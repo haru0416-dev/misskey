@@ -32,7 +32,10 @@ describe('misc:id', () => {
 		// parseFull の additional も順序を保存する
 		const additionals = ids.map(id => parseUuidv7Full(id).additional);
 		for (let i = 1; i < additionals.length; i++) {
-			expect(additionals[i] > additionals[i - 1]).toBe(true);
+			const current = additionals[i];
+			const previous = additionals[i - 1];
+			if (current == null || previous == null) throw new Error('Missing UUIDv7 sequence value');
+			expect(current > previous).toBe(true);
 		}
 	});
 });

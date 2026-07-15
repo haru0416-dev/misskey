@@ -1133,10 +1133,12 @@ export async function translateTextForHonoApi(
 		body: searchParams.toString(),
 	});
 	const json = deeplTranslationResponse.parse(await res.json());
+	const translation = json.translations[0];
+	if (translation == null) throw notesTranslateUnavailableError();
 
 	return {
-		sourceLang: json.translations[0].detected_source_language,
-		text: json.translations[0].text,
+		sourceLang: translation.detected_source_language,
+		text: translation.text,
 	};
 }
 

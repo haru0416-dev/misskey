@@ -87,11 +87,13 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 
 	test('複数タグを一括更新し、重複入力は1回だけ加算する', async () => {
 		const tags = [uniqueTag(), uniqueTag()];
+		const [firstTag, secondTag] = tags;
+		if (firstTag == null || secondTag == null) throw new Error('Failed to create hashtag fixtures');
 		const userId = genId();
 
 		await updateHashtagsRankingsForHonoApi(
 			{ meta: { hiddenTags: [], sensitiveWords: [] }, redis },
-			[tags[0], tags[1], tags[0]],
+			[firstTag, secondTag, firstTag],
 			userId,
 		);
 

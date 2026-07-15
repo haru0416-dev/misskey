@@ -133,7 +133,9 @@ async function packInviteCodeForHonoApi(
 	deps: HonoApiInviteDependencies,
 	ticket: RegistrationTicketRow,
 ): Promise<Packed<'InviteCode'>> {
-	return (await packInviteCodesForHonoApi(deps, [ticket]))[0];
+	const packed = (await packInviteCodesForHonoApi(deps, [ticket]))[0];
+	if (packed == null) throw new Error('Packed invite code is missing');
+	return packed;
 }
 
 export async function handleHonoApiAdminInviteCreate(

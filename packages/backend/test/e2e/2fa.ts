@@ -514,8 +514,10 @@ describe('2要素認証', () => {
 		assert.ok(iResponse.body.securityKeysList);
 		const securityKeys = iResponse.body.securityKeysList.filter((s: { id: string; }) => s.id === credentialId.toString('base64url'));
 		assert.strictEqual(securityKeys.length, 1);
-		assert.strictEqual(securityKeys[0].name, renamedKey);
-		assert.notEqual(securityKeys[0].lastUsed, undefined);
+		const securityKey = securityKeys[0];
+		assert.ok(securityKey);
+		assert.strictEqual(securityKey.name, renamedKey);
+		assert.notEqual(securityKey.lastUsed, undefined);
 
 		// 後片付け
 		await api('i/2fa/unregister', {

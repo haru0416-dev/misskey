@@ -50,10 +50,12 @@ function parseFeedRequest(c: Context): {
 
 	const match = pathname.slice(2).match(/^(.*)\.(atom|rss|json)$/);
 	if (match == null) return null;
+	const [, acct, format] = match;
+	if (acct == null || format == null) return null;
 
 	return {
-		acct: decodeURIComponent(match[1]),
-		format: match[2] as FeedFormat,
+		acct: decodeURIComponent(acct),
+		format: format as FeedFormat,
 	};
 }
 

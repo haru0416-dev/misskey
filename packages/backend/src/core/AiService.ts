@@ -116,8 +116,8 @@ export function createAiService(
 	async function detectChunk(url: string, apiKey: string | null, timeout: number, chunk: Buffer[]): Promise<(Prediction[] | null)[]> {
 		try {
 			const form = new FormData();
-			for (let i = 0; i < chunk.length; i++) {
-				const image = Uint8Array.from(chunk[i]);
+			for (const [i, source] of chunk.entries()) {
+				const image = Uint8Array.from(source);
 				form.append(`image${i}`, new Blob([image], { type: 'image/png' }), `${i}.png`);
 			}
 
@@ -155,7 +155,7 @@ export function createAiService(
 			const items = body.result.results;
 			return chunk.map((_, i) => {
 				const item = items[i];
-				return (item.success) ? item.predictions : null;
+				return item?.success ? item.predictions : null;
 			});
 		} catch (err) {
 			logger.warn(`sensitive detection error: ${err instanceof Error ? err.message : String(err)}`);

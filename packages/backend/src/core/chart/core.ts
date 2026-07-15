@@ -544,7 +544,9 @@ export default abstract class Chart<T extends Schema> {
 			}
 
 			for (const [k, v] of Object.entries(finalDiffs)) {
-				if (this.schema[k].uniqueIncrement) {
+				const schema = this.schema[k];
+				if (schema == null) throw new Error(`Unknown chart field: ${k}`);
+				if (schema.uniqueIncrement) {
 					const name = COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as keyof Columns<T>;
 					const tempColumnName = UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as keyof TempColumnsForUnique<T>;
 					const cardinalityOfHour = new Set([...(v as string[]), ...(logHour[tempColumnName] as unknown as string[])]).size;
@@ -559,13 +561,13 @@ export default abstract class Chart<T extends Schema> {
 				const intersection = v.intersection;
 				if (intersection) {
 					const name = COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as keyof Columns<T>;
-					const firstKey = intersection[0];
+					const [firstKey, ...remainingKeys] = intersection;
+					if (firstKey == null) continue;
 					const firstTempColumnName = UNIQUE_TEMP_COLUMN_PREFIX + firstKey.replaceAll('.', COLUMN_DELIMITER) as keyof TempColumnsForUnique<T>;
 					const firstValues = finalDiffs[firstKey] as string[] | undefined;
 					const currentValuesForHour = new Set([...(firstValues ?? []), ...(logHour[firstTempColumnName] as unknown as string[])]);
 					const currentValuesForDay = new Set([...(firstValues ?? []), ...(logDay[firstTempColumnName] as unknown as string[])]);
-					for (let i = 1; i < intersection.length; i++) {
-						const targetKey = intersection[i];
+					for (const targetKey of remainingKeys) {
 						const targetTempColumnName = UNIQUE_TEMP_COLUMN_PREFIX + targetKey.replaceAll('.', COLUMN_DELIMITER) as keyof TempColumnsForUnique<T>;
 						const targetValues = finalDiffs[targetKey] as string[] | undefined;
 						const targetValuesForHour = new Set([...(targetValues ?? []), ...(logHour[targetTempColumnName] as unknown as string[])]);

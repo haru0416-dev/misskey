@@ -36,7 +36,9 @@ export function convertSchemaToOpenApiSchema(schema: Schema, type: 'param' | 're
 
 		res.properties ??= {};
 		for (const k of Object.keys(schema.properties)) {
-			res.properties[k] = convertSchemaToOpenApiSchema(schema.properties[k], type, includeSelfRef);
+			const property = schema.properties[k];
+			if (property == null) throw new Error(`OpenAPI schema property is missing: ${k}`);
+			res.properties[k] = convertSchemaToOpenApiSchema(property, type, includeSelfRef);
 		}
 	}
 

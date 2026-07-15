@@ -41,11 +41,12 @@ export async function packFeed(
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 	const notes = await listPublicFeedNotesByUserIdFromDatabase(deps.db, user.id, 20);
+	const latestNote = notes[0];
 
 	const feed = new Feed({
 		id: author.link,
 		title: `${author.name} (@${user.username}@${deps.config.runtime.host})`,
-		updated: notes.length !== 0 ? parseId(notes[0].id).date : undefined,
+		updated: latestNote == null ? undefined : parseId(latestNote.id).date,
 		generator: 'Erebia',
 		description: `${user.notesCount} Notes, ${profile.followingVisibility === 'public' ? user.followingCount : '?'} Following, ${profile.followersVisibility === 'public' ? user.followersCount : '?'} Followers${profile.description ? ` · ${profile.description}` : ''}`,
 		link: author.link,

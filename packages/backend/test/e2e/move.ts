@@ -294,30 +294,30 @@ describe('Account Move', () => {
 				}, carol);
 				assert.strictEqual(carolFollowings.status, 200);
 				assert.strictEqual(carolFollowings.body.length, 2);
-				assert.strictEqual(carolFollowings.body[0].followeeId, bob.id);
-				assert.strictEqual(carolFollowings.body[1].followeeId, alice.id);
+				assert.strictEqual(carolFollowings.body[0]?.followeeId, bob.id);
+				assert.strictEqual(carolFollowings.body[1]?.followeeId, alice.id);
 			}, waitForMoveJobOptions);
 
 			await vi.waitFor(async () => {
 				const blockings = await api('blocking/list', {}, dave);
 				assert.strictEqual(blockings.status, 200);
 				assert.strictEqual(blockings.body.length, 2);
-				assert.strictEqual(blockings.body[0].blockeeId, bob.id);
-				assert.strictEqual(blockings.body[1].blockeeId, alice.id);
+				assert.strictEqual(blockings.body[0]?.blockeeId, bob.id);
+				assert.strictEqual(blockings.body[1]?.blockeeId, alice.id);
 			}, waitForMoveJobOptions);
 
 			await vi.waitFor(async () => {
 				const mutings = await api('mute/list', {}, dave);
 				assert.strictEqual(mutings.status, 200);
 				assert.strictEqual(mutings.body.length, 2);
-				assert.strictEqual(mutings.body[0].muteeId, bob.id);
-				assert.strictEqual(mutings.body[1].muteeId, alice.id);
+				assert.strictEqual(mutings.body[0]?.muteeId, bob.id);
+				assert.strictEqual(mutings.body[1]?.muteeId, alice.id);
 			}, waitForMoveJobOptions);
 
 			await vi.waitFor(async () => {
 				const rootLists = await api('users/lists/list', {}, root);
 				assert.strictEqual(rootLists.status, 200);
-				const userIds = rootLists.body[0].userIds;
+				const userIds = rootLists.body[0]?.userIds;
 				assert.ok(userIds);
 				assert.strictEqual(userIds.length, 2);
 				assert.ok(userIds.includes(bob.id));
@@ -327,7 +327,7 @@ describe('Account Move', () => {
 			await vi.waitFor(async () => {
 				const eveLists = await api('users/lists/list', {}, eve);
 				assert.strictEqual(eveLists.status, 200);
-				assert.deepStrictEqual(eveLists.body[0].userIds, [bob.id]);
+				assert.deepStrictEqual(eveLists.body[0]?.userIds, [bob.id]);
 			}, waitForMoveJobOptions);
 		});
 
@@ -345,7 +345,7 @@ describe('Account Move', () => {
 
 			assert.strictEqual(followers.status, 200);
 			assert.strictEqual(followers.body.length, 2);
-			assert.strictEqual(followers.body[0].followerId, bob.id);
+			assert.strictEqual(followers.body[0]?.followerId, bob.id);
 		});
 
 		test('Unfollowed after 10 sec (24 hours in production).', async () => {

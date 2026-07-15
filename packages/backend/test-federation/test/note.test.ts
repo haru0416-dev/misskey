@@ -4,6 +4,12 @@ import { Announce, Note, Question } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
 import { addCustomEmoji, createAccount, createModerator, deepStrictEqualWithExcludedFields, fetchActivityPubObject, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep, uploadFile, waitFor } from './utils.js';
 
+function getAt<T>(values: readonly T[], index: number): T {
+	const value = values[index];
+	assert(value);
+	return value;
+}
+
 describe('Note', () => {
 	let alice: LoginUser, bob: LoginUser;
 	let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
@@ -341,8 +347,8 @@ describe('Note', () => {
 
 				const reactions = await alice.client.request('notes/reactions', { noteId: note.id });
 				strictEqual(reactions.length, 1);
-				strictEqual(reactions[0].type, reaction);
-				strictEqual(reactions[0].user.id, bobInA.id);
+				strictEqual(getAt(reactions, 0).type, reaction);
+				strictEqual(getAt(reactions, 0).user.id, bobInA.id);
 			});
 
 			test('Custom emoji reaction', async () => {
@@ -354,8 +360,8 @@ describe('Note', () => {
 
 				const reactions = await alice.client.request('notes/reactions', { noteId: note.id });
 				strictEqual(reactions.length, 1);
-				strictEqual(reactions[0].type, `:${emoji.name}@b.test:`);
-				strictEqual(reactions[0].user.id, bobInA.id);
+				strictEqual(getAt(reactions, 0).type, `:${emoji.name}@b.test:`);
+				strictEqual(getAt(reactions, 0).user.id, bobInA.id);
 			});
 
 			test('Undo(Like) removes the remote reaction', async () => {
@@ -379,7 +385,7 @@ describe('Note', () => {
 
 				const reactions = await alice.client.request('notes/reactions', { noteId: note.id });
 				strictEqual(reactions.length, 1);
-				strictEqual(reactions[0].type, '❤');
+				strictEqual(getAt(reactions, 0).type, '❤');
 			});
 
 			/**
@@ -395,7 +401,7 @@ describe('Note', () => {
 
 				const reactions = await alice.client.request('notes/reactions', { noteId: note.id });
 				strictEqual(reactions.length, 1);
-				strictEqual(reactions[0].type, `:${emoji.name}@b.test:`);
+				strictEqual(getAt(reactions, 0).type, `:${emoji.name}@b.test:`);
 			});
 		});
 	});
@@ -416,8 +422,8 @@ describe('Note', () => {
 
 				const noteAfterVote = await bob.client.request('notes/show', { noteId: note.id });
 				assert(noteAfterVote.poll != null);
-				strictEqual(noteAfterVote.poll.choices[0].votes, 1);
-				strictEqual(noteAfterVote.poll.choices[1].votes, 0);
+				strictEqual(getAt(noteAfterVote.poll.choices, 0).votes, 1);
+				strictEqual(getAt(noteAfterVote.poll.choices, 1).votes, 0);
 			});
 		});
 
@@ -446,8 +452,8 @@ describe('Note', () => {
 
 				const noteAfterVote = await bobRemoteFollower.client.request('notes/show', { noteId: noteInA.id });
 				assert(noteAfterVote.poll != null);
-				strictEqual(noteAfterVote.poll.choices[0].votes, 1);
-				strictEqual(noteAfterVote.poll.choices[1].votes, 0);
+				strictEqual(getAt(noteAfterVote.poll.choices, 0).votes, 1);
+				strictEqual(getAt(noteAfterVote.poll.choices, 1).votes, 0);
 			});
 		});
 	});

@@ -9,6 +9,12 @@ const [aAdmin, bAdmin] = await Promise.all([
 	fetchAdmin('b.test'),
 ]);
 
+function getAt<T>(values: readonly T[], index: number): T {
+	const value = values[index];
+	assert(value);
+	return value;
+}
+
 describe('User', () => {
 	describe('Profile', () => {
 		describe('Consistency of profile', () => {
@@ -211,7 +217,7 @@ describe('User', () => {
 				const _aliceInB = await bob.client.request('users/show', { userId: aliceInB.id });
 				strictEqual(_aliceInB.pinnedNoteIds.length, 1);
 				const pinnedNoteInB = await resolveRemoteNote('a.test', pinnedNote.id, bob);
-				strictEqual(_aliceInB.pinnedNotes[0].id, pinnedNoteInB.id);
+				strictEqual(getAt(_aliceInB.pinnedNotes, 0).id, pinnedNoteInB.id);
 			});
 
 			test('Unpinning normal Note is delivered', async () => {
@@ -315,8 +321,8 @@ describe('User', () => {
 				test('Alice should have a request', async () => {
 					const requests = await alice.client.request('following/requests/list', {});
 					strictEqual(requests.length, 1);
-					strictEqual(requests[0].followee.id, alice.id);
-					strictEqual(requests[0].follower.id, bobInA.id);
+					strictEqual(getAt(requests, 0).followee.id, alice.id);
+					strictEqual(getAt(requests, 0).follower.id, bobInA.id);
 				});
 			});
 
@@ -370,8 +376,8 @@ describe('User', () => {
 			test('Bob follows Alice', async () => {
 				const following = await bob.client.request('users/following', { userId: bob.id });
 				strictEqual(following.length, 1);
-				strictEqual(following[0].followeeId, aliceInB.id);
-				strictEqual(following[0].followerId, bob.id);
+				strictEqual(getAt(following, 0).followeeId, aliceInB.id);
+				strictEqual(getAt(following, 0).followerId, bob.id);
 			});
 		});
 	});
@@ -548,8 +554,8 @@ describe('User', () => {
 
 				const bobFollowers = await bob.client.request('users/followers', { userId: bob.id });
 				strictEqual(bobFollowers.length, 1); // followed by Alice
-				assert(bobFollowers[0].follower != null);
-				const renewedaliceInB = bobFollowers[0].follower;
+				const renewedaliceInB = getAt(bobFollowers, 0).follower;
+				assert(renewedaliceInB != null);
 				assert(aliceInB.username === renewedaliceInB.username);
 				assert(aliceInB.host === renewedaliceInB.host);
 

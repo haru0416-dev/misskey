@@ -191,7 +191,9 @@ function validateMuteWordRegex(mutedWords: (string[] | string)[]): void {
 		if (!regexp) throw iUpdateInvalidRegexpError();
 
 		try {
-			const parsedRegexp = new RE2(regexp[1], regexp[2]);
+			const [, pattern, flags] = regexp;
+			if (pattern == null || flags == null) throw iUpdateInvalidRegexpError();
+			const parsedRegexp = new RE2(pattern, flags);
 		} catch {
 			throw iUpdateInvalidRegexpError();
 		}

@@ -78,6 +78,17 @@ import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
+function getAt<T>(values: readonly T[], index: number): T {
+	const value = values[index];
+	assert.ok(value != null);
+	return value;
+}
+
+function getDefined<T>(value: T | undefined): T {
+	assert.ok(value !== undefined);
+	return value;
+}
+
 describe('Endpoints', () => {
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
@@ -1049,9 +1060,9 @@ describe('Endpoints', () => {
 				sort: '+mentionedUsers',
 			});
 			assert.strictEqual(list.status, 200);
-			assert.strictEqual(list.body[0].tag, primary);
-			assert.strictEqual(list.body[0].mentionedUsersCount, 1000002);
-			assert.strictEqual(list.body[0].attachedLocalUsersCount, 1000001);
+			assert.strictEqual(getAt(list.body, 0).tag, primary);
+			assert.strictEqual(getAt(list.body, 0).mentionedUsersCount, 1000002);
+			assert.strictEqual(getAt(list.body, 0).attachedLocalUsersCount, 1000001);
 
 			const search = await api('hashtags/search', {
 				query: `hono_hashtag_`,
@@ -1167,7 +1178,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(all.status, 200);
 			assert.strictEqual(all.body.length, 2);
 			assert.ok(!all.body.some((f: any) => f.id === otherFile.id));
-			assert.strictEqual(all.body[0].user, null);
+			assert.strictEqual(getAt(all.body, 0).user, null);
 
 			const imagesOnly = await api('drive/stream', { limit: 100, type: 'image/png' }, user);
 			assert.strictEqual(imagesOnly.status, 200);
@@ -1409,7 +1420,7 @@ describe('Endpoints', () => {
 			const shownAfterReact = await api('chat/messages/show', { messageId: created.body.id }, sender);
 			assert.strictEqual(shownAfterReact.status, 200);
 			assert.strictEqual(shownAfterReact.body.reactions.length, 1);
-			assert.strictEqual(shownAfterReact.body.reactions[0].reaction, '👍');
+			assert.strictEqual(getAt(shownAfterReact.body.reactions, 0).reaction, '👍');
 
 			const unreacted = await api('chat/messages/unreact', { messageId: created.body.id, reaction: '👍' }, recipient);
 			assert.strictEqual(unreacted.status, 204);
@@ -1927,9 +1938,9 @@ describe('Endpoints', () => {
 			const users = await api('federation/users', { host });
 			assert.strictEqual(users.status, 200);
 			assert.strictEqual(users.body.length, 1);
-			assert.strictEqual(users.body[0].id, remoteUser.id);
-			assert.strictEqual(users.body[0].host, host);
-			assert.strictEqual('email' in users.body[0], false);
+			assert.strictEqual(getAt(users.body, 0).id, remoteUser.id);
+			assert.strictEqual(getAt(users.body, 0).host, host);
+			assert.strictEqual('email' in getAt(users.body, 0), false);
 
 			const empty = await api('federation/users', { host: `hono-fed-users-none-${suffix}.example` });
 			assert.strictEqual(empty.status, 200);
@@ -1984,7 +1995,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(noteRes.status, 200);
 			assert.strictEqual(noteRes.body.type, 'Note');
 			assert.strictEqual(noteRes.body.id, noteUri);
-			assert.ok((noteRes.body.content as string).includes('ap/get resolve target'));
+			const content: unknown = Reflect.get(noteRes.body, 'content');
+			if (typeof content !== 'string') throw new Error('ActivityPub Note content is missing');
+			assert.ok(content.includes('ap/get resolve target'));
 
 			const userUri = `${config.instance.url}/users/${alice.id}`;
 			const userRes = await api('ap/get', { uri: userUri }, alice);
@@ -2033,7 +2046,12 @@ describe('Endpoints', () => {
 			assert.strictEqual(questionRes.status, 200);
 			assert.strictEqual(questionRes.body.type, 'Question');
 			assert.strictEqual(questionRes.body.id, questionUri);
-			assert.deepStrictEqual((questionRes.body.oneOf as { name: string }[]).map(o => o.name), ['a', 'b']);
+			const choices: unknown = Reflect.get(questionRes.body, 'oneOf');
+			if (!Array.isArray(choices)) throw new Error('ActivityPub Question choices are missing');
+			assert.deepStrictEqual(choices.map((choice: unknown) => {
+				assert.ok(typeof choice === 'object' && choice != null);
+				return Reflect.get(choice, 'name');
+			}), ['a', 'b']);
 
 			const likeNote = await post(alice, { text: 'ap/get like target' });
 			const reactionId = genId(now + 1);
@@ -2878,9 +2896,9 @@ describe('Endpoints', () => {
 				assert.strictEqual(listed.body.count, 2);
 				assert.strictEqual(listed.body.allCount, 2);
 				assert.strictEqual(listed.body.allPages, 1);
-				assert.strictEqual(listed.body.emojis[0].originalUrl, localFirst.originalUrl);
-				assert.strictEqual(listed.body.emojis[1].publicUrl, localSecond.publicUrl);
-				assert.strictEqual(listed.body.emojis[1].isSensitive, true);
+				assert.strictEqual(getAt(listed.body.emojis, 0).originalUrl, localFirst.originalUrl);
+				assert.strictEqual(getAt(listed.body.emojis, 1).publicUrl, localSecond.publicUrl);
+				assert.strictEqual(getAt(listed.body.emojis, 1).isSensitive, true);
 
 				const remoteListed = await api('v2/admin/emoji/list', {
 					query: { name: `hv2emoji${suffix}`, hostType: 'remote' },
@@ -2888,7 +2906,7 @@ describe('Endpoints', () => {
 				}, manager);
 				assert.strictEqual(remoteListed.status, 200);
 				assert.deepStrictEqual(remoteListed.body.emojis.map((e: any) => e.id), [remoteEmoji.id]);
-				assert.strictEqual(remoteListed.body.emojis[0].host, remoteHost);
+				assert.strictEqual(getAt(remoteListed.body.emojis, 0).host, remoteHost);
 
 				const paged = await api('v2/admin/emoji/list', {
 					query: { name: `hv2emoji${suffix}` },
@@ -3709,10 +3727,10 @@ describe('Endpoints', () => {
 			assert.ok(newerIndex >= 0);
 			assert.ok(olderIndex >= 0);
 			assert.ok(newerIndex < olderIndex);
-			assert.strictEqual(history.body[newerIndex].createdAt, new Date(now - 1000).toISOString());
-			assert.strictEqual(history.body[newerIndex].ip, newer.ip);
-			assert.deepStrictEqual(history.body[newerIndex].headers, newer.headers);
-			assert.strictEqual(history.body[newerIndex].success, false);
+			assert.strictEqual(getAt(history.body, newerIndex).createdAt, new Date(now - 1000).toISOString());
+			assert.strictEqual(getAt(history.body, newerIndex).ip, newer.ip);
+			assert.deepStrictEqual(getAt(history.body, newerIndex).headers, newer.headers);
+			assert.strictEqual(getAt(history.body, newerIndex).success, false);
 			assert.strictEqual(history.body.some(item => item.id === otherUser.id), false);
 
 			const afterOlder = await api('i/signin-history', { sinceId: older.id, limit: 20 }, alice);
@@ -3872,15 +3890,15 @@ describe('Endpoints', () => {
 			const post = await api('fetch-rss', { url });
 			assert.strictEqual(post.status, 200);
 			assert.strictEqual(post.body.title, 'Hono RSS Feed');
-			assert.strictEqual(post.body.items[0].title, 'First entry');
-			assert.strictEqual(post.body.items[0].guid, 'entry-1');
+			assert.strictEqual(getAt(post.body.items, 0).title, 'First entry');
+			assert.strictEqual(getAt(post.body.items, 0).guid, 'entry-1');
 
 			const get = await relativeFetch(`api/fetch-rss?url=${encodeURIComponent(url)}`);
 			assert.strictEqual(get.status, 200);
 			assert.strictEqual(get.headers.get('cache-control'), 'public, max-age=180');
 			const getBody = await get.json() as { title?: string; items?: { title?: string }[] };
 			assert.strictEqual(getBody.title, 'Hono RSS Feed');
-			assert.strictEqual(getBody.items?.[0].title, 'First entry');
+			assert.strictEqual(getAt(getDefined(getBody.items), 0).title, 'First entry');
 		});
 	});
 
@@ -6145,13 +6163,13 @@ describe('Endpoints', () => {
 			assert.strictEqual(list.body.length, 2);
 			const listFollowerIds = list.body.map((r: any) => r.follower.id).sort();
 			assert.deepStrictEqual(listFollowerIds, [followerA.id, followerB.id].sort());
-			assert.strictEqual(list.body[0].followee.id, followee.id);
+			assert.strictEqual(getAt(list.body, 0).followee.id, followee.id);
 
 			const sentA = await api('following/requests/sent', {}, followerA);
 			assert.strictEqual(sentA.status, 200);
 			assert.strictEqual(sentA.body.length, 1);
-			assert.strictEqual(sentA.body[0].follower.id, followerA.id);
-			assert.strictEqual(sentA.body[0].followee.id, followee.id);
+			assert.strictEqual(getAt(sentA.body, 0).follower.id, followerA.id);
+			assert.strictEqual(getAt(sentA.body, 0).followee.id, followee.id);
 
 			const limited = await api('following/requests/list', { limit: 1 }, followee);
 			assert.strictEqual(limited.status, 200);
@@ -7051,7 +7069,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(listedRole.isExplorable, true);
 			assert.strictEqual(listedRole.displayOrder, 4242);
 			assert.strictEqual(listedRole.usersCount, 1);
-			assert.strictEqual(listedRole.policies.canInvite.useDefault, true);
+			assert.strictEqual(getDefined(listedRole.policies.canInvite).useDefault, true);
 
 			const shown = await api('roles/show', { roleId: createdRole.id });
 			assert.strictEqual(shown.status, 200);
@@ -7125,15 +7143,15 @@ describe('Endpoints', () => {
 			const users = await api('roles/users', { roleId: explorableRole.id }, member);
 			assert.strictEqual(users.status, 200);
 			assert.strictEqual(users.body.length, 1);
-			assert.strictEqual(users.body[0].user.id, member.id);
-			assert.strictEqual(users.body[0].user.username, member.username);
+			assert.strictEqual(getAt(users.body, 0).user.id, member.id);
+			assert.strictEqual(getAt(users.body, 0).user.username, member.username);
 
-			const asSelf = users.body[0].user as any;
+			const asSelf = getAt(users.body, 0).user as any;
 			assert.ok('policies' in asSelf);
 
 			const asOthers = await api('roles/users', { roleId: explorableRole.id }, alice);
 			assert.strictEqual(asOthers.status, 200);
-			assert.strictEqual('policies' in (asOthers.body[0].user as any), false);
+			assert.strictEqual('policies' in (getAt(asOthers.body, 0).user as any), false);
 
 			const forbidden = await api('roles/users', { roleId: nonExplorableRole.id });
 			assert.strictEqual(forbidden.status, 400);
@@ -7190,7 +7208,7 @@ describe('Endpoints', () => {
 				const notes = await api('roles/notes', { roleId: explorableRole.id }, author);
 				assert.strictEqual(notes.status, 200);
 				assert.strictEqual(notes.body.length, 1);
-				assert.strictEqual(notes.body[0].id, publicNoteId);
+				assert.strictEqual(getAt(notes.body, 0).id, publicNoteId);
 			} finally {
 				await redis.del(`list:roleTimeline:${explorableRole.id}`);
 				await closeRedisConnection(redis);
@@ -7233,11 +7251,11 @@ describe('Endpoints', () => {
 			assert.strictEqual(single.status, 200);
 			assert.ok(Array.isArray(single.body));
 			assert.strictEqual(single.body.length, 1);
-			assert.strictEqual(single.body[0].id, stranger.id);
-			assert.strictEqual(single.body[0].isFollowing, false);
-			assert.strictEqual(single.body[0].isBlocking, false);
-			assert.strictEqual(single.body[0].isMuted, false);
-			assert.strictEqual(single.body[0].isRenoteMuted, false);
+			assert.strictEqual(getAt(single.body, 0).id, stranger.id);
+			assert.strictEqual(getAt(single.body, 0).isFollowing, false);
+			assert.strictEqual(getAt(single.body, 0).isBlocking, false);
+			assert.strictEqual(getAt(single.body, 0).isMuted, false);
+			assert.strictEqual(getAt(single.body, 0).isRenoteMuted, false);
 
 			const batch = await api('users/relation', {
 				userId: [followee.id, blockee.id, mutee.id, renoteMutee.id, stranger.id],
@@ -7507,7 +7525,7 @@ describe('Endpoints', () => {
 			await api('following/create', { userId: target.id }, searcher);
 			const followedFirst = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, limit: 1 }, searcher);
 			assert.strictEqual(followedFirst.status, 200);
-			assert.strictEqual(followedFirst.body[0].id, target.id);
+			assert.strictEqual(getAt(followedFirst.body, 0).id, target.id);
 
 			// @ts-expect-error params must include username or host
 			const missingBoth = await api('users/search-by-username-and-host', { limit: 10 });
@@ -7515,11 +7533,11 @@ describe('Endpoints', () => {
 
 			const detailed = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: true });
 			assert.strictEqual(detailed.status, 200);
-			assert.ok(Object.prototype.hasOwnProperty.call(detailed.body[0], 'isLocked'));
+			assert.ok(Object.prototype.hasOwnProperty.call(getAt(detailed.body, 0), 'isLocked'));
 
 			const lite = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: false });
 			assert.strictEqual(lite.status, 200);
-			assert.ok(!Object.prototype.hasOwnProperty.call(lite.body[0], 'isLocked'));
+			assert.ok(!Object.prototype.hasOwnProperty.call(getAt(lite.body, 0), 'isLocked'));
 		});
 	});
 
@@ -7543,8 +7561,8 @@ describe('Endpoints', () => {
 			}, me);
 			assert.strictEqual(single.status, 200);
 			assert.strictEqual(single.body.length, 1);
-			assert.strictEqual(single.body[0].id, followee1.id);
-			assert.strictEqual(single.body[0].user.id, followee1.id);
+			assert.strictEqual(getAt(single.body, 0).id, followee1.id);
+			assert.strictEqual(getAt(single.body, 0).user.id, followee1.id);
 
 			const range = await api('users/get-following-users-by-birthday', {
 				birthday: { begin: { month: 6, day: 14 }, end: { month: 6, day: 21 } },
@@ -7657,8 +7675,8 @@ describe('Endpoints', () => {
 			const strangerSeesPublic = await api('users/reactions', { userId: owner.id }, stranger);
 			assert.strictEqual(strangerSeesPublic.status, 200);
 			assert.strictEqual(strangerSeesPublic.body.length, 1);
-			assert.strictEqual(strangerSeesPublic.body[0].note.id, note.id);
-			assert.strictEqual(strangerSeesPublic.body[0].user.id, owner.id);
+			assert.strictEqual(getAt(strangerSeesPublic.body, 0).note.id, note.id);
+			assert.strictEqual(getAt(strangerSeesPublic.body, 0).user.id, owner.id);
 
 			await api('i/update', { publicReactions: false }, owner);
 
@@ -8153,7 +8171,7 @@ describe('Endpoints', () => {
 			const likes = await api('i/gallery/likes', {}, liker);
 			assert.strictEqual(likes.status, 200);
 			assert.strictEqual(likes.body.length, 1);
-			assert.strictEqual(likes.body[0].post.id, post.body.id);
+			assert.strictEqual(getAt(likes.body, 0).post.id, post.body.id);
 
 			const unauthorized = await api('i/gallery/likes', {});
 			assert.strictEqual(unauthorized.status, 401);
@@ -8266,8 +8284,8 @@ describe('Endpoints', () => {
 			const myFavorites = await api('clips/my-favorites', {}, favoriter);
 			assert.strictEqual(myFavorites.status, 200);
 			assert.strictEqual(myFavorites.body.length, 1);
-			assert.strictEqual(myFavorites.body[0].id, clip.body.id);
-			assert.strictEqual(myFavorites.body[0].isFavorited, true);
+			assert.strictEqual(getAt(myFavorites.body, 0).id, clip.body.id);
+			assert.strictEqual(getAt(myFavorites.body, 0).isFavorited, true);
 		});
 
 		test('clips/notes は可視性とNO_SUCH_CLIPを維持する', async () => {
@@ -8294,7 +8312,7 @@ describe('Endpoints', () => {
 			const visibleForOwner = await api('clips/notes', { clipId: privateClip.body.id }, owner);
 			assert.strictEqual(visibleForOwner.status, 200);
 			assert.strictEqual(visibleForOwner.body.length, 1);
-			assert.strictEqual(visibleForOwner.body[0].id, noteId);
+			assert.strictEqual(getAt(visibleForOwner.body, 0).id, noteId);
 
 			const publicClip = await api('clips/create', { name: `Hono clip notes public ${suffix}`, isPublic: true }, owner);
 			await api('clips/add-note', { clipId: publicClip.body.id, noteId }, owner);
@@ -8530,12 +8548,12 @@ describe('Endpoints', () => {
 			const replies = await api('notes/replies', { noteId: rootId });
 			assert.strictEqual(replies.status, 200);
 			assert.strictEqual(replies.body.length, 1);
-			assert.strictEqual(replies.body[0].id, replyId);
+			assert.strictEqual(getAt(replies.body, 0).id, replyId);
 
 			const renotes = await api('notes/renotes', { noteId: rootId });
 			assert.strictEqual(renotes.status, 200);
 			assert.strictEqual(renotes.body.length, 1);
-			assert.strictEqual(renotes.body[0].id, renoteId);
+			assert.strictEqual(getAt(renotes.body, 0).id, renoteId);
 
 			const missingRenotes = await api('notes/renotes', { noteId: genId() });
 			assert.strictEqual(missingRenotes.status, 400);
@@ -9112,7 +9130,7 @@ describe('Endpoints', () => {
 			const clips = await api('notes/clips', { noteId });
 			assert.strictEqual(clips.status, 200);
 			assert.strictEqual(clips.body.length, 1);
-			assert.strictEqual(clips.body[0].id, publicClip.body.id);
+			assert.strictEqual(getAt(clips.body, 0).id, publicClip.body.id);
 
 			const missing = await api('notes/clips', { noteId: genId() });
 			assert.strictEqual(missing.status, 400);
@@ -9165,8 +9183,8 @@ describe('Endpoints', () => {
 			const res = await api('notes/show-partial-bulk', { noteIds: [noteId] });
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].id, noteId);
-			assert.strictEqual(res.body[0].reactions['👍'], 3);
+			assert.strictEqual(getAt(res.body, 0).id, noteId);
+			assert.strictEqual(getAt(res.body, 0).reactions['👍'], 3);
 		});
 
 		test('notes/show-partial-bulk は閲覧できないノートを返さない', async () => {
@@ -9458,8 +9476,8 @@ describe('Endpoints', () => {
 			assert.strictEqual(created.body.preserveAssignmentOnMoveAccount, true);
 			assert.strictEqual(created.body.displayOrder, createPayload.displayOrder);
 			assert.strictEqual(created.body.usersCount, 0);
-			assert.strictEqual(created.body.policies.canInvite.useDefault, false);
-			assert.strictEqual(created.body.policies.canInvite.value, true);
+			assert.strictEqual(getDefined(created.body.policies.canInvite).useDefault, false);
+			assert.strictEqual(getDefined(created.body.policies.canInvite).value, true);
 
 			const list = await api('admin/roles/list', {}, alice);
 			assert.strictEqual(list.status, 200);
@@ -9472,7 +9490,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(shown.status, 200);
 			assert.strictEqual(shown.body.id, created.body.id);
 			assert.strictEqual(shown.body.name, createPayload.name);
-			assert.strictEqual(shown.body.policies.canInvite.value, true);
+			assert.strictEqual(getDefined(shown.body.policies.canInvite).value, true);
 
 			const updated = await api('admin/roles/update', {
 				roleId: created.body.id,
@@ -9495,7 +9513,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(afterUpdate.body.color, null);
 			assert.strictEqual(afterUpdate.body.isPublic, false);
 			assert.strictEqual(afterUpdate.body.displayOrder, 314);
-			assert.strictEqual(afterUpdate.body.policies.canInvite.value, false);
+			assert.strictEqual(getDefined(afterUpdate.body.policies.canInvite).value, false);
 
 			const missingUpdate = await api('admin/roles/update', { roleId: '000000000000000000000000' }, alice);
 			assert.strictEqual(missingUpdate.status, 400);
@@ -9524,10 +9542,10 @@ describe('Endpoints', () => {
 			}, { token: readToken });
 			assert.strictEqual(users.status, 200);
 			assert.strictEqual(users.body.length, 1);
-			assert.strictEqual(users.body[0].id, carolRoleAssignment.id);
-			assert.strictEqual(users.body[0].user.id, carol.id);
-			assert.strictEqual(users.body[0].user.username, carol.username);
-			assert.strictEqual(users.body[0].expiresAt, new Date(now + 60 * 1000).toISOString());
+			assert.strictEqual(getAt(users.body, 0).id, carolRoleAssignment.id);
+			assert.strictEqual(getAt(users.body, 0).user.id, carol.id);
+			assert.strictEqual(getAt(users.body, 0).user.username, carol.username);
+			assert.strictEqual(getAt(users.body, 0).expiresAt, new Date(now + 60 * 1000).toISOString());
 
 			const missingUsersRole = await api('admin/roles/users', { roleId: '000000000000000000000000' }, alice);
 			assert.strictEqual(missingUsersRole.status, 400);
@@ -11430,10 +11448,10 @@ describe('Endpoints', () => {
 			const created = await api('admin/invite/create', { count: 2, expiresAt }, alice);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.length, 2);
-			assert.strictEqual(created.body[0].createdBy?.id, alice.id);
-			assert.strictEqual(created.body[0].used, false);
-			assert.strictEqual(created.body[0].usedAt, null);
-			assert.strictEqual(created.body[0].expiresAt, expiresAt);
+			assert.strictEqual(getAt(created.body, 0).createdBy?.id, alice.id);
+			assert.strictEqual(getAt(created.body, 0).used, false);
+			assert.strictEqual(getAt(created.body, 0).usedAt, null);
+			assert.strictEqual(getAt(created.body, 0).expiresAt, expiresAt);
 
 			const list = await api('admin/invite/list', { type: 'unused' }, alice);
 			assert.strictEqual(list.status, 200);
@@ -11466,7 +11484,7 @@ describe('Endpoints', () => {
 				});
 				logged = logs.some(log => {
 					const info = log.info as { invitations?: { id?: string }[] };
-					return info.invitations?.some(ticket => ticket.id === created.body[0].id) === true;
+					return info.invitations?.some(ticket => ticket.id === getAt(created.body, 0).id) === true;
 				});
 				if (logged) break;
 				await new Promise(resolve => setTimeout(resolve, 10));
@@ -11499,13 +11517,13 @@ describe('Endpoints', () => {
 			}, alice);
 			assert.strictEqual(list.status, 200);
 			assert.strictEqual(list.body.length, 1);
-			assert.strictEqual(list.body[0].id, id);
-			assert.strictEqual(list.body[0].createdAt, new Date(now).toISOString());
-			assert.strictEqual(list.body[0].type, 'updateUserNote');
-			assert.strictEqual(list.body[0].info.after, marker);
-			assert.strictEqual(list.body[0].userId, alice.id);
-			assert.strictEqual(list.body[0].user.id, alice.id);
-			assert.strictEqual(list.body[0].user.username, alice.username);
+			assert.strictEqual(getAt(list.body, 0).id, id);
+			assert.strictEqual(getAt(list.body, 0).createdAt, new Date(now).toISOString());
+			assert.strictEqual(getAt(list.body, 0).type, 'updateUserNote');
+			assert.strictEqual(getAt(list.body, 0).info.after, marker);
+			assert.strictEqual(getAt(list.body, 0).userId, alice.id);
+			assert.strictEqual(getAt(list.body, 0).user.id, alice.id);
+			assert.strictEqual(getAt(list.body, 0).user.username, alice.username);
 
 			const scopeDeniedToken = await createAppToken(alice, ['read:admin:server-info']);
 			const scopeDenied = await api('admin/show-moderation-logs', {}, { token: scopeDeniedToken });
@@ -11968,7 +11986,7 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].followerId, follower.id);
+			assert.strictEqual(getAt(res.body, 0).followerId, follower.id);
 		});
 
 		test('ユーザーが存在しなかったら怒る', async () => {
@@ -11989,7 +12007,7 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].followeeId, followee.id);
+			assert.strictEqual(getAt(res.body, 0).followeeId, followee.id);
 		});
 
 		test('不正なbirthday形式で怒られる', async () => {
@@ -12016,7 +12034,7 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].followeeId, matchingFollowee.id);
+			assert.strictEqual(getAt(res.body, 0).followeeId, matchingFollowee.id);
 		});
 
 		test('ユーザーが存在しなかったら怒る', async () => {
@@ -12059,7 +12077,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			const pinings = await listUserNotePiningsByUserIdFromDatabase(db, user.id);
 			assert.strictEqual(pinings.length, 1);
-			assert.strictEqual(pinings[0].noteId, note.id);
+			assert.strictEqual(getAt(pinings, 0).noteId, note.id);
 		});
 
 		test('同じノートを二重にピン留めできない', async () => {
@@ -12110,7 +12128,7 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].type, 'follow');
+			assert.strictEqual(getAt(res.body, 0).type, 'follow');
 		});
 
 		test('excludeTypesで指定したtypeの通知が除外される', async () => {
@@ -12195,8 +12213,8 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].noteId, note.id);
-			assert.strictEqual(res.body[0].note.id, note.id);
+			assert.strictEqual(getAt(res.body, 0).noteId, note.id);
+			assert.strictEqual(getAt(res.body, 0).note.id, note.id);
 		});
 
 		test('お気に入りがない場合は空配列が返る', async () => {
@@ -12421,8 +12439,8 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].flash.id, created.body.id);
-			assert.strictEqual(res.body[0].flash.isLiked, true);
+			assert.strictEqual(getAt(res.body, 0).flash.id, created.body.id);
+			assert.strictEqual(getAt(res.body, 0).flash.isLiked, true);
 		});
 
 		test('モデレータは他人のFlashを削除でき、モデレーションログが記録される', async () => {
@@ -12470,7 +12488,7 @@ describe('Endpoints', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].id, second.body.id);
+			assert.strictEqual(getAt(res.body, 0).id, second.body.id);
 		});
 
 		test('非公開のFlashは検索結果に出ない', async () => {
@@ -12792,7 +12810,7 @@ describe('Endpoints', () => {
 			});
 
 			assert.strictEqual(reaction.body.length, 1);
-			assert.strictEqual(reaction.body[0].type, '\u2764');
+			assert.strictEqual(getAt(reaction.body, 0).type, '\u2764');
 		});
 
 		test('絵文字ではない文字列のリアクションは\u2764にフォールバックされる', async () => {
@@ -12810,7 +12828,7 @@ describe('Endpoints', () => {
 			});
 
 			assert.strictEqual(reaction.body.length, 1);
-			assert.strictEqual(reaction.body[0].type, '\u2764');
+			assert.strictEqual(getAt(reaction.body, 0).type, '\u2764');
 		});
 
 		test('空のパラメータで怒られる', async () => {
@@ -13705,7 +13723,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].id, fixture.aaa.id);
+			assert.strictEqual(getAt(res.body, 0).id, fixture.aaa.id);
 		});
 		test('名前のみの検索で名前を複数検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -13738,7 +13756,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].id, fixture.ccc1.id);
+			assert.strictEqual(getAt(res.body, 0).id, fixture.ccc1.id);
 		});
 		test('名前と説明での検索で説明を検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -13749,7 +13767,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].id, fixture.ccc1.id);
+			assert.strictEqual(getAt(res.body, 0).id, fixture.ccc1.id);
 		});
 		test('名前と説明の検索で名前を複数検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -13808,8 +13826,8 @@ describe('Endpoints', () => {
 			const timeline = await api('channels/timeline', { channelId: channel.id });
 			assert.strictEqual(timeline.status, 200);
 			assert.strictEqual(timeline.body.length, 1);
-			assert.strictEqual(timeline.body[0].id, pinnedNoteId);
-			assert.strictEqual(timeline.body[0].channelId, channel.id);
+			assert.strictEqual(getAt(timeline.body, 0).id, pinnedNoteId);
+			assert.strictEqual(getAt(timeline.body, 0).channelId, channel.id);
 
 			const missingTimeline = await api('channels/timeline', { channelId: genId() });
 			assert.strictEqual(missingTimeline.status, 400);
@@ -14531,7 +14549,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(res.body[0].id, carolPost.id);
+			assert.strictEqual(getAt(res.body, 0).id, carolPost.id);
 		});
 	});
 

@@ -311,19 +311,23 @@ export async function handleHonoApiServerInfo(meta: MiMeta): Promise<{
 		systemInformation.mem(),
 		systemInformation.fsSize(),
 	]);
+	const cpu = os.cpus()[0];
+	if (cpu == null) throw new Error('CPU information is unavailable');
+	const fs = fsStats[0];
+	if (fs == null) throw new Error('Filesystem information is unavailable');
 
 	return {
 		machine: os.hostname(),
 		cpu: {
-			model: os.cpus()[0].model,
+			model: cpu.model,
 			cores: os.cpus().length,
 		},
 		mem: {
 			total: memStats.total,
 		},
 		fs: {
-			total: fsStats[0].size,
-			used: fsStats[0].used,
+			total: fs.size,
+			used: fs.used,
 		},
 	};
 }

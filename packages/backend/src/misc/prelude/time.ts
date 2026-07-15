@@ -10,14 +10,22 @@ const dateTimeIntervals = {
 };
 
 export function dateUTC(time: number[]): Date {
-	const d =
-		time.length === 2 ? Date.UTC(time[0], time[1])
-		: time.length === 3 ? Date.UTC(time[0], time[1], time[2])
-		: time.length === 4 ? Date.UTC(time[0], time[1], time[2], time[3])
-		: time.length === 5 ? Date.UTC(time[0], time[1], time[2], time[3], time[4])
-		: time.length === 6 ? Date.UTC(time[0], time[1], time[2], time[3], time[4], time[5])
-		: time.length === 7 ? Date.UTC(time[0], time[1], time[2], time[3], time[4], time[5], time[6])
-		: null;
+	const getPart = (index: number): number => {
+		const part = time[index];
+		if (part == null) throw new Error('wrong number of arguments');
+		return part;
+	};
+
+	let d: number;
+	switch (time.length) {
+		case 2: d = Date.UTC(getPart(0), getPart(1)); break;
+		case 3: d = Date.UTC(getPart(0), getPart(1), getPart(2)); break;
+		case 4: d = Date.UTC(getPart(0), getPart(1), getPart(2), getPart(3)); break;
+		case 5: d = Date.UTC(getPart(0), getPart(1), getPart(2), getPart(3), getPart(4)); break;
+		case 6: d = Date.UTC(getPart(0), getPart(1), getPart(2), getPart(3), getPart(4), getPart(5)); break;
+		case 7: d = Date.UTC(getPart(0), getPart(1), getPart(2), getPart(3), getPart(4), getPart(5), getPart(6)); break;
+		default: throw new Error('wrong number of arguments');
+	}
 
 	if (!d) throw new Error('wrong number of arguments');
 

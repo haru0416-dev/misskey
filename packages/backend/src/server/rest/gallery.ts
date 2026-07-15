@@ -63,15 +63,20 @@ async function getGalleryPostsRanking(deps: HonoApiGalleryDependencies, threshol
 	const redisPipeline = deps.redis.pipeline();
 	redisPipeline.zrange(`featuredGalleryPostsRanking:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
 	redisPipeline.zrange(`featuredGalleryPostsRanking:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
-	const [currentRankingResult, previousRankingResult] = await redisPipeline.exec().then(result => result ? result.map(r => (r[1] ?? []) as string[]) : [[], []]);
+	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline.exec().then(result => result ? result.map(r => (r[1] ?? []) as string[]) : []);
 
 	const ranking = new Map<string, number>();
 	for (let i = 0; i < currentRankingResult.length; i += 2) {
-		ranking.set(currentRankingResult[i]!, parseInt(currentRankingResult[i + 1]!, 10));
+		const id = currentRankingResult[i];
+		const score = currentRankingResult[i + 1];
+		if (id == null || score == null) continue;
+		ranking.set(id, parseInt(score, 10));
 	}
 	for (let i = 0; i < previousRankingResult.length; i += 2) {
-		const id = previousRankingResult[i]!;
-		const score = parseInt(previousRankingResult[i + 1]!, 10);
+		const id = previousRankingResult[i];
+		const scoreValue = previousRankingResult[i + 1];
+		if (id == null || scoreValue == null) continue;
+		const score = parseInt(scoreValue, 10);
 		const exist = ranking.get(id);
 		ranking.set(id, exist != null ? (exist + score) / 2 : score);
 	}

@@ -40,10 +40,12 @@ describe('export-clips', () => {
 			if (files.length > 1) {
 				throw new Error('Too many files?');
 			}
-			const fileResponse = await api('drive/files/show', { fileId: files[0].id }, alice);
+			const file = files[0];
+			assert.ok(file);
+			const fileResponse = await api('drive/files/show', { fileId: file.id }, alice);
 			assert.strictEqual(fileResponse.status, 200);
-			const file = fileResponse.body;
-			const res = await fetch(new URL(new URL(file.url).pathname, `http://127.0.0.1:${port}`));
+			const shownFile = fileResponse.body;
+			const res = await fetch(new URL(new URL(shownFile.url).pathname, `http://127.0.0.1:${port}`));
 			assert.strictEqual(res.status, 200);
 			return await res.json();
 		}

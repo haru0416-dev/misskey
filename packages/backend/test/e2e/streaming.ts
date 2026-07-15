@@ -820,10 +820,12 @@ describe('Streaming', () => {
 
 				const rows = await db.select().from(hashtag).where(eq(hashtag.name, tag));
 				assert.strictEqual(rows.length, 1);
-				assert.deepStrictEqual(rows[0].mentionedUserIds.toSorted(), [ayano.id, chitose.id].toSorted());
-				assert.strictEqual(rows[0].mentionedUsersCount, 2);
-				assert.deepStrictEqual(rows[0].mentionedLocalUserIds.toSorted(), [ayano.id, chitose.id].toSorted());
-				assert.strictEqual(rows[0].mentionedLocalUsersCount, 2);
+				const row = rows[0];
+				assert.ok(row);
+				assert.deepStrictEqual(row.mentionedUserIds.toSorted(), [ayano.id, chitose.id].toSorted());
+				assert.strictEqual(row.mentionedUsersCount, 2);
+				assert.deepStrictEqual(row.mentionedLocalUserIds.toSorted(), [ayano.id, chitose.id].toSorted());
+				assert.strictEqual(row.mentionedLocalUsersCount, 2);
 			});
 		});
 	});

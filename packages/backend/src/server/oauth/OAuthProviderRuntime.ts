@@ -210,7 +210,7 @@ async function discoverClientInformation(logger: Logger, httpRequestService: OAu
 		}
 
 		const contentType = res.headers.get('content-type');
-		const mediaType = contentType ? contentType.split(';')[0].trim() : null;
+		const mediaType = contentType?.split(';', 1)[0]?.trim() ?? null;
 		if (mediaType === 'application/json') {
 			const json = await res.json() as {
 				client_id: string;
@@ -243,7 +243,9 @@ async function discoverClientInformation(logger: Logger, httpRequestService: OAu
 			const text = await res.text();
 			const doc = htmlParser.parse(`<div>${text}</div>`);
 
-			redirectUris.push(...[...doc.querySelectorAll('link[rel=redirect_uri][href]')].map(el => el.attributes.href));
+			redirectUris.push(...[...doc.querySelectorAll('link[rel=redirect_uri][href]')]
+				.map(el => el.attributes.href)
+				.filter((href): href is string => href != null));
 
 			if (text) {
 				const microformats = parseMicroformats(doc, res.url, id);

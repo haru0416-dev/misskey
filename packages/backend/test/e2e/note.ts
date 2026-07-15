@@ -401,7 +401,7 @@ describe('Note', () => {
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
 			assert.ok(res.body.createdNote.files);
 			assert.strictEqual(res.body.createdNote.files.length, 1);
-			assert.strictEqual(res.body.createdNote.files[0].id, file.body!.id);
+			assert.strictEqual(res.body.createdNote.files[0]?.id, file.body!.id);
 		});
 
 		test('ファイルを添付した場合、タイムラインでファイル情報入りのレスポンスが帰ってくる', async () => {
@@ -422,7 +422,7 @@ describe('Note', () => {
 			assert.ok(myNote);
 			assert.ok(myNote.files);
 			assert.strictEqual(myNote.files.length, 1);
-			assert.strictEqual(myNote.files[0].id, file.body!.id);
+			assert.strictEqual(myNote.files[0]?.id, file.body!.id);
 		});
 
 		test('ファイルが添付されたノートをリノートした場合、タイムラインでファイル情報入りのレスポンスが帰ってくる', async () => {
@@ -449,7 +449,7 @@ describe('Note', () => {
 			assert.ok(myNote.renote);
 			assert.ok(myNote.renote.files);
 			assert.strictEqual(myNote.renote.files.length, 1);
-			assert.strictEqual(myNote.renote.files[0].id, file.body!.id);
+			assert.strictEqual(myNote.renote.files[0]?.id, file.body!.id);
 		});
 
 		test('ファイルが添付されたノートに返信した場合、タイムラインでファイル情報入りのレスポンスが帰ってくる', async () => {
@@ -477,7 +477,7 @@ describe('Note', () => {
 			assert.ok(myNote.reply);
 			assert.ok(myNote.reply.files);
 			assert.strictEqual(myNote.reply.files.length, 1);
-			assert.strictEqual(myNote.reply.files[0].id, file.body!.id);
+			assert.strictEqual(myNote.reply.files[0]?.id, file.body!.id);
 		});
 
 		test('ファイルが添付されたノートへの返信をリノートした場合、タイムラインでファイル情報入りのレスポンスが帰ってくる', async () => {
@@ -511,7 +511,7 @@ describe('Note', () => {
 			assert.ok(myNote.renote.reply);
 			assert.ok(myNote.renote.reply.files);
 			assert.strictEqual(myNote.renote.reply.files.length, 1);
-			assert.strictEqual(myNote.renote.reply.files[0].id, file.body!.id);
+			assert.strictEqual(myNote.renote.reply.files[0]?.id, file.body!.id);
 		});
 
 		test('NSFWが強制されている場合変更できない', async () => {

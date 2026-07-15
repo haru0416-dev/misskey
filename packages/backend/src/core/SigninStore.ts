@@ -42,6 +42,7 @@ export async function createSigninInDatabase(db: MiDrizzleDatabase, data: Signin
 		.insert(signin)
 		.values(data)
 		.returning();
+	if (row == null) throw new Error('Signin row was not created');
 
 	return deserializeSignin(row);
 }

@@ -10,6 +10,7 @@
 		"allowUnreachableCode": false,
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitOverride": true,
+		"noUncheckedIndexedAccess": true,
 		"noUncheckedSideEffectImports": true,
 		"declaration": false,
 		"sourceMap": true,

@@ -26,14 +26,14 @@ export function escapeValue(x: string): string {
 				insideOfCDATA = true;
 				i += beginingOfCDATA.length;
 			} else {
-				builder += x[i++];
+				builder += x.charAt(i++);
 			}
 		} else {
 			if (x.slice(i, i + endOfCDATA.length) === endOfCDATA) {
 				insideOfCDATA = false;
 				i += endOfCDATA.length;
 			} else {
-				const b = x[i++];
+				const b = x.charAt(i++);
 				builder += map[b] || b;
 			}
 		}
