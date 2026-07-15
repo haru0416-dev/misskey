@@ -302,6 +302,22 @@ export async function listUsersByIdsFromDatabase(
 	return rows.map(row => deserializeUser(row));
 }
 
+export async function listUsersByIdsForKeyShareFromDatabase(
+	db: MiDrizzleDatabase,
+	ids: MiUser['id'][],
+): Promise<MiUser[]> {
+	if (ids.length === 0) return [];
+
+	const rows = await db
+		.select()
+		.from(userTable)
+		.where(inArray(userTable.id, ids))
+		.orderBy(asc(userTable.id))
+		.for('key share');
+
+	return rows.map(row => deserializeUser(row));
+}
+
 export async function listUsersByUrisOrIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {
