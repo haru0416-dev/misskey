@@ -174,8 +174,7 @@ export function getSignupRateLimit(meta: ApiShellDependencies['meta']): HonoApiE
 	if (minInterval == null && max == null) return null;
 
 	return {
-		minInterval,
-		duration: max == null ? undefined : 60 * 60 * 1000,
-		max,
+		...(minInterval === undefined ? {} : { minInterval }),
+		...(max === undefined ? {} : { duration: 60 * 60 * 1000, max }),
 	};
 }

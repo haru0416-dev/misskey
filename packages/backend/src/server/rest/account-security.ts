@@ -13,6 +13,7 @@ import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/Us
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
+import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
@@ -194,11 +195,11 @@ export async function handleHonoApiIUpdateEmail(
 		throw iUpdateEmailRequiredError();
 	}
 
-	await updateUserProfileInDatabase(deps.db, me.id, {
+	await updateUserProfileInDatabase(deps.db, me.id, omitUndefined({
 		email: params.email,
 		emailVerified: false,
 		emailVerifyCode: null,
-	});
+	}));
 
 	const iObj = await packMeDetailedForHonoApi(deps, me, { includeSecrets: true });
 

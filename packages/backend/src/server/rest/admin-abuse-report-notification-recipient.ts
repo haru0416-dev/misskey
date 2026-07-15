@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import {
 	createAbuseReportNotificationRecipientInDatabase,
 	deleteAbuseReportNotificationRecipientsFromDatabase,
@@ -159,10 +160,10 @@ async function fetchRecipients(
 		method?: RecipientMethod[];
 	},
 ): Promise<MiAbuseReportNotificationRecipient[]> {
-	const recipients = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, {
+	const recipients = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, omitUndefined({
 		ids: params?.ids,
 		method: params?.method,
-	});
+	}));
 	if (recipients.length === 0) return [];
 
 	return await removeUnauthorizedRecipientUsers(deps, recipients);
@@ -243,7 +244,7 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>[]> {
 	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientListParamDef, body);
-	const recipients = await fetchRecipients(deps, { method: params.method });
+	const recipients = await fetchRecipients(deps, omitUndefined({ method: params.method }));
 
 	return await packHonoApiAbuseReportNotificationRecipients(deps, recipients);
 }

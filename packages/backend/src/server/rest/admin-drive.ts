@@ -13,6 +13,7 @@ import { queueRetentionOptions } from '@/queue/const.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import { appendQuery, query } from '@/misc/prelude/url.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -256,7 +257,7 @@ export async function handleHonoApiAdminDriveFiles(
 		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
-	const files = await listDriveFilesForAdminFromDatabase(deps.db, {
+	const files = await listDriveFilesForAdminFromDatabase(deps.db, omitUndefined({
 		limit: params.limit,
 		sinceId,
 		untilId,
@@ -264,7 +265,7 @@ export async function handleHonoApiAdminDriveFiles(
 		type: params.type,
 		origin: params.origin,
 		hostname: params.hostname,
-	});
+	}));
 
 	return await packAdminDriveFilesForHonoApi(deps, files);
 }

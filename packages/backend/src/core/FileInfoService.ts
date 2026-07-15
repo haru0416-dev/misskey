@@ -26,10 +26,10 @@ export type FileInfo = {
 		mime: string;
 		ext: string | null;
 	};
-	width?: number;
-	height?: number;
-	orientation?: number;
-	blurhash?: string;
+	width?: number | undefined;
+	height?: number | undefined;
+	orientation?: number | undefined;
+	blurhash?: string | undefined;
 	sensitive: boolean;
 	porn: boolean;
 	warnings: string[];
@@ -410,7 +410,7 @@ export function createFileInfoService(
 		height: number;
 		wUnits: string;
 		hUnits: string;
-		orientation?: number;
+		orientation?: number | undefined;
 	}> {
 		// sharp は PSD を読めないため、ヘッダ (26 bytes, big-endian) を直接パースする
 		if (mime === 'image/vnd.adobe.photoshop') {

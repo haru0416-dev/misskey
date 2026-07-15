@@ -8,6 +8,16 @@
 
 export type Cloneable = string | number | boolean | null | undefined | { [key: string]: Cloneable } | Cloneable[];
 
+export type OmitUndefinedProperties<T extends object> = {
+	[K in keyof T as undefined extends T[K] ? never : K]: T[K];
+} & {
+	[K in keyof T as undefined extends T[K] ? K : never]?: Exclude<T[K], undefined>;
+};
+
+export function omitUndefined<T extends object>(value: T): OmitUndefinedProperties<T> {
+	return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as OmitUndefinedProperties<T>;
+}
+
 export function deepClone<T extends Cloneable>(x: T): T {
 	if (typeof x === 'object') {
 		if (x === null) return x;

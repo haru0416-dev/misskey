@@ -379,17 +379,18 @@ export function createHttpRequestService(config: Config) {
 			await assertUrlAllowed(currentUrl, isLocalAddressAllowed);
 
 			// proxy 経由の宛先解決は proxy 側が行うため、bypass 対象や proxyBypassHosts は素通しにする。
-			const useProxy = config.outboundNetwork.proxy.url != null
+			const proxyUrl = config.outboundNetwork.proxy.url;
+			const useProxy = proxyUrl != null
 				&& !(config.outboundNetwork.proxy.bypassHosts ?? []).includes(currentUrl.hostname);
 
 			const init: RequestInit & { proxy?: string } = {
 				method,
 				headers,
-				body,
+				...(body === undefined ? {} : { body }),
 				redirect: 'manual',
 				signal: baseInit.signal,
 			};
-			if (useProxy) init.proxy = config.outboundNetwork.proxy.url;
+			if (useProxy) init.proxy = proxyUrl;
 
 			const res = await fetch(currentUrl, init);
 

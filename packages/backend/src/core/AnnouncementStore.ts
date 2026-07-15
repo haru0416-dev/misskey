@@ -45,8 +45,8 @@ export function resolveAnnouncementPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: AnnouncementOrder;
 } {
 	return resolveDateIdPagination(idService, options);

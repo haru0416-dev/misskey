@@ -333,7 +333,7 @@ export async function uploadSystemDriveFileFromUrl(
 		);
 
 		const properties: MiDriveFile['properties'] = {};
-		if (info.width) {
+		if (info.width != null && info.height != null) {
 			properties.width = info.width;
 			properties.height = info.height;
 		}

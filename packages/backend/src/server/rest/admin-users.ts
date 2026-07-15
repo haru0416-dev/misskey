@@ -13,6 +13,7 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import { parseId } from '@/misc/id/parse-id.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta, MiRole } from '@/models/_.js';
@@ -212,8 +213,9 @@ async function packAdminUsersDetailedForHonoApi(
 	return await Promise.all(users.map(async (user, index) => {
 		const userRoles = computeHonoApiUserRoles(deps, user, roles, assignmentsByUserId.get(user.id) ?? []);
 		const policies = await getHonoApiRolePolicies(deps, user, userRoles);
+		const profile = profileByUserId.get(user.id);
 		return await packAdminUserDetailedForHonoApi(deps, user, baseUsers[index]!, {
-			profile: profileByUserId.get(user.id),
+			...(profile === undefined ? {} : { profile }),
 			roles: userRoles,
 			policies,
 		});
@@ -306,7 +308,7 @@ export async function handleHonoApiAdminShowUsers(
 		}
 	}
 
-	const users = await listAdminUsersFromDatabase(deps.db, {
+	const users = await listAdminUsersFromDatabase(deps.db, omitUndefined({
 		limit: params.limit,
 		offset: params.offset,
 		sort: params.sort,
@@ -315,7 +317,7 @@ export async function handleHonoApiAdminShowUsers(
 		usernamePrefix: params.username ? `${sqlLikeEscape(params.username.toLowerCase())}%` : null,
 		hostname: params.hostname,
 		roleUserIds,
-	});
+	}));
 	const baseUsers = await packUserDetailedNotMeManyForHonoApi(deps, users, me);
 
 	return await packAdminUsersDetailedForHonoApi(deps, users, baseUsers);

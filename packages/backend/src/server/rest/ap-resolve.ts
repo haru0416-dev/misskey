@@ -90,7 +90,7 @@ export function parseLocalApUri(config: { runtime: Pick<Config['runtime'], 'host
 		local: true,
 		type,
 		id,
-		rest: rest.length === 0 ? undefined : rest.join('/'),
+		...(rest.length === 0 ? {} : { rest: rest.join('/') }),
 	};
 }
 
@@ -291,7 +291,7 @@ export async function signedPostForHonoApi(
 		},
 		url,
 		body,
-		digest,
+		...(digest === undefined ? {} : { digest }),
 		additionalHeaders: {},
 	});
 

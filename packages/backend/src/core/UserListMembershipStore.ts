@@ -45,8 +45,8 @@ export function resolveUserListMembershipPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: UserListMembershipOrder;
 } {
 	return resolveDateIdPagination(idService, options);

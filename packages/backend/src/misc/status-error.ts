@@ -5,7 +5,7 @@
 
 export class StatusError extends Error {
 	public statusCode: number;
-	public statusMessage?: string;
+	public statusMessage: string | undefined;
 	public isClientError: boolean;
 	public isRetryable: boolean;
 

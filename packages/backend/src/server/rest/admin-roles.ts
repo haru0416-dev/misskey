@@ -343,7 +343,7 @@ export async function handleHonoApiAdminRolesUpdateDefaultPolicies(
 
 	Object.assign(deps.meta, after);
 	deps.meta.rootUser = null;
-	deps.publishInternalEvent?.('metaUpdated', { before: updateBefore, after });
+	deps.publishInternalEvent?.('metaUpdated', { ...(updateBefore === undefined ? {} : { before: updateBefore }), after });
 	deps.publishInternalEvent?.('policiesUpdated', after.policies);
 	await logModerationEventInDatabase(deps, me, 'updateServerSettings', {
 		before: before.policies,

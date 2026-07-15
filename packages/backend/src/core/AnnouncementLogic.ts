@@ -118,15 +118,15 @@ export async function updateAnnouncementWithModerationLog(
 ): Promise<void> {
 	await updateAnnouncementInDatabase(deps.db, announcement.id, {
 		updatedAt: new Date(),
-		title: values.title,
-		text: values.text,
+		...(values.title === undefined ? {} : { title: values.title }),
+		...(values.text === undefined ? {} : { text: values.text }),
 		imageUrl: values.imageUrl || null,
-		display: values.display,
-		icon: values.icon,
-		forExistingUsers: values.forExistingUsers,
-		silence: values.silence,
-		needConfirmationToRead: values.needConfirmationToRead,
-		isActive: values.isActive,
+		...(values.display === undefined ? {} : { display: values.display }),
+		...(values.icon === undefined ? {} : { icon: values.icon }),
+		...(values.forExistingUsers === undefined ? {} : { forExistingUsers: values.forExistingUsers }),
+		...(values.silence === undefined ? {} : { silence: values.silence }),
+		...(values.needConfirmationToRead === undefined ? {} : { needConfirmationToRead: values.needConfirmationToRead }),
+		...(values.isActive === undefined ? {} : { isActive: values.isActive }),
 	});
 
 	const after = await fetchAnnouncementByIdOrFailFromDatabase(deps.db, announcement.id);

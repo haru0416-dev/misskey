@@ -609,10 +609,10 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 			clientInfo,
 			clientId: clientInfo.id,
 			redirectUri: redirectUriValue,
-			state,
+			...(state === undefined ? {} : { state }),
 			requestedScope,
-			codeChallenge,
-			codeChallengeMethod,
+			...(codeChallenge === undefined ? {} : { codeChallenge }),
+			...(codeChallengeMethod === undefined ? {} : { codeChallengeMethod }),
 		};
 	}
 
@@ -632,7 +632,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 		return {
 			clientId: seed.clientId,
 			redirectUri: seed.redirectUri,
-			state: seed.state,
+			...(seed.state === undefined ? {} : { state: seed.state }),
 			scopes,
 			codeChallenge: seed.codeChallenge,
 			codeChallengeMethod: seed.codeChallengeMethod,
@@ -671,7 +671,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				...await deps.getCommonData(),
 				transactionId,
 				clientName: clientInfo.name,
-				clientLogo: clientInfo.logo ?? undefined,
+				...(clientInfo.logo == null ? {} : { clientLogo: clientInfo.logo }),
 				scope: authorizationRequest.scopes,
 			})));
 		} catch (error) {

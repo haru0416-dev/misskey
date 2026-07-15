@@ -4,9 +4,12 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined, type OmitUndefinedProperties } from '@/misc/clone.js';
 import { invalidParamError } from './error.js';
 
-export function parseHonoApiParams<Z extends z.ZodType>(schema: Z, body: Record<string, unknown>): z.infer<Z> {
+type ExactOptionalProperties<T> = T extends Record<string, unknown> ? OmitUndefinedProperties<T> : T;
+
+export function parseHonoApiParams<Z extends z.ZodType>(schema: Z, body: Record<string, unknown>): ExactOptionalProperties<z.infer<Z>> {
 	const result = schema.safeParse(body);
 
 	if (!result.success) {
@@ -17,5 +20,9 @@ export function parseHonoApiParams<Z extends z.ZodType>(schema: Z, body: Record<
 		});
 	}
 
-	return result.data;
+	if (result.data != null && typeof result.data === 'object' && !Array.isArray(result.data)) {
+		return omitUndefined(result.data) as ExactOptionalProperties<z.infer<Z>>;
+	}
+
+	return result.data as ExactOptionalProperties<z.infer<Z>>;
 }

@@ -69,15 +69,17 @@ export function createEmailService(
 		// `proxy` は @types/nodemailer の SMTPTransport.Options に無いが、実際の nodemailer は
 		// (nodemailer-proxy 経由で) サポートしている型定義側の欠落なので、ここだけ拡張して型を保つ。
 		const options: nodemailer.TransportOptions & SMTPTransport.Options & { proxy?: string } = {
-			host: meta.smtpHost ?? undefined,
-			port: meta.smtpPort ?? undefined,
+			...(meta.smtpHost == null ? {} : { host: meta.smtpHost }),
+			...(meta.smtpPort == null ? {} : { port: meta.smtpPort }),
 			secure: meta.smtpSecure,
 			ignoreTLS: !enableAuth,
-			proxy: config.outboundNetwork.proxy.smtpUrl,
-			auth: enableAuth ? {
-				user: meta.smtpUser ?? undefined,
-				pass: meta.smtpPass ?? undefined,
-			} : undefined,
+			...(config.outboundNetwork.proxy.smtpUrl == null ? {} : { proxy: config.outboundNetwork.proxy.smtpUrl }),
+			...(enableAuth ? {
+				auth: {
+					user: meta.smtpUser ?? '',
+					...(meta.smtpPass == null ? {} : { pass: meta.smtpPass }),
+				},
+			} : {}),
 		};
 		const transporter = nodemailer.createTransport(options);
 

@@ -14,7 +14,8 @@ import type { MiUser } from '@/models/User.js';
 
 export type ChatRoomRecordOrder = 'asc' | 'desc';
 
-type ChatRoomUpdate = Partial<Pick<ChatRoomInsert, 'name' | 'description' | 'isArchived'>>;
+type ChatRoomUpdateValues = Pick<ChatRoomInsert, 'name' | 'description' | 'isArchived'>;
+type ChatRoomUpdate = { [K in keyof ChatRoomUpdateValues]?: ChatRoomUpdateValues[K] | undefined };
 
 function deserializeChatRoom(row: ChatRoomRow): MiChatRoom {
 	return {

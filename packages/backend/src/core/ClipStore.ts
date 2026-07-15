@@ -44,8 +44,8 @@ export function resolveClipPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: ClipOrder;
 } {
 	return resolveDateIdPagination(idService, options);

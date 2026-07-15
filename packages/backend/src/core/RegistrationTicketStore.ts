@@ -166,8 +166,8 @@ export function resolveRegistrationTicketPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: RegistrationTicketOrder;
 } {
 	return resolveDateIdPagination(idService, options);

@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import { startDriveFileDeletion, type DriveFileDeletionDependencies } from '@/core/DriveFileDeletionLogic.js';
 import {
 	fetchDriveFileByIdFromDatabase,
@@ -86,7 +87,7 @@ export async function handleHonoApiDriveFilesList(
 		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
-	const files = await listDriveFilesForUserFromDatabase(deps.db, {
+	const files = await listDriveFilesForUserFromDatabase(deps.db, omitUndefined({
 		userId: me.id,
 		limit: params.limit,
 		sinceId,
@@ -94,7 +95,7 @@ export async function handleHonoApiDriveFilesList(
 		folderId: params.folderId,
 		type: params.type,
 		sort: params.sort ?? undefined,
-	});
+	}));
 
 	return await packDriveFileManyForHonoApi(deps, files, { detail: false, self: true });
 }
@@ -132,13 +133,13 @@ export async function handleHonoApiDriveStream(
 		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
-	const files = await listDriveFilesForUserFromDatabase(deps.db, {
+	const files = await listDriveFilesForUserFromDatabase(deps.db, omitUndefined({
 		userId: me.id,
 		limit: params.limit,
 		sinceId,
 		untilId,
 		type: params.type,
-	});
+	}));
 
 	return await packDriveFileManyForHonoApi(deps, files, { detail: false, self: true });
 }
@@ -368,12 +369,12 @@ export async function handleHonoApiDriveFilesUpdate(
 		}
 	}
 
-	const values: DriveFileUpdate = {
+	const values: DriveFileUpdate = omitUndefined({
 		folderId: params.folderId,
 		name: params.name,
 		isSensitive: params.isSensitive,
 		comment: params.comment,
-	};
+	});
 	await updateDriveFileInDatabase(deps.db, file.id, values);
 
 	const packed = await packDriveFileOrFailForHonoApi(deps, file.id, { self: true });

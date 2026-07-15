@@ -8,6 +8,7 @@ import * as readline from 'node:readline';
 import { Writable } from 'node:stream';
 import { domainToASCII } from 'node:url';
 import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { z } from 'zod';
 import type * as Bull from 'bullmq';
 import { createAntennaInDatabase, listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
@@ -66,13 +67,13 @@ const importLineJobOptions = {
 function toRelationshipJobForHonoApi(config: Pick<Config, 'queues'>, name: 'follow' | 'unfollow' | 'block' | 'unblock', data: RelationshipJobData) {
 	return {
 		name,
-		data: {
+		data: omitUndefined({
 			from: { id: data.from.id },
 			to: { id: data.to.id },
 			silent: data.silent,
 			requestId: data.requestId,
 			withReplies: data.withReplies,
-		},
+		}),
 		opts: queueRetentionOptions(config),
 	};
 }
@@ -631,7 +632,7 @@ export async function handleHonoQueueImportFollowing(deps: HonoQueueDbDependenci
 
 	await enqueueImportLines(deps, file.url, (target, index) => ({
 		name: 'importFollowingToDb',
-		data: { user: { id: user.id }, target, withReplies: job.data.withReplies } satisfies DbUserImportToDbJobData,
+		data: omitUndefined({ user: { id: user.id }, target, withReplies: job.data.withReplies }) satisfies DbUserImportToDbJobData,
 		opts: { ...importLineJobOptions, jobId: `import-following-${job.id}-${index}` },
 	}));
 }
@@ -664,12 +665,12 @@ export async function handleHonoQueueImportFollowingToDb(deps: HonoQueueDbDepend
 		if (target.id === job.data.user.id) return;
 
 		await deps.relationshipQueue.addBulk([
-			toRelationshipJobForHonoApi(deps.config, 'follow', {
+			toRelationshipJobForHonoApi(deps.config, 'follow', omitUndefined({
 				from: user,
 				to: { id: target.id },
 				silent: true,
 				withReplies: withReplies ?? job.data.withReplies,
-			}),
+			})),
 		]);
 	} catch {
 		// 元実装同様、行単位のエラーはログのみで処理を継続する

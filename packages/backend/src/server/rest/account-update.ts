@@ -31,6 +31,7 @@ import { langmap } from '@/misc/langmap.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import { birthdaySchema, descriptionSchema, followedMessageSchema, locationSchema, nameSchema } from '@/models/User.js';
 import { notificationRecieveConfigZodSchema } from '@/models/json-schema/user.js';
@@ -401,7 +402,7 @@ export async function handleHonoApiIUpdate(
 	}
 	if (ps.description !== undefined) profileUpdates.description = ps.description;
 	if (ps.followedMessage !== undefined) profileUpdates.followedMessage = ps.followedMessage;
-	if (ps.lang !== undefined) profileUpdates.lang = ps.lang as UserProfileUpdate['lang'];
+	if (ps.lang !== undefined) profileUpdates.lang = ps.lang;
 	if (ps.location !== undefined) profileUpdates.location = ps.location;
 	if (ps.birthday !== undefined) profileUpdates.birthday = ps.birthday;
 	if (ps.followingVisibility !== undefined) profileUpdates.followingVisibility = ps.followingVisibility;
@@ -423,7 +424,7 @@ export async function handleHonoApiIUpdate(
 		profileUpdates.hardMutedWords = ps.hardMutedWords;
 	}
 	if (ps.mutedInstances !== undefined) profileUpdates.mutedInstances = ps.mutedInstances;
-	if (ps.notificationRecieveConfig !== undefined) profileUpdates.notificationRecieveConfig = ps.notificationRecieveConfig as UserProfileUpdate['notificationRecieveConfig'];
+	if (ps.notificationRecieveConfig !== undefined) profileUpdates.notificationRecieveConfig = omitUndefined(ps.notificationRecieveConfig);
 	if (typeof ps.isLocked === 'boolean') updates.isLocked = ps.isLocked;
 	if (typeof ps.isExplorable === 'boolean') updates.isExplorable = ps.isExplorable;
 	if (typeof ps.hideOnlineStatus === 'boolean') updates.hideOnlineStatus = ps.hideOnlineStatus;

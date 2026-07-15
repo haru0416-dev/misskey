@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import { flashLikeExistsInDatabase, listFlashLikesByUserIdFromDatabase, listLikedFlashIdsByUserIdAndFlashIdsFromDatabase } from '@/core/FlashLikeStore.js';
 import {
 	createFlashInDatabase,
@@ -121,10 +122,10 @@ export async function packFlashManyForHonoApi(
 	const userById = new Map(packedUsers.map(u => [u.id, u]));
 	const likedFlashIdSet = new Set(likedFlashIds);
 
-	return await Promise.all(flashes.map(flash => packFlashForHonoApi(deps, flash, me, {
+	return await Promise.all(flashes.map(flash => packFlashForHonoApi(deps, flash, me, omitUndefined({
 		packedUser: userById.get(flash.userId),
 		likedFlashIds: likedFlashIdSet,
-	})));
+	}))));
 }
 
 export const flashCreateParamDef = z.object({
@@ -304,13 +305,13 @@ export async function handleHonoApiFlashMyLikes(
 		untilId = genId(params.untilDate);
 	}
 
-	const likes = await listFlashLikesByUserIdFromDatabase(deps.db, me.id, {
+	const likes = await listFlashLikesByUserIdFromDatabase(deps.db, me.id, omitUndefined({
 		limit: params.limit,
 		order,
 		sinceId,
 		untilId,
 		search: params.search,
-	});
+	}));
 
 	const packedFlashes = await packFlashManyForHonoApi(deps, likes.map(like => like.flash), me);
 	const packedFlashById = new Map(packedFlashes.map(flash => [flash.id, flash]));

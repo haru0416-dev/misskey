@@ -75,7 +75,10 @@ async function resetCaptcha(): Promise<void> {
 			turnstileSecretKey: null,
 			enableTestcaptcha: false,
 		});
-		publishInternalEvent('metaUpdated', { before, after });
+		publishInternalEvent('metaUpdated', {
+			...(before == null ? {} : { before }),
+			after,
+		});
 	} finally {
 		await pool.end();
 		redisForPub.disconnect();

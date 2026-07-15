@@ -225,7 +225,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return htmlResponse(UserPage({
 				user: packedUser,
 				profile,
-				sub: segments[1],
+				...(segments[1] === undefined ? {} : { sub: segments[1] }),
 				...(await deps.getCommonData()),
 				clientCtxJson: htmlSafeJsonStringify({ user: packedUser }),
 			}), entityPageHeaders(profile));
