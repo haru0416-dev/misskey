@@ -26,6 +26,12 @@ const roles = [
 	role({ displayOrder: 999, name: 'privateRole', isPublic: false }, '999'),
 ];
 
+function requireRole(index: number) {
+	const value = roles[index];
+	if (value == null) throw new Error(`Missing role fixture at index ${index}`);
+	return value;
+}
+
 export const Default = {
 	render(args) {
 		return {
@@ -75,7 +81,7 @@ export const InitialIds = {
 	...Default,
 	args: {
 		...Default.args,
-		initialRoleIds: [roles[0].id, roles[1].id, roles[4].id, roles[6].id, roles[8].id, roles[10].id],
+		initialRoleIds: [0, 1, 4, 6, 8, 10].map(index => requireRole(index).id),
 	},
 } satisfies StoryObj<typeof MkRoleSelectDialog>;
 

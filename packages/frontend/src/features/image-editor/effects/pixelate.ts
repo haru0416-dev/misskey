@@ -19,12 +19,11 @@ export const fn = defineImageCompositorFunction<{
 }>({
 	shader,
 	main: ({ gl, u, params }) => {
-		gl.uniform2f(u.offset, params.offsetX / 2, params.offsetY / 2);
-		gl.uniform2f(u.scale, params.scaleX / 2, params.scaleY / 2);
-		gl.uniform1i(u.ellipse, params.ellipse ? 1 : 0);
-		gl.uniform1f(u.angle, params.angle / 2);
-		gl.uniform1f(u.strength, params.strength * params.strength);
-		gl.uniform1i(u.samples, 256);
+		gl.uniform2f(u('offset'), params.offsetX / 2, params.offsetY / 2);
+		gl.uniform2f(u('scale'), params.scaleX / 2, params.scaleY / 2);
+		gl.uniform1i(u('ellipse'), params.ellipse ? 1 : 0);
+		gl.uniform1f(u('angle'), params.angle / 2);
+		gl.uniform1f(u('strength'), params.strength * params.strength);
 	},
 });
 

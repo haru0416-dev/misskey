@@ -100,7 +100,7 @@ if (props.particle) {
 			yA: origin + (Math.cos(angle) * pos),
 			xB: origin + (Math.sin(angle) * (pos + velocity)),
 			yB: origin + (Math.cos(angle) * (pos + velocity)),
-			color: colors[Math.floor(Math.random() * colors.length)],
+			color: colors[Math.floor(Math.random() * colors.length)] ?? '#FFE202',
 		});
 	}
 }

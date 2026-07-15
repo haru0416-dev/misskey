@@ -19,6 +19,28 @@ SPDX-License-Identifier: AGPL-3.0-only
 </MkContainer>
 </template>
 
+<script lang="ts">
+export function createActivityData(normal: number[], reply: number[], renote: number[]) {
+	if (reply.length !== normal.length || renote.length !== normal.length) {
+		throw new Error(`Activity series length mismatch: normal=${normal.length}, reply=${reply.length}, renote=${renote.length}`);
+	}
+
+	return normal.map((notes, index) => {
+		const replies = reply[index];
+		const renotes = renote[index];
+		if (replies == null || renotes == null) {
+			throw new Error(`Activity series value is missing at index ${index}`);
+		}
+		return {
+			total: notes + replies + renotes,
+			notes,
+			replies,
+			renotes,
+		};
+	});
+}
+</script>
+
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { useWidgetPropsManager } from './widget.js';
@@ -86,12 +108,12 @@ misskeyApiGet('charts/user/notes', {
 	span: 'day',
 	limit: 7 * 21,
 }).then(res => {
-	activity.value = res.diffs.normal.map((_, i) => ({
-		total: res.diffs.normal[i] + res.diffs.reply[i] + res.diffs.renote[i],
-		notes: res.diffs.normal[i],
-		replies: res.diffs.reply[i],
-		renotes: res.diffs.renote[i],
-	}));
+	try {
+		activity.value = createActivityData(res.diffs.normal, res.diffs.reply, res.diffs.renote);
+	} catch (error) {
+		console.error(error);
+		activity.value = [];
+	}
 	fetching.value = false;
 });
 

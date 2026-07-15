@@ -112,9 +112,9 @@ const iconOnly = computed(() => {
 });
 
 const otherMenuItemIndicated = computed(() => {
-	for (const def in navbarItemDef) {
-		if (prefer.menu.includes(def)) continue;
-		if (navbarItemDef[def].indicated) return true;
+	for (const [key, def] of Object.entries(navbarItemDef)) {
+		if (prefer.menu.includes(key)) continue;
+		if (def.indicated) return true;
 	}
 	return false;
 });

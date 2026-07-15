@@ -50,6 +50,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						</template>
 
 						<XLayer
+							v-if="layers[i] != null"
 							v-model:layer="layers[i]"
 						></XLayer>
 					</MkFolder>
@@ -388,7 +389,9 @@ function swapUpLayer(layer: WatermarkPreset['layers'][number]) {
 	const index = layers.findIndex(l => l.id === layer.id);
 	if (index > 0) {
 		const tmp = layers[index - 1];
-		layers[index - 1] = layers[index];
+		const current = layers[index];
+		if (tmp == null || current == null) return;
+		layers[index - 1] = current;
 		layers[index] = tmp;
 	}
 }
@@ -397,7 +400,9 @@ function swapDownLayer(layer: WatermarkPreset['layers'][number]) {
 	const index = layers.findIndex(l => l.id === layer.id);
 	if (index < layers.length - 1) {
 		const tmp = layers[index + 1];
-		layers[index + 1] = layers[index];
+		const current = layers[index];
+		if (tmp == null || current == null) return;
+		layers[index + 1] = current;
 		layers[index] = tmp;
 	}
 }

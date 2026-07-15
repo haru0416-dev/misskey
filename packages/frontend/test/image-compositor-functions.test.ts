@@ -17,14 +17,15 @@ describe('image compositor functions', () => {
 		} as unknown as WebGL2RenderingContext;
 		const program = {} as WebGLProgram;
 		const common = { gl, program, width: 100, height: 100, textures: new Map() };
+		const uniformLocation = {} as WebGLUniformLocation;
 		const blockContext = {
 			...common,
-			u: { amount: {} as WebGLUniformLocation, channelShift: {} as WebGLUniformLocation },
+			u: () => uniformLocation,
 			params: { amount: 2, strength: 0.1, width: 0.2, height: 0.2, channelShift: 0, seed: 1 },
 		};
 		const tearingContext = {
 			...common,
-			u: { amount: {} as WebGLUniformLocation, channelShift: {} as WebGLUniformLocation },
+			u: () => uniformLocation,
 			params: { amount: 2, strength: 0.1, size: 0.2, channelShift: 0, seed: 1 },
 		};
 

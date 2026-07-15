@@ -26,22 +26,22 @@ export const FN_frame = defineImageCompositorFunction<{
 
 		gl.activeTexture(gl.TEXTURE1);
 		gl.bindTexture(gl.TEXTURE_2D, image.texture);
-		gl.uniform1i(u.image, 1);
+		gl.uniform1i(u('image'), 1);
 
-		gl.uniform1i(u.topLabelEnabled, params.topLabelEnabled ? 1 : 0);
-		gl.uniform1i(u.bottomLabelEnabled, params.bottomLabelEnabled ? 1 : 0);
-		gl.uniform1f(u.paddingTop, params.paddingTop);
-		gl.uniform1f(u.paddingBottom, params.paddingBottom);
-		gl.uniform1f(u.paddingLeft, params.paddingLeft);
-		gl.uniform1f(u.paddingRight, params.paddingRight);
-		gl.uniform3f(u.bg, params.bg[0], params.bg[1], params.bg[2]);
+		gl.uniform1i(u('topLabelEnabled'), params.topLabelEnabled ? 1 : 0);
+		gl.uniform1i(u('bottomLabelEnabled'), params.bottomLabelEnabled ? 1 : 0);
+		gl.uniform1f(u('paddingTop'), params.paddingTop);
+		gl.uniform1f(u('paddingBottom'), params.paddingBottom);
+		gl.uniform1f(u('paddingLeft'), params.paddingLeft);
+		gl.uniform1f(u('paddingRight'), params.paddingRight);
+		gl.uniform3f(u('bg'), params.bg[0], params.bg[1], params.bg[2]);
 
 		if (params.topLabelEnabled && params.topLabel != null) {
 			const topLabel = textures.get(params.topLabel);
 			if (topLabel) {
 				gl.activeTexture(gl.TEXTURE2);
 				gl.bindTexture(gl.TEXTURE_2D, topLabel.texture);
-				gl.uniform1i(u.topLabel, 2);
+				gl.uniform1i(u('topLabel'), 2);
 			}
 		}
 
@@ -50,7 +50,7 @@ export const FN_frame = defineImageCompositorFunction<{
 			if (bottomLabel) {
 				gl.activeTexture(gl.TEXTURE3);
 				gl.bindTexture(gl.TEXTURE_2D, bottomLabel.texture);
-				gl.uniform1i(u.bottomLabel, 3);
+				gl.uniform1i(u('bottomLabel'), 3);
 			}
 		}
 	},

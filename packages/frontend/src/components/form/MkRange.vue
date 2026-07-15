@@ -216,7 +216,7 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 		ev.preventDefault();
 		let beforeValue = finalValue.value;
 		const containerRect = containerEl.value!.getBoundingClientRect();
-		const pointerX = 'touches' in ev && ev.touches.length > 0 ? ev.touches[0].clientX : 'clientX' in ev ? ev.clientX : 0;
+		const pointerX = 'touches' in ev && ev.touches.length > 0 ? (ev.touches.item(0)?.clientX ?? 0) : 'clientX' in ev ? ev.clientX : 0;
 		const pointerPositionOnContainer = pointerX - (containerRect.left + (thumbWidth / 2));
 		rawValue.value = Math.min(1, Math.max(0, pointerPositionOnContainer / (containerEl.value!.offsetWidth - thumbWidth)));
 

@@ -68,9 +68,9 @@ const props = defineProps<{
 const settingsWindowed = ref(window.innerWidth > WINDOW_THRESHOLD);
 const menu = ref(prefer.menu);
 const otherNavItemIndicated = computed<boolean>(() => {
-	for (const def in navbarItemDef) {
-		if (menu.value.includes(def)) continue;
-		if (navbarItemDef[def].indicated) return true;
+	for (const [key, def] of Object.entries(navbarItemDef)) {
+		if (menu.value.includes(key)) continue;
+		if (def.indicated) return true;
 	}
 	return false;
 });

@@ -39,6 +39,7 @@ const common = {
 		let buttons = canvas.getAllByRole<HTMLButtonElement>('button');
 		await expect(buttons).toHaveLength(1);
 		const i = buttons[0];
+		if (i == null) throw new Error('Ad details button was not found');
 		await expect(i).toBeInTheDocument();
 		await userEvent.click(i);
 		await expect(canvasElement).toHaveTextContent(i18n.ts._ad.back);
@@ -49,6 +50,7 @@ const common = {
 		await expect(buttons).toHaveLength(hasReduceFrequency ? 2 : 1);
 		const reduce = hasReduceFrequency ? buttons[0] : null;
 		const back = buttons[hasReduceFrequency ? 1 : 0];
+		if (back == null) throw new Error('Ad back button was not found');
 		if (reduce) {
 			await expect(reduce).toBeInTheDocument();
 			await expect(reduce).toHaveTextContent(i18n.ts._ad.reduceFrequencyOfThisAd);

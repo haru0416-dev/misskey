@@ -270,10 +270,8 @@ export class Paginator<
 			apiRes.reverse();
 		}
 
-		for (let i = 0; i < apiRes.length; i++) {
-			const item = apiRes[i];
-			if (i === 3) item._shouldInsertAd_ = true;
-		}
+		const fourthItem = apiRes[3];
+		if (fourthItem != null) fourthItem._shouldInsertAd_ = true;
 
 		this.pushItems(apiRes);
 
@@ -334,10 +332,8 @@ export class Paginator<
 		}
 		if (abortController.signal.aborted) return;
 
-		for (let i = 0; i < apiRes.length; i++) {
-			const item = apiRes[i];
-			if (i === 10) item._shouldInsertAd_ = true;
-		}
+		const eleventhItem = apiRes[10];
+		if (eleventhItem != null) eleventhItem._shouldInsertAd_ = true;
 
 		if (this.order.value === 'oldest') {
 			this.unshiftItems(apiRes.toReversed(), false);

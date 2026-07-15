@@ -139,7 +139,7 @@ if (!['http:', 'https:'].includes(requestUrl.protocol)) throw new Error('invalid
 
 if (requestUrl.hostname === 'twitter.com' || requestUrl.hostname === 'mobile.twitter.com' || requestUrl.hostname === 'x.com' || requestUrl.hostname === 'mobile.x.com') {
 	const m = requestUrl.pathname.match(/^\/.+\/status(?:es)?\/(\d+)/);
-	if (m) tweetId.value = m[1];
+	if (m) tweetId.value = m[1] ?? null;
 }
 
 if (requestUrl.hostname === 'music.youtube.com' && requestUrl.pathname.match('^/(?:watch|channel)')) {

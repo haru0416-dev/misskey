@@ -42,4 +42,12 @@ describe('MkMiniChart', () => {
 		expect(polyline?.getAttribute('points')?.split(' ')).toHaveLength(4);
 		expect(setInterval).not.toHaveBeenCalled();
 	});
+
+	test('does not draw chart marks for an empty series', () => {
+		const result = render(MkMiniChart, { props: { src: [] } });
+
+		expect(result.container.querySelector('polygon')).toBeNull();
+		expect(result.container.querySelector('polyline')).toBeNull();
+		expect(result.container.querySelector('circle')).toBeNull();
+	});
 });

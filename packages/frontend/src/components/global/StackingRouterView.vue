@@ -69,21 +69,24 @@ const tabs = shallowRef([{
 }]);
 
 function mount() {
-	const currentTab = tabs.value[tabs.value.length - 1];
+	const currentTab = tabs.value.at(-1);
+	if (currentTab == null) return;
 	tabs.value = [currentTab];
 }
 
 function back() {
 	if (tabs.value.length <= 1) return; // transitionの関係でタブが1つの状態でbackが呼ばれることがある
-	const prev = tabs.value[tabs.value.length - 2];
+	const prev = tabs.value.at(-2);
+	if (prev == null) return;
 	tabs.value = [...tabs.value.slice(0, tabs.value.length - 1)];
 	router?.replaceByPath(prev.fullPath);
 }
 
 router.useListener('change', ({ resolved }) => {
-	const currentTab = tabs.value[tabs.value.length - 1];
-	const routePath = resolved.route.path;
 	if (resolved == null || 'redirect' in resolved.route) return;
+	const currentTab = tabs.value.at(-1);
+	if (currentTab == null) return;
+	const routePath = resolved.route.path;
 	if (resolved.route.path === currentTab.routePath && deepEqual(resolved.props, currentTab.props)) return;
 	const fullPath = router.getCurrentFullPath();
 
@@ -117,7 +120,8 @@ router.useListener('change', ({ resolved }) => {
 });
 
 router.useListener('replace', ({ fullPath }) => {
-	const currentTab = tabs.value[tabs.value.length - 1];
+	const currentTab = tabs.value.at(-1);
+	if (currentTab == null) return;
 	currentTab.fullPath = fullPath;
 	tabs.value = [...tabs.value.slice(0, tabs.value.length - 1), currentTab];
 });

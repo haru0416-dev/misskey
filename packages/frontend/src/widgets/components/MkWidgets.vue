@@ -84,7 +84,7 @@ const emit = defineEmits<{
 const widgetRefs = {} as Record<string, Component & { configure: () => void }>;
 
 function configWidget(id: string) {
-	widgetRefs[id].configure();
+	widgetRefs[id]?.configure();
 }
 
 const {

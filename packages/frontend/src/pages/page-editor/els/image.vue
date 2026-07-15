@@ -43,10 +43,12 @@ const file = ref<Misskey.entities.DriveFile | null>(null);
 
 async function choose() {
 	chooseDriveFile({ multiple: false }).then((fileResponse) => {
-		file.value = fileResponse[0];
+		const selectedFile = fileResponse[0];
+		if (selectedFile == null) return;
+		file.value = selectedFile;
 		emit('update:modelValue', {
 			...props.modelValue,
-			fileId: file.value.id,
+			fileId: selectedFile.id,
 		});
 	});
 }

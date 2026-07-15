@@ -253,6 +253,7 @@ function exec() {
 			fetching.value = false;
 		} else {
 			const [username, host] = props.q.toString().split('@');
+			if (username == null) return;
 			misskeyApi('users/search-by-username-and-host', {
 				username: username,
 				host: host,
@@ -310,7 +311,7 @@ function exec() {
 			return;
 		}
 
-		mfmParams.value = MFM_PARAMS[props.q.tag].filter(param => param.startsWith(props.q.params.at(-1) ?? ''));
+		mfmParams.value = (MFM_PARAMS[props.q.tag] ?? []).filter(param => param.startsWith(props.q.params.at(-1) ?? ''));
 	}
 }
 
@@ -328,7 +329,8 @@ function onKeydown(event: KeyboardEvent) {
 		case 'Enter':
 			if (select.value !== -1) {
 				cancel();
-				(items.value[select.value] as any).click();
+				const item = items.value[select.value];
+				if (item instanceof HTMLElement) item.click();
 			} else {
 				props.close();
 			}
@@ -390,8 +392,10 @@ function applySelect() {
 	}
 
 	if (select.value !== -1) {
-		items.value[select.value].setAttribute('data-selected', 'true');
-		(items.value[select.value] as any).focus();
+		const item = items.value[select.value];
+		if (item == null) return;
+		item.setAttribute('data-selected', 'true');
+		if (item instanceof HTMLElement) item.focus();
 	}
 }
 

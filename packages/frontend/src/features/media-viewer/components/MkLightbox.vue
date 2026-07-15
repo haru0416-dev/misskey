@@ -83,8 +83,8 @@ watch(currentIndex, (newIndex, oldIndex) => {
 }, { immediate: true });
 
 watch(currentIndex, newIndex => {
-	for (let i = 0; i < props.contents.length; i++) {
-		const source = props.contents[i].sourceElement;
+	for (const [i, content] of props.contents.entries()) {
+		const source = content.sourceElement;
 		if (source != null) source.style.visibility = i === newIndex ? 'hidden' : '';
 	}
 }, { immediate: true });

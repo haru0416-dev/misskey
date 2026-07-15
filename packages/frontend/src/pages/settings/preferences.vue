@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 					<div class="_gaps_m">
 						<SearchMarker :keywords="['language']">
-							<MkSelect v-model="lang" :items="langs.map(x => ({ label: x[1], value: x[0] }))">
+							<MkSelect v-model="lang" :items="langs.flatMap(([value, label]) => value == null || label == null ? [] : [{ label, value }])">
 								<template #label><SearchLabel>{{ i18n.ts.uiLanguage }}</SearchLabel></template>
 								<template #caption>
 									<I18n :src="i18n.ts.i18nInfo" tag="span">

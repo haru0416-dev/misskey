@@ -10,23 +10,24 @@ import { defineImageCompositorFunction } from '@/features/image-editor/core/Imag
 import { i18n } from '@/i18n.js';
 
 type UniformLocations = {
-	origins: (WebGLUniformLocation | null | undefined)[];
-	strengths: (WebGLUniformLocation | null | undefined)[];
-	heights: (WebGLUniformLocation | null | undefined)[];
+	origins: (WebGLUniformLocation | undefined)[];
+	strengths: (WebGLUniformLocation | undefined)[];
+	heights: (WebGLUniformLocation | undefined)[];
 };
 
 const locationsByProgram = new WeakMap<WebGLProgram, UniformLocations>();
 
 function getLocation(
-	locations: (WebGLUniformLocation | null | undefined)[],
+	locations: (WebGLUniformLocation | undefined)[],
 	index: number,
 	gl: WebGL2RenderingContext,
 	program: WebGLProgram,
 	name: string,
-): WebGLUniformLocation | null {
+): WebGLUniformLocation {
 	const cached = locations[index];
 	if (cached !== undefined) return cached;
 	const location = gl.getUniformLocation(program, name);
+	if (location == null) throw new Error(`Uniform "${name}" is unavailable in tearing compositor function`);
 	locations[index] = location;
 	return location;
 }
@@ -40,8 +41,8 @@ export const fn = defineImageCompositorFunction<{
 }>({
 	shader,
 	main: ({ gl, program, u, params }) => {
-		gl.uniform1i(u.amount, params.amount);
-		gl.uniform1f(u.channelShift, params.channelShift);
+		gl.uniform1i(u('amount'), params.amount);
+		gl.uniform1f(u('channelShift'), params.channelShift);
 
 		const rnd = seedrandom(params.seed.toString());
 		let locations = locationsByProgram.get(program);

@@ -72,11 +72,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 			tag="div"
 		>
 			<template v-for="(note, i) in paginator.items.value" :key="note.id">
-				<div v-if="i > 0 && isSeparatorNeeded(paginator.items.value[i -1].createdAt, note.createdAt)" :data-scroll-anchor="note.id">
+			<div v-if="getNoteSeparator(paginator.items.value, i, note.createdAt) != null" :data-scroll-anchor="note.id">
 					<div :class="$style.date">
-						<span><i class="ti ti-chevron-up"></i> {{ getSeparatorInfo(paginator.items.value[i -1].createdAt, note.createdAt)?.prevText }}</span>
+						<span><i class="ti ti-chevron-up"></i> {{ getNoteSeparator(paginator.items.value, i, note.createdAt)?.prevText }}</span>
 						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-						<span>{{ getSeparatorInfo(paginator.items.value[i -1].createdAt, note.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+						<span>{{ getNoteSeparator(paginator.items.value, i, note.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
 					</div>
 					<MkNote :class="$style.note" :note="note" :withHardMute="true"/>
 				</div>
@@ -270,19 +270,26 @@ const virtualizer = useVirtualizer(computed(() => ({
 	useAnimationFrameWithResizeObserver: true,
 })));
 
-const virtualRows = computed(() => virtualizer.value.getVirtualItems().map((virtualItem) => {
+const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((virtualItem) => {
 	const note = paginator.items.value[virtualItem.index];
+	if (note == null) return [];
 	const previousNote = paginator.items.value[virtualItem.index - 1];
 	const separatorInfo = previousNote && isSeparatorNeeded(previousNote.createdAt, note.createdAt)
 		? getSeparatorInfo(previousNote.createdAt, note.createdAt)
 		: null;
-	return {
+	return [{
 		index: virtualItem.index,
 		start: virtualItem.start,
 		note,
 		separatorInfo,
-	};
+	}];
 }));
+
+function getNoteSeparator(notes: Misskey.entities.Note[], index: number, createdAt: string) {
+	const previousNote = notes[index - 1];
+	if (previousNote == null || !isSeparatorNeeded(previousNote.createdAt, createdAt)) return null;
+	return getSeparatorInfo(previousNote.createdAt, createdAt);
+}
 
 const enteringNoteIds = shallowRef(new Set<string>());
 const leavingNoteIds = shallowRef(new Set<string>());

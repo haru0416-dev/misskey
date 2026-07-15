@@ -50,8 +50,10 @@ const dialog = useTemplateRef('dialog');
 const values = ref((() => {
 	const obj: Record<string, any> = {};
 	for (const item in props.form) {
-		if ('default' in props.form[item]) {
-			obj[item] = props.form[item].default ?? null;
+		const definition = props.form[item];
+		if (definition == null) continue;
+		if ('default' in definition) {
+			obj[item] = definition.default ?? null;
 		} else {
 			obj[item] = null;
 		}

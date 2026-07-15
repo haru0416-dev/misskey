@@ -72,7 +72,9 @@ describe('MkPreferenceContainer', () => {
 		expect(result.container.querySelector('.ti-user-cog')).not.toBeNull();
 		expect(result.container.querySelector('.ti-cloud-cog')).not.toBeNull();
 
-		const options = mocks.popupMenu.mock.calls[0][2];
+		const popupCall = mocks.popupMenu.mock.calls[0];
+		assert.ok(popupCall != null);
+		const options = popupCall[2];
 		options.onClosing();
 		expect(mocks.dispose).toHaveBeenCalledOnce();
 

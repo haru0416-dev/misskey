@@ -101,8 +101,14 @@ export function copyGridDataToClipboard(gridItems: Ref<DataSource[]> | DataSourc
 	for (let row = bounds.leftTop.row; row <= bounds.rightBottom.row; row++) {
 		const rowItems = Array.of<string>();
 		for (let col = bounds.leftTop.col; col <= bounds.rightBottom.col; col++) {
-			const { bindTo, events } = context.columns[col].setting;
-			const value = items[row][bindTo];
+			const column = context.columns[col];
+			const item = items[row];
+			if (column == null || item == null) {
+				rowItems.push('');
+				continue;
+			}
+			const { bindTo, events } = column.setting;
+			const value = item[bindTo];
 			const transformValue = events?.copy
 				? events.copy(value)
 				: typeof value === 'object' || Array.isArray(value)
@@ -158,12 +164,14 @@ export async function pasteToGridFromClipboard(
 		.split('\n')
 		.map((it) => it.split('\t'));
 
-	if (lines.length === 1 && lines[0].length === 1) {
+	const firstLine = lines[0];
+	if (lines.length === 1 && firstLine?.length === 1) {
 		// 単独文字列の場合は選択範囲全体に同じテキストを貼り付ける
+		const value = firstLine[0] ?? '';
 		const ranges = context.rangedCells;
 		for (const cell of ranges) {
 			if (cell.column.setting.editable) {
-				callback(cell.row, cell.column, parseValue(lines[0][0], cell.column.setting));
+				callback(cell.row, cell.column, parseValue(value, cell.column.setting));
 			}
 		}
 	} else {
@@ -179,6 +187,7 @@ export async function pasteToGridFromClipboard(
 			}
 
 			const items = lines[rowIdx];
+			if (items == null) break;
 			for (let col = bounds.leftTop.col; col <= bounds.rightBottom.col; col++) {
 				const colIdx = col - offsetCol;
 				if (items.length <= colIdx) {
@@ -186,8 +195,11 @@ export async function pasteToGridFromClipboard(
 					break;
 				}
 
-				if (columns[col].setting.editable) {
-					callback(rows[row], columns[col], parseValue(items[colIdx], columns[col].setting));
+				const column = columns[col];
+				const targetRow = rows[row];
+				const value = items[colIdx];
+				if (column?.setting.editable && targetRow != null && value != null) {
+					callback(targetRow, column, parseValue(value, column.setting));
 				}
 			}
 		}

@@ -57,7 +57,7 @@ async function save() {
 			if (regexp) {
 				// check that the RegExp is valid
 				try {
-					const parsedRegexp = new RegExp(regexp[1], regexp[2]);
+					const parsedRegexp = new RegExp(regexp[1] ?? '', regexp[2] ?? '');
 					// note that regex lines will not be split by spaces!
 				} catch (err) {
 					// invalid syntax: do not save, do not reset changed flag

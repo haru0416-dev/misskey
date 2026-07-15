@@ -28,6 +28,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 </component>
 </template>
 
+<script lang="ts">
+export function requireReactionCount(reactions: Record<string, number>, reaction: string): number {
+	const count = reactions[reaction];
+	if (count == null) {
+		throw new Error(`Reaction count is missing for the current user's reaction: ${reaction}`);
+	}
+	return count;
+}
+</script>
+
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
 import { inject, watch, ref } from 'vue';
@@ -60,8 +70,8 @@ const initialReactions = new Set(Object.keys(props.reactions));
 const _reactions = ref<[string, number][]>([]);
 const hasMoreReactions = ref(false);
 
-if (props.myReaction != null && !(props.myReaction in props.reactions)) {
-	_reactions.value.push([props.myReaction, props.reactions[props.myReaction]]);
+if (props.myReaction != null) {
+	requireReactionCount(props.reactions, props.myReaction);
 }
 
 function onMockToggleReaction(emoji: string, count: number) {
@@ -69,8 +79,10 @@ function onMockToggleReaction(emoji: string, count: number) {
 
 	const i = _reactions.value.findIndex((item) => item[0] === emoji);
 	if (i < 0) return;
+	const reaction = _reactions.value[i];
+	if (reaction == null) return;
 
-	emit('mockUpdateMyReaction', emoji, (count - _reactions.value[i][1]));
+	emit('mockUpdateMyReaction', emoji, (count - reaction[1]));
 }
 
 function canReact(reaction: string) {
@@ -84,10 +96,13 @@ watch([() => props.reactions, () => props.maxNumber], ([newSource, maxNumber]) =
 	hasMoreReactions.value = Object.keys(newSource).length > maxNumber;
 
 	for (let i = 0; i < _reactions.value.length; i++) {
-		const reaction = _reactions.value[i][0];
-		if (reaction in newSource && newSource[reaction] !== 0) {
-			_reactions.value[i][1] = newSource[reaction];
-			newReactions.push(_reactions.value[i]);
+		const current = _reactions.value[i];
+		if (current == null) continue;
+		const reaction = current[0];
+		const count = newSource[reaction];
+		if (count != null && count !== 0) {
+			current[1] = count;
+			newReactions.push(current);
 		}
 	}
 
@@ -116,7 +131,8 @@ watch([() => props.reactions, () => props.maxNumber], ([newSource, maxNumber]) =
 	newReactions = newReactions.slice(0, props.maxNumber);
 
 	if (props.myReaction && !newReactions.some(([reaction]) => reaction === props.myReaction)) {
-		newReactions.push([props.myReaction, newSource[props.myReaction]]);
+		const count = requireReactionCount(newSource, props.myReaction);
+		newReactions.push([props.myReaction, count]);
 	}
 
 	_reactions.value = newReactions;

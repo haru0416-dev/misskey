@@ -134,7 +134,8 @@ export function deleteProfile(name: string): void {
 	if (prefer['deck.profiles'].length === 0) {
 		createFirstProfile();
 	} else {
-		switchProfile(prefer['deck.profiles'][0]);
+		const firstProfile = prefer['deck.profiles'][0];
+		if (firstProfile != null) switchProfile(firstProfile);
 	}
 }
 
@@ -153,12 +154,19 @@ export function removeColumn(id: Column['id']) {
 
 export function swapColumn(a: Column['id'], b: Column['id']) {
 	const aX = layout.value.findIndex((ids) => ids.indexOf(a) !== -1);
-	const aY = layout.value[aX].findIndex((id) => id === a);
 	const bX = layout.value.findIndex((ids) => ids.indexOf(b) !== -1);
-	const bY = layout.value[bX].findIndex((id) => id === b);
+	const aRow = layout.value[aX];
+	const bRow = layout.value[bX];
+	if (aRow == null || bRow == null) return;
+	const aY = aRow.findIndex((id) => id === a);
+	const bY = bRow.findIndex((id) => id === b);
+	if (aY < 0 || bY < 0) return;
 	const newLayout = deepClone(layout.value);
-	newLayout[aX][aY] = b;
-	newLayout[bX][bY] = a;
+	const newARow = newLayout[aX];
+	const newBRow = newLayout[bX];
+	if (newARow == null || newBRow == null) return;
+	newARow[aY] = b;
+	newBRow[bY] = a;
 	layout.value = newLayout;
 	saveCurrentDeckProfile();
 }
@@ -168,8 +176,9 @@ export function swapLeftColumn(id: Column['id']) {
 	layout.value.some((ids, i) => {
 		if (ids.includes(id)) {
 			const left = layout.value[i - 1];
-			if (left) {
-				newLayout[i - 1] = layout.value[i];
+			const current = layout.value[i];
+			if (left && current) {
+				newLayout[i - 1] = current;
 				newLayout[i] = left;
 				layout.value = newLayout;
 			}
@@ -185,8 +194,9 @@ export function swapRightColumn(id: Column['id']) {
 	layout.value.some((ids, i) => {
 		if (ids.includes(id)) {
 			const right = layout.value[i + 1];
-			if (right) {
-				newLayout[i + 1] = layout.value[i];
+			const current = layout.value[i];
+			if (right && current) {
+				newLayout[i + 1] = current;
 				newLayout[i] = right;
 				layout.value = newLayout;
 			}
@@ -200,7 +210,9 @@ export function swapRightColumn(id: Column['id']) {
 export function swapUpColumn(id: Column['id']) {
 	const newLayout = deepClone(layout.value);
 	const idsIndex = layout.value.findIndex((ids) => ids.includes(id));
-	const ids = deepClone(layout.value[idsIndex]);
+	const sourceIds = layout.value[idsIndex];
+	if (sourceIds == null) return;
+	const ids = deepClone(sourceIds);
 	ids.some((x, i) => {
 		if (x === id) {
 			const up = ids[i - 1];
@@ -221,7 +233,9 @@ export function swapUpColumn(id: Column['id']) {
 export function swapDownColumn(id: Column['id']) {
 	const newLayout = deepClone(layout.value);
 	const idsIndex = layout.value.findIndex((ids) => ids.includes(id));
-	const ids = deepClone(layout.value[idsIndex]);
+	const sourceIds = layout.value[idsIndex];
+	if (sourceIds == null) return;
+	const ids = deepClone(sourceIds);
 	ids.some((x, i) => {
 		if (x === id) {
 			const down = ids[i + 1];
@@ -242,8 +256,11 @@ export function swapDownColumn(id: Column['id']) {
 export function stackLeftColumn(id: Column['id']) {
 	let newLayout = deepClone(layout.value);
 	const i = layout.value.findIndex((ids) => ids.includes(id));
+	if (i <= 0) return;
 	newLayout = newLayout.map((ids) => ids.filter((_id) => _id !== id));
-	newLayout[i - 1].push(id);
+	const left = newLayout[i - 1];
+	if (left == null) return;
+	left.push(id);
 	newLayout = newLayout.filter((ids) => ids.length > 0);
 	layout.value = newLayout;
 	saveCurrentDeckProfile();
@@ -253,6 +270,7 @@ export function popRightColumn(id: Column['id']) {
 	let newLayout = deepClone(layout.value);
 	const i = layout.value.findIndex((ids) => ids.includes(id));
 	const affected = newLayout[i];
+	if (affected == null) return;
 	newLayout = newLayout.map((ids) => ids.filter((_id) => _id !== id));
 	newLayout.splice(i + 1, 0, [id]);
 	newLayout = newLayout.filter((ids) => ids.length > 0);

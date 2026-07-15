@@ -17,7 +17,6 @@ uniform vec2 u_offset;
 uniform vec2 u_scale;
 uniform bool u_ellipse;
 uniform float u_angle;
-uniform int u_samples;
 uniform float u_strength;
 out vec4 out_color;
 

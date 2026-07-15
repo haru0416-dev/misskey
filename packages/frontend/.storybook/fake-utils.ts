@@ -174,8 +174,9 @@ export function boolean(seed?: string): boolean {
 }
 
 export function choose<T>(array: T[], seed?: string): T {
+	if (array.length === 0) throw new Error('Cannot choose from an empty array');
 	const rand = seed ? seedrandom(seed)() : Math.random();
-	return array[Math.floor(rand * array.length)];
+	return array[Math.floor(rand * array.length)]!;
 }
 
 export function firstName(seed?: string): string {

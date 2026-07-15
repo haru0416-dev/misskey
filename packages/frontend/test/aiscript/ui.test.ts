@@ -541,14 +541,17 @@ describe('AiScript UI API', () => {
 				id: 'id',
 			});
 			expect(buttons!.length).toBe(2);
-			const { onClick: onClickA, ...buttonA } = buttons![0];
+			const buttonAWithHandler = buttons?.[0];
+			const buttonBWithHandler = buttons?.[1];
+			if (buttonAWithHandler == null || buttonBWithHandler == null) throw new Error('Expected two buttons');
+			const { onClick: onClickA, ...buttonA } = buttonAWithHandler;
 			expect(buttonA).toStrictEqual({
 				text: 'a',
 				primary: true,
 				rounded: false,
 				disabled: false,
 			});
-			const { onClick: onClickB, ...buttonB } = buttons![1];
+			const { onClick: onClickB, ...buttonB } = buttonBWithHandler;
 			expect(buttonB).toStrictEqual({
 				text: 'b',
 				primary: true,

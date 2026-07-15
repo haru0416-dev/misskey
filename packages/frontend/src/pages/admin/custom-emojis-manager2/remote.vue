@@ -179,7 +179,7 @@ function setupGrid(): GridSetting {
 			styleRules: [
 				{
 					// チェックされたら背景色を変える
-					condition: ({ row }) => gridItems.value[row.index].checked,
+					condition: ({ row }) => gridItems.value[row.index]?.checked ?? false,
 					applyStyle: { className: $style.changedRow },
 				},
 			],
@@ -190,7 +190,10 @@ function setupGrid(): GridSetting {
 						text: i18n.ts._customEmojisManager._remote.importSelectionRows,
 						icon: 'ti ti-download',
 						action: async () => {
-							const targets = context.rangedRows.map(it => gridItems.value[it.index]);
+							const targets = context.rangedRows.flatMap(it => {
+								const item = gridItems.value[it.index];
+								return item == null ? [] : [item];
+							});
 							await importEmojis(targets);
 						},
 					},
@@ -215,11 +218,12 @@ function setupGrid(): GridSetting {
 						icon: 'ti ti-info-circle',
 						action: async () => {
 							const target = customEmojis.value[row.index];
+							if (target == null) return;
 							const { dispose } = os.popup(MkRemoteEmojiEditDialog, {
 								emoji: {
 									id: target.id,
 									name: target.name,
-									host: target.host!,
+									host: target.host ?? '',
 									license: target.license,
 									url: target.publicUrl,
 								},
@@ -238,7 +242,10 @@ function setupGrid(): GridSetting {
 						text: i18n.ts._customEmojisManager._remote.importSelectionRangesRows,
 						icon: 'ti ti-download',
 						action: async () => {
-							const targets = context.rangedCells.map(it => gridItems.value[it.row.index]);
+							const targets = context.rangedCells.flatMap(it => {
+								const item = gridItems.value[it.row.index];
+								return item == null ? [] : [item];
+							});
 							await importEmojis(targets);
 						},
 					},
@@ -305,8 +312,9 @@ function onGridEvent(event: GridEvent) {
 
 function onGridCellValueChange(event: GridCellValueChangeEvent) {
 	const { row, column, newValue } = event;
-	if (gridItems.value.length > row.index && column.setting.bindTo in gridItems.value[row.index]) {
-		(gridItems.value[row.index] as any)[column.setting.bindTo] = newValue;
+	const item = gridItems.value[row.index];
+	if (item != null && column.setting.bindTo in item) {
+		(item as any)[column.setting.bindTo] = newValue;
 	}
 }
 

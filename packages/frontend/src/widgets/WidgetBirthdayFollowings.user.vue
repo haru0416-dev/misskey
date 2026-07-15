@@ -40,7 +40,10 @@ const nowDate = computed(() => {
 	return date;
 });
 const birthdayDate = computed(() => {
-	const [year, month, day] = props.item.birthday.split('-').map((v) => parseInt(v, 10));
+	const parts = props.item.birthday.split('-');
+	const year = Number(parts[0]);
+	const month = Number(parts[1]);
+	const day = Number(parts[2]);
 	return new Date(year, month - 1, day, 0, 0, 0, 0);
 });
 

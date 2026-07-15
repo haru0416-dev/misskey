@@ -20,14 +20,14 @@ export const fn = defineImageCompositorFunction<{
 }>({
 	shader,
 	main: ({ gl, u, params }) => {
-		gl.uniform1f(u.angle, params.angle / 2);
-		gl.uniform1f(u.scale, params.scale * params.scale);
-		gl.uniform1f(u.major_radius, params.majorRadius);
-		gl.uniform1f(u.major_opacity, params.majorOpacity);
-		gl.uniform1f(u.minor_divisions, params.minorDivisions);
-		gl.uniform1f(u.minor_radius, params.minorRadius);
-		gl.uniform3f(u.color, params.color[0], params.color[1], params.color[2]);
-		gl.uniform1f(u.minor_opacity, params.minorOpacity);
+		gl.uniform1f(u('angle'), params.angle / 2);
+		gl.uniform1f(u('scale'), params.scale * params.scale);
+		gl.uniform1f(u('major_radius'), params.majorRadius);
+		gl.uniform1f(u('major_opacity'), params.majorOpacity);
+		gl.uniform1f(u('minor_divisions'), params.minorDivisions);
+		gl.uniform1f(u('minor_radius'), params.minorRadius);
+		gl.uniform3f(u('color'), params.color[0], params.color[1], params.color[2]);
+		gl.uniform1f(u('minor_opacity'), params.minorOpacity);
 	},
 });
 

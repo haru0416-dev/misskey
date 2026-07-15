@@ -75,7 +75,9 @@ misskeyApi('get-avatar-decorations').then(_avatarDecorations => {
 });
 
 function openAttachedDecoration(index: number) {
-	openDecoration(avatarDecorations.value.find(d => d.id === $i.avatarDecorations[index].id) ?? { id: '', url: '', name: '?', roleIdsThatCanBeUsedThisDecoration: [] }, index);
+	const attachedDecoration = $i.avatarDecorations[index];
+	if (attachedDecoration == null) return;
+	openDecoration(avatarDecorations.value.find(d => d.id === attachedDecoration.id) ?? { id: '', url: '', name: '?', roleIdsThatCanBeUsedThisDecoration: [] }, index);
 }
 
 async function openDecoration(avatarDecoration: {

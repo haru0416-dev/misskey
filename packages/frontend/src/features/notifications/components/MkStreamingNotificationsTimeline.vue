@@ -24,10 +24,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 			tag="div"
 		>
 			<div v-for="(notification, i) in paginator.items.value" :key="notification.id" :data-scroll-anchor="notification.id" :class="$style.item">
-				<div v-if="i > 0 && isSeparatorNeeded(paginator.items.value[i -1].createdAt, notification.createdAt)" :class="$style.date">
-					<span><i class="ti ti-chevron-up"></i> {{ getSeparatorInfo(paginator.items.value[i -1].createdAt, notification.createdAt)?.prevText }}</span>
+				<div v-if="getNotificationSeparator(paginator.items.value, i, notification.createdAt) != null" :class="$style.date">
+					<span><i class="ti ti-chevron-up"></i> {{ getNotificationSeparator(paginator.items.value, i, notification.createdAt)?.prevText }}</span>
 					<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-					<span>{{ getSeparatorInfo(paginator.items.value[i -1].createdAt, notification.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+					<span>{{ getNotificationSeparator(paginator.items.value, i, notification.createdAt)?.nextText }} <i class="ti ti-chevron-down"></i></span>
 				</div>
 				<div :class="$style.contentRow">
 					<MkNote v-if="['reply', 'quote', 'mention'].includes(notification.type) && 'note' in notification" :class="$style.content" :note="notification.note" :withHardMute="true"/>
@@ -88,6 +88,12 @@ const paginator = prefer.useGroupedNotifications ? markRaw(new Paginator('i/noti
 		excludeTypes: props.excludeTypes ?? undefined,
 	})),
 }));
+
+function getNotificationSeparator(notifications: { createdAt: string }[], index: number, createdAt: string) {
+	const previousNotification = notifications[index - 1];
+	if (previousNotification == null || !isSeparatorNeeded(previousNotification.createdAt, createdAt)) return null;
+	return getSeparatorInfo(previousNotification.createdAt, createdAt);
+}
 
 const MIN_POLLING_INTERVAL = 1000 * 10;
 const POLLING_INTERVAL =

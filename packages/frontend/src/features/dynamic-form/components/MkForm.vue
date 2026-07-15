@@ -83,13 +83,15 @@ function onSavingStateChange(key: string, changed: boolean, invalid: boolean) {
 const canSave = computed(() => {
 	for (const key in inputSavingStates.value) {
 		const state = inputSavingStates.value[key];
+		const formItem = props.form[key];
+		if (state == null || formItem == null) continue;
 		if (
-			('manualSave' in props.form[key] && props.form[key].manualSave && state.changed) ||
+			('manualSave' in formItem && formItem.manualSave && state.changed) ||
 			state.invalid
 	 	) {
 			return false;
 		}
-		if ('required' in props.form[key] && props.form[key].required) {
+		if ('required' in formItem && formItem.required) {
 			const val = values.value[key];
 			if (val === null || val === undefined || val === '') {
 				return false;

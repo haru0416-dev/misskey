@@ -283,9 +283,11 @@ export function useNoteCapture(props: {
 		latestPollVotedKey = newPollVotedKey;
 
 		const choices = [...$note.pollChoices];
+		const choice = choices[ctx.choice];
+		if (choice == null) return;
 		choices[ctx.choice] = {
-			...choices[ctx.choice],
-			votes: choices[ctx.choice].votes + 1,
+			...choice,
+			votes: choice.votes + 1,
 			...($i && ctx.userId === $i.id
 				? {
 						isVoted: true,

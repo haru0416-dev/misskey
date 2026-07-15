@@ -63,18 +63,20 @@ const change = () => {
 	if (images.value.length === 0 || slideA.value == null || slideB.value == null) return;
 
 	const index = Math.floor(Math.random() * images.value.length);
-	const img = `url(${ images.value[index].url })`;
+	const image = images.value[index];
+	if (image == null) return;
+	const img = `url(${ image.url })`;
 
 	slideB.value.style.backgroundImage = img;
 
 	slideB.value.classList.add('anime');
 	window.setTimeout(() => {
 		// 既にこのウィジェットがunmountされていたら要素がない
-		if (slideA.value == null) return;
+		if (slideA.value == null || slideB.value == null) return;
 
 		slideA.value.style.backgroundImage = img;
 
-		slideB.value!.classList.remove('anime');
+		slideB.value.classList.remove('anime');
 	}, 1000);
 };
 

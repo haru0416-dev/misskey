@@ -15,9 +15,9 @@ export const fn = defineImageCompositorFunction<{
 }>({
 	shader,
 	main: ({ gl, u, params }) => {
-		gl.uniform1f(u.r, params.r);
-		gl.uniform1f(u.g, params.g);
-		gl.uniform1f(u.b, params.b);
+		gl.uniform1f(u('r'), params.r);
+		gl.uniform1f(u('g'), params.g);
+		gl.uniform1f(u('b'), params.b);
 	},
 });
 
