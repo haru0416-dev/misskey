@@ -80,6 +80,10 @@ describe('misc:time', () => {
 		expect(dateUTC([2020, 0, 2, 3, 4, 5, 6]).toISOString()).toBe('2020-01-02T03:04:05.006Z');
 	});
 
+	test('the Unix epoch is accepted', () => {
+		expect(dateUTC([1970, 0]).getTime()).toBe(0);
+	});
+
 	test('sparse date parts are rejected', () => {
 		const sparse = new Array<number>(4);
 		sparse[0] = 2020;
