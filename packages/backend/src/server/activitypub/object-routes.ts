@@ -10,7 +10,7 @@ import type { Context } from 'hono';
 import type * as Redis from 'ioredis';
 import { listFollowersByFolloweeIdWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase } from '@/core/FollowingStore.js';
 import { fetchNoteByIdFromDatabase, listActivityPubOutboxNotesByUserIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
+import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
@@ -251,10 +251,14 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			const inStock = followings.length === limit + 1;
 			if (inStock) followings.pop();
 
-			const renderedUsers = await Promise.all(followings.map(async following => {
-				const target = await fetchUserByIdOrFailFromDatabase(deps.db, kind === 'followers' ? following.followerId : following.followeeId);
-				return getUserUri(deps.config, target);
-			}));
+			const targetIds = followings.map(following => kind === 'followers' ? following.followerId : following.followeeId);
+			const targets = await listUsersByIdsFromDatabase(deps.db, targetIds, { includeSuspended: true });
+			const targetById = new Map(targets.map(target => [target.id, target]));
+			const missingTargetIds = targetIds.filter(id => !targetById.has(id));
+			for (const target of await Promise.all(missingTargetIds.map(id => fetchUserByIdOrFailFromDatabase(deps.db, id)))) {
+				targetById.set(target.id, target);
+			}
+			const renderedUsers = targetIds.map(id => getUserUri(deps.config, targetById.get(id)!));
 
 			const rendered: Record<string, unknown> = {
 				id: `${partOf}?${urlQuery({ page: 'true', cursor: cursor ?? undefined })}`,
