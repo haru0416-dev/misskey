@@ -7,6 +7,8 @@ import { afterEach, assert, describe, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/vue';
 import { nextTick } from 'vue';
 import WidgetActivityChart from '@/widgets/WidgetActivity.chart.vue';
+import { createActivityData } from '@/widgets/WidgetActivity.vue';
+import { sumChartSeries } from '@/features/charts/components/MkChart.vue';
 
 const activity = Array.from({ length: 200 }, (_, index) => ({
 	total: index + 4,
@@ -92,5 +94,17 @@ describe('WidgetActivityChart', () => {
 
 		result.unmount();
 		expect(frames.size).toBe(0);
+	});
+
+	test('rejects mismatched activity series instead of filling missing values with zero', () => {
+		expect(() => createActivityData([1, 2], [3], [4, 5])).toThrow(
+			'Activity series length mismatch: normal=2, reply=1, renote=2',
+		);
+	});
+
+	test('rejects mismatched chart series instead of filling missing values with zero', () => {
+		expect(() => sumChartSeries([1, 2], [3])).toThrow(
+			'Chart series length mismatch: expected 2, received 1',
+		);
 	});
 });

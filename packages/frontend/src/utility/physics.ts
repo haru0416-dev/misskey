@@ -122,9 +122,9 @@ export function physics(container: HTMLElement) {
 	let animationFrameId = window.requestAnimationFrame(update);
 
 	function update() {
-		for (let i = 0; i < objEls.length; i++) {
-			const objEl = objEls[i];
+		for (const [i, objEl] of objEls.entries()) {
 			const obj = objs[i];
+			if (obj == null) continue;
 			const x = obj.position.x - objEl.offsetWidth / 2;
 			const y = obj.position.y - objEl.offsetHeight / 2;
 			const angle = obj.angle;

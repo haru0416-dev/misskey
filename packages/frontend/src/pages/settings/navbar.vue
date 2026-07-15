@@ -82,11 +82,11 @@ const menuDisplay = toRef(store, 'menuDisplay');
 const showNavbarSubButtons = prefer.model('showNavbarSubButtons');
 
 async function addItem() {
-	const menu = Object.keys(navbarItemDef).filter(k => !itemTypeValues.value.includes(k));
+	const menu = Object.entries(navbarItemDef).filter(([key]) => !itemTypeValues.value.includes(key));
 	const { canceled, result: item } = await os.select({
 		title: i18n.ts.addItem,
-		items: [...menu.map(k => ({
-			value: k, label: navbarItemDef[k].title,
+		items: [...menu.map(([key, definition]) => ({
+			value: key, label: definition.title,
 		})), {
 			value: '-', label: i18n.ts.divider,
 		}],

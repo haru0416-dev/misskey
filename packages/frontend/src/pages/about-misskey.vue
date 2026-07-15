@@ -442,11 +442,13 @@ function iconLoaded() {
 
 	const containerWidth = containerEl.value.offsetWidth;
 	for (let i = 0; i < 32; i++) {
+		const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+		if (emoji == null) continue;
 		easterEggEmojis.value.push({
 			id: i.toString(),
 			top: -(128 + (Math.random() * 256)),
 			left: (Math.random() * containerWidth),
-			emoji: emojis[Math.floor(Math.random() * emojis.length)],
+			emoji,
 		});
 	}
 

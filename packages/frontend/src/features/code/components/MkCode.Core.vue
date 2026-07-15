@@ -61,9 +61,10 @@ async function fetchLanguage(to: string): Promise<void> {
 			// Languages are specified by their id, they can also have aliases (i. e. "js" and "javascript")
 			return bundle.id === language || bundle.aliases?.includes(language);
 		});
-		if (bundles.length > 0) {
+		const bundle = bundles[0];
+		if (bundle != null) {
 			if (_DEV_) console.log(`Loading language: ${language}`);
-			await highlighter.loadLanguage(bundles[0].import);
+			await highlighter.loadLanguage(bundle.import);
 			codeLang.value = language;
 		} else {
 			codeLang.value = 'js';

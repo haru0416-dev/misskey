@@ -70,7 +70,7 @@ describe('ImageCompositor', () => {
 			functions: {
 				test: {
 					shader: 'uniform float u_amount;',
-					main: ({ gl: context, u }) => context.uniform1f(u.amount, 1),
+					main: ({ gl: context, u }) => context.uniform1f(u('amount'), 1),
 				},
 			},
 		});
@@ -84,5 +84,50 @@ describe('ImageCompositor', () => {
 		expect(gl.getUniformLocation).toHaveBeenCalledTimes(uniformLookups);
 		compositor.destroy(false);
 		expect(gl.deleteBuffer).toHaveBeenCalledOnce();
+	});
+
+	test('fails immediately when a compositor function requests an unknown uniform', () => {
+		const gl = createGl();
+		const canvas = window.document.createElement('canvas');
+		vi.spyOn(canvas, 'getContext').mockReturnValue(gl);
+		const compositor = new ImageCompositor({
+			canvas,
+			renderWidth: 100,
+			renderHeight: 100,
+			image: null,
+			functions: {
+				test: {
+					shader: 'uniform float u_amount;',
+					main: ({ gl: context, u }) => context.uniform1f(u('ammount'), 1),
+				},
+			},
+		});
+
+		expect(() => compositor.render([{ id: 'layer', functionId: 'test', params: {} }])).toThrow(
+			'Unknown uniform "ammount" in image compositor function "test"',
+		);
+	});
+
+	test('fails when WebGL does not expose a declared uniform', () => {
+		const gl = createGl();
+		vi.mocked(gl.getUniformLocation).mockImplementation((_program, name) => name === 'u_amount' ? null : {} as WebGLUniformLocation);
+		const canvas = window.document.createElement('canvas');
+		vi.spyOn(canvas, 'getContext').mockReturnValue(gl);
+		const compositor = new ImageCompositor({
+			canvas,
+			renderWidth: 100,
+			renderHeight: 100,
+			image: null,
+			functions: {
+				test: {
+					shader: 'uniform float u_amount;',
+					main: ({ gl: context, u }) => context.uniform1f(u('amount'), 1),
+				},
+			},
+		});
+
+		expect(() => compositor.render([{ id: 'layer', functionId: 'test', params: {} }])).toThrow(
+			'Uniform "amount" is unavailable in image compositor function "test"',
+		);
 	});
 });

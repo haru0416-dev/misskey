@@ -77,8 +77,9 @@ const NARROW_THRESHOLD = 600;
 const currentPage = computed(() => router.currentRef.value.child);
 
 const ro = new ResizeObserver((entries, observer) => {
-	if (entries.length === 0) return;
-	narrow.value = entries[0].borderBoxSize[0].inlineSize < NARROW_THRESHOLD;
+	const borderBox = entries[0]?.borderBoxSize[0];
+	if (borderBox == null) return;
+	narrow.value = borderBox.inlineSize < NARROW_THRESHOLD;
 });
 
 function skipAutoBackup() {

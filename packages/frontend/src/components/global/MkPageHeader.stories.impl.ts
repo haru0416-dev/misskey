@@ -6,6 +6,12 @@
 import { waitFor } from 'storybook/test';
 import MkPageHeader from './MkPageHeader.vue';
 import type { StoryObj } from '@storybook/vue3';
+
+function requireFixture<T>(value: T | undefined, name: string): T {
+	if (value == null) throw new Error(`Missing story fixture: ${name}`);
+	return value;
+}
+
 export const Empty = {
 	render(args) {
 		return {
@@ -57,7 +63,7 @@ export const Icon = {
 		...OneTab.args,
 		tabs: [
 			{
-				...OneTab.args.tabs[0],
+				...requireFixture(OneTab.args.tabs[0], 'OneTab.args.tabs[0]'),
 				icon: 'ti ti-home',
 				title: 'Home',
 			},
@@ -70,9 +76,7 @@ export const IconOnly = {
 		...Icon.args,
 		tabs: [
 			{
-				key: Icon.args.tabs[0].key,
-				icon: Icon.args.tabs[0].icon,
-				title: Icon.args.tabs[0].title,
+				...requireFixture(Icon.args.tabs[0], 'Icon.args.tabs[0]'),
 				iconOnly: true,
 			},
 		],

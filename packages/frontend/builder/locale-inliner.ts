@@ -43,7 +43,9 @@ export class LocaleInliner {
 		this.outputDir = options.outputDir;
 		this.scriptsDir = options.scriptsDir;
 		this.i18nFile = options.i18nFile;
-		this.i18nFileName = this.stripScriptDir(options.manifest[this.i18nFile].file);
+		const i18nChunk = options.manifest[this.i18nFile];
+		if (i18nChunk == null) throw new Error(`i18n entry '${this.i18nFile}' not found in manifest`);
+		this.i18nFileName = this.stripScriptDir(i18nChunk.file);
 		this.logger = options.logger;
 		this.i18nSymbol = 'i18n';
 		this.chunks = Object.values(options.manifest)
@@ -108,10 +110,9 @@ export class LocaleInliner {
 	}
 
 	async saveAllLocales(locales: Record<string, Locale>) {
-		const localeNames = Object.keys(locales);
-		for (const localeName of localeNames) {
+		for (const [localeName, locale] of Object.entries(locales)) {
 			this.logger.info(`Creating bundle for ${localeName}`);
-			await this.saveLocale(localeName, locales[localeName]);
+			await this.saveLocale(localeName, locale);
 		}
 		this.logger.info('Done');
 	}

@@ -23,9 +23,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		style="pointer-events: none;"
 	/>
 	<rect
+		v-if="today != null"
 		class="today"
 		width="1" height="1"
-		:x="activity[0].x" :y="activity[0].date.weekday"
+		:x="today.x" :y="today.date.weekday"
 		rx="1" ry="1"
 		fill="none"
 		stroke-width="0.1"
@@ -88,6 +89,8 @@ activity.slice().forEach((d, i) => {
 
 	if (d.date.weekday === 0) x--;
 });
+
+const today = activity[0] ?? null;
 </script>
 
 <style lang="scss" scoped>

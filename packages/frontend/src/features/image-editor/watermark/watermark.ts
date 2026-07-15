@@ -21,18 +21,18 @@ export const fn = defineImageCompositorFunction<
 	shader,
 	main: ({ gl, u, params, textures }) => {
 		// 基本パラメータ
-		gl.uniform1f(u.opacity, params.opacity ?? 1.0);
-		gl.uniform1f(u.scale, params.scale ?? 0.3);
-		gl.uniform1f(u.angle, params.angle ?? 0.0);
-		gl.uniform1i(u.cover, params.cover ? 1 : 0);
-		gl.uniform1i(u.repeat, params.repeat ? 1 : 0);
+		gl.uniform1f(u('opacity'), params.opacity ?? 1.0);
+		gl.uniform1f(u('scale'), params.scale ?? 0.3);
+		gl.uniform1f(u('angle'), params.angle ?? 0.0);
+		gl.uniform1i(u('cover'), params.cover ? 1 : 0);
+		gl.uniform1i(u('repeat'), params.repeat ? 1 : 0);
 		const ax = params.align?.x === 'left' ? 0 : params.align?.x === 'center' ? 1 : 2;
 		const ay = params.align?.y === 'top' ? 0 : params.align?.y === 'center' ? 1 : 2;
-		gl.uniform1i(u.alignX, ax);
-		gl.uniform1i(u.alignY, ay);
-		gl.uniform1f(u.margin, params.align?.margin ?? 0);
-		gl.uniform1f(u.repeatMargin, params.align?.margin ?? 0);
-		gl.uniform1i(u.noBBoxExpansion, params.noBoundingBoxExpansion ? 1 : 0);
+		gl.uniform1i(u('alignX'), ax);
+		gl.uniform1i(u('alignY'), ay);
+		gl.uniform1f(u('margin'), params.align?.margin ?? 0);
+		gl.uniform1f(u('repeatMargin'), params.align?.margin ?? 0);
+		gl.uniform1i(u('noBBoxExpansion'), params.noBoundingBoxExpansion ? 1 : 0);
 
 		// ウォーターマークテクスチャ
 		const wm = params.watermark ? textures.get(params.watermark) : null;
@@ -49,11 +49,11 @@ export const fn = defineImageCompositorFunction<
 				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 			}
 
-			gl.uniform1i(u.watermark, 1);
-			gl.uniform2f(u.wmResolution, wm.width, wm.height);
-			gl.uniform1i(u.wmEnabled, 1);
+			gl.uniform1i(u('watermark'), 1);
+			gl.uniform2f(u('wmResolution'), wm.width, wm.height);
+			gl.uniform1i(u('wmEnabled'), 1);
 		} else {
-			gl.uniform1i(u.wmEnabled, 0);
+			gl.uniform1i(u('wmEnabled'), 0);
 		}
 	},
 });

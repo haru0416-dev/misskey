@@ -36,13 +36,16 @@ export function getChartResolver(
 		const res = {};
 		for (const field of fields) {
 			const layers = field.split('.');
+			const leafKey = layers.pop();
+			if (leafKey == null) continue;
 			let current = res as any;
-			while (layers.length > 1) {
-				const currentKey = layers.shift()!;
+			while (layers.length > 0) {
+				const currentKey = layers.shift();
+				if (currentKey == null) break;
 				if (current[currentKey] == null) current[currentKey] = {};
 				current = current[currentKey];
 			}
-			current[layers[0]] = getChartArray(field, limit, {
+			current[leafKey] = getChartArray(field, limit, {
 				accumulate: option?.accumulate,
 				mul: option?.mulMap != null && field in option.mulMap ? option.mulMap[field] : undefined,
 			});

@@ -147,7 +147,8 @@ export class Autocomplete {
 				mentionIndexAlt !== -1 && mentionIndexAlt !== mentionIndex - 1 ? mentionIndexAlt : mentionIndex;
 
 			// メンションを構成する条件を満たしているか確認する
-			const isMention = mentionIndexLeft === 0 || '_@.-'.includes(mentionCandidate[mentionIndexLeft - 1]);
+			const precedingCharacter = mentionCandidate[mentionIndexLeft - 1];
+			const isMention = mentionIndexLeft === 0 || (precedingCharacter != null && '_@.-'.includes(precedingCharacter));
 
 			if (isMention) {
 				const username = mentionCandidate.substring(mentionIndexLeft + 1);

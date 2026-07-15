@@ -298,6 +298,7 @@ export class SnowfallEffect {
 	private setBuffer(name: string, value?: number[] | undefined) {
 		const { gl, buffers } = this;
 		const buffer = buffers[name];
+		if (buffer == null) return;
 
 		buffer.value = new Float32Array(value ?? buffer.value);
 
@@ -327,7 +328,9 @@ export class SnowfallEffect {
 	private setUniform(name: string, value?: number | number[] | Float32Array<ArrayBufferLike> | undefined) {
 		const { gl, uniforms } = this;
 		const uniform = uniforms[name];
+		if (uniform == null) return;
 		const setter = this.UNIFORM_SETTERS[uniform.type as keyof typeof this.UNIFORM_SETTERS];
+		if (setter == null) return;
 		const isMatrix = /^mat[2-4]$/i.test(uniform.type);
 
 		uniform.value = value ?? uniform.value;
@@ -469,9 +472,11 @@ export class SnowfallEffect {
 	private update(activeElapsed: number, delta: number) {
 		const { gl, buffers, wind } = this;
 		const elapsed = activeElapsed * this.speed;
+		const positionBuffer = buffers.position;
+		if (positionBuffer == null) return;
 
 		gl.clear(gl.COLOR_BUFFER_BIT);
-		gl.drawArrays(gl.POINTS, 0, buffers.position.value.length / buffers.position.size);
+		gl.drawArrays(gl.POINTS, 0, positionBuffer.value.length / positionBuffer.size);
 
 		if (Math.random() > 0.995) {
 			wind.target = (wind.min + Math.random() * (wind.max - wind.min)) * (Math.random() > 0.5 ? -1 : 1);

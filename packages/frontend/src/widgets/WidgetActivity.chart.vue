@@ -108,8 +108,7 @@ function render() {
 	const nextPointsReply: string[] = [];
 	const nextPointsRenote: string[] = [];
 	const nextPointsTotal: string[] = [];
-	for (let i = 0; i < activity.length; i++) {
-		const data = activity[i];
+	for (const [i, data] of activity.entries()) {
 		const x = (i * zoom.value) + pos.value;
 		nextPointsNote.push(`${x},${(1 - (data.notes / peak)) * viewBoxY.value}`);
 		nextPointsReply.push(`${x},${(1 - (data.replies / peak)) * viewBoxY.value}`);

@@ -223,18 +223,22 @@ export function collectModifications(
 		fileLogger.debug('removing i18n import specifier');
 		const i18nImportSpecifier = importSpecifierResult.importSpecifier;
 		const otherSpecifiers = i18nImport.specifiers.filter((specifier) => specifier !== i18nImportSpecifier);
-		const begin =
-			otherSpecifiers.length === 0
-				? i18nImport.start
-				: i18nImportSpecifier === i18nImport.specifiers[0]
-					? i18nImportSpecifier.start
-					: i18nImport.specifiers[i18nImport.specifiers.indexOf(i18nImportSpecifier) - 1].end;
-		const end =
-			otherSpecifiers.length === 0
-				? i18nImport.end
-				: i18nImportSpecifier === i18nImport.specifiers[0]
-					? i18nImport.specifiers[1].start
-					: i18nImportSpecifier.end;
+		let begin: number;
+		let end: number;
+		if (otherSpecifiers.length === 0) {
+			begin = i18nImport.start;
+			end = i18nImport.end;
+		} else if (i18nImportSpecifier === i18nImport.specifiers[0]) {
+			const nextSpecifier = i18nImport.specifiers[1];
+			if (nextSpecifier == null) throw new Error('Expected another i18n import specifier');
+			begin = i18nImportSpecifier.start;
+			end = nextSpecifier.start;
+		} else {
+			const previousSpecifier = i18nImport.specifiers[i18nImport.specifiers.indexOf(i18nImportSpecifier) - 1];
+			if (previousSpecifier == null) throw new Error('Expected a previous i18n import specifier');
+			begin = previousSpecifier.end;
+			end = i18nImportSpecifier.end;
+		}
 		codeModifications.push({
 			type: 'delete',
 			begin,
@@ -258,7 +262,7 @@ export function collectModifications(
 				id = node.property.value;
 			}
 			if (node.property.type === 'TemplateLiteral' && node.property.quasis.length === 1) {
-				id = node.property.quasis[0].value.cooked;
+				id = node.property.quasis[0]?.value.cooked ?? null;
 			}
 		} else {
 			if (node.property.type === 'Identifier') {
@@ -324,7 +328,7 @@ function lineCol(sourceCode: string, node: ESTree.Node): string {
 	const leading = sourceCode.slice(0, node.start);
 	const lines = leading.split('\n');
 	const line = lines.length;
-	const col = lines[lines.length - 1].length + 1; // +1 for 1-based index
+	const col = (lines.at(-1)?.length ?? 0) + 1; // +1 for 1-based index
 	return `(${line}:${col})`;
 }
 
@@ -393,6 +397,7 @@ function isLocalStorageGetItemLang(getItemCall: ESTree.Node): boolean {
 	if (getItemCall.arguments.length !== 1) return false;
 
 	const langLiteral = getItemCall.arguments[0];
+	if (langLiteral == null) return false;
 	if (!isStringLiteral(langLiteral, 'lang')) return false;
 
 	const getItemFunction = getItemCall.callee;
@@ -413,7 +418,7 @@ function isAwaitFetchLocaleThenJson(awaitNode: ESTree.Node): boolean {
 	if (thenCall.arguments.length < 1) return false;
 
 	const arrowFunction = thenCall.arguments[0];
-	if (arrowFunction.type !== 'ArrowFunctionExpression') return false;
+	if (arrowFunction?.type !== 'ArrowFunctionExpression') return false;
 	if (arrowFunction.params.length !== 1) return false;
 
 	const arrowBodyCall = arrowFunction.body;
@@ -431,12 +436,13 @@ function isAwaitFetchLocaleThenJson(awaitNode: ESTree.Node): boolean {
 
 	// `/assets/locales/${d}.${x}.json`
 	const assetLocaleTemplate = fetchCall.arguments[0];
-	if (assetLocaleTemplate.type !== 'TemplateLiteral') return false;
+	if (assetLocaleTemplate?.type !== 'TemplateLiteral') return false;
 	if (assetLocaleTemplate.quasis.length !== 3) return false;
 	if (assetLocaleTemplate.expressions.length !== 2) return false;
-	if (assetLocaleTemplate.quasis[0].value.cooked !== '/assets/locales/') return false;
-	if (assetLocaleTemplate.quasis[1].value.cooked !== '.') return false;
-	if (assetLocaleTemplate.quasis[2].value.cooked !== '.json') return false;
+	const [prefix, separator, suffix] = assetLocaleTemplate.quasis;
+	if (prefix?.value.cooked !== '/assets/locales/') return false;
+	if (separator?.value.cooked !== '.') return false;
+	if (suffix?.value.cooked !== '.json') return false;
 
 	const fetchFunction = fetchCall.callee;
 	if (!isMemberExpression(fetchFunction, 'fetch')) return false;

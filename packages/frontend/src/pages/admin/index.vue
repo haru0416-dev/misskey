@@ -82,8 +82,9 @@ misskeyApi('admin/abuse-user-reports', {
 
 const NARROW_THRESHOLD = 600;
 const ro = new ResizeObserver((entries, observer) => {
-	if (entries.length === 0) return;
-	narrow.value = entries[0].borderBoxSize[0].inlineSize < NARROW_THRESHOLD;
+	const borderBox = entries[0]?.borderBoxSize[0];
+	if (borderBox == null) return;
+	narrow.value = borderBox.inlineSize < NARROW_THRESHOLD;
 });
 
 const menuDef = computed<SuperMenuDef[]>(() => [{
@@ -282,9 +283,11 @@ provideReactiveMetadata(INFO);
 
 function invite() {
 	misskeyApi('admin/invite/create').then(x => {
+		const invite = x[0];
+		if (invite == null) return;
 		os.alert({
 			type: 'info',
-			text: x[0].code,
+			text: invite.code,
 		});
 	}).catch(err => {
 		os.alert({

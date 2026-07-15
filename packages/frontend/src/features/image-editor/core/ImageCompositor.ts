@@ -13,7 +13,7 @@ export type ImageCompositorFunction<PS extends ImageCompositorFunctionParams = I
 		gl: WebGL2RenderingContext;
 		program: WebGLProgram;
 		params: PS;
-		u: Record<string, WebGLUniformLocation>;
+		u: (name: string) => WebGLUniformLocation;
 		width: number;
 		height: number;
 		textures: Map<string, { texture: WebGLTexture; width: number; height: number }>;
@@ -148,7 +148,8 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 		const uniforms: string[] = [];
 		let match;
 		while ((match = uniformRegex.exec(shader)) !== null) {
-			uniforms.push(match[1].replace(/^u_/, ''));
+			const name = match[1];
+			if (name != null) uniforms.push(name.replace(/^u_/, ''));
 		}
 		return uniforms;
 	}
@@ -209,7 +210,16 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 			gl: gl,
 			program: shaderProgram,
 			params: layer.params,
-			u: Object.fromEntries(fn.uniforms.map((u) => [u, this.getUniformLocation(shaderProgram, 'u_' + u)!])),
+			u: (name) => {
+				if (!fn.uniforms.includes(name)) {
+					throw new Error(`Unknown uniform "${name}" in image compositor function "${fn.id}"`);
+				}
+				const location = this.getUniformLocation(shaderProgram, 'u_' + name);
+				if (location == null) {
+					throw new Error(`Uniform "${name}" is unavailable in image compositor function "${fn.id}"`);
+				}
+				return location;
+			},
 			width: this.renderWidth,
 			height: this.renderHeight,
 			textures: this.registeredTextures,
@@ -246,8 +256,7 @@ export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<
 
 		let preTexture = this.baseTexture;
 
-		for (let i = 0; i < layers.length; i++) {
-			const layer = layers[i];
+		for (const [i, layer] of layers.entries()) {
 			const isLast = i === layers.length - 1;
 			if (isLast) {
 				gl.bindFramebuffer(gl.FRAMEBUFFER, null);

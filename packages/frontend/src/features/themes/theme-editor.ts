@@ -31,10 +31,11 @@ export const fromThemeString = (str?: string): ThemeValue => {
 	if (str.startsWith(':')) {
 		const parts = str.slice(1).split('<');
 		const name = parts[0];
-		const arg = parseFloat(parts[1]);
+		const arg = parseFloat(parts[1] ?? '');
 		const rawValue = parts[2];
 		if (
 			parts.length !== 3 ||
+			name == null ||
 			!isFuncName(name) ||
 			!Number.isFinite(arg) ||
 			!rawValue?.startsWith('@') ||

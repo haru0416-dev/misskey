@@ -17,6 +17,7 @@
 		"noLib": false,
 		"strict": true,
 		"strictNullChecks": true,
+		"noUncheckedIndexedAccess": true,
 		"strictPropertyInitialization": false,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,

@@ -286,6 +286,7 @@ function changeAvatar(ev: PointerEvent) {
 		action: async () => {
 			const files = await os.chooseFileFromPc({ multiple: false });
 			const file = files[0];
+			if (file == null) return;
 
 			let originalOrCropped = file;
 
@@ -303,6 +304,7 @@ function changeAvatar(ev: PointerEvent) {
 			}
 
 			const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
+			if (driveFile == null) return;
 			done(driveFile);
 		},
 	}, {
@@ -310,7 +312,8 @@ function changeAvatar(ev: PointerEvent) {
 		icon: 'ti ti-cloud',
 		action: () => {
 			chooseDriveFile({ multiple: false }).then(files => {
-				done(files[0]);
+				const file = files[0];
+				if (file != null) done(file);
 			});
 		},
 	}, ...($i.avatarId != null ? [{
@@ -354,6 +357,7 @@ function changeBanner(ev: PointerEvent) {
 		action: async () => {
 			const files = await os.chooseFileFromPc({ multiple: false });
 			const file = files[0];
+			if (file == null) return;
 
 			let originalOrCropped = file;
 
@@ -371,6 +375,7 @@ function changeBanner(ev: PointerEvent) {
 			}
 
 			const driveFile = (await os.launchUploader([originalOrCropped], { multiple: false }))[0];
+			if (driveFile == null) return;
 			done(driveFile);
 		},
 	}, {
@@ -378,7 +383,8 @@ function changeBanner(ev: PointerEvent) {
 		icon: 'ti ti-cloud',
 		action: () => {
 			chooseDriveFile({ multiple: false }).then(files => {
-				done(files[0]);
+				const file = files[0];
+				if (file != null) done(file);
 			});
 		},
 	}, ...($i.bannerId != null ? [{

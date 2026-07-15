@@ -36,7 +36,7 @@ export function pluginRemoveUnrefI18n({
 					) {
 						// calls to unref with single argument
 						const arg = node.arguments[0];
-						if (arg.type === 'Identifier' && arg.name === i18nSymbolName) {
+						if (arg?.type === 'Identifier' && arg.name === i18nSymbolName) {
 							// this is unref(i18n) so replace it with i18n
 							// to replace, remove the 'unref(' and the trailing ')'
 							assertType<CallExpression>(node);

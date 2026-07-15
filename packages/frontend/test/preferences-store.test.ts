@@ -123,8 +123,8 @@ describe('Pinia preferences store', () => {
 		store.commit('animation', true);
 
 		expect(store.animation).toBe(true);
-		expect(store.profile.preferences.animation[0][1]).toBe(true);
-		expect(fixture.saves.at(-1)?.profile.preferences.animation[0][1]).toBe(true);
+		expect(store.profile.preferences.animation[0]?.[1]).toBe(true);
+		expect(fixture.saves.at(-1)?.profile.preferences.animation[0]?.[1]).toBe(true);
 	});
 
 	test('exposes preferences as computed two-way models', async () => {
@@ -164,6 +164,6 @@ describe('Pinia preferences store', () => {
 		await store.$preferencesCloudReady;
 
 		expect(store.animation).toBe(true);
-		expect(store.profile.preferences.animation[0][1]).toBe(true);
+		expect(store.profile.preferences.animation[0]?.[1]).toBe(true);
 	});
 });

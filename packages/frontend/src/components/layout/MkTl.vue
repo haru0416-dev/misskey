@@ -69,17 +69,17 @@ type TlItem<T> = ({
 const items = computed<TlItem<T>[]>(() => {
 	const results: TlItem<T>[] = [];
 
-	for (let i = 0; i < events.value.length; i++) {
-		const item = events.value[i];
+	for (const [i, item] of events.value.entries()) {
+		const nextItem = events.value[i + 1];
 
 		const date = new Date(item.timestamp);
-		const nextDate = events.value[i + 1] ? new Date(events.value[i + 1].timestamp) : null;
+		const nextDate = nextItem == null ? null : new Date(nextItem.timestamp);
 
 		results.push({
 			id: item.id,
 			type: 'event',
 			timestamp: item.timestamp,
-			delta: i === events.value.length - 1 ? 0 : item.timestamp - events.value[i + 1].timestamp,
+			delta: nextItem == null ? 0 : item.timestamp - nextItem.timestamp,
 			data: item.data,
 		});
 

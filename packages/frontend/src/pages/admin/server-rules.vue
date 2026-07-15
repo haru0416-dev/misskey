@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<span :class="$style.itemHandle" :draggable="true" @dragstart.stop="dragStart"><i class="ti ti-menu"></i></span>
 							<button class="_button" :class="$style.itemRemove" @click="remove(item.id)"><i class="ti ti-x"></i></button>
 						</div>
-						<MkInput :modelValue="item.text" @update:modelValue="serverRules[index].text = $event"/>
+						<MkInput :modelValue="item.text" @update:modelValue="updateRule(index, $event)"/>
 					</div>
 				</template>
 			</MkDraggable>
@@ -63,6 +63,11 @@ function add(): void {
 
 function remove(id: string): void {
 	serverRules.value = serverRules.value.filter(r => r.id !== id);
+}
+
+function updateRule(index: number, text: string): void {
+	const rule = serverRules.value[index];
+	if (rule != null) rule.text = text;
 }
 </script>
 

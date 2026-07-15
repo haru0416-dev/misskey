@@ -138,6 +138,7 @@ function importProfile() {
 		if (input.files == null || input.files.length === 0) return;
 
 		const file = input.files[0];
+		if (file == null) return;
 		const txt = await file.text();
 		let profile: unknown;
 		try {

@@ -13,15 +13,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div :class="$style.queueCounts">
 						<MkKeyValue>
 							<template #key>Active</template>
-							<template #value>{{ kmg(q.counts.active, 2) }}</template>
+							<template #value>{{ kmg(q.counts.active ?? null, 2) }}</template>
 						</MkKeyValue>
 						<MkKeyValue>
 							<template #key>Delayed</template>
-							<template #value>{{ kmg(q.counts.delayed, 2) }}</template>
+							<template #value>{{ kmg(q.counts.delayed ?? null, 2) }}</template>
 						</MkKeyValue>
 						<MkKeyValue>
 							<template #key>Waiting</template>
-							<template #value>{{ kmg(q.counts.waiting, 2) }}</template>
+							<template #value>{{ kmg(q.counts.waiting ?? null, 2) }}</template>
 						</MkKeyValue>
 					</div>
 					<XChart :dataSet="{ completed: q.metrics.completed.data, failed: q.metrics.failed.data }"/>
@@ -49,15 +49,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
 						<MkKeyValue>
 							<template #key>Active</template>
-							<template #value>{{ kmg(queueInfo.counts.active, 2) }}</template>
+							<template #value>{{ kmg(queueInfo.counts.active ?? null, 2) }}</template>
 						</MkKeyValue>
 						<MkKeyValue>
 							<template #key>Delayed</template>
-							<template #value>{{ kmg(queueInfo.counts.delayed, 2) }}</template>
+							<template #value>{{ kmg(queueInfo.counts.delayed ?? null, 2) }}</template>
 						</MkKeyValue>
 						<MkKeyValue>
 							<template #key>Waiting</template>
-							<template #value>{{ kmg(queueInfo.counts.waiting, 2) }}</template>
+							<template #value>{{ kmg(queueInfo.counts.waiting ?? null, 2) }}</template>
 						</MkKeyValue>
 					</div>
 					<hr>
@@ -93,7 +93,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkFolder :defaultOpen="true" :withSpacer="false">
 				<template #label>Jobs: {{ tab }}</template>
 				<template #icon><i class="ti ti-list-check"></i></template>
-				<template #suffix>&lt;A:{{ kmg(queueInfo.counts.active, 2) }}&gt; &lt;D:{{ kmg(queueInfo.counts.delayed, 2) }}&gt; &lt;W:{{ kmg(queueInfo.counts.waiting, 2) }}&gt;</template>
+				<template #suffix>&lt;A:{{ kmg(queueInfo.counts.active ?? null, 2) }}&gt; &lt;D:{{ kmg(queueInfo.counts.delayed ?? null, 2) }}&gt; &lt;W:{{ kmg(queueInfo.counts.waiting ?? null, 2) }}&gt;</template>
 				<template #header>
 					<MkTabs
 						v-model:tab="jobState"

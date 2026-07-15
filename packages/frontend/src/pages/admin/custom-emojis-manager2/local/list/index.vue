@@ -155,7 +155,8 @@ function setupGrid(): GridSetting {
 						icon: 'ti ti-trash',
 						action: () => {
 							for (const rangedRow of context.rangedRows) {
-								gridItems.value[rangedRow.index].checked = true;
+								const item = gridItems.value[rangedRow.index];
+								if (item != null) item.checked = true;
 							}
 						},
 					},
@@ -165,7 +166,8 @@ function setupGrid(): GridSetting {
 				delete(rows) {
 					// 行削除時は元データの行を消さず、削除対象としてマークするのみにする
 					for (const row of rows) {
-						gridItems.value[row.index].checked = true;
+						const item = gridItems.value[row.index];
+						if (item != null) item.checked = true;
 					}
 				},
 			},
@@ -179,8 +181,10 @@ function setupGrid(): GridSetting {
 						anchorElement: cellElement,
 						multiple: false,
 					});
-					gridItems.value[row.index].url = file.url;
-					gridItems.value[row.index].fileId = file.id;
+					const item = gridItems.value[row.index];
+					if (item == null) return value;
+					item.url = file.url;
+					item.fileId = file.id;
 
 					return file.url;
 				},
@@ -198,13 +202,15 @@ function setupGrid(): GridSetting {
 				bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction', title: 'role', type: 'text', editable: true, width: 140,
 				valueTransformer(row) {
 					// バックエンドからからはIDと名前のペア配列で受け取るが、表示にIDがあると煩雑なので名前だけにする
-					return gridItems.value[row.index].roleIdsThatCanBeUsedThisEmojiAsReaction
+					return (gridItems.value[row.index]?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [])
 						.map((it) => it.name)
 						.join(',');
 				},
 				async customValueEditor(row) {
 					// ID直記入は体験的に最悪なのでモーダルを使って入力する
-					const current = gridItems.value[row.index].roleIdsThatCanBeUsedThisEmojiAsReaction;
+					const item = gridItems.value[row.index];
+					if (item == null) return [];
+					const current = item.roleIdsThatCanBeUsedThisEmojiAsReaction;
 					const result = await os.selectRole({
 						initialRoleIds: current.map(it => it.id),
 						title: i18n.ts.rolesThatCanBeUsedThisEmojiAsReaction,
@@ -216,7 +222,7 @@ function setupGrid(): GridSetting {
 					}
 
 					const transform = result.result.map(it => ({ id: it.id, name: it.name }));
-					gridItems.value[row.index].roleIdsThatCanBeUsedThisEmojiAsReaction = transform;
+					item.roleIdsThatCanBeUsedThisEmojiAsReaction = transform;
 
 					return transform;
 				},
@@ -224,7 +230,8 @@ function setupGrid(): GridSetting {
 					paste: roleIdsParser,
 					delete(cell) {
 						// デフォルトはundefinedになるが、このプロパティは空配列にしたい
-						gridItems.value[cell.row.index].roleIdsThatCanBeUsedThisEmojiAsReaction = [];
+						const item = gridItems.value[cell.row.index];
+						if (item != null) item.roleIdsThatCanBeUsedThisEmojiAsReaction = [];
 					},
 				},
 			},
@@ -259,9 +266,10 @@ function setupGrid(): GridSetting {
 						type: 'button',
 						text: i18n.ts._customEmojisManager._local._list.markAsDeleteTargetRanges,
 						icon: 'ti ti-trash',
-						action: () => {
-							for (const rowIdx of [...new Set(context.rangedCells.map(it => it.row.index)).values()]) {
-								gridItems.value[rowIdx].checked = true;
+							action: () => {
+								for (const rowIdx of [...new Set(context.rangedCells.map(it => it.row.index)).values()]) {
+									const item = gridItems.value[rowIdx];
+									if (item != null) item.checked = true;
 							}
 						},
 					},
@@ -454,8 +462,9 @@ function onGridCellValidation(event: GridCellValidationEvent) {
 
 function onGridCellValueChange(event: GridCellValueChangeEvent) {
 	const { row, column, newValue } = event;
-	if (gridItems.value.length > row.index && column.setting.bindTo in gridItems.value[row.index]) {
-		(gridItems.value[row.index] as any)[column.setting.bindTo] = newValue;
+	const item = gridItems.value[row.index];
+	if (item != null && column.setting.bindTo in item) {
+		(item as any)[column.setting.bindTo] = newValue;
 	}
 }
 

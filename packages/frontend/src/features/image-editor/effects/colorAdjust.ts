@@ -17,11 +17,11 @@ export const fn = defineImageCompositorFunction<{
 }>({
 	shader,
 	main: ({ gl, u, params }) => {
-		gl.uniform1f(u.brightness, params.brightness);
-		gl.uniform1f(u.contrast, params.contrast);
-		gl.uniform1f(u.hue, params.hue / 2);
-		gl.uniform1f(u.lightness, params.lightness);
-		gl.uniform1f(u.saturation, params.saturation);
+		gl.uniform1f(u('brightness'), params.brightness);
+		gl.uniform1f(u('contrast'), params.contrast);
+		gl.uniform1f(u('hue'), params.hue / 2);
+		gl.uniform1f(u('lightness'), params.lightness);
+		gl.uniform1f(u('saturation'), params.saturation);
 	},
 });
 

@@ -41,6 +41,7 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 				for (let i = anchorEls.length - 1; i > -1; i--) {
 					// 下から見た方が速い
 					const anchorEl = anchorEls[i];
+					if (anchorEl == null) continue;
 					const anchorTop = anchorEl.getBoundingClientRect().top;
 					// 上端が viewPosition 以下の最初の要素（＝中央を跨ぐか、中央より上にある中で最も近いもの）を選択する
 					// 最下部スクロール時に min-height による空白に viewPosition が入った場合も最後のアイテムをキャプチャできる

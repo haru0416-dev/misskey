@@ -12,7 +12,7 @@ describe('emoji autocomplete', () => {
 			{ emoji: ':foooo:', name: 'foooo' },
 			{ emoji: ':foooobaaar:', name: 'foooobaaar' },
 		]);
-		assert.equal(result[0].emoji, ':foooo:');
+		assert.equal(result[0]?.emoji, ':foooo:');
 	});
 
 	test('名前の前方一致は名前の部分一致より優先される', async () => {
@@ -20,7 +20,7 @@ describe('emoji autocomplete', () => {
 			{ emoji: ':baaar:', name: 'baaar' },
 			{ emoji: ':foooobaaar:', name: 'foooobaaar' },
 		]);
-		assert.equal(result[0].emoji, ':baaar:');
+		assert.equal(result[0]?.emoji, ':baaar:');
 	});
 
 	test('名前の完全一致はタグの完全一致より優先される', async () => {
@@ -28,7 +28,7 @@ describe('emoji autocomplete', () => {
 			{ emoji: ':foooo:', name: 'foooo' },
 			{ emoji: ':baaar:', name: 'foooo', aliasOf: 'baaar' },
 		]);
-		assert.equal(result[0].emoji, ':foooo:');
+		assert.equal(result[0]?.emoji, ':foooo:');
 	});
 
 	test('名前の前方一致はタグの前方一致より優先される', async () => {
@@ -36,7 +36,7 @@ describe('emoji autocomplete', () => {
 			{ emoji: ':foooo:', name: 'foooo' },
 			{ emoji: ':baaar:', name: 'foooo', aliasOf: 'baaar' },
 		]);
-		assert.equal(result[0].emoji, ':foooo:');
+		assert.equal(result[0]?.emoji, ':foooo:');
 	});
 
 	test('名前の部分一致はタグの部分一致より優先される', async () => {
@@ -44,7 +44,7 @@ describe('emoji autocomplete', () => {
 			{ emoji: ':foooo:', name: 'foooo' },
 			{ emoji: ':baaar:', name: 'foooo', aliasOf: 'baaar' },
 		]);
-		assert.equal(result[0].emoji, ':foooo:');
+		assert.equal(result[0]?.emoji, ':foooo:');
 	});
 
 	test('一致種別の優先順位とDB内の順序を維持する', () => {

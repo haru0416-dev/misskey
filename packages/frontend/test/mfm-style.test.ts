@@ -27,6 +27,9 @@ describe('MFM function styles', () => {
 		const second = MkMfm({ text: 'https://example.com', parsedNodes }, { emit: vi.fn() }) as VNode;
 		const firstChild = (first.children as VNode[])[0];
 		const secondChild = (second.children as VNode[])[0];
+		expect(firstChild).toBeDefined();
+		expect(secondChild).toBeDefined();
+		if (firstChild == null || secondChild == null) throw new Error('Expected rendered MFM children');
 
 		expect(firstChild.key).toBe(secondChild.key);
 	});

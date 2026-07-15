@@ -327,7 +327,7 @@ export function getNoteMenu(props: {
 				const langResult = await detector.detect(appearNote.text);
 				let localStorageLang = miLocalStorage.getItem('lang');
 				if (localStorageLang != null) {
-					localStorageLang = localStorageLang.split('-')[0];
+					localStorageLang = localStorageLang.split('-')[0] ?? null;
 				}
 
 				// 翻訳元と翻訳先の言語が同じ場合はTranslatorがthrowするのでそのまま返す

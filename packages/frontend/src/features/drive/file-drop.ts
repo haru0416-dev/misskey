@@ -24,6 +24,7 @@ export async function extractDroppedItems(ev: DragEvent): Promise<DroppedItem[]>
 	}
 
 	const apiTestItem = dropItems[0];
+	if (apiTestItem == null) return [];
 	if ('webkitGetAsEntry' in apiTestItem) {
 		return readDataTransferItems(dropItems);
 	} else {
@@ -92,14 +93,15 @@ export async function readDataTransferItems(itemList: DataTransferItemList): Pro
 	// 扱いにくいので配列に変換
 	const items = Array.of<DataTransferItem>();
 	for (let i = 0; i < itemList.length; i++) {
-		items.push(itemList[i]);
+		const item = itemList[i];
+		if (item != null) items.push(item);
 	}
 
 	return Promise.all(
 		items
 			.map((it) => it.webkitGetAsEntry())
-			.filter((it) => it)
-			.map((it) => readEntry(it!)),
+			.filter((it): it is FileSystemEntry => it != null)
+			.map(readEntry),
 	);
 }
 

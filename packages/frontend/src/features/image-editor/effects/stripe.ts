@@ -17,12 +17,12 @@ export const fn = defineImageCompositorFunction<{
 }>({
 	shader,
 	main: ({ gl, u, params }) => {
-		gl.uniform1f(u.angle, params.angle / 2);
-		gl.uniform1f(u.frequency, params.frequency * params.frequency);
-		gl.uniform1f(u.phase, 0.0);
-		gl.uniform1f(u.threshold, params.threshold);
-		gl.uniform3f(u.color, params.color[0], params.color[1], params.color[2]);
-		gl.uniform1f(u.opacity, params.opacity);
+		gl.uniform1f(u('angle'), params.angle / 2);
+		gl.uniform1f(u('frequency'), params.frequency * params.frequency);
+		gl.uniform1f(u('phase'), 0.0);
+		gl.uniform1f(u('threshold'), params.threshold);
+		gl.uniform3f(u('color'), params.color[0], params.color[1], params.color[2]);
+		gl.uniform1f(u('opacity'), params.opacity);
 	},
 });
 

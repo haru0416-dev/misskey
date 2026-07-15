@@ -18,11 +18,11 @@ export const fn = defineImageCompositorFunction<{
 }>({
 	shader,
 	main: ({ gl, u, params }) => {
-		gl.uniform2f(u.pos, params.x / 2, params.y / 2);
-		gl.uniform1f(u.frequency, params.frequency * params.frequency);
-		gl.uniform1f(u.threshold, 1.0 - params.density);
-		gl.uniform1f(u.outlineThickness, params.outlineThickness);
-		gl.uniform1f(u.maskSize, params.maskSize);
+		gl.uniform2f(u('pos'), params.x / 2, params.y / 2);
+		gl.uniform1f(u('frequency'), params.frequency * params.frequency);
+		gl.uniform1f(u('threshold'), 1.0 - params.density);
+		gl.uniform1f(u('outlineThickness'), params.outlineThickness);
+		gl.uniform1f(u('maskSize'), params.maskSize);
 	},
 });
 

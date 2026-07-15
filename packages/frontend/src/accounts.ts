@@ -171,8 +171,9 @@ export async function refreshCurrentAccount() {
 		.catch((reason) => {
 			if (reason === isAccountDeleted) {
 				removeAccount(host, me.id);
-				if (Object.keys(store.accountTokens).length > 0) {
-					login(Object.values(store.accountTokens)[0]);
+				const remainingToken = Object.values(store.accountTokens)[0];
+				if (remainingToken != null) {
+					login(remainingToken);
 				} else {
 					signout();
 				}

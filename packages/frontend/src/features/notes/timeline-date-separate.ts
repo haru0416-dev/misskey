@@ -100,23 +100,23 @@ export function makeDateGroupedTimelineComputedRef<T extends { id: string; creat
 ) {
 	return computed<DateGroupedTimelineItem<T>[]>(() => {
 		const tl: DateGroupedTimelineItem<T>[] = [];
-		for (let i = 0; i < items.value.length; i++) {
-			const item = items.value[i];
+		for (const item of items.value) {
 			const date = new Date(item.createdAt);
+			const currentGroup = tl.at(-1);
 
 			if (
-				tl.length === 0 ||
-				(span === 'day' && tl[tl.length - 1].date.getTime() !== date.getTime()) ||
+				currentGroup == null ||
+				(span === 'day' && currentGroup.date.getTime() !== date.getTime()) ||
 				(span === 'month' &&
-					(tl[tl.length - 1].date.getFullYear() !== date.getFullYear() ||
-						tl[tl.length - 1].date.getMonth() !== date.getMonth()))
+					(currentGroup.date.getFullYear() !== date.getFullYear() ||
+						currentGroup.date.getMonth() !== date.getMonth()))
 			) {
 				tl.push({
 					date,
 					items: [],
 				});
 			}
-			tl[tl.length - 1].items.push(item);
+			tl.at(-1)?.items.push(item);
 		}
 		return tl;
 	});

@@ -60,7 +60,9 @@ export const Hover = {
 		await Default.play(context);
 		const canvas = within(context.canvasElement);
 		const links = canvas.getAllByRole('link');
-		await waitFor(() => userEvent.hover(links[0]));
+		const link = links[0];
+		if (link == null) throw new Error('Gallery post link was not found');
+		await waitFor(() => userEvent.hover(link));
 	},
 } satisfies StoryObj<typeof MkGalleryPostPreview>;
 export const HoverThenUnhover = {
@@ -69,7 +71,9 @@ export const HoverThenUnhover = {
 		await Hover.play(context);
 		const canvas = within(context.canvasElement);
 		const links = canvas.getAllByRole('link');
-		await waitFor(() => userEvent.unhover(links[0]));
+		const link = links[0];
+		if (link == null) throw new Error('Gallery post link was not found');
+		await waitFor(() => userEvent.unhover(link));
 	},
 } satisfies StoryObj<typeof MkGalleryPostPreview>;
 export const Sensitive = {
