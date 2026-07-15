@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, isNull, lt, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, or, sql, type SQL } from 'drizzle-orm';
 import { chatMessage, type ChatMessageInsert, type ChatMessageRow } from '@/db/schema/chat-message.js';
 import { chatRoom } from '@/db/schema/chat-room.js';
 import { chatRoomMembership } from '@/db/schema/chat-room-membership.js';
@@ -202,66 +202,86 @@ export async function listChatMessagesByFileIdFromDatabase(
 	return rows.map(deserializeChatMessage);
 }
 
-/**
- * meIdが送受信した1-on-1のメッセージのうち、excludeUserIdsに含まれる相手とのものを除いた最新の1件を取得する。
- * ミュートしている相手とのメッセージは対象外。
- */
-export async function findLatestChatMessageForUserExcludingUsersFromDatabase(
+export async function listUserChatHistoryFromDatabase(
 	db: MiDrizzleDatabase,
 	meId: MiUser['id'],
-	excludeUserIds: MiUser['id'][],
-): Promise<MiChatMessage | null> {
-	const conditions: SQL[] = [
-		or(
-			eq(chatMessage.fromUserId, meId),
-			eq(chatMessage.toUserId, meId),
-		)!,
-		isNull(chatMessage.toRoomId),
-		sql`${chatMessage.fromUserId} NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId})`,
-		sql`${chatMessage.toUserId} NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId})`,
-	];
+	limit: number,
+): Promise<MiChatMessage[]> {
+	const result = await db.execute<ChatMessageRow>(sql`
+		WITH "eligible" AS (
+			SELECT
+				"message"."id",
+				CASE
+					WHEN "message"."fromUserId" = ${meId} THEN "message"."toUserId"
+					ELSE "message"."fromUserId"
+				END AS "counterpartId"
+			FROM "chat_message" AS "message"
+			WHERE (
+				"message"."fromUserId" = ${meId}
+				OR "message"."toUserId" = ${meId}
+			)
+			AND "message"."toRoomId" IS NULL
+			AND "message"."fromUserId" NOT IN (
+				SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId}
+			)
+			AND "message"."toUserId" NOT IN (
+				SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId}
+			)
+		),
+		"latest" AS (
+			SELECT MAX("id") AS "id"
+			FROM "eligible"
+			GROUP BY "counterpartId"
+		),
+		"top_ids" AS (
+			SELECT "id"
+			FROM "latest"
+			ORDER BY "id" DESC
+			LIMIT ${limit}
+		)
+		SELECT "message".*
+		FROM "top_ids"
+		INNER JOIN "chat_message" AS "message" ON "message"."id" = "top_ids"."id"
+		ORDER BY "message"."id" DESC
+	`);
 
-	if (excludeUserIds.length > 0) {
-		conditions.push(notInArray(chatMessage.fromUserId, excludeUserIds));
-		conditions.push(notInArray(chatMessage.toUserId, excludeUserIds));
-	}
-
-	const [row] = await db
-		.select()
-		.from(chatMessage)
-		.where(and(...conditions))
-		.orderBy(desc(chatMessage.id))
-		.limit(1);
-
-	return row == null ? null : deserializeChatMessage(row);
+	return result.rows.map(deserializeChatMessage);
 }
 
-/**
- * roomIdsのいずれかの部屋に送られたメッセージのうち、excludeRoomIdsに含まれる部屋のものを除いた最新の1件を取得する。
- */
-export async function findLatestChatMessageForRoomsExcludingRoomsFromDatabase(
+export async function listRoomChatHistoryFromDatabase(
 	db: MiDrizzleDatabase,
-	roomIds: MiChatRoom['id'][],
-	excludeRoomIds: MiChatRoom['id'][],
-): Promise<MiChatMessage | null> {
-	if (roomIds.length === 0) {
-		return null;
-	}
+	meId: MiUser['id'],
+	limit: number,
+): Promise<MiChatMessage[]> {
+	const result = await db.execute<ChatMessageRow>(sql`
+		WITH "eligible_rooms" AS (
+			SELECT "roomId"
+			FROM "chat_room_membership"
+			WHERE "userId" = ${meId}
+			UNION
+			SELECT "id"
+			FROM "chat_room"
+			WHERE "ownerId" = ${meId}
+		),
+		"latest" AS (
+			SELECT MAX("message"."id") AS "id"
+			FROM "chat_message" AS "message"
+			INNER JOIN "eligible_rooms" ON "eligible_rooms"."roomId" = "message"."toRoomId"
+			GROUP BY "message"."toRoomId"
+		),
+		"top_ids" AS (
+			SELECT "id"
+			FROM "latest"
+			ORDER BY "id" DESC
+			LIMIT ${limit}
+		)
+		SELECT "message".*
+		FROM "top_ids"
+		INNER JOIN "chat_message" AS "message" ON "message"."id" = "top_ids"."id"
+		ORDER BY "message"."id" DESC
+	`);
 
-	const conditions: SQL[] = [inArray(chatMessage.toRoomId, roomIds)];
-
-	if (excludeRoomIds.length > 0) {
-		conditions.push(notInArray(chatMessage.toRoomId, excludeRoomIds));
-	}
-
-	const [row] = await db
-		.select()
-		.from(chatMessage)
-		.where(and(...conditions))
-		.orderBy(desc(chatMessage.id))
-		.limit(1);
-
-	return row == null ? null : deserializeChatMessage(row);
+	return result.rows.map(deserializeChatMessage);
 }
 
 export async function searchChatMessagesFromDatabase(
