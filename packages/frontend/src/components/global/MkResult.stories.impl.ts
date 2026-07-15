@@ -37,8 +37,7 @@ export const Default = {
 export const emptyWithNoText = {
 	...Default,
 	args: {
-		...Default.args,
-		text: undefined,
+		type: 'empty',
 	},
 } satisfies StoryObj<typeof MkResult>;
 export const notFound = {

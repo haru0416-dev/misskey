@@ -83,8 +83,8 @@ const dialog = useTemplateRef('dialog');
 
 const uploader = useUploader({
 	multiple: props.multiple,
-	folderId: props.folderId,
-	features: props.features,
+	...(props.folderId === undefined ? {} : { folderId: props.folderId }),
+	...(props.features === undefined ? {} : { features: props.features }),
 });
 
 onMounted(() => {

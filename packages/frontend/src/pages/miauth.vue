@@ -9,8 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.form">
 			<MkAuthConfirm
 				ref="authRoot"
-				:name="name"
-				:icon="icon || undefined"
+				v-bind="{ ...(name === undefined ? {} : { name }), ...(icon === undefined || icon === '' ? {} : { icon }) }"
 				:permissions="_permissions"
 				@accept="onAccept"
 				@deny="onDeny"
@@ -53,8 +52,8 @@ const authRoot = useTemplateRef('authRoot');
 async function onAccept(token: string) {
 	await misskeyApi('miauth/gen-token', {
 		session: props.session,
-		name: props.name,
-		iconUrl: props.icon,
+		...(props.name === undefined ? {} : { name: props.name }),
+		...(props.icon === undefined ? {} : { iconUrl: props.icon }),
 		permission: _permissions.value,
 	}, token).then(() => {
 		if (props.callback && props.callback !== '') {

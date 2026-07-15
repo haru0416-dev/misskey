@@ -25,15 +25,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-if="prefer.enableHighQualityImagePlaceholders"
 			:hash="image.blurhash"
 			:src="(prefer.dataSaver.media && hide) ? null : url"
+			v-bind="{ ...(image.properties.width === undefined ? {} : { width: image.properties.width }), ...(image.properties.height === undefined ? {} : { height: image.properties.height }), ...(marker === undefined ? {} : { marker }) }"
 			:forceBlurhash="hide"
 			:cover="hide || cover"
 			:alt="image.comment || image.name"
 			:title="image.comment || image.name"
-			:width="image.properties.width"
-			:height="image.properties.height"
 			:style="hide ? 'filter: brightness(0.7);' : null"
 			:class="$style.image"
-			:marker="marker"
 		/>
 		<div
 			v-else-if="prefer.dataSaver.media || hide"

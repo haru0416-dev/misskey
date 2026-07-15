@@ -64,7 +64,7 @@ import { useGlobalEvent } from '@/events.js';
 import { getDriveFileMenu } from '@/features/drive/get-drive-file-menu.js';
 import { Paginator } from '@/utility/paginator.js';
 
-const sortMode = ref<Misskey.entities.DriveFilesRequest['sort']>('+size');
+const sortMode = ref<NonNullable<Misskey.entities.DriveFilesRequest['sort']>>('+size');
 const paginator = markRaw(new Paginator('drive/files', {
 	limit: 10,
 	computedParams: computed(() => ({ sort: sortMode.value })),

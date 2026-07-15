@@ -126,11 +126,11 @@ function createRender(params: { emojis: entities.EmojiDetailedAdmin[] }) {
 							publicUrl: file.url,
 							originalUrl: file.url,
 							type: file.type,
-							aliases: body.aliases,
-							category: body.category ?? undefined,
-							license: body.license ?? undefined,
-							localOnly: body.localOnly,
-							isSensitive: body.isSensitive,
+							...(body.aliases === undefined ? {} : { aliases: body.aliases }),
+							...(body.category == null ? {} : { category: body.category }),
+							...(body.license == null ? {} : { license: body.license }),
+							...(body.localOnly === undefined ? {} : { localOnly: body.localOnly }),
+							...(body.isSensitive === undefined ? {} : { isSensitive: body.isSensitive }),
 						});
 						storedEmojis.push(em);
 

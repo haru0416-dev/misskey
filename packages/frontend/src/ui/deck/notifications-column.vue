@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <XColumn :column="column" :isStacked="isStacked" :menu="menu" :refresher="async () => { await notificationsComponent?.reload() }">
 	<template #header><i class="ti ti-bell" style="margin-right: 8px;"></i>{{ column.name || i18n.ts._deck._columns.notifications }}</template>
 
-	<MkStreamingNotificationsTimeline ref="notificationsComponent" :excludeTypes="props.column.excludeTypes"/>
+	<MkStreamingNotificationsTimeline ref="notificationsComponent" v-bind="props.column.excludeTypes === undefined ? {} : { excludeTypes: props.column.excludeTypes }"/>
 </XColumn>
 </template>
 
@@ -29,7 +29,7 @@ const notificationsComponent = useTemplateRef('notificationsComponent');
 
 async function func() {
 	const { dispose } = await os.popupAsyncWithDialog(import('@/features/notifications/components/MkNotificationSelectWindow.vue').then(x => x.default), {
-		excludeTypes: props.column.excludeTypes,
+		...(props.column.excludeTypes === undefined ? {} : { excludeTypes: props.column.excludeTypes }),
 	}, {
 		done: async (res) => {
 			const { excludeTypes } = res;

@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<MkImgWithBlurhash
 								v-if="page.eyeCatchingImageId"
 								:class="$style.pageBannerBg"
-								:hash="page.eyeCatchingImage?.blurhash"
+								v-bind="page.eyeCatchingImage?.blurhash === undefined ? {} : { hash: page.eyeCatchingImage.blurhash }"
 								:cover="true"
 								:forceBlurhash="true"
 							/>
@@ -205,7 +205,7 @@ function shareWithNavigator() {
 
 	navigator.share({
 		title: page.value.title ?? page.value.name,
-		text: page.value.summary ?? undefined,
+		...(page.value.summary == null ? {} : { text: page.value.summary }),
 		url: `${url}/@${page.value.user.username}/pages/${page.value.name}`,
 	});
 }

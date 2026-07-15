@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:key="src + withRenotes + withReplies + onlyFiles + withSensitive + mediaView"
 			:class="$style.tl"
 			:src="(src.split(':')[0] as (BasicTimelineType | 'list'))"
-			:list="src.split(':')[1]"
+			v-bind="src.split(':')[1] === undefined ? {} : { list: src.split(':')[1] }"
 			:withRenotes="withRenotes"
 			:withReplies="withReplies"
 			:withSensitive="withSensitive"

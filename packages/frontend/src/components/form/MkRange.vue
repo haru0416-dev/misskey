@@ -171,13 +171,15 @@ function onMouseenter() {
 	if (isTouchUsing) return;
 
 	tooltipForHoverShowing.value = true;
+	const anchorElement = thumbEl.value;
+	if (anchorElement == null) return;
 
 	const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/overlay/MkTooltip.vue')), {
 		showing: computed(() => tooltipForHoverShowing.value && !tooltipForDragShowing.value),
 		text: computed(() => {
 			return props.textConverter(finalValue.value);
 		}),
-		anchorElement: thumbEl.value ?? undefined,
+		anchorElement,
 	}, {
 		closed: () => dispose(),
 	});
@@ -195,13 +197,15 @@ function onMousedown(ev: MouseEvent | TouchEvent) {
 	ev.preventDefault();
 
 	tooltipForDragShowing.value = true;
+	const anchorElement = thumbEl.value;
+	if (anchorElement == null) return;
 
 	const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/overlay/MkTooltip.vue')), {
 		showing: tooltipForDragShowing,
 		text: computed(() => {
 			return props.textConverter(finalValue.value);
 		}),
-		anchorElement: thumbEl.value ?? undefined,
+		anchorElement,
 	}, {
 		closed: () => dispose(),
 	});

@@ -444,7 +444,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								key: nextKey(),
 								url: token.props.url,
 								rel: 'nofollow noopener',
-								navigationBehavior: props.linkNavigationBehavior,
+								...(props.linkNavigationBehavior === undefined ? {} : { navigationBehavior: props.linkNavigationBehavior }),
 							}),
 						];
 					}
@@ -457,7 +457,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									key: nextKey(),
 									url: token.props.url,
 									rel: 'nofollow noopener',
-									navigationBehavior: props.linkNavigationBehavior,
+									...(props.linkNavigationBehavior === undefined ? {} : { navigationBehavior: props.linkNavigationBehavior }),
 								},
 								{ default: () => genEl(token.children, scale, true) },
 							),
@@ -471,9 +471,9 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								host:
 									(token.props.host == null && props.author && props.author.host != null
 										? props.author.host
-										: token.props.host) ?? host,
+									: token.props.host) ?? host,
 								username: token.props.username,
-								navigationBehavior: props.linkNavigationBehavior,
+								...(props.linkNavigationBehavior === undefined ? {} : { navigationBehavior: props.linkNavigationBehavior }),
 							}),
 						];
 					}
@@ -485,10 +485,10 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								{
 									key: nextKey(),
 									to: isNote
-										? `/tags/${encodeURIComponent(token.props.hashtag)}`
-										: `/user-tags/${encodeURIComponent(token.props.hashtag)}`,
-									style: 'color:var(--MI_THEME-hashtag);',
-									behavior: props.linkNavigationBehavior,
+									? `/tags/${encodeURIComponent(token.props.hashtag)}`
+									: `/user-tags/${encodeURIComponent(token.props.hashtag)}`,
+								style: 'color:var(--MI_THEME-hashtag);',
+								...(props.linkNavigationBehavior === undefined ? {} : { behavior: props.linkNavigationBehavior }),
 								},
 								{ default: () => `#${token.props.hashtag}` },
 							),
@@ -498,10 +498,10 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'blockCode': {
 						return [
 							h(MkCode, {
-								key: nextKey(),
-								code: token.props.code,
-								lang: token.props.lang ?? undefined,
-							}),
+							key: nextKey(),
+							code: token.props.code,
+							...(token.props.lang == null ? {} : { lang: token.props.lang }),
+						}),
 						];
 					}
 
@@ -544,11 +544,11 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								h(MkCustomEmoji, {
 									key: nextKey(),
 									name: token.props.name,
-									normal: props.plain,
+									...(props.plain === undefined ? {} : { normal: props.plain }),
 									host: null,
 									useOriginalSize: scale >= 2.5,
-									menu: props.enableEmojiMenu,
-									menuReaction: props.enableEmojiMenuReaction,
+									...(props.enableEmojiMenu === undefined ? {} : { menu: props.enableEmojiMenu }),
+									...(props.enableEmojiMenuReaction === undefined ? {} : { menuReaction: props.enableEmojiMenuReaction }),
 									fallbackToImage: false,
 								}),
 							];
@@ -561,11 +561,11 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									h(MkCustomEmoji, {
 										key: nextKey(),
 										name: token.props.name,
-										url: props.emojiUrls && props.emojiUrls[token.props.name],
-										normal: props.plain,
+									...(props.emojiUrls?.[token.props.name] === undefined ? {} : { url: props.emojiUrls[token.props.name] }),
+									...(props.plain === undefined ? {} : { normal: props.plain }),
 										host: props.author.host,
 										useOriginalSize: scale >= 2.5,
-										menu: props.enableEmojiMenu,
+									...(props.enableEmojiMenu === undefined ? {} : { menu: props.enableEmojiMenu }),
 										menuReaction: false,
 									}),
 								];
@@ -578,8 +578,8 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							h(MkEmoji, {
 								key: nextKey(),
 								emoji: token.props.emoji,
-								menu: props.enableEmojiMenu,
-								menuReaction: props.enableEmojiMenuReaction,
+								...(props.enableEmojiMenu === undefined ? {} : { menu: props.enableEmojiMenu }),
+								...(props.enableEmojiMenuReaction === undefined ? {} : { menuReaction: props.enableEmojiMenuReaction }),
 							}),
 						];
 					}

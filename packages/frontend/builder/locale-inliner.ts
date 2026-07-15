@@ -52,8 +52,8 @@ export class LocaleInliner {
 			.filter((chunk) => this.isScriptFile(chunk.file))
 			.map((chunk) => ({
 				fileName: this.stripScriptDir(chunk.file),
-				src: chunk.src,
-				chunkName: chunk.name,
+				...(chunk.src === undefined ? {} : { src: chunk.src }),
+				...(chunk.name === undefined ? {} : { chunkName: chunk.name }),
 			}));
 	}
 

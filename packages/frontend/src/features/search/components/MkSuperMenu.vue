@@ -162,7 +162,7 @@ watch(rawSearchQuery, (value) => {
 				path: path ?? '/', // never gets `/`
 				label: item.label,
 				parentLabels: parentLabels.toReversed(),
-				icon,
+				...(icon === undefined ? {} : { icon }),
 				isRoot: item.parentId == null,
 			});
 		};

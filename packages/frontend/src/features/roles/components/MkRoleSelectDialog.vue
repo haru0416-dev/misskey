@@ -66,9 +66,6 @@ const props = withDefaults(defineProps<{
 	title?: string,
 	publicOnly: boolean,
 }>(), {
-	initialRoleIds: undefined,
-	infoMessage: undefined,
-	title: undefined,
 	publicOnly: true,
 });
 

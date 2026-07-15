@@ -185,8 +185,8 @@ function save() {
 
 	emit('update', {
 		type: type.value,
-		fileId: fileId.value,
-		fileUrl: fileUrl.value,
+		...(fileId.value === undefined ? {} : { fileId: fileId.value }),
+		...(fileUrl.value === undefined ? {} : { fileUrl: fileUrl.value }),
 		volume: volume.value,
 	});
 

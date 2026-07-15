@@ -65,8 +65,8 @@ export function createAiScriptEnv(opts: { storageKey: string; token?: string }) 
 
 			await os.alert({
 				type,
-				title,
-				text,
+				...(title === undefined ? {} : { title }),
+				...(text === undefined ? {} : { text }),
 			});
 			return values.NULL;
 		}),
@@ -102,8 +102,8 @@ export function createAiScriptEnv(opts: { storageKey: string; token?: string }) 
 
 			const confirm = await os.confirm({
 				type,
-				title,
-				text,
+				...(title === undefined ? {} : { title }),
+				...(text === undefined ? {} : { text }),
 			});
 			return confirm.canceled ? values.FALSE : values.TRUE;
 		}),

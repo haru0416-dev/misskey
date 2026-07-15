@@ -276,7 +276,11 @@ provideMetadataReceiver((metadataGetter) => {
 		childInfo.value = null;
 	} else {
 		childInfo.value = info;
-		INFO.value.needWideArea = info.needWideArea ?? undefined;
+		if (info.needWideArea === undefined) {
+			delete INFO.value.needWideArea;
+		} else {
+			INFO.value.needWideArea = info.needWideArea;
+		}
 	}
 });
 provideReactiveMetadata(INFO);

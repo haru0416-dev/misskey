@@ -36,7 +36,7 @@ export type WidgetComponentExpose = {
 export const useWidgetPropsManager = <F extends FormWithDefault>(
 	name: WidgetName,
 	propsDef: F,
-	props: Readonly<WidgetComponentProps<GetFormResultType<F>>>,
+	props: Readonly<{ widget: Widget<GetFormResultType<F>> | undefined }>,
 	emit: WidgetComponentEmits<GetFormResultType<F>>,
 ): {
 	widgetProps: Reactive<GetFormResultType<F>>;
@@ -59,8 +59,11 @@ export const useWidgetPropsManager = <F extends FormWithDefault>(
 		() => props.widget?.data,
 		(to) => {
 			if (to != null) {
-				for (const key of Object.keys(propsDef)) {
-					(widgetProps as any)[key] = to[key];
+				for (const key of Object.keys(to) as (keyof GetFormResultType<F>)[]) {
+					const value = to[key];
+					if (value !== undefined) {
+						Object.assign(widgetProps, { [key]: value });
+					}
 				}
 			}
 		},

@@ -97,7 +97,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker v-slot="slotProps" :keywords="['pinned', 'users']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #icon><SearchIcon><i class="ti ti-user-star"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.pinnedUsers }}</SearchLabel></template>
 						<template v-if="pinnedUsersForm.modified.value" #footer>
@@ -112,7 +112,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker v-slot="slotProps" :keywords="['serviceWorker']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #icon><SearchIcon><i class="ti ti-world-cog"></i></SearchIcon></template>
 						<template #label><SearchLabel>ServiceWorker</SearchLabel></template>
 						<template v-if="serviceWorkerForm.modified.value" #footer>
@@ -147,7 +147,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker v-slot="slotProps" :keywords="['ads']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #icon><SearchIcon><i class="ti ti-ad"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts._ad.adsSettings }}</SearchLabel></template>
 						<template v-if="adForm.modified.value" #footer>
@@ -172,7 +172,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker v-slot="slotProps" :keywords="['url', 'preview']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #icon><SearchIcon><i class="ti ti-world-search"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts._urlPreviewSetting.title }}</SearchLabel></template>
 						<template v-if="urlPreviewForm.modified.value" #footer>
@@ -253,7 +253,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker v-slot="slotProps" :keywords="['federation']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #icon><SearchIcon><i class="ti ti-planet"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.federation }}</SearchLabel></template>
 						<template v-if="federationForm.savedState.federation === 'all'" #suffix>{{ i18n.ts.all }}</template>
@@ -355,7 +355,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker v-slot="slotProps" :keywords="['proxy', 'account']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #icon><SearchIcon><i class="ti ti-ghost"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.proxyAccount }}</SearchLabel></template>
 						<template v-if="proxyAccountForm.modified.value" #footer>

@@ -128,9 +128,9 @@ export type AsUiFolder = AsUiComponentBase & {
 
 type PostFormPropsForAsUi = {
 	text: string;
-	cw?: string;
-	visibility?: (typeof Misskey.noteVisibilities)[number];
-	localOnly?: boolean;
+	cw?: string | undefined;
+	visibility?: (typeof Misskey.noteVisibilities)[number] | undefined;
+	localOnly?: boolean | undefined;
 };
 
 export type AsUiPostFormButton = AsUiComponentBase & {
@@ -162,9 +162,13 @@ export type AsUiComponent =
 	| AsUiPostFormButton
 	| AsUiPostForm;
 
+type WithExplicitUndefined<T> = {
+	[K in keyof T]: T[K] | undefined;
+};
+
 type Options<T extends AsUiComponent> = T extends AsUiButtons
-	? Omit<T, 'id' | 'type' | 'buttons'> & { buttons?: Options<AsUiButton>[] }
-	: Omit<T, 'id' | 'type'>;
+	? WithExplicitUndefined<Omit<T, 'id' | 'type' | 'buttons'>> & { buttons: Options<AsUiButton>[] }
+	: WithExplicitUndefined<Omit<T, 'id' | 'type'>>;
 
 export function patch(
 	id: string,
@@ -534,14 +538,14 @@ function getPostFormProps(form: values.VObj): PostFormPropsForAsUi {
 	if (visibility) utils.assertString(visibility);
 	const localOnly = form.value.get('localOnly');
 	if (localOnly) utils.assertBoolean(localOnly);
+	const validatedVisibility = visibility?.value && (Misskey.noteVisibilities as readonly string[]).includes(visibility.value)
+		? visibility.value as (typeof Misskey.noteVisibilities)[number]
+		: undefined;
 
 	return {
 		text: text.value,
 		cw: cw?.value,
-		visibility:
-			visibility?.value && (Misskey.noteVisibilities as readonly string[]).includes(visibility.value)
-				? (visibility.value as (typeof Misskey.noteVisibilities)[number])
-				: undefined,
+		visibility: validatedVisibility,
 		localOnly: localOnly?.value,
 	};
 }

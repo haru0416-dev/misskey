@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<XNotificationConfig
 						:userLists="userLists"
 						:value="$i.notificationRecieveConfig[type] ?? { type: 'all' }"
-						:configurableTypes="(onlyOnOrOffNotificationTypes as string[]).includes(type) ? ['all', 'never'] : undefined"
+						v-bind="(onlyOnOrOffNotificationTypes as string[]).includes(type) ? { configurableTypes: ['all', 'never'] as const } : {}"
 						@update="(res) => updateReceiveConfig(type, res)"
 					/>
 				</MkFolder>

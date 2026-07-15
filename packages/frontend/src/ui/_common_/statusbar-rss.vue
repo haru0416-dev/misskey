@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:leaveToClass="$style.transition_change_leaveTo"
 			mode="default"
 		>
-			<MkMarqueeText :key="key" :duration="marqueeDuration" :reverse="marqueeReverse">
+			<MkMarqueeText :key="key" :reverse="marqueeReverse" v-bind="marqueeDuration === undefined ? {} : { duration: marqueeDuration }">
 				<span v-for="item in items" :class="$style.item">
 					<a :href="item.link" rel="nofollow noopener" target="_blank" :title="item.title">{{ item.title }}</a><span :class="$style.divider"></span>
 				</span>

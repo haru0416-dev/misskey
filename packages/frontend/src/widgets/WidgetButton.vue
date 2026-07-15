@@ -59,7 +59,7 @@ const parser = new Parser();
 async function run() {
 	const aiscript = new Interpreter(createAiScriptEnv({
 		storageKey: 'widget',
-		token: $i?.token,
+		...($i?.token === undefined ? {} : { token: $i.token }),
 	}), {
 		in: aiScriptReadline,
 		out: (value) => {

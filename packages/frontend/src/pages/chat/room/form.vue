@@ -205,8 +205,8 @@ function send() {
 	if (props.user) {
 		misskeyApi('chat/messages/create-to-user', {
 			toUserId: props.user.id,
-			text: text.value ? text.value : undefined,
-			fileId: file.value ? file.value.id : undefined,
+			...(text.value ? { text: text.value } : {}),
+			...(file.value ? { fileId: file.value.id } : {}),
 		}).then(message => {
 			clear();
 		}).catch(err => {
@@ -217,8 +217,8 @@ function send() {
 	} else if (props.room) {
 		misskeyApi('chat/messages/create-to-room', {
 			toRoomId: props.room.id,
-			text: text.value ? text.value : undefined,
-			fileId: file.value ? file.value.id : undefined,
+			...(text.value ? { text: text.value } : {}),
+			...(file.value ? { fileId: file.value.id } : {}),
 		}).then(message => {
 			clear();
 		}).catch(err => {

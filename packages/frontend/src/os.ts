@@ -112,7 +112,7 @@ export const apiWithDialog = <E extends keyof Misskey.Endpoints>(
 		}
 		alert({
 			type: 'error',
-			title,
+			...(title === undefined ? {} : { title }),
 			text,
 		});
 	});
@@ -159,7 +159,7 @@ export function promiseDialog<T extends Promise<unknown>>(
 		{
 			success: success,
 			showing: showing,
-			text: text,
+			...(text === undefined ? {} : { text }),
 		},
 		{
 			closed: () => dispose(),
@@ -363,8 +363,8 @@ export function actions<const T extends ActionsAction[]>(props: {
 				...props,
 				actions: props.actions.map((a) => ({
 					text: a.text,
-					primary: a.primary,
-					danger: a.danger,
+					...(a.primary === undefined ? {} : { primary: a.primary }),
+					...(a.danger === undefined ? {} : { danger: a.danger }),
 					callback: () => {
 						resolve({ canceled: false, result: a.value });
 					},
@@ -426,15 +426,15 @@ export function inputText(props: {
 		const { dispose } = popup(
 			MkDialog,
 			{
-				title: props.title,
-				text: props.text,
+				...(props.title === undefined ? {} : { title: props.title }),
+				...(props.text === undefined ? {} : { text: props.text }),
 				input: {
-					type: props.type,
-					placeholder: props.placeholder,
-					autocomplete: props.autocomplete,
+					...(props.type === undefined ? {} : { type: props.type }),
+					...(props.placeholder === undefined ? {} : { placeholder: props.placeholder }),
+					...(props.autocomplete === undefined ? {} : { autocomplete: props.autocomplete }),
 					default: props.default ?? null,
-					minLength: props.minLength,
-					maxLength: props.maxLength,
+					...(props.minLength === undefined ? {} : { minLength: props.minLength }),
+					...(props.maxLength === undefined ? {} : { maxLength: props.maxLength }),
 				},
 			},
 			{
@@ -473,12 +473,12 @@ export function inputNumber(props: {
 		const { dispose } = popup(
 			MkDialog,
 			{
-				title: props.title,
-				text: props.text,
+				...(props.title === undefined ? {} : { title: props.title }),
+				...(props.text === undefined ? {} : { text: props.text }),
 				input: {
 					type: 'number',
-					placeholder: props.placeholder,
-					autocomplete: props.autocomplete,
+					...(props.placeholder === undefined ? {} : { placeholder: props.placeholder }),
+					...(props.autocomplete === undefined ? {} : { autocomplete: props.autocomplete }),
 					default: props.default ?? null,
 				},
 			},
@@ -502,11 +502,11 @@ export function inputDatetime(props: {
 		const { dispose } = popup(
 			MkDialog,
 			{
-				title: props.title,
-				text: props.text,
+				...(props.title === undefined ? {} : { title: props.title }),
+				...(props.text === undefined ? {} : { text: props.text }),
 				input: {
 					type: 'datetime-local',
-					placeholder: props.placeholder,
+					...(props.placeholder === undefined ? {} : { placeholder: props.placeholder }),
 					default: props.default ?? null,
 				},
 			},
@@ -558,8 +558,8 @@ export function select<C extends OptionValue, D extends C | null = null>(props: 
 		const { dispose } = popup(
 			MkDialog,
 			{
-				title: props.title,
-				text: props.text,
+				...(props.title === undefined ? {} : { title: props.title }),
+				...(props.text === undefined ? {} : { text: props.text }),
 				select: {
 					items: props.items.filter((x) => x !== undefined),
 					default: props.default ?? null,
@@ -618,7 +618,7 @@ export function waiting(options: { text?: string } = {}) {
 		{
 			success: isSuccess,
 			showing: showing,
-			text: options.text,
+			...(options.text === undefined ? {} : { text: options.text }),
 		},
 		{
 			closed: () => {
@@ -656,8 +656,8 @@ export async function selectUser(
 		const { dispose } = popup(
 			MkUserSelectDialog,
 			{
-				includeSelf: opts.includeSelf,
-				localOnly: opts.localOnly,
+				...(opts.includeSelf === undefined ? {} : { includeSelf: opts.includeSelf }),
+				...(opts.localOnly === undefined ? {} : { localOnly: opts.localOnly }),
 			},
 			{
 				ok: (user) => {
@@ -792,11 +792,11 @@ export async function popupMenu(
 			{
 				items: items.filter((x) => x != null),
 				anchorElement,
-				width: options?.width,
-				align: options?.align,
+				...(options?.width === undefined ? {} : { width: options.width }),
+				...(options?.align === undefined ? {} : { align: options.align }),
 				returnFocusTo,
-				debugDisablePredictionCone: options?.debugDisablePredictionCone,
-				debugShowPredictionCone: options?.debugShowPredictionCone,
+				...(options?.debugDisablePredictionCone === undefined ? {} : { debugDisablePredictionCone: options.debugDisablePredictionCone }),
+				...(options?.debugShowPredictionCone === undefined ? {} : { debugShowPredictionCone: options.debugShowPredictionCone }),
 			},
 			{
 				closed: () => {
@@ -854,19 +854,16 @@ export async function contextMenu(items: MenuItem[], ev: PointerEvent): Promise<
 }
 
 export async function post(props: PostFormProps = {}): Promise<void> {
-	const isLoggedIn = await pleaseLogin({
-		openOnRemote:
-			props.initialText || props.initialNote
-				? {
-						type: 'share',
-						params: {
-							text: props.initialText ?? props.initialNote?.text ?? '',
-							visibility: props.initialVisibility ?? props.initialNote?.visibility ?? 'public',
-							localOnly: props.initialLocalOnly || props.initialNote?.localOnly ? '1' : '0',
-						},
-					}
-				: undefined,
-	});
+	const isLoggedIn = await pleaseLogin(props.initialText || props.initialNote ? {
+		openOnRemote: {
+			type: 'share',
+			params: {
+				text: props.initialText ?? props.initialNote?.text ?? '',
+				visibility: props.initialVisibility ?? props.initialNote?.visibility ?? 'public',
+				localOnly: props.initialLocalOnly || props.initialNote?.localOnly ? '1' : '0',
+			},
+		},
+	} : {});
 	if (!isLoggedIn) return;
 
 	showMovedDialog();
@@ -876,7 +873,22 @@ export async function post(props: PostFormProps = {}): Promise<void> {
 		//       Vueが渡されたコンポーネントに内部的に__propsというプロパティを生やす影響で、
 		//       複数のpost formを開いたときに場合によってはエラーになる
 		//       もちろん複数のpost formを開けること自体Misskeyサイドのバグなのだが
-		const { dispose } = popup(MkPostFormDialog, props, {
+		const dialogProps = {
+			...(props.reply === undefined ? {} : { reply: props.reply }),
+			...(props.renote === undefined ? {} : { renote: props.renote }),
+			...(props.channel === undefined ? {} : { channel: props.channel }),
+			...(props.mention === undefined ? {} : { mention: props.mention }),
+			...(props.specified === undefined ? {} : { specified: props.specified }),
+			...(props.initialText === undefined ? {} : { initialText: props.initialText }),
+			...(props.initialCw === undefined ? {} : { initialCw: props.initialCw }),
+			...(props.initialVisibility === undefined ? {} : { initialVisibility: props.initialVisibility }),
+			...(props.initialFiles === undefined ? {} : { initialFiles: props.initialFiles }),
+			...(props.initialLocalOnly === undefined ? {} : { initialLocalOnly: props.initialLocalOnly }),
+			...(props.initialVisibleUsers === undefined ? {} : { initialVisibleUsers: props.initialVisibleUsers }),
+			...(props.initialNote === undefined ? {} : { initialNote: props.initialNote }),
+			...(props.instant === undefined ? {} : { instant: props.instant }),
+		};
+		const { dispose } = popup(MkPostFormDialog, dialogProps, {
 			closed: () => {
 				resolve();
 				dispose();
@@ -940,9 +952,9 @@ export async function launchUploader(
 			import('@/features/drive/components/MkUploaderDialog.vue').then((x) => x.default),
 			{
 				files: markRaw(files),
-				folderId: options?.folderId,
-				multiple: options?.multiple,
-				features: options?.features,
+				...(options?.folderId === undefined ? {} : { folderId: options.folderId }),
+				...(options?.multiple === undefined ? {} : { multiple: options.multiple }),
+				...(options?.features === undefined ? {} : { features: options.features }),
 			},
 			{
 				done: (driveFiles) => {

@@ -96,9 +96,9 @@ export async function parsePluginMeta(code: string): Promise<AiScriptPluginMeta>
 		name: name as string,
 		version: version as string,
 		author: author as string,
-		description: description as string | undefined,
-		permissions: permissions as (typeof Misskey.permissions)[number][] | undefined,
-		config: config as Record<string, any> | undefined,
+		...(description === undefined ? {} : { description: description as string }),
+		...(permissions === undefined ? {} : { permissions: permissions as (typeof Misskey.permissions)[number][] }),
+		...(config === undefined ? {} : { config: config as Record<string, any> }),
 	};
 }
 
@@ -410,8 +410,9 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 		return fn(ctx);
 	}
 
+	const token = store.pluginTokens[id];
 	const env: Record<string, values.Value> = {
-		...createAiScriptEnv({ ...opts, token: store.pluginTokens[id] }),
+		...createAiScriptEnv({ ...opts, ...(token === undefined ? {} : { token }) }),
 
 		'Plugin:register:post_form_action': values.FN_NATIVE(([title, handler]) => {
 			utils.assertString(title);

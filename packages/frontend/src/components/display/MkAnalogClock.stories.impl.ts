@@ -28,9 +28,7 @@ export const Default = {
 			template: '<MkAnalogClock v-bind="props" />',
 		};
 	},
-	args: {
-		now: isChromatic() ? () => new Date('2023-01-01T10:10:30') : undefined,
-	},
+	args: isChromatic() ? { now: () => new Date('2023-01-01T10:10:30') } : {},
 	decorators: [
 		() => ({
 			template:

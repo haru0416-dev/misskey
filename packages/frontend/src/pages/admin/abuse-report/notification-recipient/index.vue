@@ -116,7 +116,7 @@ async function showEditor(mode: 'create' | 'edit', id?: string) {
 			defineAsyncComponent(() => import('./editor.vue')),
 			{
 				mode,
-				id,
+				...(id === undefined ? {} : { id }),
 			},
 			{
 				submitted: () => {

@@ -137,7 +137,7 @@ function realtimeSubscribe(props: { note: Pick<Misskey.entities.Note, 'id' | 'cr
 				noteEvents.emit(`reacted:${id}`, {
 					userId: body.userId,
 					reaction: body.reaction,
-					emoji: body.emoji,
+					...(body.emoji === undefined ? {} : { emoji: body.emoji }),
 				});
 				break;
 			}

@@ -115,13 +115,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@mouseleave.passive="onItemMouseLeave"
 			>
 				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]"></i>
-				<MkSwitchButton v-else :class="$style.switchButton" :checked="item.ref" :disabled="item.disabled" @toggle="switchItem(item)"/>
+				<MkSwitchButton v-else v-bind="item.disabled === undefined ? {} : { disabled: item.disabled }" :class="$style.switchButton" :checked="item.ref" @toggle="switchItem(item)"/>
 				<div :class="$style.item_content">
 					<div :class="[$style.item_content_text, { [$style.switchText]: !item.icon }]">
 						<div :class="$style.item_content_text_title">{{ item.text }}</div>
 						<div v-if="item.caption" :class="$style.item_content_text_caption">{{ item.caption }}</div>
 					</div>
-					<MkSwitchButton v-if="item.icon" :class="[$style.switchButton, $style.caret]" :checked="item.ref" :disabled="item.disabled" @toggle="switchItem(item)"/>
+					<MkSwitchButton v-if="item.icon" v-bind="item.disabled === undefined ? {} : { disabled: item.disabled }" :class="[$style.switchButton, $style.caret]" :checked="item.ref" @toggle="switchItem(item)"/>
 				</div>
 			</button>
 
