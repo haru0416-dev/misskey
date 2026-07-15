@@ -9,14 +9,15 @@ import { z } from 'zod';
 import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
-import { deleteEmojiByIdFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, listEmojisByIdsFromDatabase, listEmojisByIdsOrFailFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, updateEmojiInDatabase, updateEmojisByIdsInDatabase } from '@/core/EmojiStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import { addAliasesToEmojisByIdsInDatabase, deleteEmojiByIdFromDatabase, deleteEmojisByIdsFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, invalidateEmojiCache, listEmojisByIdsFromDatabase, listEmojisByIdsOrFailFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, removeAliasesFromEmojisByIdsInDatabase, updateEmojiInDatabase, updateEmojisByIdsReturningFromDatabase } from '@/core/EmojiStore.js';
+import { logModerationEventInDatabase, logModerationEventsInDatabase } from '@/core/ModerationLogLogic.js';
 import { addDbJob, type DbQueue } from '@/core/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/RoleStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiEmoji } from '@/models/Emoji.js';
@@ -329,9 +330,8 @@ export async function refreshHonoApiLocalEmojisCache(deps: HonoApiEmojiDependenc
 
 async function publishHonoApiEmojiUpdated(
 	deps: HonoApiEmojiDependencies,
-	ids: MiEmoji['id'][],
+	emojis: MiEmoji[],
 ): Promise<void> {
-	const emojis = await listEmojisByIdsOrFailFromDatabase(deps.db, ids);
 	if (deps.publishBroadcastStream == null) return;
 
 	deps.publishBroadcastStream('emojiUpdated', {
@@ -343,8 +343,31 @@ async function finishHonoApiEmojiBulkUpdate(
 	deps: HonoApiEmojiDependencies,
 	ids: MiEmoji['id'][],
 ): Promise<void> {
+	invalidateEmojiCache();
 	await refreshHonoApiLocalEmojisCache(deps);
-	await publishHonoApiEmojiUpdated(deps, ids);
+	const emojis = await listEmojisByIdsOrFailFromDatabase(deps.db, ids);
+	await publishHonoApiEmojiUpdated(deps, emojis);
+}
+
+function orderEmojisByRequestedIds(ids: MiEmoji['id'][], emojis: MiEmoji[]): MiEmoji[] {
+	const emojiById = new Map(emojis.map(emoji => [emoji.id, emoji]));
+	return ids.map(id => {
+		const emoji = emojiById.get(id);
+		if (emoji == null) throw new EntityNotFoundError('MiEmoji', { id });
+		return emoji;
+	});
+}
+
+async function updateEmojisAtomically(
+	deps: HonoApiEmojiDependencies,
+	ids: MiEmoji['id'][],
+	update: (db: MiDrizzleDatabase) => Promise<MiEmoji[]>,
+): Promise<void> {
+	await deps.db.transaction(async transaction => {
+		const updated = await update(transaction as typeof deps.db);
+		orderEmojisByRequestedIds(ids, updated);
+	});
+	await finishHonoApiEmojiBulkUpdate(deps, ids);
 }
 
 async function publishHonoApiEmojiDeleted(
@@ -507,16 +530,8 @@ export async function handleHonoApiAdminEmojiAddAliasesBulk(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiAliasesBulkParamDef, body);
-	const emojis = await listEmojisByIdsFromDatabase(deps.db, params.ids);
-
-	for (const emoji of emojis) {
-		await updateEmojiInDatabase(deps.db, emoji.id, {
-			updatedAt: new Date(),
-			aliases: [...new Set(emoji.aliases.concat(params.aliases))],
-		});
-	}
-
-	await finishHonoApiEmojiBulkUpdate(deps, params.ids);
+	const updatedAt = new Date();
+	await updateEmojisAtomically(deps, params.ids, db => addAliasesToEmojisByIdsInDatabase(db, params.ids, params.aliases, updatedAt));
 }
 
 export async function handleHonoApiAdminEmojiDelete(
@@ -541,16 +556,17 @@ export async function handleHonoApiAdminEmojiDeleteBulk(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiDeleteBulkParamDef, body);
-	const emojis = await listEmojisByIdsFromDatabase(deps.db, params.ids);
+	const emojis = await deps.db.transaction(async transaction => {
+		const db = transaction as typeof deps.db;
+		const deleted = await deleteEmojisByIdsFromDatabase(db, params.ids);
+		await logModerationEventsInDatabase({ db }, me, 'deleteCustomEmoji', deleted.map(emoji => ({
+				emojiId: emoji.id,
+				emoji,
+			})));
+		return deleted;
+	});
 
-	for (const emoji of emojis) {
-		await deleteEmojiByIdFromDatabase(deps.db, emoji.id);
-		await logModerationEventInDatabase(deps, me, 'deleteCustomEmoji', {
-			emojiId: emoji.id,
-			emoji,
-		});
-	}
-
+	invalidateEmojiCache();
 	await refreshHonoApiLocalEmojisCache(deps);
 	await publishHonoApiEmojiDeleted(deps, emojis);
 }
@@ -655,7 +671,7 @@ export async function handleHonoApiAdminEmojiUpdate(
 		await publishHonoApiEmojiDeleted(deps, [emoji]);
 		await publishHonoApiEmojiAdded(deps, updated);
 	} else {
-		await publishHonoApiEmojiUpdated(deps, [emoji.id]);
+		await publishHonoApiEmojiUpdated(deps, [updated]);
 	}
 
 	await logModerationEventInDatabase(deps, me, 'updateCustomEmoji', {
@@ -670,12 +686,11 @@ export async function handleHonoApiAdminEmojiSetAliasesBulk(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiAliasesBulkParamDef, body);
-	await updateEmojisByIdsInDatabase(deps.db, params.ids, {
-		updatedAt: new Date(),
+	const updatedAt = new Date();
+	await updateEmojisAtomically(deps, params.ids, db => updateEmojisByIdsReturningFromDatabase(db, params.ids, {
+		updatedAt,
 		aliases: params.aliases,
-	});
-
-	await finishHonoApiEmojiBulkUpdate(deps, params.ids);
+	}));
 }
 
 export async function handleHonoApiAdminEmojiRemoveAliasesBulk(
@@ -683,17 +698,8 @@ export async function handleHonoApiAdminEmojiRemoveAliasesBulk(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiAliasesBulkParamDef, body);
-	const emojis = await listEmojisByIdsFromDatabase(deps.db, params.ids);
-	const aliasesToRemove = new Set(params.aliases);
-
-	for (const emoji of emojis) {
-		await updateEmojiInDatabase(deps.db, emoji.id, {
-			updatedAt: new Date(),
-			aliases: emoji.aliases.filter(alias => !aliasesToRemove.has(alias)),
-		});
-	}
-
-	await finishHonoApiEmojiBulkUpdate(deps, params.ids);
+	const updatedAt = new Date();
+	await updateEmojisAtomically(deps, params.ids, db => removeAliasesFromEmojisByIdsInDatabase(db, params.ids, params.aliases, updatedAt));
 }
 
 export async function handleHonoApiAdminEmojiSetCategoryBulk(
@@ -701,12 +707,11 @@ export async function handleHonoApiAdminEmojiSetCategoryBulk(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiSetCategoryBulkParamDef, body);
-	await updateEmojisByIdsInDatabase(deps.db, params.ids, {
-		updatedAt: new Date(),
+	const updatedAt = new Date();
+	await updateEmojisAtomically(deps, params.ids, db => updateEmojisByIdsReturningFromDatabase(db, params.ids, {
+		updatedAt,
 		category: params.category ?? null,
-	});
-
-	await finishHonoApiEmojiBulkUpdate(deps, params.ids);
+	}));
 }
 
 export async function handleHonoApiAdminEmojiSetLicenseBulk(
@@ -714,12 +719,11 @@ export async function handleHonoApiAdminEmojiSetLicenseBulk(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiSetLicenseBulkParamDef, body);
-	await updateEmojisByIdsInDatabase(deps.db, params.ids, {
-		updatedAt: new Date(),
+	const updatedAt = new Date();
+	await updateEmojisAtomically(deps, params.ids, db => updateEmojisByIdsReturningFromDatabase(db, params.ids, {
+		updatedAt,
 		license: params.license ?? null,
-	});
-
-	await finishHonoApiEmojiBulkUpdate(deps, params.ids);
+	}));
 }
 
 export async function handleHonoApiAdminEmojiListRemote(

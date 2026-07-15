@@ -128,7 +128,7 @@ function emojiCacheKey(name: MiEmoji['name'], host: MiEmoji['host']): string {
 	return `${name}@${host ?? ''}`;
 }
 
-function invalidateEmojiCache(): void {
+export function invalidateEmojiCache(): void {
 	emojiByNameAndHostCache.clear();
 }
 
@@ -350,14 +350,78 @@ export async function updateEmojisByIdsInDatabase(
 	ids: MiEmoji['id'][],
 	values: Partial<EmojiInsert>,
 ): Promise<void> {
-	if (ids.length === 0) return;
+	await updateEmojisByIdsReturningFromDatabase(db, ids, values);
+	invalidateEmojiCache();
+}
 
-	await db
+export async function updateEmojisByIdsReturningFromDatabase(
+	db: MiDrizzleDatabase,
+	ids: MiEmoji['id'][],
+	values: Partial<EmojiInsert>,
+): Promise<MiEmoji[]> {
+	if (ids.length === 0) return [];
+
+	const rows = await db
 		.update(emoji)
 		.set(values)
-		.where(inArray(emoji.id, ids));
+		.where(inArray(emoji.id, ids))
+		.returning();
 
-	invalidateEmojiCache();
+	return rows;
+}
+
+export async function addAliasesToEmojisByIdsInDatabase(
+	db: MiDrizzleDatabase,
+	ids: MiEmoji['id'][],
+	aliases: MiEmoji['aliases'],
+	updatedAt: Date,
+): Promise<MiEmoji[]> {
+	if (ids.length === 0) return [];
+
+	const rows = await db
+		.update(emoji)
+		.set({
+			updatedAt,
+			aliases: sql<MiEmoji['aliases']>`ARRAY(
+				SELECT value
+				FROM unnest(${emoji.aliases} || ${sql.param(aliases)}::character varying[]) WITH ORDINALITY AS input(value, position)
+				GROUP BY value
+				ORDER BY min(position)
+			)`,
+		})
+		.where(inArray(emoji.id, ids))
+		.returning();
+
+	return rows;
+}
+
+export async function removeAliasesFromEmojisByIdsInDatabase(
+	db: MiDrizzleDatabase,
+	ids: MiEmoji['id'][],
+	aliases: MiEmoji['aliases'],
+	updatedAt: Date,
+): Promise<MiEmoji[]> {
+	if (ids.length === 0) return [];
+
+	const rows = await db
+		.update(emoji)
+		.set({
+			updatedAt,
+			aliases: sql<MiEmoji['aliases']>`ARRAY(
+				SELECT value
+				FROM unnest(${emoji.aliases}) WITH ORDINALITY AS input(value, position)
+				WHERE NOT EXISTS (
+					SELECT 1
+					FROM unnest(${sql.param(aliases)}::character varying[]) AS removed(value)
+					WHERE input.value IS NOT DISTINCT FROM removed.value
+				)
+				ORDER BY position
+			)`,
+		})
+		.where(inArray(emoji.id, ids))
+		.returning();
+
+	return rows;
 }
 
 /**
@@ -392,6 +456,20 @@ export async function deleteEmojiByIdFromDatabase(
 		.where(eq(emoji.id, id));
 
 	invalidateEmojiCache();
+}
+
+export async function deleteEmojisByIdsFromDatabase(
+	db: MiDrizzleDatabase,
+	ids: MiEmoji['id'][],
+): Promise<MiEmoji[]> {
+	if (ids.length === 0) return [];
+
+	const rows = await db
+		.delete(emoji)
+		.where(inArray(emoji.id, ids))
+		.returning();
+
+	return rows;
 }
 
 /**
