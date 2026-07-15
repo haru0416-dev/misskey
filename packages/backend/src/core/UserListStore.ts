@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, sql } from 'drizzle-orm';
+import { userListMembership, type UserListMembershipInsert } from '@/db/schema/user-list-membership.js';
 import { userList, type UserListInsert, type UserListRow } from '@/db/schema/user-list.js';
 import { user } from '@/db/schema/user.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -128,6 +129,23 @@ export async function fetchPublicUserListByIdFromDatabase(
 	return row == null ? null : deserializeUserList(row);
 }
 
+export async function fetchPublicUserListByIdForShareFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiUserList['id'],
+): Promise<MiUserList | null> {
+	const [row] = await db
+		.select()
+		.from(userList)
+		.where(and(
+			eq(userList.id, id),
+			eq(userList.isPublic, true),
+		))
+		.limit(1)
+		.for('share');
+
+	return row == null ? null : deserializeUserList(row);
+}
+
 export async function userListExistsByIdAndUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiUserList['id'],
@@ -183,13 +201,14 @@ export async function createUserListWithinLimitInDatabase(
 	limit: number,
 ): Promise<MiUserList | null> {
 	return await db.transaction(async tx => {
-		const [lockedUser] = await tx
+		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('user-list-limit'), hashtext(${values.userId}))`);
+		const [existingUser] = await tx
 			.select({ id: user.id })
 			.from(user)
 			.where(eq(user.id, values.userId))
 			.limit(1)
-			.for('update');
-		if (!lockedUser) return null;
+			.for('key share');
+		if (!existingUser) return null;
 
 		const [row] = await tx
 			.select({ value: count() })
@@ -199,6 +218,74 @@ export async function createUserListWithinLimitInDatabase(
 
 		const [created] = await tx.insert(userList).values(values).returning();
 		return created ? deserializeUserList(created) : null;
+	});
+}
+
+/** Must be called inside a transaction so both owner locks are held until the caller finishes. */
+export async function lockUserListOwnerForCreationInDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+): Promise<boolean> {
+	await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext('user-list-limit'), hashtext(${userId}))`);
+	const [existingUser] = await db
+		.select({ id: user.id })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1)
+		.for('key share');
+	return existingUser != null;
+}
+
+export async function createUserListWithMembershipsWithinLimitsInDatabase(
+	db: MiDrizzleDatabase,
+	values: UserListInsert,
+	memberships: Pick<UserListMembershipInsert, 'id' | 'userId'>[],
+	limits: {
+		lists: number;
+		members: number;
+	},
+): Promise<
+	| { status: 'created'; userList: MiUserList }
+	| { status: 'tooManyLists' }
+	| { status: 'tooManyMembers' }
+> {
+	return await db.transaction(async tx => {
+		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('user-list-limit'), hashtext(${values.userId}))`);
+		const [existingUser] = await tx
+			.select({ id: user.id })
+			.from(user)
+			.where(eq(user.id, values.userId))
+			.limit(1)
+			.for('key share');
+		if (!existingUser) return { status: 'tooManyLists' } as const;
+
+		const [row] = await tx
+			.select({ value: count() })
+			.from(userList)
+			.where(eq(userList.userId, values.userId));
+		if ((row?.value ?? 0) >= limits.lists) return { status: 'tooManyLists' } as const;
+		if (memberships.length > limits.members) return { status: 'tooManyMembers' } as const;
+
+		const [created] = await tx.insert(userList).values(values).returning();
+		if (created == null) throw new Error('Failed to create user list');
+
+		const membershipRows: UserListMembershipInsert[] = memberships.map(membership => ({
+			...membership,
+			userListId: created.id,
+			userListUserId: created.userId,
+			withReplies: false,
+		}));
+		const batchSize = 10_000;
+		const insertBatch = async (offset: number): Promise<void> => {
+			const batch = membershipRows.slice(offset, offset + batchSize);
+			if (batch.length === 0) return;
+
+			await tx.insert(userListMembership).values(batch);
+			await insertBatch(offset + batchSize);
+		};
+		await insertBatch(0);
+
+		return { status: 'created', userList: deserializeUserList(created) } as const;
 	});
 }
 
