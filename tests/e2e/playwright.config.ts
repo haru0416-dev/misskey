@@ -5,20 +5,20 @@
 
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.MISSKEY_TEST_BASE_URL ?? 'http://localhost:61812';
-const startCommand = process.env.MISSKEY_TEST_START_COMMAND ?? 'bun run start:test';
+const baseURL = process.env['MISSKEY_TEST_BASE_URL'] ?? 'http://localhost:61812';
+const startCommand = process.env['MISSKEY_TEST_START_COMMAND'] ?? 'bun run start:test';
 
 export default defineConfig({
 	testDir: './specs',
 	fullyParallel: false,
-	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 1 : 0,
+	forbidOnly: !!process.env['CI'],
+	retries: process.env['CI'] ? 1 : 0,
 	workers: 1,
 	timeout: 60_000,
 	expect: {
 		timeout: 30_000,
 	},
-	reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
+	reporter: process.env['CI'] ? [['list'], ['html', { open: 'never' }]] : [['list']],
 	use: {
 		baseURL,
 		trace: 'retain-on-failure',
@@ -35,7 +35,7 @@ export default defineConfig({
 	webServer: {
 		command: startCommand,
 		url: baseURL,
-		reuseExistingServer: !process.env.CI,
+		reuseExistingServer: !process.env['CI'],
 		timeout: 120_000,
 		stdout: 'pipe',
 		stderr: 'pipe',

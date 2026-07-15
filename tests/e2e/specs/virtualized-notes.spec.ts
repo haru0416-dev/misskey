@@ -61,14 +61,14 @@ test.describe('Virtualized note list', () => {
 			.poll(async () => {
 				return await list
 					.locator('[data-index]')
-					.evaluateAll((rows) => Math.max(...rows.map((row) => Number((row as HTMLElement).dataset.index))));
+					.evaluateAll((rows) => Math.max(...rows.map((row) => Number((row as HTMLElement).dataset['index']))));
 			})
 			.toBeGreaterThanOrEqual(60);
 
 		const state = await list.locator('[data-index]').evaluateAll((rows) => {
 			const elements = (rows as HTMLElement[])
 				.slice()
-				.sort((a, b) => Number(a.dataset.index) - Number(b.dataset.index));
+				.sort((a, b) => Number(a.dataset['index']) - Number(b.dataset['index']));
 			const rects = elements.map((element) => element.getBoundingClientRect());
 			return {
 				rowCount: elements.length,
@@ -88,7 +88,7 @@ test.describe('Virtualized note list', () => {
 		await list.locator('[data-index]').evaluateAll((rows) => {
 			const target = rows[Math.floor(rows.length / 2)] as HTMLElement;
 			const spacer = document.createElement('div');
-			spacer.dataset.virtualTestSpacer = 'true';
+			spacer.dataset['virtualTestSpacer'] = 'true';
 			spacer.style.height = '500px';
 			target.append(spacer);
 		});
@@ -153,7 +153,7 @@ test.describe('Virtualized note list', () => {
 			.poll(async () => {
 				return await list
 					.locator('[data-index]')
-					.evaluateAll((rows) => Math.max(...rows.map((row) => Number((row as HTMLElement).dataset.index))));
+					.evaluateAll((rows) => Math.max(...rows.map((row) => Number((row as HTMLElement).dataset['index']))));
 			})
 			.toBeGreaterThanOrEqual(60);
 
@@ -166,7 +166,7 @@ test.describe('Virtualized note list', () => {
 			.poll(async () => {
 				return await list
 					.locator('[data-index]')
-					.evaluateAll((rows) => Math.min(...rows.map((row) => Number((row as HTMLElement).dataset.index))));
+					.evaluateAll((rows) => Math.min(...rows.map((row) => Number((row as HTMLElement).dataset['index']))));
 			})
 			.toBeGreaterThan(0);
 		const anchorBefore = await list.evaluate((listElement) => {
@@ -182,7 +182,7 @@ test.describe('Virtualized note list', () => {
 					: current,
 			);
 			return {
-				id: anchor.dataset.scrollAnchor!,
+				id: anchor.dataset['scrollAnchor']!,
 				top: anchor.getBoundingClientRect().top,
 			};
 		});
@@ -209,7 +209,7 @@ test.describe('Virtualized note list', () => {
 			.nth(2)
 			.evaluate((row) => {
 				const spacer = document.createElement('div');
-				spacer.dataset.streamingVirtualTestSpacer = 'true';
+				spacer.dataset['streamingVirtualTestSpacer'] = 'true';
 				spacer.style.height = '500px';
 				row.append(spacer);
 			});
@@ -246,7 +246,9 @@ async function scrollTimeline(list: Locator, fraction: number): Promise<void> {
 
 async function inspectVirtualRows(list: Locator): Promise<{ rowCount: number; overlaps: boolean }> {
 	return await list.locator('[data-index]').evaluateAll((rows) => {
-		const elements = (rows as HTMLElement[]).slice().sort((a, b) => Number(a.dataset.index) - Number(b.dataset.index));
+		const elements = (rows as HTMLElement[])
+			.slice()
+			.sort((a, b) => Number(a.dataset['index']) - Number(b.dataset['index']));
 		const rects = elements.map((element) => element.getBoundingClientRect());
 		return {
 			rowCount: elements.length,
