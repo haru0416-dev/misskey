@@ -178,6 +178,13 @@ import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
 import MkTl from '@/components/layout/MkTl.vue';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 
+type QueueJob = Omit<Misskey.entities.QueueJob, 'opts'> & {
+	opts: Misskey.entities.QueueJob['opts'] & {
+		repeat?: unknown;
+		attempts?: number;
+	};
+};
+
 function msSMH(v: number | null) {
 	if (v == null) return 'N/A';
 	if (v === 0) return '0';
@@ -191,7 +198,7 @@ function msSMH(v: number | null) {
 }
 
 const props = defineProps<{
-	job: Misskey.entities.QueueJob;
+	job: QueueJob;
 	queueType: typeof Misskey.queueTypes[number];
 }>();
 

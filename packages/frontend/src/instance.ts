@@ -20,7 +20,7 @@ const initialMeta = resolveInitialInstanceMeta({
 	cachedMeta: miLocalStorage.getItem('instance'),
 	cachedAt: miLocalStorage.getItem('instanceCachedAt'),
 	providedMeta: providedMetaEl?.textContent ?? null,
-	providedAt: providedMetaEl?.dataset.generatedAt ?? null,
+	providedAt: providedMetaEl?.dataset['generatedAt'] ?? null,
 });
 if (initialMeta.cacheAction === 'store') {
 	miLocalStorage.setItem('instance', JSON.stringify(initialMeta.meta));

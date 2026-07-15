@@ -119,10 +119,10 @@ describe('ThemeManager', () => {
 		assert.strictEqual(themeManager.currentThemeId, previewTheme.id);
 		assert.strictEqual(themeManager.isPreviewMode, true);
 		assert.strictEqual(isPreviewMode.value, true);
-		assert.strictEqual(document.documentElement.dataset.colorScheme, 'dark');
+		assert.strictEqual(document.documentElement.dataset['colorScheme'], 'dark');
 		assert.strictEqual(
 			document.documentElement.style.getPropertyValue('--MI_THEME-accent'),
-			themeManager.currentCompiledTheme?.accent,
+			themeManager.currentCompiledTheme?.['accent'],
 		);
 		assert.strictEqual(window.localStorage.getItem('theme'), cachedTheme);
 		assert.strictEqual(window.localStorage.getItem('themeId'), cachedThemeId);
@@ -132,10 +132,10 @@ describe('ThemeManager', () => {
 		const { themeManager, isPreviewMode } = await loadThemeModule();
 
 		themeManager.updateTheme(primaryTheme);
-		const originalCompiledThemeColor = themeManager.currentCompiledTheme?.htmlThemeColor;
+		const originalCompiledThemeColor = themeManager.currentCompiledTheme?.['htmlThemeColor'];
 
 		themeManager.previewTheme(previewTheme);
-		const previewCompiledThemeColor = themeManager.currentCompiledTheme?.htmlThemeColor;
+		const previewCompiledThemeColor = themeManager.currentCompiledTheme?.['htmlThemeColor'];
 		assert.strictEqual(themeManager.currentTheme?.id, previewTheme.id);
 		assert.notStrictEqual(previewCompiledThemeColor, originalCompiledThemeColor);
 
@@ -143,13 +143,13 @@ describe('ThemeManager', () => {
 
 		assert.strictEqual(themeManager.theme?.id, primaryTheme.id);
 		assert.strictEqual(themeManager.currentTheme?.id, primaryTheme.id);
-		assert.strictEqual(themeManager.currentCompiledTheme?.htmlThemeColor, originalCompiledThemeColor);
+		assert.strictEqual(themeManager.currentCompiledTheme?.['htmlThemeColor'], originalCompiledThemeColor);
 		assert.strictEqual(themeManager.isPreviewMode, false);
 		assert.strictEqual(isPreviewMode.value, false);
-		assert.strictEqual(document.documentElement.dataset.colorScheme, 'light');
+		assert.strictEqual(document.documentElement.dataset['colorScheme'], 'light');
 		assert.strictEqual(
 			document.documentElement.style.getPropertyValue('--MI_THEME-accent'),
-			themeManager.currentCompiledTheme?.accent,
+			themeManager.currentCompiledTheme?.['accent'],
 		);
 		assert.strictEqual(
 			document.head.querySelector('meta[name="theme-color"]')?.getAttribute('content'),
@@ -169,10 +169,10 @@ describe('ThemeManager', () => {
 		assert.strictEqual(themeManager.currentTheme?.id, replacementTheme.id);
 		assert.strictEqual(themeManager.isPreviewMode, false);
 		assert.strictEqual(isPreviewMode.value, false);
-		assert.strictEqual(document.documentElement.dataset.colorScheme, 'dark');
+		assert.strictEqual(document.documentElement.dataset['colorScheme'], 'dark');
 		assert.strictEqual(
 			document.documentElement.style.getPropertyValue('--MI_THEME-accent'),
-			themeManager.currentCompiledTheme?.accent,
+			themeManager.currentCompiledTheme?.['accent'],
 		);
 		assert.strictEqual(window.localStorage.getItem('themeId'), replacementTheme.id);
 	});
@@ -231,7 +231,7 @@ describe('ThemeManager', () => {
 		rejectFinished(error);
 		await vi.waitFor(() => expect(document.documentElement.classList.contains('_themeChanging_')).toBe(false));
 
-		expect(document.documentElement.dataset.colorScheme).toBe('light');
+		expect(document.documentElement.dataset['colorScheme']).toBe('light');
 		expect(themeChanged).toHaveBeenCalledTimes(1);
 		expect(consoleError).toHaveBeenCalledWith(error);
 	});
@@ -252,7 +252,7 @@ describe('ThemeManager', () => {
 		themeManager.updateTheme(primaryTheme);
 
 		expect(document.documentElement.classList.contains('_themeChanging_')).toBe(false);
-		expect(document.documentElement.dataset.colorScheme).toBe('light');
+		expect(document.documentElement.dataset['colorScheme']).toBe('light');
 		expect(themeChanged).toHaveBeenCalledTimes(1);
 		expect(consoleError).toHaveBeenCalledWith(error);
 	});

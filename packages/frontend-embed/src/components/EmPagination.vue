@@ -67,6 +67,8 @@ export type Paging<E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints> 
 };
 
 type MisskeyEntity = MisskeyEntityBase & {
+	_featuredId_?: string;
+	_prId_?: string;
 	[x: string]: any;
 };
 

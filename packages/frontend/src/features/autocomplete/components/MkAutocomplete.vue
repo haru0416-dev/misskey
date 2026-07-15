@@ -196,7 +196,11 @@ const select = ref(-1);
 const zIndex = os.claimZIndex('high');
 
 function isUserArray(value: unknown): value is Misskey.entities.User[] {
-	return Array.isArray(value) && value.every(user => isJsonObject(user) && typeof user.id === 'string' && typeof user.username === 'string');
+	return Array.isArray(value) && value.every(user => {
+		if (!isJsonObject(user)) return false;
+		const candidate = user as Record<string, unknown> & { id?: unknown; username?: unknown };
+		return typeof candidate.id === 'string' && typeof candidate.username === 'string';
+	});
 }
 
 function completeMfmParam(param: string) {

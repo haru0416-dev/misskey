@@ -21,7 +21,7 @@ describe('theme validation', () => {
 	test('accepts a structurally valid theme', () => {
 		expect(validateTheme(validTheme)).toBe(true);
 		expect(parseThemeCode(JSON.stringify(validTheme))).toStrictEqual(validTheme);
-		expect(compile(validTheme).accent).toBe('rgb(171, 205, 239)');
+		expect(compile(validTheme)['accent']).toBe('rgb(171, 205, 239)');
 	});
 
 	test('compiles every bundled theme', async () => {
@@ -73,7 +73,7 @@ describe('theme validation', () => {
 
 	test('rejects circular code highlighter overrides', () => {
 		const overrides: Record<string, unknown> = {};
-		overrides.self = overrides;
+		overrides['self'] = overrides;
 
 		expect(
 			validateTheme({

@@ -196,11 +196,11 @@ tick();
 
 function calcColors() {
 	const themeValue = themeManager.currentCompiledTheme!;
-	const dark = tinycolor(themeValue.bg).isDark();
-	const accent = tinycolor(themeValue.accent).toHexString();
+	const dark = tinycolor(themeValue['bg']).isDark();
+	const accent = tinycolor(themeValue['accent']).toHexString();
 	majorGraduationColor.value = dark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)';
 	sHandColor.value = dark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.3)';
-	mHandColor.value = tinycolor(themeValue.fg).toHexString();
+	mHandColor.value = tinycolor(themeValue['fg']).toHexString();
 	hHandColor.value = accent;
 	nowColor.value = accent;
 }

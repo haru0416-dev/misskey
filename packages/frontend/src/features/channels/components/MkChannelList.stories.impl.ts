@@ -46,7 +46,7 @@ export const Default = {
 				http.post('/api/channels/search', async ({ request, params }) => {
 					action('POST /api/channels/search')(await request.json());
 					return HttpResponse.json(
-						params.untilId === 'lastchannel' ? [] : [channel(), channel('lastchannel', 'Last Channel', null)],
+						params['untilId'] === 'lastchannel' ? [] : [channel(), channel('lastchannel', 'Last Channel', null)],
 					);
 				}),
 			],

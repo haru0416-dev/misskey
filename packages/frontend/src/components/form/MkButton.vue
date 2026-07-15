@@ -106,7 +106,7 @@ function onMousedown(evt: MouseEvent): void {
 	const rect = target.getBoundingClientRect();
 
 	const ripple = window.document.createElement('div');
-	ripple.classList.add(ripples.value!.dataset.childrenClass!);
+	ripple.classList.add(ripples.value!.dataset['childrenClass']!);
 	ripple.style.top = (evt.clientY - rect.top - 1).toString() + 'px';
 	ripple.style.left = (evt.clientX - rect.left - 1).toString() + 'px';
 

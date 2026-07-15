@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div :class="$style.root" class="_gaps_s">
 	<template v-if="edit">
-		<header :class="$style.editHeader">
+		<header :class="$style['editHeader']">
 			<MkSelect v-model="widgetAdderSelected" :items="widgetAdderSelectedDef" style="margin-bottom: var(--MI-margin)" data-cy-widget-select>
 				<template #label>{{ i18n.ts.selectWidget }}</template>
 			</MkSelect>
@@ -22,9 +22,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 		>
 			<template #default="{ item }">
 				<div :class="[$style.widget, $style.customizeContainer]" data-cy-customize-container>
-					<button :class="$style.customizeContainerConfig" class="_button" @click.prevent.stop="configWidget(item.id)"><i class="ti ti-settings"></i></button>
-					<button :class="$style.customizeContainerRemove" data-cy-customize-container-remove class="_button" @click.prevent.stop="removeWidget(item)"><i class="ti ti-x"></i></button>
-					<component :is="`widget-${item.name}`" :ref="(el: any) => widgetRefs[item.id] = el" :class="$style.customizeContainerHandleWidget" :widget="item" @updateProps="updateWidget(item.id, $event)"/>
+					<button :class="$style['customizeContainerConfig']" class="_button" @click.prevent.stop="configWidget(item.id)"><i class="ti ti-settings"></i></button>
+					<button :class="$style['customizeContainerRemove']" data-cy-customize-container-remove class="_button" @click.prevent.stop="removeWidget(item)"><i class="ti ti-x"></i></button>
+					<component :is="`widget-${item.name}`" :ref="(el: any) => widgetRefs[item.id] = el" :class="$style['customizeContainerHandleWidget']" :widget="item" @updateProps="updateWidget(item.id, $event)"/>
 				</div>
 			</template>
 		</MkDraggable>

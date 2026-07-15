@@ -180,7 +180,7 @@ function setupGrid(): GridSetting {
 				{
 					// チェックされたら背景色を変える
 					condition: ({ row }) => gridItems.value[row.index]?.checked ?? false,
-					applyStyle: { className: $style.changedRow ?? '' },
+					applyStyle: { className: $style['changedRow'] ?? '' },
 				},
 			],
 			contextMenuFactory: (row, context) => {

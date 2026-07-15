@@ -132,12 +132,12 @@ function setupGrid(): GridSetting {
 				{
 					// 初期値から変わっていたら背景色を変更
 					condition: ({ row }) => JSON.stringify(gridItems.value[row.index]) !== JSON.stringify(originGridItems.value[row.index]),
-					applyStyle: { className: $style.changedRow ?? '' },
+					applyStyle: { className: $style['changedRow'] ?? '' },
 				},
 				{
 					// バリデーションに引っかかっていたら背景色を変更
 					condition: ({ cells }) => cells.some(it => !it.violation.valid),
-					applyStyle: { className: $style.violationRow ?? '' },
+					applyStyle: { className: $style['violationRow'] ?? '' },
 				},
 			],
 			// 行のコンテキストメニュー設定

@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.body">
 			<slot></slot>
 		</div>
-		<div v-if="$slots.footer" :class="$style.footer">
+		<div v-if="slots.footer" :class="$style.footer">
 			<slot name="footer"></slot>
 		</div>
 	</div>
@@ -52,6 +52,12 @@ const emit = defineEmits<{
 	(event: 'closed'): void;
 	(event: 'ok'): void;
 	(event: 'esc'): void;
+}>();
+
+const slots = defineSlots<{
+	default?: () => void;
+	header?: () => void;
+	footer?: () => void;
 }>();
 
 const modal = useTemplateRef('modal');

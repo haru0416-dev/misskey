@@ -17,7 +17,7 @@ export function getScrollContainer(el: HTMLElement | null): HTMLElement | null {
 
 export function getStickyTop(el: HTMLElement, container: HTMLElement | null = null, top = 0) {
 	if (!el.parentElement) return top;
-	const data = el.dataset.stickyContainerHeaderHeight;
+	const data = el.dataset['stickyContainerHeaderHeight'];
 	const newTop = data ? Number(data) + top : top;
 	if (el === container) return newTop;
 	return getStickyTop(el.parentElement, container, newTop);
@@ -25,7 +25,7 @@ export function getStickyTop(el: HTMLElement, container: HTMLElement | null = nu
 
 export function getStickyBottom(el: HTMLElement, container: HTMLElement | null = null, bottom = 0) {
 	if (!el.parentElement) return bottom;
-	const data = el.dataset.stickyContainerFooterHeight;
+	const data = el.dataset['stickyContainerFooterHeight'];
 	const newBottom = data ? Number(data) + bottom : bottom;
 	if (el === container) return newBottom;
 	return getStickyBottom(el.parentElement, container, newBottom);
