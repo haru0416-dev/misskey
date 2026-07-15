@@ -454,6 +454,7 @@ definePage(() => ({
 			width: 90px;
 			height: 50px;
 			margin: 4px; // focus用のアウトライン
+			text-align: left; // buttonのUAデフォルト (center) を打ち消す。ハンドルはinline flowで左端基準
 			background-color: #b9bcf9;
 			border-radius: 90px - 6;
 			transition: background-color 200ms cubic-bezier(0.445, 0.05, 0.55, 0.95) !important;
