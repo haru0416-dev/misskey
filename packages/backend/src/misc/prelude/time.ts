@@ -27,7 +27,7 @@ export function dateUTC(time: number[]): Date {
 		default: throw new Error('wrong number of arguments');
 	}
 
-	if (!d) throw new Error('wrong number of arguments');
+	if (Number.isNaN(d)) throw new Error('wrong number of arguments');
 
 	return new Date(d);
 }
