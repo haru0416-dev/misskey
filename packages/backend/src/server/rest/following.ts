@@ -32,6 +32,7 @@ import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
+import { promiseLimit } from '@/misc/promise-limit.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiMeta } from '@/models/_.js';
@@ -56,6 +57,8 @@ export type HonoApiFollowingDependencies = UserPackingDependencies & {
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
+
+const ACCEPT_FOLLOW_REQUEST_CONCURRENCY = 8;
 
 export const followingCreateParamDef = z.object({
 	userId: misskeyId(),
@@ -295,7 +298,7 @@ async function isNotificationAllowed(
 	}
 }
 
-function createFollowingNotification(
+async function createFollowingNotification(
 	deps: HonoApiFollowingDependencies,
 	notifieeId: MiUser['id'],
 	type: FollowingNotificationType,
@@ -303,34 +306,32 @@ function createFollowingNotification(
 	options: {
 		message?: string | null;
 	} = {},
-): void {
-	trackPromise((async () => {
-		if (!await isNotificationAllowed(deps, notifieeId, type, notifier.id)) return;
+): Promise<void> {
+	if (!await isNotificationAllowed(deps, notifieeId, type, notifier.id)) return;
 
-		const notification: FollowingNotification = {
-			id: genId(),
-			createdAt: new Date().toISOString(),
-			type,
-			notifierId: notifier.id,
-			...(type === 'followRequestAccepted' ? { message: options.message ?? null } : {}),
-		};
-		const redisId = await xaddHonoApiNotification(deps, notifieeId, notification);
-		const packed = {
-			id: notification.id,
-			createdAt: notification.createdAt,
-			type: notification.type,
-			userId: notifier.id,
-			user: await packUserLiteForHonoApi(deps, notifier),
-			...(notification.type === 'followRequestAccepted' ? { message: notification.message ?? null } : {}),
-		};
+	const notification: FollowingNotification = {
+		id: genId(),
+		createdAt: new Date().toISOString(),
+		type,
+		notifierId: notifier.id,
+		...(type === 'followRequestAccepted' ? { message: options.message ?? null } : {}),
+	};
+	const redisId = await xaddHonoApiNotification(deps, notifieeId, notification);
+	const packed = {
+		id: notification.id,
+		createdAt: notification.createdAt,
+		type: notification.type,
+		userId: notifier.id,
+		user: await packUserLiteForHonoApi(deps, notifier),
+		...(notification.type === 'followRequestAccepted' ? { message: notification.message ?? null } : {}),
+	};
 
-		deps.publishMainStream?.(notifieeId, 'notification', packed);
-		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
-			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${notifieeId}`);
-			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-			deps.publishMainStream?.(notifieeId, 'unreadNotification', packed);
-		}).catch(() => {}));
-	})());
+	deps.publishMainStream?.(notifieeId, 'notification', packed);
+	trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
+		const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${notifieeId}`);
+		if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+		deps.publishMainStream?.(notifieeId, 'unreadNotification', packed);
+	}).catch(() => {}));
 }
 
 async function enqueueUserWebhook(
@@ -383,13 +384,19 @@ async function publishFollowedToLocalFollowee(
 	deps: HonoApiFollowingDependencies,
 	followee: MiUser,
 	follower: MiUser,
+	awaitNotification = false,
 ): Promise<void> {
 	if (!isLocalUser(followee)) return;
 
 	const packedFollower = await packUserLiteForHonoApi(deps, follower);
 	deps.publishMainStream?.(followee.id, 'followed', packedFollower);
 	await enqueueUserWebhook(deps, followee.id, 'followed', packedFollower);
-	createFollowingNotification(deps, followee.id, 'follow', follower);
+	const notification = createFollowingNotification(deps, followee.id, 'follow', follower);
+	if (awaitNotification) {
+		await notification.catch(() => {});
+	} else {
+		trackPromise(notification);
+	}
 }
 
 async function publishUnfollowToLocalFollower(
@@ -445,7 +452,7 @@ export async function createFollowRequestWithSideEffects(
 		deps.publishMainStream?.(followee.id, 'meUpdated', await packMeDetailedForHonoApi(deps, followee, {
 			includeSecrets: false,
 		}));
-		createFollowingNotification(deps, followee.id, 'receiveFollowRequest', follower);
+		trackPromise(createFollowingNotification(deps, followee.id, 'receiveFollowRequest', follower));
 	}
 
 	if (isLocalUser(follower) && isRemoteUser(followee)) {
@@ -557,6 +564,7 @@ export async function insertFollowingWithSideEffects(
 		withReplies?: boolean;
 		followeeProfile: MiUserProfile;
 		silent?: boolean;
+		awaitNotification?: boolean;
 	},
 ): Promise<void> {
 	await createFollowingInDatabase(deps.db, {
@@ -578,16 +586,21 @@ export async function insertFollowingWithSideEffects(
 	if (requestExists) {
 		await deleteFollowRequestFromDatabase(deps.db, follower.id, followee.id);
 		if (isLocalUser(follower)) {
-			createFollowingNotification(deps, follower.id, 'followRequestAccepted', followee, {
+			const notification = createFollowingNotification(deps, follower.id, 'followRequestAccepted', followee, {
 				message: options.followeeProfile.followedMessage,
 			});
+			if (options.awaitNotification) {
+				await notification.catch(() => {});
+			} else {
+				trackPromise(notification);
+			}
 		}
 	}
 
 	await incrementFollowing(deps, follower, followee, options.withReplies ?? false);
 	await Promise.all([
 		options.silent ? Promise.resolve() : publishFollowToLocalFollower(deps, follower, followee),
-		publishFollowedToLocalFollowee(deps, followee, follower),
+		publishFollowedToLocalFollowee(deps, followee, follower, options.awaitNotification),
 	]);
 }
 
@@ -808,23 +821,33 @@ export async function acceptAllFollowRequestsForHonoApi(
 		listUsersByIdsFromDatabase(deps.db, followerIds, { includeSuspended: true }),
 	]);
 	const followerById = new Map(followers.map(follower => [follower.id, follower]));
+	const limit = promiseLimit<void>(ACCEPT_FOLLOW_REQUEST_CONCURRENCY);
+	let accepted = false;
 
-	for (const request of requests) {
-		const follower = followerById.get(request.followerId) ?? await fetchUserByIdOrFailFromDatabase(deps.db, request.followerId);
-
-		(async () => {
+	await Promise.all(requests.map(request => limit(async () => {
+		try {
+			const currentRequest = await fetchFollowRequestFromDatabase(deps.db, request.followerId, followee.id);
+			if (currentRequest == null) return;
+			const follower = followerById.get(request.followerId) ?? await fetchUserByIdOrFailFromDatabase(deps.db, request.followerId);
 			await insertFollowingWithSideEffects(deps, follower, followee, {
-				withReplies: request.withReplies ?? undefined,
+				withReplies: currentRequest.withReplies ?? undefined,
 				followeeProfile,
+				awaitNotification: true,
 			});
+			accepted = true;
 
 			if (isRemoteUser(follower) && isLocalUser(followee)) {
-				const content = addActivityContext(deps.config, renderAccept(deps.config, renderFollow(deps.config, follower, followee, request.requestId ?? undefined), followee));
-				enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
+				const content = addActivityContext(deps.config, renderAccept(deps.config, renderFollow(deps.config, follower, followee, currentRequest.requestId ?? undefined), followee));
+				await enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 			}
+		} catch {
+			// One stale or invalid request must not prevent the remaining requests from being accepted.
+		}
+	})));
 
-			deps.publishMainStream?.(followee.id, 'meUpdated', await packMeDetailedForHonoApi(deps, followee, { includeSecrets: false }));
-		})().catch(() => {});
+	if (accepted) {
+		const freshFollowee = await fetchUserByIdOrFailFromDatabase(deps.db, followee.id);
+		deps.publishMainStream?.(followee.id, 'meUpdated', await packMeDetailedForHonoApi(deps, freshFollowee, { includeSecrets: false }));
 	}
 }
 
