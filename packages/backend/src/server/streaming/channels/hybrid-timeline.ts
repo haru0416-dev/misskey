@@ -20,9 +20,9 @@ export const honoStreamChannelHybridTimeline: HonoStreamChannelDefinition<HonoAp
 		const policies = await getHonoApiRolePolicies(deps, user);
 		if (!policies.ltlAvailable) return;
 
-		const withRenotes = !!(params.withRenotes ?? true);
-		const withReplies = !!(params.withReplies ?? false);
-		const withFiles = !!(params.withFiles ?? false);
+		const withRenotes = !!(params['withRenotes'] ?? true);
+		const withReplies = !!(params['withReplies'] ?? false);
+		const withFiles = !!(params['withFiles'] ?? false);
 
 		const handler = async (note: Packed<'Note'>) => {
 			const isMe = user.id === note.userId;

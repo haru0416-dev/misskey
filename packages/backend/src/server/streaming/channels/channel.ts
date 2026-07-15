@@ -31,8 +31,8 @@ export const honoStreamChannelChannel: HonoStreamChannelDefinition<HonoApiNoteDe
 	requireCredential: false,
 	kind: null,
 	init: async (deps, ctx, params) => {
-		if (typeof params.channelId !== 'string') return;
-		const channelId = params.channelId;
+		if (typeof params['channelId'] !== 'string') return;
+		const channelId = params['channelId'];
 
 		const handler = async (note: Packed<'Note'>) => {
 			if (note.channelId !== channelId) return;

@@ -17,9 +17,9 @@ export const honoStreamChannelLocalTimeline: HonoStreamChannelDefinition<HonoApi
 		const policies = await getHonoApiRolePolicies(deps, ctx.user ?? null);
 		if (!policies.ltlAvailable) return;
 
-		const withRenotes = !!(params.withRenotes ?? true);
-		const withReplies = !!(params.withReplies ?? false);
-		const withFiles = !!(params.withFiles ?? false);
+		const withRenotes = !!(params['withRenotes'] ?? true);
+		const withReplies = !!(params['withReplies'] ?? false);
+		const withFiles = !!(params['withFiles'] ?? false);
 
 		const handler = async (note: Packed<'Note'>) => {
 			if (withFiles && (note.fileIds == null || note.fileIds.length === 0)) return;

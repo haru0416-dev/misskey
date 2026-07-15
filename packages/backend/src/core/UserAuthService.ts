@@ -31,7 +31,7 @@ export function createUserAuthService(
 		twoFactorSecret: string,
 		token: string,
 	) {
-		if (process.env.NODE_ENV === 'test' && process.env.MISSKEY_TEST_CHECK_DUPLICATED_TOTP !== '1') {
+		if (process.env['NODE_ENV'] === 'test' && process.env['MISSKEY_TEST_CHECK_DUPLICATED_TOTP'] !== '1') {
 			return true;
 		}
 

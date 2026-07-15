@@ -21,10 +21,10 @@ export const honoStreamChannelUserList: HonoStreamChannelDefinition<HonoApiNoteD
 	requireCredential: false,
 	kind: null,
 	init: async (deps, ctx, params) => {
-		if (typeof params.listId !== 'string') return false;
-		const listId = params.listId;
-		const withFiles = !!(params.withFiles ?? false);
-		const withRenotes = !!(params.withRenotes ?? true);
+		if (typeof params['listId'] !== 'string') return false;
+		const listId = params['listId'];
+		const withFiles = !!(params['withFiles'] ?? false);
+		const withRenotes = !!(params['withRenotes'] ?? true);
 
 		// NOTE: 元実装同様 requireCredential=false だが内部では this.user を前提としている (未ログイン時は例外)
 		const user = ctx.user!;

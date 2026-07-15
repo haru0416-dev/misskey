@@ -656,7 +656,7 @@ export async function handleHonoApiFollowingCreate(
 	const shouldCreateRequest =
 		followee.isLocked ||
 		(followeeProfile.carefulBot && follower.isBot) ||
-		(isLocalUser(follower) && isRemoteUser(followee) && process.env.FORCE_FOLLOW_REMOTE_USER_FOR_TESTING !== 'true');
+		(isLocalUser(follower) && isRemoteUser(followee) && process.env['FORCE_FOLLOW_REMOTE_USER_FOR_TESTING'] !== 'true');
 
 	if (shouldCreateRequest) {
 		let autoAccept = false;

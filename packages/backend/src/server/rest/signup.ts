@@ -74,7 +74,7 @@ function normalizeHost(host: unknown): string | null {
 }
 
 function assertSignupGateOpen(meta: MiMeta): void {
-	if (process.env.NODE_ENV === 'test') return;
+	if (process.env['NODE_ENV'] === 'test') return;
 
 	if (meta.enableHcaptcha && meta.hcaptchaSecretKey) throw signupValidationError('CAPTCHA_REQUIRED');
 	if (meta.enableMcaptcha && meta.mcaptchaSecretKey && meta.mcaptchaSitekey && meta.mcaptchaInstanceUrl) throw signupValidationError('CAPTCHA_REQUIRED');
@@ -170,7 +170,7 @@ export async function signupWithHonoApi(deps: SignupDependencies, body: SignupBo
 	validatePassword(body.password);
 
 	const username = body.username;
-	const normalizedHost = process.env.NODE_ENV === 'test' ? normalizeHost(body.host) : null;
+	const normalizedHost = process.env['NODE_ENV'] === 'test' ? normalizeHost(body.host) : null;
 
 	const hash = await hashPassword(body.password);
 	const { account, token } = await createLocalSignupAccount(deps, {

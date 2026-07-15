@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
 import { describe, beforeAll, test } from 'vitest';
@@ -229,7 +229,7 @@ describe('API', () => {
 				},
 				'homeTimeline',
 				() => api('notes/create', { text: 'foo' }, alice),
-				msg => msg.type === 'note' && msg.body.text === 'foo',
+				msg => msg.type === 'note' && msg.body['text'] === 'foo',
 			);
 			assert.strictEqual(fired, true);
 		});

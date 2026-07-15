@@ -13,11 +13,11 @@ export const honoStreamChannelChatRoom: HonoStreamChannelDefinition<HonoApiChatD
 	requireCredential: true,
 	kind: 'read:chat',
 	init: async (deps, ctx, params) => {
-		if (typeof params.roomId !== 'string') return false;
+		if (typeof params['roomId'] !== 'string') return false;
 		if (!ctx.user) return false;
 
 		const user = ctx.user;
-		const roomId = params.roomId;
+		const roomId = params['roomId'];
 
 		const room = await fetchChatRoomByIdFromDatabase(deps.db, roomId);
 		if (room == null) return false;

@@ -558,11 +558,11 @@ export async function handleHonoApiNotificationsCreate(
 }
 
 function notificationGroupKey(notification: Record<string, unknown>): string | null {
-	if (notification.type === 'reaction' && typeof notification.noteId === 'string') {
-		return `reaction:${notification.noteId}`;
+	if (notification['type'] === 'reaction' && typeof notification['noteId'] === 'string') {
+		return `reaction:${notification['noteId']}`;
 	}
-	if (notification.type === 'renote' && typeof notification.targetNoteId === 'string') {
-		return `renote:${notification.targetNoteId}`;
+	if (notification['type'] === 'renote' && typeof notification['targetNoteId'] === 'string') {
+		return `renote:${notification['targetNoteId']}`;
 	}
 	return null;
 }

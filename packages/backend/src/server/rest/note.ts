@@ -1095,7 +1095,13 @@ export async function translateTextForHonoApi(
 
 		const endpoint = new URL(deps.meta.libreTranslateApiUrl);
 		endpoint.pathname = `${endpoint.pathname.replace(/\/$/, '')}/translate`;
-		const body: Record<string, string> = {
+		const body: {
+			q: string;
+			source: string;
+			target: string;
+			format: string;
+			api_key?: string;
+		} = {
 			q: text,
 			source: 'auto',
 			target: targetLang.toLowerCase(),

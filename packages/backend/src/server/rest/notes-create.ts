@@ -558,7 +558,7 @@ export type CreateNoteData = {
 	localOnly: boolean;
 	reactionAcceptance: MiNote['reactionAcceptance'];
 	cw: string | null;
-	visibility: string;
+	visibility: MiNote['visibility'];
 	visibleUsers: MiUser[] | null;
 	channel: MiChannel | null;
 	apMentions?: MiUser[] | null;
@@ -586,7 +586,7 @@ export async function insertNoteForHonoApi(
 	mentionedUsers: MiUser[],
 	db: MiDrizzleDatabase = deps.db,
 ): Promise<MiNote> {
-	const insert: Record<string, unknown> = {
+	const insert: Parameters<typeof createNoteInDatabase>[1] = {
 		id: genId(data.createdAt?.getTime()),
 		uri: data.uri ?? null,
 		url: data.url ?? null,
@@ -635,19 +635,19 @@ export async function insertNoteForHonoApi(
 
 	try {
 		if (data.poll != null) {
-			await createNoteWithPollInDatabase(db, insert as Parameters<typeof createNoteInDatabase>[1], {
-				noteId: insert.id as string,
+			await createNoteWithPollInDatabase(db, insert, {
+				noteId: insert.id,
 				choices: data.poll.choices,
 				expiresAt: data.poll.expiresAt,
 				multiple: data.poll.multiple,
 				votes: new Array(data.poll.choices.length).fill(0),
-				noteVisibility: insert.visibility as MiNote['visibility'],
+				noteVisibility: insert.visibility,
 				userId: user.id,
 				userHost: user.host,
-				channelId: insert.channelId as string | null,
+				channelId: insert.channelId,
 			});
 		} else {
-			await createNoteInDatabase(db, insert as Parameters<typeof createNoteInDatabase>[1]);
+			await createNoteInDatabase(db, insert);
 		}
 
 		return { ...insert, reply: data.reply ?? null, renote: data.renote ?? null } as unknown as MiNote;
@@ -1073,7 +1073,7 @@ export async function fetchAndCreateNoteForHonoApi(
 		fileIds: string[];
 		text: string | null;
 		cw: string | null;
-		visibility: string;
+		visibility: MiNote['visibility'];
 		visibleUserIds: string[];
 		channelId: string | null;
 		localOnly: boolean;

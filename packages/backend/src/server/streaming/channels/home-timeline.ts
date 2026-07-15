@@ -16,8 +16,8 @@ export const honoStreamChannelHomeTimeline: HonoStreamChannelDefinition<HonoApiN
 		if (!ctx.user) return false;
 		const user = ctx.user;
 
-		const withRenotes = !!(params.withRenotes ?? true);
-		const withFiles = !!(params.withFiles ?? false);
+		const withRenotes = !!(params['withRenotes'] ?? true);
+		const withFiles = !!(params['withFiles'] ?? false);
 
 		const handler = async (note: Packed<'Note'>) => {
 			const isMe = user.id === note.userId;

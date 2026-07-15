@@ -58,6 +58,11 @@ export type HonoApiAccountUpdateDependencies =
 		redis: Redis.Redis;
 	};
 
+type RenderedPerson = Record<string, unknown> & {
+	movedTo?: string;
+	alsoKnownAs?: string[];
+};
+
 function iUpdateNoSuchAvatarError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such avatar file.', code: 'NO_SUCH_AVATAR', id: '539f3a45-f215-4f81-a9a8-31293640207f' });
 }
@@ -258,7 +263,7 @@ export async function renderPersonForHonoApi(deps: HonoApiAccountUpdateDependenc
 
 	const tag = [...apemojis, ...hashtagTags];
 
-	const person: Record<string, unknown> = {
+	const person: RenderedPerson = {
 		type: isSystem ? 'Application' : user.isBot ? 'Service' : 'Person',
 		id,
 		inbox: `${id}/inbox`,
@@ -365,8 +370,8 @@ async function verifyLinkForHonoApi(deps: HonoApiAccountUpdateDependencies, url:
 		const aEls = Array.from(doc.getElementsByTagName('a'));
 		const linkEls = Array.from(doc.getElementsByTagName('link'));
 
-		const includesMyLink = aEls.some(a => a.attributes.href === myLink);
-		const includesRelMeLinks = [...aEls, ...linkEls].some(link => link.attributes.rel?.split(/\s+/).includes('me') && link.attributes.href === myLink);
+		const includesMyLink = aEls.some(a => a.attributes['href'] === myLink);
+		const includesRelMeLinks = [...aEls, ...linkEls].some(link => link.attributes['rel']?.split(/\s+/).includes('me') && link.attributes['href'] === myLink);
 
 		if (includesMyLink || includesRelMeLinks) {
 			await appendVerifiedLinkToUserProfileInDatabase(deps.db, user.id, url);

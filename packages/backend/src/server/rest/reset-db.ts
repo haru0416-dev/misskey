@@ -31,7 +31,7 @@ export async function handleHonoApiResetDb(
 ): Promise<void> {
 	parseHonoApiParams(resetDbParamDef, body);
 
-	if (process.env.NODE_ENV !== 'test') throw new Error('NODE_ENV is not a test');
+	if (process.env['NODE_ENV'] !== 'test') throw new Error('NODE_ENV is not a test');
 
 	deps.logger.info('---- Resetting database...');
 

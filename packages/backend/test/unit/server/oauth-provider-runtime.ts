@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 
 import * as htmlParser from 'node-html-parser';
 import { describe, expect, test } from 'vitest';
@@ -93,9 +93,9 @@ describe('createOAuthProviderRuntime', () => {
 
 		expect(authorize.status).toBe(200);
 		const doc = htmlParser.parse(await authorize.text());
-		const transactionId = doc.querySelector('meta[name="misskey:oauth:transaction-id"]')?.attributes.content;
+		const transactionId = doc.querySelector('meta[name="misskey:oauth:transaction-id"]')?.attributes['content'];
 		expect(transactionId).toBeTruthy();
-		expect(doc.querySelector('meta[name="misskey:oauth:client-name"]')?.attributes.content).toBe('Client App');
+		expect(doc.querySelector('meta[name="misskey:oauth:client-name"]')?.attributes['content']).toBe('Client App');
 
 		const decision = await runtime.decision({
 			transaction_id: transactionId,
@@ -207,7 +207,7 @@ describe('createOAuthProviderRuntime', () => {
 			code_challenge_method: 'S256',
 		});
 		const doc = htmlParser.parse(await authorize.text());
-		const transactionId = doc.querySelector('meta[name="misskey:oauth:transaction-id"]')!.attributes.content;
+		const transactionId = doc.querySelector('meta[name="misskey:oauth:transaction-id"]')!.attributes['content'];
 		const decision = await second.decision({ transaction_id: transactionId, login_token: 'login-token' });
 		const code = new URL(decision.headers.get('location')!).searchParams.get('code')!;
 		const request = {

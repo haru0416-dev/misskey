@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 
 import { createHash, randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
@@ -240,7 +240,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(lite.status, 200);
 			assert.strictEqual(lite.body.uri, origin);
 			assert.strictEqual(typeof lite.body.version, 'string');
-			assert.strictEqual((lite.body as Record<string, unknown>).features, undefined);
+			assert.strictEqual((lite.body as Record<string, unknown>)['features'], undefined);
 
 			const detailed = await api('meta', {});
 			const detailedBody = detailed.body as {
@@ -1993,8 +1993,8 @@ describe('Endpoints', () => {
 
 			const noteRes = await api('ap/get', { uri: noteUri }, alice);
 			assert.strictEqual(noteRes.status, 200);
-			assert.strictEqual(noteRes.body.type, 'Note');
-			assert.strictEqual(noteRes.body.id, noteUri);
+			assert.strictEqual(noteRes.body['type'], 'Note');
+			assert.strictEqual(noteRes.body['id'], noteUri);
 			const content: unknown = Reflect.get(noteRes.body, 'content');
 			if (typeof content !== 'string') throw new Error('ActivityPub Note content is missing');
 			assert.ok(content.includes('ap/get resolve target'));
@@ -2002,9 +2002,9 @@ describe('Endpoints', () => {
 			const userUri = `${config.instance.url}/users/${alice.id}`;
 			const userRes = await api('ap/get', { uri: userUri }, alice);
 			assert.strictEqual(userRes.status, 200);
-			assert.strictEqual(userRes.body.type, 'Person');
-			assert.strictEqual(userRes.body.id, userUri);
-			assert.strictEqual(userRes.body.preferredUsername, alice.username);
+			assert.strictEqual(userRes.body['type'], 'Person');
+			assert.strictEqual(userRes.body['id'], userUri);
+			assert.strictEqual(userRes.body['preferredUsername'], alice.username);
 
 			const scopeDeniedToken = await createAppToken(alice, ['read:account']);
 			const scopeDenied = await api('ap/get', { uri: noteUri }, { token: scopeDeniedToken });
@@ -2044,8 +2044,8 @@ describe('Endpoints', () => {
 			const questionUri = `${config.instance.url}/questions/${pollNoteId}`;
 			const questionRes = await api('ap/get', { uri: questionUri }, alice);
 			assert.strictEqual(questionRes.status, 200);
-			assert.strictEqual(questionRes.body.type, 'Question');
-			assert.strictEqual(questionRes.body.id, questionUri);
+			assert.strictEqual(questionRes.body['type'], 'Question');
+			assert.strictEqual(questionRes.body['id'], questionUri);
 			const choices: unknown = Reflect.get(questionRes.body, 'oneOf');
 			if (!Array.isArray(choices)) throw new Error('ActivityPub Question choices are missing');
 			assert.deepStrictEqual(choices.map((choice: unknown) => {
@@ -2064,9 +2064,9 @@ describe('Endpoints', () => {
 			const likeUri = `${config.instance.url}/likes/${reactionId}`;
 			const likeRes = await api('ap/get', { uri: likeUri }, alice);
 			assert.strictEqual(likeRes.status, 200);
-			assert.strictEqual(likeRes.body.type, 'Like');
-			assert.strictEqual(likeRes.body.id, likeUri);
-			assert.strictEqual(likeRes.body.object, `${config.instance.url}/notes/${likeNote.id}`);
+			assert.strictEqual(likeRes.body['type'], 'Like');
+			assert.strictEqual(likeRes.body['id'], likeUri);
+			assert.strictEqual(likeRes.body['object'], `${config.instance.url}/notes/${likeNote.id}`);
 
 			const remoteHost = `ap-get-remote-${suffix}.example`;
 			const remoteFolloweeId = genId(now + 2);
@@ -2092,10 +2092,10 @@ describe('Endpoints', () => {
 			const followUri = `${config.instance.url}/follows/${followRequest.id}`;
 			const followRes = await api('ap/get', { uri: followUri }, alice);
 			assert.strictEqual(followRes.status, 200);
-			assert.strictEqual(followRes.body.type, 'Follow');
-			assert.strictEqual(followRes.body.id, followUri);
-			assert.strictEqual(followRes.body.actor, `${config.instance.url}/users/${alice.id}`);
-			assert.strictEqual(followRes.body.object, remoteFollowee.uri);
+			assert.strictEqual(followRes.body['type'], 'Follow');
+			assert.strictEqual(followRes.body['id'], followUri);
+			assert.strictEqual(followRes.body['actor'], `${config.instance.url}/users/${alice.id}`);
+			assert.strictEqual(followRes.body['object'], remoteFollowee.uri);
 		});
 	});
 
@@ -7069,7 +7069,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(listedRole.isExplorable, true);
 			assert.strictEqual(listedRole.displayOrder, 4242);
 			assert.strictEqual(listedRole.usersCount, 1);
-			assert.strictEqual(getDefined(listedRole.policies.canInvite).useDefault, true);
+			assert.strictEqual(getDefined(listedRole.policies['canInvite']).useDefault, true);
 
 			const shown = await api('roles/show', { roleId: createdRole.id });
 			assert.strictEqual(shown.status, 200);
@@ -9476,8 +9476,8 @@ describe('Endpoints', () => {
 			assert.strictEqual(created.body.preserveAssignmentOnMoveAccount, true);
 			assert.strictEqual(created.body.displayOrder, createPayload.displayOrder);
 			assert.strictEqual(created.body.usersCount, 0);
-			assert.strictEqual(getDefined(created.body.policies.canInvite).useDefault, false);
-			assert.strictEqual(getDefined(created.body.policies.canInvite).value, true);
+			assert.strictEqual(getDefined(created.body.policies['canInvite']).useDefault, false);
+			assert.strictEqual(getDefined(created.body.policies['canInvite']).value, true);
 
 			const list = await api('admin/roles/list', {}, alice);
 			assert.strictEqual(list.status, 200);
@@ -9490,7 +9490,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(shown.status, 200);
 			assert.strictEqual(shown.body.id, created.body.id);
 			assert.strictEqual(shown.body.name, createPayload.name);
-			assert.strictEqual(getDefined(shown.body.policies.canInvite).value, true);
+			assert.strictEqual(getDefined(shown.body.policies['canInvite']).value, true);
 
 			const updated = await api('admin/roles/update', {
 				roleId: created.body.id,
@@ -9513,7 +9513,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(afterUpdate.body.color, null);
 			assert.strictEqual(afterUpdate.body.isPublic, false);
 			assert.strictEqual(afterUpdate.body.displayOrder, 314);
-			assert.strictEqual(getDefined(afterUpdate.body.policies.canInvite).value, false);
+			assert.strictEqual(getDefined(afterUpdate.body.policies['canInvite']).value, false);
 
 			const missingUpdate = await api('admin/roles/update', { roleId: '000000000000000000000000' }, alice);
 			assert.strictEqual(missingUpdate.status, 400);
@@ -11165,7 +11165,7 @@ describe('Endpoints', () => {
 				assert.strictEqual(shown.status, 200);
 				assert.strictEqual(shown.body.id, waitingJob.id);
 				assert.strictEqual(shown.body.name, waitingName);
-				assert.strictEqual(shown.body.data.to, waitingInbox);
+				assert.strictEqual(shown.body.data['to'], waitingInbox);
 
 				const logs = await api('admin/queue/show-job-logs', { queue: 'deliver', jobId: waitingJob.id }, alice);
 				assert.strictEqual(logs.status, 200);
@@ -11520,7 +11520,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(getAt(list.body, 0).id, id);
 			assert.strictEqual(getAt(list.body, 0).createdAt, new Date(now).toISOString());
 			assert.strictEqual(getAt(list.body, 0).type, 'updateUserNote');
-			assert.strictEqual(getAt(list.body, 0).info.after, marker);
+			assert.strictEqual(getAt(list.body, 0).info['after'], marker);
 			assert.strictEqual(getAt(list.body, 0).userId, alice.id);
 			assert.strictEqual(getAt(list.body, 0).user.id, alice.id);
 			assert.strictEqual(getAt(list.body, 0).user.username, alice.username);

@@ -46,7 +46,7 @@ class HonoFileReply implements FileServerReply {
 	});
 
 	constructor() {
-		if (process.env.NODE_ENV === 'development') {
+		if (process.env['NODE_ENV'] === 'development') {
 			this.headers.set('Access-Control-Allow-Origin', '*');
 		}
 	}

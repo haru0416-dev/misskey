@@ -12,12 +12,12 @@ export const honoStreamChannelChatUser: HonoStreamChannelDefinition<HonoApiChatD
 	requireCredential: true,
 	kind: 'read:chat',
 	init: async (deps, ctx, params) => {
-		if (typeof params.otherId !== 'string') return false;
+		if (typeof params['otherId'] !== 'string') return false;
 		if (!ctx.user) return false;
-		if (params.otherId === ctx.user.id) return false;
+		if (params['otherId'] === ctx.user.id) return false;
 
 		const user = ctx.user;
-		const otherId = params.otherId;
+		const otherId = params['otherId'];
 
 		const handler = (data: { type: string; body: JsonValue }) => {
 			ctx.send(data.type, data.body);

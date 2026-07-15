@@ -56,7 +56,7 @@ export type MisskeyHonoAppDependencies = {
 const maybeApLookupRegex = /application\/activity\+json|application\/ld\+json.+activitystreams/i;
 
 function isInternalActivityPubRedirect(location: string, config: Config): boolean {
-	const effectiveLocation = process.env.NODE_ENV === 'production' ? location : location.replace(/^http:\/\//, 'https://');
+	const effectiveLocation = process.env['NODE_ENV'] === 'production' ? location : location.replace(/^http:\/\//, 'https://');
 	return effectiveLocation.startsWith(`https://${config.runtime.host}/`);
 }
 

@@ -56,8 +56,8 @@ function genLocalUserUri(config: Pick<Config, 'instance'>, userId: MiUser['id'])
 }
 
 export function addActivityContext<T extends Record<string, unknown>>(config: Pick<Config, 'instance'>, activity: T): T & { '@context': typeof CONTEXT; id: string } {
-	if (activity.id == null) {
-		(activity as Record<string, unknown>).id = `${config.instance.url}/${randomUUID()}`;
+	if (activity['id'] == null) {
+		Object.assign(activity, { id: `${config.instance.url}/${randomUUID()}` });
 	}
 	return Object.assign({ '@context': CONTEXT }, activity) as T & { '@context': typeof CONTEXT; id: string };
 }
@@ -231,8 +231,8 @@ export function renderCreateForHonoApi(config: Pick<Config, 'instance'>, object:
 		published: parseId(note.id).date.toISOString(),
 		object,
 	};
-	if (object.to) activity.to = object.to;
-	if (object.cc) activity.cc = object.cc;
+	if (object['to']) activity['to'] = object['to'];
+	if (object['cc']) activity['cc'] = object['cc'];
 	return activity;
 }
 
@@ -352,7 +352,7 @@ function renderDeleteForHonoApi(config: Pick<Config, 'instance'>, object: Record
 }
 
 export function renderUndoForHonoApi(config: Pick<Config, 'instance'>, object: string | Record<string, unknown>, user: { id: MiUser['id'] }): Record<string, unknown> {
-	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.instance.url) ? `${object.id}/undo` : undefined;
+	const id = typeof object !== 'string' && typeof object['id'] === 'string' && object['id'].startsWith(config.instance.url) ? `${object['id']}/undo` : undefined;
 	return {
 		type: 'Undo',
 		...(id ? { id } : {}),
@@ -382,7 +382,7 @@ export async function renderLikeForHonoApi(
 		const name = reaction.replaceAll(':', '');
 		const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null);
 		if (emoji != null && !emoji.localOnly) {
-			object.tag = [renderEmoji(deps.config, emoji)];
+			object['tag'] = [renderEmoji(deps.config, emoji)];
 		}
 	}
 

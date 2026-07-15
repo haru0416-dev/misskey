@@ -17,8 +17,8 @@ export const honoStreamChannelGlobalTimeline: HonoStreamChannelDefinition<HonoAp
 		const policies = await getHonoApiRolePolicies(deps, ctx.user ?? null);
 		if (!policies.gtlAvailable) return;
 
-		const withRenotes = !!(params.withRenotes ?? true);
-		const withFiles = !!(params.withFiles ?? false);
+		const withRenotes = !!(params['withRenotes'] ?? true);
+		const withFiles = !!(params['withFiles'] ?? false);
 
 		const handler = async (note: Packed<'Note'>) => {
 			if (withFiles && (note.fileIds == null || note.fileIds.length === 0)) return;
