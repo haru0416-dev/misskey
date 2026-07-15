@@ -175,7 +175,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		{ immediate: true },
 	);
 
-	window.document.documentElement.dataset.colorScheme = store.darkMode ? 'dark' : 'light';
+	window.document.documentElement.dataset['colorScheme'] = store.darkMode ? 'dark' : 'light';
 
 	if (!isSafeMode) {
 		watch(

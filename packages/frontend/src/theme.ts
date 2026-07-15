@@ -146,7 +146,7 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 		if (!this.currentTheme || !this.currentCompiledTheme) return;
 
 		const colorScheme = this.currentTheme.base === 'dark' ? 'dark' : 'light';
-		window.document.documentElement.dataset.colorScheme = colorScheme;
+		window.document.documentElement.dataset['colorScheme'] = colorScheme;
 
 		for (const tag of window.document.head.children) {
 			if (tag.tagName === 'META' && tag.getAttribute('name') === 'theme-color') {

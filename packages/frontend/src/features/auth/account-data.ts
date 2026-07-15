@@ -7,10 +7,18 @@ import type * as Misskey from 'misskey-js';
 
 export type AccountWithToken = Misskey.entities.MeDetailed & { token: string };
 
+type AccountWithTokenCandidate = Record<string, unknown> & {
+	id?: unknown;
+	username?: unknown;
+	token?: unknown;
+	notesCount?: unknown;
+	policies?: unknown;
+};
+
 export function isAccountWithToken(value: unknown): value is AccountWithToken {
 	if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
 
-	const account = value as Record<string, unknown>;
+	const account = value as AccountWithTokenCandidate;
 	return (
 		typeof account.id === 'string' &&
 		typeof account.username === 'string' &&

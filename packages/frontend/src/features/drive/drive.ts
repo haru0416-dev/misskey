@@ -24,25 +24,40 @@ type UploadReturnType = {
 	abort: () => void;
 };
 
+type UploadResponse = Record<string, unknown> & {
+	error?: unknown;
+	id?: unknown;
+	name?: unknown;
+	type?: unknown;
+	size?: unknown;
+	url?: unknown;
+};
+
+type UploadError = Record<string, unknown> & {
+	id?: unknown;
+	message?: unknown;
+	code?: unknown;
+};
+
 export class UploadAbortedError extends Error {
 	constructor() {
 		super('Upload aborted');
 	}
 }
 
-function parseUploadResponse(value: unknown): Record<string, unknown> | null {
-	return typeof value === 'string' ? parseJsonObject(value) : null;
+function parseUploadResponse(value: unknown): UploadResponse | null {
+	return typeof value === 'string' ? parseJsonObject(value) as UploadResponse | null : null;
 }
 
-function getUploadError(value: Record<string, unknown> | null): Record<string, unknown> | null {
+function getUploadError(value: UploadResponse | null): UploadError | null {
 	if (value == null || typeof value.error !== 'object' || value.error === null || Array.isArray(value.error))
 		return null;
-	return value.error as Record<string, unknown>;
+	return value.error as UploadError;
 }
 
 function isDriveFileResponse(
-	value: Record<string, unknown> | null,
-): value is Record<string, unknown> & Misskey.entities.DriveFile {
+	value: UploadResponse | null,
+): value is UploadResponse & Misskey.entities.DriveFile {
 	return (
 		value != null &&
 		typeof value.id === 'string' &&

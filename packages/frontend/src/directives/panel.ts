@@ -11,7 +11,7 @@ export const panelDirective = {
 	mounted(src) {
 		const parentBg = getBgColor(src.parentElement) ?? 'transparent';
 
-		const myBg = themeManager.currentCompiledTheme!.panel;
+		const myBg = themeManager.currentCompiledTheme!['panel'];
 
 		if (parentBg === myBg) {
 			src.style.backgroundColor = 'var(--MI_THEME-bg)';

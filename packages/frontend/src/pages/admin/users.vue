@@ -70,13 +70,22 @@ type SearchQuery = {
 	hostname?: string;
 };
 
+type SearchQueryCandidate = Record<string, unknown> & {
+	sort?: unknown;
+	state?: unknown;
+	origin?: unknown;
+	username?: unknown;
+	hostname?: unknown;
+};
+
 function isSearchQuery(value: unknown): value is SearchQuery {
 	if (!isJsonObject(value)) return false;
-	if (value.sort !== undefined && value.sort !== '-createdAt' && value.sort !== '+createdAt' && value.sort !== '-updatedAt' && value.sort !== '+updatedAt') return false;
-	if (value.state !== undefined && value.state !== 'all' && value.state !== 'available' && value.state !== 'admin' && value.state !== 'moderator' && value.state !== 'suspended') return false;
-	if (value.origin !== undefined && value.origin !== 'combined' && value.origin !== 'local' && value.origin !== 'remote') return false;
-	if (value.username !== undefined && typeof value.username !== 'string') return false;
-	if (value.hostname !== undefined && typeof value.hostname !== 'string') return false;
+	const query = value as SearchQueryCandidate;
+	if (query.sort !== undefined && query.sort !== '-createdAt' && query.sort !== '+createdAt' && query.sort !== '-updatedAt' && query.sort !== '+updatedAt') return false;
+	if (query.state !== undefined && query.state !== 'all' && query.state !== 'available' && query.state !== 'admin' && query.state !== 'moderator' && query.state !== 'suspended') return false;
+	if (query.origin !== undefined && query.origin !== 'combined' && query.origin !== 'local' && query.origin !== 'remote') return false;
+	if (query.username !== undefined && typeof query.username !== 'string') return false;
+	if (query.hostname !== undefined && typeof query.hostname !== 'string') return false;
 	return true;
 }
 

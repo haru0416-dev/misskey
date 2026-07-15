@@ -11,7 +11,7 @@ describe('i18n', () => {
 	it('missing development locale keys degrade to strings', () => {
 		const i18n = new I18n({} as ILocale, true);
 
-		expect((i18n.ts as unknown as Record<string, unknown>).missing).toBe('missing');
+		expect((i18n.ts as unknown as Record<string, unknown>)['missing']).toBe('missing');
 	});
 
 	it('tsx (nested)', () => {
@@ -65,7 +65,7 @@ describe('i18n', () => {
 
 		expect(i18n.tsx.message({ name: 'Ai' })).toBe('Hello {} Ai, tail {');
 		expect(i18n.tsx.nested({ name: 'Ai' })).toBe('Hello {broken Ai');
-		expect((i18n.tsx as unknown as Record<string, unknown>).empty).toBeUndefined();
+		expect((i18n.tsx as unknown as Record<string, unknown>)['empty']).toBeUndefined();
 	});
 
 	it('preserves missing placeholders and reports them in dev mode', () => {

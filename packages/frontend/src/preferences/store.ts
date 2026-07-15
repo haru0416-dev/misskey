@@ -94,17 +94,35 @@ function isNullableString(value: unknown): value is string | null | undefined {
 	return value === undefined || value === null || typeof value === 'string';
 }
 
+type ScopeCandidate = Record<string, unknown> & {
+	server?: unknown;
+	account?: unknown;
+	device?: unknown;
+};
+
+type ValueMetaCandidate = Record<string, unknown> & {
+	sync?: unknown;
+};
+
+type PreferencesProfileCandidate = Record<string, unknown> & {
+	id?: unknown;
+	version?: unknown;
+	type?: unknown;
+	modifiedAt?: unknown;
+	name?: unknown;
+	preferences?: unknown;
+};
+
 function isScope(value: unknown): value is Scope {
-	return (
-		isRecord(value) &&
-		isNullableString(value.server) &&
-		isNullableString(value.account) &&
-		isNullableString(value.device)
-	);
+	if (!isRecord(value)) return false;
+	const scope = value as ScopeCandidate;
+	return isNullableString(scope.server) && isNullableString(scope.account) && isNullableString(scope.device);
 }
 
 function isValueMeta(value: unknown): value is ValueMeta {
-	return isRecord(value) && (value.sync === undefined || typeof value.sync === 'boolean');
+	if (!isRecord(value)) return false;
+	const meta = value as ValueMetaCandidate;
+	return meta.sync === undefined || typeof meta.sync === 'boolean';
 }
 
 function isPreferenceRecord(value: unknown): value is [scope: Scope, value: unknown, meta: ValueMeta] {
@@ -114,16 +132,18 @@ function isPreferenceRecord(value: unknown): value is [scope: Scope, value: unkn
 export function isPossiblyNonNormalizedPreferencesProfile(
 	value: unknown,
 ): value is PossiblyNonNormalizedPreferencesProfile {
-	if (!isRecord(value) || !isRecord(value.preferences)) return false;
+	if (!isRecord(value)) return false;
+	const profile = value as PreferencesProfileCandidate;
+	if (!isRecord(profile.preferences)) return false;
 
 	return (
-		typeof value.id === 'string' &&
-		typeof value.version === 'string' &&
-		value.type === 'main' &&
-		typeof value.modifiedAt === 'number' &&
-		Number.isFinite(value.modifiedAt) &&
-		typeof value.name === 'string' &&
-		Object.values(value.preferences).every((records) => Array.isArray(records) && records.every(isPreferenceRecord))
+		typeof profile.id === 'string' &&
+		typeof profile.version === 'string' &&
+		profile.type === 'main' &&
+		typeof profile.modifiedAt === 'number' &&
+		Number.isFinite(profile.modifiedAt) &&
+		typeof profile.name === 'string' &&
+		Object.values(profile.preferences).every((records) => Array.isArray(records) && records.every(isPreferenceRecord))
 	);
 }
 

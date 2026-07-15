@@ -71,6 +71,15 @@ function getDrafts(): Record<string, unknown> {
 	return miLocalStorage.getItemAsJson('chatMessageDrafts', isJsonObject) ?? {};
 }
 
+type ChatDraftCandidate = Record<string, unknown> & {
+	data?: unknown;
+};
+
+type ChatDraftDataCandidate = Record<string, unknown> & {
+	text?: unknown;
+	file?: unknown;
+};
+
 watch([text, file], saveDraft);
 
 async function onPaste(ev: ClipboardEvent) {
@@ -293,10 +302,13 @@ onMounted(() => {
 
 	// 書きかけの投稿を復元
 	const draft = getDrafts()[getDraftKey()];
-	const data = isJsonObject(draft) && isJsonObject(draft.data) ? draft.data : null;
-	if (data != null) {
-		if (typeof data.text === 'string') text.value = data.text;
-		if (data.file === null || isJsonObject(data.file)) file.value = data.file as Misskey.entities.DriveFile | null;
+	if (isJsonObject(draft)) {
+		const candidate = draft as ChatDraftCandidate;
+		if (isJsonObject(candidate.data)) {
+			const data = candidate.data as ChatDraftDataCandidate;
+			if (typeof data.text === 'string') text.value = data.text;
+			if (data.file === null || isJsonObject(data.file)) file.value = data.file as Misskey.entities.DriveFile | null;
+		}
 	}
 });
 

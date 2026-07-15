@@ -14,7 +14,7 @@ interface HTMLElementWithHotkey extends HTMLElement {
 
 export const hotkeyDirective = {
 	mounted(el, binding) {
-		el._hotkey_global = binding.modifiers.global === true;
+		el._hotkey_global = binding.modifiers['global'] === true;
 
 		el._keyHandler = makeHotkey(binding.value);
 

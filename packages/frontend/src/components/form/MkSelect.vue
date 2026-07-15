@@ -12,8 +12,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		role="button"
 		tabindex="0"
 		:class="[$style.input, { [$style.inline]: inline, [$style.disabled]: disabled || readonly, [$style.focused]: focused || opening }]"
-		:aria-labelledby="$slots.label ? `${labelId} ${valueId}` : valueId"
-		:aria-describedby="$slots.caption ? captionId : undefined"
+		:aria-labelledby="slots.label ? `${labelId} ${valueId}` : valueId"
+		:aria-describedby="slots.caption ? captionId : undefined"
 		:aria-disabled="disabled || readonly"
 		:aria-expanded="opening"
 		aria-haspopup="menu"
@@ -94,6 +94,13 @@ const props = defineProps<{
 	inline?: boolean;
 	small?: boolean;
 	large?: boolean;
+}>();
+
+const slots = defineSlots<{
+	default?: () => void;
+	label?: () => void;
+	caption?: () => void;
+	prefix?: () => void;
 }>();
 
 type ModelTChecked = MODELT & (

@@ -32,7 +32,11 @@ const emit = defineEmits<{
 	(ev: 'closed'): void;
 }>();
 
-const modal = ref<typeof MkModalWindow | null>(null);
+type ModalWindowInstance = {
+	close: () => void;
+};
+
+const modal = ref<ModalWindowInstance | null>(null);
 
 function close() {
 	modal.value?.close();

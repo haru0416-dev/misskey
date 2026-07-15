@@ -31,50 +31,50 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</MkRadios>
 
 	<template v-if="statusbar.type === 'rss'">
-		<MkInput v-model="statusbar.props.url" manualSave type="url">
+		<MkInput v-model="statusbar.props['url']" manualSave type="url">
 			<template #label>URL</template>
 		</MkInput>
-		<MkSwitch v-model="statusbar.props.shuffle">
+		<MkSwitch v-model="statusbar.props['shuffle']">
 			<template #label>{{ i18n.ts.shuffle }}</template>
 		</MkSwitch>
-		<MkInput v-model="statusbar.props.refreshIntervalSec" manualSave type="number" :min="1">
+		<MkInput v-model="statusbar.props['refreshIntervalSec']" manualSave type="number" :min="1">
 			<template #label>{{ i18n.ts.refreshInterval }}</template>
 		</MkInput>
-		<MkRange v-model="statusbar.props.marqueeDuration" :min="5" :max="150" :step="1">
+		<MkRange v-model="statusbar.props['marqueeDuration']" :min="5" :max="150" :step="1">
 			<template #label>{{ i18n.ts.speed }}</template>
 			<template #caption>{{ i18n.ts.fast }} &lt;-&gt; {{ i18n.ts.slow }}</template>
 		</MkRange>
-		<MkSwitch v-model="statusbar.props.marqueeReverse">
+		<MkSwitch v-model="statusbar.props['marqueeReverse']">
 			<template #label>{{ i18n.ts.reverse }}</template>
 		</MkSwitch>
 	</template>
 	<template v-else-if="statusbar.type === 'federation'">
-		<MkInput v-model="statusbar.props.refreshIntervalSec" manualSave type="number" :min="1">
+		<MkInput v-model="statusbar.props['refreshIntervalSec']" manualSave type="number" :min="1">
 			<template #label>{{ i18n.ts.refreshInterval }}</template>
 		</MkInput>
-		<MkRange v-model="statusbar.props.marqueeDuration" :min="5" :max="150" :step="1">
+		<MkRange v-model="statusbar.props['marqueeDuration']" :min="5" :max="150" :step="1">
 			<template #label>{{ i18n.ts.speed }}</template>
 			<template #caption>{{ i18n.ts.fast }} &lt;-&gt; {{ i18n.ts.slow }}</template>
 		</MkRange>
-		<MkSwitch v-model="statusbar.props.marqueeReverse">
+		<MkSwitch v-model="statusbar.props['marqueeReverse']">
 			<template #label>{{ i18n.ts.reverse }}</template>
 		</MkSwitch>
-		<MkSwitch v-model="statusbar.props.colored">
+		<MkSwitch v-model="statusbar.props['colored']">
 			<template #label>{{ i18n.ts.colored }}</template>
 		</MkSwitch>
 	</template>
 	<template v-else-if="statusbar.type === 'userList' && userLists != null">
-		<MkSelect v-model="statusbar.props.userListId" :items="userListsDef">
+		<MkSelect v-model="statusbar.props['userListId']" :items="userListsDef">
 			<template #label>{{ i18n.ts.userList }}</template>
 		</MkSelect>
-		<MkInput v-model="statusbar.props.refreshIntervalSec" manualSave type="number">
+		<MkInput v-model="statusbar.props['refreshIntervalSec']" manualSave type="number">
 			<template #label>{{ i18n.ts.refreshInterval }}</template>
 		</MkInput>
-		<MkRange v-model="statusbar.props.marqueeDuration" :min="5" :max="150" :step="1">
+		<MkRange v-model="statusbar.props['marqueeDuration']" :min="5" :max="150" :step="1">
 			<template #label>{{ i18n.ts.speed }}</template>
 			<template #caption>{{ i18n.ts.fast }} &lt;-&gt; {{ i18n.ts.slow }}</template>
 		</MkRange>
-		<MkSwitch v-model="statusbar.props.marqueeReverse">
+		<MkSwitch v-model="statusbar.props['marqueeReverse']">
 			<template #label>{{ i18n.ts.reverse }}</template>
 		</MkSwitch>
 	</template>
@@ -128,25 +128,25 @@ const userListsDef = computed(() => {
 watch(() => statusbar.type, () => {
 	if (statusbar.type === 'rss') {
 		statusbar.name = 'NEWS';
-		statusbar.props.url = 'http://feeds.afpbb.com/rss/afpbb/afpbbnews';
-		statusbar.props.shuffle = true;
-		statusbar.props.refreshIntervalSec = 120;
-		statusbar.props.display = 'marquee';
-		statusbar.props.marqueeDuration = 100;
-		statusbar.props.marqueeReverse = false;
+		statusbar.props['url'] = 'http://feeds.afpbb.com/rss/afpbb/afpbbnews';
+		statusbar.props['shuffle'] = true;
+		statusbar.props['refreshIntervalSec'] = 120;
+		statusbar.props['display'] = 'marquee';
+		statusbar.props['marqueeDuration'] = 100;
+		statusbar.props['marqueeReverse'] = false;
 	} else if (statusbar.type === 'federation') {
 		statusbar.name = 'FEDERATION';
-		statusbar.props.refreshIntervalSec = 120;
-		statusbar.props.display = 'marquee';
-		statusbar.props.marqueeDuration = 100;
-		statusbar.props.marqueeReverse = false;
-		statusbar.props.colored = false;
+		statusbar.props['refreshIntervalSec'] = 120;
+		statusbar.props['display'] = 'marquee';
+		statusbar.props['marqueeDuration'] = 100;
+		statusbar.props['marqueeReverse'] = false;
+		statusbar.props['colored'] = false;
 	} else if (statusbar.type === 'userList') {
 		statusbar.name = 'LIST TL';
-		statusbar.props.refreshIntervalSec = 120;
-		statusbar.props.display = 'marquee';
-		statusbar.props.marqueeDuration = 100;
-		statusbar.props.marqueeReverse = false;
+		statusbar.props['refreshIntervalSec'] = 120;
+		statusbar.props['display'] = 'marquee';
+		statusbar.props['marqueeDuration'] = 100;
+		statusbar.props['marqueeReverse'] = false;
 	}
 });
 

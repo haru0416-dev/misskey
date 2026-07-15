@@ -8,6 +8,12 @@ import { FN, TEXT, parse } from 'mfm-js';
 import type { CSSProperties, VNode } from 'vue';
 import MkMfm from '@/components/global/MkMfm.js';
 
+function hasStyleProps(value: unknown): value is { style: CSSProperties } {
+	if (typeof value !== 'object' || value === null) return false;
+	const candidate = value as { style?: unknown };
+	return typeof candidate.style === 'object' && candidate.style !== null;
+}
+
 function renderFunctionStyle(name: string, args: Record<string, string | true>): CSSProperties {
 	const root = MkMfm(
 		{
@@ -17,7 +23,9 @@ function renderFunctionStyle(name: string, args: Record<string, string | true>):
 		{ emit: vi.fn() },
 	) as VNode;
 	const children = root.children as VNode[];
-	return children[0]?.props?.style as CSSProperties;
+	const props = children[0]?.props;
+	if (!hasStyleProps(props)) throw new Error('Expected rendered MFM style props');
+	return props.style;
 }
 
 describe('MFM function styles', () => {

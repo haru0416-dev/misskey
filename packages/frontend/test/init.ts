@@ -66,7 +66,17 @@ const enUsLocale = locales['en-US'];
 if (enUsLocale == null) throw new Error('en-US locale is required for frontend tests');
 updateI18n(enUsLocale);
 
-export const preferState: Record<string, unknown> = {
+export type TestPreferenceState = Record<string, unknown> & {
+	animation?: boolean;
+	emojiStyle?: string;
+};
+
+export type TestPreferenceReactive = Record<string, Ref<unknown>> & {
+	animation?: Ref<boolean>;
+	emojiStyle?: Ref<string>;
+};
+
+export const preferState: TestPreferenceState = {
 	// なんかtestがうまいこと動かないのでここに書く
 	dataSaver: {
 		media: false,
@@ -78,7 +88,7 @@ export const preferState: Record<string, unknown> = {
 	mutingEmojis: [],
 };
 
-export let preferReactive: Record<string, Ref<unknown>> = {};
+export let preferReactive: TestPreferenceReactive = {};
 
 for (const key in preferState) {
 	if (preferState[key] !== undefined) {

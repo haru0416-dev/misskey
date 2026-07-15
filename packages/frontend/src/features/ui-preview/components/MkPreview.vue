@@ -9,18 +9,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkInput v-model="text">
 			<template #label>Text</template>
 		</MkInput>
-		<MkSwitch v-model="flag" :class="$style.preview__content1__switch_button">
+		<MkSwitch v-model="flag" :class="$style['preview__content1__switch_button']">
 			<span>Switch is now {{ flag ? 'on' : 'off' }}</span>
 		</MkSwitch>
-		<div :class="$style.preview__content1__button">
+		<div :class="$style['preview__content1__button']">
 			<MkButton inline>This is</MkButton>
 			<MkButton inline primary>the button</MkButton>
 		</div>
 	</div>
-	<div :class="$style.preview__content2" style="pointer-events: none;">
+	<div :class="$style['preview__content2']" style="pointer-events: none;">
 		<Mfm :text="mfm"/>
 	</div>
-	<div :class="$style.preview__content3">
+	<div :class="$style['preview__content3']">
 		<MkButton inline primary @click="openMenu">Open menu</MkButton>
 		<MkButton inline primary @click="openDialog">Open dialog</MkButton>
 		<MkButton inline primary @click="openForm">Open form</MkButton>

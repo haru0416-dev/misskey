@@ -61,8 +61,8 @@ export function physics(container: HTMLElement) {
 	const objEls = Array.from(container.children) as HTMLElement[];
 	const objs: Matter.Body[] = [];
 	for (const objEl of objEls) {
-		const left = objEl.dataset.physicsX ? parseInt(objEl.dataset.physicsX) : objEl.offsetLeft;
-		const top = objEl.dataset.physicsY ? parseInt(objEl.dataset.physicsY) : objEl.offsetTop;
+		const left = objEl.dataset['physicsX'] ? parseInt(objEl.dataset['physicsX']) : objEl.offsetLeft;
+		const top = objEl.dataset['physicsY'] ? parseInt(objEl.dataset['physicsY']) : objEl.offsetTop;
 
 		let obj: Matter.Body;
 		if (objEl.classList.contains('_physics_circle_')) {

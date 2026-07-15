@@ -88,7 +88,7 @@ const shown = ref(!!props.initialShown);
 /** @see MkEmojiPicker.vue */
 function computeButtonTitle(ev: PointerEvent): void {
 	const elm = ev.target as HTMLElement;
-	const emoji = elm.dataset.emoji as string;
+	const emoji = elm.dataset['emoji'] as string;
 	elm.title = getEmojiName(emoji);
 }
 

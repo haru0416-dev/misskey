@@ -9,10 +9,20 @@ function isStringArray(value: unknown): value is string[] {
 	return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
+type EmojiSimpleCandidate = Record<string, unknown> & {
+	name?: unknown;
+	url?: unknown;
+	category?: unknown;
+	aliases?: unknown;
+	localOnly?: unknown;
+	isSensitive?: unknown;
+	roleIdsThatCanBeUsedThisEmojiAsReaction?: unknown;
+};
+
 export function isEmojiSimple(value: unknown): value is Misskey.entities.EmojiSimple {
 	if (typeof value !== 'object' || value === null) return false;
 
-	const emoji = value as Record<string, unknown>;
+	const emoji = value as EmojiSimpleCandidate;
 	return (
 		typeof emoji.name === 'string' &&
 		typeof emoji.url === 'string' &&

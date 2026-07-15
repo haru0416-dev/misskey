@@ -33,7 +33,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<Teleport v-if="opened" defer :to="`#v-${pageId}-body`">
 				<MkStickyContainer>
 					<template #header>
-						<div v-if="$slots.header" :class="$style.inBodyHeader">
+						<div v-if="slots.header" :class="$style.inBodyHeader">
 							<slot name="header"></slot>
 						</div>
 					</template>
@@ -46,7 +46,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					</div>
 
 					<template #footer>
-						<div v-if="$slots.footer" :class="$style.inBodyFooter">
+						<div v-if="slots.footer" :class="$style.inBodyFooter">
 							<slot name="footer"></slot>
 						</div>
 					</template>
@@ -69,7 +69,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div v-show="opened">
 						<MkStickyContainer>
 							<template #header>
-								<div v-if="$slots.header" :class="$style.inBodyHeader">
+								<div v-if="slots.header" :class="$style.inBodyHeader">
 									<slot name="header"></slot>
 								</div>
 							</template>
@@ -82,7 +82,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</div>
 
 							<template #footer>
-								<div v-if="$slots.footer" :class="$style.inBodyFooter">
+								<div v-if="slots.footer" :class="$style.inBodyFooter">
 									<slot name="footer"></slot>
 								</div>
 							</template>
@@ -124,6 +124,16 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
 	(ev: 'opened'): void;
 	(ev: 'closed'): void;
+}>();
+
+const slots = defineSlots<{
+	default?: () => void;
+	header?: () => void;
+	footer?: () => void;
+	icon?: () => void;
+	label?: () => void;
+	caption?: () => void;
+	suffix?: () => void;
 }>();
 
 const rootEl = useTemplateRef('rootEl');
@@ -168,7 +178,7 @@ function updateBgSame() {
 	const themeValue = themeManager.currentCompiledTheme;
 	if (themeValue == null) return;
 	const parentBg = getBgColor(rootEl.value?.parentElement) ?? 'transparent';
-	const myBg = themeValue.panel;
+	const myBg = themeValue['panel'];
 	bgSame.value = parentBg === myBg;
 }
 

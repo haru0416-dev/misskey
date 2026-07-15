@@ -191,12 +191,33 @@ import kmg from '@/filters/kmg.js';
 import MkInput from '@/components/form/MkInput.vue';
 import bytes from '@/filters/bytes.js';
 
+type QueueCounts = Record<string, number> & {
+	active?: number;
+	delayed?: number;
+	waiting?: number;
+};
+
+type QueueInfo = Omit<Misskey.entities.AdminQueueQueuesResponse[number], 'counts'> & {
+	counts: QueueCounts;
+};
+
+type CurrentQueueInfo = Omit<Misskey.entities.AdminQueueQueueStatsResponse, 'counts'> & {
+	counts: QueueCounts;
+};
+
+type QueueJob = Omit<Misskey.entities.QueueJob, 'opts'> & {
+	opts: Misskey.entities.QueueJob['opts'] & {
+		repeat?: unknown;
+		attempts?: number;
+	};
+};
+
 const tab = ref<typeof Misskey.queueTypes[number] | '-'>('-');
 const jobState = ref<'all' | 'latest' | 'completed' | 'failed' | 'active' | 'delayed' | 'wait' | 'paused'>('all');
-const jobs = ref<Misskey.entities.QueueJob[]>([]);
+const jobs = ref<QueueJob[]>([]);
 const jobsFetching = ref(true);
-const queueInfos = ref<Misskey.entities.AdminQueueQueuesResponse>([]);
-const queueInfo = ref<Misskey.entities.AdminQueueQueueStatsResponse | null>(null);
+const queueInfos = ref<QueueInfo[]>([]);
+const queueInfo = ref<CurrentQueueInfo | null>(null);
 const searchQuery = ref('');
 
 async function fetchQueues() {

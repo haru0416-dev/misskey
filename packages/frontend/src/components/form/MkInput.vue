@@ -14,8 +14,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-model="v"
 			v-adaptive-border
 			:class="$style.inputCore"
-			:aria-labelledby="$slots.label ? labelId : undefined"
-			:aria-describedby="$slots.caption ? captionId : undefined"
+			:aria-labelledby="slots.label ? labelId : undefined"
+			:aria-describedby="slots.caption ? captionId : undefined"
 			:type="type"
 			:disabled="disabled"
 			:required="required"
@@ -97,6 +97,13 @@ const emit = defineEmits<{
 	(ev: 'enter', _ev: KeyboardEvent): void;
 	(ev: 'update:modelValue', value: ModelValueType<T>): void;
 	(ev: 'savingStateChange', saved: boolean, invalid: boolean): void;
+}>();
+
+const slots = defineSlots<{
+	label?: () => void;
+	caption?: () => void;
+	prefix?: () => void;
+	suffix?: () => void;
 }>();
 
 const { modelValue } = toRefs(props);

@@ -129,7 +129,7 @@ function setupGrid(): GridSetting {
 				{
 					// 1つでもバリデーションエラーがあれば行全体をエラー表示する
 					condition: ({ cells }) => cells.some(it => !it.violation.valid),
-					applyStyle: { className: $style.violationRow ?? '' },
+					applyStyle: { className: $style['violationRow'] ?? '' },
 				},
 			],
 			// 行のコンテキストメニュー設定

@@ -40,7 +40,7 @@ export const Default = {
 			handlers: [
 				...commonHandlers,
 				http.post('/api/users/show', ({ params }) => {
-					return HttpResponse.json(userDetailed(params.userId as string));
+					return HttpResponse.json(userDetailed(params['userId'] as string));
 				}),
 			],
 		},
