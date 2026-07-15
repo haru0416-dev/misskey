@@ -32,7 +32,7 @@ export function ChannelPage(props: CommonProps<{
 		<Layout
 			{...props}
 			title={`${props.channel.name} | ${props.instanceName}`}
-			desc={props.channel.description ?? undefined}
+			{...(props.channel.description == null ? {} : { desc: props.channel.description })}
 			ogSlot={ogBlock()}
 		>
 		</Layout>

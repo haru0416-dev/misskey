@@ -29,9 +29,8 @@ export default class TestGroupedChart extends Chart<typeof schema> { // eslint-d
 	}
 
 	protected async tickMajor(group: string): Promise<Partial<KVs<typeof schema>>> {
-		return {
-			'foo.total': this.total[group],
-		};
+		const total = this.total[group];
+		return total === undefined ? {} : { 'foo.total': total };
 	}
 
 	protected async tickMinor(): Promise<Partial<KVs<typeof schema>>> {

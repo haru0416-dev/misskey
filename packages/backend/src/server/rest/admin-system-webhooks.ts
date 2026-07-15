@@ -12,6 +12,7 @@ import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { Config } from '@/config.js';
 import type { SystemWebhookDeliverQueue } from '@/core/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -154,10 +155,10 @@ export async function handleHonoApiAdminSystemWebhookList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>[]> {
 	const params = parseHonoApiParams(adminSystemWebhookListParamDef, body);
-	const webhooks = await listSystemWebhooksFromDatabase(deps.db, {
+	const webhooks = await listSystemWebhooksFromDatabase(deps.db, omitUndefined({
 		isActive: params.isActive,
 		on: params.on,
-	});
+	}));
 
 	return packHonoApiSystemWebhooks(webhooks);
 }
@@ -178,12 +179,20 @@ export async function handleHonoApiAdminSystemWebhookTest(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminSystemWebhookTestParamDef, body);
+	const testParams = params.override === undefined ? {
+		webhookId: params.webhookId,
+		type: params.type,
+	} : {
+		webhookId: params.webhookId,
+		type: params.type,
+		override: omitUndefined(params.override),
+	};
 	try {
 		await testSystemWebhookWithQueue({
 			fetchSystemWebhooksByIds: ids => listSystemWebhooksFromDatabase(deps.db, { ids }),
 			enqueueSystemWebhookDeliver: (webhook, type, content, opts) => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, deps.config, webhook, type, content, opts),
 			populateEmojis: async () => ({}),
-		}, params);
+		}, testParams);
 	} catch (e) {
 		if (e instanceof NoSuchSystemWebhookForTestError) {
 			throw noSuchWebhookError();

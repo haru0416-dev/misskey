@@ -13,7 +13,8 @@ import type { MiUser } from '@/models/User.js';
 import { deserializeUser } from './UserStore.js';
 
 export type NoteDraftOrder = 'asc' | 'desc';
-type NoteDraftUpdate = Partial<Omit<NoteDraftInsert, 'id' | 'userId'>>;
+type NoteDraftUpdateValues = Omit<NoteDraftInsert, 'id' | 'userId'>;
+type NoteDraftUpdate = { [K in keyof NoteDraftUpdateValues]?: NoteDraftUpdateValues[K] | undefined };
 
 function deserializeNoteDraft(
 	row: NoteDraftRow,
@@ -58,8 +59,8 @@ export function resolveNoteDraftPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: NoteDraftOrder;
 } {
 	return resolveDateIdPagination(idService, options);

@@ -256,7 +256,7 @@ export async function handleHonoApiAdminUpdateMeta(
 
 	Object.assign(deps.meta, after);
 	deps.meta.rootUser = null;
-	deps.publishInternalEvent?.('metaUpdated', { before: updateBefore, after });
+	deps.publishInternalEvent?.('metaUpdated', { ...(updateBefore === undefined ? {} : { before: updateBefore }), after });
 	scheduleHiddenTagsRankingRemoval(deps, updateBefore, set.hiddenTags);
 
 	await logModerationEventInDatabase(deps, me, 'updateServerSettings', {

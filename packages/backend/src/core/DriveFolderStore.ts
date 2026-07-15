@@ -49,8 +49,8 @@ export function resolveDriveFolderPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: DriveFolderOrder;
 } {
 	return resolveDateIdPagination(idService, options);

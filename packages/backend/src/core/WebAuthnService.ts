@@ -43,7 +43,7 @@ export function createWebAuthnService(
 			origin: config.instance.url,
 			rpId: config.runtime.hostname,
 			rpName: meta.name ?? config.runtime.host,
-			rpIcon: meta.iconUrl ?? undefined,
+			...(meta.iconUrl == null ? {} : { rpIcon: meta.iconUrl }),
 		};
 	}
 
@@ -56,10 +56,10 @@ export function createWebAuthnService(
 			rpID: relyingParty.rpId,
 			userID: isoUint8Array.fromUTF8String(userId),
 			userName: userName,
-			userDisplayName: userDisplayName,
+			...(userDisplayName === undefined ? {} : { userDisplayName }),
 			excludeCredentials: keys.map(key => (<{ id: string; transports?: AuthenticatorTransportFuture[]; }>{
 				id: key.id,
-				transports: key.transports ?? undefined,
+				...(key.transports == null ? {} : { transports: key.transports }),
 			})),
 			authenticatorSelection: {
 				residentKey: 'required',
@@ -124,7 +124,7 @@ export function createWebAuthnService(
 			userVerified: registrationInfo.userVerified,
 			credentialDeviceType: registrationInfo.credentialDeviceType,
 			credentialBackedUp: registrationInfo.credentialBackedUp,
-			transports: response.response.transports,
+			...(response.response.transports === undefined ? {} : { transports: response.response.transports }),
 		};
 	}
 
@@ -198,7 +198,7 @@ export function createWebAuthnService(
 					id: key.id,
 					publicKey: Buffer.from(key.publicKey, 'base64url'),
 					counter: key.counter,
-					transports: key.transports ? key.transports as AuthenticatorTransportFuture[] : undefined,
+					...(key.transports ? { transports: key.transports as AuthenticatorTransportFuture[] } : {}),
 				},
 				requireUserVerification: true,
 			});
@@ -267,7 +267,7 @@ export function createWebAuthnService(
 					id: key.id,
 					publicKey: Buffer.from(key.publicKey, 'base64url'),
 					counter: key.counter,
-					transports: key.transports ? key.transports as AuthenticatorTransportFuture[] : undefined,
+					...(key.transports ? { transports: key.transports as AuthenticatorTransportFuture[] } : {}),
 				},
 				requireUserVerification: true,
 			});

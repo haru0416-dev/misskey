@@ -6,6 +6,7 @@
 import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import {
 	appendUserToAntennasInDatabase,
 	countAntennasByUserIdFromDatabase,
@@ -435,7 +436,7 @@ export async function handleHonoApiAntennasUpdate(
 		if (userList == null) throw noSuchUserListError('1c6b35c9-943e-48c2-81e4-2844989407f7');
 	}
 
-	await updateAntennaInDatabase(deps.db, antenna.id, {
+	await updateAntennaInDatabase(deps.db, antenna.id, omitUndefined({
 		name: params.name,
 		src: params.src,
 		userListId: params.userListId !== undefined ? (userList ? userList.id : null) : undefined,
@@ -450,7 +451,7 @@ export async function handleHonoApiAntennasUpdate(
 		excludeNotesInSensitiveChannel: params.excludeNotesInSensitiveChannel,
 		isActive: true,
 		lastUsedAt: new Date(),
-	});
+	}));
 
 	deps.publishInternalEvent?.('antennaUpdated', await fetchAntennaByIdOrFailFromDatabase(deps.db, antenna.id));
 

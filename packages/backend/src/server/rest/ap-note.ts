@@ -4,6 +4,7 @@
  */
 
 import { promiseLimit } from '@/misc/promise-limit.js';
+import { omitUndefined } from '@/misc/clone.js';
 import type * as Redis from 'ioredis';
 import { concat, toArray, unique } from '@/misc/prelude/array.js';
 import { checkHttps } from '@/misc/check-https.js';
@@ -310,7 +311,9 @@ export async function createNoteFromApForHonoApi(
 
 	const attachments = toArray(note.attachment);
 	for (const attach of attachments) {
-		(attach as { sensitive?: boolean }).sensitive ??= (note as { sensitive?: boolean }).sensitive;
+		const attachment = attach as { sensitive?: boolean };
+		const sensitive = (note as { sensitive?: boolean }).sensitive;
+		if (attachment.sensitive == null && sensitive !== undefined) attachment.sensitive = sensitive;
 	}
 	const resolvedFiles = await Promise.all(attachments.map(attach => resolveImageForHonoApi(deps, actor, attach)));
 	const files = resolvedFiles.filter(file => file != null);
@@ -361,7 +364,7 @@ export async function createNoteFromApForHonoApi(
 	const emojis = await extractEmojisForHonoApi(deps, note.tag ?? [], actor.host ?? '').catch(() => []);
 	const apEmojis = emojis.map(emoji => emoji.name);
 
-	const data: CreateNoteData = {
+	const data: CreateNoteData = omitUndefined({
 		createdAt: note.published ? new Date(note.published) : null,
 		files,
 		reply,
@@ -381,7 +384,7 @@ export async function createNoteFromApForHonoApi(
 		poll: poll ?? null,
 		uri: note.id,
 		url: url ?? null,
-	};
+	});
 
 	try {
 		return await createNoteForHonoApi(deps, actor, data, silent);

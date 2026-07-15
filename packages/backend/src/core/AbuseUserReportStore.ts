@@ -45,8 +45,8 @@ export function resolveAbuseUserReportPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: AbuseUserReportOrder;
 } {
 	return resolveDateIdPagination(idService, options);

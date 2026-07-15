@@ -53,11 +53,11 @@ function parseDbOutboxJob(row: QueueOutboxRow): DbJobBulkInput<'deleteAccount'> 
 		name: 'deleteAccount',
 		data: {
 			user: { id: user.id },
-			soft: row.data.soft,
+			...(row.data.soft === undefined ? {} : { soft: row.data.soft }),
 		},
 		opts: {
-			removeOnComplete,
-			removeOnFail,
+			...(removeOnComplete === undefined ? {} : { removeOnComplete }),
+			...(removeOnFail === undefined ? {} : { removeOnFail }),
 			jobId: `outbox-${row.id}`,
 		},
 	};

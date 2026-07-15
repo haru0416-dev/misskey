@@ -28,12 +28,12 @@ export function createS3Service(httpRequestService: HttpRequestService) {
 		}
 
 		return new S3Client({
-			endpoint: meta.objectStorageEndpoint ? u : undefined,
-			credentials: (meta.objectStorageAccessKey !== null && meta.objectStorageSecretKey !== null) ? {
+			...(meta.objectStorageEndpoint ? { endpoint: u } : {}),
+			...((meta.objectStorageAccessKey !== null && meta.objectStorageSecretKey !== null) ? { credentials: {
 				accessKeyId: meta.objectStorageAccessKey,
 				secretAccessKey: meta.objectStorageSecretKey,
-			} : undefined,
-			region: meta.objectStorageRegion ? meta.objectStorageRegion : undefined, // 空文字列もundefinedにするため ?? は使わない
+			} } : {}),
+			...(meta.objectStorageRegion ? { region: meta.objectStorageRegion } : {}), // 空文字列も省略するため ?? は使わない
 			tls: meta.objectStorageUseSSL,
 			forcePathStyle: meta.objectStorageEndpoint ? meta.objectStorageS3ForcePathStyle : false, // AWS with endPoint omitted
 			requestHandler: new NodeHttpHandler(handlerOption),

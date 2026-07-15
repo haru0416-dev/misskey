@@ -121,7 +121,7 @@ async function evaluateModeratorsInactiveDays(deps: HonoQueueCheckModeratorsActi
 async function changeToInvitationOnly(deps: HonoQueueCheckModeratorsActivityDependencies): Promise<void> {
 	const { before, after } = await updateMetaInDatabase(deps.db, { disableRegistration: true });
 	Object.assign(deps.meta, after);
-	deps.publishInternalEvent?.('metaUpdated', { before, after });
+	deps.publishInternalEvent?.('metaUpdated', { ...(before === undefined ? {} : { before }), after });
 }
 
 async function enqueueCheckModeratorsActivitySystemWebhook<T extends SystemWebhookEventType>(

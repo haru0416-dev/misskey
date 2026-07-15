@@ -13,6 +13,7 @@ import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
+import { omitUndefined } from '@/misc/clone.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
@@ -125,11 +126,11 @@ export async function handleHonoApiIImportFollowing(
 
 	void addDbJob(deps.dbQueue, {
 		name: 'importFollowing',
-		data: {
+		data: omitUndefined({
 			user: { id: me.id },
 			fileId: file.id,
 			withReplies: params.withReplies,
-		},
+		}),
 		opts: importJobOptions(deps.config),
 	});
 }

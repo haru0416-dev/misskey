@@ -21,6 +21,7 @@ import type { PostScheduledNoteQueue } from '@/core/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
@@ -408,13 +409,13 @@ async function packNoteDraftManyForHonoApi(
 	const replyById = new Map(packedReplies.map(note => [note.id, note]));
 	const renoteById = new Map(packedRenotes.map(note => [note.id, note]));
 
-	return await Promise.all(drafts.map(draft => packNoteDraftForHonoApi(deps, draft, me, {
+	return await Promise.all(drafts.map(draft => packNoteDraftForHonoApi(deps, draft, me, omitUndefined({
 		packedUser: userById.get(draft.userId),
 		packedFiles: fileById,
 		channel: draft.channelId ? (channelById.get(draft.channelId) ?? null) : null,
 		reply: draft.replyId ? (replyById.get(draft.replyId) ?? null) : undefined,
 		renote: draft.renoteId ? (renoteById.get(draft.renoteId) ?? null) : undefined,
-	})));
+	}))));
 }
 
 export async function handleHonoApiNotesDraftsCreate(
@@ -440,7 +441,7 @@ export async function handleHonoApiNotesDraftsCreate(
 	const scheduledAt = params.scheduledAt ? new Date(params.scheduledAt) : null;
 	const pollExpiresAt = params.poll?.expiresAt ? new Date(params.poll.expiresAt) : null;
 
-	await validateNoteDraft(deps, me, {
+	await validateNoteDraft(deps, me, omitUndefined({
 		isActuallyScheduled: params.isActuallyScheduled,
 		scheduledAt,
 		pollExpiresAt,
@@ -450,7 +451,7 @@ export async function handleHonoApiNotesDraftsCreate(
 		replyId: params.replyId,
 		visibility: params.visibility,
 		channelId: params.channelId,
-	}, {
+	}), {
 		scheduledAtRequired: new HonoApiError({ status: 400, message: 'scheduledAt is required when isActuallyScheduled is true.', code: 'SCHEDULED_AT_REQUIRED', id: '15e28a55-e74c-4d65-89b7-8880cdaaa87d' }),
 		scheduledAtMustBeInFuture: new HonoApiError({ status: 400, message: 'scheduledAt must be in the future.', code: 'SCHEDULED_AT_MUST_BE_IN_FUTURE', id: 'e4bed6c9-017e-4934-aed0-01c22cc60ec1' }),
 		cannotCreateAlreadyExpiredPoll: new HonoApiError({ status: 400, message: 'Poll is already expired.', code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL', id: '04da457d-b083-4055-9082-955525eda5a5' }),
@@ -521,7 +522,7 @@ export async function handleHonoApiNotesDraftsUpdate(
 	const pollExpiresAt = params.poll?.expiresAt ? new Date(params.poll.expiresAt) : null;
 	const isActuallyScheduled = params.isActuallyScheduled ?? existing.isActuallyScheduled;
 
-	await validateNoteDraft(deps, me, {
+	await validateNoteDraft(deps, me, omitUndefined({
 		isActuallyScheduled,
 		scheduledAt,
 		pollExpiresAt,
@@ -531,7 +532,7 @@ export async function handleHonoApiNotesDraftsUpdate(
 		replyId: params.replyId,
 		visibility: params.visibility,
 		channelId: params.channelId,
-	}, {
+	}), {
 		scheduledAtRequired: new HonoApiError({ status: 400, message: 'scheduledAt is required when isActuallyScheduled is true.', code: 'SCHEDULED_AT_REQUIRED', id: 'fe9737d5-cc41-498c-af9d-149207307530' }),
 		scheduledAtMustBeInFuture: new HonoApiError({ status: 400, message: 'scheduledAt must be in the future.', code: 'SCHEDULED_AT_MUST_BE_IN_FUTURE', id: 'ed1a6673-d0d1-4364-aaae-9bf3f139cbc5' }),
 		cannotCreateAlreadyExpiredPoll: new HonoApiError({ status: 400, message: 'Poll is already expired.', code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL', id: '04da457d-b083-4055-9082-955525eda5a5' }),
@@ -598,11 +599,11 @@ export async function handleHonoApiNotesDraftsList(
 	const params = parseHonoApiParams(notesDraftsListParamDef, body);
 	const pagination = resolveNoteDraftPagination({ gen: (time) => genId(time) }, params);
 
-	const drafts = await listNoteDraftsByUserIdFromDatabase(deps.db, me.id, {
+	const drafts = await listNoteDraftsByUserIdFromDatabase(deps.db, me.id, omitUndefined({
 		limit: params.limit,
 		scheduled: params.scheduled,
 		...pagination,
-	});
+	}));
 
 	return await packNoteDraftManyForHonoApi(deps, drafts, me);
 }

@@ -7,6 +7,7 @@ import { domainToASCII } from 'node:url';
 import type * as Redis from 'ioredis';
 import semver from 'semver';
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import { fetchInstanceMetadataWithSideEffects } from '@/core/FetchInstanceMetadataLogic.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
@@ -250,13 +251,13 @@ export async function unlockFetchInstanceMetadata(deps: { redis: Pick<Redis.Redi
 function toRelationshipJob(config: Pick<Config, 'queues'>, name: 'unfollow', data: RelationshipJobData) {
 	return {
 		name,
-		data: {
+		data: omitUndefined({
 			from: { id: data.from.id },
 			to: { id: data.to.id },
 			silent: data.silent,
 			requestId: data.requestId,
 			withReplies: data.withReplies,
-		},
+		}),
 		opts: queueRetentionOptions(config),
 	};
 }
@@ -355,7 +356,7 @@ export async function handleHonoApiFederationInstances(
 	const meta = typeof params.blocked === 'boolean' || typeof params.silenced === 'boolean'
 		? await fetchMetaFromDatabase(deps.db)
 		: deps.meta;
-	const instances = await listFederationInstancesFromDatabase(deps.db, {
+	const instances = await listFederationInstancesFromDatabase(deps.db, omitUndefined({
 		host: params.host,
 		blocked: params.blocked,
 		blockedHosts: meta.blockedHosts,
@@ -369,7 +370,7 @@ export async function handleHonoApiFederationInstances(
 		limit: params.limit,
 		offset: params.offset,
 		sort: (params.sort ?? null) as FederationInstancesSort,
-	});
+	}));
 
 	return await packHonoApiFederationInstances(deps, instances, user, meta);
 }

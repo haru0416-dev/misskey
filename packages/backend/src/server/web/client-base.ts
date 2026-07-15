@@ -44,13 +44,13 @@ export function createClientBaseApp(deps: ClientBaseDependencies): Hono {
 		noBody?: boolean;
 	} = {}): Promise<Response> {
 		return htmlResponse(BasePage({
-			img: deps.meta.bannerUrl ?? undefined,
+			...(deps.meta.bannerUrl == null ? {} : { img: deps.meta.bannerUrl }),
 			title: deps.meta.name ?? 'Erebia',
-			desc: deps.meta.description ?? undefined,
+			...(deps.meta.description == null ? {} : { desc: deps.meta.description }),
 			...(await getCommonData()),
-			noindex: options.noindex,
+			...(options.noindex === undefined ? {} : { noindex: options.noindex }),
 		}), {
-			noBody: options.noBody,
+			...(options.noBody === undefined ? {} : { noBody: options.noBody }),
 			headers: {
 				'Cache-Control': 'public, max-age=30',
 			},

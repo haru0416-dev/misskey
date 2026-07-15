@@ -5,6 +5,7 @@
 
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
 import { createGalleryLikeInDatabase, deleteGalleryLikeByIdFromDatabase, fetchGalleryLikeFromDatabase, galleryLikeExistsInDatabase, listGalleryLikesByUserIdFromDatabase, listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase } from '@/core/GalleryLikeStore.js';
 import {
@@ -280,11 +281,11 @@ export async function packGalleryPostsManyForHonoApi(
 	const fileById = new Map(packedFiles.map(file => [file.id, file]));
 	const likedPostIdSet = new Set(likedPostIds);
 
-	return await Promise.all(posts.map(post => packGalleryPostForHonoApi(deps, post, me, {
+	return await Promise.all(posts.map(post => packGalleryPostForHonoApi(deps, post, me, omitUndefined({
 		packedUser: userById.get(post.userId),
 		packedFiles: post.fileIds.map(fileId => fileById.get(fileId)).filter((file): file is Packed<'DriveFile'> => file != null),
 		isLiked: me ? likedPostIdSet.has(post.id) : undefined,
-	})));
+	}))));
 }
 
 export async function handleHonoApiGalleryFeatured(
@@ -389,13 +390,13 @@ export async function handleHonoApiGalleryPostsUpdate(
 		if (files.length === 0) throw new Error();
 	}
 
-	await updateGalleryPostByIdAndUserIdInDatabase(deps.db, params.postId, me.id, {
+	await updateGalleryPostByIdAndUserIdInDatabase(deps.db, params.postId, me.id, omitUndefined({
 		updatedAt: new Date(),
 		title: params.title,
 		description: params.description,
 		isSensitive: params.isSensitive,
 		fileIds: files ? files.map(file => file.id) : undefined,
-	});
+	}));
 
 	const post = await fetchGalleryPostByIdOrFailFromDatabase(deps.db, params.postId);
 	return await packGalleryPostForHonoApi(deps, post, me);

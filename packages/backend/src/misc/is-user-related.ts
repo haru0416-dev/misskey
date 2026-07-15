@@ -7,10 +7,10 @@ import type { MiUser } from '@/models/_.js';
 
 interface NoteLike {
 	userId: MiUser['id'];
-	reply?: NoteLike | null;
-	renote?: NoteLike | null;
-	replyUserId?: MiUser['id'] | null;
-	renoteUserId?: MiUser['id'] | null;
+	reply?: NoteLike | null | undefined;
+	renote?: NoteLike | null | undefined;
+	replyUserId?: MiUser['id'] | null | undefined;
+	renoteUserId?: MiUser['id'] | null | undefined;
 }
 
 export function isUserRelated(note: NoteLike | null | undefined, userIds: Set<string>, ignoreAuthor = false): boolean {
@@ -34,4 +34,3 @@ export function isUserRelated(note: NoteLike | null | undefined, userIds: Set<st
 
 	return false;
 }
-

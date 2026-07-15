@@ -13,6 +13,7 @@ import {
 	type AnnouncementUpdateValues,
 } from '@/core/AnnouncementLogic.js';
 import { countAnnouncementReadsByAnnouncementIdsFromDatabase } from '@/core/AnnouncementReadStore.js';
+import { omitUndefined } from '@/misc/clone.js';
 import {
 	fetchAnnouncementByIdFromDatabase,
 	listAnnouncementsForAdminFromDatabase,
@@ -197,12 +198,12 @@ export async function handleHonoApiAdminAnnouncementsList(
 	body: Record<string, unknown>,
 ): Promise<AdminAnnouncement[]> {
 	const params = parseHonoApiParams(adminAnnouncementsListParamDef, body);
-	const announcements = await listAnnouncementsForAdminFromDatabase(deps.db, {
+	const announcements = await listAnnouncementsForAdminFromDatabase(deps.db, omitUndefined({
 		limit: params.limit,
 		...resolveAnnouncementPagination({ gen: time => genId(time) }, params),
 		status: params.status,
 		userId: params.userId,
-	});
+	}));
 	const reads = await countAnnouncementReadsByAnnouncementIdsFromDatabase(deps.db, announcements.map(announcement => announcement.id));
 
 	return announcements.map(announcement => packAdminAnnouncementForHonoApi(

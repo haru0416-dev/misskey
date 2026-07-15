@@ -52,7 +52,7 @@ export default class Logger {
 	constructor(context: string, color?: Keyword) {
 		this.context = {
 			name: context,
-			color: color,
+			...(color === undefined ? {} : { color }),
 		};
 	}
 

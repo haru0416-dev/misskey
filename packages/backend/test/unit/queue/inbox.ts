@@ -55,6 +55,8 @@ function captureRequestServer(): Promise<{ server: Server; url: string; capture:
 }
 
 describe('hono-queue-inbox handleHonoQueueInbox', () => {
+	type ActivityOverrides = { [K in keyof IActivity]?: IActivity[K] | undefined };
+
 	let runtime: RuntimeDependencies;
 	let deps: HonoQueueInboxDependencies;
 	let keyPair: Awaited<ReturnType<typeof genRsaKeyPair>>;
@@ -84,7 +86,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	 * ローカルHTTPフィクスチャへ実際に送信して捕捉することで、httpSignature.verifySignature
 	 * が本物のバイト列に対して動作する状態を再現する (established local HTTP fixture pattern)。
 	 */
-	async function createSignedInboxJob(host: string, activityOverrides: Partial<IActivity> = {}): Promise<{ user: MiUser; job: Bull.Job<InboxJobData>; activity: IActivity }> {
+	async function createSignedInboxJob(host: string, activityOverrides: ActivityOverrides = {}): Promise<{ user: MiUser; job: Bull.Job<InboxJobData>; activity: IActivity }> {
 		const { server, url, capture } = await captureRequestServer();
 		servers.push(server);
 
@@ -110,8 +112,8 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 			// object は必須フィールドだが、署名検証のみを検証するテスト (federation/keyId系) では
 			// 実際のフォロー対象は使われないため自分自身へのダミー参照で埋める。
 			object: user.uri!,
-			...activityOverrides,
 		};
+		Object.assign(activity, activityOverrides);
 		const body = JSON.stringify(activity);
 
 		const signed = await ApRequestCreator.createSignedPost({

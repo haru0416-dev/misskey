@@ -525,7 +525,7 @@ export async function addDriveFileForHonoApi(
 
 	if (info.width) {
 		properties.width = info.width;
-		properties.height = info.height;
+		if (info.height !== undefined) properties.height = info.height;
 	}
 	if (info.orientation != null) {
 		properties.orientation = info.orientation;

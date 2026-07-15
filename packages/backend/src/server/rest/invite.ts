@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
 import {
 	countRegistrationTicketsCreatedSinceFromDatabase,
@@ -172,12 +173,12 @@ export async function handleHonoApiAdminInviteList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>[]> {
 	const params = parseHonoApiParams(adminInviteListParamDef, body);
-	const tickets = await listRegistrationTicketsForAdminFromDatabase(deps.db, {
+	const tickets = await listRegistrationTicketsForAdminFromDatabase(deps.db, omitUndefined({
 		limit: params.limit,
 		offset: params.offset,
 		type: params.type,
 		sort: params.sort,
-	});
+	}));
 
 	return await packInviteCodesForHonoApi(deps, tickets);
 }

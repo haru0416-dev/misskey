@@ -133,7 +133,7 @@ export class HonoStreamConnection {
 	private userIdsWhoMeMutingRenotes: Set<string> = new Set();
 	private userMutedInstances: Set<string> = new Set();
 	private pendingInternalEvents: GlobalEvents['internal']['payload'][] | null = null;
-	private refreshPromise?: Promise<void>;
+	private refreshPromise: Promise<void> | undefined;
 	private readonly onBroadcast = (data: { type: string; body: JsonValue }): void => {
 		this.sendMessageToWs(data.type, data.body);
 	};
@@ -357,8 +357,8 @@ export class HonoStreamConnection {
 	private buildChannelContext(id: string, send: (type: string, body: JsonValue) => void): HonoStreamChannelContext {
 		return {
 			id,
-			user: this.user,
-			token: this.token,
+			...(this.user !== undefined ? { user: this.user } : {}),
+			...(this.token !== undefined ? { token: this.token } : {}),
 			userProfile: this.userProfile,
 			following: this.following,
 			followingChannels: this.followingChannels,

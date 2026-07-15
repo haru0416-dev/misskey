@@ -12,6 +12,7 @@ import { fetchRoleByIdFromDatabase, listRolesByIdsFromDatabase } from '@/core/Ro
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { omitUndefined } from '@/misc/clone.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiGroupedNotification, MiNotification } from '@/models/Notification.js';
@@ -142,7 +143,7 @@ export async function packNotificationForHonoApi<T extends MiNotification | MiGr
 	const noteIfNeed = needsNote
 		? (hint?.packedNotes != null
 			? hint.packedNotes.get(noteId!)
-			: await packNoteForHonoApi(deps, hint?.noteSources?.get(noteId!) ?? noteId!, { id: meId }, { detail: true, hint: hint?.notePackHint }).catch(() => null))
+			: await packNoteForHonoApi(deps, hint?.noteSources?.get(noteId!) ?? noteId!, { id: meId }, omitUndefined({ detail: true, hint: hint?.notePackHint })).catch(() => null))
 		: undefined;
 	if (needsNote && !noteIfNeed) return null;
 
@@ -290,13 +291,13 @@ export async function handleHonoApiINotifications(
 	const includeTypes = params.includeTypes?.filter(type => !(obsoleteNotificationTypes as readonly string[]).includes(type));
 	const excludeTypes = params.excludeTypes?.filter(type => !(obsoleteNotificationTypes as readonly string[]).includes(type));
 
-	const notifications = await getHonoApiNotifications(deps, me.id, {
+	const notifications = await getHonoApiNotifications(deps, me.id, omitUndefined({
 		sinceId,
 		untilId,
 		limit: params.limit,
 		includeTypes,
 		excludeTypes,
-	});
+	}));
 
 	if (params.markAsRead) {
 		void markAllHonoApiNotificationsAsRead(deps, me.id, false);
@@ -373,13 +374,13 @@ export async function handleHonoApiINotificationsGrouped(
 	const includeTypes = params.includeTypes?.filter(type => !(obsoleteNotificationTypes as readonly string[]).includes(type));
 	const excludeTypes = params.excludeTypes?.filter(type => !(obsoleteNotificationTypes as readonly string[]).includes(type));
 
-	const notifications = await getHonoApiNotifications(deps, me.id, {
+	const notifications = await getHonoApiNotifications(deps, me.id, omitUndefined({
 		sinceId,
 		untilId,
 		limit: params.limit,
 		includeTypes,
 		excludeTypes,
-	});
+	}));
 
 	if (notifications.length === 0) return [];
 

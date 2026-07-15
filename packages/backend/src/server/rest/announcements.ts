@@ -13,6 +13,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAnnouncement, MiUser } from '@/models/_.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { HonoApiError } from './error.js';
 import type { HonoApiMainStreamPublisher } from './events.js';
 import { parseHonoApiParams } from './validation.js';
@@ -82,14 +83,14 @@ export async function handleHonoApiAnnouncements(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Announcement'>[]> {
 	const params = parseHonoApiParams(announcementsParamDef, body);
-	const announcements = await listAnnouncementsForUserFromDatabase(deps.db, {
+	const announcements = await listAnnouncementsForUserFromDatabase(deps.db, omitUndefined({
 		limit: params.limit,
 		...resolveAnnouncementPagination({
 			gen: time => genId(time),
 		}, params),
 		isActive: params.isActive,
 		requestUserId: user?.id,
-	});
+	}));
 	const readAnnouncementIds = user == null
 		? new Set<MiAnnouncement['id']>()
 		: new Set(await listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatabase(deps.db, user.id, announcements.map(announcement => announcement.id)));

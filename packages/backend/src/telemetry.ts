@@ -59,7 +59,7 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 		});
 		const exporterOptions = {
 			url: telemetry.endpoint,
-			headers: telemetry.headers,
+			...(telemetry.headers === undefined ? {} : { headers: telemetry.headers }),
 		};
 		const standardPropagator = new sdkNode.core.CompositePropagator({
 			propagators: [

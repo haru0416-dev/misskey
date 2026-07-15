@@ -65,8 +65,8 @@ export function resolveFlashPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: FlashOrder;
 } {
 	return resolveDateIdPagination(idService, options);

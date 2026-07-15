@@ -13,6 +13,7 @@ import {
 	updateAdInDatabase,
 } from '@/core/AdStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import { omitUndefined } from '@/misc/clone.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -166,7 +167,7 @@ export async function handleHonoApiAdminAdUpdate(
 
 	if (ad == null) throw noSuchAdError('b7aa1727-1354-47bc-a182-3a9c3973d300');
 
-	const updatedAd = await updateAdInDatabase(deps.db, ad.id, {
+	const updatedAd = await updateAdInDatabase(deps.db, ad.id, omitUndefined({
 		url: params.url,
 		place: params.place,
 		priority: params.priority,
@@ -177,7 +178,7 @@ export async function handleHonoApiAdminAdUpdate(
 		startsAt: params.startsAt ? new Date(params.startsAt) : undefined,
 		dayOfWeek: params.dayOfWeek,
 		isSensitive: params.isSensitive,
-	});
+	}));
 
 	if (updatedAd == null) throw noSuchAdError('b7aa1727-1354-47bc-a182-3a9c3973d300');
 

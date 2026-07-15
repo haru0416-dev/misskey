@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { adjustNotesPageCountInDatabase } from '@/core/NoteStore.js';
@@ -184,7 +185,7 @@ export async function packPageManyForHonoApi(
 
 	return await Promise.all(pages.map(pageEntity => {
 		const attachedFileIds = collectAttachedFileIdsForHonoApi(pageEntity.content);
-		return packPageForHonoApi(deps, pageEntity, me, {
+		return packPageForHonoApi(deps, pageEntity, me, omitUndefined({
 			packedUser: packedUserById.get(pageEntity.userId),
 			packedEyeCatchingImage: pageEntity.eyeCatchingImageId ? (packedFileById.get(pageEntity.eyeCatchingImageId) ?? null) : null,
 			packedAttachedFiles: attachedFileIds
@@ -194,7 +195,7 @@ export async function packPageManyForHonoApi(
 				})
 				.filter((file): file is Packed<'DriveFile'> => file != null),
 			isLiked: me ? likedPageIdSet.has(pageEntity.id) : undefined,
-		});
+		}));
 	}));
 }
 
@@ -326,7 +327,7 @@ export async function handleHonoApiPagesUpdate(
 		eyeCatchingImageId = eyeCatchingImage.id;
 	}
 
-	const result = await updatePageInDatabase(deps.db, params.pageId, me.id, {
+	const result = await updatePageInDatabase(deps.db, params.pageId, me.id, omitUndefined({
 		title: params.title,
 		name: params.name,
 		summary: params.summary,
@@ -337,7 +338,7 @@ export async function handleHonoApiPagesUpdate(
 		hideTitleWhenPinned: params.hideTitleWhenPinned,
 		font: params.font,
 		eyeCatchingImageId: params.eyeCatchingImageId === undefined ? undefined : eyeCatchingImageId,
-	});
+	}));
 
 	if (result.status === 'not-found') {
 		throw new HonoApiError({ status: 400, message: 'No such page.', code: 'NO_SUCH_PAGE', id: '21149b9e-3616-4778-9592-c4ce89f5a864' });

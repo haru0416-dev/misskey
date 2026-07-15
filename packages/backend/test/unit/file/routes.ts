@@ -115,7 +115,7 @@ type InjectOptions = {
 async function inject(app: Hono, options: InjectOptions) {
 	const response = await app.request(options.url, {
 		method: options.method,
-		headers: options.headers,
+		...(options.headers === undefined ? {} : { headers: options.headers }),
 	});
 
 	return {
@@ -219,11 +219,14 @@ describe('createFileServerApp', () => {
 			logger: loggerService.getLogger('server', 'gray'),
 		});
 
-		const externalConfig = {
+		const externalConfig: Config = {
 			...config,
-			mediaProxy: 'https://media-proxy.test',
-			externalMediaProxyEnabled: true,
-		} as Config;
+			media: {
+				...config.media,
+				proxyUrl: 'https://media-proxy.test',
+				externalProxyEnabled: true,
+			},
+		};
 		externalApp = createFileServerApp({
 			config: externalConfig,
 			db: drizzle,

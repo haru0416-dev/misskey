@@ -52,8 +52,8 @@ export function resolveRoleAssignmentPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: RoleAssignmentOrder;
 } {
 	return resolveDateIdPagination(idService, options);

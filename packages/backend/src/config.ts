@@ -271,18 +271,31 @@ function resolveTelemetry(config: CompiledConfigV2): Config['observability']['te
 		}
 		return name as TelemetryInstrumentationName;
 	});
-	return {
-		backend: backend == null ? undefined : {
-			...backend,
-			headers: backend.headers == null ? undefined : Object.fromEntries(
+	const resolvedBackend = backend == null ? undefined : {
+		endpoint: backend.endpoint,
+		...(backend.serviceName == null ? {} : { serviceName: backend.serviceName }),
+		...(backend.tracesSampleRatio == null ? {} : { tracesSampleRatio: backend.tracesSampleRatio }),
+		...(backend.tracePropagationTargets == null ? {} : { tracePropagationTargets: backend.tracePropagationTargets }),
+		...(backend.headers == null ? {} : {
+			headers: Object.fromEntries(
 				Object.entries(backend.headers).map(([name, value]) => [
 					name,
 					resolveSecret(value, `observability.telemetry.backend.headers.${name}`),
 				]),
 			),
-			disabledInstrumentations,
-		},
-		frontend: config.observability.telemetry.frontend,
+		}),
+		...(disabledInstrumentations == null ? {} : { disabledInstrumentations }),
+	};
+	const frontend = config.observability.telemetry.frontend;
+	const resolvedFrontend = frontend == null ? undefined : {
+		endpoint: frontend.endpoint,
+		...(frontend.serviceName == null ? {} : { serviceName: frontend.serviceName }),
+		...(frontend.tracesSampleRatio == null ? {} : { tracesSampleRatio: frontend.tracesSampleRatio }),
+		...(frontend.propagateTraceHeaderCorsUrls == null ? {} : { propagateTraceHeaderCorsUrls: frontend.propagateTraceHeaderCorsUrls }),
+	};
+	return {
+		...(resolvedBackend == null ? {} : { backend: resolvedBackend }),
+		...(resolvedFrontend == null ? {} : { frontend: resolvedFrontend }),
 	};
 }
 
@@ -311,11 +324,16 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 		configVersion: 2,
 		instance: {
 			url,
-			setupPassword: source.instance.setupPassword == null ? undefined : resolveSecret(source.instance.setupPassword, 'instance.setupPassword'),
+			...(source.instance.setupPassword == null ? {} : { setupPassword: resolveSecret(source.instance.setupPassword, 'instance.setupPassword') }),
 			publishSourceTarball: source.instance.publishSourceTarball,
 		},
 		server: {
-			listen: source.server.listen,
+			listen: 'tcp' in source.server.listen ? source.server.listen : {
+				unixSocket: {
+					path: source.server.listen.unixSocket.path,
+					...(source.server.listen.unixSocket.permissions == null ? {} : { permissions: source.server.listen.unixSocket.permissions }),
+				},
+			},
 			reverseProxy: source.server.reverseProxy,
 			http: {
 				maximumRequestBodySizeBytes,
@@ -327,8 +345,12 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 		},
 		database: {
 			primary: {
-				...source.database.primary,
+				host: source.database.primary.host,
+				port: source.database.primary.port,
+				name: source.database.primary.name,
+				user: source.database.primary.user,
 				password: resolveSecret(source.database.primary.password, 'database.primary.password'),
+				...(source.database.primary.ssl == null ? {} : { ssl: source.database.primary.ssl }),
 			},
 			pool: {
 				minimumConnections: source.database.pool.minimumConnections,
@@ -345,11 +367,18 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 			timelines: connections.timelines === 'primary' ? primary : resolveValkeyConnection(source, connections.timelines, instanceUrl.host),
 			reactions: connections.reactions === 'primary' ? primary : resolveValkeyConnection(source, connections.reactions, instanceUrl.host),
 		},
-		search: { provider: source.search.provider, meilisearch },
+		search: {
+			provider: source.search.provider,
+			...(meilisearch == null ? {} : { meilisearch }),
+		},
 		outboundNetwork: {
-			bindAddress: source.outboundNetwork.bindAddress,
+			...(source.outboundNetwork.bindAddress == null ? {} : { bindAddress: source.outboundNetwork.bindAddress }),
 			addressFamily: source.outboundNetwork.addressFamily,
-			proxy: source.outboundNetwork.proxy,
+			proxy: {
+				...(source.outboundNetwork.proxy.url == null ? {} : { url: source.outboundNetwork.proxy.url }),
+				...(source.outboundNetwork.proxy.smtpUrl == null ? {} : { smtpUrl: source.outboundNetwork.proxy.smtpUrl }),
+				bypassHosts: source.outboundNetwork.proxy.bypassHosts,
+			},
 			http: {
 				connectionTimeoutMs: parseDuration(source.outboundNetwork.http.connectionTimeout),
 				requestTimeoutMs: parseDuration(source.outboundNetwork.http.requestTimeout),

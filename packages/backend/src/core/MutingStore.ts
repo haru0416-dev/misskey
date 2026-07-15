@@ -45,8 +45,8 @@ export function resolveMutingPagination(
 		untilDate?: number | null;
 	},
 ): {
-	sinceId?: string | null;
-	untilId?: string | null;
+	sinceId: string | null;
+	untilId: string | null;
 	order: MutingOrder;
 } {
 	return resolveDateIdPagination(idService, options);

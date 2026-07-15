@@ -18,6 +18,7 @@ import type * as misskey from 'misskey-js';
 import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
 import type { HonoApiErrorBody } from '@/server/rest/error.js';
+import { omitUndefined } from '@/misc/clone.js';
 
 export { server as startServer, jobQueue as startJobQueue } from '@/boot/common.js';
 
@@ -528,11 +529,11 @@ export async function testPaginationConsistency<Entity extends { id: string, cre
 	ordering: 'desc' | 'asc' = 'desc'): Promise<void> {
 	const rangeToParam = (p: { limit?: number, until?: Entity, since?: Entity }): object => {
 		if (offsetBy === 'id') {
-			return { limit: p.limit, sinceId: p.since?.id, untilId: p.until?.id };
+			return omitUndefined({ limit: p.limit, sinceId: p.since?.id, untilId: p.until?.id });
 		} else {
 			const sinceDate = p.since?.createdAt !== undefined ? new Date(p.since.createdAt).getTime() : undefined;
 			const untilDate = p.until?.createdAt !== undefined ? new Date(p.until.createdAt).getTime() : undefined;
-			return { limit: p.limit, sinceDate, untilDate };
+			return omitUndefined({ limit: p.limit, sinceDate, untilDate });
 		}
 	};
 
@@ -570,11 +571,11 @@ export async function testPaginationConsistency<Entity extends { id: string, cre
 
 		// 3. untilId指定+limitで取得してつなぎ合わせた結果が期待通りになっていること
 		if (ordering === 'desc') {
-			let last = await fetchEntities({ limit });
+			let last = await fetchEntities(omitUndefined({ limit }));
 			const actual: Entity[] = [];
 			while (last.length !== 0) {
 				actual.push(...last);
-				last = await fetchEntities(rangeToParam({ limit, until: last.at(-1) }));
+				last = await fetchEntities(rangeToParam(omitUndefined({ limit, until: last.at(-1) })));
 			}
 			assert.deepStrictEqual(
 				actual.map(({ id, createdAt }) => id + ':' + createdAt),
@@ -583,12 +584,12 @@ export async function testPaginationConsistency<Entity extends { id: string, cre
 
 		// 4. offset指定+limitで取得してつなぎ合わせた結果が期待通りになっていること
 		if (offsetBy === 'offset') {
-			let last = await fetchEntities({ limit, offset: 0 });
+			let last = await fetchEntities(omitUndefined({ limit, offset: 0 }));
 			let offset = limit ?? 10;
 			const actual: Entity[] = [];
 			while (last.length !== 0) {
 				actual.push(...last);
-				last = await fetchEntities({ limit, offset });
+				last = await fetchEntities(omitUndefined({ limit, offset }));
 				offset += limit ?? 10;
 			}
 			assert.deepStrictEqual(

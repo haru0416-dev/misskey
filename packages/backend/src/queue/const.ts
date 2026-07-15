@@ -23,8 +23,15 @@ export const QUEUE = {
 export function baseQueueOptions(config: Config, queueName: typeof QUEUE[keyof typeof QUEUE]): Bull.QueueOptions {
 	return {
 		connection: {
-			...config.valkey.jobQueue,
-			keyPrefix: undefined,
+			host: config.valkey.jobQueue.host,
+			port: config.valkey.jobQueue.port,
+			family: config.valkey.jobQueue.family,
+			connectTimeout: config.valkey.jobQueue.connectTimeout,
+			commandTimeout: config.valkey.jobQueue.commandTimeout,
+			...(config.valkey.jobQueue.username == null ? {} : { username: config.valkey.jobQueue.username }),
+			...(config.valkey.jobQueue.password == null ? {} : { password: config.valkey.jobQueue.password }),
+			...(config.valkey.jobQueue.db == null ? {} : { db: config.valkey.jobQueue.db }),
+			...(config.valkey.jobQueue.tls == null ? {} : { tls: {} }),
 		},
 		prefix: config.valkey.jobQueue.prefix ? `${config.valkey.jobQueue.prefix}:queue:${queueName}` : `queue:${queueName}`,
 	};

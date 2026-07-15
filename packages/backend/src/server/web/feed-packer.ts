@@ -46,7 +46,7 @@ export async function packFeed(
 	const feed = new Feed({
 		id: author.link,
 		title: `${author.name} (@${user.username}@${deps.config.runtime.host})`,
-		updated: latestNote == null ? undefined : parseId(latestNote.id).date,
+		...(latestNote == null ? {} : { updated: parseId(latestNote.id).date }),
 		generator: 'Erebia',
 		description: `${user.notesCount} Notes, ${profile.followingVisibility === 'public' ? user.followingCount : '?'} Following, ${profile.followersVisibility === 'public' ? user.followersCount : '?'} Followers${profile.description ? ` · ${profile.description}` : ''}`,
 		link: author.link,
@@ -67,14 +67,15 @@ export async function packFeed(
 		const files = note.fileIds.map(id => filesById.get(id)).filter(file => file != null);
 		const file = files.find(file => file.type.startsWith('image/'));
 		const text = note.text;
+		const content = text ? mfmToHtml(deps.config, mfmParse(text), JSON.parse(note.mentionedRemoteUsers)) : null;
 
 		feed.addItem({
 			title: `New note by ${author.name}`,
 			link: `${deps.config.instance.url}/notes/${note.id}`,
 			date: parseId(note.id).date,
-			description: note.cw ?? undefined,
-			content: text ? mfmToHtml(deps.config, mfmParse(text), JSON.parse(note.mentionedRemoteUsers)) ?? undefined : undefined,
-			image: file ? getDriveFilePublicUrl(file, deps) : undefined,
+			...(note.cw == null ? {} : { description: note.cw }),
+			...(content == null ? {} : { content }),
+			...(file ? { image: getDriveFilePublicUrl(file, deps) } : {}),
 		});
 	}
 

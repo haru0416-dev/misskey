@@ -15,6 +15,7 @@ import { extractHashtags } from '@/misc/extract-hashtags.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
+import { omitUndefined } from '@/misc/clone.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { isReply } from '@/misc/is-reply.js';
@@ -950,7 +951,7 @@ export async function createNoteForHonoApi(
 		}
 	}
 
-	if (isKeyWordIncludedForHonoApi(concatNoteContentsForKeyWordCheck({ cw: data.cw, text: data.text, pollChoices: data.poll?.choices }), deps.meta.prohibitedWords)) {
+	if (isKeyWordIncludedForHonoApi(concatNoteContentsForKeyWordCheck(omitUndefined({ cw: data.cw, text: data.text, pollChoices: data.poll?.choices })), deps.meta.prohibitedWords)) {
 		throw new IdentifiableError('689ee33f-f97c-479a-ac49-1b9f8140af99', 'Note contains prohibited words');
 	}
 
@@ -1144,7 +1145,7 @@ export async function fetchAndCreateNoteForHonoApi(
 		if (channel == null || channel.isArchived) throw noSuchChannelError();
 	}
 
-	return await createNoteForHonoApi(deps, user, {
+	return await createNoteForHonoApi(deps, user, omitUndefined({
 		createdAt: data.createdAt,
 		files,
 		poll: data.poll,
@@ -1160,7 +1161,7 @@ export async function fetchAndCreateNoteForHonoApi(
 		apMentions: data.apMentions,
 		apHashtags: data.apHashtags,
 		apEmojis: data.apEmojis,
-	}, false, persist);
+	}), false, persist);
 }
 
 /**
@@ -1206,7 +1207,7 @@ export async function handleHonoApiNotesCreate(
 	const ps = parseHonoApiParams(notesCreateParamDef, body);
 
 	try {
-		const note = await fetchAndCreateNoteForHonoApi(deps, me, {
+		const note = await fetchAndCreateNoteForHonoApi(deps, me, omitUndefined({
 			createdAt: new Date(),
 			fileIds: ps.fileIds ?? ps.mediaIds ?? [],
 			poll: ps.poll ? {
@@ -1226,7 +1227,7 @@ export async function handleHonoApiNotesCreate(
 			apMentions: ps.noExtractMentions ? [] : undefined,
 			apHashtags: ps.noExtractHashtags ? [] : undefined,
 			apEmojis: ps.noExtractEmojis ? [] : undefined,
-		});
+		}));
 
 		return { createdNote: await packNoteForHonoApi(deps, note, me) };
 	} catch (err) {

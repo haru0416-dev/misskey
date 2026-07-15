@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
 import { createAppInDatabase, fetchAppByIdFromDatabase, fetchAppByIdOrFailFromDatabase, listAppsByIdsFromDatabase, listAppsByUserIdFromDatabase } from '@/core/AppStore.js';
 import {
@@ -183,7 +184,7 @@ export async function handleHonoApiIApps(
 	return tokens.map(token => {
 		const app = token.appId != null ? appById.get(token.appId) : undefined;
 
-		return {
+		return omitUndefined({
 			id: token.id,
 			name: token.name ?? app?.name,
 			createdAt: parseId(token.id).date.toISOString(),
@@ -191,7 +192,7 @@ export async function handleHonoApiIApps(
 			permission: app ? app.permission : token.permission,
 			iconUrl: token.iconUrl,
 			description: token.description ?? app?.description ?? null,
-		};
+		});
 	});
 }
 
