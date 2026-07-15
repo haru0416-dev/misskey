@@ -58,10 +58,11 @@ import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { countMutualFollowingsBetweenUsersFromDatabase } from '@/core/FollowingStore.js';
 import { mutingExistsInDatabase } from '@/core/MutingStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
+import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
@@ -115,6 +116,50 @@ type ChatRoomMembershipPackable = ChatRoomMembershipRow & {
 	room?: MiChatRoom | null;
 };
 
+async function packChatMessageUsersForHonoApi(
+	deps: HonoApiChatDependencies,
+	messages: MiChatMessage[],
+	packedUserHint?: Map<MiUser['id'], Packed<'UserLite'>>,
+	missingUserIdHint?: Set<MiUser['id']>,
+): Promise<{ packedUsers: Map<MiUser['id'], Packed<'UserLite'>>; missingUserIds: Set<MiUser['id']> }> {
+	const explicitUsers = new Map<MiUser['id'], MiUser>();
+	const requiredUserIds = new Set<MiUser['id']>();
+	const reactionUserIds = new Set<MiUser['id']>();
+	const packedUsers = new Map(packedUserHint);
+	const missingUserIds = new Set(missingUserIdHint);
+
+	for (const message of messages) {
+		for (const src of [message.fromUser ?? message.fromUserId, message.toUser ?? message.toUserId]) {
+			if (src == null) continue;
+			if (typeof src === 'object') {
+				explicitUsers.set(src.id, src);
+				missingUserIds.delete(src.id);
+			} else {
+				requiredUserIds.add(src);
+			}
+		}
+		for (const record of message.reactions) {
+			reactionUserIds.add(record.split('/')[0]!);
+		}
+	}
+
+	const idsToFetch = [...new Set([...requiredUserIds, ...reactionUserIds])]
+		.filter(id => !explicitUsers.has(id) && !packedUsers.has(id) && !missingUserIds.has(id));
+	const fetchedUsers = await listUsersByIdsFromDatabase(deps.db, idsToFetch, { includeSuspended: true });
+	const userById = new Map([...explicitUsers.values(), ...fetchedUsers].map(user => [user.id, user]));
+	const missingRequiredUserId = [...requiredUserIds].find(id => !userById.has(id) && !packedUsers.has(id));
+	if (missingRequiredUserId != null) {
+		throw new EntityNotFoundError('MiUser', { id: missingRequiredUserId });
+	}
+
+	const newlyPackedUsers = await packUserLiteManyForHonoApi(deps, [...userById.values()].filter(user => !packedUsers.has(user.id)));
+	for (const user of newlyPackedUsers) packedUsers.set(user.id, user);
+	for (const userId of reactionUserIds) {
+		if (!packedUsers.has(userId)) missingUserIds.add(userId);
+	}
+	return { packedUsers, missingUserIds };
+}
+
 export async function packChatMessageDetailedForHonoApi(
 	deps: HonoApiChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
@@ -122,22 +167,23 @@ export async function packChatMessageDetailedForHonoApi(
 	options?: {
 		_hint_?: {
 			packedFiles?: Map<MiChatMessage['fileId'], Packed<'DriveFile'> | null>;
-			packedUsers?: Map<MiChatMessage['id'], Packed<'UserLite'>>;
+			packedUsers?: Map<MiUser['id'], Packed<'UserLite'>>;
+			missingUserIds?: Set<MiUser['id']>;
 			packedRooms?: Map<MiChatMessage['toRoomId'], Packed<'ChatRoom'> | null>;
 		};
 	},
 ): Promise<Packed<'ChatMessage'>> {
-	const packedUsers = options?._hint_?.packedUsers;
 	const packedFiles = options?._hint_?.packedFiles;
 	const packedRooms = options?._hint_?.packedRooms;
 
 	const message = typeof src === 'object' ? src : await fetchChatMessageByIdOrFailFromDatabase(deps.db, src);
+	const { packedUsers } = await packChatMessageUsersForHonoApi(deps, [message], options?._hint_?.packedUsers, options?._hint_?.missingUserIds);
 
 	const reactions: { user: Packed<'UserLite'> | null; reaction: string }[] = [];
 	for (const record of message.reactions) {
 		const [userId, reaction] = record.split('/') as [string, string];
 		reactions.push({
-			user: packedUsers?.get(userId) ?? (await packUserLiteForHonoApi(deps, userId).catch(() => null)),
+			user: packedUsers.get(userId) ?? null,
 			reaction,
 		});
 	}
@@ -165,31 +211,15 @@ export async function packChatMessagesDetailedForHonoApi(
 ): Promise<Packed<'ChatMessage'>[]> {
 	if (messages.length === 0) return [];
 
-	const excludeMe = (x: MiUser | string) => (typeof x === 'string' ? x !== me.id : x.id !== me.id);
-
-	const users = [
-		...messages.map((m) => m.fromUser ?? m.fromUserId).filter(excludeMe),
-		...messages.map((m) => m.toUser ?? m.toUserId).filter((x): x is MiUser | string => x != null).filter(excludeMe),
-	];
-	const userIdSet = new Set(users.map(x => typeof x === 'string' ? x : x.id));
-
-	const reactedUserIds = messages.flatMap(x => x.reactions.map(r => r.split('/')[0]!));
-	for (const reactedUserId of reactedUserIds) {
-		if (!userIdSet.has(reactedUserId)) {
-			userIdSet.add(reactedUserId);
-			users.push(reactedUserId);
-		}
-	}
-
-	const [packedUsers, packedFiles, packedRooms] = await Promise.all([
-		packUserLiteManyForHonoApi(deps, users).then(users => new Map(users.map(u => [u.id, u]))),
+	const [packedUserData, packedFiles, packedRooms] = await Promise.all([
+		packChatMessageUsersForHonoApi(deps, messages),
 		packDriveFileManyByIdsForHonoApi(deps, messages.map(m => m.fileId).filter((x): x is string => x != null))
 			.then(files => new Map(files.map(f => [f.id, f as Packed<'DriveFile'> | null]))),
 		packChatRoomsForHonoApi(deps, messages.map(m => m.toRoom ?? m.toRoomId).filter((x): x is MiChatRoom | string => x != null), me)
 			.then(rooms => new Map(rooms.map(r => [r.id, r]))),
 	]);
 
-	return await Promise.all(messages.map(message => packChatMessageDetailedForHonoApi(deps, message, me, { _hint_: { packedUsers, packedFiles, packedRooms } })));
+	return await Promise.all(messages.map(message => packChatMessageDetailedForHonoApi(deps, message, me, { _hint_: { ...packedUserData, packedFiles, packedRooms } })));
 }
 
 export async function packChatMessageLiteFor1on1ForHonoApi(
