@@ -67,8 +67,8 @@ export function createDownloadService(
 			if (contentDisposition != null) {
 				try {
 					const parsed = parse(contentDisposition);
-					if (parsed.parameters.filename) {
-						filename = parsed.parameters.filename;
+					if (parsed.parameters['filename']) {
+						filename = parsed.parameters['filename'];
 					}
 				} catch (e) {
 					logger.warn(`Failed to parse content-disposition: ${contentDisposition}`, { stack: e });

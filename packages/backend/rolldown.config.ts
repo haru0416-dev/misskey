@@ -68,8 +68,8 @@ function backendDevServerPlugin(): Plugin {
 }
 
 export default defineConfig((args) => {
-	const isWatchMode = args.watch != null && args.watch !== 'false';
-	const isE2E = process.env.MISSKEY_BUILD_E2E === '1';
+	const isWatchMode = args['watch'] != null && args['watch'] !== 'false';
+	const isE2E = process.env['MISSKEY_BUILD_E2E'] === '1';
 
 	// 通常のビルド時にexternalとするモジュール
 	const externalModules: ExternalOption = [

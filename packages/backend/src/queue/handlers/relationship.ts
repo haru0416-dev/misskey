@@ -112,7 +112,7 @@ export async function followWithSideEffectsForHonoApi(
 	if (
 		followee.isLocked ||
 		(followeeProfile.carefulBot && follower.isBot) ||
-		(isLocalUser(follower) && isRemoteUser(followee) && process.env.FORCE_FOLLOW_REMOTE_USER_FOR_TESTING !== 'true') ||
+		(isLocalUser(follower) && isRemoteUser(followee) && process.env['FORCE_FOLLOW_REMOTE_USER_FOR_TESTING'] !== 'true') ||
 		(isLocalUser(followee) && isRemoteUser(follower) && isSilencedHost(deps.meta.silencedHosts, follower.host))
 	) {
 		let autoAccept = false;

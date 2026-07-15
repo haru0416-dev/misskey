@@ -70,11 +70,11 @@ async function fetchNodeinfo(
 				}
 			}) as Record<string, unknown>;
 
-		if (wellknown.links == null || !Array.isArray(wellknown.links)) {
+		if (wellknown['links'] == null || !Array.isArray(wellknown['links'])) {
 			throw new Error('No wellknown links');
 		}
 
-		const links = wellknown.links as ({ rel: string; href: string; })[];
+		const links = wellknown['links'] as ({ rel: string; href: string; })[];
 
 		const link1_0 = links.find(link => link.rel === 'http://nodeinfo.diaspora.software/ns/schema/1.0');
 		const link2_0 = links.find(link => link.rel === 'http://nodeinfo.diaspora.software/ns/schema/2.0');
@@ -131,7 +131,7 @@ async function fetchFaviconUrl(
 
 	if (doc) {
 		// https://github.com/misskey-dev/misskey/pull/8220#issuecomment-1025104043
-		const href = Array.from(doc.getElementsByTagName('link')).reverse().find(link => link.attributes.rel === 'icon')?.attributes.href;
+		const href = Array.from(doc.getElementsByTagName('link')).reverse().find(link => link.attributes['rel'] === 'icon')?.attributes['href'];
 
 		if (href) {
 			return (new URL(href, url)).href;
@@ -169,9 +169,9 @@ async function fetchIconUrl(
 		// https://github.com/misskey-dev/misskey/pull/8220/files/0ec4eba22a914e31b86874f12448f88b3e58dd5a#r796487559
 		const href =
 			[
-				links.find(link => link.attributes.rel?.split(/\s+/).includes('apple-touch-icon-precomposed'))?.attributes.href,
-				links.find(link => link.attributes.rel?.split(/\s+/).includes('apple-touch-icon'))?.attributes.href,
-				links.find(link => link.attributes.rel?.split(/\s+/).includes('icon'))?.attributes.href,
+				links.find(link => link.attributes['rel']?.split(/\s+/).includes('apple-touch-icon-precomposed'))?.attributes['href'],
+				links.find(link => link.attributes['rel']?.split(/\s+/).includes('apple-touch-icon'))?.attributes['href'],
+				links.find(link => link.attributes['rel']?.split(/\s+/).includes('icon'))?.attributes['href'],
 			]
 				.find(href => href);
 

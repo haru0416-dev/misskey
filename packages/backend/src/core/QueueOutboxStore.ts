@@ -16,13 +16,49 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+type SerializedKeepJobs = Record<string, unknown> & {
+	age?: unknown;
+	count?: unknown;
+	limit?: unknown;
+};
+
+type SerializedDeleteAccountData = Record<string, unknown> & {
+	user?: unknown;
+	soft?: unknown;
+};
+
+type SerializedDeleteAccountUser = Record<string, unknown> & {
+	id?: unknown;
+};
+
+type SerializedJobOptions = Record<string, unknown> & {
+	removeOnComplete?: unknown;
+	removeOnFail?: unknown;
+};
+
+function isSerializedKeepJobs(value: unknown): value is SerializedKeepJobs {
+	return isRecord(value);
+}
+
+function isSerializedDeleteAccountData(value: unknown): value is SerializedDeleteAccountData {
+	return isRecord(value);
+}
+
+function isSerializedDeleteAccountUser(value: unknown): value is SerializedDeleteAccountUser {
+	return isRecord(value);
+}
+
+function isSerializedJobOptions(value: unknown): value is SerializedJobOptions {
+	return isRecord(value);
+}
+
 const invalidKeepJobs = Symbol('invalidKeepJobs');
 type KeepJobsOption = NonNullable<Bull.BulkJobOptions['removeOnComplete']>;
 
 function parseKeepJobs(value: unknown): KeepJobsOption | undefined | typeof invalidKeepJobs {
 	if (value === undefined || typeof value === 'boolean') return value;
 	if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : invalidKeepJobs;
-	if (!isRecord(value)) return invalidKeepJobs;
+	if (!isSerializedKeepJobs(value)) return invalidKeepJobs;
 
 	const age = value.age;
 	const count = value.count;
@@ -41,9 +77,9 @@ function parseKeepJobs(value: unknown): KeepJobsOption | undefined | typeof inva
 }
 
 function parseDbOutboxJob(row: QueueOutboxRow): DbJobBulkInput<'deleteAccount'> | null {
-	if (row.name !== 'deleteAccount' || !isRecord(row.data) || !isRecord(row.opts)) return null;
+	if (row.name !== 'deleteAccount' || !isSerializedDeleteAccountData(row.data) || !isSerializedJobOptions(row.opts)) return null;
 	const user = row.data.user;
-	if (!isRecord(user) || typeof user.id !== 'string') return null;
+	if (!isSerializedDeleteAccountUser(user) || typeof user.id !== 'string') return null;
 	if (row.data.soft !== undefined && typeof row.data.soft !== 'boolean') return null;
 	const removeOnComplete = parseKeepJobs(row.opts.removeOnComplete);
 	const removeOnFail = parseKeepJobs(row.opts.removeOnFail);

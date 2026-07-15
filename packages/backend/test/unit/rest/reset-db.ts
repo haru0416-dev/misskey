@@ -53,7 +53,7 @@ describe('handleHonoApiResetDb', () => {
 	afterEach(() => {
 		vi.useRealTimers();
 		vi.clearAllMocks();
-		process.env.NODE_ENV = 'test';
+		process.env['NODE_ENV'] = 'test';
 	});
 
 	test('resets redis and database, then refreshes reactive meta', async () => {
@@ -90,7 +90,7 @@ describe('handleHonoApiResetDb', () => {
 	});
 
 	test('rejects outside test environment before destructive operations', async () => {
-		process.env.NODE_ENV = 'production';
+		process.env['NODE_ENV'] = 'production';
 		const { deps, flushdb } = createDeps();
 
 		await expect(handleHonoApiResetDb(deps, {})).rejects.toThrow('NODE_ENV is not a test');

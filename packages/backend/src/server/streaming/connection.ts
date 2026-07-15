@@ -311,27 +311,27 @@ export class HonoStreamConnection {
 	}
 
 	private onSubscribeNote(payload: JsonValue | undefined): void {
-		if (!isJsonObject(payload) || typeof payload.id !== 'string') return;
+		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') return;
 
-		const current = this.subscribingNotes[payload.id] ?? 0;
+		const current = this.subscribingNotes[payload['id']] ?? 0;
 		const updated = current + 1;
-		this.subscribingNotes[payload.id] = updated;
+		this.subscribingNotes[payload['id']] = updated;
 
 		if (updated === 1) {
-			this.subscriber?.on(`noteStream:${payload.id}`, this.onNoteStreamMessage);
+			this.subscriber?.on(`noteStream:${payload['id']}`, this.onNoteStreamMessage);
 		}
 	}
 
 	private onUnsubscribeNote(payload: JsonValue | undefined): void {
-		if (!isJsonObject(payload) || typeof payload.id !== 'string') return;
+		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') return;
 
-		const current = this.subscribingNotes[payload.id];
+		const current = this.subscribingNotes[payload['id']];
 		if (current == null) return;
 		const updated = current - 1;
-		this.subscribingNotes[payload.id] = updated;
+		this.subscribingNotes[payload['id']] = updated;
 		if (updated <= 0) {
-			delete this.subscribingNotes[payload.id];
-			this.subscriber?.off(`noteStream:${payload.id}`, this.onNoteStreamMessage);
+			delete this.subscribingNotes[payload['id']];
+			this.subscriber?.off(`noteStream:${payload['id']}`, this.onNoteStreamMessage);
 		}
 	}
 
@@ -346,8 +346,8 @@ export class HonoStreamConnection {
 	}
 
 	private onChannelDisconnectRequested(payload: JsonValue | undefined): void {
-		if (!isJsonObject(payload) || typeof payload.id !== 'string') return;
-		this.disconnectChannel(payload.id);
+		if (!isJsonObject(payload) || typeof payload['id'] !== 'string') return;
+		this.disconnectChannel(payload['id']);
 	}
 
 	public sendMessageToWs(type: string, payload: JsonValue): void {
@@ -431,12 +431,12 @@ export class HonoStreamConnection {
 
 	private onChannelMessageRequested(data: JsonValue | undefined): void {
 		if (!isJsonObject(data)) return;
-		if (typeof data.id !== 'string') return;
-		if (typeof data.type !== 'string') return;
-		if (typeof data.body === 'undefined') return;
+		if (typeof data['id'] !== 'string') return;
+		if (typeof data['type'] !== 'string') return;
+		if (typeof data['body'] === 'undefined') return;
 
-		const entry = this.channels.get(data.id);
-		entry?.handle.onMessage?.(data.type, data.body);
+		const entry = this.channels.get(data['id']);
+		entry?.handle.onMessage?.(data['type'], data['body']);
 	}
 
 	public dispose(): void {

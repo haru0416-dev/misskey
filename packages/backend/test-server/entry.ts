@@ -11,7 +11,7 @@ import type { HonoServerRuntime } from '@/boot/server.js';
 const config = loadConfig();
 const originEnv = JSON.stringify(process.env);
 
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 
 let runtime: HonoServerRuntime | undefined;
 let controllerServer: Server | undefined;

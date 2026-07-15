@@ -79,7 +79,7 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 		return rawStatus(401);
 	}
 
-	if (signature.params.headers.indexOf('host') === -1 || headers.host !== deps.config.runtime.host) {
+	if (signature.params.headers.indexOf('host') === -1 || headers['host'] !== deps.config.runtime.host) {
 		// Host not specified or not match.
 		return rawStatus(401);
 	}
@@ -89,7 +89,7 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 		return rawStatus(401);
 	}
 
-	const digest = headers.digest;
+	const digest = headers['digest'];
 	if (typeof digest !== 'string') {
 		return rawStatus(401);
 	}

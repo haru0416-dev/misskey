@@ -314,7 +314,7 @@ export async function handleHonoApiFlashMyLikes(
 	}));
 
 	const packedFlashes = await packFlashManyForHonoApi(deps, likes.map(like => like.flash), me);
-	const packedFlashById = new Map(packedFlashes.map(flash => [flash.id, flash]));
+	const packedFlashById = new Map(packedFlashes.map(flash => [flash['id'], flash]));
 
 	return await Promise.all(likes.map(async like => ({
 		id: like.id,

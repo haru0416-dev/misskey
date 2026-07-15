@@ -196,7 +196,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			if (sinceId) notes.reverse();
 
 			const activities = (await Promise.all(notes.map(note => packActivity(deps, note)))).filter((x): x is Record<string, unknown> => x != null);
-			const rendered: Record<string, unknown> = {
+			const rendered: Record<string, unknown> & { prev?: string; next?: string } = {
 				id: `${partOf}?${urlQuery({ page: 'true', since_id: sinceId ?? undefined, until_id: untilId ?? undefined })}`,
 				partOf,
 				type: 'OrderedCollectionPage',
@@ -260,7 +260,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			}
 			const renderedUsers = targetIds.map(id => getUserUri(deps.config, targetById.get(id)!));
 
-			const rendered: Record<string, unknown> = {
+			const rendered: Record<string, unknown> & { next?: string } = {
 				id: `${partOf}?${urlQuery({ page: 'true', cursor: cursor ?? undefined })}`,
 				partOf,
 				type: 'OrderedCollectionPage',

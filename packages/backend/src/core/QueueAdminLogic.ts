@@ -91,25 +91,25 @@ function parseRedisMode(value: string | undefined): 'cluster' | 'standalone' | '
 
 export function parseQueueDatabaseInfo(infoText: string) {
 	const db = parseRedisInfo(infoText);
-	const usedMemory = parseRedisInfoInteger(db.used_memory, 'used_memory');
+	const usedMemory = parseRedisInfoInteger(db['used_memory'], 'used_memory');
 
 	return {
-		version: requireRedisInfoString(db.valkey_version ?? db.redis_version, 'valkey_version or redis_version'),
-		mode: parseRedisMode(db.server_mode ?? db.redis_mode),
-		runId: requireRedisInfoString(db.run_id, 'run_id'),
-		processId: requireRedisInfoString(db.process_id, 'process_id'),
-		port: parseRedisInfoInteger(db.tcp_port, 'tcp_port'),
-		os: requireRedisInfoString(db.os, 'os'),
-		uptime: parseRedisInfoInteger(db.uptime_in_seconds, 'uptime_in_seconds'),
+		version: requireRedisInfoString(db['valkey_version'] ?? db['redis_version'], 'valkey_version or redis_version'),
+		mode: parseRedisMode(db['server_mode'] ?? db['redis_mode']),
+		runId: requireRedisInfoString(db['run_id'], 'run_id'),
+		processId: requireRedisInfoString(db['process_id'], 'process_id'),
+		port: parseRedisInfoInteger(db['tcp_port'], 'tcp_port'),
+		os: requireRedisInfoString(db['os'], 'os'),
+		uptime: parseRedisInfoInteger(db['uptime_in_seconds'], 'uptime_in_seconds'),
 		memory: {
-			total: parseOptionalRedisInfoNumber(db.total_system_memory, 0) || parseOptionalRedisInfoNumber(db.maxmemory, 0),
+			total: parseOptionalRedisInfoNumber(db['total_system_memory'], 0) || parseOptionalRedisInfoNumber(db['maxmemory'], 0),
 			used: usedMemory,
-			fragmentationRatio: parseOptionalRedisInfoNumber(db.mem_fragmentation_ratio, 0),
-			peak: parseOptionalRedisInfoNumber(db.used_memory_peak, usedMemory),
+			fragmentationRatio: parseOptionalRedisInfoNumber(db['mem_fragmentation_ratio'], 0),
+			peak: parseOptionalRedisInfoNumber(db['used_memory_peak'], usedMemory),
 		},
 		clients: {
-			connected: parseRedisInfoInteger(db.connected_clients, 'connected_clients'),
-			blocked: parseOptionalRedisInfoNumber(db.blocked_clients, 0),
+			connected: parseRedisInfoInteger(db['connected_clients'], 'connected_clients'),
+			blocked: parseOptionalRedisInfoNumber(db['blocked_clients'], 0),
 		},
 	};
 }

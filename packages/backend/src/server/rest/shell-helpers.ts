@@ -142,7 +142,7 @@ export function tokenFromRequest(c: Context, body: Record<string, unknown>): str
 		if (match?.[1] != null) return match[1];
 	}
 
-	return typeof body.i === 'string' ? body.i : null;
+	return typeof body['i'] === 'string' ? body['i'] : null;
 }
 
 export function getRequestIp(c: Context, config: Config): string {

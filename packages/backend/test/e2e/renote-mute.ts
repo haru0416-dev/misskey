@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
 import { beforeAll, describe, test } from 'vitest';
@@ -79,7 +79,7 @@ describe('Renote Mute', () => {
 		const fired = await waitFire(
 			alice, 'localTimeline',
 			() => api('notes/create', { renoteId: bobNote.id }, carol),
-			msg => msg.type === 'note' && msg.body.userId === carol.id,
+			msg => msg.type === 'note' && msg.body['userId'] === carol.id,
 			undefined,
 			STREAMING_NEGATIVE_TIMEOUT_MS,
 		);
@@ -93,7 +93,7 @@ describe('Renote Mute', () => {
 		const fired = await waitFire(
 			alice, 'localTimeline',
 			() => api('notes/create', { renoteId: bobNote.id, text: 'kore' }, carol),
-			msg => msg.type === 'note' && msg.body.userId === carol.id,
+			msg => msg.type === 'note' && msg.body['userId'] === carol.id,
 		);
 
 		assert.strictEqual(fired, true);
@@ -106,7 +106,7 @@ describe('Renote Mute', () => {
 		const fired = await waitFire(
 			alice, 'localTimeline',
 			() => api('notes/create', { renoteId: carolbNote.id }, bob),
-			msg => msg.type === 'note' && msg.body.userId === bob.id,
+			msg => msg.type === 'note' && msg.body['userId'] === bob.id,
 		);
 
 		assert.strictEqual(fired, true);

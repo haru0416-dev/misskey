@@ -10,7 +10,7 @@ const promiseRefs: Set<WeakRef<Promise<unknown>>> = new Set();
  * and makes sure they are all settled before fully closing down the server.
  */
 export function trackPromise(promise: Promise<unknown>) {
-	if (process.env.NODE_ENV !== 'test') {
+	if (process.env['NODE_ENV'] !== 'test') {
 		return;
 	}
 	const ref = new WeakRef(promise);

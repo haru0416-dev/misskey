@@ -438,7 +438,7 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
 		alsoKnownAs: person.alsoKnownAs ? toArray(person.alsoKnownAs) : null,
 		isExplorable: person.discoverable,
 		...(await resolveAvatarAndBannerForHonoApi(deps, exist, person.icon, person.image).catch(() => ({}))),
-	} as Record<string, unknown>;
+	};
 
 	const moving = (() => {
 		if (exist.movedToUri === null && updates.movedToUri) return true;
@@ -450,13 +450,13 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
 		return false;
 	})();
 
-	if (moving) updates.movedAt = new Date();
-
-	const serializedAlsoKnownAs = serializeAlsoKnownAs(updates.alsoKnownAs as string[] | null | undefined);
-	const updated = await updateUserIfNotDeletedInDatabase(deps.db, exist.id, {
-		...updates,
+	const updatesWithMove = moving ? { ...updates, movedAt: new Date() } : updates;
+	const { alsoKnownAs, ...userUpdates } = updatesWithMove;
+	const serializedAlsoKnownAs = serializeAlsoKnownAs(alsoKnownAs);
+	const updated = await updateUserIfNotDeletedInDatabase(deps.db, exist.id, omitUndefined({
+		...userUpdates,
 		...(serializedAlsoKnownAs === undefined ? {} : { alsoKnownAs: serializedAlsoKnownAs }),
-	});
+	}));
 	if (!updated) return;
 
 	if (person.publicKey) {
@@ -492,7 +492,7 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
 		followerSharedInbox: person.sharedInbox ?? person.endpoints?.sharedInbox ?? null,
 	});
 
-	const mergedUpdated = { ...exist, ...updates } as MiRemoteUser;
+	const mergedUpdated = { ...exist, ...updatesWithMove } as MiRemoteUser;
 
 	// 移行処理を行う: 初めての移行 (exist.movedAt == null) か、前回の移行から14日以上経過した場合のみ許可
 	// (Mastodonのクールダウン期間は30日だが若干緩めに設定)
@@ -768,7 +768,7 @@ async function webfingerForHonoApi(deps: { httpRequestService: Pick<HttpRequestS
 		const m = query.match(webfingerAcctRegex);
 		if (!m) throw new Error(`Invalid query (${query})`);
 		const hostname = m[2];
-		const useHttp = process.env.MISSKEY_WEBFINGER_USE_HTTP && process.env.MISSKEY_WEBFINGER_USE_HTTP.toLowerCase() === 'true';
+		const useHttp = process.env['MISSKEY_WEBFINGER_USE_HTTP'] && process.env['MISSKEY_WEBFINGER_USE_HTTP'].toLowerCase() === 'true';
 		url = `http${useHttp ? '' : 's'}://${hostname}/.well-known/webfinger?${urlQuery({ resource: `acct:${query}` })}`;
 	}
 

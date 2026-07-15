@@ -14,13 +14,14 @@ export const honoStreamChannelHashtag: HonoStreamChannelDefinition<HonoApiNoteDe
 	requireCredential: false,
 	kind: null,
 	init: async (deps, ctx, params) => {
-		if (!Array.isArray(params.q)) return false;
-		if (!params.q.every((x): x is string[] => (
+		const query = params['q'];
+		if (!Array.isArray(query)) return false;
+		if (!query.every((x): x is string[] => (
 			Array.isArray(x) &&
 			x.length >= 1 &&
 			x.every(y => typeof y === 'string')
 		))) return false;
-		const q = params.q as string[][];
+		const q = query;
 
 		const handler = async (note: Packed<'Note'>) => {
 			const noteTags = note.tags ? note.tags.map((t: string) => t.toLowerCase()) : [];

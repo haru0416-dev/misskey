@@ -70,8 +70,8 @@ export function createMfmService(config: Config) {
 
 				case 'A': {
 					const txt = getText(node);
-					const rel = node.attributes.rel;
-					const href = node.attributes.href;
+					const rel = node.attributes['rel'];
+					const href = node.attributes['href'];
 
 					if (normalizedHashtagNames && href != null && normalizedHashtagNames.has(normalizeForSearch(txt))) {
 						text += txt;

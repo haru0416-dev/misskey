@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しない。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
@@ -78,14 +78,14 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 
 		const signed = await attachLdSignatureForHonoApi(runtime, activity, { id: user.id, host: null });
 
-		const signature = signed.signature as Record<string, unknown>;
+		const signature = signed['signature'] as Record<string, unknown>;
 		expect(signature).toBeDefined();
-		expect(signature.type).toBe('RsaSignature2017');
-		expect(signature.creator).toBe(`${runtime.config.instance.url}/users/${user.id}#main-key`);
-		expect(typeof signature.signatureValue).toBe('string');
-		expect((signature.signatureValue as string).length).toBeGreaterThan(0);
-		expect(signed.type).toBe('Add');
-		expect(signed.actor).toBe(activity.actor);
+		expect(signature['type']).toBe('RsaSignature2017');
+		expect(signature['creator']).toBe(`${runtime.config.instance.url}/users/${user.id}#main-key`);
+		expect(typeof signature['signatureValue']).toBe('string');
+		expect((signature['signatureValue'] as string).length).toBeGreaterThan(0);
+		expect(signed['type']).toBe('Add');
+		expect(signed['actor']).toBe(activity.actor);
 	});
 
 	test('deliverToRelays: accepted リレーにのみ LD 署名済みアクティビティを deliver キューへ積む', async () => {
@@ -116,9 +116,9 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 		expect(data.isSharedInbox).toBe(false);
 		const content = JSON.parse(data.content) as Record<string, unknown>;
 		// LD署名が付与されている
-		expect((content.signature as Record<string, unknown>).type).toBe('RsaSignature2017');
+		expect((content['signature'] as Record<string, unknown>)['type']).toBe('RsaSignature2017');
 		// to が無い場合は Public が補われる
-		expect(content.to).toEqual(['https://www.w3.org/ns/activitystreams#Public']);
+		expect(content['to']).toEqual(['https://www.w3.org/ns/activitystreams#Public']);
 		// 元の activity オブジェクト自体は変異しない (deepClone してから加工する)
 		expect('to' in activity).toBe(false);
 		expect('signature' in activity).toBe(false);

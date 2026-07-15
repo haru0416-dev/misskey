@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig, type Config } from '@/config.js';

@@ -5,8 +5,8 @@
 
 export default async function setup() {
 	// DBはUTC（っぽい）ので、テスト側も合わせておく
-	process.env.TZ = 'UTC';
-	process.env.NODE_ENV = 'test';
+	process.env['TZ'] = 'UTC';
+	process.env['NODE_ENV'] = 'test';
 
 	const { initTestDb } = await import('./utils.js');
 	const db = await initTestDb();

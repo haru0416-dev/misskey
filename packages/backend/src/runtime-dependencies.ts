@@ -286,7 +286,7 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 			disposed = true;
 			clearInterval(chartWriterSaveIntervalId);
 			try {
-				if (process.env.NODE_ENV !== 'test') {
+				if (process.env['NODE_ENV'] !== 'test') {
 					await saveHonoChartWriters(chartWriters);
 				}
 			} finally {
