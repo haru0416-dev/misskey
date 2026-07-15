@@ -19,8 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			continuousUpdate
 			:min="v.min"
 			:max="v.max"
-			:step="v.step"
-			:textConverter="v.toViewValue"
+			v-bind="{ ...(v.step === undefined ? {} : { step: v.step }), ...(v.toViewValue === undefined ? {} : { textConverter: v.toViewValue }) }"
 			@thumbDoubleClicked="() => {
 				params[k] = v.default;
 			}"

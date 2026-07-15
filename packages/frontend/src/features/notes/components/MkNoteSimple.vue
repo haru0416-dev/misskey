@@ -10,8 +10,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkNoteHeader :class="$style.header" :note="note" :mini="true"/>
 		<div>
 			<p v-if="note.cw != null" :class="$style.cw">
-				<Mfm v-if="note.cw != ''" style="margin-right: 8px;" :text="note.cw" :author="note.user" :nyaize="'respect'" :emojiUrls="note.emojis"/>
-				<MkCwButton v-model="showContent" :text="note.text" :files="note.files" :poll="note.poll"/>
+				<Mfm v-if="note.cw != ''" style="margin-right: 8px;" :text="note.cw" :author="note.user" :nyaize="'respect'" v-bind="note.emojis === undefined ? {} : { emojiUrls: note.emojis }"/>
+				<MkCwButton v-model="showContent" :text="note.text" v-bind="{ ...(note.files === undefined ? {} : { files: note.files }), ...(note.poll === undefined ? {} : { poll: note.poll }) }"/>
 			</p>
 			<div v-show="note.cw == null || showContent">
 				<MkSubNoteContent :class="$style.text" :note="note"/>

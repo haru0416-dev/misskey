@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <PageWithHeader v-model:tab="tab" :actions="headerActions" :tabs="headerTabs" :swipable="true">
 	<div v-if="tab === 'note'" class="_spacer" style="--MI_SPACER-w: 800px;">
 		<div v-if="notesSearchAvailable || ignoreNotesSearchAvailable">
-			<XNote v-bind="props"/>
+			<XNote :query="query" v-bind="{ ...(userId === undefined ? {} : { userId }), ...(username === undefined ? {} : { username }), ...(host === undefined ? {} : { host }) }"/>
 		</div>
 		<div v-else>
 			<MkInfo warn>{{ i18n.ts.notesSearchNotAvailable }}</MkInfo>
@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<div v-else-if="tab === 'user'" class="_spacer" style="--MI_SPACER-w: 800px;">
 		<div v-if="usersSearchAvailable">
-			<XUser v-bind="props"/>
+			<XUser :query="query" :origin="origin"/>
 		</div>
 		<div v-else>
 			<MkInfo warn>{{ i18n.ts.usersSearchNotAvailable }}</MkInfo>
@@ -44,9 +44,6 @@ const props = withDefaults(defineProps<{
 	ignoreNotesSearchAvailable?: boolean,
 }>(), {
 	query: '',
-	userId: undefined,
-	username: undefined,
-	host: undefined,
 	type: 'note',
 	origin: 'combined',
 	ignoreNotesSearchAvailable: false,

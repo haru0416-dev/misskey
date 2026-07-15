@@ -46,8 +46,8 @@ export function getChartResolver(
 				current = current[currentKey];
 			}
 			current[leafKey] = getChartArray(field, limit, {
-				accumulate: option?.accumulate,
-				mul: option?.mulMap != null && field in option.mulMap ? option.mulMap[field] : undefined,
+				...(option?.accumulate === undefined ? {} : { accumulate: option.accumulate }),
+				...(option?.mulMap != null && field in option.mulMap ? { mul: option.mulMap[field] } : {}),
 			});
 		}
 		return HttpResponse.json(res);

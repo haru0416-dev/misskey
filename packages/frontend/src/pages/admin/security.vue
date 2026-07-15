@@ -11,7 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<XBotProtection/>
 
 				<SearchMarker v-slot="slotProps" :keywords="['sensitive', 'media', 'detection']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #icon><SearchIcon><i class="ti ti-eye-off"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.sensitiveMediaDetection }}</SearchLabel></template>
 						<template v-if="sensitiveMediaDetectionForm.savedState.sensitiveMediaDetection === 'all'" #suffix>{{ i18n.ts.all }}</template>
@@ -97,7 +97,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker v-slot="slotProps" :keywords="['email', 'validation']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #label><SearchLabel>Active Email Validation</SearchLabel></template>
 						<template v-if="emailValidationForm.savedState.enableActiveEmailValidation" #suffix>Enabled</template>
 						<template v-else #suffix>Disabled</template>
@@ -151,7 +151,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker v-slot="slotProps" :keywords="['banned', 'email', 'domains', 'blacklist']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #label><SearchLabel>Banned Email Domains</SearchLabel></template>
 						<template v-if="bannedEmailDomainsForm.modified.value" #footer>
 							<MkFormFooter :form="bannedEmailDomainsForm"/>
@@ -168,7 +168,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker v-slot="slotProps" :keywords="['log', 'ipAddress']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #label><SearchLabel>Log IP address</SearchLabel></template>
 						<template v-if="ipLoggingForm.savedState.enableIpLogging" #suffix>Enabled</template>
 						<template v-else #suffix>Disabled</template>

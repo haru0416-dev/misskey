@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		ref="form"
 		:class="$style.form"
 		class="_popup"
-		v-bind="props"
+		v-bind="forwardedProps"
 		autofocus
 		freezeAfterPosted
 		@posted="onPosted"
@@ -26,18 +26,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { useTemplateRef } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import type { PostFormProps } from '@/types/post-form.js';
 import MkModal from '@/components/overlay/MkModal.vue';
 import MkPostForm from '@/features/post-composer/components/MkPostForm.vue';
 
-const props = withDefaults(defineProps<PostFormProps & {
+const {
+	initialLocalOnly = undefined,
+	...props
+} = defineProps<PostFormProps & {
 	instant?: boolean;
 	fixed?: boolean;
 	autofocus?: boolean;
-}>(), {
-	initialLocalOnly: undefined,
-});
+}>();
+
+const forwardedProps = computed(() => Object.fromEntries(Object.entries({
+	...props,
+	...(initialLocalOnly === undefined ? {} : { initialLocalOnly }),
+}).filter(([, value]) => value !== undefined)));
 
 const emit = defineEmits<{
 	(ev: 'closed'): void;

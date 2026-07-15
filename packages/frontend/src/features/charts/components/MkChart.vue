@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root">
-	<MkDataChart :series="displaySeries" :ariaLabel="`${i18n.ts.statistics}: ${src}`" :height="chartHeight" :loading="fetching" :stacked="stacked" :detailed="detailed" :bytes="chartData?.bytes"/>
+	<MkDataChart :series="displaySeries" :ariaLabel="`${i18n.ts.statistics}: ${src}`" :height="chartHeight" :loading="fetching" :stacked="stacked" :detailed="detailed" v-bind="chartData?.bytes === undefined ? {} : { bytes: chartData.bytes }"/>
 </div>
 </template>
 
@@ -76,21 +76,18 @@ const props = withDefaults(defineProps<{
 	stacked?: boolean;
 	bar?: boolean;
 	aspectRatio?: number | null;
-	nowForChromatic?: number;
-}>(), {
-	args: undefined,
-	limit: 90,
-	detailed: false,
-	stacked: false,
-	bar: false,
-	aspectRatio: null,
-
 	/**
 	 * @desc Overwrites current date to fix background lines of chart.
 	 * @ignore Only used for Chromatic. Don't use this for production.
 	 * @see https://github.com/misskey-dev/misskey/pull/13830#issuecomment-2155886151
 	 */
-	nowForChromatic: undefined,
+	nowForChromatic?: number;
+}>(), {
+	limit: 90,
+	detailed: false,
+	stacked: false,
+	bar: false,
+	aspectRatio: null,
 });
 
 const sum = sumChartSeries;
@@ -115,10 +112,9 @@ type ChartData = {
 const chartData = shallowRef<ChartData | null>(null);
 const fetching = ref(true);
 const chartHeight = computed(() => Math.max(220, Math.round(700 / (props.aspectRatio ?? 2.5))));
-const displaySeries = computed(() => (chartData.value?.series ?? []).map(series => ({
-	...series,
-	type: props.bar ? 'bar' as const : series.type,
-})));
+const displaySeries = computed<DataChartSeries[]>(() => props.bar
+	? (chartData.value?.series ?? []).map(series => ({ ...series, type: 'bar' }))
+	: chartData.value?.series ?? []);
 
 const getDate = (ago: number) => {
 	const y = now.getFullYear();

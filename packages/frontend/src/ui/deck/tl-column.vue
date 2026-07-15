@@ -116,7 +116,7 @@ async function setType() {
 		}, {
 			value: 'global', label: i18n.ts._timelines.global,
 		}],
-		default: props.column.tl,
+		default: props.column.tl ?? null,
 	});
 	if (canceled) {
 		if (props.column.tl == null) {

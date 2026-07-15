@@ -337,11 +337,11 @@ const defaultPolicies = computed<Partial<Misskey.entities.RolePolicies>>(() => {
 	}
 
 	return {
-		rateLimitFactor,
-		driveCapacityMb,
-		userListLimit,
-		antennaLimit,
-		webhookLimit,
+		...(rateLimitFactor === undefined ? {} : { rateLimitFactor }),
+		...(driveCapacityMb === undefined ? {} : { driveCapacityMb }),
+		...(userListLimit === undefined ? {} : { userListLimit }),
+		...(antennaLimit === undefined ? {} : { antennaLimit }),
+		...(webhookLimit === undefined ? {} : { webhookLimit }),
 		canImportFollowing,
 		canImportMuting,
 		canImportBlocking,
@@ -355,9 +355,9 @@ function applySettings() {
 	Promise.all([
 		misskeyApi('admin/update-meta', {
 			...serverSettings.value,
-			name: q_name.value === '' ? undefined : q_name.value,
-			maintainerName: q_adminName.value === '' ? undefined : q_adminName.value,
-			maintainerEmail: q_adminEmail.value === '' ? undefined : q_adminEmail.value,
+			...(q_name.value === '' ? {} : { name: q_name.value }),
+			...(q_adminName.value === '' ? {} : { maintainerName: q_adminName.value }),
+			...(q_adminEmail.value === '' ? {} : { maintainerEmail: q_adminEmail.value }),
 		}, props.token),
 		misskeyApi('admin/roles/update-default-policies', {
 			policies: defaultPolicies.value,

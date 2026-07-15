@@ -285,10 +285,10 @@ const headerActions = computed(() => {
 						return;
 					}
 
-					navigator.share({
-						title: channel.value.name,
-						text: channel.value.description ?? undefined,
-						url: `${url}/channels/${channel.value.id}`,
+				navigator.share({
+					title: channel.value.name,
+					...(channel.value.description == null ? {} : { text: channel.value.description }),
+					url: `${url}/channels/${channel.value.id}`,
 					});
 				},
 			});

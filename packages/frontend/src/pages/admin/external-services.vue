@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<SearchMarker path="/admin/external-services" :label="i18n.ts.externalServices" :keywords="['external', 'services', 'thirdparty']" icon="ti ti-link">
 			<div class="_gaps_m">
 				<SearchMarker v-slot="slotProps">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #label><SearchLabel>Google Analytics</SearchLabel><span class="_beta">{{ i18n.ts.beta }}</span></template>
 
 						<div class="_gaps_m">
@@ -26,7 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker v-slot="slotProps" :keywords="['translation', 'deepl', 'libretranslate']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #label><SearchLabel>{{ i18n.ts._translationService.translation }}</SearchLabel></template>
 
 						<div class="_gaps_m">

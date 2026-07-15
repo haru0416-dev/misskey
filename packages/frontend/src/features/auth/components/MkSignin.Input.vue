@@ -72,8 +72,6 @@ const props = withDefaults(defineProps<{
 	initialUsername?: string;
 }>(), {
 	message: '',
-	openOnRemote: undefined,
-	initialUsername: undefined,
 });
 
 const emit = defineEmits<{

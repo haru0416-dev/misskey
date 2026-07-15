@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template #header>
 		{{ i18n.ts.drive }}
 	</template>
-	<MkDrive :initialFolder="initialFolder"/>
+	<MkDrive :initialFolder="initialFolder ?? null"/>
 </MkWindow>
 </template>
 

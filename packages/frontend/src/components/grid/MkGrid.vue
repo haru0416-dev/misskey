@@ -897,7 +897,7 @@ function calcLargestCellWidth(column: GridColumn) {
  */
 function emitGridEvent(ev: GridEvent) {
 	const currentState: GridContext = {
-		selectedCell: selectedCell.value,
+		...(selectedCell.value === undefined ? {} : { selectedCell: selectedCell.value }),
 		rangedCells: rangedCells.value,
 		rangedRows: rangedRows.value,
 		randedBounds: rangedBounds.value,
@@ -1118,7 +1118,7 @@ function unregisterMouseUp() {
 
 function createContext(): GridContext {
 	return {
-		selectedCell: selectedCell.value,
+		...(selectedCell.value === undefined ? {} : { selectedCell: selectedCell.value }),
 		rangedCells: rangedCells.value,
 		rangedRows: rangedRows.value,
 		randedBounds: rangedBounds.value,

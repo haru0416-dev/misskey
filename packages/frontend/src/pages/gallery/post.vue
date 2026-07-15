@@ -117,7 +117,7 @@ function share() {
 	if (!post.value) return;
 	navigator.share({
 		title: post.value.title,
-		text: post.value.description ?? undefined,
+		...(post.value.description == null ? {} : { text: post.value.description }),
 		url: `${url}/gallery/${post.value.id}`,
 	});
 }

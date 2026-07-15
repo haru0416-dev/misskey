@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkMenu
 		:items="items"
 		:align="align"
-		:width="width"
+		v-bind="width === undefined ? {} : { width }"
 		:asDrawer="false"
 		:debugDisablePredictionCone="debugDisablePredictionCone"
 		:debugShowPredictionCone="debugShowPredictionCone"

@@ -30,7 +30,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { chartText } from '@/features/charts/chart-i18n.js';
 
 export type HeatmapSource = 'active-users' | 'notes' | 'ap-requests-inbox-received' | 'ap-requests-deliver-succeeded' | 'ap-requests-deliver-failed';
-const props = withDefaults(defineProps<{ src: HeatmapSource; user?: Misskey.entities.User; label?: string }>(), { user: undefined, label: '' });
+const props = withDefaults(defineProps<{ src: HeatmapSource; user?: Misskey.entities.User; label?: string }>(), { label: '' });
 const rootEl = useTemplateRef('rootEl');
 const fetching = ref(true);
 const weeks = ref(25);

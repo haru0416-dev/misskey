@@ -242,7 +242,7 @@ const filesPaginator = markRaw(new Paginator('drive/files', {
 	canFetchDetection: 'limit',
 	params: () => ({ // 自動でリロードしたくないためcomputedParamsは使わない
 		folderId: folder.value ? folder.value.id : null,
-		type: props.type,
+		...(props.type === undefined ? {} : { type: props.type }),
 		sort: ['-createdAt', '+createdAt'].includes(sortModeSelect.value) ? null : sortModeSelect.value,
 	}),
 }));
@@ -432,7 +432,7 @@ async function urlUpload() {
 
 	await os.apiWithDialog('drive/files/upload-from-url', {
 		url: url,
-		folderId: folder.value ? folder.value.id : undefined,
+		...(folder.value == null ? {} : { folderId: folder.value.id }),
 	});
 
 	os.alert({
@@ -450,7 +450,7 @@ async function createFolder() {
 
 	const createdFolder = await os.apiWithDialog('drive/folders/create', {
 		name: name,
-		parentId: folder.value ? folder.value.id : undefined,
+		...(folder.value == null ? {} : { parentId: folder.value.id }),
 	});
 
 	foldersPaginator.prepend(createdFolder);
@@ -616,7 +616,7 @@ function getMenu() {
 		action: () => {
 			chooseFileFromPcAndUpload({
 				multiple: true,
-				folderId: folder.value?.id,
+				...(folder.value == null ? {} : { folderId: folder.value.id }),
 			});
 		},
 	}, {

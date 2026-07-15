@@ -28,8 +28,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkStreamingNotesTimeline
 			:key="widgetProps.src === 'list' ? `list:${widgetProps.list?.id}` : widgetProps.src === 'antenna' ? `antenna:${widgetProps.antenna?.id}` : widgetProps.src"
 			:src="widgetProps.src"
-			:list="widgetProps.list ? widgetProps.list.id : undefined"
-			:antenna="widgetProps.antenna ? widgetProps.antenna.id : undefined"
+			v-bind="{ ...(widgetProps.list == null ? {} : { list: widgetProps.list.id }), ...(widgetProps.antenna == null ? {} : { antenna: widgetProps.antenna.id }) }"
 		/>
 	</div>
 </MkContainer>

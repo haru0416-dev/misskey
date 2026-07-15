@@ -80,12 +80,12 @@ const rootEl = useTemplateRef('rootEl');
 const paginator = prefer.useGroupedNotifications ? markRaw(new Paginator('i/notifications-grouped', {
 	limit: 20,
 	computedParams: computed(() => ({
-		excludeTypes: props.excludeTypes ?? undefined,
+		...(props.excludeTypes == null ? {} : { excludeTypes: props.excludeTypes }),
 	})),
 })) : markRaw(new Paginator('i/notifications', {
 	limit: 20,
 	computedParams: computed(() => ({
-		excludeTypes: props.excludeTypes ?? undefined,
+		...(props.excludeTypes == null ? {} : { excludeTypes: props.excludeTypes }),
 	})),
 }));
 

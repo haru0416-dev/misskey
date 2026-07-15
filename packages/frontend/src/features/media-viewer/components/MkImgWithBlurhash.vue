@@ -6,13 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div ref="root" :class="['chromatic-ignore', $style.root, { [$style.cover]: cover }]" :title="title ?? ''" :data-marker="marker ?? undefined" :data-object-fit="cover ? 'cover' : 'contain'">
 	<TransitionGroup
-		:duration="prefer.animation && props.transition?.duration || undefined"
-		:enterActiveClass="prefer.animation && props.transition?.enterActiveClass || undefined"
-		:leaveActiveClass="prefer.animation && (props.transition?.leaveActiveClass ?? $style.transition_leaveActive) || undefined"
-		:enterFromClass="prefer.animation && props.transition?.enterFromClass || undefined"
-		:leaveToClass="prefer.animation && props.transition?.leaveToClass || undefined"
-		:enterToClass="prefer.animation && props.transition?.enterToClass || undefined"
-		:leaveFromClass="prefer.animation && props.transition?.leaveFromClass || undefined"
+		v-bind="transitionGroupProps"
 	>
 		<MkBlurhash
 			key="canvas"
@@ -44,7 +38,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, useTemplateRef, watch, ref } from 'vue';
+import { computed, onMounted, onUnmounted, useCssModule, useTemplateRef, watch, ref } from 'vue';
 import { calculateBlurhashDimensions } from '@shared/utility/blurhash.js';
 import { prefer } from '@/preferences.js';
 import MkBlurhash from '@/features/media-viewer/components/MkBlurhash.vue';
@@ -79,6 +73,22 @@ const props = withDefaults(defineProps<{
 	cover: true,
 	forceBlurhash: false,
 	onlyAvgColor: false,
+});
+
+const style = useCssModule();
+const transitionGroupProps = computed(() => {
+	if (!prefer.animation) return {};
+
+	const leaveActiveClass = props.transition?.leaveActiveClass ?? style.transition_leaveActive;
+	return {
+		...(props.transition?.duration ? { duration: props.transition.duration } : {}),
+		...(props.transition?.enterActiveClass ? { enterActiveClass: props.transition.enterActiveClass } : {}),
+		...(leaveActiveClass ? { leaveActiveClass } : {}),
+		...(props.transition?.enterFromClass ? { enterFromClass: props.transition.enterFromClass } : {}),
+		...(props.transition?.leaveToClass ? { leaveToClass: props.transition.leaveToClass } : {}),
+		...(props.transition?.enterToClass ? { enterToClass: props.transition.enterToClass } : {}),
+		...(props.transition?.leaveFromClass ? { leaveFromClass: props.transition.leaveFromClass } : {}),
+	};
 });
 
 const root = useTemplateRef('root');

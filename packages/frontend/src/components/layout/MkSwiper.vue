@@ -33,7 +33,7 @@ import { prefer } from '@/preferences.js';
 
 const rootEl = useTemplateRef('rootEl');
 
-const tabModel = defineModel<string>('tab');
+const tabModel = defineModel<string | undefined>('tab');
 
 const props = defineProps<{
 	tabs: Tab[];

@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	@click="emit('click')"
 >
 	<div :class="$style.name"><MkCondensedLine :minScale="0.5">{{ decoration.name }}</MkCondensedLine></div>
-	<MkAvatar style="width: 60px; height: 60px;" :user="$i" :decorations="[{ url: decoration.url, angle, flipH, offsetX, offsetY }]" forceShowDecoration/>
+	<MkAvatar style="width: 60px; height: 60px;" :user="$i" :decorations="avatarDecorations" forceShowDecoration/>
 	<i v-if="locked" :class="$style.lock" class="ti ti-lock"></i>
 </div>
 </template>
@@ -33,6 +33,14 @@ const props = defineProps<{
 	offsetX?: number;
 	offsetY?: number;
 }>();
+
+const avatarDecorations = computed(() => [{
+	url: props.decoration.url,
+	...(props.angle === undefined ? {} : { angle: props.angle }),
+	...(props.flipH === undefined ? {} : { flipH: props.flipH }),
+	...(props.offsetX === undefined ? {} : { offsetX: props.offsetX }),
+	...(props.offsetY === undefined ? {} : { offsetY: props.offsetY }),
+}]);
 
 const emit = defineEmits<{
 	(ev: 'click'): void;

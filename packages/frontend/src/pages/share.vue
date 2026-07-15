@@ -10,12 +10,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-if="state === 'writing'"
 			fixed
 			:instant="true"
-			:initialText="initialText"
-			:initialVisibility="visibility"
 			:initialFiles="files"
-			:initialLocalOnly="localOnly"
-			:reply="reply"
-			:renote="renote"
+			v-bind="{
+				...(initialText === undefined ? {} : { initialText }),
+				...(visibility === undefined ? {} : { initialVisibility: visibility }),
+				...(localOnly === undefined ? {} : { initialLocalOnly: localOnly }),
+				...(reply === undefined ? {} : { reply }),
+				...(renote === undefined ? {} : { renote }),
+			}"
 			:initialVisibleUsers="visibleUsers"
 			class="_panel"
 			@posted="onPosted"
@@ -178,7 +180,7 @@ async function init() {
 		os.alert({
 			type: 'error',
 			title: error !== null && 'message' in error && typeof error.message === 'string' ? error.message : String(err),
-			text: error !== null && 'name' in error && typeof error.name === 'string' ? error.name : undefined,
+			...(error !== null && 'name' in error && typeof error.name === 'string' ? { text: error.name } : {}),
 		});
 	}
 

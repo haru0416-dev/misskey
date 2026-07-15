@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:hasInteractionWithOtherFocusTrappedEls="true"
 	:transparentBg="true"
 	:manualShowing="manualShowing"
-	:anchorElement="anchorElement"
+	v-bind="anchorElement === undefined ? {} : { anchorElement }"
 	@click="modal?.close()"
 	@esc="modal?.close()"
 	@opening="opening"
@@ -24,11 +24,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 		class="_popup _shadow"
 		:class="{ [$style.drawer]: type === 'drawer' }"
 		:showPinned="showPinned"
-		:pinnedEmojis="pinnedEmojis"
 		:asReactionPicker="asReactionPicker"
-		:targetNote="targetNote"
+		v-bind="{ ...(pinnedEmojis === undefined ? {} : { pinnedEmojis }), ...(targetNote === undefined ? {} : { targetNote }), ...(maxHeight === undefined ? {} : { maxHeight }) }"
 		:asDrawer="type === 'drawer'"
-		:max-height="maxHeight"
 		@chosen="chosen"
 		@esc="modal?.close()"
 	/>
@@ -53,7 +51,6 @@ const props = withDefaults(defineProps<{
 }>(), {
 	manualShowing: null,
 	showPinned: true,
-	pinnedEmojis: undefined,
 	asReactionPicker: false,
 	choseAndClose: true,
 });

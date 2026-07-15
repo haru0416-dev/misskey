@@ -9,8 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.form">
 			<MkAuthConfirm
 				ref="authRoot"
-				:name="name"
-				:icon="logo"
+				v-bind="{ ...(name === undefined ? {} : { name }), ...(logo === undefined ? {} : { icon: logo }) }"
 				:permissions="permissions"
 				:waitOnDeny="true"
 				@accept="onAccept"

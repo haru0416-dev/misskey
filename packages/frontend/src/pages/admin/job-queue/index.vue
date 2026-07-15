@@ -216,7 +216,7 @@ async function fetchJobs() {
 	jobs.value = await misskeyApi('admin/queue/jobs', {
 		queue: tab.value,
 		state: state === 'all' ? ['completed', 'failed', 'active', 'delayed', 'wait'] : state === 'latest' ? ['completed', 'failed'] : [state],
-		search: searchQuery.value.trim() === '' ? undefined : searchQuery.value,
+		...(searchQuery.value.trim() === '' ? {} : { search: searchQuery.value }),
 	}).then((res: Misskey.entities.AdminQueueJobsResponse) => {
 		if (state === 'all') {
 			res.sort((a, b) => (a.processedOn ?? a.timestamp) > (b.processedOn ?? b.timestamp) ? -1 : 1);

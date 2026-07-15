@@ -11,7 +11,7 @@ import type { MkSelectItem } from '@/components/form/MkSelect.vue';
 export function chooseEmojiPalette() {
 	return os.select({
 		title: i18n.ts.chooseEmojiPalette,
-		default: prefer.emojiPaletteForMain ?? prefer.emojiPaletteForReaction ?? prefer.emojiPalettes[0]?.id,
+		default: prefer.emojiPaletteForMain ?? prefer.emojiPaletteForReaction ?? prefer.emojiPalettes[0]?.id ?? null,
 		items: prefer.emojiPalettes.map<MkSelectItem<string>>((palette) => {
 			let caption: string | undefined = undefined;
 
@@ -23,7 +23,7 @@ export function chooseEmojiPalette() {
 
 			return {
 				label: palette.name || `(${i18n.ts.noName})`,
-				caption,
+				...(caption === undefined ? {} : { caption }),
 				value: palette.id,
 			};
 		}),

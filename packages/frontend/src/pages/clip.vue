@@ -137,7 +137,9 @@ const headerActions = computed<PageHeaderItem[] | null>(() => clip.value && isOw
 
 		os.apiWithDialog('clips/update', {
 			clipId: clip.value.id,
-			...result,
+			name: result.name,
+			isPublic: result.isPublic,
+			...(result.description === undefined ? {} : { description: result.description }),
 		});
 
 		clipsCache.delete();

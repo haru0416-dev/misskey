@@ -132,9 +132,8 @@ export const DialogWithDangerActions = {
 export const DialogWithInput = {
 	...Question,
 	args: {
-		...Question.args,
+		type: 'question',
 		title: 'Hello, world!',
-		text: undefined,
 		input: {
 			placeholder: i18n.ts.inputMessageHere,
 			type: 'text',

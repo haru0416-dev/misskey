@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:leaveActiveClass="prefer.animation ? $style.transition_fade_leaveActive : ''"
 			:enterFromClass="prefer.animation ? $style.transition_fade_enterFrom : ''"
 			:leaveToClass="prefer.animation ? $style.transition_fade_leaveTo : ''"
-			:mode="prefer.animation ? 'out-in' : undefined"
+			v-bind="transitionProps"
 		>
 			<MkLoading v-if="paginator.fetching.value"/>
 
@@ -83,6 +83,8 @@ const props = withDefaults(defineProps<MkPaginationOptions & {
 	withControl: false,
 	forceDisableInfiniteScroll: false,
 });
+
+const transitionProps = computed(() => prefer.animation ? { mode: 'out-in' as const } : {});
 
 const shouldEnableInfiniteScroll = computed(() => {
 	return prefer.enableInfiniteScroll && !props.forceDisableInfiniteScroll;
