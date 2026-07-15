@@ -18,7 +18,7 @@ import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.j
 import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
 import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
-import { createBlockingInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
@@ -61,7 +61,7 @@ import { userIp } from '@/db/schema/user-ip.js';
 import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
 import { createUserListMembershipInDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
-import { createUserListInDatabase, fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
+import { createUserListInDatabase, deleteUserListByIdInDatabase, fetchUserListByIdAndUserIdFromDatabase, fetchUserListByNameAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
@@ -5548,6 +5548,60 @@ describe('Endpoints', () => {
 			assert.strictEqual(copied.body.name, `hono-copied-list-${suffix}`);
 			assert.deepStrictEqual(copied.body.userIds, [carol.id]);
 			assert.strictEqual(await userListMembershipExistsInDatabase(db, carol.id, copied.body.id), true);
+
+			const blockedSourceList = await createUserListInDatabase(db, {
+				id: genId(),
+				userId: bob.id,
+				name: `hono-blocked-source-list-${suffix}`,
+				isPublic: true,
+			});
+			await createUserListMembershipInDatabase(db, {
+				id: genId(),
+				userId: dave.id,
+				userListId: blockedSourceList.id,
+				userListUserId: bob.id,
+			});
+			const blocking = await createBlockingInDatabase(db, {
+				id: genId(),
+				blockerId: dave.id,
+				blockeeId: alice.id,
+			});
+			const blockedCopyName = `hono-blocked-copy-${suffix}`;
+			try {
+				const blocked = await api('users/lists/create-from-public', { name: blockedCopyName, listId: blockedSourceList.id }, alice);
+				assert.strictEqual(blocked.status, 400);
+				assert.strictEqual(castAsError(blocked.body as any).error.id, 'a2497f2a-2389-439c-8626-5298540530f4');
+				assert.strictEqual(await fetchUserListByNameAndUserIdFromDatabase(db, blockedCopyName, alice.id), null);
+			} finally {
+				await deleteBlockingByIdFromDatabase(db, blocking.id);
+			}
+
+			const concurrentSourceList = await createUserListInDatabase(db, {
+				id: genId(),
+				userId: carol.id,
+				name: `hono-concurrent-source-list-${suffix}`,
+				isPublic: true,
+			});
+			await Promise.all([alice.id, bob.id].map(userId =>
+				createUserListMembershipInDatabase(db, {
+					id: genId(),
+					userId,
+					userListId: concurrentSourceList.id,
+					userListUserId: carol.id,
+				}),
+			));
+			const [aliceCopy, bobCopy] = await Promise.all([
+				api('users/lists/create-from-public', { name: `hono-concurrent-alice-${suffix}`, listId: concurrentSourceList.id }, alice),
+				api('users/lists/create-from-public', { name: `hono-concurrent-bob-${suffix}`, listId: concurrentSourceList.id }, bob),
+			]);
+			assert.strictEqual(aliceCopy.status, 200);
+			assert.strictEqual(bobCopy.status, 200);
+			assert.deepStrictEqual(new Set(aliceCopy.body.userIds), new Set([alice.id, bob.id]));
+			assert.deepStrictEqual(new Set(bobCopy.body.userIds), new Set([alice.id, bob.id]));
+			await Promise.all([
+				deleteUserListByIdInDatabase(db, aliceCopy.body.id),
+				deleteUserListByIdInDatabase(db, bobCopy.body.id),
+			]);
 		});
 
 		test('users/achievements returns profile achievements without credentials', async () => {
