@@ -132,12 +132,12 @@ function setupGrid(): GridSetting {
 				{
 					// 初期値から変わっていたら背景色を変更
 					condition: ({ row }) => JSON.stringify(gridItems.value[row.index]) !== JSON.stringify(originGridItems.value[row.index]),
-					applyStyle: { className: $style.changedRow },
+					applyStyle: { className: $style.changedRow ?? '' },
 				},
 				{
 					// バリデーションに引っかかっていたら背景色を変更
 					condition: ({ cells }) => cells.some(it => !it.violation.valid),
-					applyStyle: { className: $style.violationRow },
+					applyStyle: { className: $style.violationRow ?? '' },
 				},
 			],
 			// 行のコンテキストメニュー設定
@@ -352,7 +352,7 @@ async function onUpdateButtonClicked() {
 					isSensitive: item.isSensitive,
 					localOnly: item.localOnly,
 					roleIdsThatCanBeUsedThisEmojiAsReaction: item.roleIdsThatCanBeUsedThisEmojiAsReaction.map(it => it.id),
-					fileId: item.fileId,
+					...(item.fileId === undefined ? {} : { fileId: item.fileId }),
 				})
 				.then(() => ({ item, success: true, err: undefined }))
 				.catch(err => ({ item, success: false, err })),
@@ -374,7 +374,7 @@ async function onUpdateButtonClicked() {
 		failed: !it.success,
 		url: it.item.url,
 		name: it.item.name,
-		error: it.err ? JSON.stringify(it.err) : undefined,
+		...(it.err ? { error: JSON.stringify(it.err) } : {}),
 	}));
 
 	await refreshCustomEmojis();
@@ -471,16 +471,23 @@ function onGridCellValueChange(event: GridCellValueChangeEvent) {
 async function refreshCustomEmojis() {
 	const limit = searchQuery.value.limit;
 
-	const query: Misskey.entities.V2AdminEmojiListRequest['query'] = {
-		name: emptyStrToUndefined(searchQuery.value.name),
-		type: emptyStrToUndefined(searchQuery.value.type),
-		aliases: emptyStrToUndefined(searchQuery.value.aliases),
-		category: emptyStrToUndefined(searchQuery.value.category),
-		license: emptyStrToUndefined(searchQuery.value.license),
-		isSensitive: searchQuery.value.sensitive != null ? Boolean(searchQuery.value.sensitive).valueOf() : undefined,
-		localOnly: searchQuery.value.localOnly != null ? Boolean(searchQuery.value.localOnly).valueOf() : undefined,
-		updatedAtFrom: emptyStrToUndefined(searchQuery.value.updatedAtFrom),
-		updatedAtTo: emptyStrToUndefined(searchQuery.value.updatedAtTo),
+	const name = emptyStrToUndefined(searchQuery.value.name);
+	const type = emptyStrToUndefined(searchQuery.value.type);
+	const aliases = emptyStrToUndefined(searchQuery.value.aliases);
+	const category = emptyStrToUndefined(searchQuery.value.category);
+	const license = emptyStrToUndefined(searchQuery.value.license);
+	const updatedAtFrom = emptyStrToUndefined(searchQuery.value.updatedAtFrom);
+	const updatedAtTo = emptyStrToUndefined(searchQuery.value.updatedAtTo);
+	const query: NonNullable<Misskey.entities.V2AdminEmojiListRequest['query']> = {
+		...(name === undefined ? {} : { name }),
+		...(type === undefined ? {} : { type }),
+		...(aliases === undefined ? {} : { aliases }),
+		...(category === undefined ? {} : { category }),
+		...(license === undefined ? {} : { license }),
+		...(searchQuery.value.sensitive == null ? {} : { isSensitive: Boolean(searchQuery.value.sensitive).valueOf() }),
+		...(searchQuery.value.localOnly == null ? {} : { localOnly: Boolean(searchQuery.value.localOnly).valueOf() }),
+		...(updatedAtFrom === undefined ? {} : { updatedAtFrom }),
+		...(updatedAtTo === undefined ? {} : { updatedAtTo }),
 		roleIds: searchQuery.value.roles.map(it => it.id),
 		hostType: 'local',
 	};
@@ -508,7 +515,6 @@ function refreshGridItems() {
 	gridItems.value = customEmojis.value.map(it => ({
 		checked: false,
 		id: it.id,
-		fileId: undefined,
 		url: it.publicUrl,
 		name: it.name,
 		host: it.host ?? '',

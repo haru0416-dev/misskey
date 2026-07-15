@@ -77,8 +77,6 @@ function setPosition() {
 		direction: props.direction,
 		align: 'center',
 		innerMargin: 16,
-		x: props.x,
-		y: props.y,
 	});
 
 	bodyEl.value.style.transformOrigin = data.transformOrigin;

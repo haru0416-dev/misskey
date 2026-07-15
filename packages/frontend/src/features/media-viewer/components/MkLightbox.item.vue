@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					@click.stop="onHiddenClick"
 				>
 					<span :class="$style.hiddenWrapper">
-						<MkBlurhash v-if="content.type === 'image' && content.file?.blurhash != null" :class="$style.hiddenBlurhash" :blurhash="content.file.blurhash" :height="content.height ?? undefined" :width="content.width ?? undefined"/>
+						<MkBlurhash v-if="content.type === 'image' && content.file?.blurhash != null" :class="$style.hiddenBlurhash" :blurhash="content.file.blurhash" v-bind="{ ...(content.height == null ? {} : { height: content.height }), ...(content.width == null ? {} : { width: content.width }) }"/>
 						<img v-else-if="content.type === 'video' && content.thumbnailUrl != null" :src="content.thumbnailUrl" :class="$style.hiddenThumbnail" alt="">
 						<span v-else :class="$style.hiddenPlaceholder"></span>
 						<span :class="[$style.hiddenText, { [$style.withBlur]: content.type === 'video' && content.thumbnailUrl != null }]">

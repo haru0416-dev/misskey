@@ -156,7 +156,7 @@ async function done() {
 		isSensitive: isSensitive.value,
 		localOnly: localOnly.value,
 		roleIdsThatCanBeUsedThisEmojiAsReaction: rolesThatCanBeUsedThisEmojiAsReaction.value.map(x => x.id),
-		fileId: file.value ? file.value.id : undefined,
+		...(file.value ? { fileId: file.value.id } : {}),
 	} satisfies Misskey.entities.AdminEmojiUpdateRequest;
 
 	if (props.emoji) {

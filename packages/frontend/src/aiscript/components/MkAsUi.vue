@@ -12,9 +12,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</div>
 	<span v-else-if="c.type === 'text'" :class="{ [$style.fontSerif]: c.font === 'serif', [$style.fontMonospace]: c.font === 'monospace' }" :style="{ fontSize: c.size ? `${c.size * 100}%` : undefined, fontWeight: c.bold ? 'bold' : undefined, color: c.color }">{{ c.text }}</span>
 	<Mfm v-else-if="c.type === 'mfm'" :class="{ [$style.fontSerif]: c.font === 'serif', [$style.fontMonospace]: c.font === 'monospace' }" :style="{ fontSize: c.size ? `${c.size * 100}%` : null, fontWeight: c.bold ? 'bold' : null, color: c.color ?? null }" :text="c.text ?? ''" @clickEv="c.onClickEv"/>
-	<MkButton v-else-if="c.type === 'button'" :primary="c.primary" :rounded="c.rounded" :disabled="c.disabled" :small="size === 'small'" inline @click="c.onClick">{{ c.text }}</MkButton>
+	<MkButton v-else-if="c.type === 'button'" v-bind="getButtonProps(c)" :small="size === 'small'" inline @click="c.onClick">{{ c.text }}</MkButton>
 	<div v-else-if="c.type === 'buttons'" class="_buttons" :style="{ justifyContent: align }">
-		<MkButton v-for="button in c.buttons" :primary="button.primary" :rounded="button.rounded" :disabled="button.disabled" inline :small="size === 'small'" @click="button.onClick">{{ button.text }}</MkButton>
+		<MkButton v-for="button in c.buttons" v-bind="getButtonProps(button)" inline :small="size === 'small'" @click="button.onClick">{{ button.text }}</MkButton>
 	</div>
 	<MkSwitch v-else-if="c.type === 'switch'" :modelValue="valueForSwitch" @update:modelValue="onSwitchUpdate">
 		<template v-if="c.label" #label>{{ c.label }}</template>
@@ -36,18 +36,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<template v-if="c.label" #label>{{ c.label }}</template>
 		<template v-if="c.caption" #caption>{{ c.caption }}</template>
 	</MkSelect>
-	<MkButton v-else-if="c.type === 'postFormButton'" :primary="c.primary" :rounded="c.rounded" :small="size === 'small'" inline @click="openPostForm">{{ c.text }}</MkButton>
+	<MkButton v-else-if="c.type === 'postFormButton'" v-bind="getButtonProps(c)" :small="size === 'small'" inline @click="openPostForm">{{ c.text }}</MkButton>
 	<div v-else-if="c.type === 'postForm'" :class="$style.postForm">
 		<MkPostForm
-			fixed
-			:instant="true"
-			:initialText="c.form?.text"
-			:initialCw="c.form?.cw"
-			:initialVisibility="c.form?.visibility"
-			:initialLocalOnly="c.form?.localOnly"
+			v-bind="embeddedPostFormProps"
 		/>
 	</div>
-	<MkFolder v-else-if="c.type === 'folder'" :defaultOpen="c.opened">
+	<MkFolder v-else-if="c.type === 'folder'" v-bind="c.opened === undefined ? {} : { defaultOpen: c.opened }">
 		<template #label>{{ c.title }}</template>
 		<template v-for="child in c.children" :key="child">
 			<MkAsUi v-if="!g(child).hidden" :component="g(child)" :components="props.components" :size="size"/>
@@ -55,7 +50,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</MkFolder>
 	<div v-else-if="c.type === 'container'" :class="[$style.container, { [$style.fontSerif]: c.font === 'serif', [$style.fontMonospace]: c.font === 'monospace' }]" :style="containerStyle">
 		<template v-for="child in c.children" :key="child">
-			<MkAsUi v-if="!g(child).hidden" :component="g(child)" :components="props.components" :size="size" :align="c.align"/>
+			<MkAsUi v-if="!g(child).hidden" v-bind="c.align === undefined ? {} : { align: c.align }" :component="g(child)" :components="props.components" :size="size"/>
 		</template>
 	</div>
 </div>
@@ -64,7 +59,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
 import type { Ref } from 'vue';
-import type { AsUiComponent, AsUiRoot, AsUiPostFormButton } from '@/aiscript/ui.js';
+import type { AsUiButton, AsUiComponent, AsUiRoot, AsUiPostFormButton } from '@/aiscript/ui.js';
 import * as os from '@/os.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
@@ -86,6 +81,27 @@ const props = withDefaults(defineProps<{
 });
 
 const c = props.component;
+
+const embeddedPostFormProps = computed(() => {
+	if (c.type !== 'postForm') return {};
+
+	return {
+		fixed: true,
+		instant: true,
+		...(c.form?.text === undefined ? {} : { initialText: c.form.text }),
+		...(c.form?.cw === undefined ? {} : { initialCw: c.form.cw }),
+		...(c.form?.visibility === undefined ? {} : { initialVisibility: c.form.visibility }),
+		...(c.form?.localOnly === undefined ? {} : { initialLocalOnly: c.form.localOnly }),
+	};
+});
+
+function getButtonProps(button: AsUiButton | AsUiPostFormButton) {
+	return {
+		...(button.primary === undefined ? {} : { primary: button.primary }),
+		...(button.rounded === undefined ? {} : { rounded: button.rounded }),
+		...('disabled' in button && button.disabled !== undefined ? { disabled: button.disabled } : {}),
+	};
+}
 
 function g(id: string) {
 	const v = props.components.find(x => x.value.id === id)?.value;
@@ -157,9 +173,9 @@ function openPostForm() {
 
 	os.post({
 		initialText: form.text,
-		initialCw: form.cw,
-		initialVisibility: form.visibility,
-		initialLocalOnly: form.localOnly,
+		...(form.cw === undefined ? {} : { initialCw: form.cw }),
+		...(form.visibility === undefined ? {} : { initialVisibility: form.visibility }),
+		...(form.localOnly === undefined ? {} : { initialLocalOnly: form.localOnly }),
 		instant: true,
 	});
 }

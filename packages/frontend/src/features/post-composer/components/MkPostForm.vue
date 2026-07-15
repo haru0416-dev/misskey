@@ -89,7 +89,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkUploaderItems :items="uploader.items.value" @showMenu="(item, ev) => showPerUploadItemMenu(item, ev)" @showMenuViaContextmenu="(item, ev) => showPerUploadItemMenuViaContextmenu(item, ev)"/>
 	</div>
 	<MkPollEditor v-if="poll" v-model="poll" @destroyed="poll = null"/>
-	<MkNotePreview v-if="showPreview" :class="$style.preview" :text="text" :files="files" :poll="poll ?? undefined" :useCw="useCw" :cw="cw" :user="postAccount ?? $i"/>
+	<MkNotePreview v-if="showPreview" :class="$style.preview" :text="text" :files="files" v-bind="poll == null ? {} : { poll }" :useCw="useCw" :cw="cw" :user="postAccount ?? $i"/>
 	<div v-if="showingOptions" style="padding: 8px 16px;">
 	</div>
 	<footer ref="footerEl" :class="$style.footer">
@@ -160,19 +160,20 @@ const MkPollEditor = defineAsyncComponent(() => import('@/features/post-composer
 
 const $i = ensureSignin();
 
-const props = withDefaults(defineProps<PostFormProps & {
+const {
+	initialVisibleUsers = [],
+	initialLocalOnly = undefined,
+	autofocus = true,
+	mock = false,
+	...props
+} = defineProps<PostFormProps & {
 	fixed?: boolean;
 	autofocus?: boolean;
 	freezeAfterPosted?: boolean;
 	mock?: boolean;
-}>(), {
-	initialVisibleUsers: () => [],
-	autofocus: true,
-	mock: false,
-	initialLocalOnly: undefined,
-});
+}>();
 
-provide(DI.mock, props.mock);
+provide(DI.mock, mock);
 
 const emit = defineEmits<{
 	(ev: 'posted'): void;
@@ -203,12 +204,10 @@ watch(showPreview, () => store.set('showPreview', showPreview.value));
 const showAddMfmFunction = ref(prefer.enableQuickAddMfmFunction);
 watch(showAddMfmFunction, () => prefer.commit('enableQuickAddMfmFunction', showAddMfmFunction.value));
 const cw = ref<string | null>(props.initialCw ?? null);
-const localOnly = ref(props.initialLocalOnly ?? (prefer.rememberNoteVisibility ? store.localOnly : prefer.defaultNoteLocalOnly));
+const localOnly = ref(initialLocalOnly ?? (prefer.rememberNoteVisibility ? store.localOnly : prefer.defaultNoteLocalOnly));
 const visibility = ref(props.initialVisibility ?? (prefer.rememberNoteVisibility ? store.visibility : prefer.defaultNoteVisibility));
 const visibleUsers = ref<Misskey.entities.UserDetailed[]>([]);
-if (props.initialVisibleUsers) {
-	props.initialVisibleUsers.forEach(u => pushVisibleUser(u));
-}
+initialVisibleUsers.forEach(u => pushVisibleUser(u));
 const reactionAcceptance = ref(store.reactionAcceptance);
 const scheduledAt = ref<number | null>(null);
 const draghover = ref(false);
@@ -306,7 +305,7 @@ const cwTextLength = computed((): number => {
 const maxCwTextLength = 100;
 
 const canPost = computed((): boolean => {
-	return !props.mock && !posting.value && !posted.value && !uploader.uploading.value && (uploader.items.value.length === 0 || uploader.readyForUpload.value) &&
+	return !mock && !posting.value && !posted.value && !uploader.uploading.value && (uploader.items.value.length === 0 || uploader.readyForUpload.value) &&
 		(
 			1 <= textLength.value ||
 			1 <= files.value.length ||
@@ -491,7 +490,7 @@ function focus() {
 }
 
 function chooseFileFromPc(ev: PointerEvent) {
-	if (props.mock) return;
+	if (mock) return;
 
 	os.chooseFileFromPc({ multiple: true }).then(files => {
 		if (files.length === 0) return;
@@ -500,7 +499,7 @@ function chooseFileFromPc(ev: PointerEvent) {
 }
 
 function chooseFileFromDrive(ev: PointerEvent) {
-	if (props.mock) return;
+	if (mock) return;
 
 	chooseDriveFile({ multiple: true }).then(driveFiles => {
 		files.value.push(...driveFiles);
@@ -512,7 +511,7 @@ function detachFile(id: Misskey.entities.DriveFile['id']) {
 }
 
 function updateFileSensitive(file: Misskey.entities.DriveFile, isSensitive: boolean) {
-	if (props.mock) {
+	if (mock) {
 		emit('fileChangeSensitive', file.id, isSensitive);
 	}
 	const target = files.value.find(x => x.id === file.id);
@@ -681,7 +680,7 @@ function showOtherSettings() {
 		text: i18n.ts.reset,
 		danger: true,
 		action: async () => {
-			if (props.mock) return;
+			if (mock) return;
 			const { canceled } = await os.confirm({
 				type: 'question',
 				text: i18n.ts.resetAreYouSure,
@@ -749,7 +748,7 @@ function onCompositionEnd(ev: CompositionEvent) {
 const pastedFileName = 'yyyy-MM-dd HH-mm-ss [{{number}}]';
 
 async function onPaste(ev: ClipboardEvent) {
-	if (props.mock) return;
+	if (mock) return;
 	if (ev.clipboardData == null) return;
 	if (textareaEl.value == null) return;
 
@@ -886,7 +885,7 @@ function getStoredDrafts(): Record<string, unknown> {
 }
 
 function saveDraft() {
-	if (props.instant || props.mock) return;
+	if (props.instant || mock) return;
 
 	const draftsData = getStoredDrafts();
 
@@ -987,7 +986,7 @@ async function post(ev?: PointerEvent) {
 		return;
 	}
 
-	if (props.mock) return;
+	if (mock) return;
 
 	if (visibility.value === 'public' && (
 		(useCw.value && cw.value != null && cw.value.trim() !== '' && isAnnoying(cw.value)) || // CWが迷惑になる場合
@@ -1025,17 +1024,17 @@ async function post(ev?: PointerEvent) {
 		}
 	}
 
-	let postData = {
+	let postData: Misskey.entities.NotesCreateRequest = {
 		text: text.value === '' ? null : text.value,
-		fileIds: files.value.length > 0 ? files.value.map(f => f.id) : undefined,
-		replyId: replyTargetNote.value ? replyTargetNote.value.id : undefined,
-		renoteId: renoteTargetNote.value ? renoteTargetNote.value.id : quoteId.value ? quoteId.value : undefined,
-		channelId: targetChannel.value ? targetChannel.value.id : undefined,
+		...(files.value.length > 0 ? { fileIds: files.value.map(f => f.id) } : {}),
+		...(replyTargetNote.value ? { replyId: replyTargetNote.value.id } : {}),
+		...(renoteTargetNote.value ? { renoteId: renoteTargetNote.value.id } : quoteId.value ? { renoteId: quoteId.value } : {}),
+		...(targetChannel.value ? { channelId: targetChannel.value.id } : {}),
 		poll: poll.value,
 		cw: useCw.value ? cw.value ?? '' : null,
 		localOnly: visibility.value === 'specified' ? false : localOnly.value,
 		visibility: visibility.value,
-		visibleUserIds: visibility.value === 'specified' ? visibleUsers.value.map(u => u.id) : undefined,
+		...(visibility.value === 'specified' ? { visibleUserIds: visibleUsers.value.map(u => u.id) } : {}),
 		reactionAcceptance: reactionAcceptance.value,
 	};
 
@@ -1161,7 +1160,7 @@ async function post(ev?: PointerEvent) {
 }
 
 async function postAsScheduled() {
-	if (props.mock) return;
+	if (mock) return;
 
 	await saveServerDraft({
 		isActuallyScheduled: true,
@@ -1267,7 +1266,7 @@ function showActions(ev: PointerEvent) {
 const postAccount = ref<Misskey.entities.UserDetailed | null>(null);
 
 async function openAccountMenu(ev: PointerEvent) {
-	if (props.mock) return;
+	if (mock) return;
 
 	function showDraftsDialog(scheduled: boolean) {
 		const { dispose } = os.popup(defineAsyncComponent(() => import('@/features/post-composer/components/MkNoteDraftsDialog.vue')), {
@@ -1420,7 +1419,7 @@ function showTour() {
 }
 
 async function restoreLocalDraft(): Promise<void> {
-	if (props.instant || props.mention || props.specified || props.mock || props.initialNote || prefer.draftRestoreMode === 'never') return;
+	if (props.instant || props.mention || props.specified || mock || props.initialNote || prefer.draftRestoreMode === 'never') return;
 
 	const draft = getStoredDrafts()[draftKey.value];
 	const data = isJsonObject(draft) && isJsonObject(draft.data) ? draft.data : null;
@@ -1454,7 +1453,7 @@ async function restoreLocalDraft(): Promise<void> {
 }
 
 onMounted(() => {
-	if (props.autofocus) {
+	if (autofocus) {
 		focus();
 
 		nextTick(() => {

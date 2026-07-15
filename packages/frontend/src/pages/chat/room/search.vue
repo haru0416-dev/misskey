@@ -51,8 +51,8 @@ const searchResults = ref<Misskey.entities.ChatMessage[]>([]);
 async function search() {
 	const res = await misskeyApi('chat/messages/search', {
 		query: searchQuery.value,
-		roomId: props.roomId,
-		userId: props.userId,
+		...(props.roomId === undefined ? {} : { roomId: props.roomId }),
+		...(props.userId === undefined ? {} : { userId: props.userId }),
 	});
 
 	searchResults.value = res;

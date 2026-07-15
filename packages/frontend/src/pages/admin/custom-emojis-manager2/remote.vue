@@ -180,7 +180,7 @@ function setupGrid(): GridSetting {
 				{
 					// チェックされたら背景色を変える
 					condition: ({ row }) => gridItems.value[row.index]?.checked ?? false,
-					applyStyle: { className: $style.changedRow },
+					applyStyle: { className: $style.changedRow ?? '' },
 				},
 			],
 			contextMenuFactory: (row, context) => {
@@ -356,19 +356,24 @@ async function importEmojis(targets: GridItem[]) {
 		failed: !it.success,
 		url: it.item.url,
 		name: it.item.name,
-		error: it.err ? JSON.stringify(it.err) : undefined,
+		...(it.err ? { error: JSON.stringify(it.err) } : {}),
 	}));
 
 	await refreshCustomEmojis();
 }
 
 async function refreshCustomEmojis() {
-	const query: Misskey.entities.V2AdminEmojiListRequest['query'] = {
-		name: emptyStrToUndefined(queryName.value),
-		host: emptyStrToUndefined(queryHost.value),
-		license: emptyStrToUndefined(queryLicense.value),
-		uri: emptyStrToUndefined(queryUri.value),
-		publicUrl: emptyStrToUndefined(queryPublicUrl.value),
+	const name = emptyStrToUndefined(queryName.value);
+	const host = emptyStrToUndefined(queryHost.value);
+	const license = emptyStrToUndefined(queryLicense.value);
+	const uri = emptyStrToUndefined(queryUri.value);
+	const publicUrl = emptyStrToUndefined(queryPublicUrl.value);
+	const query: NonNullable<Misskey.entities.V2AdminEmojiListRequest['query']> = {
+		...(name === undefined ? {} : { name }),
+		...(host === undefined ? {} : { host }),
+		...(license === undefined ? {} : { license }),
+		...(uri === undefined ? {} : { uri }),
+		...(publicUrl === undefined ? {} : { publicUrl }),
 		hostType: 'remote',
 	};
 

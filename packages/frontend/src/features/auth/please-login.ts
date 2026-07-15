@@ -68,7 +68,7 @@ export async function pleaseLogin(
 		{
 			autoSet: true,
 			message: opts.message ?? (_openOnRemote ? i18n.ts.signinOrContinueOnRemote : i18n.ts.signinRequired),
-			openOnRemote: _openOnRemote,
+			...(_openOnRemote === undefined ? {} : { openOnRemote: _openOnRemote }),
 		},
 		{
 			cancelled: () => {

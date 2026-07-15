@@ -77,7 +77,7 @@ const emit = defineEmits<{
 	(ev: 'tabClick', key: string): void;
 }>();
 
-const tab = defineModel<T['key']>('tab');
+const tab = defineModel<T['key'] | undefined>('tab');
 
 const tabHighlightEl = useTemplateRef('tabHighlightEl');
 const tabRefs: Record<string, HTMLElement | null> = {};

@@ -134,8 +134,8 @@ const phase = ref<'input' | 'result'>('input');
 // 本URL生成用params
 const paramsForUrl = computed<EmbedParams>(() => ({
 	header: header.value,
-	maxHeight: typeof maxHeight.value === 'number' ? Math.max(0, maxHeight.value) : undefined,
-	colorMode: colorMode.value === 'auto' ? undefined : colorMode.value,
+	...(typeof maxHeight.value === 'number' ? { maxHeight: Math.max(0, maxHeight.value) } : {}),
+	...(colorMode.value === 'auto' ? {} : { colorMode: colorMode.value }),
 	rounded: rounded.value,
 	border: border.value,
 }));
@@ -176,8 +176,8 @@ function applyToPreview() {
 
 	paramsForPreview.value = {
 		header: header.value,
-		maxHeight: typeof maxHeight.value === 'number' ? Math.max(0, maxHeight.value) : undefined,
-		colorMode: colorMode.value === 'auto' ? undefined : colorMode.value,
+		...(typeof maxHeight.value === 'number' ? { maxHeight: Math.max(0, maxHeight.value) } : {}),
+		...(colorMode.value === 'auto' ? {} : { colorMode: colorMode.value }),
 		rounded: rounded.value,
 		border: border.value,
 	};

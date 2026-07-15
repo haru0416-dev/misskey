@@ -172,8 +172,6 @@ const props = withDefaults(defineProps<{
 	host?: string | null;
 }>(), {
 	query: '',
-	userId: undefined,
-	username: undefined,
 	host: '',
 });
 

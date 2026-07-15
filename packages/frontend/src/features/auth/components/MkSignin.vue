@@ -19,8 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-if="page === 'input'"
 			key="input"
 			:message="message"
-			:openOnRemote="openOnRemote"
-			:initialUsername="initialUsername"
+			v-bind="{ ...(openOnRemote === undefined ? {} : { openOnRemote }), ...(initialUsername === undefined ? {} : { initialUsername }) }"
 
 			@usernameSubmitted="onUsernameSubmitted"
 			@passkeyClick="onPasskeyLogin"
@@ -94,8 +93,6 @@ const props = withDefaults(defineProps<{
 }>(), {
 	autoSet: false,
 	message: '',
-	openOnRemote: undefined,
-	initialUsername: undefined,
 });
 
 const page = ref<'input' | 'password' | 'totp' | 'passkey'>('input');
@@ -215,9 +212,10 @@ async function onTotpSubmitted(token: string) {
 }
 
 async function tryLogin(req: Partial<Misskey.entities.SigninFlowRequest>): Promise<Misskey.entities.SigninFlowResponse> {
+	const username = req.username ?? userInfo.value?.username;
 	const _req = {
-		username: req.username ?? userInfo.value?.username,
 		...req,
+		...(username === undefined ? {} : { username }),
 	};
 
 	function assertIsSigninFlowRequest(x: Partial<Misskey.entities.SigninFlowRequest>): x is Misskey.entities.SigninFlowRequest {

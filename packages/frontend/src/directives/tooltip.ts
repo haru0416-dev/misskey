@@ -77,7 +77,7 @@ export const tooltipDirective = {
 					id: tooltipId,
 					showing,
 					text: self.text,
-					asMfm: binding.modifiers.mfm,
+					...(binding.modifiers.mfm === undefined ? {} : { asMfm: binding.modifiers.mfm }),
 					direction: binding.modifiers.left
 						? 'left'
 						: binding.modifiers.right

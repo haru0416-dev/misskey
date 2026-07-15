@@ -195,11 +195,11 @@ export function chooseFileFromPcAndUpload(
 	} = {},
 ): Promise<Misskey.entities.DriveFile[]> {
 	return new Promise((res, rej) => {
-		os.chooseFileFromPc({ multiple: options.multiple }).then((files) => {
+		os.chooseFileFromPc(options.multiple === undefined ? {} : { multiple: options.multiple }).then((files) => {
 			if (files.length === 0) return;
 			os.launchUploader(files, {
-				folderId: options.folderId,
-				features: options.features,
+				...(options.folderId === undefined ? {} : { folderId: options.folderId }),
+				...(options.features === undefined ? {} : { features: options.features }),
 			}).then((driveFiles) => {
 				res(driveFiles);
 			});
@@ -283,7 +283,10 @@ function select(
 				{
 					text: i18n.ts.upload,
 					icon: 'ti ti-upload',
-					action: () => chooseFileFromPcAndUpload({ multiple, features }).then((files) => res(files)),
+					action: () => chooseFileFromPcAndUpload({
+						multiple,
+						...(features === undefined ? {} : { features }),
+					}).then((files) => res(files)),
 				},
 				{
 					text: i18n.ts.fromDrive,

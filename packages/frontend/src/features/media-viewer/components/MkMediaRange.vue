@@ -21,7 +21,6 @@ withDefaults(defineProps<{
 	sliderBgWhite?: boolean;
 	ariaLabel?: string;
 }>(), {
-	buffer: undefined,
 	sliderBgWhite: false,
 });
 

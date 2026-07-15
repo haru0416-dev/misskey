@@ -18,10 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<XDecoration
 						v-for="(avatarDecoration, i) in $i.avatarDecorations"
 						:decoration="avatarDecorations.find(d => d.id === avatarDecoration.id) ?? { id: '', url: '', name: '?', roleIdsThatCanBeUsedThisDecoration: [] }"
-						:angle="avatarDecoration.angle"
-						:flipH="avatarDecoration.flipH"
-						:offsetX="avatarDecoration.offsetX"
-						:offsetY="avatarDecoration.offsetY"
+						v-bind="{ ...(avatarDecoration.angle === undefined ? {} : { angle: avatarDecoration.angle }), ...(avatarDecoration.flipH === undefined ? {} : { flipH: avatarDecoration.flipH }), ...(avatarDecoration.offsetX === undefined ? {} : { offsetX: avatarDecoration.offsetX }), ...(avatarDecoration.offsetY === undefined ? {} : { offsetY: avatarDecoration.offsetY }) }"
 						:active="true"
 						@click="openAttachedDecoration(i)"
 					/>

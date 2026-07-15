@@ -72,7 +72,6 @@ const props = withDefaults(defineProps<{
 	link: false,
 	preview: false,
 	indicator: false,
-	decorations: undefined,
 	forceShowDecoration: false,
 });
 

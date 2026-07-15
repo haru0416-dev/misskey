@@ -124,7 +124,11 @@ export async function getNoteClipMenu(props: { note: Misskey.entities.Note; curr
 				});
 				if (canceled) return;
 
-				const clip = await os.apiWithDialog('clips/create', result);
+				const clip = await os.apiWithDialog('clips/create', {
+					name: result.name,
+					isPublic: result.isPublic,
+					...(result.description === undefined ? {} : { description: result.description }),
+				});
 
 				clipsCache.delete();
 
@@ -231,9 +235,9 @@ export function getNoteMenu(props: {
 
 			os.post({
 				initialNote: appearNote,
-				renote: appearNote.renote,
-				reply: appearNote.reply,
-				channel: appearNote.channel,
+				...(appearNote.renote === undefined ? {} : { renote: appearNote.renote }),
+				...(appearNote.reply === undefined ? {} : { reply: appearNote.reply }),
+				...(appearNote.channel === undefined ? {} : { channel: appearNote.channel }),
 			});
 
 			if (Date.now() - new Date(appearNote.createdAt).getTime() < 1000 * 60 && appearNote.userId === $i.id) {
@@ -711,7 +715,7 @@ export function getRenoteMenu(props: {
 						if (!props.mock) {
 							misskeyApi('notes/create', {
 								renoteId: appearNote.id,
-								channelId: appearNote.channelId,
+								...(appearNote.channelId === undefined ? {} : { channelId: appearNote.channelId }),
 							}).then((res) => {
 								os.toast(i18n.ts.renoted);
 								globalEvents.emit('notePosted', res.createdNote);
@@ -726,7 +730,7 @@ export function getRenoteMenu(props: {
 						if (!props.mock) {
 							os.post({
 								renote: appearNote,
-								channel: appearNote.channel,
+								...(appearNote.channel === undefined ? {} : { channel: appearNote.channel }),
 							});
 						}
 					},

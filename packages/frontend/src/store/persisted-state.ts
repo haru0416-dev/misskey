@@ -299,6 +299,7 @@ class PersistedStateController {
 
 		for (const [key, value] of writes) {
 			const stamp = this.nextLocalStamp(key);
+			const accountId = this.io.currentAccountId();
 			this.lastStamps.set(key, stamp);
 			this.channel?.postMessage({
 				version: 1,
@@ -306,7 +307,7 @@ class PersistedStateController {
 				where,
 				key,
 				value,
-				...(where === 'deviceAccount' ? { accountId: this.io.currentAccountId() ?? undefined } : {}),
+				...(where === 'deviceAccount' && accountId != null ? { accountId } : {}),
 				stamp,
 			});
 		}

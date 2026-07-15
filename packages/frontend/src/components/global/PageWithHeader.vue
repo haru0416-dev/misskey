@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkStickyContainer>
 		<template #header>
 			<MkPageHeader v-if="prefer.showPageTabBarBottom && (props.tabs?.length ?? 0) > 0" v-bind="pageHeaderPropsWithoutTabs"/>
-			<MkPageHeader v-else v-model:tab="tab" v-bind="pageHeaderProps"/>
+			<MkPageHeader v-else v-bind="{ ...pageHeaderProps, ...(tab === undefined ? {} : { tab }) }" @update:tab="tab = $event"/>
 		</template>
 		<div :class="$style.body">
 			<MkSwiper v-if="prefer.enableHorizontalSwipe && swipable && (props.tabs?.length ?? 1) > 1" v-model:tab="tab" :class="$style.swiper" :tabs="props.tabs ?? []">
@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<template #footer>
 			<slot name="footer"></slot>
 			<div v-if="prefer.showPageTabBarBottom && (props.tabs?.length ?? 0) > 0" :class="$style.footerTabs">
-				<MkTabs v-model:tab="tab" :tabs="props.tabs" :centered="true" :tabHighlightUpper="true"/>
+				<MkTabs v-model:tab="tab" :tabs="props.tabs ?? []" :centered="true" :tabHighlightUpper="true"/>
 			</div>
 		</template>
 	</MkStickyContainer>
@@ -46,12 +46,12 @@ const props = withDefaults(defineProps<PageHeaderProps & {
 
 const pageHeaderProps = computed(() => {
 	const { reversed, tab, ...rest } = props;
-	return rest;
+	return Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== undefined));
 });
 
 const pageHeaderPropsWithoutTabs = computed(() => {
 	const { reversed, tabs, ...rest } = props;
-	return rest;
+	return Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== undefined));
 });
 
 const tab = defineModel<string>('tab');

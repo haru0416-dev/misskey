@@ -129,7 +129,7 @@ function setupGrid(): GridSetting {
 				{
 					// 1つでもバリデーションエラーがあれば行全体をエラー表示する
 					condition: ({ cells }) => cells.some(it => !it.violation.valid),
-					applyStyle: { className: $style.violationRow },
+					applyStyle: { className: $style.violationRow ?? '' },
 				},
 			],
 			// 行のコンテキストメニュー設定
@@ -286,7 +286,7 @@ async function onRegistryClicked() {
 		failed: !it.success,
 		url: it.item.url,
 		name: it.item.name,
-		error: it.err ? JSON.stringify(it.err) : undefined,
+		...(it.err ? { error: JSON.stringify(it.err) } : {}),
 	}));
 
 	// 登録に成功したものは一覧から除く

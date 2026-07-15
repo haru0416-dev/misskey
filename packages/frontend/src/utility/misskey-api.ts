@@ -37,7 +37,7 @@ function requestMisskeyApi<_ResT, E extends keyof Misskey.Endpoints, P extends M
 			credentials: 'omit',
 			cache: method === 'POST' ? 'no-cache' : 'default',
 			...(method === 'POST' ? { headers: { 'Content-Type': 'application/json' } } : {}),
-			signal,
+			...(signal === undefined ? {} : { signal }),
 		})
 		.then(async (res) => {
 			const body = res.status === 204 ? null : await res.json();

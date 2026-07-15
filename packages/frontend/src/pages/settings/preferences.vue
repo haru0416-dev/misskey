@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<div class="_gaps_s">
 			<SearchMarker v-slot="slotProps" :keywords="['general']">
-				<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+				<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 					<template #label><SearchLabel>{{ i18n.ts.general }}</SearchLabel></template>
 					<template #icon><SearchIcon><i class="ti ti-settings"></i></SearchIcon></template>
 
@@ -156,7 +156,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</SearchMarker>
 
 			<SearchMarker v-slot="slotProps" :keywords="['timeline', 'note']">
-				<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+				<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 					<template #label><SearchLabel>{{ i18n.ts._settings.timelineAndNote }}</SearchLabel></template>
 					<template #icon><SearchIcon><i class="ti ti-notes"></i></SearchIcon></template>
 
@@ -372,7 +372,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</SearchMarker>
 
 			<SearchMarker v-slot="slotProps" :keywords="['post', 'form']">
-				<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+				<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 					<template #label><SearchLabel>{{ i18n.ts.postForm }}</SearchLabel></template>
 					<template #icon><SearchIcon><i class="ti ti-edit"></i></SearchIcon></template>
 
@@ -438,7 +438,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</SearchMarker>
 
 			<SearchMarker v-slot="slotProps" :keywords="['notification']">
-				<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+				<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 					<template #label><SearchLabel>{{ i18n.ts.notifications }}</SearchLabel></template>
 					<template #icon><SearchIcon><i class="ti ti-bell"></i></SearchIcon></template>
 
@@ -488,7 +488,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 			<template v-if="$i.policies.chatAvailability !== 'unavailable'">
 				<SearchMarker v-slot="slotProps" :keywords="['chat', 'messaging']">
-					<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #label><SearchLabel>{{ i18n.ts.directMessage }}</SearchLabel></template>
 						<template #icon><SearchIcon><i class="ti ti-messages"></i></SearchIcon></template>
 
@@ -528,7 +528,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</template>
 
 			<SearchMarker v-slot="slotProps" :keywords="['accessibility']">
-				<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+				<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 					<template #label><SearchLabel>{{ i18n.ts.accessibility }}</SearchLabel></template>
 					<template #icon><SearchIcon><i class="ti ti-accessible"></i></SearchIcon></template>
 
@@ -668,7 +668,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</SearchMarker>
 
 			<SearchMarker v-slot="slotProps" :keywords="['performance']">
-				<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+				<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 					<template #label><SearchLabel>{{ i18n.ts.performance }}</SearchLabel></template>
 					<template #icon><SearchIcon><i class="ti ti-battery-vertical-eco"></i></SearchIcon></template>
 
@@ -752,7 +752,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</SearchMarker>
 
 			<SearchMarker v-slot="slotProps" :keywords="['datasaver']">
-				<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+				<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 					<template #label><SearchLabel>{{ i18n.ts.dataSaver }}</SearchLabel></template>
 					<template #icon><SearchIcon><i class="ti ti-antenna-bars-3"></i></SearchIcon></template>
 
@@ -790,7 +790,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</SearchMarker>
 
 			<SearchMarker v-slot="slotProps" :keywords="['other']">
-				<MkFolder :defaultOpen="slotProps.isParentOfTarget">
+				<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 					<template #label><SearchLabel>{{ i18n.ts.other }}</SearchLabel></template>
 					<template #icon><SearchIcon><i class="ti ti-settings-cog"></i></SearchIcon></template>
 

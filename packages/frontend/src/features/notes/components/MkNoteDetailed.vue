@@ -79,7 +79,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<img v-for="(role, i) in appearNote.user.badgeRoles" :key="i" v-tooltip="role.name" :class="$style.noteHeaderBadgeRole" :src="role.iconUrl!"/>
 						</div>
 					</div>
-					<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :instance="appearNote.user.instance" :displayMode="prefer.instanceTickerDisplay"/>
+					<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :displayMode="prefer.instanceTickerDisplay" v-bind="appearNote.user.instance === undefined ? {} : { instance: appearNote.user.instance }"/>
 				</div>
 			</header>
 			<div :class="$style.noteContent">
@@ -93,7 +93,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						:enableEmojiMenuReaction="true"
 						/>
 					</span>
-					<MkCwButton v-model="showContent" :text="appearNote.text" :renote="appearNote.renote" :files="appearNote.files" :poll="appearNote.poll"/>
+					<MkCwButton v-model="showContent" :text="appearNote.text" v-bind="{ ...(appearNote.renote === undefined ? {} : { renote: appearNote.renote }), ...(appearNote.files === undefined ? {} : { files: appearNote.files }), ...(appearNote.poll === undefined ? {} : { poll: appearNote.poll }) }"/>
 				</p>
 				<div v-show="appearNote.cw == null || showContent">
 					<span v-if="appearNote.isHidden" style="opacity: 0.5">({{ i18n.ts.private }})</span>
@@ -104,7 +104,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							:text="appearNote.text"
 							:author="appearNote.user"
 							:nyaize="'respect'"
-							:emojiUrls="appearNote.emojis"
+							v-bind="appearNote.emojis === undefined ? {} : { emojiUrls: appearNote.emojis }"
 							:enableEmojiMenu="true"
 							:enableEmojiMenuReaction="true"
 							class="_selectable"
@@ -115,7 +115,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<MkLoading v-if="translating" mini/>
 						<div v-else-if="translation">
 							<b>{{ i18n.tsx.translatedFrom({ x: translation.sourceLang }) }}: </b>
-							<span dir="auto" :class="$style.bidiText"><Mfm :text="translation.text" :author="appearNote.user" :nyaize="'respect'" :emojiUrls="appearNote.emojis" class="_selectable"/></span>
+							<span dir="auto" :class="$style.bidiText"><Mfm :text="translation.text" :author="appearNote.user" :nyaize="'respect'" v-bind="appearNote.emojis === undefined ? {} : { emojiUrls: appearNote.emojis }" class="_selectable"/></span>
 						</div>
 					</div>
 					<div v-if="appearNote.files && appearNote.files.length > 0">
@@ -128,7 +128,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						:expiresAt="appearNote.poll.expiresAt"
 						:choices="$appearNote.pollChoices"
 						:author="appearNote.user"
-						:emojiUrls="appearNote.emojis"
+						v-bind="appearNote.emojis === undefined ? {} : { emojiUrls: appearNote.emojis }"
 						:class="$style.poll"
 					/>
 					<div v-if="isEnabledUrlPreview">
@@ -486,7 +486,7 @@ async function reply() {
 	showMovedDialog();
 	os.post({
 		reply: appearNote,
-		channel: appearNote.channel,
+		...(appearNote.channel === undefined ? {} : { channel: appearNote.channel }),
 	}).then(() => {
 		focus();
 	});

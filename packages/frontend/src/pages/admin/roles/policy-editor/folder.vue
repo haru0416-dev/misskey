@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template #label>{{ i18n.ts._role.useBaseValue }}</template>
 			</MkSwitch>
 			<div>
-				<slot :disabled="readonly || (!isBaseRole && policyMeta?.useDefault)"></slot>
+				<slot :disabled="Boolean(readonly || (!isBaseRole && policyMeta?.useDefault))"></slot>
 			</div>
 			<MkRange v-if="!isBaseRole && policyMeta != null" v-model="priorityModel" :min="0" :max="2" :step="1" easing :textConverter="priroityRangeTextConverter" :disabled="readonly">
 				<template #label>{{ i18n.ts._role.priority }}</template>

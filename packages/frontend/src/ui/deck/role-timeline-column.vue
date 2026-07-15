@@ -54,7 +54,7 @@ async function setRole() {
 		items: roles.map(x => ({
 			value: x.id, label: x.name,
 		})),
-		default: roles.find(x => x.id === props.column.roleId)?.id,
+		default: roles.find(x => x.id === props.column.roleId)?.id ?? null,
 	});
 	if (canceled || roleId == null) return;
 	const role = roles.find(x => x.id === roleId)!;

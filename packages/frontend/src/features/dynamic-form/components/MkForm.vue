@@ -7,15 +7,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div v-if="Object.values(form).filter(item => typeof item.hidden !== 'boolean' || item.hidden === true).length > 0" class="_gaps_m">
 	<template v-for="v, k in form">
 		<template v-if="typeof v.hidden == 'function' ? v.hidden(values) : v.hidden"></template>
-		<MkInput v-else-if="v.type === 'number'" v-model="values[k]" type="number" :step="v.step || 1" :manualSave="v.manualSave" @savingStateChange="(changed, invalid) => onSavingStateChange(k, changed, invalid)">
+		<MkInput v-else-if="v.type === 'number'" v-model="values[k]" v-bind="v.manualSave === undefined ? {} : { manualSave: v.manualSave }" type="number" :step="v.step || 1" @savingStateChange="(changed, invalid) => onSavingStateChange(k, changed, invalid)">
 			<template #label><span v-text="v.label || k"></span><span v-if="v.required === false"> ({{ i18n.ts.optional }})</span></template>
 			<template v-if="v.description" #caption>{{ v.description }}</template>
 		</MkInput>
-		<MkInput v-else-if="v.type === 'string' && !v.multiline" v-model="values[k]" type="text" :mfmAutocomplete="v.treatAsMfm" :manualSave="v.manualSave" @savingStateChange="(changed, invalid) => onSavingStateChange(k, changed, invalid)">
+		<MkInput v-else-if="v.type === 'string' && !v.multiline" v-model="values[k]" v-bind="{ ...(v.treatAsMfm === undefined ? {} : { mfmAutocomplete: v.treatAsMfm }), ...(v.manualSave === undefined ? {} : { manualSave: v.manualSave }) }" type="text" @savingStateChange="(changed, invalid) => onSavingStateChange(k, changed, invalid)">
 			<template #label><span v-text="v.label || k"></span><span v-if="v.required === false"> ({{ i18n.ts.optional }})</span></template>
 			<template v-if="v.description" #caption>{{ v.description }}</template>
 		</MkInput>
-		<MkTextarea v-else-if="v.type === 'string' && v.multiline" v-model="values[k]" :mfmAutocomplete="v.treatAsMfm" :mfmPreview="v.treatAsMfm" :manualSave="v.manualSave" @savingStateChange="(changed, invalid) => onSavingStateChange(k, changed, invalid)">
+		<MkTextarea v-else-if="v.type === 'string' && v.multiline" v-model="values[k]" v-bind="{ ...(v.treatAsMfm === undefined ? {} : { mfmAutocomplete: v.treatAsMfm, mfmPreview: v.treatAsMfm }), ...(v.manualSave === undefined ? {} : { manualSave: v.manualSave }) }" @savingStateChange="(changed, invalid) => onSavingStateChange(k, changed, invalid)">
 			<template #label><span v-text="v.label || k"></span><span v-if="v.required === false"> ({{ i18n.ts.optional }})</span></template>
 			<template v-if="v.description" #caption>{{ v.description }}</template>
 		</MkTextarea>
@@ -29,7 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkRadios v-else-if="v.type === 'radio'" v-model="values[k]" :options="getRadioOptionsDef(v)">
 			<template #label><span v-text="v.label || k"></span><span v-if="v.required === false"> ({{ i18n.ts.optional }})</span></template>
 		</MkRadios>
-		<MkRange v-else-if="v.type === 'range'" v-model="values[k]" :min="v.min" :max="v.max" :step="v.step" :textConverter="v.textConverter">
+		<MkRange v-else-if="v.type === 'range'" v-model="values[k]" v-bind="{ ...(v.step === undefined ? {} : { step: v.step }), ...(v.textConverter === undefined ? {} : { textConverter: v.textConverter }) }" :min="v.min" :max="v.max">
 			<template #label><span v-text="v.label || k"></span><span v-if="v.required === false"> ({{ i18n.ts.optional }})</span></template>
 			<template v-if="v.description" #caption>{{ v.description }}</template>
 		</MkRange>
@@ -38,7 +38,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</MkButton>
 		<XFile
 			v-else-if="v.type === 'drive-file'"
-			:fileId="v.defaultFileId"
+			:fileId="v.defaultFileId ?? null"
 			:validate="async f => !v.validate || await v.validate(f)"
 			@update="f => values[k] = f"
 		/>

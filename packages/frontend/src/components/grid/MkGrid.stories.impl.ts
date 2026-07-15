@@ -63,12 +63,12 @@ function createArgs(overrides?: { settings?: Partial<GridSetting>; data?: DataSo
 
 	return {
 		settings: {
-			row: overrides?.settings?.row,
+			...(overrides?.settings?.row === undefined ? {} : { row: overrides.settings.row }),
 			cols: [
 				...defaultCols.filter((col) => overrides?.settings?.cols?.every((c) => c.bindTo !== col.bindTo) ?? true),
 				...(overrides?.settings?.cols ?? []),
 			],
-			cells: overrides?.settings?.cells,
+			...(overrides?.settings?.cells === undefined ? {} : { cells: overrides.settings.cells }),
 		},
 		data: refData.value,
 	};

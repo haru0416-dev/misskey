@@ -159,6 +159,8 @@ watch([model, () => props.items], () => {
 function show() {
 	if (opening.value || props.disabled || props.readonly) return;
 	focus();
+	const containerEl = container.value;
+	if (containerEl == null) return;
 
 	opening.value = true;
 
@@ -194,8 +196,8 @@ function show() {
 		}
 	}
 
-	os.popupMenu(menu, container.value, {
-		width: container.value?.offsetWidth,
+	os.popupMenu(menu, containerEl, {
+		width: containerEl.offsetWidth,
 		onClosing: () => {
 			opening.value = false;
 		},

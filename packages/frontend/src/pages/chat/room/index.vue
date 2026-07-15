@@ -59,7 +59,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</div>
 
 	<div v-else-if="tab === 'search'" class="_spacer" style="--MI_SPACER-w: 700px;">
-		<XSearch :userId="userId" :roomId="roomId"/>
+		<XSearch v-bind="{ ...(userId === undefined ? {} : { userId }), ...(roomId === undefined ? {} : { roomId }) }"/>
 	</div>
 
 	<div v-else-if="tab === 'members'" class="_spacer" style="--MI_SPACER-w: 700px;">

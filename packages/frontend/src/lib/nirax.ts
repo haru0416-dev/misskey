@@ -199,7 +199,7 @@ function parsePath(path: string): ParsedPath {
 			const optional = placeholder.endsWith('?');
 			res.push({
 				name: placeholder.replace('(*)', '').replace('?', ''),
-				startsWith: prefix !== '' ? prefix : undefined,
+				...(prefix === '' ? {} : { startsWith: prefix }),
 				wildcard,
 				optional,
 			});
@@ -445,9 +445,9 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 	) {
 		const fullPath = buildFullPath({
 			path,
-			params: props?.params,
-			query: props?.query,
-			hash: props?.hash,
+			...(props?.params === undefined ? {} : { params: props.params }),
+			...(props?.query === undefined ? {} : { query: props.query }),
+			...(props?.hash === undefined ? {} : { hash: props.hash }),
 		});
 		this.pushByPath(fullPath, flag);
 	}
@@ -455,9 +455,9 @@ export class Nirax<DEF extends RouteDef[]> extends EventEmitter<RouterEvents> {
 	public replace<P extends FlattenAllPaths<DEF>>(path: P, props?: GetRouterOperationProps<DEF, P>) {
 		const fullPath = buildFullPath({
 			path,
-			params: props?.params,
-			query: props?.query,
-			hash: props?.hash,
+			...(props?.params === undefined ? {} : { params: props.params }),
+			...(props?.query === undefined ? {} : { query: props.query }),
+			...(props?.hash === undefined ? {} : { hash: props.hash }),
 		});
 		this.replaceByPath(fullPath);
 	}

@@ -94,7 +94,6 @@ export function clip(id = 'someclipid', name = 'Some Clip'): entities.Clip {
 		lastClippedAt: null,
 		userId: 'someuserid',
 		user: userLite(),
-		notesCount: undefined,
 		name,
 		description: 'Some clip description',
 		isPublic: false,

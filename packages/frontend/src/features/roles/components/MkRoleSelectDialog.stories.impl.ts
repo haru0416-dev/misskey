@@ -54,9 +54,6 @@ export const Default = {
 		};
 	},
 	args: {
-		initialRoleIds: undefined,
-		infoMessage: undefined,
-		title: undefined,
 		publicOnly: true,
 	},
 	parameters: {

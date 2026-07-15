@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:leaveToClass="$style.transition_change_leaveTo"
 			mode="default"
 		>
-			<MkMarqueeText :key="key" :duration="marqueeDuration" :reverse="marqueeReverse">
+			<MkMarqueeText :key="key" :reverse="marqueeReverse" v-bind="marqueeDuration === undefined ? {} : { duration: marqueeDuration }">
 				<span v-for="instance in instances" :key="instance.id" :class="[$style.item, { [$style.colored]: colored }]" :style="{ background: colored ? instance.themeColor ?? '' : '' }">
 					<img :class="$style.icon" :src="getInstanceIcon(instance)" alt=""/>
 					<MkA :to="`/instance-info/${instance.host}`" :class="$style.host" class="_monospace">

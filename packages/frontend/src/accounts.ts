@@ -35,13 +35,16 @@ export async function getAccounts(): Promise<
 	const tokens = store.accountTokens;
 	const accountInfos = store.accountInfos;
 	const accounts = prefer.accounts;
-	return accounts.map(([host, user]) => ({
-		host,
-		id: user.id,
-		username: user.username,
-		user: accountInfos[host + '/' + user.id],
-		token: tokens[host + '/' + user.id] ?? null,
-	}));
+	return accounts.map(([host, user]) => {
+		const accountInfo = accountInfos[host + '/' + user.id];
+		return {
+			host,
+			id: user.id,
+			username: user.username,
+			...(accountInfo === undefined ? {} : { user: accountInfo }),
+			token: tokens[host + '/' + user.id] ?? null,
+		};
+	});
 }
 
 async function addAccount(host: string, user: Misskey.entities.MeDetailed, token: AccountWithToken['token']) {

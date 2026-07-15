@@ -104,17 +104,21 @@ const openGallery = singleFlight(async (id?: string) => {
 		const found = gallery.value?.querySelector<HTMLElement>(`[data-marker="${marker}"]`) ?? null;
 		return found == null ? null : markRaw(found);
 	};
-	const contents = previewableMedia.value.map<LightboxContent>(media => ({
-		id: media.id,
-		type: media.type.startsWith('video') ? 'video' : 'image',
-		url: media.url,
-		thumbnailUrl: media.thumbnailUrl,
-		width: media.properties.width,
-		height: media.properties.height,
-		filename: media.name,
-		file: media,
-		sourceElement: getElementByMarker(`${markerId}:${media.id}`),
-	}));
+	const contents = previewableMedia.value.map<LightboxContent>(media => {
+		const width = media.properties.width;
+		const height = media.properties.height;
+		return {
+			id: media.id,
+			type: media.type.startsWith('video') ? 'video' : 'image',
+			url: media.url,
+			thumbnailUrl: media.thumbnailUrl,
+			...(width === undefined ? {} : { width }),
+			...(height === undefined ? {} : { height }),
+			filename: media.name,
+			file: media,
+			sourceElement: getElementByMarker(`${markerId}:${media.id}`),
+		};
+	});
 	const lightbox = await import('@/features/media-viewer/components/MkLightbox.vue');
 	if (unmounted) return;
 	const { dispose } = await os.popupAsyncWithDialog(Promise.resolve(lightbox.default), {

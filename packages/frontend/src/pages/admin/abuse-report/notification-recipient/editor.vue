@@ -170,8 +170,8 @@ async function onSubmitClicked() {
 			isActive: isActive.value,
 			name: title.value,
 			method: method.value,
-			userId: _userId ?? undefined,
-			systemWebhookId: _systemWebhookId ?? undefined,
+			...(_userId == null ? {} : { userId: _userId }),
+			...(_systemWebhookId == null ? {} : { systemWebhookId: _systemWebhookId }),
 		};
 
 		try {

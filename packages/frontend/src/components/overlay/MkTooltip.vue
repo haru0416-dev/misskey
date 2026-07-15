@@ -59,12 +59,12 @@ const zIndex = os.claimZIndex('high');
 function setPosition() {
 	if (el.value == null) return;
 	const data = calcPopupPosition(el.value, {
-		anchorElement: props.anchorElement,
+		...(props.anchorElement === undefined ? {} : { anchorElement: props.anchorElement }),
 		direction: props.direction,
 		align: 'center',
 		innerMargin: props.innerMargin,
-		x: props.x,
-		y: props.y,
+		...(props.x === undefined ? {} : { x: props.x }),
+		...(props.y === undefined ? {} : { y: props.y }),
 	});
 
 	el.value.style.transformOrigin = data.transformOrigin;

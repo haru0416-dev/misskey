@@ -50,7 +50,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkAvatar :class="[$style.avatar, prefer.useStickyIcons ? $style.useSticky : null]" :user="appearNote.user" :link="!mock" :preview="!mock"/>
 		<div :class="$style.main">
 			<MkNoteHeader :class="$style.header" :note="appearNote" :mini="true"/>
-			<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :instance="appearNote.user.instance" :displayMode="prefer.instanceTickerDisplay"/>
+			<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :displayMode="prefer.instanceTickerDisplay" v-bind="appearNote.user.instance === undefined ? {} : { instance: appearNote.user.instance }"/>
 			<div style="container-type: inline-size;">
 				<p v-if="appearNote.cw != null" :class="$style.cw">
 					<span v-if="appearNote.cw != ''" dir="auto" :class="$style.bidiText">
@@ -62,7 +62,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							:enableEmojiMenuReaction="true"
 						/>
 					</span>
-					<MkCwButton v-model="showContent" :text="appearNote.text" :renote="appearNote.renote" :files="appearNote.files" :poll="appearNote.poll" style="margin: 4px 0;"/>
+					<MkCwButton v-model="showContent" :text="appearNote.text" v-bind="{ ...(appearNote.renote === undefined ? {} : { renote: appearNote.renote }), ...(appearNote.files === undefined ? {} : { files: appearNote.files }), ...(appearNote.poll === undefined ? {} : { poll: appearNote.poll }) }" style="margin: 4px 0;"/>
 				</p>
 				<div v-show="appearNote.cw == null || showContent" :class="[{ [$style.contentCollapsed]: collapsed }]">
 					<div :class="$style.text">
@@ -74,7 +74,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 								:text="appearNote.text"
 								:author="appearNote.user"
 								:nyaize="'respect'"
-								:emojiUrls="appearNote.emojis"
+								v-bind="appearNote.emojis === undefined ? {} : { emojiUrls: appearNote.emojis }"
 								:enableEmojiMenu="true"
 								:enableEmojiMenuReaction="true"
 								class="_selectable"
@@ -84,7 +84,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<MkLoading v-if="translating" mini/>
 							<div v-else-if="translation">
 								<b>{{ i18n.tsx.translatedFrom({ x: translation.sourceLang }) }}: </b>
-								<span dir="auto" :class="$style.bidiText"><Mfm :text="translation.text" :author="appearNote.user" :nyaize="'respect'" :emojiUrls="appearNote.emojis" class="_selectable"/></span>
+								<span dir="auto" :class="$style.bidiText"><Mfm :text="translation.text" :author="appearNote.user" :nyaize="'respect'" v-bind="appearNote.emojis === undefined ? {} : { emojiUrls: appearNote.emojis }" class="_selectable"/></span>
 							</div>
 						</div>
 					</div>
@@ -98,7 +98,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						:expiresAt="appearNote.poll.expiresAt"
 						:choices="$appearNote.pollChoices"
 						:author="appearNote.user"
-						:emojiUrls="appearNote.emojis"
+						v-bind="appearNote.emojis === undefined ? {} : { emojiUrls: appearNote.emojis }"
 						:class="$style.poll"
 					/>
 					<div v-if="isEnabledUrlPreview">
@@ -523,7 +523,7 @@ async function reply() {
 
 	os.post({
 		reply: appearNote,
-		channel: appearNote.channel,
+		...(appearNote.channel === undefined ? {} : { channel: appearNote.channel }),
 	}).then(() => {
 		focus();
 	});
@@ -646,7 +646,15 @@ async function onContextmenu(ev: PointerEvent): Promise<void> {
 		const noteMenuModule = await loadNoteMenuModule();
 		if (noteMenuModule == null) return;
 
-		const { menu, cleanup } = noteMenuModule.getNoteMenu({ note: note, translating, translation, currentClip: currentClip?.value, currentAntenna: currentAntenna?.value ?? undefined });
+		const currentClipValue = currentClip?.value;
+		const currentAntennaValue = currentAntenna?.value;
+		const { menu, cleanup } = noteMenuModule.getNoteMenu({
+			note,
+			translating,
+			translation,
+			...(currentClipValue == null ? {} : { currentClip: currentClipValue }),
+			...(currentAntennaValue == null ? {} : { currentAntenna: currentAntennaValue }),
+		});
 		os.contextMenu(menu, ev).then(focus).finally(cleanup);
 	}
 }
@@ -660,7 +668,15 @@ async function showMenu(): Promise<void> {
 	const noteMenuModule = await loadNoteMenuModule();
 	if (noteMenuModule == null) return;
 
-	const { menu, cleanup } = noteMenuModule.getNoteMenu({ note: note, translating, translation, currentClip: currentClip?.value, currentAntenna: currentAntenna?.value ?? undefined });
+	const currentClipValue = currentClip?.value;
+	const currentAntennaValue = currentAntenna?.value;
+	const { menu, cleanup } = noteMenuModule.getNoteMenu({
+		note,
+		translating,
+		translation,
+		...(currentClipValue == null ? {} : { currentClip: currentClipValue }),
+		...(currentAntennaValue == null ? {} : { currentAntenna: currentAntennaValue }),
+	});
 	os.popupMenu(menu, menuButton.value).then(focus).finally(cleanup);
 }
 
@@ -673,7 +689,11 @@ async function clip(): Promise<void> {
 	const noteMenuModule = await loadNoteMenuModule();
 	if (noteMenuModule == null) return;
 
-	os.popupMenu(await noteMenuModule.getNoteClipMenu({ note: note, currentClip: currentClip?.value }), clipButton.value).then(focus);
+	const currentClipValue = currentClip?.value;
+	os.popupMenu(await noteMenuModule.getNoteClipMenu({
+		note,
+		...(currentClipValue === undefined ? {} : { currentClip: currentClipValue }),
+	}), clipButton.value).then(focus);
 }
 
 async function showRenoteMenu() {
