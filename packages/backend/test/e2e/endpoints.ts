@@ -55,12 +55,13 @@ import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetReques
 import { isPromoNoteExists } from '@/core/PromoNoteStore.js';
 import { isPromoReadExists } from '@/core/PromoReadStore.js';
 import { createSigninInDatabase } from '@/core/SigninStore.js';
+import { RootUserAlreadyAssignedError } from '@/core/SignupStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { fetchSystemWebhookByIdFromDatabase } from '@/core/SystemWebhookStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { userIp } from '@/db/schema/user-ip.js';
-import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase, fetchLocalUserByUsernameFromDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
 import { createUserListMembershipInDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { createUserListInDatabase, deleteUserListByIdInDatabase, fetchUserListByIdAndUserIdFromDatabase, fetchUserListByNameAndUserIdFromDatabase } from '@/core/UserListStore.js';
@@ -210,6 +211,19 @@ describe('Endpoints', () => {
 			assert.ok(before.rootUserId);
 			const staleMeta = { ...before, rootUserId: null, rootUser: null };
 			const suffix = Date.now().toString(36).slice(-8);
+			const requiredUsername = `requiredroot${suffix}`;
+			await assert.rejects(createLocalSignupAccount({
+				config: loadConfig(),
+				db,
+				meta: staleMeta,
+			}, {
+				username: requiredUsername,
+				host: null,
+				passwordHash: null,
+				rootClaim: 'required',
+			}), error => error instanceof RootUserAlreadyAssignedError);
+			assert.strictEqual(await fetchLocalUserByUsernameFromDatabase(db, requiredUsername), null);
+
 			const result = await createLocalSignupAccount({
 				config: loadConfig(),
 				db,
