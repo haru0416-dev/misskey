@@ -60,8 +60,7 @@ const popularUsersPaginator = markRaw(new Paginator('users', {
 <style lang="scss" module>
 .users {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+	grid-template-columns: 1fr;
 	gap: var(--MI-margin);
-	justify-content: center;
 }
 </style>

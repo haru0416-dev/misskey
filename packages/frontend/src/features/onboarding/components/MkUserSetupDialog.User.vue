@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div v-adaptive-bg class="_panel" style="position: relative;">
-	<div :class="$style.banner" :style="user.bannerUrl ? { backgroundImage: `url(${user.bannerUrl})` } : ''"></div>
+	<div :class="$style.banner" :style="user.bannerUrl ? { backgroundImage: `url(${user.bannerUrl})` } : undefined"></div>
 	<MkAvatar :class="$style.avatar" :user="user" indicator/>
 	<div :class="$style.title">
 		<div :class="$style.name"><MkUserName :user="user" :nowrap="false"/></div>
@@ -17,9 +17,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 		<span v-else style="opacity: 0.7;">{{ i18n.ts.noAccountDescription }}</span>
 	</div>
-	<div :class="$style.footer">
-		<MkButton v-if="!isFollowing" primary gradate rounded full @click="follow"><i class="ti ti-plus"></i> {{ i18n.ts.follow }}</MkButton>
-		<div v-else style="opacity: 0.7; text-align: center;">{{ i18n.ts.youFollowing }} <i class="ti ti-check"></i></div>
+	<div :class="$style.footer" role="status" aria-live="polite">
+		<MkButton v-if="!isFollowing" primary gradate rounded full @click="follow"><i class="ti ti-plus" aria-hidden="true"></i> {{ i18n.ts.follow }}</MkButton>
+		<div v-else style="opacity: 0.7; text-align: center;">{{ i18n.ts.youFollowing }} <i class="ti ti-check" aria-hidden="true"></i></div>
 	</div>
 </div>
 </template>
@@ -48,7 +48,7 @@ async function follow() {
 <style lang="scss" module>
 .banner {
 	height: 60px;
-	background-color: rgba(0, 0, 0, 0.1);
+	background-color: var(--MI-surface-subtle);
 	background-size: cover;
 	background-position: center;
 }
@@ -87,7 +87,7 @@ async function follow() {
 }
 
 .description {
-	padding: 0 16px 16px 88px;
+	padding: 0 var(--MI-space-lg) var(--MI-space-lg) 88px;
 	font-size: 0.9em;
 }
 
@@ -100,6 +100,6 @@ async function follow() {
 
 .footer {
 	border-top: solid 0.5px var(--MI_THEME-divider);
-	padding: 16px;
+	padding: var(--MI-space-lg);
 }
 </style>
