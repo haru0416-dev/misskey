@@ -9,11 +9,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div class="_gaps">
 			<MkInfo v-if="$i && $i.hasUnreadAnnouncement && tab === 'current'" warn>{{ i18n.ts.youHaveUnreadAnnouncements }}</MkInfo>
 			<MkPagination v-slot="{items}" :paginator="paginator" class="_gaps">
-				<section v-for="announcement in items" :key="announcement.id" class="_panel" :class="$style.announcement">
-					<div v-if="announcement.forYou" :class="$style.forYou"><i class="ti ti-pin"></i> {{ i18n.ts.forYou }}</div>
+				<section v-for="announcement in items" :key="announcement.id" class="_panel" :class="[$style.announcement, { [$style.isRead]: $i != null && announcement.isRead }]">
+					<div v-if="announcement.forYou" :class="$style.forYou"><i class="ti ti-pin" aria-hidden="true"></i> {{ i18n.ts.forYou }}</div>
 					<div :class="$style.header">
-						<span v-if="$i && !announcement.silence && !announcement.isRead" style="margin-right: 0.5em;">🆕</span>
-						<span style="margin-right: 0.5em;">
+						<span v-if="$i && !announcement.silence && !announcement.isRead" :class="$style.unreadDot" role="img" :aria-label="i18n.ts.unread"></span>
+						<span :class="$style.typeIcon" aria-hidden="true">
 							<i v-if="announcement.icon === 'info'" class="ti ti-info-circle"></i>
 							<i v-else-if="announcement.icon === 'warning'" class="ti ti-alert-triangle" style="color: var(--MI_THEME-warn);"></i>
 							<i v-else-if="announcement.icon === 'error'" class="ti ti-circle-x" style="color: var(--MI_THEME-error);"></i>
@@ -23,18 +23,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 					</div>
 					<div :class="$style.content">
 						<Mfm :text="announcement.text" class="_selectable"/>
-						<img v-if="announcement.imageUrl" :src="announcement.imageUrl"/>
+						<img v-if="announcement.imageUrl" :src="announcement.imageUrl" :alt="announcement.title"/>
 						<MkA :to="`/announcements/${announcement.id}`">
-							<div style="margin-top: 8px; opacity: 0.7; font-size: 85%;">
-								{{ i18n.ts.createdAt }}: <MkTime :time="announcement.createdAt" mode="detail"/>
-							</div>
-							<div v-if="announcement.updatedAt" style="opacity: 0.7; font-size: 85%;">
-								{{ i18n.ts.updatedAt }}: <MkTime :time="announcement.updatedAt" mode="detail"/>
+							<div :class="$style.dates">
+								<div>
+									{{ i18n.ts.createdAt }}: <MkTime :time="announcement.createdAt" mode="detail"/>
+								</div>
+								<div v-if="announcement.updatedAt">
+									{{ i18n.ts.updatedAt }}: <MkTime :time="announcement.updatedAt" mode="detail"/>
+								</div>
 							</div>
 						</MkA>
 					</div>
 					<div v-if="tab !== 'past' && $i != null && !announcement.silence && !announcement.isRead" :class="$style.footer">
-						<MkButton primary @click="read(announcement)"><i class="ti ti-check"></i> {{ i18n.ts.gotIt }}</MkButton>
+						<MkButton primary @click="read(announcement)"><i class="ti ti-check" aria-hidden="true"></i> {{ i18n.ts.gotIt }}</MkButton>
 					</div>
 				</section>
 			</MkPagination>
@@ -108,7 +110,13 @@ definePage(() => ({
 
 <style lang="scss" module>
 .announcement {
-	padding: 16px;
+	padding: var(--MI-space-lg);
+}
+
+.isRead {
+	.header {
+		opacity: 0.75;
+	}
 }
 
 .forYou {
@@ -117,12 +125,26 @@ definePage(() => ({
 	line-height: 24px;
 	font-size: 90%;
 	white-space: pre;
-	color: #d28a3f;
+	color: var(--MI_THEME-warn);
 }
 
 .header {
-	margin-bottom: 16px;
+	margin-bottom: var(--MI-space-lg);
 	font-weight: bold;
+}
+
+.unreadDot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-right: var(--MI-space-sm);
+	border-radius: var(--MI-radius-full);
+	background: var(--MI_THEME-indicator);
+	vertical-align: middle;
+}
+
+.typeIcon {
+	margin-right: 0.5em;
 }
 
 .content {
@@ -130,10 +152,18 @@ definePage(() => ({
 		display: block;
 		max-height: 300px;
 		max-width: 100%;
+		border-radius: var(--MI-radius-md);
+		margin-top: var(--MI-space-sm);
 	}
 }
 
+.dates {
+	margin-top: var(--MI-space-sm);
+	opacity: 0.7;
+	font-size: 85%;
+}
+
 .footer {
-	margin-top: 16px;
+	margin-top: var(--MI-space-lg);
 }
 </style>

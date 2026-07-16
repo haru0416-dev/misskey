@@ -7,13 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 <MkA :to="`/play/${flash.id}`" class="vhpxefrk _panel" :class="[{ gray: flash.visibility === 'private' }]">
 	<article>
 		<header>
-			<h1 :title="flash.title">{{ flash.title }}</h1>
+			<h1 :title="flash.title">{{ flash.title }}<span v-if="flash.visibility === 'private'" class="privateBadge">{{ i18n.ts.private }}</span></h1>
 		</header>
 		<p v-if="flash.summary" :title="flash.summary">
 			<Mfm class="summaryMfm" :text="flash.summary" :plain="true" :nowrap="true"/>
 		</p>
 		<footer>
-			<img class="icon" :src="flash.user.avatarUrl"/>
+			<img class="icon" :src="flash.user.avatarUrl" alt=""/>
 			<p>{{ userName(flash.user) }}</p>
 		</footer>
 	</article>
@@ -21,9 +21,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { } from 'vue';
 import * as Misskey from 'misskey-js';
 import { userName } from '@/filters/user.js';
+import { i18n } from '@/i18n.js';
 
 const props = defineProps<{
 	flash: Misskey.entities.Flash;
@@ -44,21 +44,30 @@ const props = defineProps<{
 	}
 
 	> article {
-		padding: 16px;
+		padding: var(--MI-space-lg);
 
 		> header {
-			margin-bottom: 8px;
+			margin-bottom: var(--MI-space-sm);
 
 			> h1 {
 				margin: 0;
 				font-size: 1em;
-				color: var(--urlPreviewTitle);
+				font-weight: 600;
+
+				> .privateBadge {
+					margin-left: var(--MI-space-sm);
+					font-size: 0.7em;
+					padding: var(--MI-space-2xs) var(--MI-space-sm);
+					border-radius: var(--MI-radius-sm);
+					color: color-mix(in oklab, var(--MI_THEME-fg) 72%, transparent);
+					border: 1px solid var(--MI-border-muted);
+				}
 			}
 		}
 
 		> p {
 			margin: 0;
-			color: var(--urlPreviewText);
+			color: color-mix(in oklab, var(--MI_THEME-fg) 72%, transparent);
 			font-size: 0.8em;
 			overflow: clip;
 
@@ -69,20 +78,21 @@ const props = defineProps<{
 		}
 
 		> footer {
-			margin-top: 8px;
+			margin-top: var(--MI-space-sm);
 			height: 16px;
 
 			> img {
 				display: inline-block;
 				width: 16px;
 				height: 16px;
-				margin-right: 4px;
+				margin-right: var(--MI-space-xs);
 				vertical-align: top;
 			}
 
 			> p {
 				display: inline-block;
 				margin: 0;
+				color: color-mix(in oklab, var(--MI_THEME-fg) 72%, transparent);
 				font-size: 0.8em;
 				line-height: 16px;
 				vertical-align: top;
@@ -90,35 +100,30 @@ const props = defineProps<{
 		}
 	}
 
-	&:global(.gray) {
+	&.gray {
 		--c: var(--MI_THEME-bg);
 		background-image: linear-gradient(45deg, var(--c) 16.67%, transparent 16.67%, transparent 50%, var(--c) 50%, var(--c) 66.67%, transparent 66.67%, transparent 100%);
 		background-size: 16px 16px;
-	}
-
-	@media (max-width: 700px) {
 	}
 
 	@media (max-width: 550px) {
 		font-size: 12px;
 
 		> article {
-			padding: 12px;
+			padding: var(--MI-space-md);
 		}
 	}
 
 	@media (max-width: 500px) {
-		font-size: 10px;
-
 		> article {
-			padding: 8px;
+			padding: var(--MI-space-sm);
 
 			> header {
-				margin-bottom: 4px;
+				margin-bottom: var(--MI-space-xs);
 			}
 
 			> footer {
-				margin-top: 4px;
+				margin-top: var(--MI-space-xs);
 
 				> img {
 					width: 12px;

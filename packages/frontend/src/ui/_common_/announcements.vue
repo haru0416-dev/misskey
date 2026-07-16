@@ -11,11 +11,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 		:class="$style.item"
 		:to="`/announcements/${announcement.id}`"
 	>
-		<span :class="$style.icon">
+		<span :class="$style.icon" aria-hidden="true">
 			<i v-if="announcement.icon === 'info'" class="ti ti-info-circle"></i>
-			<i v-else-if="announcement.icon === 'warning'" class="ti ti-alert-triangle" style="color: var(--MI_THEME-warn);"></i>
-			<i v-else-if="announcement.icon === 'error'" class="ti ti-circle-x" style="color: var(--MI_THEME-error);"></i>
-			<i v-else-if="announcement.icon === 'success'" class="ti ti-check" style="color: var(--MI_THEME-success);"></i>
+			<i v-else-if="announcement.icon === 'warning'" class="ti ti-alert-triangle"></i>
+			<i v-else-if="announcement.icon === 'error'" class="ti ti-circle-x"></i>
+			<i v-else-if="announcement.icon === 'success'" class="ti ti-check"></i>
 		</span>
 		<span :class="$style.title">{{ announcement.title }}</span>
 		<span :class="$style.body">{{ announcement.text }}</span>
@@ -38,7 +38,6 @@ import { $i } from '@/i.js';
 	font-size: 0.85em;
 
 	display: flex;
-	vertical-align: bottom;
 	width: 100%;
 	line-height: var(--height);
 	height: var(--height);
@@ -58,11 +57,11 @@ import { $i } from '@/i.js';
 }
 
 .icon {
-	margin-left: 10px;
+	margin-left: var(--MI-space-md);
 }
 
 .title {
-	padding: 0 10px;
+	padding: 0 var(--MI-space-md);
 	font-weight: bold;
 
 	&:empty {
@@ -76,5 +75,6 @@ import { $i } from '@/i.js';
 	overflow: clip;
 	white-space: nowrap;
 	text-overflow: ellipsis;
+	padding-right: var(--MI-space-md);
 }
 </style>

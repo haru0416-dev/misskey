@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<div v-else-if="tab === 'my'">
 			<div class="_gaps">
-				<MkButton gradate rounded style="margin: 0 auto;" @click="create()"><i class="ti ti-plus"></i></MkButton>
+				<MkButton gradate rounded style="margin: 0 auto;" :aria-label="i18n.ts.create" @click="create()"><i class="ti ti-plus" aria-hidden="true"></i></MkButton>
 				<MkPagination v-slot="{items}" :paginator="myFlashsPaginator">
 					<div class="_gaps_s">
 						<MkFlashPreview v-for="flash in items" :key="flash.id" :flash="flash"/>

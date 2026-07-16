@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div v-if="clip.description">
 						<Mfm :text="clip.description" :isNote="false"/>
 					</div>
-					<div v-else>({{ i18n.ts.noDescription }})</div>
+					<div v-else :class="$style.noDescription">({{ i18n.ts.noDescription }})</div>
 					<div>
 						<MkButton v-if="favorited" v-tooltip="i18n.ts.unfavorite" asLike rounded primary @click="unfavorite()"><i class="ti ti-heart"></i><span v-if="clip.favoritedCount > 0" style="margin-left: 6px;">{{ clip.favoritedCount }}</span></MkButton>
 						<MkButton v-else v-tooltip="i18n.ts.favorite" asLike rounded @click="favorite()"><i class="ti ti-heart"></i><span v-if="clip.favoritedCount > 0" style="margin-left: 6px;">{{ clip.favoritedCount }}</span></MkButton>
@@ -210,6 +210,10 @@ definePage(() => ({
 <style lang="scss" module>
 .description {
 	padding: 16px;
+}
+
+.noDescription {
+	opacity: 0.7;
 }
 
 .user {

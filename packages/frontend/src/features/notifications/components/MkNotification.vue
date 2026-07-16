@@ -8,9 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div :class="$style.head">
 		<MkAvatar v-if="['pollEnded', 'note'].includes(notification.type) && 'note' in notification" :class="$style.icon" :user="notification.note.user" link preview/>
 		<MkAvatar v-else-if="['roleAssigned', 'achievementEarned', 'exportCompleted', 'login', 'createToken', 'scheduledNotePosted', 'scheduledNotePostFailed'].includes(notification.type)" :class="$style.icon" :user="$i" link preview/>
-		<div v-else-if="notification.type === 'reaction:grouped' && notification.note.reactionAcceptance === 'likeOnly'" :class="[$style.icon, $style.icon_reactionGroupHeart]"><i class="ti ti-heart" style="line-height: 1;"></i></div>
-		<div v-else-if="notification.type === 'reaction:grouped'" :class="[$style.icon, $style.icon_reactionGroup]"><i class="ti ti-plus" style="line-height: 1;"></i></div>
-		<div v-else-if="notification.type === 'renote:grouped'" :class="[$style.icon, $style.icon_renoteGroup]"><i class="ti ti-repeat" style="line-height: 1;"></i></div>
+		<div v-else-if="notification.type === 'reaction:grouped' && notification.note.reactionAcceptance === 'likeOnly'" :class="[$style.icon, $style.icon_reactionGroupHeart]"><i class="ti ti-heart" aria-hidden="true"></i></div>
+		<div v-else-if="notification.type === 'reaction:grouped'" :class="[$style.icon, $style.icon_reactionGroup]"><i class="ti ti-plus" aria-hidden="true"></i></div>
+		<div v-else-if="notification.type === 'renote:grouped'" :class="[$style.icon, $style.icon_renoteGroup]"><i class="ti ti-repeat" aria-hidden="true"></i></div>
 		<MkAvatar v-else-if="'user' in notification" :class="$style.icon" :user="notification.user" link preview/>
 		<img v-else-if="'icon' in notification && notification.icon != null" :class="[$style.icon, $style.icon_app]" :src="notification.icon" alt=""/>
 		<div
@@ -33,31 +33,31 @@ SPDX-License-Identifier: AGPL-3.0-only
 				[$style.t_roleAssigned]: notification.type === 'roleAssigned' && notification.role.iconUrl == null,
 			}]"
 		>
-			<i v-if="notification.type === 'follow'" class="ti ti-plus"></i>
-			<i v-else-if="notification.type === 'receiveFollowRequest'" class="ti ti-clock"></i>
-			<i v-else-if="notification.type === 'followRequestAccepted'" class="ti ti-check"></i>
-			<i v-else-if="notification.type === 'renote'" class="ti ti-repeat"></i>
-			<i v-else-if="notification.type === 'reply'" class="ti ti-arrow-back-up"></i>
-			<i v-else-if="notification.type === 'mention'" class="ti ti-at"></i>
-			<i v-else-if="notification.type === 'quote'" class="ti ti-quote"></i>
-			<i v-else-if="notification.type === 'pollEnded'" class="ti ti-chart-arrows"></i>
-			<i v-else-if="notification.type === 'scheduledNotePosted'" class="ti ti-send"></i>
-			<i v-else-if="notification.type === 'scheduledNotePostFailed'" class="ti ti-alert-triangle"></i>
-			<i v-else-if="notification.type === 'achievementEarned'" class="ti ti-medal"></i>
-			<i v-else-if="notification.type === 'exportCompleted'" class="ti ti-archive"></i>
-			<i v-else-if="notification.type === 'login'" class="ti ti-login-2"></i>
-			<i v-else-if="notification.type === 'createToken'" class="ti ti-key"></i>
-			<i v-else-if="notification.type === 'chatRoomInvitationReceived'" class="ti ti-messages"></i>
+			<i v-if="notification.type === 'follow'" class="ti ti-plus" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'receiveFollowRequest'" class="ti ti-clock" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'followRequestAccepted'" class="ti ti-check" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'renote'" class="ti ti-repeat" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'reply'" class="ti ti-arrow-back-up" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'mention'" class="ti ti-at" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'quote'" class="ti ti-quote" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'pollEnded'" class="ti ti-chart-arrows" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'scheduledNotePosted'" class="ti ti-send" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'scheduledNotePostFailed'" class="ti ti-alert-triangle" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'achievementEarned'" class="ti ti-medal" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'exportCompleted'" class="ti ti-archive" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'login'" class="ti ti-login-2" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'createToken'" class="ti ti-key" aria-hidden="true"></i>
+			<i v-else-if="notification.type === 'chatRoomInvitationReceived'" class="ti ti-messages" aria-hidden="true"></i>
 			<template v-else-if="notification.type === 'roleAssigned'">
-				<img v-if="notification.role.iconUrl" style="height: 1.3em; vertical-align: -22%;" :src="notification.role.iconUrl" alt=""/>
-				<i v-else class="ti ti-badges"></i>
+				<img v-if="notification.role.iconUrl" :class="$style.roleIcon" :src="notification.role.iconUrl" alt=""/>
+				<i v-else class="ti ti-badges" aria-hidden="true"></i>
 			</template>
 			<MkReactionIcon
 				v-else-if="notification.type === 'reaction'"
 				:withTooltip="true"
 				:reaction="notification.reaction.replace(/^:(\w+):$/, ':$1@.:')"
 				:noStyle="true"
-				style="width: 100%; height: 100% !important; object-fit: contain;"
+				:class="$style.reactionIcon"
 			/>
 		</div>
 	</div>
@@ -83,36 +83,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</header>
 		<div>
 			<MkA v-if="notification.type === 'reaction' || notification.type === 'reaction:grouped'" :class="$style.text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">
-				<i class="ti ti-quote" :class="$style.quote"></i>
+				<i class="ti ti-quote" :class="$style.quote" aria-hidden="true"></i>
 				<Mfm :text="getNoteSummary(notification.note)" :plain="true" :nowrap="true" :author="notification.note.user"/>
-				<i class="ti ti-quote" :class="$style.quote"></i>
+				<i class="ti ti-quote" :class="$style.quote" aria-hidden="true"></i>
 			</MkA>
 			<MkA v-else-if="notification.type === 'renote' || notification.type === 'renote:grouped'" :class="$style.text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note.renote)">
-				<i class="ti ti-quote" :class="$style.quote"></i>
+				<i class="ti ti-quote" :class="$style.quote" aria-hidden="true"></i>
 				<Mfm :text="getNoteSummary(notification.note.renote)" :plain="true" :nowrap="true" v-bind="notification.note.renote?.user === undefined ? {} : { author: notification.note.renote.user }"/>
-				<i class="ti ti-quote" :class="$style.quote"></i>
+				<i class="ti ti-quote" :class="$style.quote" aria-hidden="true"></i>
 			</MkA>
-			<MkA v-else-if="notification.type === 'reply'" :class="$style.text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">
-				<Mfm :text="getNoteSummary(notification.note)" :plain="true" :nowrap="true" :author="notification.note.user"/>
-			</MkA>
-			<MkA v-else-if="notification.type === 'mention'" :class="$style.text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">
-				<Mfm :text="getNoteSummary(notification.note)" :plain="true" :nowrap="true" :author="notification.note.user"/>
-			</MkA>
-			<MkA v-else-if="notification.type === 'quote'" :class="$style.text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">
-				<Mfm :text="getNoteSummary(notification.note)" :plain="true" :nowrap="true" :author="notification.note.user"/>
-			</MkA>
-			<MkA v-else-if="notification.type === 'note'" :class="$style.text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">
+			<MkA v-else-if="notification.type === 'reply' || notification.type === 'mention' || notification.type === 'quote' || notification.type === 'note'" :class="$style.text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">
 				<Mfm :text="getNoteSummary(notification.note)" :plain="true" :nowrap="true" :author="notification.note.user"/>
 			</MkA>
 			<MkA v-else-if="notification.type === 'pollEnded'" :class="$style.text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">
-				<i class="ti ti-quote" :class="$style.quote"></i>
+				<i class="ti ti-quote" :class="$style.quote" aria-hidden="true"></i>
 				<Mfm :text="getNoteSummary(notification.note)" :plain="true" :nowrap="true" :author="notification.note.user"/>
-				<i class="ti ti-quote" :class="$style.quote"></i>
+				<i class="ti ti-quote" :class="$style.quote" aria-hidden="true"></i>
 			</MkA>
 			<MkA v-else-if="notification.type === 'scheduledNotePosted'" :class="$style.text" :to="notePage(notification.note)" :title="getNoteSummary(notification.note)">
-				<i class="ti ti-quote" :class="$style.quote"></i>
+				<i class="ti ti-quote" :class="$style.quote" aria-hidden="true"></i>
 				<Mfm :text="getNoteSummary(notification.note)" :plain="true" :nowrap="true" :author="notification.note.user"/>
-				<i class="ti ti-quote" :class="$style.quote"></i>
+				<i class="ti ti-quote" :class="$style.quote" aria-hidden="true"></i>
 			</MkA>
 			<div v-else-if="notification.type === 'roleAssigned'" :class="$style.text">
 				{{ notification.role.name }}
@@ -130,21 +121,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<Mfm :text="i18n.tsx._notification.createTokenDescription({ text: i18n.ts.manageAccessTokens })"/>
 			</MkA>
 			<template v-else-if="notification.type === 'follow'">
-				<span :class="$style.text" style="opacity: 0.6;">{{ i18n.ts.youGotNewFollower }}</span>
+				<span :class="[$style.text, $style.textSub]">{{ i18n.ts.youGotNewFollower }}</span>
 			</template>
 			<template v-else-if="notification.type === 'followRequestAccepted'">
-				<div :class="$style.text" style="opacity: 0.6;">{{ i18n.ts.followRequestAccepted }}</div>
-				<div v-if="notification.message" :class="$style.text" style="opacity: 0.6; font-style: oblique;">
-					<i class="ti ti-quote" :class="$style.quote"></i>
+				<div :class="[$style.text, $style.textSub]">{{ i18n.ts.followRequestAccepted }}</div>
+				<div v-if="notification.message" :class="[$style.text, $style.textSub, $style.textQuoted]">
+					<i class="ti ti-quote" :class="$style.quote" aria-hidden="true"></i>
 					<Mfm :text="notification.message" :author="notification.user" :plain="true" :nowrap="true"/>
-					<i class="ti ti-quote" :class="$style.quote"></i>
+					<i class="ti ti-quote" :class="$style.quote" aria-hidden="true"></i>
 				</div>
 			</template>
 			<template v-else-if="notification.type === 'receiveFollowRequest'">
-				<span :class="$style.text" style="opacity: 0.6;">{{ i18n.ts.receiveFollowRequest }}</span>
+				<span :class="[$style.text, $style.textSub]">{{ i18n.ts.receiveFollowRequest }}</span>
 				<div v-if="full && !followRequestDone" :class="$style.followRequestCommands">
-					<MkButton :class="$style.followRequestCommandButton" rounded primary @click="acceptFollowRequest()"><i class="ti ti-check"></i> {{ i18n.ts.accept }}</MkButton>
-					<MkButton :class="$style.followRequestCommandButton" rounded danger @click="rejectFollowRequest()"><i class="ti ti-x"></i> {{ i18n.ts.reject }}</MkButton>
+					<MkButton :class="$style.followRequestCommandButton" rounded primary @click="acceptFollowRequest()"><i class="ti ti-check" aria-hidden="true"></i> {{ i18n.ts.accept }}</MkButton>
+					<MkButton :class="$style.followRequestCommandButton" rounded danger @click="rejectFollowRequest()"><i class="ti ti-x" aria-hidden="true"></i> {{ i18n.ts.reject }}</MkButton>
 				</div>
 			</template>
 			<span v-else-if="notification.type === 'test'" :class="$style.text">{{ i18n.ts._notification.notificationWillBeDisplayedLikeThis }}</span>
@@ -160,7 +151,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							:withTooltip="true"
 							:reaction="reaction.reaction.replace(/^:(\w+):$/, ':$1@.:')"
 							:noStyle="true"
-							style="width: 100%; height: 100% !important; object-fit: contain;"
+							:class="$style.reactionIcon"
 						/>
 					</div>
 				</div>
@@ -236,7 +227,7 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 .root {
 	position: relative;
 	box-sizing: border-box;
-	padding: 24px 32px;
+	padding: 22px var(--MI-space-2xl) 18px;
 	font-size: 0.9em;
 	overflow-wrap: break-word;
 	display: flex;
@@ -244,23 +235,23 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	content-visibility: auto;
 	contain-intrinsic-size: 0 100px;
 
-	--eventFollow: #36aed2;
-	--eventRenote: #36d298;
-	--eventReply: #007aff;
+	--eventFollow: var(--MI_THEME-link);
+	--eventRenote: var(--MI_THEME-renote);
+	--eventReply: var(--MI_THEME-accent);
 	--eventReactionHeart: var(--MI_THEME-love);
-	--eventReaction: #e99a0b;
-	--eventAchievement: #cb9a11;
-	--eventLogin: #007aff;
-	--eventOther: #88a6b7;
+	--eventReaction: var(--MI_THEME-warn);
+	--eventAchievement: var(--MI_THEME-hashtag);
+	--eventLogin: var(--MI_THEME-accent);
+	--eventOther: color-mix(in oklab, var(--MI_THEME-fg) 45%, var(--MI_THEME-panel));
 }
 
 .head {
 	position: sticky;
-	top: 0;
+	top: calc(22px + var(--MI-stickyTop, 0px));
 	flex-shrink: 0;
-	width: 42px;
-	height: 42px;
-	margin-right: 8px;
+	width: 48px;
+	height: 48px;
+	margin-right: var(--MI-space-md);
 }
 
 .icon {
@@ -277,9 +268,11 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	justify-items: center;
 	width: 80%;
 	height: 80%;
+	margin: 10%;
 	font-size: 15px;
+	line-height: 1;
 	border-radius: 100%;
-	color: #fff;
+	color: var(--MI_THEME-fgOnAccent);
 }
 
 .icon_reactionGroup {
@@ -295,7 +288,18 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 }
 
 .icon_app {
-	border-radius: 6px;
+	border-radius: var(--MI-radius-md);
+}
+
+.roleIcon {
+	height: 1.3em;
+	vertical-align: -22%;
+}
+
+.reactionIcon {
+	width: 100%;
+	height: 100% !important;
+	object-fit: contain;
 }
 
 .subIcon {
@@ -312,7 +316,7 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	box-shadow: 0 0 0 3px var(--MI_THEME-panel);
 	font-size: 11px;
 	text-align: center;
-	color: #fff;
+	color: var(--MI_THEME-fgOnAccent);
 
 	&:empty {
 		display: none;
@@ -365,9 +369,16 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	display: flex;
 	align-items: baseline;
 	white-space: nowrap;
+
+	> span {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
 }
 
 .headerName {
+	font-weight: bold;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	min-width: 0;
@@ -375,7 +386,9 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 }
 
 .headerTime {
+	flex-shrink: 0;
 	margin-left: auto;
+	padding-left: var(--MI-space-sm);
 	font-size: 0.9em;
 }
 
@@ -385,6 +398,14 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	overflow: clip;
 }
 
+.textSub {
+	opacity: 0.6;
+}
+
+.textQuoted {
+	font-style: oblique;
+}
+
 .quote {
 	vertical-align: super;
 	font-size: 50%;
@@ -392,7 +413,7 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 }
 
 .quote:first-child {
-	margin-right: 4px;
+	margin-right: var(--MI-space-xs);
 	position: relative;
 
 	&::before {
@@ -402,14 +423,14 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 }
 
 .quote:last-child {
-	margin-left: 4px;
+	margin-left: var(--MI-space-xs);
 }
 
 .followRequestCommands {
 	display: flex;
-	gap: 8px;
+	gap: var(--MI-space-sm);
 	max-width: 300px;
-	margin-top: 8px;
+	margin-top: var(--MI-space-sm);
 }
 .followRequestCommandButton {
 	flex: 1;
@@ -420,8 +441,8 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	position: relative;
 	width: 38px;
 	height: 38px;
-	margin-top: 8px;
-	margin-right: 8px;
+	margin-top: var(--MI-space-sm);
+	margin-right: var(--MI-space-sm);
 }
 
 .reactionsItemAvatar {
@@ -442,20 +463,41 @@ function getActualReactedUsersCount(notification: Misskey.entities.Notification)
 	box-shadow: 0 0 0 3px var(--MI_THEME-panel);
 	font-size: 11px;
 	text-align: center;
-	color: #fff;
+	color: var(--MI_THEME-fgOnAccent);
 }
 
-@container (max-width: 600px) {
+@container (max-width: 580px) {
 	.root {
-		padding: 16px;
-		font-size: 0.9em;
+		padding: 20px 22px 16px;
+	}
+
+	.head {
+		width: 46px;
+		height: 46px;
 	}
 }
 
 @container (max-width: 500px) {
 	.root {
-		padding: 12px;
+		padding: 17px 18px 14px;
 		font-size: 0.85em;
+	}
+}
+
+@container (max-width: 480px) {
+	.root {
+		padding: 14px 16px;
+	}
+
+	// sticky offset は行の上 padding に追従させる (MkNote と同原則)
+	.head {
+		top: calc(14px + var(--MI-stickyTop, 0px));
+	}
+}
+
+@container (max-width: 450px) {
+	.head {
+		margin-right: 10px;
 	}
 }
 </style>

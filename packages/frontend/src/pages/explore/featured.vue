@@ -11,9 +11,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			{ key: 'notes', label: i18n.ts.notes },
 			{ key: 'polls', label: i18n.ts.poll },
 		]"
-		style="margin-bottom: var(--MI-margin);"
-	>
-	</MkTab>
+		:class="$style.tab"
+	/>
 	<MkNotesTimeline v-if="tab === 'notes'" :paginator="paginatorForNotes"/>
 	<MkNotesTimeline v-else-if="tab === 'polls'" :paginator="paginatorForPolls"/>
 </div>
@@ -40,3 +39,9 @@ const paginatorForPolls = markRaw(new Paginator('notes/polls/recommendation', {
 
 const tab = ref<'notes' | 'polls'>('notes');
 </script>
+
+<style lang="scss" module>
+.tab {
+	margin-bottom: var(--MI-margin);
+}
+</style>
