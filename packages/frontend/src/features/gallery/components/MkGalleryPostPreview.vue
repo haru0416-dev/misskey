@@ -4,23 +4,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkA :to="`/gallery/${post.id}`" class="ttasepnz _panel" tabindex="-1" @pointerenter="enterHover" @pointerleave="leaveHover">
+<MkA :to="`/gallery/${post.id}`" class="ttasepnz _panel" @pointerenter="enterHover" @pointerleave="leaveHover">
 	<div class="thumbnail">
-		<Transition>
-			<MkImgWithBlurhash
-				class="img layered"
-				:transition="safe ? null : {
-					duration: 500,
-					leaveActiveClass: $style.transition_toggle_leaveActive,
-					leaveToClass: $style.transition_toggle_leaveTo,
-				}"
-				v-bind="{
-					...(post.files?.[0]?.thumbnailUrl === undefined ? {} : { src: post.files[0].thumbnailUrl }),
-					...(post.files?.[0]?.blurhash === undefined ? {} : { hash: post.files[0].blurhash }),
-				}"
-				:forceBlurhash="!show"
-			/>
-		</Transition>
+		<MkImgWithBlurhash
+			class="img layered"
+			:transition="safe ? null : {
+				duration: 500,
+				leaveActiveClass: $style.transition_toggle_leaveActive,
+				leaveToClass: $style.transition_toggle_leaveTo,
+			}"
+			v-bind="{
+				...(post.files?.[0]?.thumbnailUrl === undefined ? {} : { src: post.files[0].thumbnailUrl }),
+				...(post.files?.[0]?.blurhash === undefined ? {} : { hash: post.files[0].blurhash }),
+			}"
+			:forceBlurhash="!show"
+		/>
 	</div>
 	<article>
 		<header>
@@ -77,26 +75,12 @@ function leaveHover(): void {
 
 	&:hover {
 		text-decoration: none;
-		color: var(--MI_THEME-accent);
-
-		> .thumbnail {
-			transform: scale(1.1);
-		}
-
-		> article {
-			> footer {
-				&::before {
-					opacity: 1;
-				}
-			}
-		}
 	}
 
 	> .thumbnail {
 		width: 100%;
 		height: 100%;
 		position: absolute;
-		transition: transform 0.5s ease;
 
 		> .img {
 			width: 100%;
@@ -120,7 +104,7 @@ function leaveHover(): void {
 			position: absolute;
 			top: 0;
 			width: 100%;
-			padding: 12px;
+			padding: var(--MI-space-md);
 			box-sizing: border-box;
 			display: flex;
 
@@ -135,28 +119,20 @@ function leaveHover(): void {
 			position: absolute;
 			bottom: 0;
 			width: 100%;
-			padding: 16px;
+			padding: var(--MI-space-lg);
 			box-sizing: border-box;
 			color: #fff;
 			text-shadow: 0 0 8px #000;
 			background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
 
-			&::before {
-				content: "";
-				display: block;
-				position: absolute;
-				z-index: -1;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				background: linear-gradient(rgba(0, 0, 0, 0.4), transparent);
-				opacity: 0;
-				transition: opacity 0.5s ease;
-			}
-
 			> .title {
 				font-weight: bold;
+				display: -webkit-box;
+				-webkit-box-orient: vertical;
+				-webkit-line-clamp: 2;
+				line-clamp: 2;
+				overflow: hidden;
+				overflow-wrap: anywhere;
 			}
 		}
 	}

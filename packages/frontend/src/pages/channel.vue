@@ -8,14 +8,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div class="_spacer" style="--MI_SPACER-w: 700px;">
 		<div v-if="channel && tab === 'overview'" class="_gaps">
 			<div class="_panel" :class="$style.bannerContainer">
-				<XChannelFollowButton :channel="channel" :full="true" :class="$style.subscribe"/>
-				<MkButton v-if="favorited" v-tooltip="i18n.ts.unfavorite" asLike class="button" rounded primary :class="$style.favorite" @click="unfavorite()"><i class="ti ti-star"></i></MkButton>
-				<MkButton v-else v-tooltip="i18n.ts.favorite" asLike class="button" rounded :class="$style.favorite" @click="favorite()"><i class="ti ti-star"></i></MkButton>
-				<div :style="{ backgroundImage: channel.bannerUrl ? `url(${channel.bannerUrl})` : undefined }" :class="$style.banner">
+				<div :class="$style.bannerActions">
+					<XChannelFollowButton :channel="channel" :full="true"/>
+					<MkButton v-if="favorited" v-tooltip="i18n.ts.unfavorite" :aria-label="i18n.ts.unfavorite" asLike rounded primary @click="unfavorite()"><i class="ti ti-star" aria-hidden="true"></i></MkButton>
+					<MkButton v-else v-tooltip="i18n.ts.favorite" :aria-label="i18n.ts.favorite" asLike rounded @click="favorite()"><i class="ti ti-star" aria-hidden="true"></i></MkButton>
+				</div>
+				<div :style="{ backgroundImage: channel.bannerUrl ? `url(${channel.bannerUrl})` : undefined }" :class="[$style.banner, !channel.bannerUrl ? $style.bannerFallback : null]">
 					<div :class="$style.bannerStatus">
-						<div><i class="ti ti-users ti-fw"></i><I18n :src="i18n.ts._channel.usersCount" tag="span" style="margin-left: 4px;"><template #n><b>{{ channel.usersCount }}</b></template></I18n></div>
-						<div><i class="ti ti-pencil ti-fw"></i><I18n :src="i18n.ts._channel.notesCount" tag="span" style="margin-left: 4px;"><template #n><b>{{ channel.notesCount }}</b></template></I18n></div>
-						<div v-if="$i != null && channel != null && $i.id === channel.userId" style="color: var(--MI_THEME-warn)"><i class="ti ti-user-star ti-fw"></i><span style="margin-left: 4px;">{{ i18n.ts.youAreAdmin }}</span></div>
+						<div><i class="ti ti-users ti-fw" aria-hidden="true"></i><I18n :src="i18n.ts._channel.usersCount" tag="span" style="margin-left: var(--MI-space-xs);"><template #n><b>{{ channel.usersCount }}</b></template></I18n></div>
+						<div><i class="ti ti-pencil ti-fw" aria-hidden="true"></i><I18n :src="i18n.ts._channel.notesCount" tag="span" style="margin-left: var(--MI-space-xs);"><template #n><b>{{ channel.notesCount }}</b></template></I18n></div>
+						<div v-if="$i != null && $i.id === channel.userId" style="color: var(--MI_THEME-warn)"><i class="ti ti-user-star ti-fw" aria-hidden="true"></i><span style="margin-left: var(--MI-space-xs);">{{ i18n.ts.youAreAdmin }}</span></div>
 					</div>
 					<div v-if="channel.isSensitive" :class="$style.sensitiveIndicator">{{ i18n.ts.sensitive }}</div>
 					<div :class="$style.bannerFade"></div>
@@ -25,9 +27,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</div>
 
-			<MkFoldableSection>
-				<template #header><i class="ti ti-pin ti-fw" style="margin-right: 0.5em;"></i>{{ i18n.ts.pinnedNotes }}</template>
-				<div v-if="channel.pinnedNotes && channel.pinnedNotes.length > 0" class="_gaps">
+			<MkFoldableSection v-if="channel.pinnedNotes && channel.pinnedNotes.length > 0">
+				<template #header><i class="ti ti-pin ti-fw" aria-hidden="true" style="margin-right: 0.5em;"></i>{{ i18n.ts.pinnedNotes }}</template>
+				<div class="_gaps">
 					<MkNote v-for="note in channel.pinnedNotes" :key="note.id" class="_panel" :note="note"/>
 				</div>
 			</MkFoldableSection>
@@ -49,7 +51,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkInput v-model="searchQuery" @enter="search()">
 						<template #prefix><i class="ti ti-search"></i></template>
 					</MkInput>
-					<MkButton primary rounded style="margin-top: 8px;" @click="search()">{{ i18n.ts.search }}</MkButton>
+					<MkButton primary rounded style="margin-top: var(--MI-space-sm);" @click="search()">{{ i18n.ts.search }}</MkButton>
 				</div>
 				<MkNotesTimeline v-if="searchPaginator" :key="searchKey" :paginator="searchPaginator"/>
 			</div>
@@ -285,10 +287,10 @@ const headerActions = computed(() => {
 						return;
 					}
 
-				navigator.share({
-					title: channel.value.name,
-					...(channel.value.description == null ? {} : { text: channel.value.description }),
-					url: `${url}/channels/${channel.value.id}`,
+					navigator.share({
+						title: channel.value.name,
+						...(channel.value.description == null ? {} : { text: channel.value.description }),
+						url: `${url}/channels/${channel.value.id}`,
 					});
 				},
 			});
@@ -362,18 +364,13 @@ definePage(() => ({
 	position: relative;
 }
 
-.subscribe {
+.bannerActions {
 	position: absolute;
 	z-index: 1;
-	top: 16px;
-	left: 16px;
-}
-
-.favorite {
-	position: absolute;
-	z-index: 1;
-	top: 16px;
-	right: 16px;
+	top: var(--MI-space-lg);
+	right: var(--MI-space-lg);
+	display: flex;
+	gap: var(--MI-space-sm);
 }
 
 .banner {
@@ -381,6 +378,10 @@ definePage(() => ({
 	height: 200px;
 	background-position: center;
 	background-size: cover;
+}
+
+.bannerFallback {
+	background: var(--MI-surface-subtle);
 }
 
 .bannerFade {
@@ -395,29 +396,29 @@ definePage(() => ({
 .bannerStatus {
 	position: absolute;
 	z-index: 1;
-	bottom: 16px;
-	right: 16px;
-	padding: 8px 12px;
+	bottom: var(--MI-space-lg);
+	right: var(--MI-space-lg);
+	padding: var(--MI-space-sm) var(--MI-space-md);
 	font-size: 80%;
 	background: rgba(0, 0, 0, 0.7);
-	border-radius: 6px;
+	border-radius: var(--MI-radius-md);
 	color: #fff;
 }
 
 .description {
-	padding: 16px;
+	padding: var(--MI-space-lg);
 }
 
 .sensitiveIndicator {
 	position: absolute;
 	z-index: 1;
-	bottom: 16px;
-	left: 16px;
+	bottom: var(--MI-space-lg);
+	left: var(--MI-space-lg);
 	background: rgba(0, 0, 0, 0.7);
 	color: var(--MI_THEME-warn);
-	border-radius: 6px;
+	border-radius: var(--MI-radius-md);
 	font-weight: bold;
 	font-size: 1em;
-	padding: 4px 7px;
+	padding: var(--MI-space-xs) var(--MI-space-sm);
 }
 </style>

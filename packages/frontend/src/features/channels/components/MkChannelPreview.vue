@@ -6,35 +6,35 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div style="position: relative;">
 	<MkA :to="`/channels/${channel.id}`" class="eftoefju _panel" @click="updateLastReadedAt">
-		<div class="banner" :style="bannerStyle">
+		<div class="banner" :class="{ bannerFallback: !channel.bannerUrl }" :style="bannerStyle">
 			<div class="fade"></div>
-			<div class="name"><i class="ti ti-device-tv"></i> {{ channel.name }}</div>
+			<div class="name"><i class="ti ti-device-tv" aria-hidden="true"></i> {{ channel.name }}</div>
 			<div v-if="channel.isSensitive" class="sensitiveIndicator">{{ i18n.ts.sensitive }}</div>
 			<div class="status">
 				<div>
-					<i class="ti ti-users ti-fw"></i>
-					<I18n :src="i18n.ts._channel.usersCount" tag="span" style="margin-left: 4px;">
+					<i class="ti ti-users ti-fw" aria-hidden="true"></i>
+					<I18n :src="i18n.ts._channel.usersCount" tag="span" style="margin-left: var(--MI-space-xs);">
 						<template #n>
 							<b>{{ channel.usersCount }}</b>
 						</template>
 					</I18n>
 				</div>
 				<div>
-					<i class="ti ti-pencil ti-fw"></i>
-					<I18n :src="i18n.ts._channel.notesCount" tag="span" style="margin-left: 4px;">
+					<i class="ti ti-pencil ti-fw" aria-hidden="true"></i>
+					<I18n :src="i18n.ts._channel.notesCount" tag="span" style="margin-left: var(--MI-space-xs);">
 						<template #n>
 							<b>{{ channel.notesCount }}</b>
 						</template>
 					</I18n>
 				</div>
 				<div v-if="$i != null && $i.id === channel.userId" style="color: var(--MI_THEME-warn)">
-					<i class="ti ti-user-star ti-fw"></i>
-					<span style="margin-left: 4px;">{{ i18n.ts.youAreAdmin }}</span>
+					<i class="ti ti-user-star ti-fw" aria-hidden="true"></i>
+					<span style="margin-left: var(--MI-space-xs);">{{ i18n.ts.youAreAdmin }}</span>
 				</div>
 			</div>
 		</div>
 		<article v-if="channel.description">
-			<p :title="channel.description">{{ channel.description.length > 85 ? channel.description.slice(0, 85) + '…' : channel.description }}</p>
+			<p :title="channel.description">{{ channel.description }}</p>
 		</article>
 		<footer>
 			<span v-if="channel.lastNotedAt">
@@ -81,7 +81,7 @@ const bannerStyle = computed(() => {
 	if (props.channel.bannerUrl) {
 		return { backgroundImage: `url(${props.channel.bannerUrl})` };
 	} else {
-		return { backgroundColor: '#4c5e6d' };
+		return undefined;
 	}
 });
 </script>
@@ -97,7 +97,7 @@ const bannerStyle = computed(() => {
 		text-decoration: none;
 	}
 
-	&:focus-within {
+	&:focus-visible {
 		outline: none;
 
 		&::after {
@@ -120,6 +120,10 @@ const bannerStyle = computed(() => {
 		background-position: center;
 		background-size: cover;
 
+		&.bannerFallback {
+			background: var(--MI-surface-subtle);
+		}
+
 		> .fade {
 			position: absolute;
 			bottom: 0;
@@ -131,10 +135,10 @@ const bannerStyle = computed(() => {
 
 		> .name {
 			position: absolute;
-			top: 16px;
-			left: 16px;
+			top: var(--MI-space-lg);
+			left: var(--MI-space-lg);
 			max-width: calc(100% - 32px);
-			padding: 12px 16px;
+			padding: var(--MI-space-md) var(--MI-space-lg);
 			box-sizing: border-box;
 			background: rgba(0, 0, 0, 0.7);
 			color: #fff;
@@ -144,40 +148,45 @@ const bannerStyle = computed(() => {
 		> .status {
 			position: absolute;
 			z-index: 1;
-			bottom: 16px;
-			right: 16px;
-			padding: 8px 12px;
+			bottom: var(--MI-space-lg);
+			right: var(--MI-space-lg);
+			padding: var(--MI-space-sm) var(--MI-space-md);
 			font-size: 80%;
 			background: rgba(0, 0, 0, 0.7);
-			border-radius: 6px;
+			border-radius: var(--MI-radius-md);
 			color: #fff;
 		}
 
 		> .sensitiveIndicator {
 			position: absolute;
 			z-index: 1;
-			bottom: 16px;
-			left: 16px;
+			bottom: var(--MI-space-lg);
+			left: var(--MI-space-lg);
 			background: rgba(0, 0, 0, 0.7);
 			color: var(--MI_THEME-warn);
-			border-radius: 6px;
+			border-radius: var(--MI-radius-md);
 			font-weight: bold;
 			font-size: 1em;
-			padding: 4px 7px;
+			padding: var(--MI-space-xs) var(--MI-space-sm);
 		}
 	}
 
 	> article {
-		padding: 16px;
+		padding: var(--MI-space-lg);
 
 		> p {
 			margin: 0;
 			font-size: 1em;
+			display: -webkit-box;
+			-webkit-box-orient: vertical;
+			-webkit-line-clamp: 2;
+			line-clamp: 2;
+			overflow: hidden;
 		}
 	}
 
 	> footer {
-		padding: 12px 16px;
+		padding: var(--MI-space-md) var(--MI-space-lg);
 		border-top: solid 0.5px var(--MI_THEME-divider);
 
 		> span {
@@ -198,7 +207,7 @@ const bannerStyle = computed(() => {
 		}
 
 		> article {
-			padding: 12px;
+			padding: var(--MI-space-md);
 		}
 
 		> footer {
@@ -214,7 +223,7 @@ const bannerStyle = computed(() => {
 		}
 
 		> article {
-			padding: 8px;
+			padding: var(--MI-space-sm);
 		}
 	}
 }
@@ -226,7 +235,7 @@ const bannerStyle = computed(() => {
 	transform: translate(25%, -25%);
 	background-color: var(--MI_THEME-accent);
 	border: solid var(--MI_THEME-bg) 4px;
-	border-radius: 100%;
+	border-radius: var(--MI-radius-full);
 	width: 1.5rem;
 	height: 1.5rem;
 	aspect-ratio: 1 / 1;

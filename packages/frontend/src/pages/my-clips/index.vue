@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			{{ i18n.ts._clip.tip }}
 		</MkTip>
 		<div v-if="tab === 'my'" class="_gaps">
-			<MkButton primary rounded class="add" @click="create"><i class="ti ti-plus"></i> {{ i18n.ts.add }}</MkButton>
+			<MkButton primary rounded @click="create"><i class="ti ti-plus" aria-hidden="true"></i> {{ i18n.ts.add }}</MkButton>
 
 			<MkPagination v-slot="{ items }" :paginator="paginator" class="_gaps" withControl>
 				<MkClipPreview v-for="item in items" :key="item.id" :clip="item" :noUserInfo="true"/>
@@ -26,8 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { watch, ref, computed, markRaw } from 'vue';
-import * as Misskey from 'misskey-js';
+import { ref, computed, markRaw } from 'vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkClipPreview from '@/features/clips/components/MkClipPreview.vue';
@@ -80,14 +79,6 @@ async function create() {
 	paginator.reload();
 }
 
-function onClipCreated() {
-	paginator.reload();
-}
-
-function onClipDeleted() {
-	paginator.reload();
-}
-
 const headerActions = computed(() => []);
 
 const headerTabs = computed(() => [{
@@ -105,7 +96,3 @@ definePage(() => ({
 	icon: 'ti ti-paperclip',
 }));
 </script>
-
-<style lang="scss" module>
-
-</style>
