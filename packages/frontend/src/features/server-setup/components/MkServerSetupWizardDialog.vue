@@ -46,12 +46,3 @@ function onCloseModalWindow() {
 	windowEl.value?.close();
 }
 </script>
-
-<style module lang="scss">
-.root {
-	max-height: 410px;
-	height: 410px;
-	display: flex;
-	flex-direction: column;
-}
-</style>

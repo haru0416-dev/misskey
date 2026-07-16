@@ -100,7 +100,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<template #label>{{ i18n.ts._serverSetupWizard.followingSettingsAreRecommended }}</template>
 		<template #icon><i class="ti ti-adjustments-alt"></i></template>
 
-		<div class="_gaps_s">
+		<div class="_gaps_s" :class="$style.recommendList">
 			<div>
 				<div><b>{{ i18n.ts._serverSettings.singleUserMode }}:</b></div>
 				<div>{{ serverSettings.singleUserMode ? i18n.ts.yes : i18n.ts.no }}</div>
@@ -375,3 +375,31 @@ function applySettings() {
 	});
 }
 </script>
+
+<style lang="scss" module>
+// 推奨設定サマリ: label と value を1行に収めた定義リスト行 (縦積み2行から圧縮)
+.recommendList > div {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--MI-space-md);
+}
+
+.recommendList > div > div:first-child {
+	min-width: 0;
+	color: var(--MI_THEME-fg);
+	opacity: 0.7;
+}
+
+.recommendList > div > div:last-child {
+	flex-shrink: 0;
+	white-space: nowrap;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.recommendList > div + div {
+	border-top: solid 0.5px var(--MI_THEME-divider);
+	padding-top: var(--MI-space-sm);
+}
+</style>

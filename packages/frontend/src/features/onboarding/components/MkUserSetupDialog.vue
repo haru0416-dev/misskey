@@ -13,10 +13,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 	@closed="emit('closed')"
 	@esc="close(true)"
 >
-	<template v-if="page === 1" #header><i class="ti ti-user-edit"></i> {{ i18n.ts._initialAccountSetting.profileSetting }}</template>
-	<template v-else-if="page === 2" #header><i class="ti ti-lock"></i> {{ i18n.ts._initialAccountSetting.privacySetting }}</template>
-	<template v-else-if="page === 3" #header><i class="ti ti-user-plus"></i> {{ i18n.ts.follow }}</template>
-	<template v-else-if="page === 4" #header><i class="ti ti-bell-plus"></i> {{ i18n.ts.pushNotification }}</template>
+	<template v-if="page === 1" #header><i class="ti ti-user-edit" aria-hidden="true"></i> {{ i18n.ts._initialAccountSetting.profileSetting }}</template>
+	<template v-else-if="page === 2" #header><i class="ti ti-lock" aria-hidden="true"></i> {{ i18n.ts._initialAccountSetting.privacySetting }}</template>
+	<template v-else-if="page === 3" #header><i class="ti ti-user-plus" aria-hidden="true"></i> {{ i18n.ts.follow }}</template>
+	<template v-else-if="page === 4" #header><i class="ti ti-bell-plus" aria-hidden="true"></i> {{ i18n.ts.pushNotification }}</template>
 	<template v-else-if="page === 5" #header>{{ i18n.ts.done }}</template>
 	<template v-else #header>{{ i18n.ts.initialAccountSetting }}</template>
 
@@ -30,23 +30,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:leaveActiveClass="$style.transition_x_leaveActive"
 			:enterFromClass="$style.transition_x_enterFrom"
 			:leaveToClass="$style.transition_x_leaveTo"
+			@after-enter="onAfterEnter"
 		>
 			<template v-if="page === 0">
-				<div :class="$style.centerPage">
+				<div :class="$style.centerPage" tabindex="-1">
 					<MkAnimBg style="position: absolute; top: 0;" :scale="1.5"/>
 					<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 28px;">
 						<div class="_gaps" style="text-align: center;">
-							<i class="ti ti-confetti" style="display: block; margin: auto; font-size: 3em; color: var(--MI_THEME-accent);"></i>
+							<i class="ti ti-confetti" aria-hidden="true" style="display: block; margin: auto; font-size: 3em; color: var(--MI_THEME-accent);"></i>
 							<div style="font-size: 120%;">{{ i18n.ts._initialAccountSetting.accountCreated }}</div>
 							<div>{{ i18n.ts._initialAccountSetting.letsStartAccountSetup }}</div>
-							<MkButton primary rounded gradate style="margin: 16px auto 0 auto;" data-cy-user-setup-continue @click="page++">{{ i18n.ts._initialAccountSetting.profileSetting }} <i class="ti ti-arrow-right"></i></MkButton>
+							<MkButton primary rounded gradate style="margin: var(--MI-space-lg) auto 0 auto;" data-cy-user-setup-continue @click="page++">{{ i18n.ts._initialAccountSetting.profileSetting }} <i class="ti ti-arrow-right"></i></MkButton>
 							<MkButton style="margin: 0 auto;" transparent rounded @click="later(true)">{{ i18n.ts.later }}</MkButton>
 						</div>
 					</div>
 				</div>
 			</template>
 			<template v-else-if="page === 1">
-				<div style="height: 100cqh; overflow: auto;">
+				<div :class="$style.scrollPage" tabindex="-1">
 					<div :class="$style.pageRoot">
 						<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 28px;" :class="$style.pageMain">
 							<XProfile/>
@@ -61,7 +62,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</template>
 			<template v-else-if="page === 2">
-				<div style="height: 100cqh; overflow: auto;">
+				<div :class="$style.scrollPage" tabindex="-1">
 					<div :class="$style.pageRoot">
 						<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 28px;" :class="$style.pageMain">
 							<XPrivacy/>
@@ -76,27 +77,29 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</template>
 			<template v-else-if="page === 3">
-				<div style="height: 100cqh; overflow: auto;">
-					<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 28px;">
-						<XFollow/>
-					</div>
-					<div :class="$style.pageFooter">
-						<div class="_buttonsCenter">
-							<MkButton rounded data-cy-user-setup-back @click="page--"><i class="ti ti-arrow-left"></i> {{ i18n.ts.goBack }}</MkButton>
-							<MkButton primary rounded gradate style="" data-cy-user-setup-continue @click="page++">{{ i18n.ts.continue }} <i class="ti ti-arrow-right"></i></MkButton>
+				<div :class="$style.scrollPage" tabindex="-1">
+					<div :class="$style.pageRoot">
+						<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 28px;" :class="$style.pageMain">
+							<XFollow/>
+						</div>
+						<div :class="$style.pageFooter">
+							<div class="_buttonsCenter">
+								<MkButton rounded data-cy-user-setup-back @click="page--"><i class="ti ti-arrow-left"></i> {{ i18n.ts.goBack }}</MkButton>
+								<MkButton primary rounded gradate data-cy-user-setup-continue @click="page++">{{ i18n.ts.continue }} <i class="ti ti-arrow-right"></i></MkButton>
+							</div>
 						</div>
 					</div>
 				</div>
 			</template>
 			<template v-else-if="page === 4">
-				<div :class="$style.centerPage">
+				<div :class="$style.centerPage" tabindex="-1">
 					<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 28px;">
 						<div class="_gaps" style="text-align: center;">
-							<i class="ti ti-bell-ringing-2" style="display: block; margin: auto; font-size: 3em; color: var(--MI_THEME-accent);"></i>
+							<i class="ti ti-bell-ringing-2" aria-hidden="true" style="display: block; margin: auto; font-size: 3em; color: var(--MI_THEME-accent);"></i>
 							<div style="font-size: 120%;">{{ i18n.ts.pushNotification }}</div>
-							<div style="padding: 0 16px;">{{ i18n.tsx._initialAccountSetting.pushNotificationDescription({ name: instance.name ?? host }) }}</div>
+							<div style="padding: 0 var(--MI-space-lg);">{{ i18n.tsx._initialAccountSetting.pushNotificationDescription({ name: instance.name ?? host }) }}</div>
 							<MkPushNotificationAllowButton primary showOnlyToRegister style="margin: 0 auto;"/>
-							<div class="_buttonsCenter" style="margin-top: 16px;">
+							<div class="_buttonsCenter" style="margin-top: var(--MI-space-lg);">
 								<MkButton rounded data-cy-user-setup-back @click="page--"><i class="ti ti-arrow-left"></i> {{ i18n.ts.goBack }}</MkButton>
 								<MkButton primary rounded gradate data-cy-user-setup-continue @click="page++">{{ i18n.ts.continue }} <i class="ti ti-arrow-right"></i></MkButton>
 							</div>
@@ -105,19 +108,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</template>
 			<template v-else-if="page === 5">
-				<div :class="$style.centerPage">
+				<div :class="$style.centerPage" tabindex="-1">
 					<MkAnimBg style="position: absolute; top: 0;" :scale="1.5"/>
 					<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 28px;">
 						<div class="_gaps" style="text-align: center;">
-							<i class="ti ti-check" style="display: block; margin: auto; font-size: 3em; color: var(--MI_THEME-accent);"></i>
+							<i class="ti ti-check" aria-hidden="true" style="display: block; margin: auto; font-size: 3em; color: var(--MI_THEME-accent);"></i>
 							<div style="font-size: 120%;">{{ i18n.ts._initialAccountSetting.initialAccountSettingCompleted }}</div>
 							<div>{{ i18n.tsx._initialAccountSetting.youCanContinueTutorial({ name: instance.name ?? host }) }}</div>
-							<div class="_buttonsCenter" style="margin-top: 16px;">
+							<div class="_buttonsCenter" style="margin-top: var(--MI-space-lg);">
 								<MkButton rounded primary gradate data-cy-user-setup-continue @click="launchTutorial()">{{ i18n.ts._initialAccountSetting.startTutorial }} <i class="ti ti-arrow-right"></i></MkButton>
 							</div>
 							<div class="_buttonsCenter">
 								<MkButton rounded data-cy-user-setup-back @click="page--"><i class="ti ti-arrow-left"></i> {{ i18n.ts.goBack }}</MkButton>
-								<MkButton rounded primary data-cy-user-setup-continue @click="setupComplete()">{{ i18n.ts.close }}</MkButton>
+								<MkButton rounded data-cy-user-setup-continue @click="setupComplete()">{{ i18n.ts.close }}</MkButton>
 							</div>
 						</div>
 					</div>
@@ -153,6 +156,13 @@ const page = ref(store.accountSetupWizard);
 const closing = ref(false);
 const savingPage = ref(false);
 let restoringPage = false;
+
+// 各ステップの遷移完了後、入ったページのルート (tabindex=-1) へフォーカスを移し、
+// スクリーンリーダーの読み上げ位置とキーボード操作の起点をステップ先頭へ復帰させる
+function onAfterEnter(el: Element) {
+	if (closing.value || savingPage.value) return;
+	(el as HTMLElement).focus({ preventScroll: true });
+}
 
 watch(page, async (value, previousValue) => {
 	if (closing.value || restoringPage) return;
@@ -249,7 +259,7 @@ async function persistAndClose(value: number): Promise<boolean> {
 <style lang="scss" module>
 .transition_x_enterActive,
 .transition_x_leaveActive {
-	transition: opacity 0.3s cubic-bezier(0,0,.35,1), transform 0.3s cubic-bezier(0,0,.35,1);
+	transition: opacity var(--MI-duration-slow) var(--MI-ease-out), transform var(--MI-duration-slow) var(--MI-ease-out);
 }
 .transition_x_enterFrom {
 	opacity: 0;
@@ -272,16 +282,30 @@ async function persistAndClose(value: number): Promise<boolean> {
 .progressBarValue {
 	height: 100%;
 	background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
-	transition: all 0.5s cubic-bezier(0,.5,.5,1);
+	transition: width 0.5s cubic-bezier(0,.5,.5,1);
 }
 
 .centerPage {
 	display: flex;
 	justify-content: center;
-	align-items: center;
+	align-items: safe center;
 	height: 100cqh;
-	padding-bottom: 30px;
+	padding-bottom: var(--MI-space-3xl);
+	overflow: auto;
 	box-sizing: border-box;
+
+	&:focus {
+		outline: none;
+	}
+}
+
+.scrollPage {
+	height: 100cqh;
+	overflow: auto;
+
+	&:focus {
+		outline: none;
+	}
 }
 
 .pageRoot {
@@ -299,9 +323,23 @@ async function persistAndClose(value: number): Promise<boolean> {
 	bottom: 0;
 	left: 0;
 	flex-shrink: 0;
-	padding: 12px;
+	padding: var(--MI-space-md);
 	border-top: solid 0.5px var(--MI_THEME-divider);
 	-webkit-backdrop-filter: blur(15px);
 	backdrop-filter: blur(15px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.transition_x_enterActive,
+	.transition_x_leaveActive {
+		transition-duration: 0.01ms;
+	}
+	.transition_x_enterFrom,
+	.transition_x_leaveTo {
+		transform: none;
+	}
+	.progressBarValue {
+		transition: none;
+	}
 }
 </style>

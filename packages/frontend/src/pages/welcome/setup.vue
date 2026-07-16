@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <PageWithAnimBg>
 	<div :class="$style.formContainer">
 		<div :class="$style.form" class="_panel">
-			<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="z-index:1;position:relative" viewBox="0 0 854 300">
+			<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="z-index:1;position:relative" viewBox="0 0 854 300" aria-hidden="true" focusable="false">
 				<defs>
 					<linearGradient id="linear" x1="0%" y1="0%" x2="100%" y2="0%">
 						<stop offset="0%" stop-color="#8185f2"/><stop offset="100%" stop-color="#5c62d8"/>
@@ -15,8 +15,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</defs>
 
 				<g transform="translate(427, 150) scale(1, 1) translate(-427, -150)">
-					<path d="" fill="url(#linear)" opacity="0.4">
+					<path d="M0 0L 0 220Q 213.5 260 427 230T 854 255L 854 0 Z" fill="url(#linear)" opacity="0.4">
 						<animate
+							v-if="prefer.animation"
 							attributeName="d"
 							dur="20s"
 							repeatCount="indefinite"
@@ -28,8 +29,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 						>
 						</animate>
 					</path>
-					<path d="" fill="url(#linear)" opacity="0.4">
+					<path d="M0 0L 0 235Q 213.5 280 427 250T 854 260L 854 0 Z" fill="url(#linear)" opacity="0.4">
 						<animate
+							v-if="prefer.animation"
 							attributeName="d"
 							dur="20s"
 							repeatCount="indefinite"
@@ -44,25 +46,25 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</g>
 			</svg>
 			<div :class="$style.title">
-				<div>Welcome to Erebia!</div>
+				<h1 :class="$style.brandHeading"><img :src="erebiaWordmark" :class="$style.wordmark" alt="Welcome to Erebia"></h1>
 				<div :class="$style.version">v{{ version }}</div>
 			</div>
-			<div style="padding: 16px 32px 32px 32px;">
+			<div :class="$style.formBody">
 				<form v-if="!accountCreated" class="_gaps_m" @submit.prevent="createAccount()">
 					<div style="text-align: center;" class="_gaps_s">
 						<div><b>{{ i18n.ts._serverSetupWizard.installCompleted }}</b></div>
 						<div>{{ i18n.ts._serverSetupWizard.firstCreateAccount }}</div>
 					</div>
-					<MkInput v-model="setupPassword" type="password" data-cy-admin-initial-password>
+					<MkInput v-model="setupPassword" type="password" autocomplete="off" data-cy-admin-initial-password>
 						<template #label>{{ i18n.ts.initialPasswordForSetup }} <button v-tooltip:dialog="i18n.ts.initialPasswordForSetupDescription" type="button" class="_button _help" :aria-label="i18n.ts.initialPasswordForSetupDescription"><i class="ti ti-help-circle"></i></button></template>
 						<template #prefix><i class="ti ti-lock"></i></template>
 					</MkInput>
-					<MkInput v-model="username" pattern="^[a-zA-Z0-9_]{1,20}$" :spellcheck="false" required data-cy-admin-username>
+					<MkInput v-model="username" pattern="^[a-zA-Z0-9_]{1,20}$" :spellcheck="false" autocomplete="username" required data-cy-admin-username>
 						<template #label>{{ i18n.ts.username }} <button v-tooltip:dialog="i18n.ts.usernameInfo" type="button" class="_button _help" :aria-label="i18n.ts.usernameInfo"><i class="ti ti-help-circle"></i></button></template>
 						<template #prefix>@</template>
 						<template #suffix>@{{ host }}</template>
 					</MkInput>
-					<MkInput v-model="password" type="password" data-cy-admin-password>
+					<MkInput v-model="password" type="password" autocomplete="new-password" data-cy-admin-password>
 						<template #label>{{ i18n.ts.password }}</template>
 						<template #prefix><i class="ti ti-lock"></i></template>
 					</MkInput>
@@ -126,6 +128,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { host, version } from '@shared/utility/config.js';
+import erebiaWordmark from '/client-assets/erebia.svg';
 import MkButton from '@/components/form/MkButton.vue';
 import PageWithAnimBg from '@/components/global/PageWithAnimBg.vue';
 import MkInput from '@/components/form/MkInput.vue';
@@ -133,6 +136,7 @@ import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { login } from '@/accounts.js';
+import { prefer } from '@/preferences.js';
 import MkLink from '@/features/link-preview/components/MkLink.vue';
 import MkServerSetupWizard from '@/features/server-setup/components/MkServerSetupWizard.vue';
 
@@ -199,45 +203,78 @@ function finish() {
 <style lang="scss" module>
 .formContainer {
 	min-height: 100svh;
-	padding: 32px 32px 64px 32px;
+	padding: var(--MI-space-3xl) var(--MI-space-3xl) calc(var(--MI-space-3xl) * 2);
 	box-sizing: border-box;
 	align-content: center;
+
+	@media (max-width: 500px) {
+		padding-inline: var(--MI-space-lg);
+	}
 }
 
 .form {
 	position: relative;
 	z-index: 10;
 	border-radius: var(--MI-radius);
-	box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+	box-shadow: var(--MI-shadow-md);
 	overflow: clip;
 	max-width: 550px;
 	margin: 0 auto;
+
+	> svg {
+		display: block;
+		width: 100%;
+	}
+}
+
+.formBody {
+	padding: var(--MI-space-lg) var(--MI-space-3xl) var(--MI-space-3xl);
+
+	@media (max-width: 500px) {
+		padding-inline: var(--MI-space-lg);
+	}
 }
 
 .title {
 	position: absolute;
-	top: 16px;
+	top: var(--MI-space-md);
 	left: 0;
 	right: 0;
 	z-index: 1;
 	margin: 0;
-	font-size: 1.5em;
 	text-align: center;
-	padding: 32px;
+	padding: var(--MI-space-lg) var(--MI-space-3xl);
 	color: #fff;
-	font-weight: bold;
+
+	@media (max-width: 500px) {
+		padding: var(--MI-space-md) var(--MI-space-lg);
+	}
+}
+
+.brandHeading {
+	margin: 0;
+	line-height: 0;
+}
+
+.wordmark {
+	display: inline-block;
+	width: auto;
+	height: 34px;
+	max-width: 70%;
 }
 
 .version {
-	font-size: 70%;
+	display: block;
+	margin-top: var(--MI-space-xs);
+	font-size: 0.8rem;
 	font-weight: normal;
-	opacity: 0.7;
+	opacity: 0.8;
 }
 
 .donation {
 	background: var(--MI_THEME-accentedBg);
-	border-radius: 12px;
-	padding: 16px;
+	border-radius: var(--MI-radius-md);
+	padding: var(--MI-space-lg);
 	text-align: center;
 }
 </style>
