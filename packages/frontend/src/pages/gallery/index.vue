@@ -32,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</MkPagination>
 		</div>
 		<div v-else-if="tab === 'my'">
-			<MkA to="/gallery/new" class="_link" style="margin: 16px;"><i class="ti ti-plus"></i> {{ i18n.ts.postToGallery }}</MkA>
+			<MkA to="/gallery/new" class="_link" :class="$style.postLink"><i class="ti ti-plus"></i> {{ i18n.ts.postToGallery }}</MkA>
 			<MkPagination v-slot="{items}" :paginator="myPostsPaginator">
 				<div :class="$style.items">
 					<MkGalleryPostPreview v-for="post in items" :key="post.id" :post="post" class="post"/>
@@ -44,7 +44,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { watch, ref, computed, markRaw } from 'vue';
+import { ref, computed, markRaw } from 'vue';
 import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import MkGalleryPostPreview from '@/features/gallery/components/MkGalleryPostPreview.vue';
@@ -55,12 +55,7 @@ import { Paginator } from '@/utility/paginator.js';
 
 const router = useRouter();
 
-const props = defineProps<{
-	tag?: string;
-}>();
-
 const tab = ref('explore');
-const tagsRef = ref();
 
 const recentPostsPaginator = markRaw(new Paginator('gallery/posts', {
 	limit: 6,
@@ -74,10 +69,6 @@ const myPostsPaginator = markRaw(new Paginator('i/gallery/posts', {
 const likedPostsPaginator = markRaw(new Paginator('i/gallery/likes', {
 	limit: 5,
 }));
-
-watch(() => props.tag, () => {
-	if (tagsRef.value) tagsRef.value.tags.toggleContent(props.tag == null);
-});
 
 const headerActions = computed(() => [{
 	icon: 'ti ti-plus',
@@ -111,7 +102,11 @@ definePage(() => ({
 .items {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-	gap: 12px;
+	gap: var(--MI-space-md);
 	margin: 0 var(--MI-margin);
+}
+
+.postLink {
+	margin: var(--MI-space-lg);
 }
 </style>

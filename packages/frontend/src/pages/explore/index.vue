@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, watch, ref, useTemplateRef } from 'vue';
+import { computed, ref } from 'vue';
 import XFeatured from './featured.vue';
 import XUsers from './users.vue';
 import XRoles from './roles.vue';
