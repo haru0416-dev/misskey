@@ -48,7 +48,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</div>
 						</div>
 						<div v-if="user.followedMessage != null" class="followedMessage">
-							<MkFukidashi class="fukidashi" :tail="narrow ? 'none' : 'left'" negativeMargin>
+							<MkFukidashi class="fukidashi" :tail="narrow ? 'none' : 'left'">
 								<div class="messageHeader">{{ i18n.ts.messageToFollower }}</div>
 								<div><MkSparkle><Mfm :plain="true" :text="user.followedMessage" :author="user" class="_selectable"/></MkSparkle></div>
 							</MkFukidashi>
@@ -534,7 +534,6 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 					> .fukidashi {
 						display: block;
 						--fukidashi-bg: color-mix(in srgb, var(--MI_THEME-accent), var(--MI_THEME-panel) 85%);
-						--fukidashi-radius: var(--MI-radius-lg);
 						font-size: 0.9em;
 
 						.messageHeader {
