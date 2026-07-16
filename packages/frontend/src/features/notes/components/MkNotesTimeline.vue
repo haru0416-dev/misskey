@@ -4,14 +4,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkPagination :paginator="paginator" :direction="direction" :autoLoad="autoLoad" :pullToRefresh="pullToRefresh" :withControl="withControl" :forceDisableInfiniteScroll="forceDisableInfiniteScroll">
+<MkPagination ref="paginationEl" :paginator="paginator" :direction="direction" :autoLoad="autoLoad" :pullToRefresh="pullToRefresh" :withControl="withControl" :forceDisableInfiniteScroll="forceDisableInfiniteScroll">
 	<template #empty><MkResult type="empty" :text="i18n.ts.noNotes"/></template>
 
 	<template #default="{ items: notes }">
 		<div
 			ref="rootEl"
 			data-cy-notes-timeline
-			:class="[$style.root, { [$style.noGap]: noGap }]"
+			:class="[$style.root, { [$style.noGap]: noGap, [$style.layoutPending]: canVirtualize && virtualLayoutPending }]"
 			:style="canVirtualize ? { height: `${virtualizer.getTotalSize()}px` } : undefined"
 		>
 			<template v-if="canVirtualize">
@@ -96,7 +96,9 @@ const virtualizer = useVirtualizer(computed(() => ({
 	overscan: 5,
 	scrollMargin: scrollMargin.value,
 	useScrollendEvent: true,
-	useAnimationFrameWithResizeObserver: true,
+	// 計測適用をrAFに遅延させると、アイテム投入直後に全行 start=0 の縮退フレームが描画される
+	// (「全投稿が一瞬重なる」フラッシュの根本原因) ため同期計測にする
+	useAnimationFrameWithResizeObserver: false,
 })));
 
 const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((virtualItem) => {
@@ -120,6 +122,64 @@ function getNoteSeparator(notes: Misskey.entities.Note[], index: number, created
 	return getSeparatorInfo(previousNote.createdAt, createdAt);
 }
 
+// virtualizerはアイテム投入直後、計測が出揃うまでの1〜数フレームを全行 start=0 (=全行が
+// 同座標に重なる) の状態で描画することがある。初期状態を visibility: hidden にし、DOM更新後・
+// ペイント前に走る flush:'post' watch で実際の行配置を検査して、正常に展開されたときだけ
+// 表示する (詳細は MkStreamingNotesTimeline の同名ロジック参照)
+const virtualLayoutVerified = ref(false);
+let layoutVerifyTimer: number | null = null;
+
+// 非仮想フォールバック中は検査せず即確定扱いにする代わりに、仮想化が有効になった時点で
+// ラッチをリセットして検査をやり直す (フォールバック中の確定が仮想初回レンダーを素通しさせない)
+watch(canVirtualize, (active, prev) => {
+	if (active && !prev) virtualLayoutVerified.value = false;
+});
+
+function isVirtualLayoutSane(len: number): boolean {
+	if (!canVirtualize.value) return true; // 非仮想フォールバックは通常フローなので対象外
+	if (len <= 1) return true; // 1件以下なら重なりようがない
+	const container = rootEl.value;
+	// コンテナや行がまだ出揃っていない (アイテム到着直後の中間レンダー) 間は「未確定」。
+	// ここで確定扱いすると、直後に描かれる縮退状態を素通ししてしまう
+	if (container == null) return false;
+	const rowEls = [...container.children] as HTMLElement[];
+	if (rowEls.length < 2) return false;
+	// 隣接行の重なり検査 (詳細は MkStreamingNotesTimeline の同名ロジック参照)。
+	// 高さ0の行 (ハードミュート等) は top 同値でも重ならないので誤検出しない
+	for (let i = 1; i < rowEls.length; i++) {
+		const prev = rowEls[i - 1]!;
+		if (rowEls[i]!.offsetTop < prev.offsetTop + prev.offsetHeight - 2) return false;
+	}
+	return true;
+}
+
+watch([virtualRows, () => props.paginator.items.value.length], ([, len]) => {
+	if (len === 0) {
+		virtualLayoutVerified.value = false;
+		if (layoutVerifyTimer != null) {
+			window.clearTimeout(layoutVerifyTimer);
+			layoutVerifyTimer = null;
+		}
+		return;
+	}
+	if (virtualLayoutVerified.value) return;
+	if (isVirtualLayoutSane(len)) {
+		virtualLayoutVerified.value = true;
+		if (layoutVerifyTimer != null) {
+			window.clearTimeout(layoutVerifyTimer);
+			layoutVerifyTimer = null;
+		}
+	} else {
+		// フェイルセーフ: 想定外の理由でレイアウトが確定しない場合も一定時間で必ず表示する
+		layoutVerifyTimer ??= window.setTimeout(() => {
+			layoutVerifyTimer = null;
+			virtualLayoutVerified.value = true;
+		}, 300);
+	}
+}, { immediate: true, flush: 'post' });
+
+const virtualLayoutPending = computed(() => props.paginator.items.value.length > 0 && !virtualLayoutVerified.value);
+
 function measureElement(node: Element | ComponentPublicInstance | null) {
 	if (node instanceof Element) virtualizer.value.measureElement(node);
 }
@@ -140,8 +200,23 @@ function scheduleScrollMarginUpdate() {
 	});
 }
 
+const paginationEl = useTemplateRef<ComponentPublicInstance>('paginationEl');
+
+function attachScrollElement(el: HTMLElement | null) {
+	const next = getScrollContainer(el);
+	// 一度解決したスクロールコンテナは維持 (リロードで rootEl が消えても仮想化を落とさない)
+	if (next == null || next === scrollElement.value) return;
+	scrollElement.value = next;
+	nextTick(scheduleScrollMarginUpdate);
+}
+
+// ローディング中から存在する MkPagination のルートでスクロールコンテナを先に解決する。
+// rootEl (アイテム描画後にしか存在しない) だけだと初回表示が非仮想→仮想の二重マウントになる
+watch(paginationEl, (comp) => {
+	attachScrollElement(comp?.$el instanceof HTMLElement ? comp.$el : null);
+}, { immediate: true });
 watch(rootEl, (el) => {
-	scrollElement.value = getScrollContainer(el);
+	attachScrollElement(el);
 	nextTick(scheduleScrollMarginUpdate);
 });
 
@@ -156,6 +231,7 @@ onMounted(() => {
 onUnmounted(() => {
 	window.removeEventListener('resize', scheduleScrollMarginUpdate);
 	if (scrollMarginFrame != null) window.cancelAnimationFrame(scrollMarginFrame);
+	if (layoutVerifyTimer != null) window.clearTimeout(layoutVerifyTimer);
 });
 
 useGlobalEvent('noteDeleted', (noteId) => {
@@ -175,6 +251,10 @@ defineExpose({
 .root {
 	container-type: inline-size;
 	position: relative;
+
+	&.layoutPending {
+		visibility: hidden;
+	}
 
 	&.noGap {
 		background: var(--MI-surface-panel);
@@ -223,6 +303,14 @@ defineExpose({
 	position: absolute;
 	top: 0;
 	left: 0;
+
+	.note {
+		/* 仮想化がDOMを画面近傍に限定済みなので content-visibility: auto は冗長。
+		 * contain-intrinsic-size プレースホルダの初回ペイント + 誤計測による
+		 * レイアウトフラッシュを防ぐため常に visible に固定する (rowFallback 側は
+		 * 全件マウントするため auto の恩恵が残るので対象外) */
+		content-visibility: visible !important;
+	}
 }
 
 .date {

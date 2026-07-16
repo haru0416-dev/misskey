@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<component :is="prefer.enablePullToRefresh ? MkPullToRefresh : 'div'" :refresher="() => reloadTimeline()">
+<component :is="prefer.enablePullToRefresh ? MkPullToRefresh : 'div'" ref="containerEl" :refresher="() => reloadTimeline()">
 	<MkLoading v-if="paginator.fetching.value"/>
 
 	<MkError v-else-if="paginator.error.value" @retry="paginator.init()"/>
@@ -35,7 +35,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-else-if="canVirtualize"
 			ref="notesEl"
 			data-cy-streaming-notes
-			:class="$style.notes"
+			:class="[$style.notes, { [$style.layoutPending]: virtualLayoutPending }]"
 			:style="{ height: `${virtualizer.getTotalSize()}px` }"
 		>
 			<div
@@ -271,7 +271,9 @@ const virtualizer = useVirtualizer(computed(() => ({
 	overscan: 5,
 	scrollMargin: scrollMargin.value,
 	useScrollendEvent: true,
-	useAnimationFrameWithResizeObserver: true,
+	// 計測適用をrAFに遅延させると、アイテム投入直後に全行 start=0 の縮退フレームが描画される
+	// (「全投稿が一瞬重なる」フラッシュの根本原因) ため同期計測にする
+	useAnimationFrameWithResizeObserver: false,
 })));
 
 const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((virtualItem) => {
@@ -288,6 +290,69 @@ const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((
 		separatorInfo,
 	}];
 }));
+
+// virtualizerはアイテム投入直後、計測が出揃うまでの1〜数フレームを全行 start=0 (=全行が
+// 同座標に重なる) の状態で描画することがある。「全投稿が一瞬グチャッと重なってから展開する」
+// フラッシュの正体。対策として初期状態を visibility: hidden にし、DOM更新後・ペイント前に
+// 走る flush:'post' watch で実際の行配置を検査して、正常に展開されたときだけ表示する。
+// (virtualizer内部のstart値はレンダーとの整合をライブラリ内部実装に依存するため、描画結果の
+// DOMそのものを真実として判定する)
+const virtualLayoutVerified = ref(false);
+let layoutVerifyTimer: number | null = null;
+
+// ゲートが意味を持つのは仮想ブランチが描画されている間だけ。media モード等では検査せず
+// 即確定扱いにし (mediaGrid のマルチカラムは同 offsetTop が正常なため誤検出する)、
+// 仮想ブランチへ切り替わった時点でラッチをリセットして検査をやり直す
+const virtualGateActive = computed(() => props.viewMode === 'notes' && canVirtualize.value);
+watch(virtualGateActive, (active, prev) => {
+	if (active && !prev) virtualLayoutVerified.value = false;
+});
+
+function isVirtualLayoutSane(len: number): boolean {
+	if (!virtualGateActive.value) return true; // 仮想ブランチ以外は対象外
+	if (len <= 1) return true; // 1件以下なら重なりようがない
+	const container = notesEl.value;
+	// コンテナや行がまだ出揃っていない (アイテム到着直後の中間レンダー) 間は「未確定」。
+	// ここで確定扱いすると、直後に描かれる縮退状態を素通ししてしまう
+	if (container == null) return false;
+	const rowEls = [...container.children] as HTMLElement[];
+	if (rowEls.length < 2) return false;
+	// 隣接行が重なっていないかを検査する。縮退状態は「先頭数行が同座標に積み重なり後方は正常」の
+	// 混合形で現れるため、全行同topの判定では取りこぼす。高さ0の行 (ハードミュート等) は
+	// top が同値でも重ならないので誤検出しない (-2px は丸め誤差の許容)
+	for (let i = 1; i < rowEls.length; i++) {
+		const prev = rowEls[i - 1]!;
+		if (rowEls[i]!.offsetTop < prev.offsetTop + prev.offsetHeight - 2) return false;
+	}
+	return true;
+}
+
+watch([virtualRows, () => paginator.items.value.length], ([, len]) => {
+	if (len === 0) {
+		virtualLayoutVerified.value = false;
+		if (layoutVerifyTimer != null) {
+			window.clearTimeout(layoutVerifyTimer);
+			layoutVerifyTimer = null;
+		}
+		return;
+	}
+	if (virtualLayoutVerified.value) return;
+	if (isVirtualLayoutSane(len)) {
+		virtualLayoutVerified.value = true;
+		if (layoutVerifyTimer != null) {
+			window.clearTimeout(layoutVerifyTimer);
+			layoutVerifyTimer = null;
+		}
+	} else {
+		// フェイルセーフ: 想定外の理由でレイアウトが確定しない場合も一定時間で必ず表示する
+		layoutVerifyTimer ??= window.setTimeout(() => {
+			layoutVerifyTimer = null;
+			virtualLayoutVerified.value = true;
+		}, 300);
+	}
+}, { immediate: true, flush: 'post' });
+
+const virtualLayoutPending = computed(() => paginator.items.value.length > 0 && !virtualLayoutVerified.value);
 
 function getNoteSeparator(notes: Misskey.entities.Note[], index: number, createdAt: string) {
 	const previousNote = notes[index - 1];
@@ -361,14 +426,30 @@ function onScrollContainerScroll() {
 
 const rootEl = useTemplateRef('rootEl');
 const notesEl = useTemplateRef('notesEl');
-watch(rootEl, (el) => {
+const containerEl = useTemplateRef('containerEl');
+
+function attachScrollElement(el: HTMLElement | null) {
 	const nextScrollElement = getScrollContainer(el);
-	if (nextScrollElement === scrollElement.value) return;
+	// 一度解決したスクロールコンテナは維持する (リロード等で rootEl が一時的に消えても
+	// canVirtualize を落とさない。null に戻すと復帰時に非仮想ブランチで全ノートを
+	// 無駄にフルマウントしてから仮想ブランチへ入れ替えるスラッシングが起きる)
+	if (nextScrollElement == null || nextScrollElement === scrollElement.value) return;
 	scrollElement.value?.removeEventListener('scroll', onScrollContainerScroll);
 	scrollElement.value = nextScrollElement;
 	// 先頭へ戻った瞬間にキューを開放するため、スクロール中も軽量な位置判定だけを行う。
-	scrollElement.value?.addEventListener('scroll', onScrollContainerScroll, { passive: true });
+	scrollElement.value.addEventListener('scroll', onScrollContainerScroll, { passive: true });
 	nextTick(scheduleScrollMarginUpdate);
+}
+
+// ローディング中から存在するコンポーネントルートでスクロールコンテナを先に解決しておく。
+// rootEl (ノート描画後にしか存在しない) だけに頼ると、初回表示が非仮想ブランチ→仮想ブランチの
+// 二重マウントになり、仮想化レイアウト確定前の1〜2フレームで全行が同座標に重なって見える
+watch(containerEl, (comp) => {
+	const el = comp == null ? null : comp instanceof HTMLElement ? comp : comp.$el instanceof HTMLElement ? comp.$el : null;
+	attachScrollElement(el);
+}, { immediate: true });
+watch(rootEl, (el) => {
+	attachScrollElement(el);
 }, { immediate: true });
 
 watch(notesEl, () => nextTick(scheduleScrollMarginUpdate));
@@ -390,6 +471,7 @@ onUnmounted(() => {
 	scrollElement.value?.removeEventListener('scroll', onScrollContainerScroll);
 	window.removeEventListener('resize', scheduleScrollMarginUpdate);
 	if (scrollMarginFrame != null) window.cancelAnimationFrame(scrollMarginFrame);
+	if (layoutVerifyTimer != null) window.clearTimeout(layoutVerifyTimer);
 	for (const timer of animationTimers.values()) window.clearTimeout(timer);
 	animationTimers.clear();
 });
@@ -635,6 +717,10 @@ defineExpose({
 	container-type: inline-size;
 	position: relative;
 	background: var(--MI-surface-panel);
+
+	&.layoutPending {
+		visibility: hidden;
+	}
 }
 
 .mediaGrid {
@@ -730,23 +816,23 @@ defineExpose({
 
 .rowContent {
 	width: 100%;
+
+	.note {
+		/* 仮想化がDOMを画面近傍に限定済みなので content-visibility: auto は冗長。
+		 * それどころか初回ペイントで contain-intrinsic-size のプレースホルダ (150px) が
+		 * 描かれ、その仮サイズを measureElement が計測してしまい、全行が同座標に
+		 * 重なって見えるフラッシュの原因になるため常に visible に固定する */
+		content-visibility: visible !important;
+	}
 }
 
 .rowEntering {
 	animation: rowEnter 0.7s cubic-bezier(0.23, 1, 0.32, 1);
-
-	.note {
-		content-visibility: visible !important;
-	}
 }
 
 .rowLeaving {
 	pointer-events: none;
 	animation: rowLeave 0.2s cubic-bezier(0,.5,.5,1) forwards;
-
-	.note {
-		content-visibility: visible !important;
-	}
 }
 
 @keyframes rowEnter {
