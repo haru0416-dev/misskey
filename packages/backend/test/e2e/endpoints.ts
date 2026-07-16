@@ -73,6 +73,7 @@ import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { toXListId } from '@/server/rest/notification.js';
+import { createLocalSignupAccount } from '@/server/rest/signup.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
 import { dispatchQueueOutbox, fetchQueueOutboxByIdFromDatabase } from '@/core/QueueOutboxStore.js';
@@ -174,6 +175,63 @@ describe('Endpoints', () => {
 			});
 
 			assert.strictEqual(res.status, 400);
+		});
+
+		test('同じリモートユーザー名の並行作成は一方だけ成功する', async () => {
+			const params = {
+				username: `remote${Date.now().toString(36).slice(-8)}`,
+				password: 'test',
+				host: 'remote.example.com',
+			};
+			const results = await Promise.all([
+				api('signup', params),
+				api('signup', params),
+			]);
+			assert.strictEqual(results.filter(result => result.status === 200).length, 1);
+			const duplicated = results.find(result => result.status === 400);
+			assert.ok(duplicated);
+			assert.strictEqual(castAsError(duplicated.body as any).error.code, 'DUPLICATED_USERNAME');
+		});
+
+		test('異なるホストでも使用済みユーザー名を並行作成できない', async () => {
+			const username = `used${Date.now().toString(36).slice(-8)}`;
+			const results = await Promise.all([
+				api('signup', { username, password: 'test', host: 'remote-a.example.com' }),
+				api('signup', { username, password: 'test', host: 'remote-b.example.com' }),
+			]);
+			assert.strictEqual(results.filter(result => result.status === 200).length, 1);
+			const used = results.find(result => result.status === 400);
+			assert.ok(used);
+			assert.strictEqual(castAsError(used.body as any).error.code, 'USED_USERNAME');
+		});
+
+		test('stale root claim does not roll back a valid signup after another process claimed root', async () => {
+			const before = await fetchMetaFromDatabase(db);
+			assert.ok(before.rootUserId);
+			const staleMeta = { ...before, rootUserId: null, rootUser: null };
+			const suffix = Date.now().toString(36).slice(-8);
+			const result = await createLocalSignupAccount({
+				config: loadConfig(),
+				db,
+				meta: staleMeta,
+			}, {
+				username: `staleroot${suffix}`,
+				host: null,
+				passwordHash: null,
+			});
+
+			assert.strictEqual(result.account.username, `staleroot${suffix}`);
+			assert.strictEqual((await fetchMetaFromDatabase(db)).rootUserId, before.rootUserId);
+
+			await assert.rejects(createLocalSignupAccount({
+				config: loadConfig(),
+				db,
+				meta: staleMeta,
+			}, {
+				username: 'admin',
+				host: null,
+				passwordHash: null,
+			}), { code: 'USED_USERNAME' });
 		});
 	});
 
@@ -497,6 +555,17 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin account deletion', () => {
+		test('存在しないユーザーの削除はNO_SUCH_USERを返す', async () => {
+			const missingUserId = 'zzzzzzzzzzzzzzzzzzzzzzzzzz';
+			const missingFromAccountsDelete = await api('admin/accounts/delete', { userId: missingUserId }, alice);
+			assert.strictEqual(missingFromAccountsDelete.status, 400);
+			assert.strictEqual(castAsError(missingFromAccountsDelete.body as any).error.id, 'f26ff6c4-278d-4c07-af5a-224c9d1e53f3');
+
+			const missingFromDeleteAccount = await api('admin/delete-account', { userId: missingUserId }, alice);
+			assert.strictEqual(missingFromDeleteAccount.status, 400);
+			assert.strictEqual(castAsError(missingFromDeleteAccount.body as any).error.id, '7ccf53b8-f359-45a7-b376-5f05a7bdfa93');
+		});
+
 		test('admin/accounts/delete と admin/delete-account は削除状態、job、scope、roleを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const accountDeleteTarget = await signup({ username: `haad${suffix}` });
@@ -575,7 +644,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin/accounts/create', () => {
-		test('root native token のみアカウント作成でき、external token と非rootは拒否される', async () => {
+			test('root native token のみアカウント作成でき、external token と非rootは拒否される', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const created = await api('admin/accounts/create', {
 				username: `hacreate${suffix}`,
@@ -607,6 +676,20 @@ describe('Endpoints', () => {
 			}, bob);
 			assert.strictEqual(nonRootDenied.status, 400);
 			assert.strictEqual(castAsError(nonRootDenied.body as any).error.code, 'ACCESS_DENIED');
+		});
+
+		test('同じユーザー名の並行作成は一方だけ成功する', async () => {
+			const username = `haconcurrent${Date.now().toString(36).slice(-8)}`;
+			const results = await Promise.all([
+				api('admin/accounts/create', { username, password: 'test', setupPassword: null }, alice),
+				api('admin/accounts/create', { username, password: 'test', setupPassword: null }, alice),
+			]);
+			const successful = results.filter(result => result.status === 200);
+			const duplicated = results.filter(result => result.status === 400);
+
+			assert.strictEqual(successful.length, 1);
+			assert.strictEqual(duplicated.length, 1);
+			assert.strictEqual(castAsError(duplicated[0]!.body as any).error.code, 'DUPLICATED_USERNAME');
 		});
 	});
 
@@ -951,6 +1034,10 @@ describe('Endpoints', () => {
 			const detailByGet = await relativeFetch(`api/emoji?name=${emoji.name}`);
 			assert.strictEqual(detailByGet.status, 200);
 			assert.strictEqual(detailByGet.headers.get('cache-control'), 'public, max-age=3600');
+
+			const missing = await api('emoji', { name: `missing_${Date.now().toString(36)}` });
+			assert.strictEqual(missing.status, 404);
+			assert.strictEqual(castAsError(missing.body as any).error.id, 'e2785b66-dca3-4087-9cac-b93c541cc425');
 		});
 	});
 
@@ -1352,12 +1439,24 @@ describe('Endpoints', () => {
 			const movedBack = await api('drive/files/move-bulk', { fileIds: [fileA.id, fileB.id], folderId: null }, alice);
 			assert.strictEqual(movedBack.status, 204);
 			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId, null);
+
+			const missingFolder = await api('drive/files/move-bulk', { fileIds: [fileA.id], folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			assert.strictEqual(missingFolder.status, 400);
+			assert.strictEqual(castAsError(missingFolder.body as any).error.id, 'abdd73a9-6225-4140-a3e4-8089c77168bc');
 		});
 
 		test('chat/messages/create-to-user, show, react, unreact, and delete manage a 1-on-1 message lifecycle', async () => {
 			const suffix = Date.now().toString(36);
 			const sender = await signup({ username: `chatsender${suffix}` });
 			const recipient = await signup({ username: `chatrcpt${suffix}` });
+			const unavailableRecipient = await signup({ username: `chatunavail${suffix}` });
+			const unavailable = await api('chat/messages/create-to-user', { text: 'hi', toUserId: unavailableRecipient.id }, sender);
+			assert.strictEqual(unavailable.status, 400);
+			assert.strictEqual(castAsError(unavailable.body as any).error.code, 'CHAT_NOT_AVAILABLE');
+			await api('blocking/create', { userId: sender.id }, unavailableRecipient);
+			const unavailableAndBlocked = await api('chat/messages/create-to-user', { text: 'hi', toUserId: unavailableRecipient.id }, sender);
+			assert.strictEqual(unavailableAndBlocked.status, 400);
+			assert.strictEqual(castAsError(unavailableAndBlocked.body as any).error.code, 'CHAT_NOT_AVAILABLE');
 			// chatScope はデフォルト 'mutual' のため、相互フォローを確立してからチャットする
 			await api('following/create', { userId: recipient.id }, sender);
 			await api('following/create', { userId: sender.id }, recipient);
@@ -1374,6 +1473,14 @@ describe('Endpoints', () => {
 			assert.strictEqual(noSuchUser.status, 400);
 			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, '11795c64-40ea-4198-b06e-3c873ed9039d');
 
+			const noSuchReactionTarget = await api('chat/messages/react', { messageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', reaction: '👍' }, recipient);
+			assert.strictEqual(noSuchReactionTarget.status, 400);
+			assert.strictEqual(castAsError(noSuchReactionTarget.body as any).error.id, '9b5839b9-0ba0-4351-8c35-37082093d200');
+
+			const noSuchUnreactionTarget = await api('chat/messages/unreact', { messageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', reaction: '👍' }, recipient);
+			assert.strictEqual(noSuchUnreactionTarget.status, 400);
+			assert.strictEqual(castAsError(noSuchUnreactionTarget.body as any).error.id, 'c39ea42f-e3ca-428a-ad57-390e0a711595');
+
 			const created = await api('chat/messages/create-to-user', { text: 'hello there', toUserId: recipient.id }, sender);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.text, 'hello there');
@@ -1383,12 +1490,24 @@ describe('Endpoints', () => {
 			assert.strictEqual(shownBySender.status, 200);
 			assert.strictEqual(shownBySender.body.fromUserId, sender.id);
 
-			const shownByOutsider = await api('chat/messages/show', { messageId: created.body.id }, await signup({ username: `chatoutsdr${suffix}` }));
+			const outsider = await signup({ username: `chatoutsdr${suffix}` });
+			const shownByOutsider = await api('chat/messages/show', { messageId: created.body.id }, outsider);
 			assert.strictEqual(shownByOutsider.status, 400);
 			assert.strictEqual(castAsError(shownByOutsider.body as any).error.id, '3710865b-1848-4da9-8d61-cfed15510b93');
 
+			const invalidReaction = await api('chat/messages/react', { messageId: created.body.id, reaction: 'not-an-emoji' }, recipient);
+			assert.strictEqual(invalidReaction.status, 400);
+			assert.strictEqual(castAsError(invalidReaction.body as any).error.code, 'INVALID_PARAM');
+
+			const ownReaction = await api('chat/messages/react', { messageId: created.body.id, reaction: '👍' }, sender);
+			assert.strictEqual(ownReaction.status, 400);
+			assert.strictEqual(castAsError(ownReaction.body as any).error.id, '9b5839b9-0ba0-4351-8c35-37082093d200');
+
 			const reacted = await api('chat/messages/react', { messageId: created.body.id, reaction: '👍' }, recipient);
 			assert.strictEqual(reacted.status, 204);
+			const unreactedByOutsider = await api('chat/messages/unreact', { messageId: created.body.id, reaction: '👍' }, outsider);
+			assert.strictEqual(unreactedByOutsider.status, 400);
+			assert.strictEqual(castAsError(unreactedByOutsider.body as any).error.id, 'c39ea42f-e3ca-428a-ad57-390e0a711595');
 
 			const shownAfterReact = await api('chat/messages/show', { messageId: created.body.id }, sender);
 			assert.strictEqual(shownAfterReact.status, 200);
@@ -1404,6 +1523,13 @@ describe('Endpoints', () => {
 
 			const deleted = await api('chat/messages/delete', { messageId: created.body.id }, sender);
 			assert.strictEqual(deleted.status, 204);
+
+			await api('i/update', { chatScope: 'everyone' }, recipient);
+			const blocked = await api('blocking/create', { userId: sender.id }, recipient);
+			assert.strictEqual(blocked.status, 200);
+			const sendAfterBlock = await api('chat/messages/create-to-user', { text: 'blocked', toUserId: recipient.id }, sender);
+			assert.strictEqual(sendAfterBlock.status, 400);
+			assert.strictEqual(castAsError(sendAfterBlock.body as any).error.id, 'c15a5199-7422-4968-941a-2a462c478f7d');
 		});
 
 		test('chat/messages/user-timeline and chat/history reflect sent messages and read state', async () => {
@@ -1433,9 +1559,26 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36);
 			const owner = await signup({ username: `chatrmown${suffix}` });
 			const invitee = await signup({ username: `chatrminv${suffix}` });
+			const parallelInvitee = await signup({ username: `chatrmpar${suffix}` });
+			const noSuchRoomId = 'zzzzzzzzzzzzzzzzzzzzzzzzzz';
+
+			const joinMissing = await api('chat/rooms/join', { roomId: noSuchRoomId }, invitee);
+			assert.strictEqual(joinMissing.status, 400);
+			assert.strictEqual(castAsError(joinMissing.body as any).error.id, '84416476-5ce8-4a2c-b568-9569f1b10733');
+
+			const leaveMissing = await api('chat/rooms/leave', { roomId: noSuchRoomId }, invitee);
+			assert.strictEqual(leaveMissing.status, 400);
+			assert.strictEqual(castAsError(leaveMissing.body as any).error.id, 'cb7f3179-50e8-4389-8c30-dbe2650a67c9');
+
+			const muteMissing = await api('chat/rooms/mute', { roomId: noSuchRoomId, mute: true }, invitee);
+			assert.strictEqual(muteMissing.status, 400);
+			assert.strictEqual(castAsError(muteMissing.body as any).error.id, 'c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df');
 
 			const room = await api('chat/rooms/create', { name: `hono-chat-room-${suffix}`, description: 'test room' }, owner);
 			assert.strictEqual(room.status, 200);
+			const missingInvitee = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, owner);
+			assert.strictEqual(missingInvitee.status, 400);
+			assert.strictEqual(castAsError(missingInvitee.body as any).error.id, '0f451b9e-fc21-491a-b2bf-46331103a945');
 			assert.strictEqual(room.body.name, `hono-chat-room-${suffix}`);
 
 			const shown = await api('chat/rooms/show', { roomId: room.body.id }, owner);
@@ -1453,6 +1596,29 @@ describe('Endpoints', () => {
 			const invitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: invitee.id }, owner);
 			assert.strictEqual(invitation.status, 200);
 			assert.strictEqual(invitation.body.userId, invitee.id);
+			const parallelInvitations = await Promise.all([
+				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
+				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
+			]);
+			assert.strictEqual(parallelInvitations.filter(result => result.status === 200).length, 1);
+			const parallelDuplicate = parallelInvitations.find(result => result.status === 400);
+			assert.ok(parallelDuplicate);
+			assert.strictEqual(castAsError(parallelDuplicate.body as any).error.code, 'CANNOT_CREATE_INVITATION');
+			const [parallelJoin, invitationDuringJoin] = await Promise.all([
+				api('chat/rooms/join', { roomId: room.body.id }, parallelInvitee),
+				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
+			]);
+			assert.strictEqual(parallelJoin.status, 204);
+			assert.strictEqual(invitationDuringJoin.status, 400);
+			assert.strictEqual(castAsError(invitationDuringJoin.body as any).error.code, 'CANNOT_CREATE_INVITATION');
+
+			const duplicateInvitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: invitee.id }, owner);
+			assert.strictEqual(duplicateInvitation.status, 400);
+			assert.strictEqual(castAsError(duplicateInvitation.body as any).error.code, 'CANNOT_CREATE_INVITATION');
+
+			const selfInvitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: owner.id }, owner);
+			assert.strictEqual(selfInvitation.status, 400);
+			assert.strictEqual(castAsError(selfInvitation.body as any).error.code, 'INVALID_PARAM');
 
 			const outbox = await api('chat/rooms/invitations/outbox', { roomId: room.body.id }, owner);
 			assert.strictEqual(outbox.status, 200);
@@ -1512,6 +1678,10 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36);
 			const owner = await signup({ username: `chatigown${suffix}` });
 			const invitee = await signup({ username: `chatiginv${suffix}` });
+
+			const ignoreMissing = await api('chat/rooms/invitations/ignore', { roomId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, invitee);
+			assert.strictEqual(ignoreMissing.status, 400);
+			assert.strictEqual(castAsError(ignoreMissing.body as any).error.id, '5130557e-5a11-4cfb-9cc5-fe60cda5de0d');
 
 			const room = await api('chat/rooms/create', { name: `hono-ignore-room-${suffix}` }, owner);
 			assert.strictEqual(room.status, 200);
@@ -3186,6 +3356,14 @@ describe('Endpoints', () => {
 			});
 
 			try {
+				const missing = await api('admin/emoji/set-category-bulk', {
+					ids: [first.id, 'zzzzzzzzzzzzzzzzzzzzzzzzzz'],
+					category: `must_rollback_${suffix}`,
+				}, manager);
+				assert.strictEqual(missing.status, 400);
+				assert.strictEqual(castAsError(missing.body as any).error.id, '756e37b2-8e81-421c-9d18-740a6932d57f');
+				assert.strictEqual((await fetchEmojiByIdOrFailFromDatabase(db, first.id)).category, null);
+
 				const addAliases = await api('admin/emoji/add-aliases-bulk', {
 					ids: [first.id, second.id],
 					aliases: [`added_${suffix}`, `base_${suffix}`],
@@ -3333,6 +3511,9 @@ describe('Endpoints', () => {
 				const deleted = await api('admin/emoji/delete', { id: single.id }, manager);
 				assert.strictEqual(deleted.status, 204);
 				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, single.id), null);
+				const deletedAgain = await api('admin/emoji/delete', { id: single.id }, manager);
+				assert.strictEqual(deletedAgain.status, 400);
+				assert.strictEqual(castAsError(deletedAgain.body as any).error.id, 'be83669b-773a-44b7-b1f8-e5e5170ac3c2');
 
 				const deletedBulk = await api('admin/emoji/delete-bulk', {
 					ids: [bulkFirst.id, bulkSecond.id],
@@ -3564,16 +3745,18 @@ describe('Endpoints', () => {
 	describe('signin-flow', () => {
 		test('間違ったパスワードでサインインできない', async () => {
 			const res = await api('signin-flow', {
-				username: 'test1',
+				username: alice.username,
 				password: 'bar',
 			});
 
 			assert.strictEqual(res.status, 403);
+			assert.strictEqual(castAsError(res.body as any).error.code, 'AUTHENTICATION_FAILED');
+			assert.strictEqual(castAsError(res.body as any).error.kind, 'permission');
 		});
 
 		test('クエリをインジェクションできない', async () => {
 			const res = await api('signin-flow', {
-				username: 'test1',
+				username: alice.username,
 				// @ts-expect-error password must be string
 				password: {
 					$gt: '',
@@ -3581,6 +3764,8 @@ describe('Endpoints', () => {
 			});
 
 			assert.strictEqual(res.status, 400);
+			assert.strictEqual(castAsError(res.body as any).error.code, 'INVALID_PARAM');
+			assert.strictEqual(castAsError(res.body as any).error.kind, 'client');
 		});
 
 		test('正しい情報でサインインできる', async () => {
@@ -4680,6 +4865,20 @@ describe('Endpoints', () => {
 			assert.strictEqual(cannotRenote.status, 400);
 			assert.strictEqual(castAsError(cannotRenote.body as any).error.id, '76cc5583-5a14-4ad3-8717-0298507e32db');
 			assert.strictEqual(castAsError(cannotRenote.body as any).error.code, 'CANNOT_RENOTE');
+
+			const specifiedReplyTarget = await post(alice, {
+				text: 'specified reply target',
+				visibility: 'specified',
+				visibleUserIds: [alice.id],
+			});
+			const extendedVisibilityReply = await api('notes/drafts/update', {
+				draftId: draft.id,
+				replyId: specifiedReplyTarget.id,
+				visibility: 'public',
+			}, alice);
+			assert.strictEqual(extendedVisibilityReply.status, 400);
+			assert.strictEqual(castAsError(extendedVisibilityReply.body as any).error.id, '215dbc76-336c-4d2a-9605-95766ba7dab0');
+			assert.strictEqual(castAsError(extendedVisibilityReply.body as any).error.code, 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY');
 
 			const foreignDraft = await createNoteDraftInDatabase(db, {
 				id: genId(),
@@ -11792,6 +11991,7 @@ describe('Endpoints', () => {
 				}, alice);
 				assert.strictEqual(invalid.status, 400);
 				assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAMETERS');
+				assert.strictEqual(castAsError(invalid.body as any).error.message, 'Invalid parameters.');
 
 				const saved = await api('admin/captcha/save', {
 					provider: 'testcaptcha',
@@ -14156,6 +14356,18 @@ describe('Endpoints', () => {
 			const res = await api('drive/files/create', {}, alice);
 
 			assert.strictEqual(res.status, 400);
+			assert.ok(res.body);
+			assert.strictEqual(castAsError(res.body).error.code, 'INVALID_PARAM');
+			assert.strictEqual(castAsError(res.body).error.kind, 'client');
+		});
+
+		test('存在しないフォルダーにはファイルを作成できない', async () => {
+			const res = await uploadFile(alice, { folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' });
+
+			assert.strictEqual(res.status, 400);
+			assert.ok(res.body);
+			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.code, 'NO_SUCH_FOLDER');
+			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.id, '12e7caa8-224f-471d-978a-653a81cf4c90');
 		});
 
 		test('SVGファイルを作成できる', async () => {

@@ -11,6 +11,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { SchemaType } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/_.js';
 import { omitUndefined } from '@/misc/clone.js';
+import { recordException } from '@/telemetry.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
 import { HonoApiError } from './error.js';
 import { parseHonoApiParams } from './validation.js';
@@ -38,44 +39,48 @@ function captchaErrorToHonoApiError(error: CaptchaError): HonoApiError {
 		case captchaErrorCodes.invalidProvider:
 			return new HonoApiError({
 				status: 400,
-				message: error.message,
+				message: 'Invalid provider.',
 				code: 'INVALID_PROVIDER',
 				id: '14bf7ae1-80cc-4363-acb2-4fd61d086af0',
 			});
 		case captchaErrorCodes.invalidParameters:
 			return new HonoApiError({
 				status: 400,
-				message: error.message,
+				message: 'Invalid parameters.',
 				code: 'INVALID_PARAMETERS',
 				id: '26654194-410e-44e2-b42e-460ff6f92476',
 			});
 		case captchaErrorCodes.noResponseProvided:
 			return new HonoApiError({
 				status: 400,
-				message: error.message,
+				message: 'No response provided.',
 				code: 'NO_RESPONSE_PROVIDED',
 				id: '40acbba8-0937-41fb-bb3f-474514d40afe',
 			});
 		case captchaErrorCodes.requestFailed:
+			recordException(new Error(error.message));
 			return new HonoApiError({
 				status: 500,
-				message: error.message,
+				message: 'Request failed.',
 				code: 'REQUEST_FAILED',
 				id: '0f4fe2f1-2c15-4d6e-b714-efbfcde231cd',
+				kind: 'server',
 			});
 		case captchaErrorCodes.verificationFailed:
 			return new HonoApiError({
 				status: 400,
-				message: error.message,
+				message: 'Verification failed.',
 				code: 'VERIFICATION_FAILED',
 				id: 'c41c067f-24f3-4150-84b2-b5a3ae8c2214',
 			});
 		default:
+			recordException(new Error(error.message));
 			return new HonoApiError({
 				status: 500,
 				message: 'unknown',
 				code: 'UNKNOWN',
 				id: 'f868d509-e257-42a9-99c1-42614b031a97',
+				kind: 'server',
 			});
 	}
 }

@@ -15,10 +15,15 @@ import { getUrlWithLoginId } from '@/scripts/login-id.js';
 
 export const cli = new APIClient({ origin, fetch: (...args): Promise<Response> => fetch(...args) });
 
+type ApiArgs<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']> =
+	Misskey.Endpoints[E] extends { reqOptional: true }
+		? [userId?: string, params?: P]
+		: [userId: string | undefined, params: P];
+
 export async function api<
 	E extends keyof Misskey.Endpoints,
-	P extends Misskey.Endpoints[E]['req'],
->(endpoint: E, userId?: string, params?: P): Promise<Misskey.api.SwitchCaseResponseType<E, P> | undefined> {
+	P extends Misskey.Endpoints[E]['req'] = never,
+>(endpoint: E, ...[userId, params]: ApiArgs<E, P>): Promise<Misskey.api.SwitchCaseResponseType<E, P> | undefined> {
 	let account: Pick<Misskey.entities.SignupResponse, 'id' | 'token'> | undefined;
 
 	if (userId) {
@@ -26,11 +31,12 @@ export async function api<
 		if (!account) return;
 	}
 
+	const requestParams = params ?? {} as P;
 	return (cli.request as <E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']>(
 		endpoint: E,
 		params?: P,
 		credential?: string | null,
-	) => Promise<Misskey.api.SwitchCaseResponseType<E, P>>)(endpoint, params, account?.token);
+	) => Promise<Misskey.api.SwitchCaseResponseType<E, P>>)(endpoint, requestParams, account?.token);
 }
 
 // mark-all-as-read送出を1秒間隔に制限する

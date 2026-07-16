@@ -78,6 +78,15 @@ function adminAccountCreateWrongInitialPasswordError(): HonoApiError {
 	});
 }
 
+function adminAccountNoSuchUserError(id: string): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'No such user.',
+		code: 'NO_SUCH_USER',
+		id,
+	});
+}
+
 export async function handleHonoApiAdminAccountsCreate(
 	deps: HonoApiAdminAccountsDependencies,
 	auth: HonoApiAuthenticated,
@@ -141,7 +150,7 @@ export async function handleHonoApiAdminAccountsDelete(
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 
 	if (user == null) {
-		throw new Error('user not found');
+		throw adminAccountNoSuchUserError('f26ff6c4-278d-4c07-af5a-224c9d1e53f3');
 	}
 
 	await deleteAccountWithSideEffects(deps, user, me);
@@ -153,7 +162,10 @@ export async function handleHonoApiAdminDeleteAccount(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminAccountDeleteParamDef, body);
-	const user = await fetchUserByIdOrFailFromDatabase(deps.db, params.userId);
+	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
+	if (user == null) {
+		throw adminAccountNoSuchUserError('7ccf53b8-f359-45a7-b376-5f05a7bdfa93');
+	}
 	if (user.isDeleted) {
 		return;
 	}

@@ -296,6 +296,8 @@ interface UploadOptions {
 	path?: string | URL;
 	/** The name to be used for the file upload */
 	name?: string;
+	/** The drive folder to upload into. */
+	folderId?: string;
 	/** A Blob can be provided instead of path */
 	blob?: Blob;
 }
@@ -304,7 +306,7 @@ interface UploadOptions {
  * Upload file
  * @param user User
  */
-export const uploadFile = async (user?: UserToken, { path, name, blob }: UploadOptions = {}): Promise<{
+export const uploadFile = async (user?: UserToken, { path, name, folderId, blob }: UploadOptions = {}): Promise<{
 	status: number,
 	headers: Headers,
 	body: misskey.entities.DriveFile | null
@@ -325,6 +327,9 @@ export const uploadFile = async (user?: UserToken, { path, name, blob }: UploadO
 	formData.append('force', 'true');
 	if (name) {
 		formData.append('name', name);
+	}
+	if (folderId) {
+		formData.append('folderId', folderId);
 	}
 
 	const headers: Record<string, string> = {};
@@ -696,7 +701,7 @@ export async function sendEnvResetRequest() {
 
 // 与えられた値を強制的にエラーとみなす。この関数は型安全性を破壊するため、異常系のアサーション以外で用いられるべきではない。
 // FIXME(misskey-js): misskey-jsがエラー情報を公開するようになったらこの関数を廃止する
-export function castAsError(obj: Record<string, unknown>): HonoApiErrorBody {
+export function castAsError(obj: unknown): HonoApiErrorBody {
 	return obj as HonoApiErrorBody;
 }
 

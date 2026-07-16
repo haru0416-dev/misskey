@@ -16,7 +16,7 @@ import {
 	updateDriveFilesFolderByIdsAndUserIdInDatabase,
 	type DriveFileUpdate,
 } from '@/core/DriveFileStore.js';
-import { fetchDriveFolderByIdAndUserIdFromDatabase, fetchDriveFolderByIdAndUserIdOrFailFromDatabase } from '@/core/DriveFolderStore.js';
+import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/DriveFolderStore.js';
 import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } from '@/core/ChatMessageStore.js';
 import type { InternalStorageService } from '@/core/InternalStorageService.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
@@ -414,7 +414,10 @@ export async function handleHonoApiDriveFilesMoveBulk(
 ): Promise<void> {
 	const params = parseHonoApiParams(driveFilesMoveBulkParamDef, body);
 
-	const folder = params.folderId ? await fetchDriveFolderByIdAndUserIdOrFailFromDatabase(deps.db, params.folderId, me.id) : null;
+	const folder = params.folderId ? await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id) : null;
+	if (params.folderId && folder == null) {
+		throw new HonoApiError({ status: 400, message: 'No such folder.', code: 'NO_SUCH_FOLDER', id: 'abdd73a9-6225-4140-a3e4-8089c77168bc' });
+	}
 
 	await updateDriveFilesFolderByIdsAndUserIdInDatabase(deps.db, params.fileIds, me.id, folder ? folder.id : null);
 }

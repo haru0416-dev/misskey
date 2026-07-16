@@ -8,6 +8,14 @@ process.env['NODE_ENV'] = 'test';
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
+import {
+	ChatRoomCapacityExceededError,
+	countChatRoomMembershipsByRoomIdFromDatabase,
+	createChatRoomInDatabase,
+	createChatRoomInvitationInDatabase,
+	createChatRoomMembershipInDatabase,
+	joinChatRoomFromInvitationInDatabase,
+} from '@/core/ChatRoomStore.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
@@ -118,5 +126,41 @@ describe('chat message packing', () => {
 			name: 'EntityNotFoundError',
 		});
 		expect(queries.count()).toBe(1);
+	});
+
+	test('serializes joins by room so concurrent invitees cannot exceed the member limit', async () => {
+		const [owner, existingMember, invitee1, invitee2] = await Promise.all([
+			createUser('capacity-owner'),
+			createUser('capacity-existing'),
+			createUser('capacity-invitee1'),
+			createUser('capacity-invitee2'),
+		]);
+		const room = await createChatRoomInDatabase(runtime.db, {
+			id: genId(),
+			name: 'capacity test',
+			ownerId: owner.id,
+		});
+		await createChatRoomMembershipInDatabase(runtime.db, {
+			id: genId(),
+			roomId: room.id,
+			userId: existingMember.id,
+		});
+		const invitations = await Promise.all([invitee1, invitee2].map(async user => await createChatRoomInvitationInDatabase(runtime.db, {
+			id: genId(),
+			roomId: room.id,
+			userId: user.id,
+		}, 2)));
+
+		const results = await Promise.allSettled([invitee1, invitee2].map(async (user, index) => await joinChatRoomFromInvitationInDatabase(runtime.db, {
+			id: genId(),
+			roomId: room.id,
+			userId: user.id,
+		}, invitations[index]!.id, 2)));
+
+		expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+		const rejected = results.find(result => result.status === 'rejected');
+		expect(rejected).toBeDefined();
+		expect((rejected as PromiseRejectedResult).reason).toBeInstanceOf(ChatRoomCapacityExceededError);
+		expect(await countChatRoomMembershipsByRoomIdFromDatabase(runtime.db, room.id)).toBe(2);
 	});
 });

@@ -130,6 +130,18 @@ export const endpointMetas = {
 					code: 'INCORRECT_INITIAL_PASSWORD',
 					id: '97147c55-1ae1-4f6f-91d6-e1c3e0e76d62',
 				},
+
+				duplicatedUsername: {
+					message: 'DUPLICATED_USERNAME',
+					code: 'DUPLICATED_USERNAME',
+					id: 'b973e8da-5e72-4efd-8de0-822ae5e4cfc7',
+				},
+
+				usedUsername: {
+					message: 'USED_USERNAME',
+					code: 'USED_USERNAME',
+					id: 'b973e8da-5e72-4efd-8de0-822ae5e4cfc7',
+				},
 			},
 
 			res: {
@@ -162,6 +174,14 @@ export const endpointMetas = {
 			requireCredential: true,
 			requireAdmin: true,
 			kind: 'write:admin:account',
+
+			errors: {
+				noSuchUser: {
+					message: 'No such user.',
+					code: 'NO_SUCH_USER',
+					id: 'f26ff6c4-278d-4c07-af5a-224c9d1e53f3',
+				},
+			},
 		} as const,
 		paramDef: adminAccountDeleteParamDef,
 	},
@@ -631,22 +651,10 @@ export const endpointMetas = {
 			kind: 'write:admin:meta',
 
 			errors: {
-				invalidProvider: {
-					message: 'Invalid provider.',
-					code: 'INVALID_PROVIDER',
-					id: '14bf7ae1-80cc-4363-acb2-4fd61d086af0',
-					httpStatusCode: 400,
-				},
 				invalidParameters: {
 					message: 'Invalid parameters.',
 					code: 'INVALID_PARAMETERS',
 					id: '26654194-410e-44e2-b42e-460ff6f92476',
-					httpStatusCode: 400,
-				},
-				noResponseProvided: {
-					message: 'No response provided.',
-					code: 'NO_RESPONSE_PROVIDED',
-					id: '40acbba8-0937-41fb-bb3f-474514d40afe',
 					httpStatusCode: 400,
 				},
 				requestFailed: {
@@ -654,6 +662,7 @@ export const endpointMetas = {
 					code: 'REQUEST_FAILED',
 					id: '0f4fe2f1-2c15-4d6e-b714-efbfcde231cd',
 					httpStatusCode: 500,
+					kind: 'server',
 				},
 				verificationFailed: {
 					message: 'Verification failed.',
@@ -666,6 +675,7 @@ export const endpointMetas = {
 					code: 'UNKNOWN',
 					id: 'f868d509-e257-42a9-99c1-42614b031a97',
 					httpStatusCode: 500,
+					kind: 'server',
 				},
 			},
 		} as const,
@@ -678,6 +688,14 @@ export const endpointMetas = {
 			requireCredential: true,
 			requireAdmin: true,
 			kind: 'write:admin:delete-account',
+
+			errors: {
+				noSuchUser: {
+					message: 'No such user.',
+					code: 'NO_SUCH_USER',
+					id: '7ccf53b8-f359-45a7-b376-5f05a7bdfa93',
+				},
+			},
 		} as const,
 		paramDef: adminAccountDeleteParamDef,
 	},

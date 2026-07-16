@@ -101,7 +101,7 @@ function iUpdateNameContainsProhibitedWordsError(): HonoApiError {
 	return new HonoApiError({ status: 422, message: 'Your new name contains prohibited words.', code: 'YOUR_NAME_CONTAINS_PROHIBITED_WORDS', id: '0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191' });
 }
 function iUpdateYourAccountMovedError(): HonoApiError {
-	return new HonoApiError({ status: 403, message: 'You have moved your account.', code: 'YOUR_ACCOUNT_MOVED', id: '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31' });
+	return new HonoApiError({ status: 403, message: 'You have moved your account.', code: 'YOUR_ACCOUNT_MOVED', id: '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31', kind: 'permission' });
 }
 
 const muteWordsZodSchema = z.array(z.union([z.array(z.string()), z.string()]));

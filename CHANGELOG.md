@@ -177,6 +177,7 @@
 - Enhance: サーバー設定を厳密な `configVersion: 2` の階層構造へ再設計し、DB・Valkey・HTTP・キュー・ログを詳細設定できるように
 - Enhance: URLプレビューの結果をプロセスメモリへキャッシュし、同一URLの重複取得を抑制
 - Enhance: OpenTelemetryの外向きtrace伝播先とinstrumentation無効化を個別設定可能にし、既定の外部伝播を停止
+- Fix: OpenAPIのエラーstatus・schema・exampleと実際のAPI応答を一致させ、複数endpointの誤った500応答を修正
 - Fix: 複数ワーカー環境のOAuth認可、投稿後処理、Renote取り消し、Page/Playのいいね件数、予約投稿キュー、分散ロックの整合性を改善
 - Enhance: アンテナ判定のDB取得と同時実行数を抑制
 - Fix: 指定公開ノートの宛先数制限、OAuth認可コード再利用時のトークン失効、おすすめユーザーの除外条件を修正
