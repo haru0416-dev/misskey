@@ -114,7 +114,11 @@ describe('emoji bulk operations', () => {
 		await expect(handleHonoApiAdminEmojiSetCategoryBulk(deps, {
 			ids: [first.id, missingId],
 			category: 'must-roll-back',
-		})).rejects.toMatchObject({ name: 'EntityNotFoundError' });
+		})).rejects.toMatchObject({
+			status: 400,
+			code: 'NO_SUCH_EMOJI',
+			id: '756e37b2-8e81-421c-9d18-740a6932d57f',
+		});
 		expect((await fetchEmojiByIdOrFailFromDatabase(runtime.db, first.id)).category).toBe('bulk');
 		expect((await fetchEmojiByNameAndHostFromDatabaseCached(runtime.db, first.name, first.host))?.category).toBe('bulk');
 		expect(publishBroadcastStream).not.toHaveBeenCalled();

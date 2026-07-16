@@ -17,7 +17,6 @@ import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/Rol
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiEmoji } from '@/models/Emoji.js';
@@ -283,6 +282,14 @@ function adminNoSuchEmojiError(): HonoApiError {
 	return adminEmojiClientError('No such emoji.', 'NO_SUCH_EMOJI', '684dec9d-a8c2-4364-9aa8-456c49cb1dc8');
 }
 
+function adminDeleteNoSuchEmojiError(): HonoApiError {
+	return adminEmojiClientError('No such emoji.', 'NO_SUCH_EMOJI', 'be83669b-773a-44b7-b1f8-e5e5170ac3c2');
+}
+
+function adminBulkNoSuchEmojiError(): HonoApiError {
+	return adminEmojiClientError('No such emoji.', 'NO_SUCH_EMOJI', '756e37b2-8e81-421c-9d18-740a6932d57f');
+}
+
 function adminAddNoSuchFileError(): HonoApiError {
 	return adminEmojiClientError('No such file.', 'NO_SUCH_FILE', 'fc46b5a4-6b92-4c33-ac66-b806659bb5cf');
 }
@@ -341,7 +348,7 @@ function orderEmojisByRequestedIds(ids: MiEmoji['id'][], emojis: MiEmoji[]): MiE
 	const emojiById = new Map(emojis.map(emoji => [emoji.id, emoji]));
 	return ids.map(id => {
 		const emoji = emojiById.get(id);
-		if (emoji == null) throw new EntityNotFoundError('MiEmoji', { id });
+		if (emoji == null) throw adminBulkNoSuchEmojiError();
 		return emoji;
 	});
 }
@@ -526,7 +533,8 @@ export async function handleHonoApiAdminEmojiDelete(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiDeleteParamDef, body);
-	const emoji = await fetchEmojiByIdOrFailFromDatabase(deps.db, params.id);
+	const emoji = await fetchEmojiByIdFromDatabase(deps.db, params.id);
+	if (emoji == null) throw adminDeleteNoSuchEmojiError();
 	await deleteEmojiByIdFromDatabase(deps.db, emoji.id);
 	await publishHonoApiEmojiDeleted(deps, [emoji]);
 	await logModerationEventInDatabase(deps, me, 'deleteCustomEmoji', {

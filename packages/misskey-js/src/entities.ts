@@ -318,8 +318,11 @@ export type SigninFlowResponse = {
 };
 
 export type SigninWithPasskeyRequest = {
-	credential?: AuthenticationResponseJSON;
-	context?: string;
+	credential?: never;
+	context?: never;
+} | {
+	credential: AuthenticationResponseJSON;
+	context: string;
 };
 
 export type SigninWithPasskeyInitResponse = {

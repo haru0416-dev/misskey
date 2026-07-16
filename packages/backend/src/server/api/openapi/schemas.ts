@@ -81,7 +81,7 @@ export function getSchemas(includeSelfRef: boolean) {
 					properties: {
 						code: {
 							type: 'string',
-							description: 'An error code. Unique within the endpoint.',
+							description: 'A stable machine-readable error code.',
 						},
 						message: {
 							type: 'string',
@@ -89,11 +89,18 @@ export function getSchemas(includeSelfRef: boolean) {
 						},
 						id: {
 							type: 'string',
-							format: 'uuid',
-							description: 'An error ID. This ID is static.',
+							description: 'A stable error identifier.',
+						},
+						kind: {
+							type: 'string',
+							enum: ['client', 'server', 'permission'],
+							description: 'The category of the error.',
+						},
+						info: {
+							description: 'Additional structured details about the error.',
 						},
 					},
-					required: ['code', 'id', 'message'],
+					required: ['code', 'id', 'kind', 'message'],
 				},
 			},
 			required: ['error'],

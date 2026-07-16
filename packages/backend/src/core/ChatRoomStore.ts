@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import { chatRoom, type ChatRoomInsert, type ChatRoomRow } from '@/db/schema/chat-room.js';
 import { chatRoomInvitation, type ChatRoomInvitationInsert, type ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js';
 import { chatRoomMembership, type ChatRoomMembershipInsert, type ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js';
@@ -13,6 +13,10 @@ import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiUser } from '@/models/User.js';
 
 export type ChatRoomRecordOrder = 'asc' | 'desc';
+// Invitation creation and joining must acquire the room lock before the per-user lock.
+export class ChatRoomCapacityExceededError extends Error {}
+export class ChatRoomInvitationConflictError extends Error {}
+export class ChatRoomInvitationNotFoundError extends Error {}
 
 type ChatRoomUpdateValues = Pick<ChatRoomInsert, 'name' | 'description' | 'isArchived'>;
 type ChatRoomUpdate = { [K in keyof ChatRoomUpdateValues]?: ChatRoomUpdateValues[K] | undefined };
@@ -399,8 +403,27 @@ export async function joinChatRoomFromInvitationInDatabase(
 	db: MiDrizzleDatabase,
 	data: ChatRoomMembershipInsert,
 	invitationId: ChatRoomInvitationRow['id'],
+	maximumMembers: number,
 ): Promise<ChatRoomMembershipRow> {
 	return await db.transaction(async (tx) => {
+		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('chat-room-membership'), hashtext(${data.roomId}))`);
+		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('chat-room-invitation'), hashtext(${`${data.roomId}:${data.userId}`}))`);
+		const [invitation] = await tx
+			.select({ id: chatRoomInvitation.id })
+			.from(chatRoomInvitation)
+			.where(and(
+				eq(chatRoomInvitation.id, invitationId),
+				eq(chatRoomInvitation.roomId, data.roomId),
+				eq(chatRoomInvitation.userId, data.userId),
+			))
+			.limit(1);
+		if (invitation == null) throw new ChatRoomInvitationNotFoundError();
+		const [membershipCount] = await tx
+			.select({ count: count() })
+			.from(chatRoomMembership)
+			.where(eq(chatRoomMembership.roomId, data.roomId));
+		if ((membershipCount?.count ?? 0) >= maximumMembers) throw new ChatRoomCapacityExceededError();
+
 		const [row] = await tx
 			.insert(chatRoomMembership)
 			.values(data)
@@ -578,17 +601,39 @@ export async function listChatRoomInvitationsByRoomIdsAndUserIdFromDatabase(
 export async function createChatRoomInvitationInDatabase(
 	db: MiDrizzleDatabase,
 	data: ChatRoomInvitationInsert,
+	maximumMembers: number,
 ): Promise<ChatRoomInvitationRow> {
-	const [row] = await db
-		.insert(chatRoomInvitation)
-		.values(data)
-		.returning();
+	return await db.transaction(async (tx) => {
+		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('chat-room-membership'), hashtext(${data.roomId}))`);
+		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('chat-room-invitation'), hashtext(${`${data.roomId}:${data.userId}`}))`);
+		const [membership] = await tx
+			.select({ id: chatRoomMembership.id })
+			.from(chatRoomMembership)
+			.where(chatRoomMembershipCondition(data.roomId, data.userId))
+			.limit(1);
+		const [invitation] = await tx
+			.select({ id: chatRoomInvitation.id })
+			.from(chatRoomInvitation)
+			.where(chatRoomInvitationCondition(data.roomId, data.userId))
+			.limit(1);
+		if (membership != null || invitation != null) throw new ChatRoomInvitationConflictError();
+		const [membershipCount] = await tx
+			.select({ count: count() })
+			.from(chatRoomMembership)
+			.where(eq(chatRoomMembership.roomId, data.roomId));
+		if ((membershipCount?.count ?? 0) >= maximumMembers) throw new ChatRoomCapacityExceededError();
 
-	if (row == null) {
-		throw new Error('Failed to create chat room invitation');
-	}
+		const [row] = await tx
+			.insert(chatRoomInvitation)
+			.values(data)
+			.returning();
 
-	return row;
+		if (row == null) {
+			throw new Error('Failed to create chat room invitation');
+		}
+
+		return row;
+	});
 }
 
 export async function deleteChatRoomInvitationByIdFromDatabase(

@@ -9,7 +9,8 @@ import { handleHonoApiDrive, handleHonoApiDriveFilesCheckExistence, handleHonoAp
 import { handleHonoApiDriveFilesAttachedChatMessages, handleHonoApiDriveFilesAttachedNotes, handleHonoApiDriveFilesDelete, handleHonoApiDriveFilesFind, handleHonoApiDriveFilesFindByHash, handleHonoApiDriveFilesList, handleHonoApiDriveFilesMoveBulk, handleHonoApiDriveFilesShow, handleHonoApiDriveFilesUpdate, handleHonoApiDriveStream } from '../drive-files.js';
 import { handleHonoApiDriveFilesCreate, handleHonoApiDriveFilesUploadFromUrl, readHonoApiMultipartRequest } from '../drive-file-upload.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { jsonResponse, emptyResponse, rawStatusResponse, jsonBody, tokenFromRequest, getRequestIp, runApiEndpoint } from '../shell-helpers.js';
+import { invalidParamError, payloadTooLargeError } from '../error.js';
+import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, getRequestIp, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -38,8 +39,8 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post('/drive/files/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const parsed = await readHonoApiMultipartRequest(c, deps.config);
-			if (parsed.status === 'missing-file') return rawStatusResponse(c, 400);
-			if (parsed.status === 'too-large') return rawStatusResponse(c, 413);
+			if (parsed.status === 'missing-file') throw invalidParamError({ param: 'file', reason: 'required' });
+			if (parsed.status === 'too-large') throw payloadTooLargeError();
 
 			const { file, cleanup, fields } = parsed;
 			try {

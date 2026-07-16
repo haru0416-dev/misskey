@@ -31,7 +31,7 @@ import { pinnedUsersParamDef } from '@/server/rest/user.js';
 import { verifyEmailParamDef } from '@/server/rest/verify-email.js';
 import { z } from 'zod';
 import * as Redis from 'ioredis';
-import { HOUR } from '@/const.js';
+import { MINUTE, HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'announcements': {
@@ -69,6 +69,7 @@ export const endpointMetas = {
 					message: 'No such announcement.',
 					code: 'NO_SUCH_ANNOUNCEMENT',
 					id: 'b57b5e1d-4f49-404a-9edb-46b00268f121',
+					httpStatusCode: 404,
 				},
 			},
 		} as const,
@@ -474,6 +475,15 @@ export const endpointMetas = {
 			allowGet: true,
 			cacheSec: 3600,
 
+			errors: {
+				noSuchEmoji: {
+					message: 'No such emoji.',
+					code: 'NO_SUCH_EMOJI',
+					id: 'e2785b66-dca3-4087-9cac-b93c541cc425',
+					httpStatusCode: 404,
+				},
+			},
+
 			res: {
 				type: 'object',
 				optional: false, nullable: false,
@@ -613,6 +623,10 @@ export const endpointMetas = {
 			requireCredential: false,
 			allowGet: true,
 			cacheSec: 60 * 3,
+			limit: {
+				duration: MINUTE,
+				max: 30,
+			},
 
 			res: {
 				type: 'object',

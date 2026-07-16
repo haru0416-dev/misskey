@@ -327,12 +327,6 @@ export const endpointMetas = {
 					id: '13c457db-a8cb-4d88-b70a-211ceeeabb5f',
 				},
 
-				alreadyAdded: {
-					message: 'That user has already been added to that list.',
-					code: 'ALREADY_ADDED',
-					id: 'c3ad6fdb-692b-47ee-a455-7bd12c7af615',
-				},
-
 				youHaveBeenBlocked: {
 					message: 'You cannot push this user because you have been blocked by this user.',
 					code: 'YOU_HAVE_BEEN_BLOCKED',
@@ -685,22 +679,10 @@ export const endpointMetas = {
 			},
 
 			errors: {
-				noSuchUser: {
-					message: 'No such user.',
-					code: 'NO_SUCH_USER',
-					id: '27e494ba-2ac2-48e8-893b-10d4d8c2387b',
-				},
-
 				bothWithRepliesAndWithFiles: {
 					message: 'Specifying both withReplies and withFiles is not supported',
 					code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
 					id: '91c8cb9f-36ed-46e7-9ca2-7df96ed6e222',
-				},
-
-				signinRequired: {
-					message: 'Signin required.',
-					code: 'SIGNIN_REQUIRED',
-					id: 'd1588a9e-4b4d-4c07-807f-16f1486577a2',
 				},
 			},
 		} as const,
@@ -986,6 +968,7 @@ export const endpointMetas = {
 					message: 'Failed to resolve remote user.',
 					code: 'FAILED_TO_RESOLVE_REMOTE_USER',
 					id: 'ef7b9be4-9cba-4e6f-ab41-90ed171c7d3c',
+					httpStatusCode: 500,
 					kind: 'server',
 				},
 

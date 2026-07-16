@@ -178,6 +178,7 @@ describe('API', () => {
 									message: 'Credential required.',
 									code: 'CREDENTIAL_REQUIRED',
 									id: '1384574d-a912-4b81-8601-c7b1c4085df1',
+									kind: 'client',
 								}
 							}), { status: 401 });
 						}
@@ -187,18 +188,19 @@ describe('API', () => {
 				return new Response(null, { status: 404 });
 			});
 
-		try {
-			const cli = new APIClient({
-				origin: 'https://misskey.test',
-				credential: 'TOKEN',
-			});
+		const cli = new APIClient({
+			origin: 'https://misskey.test',
+			credential: 'TOKEN',
+		});
+		const error = await cli.request('i', {}, null).then(
+			() => null,
+			reason => reason,
+		);
 
-			await cli.request('i', {}, null);
-		} catch (e) {
-			expect(isAPIError(e)).toEqual(true);
-		} finally {
-			fetchMock.mockRestore();
-		}
+		expect(error).not.toBeNull();
+		expect(isAPIError(error)).toEqual(true);
+		expect(error).toMatchObject({ code: 'CREDENTIAL_REQUIRED', kind: 'client' });
+		fetchMock.mockRestore();
 	});
 
 	test('api error', async () => {

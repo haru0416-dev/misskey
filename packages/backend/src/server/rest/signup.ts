@@ -7,7 +7,8 @@ import { domainToASCII } from 'node:url';
 import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
-import { createSignupAccountInDatabase, DuplicatedUsernameError, UsedUsernameError } from '@/core/SignupStore.js';
+import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
+import { createSignupAccountInDatabase, DuplicatedUsernameError, RootUserAlreadyAssignedError, UsedUsernameError } from '@/core/SignupStore.js';
 import { fetchRegistrationTicketByPendingUserIdFromDatabase, updateRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
 import { deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
@@ -83,6 +84,16 @@ function assertSignupGateOpen(meta: MiMeta): void {
 	if (meta.disableRegistration) throw signupValidationError('INVITATION_REQUIRED');
 }
 
+function assertUsernameAvailableForNonRoot(meta: MiMeta, usernameLower: string): void {
+	if (meta.preservedUsernames.map(x => x.toLowerCase()).includes(usernameLower)) {
+		throw signupValidationError('USED_USERNAME');
+	}
+
+	if (isKeywordIncluded(usernameLower, meta.prohibitedWordsForNameOfUser)) {
+		throw signupValidationError('USED_USERNAME');
+	}
+}
+
 export async function packSignupUser(deps: SignupDependencies, user: MiUser, token: string): Promise<SignupResponse> {
 	return {
 		...await packMeDetailedForHonoApi(deps, user, { includeSecrets: true }),
@@ -106,42 +117,49 @@ export async function createLocalSignupAccount(
 	const usernameLower = params.username.toLowerCase();
 
 	if (!params.ignorePreservedUsernames && deps.meta.rootUserId != null) {
-		if (deps.meta.preservedUsernames.map(x => x.toLowerCase()).includes(usernameLower)) {
-			throw signupValidationError('USED_USERNAME');
-		}
-
-		if (isKeywordIncluded(usernameLower, deps.meta.prohibitedWordsForNameOfUser)) {
-			throw signupValidationError('USED_USERNAME');
-		}
+		assertUsernameAvailableForNonRoot(deps.meta, usernameLower);
 	}
 
 	const token = generateNativeUserToken();
 	const keyPair = await genRsaKeyPair();
 	const remoteUri = params.host == null ? null : `https://${params.host}/users/${params.username}`;
 	const beforeMeta = { ...deps.meta };
-	let account: MiUser;
-	let rootClaimed: boolean;
-	try {
-		({ account, rootClaimed } = await createSignupAccountInDatabase(deps.db, {
-			id: genId(),
-			username: params.username,
-			usernameLower,
-			host: params.host,
-			uri: remoteUri,
-			inbox: remoteUri == null ? null : `${remoteUri}/inbox`,
-			sharedInbox: params.host == null ? null : `https://${params.host}/inbox`,
-			followersUri: remoteUri == null ? null : `${remoteUri}/followers`,
-			token,
-			passwordHash: params.passwordHash,
-			publicKey: keyPair.publicKey,
-			privateKey: keyPair.privateKey,
-			claimRoot: params.claimRoot ?? (deps.meta.rootUserId == null),
-		}));
-	} catch (error) {
+	const accountData = {
+		id: genId(),
+		username: params.username,
+		usernameLower,
+		host: params.host,
+		uri: remoteUri,
+		inbox: remoteUri == null ? null : `${remoteUri}/inbox`,
+		sharedInbox: params.host == null ? null : `https://${params.host}/inbox`,
+		followersUri: remoteUri == null ? null : `${remoteUri}/followers`,
+		token,
+		passwordHash: params.passwordHash,
+		publicKey: keyPair.publicKey,
+		privateKey: keyPair.privateKey,
+	};
+	const createAccount = async (claimRoot: boolean) => await createSignupAccountInDatabase(deps.db, {
+		...accountData,
+		claimRoot,
+	});
+	const handleCreationError = (error: unknown): never => {
 		if (error instanceof DuplicatedUsernameError) throw signupValidationError('DUPLICATED_USERNAME');
 		if (error instanceof UsedUsernameError) throw signupValidationError('USED_USERNAME');
 		throw error;
+	};
+
+	let created: Awaited<ReturnType<typeof createAccount>>;
+	try {
+		created = await createAccount(params.claimRoot ?? (deps.meta.rootUserId == null));
+	} catch (error) {
+		// claimRoot を明示指定した呼び出し元 (管理者によるアカウント作成) は root 競合を自分で扱うため、素通しする。
+		if (params.claimRoot != null || !(error instanceof RootUserAlreadyAssignedError)) handleCreationError(error);
+		// 別のリクエストが先に root を取っていた場合は、通常ユーザーとして作り直す。
+		const currentMeta = await fetchMetaFromDatabase(deps.db);
+		if (!params.ignorePreservedUsernames) assertUsernameAvailableForNonRoot(currentMeta, usernameLower);
+		created = await createAccount(false).catch(handleCreationError);
 	}
+	const { account, rootClaimed } = created;
 
 	if (rootClaimed) {
 		deps.meta.rootUserId = account.id;

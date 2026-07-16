@@ -9,6 +9,142 @@ import endpoints, { IEndpoint } from '../endpoints.js';
 import { errors as basicErrors } from './errors.js';
 import { getSchemas, convertSchemaToOpenApiSchema, type OpenApiSchemaObject } from './schemas.js';
 
+type ErrorExample = {
+	value: {
+		error: {
+			message: string;
+			code: string;
+			id: string;
+			kind: 'client' | 'server' | 'permission';
+			info?: unknown;
+		};
+	};
+};
+const errorResponseDescriptions: Record<string, string> = {
+	'400': 'Client error',
+	'401': 'Authentication error',
+	'403': 'Forbidden error',
+	'404': 'Not found',
+	'413': 'Payload too large',
+	'422': 'Unprocessable content',
+	'429': 'Too many requests',
+	'500': 'Internal server error',
+};
+
+const unauthenticatedEndpoints = new Set([
+	'email-address/available',
+	'emoji',
+	'emojis',
+	'fetch-rss',
+	'endpoints',
+	'endpoint',
+	'federation/followers',
+	'federation/following',
+	'federation/update-remote-user',
+	'hashtags/list',
+	'hashtags/search',
+	'hashtags/show',
+	'hashtags/trend',
+	'meta',
+	'ping',
+	'retention',
+	'request-reset-password',
+	'reset-password',
+	'reset-db',
+	'roles/show',
+	'server-info',
+	'test',
+	'get-online-users-count',
+	'get-avatar-decorations',
+	'users/achievements',
+	'users/pages',
+	'users/flashs',
+	'username/available',
+]);
+
+type AuthenticationMode = 'none' | 'optional' | 'required';
+type RequestMethod = 'get' | 'post';
+type RequestBodyKind = 'none' | 'json' | 'multipart';
+
+function authenticationMode(endpoint: IEndpoint): AuthenticationMode {
+	if (endpoint.meta.requireCredential === true || endpoint.meta.requireAdmin === true || endpoint.meta.requireModerator === true) return 'required';
+	if (unauthenticatedEndpoints.has(endpoint.name)) return 'none';
+	return 'optional';
+}
+
+function requestBodyKind(endpoint: IEndpoint, method: RequestMethod): RequestBodyKind {
+	if (method === 'get' || endpoint.name === 'endpoints') return 'none';
+	return endpoint.meta.requireFile === true ? 'multipart' : 'json';
+}
+
+function buildQueryParameters(schema: OpenApiSchemaObject): Record<string, unknown>[] {
+	const required = new Set(schema.required ?? []);
+	return Object.entries(schema.properties ?? {}).map(([name, propertySchema]) => ({
+		name,
+		in: 'query',
+		required: required.has(name),
+		schema: propertySchema,
+	}));
+}
+
+function acceptsEmptyObject(params: IEndpoint['params'], schema: OpenApiSchemaObject): boolean {
+	if (params instanceof z.ZodType) return params.safeParse({}).success;
+	return (schema.required?.length ?? 0) === 0;
+}
+
+function buildErrorResponses(endpoint: IEndpoint, method: RequestMethod, hasInputParams: boolean): Record<string, Record<string, unknown>> {
+	const examplesByStatus = new Map<string, Record<string, ErrorExample>>();
+	const authMode = authenticationMode(endpoint);
+	const bodyKind = requestBodyKind(endpoint, method);
+	for (const [status, examples] of Object.entries(basicErrors)) {
+		if (status === '429' && endpoint.meta.limit == null) continue;
+		const selected = Object.fromEntries(Object.entries(examples).filter(([, example]) => {
+			switch (example.value.error.code) {
+				case 'INVALID_PARAM': return example.value.error.id === '3d81ceae-475f-4600-b2a8-2bc116157532'
+					? hasInputParams
+					: bodyKind === 'json';
+				case 'ACCESS_DENIED': return endpoint.meta.secure === true;
+				case 'CREDENTIAL_REQUIRED': return authMode === 'required';
+				case 'AUTHENTICATION_FAILED': return authMode !== 'none';
+				case 'PERMISSION_DENIED': return authMode !== 'none' && endpoint.meta.kind != null && endpoint.meta.secure !== true;
+				case 'ROLE_PERMISSION_DENIED': return endpoint.meta.requireAdmin === true || endpoint.meta.requireModerator === true || endpoint.meta.requiredRolePolicy != null || endpoint.meta.kind === 'read:chat' || endpoint.meta.kind === 'write:chat';
+				case 'YOUR_ACCOUNT_SUSPENDED': return authMode !== 'none';
+				case 'YOUR_ACCOUNT_MOVED': return endpoint.meta.prohibitMoved === true;
+				case 'PAYLOAD_TOO_LARGE': return bodyKind !== 'none';
+				default: return true;
+			}
+		}));
+		if (Object.keys(selected).length > 0) examplesByStatus.set(status, selected);
+	}
+
+	for (const [key, error] of Object.entries(endpoint.meta.errors ?? {})) {
+		const status = String(error.httpStatusCode ?? 400);
+		const examples = examplesByStatus.get(status) ?? {};
+		examples[key] = {
+			value: {
+				error: {
+					message: error.message,
+					code: error.code,
+					id: error.id,
+					kind: error.kind ?? 'client',
+					...(error.info === undefined ? {} : { info: error.info }),
+				},
+			},
+		};
+		examplesByStatus.set(status, examples);
+	}
+
+	return Object.fromEntries([...examplesByStatus.entries()].map(([status, examples]) => [status, {
+		description: errorResponseDescriptions[status] ?? `HTTP ${status} error`,
+		content: {
+			'application/json': {
+				schema: { $ref: '#/components/schemas/Error' },
+				examples,
+			},
+		},
+	}]));
+}
+
 /**
  * Zod スキーマを JSON Schema (OpenAPI 互換) に変換する。
  * Misskey 独自拡張 (optional/ref/selfRef 等) を持たないため schemas.ts の変換は不要で、
@@ -62,18 +198,6 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		if (originalEndpoint == null) throw new Error(`OpenAPI endpoint copy is missing index ${i}`);
 		const originalParams = originalEndpoint.params;
 		const params = originalParams instanceof z.ZodType ? originalParams : endpoint.params;
-		const errors: Record<string, { value: { error: unknown } }> = {};
-
-		if (endpoint.meta.errors) {
-			for (const e of Object.values(endpoint.meta.errors)) {
-				errors[e.code] = {
-					value: {
-						error: e,
-					},
-				};
-			}
-		}
-
 		const resSchema = endpoint.meta.res ? convertSchemaToOpenApiSchema(endpoint.meta.res, 'res', includeSelfRef) : {};
 
 		let desc = (endpoint.meta.description ? endpoint.meta.description : 'No description provided.') + '\n\n';
@@ -111,9 +235,17 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		}
 
 		const hasBody = (schema.type === 'object' && schema.properties && Object.keys(schema.properties).length >= 1)
-			|| ['allOf', 'oneOf', 'anyOf'].some(o => (Array.isArray(schema[o]) && schema[o].length >= 0));
+			|| ['allOf', 'oneOf', 'anyOf'].some(o => (Array.isArray(schema[o]) && schema[o].length > 0));
+		const queryParameters = buildQueryParameters(schema);
+		const requestBodyRequired = endpoint.meta.requireFile === true || !acceptsEmptyObject(params, schema);
 
-		const info = {
+		const authMode = authenticationMode(originalEndpoint);
+		const security = authMode === 'required'
+			? [{ bearerAuth: [] }]
+			: authMode === 'optional'
+				? [{}, { bearerAuth: [] }]
+				: undefined;
+		const baseInfo = {
 			// misskey-js generator treats `___` as the encoded endpoint path separator.
 			operationId: endpoint.name.replaceAll('/', '___'),
 			summary: endpoint.name,
@@ -125,22 +257,9 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 			...(endpoint.meta.tags ? {
 				tags: [endpoint.meta.tags[0]],
 			} : {}),
-			...(endpoint.meta.requireCredential ? {
-				security: [{
-					bearerAuth: [],
-				}],
-			} : {}),
-			...(hasBody ? {
-				requestBody: {
-					required: true,
-					content: {
-						[requestType]: {
-							schema,
-						},
-					},
-				},
-			} : {}),
-			responses: {
+			...(security === undefined ? {} : { security }),
+		};
+		const successResponses = {
 				...(endpoint.meta.res ? {
 					'200': {
 						description: 'OK (with results)',
@@ -155,92 +274,43 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 						description: 'OK (without any results)',
 					},
 				}),
-				...(endpoint.meta.res?.optional === true || endpoint.meta.res?.nullable === true ? {
+				...(endpoint.meta.res?.optional === true ? {
 					'204': {
 						description: 'OK (without any results)',
 					},
 				} : {}),
-				'400': {
-					description: 'Client error',
-					content: {
-						'application/json': {
-							schema: {
-								$ref: '#/components/schemas/Error',
-							},
-							examples: { ...errors, ...basicErrors['400'] },
-						},
-					},
-				},
-				'401': {
-					description: 'Authentication error',
-					content: {
-						'application/json': {
-							schema: {
-								$ref: '#/components/schemas/Error',
-							},
-							examples: basicErrors['401'],
-						},
-					},
-				},
-				'403': {
-					description: 'Forbidden error',
-					content: {
-						'application/json': {
-							schema: {
-								$ref: '#/components/schemas/Error',
-							},
-							examples: basicErrors['403'],
-						},
-					},
-				},
-				'418': {
-					description: 'I\'m Ai',
-					content: {
-						'application/json': {
-							schema: {
-								$ref: '#/components/schemas/Error',
-							},
-							examples: basicErrors['418'],
-						},
-					},
-				},
-				...(endpoint.meta.limit ? {
-					'429': {
-						description: 'Too many requests',
-						content: {
-							'application/json': {
-								schema: {
-									$ref: '#/components/schemas/Error',
-								},
-								examples: basicErrors['429'],
-							},
-						},
-					},
-				} : {}),
-				'500': {
-					description: 'Internal server error',
-					content: {
-						'application/json': {
-							schema: {
-								$ref: '#/components/schemas/Error',
-							},
-							examples: basicErrors['500'],
-						},
-					},
-				},
-			},
 		};
+		const hasInputParams = hasBody;
 
 		spec.paths['/' + endpoint.name] = {
 			...(endpoint.meta.allowGet ? {
 				get: {
-					...info,
-					operationId: 'get___' + info.operationId,
+					...baseInfo,
+					operationId: 'get___' + baseInfo.operationId,
+					...(queryParameters.length === 0 ? {} : { parameters: queryParameters }),
+					responses: {
+						...successResponses,
+						...buildErrorResponses(originalEndpoint, 'get', hasInputParams),
+					},
 				},
 			} : {}),
 			post: {
-				...info,
-				operationId: 'post___' + info.operationId,
+				...baseInfo,
+				operationId: 'post___' + baseInfo.operationId,
+				...(hasBody ? {
+					requestBody: {
+						required: requestBodyRequired,
+						content: {
+							[requestType]: {
+								schema,
+							},
+						},
+					},
+				} : {}),
+				responses: {
+					...successResponses,
+					...buildErrorResponses(originalEndpoint, 'post', hasInputParams),
+				},
 			},
 		};
 	}

@@ -176,10 +176,6 @@ function draftNoSuchNoteDraftError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such note draft.', code: 'NO_SUCH_NOTE_DRAFT', id: '49cd6b9d-848e-41ee-b0b9-adaca711a6b1' });
 }
 
-function draftAccessDeniedError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id: '56f35758-7dd5-468b-8439-5d6fb8ec9b8e' });
-}
-
 type DraftValidationErrorMap = {
 	scheduledAtRequired: HonoApiError;
 	scheduledAtMustBeInFuture: HonoApiError;
@@ -546,7 +542,7 @@ export async function handleHonoApiNotesDraftsUpdate(
 		noSuchReplyTarget: new HonoApiError({ status: 400, message: 'No such reply.', code: 'NO_SUCH_REPLY', id: 'c4721841-22fc-4bb7-ad3d-897ef1d375b5' }),
 		cannotReplyToPureRenote: new HonoApiError({ status: 400, message: 'You can not reply to a pure Renote.', code: 'CANNOT_REPLY_TO_A_PURE_RENOTE', id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15' }),
 		cannotReplyToInvisibleNote: new HonoApiError({ status: 400, message: 'You cannot reply to an invisible Note.', code: 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE', id: 'b98980fa-3780-406c-a935-b6d0eeee10d1' }),
-		cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: new HonoApiError({ status: 400, message: 'You cannot reply to a specified visibility note with extended visibility.', code: 'CANNOT_REPLY_TO_SPECIFIED_NOTE_WITH_EXTENDED_VISIBILITY', id: '215dbc76-336c-4d2a-9605-95766ba7dab0' }),
+		cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: new HonoApiError({ status: 400, message: 'You cannot reply to a specified visibility note with extended visibility.', code: 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY', id: '215dbc76-336c-4d2a-9605-95766ba7dab0' }),
 	});
 
 	const updatedDraft = await updateNoteDraftInDatabase(deps.db, params.draftId, {
@@ -585,7 +581,6 @@ export async function handleHonoApiNotesDraftsDelete(
 	const params = parseHonoApiParams(notesDraftsDeleteParamDef, body);
 	const draft = await fetchNoteDraftByIdAndUserIdFromDatabase(deps.db, params.draftId, me.id);
 	if (draft == null) throw draftNoSuchNoteDraftError();
-	if (draft.userId !== me.id) throw draftAccessDeniedError();
 
 	await deleteNoteDraftByIdFromDatabase(deps.db, draft.id);
 	await clearNoteDraftSchedule(deps, draft);
