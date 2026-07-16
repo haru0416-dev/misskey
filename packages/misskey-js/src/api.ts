@@ -1,4 +1,5 @@
 import { endpointReqTypes } from './autogen/endpoint.js';
+import type { components } from './autogen/types.js';
 import type { SwitchCaseResponseType, Endpoints } from './api.types.js';
 
 export type {
@@ -7,13 +8,7 @@ export type {
 
 const MK_API_ERROR = Symbol();
 
-export type APIError = {
-	id: string;
-	code: string;
-	message: string;
-	kind: 'client' | 'server';
-	info: Record<string, unknown>;
-};
+export type APIError = components['schemas']['Error']['error'];
 
 export function isAPIError(reason: Record<PropertyKey, unknown>): reason is APIError {
 	return reason[MK_API_ERROR] === true;
@@ -51,15 +46,26 @@ export class APIClient {
 		return obj !== null && typeof obj === 'object' && !Array.isArray(obj);
 	}
 
+	private assertIsAPIError(obj: unknown): obj is APIError {
+		return this.assertIsRecord(obj)
+			&& typeof obj['code'] === 'string'
+			&& typeof obj['message'] === 'string'
+			&& typeof obj['id'] === 'string'
+			&& (obj['kind'] === 'client' || obj['kind'] === 'server' || obj['kind'] === 'permission');
+	}
+
 	private assertSpecialEpReqType(ep: keyof Endpoints): ep is keyof typeof endpointReqTypes {
 		return ep in endpointReqTypes;
 	}
 
-	public request<E extends keyof Endpoints, P extends Endpoints[E]['req']>(
+	public request<E extends keyof Endpoints, P extends Endpoints[E]['req'] = never>(
 		endpoint: E,
-		params: P = {} as P,
-		credential?: string | null,
+		...args: Endpoints[E] extends { reqOptional: true }
+			? [params?: P, credential?: string | null]
+			: [params: P, credential?: string | null]
 	): Promise<SwitchCaseResponseType<E, P>> {
+		const params = args[0] ?? {} as P;
+		const credential = args[1];
 		return new Promise((resolve, reject) => {
 			let mediaType = 'application/json';
 			// （autogenがバグったときのため、念の為nullチェックも行う）
@@ -115,10 +121,11 @@ export class APIClient {
 					// サーバーがそのスキーマ通りに応答してくることを信頼してキャストする
 					resolve(body as SwitchCaseResponseType<E, P>);
 				} else {
-					reject({
+					const error = this.assertIsRecord(body) ? body['error'] : undefined;
+					reject(this.assertIsAPIError(error) ? {
 						[MK_API_ERROR]: true,
-						...(this.assertIsRecord(body) && this.assertIsRecord(body['error']) ? body['error'] : {}),
-					});
+						...error,
+					} : body);
 				}
 			}).catch(reject);
 		});

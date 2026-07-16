@@ -127,6 +127,7 @@ const textDecoder = new TextDecoder();
 
 export async function jsonBody(c: Context): Promise<Record<string, unknown>> {
 	const raw = await readRequestBodyWithLimit(c.req.raw, JSON_BODY_LIMIT, payloadTooLargeError);
+	if (raw.byteLength === 0) return {};
 	try {
 		const body = JSON.parse(textDecoder.decode(raw)) as unknown;
 		return body != null && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : {};
@@ -184,21 +185,18 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 
 		// 予期しない例外の詳細はクライアントには公開しないが、サーバー側には必ず痕跡を残す
 		// (テレメトリだけだと OTel 未設定の環境 — 開発・テスト含む — で 500 の原因が完全に消える)。
-		if (err instanceof Error) {
-			const errorId = randomUUID();
-			recordException(err);
-			apiLogger.error(`Unexpected error while handling ${new URL(c.req.url).pathname}`, { errorId, e: err });
-			return apiErrorResponse(c, new HonoApiError({
-				status: 500,
-				message: 'Internal error occurred. Please contact us if the error persists.',
-				code: 'INTERNAL_ERROR',
-				id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
-				kind: 'server',
-				info: { id: errorId },
-			}));
-		}
-
-		throw err;
+		const errorId = randomUUID();
+		const error = err instanceof Error ? err : new Error(String(err));
+		recordException(error);
+		apiLogger.error(`Unexpected error while handling ${new URL(c.req.url).pathname}`, { errorId, e: error });
+		return apiErrorResponse(c, new HonoApiError({
+			status: 500,
+			message: 'Internal error occurred. Please contact us if the error persists.',
+			code: 'INTERNAL_ERROR',
+			id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
+			kind: 'server',
+			info: { id: errorId },
+		}));
 	}
 }
 

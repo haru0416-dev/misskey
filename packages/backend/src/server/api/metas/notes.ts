@@ -358,24 +358,6 @@ export const endpointMetas = {
 					id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
 				},
 
-				cannotRenoteOutsideOfChannel: {
-					message: 'Cannot renote outside of channel.',
-					code: 'CANNOT_RENOTE_OUTSIDE_OF_CHANNEL',
-					id: '33510210-8452-094c-6227-4a6c05d99f00',
-				},
-
-				containsProhibitedWords: {
-					message: 'Cannot post because it contains prohibited words.',
-					code: 'CONTAINS_PROHIBITED_WORDS',
-					id: 'aa6e01d3-a85c-669d-758a-76aab43af334',
-				},
-
-				containsTooManyMentions: {
-					message: 'Cannot post because it exceeds the allowed number of mentions.',
-					code: 'CONTAINS_TOO_MANY_MENTIONS',
-					id: '4de0363a-3046-481b-9b0f-feff3e211025',
-				},
-
 				tooManyDrafts: {
 					message: 'You cannot create drafts any more.',
 					code: 'TOO_MANY_DRAFTS',
@@ -430,12 +412,6 @@ export const endpointMetas = {
 					code: 'NO_SUCH_NOTE_DRAFT',
 					id: '49cd6b9d-848e-41ee-b0b9-adaca711a6b1',
 				},
-
-				accessDenied: {
-					message: 'Access denied.',
-					code: 'ACCESS_DENIED',
-					id: '56f35758-7dd5-468b-8439-5d6fb8ec9b8e',
-				},
 			},
 		} as const,
 		paramDef: notesDraftsDeleteParamDef,
@@ -463,28 +439,10 @@ export const endpointMetas = {
 			},
 
 			errors: {
-				noSuchRenoteTarget: {
-					message: 'No such renote target.',
-					code: 'NO_SUCH_RENOTE_TARGET',
-					id: 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4',
-				},
-
-				cannotReRenote: {
-					message: 'You can not Renote a pure Renote.',
-					code: 'CANNOT_RENOTE_TO_A_PURE_RENOTE',
-					id: 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a',
-				},
-
 				cannotRenoteDueToVisibility: {
 					message: 'You can not Renote due to target visibility.',
 					code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY',
 					id: 'be9529e9-fe72-4de0-ae43-0b363c4938af',
-				},
-
-				noSuchReplyTarget: {
-					message: 'No such reply target.',
-					code: 'NO_SUCH_REPLY_TARGET',
-					id: '749ee0f6-d3da-459a-bf02-282e2da4292c',
 				},
 
 				cannotReplyToInvisibleNote: {
@@ -497,12 +455,6 @@ export const endpointMetas = {
 					message: 'You can not reply to a pure Renote.',
 					code: 'CANNOT_REPLY_TO_A_PURE_RENOTE',
 					id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15',
-				},
-
-				cannotReplyToSpecifiedNoteWithExtendedVisibility: {
-					message: 'You cannot reply to a specified visibility note with extended visibility.',
-					code: 'CANNOT_REPLY_TO_SPECIFIED_NOTE_WITH_EXTENDED_VISIBILITY',
-					id: 'ed940410-535c-4d5e-bfa3-af798671e93c',
 				},
 
 				cannotCreateAlreadyExpiredPoll: {
@@ -529,34 +481,10 @@ export const endpointMetas = {
 					id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
 				},
 
-				cannotRenoteOutsideOfChannel: {
-					message: 'Cannot renote outside of channel.',
-					code: 'CANNOT_RENOTE_OUTSIDE_OF_CHANNEL',
-					id: '33510210-8452-094c-6227-4a6c05d99f00',
-				},
-
-				containsProhibitedWords: {
-					message: 'Cannot post because it contains prohibited words.',
-					code: 'CONTAINS_PROHIBITED_WORDS',
-					id: 'aa6e01d3-a85c-669d-758a-76aab43af334',
-				},
-
-				containsTooManyMentions: {
-					message: 'Cannot post because it exceeds the allowed number of mentions.',
-					code: 'CONTAINS_TOO_MANY_MENTIONS',
-					id: '4de0363a-3046-481b-9b0f-feff3e211025',
-				},
-
 				noSuchNoteDraft: {
 					message: 'No such note draft.',
 					code: 'NO_SUCH_NOTE_DRAFT',
 					id: '49cd6b9d-848e-41ee-b0b9-adaca711a6b1',
-				},
-
-				accessDenied: {
-					message: 'Access denied.',
-					code: 'ACCESS_DENIED',
-					id: '56f35758-7dd5-468b-8439-5d6fb8ec9b8e',
 				},
 
 				noSuchRenote: {

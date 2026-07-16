@@ -480,6 +480,7 @@ describe('Account Move', () => {
 			assert.strictEqual(res.status, 403);
 			assert.strictEqual(castAsError(res.body).error.code, 'YOUR_ACCOUNT_MOVED');
 			assert.strictEqual(castAsError(res.body).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+			assert.strictEqual(castAsError(res.body).error.kind, 'permission');
 		});
 	});
 });

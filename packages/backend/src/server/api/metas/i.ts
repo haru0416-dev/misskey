@@ -43,6 +43,7 @@ export const endpointMetas = {
 					message: 'User is deleted.',
 					code: 'USER_IS_DELETED',
 					id: 'e5b3b9f0-2b8f-4b9f-9c1f-8c5c1b2e1b1a',
+					httpStatusCode: 403,
 					kind: 'permission',
 				},
 			},
@@ -185,6 +186,10 @@ export const endpointMetas = {
 
 			secure: true,
 
+			res: {
+				type: 'object',
+			},
+
 			errors: {
 				incorrectPassword: {
 					message: 'Incorrect password.',
@@ -216,6 +221,10 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			secure: true,
+
+			res: {
+				type: 'object',
+			},
 
 			errors: {
 				noSuchKey: {
@@ -600,12 +609,6 @@ export const endpointMetas = {
 					id: 'ebb53e5f-6574-9c0c-0b92-7ca6def56d7e',
 				},
 
-				unexpectedFileType: {
-					message: 'We need csv file.',
-					code: 'UNEXPECTED_FILE_TYPE',
-					id: 'b6fab7d6-d945-d67c-dfdb-32da1cd12cfe',
-				},
-
 				tooBigFile: {
 					message: 'That file is too big.',
 					code: 'TOO_BIG_FILE',
@@ -637,12 +640,6 @@ export const endpointMetas = {
 					message: 'No such file.',
 					code: 'NO_SUCH_FILE',
 					id: 'b98644cf-a5ac-4277-a502-0b8054a709a3',
-				},
-
-				unexpectedFileType: {
-					message: 'We need csv file.',
-					code: 'UNEXPECTED_FILE_TYPE',
-					id: '660f3599-bce0-4f95-9dde-311fd841c183',
 				},
 
 				tooBigFile: {
@@ -679,12 +676,6 @@ export const endpointMetas = {
 					id: 'e674141e-bd2a-ba85-e616-aefb187c9c2a',
 				},
 
-				unexpectedFileType: {
-					message: 'We need csv file.',
-					code: 'UNEXPECTED_FILE_TYPE',
-					id: '568c6e42-c86c-ba09-c004-517f83f9f1a8',
-				},
-
 				tooBigFile: {
 					message: 'That file is too big.',
 					code: 'TOO_BIG_FILE',
@@ -716,12 +707,6 @@ export const endpointMetas = {
 					message: 'No such file.',
 					code: 'NO_SUCH_FILE',
 					id: 'ea9cc34f-c415-4bc6-a6fe-28ac40357049',
-				},
-
-				unexpectedFileType: {
-					message: 'We need csv file.',
-					code: 'UNEXPECTED_FILE_TYPE',
-					id: 'a3c9edda-dd9b-4596-be6a-150ef813745c',
 				},
 
 				tooBigFile: {
@@ -772,11 +757,6 @@ export const endpointMetas = {
 					message: 'User ActivityPup URI is null.',
 					code: 'URI_NULL',
 					id: 'bf326f31-d430-4f97-9933-5d61e4d48a23',
-				},
-				localUriNull: {
-					message: 'Local User ActivityPup URI is null.',
-					code: 'URI_NULL',
-					id: '95ba11b9-90e8-43a5-ba16-7acc1ab32e71',
 				},
 				alreadyMoved: {
 					message: 'Account was already moved to another account.',
@@ -1048,13 +1028,6 @@ export const endpointMetas = {
 			requireCredential: true,
 			kind: 'write:account',
 
-			errors: {
-				noSuchKey: {
-					message: 'No such key.',
-					code: 'NO_SUCH_KEY',
-					id: '1fac4e8a-a6cd-4e39-a4a5-3a7e11f1b019',
-				},
-			},
 		} as const,
 		paramDef: registryGetParamDef,
 	},
@@ -1228,6 +1201,14 @@ export const endpointMetas = {
 					code: 'YOUR_NAME_CONTAINS_PROHIBITED_WORDS',
 					id: '0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191',
 					httpStatusCode: 422,
+				},
+
+				yourAccountMoved: {
+					message: 'You have moved your account.',
+					code: 'YOUR_ACCOUNT_MOVED',
+					id: '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31',
+					httpStatusCode: 403,
+					kind: 'permission',
 				},
 			},
 

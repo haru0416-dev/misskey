@@ -17,6 +17,9 @@ interface IEndpointMetaBase {
 			readonly message: string;
 			readonly code: string;
 			readonly id: string;
+			readonly httpStatusCode?: number;
+			readonly kind?: 'client' | 'server' | 'permission';
+			readonly info?: unknown;
 		};
 	};
 

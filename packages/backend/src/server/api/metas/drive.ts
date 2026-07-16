@@ -162,10 +162,10 @@ export const endpointMetas = {
 					id: 'f449b209-0c60-4e51-84d5-29486263bfd4',
 				},
 
-				inappropriate: {
-					message: 'Cannot upload the file because it has been determined that it possibly contains inappropriate content.',
-					code: 'INAPPROPRIATE',
-					id: 'bec5bd69-fba3-43c9-b4fb-2894b66ad5d2',
+				noSuchFolder: {
+					message: 'No such folder.',
+					code: 'NO_SUCH_FOLDER',
+					id: '12e7caa8-224f-471d-978a-653a81cf4c90',
 				},
 
 				noFreeSpace: {
@@ -350,6 +350,11 @@ export const endpointMetas = {
 			kind: 'write:drive',
 
 			errors: {
+				noSuchFolder: {
+					message: 'No such folder.',
+					code: 'NO_SUCH_FOLDER',
+					id: 'abdd73a9-6225-4140-a3e4-8089c77168bc',
+				},
 			},
 		} as const,
 		paramDef: driveFilesMoveBulkParamDef,

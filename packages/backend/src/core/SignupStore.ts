@@ -35,14 +35,18 @@ export class UsedUsernameError extends Error {}
 
 export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data: SignupAccountInsert): Promise<{ account: MiUser; rootClaimed: boolean }> {
 	const result = await db.transaction(async (tx) => {
+		// Serialize the global used_username reservation, including test-only remote signups.
 		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`signup:${data.usernameLower}`}))`);
+		const hostCondition = data.host == null
+			? isNull(userTable.host)
+			: eq(userTable.host, data.host);
 
 		const [existing] = await tx
 			.select({ id: userTable.id })
 			.from(userTable)
 			.where(and(
 				eq(userTable.usernameLower, data.usernameLower),
-				isNull(userTable.host),
+				hostCondition,
 			))
 			.limit(1);
 
@@ -55,10 +59,7 @@ export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data:
 			.from(usedUsername)
 			.where(eq(usedUsername.username, data.usernameLower))
 			.limit(1);
-
-		if (used) {
-			throw new UsedUsernameError();
-		}
+		if (used) throw new UsedUsernameError();
 
 		const [account] = await tx
 			.insert(userTable)
@@ -103,7 +104,7 @@ export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data:
 				.set({ rootUserId: account.id })
 				.where(and(eq(metaTable.id, 'x'), isNull(metaTable.rootUserId)))
 				.returning({ id: metaTable.id });
-			if (!updatedMeta) throw new RootUserAlreadyAssignedError();
+			if (updatedMeta == null) throw new RootUserAlreadyAssignedError();
 			rootClaimed = true;
 		}
 

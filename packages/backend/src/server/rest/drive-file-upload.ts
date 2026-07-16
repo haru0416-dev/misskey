@@ -48,7 +48,7 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type Logger from '@/logger.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from './error.js';
+import { HonoApiError, invalidParamError } from './error.js';
 import { readRequestBodyWithLimit } from '../body-limit.js';
 import { packDriveFileOrFailForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
 import { buildDriveFileDeletionDependencies, validateHonoApiDriveFileName, type HonoApiDriveFilesDependencies } from './drive-files.js';
@@ -139,13 +139,7 @@ export function castHonoApiMultipartFields(paramDef: { properties?: Record<strin
 			try {
 				fields[key] = JSON.parse(fields[key] as string);
 			} catch {
-				throw new HonoApiError({
-					status: 400,
-					message: 'Invalid param.',
-					code: 'INVALID_PARAM',
-					id: '0b5f1631-7c1a-41a6-b399-cce335f34d85',
-					info: { param: key, reason: `cannot cast to ${type}` },
-				});
+				throw invalidParamError({ param: key, reason: `cannot cast to ${type}` });
 			}
 		}
 	}
@@ -630,7 +624,9 @@ export async function addDriveFileForHonoApi(
 		if (!folderId) return null;
 
 		const driveFolder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, folderId, user ? user.id : null);
-		if (driveFolder == null) throw new Error('folder-not-found');
+		if (driveFolder == null) {
+			throw new HonoApiError({ status: 400, message: 'No such folder.', code: 'NO_SUCH_FOLDER', id: '12e7caa8-224f-471d-978a-653a81cf4c90' });
+		}
 
 		return driveFolder;
 	};
@@ -794,15 +790,11 @@ export async function handleHonoApiDriveFilesCreate(
 		});
 		return await packDriveFileOrFailForHonoApi(deps, driveFile, { self: true });
 	} catch (err) {
+		if (err instanceof HonoApiError) throw err;
 		if (err instanceof Error || typeof err === 'string') {
 			deps.logger.error(String(err));
 		}
 		if (err instanceof IdentifiableError) {
-			// 元の DriveService#addFile では inappropriate (282f77bf-...) の throw 箇所自体がコメントアウトされており
-			// 到達不能だが、create.ts のエラーマッピング自体はそのまま残っているため、ここでも同様に到達不能なまま残す。
-			if (err.id === '282f77bf-5816-4f72-9264-aa14d8261a21') {
-				throw new HonoApiError({ status: 400, message: 'Cannot upload the file because it has been determined that it possibly contains inappropriate content.', code: 'INAPPROPRIATE', id: 'bec5bd69-fba3-43c9-b4fb-2894b66ad5d2' });
-			}
 			if (err.id === 'c6244ed2-a39a-4e1c-bf93-f0fbd7764fa6') {
 				throw new HonoApiError({ status: 400, message: 'Cannot upload the file because you have no free space of drive.', code: 'NO_FREE_SPACE', id: 'd08dbc37-a6a9-463a-8c47-96c32ab5f064' });
 			}

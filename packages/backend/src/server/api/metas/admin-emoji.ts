@@ -46,6 +46,14 @@ export const endpointMetas = {
 			requireCredential: true,
 			requiredRolePolicy: 'canManageCustomEmojis',
 			kind: 'write:admin:emoji',
+
+			errors: {
+				noSuchEmoji: {
+					message: 'No such emoji.',
+					code: 'NO_SUCH_EMOJI',
+					id: '756e37b2-8e81-421c-9d18-740a6932d57f',
+				},
+			},
 		} as const,
 		paramDef: adminEmojiAliasesBulkParamDef,
 	},
@@ -165,6 +173,14 @@ export const endpointMetas = {
 			requireCredential: true,
 			requiredRolePolicy: 'canManageCustomEmojis',
 			kind: 'write:admin:emoji',
+
+			errors: {
+				noSuchEmoji: {
+					message: 'No such emoji.',
+					code: 'NO_SUCH_EMOJI',
+					id: '756e37b2-8e81-421c-9d18-740a6932d57f',
+				},
+			},
 		} as const,
 		paramDef: adminEmojiAliasesBulkParamDef,
 	},
@@ -175,6 +191,14 @@ export const endpointMetas = {
 			requireCredential: true,
 			requiredRolePolicy: 'canManageCustomEmojis',
 			kind: 'write:admin:emoji',
+
+			errors: {
+				noSuchEmoji: {
+					message: 'No such emoji.',
+					code: 'NO_SUCH_EMOJI',
+					id: '756e37b2-8e81-421c-9d18-740a6932d57f',
+				},
+			},
 		} as const,
 		paramDef: adminEmojiAliasesBulkParamDef,
 	},
@@ -185,6 +209,14 @@ export const endpointMetas = {
 			requireCredential: true,
 			requiredRolePolicy: 'canManageCustomEmojis',
 			kind: 'write:admin:emoji',
+
+			errors: {
+				noSuchEmoji: {
+					message: 'No such emoji.',
+					code: 'NO_SUCH_EMOJI',
+					id: '756e37b2-8e81-421c-9d18-740a6932d57f',
+				},
+			},
 		} as const,
 		paramDef: adminEmojiSetCategoryBulkParamDef,
 	},
@@ -195,6 +227,14 @@ export const endpointMetas = {
 			requireCredential: true,
 			requiredRolePolicy: 'canManageCustomEmojis',
 			kind: 'write:admin:emoji',
+
+			errors: {
+				noSuchEmoji: {
+					message: 'No such emoji.',
+					code: 'NO_SUCH_EMOJI',
+					id: '756e37b2-8e81-421c-9d18-740a6932d57f',
+				},
+			},
 		} as const,
 		paramDef: adminEmojiSetLicenseBulkParamDef,
 	},

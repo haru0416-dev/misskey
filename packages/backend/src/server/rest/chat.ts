@@ -22,7 +22,9 @@ import {
 	searchChatMessagesFromDatabase,
 } from '@/core/ChatMessageStore.js';
 import {
-	countChatRoomMembershipsByRoomIdFromDatabase,
+	ChatRoomCapacityExceededError,
+	ChatRoomInvitationConflictError,
+	ChatRoomInvitationNotFoundError,
 	createChatRoomInDatabase,
 	createChatRoomInvitationInDatabase,
 	deleteChatRoomByIdFromDatabase,
@@ -33,10 +35,8 @@ import {
 	fetchChatRoomByIdOrFailFromDatabase,
 	fetchChatRoomInvitationByIdOrFailFromDatabase,
 	fetchChatRoomInvitationFromDatabase,
-	fetchChatRoomInvitationOrFailFromDatabase,
 	fetchChatRoomMembershipByIdOrFailFromDatabase,
 	fetchChatRoomMembershipFromDatabase,
-	fetchChatRoomMembershipOrFailFromDatabase,
 	joinChatRoomFromInvitationInDatabase,
 	listChatRoomInvitationsByRoomIdFromDatabase,
 	listChatRoomInvitationsByRoomIdsAndUserIdFromDatabase,
@@ -55,6 +55,7 @@ import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.j
 import { emojiRegex } from '@/misc/emoji-regex.js';
 import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
 import { followingExistsInDatabase } from '@/core/FollowingStore.js';
+import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { countMutualFollowingsBetweenUsersFromDatabase } from '@/core/FollowingStore.js';
 import { mutingExistsInDatabase } from '@/core/MutingStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
@@ -73,7 +74,7 @@ import type { ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js'
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { xaddHonoApiNotification, type HonoApiNotificationDependencies } from './notification.js';
-import { HonoApiError } from './error.js';
+import { HonoApiError, invalidParamError } from './error.js';
 import type { HonoApiChatRoomStreamPublisher, HonoApiChatUserStreamPublisher, HonoApiMainStreamPublisher } from './events.js';
 import { packDriveFileForHonoApi, packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
@@ -100,7 +101,7 @@ function normalizeEmojiStringForHonoApi(x: string): string {
 		// 異体字セレクタ除去
 		return unicode.match('\u200d') ? unicode : unicode.replace(/\ufe0f/g, '');
 	} else {
-		throw new Error('invalid emoji');
+		throw invalidParamError({ param: 'reaction', reason: 'invalid emoji' });
 	}
 }
 
@@ -565,23 +566,28 @@ export async function createChatMessageToUserForHonoApi(
 
 	if (!otherApprovedMe) {
 		if (toUser.chatScope === 'none') {
-			throw new Error('recipient is cannot chat (none)');
+			throw chatNotAvailableError();
 		} else if (toUser.chatScope === 'followers') {
-			if (!await followingExistsInDatabase(deps.db, fromUser.id, toUser.id)) throw new Error('recipient is cannot chat (followers)');
+			if (!await followingExistsInDatabase(deps.db, fromUser.id, toUser.id)) throw chatNotAvailableError();
 		} else if (toUser.chatScope === 'following') {
-			if (!await followingExistsInDatabase(deps.db, toUser.id, fromUser.id)) throw new Error('recipient is cannot chat (following)');
+			if (!await followingExistsInDatabase(deps.db, toUser.id, fromUser.id)) throw chatNotAvailableError();
 		} else if (toUser.chatScope === 'mutual') {
 			const count = await countMutualFollowingsBetweenUsersFromDatabase(deps.db, fromUser.id, toUser.id);
-			if (count !== 2) throw new Error('recipient is cannot chat (mutual)');
+			if (count !== 2) throw chatNotAvailableError();
 		}
 	}
 
 	if (!(await getChatAvailabilityForHonoApi(deps, toUser.id)).write) {
-		throw new Error('recipient is cannot chat (policy)');
+		throw chatNotAvailableError();
 	}
 
 	if (await blockingExistsInDatabase(deps.db, toUser.id, fromUser.id)) {
-		throw new Error('blocked');
+		throw new HonoApiError({
+			status: 400,
+			message: 'You cannot send a message because you have been blocked by this user.',
+			code: 'YOU_HAVE_BEEN_BLOCKED',
+			id: 'c15a5199-7422-4968-941a-2a462c478f7d',
+		});
 	}
 
 	const message = {
@@ -647,7 +653,7 @@ export async function createChatMessageToRoomForHonoApi(
 	})).concat({ userId: toRoom.ownerId, isMuted: false });
 
 	if (!memberships.some(member => member.userId === fromUser.id)) {
-		throw new Error('you are not a member of the room');
+		throw noSuchRoomError('8098520d-2da5-4e8f-8ee1-df78b55a4ec6');
 	}
 
 	const membershipsOtherThanMe = memberships.filter(member => member.userId !== fromUser.id);
@@ -854,23 +860,12 @@ export async function isChatRoomMemberForHonoApi(deps: HonoApiChatDependencies, 
 
 export async function createChatRoomInvitationForHonoApi(deps: HonoApiChatDependencies, inviterId: MiUser['id'], roomId: MiChatRoom['id'], inviteeId: MiUser['id']): Promise<ChatRoomInvitationRow> {
 	if (inviterId === inviteeId) {
-		throw new Error('yourself');
+		throw invalidParamError({ param: 'userId', reason: 'self invitation' });
 	}
 
 	const room = await fetchChatRoomByIdAndOwnerIdOrFailFromDatabase(deps.db, roomId, inviterId);
-
-	if (await isChatRoomMemberForHonoApi(deps, room, inviteeId)) {
-		throw new Error('already member');
-	}
-
-	const existingInvitation = await fetchChatRoomInvitationFromDatabase(deps.db, roomId, inviteeId);
-	if (existingInvitation) {
-		throw new Error('already invited');
-	}
-
-	const membershipsCount = await countChatRoomMembershipsByRoomIdFromDatabase(deps.db, roomId);
-	if (membershipsCount >= MAX_ROOM_MEMBERS) {
-		throw new Error('room is full');
+	if (await fetchUserByIdFromDatabase(deps.db, inviteeId) == null) {
+		throw noSuchUserError('0f451b9e-fc21-491a-b2bf-46331103a945');
 	}
 
 	const invitation = {
@@ -879,7 +874,10 @@ export async function createChatRoomInvitationForHonoApi(deps: HonoApiChatDepend
 		userId: inviteeId,
 	};
 
-	const created = await createChatRoomInvitationInDatabase(deps.db, invitation);
+	const created = await createChatRoomInvitationInDatabase(deps.db, invitation, MAX_ROOM_MEMBERS).catch(error => {
+		if (error instanceof ChatRoomCapacityExceededError || error instanceof ChatRoomInvitationConflictError || isDuplicateKeyValueDatabaseError(error)) throw cannotCreateChatRoomInvitationError();
+		throw error;
+	});
 
 	void createChatRoomInvitationNotificationForHonoApi(deps, inviteeId, invitation.id, inviterId);
 
@@ -899,27 +897,31 @@ export async function getReceivedChatRoomInvitationsWithPaginationForHonoApi(dep
 }
 
 export async function joinToChatRoomForHonoApi(deps: HonoApiChatDependencies, userId: MiUser['id'], roomId: MiChatRoom['id']): Promise<void> {
-	const invitation = await fetchChatRoomInvitationOrFailFromDatabase(deps.db, roomId, userId);
-
-	const membershipsCount = await countChatRoomMembershipsByRoomIdFromDatabase(deps.db, roomId);
-	if (membershipsCount >= MAX_ROOM_MEMBERS) {
-		throw new Error('room is full');
-	}
+	const invitation = await fetchChatRoomInvitationFromDatabase(deps.db, roomId, userId);
+	if (invitation == null) throw noSuchRoomError('84416476-5ce8-4a2c-b568-9569f1b10733');
 
 	await joinChatRoomFromInvitationInDatabase(deps.db, {
 		id: genId(),
 		roomId,
 		userId,
-	}, invitation.id);
+	}, invitation.id, MAX_ROOM_MEMBERS).catch(error => {
+		if (error instanceof ChatRoomCapacityExceededError) throw cannotJoinChatRoomError();
+		if (error instanceof ChatRoomInvitationNotFoundError || isDuplicateKeyValueDatabaseError(error)) {
+			throw noSuchRoomError('84416476-5ce8-4a2c-b568-9569f1b10733');
+		}
+		throw error;
+	});
 }
 
 export async function ignoreChatRoomInvitationForHonoApi(deps: HonoApiChatDependencies, userId: MiUser['id'], roomId: MiChatRoom['id']): Promise<void> {
-	const invitation = await fetchChatRoomInvitationOrFailFromDatabase(deps.db, roomId, userId);
+	const invitation = await fetchChatRoomInvitationFromDatabase(deps.db, roomId, userId);
+	if (invitation == null) throw noSuchRoomError('5130557e-5a11-4cfb-9cc5-fe60cda5de0d');
 	await updateChatRoomInvitationIgnoredFromDatabase(deps.db, invitation.id, true);
 }
 
 export async function leaveChatRoomForHonoApi(deps: HonoApiChatDependencies, userId: MiUser['id'], roomId: MiChatRoom['id']): Promise<void> {
-	const membership = await fetchChatRoomMembershipOrFailFromDatabase(deps.db, roomId, userId);
+	const membership = await fetchChatRoomMembershipFromDatabase(deps.db, roomId, userId);
+	if (membership == null) throw noSuchRoomError('cb7f3179-50e8-4389-8c30-dbe2650a67c9');
 	await deleteChatRoomMembershipByIdFromDatabase(deps.db, membership.id);
 
 	await deps.redis.pipeline()
@@ -929,7 +931,8 @@ export async function leaveChatRoomForHonoApi(deps: HonoApiChatDependencies, use
 }
 
 export async function muteChatRoomForHonoApi(deps: HonoApiChatDependencies, userId: MiUser['id'], roomId: MiChatRoom['id'], mute: boolean): Promise<void> {
-	const membership = await fetchChatRoomMembershipOrFailFromDatabase(deps.db, roomId, userId);
+	const membership = await fetchChatRoomMembershipFromDatabase(deps.db, roomId, userId);
+	if (membership == null) throw noSuchRoomError('c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df');
 	await updateChatRoomMembershipMuteFromDatabase(deps.db, membership.id, mute);
 }
 
@@ -954,7 +957,7 @@ async function resolveChatReactionForHonoApi(deps: HonoApiChatDependencies, reac
 		const name = custom[1]!;
 		if (requireExists) {
 			const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null);
-			if (emoji == null) throw new Error('no such emoji');
+			if (emoji == null) throw invalidParamError({ param: 'reaction', reason: 'no such emoji' });
 		}
 		return `:${name}:`;
 	}
@@ -963,25 +966,26 @@ async function resolveChatReactionForHonoApi(deps: HonoApiChatDependencies, reac
 export async function reactToChatMessageForHonoApi(deps: HonoApiChatDependencies, messageId: MiChatMessage['id'], userId: MiUser['id'], reactionInput: string): Promise<void> {
 	const reaction = await resolveChatReactionForHonoApi(deps, reactionInput, true);
 
-	const message = await fetchChatMessageByIdOrFailFromDatabase(deps.db, messageId);
+	const message = await fetchChatMessageByIdFromDatabase(deps.db, messageId);
+	if (message == null) throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
 
 	if (message.fromUserId === userId) {
-		throw new Error('cannot react to own message');
+		throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
 	}
 
 	if (message.toRoomId === null && message.toUserId !== userId) {
-		throw new Error('cannot react to others message');
+		throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
 	}
 
 	if (message.reactions.length >= MAX_REACTIONS_PER_MESSAGE) {
-		throw new Error('too many reactions');
+		throw tooManyChatMessageReactionsError();
 	}
 
 	const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(deps.db, message.toRoomId) : null;
 
 	if (room) {
 		if (!(await isChatRoomMemberForHonoApi(deps, room, userId))) {
-			throw new Error('cannot react to others message');
+			throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
 		}
 	}
 
@@ -1002,8 +1006,15 @@ export async function reactToChatMessageForHonoApi(deps: HonoApiChatDependencies
 export async function unreactToChatMessageForHonoApi(deps: HonoApiChatDependencies, messageId: MiChatMessage['id'], userId: MiUser['id'], reactionInput: string): Promise<void> {
 	const reaction = await resolveChatReactionForHonoApi(deps, reactionInput, false);
 
-	const message = await fetchChatMessageByIdOrFailFromDatabase(deps.db, messageId);
+	const message = await fetchChatMessageByIdFromDatabase(deps.db, messageId);
+	if (message == null) throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
+	if (message.fromUserId === userId || (message.toRoomId === null && message.toUserId !== userId)) {
+		throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
+	}
 	const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(deps.db, message.toRoomId) : null;
+	if (room && !(await isChatRoomMemberForHonoApi(deps, room, userId))) {
+		throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
+	}
 
 	await removeChatMessageReactionInDatabase(deps.db, message.id, userId, reaction);
 
@@ -1036,6 +1047,22 @@ function noSuchMessageError(id: string): HonoApiError {
 
 function noSuchUserError(id: string): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id });
+}
+
+function chatNotAvailableError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Chat is not available with this user.', code: 'CHAT_NOT_AVAILABLE', id: '0b6812b5-f0c3-486b-a99a-4973d22c44b2' });
+}
+
+function tooManyChatMessageReactionsError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'This message has too many reactions.', code: 'TOO_MANY_REACTIONS', id: '86753281-61b8-4dea-9a38-a08c0439f151' });
+}
+
+function cannotCreateChatRoomInvitationError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Cannot create an invitation for this room.', code: 'CANNOT_CREATE_INVITATION', id: 'a3482fe1-78c8-4489-bcbf-a488631e95f4' });
+}
+
+function cannotJoinChatRoomError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Cannot join this room.', code: 'CANNOT_JOIN_ROOM', id: 'c5a1e411-996d-46e1-be6e-82a8b996d1a1' });
 }
 
 async function getUserForHonoApiChat(deps: HonoApiChatDependencies, userId: string): Promise<MiUser> {

@@ -27,6 +27,7 @@ import type { MiLocalUser } from '@/models/User.js';
 import type Logger from '@/logger.js';
 import { createLoginNotification, type HonoApiNotificationDependencies } from './notification.js';
 import { isHonoApiRateLimited } from './rate-limit.js';
+import type { HonoApiErrorBody, HonoApiErrorKind } from './error.js';
 
 export type HonoApiSigninDependencies = HonoApiNotificationDependencies & {
 	config: Config;
@@ -55,13 +56,7 @@ export type HonoApiSigninRequest = {
 	ip: string;
 };
 
-export type HonoApiSigninErrorBody = {
-	error: {
-		message?: string;
-		code?: string;
-		id: string;
-	};
-};
+export type HonoApiSigninErrorBody = HonoApiErrorBody;
 
 export type HonoApiSigninFlowResult = {
 	status: number;
@@ -79,10 +74,22 @@ type CaptchaResponse = {
 };
 
 export function honoApiSigninError(status: number, id: string): HonoApiSigninErrorResult {
+	let message = 'Invalid param.';
+	let code = 'INVALID_PARAM';
+	let kind: HonoApiErrorKind = 'client';
+	if (status === 403) {
+		message = 'Authentication failed.';
+		code = 'AUTHENTICATION_FAILED';
+		kind = 'permission';
+	} else if (status === 404) {
+		message = 'No such user.';
+		code = 'NO_SUCH_USER';
+	}
+
 	return {
 		status,
 		body: {
-			error: { id },
+			error: { message, code, id, kind },
 		},
 	};
 }
@@ -95,6 +102,7 @@ export function tooManyAuthenticationFailures(): HonoApiSigninErrorResult {
 				message: 'Too many failed attempts to sign in. Try again later.',
 				code: 'TOO_MANY_AUTHENTICATION_FAILURES',
 				id: '22d05606-fbcf-421a-a2db-b32610dcfd1b',
+				kind: 'client',
 			},
 		},
 	};
@@ -321,11 +329,11 @@ export async function handleHonoApiSigninFlow(
 	}
 
 	if (typeof username !== 'string') {
-		return { status: 400 };
+		return honoApiSigninError(400, '3d81ceae-475f-4600-b2a8-2bc116157532');
 	}
 
 	if (token != null && typeof token !== 'string') {
-		return { status: 400 };
+		return honoApiSigninError(400, '3d81ceae-475f-4600-b2a8-2bc116157532');
 	}
 
 	const user = await fetchLocalUserByUsernameFromDatabase(deps.db, username);
@@ -362,7 +370,7 @@ export async function handleHonoApiSigninFlow(
 	}
 
 	if (typeof password !== 'string') {
-		return { status: 400 };
+		return honoApiSigninError(400, '3d81ceae-475f-4600-b2a8-2bc116157532');
 	}
 
 	const same = await comparePassword(password, profile.password!);
@@ -371,7 +379,7 @@ export async function handleHonoApiSigninFlow(
 		try {
 			await verifyEnabledCaptchas(deps, body);
 		} catch {
-			return { status: 400 };
+			return honoApiSigninError(400, '3d81ceae-475f-4600-b2a8-2bc116157532');
 		}
 
 		if (same) {

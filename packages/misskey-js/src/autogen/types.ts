@@ -3955,15 +3955,19 @@ export type components = {
         Error: {
             /** @description An error object. */
             error: {
-                /** @description An error code. Unique within the endpoint. */
+                /** @description A stable machine-readable error code. */
                 code: string;
                 /** @description An error message. */
                 message: string;
-                /**
-                 * Format: uuid
-                 * @description An error ID. This ID is static.
-                 */
+                /** @description A stable error identifier. */
                 id: string;
+                /**
+                 * @description The category of the error.
+                 * @enum {string}
+                 */
+                kind: 'client' | 'server' | 'permission';
+                /** @description Additional structured details about the error. */
+                info?: unknown;
             };
         };
         UserLite: {
@@ -5841,8 +5845,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5904,8 +5908,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5925,7 +5929,7 @@ export interface operations {
         };
     };
     'admin___abuse-report___notification-recipient___list': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     method?: ('email' | 'webhook')[];
@@ -5969,8 +5973,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6035,8 +6039,17 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6109,8 +6122,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6130,7 +6143,7 @@ export interface operations {
         };
     };
     'admin___abuse-user-reports': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -6217,8 +6230,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6286,8 +6299,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6349,8 +6362,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6414,8 +6427,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6488,8 +6501,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6551,8 +6564,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6572,7 +6585,7 @@ export interface operations {
         };
     };
     admin___ad___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -6625,8 +6638,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6698,8 +6711,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6796,8 +6809,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6859,8 +6872,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6880,7 +6893,7 @@ export interface operations {
         };
     };
     admin___announcements___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -6960,8 +6973,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7034,8 +7047,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7115,8 +7128,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7178,8 +7191,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7199,7 +7212,7 @@ export interface operations {
         };
     };
     'admin___avatar-decorations___list': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -7266,8 +7279,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7334,8 +7347,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7412,8 +7425,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7479,8 +7492,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7542,8 +7555,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7605,8 +7618,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7660,8 +7673,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7715,8 +7728,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7736,7 +7749,7 @@ export interface operations {
         };
     };
     admin___drive___files: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -7796,8 +7809,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7924,8 +7937,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7997,8 +8010,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8060,8 +8073,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8129,8 +8142,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8192,8 +8205,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8254,8 +8267,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8317,8 +8330,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8338,7 +8351,7 @@ export interface operations {
         };
     };
     admin___emoji___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default null */
@@ -8391,8 +8404,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8412,7 +8425,7 @@ export interface operations {
         };
     };
     'admin___emoji___list-remote': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default null */
@@ -8467,8 +8480,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8530,8 +8543,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8593,8 +8606,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8656,8 +8669,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8719,8 +8732,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8796,8 +8809,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8858,8 +8871,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8920,8 +8933,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8982,8 +8995,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9046,8 +9059,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9109,8 +9122,17 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9170,8 +9192,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9233,8 +9255,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9303,8 +9325,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9324,7 +9346,7 @@ export interface operations {
         };
     };
     admin___invite___create: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 1 */
@@ -9370,8 +9392,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9391,7 +9413,7 @@ export interface operations {
         };
     };
     admin___invite___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 30 */
@@ -9445,8 +9467,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9651,8 +9673,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9715,8 +9737,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9853,8 +9875,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9911,8 +9933,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9969,8 +9991,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10047,8 +10069,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10205,8 +10227,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10278,8 +10300,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10403,8 +10425,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10489,8 +10511,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10563,8 +10585,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10636,8 +10658,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10710,8 +10732,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10850,8 +10872,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10927,8 +10949,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10990,8 +11012,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11065,8 +11087,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11133,8 +11155,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11195,8 +11217,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11263,8 +11285,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11327,8 +11349,17 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11393,8 +11424,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11482,8 +11513,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11545,8 +11576,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11603,8 +11634,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11669,8 +11700,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11734,8 +11765,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11821,8 +11852,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11885,8 +11916,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11967,8 +11998,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12031,8 +12062,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12115,8 +12146,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12136,7 +12167,7 @@ export interface operations {
         };
     };
     'admin___show-moderation-logs': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -12200,8 +12231,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12585,8 +12616,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12606,7 +12637,7 @@ export interface operations {
         };
     };
     'admin___show-users': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -12677,8 +12708,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12740,8 +12771,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12816,8 +12847,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12879,8 +12910,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12900,7 +12931,7 @@ export interface operations {
         };
     };
     'admin___system-webhook___list': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     isActive?: boolean;
@@ -12951,8 +12982,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13017,8 +13048,17 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13091,8 +13131,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13178,8 +13218,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13241,8 +13281,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13304,8 +13344,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13367,8 +13407,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13430,8 +13470,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13494,8 +13534,17 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13515,7 +13564,7 @@ export interface operations {
         };
     };
     'admin___update-meta': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     disableRegistration?: boolean | null;
@@ -13703,8 +13752,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13724,7 +13773,7 @@ export interface operations {
         };
     };
     'admin___update-proxy-account': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     description?: string | null;
@@ -13768,8 +13817,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13832,8 +13881,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13853,7 +13902,7 @@ export interface operations {
         };
     };
     announcements: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -13906,8 +13955,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13972,8 +14021,17 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14049,8 +14107,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14112,8 +14170,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14170,8 +14228,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14244,8 +14302,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14309,8 +14367,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14375,8 +14433,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14454,8 +14512,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14519,8 +14577,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14603,8 +14661,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14680,8 +14738,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14746,8 +14804,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14808,8 +14866,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14877,8 +14935,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14947,8 +15005,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15016,8 +15074,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15082,8 +15140,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15157,8 +15215,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15187,7 +15245,7 @@ export interface operations {
         };
     };
     blocking___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 30 */
@@ -15238,8 +15296,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15308,8 +15366,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15380,8 +15438,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15438,8 +15496,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15501,8 +15559,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15522,7 +15580,7 @@ export interface operations {
         };
     };
     channels___followed: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** Format: misskey:id */
@@ -15573,8 +15631,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15637,8 +15695,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15700,8 +15758,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15758,8 +15816,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15816,8 +15874,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15837,7 +15895,7 @@ export interface operations {
         };
     };
     channels___owned: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** Format: misskey:id */
@@ -15888,8 +15946,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15966,8 +16024,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16032,8 +16090,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16106,8 +16164,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16169,8 +16227,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16232,8 +16290,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16306,8 +16364,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16386,8 +16444,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16460,8 +16518,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16543,8 +16601,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16622,8 +16680,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16732,8 +16790,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16825,8 +16883,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16904,8 +16962,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17001,8 +17059,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17083,8 +17141,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17164,8 +17222,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17243,8 +17301,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17324,8 +17382,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17345,7 +17403,7 @@ export interface operations {
         };
     };
     chat___history: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -17392,8 +17450,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17461,8 +17519,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17539,8 +17597,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17611,8 +17669,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17675,8 +17733,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17749,8 +17807,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17818,8 +17876,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17884,8 +17942,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17948,8 +18006,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18022,8 +18080,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18077,8 +18135,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18143,8 +18201,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18215,8 +18273,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18283,8 +18341,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18355,8 +18413,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18376,7 +18434,7 @@ export interface operations {
         };
     };
     chat___rooms___invitations___inbox: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 30 */
@@ -18427,8 +18485,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18501,8 +18559,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18564,8 +18622,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18585,7 +18643,7 @@ export interface operations {
         };
     };
     chat___rooms___joining: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 30 */
@@ -18636,8 +18694,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18699,8 +18757,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18773,8 +18831,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18837,8 +18895,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18858,7 +18916,7 @@ export interface operations {
         };
     };
     chat___rooms___owned: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 30 */
@@ -18909,8 +18967,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18975,8 +19033,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19043,8 +19101,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19108,8 +19166,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19185,8 +19243,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19248,8 +19306,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19311,8 +19369,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19332,7 +19390,7 @@ export interface operations {
         };
     };
     clips___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -19383,8 +19441,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19441,8 +19499,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19516,8 +19574,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19581,8 +19639,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19647,8 +19705,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19710,8 +19768,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19779,8 +19837,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19840,8 +19898,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19861,7 +19919,7 @@ export interface operations {
         };
     };
     drive___files: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -19916,8 +19974,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19990,8 +20048,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20064,8 +20122,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20129,8 +20187,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20208,8 +20266,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20280,8 +20338,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20347,8 +20405,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20412,8 +20470,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20475,8 +20533,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20545,8 +20603,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20615,8 +20673,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20687,8 +20745,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20717,7 +20775,7 @@ export interface operations {
         };
     };
     drive___folders: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -20770,8 +20828,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20791,7 +20849,7 @@ export interface operations {
         };
     };
     drive___folders___create: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default Untitled */
@@ -20837,8 +20895,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20909,8 +20967,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20976,8 +21034,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21042,8 +21100,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21110,8 +21168,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21131,7 +21189,7 @@ export interface operations {
         };
     };
     drive___stream: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -21183,8 +21241,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21233,26 +21291,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21298,8 +21338,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
+            /** @description Not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21307,17 +21347,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21358,26 +21389,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21419,12 +21432,6 @@ export interface operations {
                     } | null;
                 };
             };
-            /** @description OK (without any results) */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-            };
             /** @description Client error */
             400: {
                 headers: {
@@ -21434,26 +21441,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21481,42 +21470,6 @@ export interface operations {
                 };
                 content: {
                     'application/json': string[];
-                };
-            };
-            /** @description Client error */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
                 };
             };
             /** @description Internal server error */
@@ -21565,8 +21518,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21629,26 +21582,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21702,26 +21637,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21741,7 +21658,7 @@ export interface operations {
         };
     };
     federation___instances: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     host?: string | null;
@@ -21814,8 +21731,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21852,12 +21769,6 @@ export interface operations {
                     'application/json': components['schemas']['FederationInstance'] | null;
                 };
             };
-            /** @description OK (without any results) */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-            };
             /** @description Client error */
             400: {
                 headers: {
@@ -21885,8 +21796,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21906,7 +21817,7 @@ export interface operations {
         };
     };
     federation___stats: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -21956,8 +21867,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22001,26 +21912,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22092,8 +21985,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22161,8 +22054,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22265,8 +22158,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22274,17 +22167,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Too many requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22356,8 +22240,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22428,8 +22312,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22449,7 +22333,7 @@ export interface operations {
         };
     };
     flash___featured: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 0 */
@@ -22496,8 +22380,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22559,8 +22443,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22580,7 +22464,7 @@ export interface operations {
         };
     };
     flash___my: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -22631,8 +22515,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22652,7 +22536,7 @@ export interface operations {
         };
     };
     'flash___my-likes': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -22708,8 +22592,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22781,8 +22665,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22847,8 +22731,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22910,8 +22794,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22979,8 +22863,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23055,8 +22939,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23130,8 +23014,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23205,8 +23089,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23235,7 +23119,7 @@ export interface operations {
         };
     };
     following___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default false */
@@ -23288,8 +23172,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23351,8 +23235,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23417,8 +23301,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23438,7 +23322,7 @@ export interface operations {
         };
     };
     following___requests___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** Format: misskey:id */
@@ -23494,8 +23378,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23557,8 +23441,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23578,7 +23462,7 @@ export interface operations {
         };
     };
     following___requests___sent: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** Format: misskey:id */
@@ -23634,8 +23518,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23703,8 +23587,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23733,7 +23617,7 @@ export interface operations {
         };
     };
     'following___update-all': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @enum {string} */
@@ -23776,8 +23660,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23806,7 +23690,7 @@ export interface operations {
         };
     };
     gallery___featured: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -23853,8 +23737,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23911,8 +23795,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23932,7 +23816,7 @@ export interface operations {
         };
     };
     gallery___posts: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -23983,8 +23867,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24052,8 +23936,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24124,8 +24008,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24187,8 +24071,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24253,8 +24137,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24316,8 +24200,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24387,8 +24271,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24447,26 +24331,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24507,26 +24373,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24593,26 +24441,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24662,26 +24492,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24727,26 +24539,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24789,26 +24583,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24888,8 +24664,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24946,8 +24722,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25013,8 +24789,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25086,8 +24862,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25148,8 +24924,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25220,8 +24996,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25286,8 +25062,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25317,10 +25093,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK (without any results) */
-            204: {
+            /** @description OK (with results) */
+            200: {
                 headers: {
                     [name: string]: unknown;
+                };
+                content: {
+                    'application/json': Record<string, never>;
                 };
             };
             /** @description Client error */
@@ -25350,8 +25129,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25413,8 +25192,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25443,10 +25222,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK (without any results) */
-            204: {
+            /** @description OK (with results) */
+            200: {
                 headers: {
                     [name: string]: unknown;
+                };
+                content: {
+                    'application/json': Record<string, never>;
                 };
             };
             /** @description Client error */
@@ -25476,8 +25258,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25497,7 +25279,7 @@ export interface operations {
         };
     };
     i___apps: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @enum {string} */
@@ -25553,8 +25335,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25574,7 +25356,7 @@ export interface operations {
         };
     };
     'i___authorized-apps': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -25633,8 +25415,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25697,8 +25479,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25835,8 +25617,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25898,8 +25680,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25953,8 +25735,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26017,8 +25799,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26081,8 +25863,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26145,8 +25927,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26175,7 +25957,7 @@ export interface operations {
         };
     };
     'i___export-following': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default false */
@@ -26219,8 +26001,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26283,8 +26065,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26347,8 +26129,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26411,8 +26193,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26441,7 +26223,7 @@ export interface operations {
         };
     };
     i___favorites: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -26492,8 +26274,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26513,7 +26295,7 @@ export interface operations {
         };
     };
     i___gallery___likes: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -26568,8 +26350,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26589,7 +26371,7 @@ export interface operations {
         };
     };
     i___gallery___posts: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -26640,8 +26422,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26703,8 +26485,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26775,8 +26557,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26848,8 +26630,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26920,8 +26702,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26992,8 +26774,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27066,8 +26848,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27096,7 +26878,7 @@ export interface operations {
         };
     };
     i___notifications: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -27197,8 +26979,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27227,7 +27009,7 @@ export interface operations {
         };
     };
     'i___notifications-grouped': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -27328,8 +27110,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27358,7 +27140,7 @@ export interface operations {
         };
     };
     'i___page-likes': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -27413,8 +27195,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27434,7 +27216,7 @@ export interface operations {
         };
     };
     i___pages: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -27485,8 +27267,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27551,8 +27333,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27614,8 +27396,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27676,8 +27458,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27744,8 +27526,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27765,7 +27547,7 @@ export interface operations {
         };
     };
     'i___registry___get-all': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default [] */
@@ -27811,8 +27593,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27882,8 +27664,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27903,7 +27685,7 @@ export interface operations {
         };
     };
     i___registry___keys: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default [] */
@@ -27949,8 +27731,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27970,7 +27752,7 @@ export interface operations {
         };
     };
     'i___registry___keys-with-type': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default [] */
@@ -28018,8 +27800,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -28083,8 +27865,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -28144,8 +27926,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -28210,8 +27992,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -28277,8 +28059,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -28298,7 +28080,7 @@ export interface operations {
         };
     };
     'i___signin-history': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -28349,8 +28131,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -28415,8 +28197,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -28436,7 +28218,7 @@ export interface operations {
         };
     };
     i___update: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     name?: string | null;
@@ -29043,8 +28825,17 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Unprocessable content */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29119,8 +28910,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29219,8 +29010,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29282,8 +29073,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29340,8 +29131,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29406,8 +29197,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29475,8 +29266,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29552,8 +29343,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29610,8 +29401,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29673,8 +29464,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29733,8 +29524,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29754,7 +29545,7 @@ export interface operations {
         };
     };
     invite___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 30 */
@@ -29805,8 +29596,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29826,7 +29617,7 @@ export interface operations {
         };
     };
     meta: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default true */
@@ -29853,26 +29644,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -29942,8 +29715,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30006,8 +29779,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30078,8 +29851,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30099,7 +29872,7 @@ export interface operations {
         };
     };
     mute___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 30 */
@@ -30150,8 +29923,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30171,7 +29944,7 @@ export interface operations {
         };
     };
     my___apps: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -30218,8 +29991,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30239,7 +30012,7 @@ export interface operations {
         };
     };
     notes: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default false */
@@ -30296,8 +30069,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30370,8 +30143,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30436,8 +30209,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30506,8 +30279,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30608,8 +30381,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30680,8 +30453,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30747,8 +30520,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30768,7 +30541,7 @@ export interface operations {
         };
     };
     notes___drafts___create: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /**
@@ -30846,8 +30619,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30918,8 +30691,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -30939,7 +30712,7 @@ export interface operations {
         };
     };
     notes___drafts___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 30 */
@@ -30991,8 +30764,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31086,8 +30859,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31158,8 +30931,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31230,8 +31003,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31251,7 +31024,7 @@ export interface operations {
         };
     };
     notes___featured: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -31299,8 +31072,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31320,7 +31093,7 @@ export interface operations {
         };
     };
     'notes___global-timeline': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default false */
@@ -31375,8 +31148,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31396,7 +31169,7 @@ export interface operations {
         };
     };
     'notes___hybrid-timeline': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -31461,8 +31234,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31482,7 +31255,7 @@ export interface operations {
         };
     };
     'notes___local-timeline': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default false */
@@ -31541,8 +31314,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31562,7 +31335,7 @@ export interface operations {
         };
     };
     notes___mentions: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default false */
@@ -31616,8 +31389,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31637,7 +31410,7 @@ export interface operations {
         };
     };
     notes___polls___recommendation: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -31686,8 +31459,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31750,8 +31523,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31825,8 +31598,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31889,8 +31662,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -31952,8 +31725,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32035,8 +31808,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32109,8 +31882,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32203,8 +31976,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32290,8 +32063,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32356,8 +32129,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32429,8 +32202,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32498,8 +32271,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32561,8 +32334,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32633,8 +32406,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32654,7 +32427,7 @@ export interface operations {
         };
     };
     notes___timeline: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -32717,8 +32490,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32793,8 +32566,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32856,8 +32629,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -32951,8 +32724,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33015,8 +32788,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33089,8 +32862,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33144,8 +32917,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33199,8 +32972,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33254,8 +33027,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33328,8 +33101,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33412,8 +33185,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33484,8 +33257,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33542,8 +33315,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33605,8 +33378,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33676,8 +33449,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33739,8 +33512,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33817,8 +33590,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33868,26 +33641,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -33944,8 +33699,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34007,8 +33762,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34070,8 +33825,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34142,8 +33897,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34163,7 +33918,7 @@ export interface operations {
         };
     };
     'renote-mute___list': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 30 */
@@ -34214,8 +33969,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34259,26 +34014,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34323,26 +34060,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34386,26 +34105,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34451,26 +34152,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34527,8 +34210,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34601,8 +34284,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34649,26 +34332,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34745,8 +34410,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34798,26 +34463,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34883,8 +34530,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34959,8 +34606,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35001,12 +34648,6 @@ export interface operations {
                     } | null;
                 };
             };
-            /** @description OK (without any results) */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-            };
             /** @description Client error */
             400: {
                 headers: {
@@ -35034,8 +34675,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35096,8 +34737,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35166,8 +34807,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35228,26 +34869,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35295,26 +34918,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35334,7 +34939,7 @@ export interface operations {
         };
     };
     users: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -35395,8 +35000,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35443,26 +35048,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35535,8 +35122,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35605,8 +35192,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35661,26 +35248,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35770,8 +35339,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35863,8 +35432,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35937,8 +35506,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36025,8 +35594,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36096,8 +35665,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36161,8 +35730,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36228,8 +35797,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36291,8 +35860,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36354,8 +35923,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36439,8 +36008,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36460,7 +36029,7 @@ export interface operations {
         };
     };
     users___lists___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** Format: misskey:id */
@@ -36505,8 +36074,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36570,8 +36139,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36635,8 +36204,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36715,8 +36284,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36778,8 +36347,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36846,8 +36415,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36912,8 +36481,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -36996,8 +36565,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37052,26 +36621,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description Authentication error */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description Forbidden error */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    'application/json': components['schemas']['Error'];
-                };
-            };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37144,8 +36695,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37165,7 +36716,7 @@ export interface operations {
         };
     };
     users___recommendation: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     /** @default 10 */
@@ -37212,8 +36763,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37301,8 +36852,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37365,8 +36916,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37441,8 +36992,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37518,8 +37069,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37597,8 +37148,17 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37661,8 +37221,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37682,7 +37242,7 @@ export interface operations {
         };
     };
     v2___admin___emoji___list: {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     query?: {
@@ -37793,8 +37353,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -37855,8 +37415,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
