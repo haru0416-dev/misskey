@@ -10,8 +10,10 @@ const MK_API_ERROR = Symbol();
 
 export type APIError = components['schemas']['Error']['error'];
 
-export function isAPIError(reason: Record<PropertyKey, unknown>): reason is APIError {
-	return reason[MK_API_ERROR] === true;
+export function isAPIError(reason: unknown): reason is APIError {
+	return reason !== null
+		&& typeof reason === 'object'
+		&& (reason as Record<PropertyKey, unknown>)[MK_API_ERROR] === true;
 }
 
 export type FetchLike = (input: string, init?: {
