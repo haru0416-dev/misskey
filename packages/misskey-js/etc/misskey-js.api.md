@@ -2702,7 +2702,7 @@ type IResponse = operations['i']['responses']['200']['content']['application/jso
 type IRevokeTokenRequest = NonNullable<operations['i___revoke-token']['requestBody']>['content']['application/json'];
 
 // @public (undocumented)
-function isAPIError(reason: Record<PropertyKey, unknown>): reason is APIError;
+function isAPIError(reason: unknown): reason is APIError;
 
 // @public (undocumented)
 type ISigninHistoryRequest = NonNullable<operations['i___signin-history']['requestBody']>['content']['application/json'];

@@ -108,7 +108,7 @@ export async function createLocalSignupAccount(
 		passwordHash: string | null;
 		host: string | null;
 		ignorePreservedUsernames?: boolean;
-		claimRoot?: boolean;
+		rootClaim?: 'auto' | 'required' | 'skip';
 	},
 ): Promise<{
 	account: MiUser;
@@ -148,12 +148,15 @@ export async function createLocalSignupAccount(
 		throw error;
 	};
 
+	const rootClaim = params.rootClaim ?? 'auto';
+	const shouldClaimRoot = rootClaim === 'required' || (rootClaim === 'auto' && deps.meta.rootUserId == null);
 	let created: Awaited<ReturnType<typeof createAccount>>;
 	try {
-		created = await createAccount(params.claimRoot ?? (deps.meta.rootUserId == null));
+		created = await createAccount(shouldClaimRoot);
 	} catch (error) {
-		// claimRoot を明示指定した呼び出し元 (管理者によるアカウント作成) は root 競合を自分で扱うため、素通しする。
-		if (params.claimRoot != null || !(error instanceof RootUserAlreadyAssignedError)) handleCreationError(error);
+		if (!(error instanceof RootUserAlreadyAssignedError)) handleCreationError(error);
+		// rootClaim を明示指定した呼び出し元 (管理者によるアカウント作成) は root 競合を自分で扱う。
+		if (rootClaim !== 'auto') throw error;
 		// 別のリクエストが先に root を取っていた場合は、通常ユーザーとして作り直す。
 		const currentMeta = await fetchMetaFromDatabase(deps.db);
 		if (!params.ignorePreservedUsernames) assertUsernameAvailableForNonRoot(currentMeta, usernameLower);

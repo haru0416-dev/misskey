@@ -232,6 +232,20 @@ describe('API', () => {
 		}
 	});
 
+	test('non-object error response is not treated as an API error', async () => {
+		const cli = new APIClient({
+			origin: 'https://misskey.test',
+			fetch: async () => new Response('null', { status: 500 }),
+		});
+		const reason = await cli.request('i').then(
+			() => undefined,
+			error => error,
+		);
+
+		expect(reason).toBeNull();
+		expect(isAPIError(reason)).toBe(false);
+	});
+
 	test('network error', async () => {
 		const fetchMock = vi
 			.spyOn(globalThis, 'fetch')
