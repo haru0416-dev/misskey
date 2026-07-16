@@ -4,10 +4,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div :class="[$style.root, { [$style.isMe]: isMe }]">
-	<MkAvatar :class="[$style.avatar, prefer.useStickyIcons ? $style.useSticky : null]" :user="message.fromUser!" :link="!isMe" :preview="false"/>
+<div :class="[$style.root, { [$style.isMe]: isMe, [$style.grouped]: grouped }]">
+	<MkAvatar v-if="!isMe && !grouped" :class="[$style.avatar, prefer.useStickyIcons ? $style.useSticky : null]" :user="message.fromUser!" link :preview="false"/>
 	<div :class="[$style.body, message.file != null ? $style.fullWidth : null]" @contextmenu.stop="onContextmenu">
-		<div :class="$style.header"><MkUserName v-if="!isMe && prefer['chat.showSenderName'] && message.fromUser != null" :user="message.fromUser"/></div>
+		<div :class="$style.header"><MkUserName v-if="!isMe && !grouped && prefer['chat.showSenderName'] && message.fromUser != null" :user="message.fromUser"/></div>
 		<MkFukidashi :class="$style.fukidashi" :tail="isMe ? 'right' : 'left'" :fullWidth="message.file != null" :accented="isMe">
 			<Mfm
 				v-if="message.text"
@@ -21,9 +21,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 			/>
 			<MkMediaList v-if="message.file" :mediaList="[message.file]"/>
 		</MkFukidashi>
-		<MkUrlPreview v-for="url in urls" :key="url" :url="url" style="margin: 8px 0;"/>
+		<MkUrlPreview v-for="url in urls" :key="url" :url="url" :class="$style.urlPreview"/>
 		<div :class="$style.footer">
-			<button class="_textButton" style="color: currentColor;" @click="showMenu"><i class="ti ti-dots-circle-horizontal"></i></button>
+			<button class="_textButton" style="color: currentColor;" :aria-label="i18n.ts.menu" @click="showMenu"><i class="ti ti-dots-circle-horizontal" aria-hidden="true"></i></button>
 			<MkTime :class="$style.time" :time="message.createdAt"/>
 			<MkA v-if="isSearchResult && 'toRoom' in message && message.toRoom != null" :to="`/chat/room/${message.toRoomId}`">{{ message.toRoom.name }}</MkA>
 			<MkA v-if="isSearchResult && 'toUser' in message && message.toUser != null && isMe" :to="`/chat/user/${message.toUserId}`">@{{ message.toUser.username }}</MkA>
@@ -36,7 +36,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:moveClass="prefer.animation ? $style.transition_reaction_move : ''"
 			tag="div" :class="$style.reactions"
 		>
-			<div v-for="record in message.reactions" :key="record.reaction + record.user.id" :class="[$style.reaction, record.user.id === $i.id ? $style.reactionMy : null]" @click="onReactionClick(record)">
+			<div v-for="record in message.reactions" :key="record.reaction + record.user.id" role="button" tabindex="0" :aria-pressed="record.user.id === $i.id" :aria-label="record.reaction" :class="[$style.reaction, record.user.id === $i.id ? $style.reactionMy : null]" @click="onReactionClick(record)" @keydown.enter.prevent="onReactionClick(record)" @keydown.space.prevent="onReactionClick(record)">
 				<MkAvatar :user="record.user" :link="false" :class="$style.reactionAvatar"/>
 				<MkReactionIcon
 					:withTooltip="true"
@@ -79,6 +79,8 @@ const $i = ensureSignin();
 const props = defineProps<{
 	message: NormalizedChatMessage | Misskey.entities.ChatMessage;
 	isSearchResult?: boolean;
+	/** 同一送信者の連投の2件目以降。アバター/送信者名を省略し、行間を詰めて表示する */
+	grouped?: boolean;
 }>();
 
 const isMe = computed(() => props.message.fromUserId === $i.id);
@@ -205,7 +207,7 @@ function showMenu(ev: PointerEvent, contextmenu = false) {
 .transition_reaction_move,
 .transition_reaction_enterActive,
 .transition_reaction_leaveActive {
-	transition: opacity 0.2s cubic-bezier(0,.5,.5,1), transform 0.2s cubic-bezier(0,.5,.5,1) !important;
+	transition: opacity var(--MI-duration-normal) var(--MI-ease-out), transform var(--MI-duration-normal) var(--MI-ease-out) !important;
 }
 .transition_reaction_enterFrom,
 .transition_reaction_leaveTo {
@@ -227,6 +229,10 @@ function showMenu(ev: PointerEvent, contextmenu = false) {
 		.footer {
 			flex-direction: row-reverse;
 		}
+
+		.reactions {
+			justify-content: flex-end;
+		}
 	}
 }
 
@@ -237,22 +243,41 @@ function showMenu(ev: PointerEvent, contextmenu = false) {
 
 	&.useSticky {
 		position: sticky;
-		top: calc(16px + var(--MI-stickyTop, 0px));
+		top: calc(var(--MI-space-lg) + var(--MI-stickyTop, 0px));
+	}
+}
+
+// 連投2件目以降はアバターを描画しないため、margin でバブルの左端を初回行と揃える
+.root.grouped:not(.isMe) > .body {
+	margin-left: calc(50px + var(--MI-space-md));
+}
+
+.body {
+	margin: 0 var(--MI-space-md);
+	// 長文バブルが行いっぱいまで伸びると発言者の左右が判別しづらく行長も読みにくいため、
+	// チャット慣習に合わせて上限を設ける (ファイル添付 = fullWidth はメディア表示優先で除外)
+	max-width: min(72%, 480px);
+
+	&.fullWidth {
+		width: 100%;
+		max-width: none;
 	}
 }
 
 @container (max-width: 450px) {
-	.root {
-		&.isMe {
-			.avatar {
-				display: none;
-			}
-		}
-	}
-
 	.avatar {
 		width: 42px;
 		height: 42px;
+	}
+
+	// grouped 時の左端揃えもアバター縮小に追従させる
+	.root.grouped:not(.isMe) > .body {
+		margin-left: calc(42px + var(--MI-space-md));
+	}
+
+	// 狭幅では折返しが増えすぎないよう上限を緩める
+	.body:not(.fullWidth) {
+		max-width: 80%;
 	}
 
 	.fukidashi {
@@ -260,16 +285,8 @@ function showMenu(ev: PointerEvent, contextmenu = false) {
 	}
 }
 
-.body {
-	margin: 0 12px;
-
-	&.fullWidth {
-		width: 100%;
-	}
-}
-
 .header {
-	min-height: 4px; // fukidashiの位置調整も兼ねるため
+	min-height: var(--MI-space-xs); // fukidashiの位置調整も兼ねるため
 	font-size: 80%;
 }
 
@@ -277,17 +294,15 @@ function showMenu(ev: PointerEvent, contextmenu = false) {
 	text-align: left;
 }
 
-.content {
-	overflow: clip;
-	overflow-wrap: break-word;
-	word-break: break-word;
+.urlPreview {
+	margin: var(--MI-space-sm) 0;
 }
 
 .footer {
 	display: flex;
 	flex-direction: row;
 	gap: 0.5em;
-	margin-top: 4px;
+	margin-top: var(--MI-space-xs);
 	font-size: 75%;
 }
 
@@ -299,8 +314,8 @@ function showMenu(ev: PointerEvent, contextmenu = false) {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px;
-	margin-top: 8px;
+	gap: var(--MI-space-sm);
+	margin-top: var(--MI-space-sm);
 
 	&:empty {
 		display: none;
@@ -311,18 +326,19 @@ function showMenu(ev: PointerEvent, contextmenu = false) {
 	display: flex;
 	align-items: center;
 	border: solid 1px var(--MI_THEME-divider);
-	border-radius: 999px;
-	padding: 8px;
+	border-radius: var(--MI-radius-full);
+	padding: var(--MI-space-xs) var(--MI-space-sm);
 
 	&.reactionMy {
 		border-color: var(--MI_THEME-accent);
+		background: var(--MI_THEME-accentedBg);
 	}
 }
 
 .reactionAvatar {
 	width: 24px;
 	height: 24px;
-	margin-right: 8px;
+	margin-right: var(--MI-space-sm);
 }
 
 .reactionIcon {
