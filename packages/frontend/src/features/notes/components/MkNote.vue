@@ -1246,6 +1246,20 @@ function emitUpdReaction(emoji: string, delta: number) {
 		width: 44px;
 		height: 44px;
 	}
+
+	// 極狭カラム (通知ウィジェット/デッキ等) では @container 500px で拡大した 44px の
+	// アクションボタンが1行に収まらず2段へ折り返す。この幅はほぼマウス操作のデスクトップ文脈
+	// なので、控えめな寸法と詰めた gap に戻して返信/リノート/リアクション/メニューを1行へ収める
+	.root:not(.showActionsOnlyHover) {
+		.footer {
+			gap: var(--MI-space-xs);
+		}
+
+		.footerButton {
+			min-width: var(--MI-control-sm);
+			min-height: var(--MI-control-sm);
+		}
+	}
 }
 
 .muted {
