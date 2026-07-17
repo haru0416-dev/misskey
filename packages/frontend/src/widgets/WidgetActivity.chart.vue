@@ -7,27 +7,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 <svg :viewBox="`0 0 ${ viewBoxX } ${ viewBoxY }`" :class="$style.root" @mousedown.prevent="onMousedown">
 	<polyline
 		:points="pointsNote"
+		:class="$style.note"
 		fill="none"
 		stroke-width="1"
-		stroke="#41ddde"
 	/>
 	<polyline
 		:points="pointsReply"
+		:class="$style.reply"
 		fill="none"
 		stroke-width="1"
-		stroke="#f7796c"
 	/>
 	<polyline
 		:points="pointsRenote"
+		:class="$style.renote"
 		fill="none"
 		stroke-width="1"
-		stroke="#a1de41"
 	/>
 	<polyline
 		:points="pointsTotal"
+		:class="$style.total"
 		fill="none"
 		stroke-width="1"
-		stroke="#555"
 		stroke-dasharray="2 2"
 	/>
 </svg>
@@ -144,5 +144,22 @@ onUnmounted(() => {
 	width: 100%;
 	box-sizing: border-box;
 	cursor: all-scroll;
+}
+
+.note {
+	stroke: var(--MI_THEME-link);
+}
+
+.reply {
+	stroke: var(--MI_THEME-error);
+}
+
+.renote {
+	stroke: var(--MI_THEME-renote);
+}
+
+.total {
+	stroke: var(--MI_THEME-fg);
+	stroke-opacity: 0.45;
 }
 </style>

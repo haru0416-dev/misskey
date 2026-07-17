@@ -7,11 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div :class="$style.root" class="_gaps_s">
 	<template v-if="edit">
 		<header :class="$style['editHeader']">
-			<MkSelect v-model="widgetAdderSelected" :items="widgetAdderSelectedDef" style="margin-bottom: var(--MI-margin)" data-cy-widget-select>
+			<MkSelect v-model="widgetAdderSelected" :items="widgetAdderSelectedDef" :class="$style['editHeaderSelect']" data-cy-widget-select>
 				<template #label>{{ i18n.ts.selectWidget }}</template>
 			</MkSelect>
-			<MkButton inline primary data-cy-widget-add @click="addWidget"><i class="ti ti-plus"></i> {{ i18n.ts.add }}</MkButton>
-			<MkButton inline @click="emit('exit')">{{ i18n.ts.close }}</MkButton>
+			<div :class="$style['editHeaderButtons']">
+				<MkButton inline primary data-cy-widget-add @click="addWidget"><i class="ti ti-plus" aria-hidden="true"></i> {{ i18n.ts.add }}</MkButton>
+				<MkButton inline @click="emit('exit')">{{ i18n.ts.close }}</MkButton>
+			</div>
 		</header>
 		<MkDraggable
 			:modelValue="props.widgets"
@@ -22,8 +24,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		>
 			<template #default="{ item }">
 				<div :class="[$style.widget, $style.customizeContainer]" data-cy-customize-container>
-					<button :class="$style['customizeContainerConfig']" class="_button" @click.prevent.stop="configWidget(item.id)"><i class="ti ti-settings"></i></button>
-					<button :class="$style['customizeContainerRemove']" data-cy-customize-container-remove class="_button" @click.prevent.stop="removeWidget(item)"><i class="ti ti-x"></i></button>
+					<button v-tooltip="i18n.ts.settings" :class="$style['customizeContainerConfig']" class="_button" :aria-label="i18n.ts.settings" @click.prevent.stop="configWidget(item.id)"><i class="ti ti-settings" aria-hidden="true"></i></button>
+					<button v-tooltip="i18n.ts.remove" :class="$style['customizeContainerRemove']" data-cy-customize-container-remove class="_button" :aria-label="i18n.ts.remove" @click.prevent.stop="removeWidget(item)"><i class="ti ti-x" aria-hidden="true"></i></button>
 					<component :is="`widget-${item.name}`" :ref="(el: any) => widgetRefs[item.id] = el" :class="$style['customizeContainerHandleWidget']" :widget="item" @updateProps="updateWidget(item.id, $event)"/>
 				</div>
 			</template>
@@ -145,11 +147,16 @@ function onContextmenu(widget: Widget, ev: PointerEvent) {
 
 .edit {
 	&Header {
-		margin: 16px 0;
+		margin: var(--MI-space-lg) 0;
 
-		> * {
+		&Select {
 			width: 100%;
-			padding: 4px;
+			margin-bottom: var(--MI-space-sm);
+		}
+
+		&Buttons {
+			display: flex;
+			gap: var(--MI-space-sm);
 		}
 	}
 }
@@ -161,30 +168,32 @@ function onContextmenu(widget: Widget, ev: PointerEvent) {
 	&Config,
 	&Remove {
 		position: absolute;
-		z-index: 10000;
-		top: 8px;
+		z-index: 10; // contain: content (.widget) + position: relative により customizeContainer 自身がスタッキングコンテキストを形成するため、この z-index はコンテナ内部でのみ有効
+		top: var(--MI-space-sm);
 		width: 32px;
 		height: 32px;
-		color: #fff;
-		background: rgba(#000, 0.7);
-		border-radius: 4px;
-	}
+		color: var(--MI_THEME-fg);
+		background: color(from var(--MI_THEME-panel) srgb r g b / 0.85);
+		border: 1px solid var(--MI-border-muted);
+		border-radius: var(--MI-radius-sm);
+		transition: color var(--MI-duration-fast) var(--MI-ease-out);
 
-	&Config {
-		right: 8px + 8px + 32px;
-	}
-
-	&Remove {
-		right: 8px;
-	}
-
-	&Handle {
-
-		&Widget {
-			pointer-events: none;
+		&:hover {
+			color: var(--MI_THEME-accent);
 		}
 	}
 
+	&Config {
+		right: calc(var(--MI-space-sm) * 2 + 32px);
+	}
+
+	&Remove {
+		right: var(--MI-space-sm);
+	}
+
+	&HandleWidget {
+		pointer-events: none;
+	}
 }
 
 </style>

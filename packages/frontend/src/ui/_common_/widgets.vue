@@ -15,8 +15,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		@exit="editMode = false"
 	/>
 
-	<button v-if="editMode" class="_textButton" style="font-size: 0.9em;" @click="editMode = false"><i class="ti ti-check"></i> {{ i18n.ts.editWidgetsExit }}</button>
-	<button v-else class="_textButton" data-cy-widget-edit :class="$style.edit" style="font-size: 0.9em; margin-top: 16px;" @click="editMode = true"><i class="ti ti-pencil"></i> {{ i18n.ts.editWidgets }}</button>
+	<button v-if="editMode" class="_textButton" :class="$style.toggle" @click="editMode = false"><i class="ti ti-check" aria-hidden="true"></i> {{ i18n.ts.editWidgetsExit }}</button>
+	<button v-else class="_textButton" data-cy-widget-edit :class="$style.toggle" @click="editMode = true"><i class="ti ti-pencil" aria-hidden="true"></i> {{ i18n.ts.editWidgets }}</button>
 </div>
 </template>
 
@@ -87,7 +87,9 @@ function updateWidgets(thisWidgets: Widget[]) {
 </script>
 
 <style lang="scss" module>
-.edit {
+.toggle {
 	width: 100%;
+	margin-top: var(--MI-space-lg);
+	font-size: 0.9em;
 }
 </style>

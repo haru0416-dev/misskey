@@ -8,8 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<svg :viewBox="`0 0 ${ viewBoxX } ${ viewBoxY }`">
 		<defs>
 			<linearGradient :id="cpuGradientId" x1="0" x2="0" y1="1" y2="0">
-				<stop offset="0%" stop-color="hsl(180, 80%, 70%)"></stop>
-				<stop offset="100%" stop-color="hsl(0, 80%, 70%)"></stop>
+				<stop offset="0%" class="safe"></stop>
+				<stop offset="100%" class="danger"></stop>
 			</linearGradient>
 			<mask :id="cpuMaskId" x="0" y="0" :width="viewBoxX" :height="viewBoxY">
 				<polygon
@@ -41,8 +41,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<svg :viewBox="`0 0 ${ viewBoxX } ${ viewBoxY }`">
 		<defs>
 			<linearGradient :id="memGradientId" x1="0" x2="0" y1="1" y2="0">
-				<stop offset="0%" stop-color="hsl(180, 80%, 70%)"></stop>
-				<stop offset="100%" stop-color="hsl(0, 80%, 70%)"></stop>
+				<stop offset="0%" class="safe"></stop>
+				<stop offset="100%" class="danger"></stop>
 			</linearGradient>
 			<mask :id="memMaskId" x="0" y="0" :width="viewBoxX" :height="viewBoxY">
 				<polygon
@@ -145,6 +145,14 @@ function onStatsLog(statsLog: Misskey.entities.ServerStatsLog) {
 </script>
 
 <style lang="scss" scoped>
+stop.safe {
+	stop-color: var(--MI_THEME-success);
+}
+
+stop.danger {
+	stop-color: var(--MI_THEME-error);
+}
+
 .lcfyofjk {
 	display: flex;
 

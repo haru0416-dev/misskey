@@ -61,7 +61,7 @@ let disposed = false;
 function startTagCanvas(tagCanvas: TagCanvasApi): void {
 	try {
 		tagCanvas.Start(idForCanvas, idForTags, {
-			textColour: '#ffffff',
+			textColour: tinycolor(themeManager.currentCompiledTheme!['fg']).toHexString(),
 			outlineColour: tinycolor(themeManager.currentCompiledTheme!['accent']).toHexString(),
 			outlineRadius: 10,
 			initial: [-0.030, -0.010],
