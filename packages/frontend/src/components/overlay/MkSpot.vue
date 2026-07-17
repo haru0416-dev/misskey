@@ -5,16 +5,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root" :style="{ zIndex }">
-	<div :class="[$style.bg]"></div>
 	<div :class="$style.spot"></div>
-	<div ref="bodyEl" :class="$style.body" class="_panel _shadow">
+	<div ref="bodyEl" role="dialog" :aria-label="title" :class="$style.body" class="_panel _shadow">
 		<div class="_gaps_s">
 			<div><b>{{ title }}</b></div>
 			<div>{{ description }}</div>
 			<div class="_buttons">
-				<MkButton v-if="hasPrev" small @click="prev"><i class="ti ti-arrow-left"></i> {{ i18n.ts.goBack }}</MkButton>
-				<MkButton v-if="hasNext" small primary @click="next">{{ i18n.ts.next }} <i class="ti ti-arrow-right"></i></MkButton>
-				<MkButton v-else small primary @click="next">{{ i18n.ts.done }} <i class="ti ti-check"></i></MkButton>
+				<MkButton v-if="hasPrev" small @click="prev"><i class="ti ti-arrow-left" aria-hidden="true"></i> {{ i18n.ts.goBack }}</MkButton>
+				<MkButton v-if="hasNext" small primary @click="next">{{ i18n.ts.next }} <i class="ti ti-arrow-right" aria-hidden="true"></i></MkButton>
+				<MkButton v-else small primary @click="next">{{ i18n.ts.done }} <i class="ti ti-check" aria-hidden="true"></i></MkButton>
 			</div>
 		</div>
 	</div>
@@ -33,8 +32,6 @@ const props = withDefaults(defineProps<{
 	title: string;
 	description: string;
 	anchorElement?: HTMLElement;
-	x?: number;
-	y?: number;
 	direction?: 'top' | 'bottom' | 'right' | 'left';
 	hasPrev: boolean;
 	hasNext: boolean;
@@ -93,7 +90,7 @@ watch(() => props.anchorElement, (newAnchor, oldAnchor) => {
 	schedulePosition();
 }, { flush: 'post' });
 
-watch(() => [props.direction, props.x, props.y], schedulePosition, { flush: 'post' });
+watch(() => props.direction, schedulePosition, { flush: 'post' });
 
 onMounted(() => {
 	resizeObserver = new ResizeObserver(schedulePosition);
@@ -121,20 +118,12 @@ onUnmounted(() => {
 	height: 100%;
 }
 
-.bg {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-}
-
 .spot {
 	--x: v-bind("spotX + 'px'");
 	--y: v-bind("spotY + 'px'");
 	--width: v-bind("spotWidth + 'px'");
 	--height: v-bind("spotHeight + 'px'");
-	--padding: 8px;
+	--padding: var(--MI-space-sm);
 	position: absolute;
 	left: calc(var(--x) - var(--padding));
 	top: calc(var(--y) - var(--padding));
@@ -142,18 +131,18 @@ onUnmounted(() => {
 	height: calc(var(--height) + var(--padding) * 2);
 	box-sizing: border-box;
 	border: 1px solid transparent;
-	border-radius: 8px;
-	box-shadow: 0 0 0 9999px #000a;
-	transition: left 0.2s ease-out, top 0.2s ease-out, width 0.2s ease-out, height 0.2s ease-out;
+	border-radius: var(--MI-radius-lg);
+	box-shadow: 0 0 0 9999px var(--MI_THEME-modalBg);
+	transition: left var(--MI-duration-normal) var(--MI-ease-out), top var(--MI-duration-normal) var(--MI-ease-out), width var(--MI-duration-normal) var(--MI-ease-out), height var(--MI-duration-normal) var(--MI-ease-out);
 	animation: blink 1s infinite;
 }
 
 .body {
 	position: absolute;
-	padding: 16px 20px;
+	padding: var(--MI-space-lg) var(--MI-space-xl);
 	box-sizing: border-box;
 	width: max-content;
-	max-width: min(500px, 100vw);
+	max-width: min(500px, calc(100vw - var(--MI-space-lg) * 2));
 }
 
 @keyframes blink {

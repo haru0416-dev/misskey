@@ -33,7 +33,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<template v-for="item in (items2 ?? [])">
 			<div v-if="item.type === 'divider'" role="separator" tabindex="-1" :class="$style.divider"></div>
 
-			<div v-else-if="item.type === 'label'" role="menuitem" tabindex="-1" :class="[$style.label]">
+			<div v-else-if="item.type === 'label'" role="presentation" tabindex="-1" :class="[$style.label]">
 				<span>{{ item.text }}</span>
 			</div>
 
@@ -55,7 +55,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@mouseenter.passive="onItemMouseEnter"
 				@mouseleave.passive="onItemMouseLeave"
 			>
-				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]"></i>
+				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]" aria-hidden="true"></i>
 				<MkAvatar v-if="item.avatar" :user="item.avatar" :class="$style.avatar"/>
 				<div :class="$style.item_content">
 					<div :class="$style.item_content_text">
@@ -79,7 +79,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@mouseenter.passive="onItemMouseEnter"
 				@mouseleave.passive="onItemMouseLeave"
 			>
-				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]"></i>
+				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]" aria-hidden="true"></i>
 				<div :class="$style.item_content">
 					<div :class="$style.item_content_text">
 						<div :class="$style.item_content_text_title">{{ item.text }}</div>
@@ -108,13 +108,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 				v-else-if="item.type === 'switch'"
 				role="menuitemcheckbox"
 				tabindex="0"
+				:aria-checked="unref(item.ref)"
 				:class="['_button', $style.item]"
 				:disabled="unref(item.disabled)"
 				@click.prevent="switchItem(item)"
 				@mouseenter.passive="onItemMouseEnter"
 				@mouseleave.passive="onItemMouseLeave"
 			>
-				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]"></i>
+				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]" aria-hidden="true"></i>
 				<MkSwitchButton v-else v-bind="item.disabled === undefined ? {} : { disabled: item.disabled }" :class="$style.switchButton" :checked="item.ref" @toggle="switchItem(item)"/>
 				<div :class="$style.item_content">
 					<div :class="[$style.item_content_text, { [$style.switchText]: !item.icon }]">
@@ -129,6 +130,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 				v-else-if="item.type === 'radio'"
 				role="menuitem"
 				tabindex="0"
+				aria-haspopup="menu"
+				:aria-expanded="childShowingItem === item"
 				:class="['_button', $style.item, $style.parent, { [$style.active]: childShowingItem === item }]"
 				:disabled="unref(item.disabled)"
 				@mouseenter.prevent="preferClick ? null : showRadioOptions(item, $event)"
@@ -136,13 +139,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@keydown.enter.prevent="preferClick ? null : showRadioOptions(item, $event)"
 				@click.prevent="!preferClick ? null : showRadioOptions(item, $event)"
 			>
-				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]" style="pointer-events: none;"></i>
+				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]" style="pointer-events: none;" aria-hidden="true"></i>
 				<div :class="$style.item_content">
 					<div :class="$style.item_content_text" style="pointer-events: none;">
 						<div :class="$style.item_content_text_title">{{ item.text }}</div>
 						<div v-if="item.caption" :class="$style.item_content_text_caption">{{ item.caption }}</div>
 					</div>
-					<span :class="$style.caret" style="pointer-events: none;"><i class="ti ti-chevron-right ti-fw"></i></span>
+					<span :class="$style.caret" style="pointer-events: none;" aria-hidden="true"><i class="ti ti-chevron-right ti-fw" aria-hidden="true"></i></span>
 				</div>
 			</button>
 
@@ -150,6 +153,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				v-else-if="item.type === 'radioOption'"
 				role="menuitemradio"
 				tabindex="0"
+				:aria-checked="unref(item.active) ?? false"
 				:class="['_button', $style.item, $style.radio, { [$style.active]: unref(item.active) }]"
 				@click.prevent="unref(item.active) ? null : clicked(item.action, $event, false)"
 				@mouseenter.passive="onItemMouseEnter"
@@ -170,19 +174,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 				v-else-if="item.type === 'parent'"
 				role="menuitem"
 				tabindex="0"
+				aria-haspopup="menu"
+				:aria-expanded="childShowingItem === item"
 				:class="['_button', $style.item, $style.parent, { [$style.active]: childShowingItem === item }]"
 				@mouseenter.prevent="preferClick ? null : showChildren(item, $event)"
 				@mousemove="parentMouseMove"
 				@keydown.enter.prevent="preferClick ? null : showChildren(item, $event)"
 				@click.prevent="!preferClick ? null : showChildren(item, $event)"
 			>
-				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]" style="pointer-events: none;"></i>
+				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]" style="pointer-events: none;" aria-hidden="true"></i>
 				<div :class="$style.item_content">
 					<div :class="$style.item_content_text" style="pointer-events: none;">
 						<div :class="$style.item_content_text_title">{{ item.text }}</div>
 						<div v-if="item.caption" :class="$style.item_content_text_caption">{{ item.caption }}</div>
 					</div>
-					<span :class="$style.caret" style="pointer-events: none;"><i class="ti ti-chevron-right ti-fw"></i></span>
+					<span :class="$style.caret" style="pointer-events: none;" aria-hidden="true"><i class="ti ti-chevron-right ti-fw" aria-hidden="true"></i></span>
 				</div>
 			</button>
 
@@ -195,7 +201,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@mouseenter.passive="onItemMouseEnter"
 				@mouseleave.passive="onItemMouseLeave"
 			>
-				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]"></i>
+				<i v-if="item.icon" class="ti-fw" :class="[$style.icon, item.icon]" aria-hidden="true"></i>
 				<MkAvatar v-if="item.avatar" :user="item.avatar" :class="$style.avatar"/>
 				<div :class="$style.item_content">
 					<div :class="$style.item_content_text">
@@ -626,7 +632,7 @@ function guardMouseMove(ev: MouseEvent) {
 }
 
 .menu {
-	padding: 8px 0;
+	padding: var(--MI-space-sm) 0;
 	box-sizing: border-box;
 	max-width: 100vw;
 	min-width: 200px;
@@ -642,7 +648,7 @@ function guardMouseMove(ev: MouseEvent) {
 	display: flex;
 	align-items: center;
 	position: relative;
-	padding: 5px 16px;
+	padding: 5px var(--MI-space-lg);
 	width: 100%;
 	box-sizing: border-box;
 	white-space: nowrap;
@@ -663,9 +669,9 @@ function guardMouseMove(ev: MouseEvent) {
 		left: 0;
 		right: 0;
 		margin: auto;
-		width: calc(100% - 16px);
+		width: calc(100% - var(--MI-space-lg));
 		height: 100%;
-		border-radius: 6px;
+		border-radius: var(--MI-radius-md);
 	}
 
 	&:focus-visible {
@@ -706,9 +712,9 @@ function guardMouseMove(ev: MouseEvent) {
 
 	&.danger {
 		--menuFg: var(--MI_THEME-error);
-		--menuHoverFg: #fff;
+		--menuHoverFg: var(--MI_THEME-fgOnAccent);
 		--menuHoverBg: var(--MI_THEME-error);
-		--menuActiveFg: #fff;
+		--menuActiveFg: var(--MI_THEME-fgOnAccent);
 		--menuActiveBg: hsl(from var(--MI_THEME-error) h s calc(l - 10));
 	}
 
@@ -739,7 +745,7 @@ function guardMouseMove(ev: MouseEvent) {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 8px;
+	gap: var(--MI-space-sm);
 	text-overflow: ellipsis;
 }
 
@@ -764,13 +770,13 @@ function guardMouseMove(ev: MouseEvent) {
 }
 
 .switchText {
-	margin-left: 8px;
+	margin-left: var(--MI-space-sm);
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 
 .icon {
-	margin-right: 8px;
+	margin-right: var(--MI-space-sm);
 	line-height: 1;
 }
 
@@ -793,7 +799,7 @@ function guardMouseMove(ev: MouseEvent) {
 
 .label {
 	position: relative;
-	padding: 6px 16px;
+	padding: 6px var(--MI-space-lg);
 	box-sizing: border-box;
 	white-space: nowrap;
 	font-size: 0.7em;
@@ -805,7 +811,7 @@ function guardMouseMove(ev: MouseEvent) {
 }
 
 .divider {
-	margin: 8px 0;
+	margin: var(--MI-space-sm) 0;
 	border-top: solid 0.5px var(--MI_THEME-divider);
 }
 

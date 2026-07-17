@@ -12,12 +12,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 	appear
 	@afterLeave="emit('closed')"
 >
-	<div v-if="showing" ref="rootEl" :class="[$style.root, { [$style.maximized]: maximized }]">
-		<div :class="$style.body" class="_shadow" @pointerdown="onBodyPointerDown" @keydown="onKeydown">
+	<div v-if="showing" ref="rootEl" tabindex="-1" :class="[$style.root, { [$style.maximized]: maximized }]" @keydown="onKeydown">
+		<div role="dialog" :class="$style.body" class="_shadow" @pointerdown="onBodyPointerDown">
 			<div :class="[$style.header, { [$style.mini]: mini }]" @contextmenu.prevent.stop="onContextmenu">
 				<span :class="$style.headerLeft">
 					<template v-if="!minimized">
-						<button v-for="button in buttonsLeft" v-tooltip="button.title" class="_button" :class="[$style.headerButton, { [$style.highlighted]: button.highlighted }]" @click="button.onClick"><i :class="button.icon"></i></button>
+						<button v-for="button in buttonsLeft" v-tooltip="button.title" :aria-label="button.title" class="_button" :class="[$style.headerButton, { [$style.highlighted]: button.highlighted }]" @click="button.onClick"><i :class="button.icon" aria-hidden="true"></i></button>
 					</template>
 				</span>
 				<span :class="$style.headerTitle" @pointerdown.prevent="onHeaderPointerdown">
@@ -25,13 +25,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</span>
 				<span :class="$style.headerRight">
 					<template v-if="!minimized">
-						<button v-for="button in buttonsRight" v-tooltip="button.title" class="_button" :class="[$style.headerButton, { [$style.highlighted]: button.highlighted }]" @click="button.onClick"><i :class="button.icon"></i></button>
+						<button v-for="button in buttonsRight" v-tooltip="button.title" :aria-label="button.title" class="_button" :class="[$style.headerButton, { [$style.highlighted]: button.highlighted }]" @click="button.onClick"><i :class="button.icon" aria-hidden="true"></i></button>
 					</template>
-					<button v-if="canResize && minimized" v-tooltip="i18n.ts.windowRestore" class="_button" :class="$style.headerButton" @click="unMinimize()"><i class="ti ti-maximize"></i></button>
-					<button v-else-if="canResize && !maximized" v-tooltip="i18n.ts.windowMinimize" class="_button" :class="$style.headerButton" @click="minimize()"><i class="ti ti-minimize"></i></button>
-					<button v-if="canResize && maximized" v-tooltip="i18n.ts.windowRestore" class="_button" :class="$style.headerButton" @click="unMaximize()"><i class="ti ti-picture-in-picture"></i></button>
-					<button v-else-if="canResize && !maximized && !minimized" v-tooltip="i18n.ts.windowMaximize" class="_button" :class="$style.headerButton" @click="maximize()"><i class="ti ti-rectangle"></i></button>
-					<button v-if="closeButton" v-tooltip="i18n.ts.close" class="_button" :class="$style.headerButton" @click="close()"><i class="ti ti-x"></i></button>
+					<button v-if="canResize && minimized" v-tooltip="i18n.ts.windowRestore" :aria-label="i18n.ts.windowRestore" class="_button" :class="$style.headerButton" @click="unMinimize()"><i class="ti ti-maximize" aria-hidden="true"></i></button>
+					<button v-else-if="canResize && !maximized" v-tooltip="i18n.ts.windowMinimize" :aria-label="i18n.ts.windowMinimize" class="_button" :class="$style.headerButton" @click="minimize()"><i class="ti ti-minimize" aria-hidden="true"></i></button>
+					<button v-if="canResize && maximized" v-tooltip="i18n.ts.windowRestore" :aria-label="i18n.ts.windowRestore" class="_button" :class="$style.headerButton" @click="unMaximize()"><i class="ti ti-picture-in-picture" aria-hidden="true"></i></button>
+					<button v-else-if="canResize && !maximized && !minimized" v-tooltip="i18n.ts.windowMaximize" :aria-label="i18n.ts.windowMaximize" class="_button" :class="$style.headerButton" @click="maximize()"><i class="ti ti-rectangle" aria-hidden="true"></i></button>
+					<button v-if="closeButton" v-tooltip="i18n.ts.close" :aria-label="i18n.ts.close" class="_button" :class="$style.headerButton" @click="close()"><i class="ti ti-x" aria-hidden="true"></i></button>
 				</span>
 			</div>
 			<div :class="$style.content">
@@ -154,7 +154,7 @@ function close() {
 }
 
 function onKeydown(evt: KeyboardEvent) {
-	if (evt.which === 27) { // Esc
+	if (evt.key === 'Escape') {
 		evt.preventDefault();
 		evt.stopPropagation();
 		close();
@@ -526,7 +526,7 @@ defineExpose({
 <style lang="scss" module>
 .transition_window_enterActive,
 .transition_window_leaveActive {
-	transition: opacity 0.2s, transform 0.2s !important;
+	transition: opacity var(--MI-duration-normal) var(--MI-ease-out), transform var(--MI-duration-normal) var(--MI-ease-out) !important;
 }
 .transition_window_enterFrom,
 .transition_window_leaveTo {
