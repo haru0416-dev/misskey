@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<span :class="$style.year">{{ i18n.tsx.yearX({ year }) }}</span>
 			<span :class="$style.month">{{ i18n.tsx.monthX({ month }) }}</span>
 		</p>
-		<p v-if="month === 1 && day === 1" class="day">🎉{{ i18n.tsx.dayX({ day }) }}<span style="display: inline-block; transform: scaleX(-1);">🎉</span></p>
+		<p v-if="month === 1 && day === 1" :class="$style.day">🎉{{ i18n.tsx.dayX({ day }) }}<span style="display: inline-block; transform: scaleX(-1);">🎉</span></p>
 		<p v-else :class="$style.day">{{ i18n.tsx.dayX({ day }) }}</p>
 		<p :class="$style.weekDay">{{ weekDay }}</p>
 	</div>
@@ -145,7 +145,7 @@ defineExpose<WidgetComponentExpose>({
 
 <style lang="scss" module>
 .root {
-	padding: 16px 0;
+	padding: var(--MI-space-lg) 0;
 
 	&::after {
 		content: "";
@@ -161,7 +161,7 @@ defineExpose<WidgetComponentExpose>({
 
 	&.isHoliday {
 		> .day {
-			color: #ef95a0;
+			color: var(--MI_THEME-error);
 		}
 	}
 }
@@ -182,13 +182,14 @@ defineExpose<WidgetComponentExpose>({
 	margin: 10px 0;
 	line-height: 32px;
 	font-size: 1.75em;
+	font-variant-numeric: tabular-nums;
 }
 
 .info {
 	display: block;
 	float: left;
 	width: 40%;
-	padding: 0 16px 0 0;
+	padding: 0 var(--MI-space-lg) 0 0;
 	box-sizing: border-box;
 }
 
@@ -201,19 +202,19 @@ defineExpose<WidgetComponentExpose>({
 
 	&:nth-child(1) {
 		> .meter > .meterVal {
-			background: #f7796c;
+			background: var(--MI_THEME-error);
 		}
 	}
 
 	&:nth-child(2) {
 		> .meter > .meterVal {
-			background: #a1de41;
+			background: var(--MI_THEME-success);
 		}
 	}
 
 	&:nth-child(3) {
 		> .meter > .meterVal {
-			background: #41ddde;
+			background: var(--MI_THEME-link);
 		}
 	}
 }
@@ -228,17 +229,18 @@ defineExpose<WidgetComponentExpose>({
 
 .percentage {
 	margin-left: auto;
+	font-variant-numeric: tabular-nums;
 }
 
 .meter {
 	width: 100%;
 	overflow: hidden;
-	background: light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3));
-	border-radius: 8px;
+	background: color-mix(in srgb, var(--MI_THEME-fg) 10%, transparent);
+	border-radius: var(--MI-radius-xs);
 }
 
 .meterVal {
 	height: 4px;
-	transition: width .3s cubic-bezier(0.23, 1, 0.32, 1);
+	transition: width var(--MI-duration-slow) var(--MI-ease-out);
 }
 </style>

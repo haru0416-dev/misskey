@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	@ok="save()"
 	@closed="emit('closed')"
 >
-	<template #header><i class="ti ti-icons"></i> {{ i18n.ts._widgets[widgetName] ?? widgetName }}</template>
+	<template #header><i class="ti ti-icons" aria-hidden="true"></i> {{ i18n.ts._widgets[widgetName] ?? widgetName }}</template>
 
 	<MkPreviewWithControls>
 		<template #preview>
@@ -109,7 +109,7 @@ function calcScale() {
 	if (!resizerRootEl.value) return;
 	const previewWidth = resizerRootEl.value.clientWidth - 40; // 左右の余白 20pxずつ
 	const previewHeight = resizerRootEl.value.clientHeight - 40; // 上下の余白 20pxずつ
-	const widgetWidth = 280;
+	const widgetWidth = resizerEl.value?.offsetWidth ?? 280;
 	const scale = Math.min(previewWidth / widgetWidth, previewHeight / widgetHeight.value, 1); // 拡大はしないので1を上限に
 	widgetScale.value = scale;
 }
@@ -132,21 +132,13 @@ onBeforeUnmount(() => {
 </script>
 
 <style module>
-.previewContainer {
-	display: flex;
-	flex-direction: column;
-	height: 100%;
-	user-select: none;
-	-webkit-user-drag: none;
-}
-
 .previewTitle {
 	position: absolute;
 	z-index: 100;
-	top: 8px;
-	left: 8px;
-	padding: 6px 10px;
-	border-radius: 6px;
+	top: var(--MI-space-sm);
+	left: var(--MI-space-sm);
+	padding: 6px 10px; /* トークン格子外のため現状維持 */
+	border-radius: var(--MI-radius-md);
 	font-size: 85%;
 }
 

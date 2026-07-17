@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkEllipsis/>
 		</div>
 		<div v-else>
-			<Transition :name="$style.change" mode="default" appear>
+			<Transition v-bind="prefer.animation ? { name: $style.change } : {}" mode="default" appear>
 				<MkMarqueeText :key="key" :duration="widgetProps.duration" :reverse="widgetProps.reverse">
 					<span v-for="item in items" :key="item.link" :class="$style.item">
 						<a :href="item.link" rel="nofollow noopener" target="_blank" :title="item.title">{{ item.title }}</a><span :class="$style.divider"></span>
@@ -36,6 +36,7 @@ import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
 import { shuffle } from '@/utility/shuffle.js';
 import { i18n } from '@/i18n.js';
+import { prefer } from '@/preferences.js';
 import { url as base } from '@shared/utility/config.js';
 import { useInterval } from '@shared/utility/use-interval.js';
 
@@ -126,11 +127,17 @@ const tick = () => {
 	if (window.document.visibilityState === 'hidden' && rawItems.value.length !== 0) return;
 
 	window.fetch(fetchEndpoint.value, {})
-		.then(res => res.json())
+		.then(res => {
+			if (!res.ok) throw new Error();
+			return res.json();
+		})
 		.then((feed: Misskey.entities.FetchRssResponse) => {
 			rawItems.value = feed.items;
 			fetching.value = false;
 			key.value++;
+		})
+		.catch(() => {
+			fetching.value = false;
 		});
 };
 
@@ -158,7 +165,7 @@ defineExpose<WidgetComponentExpose>({
 	&:global(-leave-active) {
 		position: absolute;
 		top: 0;
-		transition: all 1s ease;
+		transition: opacity var(--MI-duration-slow) var(--MI-ease-out), transform var(--MI-duration-slow) var(--MI-ease-out);
 	}
 	&:global(-enter-from) {
 		opacity: 0;
