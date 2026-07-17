@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <MkModal ref="modal" :preferType="'dialog'" :zPriority="'high'" @click="success ? done() : () => {}" @closed="emit('closed')">
-	<div :class="[$style.root, { [$style.iconOnly]: (text == null) || success }]">
+	<div :class="[$style.root, { [$style.iconOnly]: (text == null) || success }]" role="status">
 		<i v-if="success" :class="[$style.icon, $style.success]" class="ti ti-check"></i>
 		<MkLoading v-else :class="[$style.icon, $style.waiting]" :em="true"/>
 		<div v-if="text && !success" :class="$style.text">{{ text }}<MkEllipsis/></div>
@@ -44,7 +44,7 @@ watch(() => props.showing, () => {
 .root {
 	margin: auto;
 	position: relative;
-	padding: 32px;
+	padding: var(--MI-space-3xl);
 	box-sizing: border-box;
 	text-align: center;
 	background: var(--MI_THEME-panel);
@@ -74,6 +74,6 @@ watch(() => props.showing, () => {
 }
 
 .text {
-	margin-top: 16px;
+	margin-top: var(--MI-space-lg);
 }
 </style>

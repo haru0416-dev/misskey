@@ -9,13 +9,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div class="main">
 			<template v-for="item in items" :key="item.text">
 				<button v-if="item.action != null" v-click-anime class="_button item" @click="$event => { item.action!($event); close(); }">
-					<i class="icon" :class="item.icon"></i>
+					<i class="icon" :class="item.icon" aria-hidden="true"></i>
 					<div class="text">{{ item.text }}</div>
 					<span v-if="item.indicate && item.indicateValue" class="_indicateCounter indicatorWithValue">{{ item.indicateValue }}</span>
 					<span v-else-if="item.indicate" class="indicator _blink"><i class="_indicatorCircle"></i></span>
 				</button>
 				<MkA v-else-if="item.to != null" v-click-anime :to="item.to" class="item" @click.passive="close()">
-					<i class="icon" :class="item.icon"></i>
+					<i class="icon" :class="item.icon" aria-hidden="true"></i>
 					<div class="text">{{ item.text }}</div>
 					<span v-if="item.indicate && item.indicateValue" class="_indicateCounter indicatorWithValue">{{ item.indicateValue }}</span>
 					<span v-else-if="item.indicate" class="indicator _blink"><i class="_indicatorCircle"></i></span>
@@ -73,7 +73,7 @@ function close() {
 	max-height: 100%;
 	width: min(460px, 100vw);
 	margin: auto;
-	padding: 24px;
+	padding: var(--MI-space-2xl);
 	box-sizing: border-box;
 	overflow: auto;
 	overscroll-behavior: contain;
@@ -82,7 +82,7 @@ function close() {
 
 	&.asDrawer {
 		width: 100%;
-		padding: 16px 16px max(env(safe-area-inset-bottom, 0px), 16px) 16px;
+		padding: var(--MI-space-lg) var(--MI-space-lg) max(env(safe-area-inset-bottom, 0px), var(--MI-space-lg)) var(--MI-space-lg);
 		border-radius: 24px;
 		border-bottom-right-radius: 0;
 		border-bottom-left-radius: 0;
@@ -101,7 +101,7 @@ function close() {
 			justify-content: center;
 			vertical-align: bottom;
 			height: 100px;
-			border-radius: 10px;
+			border-radius: var(--MI-radius-lg);
 			padding: 10px;
 			box-sizing: border-box;
 
@@ -117,7 +117,7 @@ function close() {
 			}
 
 			> .text {
-				margin-top: 12px;
+				margin-top: var(--MI-space-md);
 				font-size: 0.8em;
 				line-height: 1.5em;
 				text-align: center;
