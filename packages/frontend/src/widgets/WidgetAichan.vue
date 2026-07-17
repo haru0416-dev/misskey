@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <MkContainer :naked="widgetProps.transparent" :showHeader="false" data-cy-mkw-aichan class="mkw-aichan">
-	<iframe ref="live2d" :class="$style.root" src="https://misskey-dev.github.io/mascot-web/?scale=1.5&y=1.1&eyeY=100" @click="touched"></iframe>
+	<iframe ref="live2d" :class="$style.root" :title="i18n.ts._widgets.aichan" src="https://misskey-dev.github.io/mascot-web/?scale=1.5&y=1.1&eyeY=100"></iframe>
 </MkContainer>
 </template>
 
@@ -39,9 +39,6 @@ const { widgetProps, configure } = useWidgetPropsManager(name,
 );
 
 const live2d = useTemplateRef('live2d');
-
-const touched = () => {
-};
 
 const moveCursor = (ev: MouseEvent) => {
 	if (!live2d.value || !live2d.value.contentWindow) return;

@@ -182,7 +182,7 @@ defineExpose<WidgetComponentExpose>({
 	position: relative;
 
 	&.small {
-		padding: 12px;
+		padding: var(--MI-space-md);
 
 		> .clock {
 			height: 100px;
@@ -198,7 +198,7 @@ defineExpose<WidgetComponentExpose>({
 	}
 
 	&.large {
-		padding: 16px;
+		padding: var(--MI-space-lg);
 
 		> .clock {
 			height: 200px;
@@ -213,11 +213,6 @@ defineExpose<WidgetComponentExpose>({
 	&.a {
 		top: 14px;
 		left: 14px;
-	}
-
-	&.b {
-		top: 14px;
-		right: 14px;
 	}
 
 	&.c {

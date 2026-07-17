@@ -5,9 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <MkContainer :showHeader="widgetProps.showHeader" class="mkw-chat">
-	<template #icon><i class="ti ti-users"></i></template>
+	<template #icon><i class="ti ti-messages"></i></template>
 	<template #header>{{ i18n.ts._widgets.chat }}</template>
-	<template #func="{ buttonStyleClass }"><button class="_button" :class="buttonStyleClass" @click="configure()"><i class="ti ti-settings"></i></button></template>
+	<template #func="{ buttonStyleClass }"><button v-tooltip="i18n.ts.settings" class="_button" :class="buttonStyleClass" :aria-label="i18n.ts.settings" @click="configure()"><i class="ti ti-settings"></i></button></template>
 
 	<div>
 		<MkChatHistories/>
@@ -16,7 +16,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { } from 'vue';
 import { useWidgetPropsManager } from './widget.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
@@ -39,7 +38,7 @@ type WidgetProps = GetFormResultType<typeof widgetPropsDef>;
 const props = defineProps<WidgetComponentProps<WidgetProps>>();
 const emit = defineEmits<WidgetComponentEmits<WidgetProps>>();
 
-const { widgetProps, configure, save } = useWidgetPropsManager(name,
+const { widgetProps, configure } = useWidgetPropsManager(name,
 	widgetPropsDef,
 	props,
 	emit,

@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <MkContainer :showHeader="widgetProps.showHeader" :naked="widgetProps.transparent">
 	<template #icon><i class="ti ti-server"></i></template>
 	<template #header>{{ i18n.ts._widgets.serverMetric }}</template>
-	<template #func="{ buttonStyleClass }"><button class="_button" :class="buttonStyleClass" @click="toggleView()"><i class="ti ti-selector"></i></button></template>
+	<template #func="{ buttonStyleClass }"><button v-tooltip="i18n.ts.switch" class="_button" :class="buttonStyleClass" :aria-label="i18n.ts.switch" @click="toggleView()"><i class="ti ti-selector" aria-hidden="true"></i></button></template>
 
 	<div v-if="meta" data-cy-mkw-serverMetric class="mkw-serverMetric">
 		<XCpuMemory v-if="widgetProps.view === 0" :connection="connection" :meta="meta"/>

@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div data-cy-mkw-onlineUsers :class="[$style.root, { _panel: !widgetProps.transparent, [$style.pad]: !widgetProps.transparent }]">
 	<span :class="$style.text">
 		<I18n v-if="onlineUsersCount" :src="i18n.ts.onlineUsersCount" textTag="span">
-			<template #n><b style="color: #41b781;">{{ number(onlineUsersCount) }}</b></template>
+			<template #n><b :class="$style.count">{{ number(onlineUsersCount) }}</b></template>
 		</I18n>
 	</span>
 </div>
@@ -69,11 +69,15 @@ defineExpose<WidgetComponentExpose>({
 	text-align: center;
 
 	&.pad {
-		padding: 16px 0;
+		padding: var(--MI-space-lg) 0;
 	}
 }
 
 .text {
 	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+}
+
+.count {
+	color: var(--MI_THEME-success);
 }
 </style>

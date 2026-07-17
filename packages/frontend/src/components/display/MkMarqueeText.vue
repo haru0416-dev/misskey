@@ -78,6 +78,12 @@ onMounted(calcDuration);
 	animation-play-state: paused;
 }
 
+@media (prefers-reduced-motion: reduce) {
+	.text {
+		animation-play-state: paused;
+	}
+}
+
 .reverse .text {
 	animation-direction: reverse;
 }

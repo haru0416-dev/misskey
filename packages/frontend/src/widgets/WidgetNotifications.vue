@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <MkContainer :style="`height: ${widgetProps.height}px;`" :showHeader="widgetProps.showHeader" :scrollable="true" data-cy-mkw-notifications class="mkw-notifications">
 	<template #icon><i class="ti ti-bell"></i></template>
 	<template #header>{{ i18n.ts.notifications }}</template>
-	<template #func="{ buttonStyleClass }"><button class="_button" :class="buttonStyleClass" @click="configureNotification()"><i class="ti ti-settings"></i></button></template>
+	<template #func="{ buttonStyleClass }"><button v-tooltip="i18n.ts.notificationSettings" class="_button" :class="buttonStyleClass" :aria-label="i18n.ts.notificationSettings" @click="configureNotification()"><i class="ti ti-settings" aria-hidden="true"></i></button></template>
 
 	<div>
 		<MkStreamingNotificationsTimeline :excludeTypes="widgetProps.excludeTypes"/>
@@ -16,7 +16,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { defineAsyncComponent } from 'vue';
 import { useWidgetPropsManager } from './widget.js';
 import type { notificationTypes as notificationTypes_typeReferenceOnly } from 'misskey-js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';

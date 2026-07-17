@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div class="zbwaqsat">
 	<XPie class="pie" :value="usage"/>
 	<div>
-		<p><i class="ti ti-database"></i>Disk</p>
+		<p><i class="ti ti-database" aria-hidden="true"></i>Disk</p>
 		<p>Total: {{ bytes(total, 1) }}</p>
 		<p>Free: {{ bytes(available, 1) }}</p>
 		<p>Used: {{ bytes(used, 1) }}</p>
@@ -34,12 +34,12 @@ const available = computed(() => props.meta.fs.total - props.meta.fs.used);
 <style lang="scss" scoped>
 .zbwaqsat {
 	display: flex;
-	padding: 16px;
+	padding: var(--MI-space-lg);
 
 	> .pie {
 		height: 82px;
 		flex-shrink: 0;
-		margin-right: 16px;
+		margin-right: var(--MI-space-lg);
 	}
 
 	> div {
@@ -51,10 +51,10 @@ const available = computed(() => props.meta.fs.total - props.meta.fs.used);
 
 			&:first-child {
 				font-weight: bold;
-				margin-bottom: 4px;
+				margin-bottom: var(--MI-space-xs);
 
 				> i {
-					margin-right: 4px;
+					margin-right: var(--MI-space-xs);
 				}
 			}
 		}

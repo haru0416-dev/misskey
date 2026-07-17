@@ -56,6 +56,7 @@ defineExpose<WidgetComponentExpose>({
 <style lang="scss" module>
 .container {
 	position: relative;
+	background-color: var(--MI_THEME-accent);
 	background-size: cover;
 	background-position: center;
 	display: flex;
@@ -72,7 +73,7 @@ defineExpose<WidgetComponentExpose>({
 	width: 60px;
 	height: 60px;
 	box-sizing: border-box;
-	border: solid 3px #fff;
+	border: solid 3px var(--MI_THEME-fgOnAccent);
 }
 
 .bodyContainer {
@@ -90,13 +91,13 @@ defineExpose<WidgetComponentExpose>({
 }
 
 .name {
-	color: #fff;
+	color: var(--MI_THEME-fgOnAccent);
 	filter: drop-shadow(0 0 4px #000) drop-shadow(0 0 0.1px rgba(0, 0, 0, 0.5));
 	font-weight: bold;
 }
 
 .username {
-	color: #fff;
+	color: var(--MI_THEME-fgOnAccent);
 	filter: drop-shadow(0 0 4px #000) drop-shadow(0 0 0.1px rgba(0, 0, 0, 0.5));
 	font-weight: normal;
 }

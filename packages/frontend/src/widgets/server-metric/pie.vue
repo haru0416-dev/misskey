@@ -10,8 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		cx="50%" cy="50%"
 		fill="none"
 		stroke-width="0.1"
-		stroke="rgba(0, 0, 0, 0.05)"
-		:class="$style.circle"
+		:class="[$style.circle, $style.track]"
 	/>
 	<circle
 		:r="r"
@@ -49,7 +48,11 @@ const strokeDashoffset = computed(() => (1 - props.value) * (Math.PI * (r * 2)))
 .circle {
 	transform-origin: center;
 	transform: rotate(-90deg);
-	transition: stroke-dashoffset 0.5s ease;
+	transition: stroke-dashoffset var(--MI-duration-slow) var(--MI-ease-out);
+}
+
+.track {
+	stroke: var(--MI_THEME-divider);
 }
 
 .text {

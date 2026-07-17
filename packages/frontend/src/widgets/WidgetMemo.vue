@@ -110,7 +110,7 @@ defineExpose<WidgetComponentExpose>({
 
 <style lang="scss" module>
 .root {
-	padding-bottom: 28px + 16px;
+	padding-bottom: calc(28px + var(--MI-space-lg));
 }
 
 .textarea {
@@ -118,7 +118,7 @@ defineExpose<WidgetComponentExpose>({
 	width: 100%;
 	max-width: 100%;
 	min-width: 100%;
-	padding: 16px;
+	padding: var(--MI-space-lg);
 	color: var(--MI_THEME-fg);
 	background: transparent;
 	border: none;
@@ -137,13 +137,13 @@ defineExpose<WidgetComponentExpose>({
 .save {
 	display: block;
 	position: absolute;
-	bottom: 8px;
-	right: 8px;
+	bottom: var(--MI-space-sm);
+	right: var(--MI-space-sm);
 	margin: 0;
 	padding: 0 10px;
 	height: 28px;
 	outline: none;
-	border-radius: 4px;
+	border-radius: var(--MI-radius-sm);
 
 	&:disabled {
 		opacity: 0.7;

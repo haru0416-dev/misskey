@@ -86,9 +86,15 @@ const tick = () => {
 	if (window.document.visibilityState === 'hidden' && rawItems.value.length !== 0) return;
 
 	window.fetch(fetchEndpoint.value, {})
-		.then(res => res.json())
+		.then(res => {
+			if (!res.ok) throw new Error();
+			return res.json();
+		})
 		.then((feed: Misskey.entities.FetchRssResponse) => {
 			rawItems.value = feed.items;
+			fetching.value = false;
+		})
+		.catch(() => {
 			fetching.value = false;
 		});
 };
@@ -126,7 +132,7 @@ defineExpose<WidgetComponentExpose>({
 	overflow: hidden;
 
 	&:nth-child(even) {
-		background: rgba(#000, 0.05);
+		background: var(--MI-surface-subtle);
 	}
 }
 </style>

@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <MkContainer :style="`height: ${widgetProps.height}px;`" :showHeader="widgetProps.showHeader" :scrollable="true" class="mkw-bdayfollowings">
 	<template #icon><i class="ti ti-cake"></i></template>
 	<template #header>{{ i18n.ts._widgets.birthdayFollowings }}</template>
-	<template #func="{ buttonStyleClass }"><button class="_button" :class="buttonStyleClass" @click="fetch"><i class="ti ti-refresh"></i></button></template>
+	<template #func="{ buttonStyleClass }"><button v-tooltip="i18n.ts.reload" class="_button" :class="buttonStyleClass" :aria-label="i18n.ts.reload" @click="fetch"><i class="ti ti-refresh"></i></button></template>
 
 	<MkPagination v-slot="{ items }" :paginator="birthdayUsersPaginator">
 		<div>
@@ -16,9 +16,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 					v-if="getBirthdaySeparator(items, i, user.birthday) != null"
 				>
 					<div :class="$style.date">
-						<span><i class="ti ti-chevron-up"></i> {{ getBirthdaySeparator(items, i, user.birthday)?.prevText }}</span>
-						<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-						<span>{{ getBirthdaySeparator(items, i, user.birthday)?.nextText }} <i class="ti ti-chevron-down"></i></span>
+						<span><i class="ti ti-chevron-up" aria-hidden="true"></i> {{ getBirthdaySeparator(items, i, user.birthday)?.prevText }}</span>
+						<span :class="$style.dateTick"></span>
+						<span>{{ getBirthdaySeparator(items, i, user.birthday)?.nextText }} <i class="ti ti-chevron-down" aria-hidden="true"></i></span>
 					</div>
 					<XUser :class="$style.user" :item="user" />
 				</div>
@@ -173,11 +173,6 @@ defineExpose<WidgetComponentExpose>({
 </script>
 
 <style lang="scss" module>
-.root {
-	container-type: inline-size;
-	background: var(--MI_THEME-panel);
-}
-
 .user {
 	border-bottom: solid 0.5px var(--MI_THEME-divider);
 }
@@ -189,8 +184,14 @@ defineExpose<WidgetComponentExpose>({
 	justify-content: center;
 	gap: 1em;
 	opacity: 0.75;
-	padding: 8px 8px;
+	padding: var(--MI-space-sm);
 	margin: 0 auto;
 	border-bottom: solid 0.5px var(--MI_THEME-divider);
+}
+
+.dateTick {
+	height: 1em;
+	width: 1px;
+	background: var(--MI_THEME-divider);
 }
 </style>

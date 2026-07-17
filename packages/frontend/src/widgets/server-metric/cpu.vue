@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div class="vrvdvrys">
 	<XPie class="pie" :value="usage"/>
 	<div>
-		<p><i class="ti ti-cpu"></i>CPU</p>
+		<p><i class="ti ti-cpu" aria-hidden="true"></i>CPU</p>
 		<p>{{ meta.cpu.cores }} Logical cores</p>
 		<p>{{ meta.cpu.model }}</p>
 	</div>
@@ -42,12 +42,12 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 .vrvdvrys {
 	display: flex;
-	padding: 16px;
+	padding: var(--MI-space-lg);
 
 	> .pie {
 		height: 82px;
 		flex-shrink: 0;
-		margin-right: 16px;
+		margin-right: var(--MI-space-lg);
 	}
 
 	> div {
@@ -59,10 +59,10 @@ onBeforeUnmount(() => {
 
 			&:first-child {
 				font-weight: bold;
-				margin-bottom: 4px;
+				margin-bottom: var(--MI-space-xs);
 
 				> i {
-					margin-right: 4px;
+					margin-right: var(--MI-space-xs);
 				}
 			}
 		}

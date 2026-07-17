@@ -5,14 +5,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div data-cy-mkw-slideshow class="kvausudm _panel mkw-slideshow" :style="{ height: widgetProps.height + 'px' }">
-	<div @click="choose">
+	<button type="button" class="_button" :aria-label="i18n.ts.selectFolder" @click="choose">
 		<p v-if="widgetProps.folderId == null">
 			{{ i18n.ts.folder }}
 		</p>
 		<p v-if="widgetProps.folderId != null && images.length === 0 && !fetching">{{ i18n.ts.nothing }}</p>
 		<div ref="slideA" class="slide a"></div>
 		<div ref="slideB" class="slide b"></div>
-	</div>
+	</button>
 </div>
 </template>
 
@@ -94,6 +94,9 @@ const fetch = () => {
 		slideA.value!.style.backgroundImage = '';
 		slideB.value!.style.backgroundImage = '';
 		change();
+	}).catch(() => {
+		images.value = [];
+		fetching.value = false;
 	});
 };
 
@@ -130,16 +133,18 @@ defineExpose<WidgetComponentExpose>({
 .kvausudm {
 	position: relative;
 
-	> div {
+	> button {
+		display: block;
 		width: 100%;
 		height: 100%;
+		padding: 0;
 		cursor: pointer;
 
 		> p {
 			display: block;
 			margin: 1em;
 			text-align: center;
-			color: #888;
+			opacity: 0.7;
 		}
 
 		> * {

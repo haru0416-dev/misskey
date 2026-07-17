@@ -5,8 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root">
-	<MkA :to="userPage(item.user)" style="overflow: clip;">
-		<MkUserCardMini :user="item.user" :withChart="false" style="text-overflow: ellipsis; background: inherit; border-radius: unset;">
+	<MkA :to="userPage(item.user)" :class="$style.link">
+		<MkUserCardMini :user="item.user" :withChart="false" style="background: inherit; border-radius: unset;">
 			<template #sub>
 				<span>{{ countdownDate }}</span>
 				<span> / </span>
@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</template>
 		</MkUserCardMini>
 	</MkA>
-	<button v-tooltip.noDelay="i18n.ts.note" class="_button" :class="$style.post" @click="os.post({initialText: `@${item.user.username}${item.user.host ? `@${item.user.host}` : ''} `})">
+	<button v-tooltip.noDelay="i18n.ts.note" class="_button" :class="$style.post" :aria-label="i18n.ts.note" @click="os.post({initialText: `@${item.user.username}${item.user.host ? `@${item.user.host}` : ''} `})">
 		<i class="ti-fw ti ti-confetti" :class="$style.postIcon"></i>
 	</button>
 </div>
@@ -64,7 +64,11 @@ const countdownDate = computed(() => {
 	box-sizing: border-box;
 	display: grid;
 	align-items: center;
-	grid-template-columns: auto 56px;
+	grid-template-columns: minmax(0, 1fr) 56px;
+}
+
+.link {
+	overflow: clip;
 }
 
 .post {
@@ -73,13 +77,13 @@ const countdownDate = computed(() => {
 	align-items: center;
 	height: 40px;
 	width: 40px;
-	margin-right: 16px;
+	margin-right: var(--MI-space-lg);
 	aspect-ratio: 1/1;
-	border-radius: 100%;
+	border-radius: var(--MI-radius-full);
 	background: linear-gradient(90deg, var(--MI_THEME-buttonGradateA), var(--MI_THEME-buttonGradateB));
 
 	&:hover {
-		background: linear-gradient(90deg, hsl(from var(--MI_THEME-accent) h s calc(l + 5)), hsl(from var(--MI_THEME-accent) h s calc(l + 5)));
+		background: hsl(from var(--MI_THEME-accent) h s calc(l + 5));
 	}
 }
 

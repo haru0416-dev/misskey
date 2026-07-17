@@ -10,6 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<div class="">
 		<MkLoading v-if="fetching"/>
+		<div v-else-if="images.length === 0" :class="$style.empty">{{ i18n.ts.nothing }}</div>
 		<div v-else :class="$style.stream">
 			<div
 				v-for="(image, i) in images" :key="i"
@@ -82,6 +83,9 @@ misskeyApi('drive/stream', {
 	limit: 9,
 }).then(res => {
 	images.value = res;
+}).catch(() => {
+	// 取得失敗時は空のまま (unhandled rejection を防ぐ)
+}).finally(() => {
 	fetching.value = false;
 });
 
@@ -105,15 +109,21 @@ defineExpose<WidgetComponentExpose>({
 
 	.img {
 		border: solid 4px transparent;
-		border-radius: 8px;
+		border-radius: var(--MI-radius-lg);
 	}
+}
+
+.empty {
+	padding: var(--MI-space-lg);
+	text-align: center;
+	opacity: 0.7;
 }
 
 .stream {
 	display: flex;
 	justify-content: center;
 	flex-wrap: wrap;
-	padding: 8px;
+	padding: var(--MI-space-sm);
 
 	.img {
 		flex: 1 1 33%;
@@ -124,7 +134,7 @@ defineExpose<WidgetComponentExpose>({
 		background-size: cover;
 		background-clip: content-box;
 		border: solid 2px transparent;
-		border-radius: 4px;
+		border-radius: var(--MI-radius-sm);
 	}
 }
 </style>

@@ -7,16 +7,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 <MkContainer :showHeader="widgetProps.showHeader" class="mkw-userList">
 	<template #icon><i class="ti ti-users"></i></template>
 	<template #header>{{ list ? list.name : i18n.ts._widgets.userList }}</template>
-	<template #func="{ buttonStyleClass }"><button class="_button" :class="buttonStyleClass" @click="configure()"><i class="ti ti-settings"></i></button></template>
+	<template #func="{ buttonStyleClass }"><button v-tooltip="i18n.ts.settings" class="_button" :class="buttonStyleClass" :aria-label="i18n.ts.settings" @click="configure()"><i class="ti ti-settings"></i></button></template>
 
-	<div :class="$style.root">
-		<div v-if="widgetProps.listId == null" class="init">
+	<div>
+		<div v-if="widgetProps.listId == null" :class="$style.init">
 			<MkButton primary @click="chooseList">{{ i18n.ts._widgets._userList.chooseList }}</MkButton>
 		</div>
 		<MkLoading v-else-if="fetching"/>
-		<div v-else class="users">
-			<span v-for="user in users" :key="user.id" class="user">
-				<MkAvatar :user="user" class="avatar" indicator link preview/>
+		<div v-else-if="users.length === 0" :class="$style.init">{{ i18n.ts.noUsers }}</div>
+		<div v-else :class="$style.users">
+			<span v-for="user in users" :key="user.id" :class="$style.user">
+				<MkAvatar :user="user" :class="$style.avatar" indicator link preview/>
 			</span>
 		</div>
 	</div>
@@ -82,23 +83,25 @@ async function chooseList() {
 	fetch();
 }
 
-const fetch = () => {
+const fetch = async () => {
 	if (widgetProps.listId == null) {
 		fetching.value = false;
 		return;
 	}
 
-	misskeyApi('users/lists/show', {
-		listId: widgetProps.listId,
-	}).then(_list => {
-		list.value = _list;
-		misskeyApi('users/show', {
-			userIds: list.value.userIds ?? [],
-		}).then(_users => {
-			users.value = _users;
-			fetching.value = false;
+	try {
+		const _list = await misskeyApi('users/lists/show', {
+			listId: widgetProps.listId,
 		});
-	});
+		list.value = _list;
+		users.value = await misskeyApi('users/show', {
+			userIds: _list.userIds ?? [],
+		});
+	} catch {
+		// ポーリング失敗時は既存の表示を保持する (未ロードなら空のままで空状態表示になる)
+	} finally {
+		fetching.value = false;
+	}
 };
 
 useInterval(fetch, 1000 * 60, {
@@ -114,30 +117,26 @@ defineExpose<WidgetComponentExpose>({
 </script>
 
 <style lang="scss" module>
-.root {
-	&:global {
-		> .init {
-			padding: 16px;
-		}
+.init {
+	padding: var(--MI-space-lg);
+}
 
-		> .users {
-			display: grid;
-			grid-template-columns: repeat(auto-fill, minmax(30px, 40px));
-			gap: 12px;
-			place-content: center;
-			padding: 16px;
+.users {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(30px, 40px));
+	gap: var(--MI-space-md);
+	place-content: center;
+	padding: var(--MI-space-lg);
+}
 
-			> .user {
-				width: 100%;
-				height: 100%;
-				aspect-ratio: 1;
+.user {
+	width: 100%;
+	height: 100%;
+	aspect-ratio: 1;
+}
 
-				> .avatar {
-					width: 100%;
-					height: 100%;
-				}
-			}
-		}
-	}
+.avatar {
+	width: 100%;
+	height: 100%;
 }
 </style>

@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="_panel">
-	<div :class="$style.container" :style="{ backgroundImage: instance.bannerUrl ? `url(${ instance.bannerUrl })` : undefined }">
+	<div :class="[$style.container, { [$style.noBanner]: !instance.bannerUrl }]" :style="{ backgroundImage: instance.bannerUrl ? `url(${ instance.bannerUrl })` : undefined }">
 		<div :class="$style.iconContainer">
 			<img :src="instance.iconUrl ?? '/client-assets/erebia-icon.svg'" alt="" :class="$style.icon"/>
 		</div>
@@ -57,6 +57,18 @@ defineExpose<WidgetComponentExpose>({
 	display: flex;
 }
 
+.noBanner {
+	.name,
+	.host {
+		color: var(--MI_THEME-fg);
+		filter: none;
+	}
+
+	.icon {
+		border-color: var(--MI_THEME-panel);
+	}
+}
+
 .iconContainer {
 	display: inline-block;
 	text-align: center;
@@ -67,7 +79,7 @@ defineExpose<WidgetComponentExpose>({
 	display: inline-block;
 	width: 60px;
 	height: 60px;
-	border-radius: 8px;
+	border-radius: var(--MI-radius-lg);
 	box-sizing: border-box;
 	border: solid 3px #fff;
 }

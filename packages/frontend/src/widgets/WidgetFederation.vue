@@ -114,7 +114,7 @@ defineExpose<WidgetComponentExpose>({
 				width: ($bodyTitleHieght + $bodyInfoHieght);
 				height: ($bodyTitleHieght + $bodyInfoHieght);
 				object-fit: cover;
-				border-radius: 4px;
+				border-radius: var(--MI-radius-sm);
 				margin-right: 8px;
 			}
 
