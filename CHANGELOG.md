@@ -188,6 +188,7 @@
 - Enhance: Queue outboxの状態・lease・coordinatorを正規化し、BullMQ操作をDB row lock外へ分離して配送確認pollを指数backoff化
 - Fix: 非配信広告一覧のカーソル絞り込みを修正
 - Fix: ユーザーリスト・クリップのお気に入り登録競合時のAPIエラーを修正
+- Enhance: 言語コード表 (langmap) がbackendとfrontendに完全重複していたのをmisskey-jsへ集約
 - Fix: チャンネルとお知らせの個別ページでサーバーサイドのOGPメタデータが出力されず、リンク共有時にカード表示にならない問題を修正
 - Fix: 埋め込みページ (`/embed/*`) が配信されず、`X-Frame-Options: DENY` により外部サイトのiframeに埋め込めなくなっていた問題を修正
 - Fix: 埋め込みページの可視性判定を通常ページと同一basisに統一 (非公開クリップ・凍結ユーザー・`requireSigninToViewContents` 設定・`ugcVisibilityForVisitor` 設定が埋め込み経由で迂回されないように)

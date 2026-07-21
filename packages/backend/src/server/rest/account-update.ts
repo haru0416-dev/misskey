@@ -33,7 +33,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import * as Acct from '@/misc/acct.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
-import { langmap } from '@/misc/langmap.js';
+import { langmap } from 'misskey-js/langmap.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
 import { z } from 'zod';
