@@ -64,7 +64,6 @@ const searchOrigin = ref(toRef(props, 'origin').value);
 async function search() {
 	const query = searchQuery.value.toString().trim();
 
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (query == null || query === '') return;
 
 	//#region AP lookup
@@ -88,7 +87,6 @@ async function search() {
 						acct: `${res.object.username}@${res.object.host}`,
 					},
 				});
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			} else if (res.type === 'Note') {
 				router.push('/notes/:noteId/:initialTab?', {
 					params: {

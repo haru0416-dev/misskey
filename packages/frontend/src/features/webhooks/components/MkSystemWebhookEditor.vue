@@ -183,14 +183,12 @@ async function onSubmitClicked() {
 					break;
 				}
 				case 'edit': {
-					// eslint-disable-next-line
 					const result = await misskeyApi('admin/system-webhook/update', { id: id.value!, ...params });
 					dialogEl.value?.close();
 					emit('submitted', result);
 					break;
 				}
 			}
-			// eslint-disable-next-line
 		} catch (ex: any) {
 			const msg = ex.message ?? i18n.ts.internalServerErrorDescription;
 			await os.alert({ type: 'error', title: i18n.ts.error, text: msg });
@@ -247,7 +245,6 @@ onMounted(async () => {
 					for (const ev of Object.keys(events.value)) {
 						events.value[ev as SystemWebhookEventType] = res.on.includes(ev as SystemWebhookEventType);
 					}
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				} catch (ex: any) {
 					const msg = ex.message ?? i18n.ts.internalServerErrorDescription;
 					await os.alert({ type: 'error', title: i18n.ts.error, text: msg });

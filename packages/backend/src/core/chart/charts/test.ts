@@ -16,7 +16,6 @@ import type { KVs } from '../core.js';
  * For testing
  */
 export default class TestChart extends Chart<typeof schema> {
-	// eslint-disable-line import/no-default-export
 	public total = 0; // publicにするのはテストのため
 
 	constructor(

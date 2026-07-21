@@ -355,7 +355,6 @@ export async function assertNotificationReceived(
 
 	const endpointFired = await receiver.client
 		.request('i/notifications', {})
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		.then(([notification]) => (notification != null ? cond(notification) : false));
 	strictEqual(endpointFired, expect);
 }

@@ -343,7 +343,6 @@ async function onUpdateButtonClicked() {
 			misskeyApi(
 				'admin/emoji/update',
 				{
-					// eslint-disable-next-line
 					id: item.id!,
 					name: item.name,
 					category: emptyStrToNull(item.category),

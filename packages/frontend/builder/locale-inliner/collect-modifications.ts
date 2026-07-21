@@ -218,7 +218,6 @@ export function collectModifications(
 		},
 	});
 
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (!preserveI18nImport) {
 		fileLogger.debug('removing i18n import specifier');
 		const i18nImportSpecifier = importSpecifierResult.importSpecifier;
