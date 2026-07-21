@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import { recordException } from '@/telemetry.js';
 import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import type { MiMeta } from '@/models/_.js';
+import { ErrorPage } from '@/server/web/views/error.js';
 import { createApiShellApp, type ApiShellDependencies } from './rest/shell.js';
 import { createClientBaseApp, type ClientBaseDependencies } from './web/client-base.js';
 import { createFeedApp, type FeedDependencies } from './web/feed.js';
@@ -126,11 +128,25 @@ export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
 	// well-known / oauth 等) の未捕捉例外は Hono デフォルトだとログ無しの 500 テキストになる。
 	// サーバーログに残るように onError で明示的にハンドリングする。
 	app.onError((err, c) => {
+		const errId = randomUUID();
 		recordException(err);
-		deps.http.logger?.error(err instanceof Error ? err : new Error(String(err)), { path: c.req.path });
-		return new Response('Internal Server Error', {
+		deps.http.logger?.error(err instanceof Error ? err : new Error(String(err)), { path: c.req.path, id: errId });
+
+		// API 以外 (web SSR / file / well-known 等) は人が直接見る画面なので、
+		// 問い合わせに使えるエラー ID 付きの HTML を返す。
+		if (c.req.path.startsWith('/api/')) {
+			return new Response('Internal Server Error', {
+				status: 500,
+				headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+			});
+		}
+
+		return new Response(String(ErrorPage({ code: err.name, id: errId })), {
 			status: 500,
-			headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+			headers: {
+				'Content-Type': 'text/html; charset=utf-8',
+				'Cache-Control': 'max-age=10, must-revalidate',
+			},
 		});
 	});
 

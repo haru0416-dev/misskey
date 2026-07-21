@@ -5,6 +5,8 @@
 
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
+import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/AnnouncementStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
 import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
 import { fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
@@ -20,6 +22,8 @@ import * as Acct from '@/misc/acct.js';
 import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
+import { packAnnouncementForHonoApi } from '../rest/admin-announcements.js';
+import { packChannelForSsr, type HonoApiChannelsDependencies } from '../rest/channels.js';
 import { packClipForHonoApi, type HonoApiClipDependencies } from '../rest/clips.js';
 import { packFlashForHonoApi, type HonoApiFlashDependencies } from '../rest/flash.js';
 import { packGalleryPostForHonoApi, type HonoApiGalleryDependencies } from '../rest/gallery.js';
@@ -27,6 +31,9 @@ import { packNoteForHonoApi, type HonoApiNoteDependencies } from '../rest/note.j
 import { packPageForHonoApi, type HonoApiPageDependencies } from '../rest/pages.js';
 import { packUserDetailedNotMeForHonoApi } from '../rest/user.js';
 import type { CommonData } from './views/_.js';
+import { AnnouncementPage } from './views/announcement.js';
+import { ChannelPage } from './views/channel.js';
+import { BaseEmbed } from './views/base-embed.js';
 import { ClipPage } from './views/clip.js';
 import { FlashPage } from './views/flash.js';
 import { GalleryPostPage } from './views/gallery-post.js';
@@ -38,7 +45,8 @@ export type ClientPagesDependencies = HonoApiNoteDependencies &
 	HonoApiClipDependencies &
 	HonoApiFlashDependencies &
 	HonoApiGalleryDependencies &
-	HonoApiPageDependencies & {
+	HonoApiPageDependencies &
+	HonoApiChannelsDependencies & {
 		getCommonData: () => Promise<CommonData>;
 	};
 
@@ -49,6 +57,20 @@ function htmlResponse(html: unknown, headers: Record<string, string>): Response 
 			'Content-Type': 'text/html; charset=utf-8',
 			'X-Frame-Options': 'DENY',
 			...headers,
+		},
+	});
+}
+
+/**
+ * 埋め込みページ用。第三者サイトの iframe から読まれるため、
+ * 通常ページと違い X-Frame-Options を付けてはいけない。
+ */
+function embedHtmlResponse(html: unknown): Response {
+	return new Response(String(html), {
+		status: 200,
+		headers: {
+			'Content-Type': 'text/html; charset=utf-8',
+			'Cache-Control': 'public, max-age=3600',
 		},
 	});
 }
@@ -176,6 +198,112 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 					...(await deps.getCommonData()),
 				}),
 				entityPageHeaders(profile),
+			);
+		}
+
+		await next();
+		return;
+	});
+
+	//#region 埋め込みページ (frontend-embed が描画する。X-Frame-Options を外す必要がある)
+	app.get('/embed/user-timeline/:user', async (c, next) => {
+		const user = await fetchUserByIdFromDatabase(deps.db, c.req.param('user'));
+
+		if (user == null || user.host != null) {
+			await next();
+			return;
+		}
+
+		const packedUser = await packUserDetailedNotMeForHonoApi(deps, user, null);
+
+		return embedHtmlResponse(
+			BaseEmbed({
+				title: deps.meta.name ?? 'Misskey',
+				...(await deps.getCommonData()),
+				embedCtxJson: htmlSafeJsonStringify({ user: packedUser }),
+			}),
+		);
+	});
+
+	app.get('/embed/notes/:note', async (c, next) => {
+		const note = await fetchNoteByIdFromDatabase(deps.db, c.req.param('note'));
+
+		if (note == null || note.userHost != null || ['specified', 'followers'].includes(note.visibility)) {
+			await next();
+			return;
+		}
+
+		const packedNote = await packNoteForHonoApi(deps, note, null, { detail: true });
+
+		return embedHtmlResponse(
+			BaseEmbed({
+				title: deps.meta.name ?? 'Misskey',
+				...(await deps.getCommonData()),
+				embedCtxJson: htmlSafeJsonStringify({ note: packedNote }),
+			}),
+		);
+	});
+
+	app.get('/embed/clips/:clip', async (c, next) => {
+		const clip = await fetchClipByIdFromDatabase(deps.db, c.req.param('clip'));
+
+		if (clip == null) {
+			await next();
+			return;
+		}
+
+		const packedClip = await packClipForHonoApi(deps, clip, null);
+
+		return embedHtmlResponse(
+			BaseEmbed({
+				title: deps.meta.name ?? 'Misskey',
+				...(await deps.getCommonData()),
+				embedCtxJson: htmlSafeJsonStringify({ clip: packedClip }),
+			}),
+		);
+	});
+
+	app.get('/embed/*', async (c) => {
+		return embedHtmlResponse(
+			BaseEmbed({
+				title: deps.meta.name ?? 'Misskey',
+				...(await deps.getCommonData()),
+			}),
+		);
+	});
+	//#endregion
+
+	app.get('/channels/:channel', async (c, next) => {
+		const channel = await fetchChannelByIdFromDatabase(deps.db, c.req.param('channel'));
+
+		if (channel != null) {
+			const packedChannel = await packChannelForSsr(deps, channel);
+
+			return htmlResponse(
+				ChannelPage({
+					channel: packedChannel,
+					...(await deps.getCommonData()),
+				}),
+				{ 'Cache-Control': 'public, max-age=15' },
+			);
+		}
+
+		await next();
+		return;
+	});
+
+	app.get('/announcements/:announcement', async (c, next) => {
+		const announcement = await fetchGlobalAnnouncementByIdFromDatabase(deps.db, c.req.param('announcement'));
+
+		if (announcement != null) {
+			const packedAnnouncement = packAnnouncementForHonoApi(deps.config, announcement, null);
+
+			return htmlResponse(
+				AnnouncementPage({
+					announcement: packedAnnouncement,
+					...(await deps.getCommonData()),
+				}),
+				{ 'Cache-Control': 'public, max-age=3600' },
 			);
 		}
 

@@ -188,6 +188,9 @@
 - Enhance: Queue outboxの状態・lease・coordinatorを正規化し、BullMQ操作をDB row lock外へ分離して配送確認pollを指数backoff化
 - Fix: 非配信広告一覧のカーソル絞り込みを修正
 - Fix: ユーザーリスト・クリップのお気に入り登録競合時のAPIエラーを修正
+- Fix: チャンネルとお知らせの個別ページでサーバーサイドのOGPメタデータが出力されず、リンク共有時にカード表示にならない問題を修正
+- Fix: 埋め込みページ (`/embed/*`) が配信されず、`X-Frame-Options: DENY` により外部サイトのiframeに埋め込めなくなっていた問題を修正
+- Fix: サーバー内部エラー時の応答がプレーンテキストになっており、問い合わせ用のエラーIDが表示されない問題を修正
 - Enhance: サーバー設定を厳密な `configVersion: 2` の階層構造へ再設計し、DB・Valkey・HTTP・キュー・ログを詳細設定できるように
 - Enhance: URLプレビューの結果をプロセスメモリへキャッシュし、同一URLの重複取得を抑制
 - Enhance: OpenTelemetryの外向きtrace伝播先とinstrumentation無効化を個別設定可能にし、既定の外部伝播を停止
