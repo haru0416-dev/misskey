@@ -404,7 +404,7 @@ function getRgb(hex: string | number): [number, number, number] | null {
 
 	const m = hex.slice(1).match(/[0-9a-fA-F]{2}/g);
 	if (m == null) return [0, 0, 0];
-	return m.map(x => parseInt(x, 16) / 255) as [number, number, number];
+	return m.map(x => Number.parseInt(x, 16) / 255) as [number, number, number];
 }
 </script>
 

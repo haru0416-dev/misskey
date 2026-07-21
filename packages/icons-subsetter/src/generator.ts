@@ -58,7 +58,7 @@ async function main() {
 			}
 		}
 
-		const unicodeValues = Array.from(iconsToPack).map((icon) => parseInt(rgMap.get(icon)!, 16));
+		const unicodeValues = Array.from(iconsToPack).map((icon) => Number.parseInt(rgMap.get(icon)!, 16));
 		unicodeRangeValues.set(key, unicodeValues);
 	}
 
@@ -119,7 +119,7 @@ async function main() {
 
 			// 使用されているアイコンのclassとの対応を追記
 			for (const icon of unicodeValues) {
-				const iconClasses = Array.from(rgMap.entries()).filter(([_, unicode]) => parseInt(unicode, 16) === icon);
+				const iconClasses = Array.from(rgMap.entries()).filter(([_, unicode]) => Number.parseInt(unicode, 16) === icon);
 				if (iconClasses.length > 1) {
 					console.warn(`[WARN] Multiple classes for the same unicode: ${iconClasses.map(([cls]) => cls).join(', ')}. Maybe it's deprecated?`);
 				}

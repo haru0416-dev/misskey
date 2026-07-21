@@ -165,7 +165,7 @@ export async function createNoteReactionForHonoApi(
 						reaction = FALLBACK;
 					}
 
-					if (reacterHost != null && (deps.meta.mediaSilencedHosts ?? []).some(h => reacterHost === h)) {
+					if (reacterHost != null && (deps.meta.mediaSilencedHosts ?? []).includes(reacterHost)) {
 						reaction = FALLBACK;
 					}
 				} else {

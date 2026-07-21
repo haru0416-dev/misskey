@@ -930,7 +930,7 @@ async function searchUsersForHonoApi(
 	options: { limit?: number; offset?: number; origin?: 'local' | 'remote' | 'combined' } = {},
 ): Promise<MiUser[]> {
 	const activeThreshold = new Date(Date.now() - (1000 * 60 * 60 * 24 * 30));
-	const isUsername = query.startsWith('@') && !query.includes(' ') && query.indexOf('@', 1) === -1;
+	const isUsername = query.startsWith('@') && !query.includes(' ') && !query.includes('@', 1);
 	const isLocalUsername = /^\w{1,20}$/.test(query);
 
 	const nameConditions: SQL[] = [

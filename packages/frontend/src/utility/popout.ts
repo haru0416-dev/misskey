@@ -12,8 +12,8 @@ export function popout(path: string, w?: HTMLElement) {
 	if (w) {
 		const position = w.getBoundingClientRect();
 		const computedStyle = getComputedStyle(w, '');
-		const width = parseInt(computedStyle.width, 10);
-		const height = parseInt(computedStyle.height, 10);
+		const width = Number.parseInt(computedStyle.width, 10);
+		const height = Number.parseInt(computedStyle.height, 10);
 		const x = window.screenX + position.left;
 		const y = window.screenY + position.top;
 		window.open(url, url, `width=${width}, height=${height}, top=${y}, left=${x}`);

@@ -125,8 +125,8 @@ function isValidPolicyValue<T extends keyof RolePolicies>(name: T, value: unknow
 }
 
 function aggregateChatAvailability(values: RolePolicies['chatAvailability'][]): RolePolicies['chatAvailability'] {
-	if (values.some(value => value === 'available')) return 'available';
-	if (values.some(value => value === 'readonly')) return 'readonly';
+	if (values.includes('available')) return 'available';
+	if (values.includes('readonly')) return 'readonly';
 	return 'unavailable';
 }
 
@@ -165,25 +165,25 @@ export async function getHonoApiRolePolicies(
 	const serverMaxFileSizeMb = Math.floor(deps.config.limits.maximumFileSizeBytes / (1024 * 1024));
 
 	return {
-		gtlAvailable: calc('gtlAvailable', values => values.some(value => value === true)),
-		ltlAvailable: calc('ltlAvailable', values => values.some(value => value === true)),
-		canPublicNote: calc('canPublicNote', values => values.some(value => value === true)),
+		gtlAvailable: calc('gtlAvailable', values => values.includes(true)),
+		ltlAvailable: calc('ltlAvailable', values => values.includes(true)),
+		canPublicNote: calc('canPublicNote', values => values.includes(true)),
 		mentionLimit: calc('mentionLimit', values => Math.max(...values)),
-		canInvite: calc('canInvite', values => values.some(value => value === true)),
+		canInvite: calc('canInvite', values => values.includes(true)),
 		inviteLimit: calc('inviteLimit', values => Math.max(...values)),
 		inviteLimitCycle: calc('inviteLimitCycle', values => Math.max(...values)),
 		inviteExpirationTime: calc('inviteExpirationTime', values => Math.max(...values)),
-		canManageCustomEmojis: calc('canManageCustomEmojis', values => values.some(value => value === true)),
-		canManageAvatarDecorations: calc('canManageAvatarDecorations', values => values.some(value => value === true)),
-		canSearchNotes: calc('canSearchNotes', values => values.some(value => value === true)),
-		canSearchUsers: calc('canSearchUsers', values => values.some(value => value === true)),
-		canUseTranslator: calc('canUseTranslator', values => values.some(value => value === true)),
-		canHideAds: calc('canHideAds', values => values.some(value => value === true)),
-		canCreateChannel: calc('canCreateChannel', values => values.some(value => value === true)),
+		canManageCustomEmojis: calc('canManageCustomEmojis', values => values.includes(true)),
+		canManageAvatarDecorations: calc('canManageAvatarDecorations', values => values.includes(true)),
+		canSearchNotes: calc('canSearchNotes', values => values.includes(true)),
+		canSearchUsers: calc('canSearchUsers', values => values.includes(true)),
+		canUseTranslator: calc('canUseTranslator', values => values.includes(true)),
+		canHideAds: calc('canHideAds', values => values.includes(true)),
+		canCreateChannel: calc('canCreateChannel', values => values.includes(true)),
 		driveCapacityMb: calc('driveCapacityMb', values => Math.max(...values)),
 		maxFileSizeMb: calc('maxFileSizeMb', values => Math.min(serverMaxFileSizeMb, Math.max(...values))),
-		alwaysMarkNsfw: calc('alwaysMarkNsfw', values => values.some(value => value === true)),
-		canUpdateBioMedia: calc('canUpdateBioMedia', values => values.some(value => value === true)),
+		alwaysMarkNsfw: calc('alwaysMarkNsfw', values => values.includes(true)),
+		canUpdateBioMedia: calc('canUpdateBioMedia', values => values.includes(true)),
 		pinLimit: calc('pinLimit', values => Math.max(...values)),
 		antennaLimit: calc('antennaLimit', values => Math.max(...values)),
 		wordMuteLimit: calc('wordMuteLimit', values => Math.max(...values)),
@@ -194,11 +194,11 @@ export async function getHonoApiRolePolicies(
 		userEachUserListsLimit: calc('userEachUserListsLimit', values => Math.max(...values)),
 		rateLimitFactor: calc('rateLimitFactor', values => Math.max(...values)),
 		avatarDecorationLimit: calc('avatarDecorationLimit', values => Math.max(...values)),
-		canImportAntennas: calc('canImportAntennas', values => values.some(value => value === true)),
-		canImportBlocking: calc('canImportBlocking', values => values.some(value => value === true)),
-		canImportFollowing: calc('canImportFollowing', values => values.some(value => value === true)),
-		canImportMuting: calc('canImportMuting', values => values.some(value => value === true)),
-		canImportUserLists: calc('canImportUserLists', values => values.some(value => value === true)),
+		canImportAntennas: calc('canImportAntennas', values => values.includes(true)),
+		canImportBlocking: calc('canImportBlocking', values => values.includes(true)),
+		canImportFollowing: calc('canImportFollowing', values => values.includes(true)),
+		canImportMuting: calc('canImportMuting', values => values.includes(true)),
+		canImportUserLists: calc('canImportUserLists', values => values.includes(true)),
 		chatAvailability: calc('chatAvailability', aggregateChatAvailability),
 		uploadableFileTypes: calc('uploadableFileTypes', values => {
 			const set = new Set<string>();
@@ -212,7 +212,7 @@ export async function getHonoApiRolePolicies(
 		}),
 		noteDraftLimit: calc('noteDraftLimit', values => Math.max(...values)),
 		scheduledNoteLimit: calc('scheduledNoteLimit', values => Math.max(...values)),
-		watermarkAvailable: calc('watermarkAvailable', values => values.some(value => value === true)),
+		watermarkAvailable: calc('watermarkAvailable', values => values.includes(true)),
 	};
 }
 

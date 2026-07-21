@@ -434,7 +434,7 @@ export class HonoStreamConnection {
 			return;
 		}
 
-		if (this.token && ((definition.kind && !this.token.permission.some(p => p === definition.kind))
+		if (this.token && ((definition.kind && !this.token.permission.includes(definition.kind))
 			|| (!definition.kind && definition.requireCredential))) {
 			return;
 		}

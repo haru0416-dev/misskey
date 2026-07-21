@@ -403,7 +403,7 @@ class HonoFederationChartWriter extends Chart<typeof federationChartSchema> {
 	private async countQuery(query: SQL): Promise<number> {
 		const result = await this.drizzle.execute<{ count: string | number }>(query);
 
-		return parseInt(String(result.rows[0]?.count ?? 0), 10);
+		return Number.parseInt(String(result.rows[0]?.count ?? 0), 10);
 	}
 
 	public async deliverd(host: string, succeeded: boolean): Promise<void> {

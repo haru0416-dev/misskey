@@ -61,8 +61,8 @@ export async function handleHonoApiAdminGetTableStats(
 	const stats: TableStatsResponse = {};
 	for (const row of result.rows) {
 		stats[row.table] = {
-			count: parseInt(row.count, 10),
-			size: parseInt(row.size, 10),
+			count: Number.parseInt(row.count, 10),
+			size: Number.parseInt(row.size, 10),
 		};
 	}
 

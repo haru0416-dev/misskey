@@ -47,14 +47,14 @@ export function isNoteVisibleForMeForHonoStream(ctx: HonoStreamChannelContext, n
 	if (note.visibility === 'specified') {
 		if (meId == null) return false;
 		if (meId === note.userId) return true;
-		return note.visibleUserIds?.some(id => meId === id) ?? false;
+		return note.visibleUserIds?.includes(meId) ?? false;
 	}
 
 	if (note.visibility === 'followers') {
 		if (meId == null) return false;
 		if (meId === note.userId) return true;
 		if (note.reply && meId === note.reply.userId) return true;
-		if (note.mentions && note.mentions.some(id => meId === id)) return true;
+		if (note.mentions && note.mentions.includes(meId)) return true;
 		return Object.hasOwn(ctx.following, note.userId);
 	}
 

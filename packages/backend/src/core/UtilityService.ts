@@ -65,7 +65,7 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 
 	function isMediaSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
 		if (!silencedHosts || host == null) return false;
-		return silencedHosts.some(x => host.toLowerCase() === x);
+		return silencedHosts.includes(host.toLowerCase());
 	}
 
 	function concatNoteContentsForKeyWordCheck(content: {

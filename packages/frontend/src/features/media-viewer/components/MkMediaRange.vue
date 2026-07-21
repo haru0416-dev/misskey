@@ -30,7 +30,7 @@ const emit = defineEmits<{
 
 const model = defineModel<string | number>({ required: true });
 const modelValue = computed({
-	get: () => typeof model.value === 'number' ? model.value : parseFloat(model.value),
+	get: () => typeof model.value === 'number' ? model.value : Number.parseFloat(model.value),
 	set: v => { model.value = v; },
 });
 </script>

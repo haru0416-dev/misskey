@@ -15,7 +15,7 @@ function containsFocusTrappedElements(el: HTMLElement): boolean {
 }
 
 function getZIndex(el: HTMLElement): number {
-	const zIndex = parseInt(window.getComputedStyle(el).zIndex || '0', 10);
+	const zIndex = Number.parseInt(window.getComputedStyle(el).zIndex || '0', 10);
 	if (isNaN(zIndex)) {
 		return 0;
 	}

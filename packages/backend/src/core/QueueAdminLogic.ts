@@ -68,7 +68,7 @@ function parseRedisInfo(infoText: string): Record<string, string> {
 
 function parseRedisInfoInteger(value: string | undefined, field: string): number {
 	if (value == null) throw new Error(`Redis INFO response is missing ${field}`);
-	const parsed = parseInt(value, 10);
+	const parsed = Number.parseInt(value, 10);
 	if (!Number.isFinite(parsed)) throw new Error(`Redis INFO response has invalid ${field}`);
 	return parsed;
 }
