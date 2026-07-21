@@ -12,6 +12,15 @@
 	"insertFinalNewline": true,
 	"vueIndentScriptAndStyle": false,
 	"sortPackageJson": false,
+	"$comment": [
+		"packages/frontend/**/*.vue を除外しているのは意図的 (2026-07-21 に全619ファイルで検証)。",
+		"整形すると <script> の arrowParens が 26.7% → 100% に揃う一方、<template> 直下が",
+		"1段インデントされ (vueIndentScriptAndStyle は script/style 用で template には効かない)、",
+		"属性が printWidth で折り返される。1行で書かれている要素が複数行に割れるため、",
+		"script 側の grep 分断を消す代わりに template 側に分断を作ることになる。",
+		"影響は 618/619 ファイル・74,914行 (うち空白のみでないものが 30,131行)。",
+		"再検討する場合は、.vue だけ printWidth を大きくして属性の折り返しを抑えられるかから調べること。"
+	],
 	"ignorePatterns": [
 		".agents/**",
 		".claude/**",
