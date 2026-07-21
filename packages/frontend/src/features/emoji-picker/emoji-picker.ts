@@ -24,7 +24,9 @@ class EmojiPicker {
 			[emojiPaletteForMain, emojiPalettes],
 			([newId, newPalettes]) => {
 				this.emojisRef.value =
-					newId == null ? (newPalettes[0]?.emojis ?? []) : (newPalettes.find((palette) => palette.id === newId)?.emojis ?? []);
+					newId == null
+						? (newPalettes[0]?.emojis ?? [])
+						: (newPalettes.find((palette) => palette.id === newId)?.emojis ?? []);
 			},
 			{
 				immediate: true,

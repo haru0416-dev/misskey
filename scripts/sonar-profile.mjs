@@ -58,13 +58,13 @@ const existing = await api('/api/qualityprofiles/search', {});
 let applied = 0;
 
 for (const language of overrides.languages) {
-	const sonarWay = existing.profiles.find(p => p.language === language && p.name === 'Sonar way');
+	const sonarWay = existing.profiles.find((p) => p.language === language && p.name === 'Sonar way');
 	if (!sonarWay) {
 		console.warn(`warn: 言語 ${language} の 'Sonar way' が見つかりません。読み飛ばします。`);
 		continue;
 	}
 
-	let profile = existing.profiles.find(p => p.language === language && p.name === profileName);
+	let profile = existing.profiles.find((p) => p.language === language && p.name === profileName);
 	if (!profile) {
 		const copied = await api('/api/qualityprofiles/copy', { fromKey: sonarWay.key, toName: profileName }, 'POST');
 		profile = { key: copied.key, language, name: profileName };

@@ -241,7 +241,8 @@ export function validateTheme(theme: unknown): theme is Theme {
 	if (typeof candidate.author !== 'string') return false;
 	if (candidate.desc !== undefined && typeof candidate.desc !== 'string') return false;
 	if (candidate.base !== 'light' && candidate.base !== 'dark') return false;
-	if (!isRecord(candidate.props) || !Object.values(candidate.props).every((value) => typeof value === 'string')) return false;
+	if (!isRecord(candidate.props) || !Object.values(candidate.props).every((value) => typeof value === 'string'))
+		return false;
 	if (candidate.codeHighlighter !== undefined) {
 		if (!isRecord(candidate.codeHighlighter)) return false;
 		const codeHighlighter = candidate.codeHighlighter as ThemeCodeHighlighterCandidate;
