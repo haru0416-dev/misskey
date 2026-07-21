@@ -366,7 +366,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							}
 							case 'unixtime': {
 								const child = token.children[0];
-								const unixtime = parseInt(child?.type === 'text' ? child.props.text : '');
+								const unixtime = Number.parseInt(child?.type === 'text' ? child.props.text : '');
 								return h(
 									'span',
 									{

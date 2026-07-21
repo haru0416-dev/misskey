@@ -34,7 +34,7 @@ export function genUuidv7(t: number): string {
 }
 
 export function parseUuidv7(id: string): { date: Date; } {
-	return { date: new Date(parseInt(id.slice(0, TIME_LENGTH), 16)) };
+	return { date: new Date(Number.parseInt(id.slice(0, TIME_LENGTH), 16)) };
 }
 
 export function parseUuidv7Full(id: string): { date: number; additional: bigint; } {
@@ -42,7 +42,7 @@ export function parseUuidv7Full(id: string): { date: number; additional: bigint;
 	// タイムスタンプ以降の80bit接尾辞の上位64bitを採用する。version/variantの固定bitは
 	// 全IDで同位置・同値なので相対順序に影響せず、26bitカウンタも完全に含まれる
 	return {
-		date: parseInt(id.slice(0, TIME_LENGTH), 16),
+		date: Number.parseInt(id.slice(0, TIME_LENGTH), 16),
 		additional: BigInt('0x' + id.slice(TIME_LENGTH)) >> 16n,
 	};
 }

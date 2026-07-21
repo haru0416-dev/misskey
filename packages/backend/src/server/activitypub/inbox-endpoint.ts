@@ -79,12 +79,12 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 		return rawStatus(401);
 	}
 
-	if (signature.params.headers.indexOf('host') === -1 || headers['host'] !== deps.config.runtime.host) {
+	if (!signature.params.headers.includes('host') || headers['host'] !== deps.config.runtime.host) {
 		// Host not specified or not match.
 		return rawStatus(401);
 	}
 
-	if (signature.params.headers.indexOf('digest') === -1) {
+	if (!signature.params.headers.includes('digest')) {
 		// Digest not found.
 		return rawStatus(401);
 	}

@@ -117,7 +117,7 @@ async function getBufferedReactions(
 
 	const deltas: Record<string, number> = {};
 	for (const [name, count] of Object.entries(resultDeltas)) {
-		deltas[name] = parseInt(count, 10);
+		deltas[name] = Number.parseInt(count, 10);
 	}
 
 	const pairs = resultPairs.map(x => x.split('/') as [MiUser['id'], string]);
@@ -147,7 +147,7 @@ async function getBufferedReactionsMany(
 
 		const deltas: Record<string, number> = {};
 		for (const [name, count] of Object.entries(resultDeltas)) {
-			deltas[name] = parseInt(count, 10);
+			deltas[name] = Number.parseInt(count, 10);
 		}
 
 		result.set(noteIds[i]!, {
@@ -319,14 +319,14 @@ export async function shouldHideNoteForHonoApi(
 
 	if (packedNote.visibility === 'specified') {
 		if (meId == null) return true;
-		const specified = packedNote.visibleUserIds?.some(id => meId === id);
+		const specified = packedNote.visibleUserIds?.includes(meId);
 		if (!specified) return true;
 	}
 
 	if (packedNote.visibility === 'followers') {
 		if (meId == null) return true;
 		if (packedNote.reply && meId === packedNote.reply.userId) return false;
-		if (packedNote.mentions?.some(id => meId === id)) return false;
+		if (packedNote.mentions?.includes(meId)) return false;
 
 		// followeeIds が全フォロー先、または coverage に含まれる対象者の照会結果なら再利用する。
 		const canUseHint = followeeIds != null && (followeeIdCoverage == null || followeeIdCoverage.has(packedNote.userId));
@@ -402,14 +402,14 @@ export async function isVisibleForMeForHonoApi(
 	if (note.visibility === 'specified') {
 		if (meId == null) return false;
 		if (meId === note.userId) return true;
-		return note.visibleUserIds.some(id => meId === id);
+		return note.visibleUserIds.includes(meId);
 	}
 
 	if (note.visibility === 'followers') {
 		if (meId == null) return false;
 		if (meId === note.userId) return true;
 		if (note.reply && meId === note.reply.userId) return true;
-		if (note.mentions?.some(id => meId === id)) return true;
+		if (note.mentions?.includes(meId)) return true;
 
 		const [isFollowing, meHost] = await Promise.all([
 			hint?.followeeIdCoverage.has(note.userId)
@@ -950,12 +950,12 @@ async function getFeaturedRankingOfForHonoApi(
 	const ranking = new Map<string, number>();
 	for (let i = 0; i < currentRankingResult!.length; i += 2) {
 		const noteId = currentRankingResult![i]!;
-		const score = parseInt(currentRankingResult![i + 1]!, 10);
+		const score = Number.parseInt(currentRankingResult![i + 1]!, 10);
 		ranking.set(noteId, score);
 	}
 	for (let i = 0; i < previousRankingResult!.length; i += 2) {
 		const noteId = previousRankingResult![i]!;
-		const score = parseInt(previousRankingResult![i + 1]!, 10);
+		const score = Number.parseInt(previousRankingResult![i + 1]!, 10);
 		const exist = ranking.get(noteId);
 		if (exist != null) {
 			ranking.set(noteId, (exist + score) / 2);
@@ -1283,7 +1283,7 @@ export async function handleHonoApiUsersNotes(
 			noteFilter: note => {
 				// リノート経由でも本文が露出するので、リノート先のチャンネルも同じ基準で弾く
 				if (!isSelf && (note.channel?.isSensitive || note.renote?.channel?.isSensitive)) return false;
-				if (note.visibility === 'specified' && (!me || (me.id !== note.userId && !note.visibleUserIds.some(v => v === me.id)))) return false;
+				if (note.visibility === 'specified' && (!me || (me.id !== note.userId && !note.visibleUserIds.includes(me.id)))) return false;
 				if (note.visibility === 'followers' && !isFollowing && !isSelf) return false;
 
 				return true;
