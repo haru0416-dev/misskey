@@ -209,7 +209,9 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 	app.get('/embed/user-timeline/:user', async (c, next) => {
 		const user = await fetchUserByIdFromDatabase(deps.db, c.req.param('user'));
 
-		if (user == null || user.host != null) {
+		// 通常のユーザーページ (/@:user) と同じ可視性判定にする。
+		// 埋め込みだけ緩いと、非公開設定を迂回する経路になってしまう。
+		if (user == null || user.host != null || user.isSuspended || !isUgcVisibleToVisitor(deps, user.host)) {
 			await next();
 			return;
 		}
@@ -227,8 +229,22 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 
 	app.get('/embed/notes/:note', async (c, next) => {
 		const note = await fetchNoteByIdFromDatabase(deps.db, c.req.param('note'));
+		const noteUser =
+			note != null && ['public', 'home'].includes(note.visibility)
+				? await fetchUserByIdFromDatabase(deps.db, note.userId)
+				: null;
 
-		if (note == null || note.userHost != null || ['specified', 'followers'].includes(note.visibility)) {
+		// 通常のノートページ (/notes/:note) と同じ可視性判定にする。
+		// requireSigninToViewContents (ユーザー設定) と ugcVisibilityForVisitor
+		// (インスタンス設定) を見ないと、埋め込みが非公開設定の抜け道になる。
+		if (
+			note == null ||
+			noteUser == null ||
+			noteUser.isSuspended ||
+			noteUser.requireSigninToViewContents ||
+			!['public', 'home'].includes(note.visibility) ||
+			!isUgcVisibleToVisitor(deps, note.userHost)
+		) {
 			await next();
 			return;
 		}
@@ -247,7 +263,9 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 	app.get('/embed/clips/:clip', async (c, next) => {
 		const clip = await fetchClipByIdFromDatabase(deps.db, c.req.param('clip'));
 
-		if (clip == null) {
+		// 通常のクリップページ (/clips/:clip) と同じく公開クリップのみ。
+		// clip はリモートを持たないので isPublic だけ見れば足りる。
+		if (clip == null || !clip.isPublic) {
 			await next();
 			return;
 		}
