@@ -3822,8 +3822,8 @@ type VerifyEmailRequest = NonNullable<operations['verify-email']['requestBody']>
 // Warnings were encountered during analysis:
 //
 // src/entities.ts:59:2 - (ae-forgotten-export) The symbol "ModerationLogPayloads" needs to be exported by the entry point index.d.ts
-// src/streaming.ts:56:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocketOptions" needs to be exported by the entry point index.d.ts
-// src/streaming.ts:57:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
+// src/streaming.ts:54:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocketOptions" needs to be exported by the entry point index.d.ts
+// src/streaming.ts:55:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

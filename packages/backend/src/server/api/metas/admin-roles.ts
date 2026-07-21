@@ -196,7 +196,7 @@ export const endpointMetas = {
 		meta: {
 			tags: ['admin', 'role', 'users'],
 
-			requireCredential: false,
+			requireCredential: true,
 			requireModerator: true,
 			kind: 'read:admin:roles',
 

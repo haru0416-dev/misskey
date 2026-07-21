@@ -139,6 +139,15 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:mutes');
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'mute/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 20,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiMuteCreate(deps, auth.user, body);
 			return emptyResponse(c);
@@ -175,6 +184,15 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:mutes');
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'renote-mute/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 20,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiRenoteMuteCreate(deps, auth.user, body);
 			return emptyResponse(c);
