@@ -59,7 +59,7 @@ async function serveFile(
 		'Cache-Control': cacheControl,
 		'Content-Length': String(fileStat.size),
 		'Last-Modified': fileStat.mtime.toUTCString(),
-		...(extraHeaders ?? {}),
+		...extraHeaders,
 	});
 	const contentType = mime.lookup(filePath);
 	if (contentType) {

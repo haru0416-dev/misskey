@@ -56,6 +56,7 @@ for (const [key] of disabled) {
 
 const existing = await api('/api/qualityprofiles/search', {});
 let applied = 0;
+let restored = 0;
 
 for (const language of overrides.languages) {
 	const sonarWay = existing.profiles.find((p) => p.language === language && p.name === 'Sonar way');
@@ -78,8 +79,33 @@ for (const language of overrides.languages) {
 		applied++;
 	}
 
+	// rule-overrides.json を唯一の正にするため、無効化リストから外されたルールは
+	// 'Sonar way' で有効なら有効へ戻す (これが無いと JSON から消しても無効のまま残る)
+	const disabledKeys = new Set(targets.map(([key]) => key));
+	const sonarWayRules = await api('/api/rules/search', {
+		activation: 'true',
+		qprofile: sonarWay.key,
+		ps: '500',
+		f: 'internalKey',
+	});
+	const current = await api('/api/rules/search', {
+		activation: 'true',
+		qprofile: profile.key,
+		ps: '500',
+		f: 'internalKey',
+	});
+	const activeNow = new Set(current.rules.map((r) => r.key));
+	for (const rule of sonarWayRules.rules) {
+		if (disabledKeys.has(rule.key) || activeNow.has(rule.key)) continue;
+		await api('/api/qualityprofiles/activate_rule', { key: profile.key, rule: rule.key }, 'POST');
+		console.log(`  re-enabled ${rule.key}`);
+		restored++;
+	}
+
 	await api('/api/qualityprofiles/add_project', { qualityProfile: profileName, language, project: PROJECT }, 'POST');
 }
 
-console.log(`\n${applied} ルールを無効化し、${PROJECT} に '${profileName}' を割り当てました。`);
+console.log(
+	`\n${applied} ルールを無効化 / ${restored} ルールを有効へ復帰し、${PROJECT} に '${profileName}' を割り当てました。`,
+);
 console.log('反映するには再スキャンしてください: bun run lint:sonar');

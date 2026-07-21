@@ -417,8 +417,8 @@ export class HonoStreamConnection {
 		const { channel, id, params, pong } = payload;
 		if (typeof id !== 'string') return;
 		if (typeof channel !== 'string') return;
-		if (typeof pong !== 'boolean' && typeof pong !== 'undefined' && pong !== null) return;
-		if (typeof params !== 'undefined' && !isJsonObject(params)) return;
+		if (typeof pong !== 'boolean' && pong !== undefined && pong !== null) return;
+		if (params !== undefined && !isJsonObject(params)) return;
 		void this.connectChannel(id, params, channel, pong ?? undefined).catch(() => {});
 	}
 
@@ -562,7 +562,7 @@ export class HonoStreamConnection {
 		if (!isJsonObject(data)) return;
 		if (typeof data['id'] !== 'string') return;
 		if (typeof data['type'] !== 'string') return;
-		if (typeof data['body'] === 'undefined') return;
+		if (data['body'] === undefined) return;
 
 		const entry = this.channels.get(data['id']);
 		entry?.handle.onMessage?.(data['type'], data['body']);

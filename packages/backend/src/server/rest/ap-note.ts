@@ -336,7 +336,7 @@ export async function createNoteFromApForHonoApi(
 	let text: string | null = null;
 	if (note.source?.mediaType === 'text/x.misskeymarkdown' && typeof note.source.content === 'string') {
 		text = note.source.content;
-	} else if (typeof note._misskey_content !== 'undefined') {
+	} else if (note._misskey_content !== undefined) {
 		text = note._misskey_content as string;
 	} else if (typeof note.content === 'string') {
 		text = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(note.content, note.tag);

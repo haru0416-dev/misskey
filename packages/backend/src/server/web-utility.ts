@@ -27,7 +27,7 @@ function htmlResponse(
 ): Response {
 	const headers = new Headers({
 		'Content-Type': 'text/html; charset=utf-8',
-		...(options.headers ?? {}),
+		...options.headers,
 	});
 
 	if (options.xFrameOptions !== null) {

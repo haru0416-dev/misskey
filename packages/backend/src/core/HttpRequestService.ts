@@ -485,7 +485,7 @@ export function createHttpRequestService(config: Config) {
 					method: args.method ?? 'GET',
 					headers: {
 						'User-Agent': config.runtime.userAgent,
-						...(args.headers ?? {}),
+						...args.headers,
 					},
 					body: args.body,
 					signal: controller.signal,

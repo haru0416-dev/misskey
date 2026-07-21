@@ -29,7 +29,7 @@ function htmlResponse(
 	const headers = new Headers({
 		'Content-Type': 'text/html; charset=utf-8',
 		'X-Frame-Options': 'DENY',
-		...(options.headers ?? {}),
+		...options.headers,
 	});
 
 	return new Response(options.noBody ? null : String(html), {
