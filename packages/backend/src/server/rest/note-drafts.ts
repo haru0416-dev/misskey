@@ -62,7 +62,7 @@ export async function handleHonoApiNotesDraftsCount(
 	return await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 }
 
-export const notePollParamDef = z
+const notePollParamDef = z
 	.object({
 		choices: uniqueItems(z.array(z.string().min(1).max(50)).min(0).max(10)),
 		multiple: z.boolean().optional(),

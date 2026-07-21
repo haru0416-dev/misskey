@@ -152,7 +152,7 @@ export async function listLocalFollowerFollowingsByFolloweeIdFromDatabase(
 		.where(and(...conditions));
 }
 
-export async function listFollowerIdsByFolloweeIdFromDatabase(
+async function listFollowerIdsByFolloweeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
@@ -468,7 +468,7 @@ export async function deleteFollowingAndUpdateUserCountsByIdInDatabase(
 	});
 }
 
-export async function fetchFollowingByIdOrFailFromDatabase(
+async function fetchFollowingByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiFollowing['id'],
 ): Promise<MiFollowing> {
@@ -625,7 +625,7 @@ export async function countFollowingsByFolloweeIdAndFollowerHostStateFromDatabas
 	return row?.value ?? 0;
 }
 
-export async function countFollowingsByFollowerHostFromDatabase(
+async function countFollowingsByFollowerHostFromDatabase(
 	db: MiDrizzleDatabase,
 	followerHost: NonNullable<MiFollowing['followerHost']>,
 ): Promise<number> {
@@ -634,7 +634,7 @@ export async function countFollowingsByFollowerHostFromDatabase(
 	return row?.value ?? 0;
 }
 
-export async function countFollowingsByFolloweeHostFromDatabase(
+async function countFollowingsByFolloweeHostFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeHost: NonNullable<MiFollowing['followeeHost']>,
 ): Promise<number> {
@@ -643,7 +643,7 @@ export async function countFollowingsByFolloweeHostFromDatabase(
 	return row?.value ?? 0;
 }
 
-export async function updateFollowerHibernatedStateByFollowerIdInDatabase(
+async function updateFollowerHibernatedStateByFollowerIdInDatabase(
 	db: MiDrizzleDatabase,
 	followerId: MiUser['id'],
 	isFollowerHibernated: boolean,
@@ -651,7 +651,7 @@ export async function updateFollowerHibernatedStateByFollowerIdInDatabase(
 	await db.update(following).set({ isFollowerHibernated }).where(eq(following.followerId, followerId));
 }
 
-export async function updateFollowerHibernatedStateByFollowerIdsInDatabase(
+async function updateFollowerHibernatedStateByFollowerIdsInDatabase(
 	db: MiDrizzleDatabase,
 	followerIds: MiUser['id'][],
 	isFollowerHibernated: boolean,

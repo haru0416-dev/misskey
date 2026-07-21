@@ -74,7 +74,7 @@ export async function fetchAbuseUserReportByIdOrFailFromDatabase(
 	return report;
 }
 
-export async function listAbuseUserReportsByIdsFromDatabase(
+async function listAbuseUserReportsByIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiAbuseUserReport['id'][],
 ): Promise<MiAbuseUserReport[]> {

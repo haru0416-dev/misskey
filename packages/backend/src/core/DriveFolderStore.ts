@@ -85,7 +85,7 @@ export async function fetchDriveFolderByIdAndUserIdFromDatabase(
 	return row ?? null;
 }
 
-export async function fetchDriveFolderByIdAndUserIdOrFailFromDatabase(
+async function fetchDriveFolderByIdAndUserIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: DriveFolderRow['id'],
 	userId: MiUser['id'],

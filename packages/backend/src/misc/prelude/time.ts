@@ -53,7 +53,7 @@ export function isTimeBefore(a: Date, b: Date): boolean {
 	return a.getTime() - b.getTime() < 0;
 }
 
-export function isTimeAfter(a: Date, b: Date): boolean {
+function isTimeAfter(a: Date, b: Date): boolean {
 	return a.getTime() - b.getTime() > 0;
 }
 

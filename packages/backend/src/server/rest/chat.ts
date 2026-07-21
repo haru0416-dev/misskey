@@ -265,7 +265,7 @@ export async function packChatMessagesDetailedForHonoApi(
 	);
 }
 
-export async function packChatMessageLiteFor1on1ForHonoApi(
+async function packChatMessageLiteFor1on1ForHonoApi(
 	deps: HonoApiChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	options?: { _hint_?: { packedFiles: Map<MiChatMessage['fileId'], Packed<'DriveFile'> | null> } },
@@ -293,7 +293,7 @@ export async function packChatMessageLiteFor1on1ForHonoApi(
 	} as Packed<'ChatMessageLiteFor1on1'>;
 }
 
-export async function packChatMessagesLiteFor1on1ForHonoApi(
+async function packChatMessagesLiteFor1on1ForHonoApi(
 	deps: HonoApiChatDependencies,
 	messages: MiChatMessage[],
 ): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
@@ -309,7 +309,7 @@ export async function packChatMessagesLiteFor1on1ForHonoApi(
 	);
 }
 
-export async function packChatMessageLiteForRoomForHonoApi(
+async function packChatMessageLiteForRoomForHonoApi(
 	deps: HonoApiChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	options?: {
@@ -349,7 +349,7 @@ export async function packChatMessageLiteForRoomForHonoApi(
 	} as Packed<'ChatMessageLiteForRoom'>;
 }
 
-export async function packChatMessagesLiteForRoomForHonoApi(
+async function packChatMessagesLiteForRoomForHonoApi(
 	deps: HonoApiChatDependencies,
 	messages: MiChatMessage[],
 ): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
@@ -380,7 +380,7 @@ export async function packChatMessagesLiteForRoomForHonoApi(
 	);
 }
 
-export async function packChatRoomForHonoApi(
+async function packChatRoomForHonoApi(
 	deps: HonoApiChatDependencies,
 	src: MiChatRoom['id'] | MiChatRoom,
 	me?: { id: MiUser['id'] },
@@ -421,7 +421,7 @@ export async function packChatRoomForHonoApi(
 	} as Packed<'ChatRoom'>;
 }
 
-export async function packChatRoomsForHonoApi(
+async function packChatRoomsForHonoApi(
 	deps: HonoApiChatDependencies,
 	rooms: (MiChatRoom | MiChatRoom['id'])[],
 	me: { id: MiUser['id'] },
@@ -523,7 +523,7 @@ export async function packChatRoomInvitationsForHonoApi(
 	);
 }
 
-export async function packChatRoomMembershipForHonoApi(
+async function packChatRoomMembershipForHonoApi(
 	deps: HonoApiChatDependencies,
 	src: ChatRoomMembershipRow['id'] | ChatRoomMembershipPackable,
 	me: { id: MiUser['id'] },
@@ -555,7 +555,7 @@ export async function packChatRoomMembershipForHonoApi(
 	} as Packed<'ChatRoomMembership'>;
 }
 
-export async function packChatRoomMembershipsForHonoApi(
+async function packChatRoomMembershipsForHonoApi(
 	deps: HonoApiChatDependencies,
 	memberships: ChatRoomMembershipPackable[],
 	me: { id: MiUser['id'] },
@@ -593,7 +593,7 @@ export async function packChatRoomMembershipsForHonoApi(
 // service logic (ports of ChatService)
 // ---------------------------------------------------------------------------
 
-export async function getChatAvailabilityForHonoApi(
+async function getChatAvailabilityForHonoApi(
 	deps: HonoApiChatDependencies,
 	userId: MiUser['id'],
 ): Promise<{ read: boolean; write: boolean }> {
@@ -684,7 +684,7 @@ async function createChatRoomInvitationNotificationForHonoApi(
 	void pushSwNotificationForHonoApi(deps, notifieeId, 'notification', notification);
 }
 
-export async function createChatMessageToUserForHonoApi(
+async function createChatMessageToUserForHonoApi(
 	deps: HonoApiChatDependencies,
 	fromUser: { id: MiUser['id']; host: MiUser['host'] },
 	toUser: MiUser,
@@ -776,7 +776,7 @@ export async function createChatMessageToUserForHonoApi(
 	return packedMessage;
 }
 
-export async function createChatMessageToRoomForHonoApi(
+async function createChatMessageToRoomForHonoApi(
 	deps: HonoApiChatDependencies,
 	fromUser: { id: MiUser['id']; host: MiUser['host'] },
 	toRoom: MiChatRoom,
@@ -866,10 +866,7 @@ export async function readRoomChatMessageForHonoApi(
 		.exec();
 }
 
-export async function readAllChatMessagesForHonoApi(
-	deps: HonoApiChatDependencies,
-	readerId: MiUser['id'],
-): Promise<void> {
+async function readAllChatMessagesForHonoApi(deps: HonoApiChatDependencies, readerId: MiUser['id']): Promise<void> {
 	await deps.redis.pipeline().del(`newChatMessagesExists:${readerId}`).exec();
 }
 
@@ -882,10 +879,7 @@ export async function hasPermissionToViewRoomTimelineForHonoApi(
 	return await isHonoApiModerator(deps, { id: meId } as MiUser);
 }
 
-export async function deleteChatMessageForHonoApi(
-	deps: HonoApiChatDependencies,
-	message: MiChatMessage,
-): Promise<void> {
+async function deleteChatMessageForHonoApi(deps: HonoApiChatDependencies, message: MiChatMessage): Promise<void> {
 	await deleteChatMessageByIdFromDatabase(deps.db, message.id);
 
 	if (message.toUserId) {
@@ -902,7 +896,7 @@ export async function deleteChatMessageForHonoApi(
 	}
 }
 
-export async function chatUserTimelineForHonoApi(
+async function chatUserTimelineForHonoApi(
 	deps: HonoApiChatDependencies,
 	meId: MiUser['id'],
 	otherId: MiUser['id'],
@@ -916,7 +910,7 @@ export async function chatUserTimelineForHonoApi(
 	});
 }
 
-export async function chatRoomTimelineForHonoApi(
+async function chatRoomTimelineForHonoApi(
 	deps: HonoApiChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
@@ -929,7 +923,7 @@ export async function chatRoomTimelineForHonoApi(
 	});
 }
 
-export async function chatUserHistoryForHonoApi(
+async function chatUserHistoryForHonoApi(
 	deps: HonoApiChatDependencies,
 	meId: MiUser['id'],
 	limit: number,
@@ -937,7 +931,7 @@ export async function chatUserHistoryForHonoApi(
 	return await listUserChatHistoryFromDatabase(deps.db, meId, limit);
 }
 
-export async function chatRoomHistoryForHonoApi(
+async function chatRoomHistoryForHonoApi(
 	deps: HonoApiChatDependencies,
 	meId: MiUser['id'],
 	limit: number,
@@ -945,7 +939,7 @@ export async function chatRoomHistoryForHonoApi(
 	return await listRoomChatHistoryFromDatabase(deps.db, meId, limit);
 }
 
-export async function getUserChatReadStateMapForHonoApi(
+async function getUserChatReadStateMapForHonoApi(
 	deps: HonoApiChatDependencies,
 	userId: MiUser['id'],
 	otherIds: MiUser['id'][],
@@ -966,7 +960,7 @@ export async function getUserChatReadStateMapForHonoApi(
 	return readStateMap;
 }
 
-export async function getRoomChatReadStateMapForHonoApi(
+async function getRoomChatReadStateMapForHonoApi(
 	deps: HonoApiChatDependencies,
 	userId: MiUser['id'],
 	roomIds: MiChatRoom['id'][],
@@ -1000,7 +994,7 @@ export async function createChatRoomForHonoApi(
 	});
 }
 
-export async function hasPermissionToViewRoomInfoForHonoApi(
+async function hasPermissionToViewRoomInfoForHonoApi(
 	deps: HonoApiChatDependencies,
 	meId: MiUser['id'],
 	room: MiChatRoom,
@@ -1011,7 +1005,7 @@ export async function hasPermissionToViewRoomInfoForHonoApi(
 	return await isHonoApiModerator(deps, { id: meId } as MiUser);
 }
 
-export async function hasPermissionToDeleteRoomForHonoApi(
+async function hasPermissionToDeleteRoomForHonoApi(
 	deps: HonoApiChatDependencies,
 	meId: MiUser['id'],
 	room: MiChatRoom,
@@ -1020,7 +1014,7 @@ export async function hasPermissionToDeleteRoomForHonoApi(
 	return await isHonoApiModerator(deps, { id: meId } as MiUser);
 }
 
-export async function deleteChatRoomForHonoApi(
+async function deleteChatRoomForHonoApi(
 	deps: HonoApiChatDependencies,
 	room: MiChatRoom,
 	deleter?: MiUser,
@@ -1048,7 +1042,7 @@ export async function deleteChatRoomForHonoApi(
 	}
 }
 
-export async function findMyChatRoomByIdForHonoApi(
+async function findMyChatRoomByIdForHonoApi(
 	deps: HonoApiChatDependencies,
 	ownerId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -1056,14 +1050,14 @@ export async function findMyChatRoomByIdForHonoApi(
 	return await fetchChatRoomByIdAndOwnerIdFromDatabase(deps.db, roomId, ownerId);
 }
 
-export async function findChatRoomByIdForHonoApi(
+async function findChatRoomByIdForHonoApi(
 	deps: HonoApiChatDependencies,
 	roomId: MiChatRoom['id'],
 ): Promise<MiChatRoom | null> {
 	return await fetchChatRoomByIdFromDatabase(deps.db, roomId);
 }
 
-export async function isChatRoomMemberForHonoApi(
+async function isChatRoomMemberForHonoApi(
 	deps: HonoApiChatDependencies,
 	room: MiChatRoom,
 	userId: MiUser['id'],
@@ -1072,7 +1066,7 @@ export async function isChatRoomMemberForHonoApi(
 	return (await fetchChatRoomMembershipFromDatabase(deps.db, room.id, userId)) != null;
 }
 
-export async function createChatRoomInvitationForHonoApi(
+async function createChatRoomInvitationForHonoApi(
 	deps: HonoApiChatDependencies,
 	inviterId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -1108,7 +1102,7 @@ export async function createChatRoomInvitationForHonoApi(
 	return created;
 }
 
-export async function getSentChatRoomInvitationsWithPaginationForHonoApi(
+async function getSentChatRoomInvitationsWithPaginationForHonoApi(
 	deps: HonoApiChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
@@ -1121,7 +1115,7 @@ export async function getSentChatRoomInvitationsWithPaginationForHonoApi(
 	});
 }
 
-export async function getOwnedChatRoomsWithPaginationForHonoApi(
+async function getOwnedChatRoomsWithPaginationForHonoApi(
 	deps: HonoApiChatDependencies,
 	ownerId: MiUser['id'],
 	limit: number,
@@ -1134,7 +1128,7 @@ export async function getOwnedChatRoomsWithPaginationForHonoApi(
 	});
 }
 
-export async function getReceivedChatRoomInvitationsWithPaginationForHonoApi(
+async function getReceivedChatRoomInvitationsWithPaginationForHonoApi(
 	deps: HonoApiChatDependencies,
 	userId: MiUser['id'],
 	limit: number,
@@ -1148,7 +1142,7 @@ export async function getReceivedChatRoomInvitationsWithPaginationForHonoApi(
 	});
 }
 
-export async function joinToChatRoomForHonoApi(
+async function joinToChatRoomForHonoApi(
 	deps: HonoApiChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -1174,7 +1168,7 @@ export async function joinToChatRoomForHonoApi(
 	});
 }
 
-export async function ignoreChatRoomInvitationForHonoApi(
+async function ignoreChatRoomInvitationForHonoApi(
 	deps: HonoApiChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -1184,7 +1178,7 @@ export async function ignoreChatRoomInvitationForHonoApi(
 	await updateChatRoomInvitationIgnoredFromDatabase(deps.db, invitation.id, true);
 }
 
-export async function leaveChatRoomForHonoApi(
+async function leaveChatRoomForHonoApi(
 	deps: HonoApiChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -1200,7 +1194,7 @@ export async function leaveChatRoomForHonoApi(
 		.exec();
 }
 
-export async function muteChatRoomForHonoApi(
+async function muteChatRoomForHonoApi(
 	deps: HonoApiChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
@@ -1211,7 +1205,7 @@ export async function muteChatRoomForHonoApi(
 	await updateChatRoomMembershipMuteFromDatabase(deps.db, membership.id, mute);
 }
 
-export async function updateChatRoomForHonoApi(
+async function updateChatRoomForHonoApi(
 	deps: HonoApiChatDependencies,
 	room: MiChatRoom,
 	params: { name?: string; description?: string },
@@ -1219,7 +1213,7 @@ export async function updateChatRoomForHonoApi(
 	return await updateChatRoomInDatabase(deps.db, room.id, params);
 }
 
-export async function getRoomChatMembershipsWithPaginationForHonoApi(
+async function getRoomChatMembershipsWithPaginationForHonoApi(
 	deps: HonoApiChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
@@ -1232,7 +1226,7 @@ export async function getRoomChatMembershipsWithPaginationForHonoApi(
 	});
 }
 
-export async function searchChatMessagesForHonoApi(
+async function searchChatMessagesForHonoApi(
 	deps: HonoApiChatDependencies,
 	meId: MiUser['id'],
 	query: string,
@@ -1261,7 +1255,7 @@ async function resolveChatReactionForHonoApi(
 	}
 }
 
-export async function reactToChatMessageForHonoApi(
+async function reactToChatMessageForHonoApi(
 	deps: HonoApiChatDependencies,
 	messageId: MiChatMessage['id'],
 	userId: MiUser['id'],
@@ -1306,7 +1300,7 @@ export async function reactToChatMessageForHonoApi(
 	}
 }
 
-export async function unreactToChatMessageForHonoApi(
+async function unreactToChatMessageForHonoApi(
 	deps: HonoApiChatDependencies,
 	messageId: MiChatMessage['id'],
 	userId: MiUser['id'],
@@ -1338,7 +1332,7 @@ export async function unreactToChatMessageForHonoApi(
 	}
 }
 
-export async function getMyChatMembershipsForHonoApi(
+async function getMyChatMembershipsForHonoApi(
 	deps: HonoApiChatDependencies,
 	userId: MiUser['id'],
 	limit: number,
@@ -1449,7 +1443,7 @@ export async function handleHonoApiChatHistory(
 	return packedMessages;
 }
 
-export const chatReadAllParamDef = z.object({});
+const chatReadAllParamDef = z.object({});
 
 export async function handleHonoApiChatReadAll(
 	deps: HonoApiChatDependencies,

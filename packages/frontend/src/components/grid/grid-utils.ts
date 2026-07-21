@@ -13,11 +13,11 @@ import type { GridContext } from '@/components/grid/grid-event.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import type { GridColumn, GridColumnSetting } from '@/components/grid/column.js';
 
-export function isCellElement(elem: HTMLElement): boolean {
+function isCellElement(elem: HTMLElement): boolean {
 	return elem.hasAttribute('data-grid-cell');
 }
 
-export function isRowElement(elem: HTMLElement): boolean {
+function isRowElement(elem: HTMLElement): boolean {
 	return elem.hasAttribute('data-grid-row');
 }
 

@@ -18,4 +18,4 @@ export const schema = {
 	pubActive: { accumulate: true, range: 'small' },
 } as const;
 
-export const entity = Chart.schemaToEntity(name, schema);
+const entity = Chart.schemaToEntity(name, schema);

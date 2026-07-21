@@ -47,7 +47,7 @@ export type HonoApiSigninDependencies = HonoApiNotificationDependencies & {
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 };
 
-export type HonoApiSigninBody = Record<string, unknown> & {
+type HonoApiSigninBody = Record<string, unknown> & {
 	username?: unknown;
 	password?: unknown;
 	token?: unknown;

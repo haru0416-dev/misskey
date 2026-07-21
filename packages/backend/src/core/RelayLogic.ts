@@ -28,11 +28,11 @@ export type RelaySideEffectDependencies = {
 	) => unknown;
 };
 
-export function genLocalUserUri(config: Pick<Config, 'instance'>, userId: MiUser['id']): string {
+function genLocalUserUri(config: Pick<Config, 'instance'>, userId: MiUser['id']): string {
 	return `${config.instance.url}/users/${userId}`;
 }
 
-export function isUriLocal(config: Pick<Config, 'runtime'>, uri: string): boolean {
+function isUriLocal(config: Pick<Config, 'runtime'>, uri: string): boolean {
 	try {
 		return domainToASCII(new URL(uri).host) === domainToASCII(config.runtime.host);
 	} catch {
@@ -40,7 +40,7 @@ export function isUriLocal(config: Pick<Config, 'runtime'>, uri: string): boolea
 	}
 }
 
-export function renderFollowRelay(config: Pick<Config, 'instance'>, relay: MiRelay, relayActor: MiLocalUser): IFollow {
+function renderFollowRelay(config: Pick<Config, 'instance'>, relay: MiRelay, relayActor: MiLocalUser): IFollow {
 	return {
 		id: `${config.instance.url}/activities/follow-relay/${relay.id}`,
 		type: 'Follow',
@@ -49,7 +49,7 @@ export function renderFollowRelay(config: Pick<Config, 'instance'>, relay: MiRel
 	};
 }
 
-export function renderUndo(config: RelayActivityConfig, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
+function renderUndo(config: RelayActivityConfig, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
 	const id =
 		typeof object !== 'string' && typeof object.id === 'string' && isUriLocal(config, object.id)
 			? `${object.id}/undo`
@@ -64,10 +64,7 @@ export function renderUndo(config: RelayActivityConfig, object: string | IObject
 	};
 }
 
-export function addContext<T extends IObject>(
-	config: Pick<Config, 'instance'>,
-	x: T,
-): T & { '@context': any; id: string } {
+function addContext<T extends IObject>(config: Pick<Config, 'instance'>, x: T): T & { '@context': any; id: string } {
 	if (typeof x === 'object' && x.id == null) {
 		x.id = `${config.instance.url}/${randomUUID()}`;
 	}

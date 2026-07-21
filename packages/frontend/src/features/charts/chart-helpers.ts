@@ -6,7 +6,7 @@
 /**
  * dateTimeAxisLabel系のday単位チャートで使う、「now から ago 日前」の日付を返す
  */
-export function getDateDaysAgo(now: Date, ago: number): Date {
+function getDateDaysAgo(now: Date, ago: number): Date {
 	const y = now.getFullYear();
 	const m = now.getMonth();
 	const d = now.getDate();

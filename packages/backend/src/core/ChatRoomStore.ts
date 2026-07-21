@@ -246,7 +246,7 @@ export async function fetchChatRoomMembershipByIdOrFailFromDatabase(
 	return row;
 }
 
-export async function fetchChatRoomMembershipOrFailFromDatabase(
+async function fetchChatRoomMembershipOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	roomId: MiChatRoom['id'],
 	userId: MiUser['id'],
@@ -446,7 +446,7 @@ export async function listChatRoomInvitationsByIdsFromDatabase(
 	return ids.map((id) => invitationById.get(id)).filter((row): row is ChatRoomInvitationRow => row != null);
 }
 
-export async function fetchChatRoomInvitationOrFailFromDatabase(
+async function fetchChatRoomInvitationOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	roomId: MiChatRoom['id'],
 	userId: MiUser['id'],
@@ -569,7 +569,7 @@ export async function createChatRoomInvitationInDatabase(
 	});
 }
 
-export async function deleteChatRoomInvitationByIdFromDatabase(
+async function deleteChatRoomInvitationByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: ChatRoomInvitationRow['id'],
 ): Promise<void> {

@@ -67,7 +67,7 @@ export async function fetchRenoteMutingFromDatabase(
 	return row ?? null;
 }
 
-export async function fetchRenoteMutingByIdOrFailFromDatabase(
+async function fetchRenoteMutingByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: RenoteMutingRow['id'],
 ): Promise<RenoteMutingRow> {

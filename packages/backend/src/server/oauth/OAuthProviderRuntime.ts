@@ -306,7 +306,7 @@ async function discoverClientInformation(
 	}
 }
 
-export function firstValue(value: unknown | unknown[] | undefined): string | undefined {
+function firstValue(value: unknown | unknown[] | undefined): string | undefined {
 	const firstElement = Array.isArray(value) ? value[0] : value;
 	return typeof firstElement === 'string' ? firstElement : undefined;
 }

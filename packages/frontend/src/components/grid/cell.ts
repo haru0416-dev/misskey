@@ -34,12 +34,7 @@ export type GridCell = {
 	violation: ValidateViolation;
 };
 
-export type GridCellContextMenuFactory = (
-	col: GridColumn,
-	row: GridRow,
-	value: CellValue,
-	context: GridContext,
-) => MenuItem[];
+type GridCellContextMenuFactory = (col: GridColumn, row: GridRow, value: CellValue, context: GridContext) => MenuItem[];
 
 export type GridCellSetting = {
 	contextMenuFactory?: GridCellContextMenuFactory;

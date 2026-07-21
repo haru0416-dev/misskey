@@ -1118,7 +1118,7 @@ function isValidQueryBranch(query: unknown): query is string[][] {
 	);
 }
 
-export const notesSearchByTagParamDef = z
+const notesSearchByTagParamDef = z
 	.object({
 		tag: z.unknown().optional(),
 		query: z.unknown().optional(),

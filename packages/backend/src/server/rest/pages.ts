@@ -51,7 +51,7 @@ const pageNamePattern = new RegExp(pageNameSchema.pattern);
 
 export type HonoApiPageDependencies = HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies;
 
-export function collectReferencedNotesForHonoApi(content: MiPage['content']): string[] {
+function collectReferencedNotesForHonoApi(content: MiPage['content']): string[] {
 	const referencingNotes = new Set<string>();
 	const recursiveCollect = (items: unknown[]): void => {
 		for (const item of items) {
@@ -166,7 +166,7 @@ export async function packPageForHonoApi(
 	};
 }
 
-export async function packPageManyForHonoApi(
+async function packPageManyForHonoApi(
 	deps: HonoApiPageDependencies,
 	pages: MiPage[],
 	me?: { id: MiUser['id'] } | null | undefined,
@@ -219,7 +219,7 @@ export async function packPageManyForHonoApi(
 	);
 }
 
-export async function packPageLikeForHonoApi(
+async function packPageLikeForHonoApi(
 	deps: HonoApiPageDependencies,
 	src: PageLikeRow['id'] | (PageLikeRow & { page?: MiPage | null }),
 	me?: { id: MiUser['id'] } | null | undefined,

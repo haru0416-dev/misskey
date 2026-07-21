@@ -18,4 +18,4 @@ export const schema = {
 	'remote.decSize': {}, // in kilobyte
 } as const;
 
-export const entity = Chart.schemaToEntity(name, schema);
+const entity = Chart.schemaToEntity(name, schema);

@@ -33,7 +33,7 @@ type SystemAccountProfileUpdateData = {
 	description?: MiUserProfile['description'];
 };
 
-export async function listSystemAccountsFromDatabase(db: MiDrizzleDatabase): Promise<MiSystemAccount[]> {
+async function listSystemAccountsFromDatabase(db: MiDrizzleDatabase): Promise<MiSystemAccount[]> {
 	const rows = await db.select().from(systemAccountTable);
 
 	return rows.map(

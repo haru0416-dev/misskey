@@ -16,10 +16,7 @@ function deserializeUserKeypair(row: UserKeypairRow): MiUserKeypair {
 	} as MiUserKeypair;
 }
 
-export async function fetchUserKeypairFromDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-): Promise<MiUserKeypair> {
+async function fetchUserKeypairFromDatabase(db: MiDrizzleDatabase, userId: MiUser['id']): Promise<MiUserKeypair> {
 	const [row] = await db.select().from(userKeypair).where(eq(userKeypair.userId, userId)).limit(1);
 
 	if (!row) {

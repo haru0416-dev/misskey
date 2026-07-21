@@ -28,10 +28,7 @@ export type HonoQueueObjectStorageDependencies = {
 	publishDriveStream?: (userId: MiUser['id'], type: 'fileDeleted', value: MiDriveFile['id']) => void;
 };
 
-export async function deleteObjectStorageFileForHonoApi(
-	deps: HonoQueueObjectStorageDependencies,
-	key: string,
-): Promise<void> {
+async function deleteObjectStorageFileForHonoApi(deps: HonoQueueObjectStorageDependencies, key: string): Promise<void> {
 	try {
 		const param = {
 			Bucket: deps.meta.objectStorageBucket,

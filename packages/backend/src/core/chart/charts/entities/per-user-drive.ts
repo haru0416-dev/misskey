@@ -16,4 +16,4 @@ export const schema = {
 	decSize: {}, // in kilobyte
 } as const;
 
-export const entity = Chart.schemaToEntity(name, schema, true);
+const entity = Chart.schemaToEntity(name, schema, true);

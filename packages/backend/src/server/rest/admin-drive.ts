@@ -47,7 +47,7 @@ export const adminDriveUserParamDef = z.object({
 });
 
 // Accepts either `fileId` or `url` (both may be present at once); at least one is required.
-export const adminDriveShowFileParamDef = z
+const adminDriveShowFileParamDef = z
 	.object({
 		fileId: misskeyId().optional(),
 		url: z.string().optional(),

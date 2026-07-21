@@ -94,7 +94,7 @@ export const adminEmojiAddParamDef = z.object({
  * この挙動を再現するため、id/name はここでは型を固定せず (z.unknown())、superRefine内で
  * それぞれ個別に misskeyId/name パターンとして安全にパースできるかどうかだけを判定する。
  */
-export const adminEmojiUpdateParamDef = z
+const adminEmojiUpdateParamDef = z
 	.object({
 		id: z.unknown().optional(),
 		name: z.unknown().optional(),
@@ -202,7 +202,7 @@ function packHonoEmojiSimple(emoji: MiEmoji): Packed<'EmojiSimple'> {
 	};
 }
 
-export function packHonoEmojiDetailed(emoji: MiEmoji): Packed<'EmojiDetailed'> {
+function packHonoEmojiDetailed(emoji: MiEmoji): Packed<'EmojiDetailed'> {
 	return {
 		id: emoji.id,
 		aliases: emoji.aliases,
@@ -398,7 +398,7 @@ async function publishHonoApiEmojiDeleted(deps: HonoApiEmojiDependencies, emojis
 	});
 }
 
-export async function publishHonoApiEmojiAdded(deps: HonoApiEmojiDependencies, emoji: MiEmoji): Promise<void> {
+async function publishHonoApiEmojiAdded(deps: HonoApiEmojiDependencies, emoji: MiEmoji): Promise<void> {
 	if (deps.publishBroadcastStream == null) return;
 
 	deps.publishBroadcastStream('emojiAdded', {
@@ -803,7 +803,7 @@ const fetchEmojisSortKeys = [
 	'-roleIdsThatCanBeUsedThisEmojiAsReaction',
 ] as const;
 
-export const v2AdminEmojiListQueryParamDef = z
+const v2AdminEmojiListQueryParamDef = z
 	.object({
 		updatedAtFrom: z.string().optional(),
 		updatedAtTo: z.string().optional(),
@@ -823,7 +823,7 @@ export const v2AdminEmojiListQueryParamDef = z
 	})
 	.nullable();
 
-export const v2AdminEmojiListParamDef = z.object({
+const v2AdminEmojiListParamDef = z.object({
 	query: v2AdminEmojiListQueryParamDef.optional(),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),

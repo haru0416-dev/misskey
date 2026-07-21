@@ -163,7 +163,7 @@ type PreferencesDefinitionRecord<Default, T = Default extends () => infer R ? R 
 	mergeStrategy?: (a: T, b: T) => T;
 };
 
-export type PreferencesDefinition = Record<string, PreferencesDefinitionRecord<unknown>>;
+type PreferencesDefinition = Record<string, PreferencesDefinitionRecord<unknown>>;
 
 type PreferencesStoreEvents = {
 	committed: <K extends keyof PREF>(ctx: { key: K; value: ValueOf<K>; oldValue: ValueOf<K> }) => void;

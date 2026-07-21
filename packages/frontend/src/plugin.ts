@@ -46,7 +46,7 @@ async function getParser(): Promise<Parser> {
 	return _parser;
 }
 
-export function isSupportedAiScriptVersion(version: string): boolean {
+function isSupportedAiScriptVersion(version: string): boolean {
 	try {
 		return compareVersions(version, '0.12.0') >= 0;
 	} catch (_) {
@@ -102,7 +102,7 @@ export async function parsePluginMeta(code: string): Promise<AiScriptPluginMeta>
 	};
 }
 
-export async function authorizePlugin(plugin: Plugin) {
+async function authorizePlugin(plugin: Plugin) {
 	if (plugin.permissions == null || plugin.permissions.length === 0) return;
 	if (Object.hasOwn(store.pluginTokens, plugin.installId)) return;
 
@@ -337,7 +337,7 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 	);
 }
 
-export function abortPlugin(plugin: Plugin): void {
+function abortPlugin(plugin: Plugin): void {
 	const pluginContext = pluginContexts.get(plugin.installId);
 	if (!pluginContext) return;
 

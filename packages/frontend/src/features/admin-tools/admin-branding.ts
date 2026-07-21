@@ -6,9 +6,9 @@
 import JSON5 from 'json5';
 import { parseThemeOrNull } from '@shared/utility/theme.js';
 
-export type BrandingJsonField = 'defaultLightTheme' | 'defaultDarkTheme' | 'manifestJsonOverride';
+type BrandingJsonField = 'defaultLightTheme' | 'defaultDarkTheme' | 'manifestJsonOverride';
 
-export type NormalizedBrandingJsonSettings = {
+type NormalizedBrandingJsonSettings = {
 	defaultLightTheme: string | null;
 	defaultDarkTheme: string | null;
 	manifestJsonOverride: string;

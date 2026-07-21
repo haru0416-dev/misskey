@@ -16,7 +16,7 @@ function deserializeUserPublickey(row: UserPublickeyRow): MiUserPublickey {
 	} as MiUserPublickey;
 }
 
-export async function createUserPublickeyInDatabase(
+async function createUserPublickeyInDatabase(
 	db: MiDrizzleDatabase,
 	data: UserPublickeyInsert,
 ): Promise<MiUserPublickey> {

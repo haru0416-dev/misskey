@@ -90,7 +90,7 @@ export async function createUserNotePiningWithinLimitInDatabase(
 	});
 }
 
-export async function replaceUserNotePiningsInDatabase(
+async function replaceUserNotePiningsInDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 	data: UserNotePiningInsert[],

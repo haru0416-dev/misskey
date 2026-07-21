@@ -53,7 +53,7 @@ const NOTE_REQUIRED_NOTIFICATION_TYPES = new Set([
 	'scheduledNotePosted',
 ]);
 
-export async function getHonoApiNotifications(
+async function getHonoApiNotifications(
 	deps: HonoApiNotificationsListDependencies,
 	userId: MiUser['id'],
 	options: {
@@ -254,7 +254,7 @@ export async function packNotificationForHonoApi<T extends MiNotification | MiGr
 	};
 }
 
-export async function packNotificationsForHonoApi<T extends MiNotification | MiGroupedNotification>(
+async function packNotificationsForHonoApi<T extends MiNotification | MiGroupedNotification>(
 	deps: HonoApiNotificationsListDependencies,
 	notifications: T[],
 	meId: MiUser['id'],

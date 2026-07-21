@@ -71,10 +71,7 @@ export async function listRelaysFromDatabase(db: MiDrizzleDatabase): Promise<Rel
 	return db.select().from(relay);
 }
 
-export async function listRelaysByStatusFromDatabase(
-	db: MiDrizzleDatabase,
-	status: MiRelay['status'],
-): Promise<RelayRow[]> {
+async function listRelaysByStatusFromDatabase(db: MiDrizzleDatabase, status: MiRelay['status']): Promise<RelayRow[]> {
 	return db.select().from(relay).where(eq(relay.status, status));
 }
 

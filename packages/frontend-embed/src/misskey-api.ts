@@ -7,7 +7,7 @@ import * as Misskey from 'misskey-js';
 import { ref } from 'vue';
 import { apiUrl } from '@shared/utility/config.js';
 
-export const pendingApiRequestsCount = ref(0);
+const pendingApiRequestsCount = ref(0);
 
 type ApiRequestArgs<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']> =
 	Misskey.Endpoints[E] extends { reqOptional: true }
