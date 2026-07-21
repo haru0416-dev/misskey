@@ -606,7 +606,7 @@ async function packUserDetailedNotMeCoreForHonoApi(
 		roles: extras.roles,
 		memo,
 		moderationNote: extras.moderationNote,
-		...(extras.twoFactor ?? {}),
+		...extras.twoFactor,
 		...(extras.relation
 			? {
 					isFollowing: extras.relation.isFollowing,

@@ -72,7 +72,7 @@ export function mfmToHtml(
 						}
 
 						const text = rt.type === 'text' ? rt.props.text : '';
-						return `<ruby>${toHtml(node.children.slice(0, node.children.length - 1))}<rp>(</rp><rt>${escapeHtml(text.trim())}</rt><rp>)</rp></ruby>`;
+						return `<ruby>${toHtml(node.children.slice(0, -1))}<rp>(</rp><rt>${escapeHtml(text.trim())}</rt><rp>)</rp></ruby>`;
 					}
 				}
 

@@ -398,10 +398,7 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 
 	const config = new Map<string, values.Value>();
 	for (const [k, v] of Object.entries(opts.plugin.config ?? {})) {
-		config.set(
-			k,
-			utils.jsToVal(typeof opts.plugin.configData[k] !== 'undefined' ? opts.plugin.configData[k] : v.default),
-		);
+		config.set(k, utils.jsToVal(opts.plugin.configData[k] !== undefined ? opts.plugin.configData[k] : v.default));
 	}
 
 	function withContext<T>(fn: (ctx: Interpreter) => T): T {

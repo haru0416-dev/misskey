@@ -267,7 +267,7 @@ function setupGrid(): GridSetting {
 						text: i18n.ts._customEmojisManager._local._list.markAsDeleteTargetRanges,
 						icon: 'ti ti-trash',
 							action: () => {
-								for (const rowIdx of [...new Set(context.rangedCells.map(it => it.row.index)).values()]) {
+								for (const rowIdx of new Set(context.rangedCells.map(it => it.row.index))) {
 									const item = gridItems.value[rowIdx];
 									if (item != null) item.checked = true;
 							}
