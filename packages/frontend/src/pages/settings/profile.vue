@@ -177,7 +177,7 @@ import { chooseDriveFile } from '@/features/drive/drive.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { ensureSignin } from '@/i.js';
-import { langmap } from '@/utility/langmap.js';
+import { langmap } from 'misskey-js/langmap.js';
 import { definePage } from '@/page.js';
 import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { store } from '@/store.js';

@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// TODO: sharedに置いてバックエンドのと統合したい
+// 言語コード → 母語表記の対応表。backend (account-update の lang 検証) と
+// frontend (プロフィール設定の言語選択) の双方から使うため misskey-js に置く。
 export const langmap = {
 	ach: {
 		nativeName: 'Lwo',

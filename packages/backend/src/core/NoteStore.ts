@@ -1132,6 +1132,19 @@ export async function searchNotesByTextFromDatabase(
 		conditions.push(sql`"note"."visibility" = ${options.visibility}`);
 	}
 
+	return await executeTimelineNoteQuery(db, conditions, options);
+}
+
+/**
+ * タイムライン系クエリで共通の SELECT + JOIN + WHERE + ORDER + LIMIT。
+ * 展開前と生成 SQL が完全に同一であることを前提にした集約なので、
+ * 結合順・別名・ORDER BY の形をここで変えないこと (クエリプランが変わる)。
+ */
+async function executeTimelineNoteQuery(
+	db: MiDrizzleDatabase,
+	conditions: SQL[],
+	options: { sinceId?: MiNote['id'] | null; untilId?: MiNote['id'] | null; limit: number },
+): Promise<MiNote[]> {
 	const result = await db.execute<NoteRow>(sql`
 		SELECT "note".*
 		FROM "note" AS "note"
@@ -1242,22 +1255,7 @@ export async function listNotesByTagSearchFromDatabase(
 		conditions.push(eq(note.hasPoll, options.poll));
 	}
 
-	const result = await db.execute<NoteRow>(sql`
-		SELECT "note".*
-		FROM "note" AS "note"
-		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
-		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
-		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(
-			conditions.map((condition) => sql`(${condition})`),
-			sql` AND `,
-		)}
-		ORDER BY "note"."id" ${notePaginationOrder(options)}
-		LIMIT ${options.limit}
-	`);
-
-	return result.rows.map((row) => deserializeNote(row));
+	return await executeTimelineNoteQuery(db, conditions, options);
 }
 
 export async function listClipNotesFromDatabase(
@@ -1333,22 +1331,7 @@ export async function listGlobalTimelineNotesFromDatabase(
 		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
 	}
 
-	const result = await db.execute<NoteRow>(sql`
-		SELECT "note".*
-		FROM "note" AS "note"
-		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
-		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
-		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(
-			conditions.map((condition) => sql`(${condition})`),
-			sql` AND `,
-		)}
-		ORDER BY "note"."id" ${notePaginationOrder(options)}
-		LIMIT ${options.limit}
-	`);
-
-	return result.rows.map((row) => deserializeNote(row));
+	return await executeTimelineNoteQuery(db, conditions, options);
 }
 
 export async function listLocalTimelineNotesFromDatabase(
@@ -1406,22 +1389,7 @@ export async function listLocalTimelineNotesFromDatabase(
 		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
 	}
 
-	const result = await db.execute<NoteRow>(sql`
-		SELECT "note".*
-		FROM "note" AS "note"
-		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
-		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
-		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(
-			conditions.map((condition) => sql`(${condition})`),
-			sql` AND `,
-		)}
-		ORDER BY "note"."id" ${notePaginationOrder(options)}
-		LIMIT ${options.limit}
-	`);
-
-	return result.rows.map((row) => deserializeNote(row));
+	return await executeTimelineNoteQuery(db, conditions, options);
 }
 
 export async function listChannelTimelineNotesFromDatabase(
@@ -1454,22 +1422,7 @@ export async function listChannelTimelineNotesFromDatabase(
 		)`);
 	}
 
-	const result = await db.execute<NoteRow>(sql`
-		SELECT "note".*
-		FROM "note" AS "note"
-		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
-		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
-		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(
-			conditions.map((condition) => sql`(${condition})`),
-			sql` AND `,
-		)}
-		ORDER BY "note"."id" ${notePaginationOrder(options)}
-		LIMIT ${options.limit}
-	`);
-
-	return result.rows.map((row) => deserializeNote(row));
+	return await executeTimelineNoteQuery(db, conditions, options);
 }
 
 export async function listUserTimelineNotesFromDatabase(
@@ -1672,22 +1625,7 @@ export async function listHomeTimelineNotesFromDatabase(
 		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
 	}
 
-	const result = await db.execute<NoteRow>(sql`
-		SELECT "note".*
-		FROM "note" AS "note"
-		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
-		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
-		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(
-			conditions.map((condition) => sql`(${condition})`),
-			sql` AND `,
-		)}
-		ORDER BY "note"."id" ${notePaginationOrder(options)}
-		LIMIT ${options.limit}
-	`);
-
-	return result.rows.map((row) => deserializeNote(row));
+	return await executeTimelineNoteQuery(db, conditions, options);
 }
 
 export async function listHybridTimelineNotesFromDatabase(
@@ -1794,22 +1732,7 @@ export async function listHybridTimelineNotesFromDatabase(
 		conditions.push(sql`${note.fileIds} != '{}'`);
 	}
 
-	const result = await db.execute<NoteRow>(sql`
-		SELECT "note".*
-		FROM "note" AS "note"
-		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
-		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
-		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
-		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(
-			conditions.map((condition) => sql`(${condition})`),
-			sql` AND `,
-		)}
-		ORDER BY "note"."id" ${notePaginationOrder(options)}
-		LIMIT ${options.limit}
-	`);
-
-	return result.rows.map((row) => deserializeNote(row));
+	return await executeTimelineNoteQuery(db, conditions, options);
 }
 
 export async function listUserListTimelineNotesFromDatabase(
