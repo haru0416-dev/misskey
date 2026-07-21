@@ -8,14 +8,14 @@ import type { GridColumn } from '@/components/grid/column.js';
 import type { GridRow } from '@/components/grid/row.js';
 import { i18n } from '@/i18n.js';
 
-export type ValidatorParams = {
+type ValidatorParams = {
 	column: GridColumn;
 	row: GridRow;
 	value: CellValue;
 	allCells: GridCell[];
 };
 
-export type ValidatorResult = {
+type ValidatorResult = {
 	valid: boolean;
 	message?: string;
 };
@@ -32,7 +32,7 @@ export type ValidateViolation = {
 	violations: ValidateViolationItem[];
 };
 
-export type ValidateViolationItem = {
+type ValidateViolationItem = {
 	valid: boolean;
 	validator: GridCellValidator;
 	result: ValidatorResult;

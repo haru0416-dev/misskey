@@ -49,7 +49,7 @@ export const columnTypes = [
 	'chat',
 ] as const;
 
-export type ColumnType = (typeof columnTypes)[number];
+type ColumnType = (typeof columnTypes)[number];
 
 export type Column = {
 	id: string;
@@ -84,7 +84,7 @@ if (prefer['deck.profile'] == null) {
 	addProfile('Main');
 }
 
-export function forceSaveCurrentDeckProfile() {
+function forceSaveCurrentDeckProfile() {
 	const currentProfile = prefer['deck.profiles'].find((p) => p.name === prefer['deck.profile']);
 	if (currentProfile == null) return;
 
@@ -97,7 +97,7 @@ export function forceSaveCurrentDeckProfile() {
 	prefer.commit('deck.profiles', newProfiles);
 }
 
-export const saveCurrentDeckProfile = () => {
+const saveCurrentDeckProfile = () => {
 	forceSaveCurrentDeckProfile();
 };
 

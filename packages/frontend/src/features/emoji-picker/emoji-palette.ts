@@ -8,7 +8,7 @@ import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import type { MkSelectItem } from '@/components/form/MkSelect.vue';
 
-export function chooseEmojiPalette() {
+function chooseEmojiPalette() {
 	return os.select({
 		title: i18n.ts.chooseEmojiPalette,
 		default: prefer.emojiPaletteForMain ?? prefer.emojiPaletteForReaction ?? prefer.emojiPalettes[0]?.id ?? null,

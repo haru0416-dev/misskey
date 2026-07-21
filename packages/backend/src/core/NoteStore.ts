@@ -476,7 +476,7 @@ export async function countNotesByUserHostFromDatabase(
 	return row?.value ?? 0;
 }
 
-export async function countNotesByUserHostNotNullFromDatabase(db: MiDrizzleDatabase): Promise<number> {
+async function countNotesByUserHostNotNullFromDatabase(db: MiDrizzleDatabase): Promise<number> {
 	const [row] = await db.select({ value: count() }).from(note).where(isNotNull(note.userHost));
 
 	return row?.value ?? 0;

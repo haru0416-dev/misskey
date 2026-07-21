@@ -34,4 +34,4 @@ export const schema = {
 	'drive.decUsage': {}, // in kilobyte
 } as const;
 
-export const entity = Chart.schemaToEntity(name, schema, true);
+const entity = Chart.schemaToEntity(name, schema, true);

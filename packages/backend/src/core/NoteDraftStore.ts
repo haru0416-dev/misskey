@@ -71,7 +71,7 @@ export async function fetchNoteDraftByIdFromDatabase(
 	return row == null ? null : deserializeNoteDraft(row);
 }
 
-export async function fetchNoteDraftByIdOrFailFromDatabase(
+async function fetchNoteDraftByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiNoteDraft['id'],
 ): Promise<MiNoteDraft> {

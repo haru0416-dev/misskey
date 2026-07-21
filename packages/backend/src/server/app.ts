@@ -28,7 +28,7 @@ import { createInboxApp, type InboxEndpointDependencies } from './activitypub/in
 import { createApObjectRoutesApp, type ApObjectRoutesDependencies } from './activitypub/object-routes.js';
 import { createClientPagesApp, type ClientPagesDependencies } from './web/client-pages.js';
 
-export type HttpMiddlewareDependencies = {
+type HttpMiddlewareDependencies = {
 	config: Config;
 	meta: MiMeta;
 	logger?: Logger;

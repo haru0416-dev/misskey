@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export type SortOrderDirection = '+' | '-';
+type SortOrderDirection = '+' | '-';
 
 export type SortOrder<T extends string> = {
 	key: T;

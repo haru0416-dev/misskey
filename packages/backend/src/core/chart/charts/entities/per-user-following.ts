@@ -22,4 +22,4 @@ export const schema = {
 	'remote.followers.dec': { range: 'small' },
 } as const;
 
-export const entity = Chart.schemaToEntity(name, schema, true);
+const entity = Chart.schemaToEntity(name, schema, true);

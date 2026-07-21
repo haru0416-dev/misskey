@@ -283,7 +283,7 @@ export async function packGalleryPostForHonoApi(
 	};
 }
 
-export async function packGalleryPostsManyForHonoApi(
+async function packGalleryPostsManyForHonoApi(
 	deps: HonoApiGalleryDependencies,
 	posts: MiGalleryPost[],
 	me: { id: MiUser['id'] } | null | undefined,

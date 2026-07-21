@@ -12,7 +12,7 @@ type Text = string | ComputedRef<string>;
 
 export type MenuAction = (ev: PointerEvent) => void;
 
-export interface MenuButton {
+interface MenuButton {
 	type?: 'button';
 	text: Text;
 	caption?: Text | null | undefined | ComputedRef<null | undefined>;
@@ -34,24 +34,24 @@ interface TextMenuBase extends MenuBase {
 	icon?: string;
 }
 
-export interface MenuDivider extends MenuBase {
+interface MenuDivider extends MenuBase {
 	type: 'divider';
 }
 
-export interface MenuLabel extends MenuBase {
+interface MenuLabel extends MenuBase {
 	type: 'label';
 	text: Text;
 	caption?: Text | null | undefined | ComputedRef<null | undefined>;
 }
 
-export interface MenuLink extends TextMenuBase {
+interface MenuLink extends TextMenuBase {
 	type: 'link';
 	to: string;
 	indicate?: boolean;
 	avatar?: Misskey.entities.User;
 }
 
-export interface MenuA extends TextMenuBase {
+interface MenuA extends TextMenuBase {
 	type: 'a';
 	href: string;
 	target?: string;
@@ -59,7 +59,7 @@ export interface MenuA extends TextMenuBase {
 	indicate?: boolean;
 }
 
-export interface MenuUser extends MenuBase {
+interface MenuUser extends MenuBase {
 	type: 'user';
 	user: Misskey.entities.User;
 	active?: boolean;
@@ -91,7 +91,7 @@ export interface MenuRadioOption extends MenuBase {
 	active?: boolean | ComputedRef<boolean>;
 }
 
-export interface MenuComponent<T extends Component = any> extends MenuBase {
+interface MenuComponent<T extends Component = any> extends MenuBase {
 	type: 'component';
 	component: T;
 	props?: ComponentProps<T>;

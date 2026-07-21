@@ -176,7 +176,7 @@ async function packAbuseReportsForSystemWebhook<T extends 'abuseReport' | 'abuse
 	);
 }
 
-export async function notifyAbuseReportSystemWebhookForHonoApi(
+async function notifyAbuseReportSystemWebhookForHonoApi(
 	deps: HonoApiAdminAbuseReportsDependencies,
 	reports: MiAbuseUserReport[],
 	type: 'abuseReport' | 'abuseReportResolved',

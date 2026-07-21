@@ -41,7 +41,7 @@ export async function fetchFollowRequestByIdFromDatabase(
 	return row ?? null;
 }
 
-export async function fetchFollowRequestByIdOrFailFromDatabase(
+async function fetchFollowRequestByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: FollowRequestRow['id'],
 ): Promise<FollowRequestRow> {
@@ -82,7 +82,7 @@ export async function followRequestExistsInDatabase(
 	return row != null;
 }
 
-export async function followRequestExistsByFolloweeIdInDatabase(
+async function followRequestExistsByFolloweeIdInDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
 ): Promise<boolean> {
@@ -161,7 +161,7 @@ export async function listFollowRequestsByFollowerIdsFromDatabase(
 	return await db.select().from(followRequest).where(inArray(followRequest.followerId, followerIds));
 }
 
-export async function listFollowRequestFolloweeIdsByFollowerIdFromDatabase(
+async function listFollowRequestFolloweeIdsByFollowerIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followerId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
@@ -190,7 +190,7 @@ export async function listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFrom
 	return rows.map((row) => row.followeeId);
 }
 
-export async function listFollowRequestFollowerIdsByFolloweeIdFromDatabase(
+async function listFollowRequestFollowerIdsByFolloweeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
 ): Promise<MiUser['id'][]> {

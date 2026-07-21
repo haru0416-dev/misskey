@@ -132,7 +132,7 @@ async function getAdministratorIds(deps: HonoApiAdminUsersDependencies): Promise
 	return [...new Set(assigns.map((assign) => assign.userId))].sort((a, b) => a.localeCompare(b));
 }
 
-export async function getModeratorIdsForHonoApi(
+async function getModeratorIdsForHonoApi(
 	deps: Pick<HonoApiAdminUsersDependencies, 'db' | 'meta'>,
 	options: {
 		includeAdmins: boolean;

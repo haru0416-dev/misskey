@@ -14,4 +14,4 @@ export const schema = {
 	'pv.visitor': { range: 'small' },
 } as const;
 
-export const entity = Chart.schemaToEntity(name, schema, true);
+const entity = Chart.schemaToEntity(name, schema, true);

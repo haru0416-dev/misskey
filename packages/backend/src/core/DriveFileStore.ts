@@ -415,7 +415,7 @@ export async function deleteDriveFileByIdInDatabase(db: MiDrizzleDatabase, id: M
 	await db.delete(driveFile).where(eq(driveFile.id, id));
 }
 
-export async function countDriveFilesByUserHostFromDatabase(
+async function countDriveFilesByUserHostFromDatabase(
 	db: MiDrizzleDatabase,
 	userHost: NonNullable<MiDriveFile['userHost']>,
 ): Promise<number> {
@@ -530,7 +530,7 @@ export async function sumDriveFileSizeByUserIdFromDatabase(
 	return Number(row?.value ?? 0);
 }
 
-export async function sumDriveFileSizeByUserHostFromDatabase(
+async function sumDriveFileSizeByUserHostFromDatabase(
 	db: MiDrizzleDatabase,
 	userHost: NonNullable<MiDriveFile['userHost']>,
 ): Promise<number> {
@@ -542,7 +542,7 @@ export async function sumDriveFileSizeByUserHostFromDatabase(
 	return Number(row?.value ?? 0);
 }
 
-export async function sumLocalDriveFileSizeFromDatabase(db: MiDrizzleDatabase): Promise<number> {
+async function sumLocalDriveFileSizeFromDatabase(db: MiDrizzleDatabase): Promise<number> {
 	const [row] = await db
 		.select({ value: sum(driveFile.size) })
 		.from(driveFile)
@@ -551,7 +551,7 @@ export async function sumLocalDriveFileSizeFromDatabase(db: MiDrizzleDatabase): 
 	return Number(row?.value ?? 0);
 }
 
-export async function sumRemoteDriveFileSizeFromDatabase(db: MiDrizzleDatabase): Promise<number> {
+async function sumRemoteDriveFileSizeFromDatabase(db: MiDrizzleDatabase): Promise<number> {
 	const [row] = await db
 		.select({ value: sum(driveFile.size) })
 		.from(driveFile)

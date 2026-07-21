@@ -47,10 +47,7 @@ export async function countUserListsByUserIdFromDatabase(db: MiDrizzleDatabase, 
 	return row?.value ?? 0;
 }
 
-export async function fetchUserListByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiUserList['id'],
-): Promise<MiUserList | null> {
+async function fetchUserListByIdFromDatabase(db: MiDrizzleDatabase, id: MiUserList['id']): Promise<MiUserList | null> {
 	const [row] = await db.select().from(userList).where(eq(userList.id, id)).limit(1);
 
 	return row == null ? null : deserializeUserList(row);

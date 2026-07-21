@@ -67,7 +67,7 @@ export const userListParamDef = z.object({
 	listId: misskeyId(),
 });
 
-export const clipParamDef = z.object({
+const clipParamDef = z.object({
 	clipId: misskeyId(),
 });
 

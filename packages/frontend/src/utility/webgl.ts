@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export function loadShader(gl: WebGL2RenderingContext, type: GLenum, source: string): WebGLShader {
+function loadShader(gl: WebGL2RenderingContext, type: GLenum, source: string): WebGLShader {
 	const shader = gl.createShader(type);
 	if (shader == null) {
 		throw new Error('falied to create shader');

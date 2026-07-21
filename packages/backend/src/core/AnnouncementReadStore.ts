@@ -17,7 +17,7 @@ function announcementReadCondition(userId: MiUser['id'], announcementId: MiAnnou
 	return and(eq(announcementRead.userId, userId), eq(announcementRead.announcementId, announcementId));
 }
 
-export async function listAnnouncementReadsByUserIdFromDatabase(
+async function listAnnouncementReadsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<AnnouncementReadRow[]> {

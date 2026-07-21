@@ -56,7 +56,7 @@ export function resolveUserListMembershipPagination(
 /**
  * リストの現在の所属人数カウント (人数上限チェック用)。
  */
-export async function countUserListMembershipsByUserListIdInDatabase(
+async function countUserListMembershipsByUserListIdInDatabase(
 	db: MiDrizzleDatabase,
 	userListId: MiUserList['id'],
 ): Promise<number> {

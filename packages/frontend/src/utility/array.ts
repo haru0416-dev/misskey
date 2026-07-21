@@ -21,7 +21,7 @@ export function countIf<T>(f: Predicate<T>, xs: T[]): number {
 /**
  * Count the number of elements that is equal to the element
  */
-export function count<T>(a: T, xs: T[]): number {
+function count<T>(a: T, xs: T[]): number {
 	return countIf((x) => x === a, xs);
 }
 
@@ -96,7 +96,7 @@ export function maximum(xs: number[]): number {
 /**
  * Compare two arrays by lexicographical order
  */
-export function lessThan(xs: number[], ys: number[]): boolean {
+function lessThan(xs: number[], ys: number[]): boolean {
 	for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
 		const x = xs[i];
 		const y = ys[i];
@@ -110,7 +110,7 @@ export function lessThan(xs: number[], ys: number[]): boolean {
 /**
  * Returns the longest prefix of elements that satisfy the predicate
  */
-export function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
+function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
 	const ys: T[] = [];
 	for (const x of xs) {
 		if (f(x)) {
@@ -122,15 +122,15 @@ export function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
 	return ys;
 }
 
-export function cumulativeSum(xs: number[]): number[] {
+function cumulativeSum(xs: number[]): number[] {
 	let total = 0;
 	return xs.map((x) => (total += x));
 }
 
-export function toArray<T>(x: T | T[] | undefined): T[] {
+function toArray<T>(x: T | T[] | undefined): T[] {
 	return Array.isArray(x) ? x : x != null ? [x] : [];
 }
 
-export function toSingle<T>(x: T | T[] | undefined): T | undefined {
+function toSingle<T>(x: T | T[] | undefined): T | undefined {
 	return Array.isArray(x) ? x[0] : x;
 }

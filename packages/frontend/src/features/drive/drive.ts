@@ -243,7 +243,7 @@ export function chooseDriveFile(
 	});
 }
 
-export function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
+function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
 	return new Promise((res, rej) => {
 		os.inputText({
 			title: i18n.ts.uploadFromUrl,
@@ -332,7 +332,7 @@ export async function selectFile<
 	return opts.multiple ? (files as MR) : (files[0]! as MR);
 }
 
-export async function createCroppedImageDriveFileFromImageDriveFile(
+async function createCroppedImageDriveFileFromImageDriveFile(
 	imageDriveFile: Misskey.entities.DriveFile,
 	options: {
 		aspectRatio: number | null;

@@ -54,7 +54,7 @@ export async function fetchNoteFavoriteFromDatabase(
 	return row ?? null;
 }
 
-export async function fetchNoteFavoriteByIdOrFailFromDatabase(
+async function fetchNoteFavoriteByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: NoteFavoriteRow['id'],
 ): Promise<NoteFavoriteRow> {

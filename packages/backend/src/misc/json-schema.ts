@@ -210,12 +210,12 @@ type RequiredPropertyNames<s extends Obj> = {
 			: never;
 }[keyof s];
 
-export type Obj = Record<string, Schema>;
+type Obj = Record<string, Schema>;
 
 // https://github.com/misskey-dev/misskey/issues/8535
 // To avoid excessive stack depth error,
 // deceive TypeScript with UnionToIntersection (or more precisely, `infer` expression within it).
-export type ObjType<s extends Obj, RequiredProps extends ReadonlyArray<keyof s>> = UnionToIntersection<
+type ObjType<s extends Obj, RequiredProps extends ReadonlyArray<keyof s>> = UnionToIntersection<
 	{ -readonly [R in RequiredPropertyNames<s>]-?: SchemaType<s[R]> } & {
 		-readonly [R in RequiredProps[number]]-?: SchemaType<s[R]>;
 	} & { -readonly [P in keyof s]?: SchemaType<s[P]> }
@@ -284,7 +284,7 @@ type ObjectSchemaTypeDef<p extends Schema> = p['ref'] extends keyof typeof refs
 							: never
 						: any;
 
-export type SchemaTypeDef<p extends Schema> = p['type'] extends 'null'
+type SchemaTypeDef<p extends Schema> = p['type'] extends 'null'
 	? null
 	: p['type'] extends 'integer'
 		? number
@@ -328,4 +328,4 @@ export type SchemaTypeDef<p extends Schema> = p['type'] extends 'null'
 										? UnionSchemaType<p['oneOf']>
 										: any;
 
-export type SchemaType<p extends Schema> = NullOrUndefined<p, SchemaTypeDef<p>>;
+type SchemaType<p extends Schema> = NullOrUndefined<p, SchemaTypeDef<p>>;

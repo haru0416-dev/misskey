@@ -15,7 +15,7 @@ export const comment = `<!--
 
 export const defaultDescription = '✨🌎✨ A interplanetary communication platform ✨🚀✨';
 
-export type MinimumCommonData = {
+type MinimumCommonData = {
 	version: string;
 	config: Config;
 };

@@ -26,7 +26,7 @@ type PushNotificationDataSourceMap = {
 	newChatMessage: Misskey.entities.ChatMessage;
 };
 
-export type PushNotificationData<K extends keyof PushNotificationDataSourceMap> = {
+type PushNotificationData<K extends keyof PushNotificationDataSourceMap> = {
 	type: K;
 	body: PushNotificationDataSourceMap[K];
 	userId: string;

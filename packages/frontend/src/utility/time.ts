@@ -9,7 +9,7 @@ const dateTimeIntervals = {
 	ms: 1,
 };
 
-export function dateUTC(time: number[]): Date {
+function dateUTC(time: number[]): Date {
 	const [year, month, date, hours, minutes, seconds, ms] = time;
 	if (year == null || month == null) throw new Error('wrong number of arguments');
 	const d =
@@ -32,15 +32,15 @@ export function dateUTC(time: number[]): Date {
 	return new Date(d);
 }
 
-export function isTimeSame(a: Date, b: Date): boolean {
+function isTimeSame(a: Date, b: Date): boolean {
 	return a.getTime() === b.getTime();
 }
 
-export function isTimeBefore(a: Date, b: Date): boolean {
+function isTimeBefore(a: Date, b: Date): boolean {
 	return a.getTime() - b.getTime() < 0;
 }
 
-export function isTimeAfter(a: Date, b: Date): boolean {
+function isTimeAfter(a: Date, b: Date): boolean {
 	return a.getTime() - b.getTime() > 0;
 }
 
@@ -48,6 +48,6 @@ export function addTime(x: Date, value: number, span: keyof typeof dateTimeInter
 	return new Date(x.getTime() + value * dateTimeIntervals[span]);
 }
 
-export function subtractTime(x: Date, value: number, span: keyof typeof dateTimeIntervals = 'ms'): Date {
+function subtractTime(x: Date, value: number, span: keyof typeof dateTimeIntervals = 'ms'): Date {
 	return new Date(x.getTime() - value * dateTimeIntervals[span]);
 }

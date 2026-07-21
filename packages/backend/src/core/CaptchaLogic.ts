@@ -14,7 +14,7 @@ export const supportedCaptchaProviders = [
 	'turnstile',
 	'testcaptcha',
 ] as const;
-export type CaptchaProvider = (typeof supportedCaptchaProviders)[number];
+type CaptchaProvider = (typeof supportedCaptchaProviders)[number];
 
 export const captchaErrorCodes = {
 	invalidProvider: Symbol('invalidProvider'),
@@ -59,10 +59,10 @@ export class CaptchaError extends Error {
 	}
 }
 
-export type CaptchaSaveSuccess = {
+type CaptchaSaveSuccess = {
 	success: true;
 };
-export type CaptchaSaveFailure = {
+type CaptchaSaveFailure = {
 	success: false;
 	error: CaptchaError;
 };
@@ -125,7 +125,7 @@ async function getCaptchaResponse(
 	return (await res.json()) as CaptchaResponse;
 }
 
-export async function verifyRecaptcha(
+async function verifyRecaptcha(
 	httpRequestService: Pick<HttpRequestService, 'send'>,
 	secret: string,
 	response: string | null | undefined,
@@ -149,7 +149,7 @@ export async function verifyRecaptcha(
 	}
 }
 
-export async function verifyHcaptcha(
+async function verifyHcaptcha(
 	httpRequestService: Pick<HttpRequestService, 'send'>,
 	secret: string,
 	response: string | null | undefined,
@@ -173,7 +173,7 @@ export async function verifyHcaptcha(
 	}
 }
 
-export async function verifyMcaptcha(
+async function verifyMcaptcha(
 	httpRequestService: Pick<HttpRequestService, 'send'>,
 	secret: string,
 	siteKey: string,
@@ -212,7 +212,7 @@ export async function verifyMcaptcha(
 	}
 }
 
-export async function verifyTurnstile(
+async function verifyTurnstile(
 	httpRequestService: Pick<HttpRequestService, 'send'>,
 	secret: string,
 	response: string | null | undefined,
@@ -236,7 +236,7 @@ export async function verifyTurnstile(
 	}
 }
 
-export async function verifyTestcaptcha(response: string | null | undefined): Promise<void> {
+async function verifyTestcaptcha(response: string | null | undefined): Promise<void> {
 	if (response == null) {
 		throw new CaptchaError(captchaErrorCodes.noResponseProvided, 'testcaptcha-failed: no response provided');
 	}
@@ -291,7 +291,7 @@ export function getCaptchaSetting(meta: MiMeta): CaptchaSetting {
 	};
 }
 
-export function buildCaptchaMetaUpdate(provider: CaptchaProvider, params?: CaptchaSaveParams): CaptchaMetaUpdate {
+function buildCaptchaMetaUpdate(provider: CaptchaProvider, params?: CaptchaSaveParams): CaptchaMetaUpdate {
 	const metaPartial: CaptchaMetaUpdate = {
 		enableHcaptcha: provider === 'hcaptcha',
 		enableMcaptcha: provider === 'mcaptcha',

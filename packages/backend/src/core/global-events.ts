@@ -139,7 +139,7 @@ export interface AntennaEventTypes {
 	note: MiNote;
 }
 
-export interface RoleTimelineEventTypes {
+interface RoleTimelineEventTypes {
 	note: Packed<'Note'>;
 }
 
@@ -281,4 +281,4 @@ export type GlobalEvents = {
 	};
 };
 
-export type StreamChannels = GlobalEvents[keyof GlobalEvents]['name'];
+type StreamChannels = GlobalEvents[keyof GlobalEvents]['name'];

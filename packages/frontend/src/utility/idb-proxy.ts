@@ -54,7 +54,7 @@ export async function update(key: string, updater: (value: unknown) => unknown) 
 	write();
 }
 
-export async function del(key: string) {
+async function del(key: string) {
 	if (idbAvailable) return idel(key);
 	return miLocalStorage.removeItem(`${PREFIX}${key}`);
 }

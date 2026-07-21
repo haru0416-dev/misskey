@@ -25,7 +25,7 @@ export async function fetchRegistrationTicketByIdFromDatabase(
 	return row ?? null;
 }
 
-export async function fetchRegistrationTicketByIdOrFailFromDatabase(
+async function fetchRegistrationTicketByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: RegistrationTicketRow['id'],
 ): Promise<RegistrationTicketRow> {
@@ -38,7 +38,7 @@ export async function fetchRegistrationTicketByIdOrFailFromDatabase(
 	return row;
 }
 
-export async function fetchRegistrationTicketByCodeFromDatabase(
+async function fetchRegistrationTicketByCodeFromDatabase(
 	db: MiDrizzleDatabase,
 	code: RegistrationTicketRow['code'],
 ): Promise<RegistrationTicketRow | null> {
