@@ -37,7 +37,7 @@ import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
 import type { Config } from '@/config.js';
 import type { IPoll } from '@/models/Poll.js';
 import type { MiNote } from '@/models/Note.js';
-import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
+import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import {
 	extractDbHost,
 	getNoteFromApIdForHonoApi,

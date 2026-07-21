@@ -4,7 +4,7 @@
  */
 
 import QRCodeStyling from 'qr-code-styling';
-import { url, host } from '@shared/utility/config.js';
+import { url } from '@shared/utility/config.js';
 import { getProxiedImageUrl } from '@/utility/media-proxy.js';
 import { fn as fn_watermark } from './watermark.js';
 import { fn as fn_stripe } from '@/features/image-editor/effects/stripe.js';

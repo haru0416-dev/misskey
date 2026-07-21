@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase, deleteChannelFavoriteFromDatabase } from '@/core/ChannelFavoriteStore.js';
+import { createChannelFavoriteInDatabase, deleteChannelFavoriteFromDatabase } from '@/core/ChannelFavoriteStore.js';
 import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase, createClipFavoriteInDatabase, deleteClipFavoriteByIdFromDatabase, fetchClipFavoriteFromDatabase } from '@/core/ClipFavoriteStore.js';
 import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';

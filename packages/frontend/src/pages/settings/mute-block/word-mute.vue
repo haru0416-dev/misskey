@@ -57,8 +57,9 @@ async function save() {
 			if (regexp) {
 				// check that the RegExp is valid
 				try {
-					const parsedRegexp = new RegExp(regexp[1] ?? '', regexp[2] ?? '');
+					// 正規表現として妥当かどうかだけを見る (不正なら throw する)
 					// note that regex lines will not be split by spaces!
+					void new RegExp(regexp[1] ?? '', regexp[2] ?? '');
 				} catch (err) {
 					// invalid syntax: do not save, do not reset changed flag
 					os.alert({

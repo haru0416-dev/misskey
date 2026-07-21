@@ -14,7 +14,7 @@ import {
 import { listUsersByTagFromDatabase, type UserListOrigin, type UserListSort, type UserListState } from '@/core/UserStore.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
 import type { MiHashtag } from '@/models/Hashtag.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';

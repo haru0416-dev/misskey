@@ -8,7 +8,7 @@ import { EventEmitter } from 'eventemitter3';
 import { computed, markRaw, onUnmounted, ref, triggerRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
 import type { WatermarkLayers, WatermarkPreset } from '@/features/image-editor/watermark/WatermarkRenderer.js';
-import type { ImageFrameParams, ImageFramePreset } from '@/features/image-editor/frame/ImageFrameRenderer.js';
+import type { ImageFrameParams } from '@/features/image-editor/frame/ImageFrameRenderer.js';
 import { genId } from '@/utility/id.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
@@ -711,7 +711,7 @@ export function useUploader(
 		if (needsImageFrame && item.imageFrameParams != null) {
 			const canvas = window.document.createElement('canvas');
 			const ExifReader = await import('exifreader');
-			const exif = await ExifReader.load(await item.file.arrayBuffer());
+			const exif = ExifReader.load(await item.file.arrayBuffer());
 			const ImageFrameRenderer = await import('@/features/image-editor/frame/ImageFrameRenderer.js').then(
 				(x) => x.ImageFrameRenderer,
 			);

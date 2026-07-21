@@ -25,9 +25,7 @@ import { adminFederationHostParamDef, adminFederationUpdateInstanceParamDef } fr
 import { adminInviteCreateParamDef, adminInviteListParamDef } from '@/server/rest/invite.js';
 import { adminShowModerationLogsParamDef } from '@/server/rest/moderation-log.js';
 import { adminPromoCreateParamDef } from '@/server/rest/promo.js';
-import { URL } from 'node:url';
 import { z } from 'zod';
-import * as os from 'node:os';
 
 export const endpointMetas = {
 	'admin/abuse-user-reports': {

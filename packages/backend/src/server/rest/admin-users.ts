@@ -11,7 +11,7 @@ import { fetchUserProfileByUserIdFromDatabase, fetchUserProfileByUserIdOrFailFro
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, listAdminUsersFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';

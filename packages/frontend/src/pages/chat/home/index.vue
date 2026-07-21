@@ -52,6 +52,3 @@ definePage(() => ({
 	icon: 'ti ti-messages',
 }));
 </script>
-
-<style lang="scss" module>
-</style>

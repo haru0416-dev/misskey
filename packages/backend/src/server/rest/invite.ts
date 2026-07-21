@@ -21,7 +21,7 @@ import { createModerationLogInDatabase } from '@/core/ModerationLogStore.js';
 import type { RolePolicies } from '@/core/role-policies.js';
 import type { RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
 import { generateInviteCode } from '@/misc/generate-invite-code.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';

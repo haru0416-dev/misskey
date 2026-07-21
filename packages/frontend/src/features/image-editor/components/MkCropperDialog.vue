@@ -36,6 +36,7 @@ import tinycolor from 'tinycolor2';
 import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import { themeManager } from '@/theme.js';
 import { i18n } from '@/i18n.js';
+import * as os from '@/os.js';
 
 const props = defineProps<{
 	imageFile: F;
@@ -56,24 +57,41 @@ let cropper: Cropper | null = null;
 const loading = ref(true);
 
 async function ok() {
-	const promise = new Promise<Blob>(async (res) => {
-		if (cropper == null) throw new Error('Cropper is not initialized');
+	// 呼び出し元はテンプレートの @ok なので、ここで捕まえないと失敗が誰にも伝わらない
+	try {
+		await crop();
+	} catch (err) {
+		os.alert({
+			type: 'error',
+			title: i18n.ts.somethingHappened,
+			text: err instanceof Error ? err.message : String(err),
+		});
+		console.error(err);
+	}
+}
 
-		const croppedImage = await cropper.getCropperImage()!;
-		const croppedSection = await cropper.getCropperSelection()!;
+async function crop() {
+	if (cropper == null) throw new Error('Cropper is not initialized');
 
-		// 拡大率を計算し、(ほぼ)元の大きさに戻す
-		const zoomedRate = croppedImage.getBoundingClientRect().width / croppedImage.clientWidth;
-		const widthToRender = croppedSection.getBoundingClientRect().width / zoomedRate;
+	const croppedImage = await cropper.getCropperImage()!;
+	const croppedSection = await cropper.getCropperSelection()!;
 
-		const croppedCanvas = await croppedSection.$toCanvas({ width: widthToRender });
+	// 拡大率を計算し、(ほぼ)元の大きさに戻す
+	const zoomedRate = croppedImage.getBoundingClientRect().width / croppedImage.clientWidth;
+	const widthToRender = croppedSection.getBoundingClientRect().width / zoomedRate;
+
+	const croppedCanvas = await croppedSection.$toCanvas({ width: widthToRender });
+
+	// executor を async にすると throw も toBlob の失敗も握り潰され、await が永久に解決しなくなる
+	const f = await new Promise<Blob>((res, rej) => {
 		croppedCanvas.toBlob(blob => {
-			if (!blob) return;
+			if (blob == null) {
+				rej(new Error('Failed to encode the cropped image'));
+				return;
+			}
 			res(blob);
 		});
 	});
-
-	const f = await promise;
 	let finalFile: F;
 	if (props.imageFile instanceof File) {
 		finalFile = new File([f], props.imageFile.name, { type: f.type }) as F;

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { EndoRelation, Predicate } from './relation.js';
+import { Predicate } from './relation.js';
 
 
 export function countIf<T>(f: Predicate<T>, xs: T[]): number {

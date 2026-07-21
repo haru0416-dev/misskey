@@ -90,14 +90,10 @@ globalThis.addEventListener('activate', ev => {
 });
 
 globalThis.addEventListener('fetch', ev => {
-	let isHTMLRequest = false;
-	if (ev.request.headers.get('sec-fetch-dest') === 'document') {
-		isHTMLRequest = true;
-	} else if (ev.request.headers.get('accept')?.includes('/html')) {
-		isHTMLRequest = true;
-	} else if (ev.request.url.endsWith('/')) {
-		isHTMLRequest = true;
-	}
+	const isHTMLRequest =
+		ev.request.headers.get('sec-fetch-dest') === 'document' ||
+		(ev.request.headers.get('accept')?.includes('/html') ?? false) ||
+		ev.request.url.endsWith('/');
 
 	if (!isHTMLRequest) return;
 	ev.respondWith(respondToNavigation(ev.request));

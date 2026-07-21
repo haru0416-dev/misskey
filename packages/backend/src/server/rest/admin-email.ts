@@ -5,7 +5,6 @@
 
 import { z } from 'zod';
 import type { EmailService } from '@/core/EmailService.js';
-import type { SchemaType } from '@/misc/json-schema.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminEmailDependencies = {

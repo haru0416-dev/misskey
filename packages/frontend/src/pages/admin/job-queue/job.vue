@@ -293,7 +293,3 @@ function copyRaw() {
 	copyToClipboard(raw);
 }
 </script>
-
-<style lang="scss" module>
-
-</style>

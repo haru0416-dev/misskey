@@ -42,7 +42,7 @@ export default class TestChart extends Chart<typeof schema> { // eslint-disable-
 	public async increment(): Promise<void> {
 		this.total++;
 
-		await this.commit({
+		this.commit({
 			'foo.total': 1,
 			'foo.inc': 1,
 		});
@@ -52,7 +52,7 @@ export default class TestChart extends Chart<typeof schema> { // eslint-disable-
 	public async decrement(): Promise<void> {
 		this.total--;
 
-		await this.commit({
+		this.commit({
 			'foo.total': -1,
 			'foo.dec': 1,
 		});

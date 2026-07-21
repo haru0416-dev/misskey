@@ -11,7 +11,6 @@ import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/UserStor
 import { fetchUserProfileByUserIdOrFailFromDatabase, unsetUserMfaInDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
-import type { SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';

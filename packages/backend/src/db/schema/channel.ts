@@ -5,7 +5,6 @@
 
 import { sql } from 'drizzle-orm';
 import { boolean, index, integer, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
-import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
 import { user } from './user.js';

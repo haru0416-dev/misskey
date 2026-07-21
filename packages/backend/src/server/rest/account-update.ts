@@ -21,7 +21,7 @@ import { createMfmService } from '@/core/MfmService.js';
 import { fetchPageByIdFromDatabase } from '@/core/PageStore.js';
 import { listRolesFromDatabase } from '@/core/RoleStore.js';
 import { appendVerifiedLinkToUserProfileInDatabase, fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase, type UserProfileUpdate } from '@/core/UserProfileStore.js';
-import { fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, updateUserInDatabase, type UserUpdate } from '@/core/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase, type UserUpdate } from '@/core/UserStore.js';
 import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -200,7 +200,8 @@ function validateMuteWordRegex(mutedWords: (string[] | string)[]): void {
 		try {
 			const [, pattern, flags] = regexp;
 			if (pattern == null || flags == null) throw iUpdateInvalidRegexpError();
-			const parsedRegexp = new RE2(pattern, flags);
+			// 正規表現として妥当かどうかだけを見る (不正なら throw する)
+			void new RE2(pattern, flags);
 		} catch {
 			throw iUpdateInvalidRegexpError();
 		}

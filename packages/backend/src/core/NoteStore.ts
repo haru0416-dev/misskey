@@ -663,7 +663,7 @@ export async function rebuildNoteReactionsInDatabase(
 			.update(note)
 			.set({
 				reactions: Object.fromEntries(counts.map(row => [row.reaction, row.count])),
-				reactionAndUserPairCache: recentPairs.reverse().map(row => `${row.userId}/${row.reaction}`),
+				reactionAndUserPairCache: recentPairs.toReversed().map(row => `${row.userId}/${row.reaction}`),
 			})
 			.where(eq(note.id, id));
 	});

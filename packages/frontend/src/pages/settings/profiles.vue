@@ -37,6 +37,3 @@ definePage(() => ({
 	icon: 'ti ti-settings-cog',
 }));
 </script>
-
-<style lang="scss" module>
-</style>
