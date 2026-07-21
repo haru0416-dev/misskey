@@ -1,0 +1,75 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"ignore": [
+		"**/built/**",
+		"**/built-test/**",
+		"**/js-built/**",
+		"**/node_modules/**",
+		"packages/backend/migration/_legacy/**",
+		"packages/backend/assets/**",
+		"packages/frontend/assets/**",
+		"packages/frontend/public/**",
+		"packages/i18n/src/autogen/**",
+		"packages/misskey-js/src/autogen/**"
+	],
+	"ignoreBinaries": ["taskkill"],
+	"ignoreDependencies": [
+		"@typescript/lib-webworker",
+		"@tabler/icons-webfont",
+		"@misskey-dev/emoji-assets",
+		"react",
+		"react-dom",
+		"vue-tsc",
+		"search-index"
+	],
+	"workspaces": {
+		".": {
+			"entry": ["scripts/*.{mjs,cjs,ts}", ".github/scripts/*.{mjs,cjs,mts,ts}"],
+			"project": ["scripts/**/*.{mjs,cjs,ts}", ".github/scripts/**/*.{mjs,cjs,mts,ts}"]
+		},
+		"packages/backend": {
+			"entry": [
+				"src/boot/entry.ts",
+				"src/boot/cli.ts",
+				"src/misc/migration-runner.ts",
+				"scripts/*.{js,mjs,mts,ts}",
+				"test/**/*.ts",
+				"test-server/**/*.ts",
+				"test-federation/**/*.ts",
+				"rolldown.config.ts",
+				"drizzle.config.ts"
+			]
+		},
+		"packages/frontend": {
+			"entry": [
+				"src/_boot_.ts",
+				"src/workers/*.ts",
+				"build.ts",
+				"vite.config.ts",
+				"builder/**/*.ts",
+				"lib/**/*.ts",
+				"test/**/*.ts",
+				".storybook/*.{ts,tsx}",
+				"src/**/*.stories.impl.ts"
+			]
+		},
+		"packages/frontend-embed": {
+			"entry": ["src/boot.ts", "src/workers/*.ts", "build.ts", "vite.config.ts"]
+		},
+		"packages/sw": {
+			"entry": ["src/sw.ts", "build.js"]
+		},
+		"packages/frontend-shared": {
+			"entry": ["utility/**/*.ts", "themes/**/*.ts", "@types/**/*.ts"]
+		},
+		"packages/misskey-js": {
+			"entry": ["src/index.ts", "test/**/*.ts", "generator/**/*.ts"]
+		},
+		"packages/i18n": {
+			"entry": ["src/index.ts", "build.ts", "scripts/**/*.ts"]
+		},
+		"packages/icons-subsetter": {
+			"entry": ["src/index.ts", "src/cli.ts", "build.ts"]
+		}
+	}
+}

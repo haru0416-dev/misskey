@@ -1,0 +1,20 @@
+{
+	"threshold": 2.5,
+	"minLines": 10,
+	"minTokens": 70,
+	"reporters": ["consoleFull"],
+	"absolute": false,
+	"gitignore": true,
+	"ignore": [
+		"**/built/**",
+		"**/built-test/**",
+		"**/js-built/**",
+		"**/node_modules/**",
+		"**/autogen/**",
+		"**/*.stories.ts",
+		"**/*.stories.impl.ts",
+		"packages/backend/migration/**",
+		"packages/aiscript/**",
+		"packages/mfm-js/**"
+	]
+}
