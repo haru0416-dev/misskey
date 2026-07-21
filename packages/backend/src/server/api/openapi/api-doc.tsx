@@ -7,7 +7,7 @@ export function ApiDocPage() {
 	return (
 		<>
 			{'<!DOCTYPE html>'}
-			<html>
+			<html lang="en">
 				<head>
 					<meta charset="UTF-8" />
 					<title>Erebia API</title>

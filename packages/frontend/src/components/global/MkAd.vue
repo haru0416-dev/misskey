@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				target: '_blank',
 			}"
 		>
-			<img :src="chosen.imageUrl" :class="$style.img">
+			<img :src="chosen.imageUrl" :class="$style.img" alt="">
 			<button class="_button" :class="$style.i" @click.prevent.stop="toggleMenu"><i :class="$style.iIcon" class="ti ti-info-circle"></i></button>
 		</component>
 	</div>

@@ -20,16 +20,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div class="_gaps_m">
 				<div v-if="imgUrl != null" :class="$style.imgs">
 					<div style="background: #000;" :class="$style.imgContainer">
-						<img :src="imgUrl" :class="$style.img"/>
+						<img :src="imgUrl" :class="$style.img" :alt="name"/>
 					</div>
 					<div style="background: #222;" :class="$style.imgContainer">
-						<img :src="imgUrl" :class="$style.img"/>
+						<img :src="imgUrl" :class="$style.img" :alt="name"/>
 					</div>
 					<div style="background: #ddd;" :class="$style.imgContainer">
-						<img :src="imgUrl" :class="$style.img"/>
+						<img :src="imgUrl" :class="$style.img" :alt="name"/>
 					</div>
 					<div style="background: #fff;" :class="$style.imgContainer">
-						<img :src="imgUrl" :class="$style.img"/>
+						<img :src="imgUrl" :class="$style.img" :alt="name"/>
 					</div>
 				</div>
 				<MkButton rounded style="margin: 0 auto;" @click="changeImage">{{ i18n.ts.selectFile }}</MkButton>

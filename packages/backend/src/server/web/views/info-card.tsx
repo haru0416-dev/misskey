@@ -16,7 +16,7 @@ export function InfoCardPage(props: CommonPropsMinimum<{
 		<>
 			{'<!DOCTYPE html>'}
 			{comment}
-			<html>
+			<html lang="en">
 				<head>
 					<meta charset="UTF-8" />
 					<meta name="application-name" content="Erebia" />

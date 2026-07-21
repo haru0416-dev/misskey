@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div>
 				<MkButton v-if="bannerId == null" @click="setBannerImage"><i class="ti ti-plus"></i> {{ i18n.ts._channel.setBanner }}</MkButton>
 				<div v-else-if="bannerUrl">
-					<img :src="bannerUrl" style="width: 100%;"/>
+					<img :src="bannerUrl" style="width: 100%;" alt=""/>
 					<MkButton @click="removeBannerImage()"><i class="ti ti-trash"></i> {{ i18n.ts._channel.removeBanner }}</MkButton>
 				</div>
 			</div>

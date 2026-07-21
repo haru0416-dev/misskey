@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					}]"
 				>
 					<div :class="[$style.iconInner]" :style="{ background: ACHIEVEMENT_BADGES[achievement.name].bg ?? '' }">
-						<img :class="$style.iconImg" :src="ACHIEVEMENT_BADGES[achievement.name].img">
+						<img :class="$style.iconImg" :src="ACHIEVEMENT_BADGES[achievement.name].img" alt="">
 					</div>
 				</div>
 			</div>

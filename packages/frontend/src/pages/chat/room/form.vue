@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</button>
 		</div>
 	</footer>
-	<input ref="fileEl" style="display: none;" type="file" @change="onChangeFile"/>
+	<input ref="fileEl" style="display: none;" type="file" :aria-label="i18n.ts.attachFile" @change="onChangeFile"/>
 </div>
 </template>
 
