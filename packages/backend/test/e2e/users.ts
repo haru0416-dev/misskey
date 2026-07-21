@@ -171,7 +171,7 @@ describe('ユーザー', () => {
 	let bob: misskey.entities.SignupResponse;
 
 	// NOTE: これがないと落ちる（bob の updatedAt が null になってしまうため？）
-	let bobNote: misskey.entities.Note; // eslint-disable-line @typescript-eslint/no-unused-vars
+	let bobNote: misskey.entities.Note;
 
 	let carol: misskey.entities.SignupResponse;
 

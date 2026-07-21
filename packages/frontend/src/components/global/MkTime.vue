@@ -42,7 +42,6 @@ function getDateSafe(n: Date | string | number) {
 	}
 }
 
-// eslint-disable-next-line vue/no-setup-props-reactivity-loss
 const _time = props.time == null ? Number.NaN : getDateSafe(props.time).getTime();
 const invalid = Number.isNaN(_time);
 const absolute = !invalid ? dateTimeFormat.format(_time) : i18n.ts._ago.invalid;
@@ -50,7 +49,6 @@ const absolute = !invalid ? dateTimeFormat.format(_time) : i18n.ts._ago.invalid;
 const actualNow = useLowresTime();
 const now = computed(() => (props.origin ? props.origin.getTime() : actualNow.value));
 
-// eslint-disable-next-line vue/no-setup-props-reactivity-loss
 const ago = computed(() => (now.value - _time) / 1000/*ms*/);
 
 const relative = computed<string>(() => {

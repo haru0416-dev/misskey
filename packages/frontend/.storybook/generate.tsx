@@ -72,7 +72,7 @@ const generator = {
 				break;
 			}
 			default: {
-				// @ts-ignore
+				// @ts-expect-error node.expression.type で動的にメソッドを引くため、インデックスシグネチャが無い
 				this[node.expression.type](node.expression, state);
 				break;
 			}
@@ -101,7 +101,7 @@ type SplitCamel<
 			: SplitCamel<XR, `${YC}${XH}`, YN>
 	: YN;
 
-// @ts-ignore
+// @ts-expect-error 再帰的な conditional type の深さ制限に引っかかる
 type SplitKebab<T extends string> = T extends `${infer XH}-${infer XR}` ? [XH, ...SplitKebab<XR>] : [T];
 
 type ToKebab<T extends readonly string[]> = T extends readonly [infer XO extends string]
@@ -110,7 +110,7 @@ type ToKebab<T extends readonly string[]> = T extends readonly [infer XO extends
 		? `${XH}${XR extends readonly string[] ? `-${ToKebab<XR>}` : ''}`
 		: '';
 
-// @ts-ignore
+// @ts-expect-error 再帰的な conditional type の深さ制限に引っかかる
 type ToPascal<T extends readonly string[]> = T extends readonly [
 	infer XH extends string,
 	...infer XR extends readonly string[],

@@ -39,7 +39,6 @@ const props = withDefaults(defineProps<{
 	initialTab: 'users',
 });
 
-// eslint-disable-next-line vue/no-setup-props-reactivity-loss
 const tab = ref(props.initialTab);
 const role = ref<Misskey.entities.Role | null>(null);
 const error = ref<string | null>(null);

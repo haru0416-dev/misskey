@@ -167,8 +167,7 @@ type StringDefToType<T extends TypeStringef> = T extends 'null'
 						? ReadonlyArray<unknown>
 						: T extends 'object'
 							? Record<string, unknown>
-							: // eslint-disable-next-line @typescript-eslint/no-explicit-any
-								any;
+							: any;
 
 // https://swagger.io/specification/?sbsearch=optional#schema-object
 type OfSchema = {
@@ -248,11 +247,9 @@ type ArrayToIntersection<T extends ReadonlyArray<Schema>> = T extends readonly [
 // NOTE: `a`'s `any[]` bound is load-bearing here: `a[number]` feeds the default
 // value of X (constrained to Schema / ReadonlyArray<keyof s>), and narrowing it
 // to `unknown[]` breaks that constraint check. Kept as `any[]` deliberately.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type UnionSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends unknown
 	? SchemaType<X>
 	: never;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type UnionObjType<
 	s extends Obj,
 	a extends readonly any[],
@@ -277,7 +274,6 @@ type ObjectSchemaTypeDef<p extends Schema> = p['ref'] extends keyof typeof refs
 				: // NOTE: consumers (e.g. MetaEntityPacker.ts) assign concrete third-party option
 					// configuration objects into fields typed via this branch;
 					// narrowing to Record<string, unknown> breaks that structural assignment. Kept as any.
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					p['additionalProperties'] extends true
 					? Record<string, any>
 					: p['additionalProperties'] extends Schema

@@ -211,7 +211,6 @@ const { model: visibilityFilter } = useMkSelect({ items: visibilityFilterDef, in
 
 const user = shallowRef<Misskey.entities.UserDetailed | null>(null);
 
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 const noteSearchableScope = instance.noteSearchableScope ?? 'local';
 
 //#region set user
@@ -381,7 +380,6 @@ async function search() {
 						acct: `${res.object.username}@${res.object.host}`,
 					},
 				});
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 			} else if (res.type === 'Note') {
 				router.push('/notes/:noteId/:initialTab?', {
 					params: {

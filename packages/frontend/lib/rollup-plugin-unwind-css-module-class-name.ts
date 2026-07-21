@@ -533,7 +533,6 @@ export function unwindCssModuleClassName(ast: ESTree.Node, magicString: Rolldown
 	});
 }
 
-// eslint-disable-next-line import/no-default-export
 export default function pluginUnwindCssModuleClassName(): Plugin {
 	return {
 		name: 'UnwindCssModuleClassName',

@@ -136,9 +136,9 @@ const {
 
 // overload function を使いたいので lint エラーを無視する
 function done(canceled: true): void;
-function done(canceled: false, result: Result): void; // eslint-disable-line no-redeclare
+function done(canceled: false, result: Result): void;
 
-function done(canceled: boolean, result?: Result): void { // eslint-disable-line no-redeclare
+function done(canceled: boolean, result?: Result): void {
 	emit('done', { canceled, result } as MkDialogReturnType);
 	modal.value?.close();
 }

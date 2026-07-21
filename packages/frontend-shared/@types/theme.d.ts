@@ -8,6 +8,5 @@ declare module '@shared/themes/*.json5' {
 
 	const theme: Theme;
 
-	// eslint-disable-next-line import/no-default-export
 	export default theme;
 }

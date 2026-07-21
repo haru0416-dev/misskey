@@ -599,7 +599,6 @@ export function buildAdminUpdateMetaPatch(serverSettings: MiMeta, params: AdminU
 
 	if (params.googleAnalyticsMeasurementId !== undefined) {
 		// 空文字列をnullにしたいので??は使わない
-		// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 		set.googleAnalyticsMeasurementId = params.googleAnalyticsMeasurementId || null;
 	}
 

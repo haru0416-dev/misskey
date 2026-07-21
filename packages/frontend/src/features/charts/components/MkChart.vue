@@ -103,7 +103,6 @@ const colors = {
 	lime: '#bde800',
 	cyan: '#00e0e0',
 };
-// eslint-disable-next-line vue/no-setup-props-reactivity-loss
 const now = props.nowForChromatic != null ? new Date(props.nowForChromatic) : new Date();
 type ChartData = {
 	series: DataChartSeries[];
