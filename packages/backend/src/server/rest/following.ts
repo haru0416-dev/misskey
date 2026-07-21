@@ -1149,7 +1149,7 @@ export async function handleHonoApiUsersFollowing(
 		try {
 			const parts = params.birthday.split('-');
 			parts.shift();
-			const birthdayNum = parseInt(parts.join(''));
+			const birthdayNum = Number.parseInt(parts.join(''));
 			followings = await listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase(deps.db, user.id, birthdayNum, {
 				limit: params.limit,
 				order: pagination.order,

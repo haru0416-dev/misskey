@@ -77,7 +77,7 @@ function getRgb(hex: string | number): ImageEffectorRGB | null {
 
 	const m = hex.slice(1).match(/[0-9a-fA-F]{2}/g);
 	if (m == null) return [0, 0, 0];
-	return m.map(x => parseInt(x, 16) / 255) as ImageEffectorRGB;
+	return m.map(x => Number.parseInt(x, 16) / 255) as ImageEffectorRGB;
 }
 </script>
 

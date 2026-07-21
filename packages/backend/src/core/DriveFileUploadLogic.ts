@@ -45,9 +45,9 @@ function validateDriveFileName(name: string): boolean {
 	return (
 		(name.trim().length > 0) &&
 		(name.length <= 200) &&
-		(name.indexOf('\\') === -1) &&
-		(name.indexOf('/') === -1) &&
-		(name.indexOf('..') === -1)
+		(!name.includes('\\')) &&
+		(!name.includes('/')) &&
+		(!name.includes('..'))
 	);
 }
 

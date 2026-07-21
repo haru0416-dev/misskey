@@ -128,7 +128,7 @@ function get(): PollEditorModelValue {
 	};
 
 	const calcAfter = () => {
-		let base = parseInt(after.value.toString());
+		let base = Number.parseInt(after.value.toString());
 		switch (unit.value) {
 			// @ts-expect-error fallthrough
 			case 'day': base *= 24;

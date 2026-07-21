@@ -51,7 +51,7 @@ export function mfmToHtml(
 					const child = node.children[0];
 					const text = child?.type === 'text' ? child.props.text : '';
 					try {
-						const date = new Date(parseInt(text, 10) * 1000);
+						const date = new Date(Number.parseInt(text, 10) * 1000);
 						return `<time datetime="${escapeHtml(date.toISOString())}">${escapeHtml(date.toISOString())}</time>`;
 					} catch {
 						return fnDefault(node);

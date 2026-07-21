@@ -8,7 +8,7 @@ import * as Misskey from 'misskey-js';
 export function isBirthday(user: Misskey.entities.UserDetailed, now = new Date()): boolean {
 	if (user.birthday == null) return false;
 
-	const [_, bm, bd] = user.birthday.split('-').map((v) => parseInt(v, 10));
+	const [_, bm, bd] = user.birthday.split('-').map((v) => Number.parseInt(v, 10));
 	if (bm == null || bd == null || isNaN(bm) || isNaN(bd)) return false;
 
 	const y = now.getFullYear();

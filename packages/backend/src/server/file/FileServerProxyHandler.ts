@@ -116,7 +116,7 @@ export class FileServerProxyHandler {
 		if (!userAgent) {
 			throw new StatusError('User-Agent is required', 400, 'User-Agent is required');
 		}
-		if (userAgent.toLowerCase().indexOf('misskey/') !== -1) {
+		if (userAgent.toLowerCase().includes('misskey/')) {
 			throw new StatusError('Refusing to proxy a request from another proxy', 403, 'Proxy is recursive');
 		}
 	}

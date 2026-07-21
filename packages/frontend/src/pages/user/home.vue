@@ -250,7 +250,7 @@ const style = computed(() => {
 });
 
 const age = computed(() => {
-	return props.user.birthday ? calcAge(props.user.birthday) : NaN;
+	return props.user.birthday ? calcAge(props.user.birthday) : Number.NaN;
 });
 
 function menu(ev: PointerEvent) {

@@ -111,7 +111,7 @@ function isSilencedHostForHonoApi(silencedHosts: string[] | undefined, host: str
 
 function isMediaSilencedHostForHonoApi(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) return false;
-	return silencedHosts.some(x => host.toLowerCase() === x);
+	return silencedHosts.includes(host.toLowerCase());
 }
 
 function concatNoteContentsForKeyWordCheck(content: { cw?: string | null; text?: string | null; pollChoices?: string[] | null; others?: string[] | null }): string {

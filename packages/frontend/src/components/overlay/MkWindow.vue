@@ -273,7 +273,7 @@ function onHeaderPointerdown(evt: PointerEvent) {
 
 	const clickX = getPositionX(evt);
 	const clickY = getPositionY(evt);
-	const moveBaseX = beforeMaximized ? parseInt(unResizedWidth, 10) / 2 : clickX - position.left; // TODO: parseIntやめる
+	const moveBaseX = beforeMaximized ? Number.parseInt(unResizedWidth, 10) / 2 : clickX - position.left; // TODO: parseIntやめる
 	const moveBaseY = beforeMaximized ? 20 : clickY - position.top;
 	const browserWidth = window.innerWidth;
 	const browserHeight = window.innerHeight;
@@ -325,8 +325,8 @@ function onTopHandlePointerdown(evt: PointerEvent) {
 
 	const base = getPositionY(evt);
 	const computedStyle = getComputedStyle(main, '');
-	const height = parseInt(computedStyle.height, 10);
-	const top = parseInt(computedStyle.top, 10);
+	const height = Number.parseInt(computedStyle.height, 10);
+	const top = Number.parseInt(computedStyle.top, 10);
 
 	// 動かした時
 	dragListen(me => {
@@ -355,8 +355,8 @@ function onRightHandlePointerdown(evt: PointerEvent) {
 
 	const base = getPositionX(evt);
 	const computedStyle = getComputedStyle(main, '');
-	const width = parseInt(computedStyle.width, 10);
-	const left = parseInt(computedStyle.left, 10);
+	const width = Number.parseInt(computedStyle.width, 10);
+	const left = Number.parseInt(computedStyle.left, 10);
 	const browserWidth = window.innerWidth;
 
 	// 動かした時
@@ -383,8 +383,8 @@ function onBottomHandlePointerdown(evt: PointerEvent) {
 
 	const base = getPositionY(evt);
 	const computedStyle = getComputedStyle(main, '');
-	const height = parseInt(computedStyle.height, 10);
-	const top = parseInt(computedStyle.top, 10);
+	const height = Number.parseInt(computedStyle.height, 10);
+	const top = Number.parseInt(computedStyle.top, 10);
 	const browserHeight = window.innerHeight;
 
 	// 動かした時
@@ -411,8 +411,8 @@ function onLeftHandlePointerdown(evt: PointerEvent) {
 
 	const base = getPositionX(evt);
 	const computedStyle = getComputedStyle(main, '');
-	const width = parseInt(computedStyle.width, 10);
-	const left = parseInt(computedStyle.left, 10);
+	const width = Number.parseInt(computedStyle.width, 10);
+	const left = Number.parseInt(computedStyle.left, 10);
 
 	// 動かした時
 	dragListen(me => {

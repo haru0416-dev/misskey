@@ -263,7 +263,7 @@ watch(q, () => {
 			if (matches.size >= max) return matches;
 
 			for (const emoji of emojis) {
-				if (emoji.aliases.some(alias => alias === newQ)) {
+				if (emoji.aliases.includes(newQ)) {
 					matches.add(emoji);
 					if (matches.size >= max) break;
 				}

@@ -78,14 +78,14 @@ async function getFeaturedRanking(
 		const noteId = currentRankingResult[i];
 		const scoreValue = currentRankingResult[i + 1];
 		if (noteId == null || scoreValue == null) continue;
-		const score = parseInt(scoreValue, 10);
+		const score = Number.parseInt(scoreValue, 10);
 		ranking.set(noteId, score);
 	}
 	for (let i = 0; i < previousRankingResult.length; i += 2) {
 		const noteId = previousRankingResult[i];
 		const scoreValue = previousRankingResult[i + 1];
 		if (noteId == null || scoreValue == null) continue;
-		const score = parseInt(scoreValue, 10);
+		const score = Number.parseInt(scoreValue, 10);
 		const exist = ranking.get(noteId);
 		if (exist != null) {
 			ranking.set(noteId, (exist + score) / 2);

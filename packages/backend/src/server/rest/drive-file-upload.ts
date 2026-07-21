@@ -147,7 +147,7 @@ export function castHonoApiMultipartFields(paramDef: { properties?: Record<strin
 
 function isMediaSilencedHostForHonoApi(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) return false;
-	return silencedHosts.some(x => host.toLowerCase() === x);
+	return silencedHosts.includes(host.toLowerCase());
 }
 
 function driveFileInternalError(): HonoApiError {

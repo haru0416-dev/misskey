@@ -153,8 +153,8 @@ export function removeColumn(id: Column['id']) {
 }
 
 export function swapColumn(a: Column['id'], b: Column['id']) {
-	const aX = layout.value.findIndex((ids) => ids.indexOf(a) !== -1);
-	const bX = layout.value.findIndex((ids) => ids.indexOf(b) !== -1);
+	const aX = layout.value.findIndex((ids) => ids.includes(a));
+	const bX = layout.value.findIndex((ids) => ids.includes(b));
 	const aRow = layout.value[aX];
 	const bRow = layout.value[bX];
 	if (aRow == null || bRow == null) return;

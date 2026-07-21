@@ -106,7 +106,7 @@ export async function packPageForHonoApi(
 				}
 				if (item.inputType === 'number') {
 					item.type = 'numberInput';
-					if (item.default) item.default = parseInt(String(item.default), 10);
+					if (item.default) item.default = Number.parseInt(String(item.default), 10);
 				}
 				migrated = true;
 			}
