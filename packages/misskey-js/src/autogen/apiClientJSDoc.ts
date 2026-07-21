@@ -1002,7 +1002,7 @@ declare module '../api.js' {
         /**
          * No description provided.
          *
-         * **Credential required**: *No* / **Permission**: *read:admin:roles*
+         * **Credential required**: *Yes* / **Permission**: *read:admin:roles*
          */
         request<E extends 'admin/roles/users', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
             endpoint: E,
