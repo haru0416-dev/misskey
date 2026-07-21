@@ -98,7 +98,7 @@ async function onPaste(ev: ClipboardEvent) {
 			if (!pastedFile) return;
 			const lio = pastedFile.name.lastIndexOf('.');
 			const ext = lio >= 0 ? pastedFile.name.slice(lio) : '';
-			const formattedName = formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replace(/{{number}}/g, '1') + ext;
+			const formattedName = formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replaceAll(/{{number}}/g, '1') + ext;
 			const renamedFile = new File([pastedFile], formattedName, { type: pastedFile.type });
 			os.launchUploader([renamedFile], { multiple: false }).then(driveFiles => {
 				const driveFile = driveFiles[0];

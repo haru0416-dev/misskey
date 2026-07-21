@@ -323,7 +323,7 @@ export async function createNoteFromApForHonoApi(
 	const uri = getOneApId(note.attributedTo as ApObject);
 
 	actor ??= (await fetchPersonForHonoApi(deps, uri)) as MiRemoteUser | undefined;
-	if (actor && actor.isSuspended) {
+	if (actor?.isSuspended) {
 		throw new IdentifiableError('85ab9bd7-3a41-4530-959d-f07073900109', 'actor has been suspended');
 	}
 
@@ -417,7 +417,7 @@ export async function createNoteFromApForHonoApi(
 		}
 	}
 
-	if (reply && reply.hasPoll) {
+	if (reply?.hasPoll) {
 		const replyPoll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, reply.id);
 		if (note.name) {
 			const index = replyPoll.choices.findIndex((x) => x === note.name);

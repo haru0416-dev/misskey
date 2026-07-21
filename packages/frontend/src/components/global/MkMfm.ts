@@ -110,7 +110,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							res.shift();
 							return res;
 						} else {
-							return [text.replace(/\n/g, ' ')];
+							return [text.replaceAll(/\n/g, ' ')];
 						}
 					}
 

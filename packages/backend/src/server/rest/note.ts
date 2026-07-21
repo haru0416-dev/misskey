@@ -548,7 +548,7 @@ export async function packNoteForHonoApi(
 	const host = note.userHost;
 
 	// hint は事前一括取得の対象だったノートに対してのみ信頼できる
-	const hint = opts.hint != null && opts.hint.noteIds.has(note.id) ? opts.hint : undefined;
+	const hint = opts.hint?.noteIds.has(note.id) ? opts.hint : undefined;
 
 	const bufferedReactions = hint?.bufferedReactions.get(note.id) ?? (await getBufferedReactions(deps, note.id));
 	const reactions = normalizeReactionKeys(mergeReactions(note.reactions, bufferedReactions.deltas));

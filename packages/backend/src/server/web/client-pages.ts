@@ -122,7 +122,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 
 		// 原典 (ClientServerService) は visibility を見ずに描画していたが、非公開 Play の
 		// タイトル等が匿名訪問者へ漏れるため public のみ SSR する (非公開は汎用ページへ)。
-		if (flash != null && flash.visibility === 'public') {
+		if (flash?.visibility === 'public') {
 			const packedFlash = (await packFlashForHonoApi(deps, flash, null)) as unknown as Packed<'Flash'>;
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, flash.userId);
 
@@ -143,7 +143,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 	app.get('/clips/:clip', async (c, next) => {
 		const clip = await fetchClipByIdFromDatabase(deps.db, c.req.param('clip'));
 
-		if (clip != null && clip.isPublic) {
+		if (clip?.isPublic) {
 			const packedClip = await packClipForHonoApi(deps, clip, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, clip.userId);
 

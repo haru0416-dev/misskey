@@ -82,7 +82,7 @@ export async function handleHonoApiFetchExternalResources(
 		throw clientError(invalidSchema);
 	}
 
-	const resHash = createHash('sha512').update(res.data.replace(/\r\n/g, '\n')).digest('hex');
+	const resHash = createHash('sha512').update(res.data.replaceAll(/\r\n/g, '\n')).digest('hex');
 	if (resHash !== params.hash) {
 		throw clientError(hashUnmatched);
 	}

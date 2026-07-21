@@ -759,7 +759,7 @@ async function onPaste(ev: ClipboardEvent) {
 			if (!file) continue;
 			const lio = file.name.lastIndexOf('.');
 			const ext = lio >= 0 ? file.name.slice(lio) : '';
-			const formattedName = `${formatTimeString(new Date(file.lastModified), pastedFileName).replace(/{{number}}/g, `${i + 1}`)}${ext}`;
+			const formattedName = `${formatTimeString(new Date(file.lastModified), pastedFileName).replaceAll(/{{number}}/g, `${i + 1}`)}${ext}`;
 			const renamedFile = new File([file], formattedName, { type: file.type });
 			pastedFiles.push(renamedFile);
 		}
@@ -801,7 +801,7 @@ async function onPaste(ev: ClipboardEvent) {
 			return;
 		}
 
-		const fileName = formatTimeString(new Date(), pastedFileName).replace(/{{number}}/g, '0');
+		const fileName = formatTimeString(new Date(), pastedFileName).replaceAll(/{{number}}/g, '0');
 		const file = new File([paste], `${fileName}.txt`, { type: 'text/plain' });
 		uploader.addFiles([file]);
 	}

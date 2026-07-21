@@ -106,7 +106,7 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 				// anchor方式が失敗した場合（anchorIdがnullまたは要素が見つからない場合）の
 				// フォールバック
 				const el = scrollContainerRef.value;
-				if (el && el.scrollTop === 0 && savedScrollTop > 0) {
+				if (el?.scrollTop === 0 && savedScrollTop > 0) {
 					el.scrollTop = savedScrollTop;
 				}
 
