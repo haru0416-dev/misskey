@@ -387,6 +387,18 @@ async function packChannelsForHonoApi(
 	return channels.map((channel) => packChannelForHonoApi(deps, channel, me, hint));
 }
 
+/**
+ * SSR (web/client-pages.ts の /channels/:channel) から使う。
+ * 未ログイン閲覧者向けなので me は常に null で、hint も単体分だけ組む。
+ */
+export async function packChannelForSsr(
+	deps: HonoApiChannelsDependencies,
+	channel: MiChannel,
+): Promise<HonoApiPackedChannel> {
+	const hint = await buildChannelPackHint(deps, [channel], null);
+	return packChannelForHonoApi(deps, channel, null, hint);
+}
+
 async function packChannelDetailedForHonoApi(
 	deps: HonoApiChannelsDependencies & HonoApiNoteDependencies,
 	channel: MiChannel,
