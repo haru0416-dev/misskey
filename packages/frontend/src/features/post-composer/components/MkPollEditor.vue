@@ -137,7 +137,7 @@ function get(): PollEditorModelValue {
 			// @ts-expect-error fallthrough
 			case 'minute': base *= 60;
 			// eslint-disable-next-line no-fallthrough
-			case 'second': return base *= 1000;
+			case 'second': return base * 1000;
 			default: return null;
 		}
 	};

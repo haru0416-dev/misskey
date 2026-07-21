@@ -69,7 +69,6 @@ async function onClick() {
 	display: inline-block;
 	font-weight: bold;
 	color: var(--MI_THEME-accent);
-	background: transparent;
 	border: solid 1px var(--MI_THEME-accent);
 	padding: 0;
 	height: 31px;

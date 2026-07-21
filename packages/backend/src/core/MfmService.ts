@@ -6,7 +6,6 @@
 import { URL } from 'node:url';
 import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
-import { intersperse } from '@/misc/prelude/array.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import type { IMentionedRemoteUsers } from '@/models/Note.js';
 import { mfmToHtml } from '@/core/MfmToHtml.js';

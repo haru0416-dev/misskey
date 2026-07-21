@@ -23,7 +23,7 @@ import { applyTheme } from '@/theme.js';
 import { fetchCustomEmojis } from '@/custom-emojis.js';
 import { DI } from '@/di.js';
 import { serverMetadata } from '@/server-metadata.js';
-import { url, version, lang } from '@shared/utility/config.js';
+import { url } from '@shared/utility/config.js';
 import { parseEmbedParams } from '@shared/utility/embed-page.js';
 import { postMessageToParentWindow, setIframeId } from '@/post-message.js';
 import { serverContext } from '@/server-context.js';

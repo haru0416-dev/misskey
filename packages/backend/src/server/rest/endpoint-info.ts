@@ -4,7 +4,6 @@
  */
 
 import { z } from 'zod';
-import type { SchemaType } from '@/misc/json-schema.js';
 import { parseHonoApiParams } from './validation.js';
 
 type ApiEndpoints = typeof import('../api/endpoints.js').default;

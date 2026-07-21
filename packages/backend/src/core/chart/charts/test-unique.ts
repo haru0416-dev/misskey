@@ -36,7 +36,7 @@ export default class TestUniqueChart extends Chart<typeof schema> { // eslint-di
 
 	@bindThis
 	public async uniqueIncrement(key: string): Promise<void> {
-		await this.commit({
+		this.commit({
 			foo: [key],
 		});
 	}

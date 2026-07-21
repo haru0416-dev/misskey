@@ -158,6 +158,3 @@ onUnmounted(() => {
 	// TODO: WebGLリソースの解放
 });
 </script>
-
-<style lang="scss" module>
-</style>

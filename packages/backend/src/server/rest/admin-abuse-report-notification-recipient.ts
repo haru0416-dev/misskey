@@ -236,7 +236,7 @@ async function packHonoApiAbuseReportNotificationRecipients(
 	return await Promise.all(recipients.map(recipient => packHonoApiAbuseReportNotificationRecipient(deps, recipient, {
 		users: usersById,
 		webhooks: systemWebhooksById,
-	}))).then(packed => packed.sort((a, b) => a.id.localeCompare(b.id)));
+	}))).then(packed => packed.toSorted((a, b) => a.id.localeCompare(b.id)));
 }
 
 export async function handleHonoApiAdminAbuseReportNotificationRecipientList(

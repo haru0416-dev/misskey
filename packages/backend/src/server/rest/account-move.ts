@@ -16,7 +16,6 @@ import {
 	decrementUsersFollowersCountInDatabase,
 	decrementUsersFollowingCountInDatabase,
 	fetchUserByIdOrFailFromDatabase,
-	fetchUserByUsernameAndHostFromDatabase,
 	updateUserInDatabase,
 } from '@/core/UserStore.js';
 import { listAllFollowingsByFollowerIdFromDatabase, listLocalFollowerFollowingsByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';

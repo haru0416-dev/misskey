@@ -43,7 +43,7 @@ export default class TestGroupedChart extends Chart<typeof schema> { // eslint-d
 
 		this.total[group]++;
 
-		await this.commit({
+		this.commit({
 			'foo.total': 1,
 			'foo.inc': 1,
 		}, group);

@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { defineAsyncComponent } from 'vue';
 import * as Misskey from 'misskey-js';
 import { apiUrl } from '@shared/utility/config.js';
 import { parseJsonObject } from '@shared/utility/server-context.js';
@@ -84,7 +83,7 @@ export function uploadFile(
 	const { signal } = abortController;
 
 	const filePromise = new Promise<Misskey.entities.DriveFile>((resolve, reject) => {
-		if ($i == null) return reject();
+		if ($i == null) return reject(new Error('not signed in'));
 
 		// こっち側で検出するMIME typeとサーバーで検出するMIME typeは異なる場合があるため、こっち側ではやらないことにする
 		// https://github.com/misskey-dev/misskey/issues/16091
@@ -95,7 +94,7 @@ export function uploadFile(
 				title: i18n.ts.failedToUpload,
 				text: i18n.ts.cannotUploadBecauseExceedsFileSizeLimit,
 			});
-			return reject();
+			return reject(new Error('file exceeds the size limit'));
 		}
 
 		signal.addEventListener(
@@ -153,7 +152,7 @@ export function uploadFile(
 					});
 				}
 
-				reject();
+				reject(new Error('failed to upload'));
 				return;
 			}
 
@@ -352,7 +351,7 @@ export async function createCroppedImageDriveFileFromImageDriveFile(
 			ctx.drawImage(image, 0, 0);
 			canvas.toBlob((blob) => {
 				if (blob == null) {
-					reject();
+					reject(new Error('failed to encode the image'));
 					return;
 				}
 

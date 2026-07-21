@@ -543,13 +543,8 @@ export async function addDriveFileForHonoApi(
 		ext = null,
 	}: AddDriveFileArgs,
 ): Promise<MiDriveFile> {
-	let skipNsfwCheck = false;
 	const userRoleNSFW = user != null && (await getHonoApiRolePolicies(deps, user)).alwaysMarkNsfw;
-	if (user == null) {
-		skipNsfwCheck = true;
-	} else if (userRoleNSFW) {
-		skipNsfwCheck = true;
-	}
+	let skipNsfwCheck = user == null || userRoleNSFW;
 	if (deps.meta.sensitiveMediaDetection === 'none') skipNsfwCheck = true;
 	if (user != null && deps.meta.sensitiveMediaDetection === 'local' && user.host != null) skipNsfwCheck = true;
 	if (user != null && deps.meta.sensitiveMediaDetection === 'remote' && user.host == null) skipNsfwCheck = true;

@@ -147,7 +147,8 @@ async function processResult(result: QrScanner.ScanResult) {
 	results.value.add(trimmed);
 
 	try {
-		const parsedUrl = new URL(trimmed);
+		// URL として解釈できるかどうかだけを見る (不正なら throw する)
+		void new URL(trimmed);
 	} catch {
 		if (!haveExisted) {
 			tab.value = 'all';
@@ -260,11 +261,18 @@ function stopQr() {
 }
 
 onActivated(() => {
-	startQr;
+	startQr().catch(err => {
+		qrStarted.value = false;
+		os.alert({
+			type: 'error',
+			text: err.toString(),
+		});
+		console.error(err);
+	});
 });
 
 onDeactivated(() => {
-	stopQr;
+	stopQr();
 });
 
 const alertLock = ref(false);

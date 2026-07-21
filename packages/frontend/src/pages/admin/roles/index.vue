@@ -87,7 +87,3 @@ definePage(() => ({
 	icon: 'ti ti-badges',
 }));
 </script>
-
-<style lang="scss" module>
-
-</style>

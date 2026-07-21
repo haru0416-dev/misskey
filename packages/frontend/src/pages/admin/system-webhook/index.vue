@@ -86,7 +86,3 @@ definePage(() => ({
 	icon: 'ti ti-webhook',
 }));
 </script>
-
-<style module lang="scss">
-
-</style>

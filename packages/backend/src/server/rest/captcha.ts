@@ -8,7 +8,6 @@ import { captchaErrorCodes, getCaptchaSetting, saveCaptchaSetting, supportedCapt
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { SchemaType } from '@/misc/json-schema.js';
 import type { MiMeta } from '@/models/_.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { recordException } from '@/telemetry.js';

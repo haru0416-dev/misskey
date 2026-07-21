@@ -15,7 +15,6 @@ import {
 } from '@/core/RegistryItemStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
-import type { SchemaType } from '@/misc/json-schema.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';

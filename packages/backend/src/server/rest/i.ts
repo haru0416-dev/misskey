@@ -10,7 +10,6 @@ import { listSigninHistoryFromDatabase, type SigninHistoryOrder } from '@/core/S
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiSignin } from '@/models/Signin.js';

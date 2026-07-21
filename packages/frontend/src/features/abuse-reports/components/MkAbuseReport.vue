@@ -148,6 +148,3 @@ function showMenu(ev: PointerEvent) {
 	}], ev.currentTarget ?? ev.target);
 }
 </script>
-
-<style lang="scss" module>
-</style>

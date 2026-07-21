@@ -21,5 +21,5 @@ export function generateInviteCode(): string {
 		n = t;
 	}
 
-	return code + uniqueId.reverse().join('');
+	return code + uniqueId.toReversed().join('');
 }

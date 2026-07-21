@@ -4,7 +4,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<!-- eslint-disable vue/no-mutating-props -->
 <XContainer :draggable="true" v-bind="dragStartCallback === undefined ? {} : { dragStartCallback }" @remove="() => emit('remove')">
 	<template #header><i class="ti ti-note"></i> {{ i18n.ts._pages.blocks.note }}</template>
 
@@ -13,17 +12,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<template #label>{{ i18n.ts._pages.blocks._note.id }}</template>
 			<template #caption>{{ i18n.ts._pages.blocks._note.idDescription }}</template>
 		</MkInput>
-		<MkSwitch v-model="props.modelValue.detailed"><span>{{ i18n.ts._pages.blocks._note.detailed }}</span></MkSwitch>
+		<MkSwitch v-model="detailed"><span>{{ i18n.ts._pages.blocks._note.detailed }}</span></MkSwitch>
 
-		<MkNote v-if="note && !props.modelValue.detailed" :key="note.id + ':normal'" v-model:note="note" style="margin-bottom: 16px;"/>
-		<MkNoteDetailed v-if="note && props.modelValue.detailed" :key="note.id + ':detail'" v-model:note="note" style="margin-bottom: 16px;"/>
+		<MkNote v-if="note && !detailed" :key="note.id + ':normal'" v-model:note="note" style="margin-bottom: 16px;"/>
+		<MkNoteDetailed v-if="note && detailed" :key="note.id + ':detail'" v-model:note="note" style="margin-bottom: 16px;"/>
 	</section>
 </XContainer>
 </template>
 
 <script lang="ts" setup>
-/* eslint-disable vue/no-mutating-props */
-import { watch, ref } from 'vue';
+import { computed, watch, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import XContainer from '../container.vue';
 import MkInput from '@/components/form/MkInput.vue';
@@ -45,6 +43,12 @@ const emit = defineEmits<{
 
 const id = ref(props.modelValue.note);
 const note = ref<Misskey.entities.Note | null>(null);
+
+// props を直接書き換えず update:modelValue で親に返す (id 側と同じ経路に揃える)
+const detailed = computed({
+	get: () => props.modelValue.detailed,
+	set: (value: boolean) => emit('update:modelValue', { ...props.modelValue, detailed: value }),
+});
 
 watch(id, async () => {
 	if (id.value && (id.value.startsWith('http://') || id.value.startsWith('https://'))) {

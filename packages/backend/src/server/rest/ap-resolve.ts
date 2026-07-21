@@ -26,7 +26,7 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { getApId } from '@/core/activitypub/type.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
-import { addActivityContext, renderCreateForHonoApi, renderLikeForHonoApi, renderNoteForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
+import { addActivityContext, renderCreateForHonoApi, renderLikeForHonoApi, renderNoteForHonoApi } from './notes-ap.js';
 import { renderPersonForHonoApi, type HonoApiAccountUpdateDependencies } from './account-update.js';
 
 export type HonoApiApResolveDependencies = HonoApiAccountUpdateDependencies & {

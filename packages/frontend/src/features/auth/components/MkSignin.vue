@@ -328,14 +328,7 @@ function onSigninApiError(err?: any): void {
 			});
 			break;
 		}
-		case '93b86c4b-72f9-40eb-9815-798928603d1e': {
-			os.alert({
-				type: 'error',
-				title: i18n.ts.loginFailed,
-				text: i18n.ts.passkeyVerificationFailed,
-			});
-			break;
-		}
+		case '93b86c4b-72f9-40eb-9815-798928603d1e':
 		case 'b18c89a7-5b5e-4cec-bb5b-0419f332d430': {
 			os.alert({
 				type: 'error',
