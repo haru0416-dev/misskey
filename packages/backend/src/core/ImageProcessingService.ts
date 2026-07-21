@@ -12,7 +12,7 @@ export type IImage = {
 	type: string;
 };
 
-export type IImageStream = {
+type IImageStream = {
 	data: Readable;
 	ext: string | null;
 	type: string;
@@ -37,7 +37,7 @@ export const webpDefault: WebpOptions = {
 	loop: 0,
 };
 
-export const avifDefault: AvifOptions = {
+const avifDefault: AvifOptions = {
 	quality: 60,
 	lossless: false,
 	effort: 2,

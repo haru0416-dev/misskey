@@ -100,10 +100,7 @@ export async function deleteBlockingByIdFromDatabase(db: MiDrizzleDatabase, id: 
 	await db.delete(blocking).where(eq(blocking.id, id));
 }
 
-export async function fetchBlockingByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiBlocking['id'],
-): Promise<MiBlocking> {
+async function fetchBlockingByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiBlocking['id']): Promise<MiBlocking> {
 	const [row] = await db.select().from(blocking).where(eq(blocking.id, id)).limit(1);
 
 	if (row == null) {

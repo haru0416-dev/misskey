@@ -474,7 +474,7 @@ export async function publishUnfollowToLocalFollower(
 	await enqueueUserWebhook(deps, follower.id, 'unfollow', packedFollowee);
 }
 
-export async function deliverFollowActivity(
+async function deliverFollowActivity(
 	deps: HonoApiFollowingDependencies,
 	follower: MiUser,
 	followee: MiUser,
@@ -1183,14 +1183,14 @@ const usersPaginationShape = {
 // `.passthrough()` は元 ajv 版が `additionalProperties: false` を指定しておらず、
 // anyOf のもう一方の枝にしか属さないプロパティ (例: userId 枝に対する username/host) も
 // 素通りさせていた挙動を再現するために必要 (等価性検証スクリプトで確認済み)。
-export const usersByUserIdBaseParamDef = z
+const usersByUserIdBaseParamDef = z
 	.object({
 		userId: misskeyId(),
 		...usersPaginationShape,
 	})
 	.passthrough();
 
-export const usersByUsernameHostBaseParamDef = z
+const usersByUsernameHostBaseParamDef = z
 	.object({
 		username: z.string(),
 		host: z.string().nullable(),
@@ -1363,7 +1363,7 @@ const birthdayOneOfSchema = z.custom<z.infer<typeof birthdayMonthDaySchema> | z.
 	{ message: 'must match exactly one schema in oneOf' },
 );
 
-export const usersGetFollowingUsersByBirthdayParamDef = z.object({
+const usersGetFollowingUsersByBirthdayParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 	offset: z.number().int().default(0),
 	birthday: birthdayOneOfSchema,

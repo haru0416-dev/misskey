@@ -454,7 +454,7 @@ export function createExportCompletedNotification(
 	);
 }
 
-export function createAppNotification(
+function createAppNotification(
 	deps: HonoApiNotificationDependencies,
 	userId: MiUser['id'],
 	data: {
@@ -504,7 +504,7 @@ export function createAppNotification(
 	);
 }
 
-export function createTestNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
+function createTestNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
 	trackPromise(
 		(async () => {
 			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);

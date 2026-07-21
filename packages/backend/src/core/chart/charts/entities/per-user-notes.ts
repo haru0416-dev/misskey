@@ -17,4 +17,4 @@ export const schema = {
 	'diffs.withFile': { range: 'small' },
 } as const;
 
-export const entity = Chart.schemaToEntity(name, schema, true);
+const entity = Chart.schemaToEntity(name, schema, true);

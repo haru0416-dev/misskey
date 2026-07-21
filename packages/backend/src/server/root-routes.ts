@@ -15,7 +15,7 @@ import * as Acct from '@/misc/acct.js';
 import { genIdenticon } from '@/misc/gen-identicon.js';
 import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
 
-export type RootRouteStores = {
+type RootRouteStores = {
 	fetchEmojiByNameAndHost: (
 		db: MiDrizzleDatabase,
 		name: MiEmoji['name'],

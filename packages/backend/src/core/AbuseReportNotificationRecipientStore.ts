@@ -80,7 +80,7 @@ function recipientFilterCondition(options: {
 	return conditions.length > 0 ? and(...conditions) : undefined;
 }
 
-export async function fetchAbuseReportNotificationRecipientByIdFromDatabase(
+async function fetchAbuseReportNotificationRecipientByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiAbuseReportNotificationRecipient['id'],
 ): Promise<MiAbuseReportNotificationRecipient | null> {
@@ -148,7 +148,7 @@ export async function listAbuseReportNotificationRecipientsFromDatabase(
 		.filter((x) => x != null);
 }
 
-export async function listUserAbuseReportNotificationRecipientsFromDatabase(
+async function listUserAbuseReportNotificationRecipientsFromDatabase(
 	db: MiDrizzleDatabase,
 ): Promise<MiAbuseReportNotificationRecipient[]> {
 	const rows = await db

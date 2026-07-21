@@ -441,7 +441,7 @@ export async function renderPersonForHonoApi(
 	return person;
 }
 
-export async function publishAccountUpdateToFollowersForHonoApi(
+async function publishAccountUpdateToFollowersForHonoApi(
 	deps: HonoApiAccountUpdateDependencies,
 	userId: MiUser['id'],
 ): Promise<void> {

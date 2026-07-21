@@ -167,7 +167,7 @@ export async function cancelFollowRequest(
 	await deliverFollowCancelActivity(deps, follower, followee, request.requestId);
 }
 
-export async function decrementFollowing(
+async function decrementFollowing(
 	deps: HonoApiAccountBlockingDependencies,
 	follower: MiUser,
 	followee: MiUser,
@@ -256,7 +256,7 @@ export async function remoteRejectForHonoApi(
 	await publishUnfollowToLocalFollower(deps, follower, actor);
 }
 
-export async function removeFromList(
+async function removeFromList(
 	deps: HonoApiAccountBlockingDependencies,
 	listOwner: MiUser,
 	user: MiUser,
@@ -286,7 +286,7 @@ async function packHonoApiBlocking(
 	};
 }
 
-export async function deliverBlockActivity(
+async function deliverBlockActivity(
 	deps: HonoApiAccountBlockingDependencies,
 	blocking: MiBlocking & { blocker: MiUser; blockee: MiUser },
 ): Promise<void> {
@@ -303,7 +303,7 @@ export async function deliverBlockActivity(
 	);
 }
 
-export async function deliverUndoBlockActivity(
+async function deliverUndoBlockActivity(
 	deps: HonoApiAccountBlockingDependencies,
 	blocking: MiBlocking & { blocker: MiUser; blockee: MiUser },
 ): Promise<void> {

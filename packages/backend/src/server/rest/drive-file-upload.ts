@@ -141,7 +141,7 @@ export async function readHonoApiMultipartRequest(
 	};
 }
 
-export function castHonoApiMultipartFields(
+function castHonoApiMultipartFields(
 	paramDef: { properties?: Record<string, { type?: string }> },
 	fields: Record<string, unknown>,
 ): void {

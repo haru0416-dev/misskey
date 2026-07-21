@@ -10,7 +10,7 @@ import { deepClone } from '@/utility/clone.js';
 import { deepEqual } from '@/utility/deep-equal.js';
 import { deepMerge } from '@/utility/merge.js';
 
-export type PersistedStateLocation = 'account' | 'device' | 'deviceAccount';
+type PersistedStateLocation = 'account' | 'device' | 'deviceAccount';
 
 export type PersistedStateDefinition<S extends StateTree> = {
 	namespace: string;

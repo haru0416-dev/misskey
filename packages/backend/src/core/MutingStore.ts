@@ -84,7 +84,7 @@ export async function listMuterIdsByMuteeIdAndMuterIdsFromDatabase(
 	return rows.map((row) => row.muterId);
 }
 
-export async function fetchMutingByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiMuting['id']): Promise<MiMuting> {
+async function fetchMutingByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiMuting['id']): Promise<MiMuting> {
 	const [row] = await db.select().from(muting).where(eq(muting.id, id)).limit(1);
 
 	if (row == null) {

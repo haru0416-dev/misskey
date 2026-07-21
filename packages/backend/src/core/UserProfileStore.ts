@@ -14,7 +14,7 @@ import type { MiUser } from '@/models/User.js';
 
 export type UserProfileUpdate = Partial<Omit<UserProfileRow, 'userId'>>;
 
-export function deserializeUserProfile(row: UserProfileRow): MiUserProfile {
+function deserializeUserProfile(row: UserProfileRow): MiUserProfile {
 	return {
 		...row,
 		user: null,
@@ -22,10 +22,7 @@ export function deserializeUserProfile(row: UserProfileRow): MiUserProfile {
 	} as MiUserProfile;
 }
 
-export async function createUserProfileInDatabase(
-	db: MiDrizzleDatabase,
-	data: UserProfileInsert,
-): Promise<MiUserProfile> {
+async function createUserProfileInDatabase(db: MiDrizzleDatabase, data: UserProfileInsert): Promise<MiUserProfile> {
 	const [row] = await db.insert(userProfile).values(data).returning();
 
 	if (row == null) {

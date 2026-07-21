@@ -23,19 +23,19 @@ import type { JsonLd as JsonLdObject, RemoteDocument } from 'jsonld/jsonld-spec.
 
 export class JsonLdError extends IdentifiableError {}
 
-export class JsonLdCacheOverflowError extends JsonLdError {
+class JsonLdCacheOverflowError extends JsonLdError {
 	constructor() {
 		super('42fb039c-69fb-4f75-8187-d3aee412423e', 'context cache overflow');
 	}
 }
 
-export class JsonLdCacheFrozenError extends JsonLdError {
+class JsonLdCacheFrozenError extends JsonLdError {
 	constructor() {
 		super('202c41fa-72d5-4e22-95af-94a8ac83346f', 'attempt to insert into frozen context cache');
 	}
 }
 
-export class JsonLdForbiddenDirectiveError extends JsonLdError {
+class JsonLdForbiddenDirectiveError extends JsonLdError {
 	constructor(public directive: string) {
 		super('0297f79b-0ed9-4b6c-875f-b0a82ff96781', `${directive} is forbidden by Erebia in ActivityPub documents`);
 	}

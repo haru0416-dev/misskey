@@ -70,7 +70,7 @@ export async function fetchFlashLikeFromDatabase(
 	return row ?? null;
 }
 
-export async function fetchFlashLikeByIdOrFailFromDatabase(
+async function fetchFlashLikeByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: FlashLikeRow['id'],
 ): Promise<FlashLikeRow> {
@@ -92,7 +92,7 @@ export async function deleteFlashLikeByIdFromDatabase(db: MiDrizzleDatabase, id:
 	return deleted.length === 1;
 }
 
-export async function listLikedFlashIdsByUserIdFromDatabase(
+async function listLikedFlashIdsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiFlash['id'][]> {

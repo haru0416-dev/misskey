@@ -447,7 +447,7 @@ async function hydrateNotificationNoteRelationsForHonoApi(
 	return roots;
 }
 
-export async function createNoteNotificationsForHonoApi(
+async function createNoteNotificationsForHonoApi(
 	deps: HonoApiNotificationDependencies & HonoApiNotificationsListDependencies,
 	notifierId: MiUser['id'],
 	requests: readonly NoteNotificationRequest[],
@@ -756,7 +756,7 @@ function isQuoteData(data: CreateNoteData & { renote: MiNote }): boolean {
 	);
 }
 
-export async function insertNoteForHonoApi(
+async function insertNoteForHonoApi(
 	deps: HonoApiNotesCreateDependencies,
 	user: { id: MiUser['id']; host: MiUser['host'] },
 	data: CreateNoteData,
@@ -853,7 +853,7 @@ export async function insertNoteForHonoApi(
 	}
 }
 
-export async function postNoteCreatedForHonoApi(
+async function postNoteCreatedForHonoApi(
 	deps: HonoApiNotesCreateDependencies,
 	note: MiNote,
 	user: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },

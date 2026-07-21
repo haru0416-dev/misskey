@@ -56,7 +56,7 @@ export async function createModerationLogsInDatabase(
 	await insertBatch(0);
 }
 
-export async function fetchModerationLogByIdOrFailFromDatabase(
+async function fetchModerationLogByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiModerationLog['id'],
 ): Promise<MiModerationLog> {

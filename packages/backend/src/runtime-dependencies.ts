@@ -92,7 +92,7 @@ export type RuntimeDependencies = {
 	dispose: () => Promise<void>;
 };
 
-export type RuntimeResources = {
+type RuntimeResources = {
 	drizzlePool?: MiDrizzlePool;
 	redis?: Redis.Redis;
 	redisForPub?: Redis.Redis;
@@ -112,7 +112,7 @@ export type RuntimeResources = {
 	urlPreviewService?: UrlPreviewService;
 };
 
-export function createMeilisearchClient(config: Config): Meilisearch | null {
+function createMeilisearchClient(config: Config): Meilisearch | null {
 	if (config.search.provider !== 'meilisearch') {
 		return null;
 	}
@@ -135,7 +135,7 @@ export function createRedisForPub(config: Config): Redis.Redis {
 	return new Redis.Redis(config.valkey.pubsub);
 }
 
-export async function createRedisForSub(config: Config): Promise<Redis.Redis> {
+async function createRedisForSub(config: Config): Promise<Redis.Redis> {
 	const redis = new Redis.Redis(config.valkey.pubsub);
 	try {
 		await redis.subscribe(config.runtime.host);
@@ -146,15 +146,15 @@ export async function createRedisForSub(config: Config): Promise<Redis.Redis> {
 	}
 }
 
-export function createRedisForTimelines(config: Config): Redis.Redis {
+function createRedisForTimelines(config: Config): Redis.Redis {
 	return new Redis.Redis(config.valkey.timelines);
 }
 
-export function createRedisForReactions(config: Config): Redis.Redis {
+function createRedisForReactions(config: Config): Redis.Redis {
 	return new Redis.Redis(config.valkey.reactions);
 }
 
-export async function fetchReactiveMeta(db: MiDrizzleDatabase, redisForSub: Redis.Redis): Promise<MiMeta> {
+async function fetchReactiveMeta(db: MiDrizzleDatabase, redisForSub: Redis.Redis): Promise<MiMeta> {
 	const meta = await fetchMetaFromDatabase(db);
 
 	async function onMessage(_: string, data: string): Promise<void> {
@@ -189,7 +189,7 @@ export async function closeRedisConnection(redis: Redis.Redis): Promise<void> {
 	}
 }
 
-export async function disposeRuntimeResources(resources: RuntimeResources): Promise<void> {
+async function disposeRuntimeResources(resources: RuntimeResources): Promise<void> {
 	resources.urlPreviewService?.dispose();
 	await allSettled();
 	await Promise.all([

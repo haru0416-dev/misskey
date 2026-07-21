@@ -69,7 +69,7 @@ export const notificationTypes = [
 	'test',
 ] as const;
 
-export const groupedNotificationTypes = [...notificationTypes, 'reaction:grouped', 'renote:grouped'] as const;
+const groupedNotificationTypes = [...notificationTypes, 'reaction:grouped', 'renote:grouped'] as const;
 
 export const obsoleteNotificationTypes = ['pollVote', 'groupInvited'] as const;
 
@@ -83,7 +83,7 @@ export const noteReactionAcceptances = [
 	null,
 ] as const;
 
-export const mutedNoteReasons = ['word', 'manual', 'spam', 'other'] as const;
+const mutedNoteReasons = ['word', 'manual', 'spam', 'other'] as const;
 
 export const followingVisibilities = ['public', 'followers', 'private'] as const;
 export const followersVisibilities = ['public', 'followers', 'private'] as const;
@@ -110,14 +110,7 @@ export const userExportableEntities = [
  *
  * （主にインポート完了通知で使用するものであり、既存のDBの名称等と必ずしも一致しない）
  */
-export const userImportableEntities = [
-	'antenna',
-	'blocking',
-	'customEmoji',
-	'following',
-	'muting',
-	'userList',
-] as const;
+const userImportableEntities = ['antenna', 'blocking', 'customEmoji', 'following', 'muting', 'userList'] as const;
 
 export type ModerationLogPayloads = {
 	updateServerSettings: {
@@ -403,7 +396,7 @@ export type Serialized<T> = {
 						: T[K];
 };
 
-export type FilterUnionByProperty<Union, Property extends string | number | symbol, Condition> =
+type FilterUnionByProperty<Union, Property extends string | number | symbol, Condition> =
 	Union extends Record<Property, Condition> ? Union : never;
 
 export type Awaitable<T> = T | Promise<T>;

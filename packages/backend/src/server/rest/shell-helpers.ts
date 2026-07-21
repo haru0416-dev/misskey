@@ -46,7 +46,7 @@ export function emptyResponse(c: Context): Response {
 	});
 }
 
-export function rawStatusResponse(c: Context, status: number): Response {
+function rawStatusResponse(c: Context, status: number): Response {
 	setApiHeaders(c);
 	return new Response(null, {
 		status,
@@ -102,7 +102,7 @@ export function publicCacheHeadersWhenAnonymous(auth: HonoApiAuthenticated, seco
 	return auth.user == null ? { 'Cache-Control': `public, max-age=${seconds}` } : {};
 }
 
-export function apiErrorResponse(c: Context, err: HonoApiError): Response {
+function apiErrorResponse(c: Context, err: HonoApiError): Response {
 	setApiHeaders(c);
 
 	// ApiCallService.#sendApiError 相当: 401以外のclient系エラーには invalid_request の

@@ -118,7 +118,7 @@ type PackMeDetailedOptions = {
 	profile?: MiUserProfile;
 };
 
-export function getHonoApiUserPolicies(config: Config, meta: MiMeta): RolePolicies {
+function getHonoApiUserPolicies(config: Config, meta: MiMeta): RolePolicies {
 	const policies = { ...DEFAULT_POLICIES, ...meta.policies };
 	const serverMaxFileSizeMb = Math.floor(config.limits.maximumFileSizeBytes / (1024 * 1024));
 

@@ -112,7 +112,7 @@ export async function packFlashForHonoApi(
 	};
 }
 
-export async function packFlashManyForHonoApi(
+async function packFlashManyForHonoApi(
 	deps: HonoApiFlashDependencies,
 	flashes: MiFlash[],
 	me?: { id: MiUser['id'] } | null,

@@ -88,7 +88,7 @@ function serializeAlsoKnownAs(value: string[] | null | undefined): string | null
 	return value == null ? value : value.join(',');
 }
 
-export function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IObject, uri: string): IActor {
+function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IObject, uri: string): IActor {
 	const expectHost = punyHostForHonoApi(uri);
 
 	if (!isActor(x)) {
@@ -181,12 +181,12 @@ export function toPunyForHonoApi(host: string): string {
 	return domainToASCII(host.toLowerCase());
 }
 
-export function punyHostForHonoApi(url: string): string {
+function punyHostForHonoApi(url: string): string {
 	const urlObj = new URL(url);
 	return `${toPunyForHonoApi(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
 }
 
-export function analyzeAttachmentsForHonoApi(
+function analyzeAttachmentsForHonoApi(
 	config: Pick<Config, 'instance'>,
 	attachments: IObject | IObject[] | undefined,
 ): { name: string; value: string }[] {
@@ -308,7 +308,7 @@ export async function resolveImageForHonoApi(
 	}
 }
 
-export async function resolveAvatarAndBannerForHonoApi(
+async function resolveAvatarAndBannerForHonoApi(
 	deps: HonoApiApPersonDependencies,
 	user: MiRemoteUser,
 	icon: unknown,
@@ -361,7 +361,7 @@ export async function resolveAvatarAndBannerForHonoApi(
 	>;
 }
 
-export async function isPublicCollectionForHonoApi(
+async function isPublicCollectionForHonoApi(
 	deps: HonoApiApPersonDependencies,
 	collection: string | IObject | undefined,
 	history: Set<string>,

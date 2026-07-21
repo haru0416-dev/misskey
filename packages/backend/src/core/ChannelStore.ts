@@ -159,10 +159,7 @@ export async function fetchChannelByIdFromDatabase(
 	return row ? deserializeChannel(row) : null;
 }
 
-export async function fetchChannelByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiChannel['id'],
-): Promise<MiChannel> {
+async function fetchChannelByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiChannel['id']): Promise<MiChannel> {
 	const channel = await fetchChannelByIdFromDatabase(db, id);
 
 	if (channel == null) {

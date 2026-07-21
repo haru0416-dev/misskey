@@ -99,7 +99,7 @@ export async function fetchEmojiByNameAndHostFromDatabase(
 	return row ?? null;
 }
 
-export async function fetchEmojiByNameAndHostOrFailFromDatabase(
+async function fetchEmojiByNameAndHostOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	name: MiEmoji['name'],
 	host: MiEmoji['host'],
@@ -205,7 +205,7 @@ export async function fetchEmojisByNamesAndHostsFromDatabaseCached(
 	return queries.map((query) => resultByKey.get(emojiCacheKey(query.name, query.host)) ?? null);
 }
 
-export async function listEmojisByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiEmoji['id'][]): Promise<MiEmoji[]> {
+async function listEmojisByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiEmoji['id'][]): Promise<MiEmoji[]> {
 	if (ids.length === 0) return [];
 
 	return await db.select().from(emoji).where(inArray(emoji.id, ids));
@@ -262,7 +262,7 @@ export async function emojiExistsWithLocalNameInDatabase(
 /**
  * CustomEmojiService.prefetchEmojis 向け。(host, name[]) の組ごとにOR条件で絵文字のURL情報のみ取得する。
  */
-export async function listEmojiThumbnailsByNamesAndHostsFromDatabase(
+async function listEmojiThumbnailsByNamesAndHostsFromDatabase(
 	db: MiDrizzleDatabase,
 	queries: { names: string[]; host: string }[],
 ): Promise<Pick<MiEmoji, 'name' | 'host' | 'originalUrl' | 'publicUrl'>[]> {
@@ -300,7 +300,7 @@ export async function updateEmojiInDatabase(
 	invalidateEmojiCache();
 }
 
-export async function updateEmojisByIdsInDatabase(
+async function updateEmojisByIdsInDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiEmoji['id'][],
 	values: Partial<EmojiInsert>,

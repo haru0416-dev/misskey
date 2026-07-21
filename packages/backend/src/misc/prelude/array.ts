@@ -5,11 +5,11 @@
 
 import { Predicate } from './relation.js';
 
-export function countIf<T>(f: Predicate<T>, xs: T[]): number {
+function countIf<T>(f: Predicate<T>, xs: T[]): number {
 	return xs.filter(f).length;
 }
 
-export function count<T>(a: T, xs: T[]): number {
+function count<T>(a: T, xs: T[]): number {
 	return countIf((x) => x === a, xs);
 }
 
@@ -21,11 +21,11 @@ export function intersperse<T>(sep: T, xs: T[]): T[] {
 	return concat(xs.map((x) => [sep, x])).slice(1);
 }
 
-export function erase<T>(a: T, xs: T[]): T[] {
+function erase<T>(a: T, xs: T[]): T[] {
 	return xs.filter((x) => x !== a);
 }
 
-export function difference<T>(xs: T[], ys: T[]): T[] {
+function difference<T>(xs: T[], ys: T[]): T[] {
 	return xs.filter((x) => !ys.includes(x));
 }
 
@@ -33,7 +33,7 @@ export function unique<T>(xs: T[]): T[] {
 	return [...new Set(xs)];
 }
 
-export function sum(xs: number[]): number {
+function sum(xs: number[]): number {
 	return xs.reduce((a, b) => a + b, 0);
 }
 
@@ -41,7 +41,7 @@ export function maximum(xs: number[]): number {
 	return Math.max(...xs);
 }
 
-export function lessThan(xs: number[], ys: number[]): boolean {
+function lessThan(xs: number[], ys: number[]): boolean {
 	for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
 		const x = xs[i];
 		const y = ys[i];
@@ -52,7 +52,7 @@ export function lessThan(xs: number[], ys: number[]): boolean {
 	return xs.length < ys.length;
 }
 
-export function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
+function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
 	const ys = [];
 	for (const x of xs) {
 		if (f(x)) {
@@ -64,7 +64,7 @@ export function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
 	return ys;
 }
 
-export function cumulativeSum(xs: number[]): number[] {
+function cumulativeSum(xs: number[]): number[] {
 	let total = 0;
 	return xs.map((value) => (total += value));
 }

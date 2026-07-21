@@ -54,7 +54,7 @@ export async function fetchGalleryLikeFromDatabase(
 	return row ?? null;
 }
 
-export async function fetchGalleryLikeByIdOrFailFromDatabase(
+async function fetchGalleryLikeByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: GalleryLikeRow['id'],
 ): Promise<GalleryLikeRow> {

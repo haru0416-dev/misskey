@@ -640,7 +640,7 @@ export async function updateUserLastActiveDateInDatabase(
 	await db.update(userTable).set({ lastActiveDate }).where(eq(userTable.id, id));
 }
 
-export async function updateUserLastActiveDateReturningWasHibernatedInDatabase(
+async function updateUserLastActiveDateReturningWasHibernatedInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiUser['id'],
 	lastActiveDate: Date,
@@ -654,7 +654,7 @@ export async function updateUserLastActiveDateReturningWasHibernatedInDatabase(
 	return row?.isHibernated ?? false;
 }
 
-export async function updateUserHibernatedStateInDatabase(
+async function updateUserHibernatedStateInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiUser['id'],
 	isHibernated: boolean,
@@ -746,7 +746,7 @@ export async function incrementUserNotesCountAndUpdatedAtInDatabase(
 		.where(eq(userTable.id, id));
 }
 
-export async function listUserIdsByIdsAndLastActiveBeforeFromDatabase(
+async function listUserIdsByIdsAndLastActiveBeforeFromDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiUser['id'][],
 	before: Date,
@@ -761,7 +761,7 @@ export async function listUserIdsByIdsAndLastActiveBeforeFromDatabase(
 	return rows.map((row) => row.id);
 }
 
-export async function updateUsersHibernatedStateInDatabase(
+async function updateUsersHibernatedStateInDatabase(
 	db: MiDrizzleDatabase,
 	ids: MiUser['id'][],
 	isHibernated: boolean,

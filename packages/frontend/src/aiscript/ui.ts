@@ -18,7 +18,7 @@ type Align = (typeof ALIGNS)[number];
 type Font = (typeof FONTS)[number];
 type BorderStyle = (typeof BORDER_STYLES)[number];
 
-export type AsUiComponentBase = {
+type AsUiComponentBase = {
 	id: string;
 	hidden?: boolean;
 	children?: AsUiComponent['id'][];
@@ -28,7 +28,7 @@ export type AsUiRoot = AsUiComponentBase & {
 	type: 'root';
 };
 
-export type AsUiContainer = AsUiComponentBase & {
+type AsUiContainer = AsUiComponentBase & {
 	type: 'container';
 	align?: Align;
 	bgColor?: string;
@@ -120,7 +120,7 @@ export type AsUiSelect = AsUiComponentBase & {
 	caption?: string;
 };
 
-export type AsUiFolder = AsUiComponentBase & {
+type AsUiFolder = AsUiComponentBase & {
 	type: 'folder';
 	title?: string;
 	opened?: boolean;
@@ -141,7 +141,7 @@ export type AsUiPostFormButton = AsUiComponentBase & {
 	form?: PostFormPropsForAsUi;
 };
 
-export type AsUiPostForm = AsUiComponentBase & {
+type AsUiPostForm = AsUiComponentBase & {
 	type: 'postForm';
 	form?: PostFormPropsForAsUi;
 };
@@ -170,11 +170,7 @@ type Options<T extends AsUiComponent> = T extends AsUiButtons
 	? WithExplicitUndefined<Omit<T, 'id' | 'type' | 'buttons'>> & { buttons: Options<AsUiButton>[] }
 	: WithExplicitUndefined<Omit<T, 'id' | 'type'>>;
 
-export function patch(
-	id: string,
-	def: values.Value,
-	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
-) {
+function patch(id: string, def: values.Value, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>) {
 	// TODO
 }
 

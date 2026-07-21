@@ -293,7 +293,7 @@ async function getDescription(
 	return null;
 }
 
-export async function tryLockFetchInstanceMetadata(
+async function tryLockFetchInstanceMetadata(
 	deps: Pick<FetchInstanceMetadataDependencies, 'tryLock'>,
 	host: string,
 ): Promise<boolean> {

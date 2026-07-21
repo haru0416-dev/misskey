@@ -171,7 +171,7 @@ type ChannelShowParams = {
 	channelId: string;
 };
 
-export const channelTimelineParamDef = z.object({
+const channelTimelineParamDef = z.object({
 	channelId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),

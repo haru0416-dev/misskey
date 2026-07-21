@@ -9,7 +9,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiApp } from '@/models/App.js';
 import type { MiUser } from '@/models/User.js';
 
-export async function fetchAuthSessionByIdOrFailFromDatabase(
+async function fetchAuthSessionByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: AuthSessionRow['id'],
 ): Promise<AuthSessionRow> {

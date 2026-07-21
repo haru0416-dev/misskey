@@ -121,7 +121,7 @@ export function parseQueueDatabaseInfo(infoText: string) {
 	};
 }
 
-export function getQueue(deps: AdminQueueDependencies, type: QueueType): Bull.Queue | DbQueue {
+function getQueue(deps: AdminQueueDependencies, type: QueueType): Bull.Queue | DbQueue {
 	switch (type) {
 		case 'system':
 			return deps.systemQueue;
@@ -252,7 +252,7 @@ export async function abandonQueueOutboxDeadLetter(
 	return await abandonDeadLetterOutboxInDatabase(deps.db, id, revision);
 }
 
-export function packQueueJob(job: Bull.Job): Packed<'QueueJob'> {
+function packQueueJob(job: Bull.Job): Packed<'QueueJob'> {
 	const stacktrace = job.stacktrace ? job.stacktrace.filter(Boolean) : [];
 	stacktrace.reverse();
 
