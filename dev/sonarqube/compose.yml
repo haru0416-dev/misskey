@@ -1,0 +1,56 @@
+# ローカル解析専用の SonarQube Community Build。
+# 外部公開しないため 127.0.0.1 にのみバインドする (Docker の -p は ufw を素通りするため)。
+name: misskey-sonarqube
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonar
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar -d sonar"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  sonarqube:
+    image: sonarqube:community
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+      # 利用統計を SonarSource へ送らない
+      SONAR_TELEMETRY_ENABLE: "false"
+      # 解析対象は 1 リポジトリのみなので Elasticsearch / Web のヒープを絞る
+      SONAR_WEB_JAVAOPTS: -Xmx768m -Xms128m
+      SONAR_CE_JAVAOPTS: -Xmx1g -Xms128m
+      SONAR_SEARCH_JAVAOPTS: -Xmx768m -Xms768m
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-extensions:/opt/sonarqube/extensions
+      - sonarqube-logs:/opt/sonarqube/logs
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+
+volumes:
+  db-data:
+  sonarqube-data:
+  sonarqube-extensions:
+  sonarqube-logs:
