@@ -182,7 +182,7 @@ export async function checkHitAntennaForHonoApi(
 	}
 
 	if (antenna.withFile) {
-		if (note.fileIds && note.fileIds.length === 0) return false;
+		if (note.fileIds?.length === 0) return false;
 	}
 
 	return true;

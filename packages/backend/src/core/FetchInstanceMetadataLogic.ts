@@ -238,7 +238,7 @@ async function getSiteName(
 	doc: htmlParser.HTMLElement | null,
 	manifest: WebAppManifest | null,
 ): Promise<string | null> {
-	if (info && info.metadata) {
+	if (info?.metadata) {
 		if (typeof info.metadata.nodeName === 'string') {
 			return info.metadata.nodeName;
 		} else if (typeof info.metadata.name === 'string') {
@@ -266,7 +266,7 @@ async function getDescription(
 	doc: htmlParser.HTMLElement | null,
 	manifest: WebAppManifest | null,
 ): Promise<string | null> {
-	if (info && info.metadata) {
+	if (info?.metadata) {
 		if (typeof info.metadata.nodeDescription === 'string') {
 			return info.metadata.nodeDescription;
 		} else if (typeof info.metadata.description === 'string') {
@@ -320,7 +320,7 @@ export async function fetchInstanceMetadataWithSideEffects(
 		if (!force) {
 			const existing = await deps.fetchOrRegisterInstance(host);
 			const now = Date.now();
-			if (existing && existing.infoUpdatedAt && now - existing.infoUpdatedAt.getTime() < 1000 * 60 * 60 * 24) {
+			if (existing?.infoUpdatedAt && now - existing.infoUpdatedAt.getTime() < 1000 * 60 * 60 * 24) {
 				return;
 			}
 		}

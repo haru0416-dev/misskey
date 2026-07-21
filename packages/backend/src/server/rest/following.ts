@@ -767,7 +767,7 @@ export async function handleHonoApiFollowingUpdateAll(
 		me.id,
 		omitUndefined({
 			notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
-			withReplies: params.withReplies != null ? params.withReplies : undefined,
+			withReplies: params.withReplies ?? undefined,
 		}),
 	);
 	if (params.withReplies != null) {
@@ -825,7 +825,7 @@ export async function handleHonoApiFollowingUpdate(
 		exist.id,
 		omitUndefined({
 			notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
-			withReplies: params.withReplies != null ? params.withReplies : undefined,
+			withReplies: params.withReplies ?? undefined,
 		}),
 	);
 	if (params.withReplies != null) {

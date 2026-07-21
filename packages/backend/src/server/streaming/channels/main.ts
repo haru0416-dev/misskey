@@ -34,7 +34,7 @@ export const honoStreamChannelMain: HonoStreamChannelDefinition<HonoApiNoteDepen
 					if (isUserFromMutedInstance(body as Packed<'Notification'>, ctx.userMutedInstances)) return;
 					if (body.userId && ctx.userIdsWhoMeMuting.has(body.userId)) return;
 
-					if (body.note && body.note.isHidden) {
+					if (body.note?.isHidden) {
 						const note = await packNoteForHonoApi(deps, body.note.id, user, { detail: true });
 						data = { type: data.type, body: { ...body, note } };
 					}

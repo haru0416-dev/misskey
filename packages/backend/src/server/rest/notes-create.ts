@@ -923,7 +923,7 @@ export async function postNoteCreatedForHonoApi(
 		await incrementNoteRenoteCountInDatabase(deps.db, data.renote.id, 1);
 	}
 
-	if (data.poll && data.poll.expiresAt) {
+	if (data.poll?.expiresAt) {
 		const delay = data.poll.expiresAt.getTime() - Date.now();
 		await deps.endedPollNotificationQueue.add(
 			note.id,

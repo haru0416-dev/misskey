@@ -227,7 +227,7 @@ watch(q, () => {
 		return;
 	}
 
-	const newQ = q.value.replace(/:/g, '').toLowerCase();
+	const newQ = q.value.replaceAll(/:/g, '').toLowerCase();
 
 	const searchCustom = () => {
 		const max = 100;
@@ -473,7 +473,7 @@ function done(query?: string): boolean | void {
 	if (query == null) query = q.value;
 	if (query == null || typeof query !== 'string') return;
 
-	const q2 = query.replace(/:/g, '');
+	const q2 = query.replaceAll(/:/g, '');
 	const exactMatchCustom = customEmojisMap.get(q2);
 	if (exactMatchCustom) {
 		chosen(exactMatchCustom);

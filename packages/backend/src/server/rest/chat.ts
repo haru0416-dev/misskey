@@ -113,7 +113,7 @@ function normalizeEmojiStringForHonoApi(x: string): string {
 		const unicode = match[0];
 
 		// 異体字セレクタ除去
-		return unicode.match('\u200d') ? unicode : unicode.replace(/\ufe0f/g, '');
+		return unicode.match('\u200d') ? unicode : unicode.replaceAll(/\ufe0f/g, '');
 	} else {
 		throw invalidParamError({ param: 'reaction', reason: 'invalid emoji' });
 	}

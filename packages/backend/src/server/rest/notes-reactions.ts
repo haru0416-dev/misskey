@@ -85,7 +85,7 @@ function normalizeReactionForHonoApi(reaction: string | null): string {
 	const match = emojiRegex.exec(reaction);
 	if (match) {
 		const unicode = match[0];
-		return unicode.match('\u200d') ? unicode : unicode.replace(/\ufe0f/g, '');
+		return unicode.match('\u200d') ? unicode : unicode.replaceAll(/\ufe0f/g, '');
 	}
 
 	return FALLBACK;
