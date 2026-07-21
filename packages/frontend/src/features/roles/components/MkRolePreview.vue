@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.bodyTitle">
 			<span :class="$style.bodyIcon">
 				<template v-if="role.iconUrl">
-					<img :class="$style.bodyBadge" :src="role.iconUrl"/>
+					<img :class="$style.bodyBadge" :src="role.iconUrl" alt=""/>
 				</template>
 				<template v-else>
 					<i v-if="role.isAdministrator" class="ti ti-crown" style="color: var(--MI_THEME-accent);"></i>

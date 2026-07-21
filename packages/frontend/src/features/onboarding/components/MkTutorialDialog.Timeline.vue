@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</div>
 	<div class="_gaps_s">
 		<div>{{ i18n.ts._initialTutorial._timeline.description2 }}</div>
-		<img :class="$style.image" src="/client-assets/tutorial/timeline_tab.png"/>
+		<img :class="$style.image" src="/client-assets/tutorial/timeline_tab.png" alt=""/>
 	</div>
 	<div :class="$style.divider"></div>
 	<I18n :src="i18n.ts._initialTutorial._timeline.description3" tag="div" style="padding: 0 16px;">

@@ -48,7 +48,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 		<div v-else-if="phase === 'consent'" key="consent" :class="$style.root" class="_gaps">
 			<div :class="$style.header" class="_gaps_s">
-				<img v-if="icon" :class="$style.icon" :src="getProxiedImageUrl(icon, 'preview')"/>
+				<img v-if="icon" :class="$style.icon" :src="getProxiedImageUrl(icon, 'preview')" alt=""/>
 				<div v-else :class="$style.iconFallback">
 					<i class="ti ti-apps"></i>
 				</div>

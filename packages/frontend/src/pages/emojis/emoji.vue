@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <button class="_button" :class="$style.root" @click="menu">
-	<img :src="emoji.url" :class="$style.img" loading="lazy"/>
+	<img :src="emoji.url" :class="$style.img" loading="lazy" :alt="emoji.name"/>
 	<div :class="$style.body">
 		<div :class="$style.name" class="_monospace">{{ emoji.name }}</div>
 		<div :class="$style.info">{{ emoji.aliases.join(' ') }}</div>

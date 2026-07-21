@@ -25,6 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 								:forceBlurhash="true"
 							/>
 							<img
+								alt=""
 								v-else-if="instance.backgroundImageUrl || instance.bannerUrl"
 								:class="[$style.pageBannerBg, $style.pageBannerBgFallback1]"
 								:src="getStaticImageUrl(instance.backgroundImageUrl ?? instance.bannerUrl!)"

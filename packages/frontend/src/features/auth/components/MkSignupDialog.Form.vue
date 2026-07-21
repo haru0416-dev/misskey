@@ -9,7 +9,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<i class="ti ti-user-edit"></i>
 	</div>
 	<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 32px;">
-		<form class="_gaps_m" autocomplete="new-password" @submit.prevent="onSubmit">
+		<!-- form の autocomplete は on / off しか取れない。new-password の指定は各 input 側にある -->
+		<form class="_gaps_m" autocomplete="off" @submit.prevent="onSubmit">
 			<MkInput v-if="instance.disableRegistration" v-model="invitationCode" type="text" :spellcheck="false" required data-cy-signup-invitation-code>
 				<template #label>{{ i18n.ts.invitationCode }}</template>
 				<template #prefix><i class="ti ti-key"></i></template>

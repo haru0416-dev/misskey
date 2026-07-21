@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</Transition>
 		<div class="container">
-			<img ref="imgEl" :src="imgUrl" style="display: none;" @load="onImageLoad">
+			<img ref="imgEl" :src="imgUrl" style="display: none;" @load="onImageLoad" alt="">
 		</div>
 	</div>
 </MkModalWindow>
