@@ -96,6 +96,7 @@
 | --- | --- |
 | 全体 lint (oxlint + oxfmt + typecheck) | `bun run lint` |
 | 整形の自動修正 | `bun run format:ox` |
+| Vue テンプレートの構文検査 | `bun run lint:vue-templates` |
 | 未使用ファイル / export / 依存の検出 | `bun run lint:knip` |
 | コピペ (重複コード) の検出 | `bun run lint:jscpd` |
 | Backend unit test | `bun run --bun --filter backend test` |
