@@ -253,7 +253,6 @@ export async function abandonQueueOutboxDeadLetter(
 }
 
 export function packQueueJob(job: Bull.Job): Packed<'QueueJob'> {
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	const stacktrace = job.stacktrace ? job.stacktrace.filter(Boolean) : [];
 	stacktrace.reverse();
 

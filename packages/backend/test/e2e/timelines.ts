@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // How to run:
 // bun run test:e2e -- e2e/timelines.ts
 

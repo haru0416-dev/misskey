@@ -53,7 +53,6 @@ export function convertSchemaToOpenApiSchema(
 	}
 
 	for (const o of ['anyOf', 'oneOf', 'allOf'] as const) {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		if (o in schema) res[o] = schema[o]!.map((schema) => convertSchemaToOpenApiSchema(schema, type, includeSelfRef));
 	}
 

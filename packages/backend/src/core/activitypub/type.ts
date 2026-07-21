@@ -33,9 +33,7 @@ export interface IObject {
 	// ApNoteService.ts 等の消費側コードは `.url` への緩いアクセスを前提にしている。
 	// このフィールドをより厳密な型に倒すと、それらの消費側 (本タスクの編集対象外) で
 	// 型エラーを誘発するため、意図的に any のまま残す。
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	icon?: any;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	image?: any;
 	mediaType?: string;
 	url?: ApObject | string;

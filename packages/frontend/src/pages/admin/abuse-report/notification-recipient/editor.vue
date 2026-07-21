@@ -181,7 +181,6 @@ async function onSubmitClicked() {
 					break;
 				}
 				case 'edit': {
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 					await misskeyApi('admin/abuse-report/notification-recipient/update', { id: id.value!, ...params });
 					break;
 				}

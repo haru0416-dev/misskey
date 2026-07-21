@@ -67,7 +67,6 @@ function makeScope(
 
 export function isSameScope(a: Scope, b: Scope): boolean {
 	// null と undefined (キー無し) は区別したくないので == で比較
-	// eslint-disable-next-line eqeqeq
 	return a.server == b.server && a.account == b.account && a.device == b.device;
 }
 

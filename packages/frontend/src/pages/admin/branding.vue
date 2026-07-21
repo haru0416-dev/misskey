@@ -171,11 +171,8 @@ import { normalizeBrandingJsonSettings } from '@/features/admin-tools/admin-bran
 
 const meta = await misskeyApi('admin/meta');
 
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 const entrancePageStyle = ref<Misskey.entities.MetaClientOptions['entrancePageStyle']>(meta.clientOptions.entrancePageStyle ?? 'classic');
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 const showTimelineForVisitor = ref<Misskey.entities.MetaClientOptions['showTimelineForVisitor']>(meta.clientOptions.showTimelineForVisitor ?? true);
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 const showActivitiesForVisitor = ref<Misskey.entities.MetaClientOptions['showActivitiesForVisitor']>(meta.clientOptions.showActivitiesForVisitor ?? true);
 
 const iconUrl = ref(meta.iconUrl);

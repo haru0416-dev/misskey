@@ -27,7 +27,6 @@ type WebSocketLike = {
 };
 
 // DOM の WebSocket と npm の ws パッケージの両方を受け付けるため、コンストラクタは緩く取る
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WebSocketConstructor = new (url: string, protocols?: string | string[]) => any;
 
 export type ReconnectingWebSocketOptions = {
