@@ -102,6 +102,7 @@ import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList } from '..
 import { handleHonoApiAdminMeta, handleHonoApiAdminUpdateMeta } from '../meta.js';
 import { handleHonoApiAdminShowModerationLogs } from '../moderation-log.js';
 import { handleHonoApiAdminPromoCreate } from '../promo.js';
+import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -655,6 +656,16 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 			assertCredential(auth);
 			assertSecureCredential(auth);
 			await assertHonoApiModerator(deps, auth);
+			// 外部 URL への HTTP 配送をキューに積むので、無制限だと増幅送信の踏み台になる
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'admin/system-webhook/test',
+				{
+					duration: 15 * 60 * 1000,
+					max: 60,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiAdminSystemWebhookTest(deps, body);
 			return emptyResponse(c);

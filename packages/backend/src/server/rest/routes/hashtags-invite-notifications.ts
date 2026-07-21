@@ -71,7 +71,10 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 	app.post('/hashtags/trend', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiHashtagsTrend(deps, body));
+			// meta の cacheSec: 60 は GET/POST 双方に掛かる (他の cacheSec 宣言と同様)
+			return jsonResponse(c, await handleHonoApiHashtagsTrend(deps, body), 200, {
+				'Cache-Control': 'public, max-age=60',
+			});
 		});
 	});
 

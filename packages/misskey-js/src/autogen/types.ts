@@ -766,7 +766,7 @@ export type paths = {
          * admin/roles/users
          * @description No description provided.
          *
-         *     **Credential required**: *No* / **Permission**: *read:admin:roles*
+         *     **Credential required**: *Yes* / **Permission**: *read:admin:roles*
          */
         post: operations['admin___roles___users'];
     };
