@@ -35,6 +35,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 								<iframe
 									ref="iframeEl"
 									:src="embedPreviewUrl"
+									:title="i18n.ts.preview"
 									:class="$style.embedCodeGenPreviewIframe"
 									:style="{ height: `${iframeHeight}px` }"
 									@load="iframeOnLoad"

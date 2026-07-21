@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		>
 			<MkMarqueeText :key="key" :reverse="marqueeReverse" v-bind="marqueeDuration === undefined ? {} : { duration: marqueeDuration }">
 				<span v-for="note in notes" :key="note.id" :class="$style.item">
-					<img v-if="note.user.avatarUrl" :class="$style.avatar" :src="note.user.avatarUrl" decoding="async"/>
+					<img v-if="note.user.avatarUrl" :class="$style.avatar" :src="note.user.avatarUrl" decoding="async" alt=""/>
 					<MkA :class="$style.text" :to="notePage(note)">
 						<Mfm :text="getNoteSummary(note)" :plain="true" :nowrap="true"/>
 					</MkA>

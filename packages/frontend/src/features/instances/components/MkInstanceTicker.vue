@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:role="displayMode === 'icon' ? 'img' : undefined"
 	:aria-label="displayMode === 'icon' ? instanceName : undefined"
 >
-	<img v-if="faviconUrl" :class="$style.icon" :src="faviconUrl"/>
+	<img v-if="faviconUrl" :class="$style.icon" :src="faviconUrl" alt=""/>
 	<div :class="$style.name">{{ instanceName }}</div>
 </div>
 </template>
