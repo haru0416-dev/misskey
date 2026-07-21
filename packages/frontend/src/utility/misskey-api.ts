@@ -10,11 +10,15 @@ import { $i } from '@/i.js';
 import { fetchMisskeyQuery, invalidateAfterMutation, isCachedEndpoint } from '@/query/api.js';
 export const pendingApiRequestsCount = ref(0);
 
-type ApiRequestData<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']> = P & { i?: string | null };
-type ApiRequestArgs<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']> =
-	Misskey.Endpoints[E] extends { reqOptional: true }
-		? [data?: ApiRequestData<E, P>, token?: string | null | undefined, signal?: AbortSignal | undefined]
-		: [data: ApiRequestData<E, P>, token?: string | null | undefined, signal?: AbortSignal | undefined];
+type ApiRequestData<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']> = P & {
+	i?: string | null;
+};
+type ApiRequestArgs<
+	E extends keyof Misskey.Endpoints,
+	P extends Misskey.Endpoints[E]['req'],
+> = Misskey.Endpoints[E] extends { reqOptional: true }
+	? [data?: ApiRequestData<E, P>, token?: string | null | undefined, signal?: AbortSignal | undefined]
+	: [data: ApiRequestData<E, P>, token?: string | null | undefined, signal?: AbortSignal | undefined];
 type OptionalEndpoint = {
 	[E in keyof Misskey.Endpoints]: Misskey.Endpoints[E] extends { reqOptional: true } ? E : never;
 }[keyof Misskey.Endpoints];
@@ -77,10 +81,7 @@ export function misskeyApi<
 	E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints,
 	P extends Misskey.Endpoints[E]['req'] = Misskey.Endpoints[E]['req'],
 	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
->(
-	endpoint: E,
-	...args: ApiRequestArgs<E, P>
-): Promise<_ResT> {
+>(endpoint: E, ...args: ApiRequestArgs<E, P>): Promise<_ResT> {
 	if (endpoint.includes('://')) throw new Error('invalid endpoint');
 	const [data = {} as ApiRequestData<E, P>, token, signal] = args;
 
@@ -110,9 +111,12 @@ export function misskeyApiGet<
 	E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints,
 	P extends Misskey.Endpoints[E]['req'] = Misskey.Endpoints[E]['req'],
 	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
->(endpoint: E, ...args: Misskey.Endpoints[E] extends { reqOptional: true }
-	? [data?: ApiRequestData<E, P>]
-	: [data: ApiRequestData<E, P>]): Promise<_ResT>;
+>(
+	endpoint: E,
+	...args: Misskey.Endpoints[E] extends { reqOptional: true }
+		? [data?: ApiRequestData<E, P>]
+		: [data: ApiRequestData<E, P>]
+): Promise<_ResT>;
 export function misskeyApiGet<
 	ResT = void,
 	E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints,

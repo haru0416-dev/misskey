@@ -538,9 +538,10 @@ function getPostFormProps(form: values.VObj): PostFormPropsForAsUi {
 	if (visibility) utils.assertString(visibility);
 	const localOnly = form.value.get('localOnly');
 	if (localOnly) utils.assertBoolean(localOnly);
-	const validatedVisibility = visibility?.value && (Misskey.noteVisibilities as readonly string[]).includes(visibility.value)
-		? visibility.value as (typeof Misskey.noteVisibilities)[number]
-		: undefined;
+	const validatedVisibility =
+		visibility?.value && (Misskey.noteVisibilities as readonly string[]).includes(visibility.value)
+			? (visibility.value as (typeof Misskey.noteVisibilities)[number])
+			: undefined;
 
 	return {
 		text: text.value,

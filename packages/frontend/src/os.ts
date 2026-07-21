@@ -795,8 +795,12 @@ export async function popupMenu(
 				...(options?.width === undefined ? {} : { width: options.width }),
 				...(options?.align === undefined ? {} : { align: options.align }),
 				returnFocusTo,
-				...(options?.debugDisablePredictionCone === undefined ? {} : { debugDisablePredictionCone: options.debugDisablePredictionCone }),
-				...(options?.debugShowPredictionCone === undefined ? {} : { debugShowPredictionCone: options.debugShowPredictionCone }),
+				...(options?.debugDisablePredictionCone === undefined
+					? {}
+					: { debugDisablePredictionCone: options.debugDisablePredictionCone }),
+				...(options?.debugShowPredictionCone === undefined
+					? {}
+					: { debugShowPredictionCone: options.debugShowPredictionCone }),
 			},
 			{
 				closed: () => {
@@ -854,16 +858,20 @@ export async function contextMenu(items: MenuItem[], ev: PointerEvent): Promise<
 }
 
 export async function post(props: PostFormProps = {}): Promise<void> {
-	const isLoggedIn = await pleaseLogin(props.initialText || props.initialNote ? {
-		openOnRemote: {
-			type: 'share',
-			params: {
-				text: props.initialText ?? props.initialNote?.text ?? '',
-				visibility: props.initialVisibility ?? props.initialNote?.visibility ?? 'public',
-				localOnly: props.initialLocalOnly || props.initialNote?.localOnly ? '1' : '0',
-			},
-		},
-	} : {});
+	const isLoggedIn = await pleaseLogin(
+		props.initialText || props.initialNote
+			? {
+					openOnRemote: {
+						type: 'share',
+						params: {
+							text: props.initialText ?? props.initialNote?.text ?? '',
+							visibility: props.initialVisibility ?? props.initialNote?.visibility ?? 'public',
+							localOnly: props.initialLocalOnly || props.initialNote?.localOnly ? '1' : '0',
+						},
+					},
+				}
+			: {},
+	);
 	if (!isLoggedIn) return;
 
 	showMovedDialog();
