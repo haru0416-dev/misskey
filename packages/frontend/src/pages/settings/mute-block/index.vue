@@ -58,7 +58,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<template #label>{{ i18n.ts.emojiMute }}</template>
 
 					<XEmojiMute/>
-				</mkfolder>
+				</MkFolder>
 			</SearchMarker>
 
 			<SearchMarker
