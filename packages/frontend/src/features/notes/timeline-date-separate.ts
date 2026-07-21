@@ -108,8 +108,7 @@ export function makeDateGroupedTimelineComputedRef<T extends { id: string; creat
 				currentGroup == null ||
 				(span === 'day' && currentGroup.date.getTime() !== date.getTime()) ||
 				(span === 'month' &&
-					(currentGroup.date.getFullYear() !== date.getFullYear() ||
-						currentGroup.date.getMonth() !== date.getMonth()))
+					(currentGroup.date.getFullYear() !== date.getFullYear() || currentGroup.date.getMonth() !== date.getMonth()))
 			) {
 				tl.push({
 					date,

@@ -103,8 +103,6 @@ describe('WidgetActivityChart', () => {
 	});
 
 	test('rejects mismatched chart series instead of filling missing values with zero', () => {
-		expect(() => sumChartSeries([1, 2], [3])).toThrow(
-			'Chart series length mismatch: expected 2, received 1',
-		);
+		expect(() => sumChartSeries([1, 2], [3])).toThrow('Chart series length mismatch: expected 2, received 1');
 	});
 });

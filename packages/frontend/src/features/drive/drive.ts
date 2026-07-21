@@ -45,7 +45,7 @@ export class UploadAbortedError extends Error {
 }
 
 function parseUploadResponse(value: unknown): UploadResponse | null {
-	return typeof value === 'string' ? parseJsonObject(value) as UploadResponse | null : null;
+	return typeof value === 'string' ? (parseJsonObject(value) as UploadResponse | null) : null;
 }
 
 function getUploadError(value: UploadResponse | null): UploadError | null {
@@ -54,9 +54,7 @@ function getUploadError(value: UploadResponse | null): UploadError | null {
 	return value.error as UploadError;
 }
 
-function isDriveFileResponse(
-	value: UploadResponse | null,
-): value is UploadResponse & Misskey.entities.DriveFile {
+function isDriveFileResponse(value: UploadResponse | null): value is UploadResponse & Misskey.entities.DriveFile {
 	return (
 		value != null &&
 		typeof value.id === 'string' &&
@@ -297,10 +295,11 @@ function select(
 				{
 					text: i18n.ts.upload,
 					icon: 'ti ti-upload',
-					action: () => chooseFileFromPcAndUpload({
-						multiple,
-						...(features === undefined ? {} : { features }),
-					}).then((files) => res(files)),
+					action: () =>
+						chooseFileFromPcAndUpload({
+							multiple,
+							...(features === undefined ? {} : { features }),
+						}).then((files) => res(files)),
 				},
 				{
 					text: i18n.ts.fromDrive,
