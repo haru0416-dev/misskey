@@ -36,7 +36,7 @@ function requestMisskeyApi<_ResT, E extends keyof Misskey.Endpoints, P extends M
 		pendingApiRequestsCount.value--;
 	};
 
-	const payload = { ...(data ?? {}) } as Record<string, unknown> & { i?: string | null };
+	const payload = { ...data } as Record<string, unknown> & { i?: string | null };
 	if (method === 'POST') {
 		if ($i) payload.i = $i.token;
 		if (token !== undefined) payload.i = token;

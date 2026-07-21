@@ -78,7 +78,7 @@ function back() {
 	if (tabs.value.length <= 1) return; // transitionの関係でタブが1つの状態でbackが呼ばれることがある
 	const prev = tabs.value.at(-2);
 	if (prev == null) return;
-	tabs.value = [...tabs.value.slice(0, tabs.value.length - 1)];
+	tabs.value = tabs.value.slice(0, -1);
 	router?.replaceByPath(prev.fullPath);
 }
 
@@ -123,7 +123,7 @@ router.useListener('replace', ({ fullPath }) => {
 	const currentTab = tabs.value.at(-1);
 	if (currentTab == null) return;
 	currentTab.fullPath = fullPath;
-	tabs.value = [...tabs.value.slice(0, tabs.value.length - 1), currentTab];
+	tabs.value = [...tabs.value.slice(0, -1), currentTab];
 });
 </script>
 

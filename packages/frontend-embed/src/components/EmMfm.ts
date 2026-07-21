@@ -285,7 +285,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							if (!disableNyaize && shouldNyaize) {
 								text = Misskey.nyaize(text);
 							}
-							return h('ruby', {}, [...genEl(token.children.slice(0, token.children.length - 1), scale), h('rt', text.trim())]);
+							return h('ruby', {}, [...genEl(token.children.slice(0, -1), scale), h('rt', text.trim())]);
 						}
 					}
 					case 'unixtime': {

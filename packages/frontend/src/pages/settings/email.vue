@@ -102,11 +102,11 @@ const emailNotification_receiveFollowRequest = ref($i.emailNotificationTypes.inc
 const saveNotificationSettings = () => {
 	misskeyApi('i/update', {
 		emailNotificationTypes: [
-			...[emailNotification_mention.value ? 'mention' : null],
-			...[emailNotification_reply.value ? 'reply' : null],
-			...[emailNotification_quote.value ? 'quote' : null],
-			...[emailNotification_follow.value ? 'follow' : null],
-			...[emailNotification_receiveFollowRequest.value ? 'receiveFollowRequest' : null],
+			emailNotification_mention.value ? 'mention' : null,
+			emailNotification_reply.value ? 'reply' : null,
+			emailNotification_quote.value ? 'quote' : null,
+			emailNotification_follow.value ? 'follow' : null,
+			emailNotification_receiveFollowRequest.value ? 'receiveFollowRequest' : null,
 		].filter(x => x != null),
 	});
 };
