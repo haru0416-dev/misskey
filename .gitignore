@@ -29,6 +29,7 @@ report.*.json
 playwright-report/
 test-results/
 coverage/
+.scannerwork/
 
 # Local config and secrets
 /.config/*
@@ -39,6 +40,7 @@ coverage/
 !/.config/playwright-devcontainer.yml
 /.claude/settings.local.json
 /.claude/.credentials.json
+/dev/sonarqube/.env
 /packages/backend/.config/
 *.pem
 ormconfig.json
