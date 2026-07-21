@@ -10,7 +10,8 @@
 		"packages/frontend/assets/**",
 		"packages/frontend/public/**",
 		"packages/i18n/src/autogen/**",
-		"packages/misskey-js/src/autogen/**"
+		"packages/misskey-js/src/autogen/**",
+		"**/public/**"
 	],
 	"ignoreBinaries": ["taskkill"],
 	"ignoreDependencies": [
@@ -37,7 +38,8 @@
 				"test-server/**/*.ts",
 				"test-federation/**/*.ts",
 				"rolldown.config.ts",
-				"drizzle.config.ts"
+				"drizzle.config.ts",
+				"vitest.config.*.ts"
 			]
 		},
 		"packages/frontend": {
@@ -50,7 +52,8 @@
 				"lib/**/*.ts",
 				"test/**/*.ts",
 				".storybook/*.{ts,tsx}",
-				"src/**/*.stories.impl.ts"
+				"src/**/*.stories.impl.ts",
+				"src/**/*.stories.meta.ts"
 			]
 		},
 		"packages/frontend-embed": {
@@ -63,7 +66,7 @@
 			"entry": ["utility/**/*.ts", "themes/**/*.ts", "@types/**/*.ts"]
 		},
 		"packages/misskey-js": {
-			"entry": ["src/index.ts", "test/**/*.ts", "generator/**/*.ts"]
+			"entry": ["src/index.ts", "test/**/*.ts", "generator/**/*.ts", "test-d/**/*.ts"]
 		},
 		"packages/i18n": {
 			"entry": ["src/index.ts", "build.ts", "scripts/**/*.ts"]
