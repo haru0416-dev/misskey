@@ -23,7 +23,13 @@ import {
 	fetchUserByIdOrFailFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
+	fetchRemoteUserByIdFromDatabase,
 } from '@/core/UserStore.js';
+import { renderEmoji, renderLikeForHonoApi } from '../rest/notes-ap.js';
+import { renderFollow } from '../rest/following.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
+import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
+import { fetchNoteReactionByIdFromDatabase } from '@/core/NoteReactionStore.js';
 import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
@@ -385,6 +391,63 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 
 	// Hono は /@:acct のようなセグメント内プレフィックス付きパラメータを解釈できないため、
 	// feed.ts と同じくワイルドカード+手動パースで /@acct (サブパスなし) のAP要求のみ処理する。
+	// Fastify 撤去 (f531161adc) で移植されず、SPA フォールバックに落ちて HTML を
+	// 返していた ActivityPub オブジェクト。リモートが uri を解決できなくなる。
+	app.get('/emojis/:emoji', async (c) => {
+		if (deps.meta.federation === 'none') return apError(403);
+
+		const emoji = await fetchEmojiByNameAndHostFromDatabase(deps.db, c.req.param('emoji'), null);
+		if (emoji == null || emoji.localOnly) return apError(404);
+
+		return apJson(c, withApContext(renderEmoji(deps.config, emoji)));
+	});
+
+	app.get('/likes/:like', async (c) => {
+		if (deps.meta.federation === 'none') return apError(403);
+
+		const reaction = await fetchNoteReactionByIdFromDatabase(deps.db, c.req.param('like'));
+		if (reaction == null) return apError(404);
+
+		const note = await fetchNoteByIdFromDatabase(deps.db, reaction.noteId);
+		if (note == null) return apError(404);
+
+		return apJson(c, withApContext(await renderLikeForHonoApi(deps, reaction, note)));
+	});
+
+	// フォローが成立する前にも参照されうるので、following の存在は確認しない (旧実装と同じ)
+	app.get('/follows/:follower/:followee', async (c) => {
+		if (deps.meta.federation === 'none') return apError(403);
+
+		const [follower, followee] = await Promise.all([
+			fetchLocalUserByIdFromDatabase(deps.db, c.req.param('follower')),
+			fetchRemoteUserByIdFromDatabase(deps.db, c.req.param('followee')),
+		]);
+		if (follower == null || followee == null) return apError(404);
+
+		return apJson(
+			c,
+			withApContext(renderFollow(deps.config, follower, followee) as unknown as Record<string, unknown>),
+		);
+	});
+
+	app.get('/follows/:followRequest', async (c) => {
+		if (deps.meta.federation === 'none') return apError(403);
+
+		const followRequest = await fetchFollowRequestByIdFromDatabase(deps.db, c.req.param('followRequest'));
+		if (followRequest == null) return apError(404);
+
+		const [follower, followee] = await Promise.all([
+			fetchLocalUserByIdFromDatabase(deps.db, followRequest.followerId),
+			fetchRemoteUserByIdFromDatabase(deps.db, followRequest.followeeId),
+		]);
+		if (follower == null || followee == null) return apError(404);
+
+		return apJson(
+			c,
+			withApContext(renderFollow(deps.config, follower, followee) as unknown as Record<string, unknown>),
+		);
+	});
+
 	app.get('*', async (c, next) => {
 		const pathname = new URL(c.req.url).pathname;
 		if (!pathname.startsWith('/@')) {

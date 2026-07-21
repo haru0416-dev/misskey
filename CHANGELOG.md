@@ -188,6 +188,7 @@
 - Enhance: Queue outboxの状態・lease・coordinatorを正規化し、BullMQ操作をDB row lock外へ分離して配送確認pollを指数backoff化
 - Fix: 非配信広告一覧のカーソル絞り込みを修正
 - Fix: ユーザーリスト・クリップのお気に入り登録競合時のAPIエラーを修正
+- Fix: ActivityPubのカスタム絵文字・リアクション(Like)・フォロー関係のオブジェクトURIがHTMLを返しており、リモートから解決できなくなっていた問題を修正
 - Fix: `mute/create` / `renote-mute/create` / `admin/system-webhook/test` にレートリミットが適用されていなかった問題を修正
 - Fix: `admin/roles/users` のAPI定義が認証不要と誤って宣言されていた問題を修正 (実装は認証必須のまま)
 - Fix: `hashtags/trend` のPOSTにキャッシュヘッダが付いていなかった問題を修正

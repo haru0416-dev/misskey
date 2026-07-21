@@ -54,7 +54,7 @@ export function resolveNoteReactionPagination(
 	return resolveDateIdPagination(idService, options);
 }
 
-async function fetchNoteReactionByIdFromDatabase(
+export async function fetchNoteReactionByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: NoteReactionRow['id'],
 ): Promise<NoteReactionRow | null> {
