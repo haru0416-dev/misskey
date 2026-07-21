@@ -234,7 +234,7 @@ export function useNoteCapture(props: {
 		emoji?: { name: string; url: string } | null;
 	}): void {
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
-		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
+		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replaceAll(/\ufe0f/g, '');
 		if (reactionUserMap.get(ctx.userId) === normalizedName) return;
 		reactionUserMap.set(ctx.userId, normalizedName);
 
@@ -258,7 +258,7 @@ export function useNoteCapture(props: {
 		emoji?: { name: string; url: string } | null;
 	}): void {
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
-		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
+		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replaceAll(/\ufe0f/g, '');
 
 		// 確実に一度リアクションされて取り消されている場合のみ処理をとめる（APIで初回読み込み→Streamでアップデート等の場合、reactionUserMapに情報がないため）
 		if (reactionUserMap.get(ctx.userId) === noReaction) return;

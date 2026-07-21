@@ -364,7 +364,7 @@ export async function handleHonoApiINotifications(
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
-	if (params.includeTypes && params.includeTypes.length === 0) return [];
+	if (params.includeTypes?.length === 0) return [];
 	if (notificationTypes.every((type) => params.excludeTypes?.includes(type))) return [];
 
 	const includeTypes = params.includeTypes?.filter(
@@ -455,7 +455,7 @@ export async function handleHonoApiINotificationsGrouped(
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
-	if (params.includeTypes && params.includeTypes.length === 0) return [];
+	if (params.includeTypes?.length === 0) return [];
 	if (notificationTypes.every((type) => params.excludeTypes?.includes(type))) return [];
 
 	const includeTypes = params.includeTypes?.filter(

@@ -271,7 +271,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 	}
 
 	//#region Fetch user
-	if ($i && $i.token) {
+	if ($i?.token) {
 		if (_DEV_) {
 			console.log('account cache found. refreshing...');
 		}

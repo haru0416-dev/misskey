@@ -831,7 +831,7 @@ export async function handleHonoApiNotesHybridTimeline(
 				alwaysIncludeMyNotes: true,
 				excludePureRenotes: !params.withRenotes,
 				noteFilter: (note) => {
-					if (note.reply && note.reply.visibility === 'followers') {
+					if (note.reply?.visibility === 'followers') {
 						if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) return false;
 					}
 
@@ -1325,7 +1325,7 @@ export async function handleHonoApiNotesTimeline(
 				alwaysIncludeMyNotes: true,
 				excludePureRenotes: !params.withRenotes,
 				noteFilter: (note) => {
-					if (note.reply && note.reply.visibility === 'followers') {
+					if (note.reply?.visibility === 'followers') {
 						if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) return false;
 					}
 

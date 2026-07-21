@@ -30,7 +30,7 @@ module.exports.getLanguagePlugins = (ts, options) => {
 	const { configFilePath } = options.options;
 	const vueOptions =
 		typeof configFilePath === 'string'
-			? core.createParsedCommandLine(ts, ts.sys, configFilePath.replace(windowsPathReg, '/')).vueOptions
+			? core.createParsedCommandLine(ts, ts.sys, configFilePath.replaceAll(windowsPathReg, '/')).vueOptions
 			: core.createParsedCommandLineByJson(ts, ts.sys, (options.host ?? ts.sys).getCurrentDirectory(), {}).vueOptions;
 
 	return {
