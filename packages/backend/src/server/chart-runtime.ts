@@ -56,7 +56,7 @@ class HonoDriveChartWriter extends Chart<typeof driveChartSchema> {
 
 	public async update(file: MiDriveFile, isAdditional: boolean): Promise<void> {
 		const fileSizeKb = file.size / 1000;
-		await this.commit(file.userHost === null ? {
+		this.commit(file.userHost === null ? {
 			'local.incCount': isAdditional ? 1 : 0,
 			'local.incSize': isAdditional ? fileSizeKb : 0,
 			'local.decCount': isAdditional ? 0 : 1,
@@ -82,7 +82,7 @@ class HonoPerUserDriveChartWriter extends Chart<typeof perUserDriveChartSchema> 
 	public async update(file: MiDriveFile, isAdditional: boolean): Promise<void> {
 		if (file.userId == null) return;
 		const fileSizeKb = file.size / 1000;
-		await this.commit({
+		this.commit({
 			'totalCount': isAdditional ? 1 : -1,
 			'totalSize': isAdditional ? fileSizeKb : -fileSizeKb,
 			'incCount': isAdditional ? 1 : 0,
@@ -104,7 +104,7 @@ class HonoInstanceChartWriter extends Chart<typeof instanceChartSchema> {
 
 	public async updateDrive(file: MiDriveFile, isAdditional: boolean): Promise<void> {
 		const fileSizeKb = file.size / 1000;
-		await this.commit({
+		this.commit({
 			'drive.totalFiles': isAdditional ? 1 : -1,
 			'drive.incFiles': isAdditional ? 1 : 0,
 			'drive.incUsage': isAdditional ? fileSizeKb : 0,
@@ -114,27 +114,27 @@ class HonoInstanceChartWriter extends Chart<typeof instanceChartSchema> {
 	}
 
 	public async requestReceived(host: string): Promise<void> {
-		await this.commit({
+		this.commit({
 			'requests.received': 1,
 		}, domainToASCII(host.toLowerCase()));
 	}
 
 	public async requestSent(host: string, isSucceeded: boolean): Promise<void> {
-		await this.commit({
+		this.commit({
 			'requests.succeeded': isSucceeded ? 1 : 0,
 			'requests.failed': isSucceeded ? 0 : 1,
 		}, domainToASCII(host.toLowerCase()));
 	}
 
 	public async newUser(host: string): Promise<void> {
-		await this.commit({
+		this.commit({
 			'users.total': 1,
 			'users.inc': 1,
 		}, domainToASCII(host.toLowerCase()));
 	}
 
 	public async updateFollowing(host: string, isAdditional: boolean): Promise<void> {
-		await this.commit({
+		this.commit({
 			'following.total': isAdditional ? 1 : -1,
 			'following.inc': isAdditional ? 1 : 0,
 			'following.dec': isAdditional ? 0 : 1,
@@ -142,7 +142,7 @@ class HonoInstanceChartWriter extends Chart<typeof instanceChartSchema> {
 	}
 
 	public async updateFollowers(host: string, isAdditional: boolean): Promise<void> {
-		await this.commit({
+		this.commit({
 			'followers.total': isAdditional ? 1 : -1,
 			'followers.inc': isAdditional ? 1 : 0,
 			'followers.dec': isAdditional ? 0 : 1,
@@ -150,7 +150,7 @@ class HonoInstanceChartWriter extends Chart<typeof instanceChartSchema> {
 	}
 
 	public async updateNote(host: string, note: Pick<MiNote, 'replyId' | 'renoteId' | 'fileIds'>, isAdditional: boolean): Promise<void> {
-		await this.commit({
+		this.commit({
 			'notes.total': isAdditional ? 1 : -1,
 			'notes.inc': isAdditional ? 1 : 0,
 			'notes.dec': isAdditional ? 0 : 1,
@@ -174,7 +174,7 @@ class HonoNotesChartWriter extends Chart<typeof notesChartSchema> {
 	public async update(note: Pick<MiNote, 'userHost' | 'replyId' | 'renoteId' | 'fileIds'>, isAdditional: boolean): Promise<void> {
 		const prefix = note.userHost === null ? 'local' : 'remote';
 
-		await this.commit({
+		this.commit({
 			[`${prefix}.total`]: isAdditional ? 1 : -1,
 			[`${prefix}.inc`]: isAdditional ? 1 : 0,
 			[`${prefix}.dec`]: isAdditional ? 0 : 1,
@@ -235,14 +235,14 @@ class HonoPerUserPvChartWriter extends Chart<typeof perUserPvChartSchema> {
 	}
 
 	public async commitByUser(user: { id: MiUser['id'] }, key: string): Promise<void> {
-		await this.commit({
+		this.commit({
 			'upv.user': [key],
 			'pv.user': 1,
 		}, user.id);
 	}
 
 	public async commitByVisitor(user: { id: MiUser['id'] }, key: string): Promise<void> {
-		await this.commit({
+		this.commit({
 			'upv.visitor': [key],
 			'pv.visitor': 1,
 		}, user.id);
@@ -267,7 +267,7 @@ class HonoActiveUsersChartWriter extends Chart<typeof activeUsersChartSchema> {
 	}
 
 	public async write(user: { id: MiUser['id']; host: null }): Promise<void> {
-		await this.commit({
+		this.commit({
 			'write': [user.id],
 		});
 	}
@@ -279,7 +279,7 @@ class HonoActiveUsersChartWriter extends Chart<typeof activeUsersChartSchema> {
 		const createdAt = parseId(user.id).date;
 		const age = Date.now() - createdAt.getTime();
 
-		await this.commit({
+		this.commit({
 			'read': [user.id],
 			'registeredWithinWeek': age < week ? [user.id] : [],
 			'registeredWithinMonth': age < month ? [user.id] : [],
@@ -407,7 +407,7 @@ class HonoFederationChartWriter extends Chart<typeof federationChartSchema> {
 	}
 
 	public async deliverd(host: string, succeeded: boolean): Promise<void> {
-		await this.commit(succeeded ? {
+		this.commit(succeeded ? {
 			'deliveredInstances': [host],
 		} : {
 			'stalled': [host],
@@ -415,7 +415,7 @@ class HonoFederationChartWriter extends Chart<typeof federationChartSchema> {
 	}
 
 	public async inbox(host: string): Promise<void> {
-		await this.commit({
+		this.commit({
 			'inboxInstances': [host],
 		});
 	}
@@ -450,7 +450,7 @@ class HonoUsersChartWriter extends Chart<typeof usersChartSchema> {
 	public async update(user: { id: MiUser['id']; host: MiUser['host'] }, isAdditional: boolean): Promise<void> {
 		const prefix = user.host == null ? 'local' : 'remote';
 
-		await this.commit({
+		this.commit({
 			[`${prefix}.total`]: isAdditional ? 1 : -1,
 			[`${prefix}.inc`]: isAdditional ? 1 : 0,
 			[`${prefix}.dec`]: isAdditional ? 0 : 1,
@@ -520,19 +520,19 @@ class HonoApRequestChartWriter extends Chart<typeof apRequestChartSchema> {
 	}
 
 	public async deliverSucc(): Promise<void> {
-		await this.commit({
+		this.commit({
 			'deliverSucceeded': 1,
 		});
 	}
 
 	public async deliverFail(): Promise<void> {
-		await this.commit({
+		this.commit({
 			'deliverFailed': 1,
 		});
 	}
 
 	public async inbox(): Promise<void> {
-		await this.commit({
+		this.commit({
 			'inboxReceived': 1,
 		});
 	}

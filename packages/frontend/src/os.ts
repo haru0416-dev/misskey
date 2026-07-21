@@ -946,7 +946,7 @@ export async function launchUploader(
 	},
 ): Promise<Misskey.entities.DriveFile[]> {
 	return new Promise((res, rej) => {
-		if (files.length === 0) return rej();
+		if (files.length === 0) return rej(new Error('no file selected'));
 		let dispose: () => void;
 		popupAsyncWithDialog(
 			import('@/features/drive/components/MkUploaderDialog.vue').then((x) => x.default),
@@ -958,7 +958,7 @@ export async function launchUploader(
 			},
 			{
 				done: (driveFiles) => {
-					if (driveFiles.length === 0) return rej();
+					if (driveFiles.length === 0) return rej(new Error('no file selected'));
 					res(driveFiles);
 				},
 				closed: () => dispose(),

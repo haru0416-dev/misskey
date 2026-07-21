@@ -81,7 +81,7 @@ async function main() {
 			await fsp.writeFile(`./built/tabler-icons-${key}.woff2`, buffer);
 
 			const unicodeRangeString = (() => {
-				const values = unicodeValues.sort((a, b) => a - b);
+				const values = unicodeValues.toSorted((a, b) => a - b);
 				const ranges = [];
 
 				for (let i = 0; i < values.length; i++) {

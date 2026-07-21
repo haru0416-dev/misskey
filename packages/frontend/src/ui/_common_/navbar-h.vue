@@ -185,7 +185,6 @@ onMounted(() => {
 
 .instance {
 	display: inline-block;
-	position: relative;
 	width: 56px;
 	height: 100%;
 	vertical-align: bottom;

@@ -9,7 +9,7 @@ import { omitUndefined } from '@/misc/clone.js';
 import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
-import { addAliasesToEmojisByIdsInDatabase, deleteEmojiByIdFromDatabase, deleteEmojisByIdsFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, invalidateEmojiCache, listEmojisByIdsFromDatabase, listEmojisByIdsOrFailFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, removeAliasesFromEmojisByIdsInDatabase, updateEmojiInDatabase, updateEmojisByIdsReturningFromDatabase } from '@/core/EmojiStore.js';
+import { addAliasesToEmojisByIdsInDatabase, deleteEmojiByIdFromDatabase, deleteEmojisByIdsFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, invalidateEmojiCache, listEmojisByIdsOrFailFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, removeAliasesFromEmojisByIdsInDatabase, updateEmojiInDatabase, updateEmojisByIdsReturningFromDatabase } from '@/core/EmojiStore.js';
 import { logModerationEventInDatabase, logModerationEventsInDatabase } from '@/core/ModerationLogLogic.js';
 import { addDbJob, type DbQueue } from '@/core/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';

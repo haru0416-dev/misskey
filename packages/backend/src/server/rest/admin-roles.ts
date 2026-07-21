@@ -30,7 +30,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Redis } from 'ioredis';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';

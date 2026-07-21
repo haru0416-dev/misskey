@@ -14,10 +14,8 @@ import { updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js'
 import { RootUserAlreadyAssignedError } from '@/core/SignupStore.js';
 import { fetchUserProfileByEmailFromDatabase } from '@/core/UserProfileStore.js';
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import type { SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { omitUndefined } from '@/misc/clone.js';
-import type { MiUser } from '@/models/_.js';
 import { descriptionSchema, localUsernameSchema, passwordSchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { hashPassword } from '@/misc/password.js';

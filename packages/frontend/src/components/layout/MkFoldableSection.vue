@@ -93,7 +93,6 @@ onBeforeUnmount(() => {
 
 .header {
 	display: flex;
-	position: relative;
 	z-index: 10;
 	position: sticky;
 	top: var(--MI-stickyTop, 0px);

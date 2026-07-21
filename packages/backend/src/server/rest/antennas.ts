@@ -635,7 +635,7 @@ export async function handleHonoApiAntennasNotes(
 			? rawIds.filter(id => id < untilId).sort((a, b) => a > b ? -1 : 1)
 			: sinceId
 				? rawIds.filter(id => id > sinceId).sort((a, b) => a < b ? -1 : 1)
-				: rawIds.sort((a, b) => a > b ? -1 : 1);
+				: rawIds.toSorted((a, b) => a > b ? -1 : 1);
 	noteIds = noteIds.slice(0, params.limit);
 
 	if (noteIds.length === 0) return [];

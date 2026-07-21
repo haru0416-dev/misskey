@@ -75,9 +75,7 @@ const POLLING_INTERVAL =
 		? MIN_POLLING_INTERVAL * 1.5 * 1.5
 		: prefer.pollingInterval === 2
 			? MIN_POLLING_INTERVAL * 1.5
-			: prefer.pollingInterval === 3
-				? MIN_POLLING_INTERVAL
-				: MIN_POLLING_INTERVAL;
+			: MIN_POLLING_INTERVAL;
 
 const pollingScheduler = new PollingScheduler(async () => {
 	const ids = [...pollingQueue.entries()]

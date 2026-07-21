@@ -30,7 +30,6 @@ import { swRegisterParamDef, swShowRegistrationParamDef, swUpdateRegistrationPar
 import { pinnedUsersParamDef } from '@/server/rest/user.js';
 import { verifyEmailParamDef } from '@/server/rest/verify-email.js';
 import { z } from 'zod';
-import * as Redis from 'ioredis';
 import { MINUTE, HOUR } from '@/const.js';
 
 export const endpointMetas = {

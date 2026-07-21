@@ -13,7 +13,7 @@ const targetExtsToSkip = new Set([
 	'.7z',
 ]);
 
-const extRegExp = /\.[0-9a-zA-Z]+$/i;
+const extRegExp = /\.[0-9a-zA-Z]+$/;
 
 /**
  * 与えられた拡張子とファイル名が一致しているかどうかを確認し、

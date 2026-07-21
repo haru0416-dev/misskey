@@ -19,9 +19,6 @@ export async function workerMain(config: Config) {
 	if (envOption.onlyServer) {
 		const runtime = await server(config);
 		dispose = () => runtime.dispose();
-	} else if (envOption.onlyQueue) {
-		const runtime = await jobQueue(config);
-		dispose = () => runtime.close();
 	} else {
 		const runtime = await jobQueue(config);
 		dispose = () => runtime.close();

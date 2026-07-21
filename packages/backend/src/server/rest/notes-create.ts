@@ -944,9 +944,10 @@ export async function createNoteForHonoApi(
 	const policies = await getHonoApiRolePolicies(deps, user as MiUser);
 
 	if (data.visibility === 'public' && data.channel == null) {
-		if (isKeyWordIncludedForHonoApi(data.cw ?? data.text ?? '', deps.meta.sensitiveWords)) {
-			data.visibility = 'home';
-		} else if (policies.canPublicNote === false) {
+		if (
+			isKeyWordIncludedForHonoApi(data.cw ?? data.text ?? '', deps.meta.sensitiveWords) ||
+			policies.canPublicNote === false
+		) {
 			data.visibility = 'home';
 		}
 	}
@@ -1108,9 +1109,10 @@ export async function fetchAndCreateNoteForHonoApi(
 			if (blocked) throw youHaveBeenBlockedError();
 		}
 
-		if (renote.visibility === 'followers' && renote.userId !== user.id) {
-			throw cannotRenoteDueToVisibilityError();
-		} else if (renote.visibility === 'specified') {
+		if (
+			(renote.visibility === 'followers' && renote.userId !== user.id) ||
+			renote.visibility === 'specified'
+		) {
 			throw cannotRenoteDueToVisibilityError();
 		}
 

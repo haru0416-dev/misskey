@@ -14,7 +14,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
@@ -200,7 +200,7 @@ export async function handleHonoApiRolesNotes(
 			? rawIds.filter(id => id < untilId).sort((a, b) => a > b ? -1 : 1)
 			: sinceId
 				? rawIds.filter(id => id > sinceId).sort((a, b) => a < b ? -1 : 1)
-				: rawIds.sort((a, b) => a > b ? -1 : 1);
+				: rawIds.toSorted((a, b) => a > b ? -1 : 1);
 	noteIds = noteIds.slice(0, params.limit);
 
 	if (noteIds.length === 0) return [];

@@ -4,7 +4,7 @@
  */
 
 import { toUnicode } from 'punycode.js';
-import { defineAsyncComponent, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { host, url } from '@shared/utility/config.js';
 import type { Router } from '@/router.js';

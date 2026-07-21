@@ -6,7 +6,6 @@
 import { z } from 'zod';
 import { listUserIpsFromDatabase } from '@/core/UserIpStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { parseHonoApiParams } from './validation.js';
 

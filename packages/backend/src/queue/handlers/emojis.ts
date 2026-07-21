@@ -140,7 +140,9 @@ export async function handleHonoQueueImportCustomEmojis(deps: HonoQueueEmojisDep
 
 		for (const record of meta.emojis) {
 			if (!record.downloaded) continue;
-			if (!/^[a-zA-Z0-9_]+?([a-zA-Z0-9.]+)?$/.test(record.fileName)) continue;
+			// アップロードされた zip 由来の値なので、バックトラックが二次時間になる形は避ける
+			// (`[a-zA-Z0-9_]+?` と `[a-zA-Z0-9.]+` は英数字が重複するため分割点が曖昧になっていた)
+			if (!/^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9.]*)?$/.test(record.fileName)) continue;
 			const emojiInfo = record.emoji;
 			if (!/^[a-zA-Z0-9_]+$/.test(emojiInfo.name)) continue;
 			const emojiPath = outputPath + '/' + record.fileName;

@@ -22,7 +22,7 @@ export type HealthDependencies = {
 
 export async function checkHealth(deps: HealthDependencies): Promise<boolean> {
 	return await Promise.all([
-		new Promise<void>((resolve, reject) => readyRef.value ? resolve() : reject()),
+		new Promise<void>((resolve, reject) => readyRef.value ? resolve() : reject(new Error('server is not ready'))),
 		deps.redis.ping(),
 		deps.redisForPub.ping(),
 		deps.redisForSub.ping(),

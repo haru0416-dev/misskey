@@ -155,7 +155,7 @@ export function createWebAuthnService(
 	 * @returns authenticationOptions
 	 */
 	async function initiateSignInWithPasskeyAuthentication(context: string): Promise<PublicKeyCredentialRequestOptionsJSON> {
-		const relyingParty = await getRelyingParty();
+		const relyingParty = getRelyingParty();
 
 		const authenticationOptions = await generateAuthenticationOptions({
 			rpID: relyingParty.rpId,
@@ -185,7 +185,7 @@ export function createWebAuthnService(
 			throw new IdentifiableError('36b96a7d-b547-412d-aeed-2d611cdc8cdc', 'Unknown Webauthn key');
 		}
 
-		const relyingParty = await getRelyingParty();
+		const relyingParty = getRelyingParty();
 
 		let verification;
 		try {

@@ -17,7 +17,7 @@ import { omitUndefined } from '@/misc/clone.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
-import type { Packed, SchemaType } from '@/misc/json-schema.js';
+import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAd } from '@/models/Ad.js';
 import type { MiLocalUser } from '@/models/User.js';

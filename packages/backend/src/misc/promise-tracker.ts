@@ -19,5 +19,6 @@ export function trackPromise(promise: Promise<unknown>) {
 }
 
 export async function allSettled(): Promise<void> {
-	await Promise.allSettled([...promiseRefs].map(r => r.deref()));
+	// WeakRef.deref() は回収済みなら undefined を返すので、Promise だけを渡す
+	await Promise.allSettled([...promiseRefs].map(r => r.deref()).filter(p => p != null));
 }

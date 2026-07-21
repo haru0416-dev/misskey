@@ -182,27 +182,6 @@ export async function countNoteReactionsFromDatabase(
 	return row?.count ?? 0;
 }
 
-export async function listNoteReactionsByUserIdAndNoteIdsFromDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-	noteIds: MiNote['id'][],
-): Promise<NoteReactionRow[]> {
-	if (noteIds.length === 0) return [];
-
-	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
-	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-	const statement = preparedQueryFor(db, 'noteReaction:byUserIdAndNoteIds', () => db
-		.select()
-		.from(noteReaction)
-		.where(and(
-			eq(noteReaction.userId, sql.placeholder('userId')),
-			sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
-		))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
-
-	return await statement.execute({ userId, noteIds });
-}
-
 export async function listNoteReactionsByNoteIdFromDatabase(
 	db: MiDrizzleDatabase,
 	noteId: MiNote['id'],
