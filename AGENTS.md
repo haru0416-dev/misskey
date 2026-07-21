@@ -94,7 +94,8 @@
 
 | 用途 | コマンド |
 | --- | --- |
-| 全体 lint (oxlint + typecheck) | `bun run lint` |
+| 全体 lint (oxlint + oxfmt + typecheck) | `bun run lint` |
+| 整形の自動修正 | `bun run format:ox` |
 | Backend unit test | `bun run --bun --filter backend test` |
 | Backend e2e test | `bun run --bun --filter backend test:e2e` |
 | Backend federation test | `bun run --bun --filter backend test:fed` |
@@ -107,6 +108,8 @@
 | 開発サーバー (backend + frontend watch) | `bun run dev` |
 
 **注意:** backend テスト (`test` / `test:e2e` / `test:fed`) 実行前に `.config/test.yml` が必要 (`cp .github/misskey/test.yml .config/test.yml` で作成)。
+
+**grep する時の注意:** `.vue` は oxfmt の対象外なので、アロー関数の書式が `.ts` と揃っていない (`.ts` は `(x) =>` に統一済み、`.vue` は `x =>` が 73%)。`packages/` 全体を検索するときは `(x) =>` と `x =>` の両方を試すこと。理由と再検討の手掛かりは [.oxfmtrc.json](.oxfmtrc.json) の `$comment` を参照。
 
 ---
 
