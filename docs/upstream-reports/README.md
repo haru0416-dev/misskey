@@ -22,10 +22,14 @@ upstream Misskey が気づかずに継承しているバグを複数見つけた
 | [05](./05-drive-capacity-toctou.md) | ドライブ容量チェックの TOCTOU で容量超過 | 未報告バグ | ✅ usage 120>100 | 提案(直列化要) | 公開 issue + PR |
 | [99](./99-SECURITY-admin-privesc.md) | admin reset-password/unset-mfa の権限昇格 | root保護=意図的/admin間=未認識 | (e2e) | 提案 | **非公開 Security Advisory** |
 
-- `submissions/` — **そのまま貼れる英語の提出文面**（upstream の慣習: issue/PR は英語推奨）:
-  - `issues.md` — 5 件の issue 本文（bug-report テンプレ形式）
-  - `pull-requests.md` — #01/#02/#03 の PR タイトル+本文（+CHANGELOG 文言）
-  - `security-advisory.md` — #99 の非公開 Advisory 文面
+- `submissions/` — **そのまま貼れる提出文面**。
+  - **日本語版（推奨・主）**: `issues-ja.md` / `pull-requests-ja.md` / `security-advisory-ja.md`
+  - 英語版（fallback）: `issues.md` / `pull-requests.md` / `security-advisory.md`
+  - **なぜ日本語**: upstream の実運用は日本語が主流。直近 100 件の実測で **PR: 日本語 56 / 英語 5**、
+    **Issue: 日本語 37 / 英語 2**（英語はほぼ依存 bot）。house style は「タイトルの
+    conventional-commit prefix は英語 + 要約/本文は日本語」（例
+    `fix(frontend): …の問題を修正`）。CONTRIBUTING も「機械翻訳の日本語より原語が読みやすい」と言っており、
+    投稿者が日本語話者なら原語＝日本語が最も適合する。
 - `patches/*.patch` — 検証済み修正の diff（#01/#02/#03）。`git apply` で upstream develop に当たる。
 - `repros/*.repro.ts` — upstream で動かした再現テスト（`packages/backend/test/unit/` に置いて実行）。
 
