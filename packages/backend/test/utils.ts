@@ -11,16 +11,15 @@ import { randomUUID } from 'node:crypto';
 import { inspect } from 'node:util';
 import WebSocket, { ClientOptions } from 'ws';
 import * as htmlParser from 'node-html-parser';
-import { loadConfig } from '@/config.js';
-import { createDrizzlePool } from '@/drizzle.js';
-import { resetDatabase, runMigrations } from '@/migration-runner.js';
 import type * as misskey from 'misskey-js';
 import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
 import type { HonoApiErrorBody } from '@/server/rest/error.js';
 import { omitUndefined } from '@/misc/clone.js';
+import { resolveStreamingUrl, resolveTargetUrl, startJobQueue, testTarget } from './target.js';
 
-export { server as startServer, jobQueue as startJobQueue } from '@/boot/common.js';
+export { resolveStreamingUrl, resolveTargetUrl, startJobQueue } from './target.js';
+export type { TestJobQueueRuntime } from './target.js';
 
 export interface UserToken {
 	token: string;
@@ -36,10 +35,10 @@ export type SystemWebhookPayload = {
 	body: any;
 };
 
-const config = loadConfig();
-export const port = 'tcp' in config.server.listen ? config.server.listen.tcp.port : 3000;
-export const origin = config.instance.url;
-export const host = new URL(config.instance.url).host;
+export const port = Number(testTarget.transportUrl.port || (testTarget.transportUrl.protocol === 'https:' ? 443 : 80));
+export const origin = testTarget.instanceUrl.origin;
+export const host = testTarget.instanceUrl.host;
+export const oauthClientPort = testTarget.oauthClientPort;
 
 export const WEBHOOK_HOST = 'http://localhost:15080';
 export const WEBHOOK_PORT = 15080;
@@ -125,7 +124,7 @@ export const api = async <E extends keyof misskey.Endpoints, P extends misskey.E
 };
 
 export const relativeFetch = async (path: string, init?: RequestInit | undefined) => {
-	return await fetch(new URL(path, `http://127.0.0.1:${port}/`).toString(), init);
+	return await fetch(resolveTargetUrl(path), init);
 };
 
 export function randomString(chars = 'abcdefghijklmnopqrstuvwxyz0123456789', length = 16) {
@@ -505,7 +504,7 @@ export function connectStream<C extends keyof misskey.Channels>(
 	params?: misskey.Channels[C]['params'],
 ): Promise<WebSocket> {
 	return new Promise((res, rej) => {
-		const url = new URL(`ws://127.0.0.1:${port}/streaming`);
+		const url = resolveStreamingUrl();
 		const options: ClientOptions = {};
 		if (user.bearer) {
 			options.headers = { Authorization: `Bearer ${user.token}` };
@@ -765,13 +764,8 @@ export async function initTestDb(justBorrow = false, _initEntities?: unknown[]) 
 	if (process.env['NODE_ENV'] !== 'test') throw new Error('NODE_ENV is not a test');
 
 	if (!justBorrow) {
-		const pool = createDrizzlePool(config);
-		try {
-			await resetDatabase(pool);
-			await runMigrations(pool);
-		} finally {
-			await pool.end();
-		}
+		const { resetTestDatabase } = await import('./fixtures.js');
+		await resetTestDatabase();
 	}
 
 	return {
@@ -780,7 +774,7 @@ export async function initTestDb(justBorrow = false, _initEntities?: unknown[]) 
 }
 
 export async function sendEnvUpdateRequest(params: { key: string; value?: string }) {
-	const res = await fetch(`http://localhost:${port + 1000}/env`, {
+	const res = await fetch(new URL('env', testTarget.controlUrl), {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -794,7 +788,7 @@ export async function sendEnvUpdateRequest(params: { key: string; value?: string
 }
 
 export async function sendEnvResetRequest() {
-	const res = await fetch(`http://localhost:${port + 1000}/env-reset`, {
+	const res = await fetch(new URL('env-reset', testTarget.controlUrl), {
 		method: 'POST',
 		body: JSON.stringify({}),
 	});

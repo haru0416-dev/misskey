@@ -8,13 +8,14 @@ process.env['NODE_ENV'] = 'test';
 import * as assert from 'assert';
 import { describe, beforeAll, test } from 'vitest';
 import * as http from 'node:http';
+import * as https from 'node:https';
 import type { IncomingMessage } from 'node:http';
 import {
 	api,
 	createAppToken,
 	failedApiCall,
-	port,
 	relativeFetch,
+	resolveTargetUrl,
 	signup,
 	successfulApiCall,
 	uploadFile,
@@ -25,11 +26,11 @@ import type * as misskey from 'misskey-js';
 /** /streaming へのWebSocketアップグレード要求を送り、拒否時のHTTPレスポンスを返す */
 function requestStreamingUpgrade(headers: Record<string, string>): Promise<IncomingMessage> {
 	return new Promise((resolve, reject) => {
-		const req = http.get(
+		const url = resolveTargetUrl('streaming');
+		const client = url.protocol === 'https:' ? https : http;
+		const req = client.get(
+			url,
 			{
-				host: '127.0.0.1',
-				port,
-				path: '/streaming',
 				headers: {
 					...headers,
 					Connection: 'Upgrade',

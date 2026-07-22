@@ -19,10 +19,7 @@ import {
 	userList,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { loadConfig } from '@/config.js';
-import { updateAntennaInDatabase } from '@/core/AntennaStore.js';
-import { DEFAULT_POLICIES } from '@/core/role-policies.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import { DEFAULT_POLICIES, openTestDatabase, type TestDatabase, updateAntennaInDatabase } from '../fixtures.js';
 
 const compareBy =
 	<T extends { id: string }>(selector: (s: T) => string = (s: T): string => s.id) =>
@@ -78,14 +75,11 @@ describe('アンテナ', () => {
 	let testChannel: misskey.entities.Channel;
 	let testMutedChannel: misskey.entities.Channel;
 
-	let pool: MiDrizzlePool | undefined;
-	let db: MiDrizzleDatabase;
+	let database: TestDatabase;
 
 	beforeAll(
 		async () => {
-			const config = loadConfig();
-			pool = createDrizzlePool(config);
-			db = createDrizzleDatabase(pool, config);
+			database = openTestDatabase();
 			root = await signup({ username: 'root' });
 			alice = await signup({ username: 'alice' });
 			alicePost = await post(alice, { text: 'test' });
@@ -149,7 +143,7 @@ describe('アンテナ', () => {
 	);
 
 	afterAll(async () => {
-		await pool?.end();
+		await database.close();
 	});
 
 	beforeEach(async () => {
@@ -985,7 +979,7 @@ describe('アンテナ', () => {
 				parameters: { ...defaultParam, keywords: [[keyword]] },
 				user: alice,
 			});
-			await updateAntennaInDatabase(db, antenna.id, { isActive: false, lastUsedAt: new Date(0) });
+			await updateAntennaInDatabase(database, antenna.id, { isActive: false, lastUsedAt: new Date(0) });
 
 			await successfulApiCall({ endpoint: 'antennas/notes', parameters: { antennaId: antenna.id }, user: alice });
 

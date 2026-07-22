@@ -11,8 +11,8 @@ import { describe, beforeAll, test } from 'vitest';
 import { entities } from 'misskey-js';
 import { Redis } from 'ioredis';
 import { SignupResponse, Note } from 'misskey-js/entities.js';
+import { fixtureConfig } from '../fixtures.js';
 import { api, initTestDb, post, randomString, sendEnvUpdateRequest, signup, uploadFile, UserToken } from '../utils.js';
-import { loadConfig } from '@/config.js';
 
 function genHost() {
 	return randomString() + '.example.com';
@@ -88,7 +88,7 @@ describe('Timelines', () => {
 
 	beforeAll(
 		async () => {
-			redisForTimelines = new Redis(loadConfig().valkey.timelines);
+			redisForTimelines = new Redis(fixtureConfig.valkey.timelines);
 			root = await signup({ username: 'root' });
 		},
 		1000 * 60 * 2,

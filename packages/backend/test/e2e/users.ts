@@ -8,13 +8,15 @@ process.env['NODE_ENV'] = 'test';
 import * as assert from 'assert';
 import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
 import { inspect } from 'node:util';
+import {
+	DEFAULT_POLICIES,
+	createUserWithProfileAndPublickeyInDatabase,
+	genId,
+	openTestDatabase,
+	type TestDatabase,
+} from '../fixtures.js';
 import { api, post, role, signup, successfulApiCall, testPaginationConsistency, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
-import { loadConfig } from '@/config.js';
-import { DEFAULT_POLICIES } from '@/core/role-policies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined as stripUndefined } from '@/misc/clone.js';
 
 describe('ユーザー', () => {
@@ -204,8 +206,7 @@ describe('ユーザー', () => {
 	let userFollowRequesting: misskey.entities.SignupResponse;
 	let userFollowRequested: misskey.entities.SignupResponse;
 
-	let pool: MiDrizzlePool | undefined;
-	let db: MiDrizzleDatabase;
+	let database: TestDatabase;
 
 	// 連合の実サーバーは立てず、リモートユーザーをDBに直接用意する。
 	// isExplorable はデフォルト true だが、既存の一覧系テストは origin: 'local' (デフォルト) で
@@ -214,12 +215,11 @@ describe('ユーザー', () => {
 	const createRemoteUser = async (
 		options: { host?: string; tags?: string[] } = {},
 	): Promise<{ id: string; username: string; host: string }> => {
-		const config = loadConfig();
 		const suffix = `${Date.now().toString(36).slice(-6)}x${++remoteUserCounter}`;
 		const host = options.host ?? `users-remote-${suffix}.example`;
 		const id = genId();
 		const username = `uremote${suffix}`;
-		await createUserWithProfileAndPublickeyInDatabase(db, {
+		await createUserWithProfileAndPublickeyInDatabase(database, {
 			user: {
 				id,
 				username,
@@ -241,14 +241,12 @@ describe('ユーザー', () => {
 	};
 
 	afterAll(async () => {
-		await pool?.end();
+		await database.close();
 	});
 
 	beforeAll(
 		async () => {
-			const config = loadConfig();
-			pool = createDrizzlePool(config);
-			db = createDrizzleDatabase(pool, config);
+			database = openTestDatabase();
 			root = await signup({ username: 'root' });
 			alice = await signup({ username: 'alice' });
 			aliceNote = await post(alice, { text: 'test' });

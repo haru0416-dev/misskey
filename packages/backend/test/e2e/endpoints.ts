@@ -13,104 +13,8 @@ import bcrypt from 'bcryptjs';
 import * as Bull from 'bullmq';
 import { inArray } from 'drizzle-orm';
 import { describe, beforeAll, afterAll, test, expect } from 'vitest';
-import { loadConfig } from '@/config.js';
-import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
-import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
-import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
-import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
-import {
-	createAbuseUserReportInDatabase,
-	fetchAbuseUserReportByIdOrFailFromDatabase,
-} from '@/core/AbuseUserReportStore.js';
-import {
-	createBlockingInDatabase,
-	deleteBlockingByIdFromDatabase,
-	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
-} from '@/core/BlockingStore.js';
-import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
-import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
-import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
-import { createChannelInDatabase, updateChannelInDatabase } from '@/core/ChannelStore.js';
-import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
-import { createClipInDatabase } from '@/core/ClipStore.js';
-import {
-	createDriveFileInDatabase,
-	fetchDriveFileByIdFromDatabase,
-	fetchDriveFileByUrlFromDatabase,
-	updateDriveFileInDatabase,
-} from '@/core/DriveFileStore.js';
-import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@/core/DriveFolderStore.js';
-import {
-	fetchEmojiByIdFromDatabase,
-	fetchEmojiByIdOrFailFromDatabase,
-	insertEmojiInDatabase,
-} from '@/core/EmojiStore.js';
-import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
-import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
-import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
-import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
-import {
-	createFollowingInDatabase,
-	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
-} from '@/core/FollowingStore.js';
-import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
-import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
-import { fetchMutingByMuterIdAndMuteeIdFromDatabase } from '@/core/MutingStore.js';
-import { createNoteDraftInDatabase, fetchNoteDraftByIdFromDatabase } from '@/core/NoteDraftStore.js';
-import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
-import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
-import { pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
-import { createPageInDatabase } from '@/core/PageStore.js';
-import { createPollInDatabase, fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
-import { listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
-import { createRelayInDatabase, fetchRelayByInboxFromDatabase } from '@/core/RelayStore.js';
-import { fetchRenoteMutingFromDatabase } from '@/core/RenoteMutingStore.js';
-import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
-import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
-import {
-	createRoleAssignmentInDatabase,
-	fetchRoleAssignmentByUserIdAndRoleIdFromDatabase,
-} from '@/core/RoleAssignmentStore.js';
-import { createRoleInDatabase } from '@/core/RoleStore.js';
-import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
-import { isPromoNoteExists } from '@/core/PromoNoteStore.js';
-import { isPromoReadExists } from '@/core/PromoReadStore.js';
-import { createSigninInDatabase } from '@/core/SigninStore.js';
-import { RootUserAlreadyAssignedError } from '@/core/SignupStore.js';
-import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
-import { fetchSystemWebhookByIdFromDatabase } from '@/core/SystemWebhookStore.js';
-import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
-import { userIp } from '@/db/schema/user-ip.js';
-import {
-	createUserInDatabase,
-	createUserWithProfileAndPublickeyInDatabase,
-	fetchLocalUserByUsernameFromDatabase,
-	fetchUserByIdOrFailFromDatabase,
-	updateUserInDatabase,
-} from '@/core/UserStore.js';
-import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
-import {
-	createUserListMembershipInDatabase,
-	userListMembershipExistsInDatabase,
-} from '@/core/UserListMembershipStore.js';
-import {
-	createUserListInDatabase,
-	deleteUserListByIdInDatabase,
-	fetchUserListByIdAndUserIdFromDatabase,
-	fetchUserListByNameAndUserIdFromDatabase,
-} from '@/core/UserListStore.js';
-import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
-import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
-import { createUserPendingInDatabase } from '@/core/UserPendingStore.js';
-import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
-import { DEFAULT_POLICIES } from '@/core/role-policies.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { genId } from '@/misc/id/gen-id.js';
 import { toXListId } from '@/server/rest/notification.js';
-import { createLocalSignupAccount } from '@/server/rest/signup.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
 import { dispatchQueueOutbox, fetchQueueOutboxByIdFromDatabase } from '@/core/QueueOutboxStore.js';
@@ -125,6 +29,103 @@ import type {
 	SystemWebhookDeliverJobData,
 } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
+import {
+	announcementReadExistsInDatabase,
+	channelFavoriteExistsInDatabase,
+	channelFollowingExistsInDatabase,
+	channelMutingExistsInDatabase,
+	clipFavoriteExistsInDatabase,
+	countAntennasByUserIdFromDatabase,
+	createAbuseUserReportInDatabase,
+	createAnnouncementInDatabase,
+	createAnnouncementReadInDatabase,
+	createAvatarDecorationInDatabase,
+	createBlockingInDatabase,
+	createChannelFavoriteInDatabase,
+	createChannelFollowingInDatabase,
+	createChannelInDatabase,
+	createChannelMutingInDatabase,
+	createClipInDatabase,
+	createDriveFileInDatabase,
+	createDriveFolderInDatabase,
+	createFlashInDatabase,
+	createFollowingInDatabase,
+	createFollowRequestInDatabase,
+	createInstanceInDatabase,
+	createLocalSignupAccount,
+	createModerationLogInDatabase,
+	createNoteDraftInDatabase,
+	createNoteInDatabase,
+	createNoteReactionInDatabase,
+	createPageInDatabase,
+	createPasswordResetRequestInDatabase,
+	createPollInDatabase,
+	createRegistrationTicketInDatabase,
+	createRelayInDatabase,
+	createRetentionAggregationInDatabase,
+	createRoleAssignmentInDatabase,
+	createRoleInDatabase,
+	createSigninInDatabase,
+	createSwSubscriptionInDatabase,
+	createUserInDatabase,
+	createUserListInDatabase,
+	createUserListMembershipInDatabase,
+	createUserPendingInDatabase,
+	createUserSecurityKeyInDatabase,
+	createUserWithProfileAndPublickeyInDatabase,
+	createWebhookInDatabase,
+	DEFAULT_POLICIES,
+	deleteBlockingByIdFromDatabase,
+	deleteUserListByIdInDatabase,
+	fetchAbuseUserReportByIdOrFailFromDatabase,
+	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
+	fetchDriveFileByIdFromDatabase,
+	fetchDriveFileByUrlFromDatabase,
+	fetchDriveFolderByIdFromDatabase,
+	fetchEmojiByIdFromDatabase,
+	fetchEmojiByIdOrFailFromDatabase,
+	fetchFlashByIdFromDatabase,
+	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
+	fetchFollowRequestFromDatabase,
+	fetchGalleryPostByIdFromDatabase,
+	fetchInstanceByHostFromDatabase,
+	fetchLocalUserByUsernameFromDatabase,
+	fetchMetaFromDatabase,
+	fetchMutingByMuterIdAndMuteeIdFromDatabase,
+	fetchNoteByIdFromDatabase,
+	fetchNoteDraftByIdFromDatabase,
+	fetchPollByNoteIdOrFailFromDatabase,
+	fetchRelayByInboxFromDatabase,
+	fetchRenoteMutingFromDatabase,
+	fetchRoleAssignmentByUserIdAndRoleIdFromDatabase,
+	fetchSystemWebhookByIdFromDatabase,
+	fetchUserByIdOrFailFromDatabase,
+	fetchUserListByIdAndUserIdFromDatabase,
+	fetchUserListByNameAndUserIdFromDatabase,
+	fetchUserProfileByUserIdOrFailFromDatabase,
+	fetchWebhookByIdAndUserIdFromDatabase,
+	fixtureConfig,
+	flashLikeExistsInDatabase,
+	genId,
+	insertEmojiInDatabase,
+	insertHashtags,
+	insertUserIps,
+	isPromoNoteExists,
+	isPromoReadExists,
+	listModerationLogsFromDatabase,
+	listPollVotesByNoteAndUserFromDatabase,
+	listUserNotePiningsByUserIdFromDatabase,
+	openTestDatabase,
+	RootUserAlreadyAssignedError,
+	pageLikeExistsInDatabase,
+	type TestDatabase,
+	updateChannelInDatabase,
+	updateDriveFileInDatabase,
+	updateUserInDatabase,
+	updateUserProfileInDatabase,
+	userListFavoriteExistsInDatabase,
+	userListMembershipExistsInDatabase,
+} from '../fixtures.js';
 import {
 	api,
 	castAsError,
@@ -155,8 +156,7 @@ describe('Endpoints', () => {
 	let bob: misskey.entities.SignupResponse;
 	let carol: misskey.entities.SignupResponse;
 	let dave: misskey.entities.SignupResponse;
-	let db: MiDrizzleDatabase;
-	let pool: MiDrizzlePool | undefined;
+	let db: TestDatabase;
 	let dbQueue: Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
 	let deliverQueue: Bull.Queue<DeliverJobData> | undefined;
 	let inboxQueue: Bull.Queue<InboxJobData> | undefined;
@@ -167,9 +167,8 @@ describe('Endpoints', () => {
 
 	beforeAll(
 		async () => {
-			const config = loadConfig();
-			pool = createDrizzlePool(config);
-			db = createDrizzleDatabase(pool, config);
+			const config = fixtureConfig;
+			db = openTestDatabase();
 			dbQueue = new Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>>(
 				QUEUE.DB,
 				baseQueueOptions(config, QUEUE.DB),
@@ -209,7 +208,7 @@ describe('Endpoints', () => {
 		await objectStorageQueue?.close();
 		await systemWebhookDeliverQueue?.close();
 		await postScheduledNoteQueue?.close();
-		await pool?.end();
+		await db.close();
 	});
 
 	describe('signup', () => {
@@ -283,52 +282,31 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const requiredUsername = `requiredroot${suffix}`;
 			await assert.rejects(
-				createLocalSignupAccount(
-					{
-						config: loadConfig(),
-						db,
-						meta: staleMeta,
-					},
-					{
-						username: requiredUsername,
-						host: null,
-						passwordHash: null,
-						rootClaim: 'required',
-					},
-				),
+				createLocalSignupAccount(db, staleMeta, {
+					username: requiredUsername,
+					host: null,
+					passwordHash: null,
+					rootClaim: 'required',
+				}),
 				(error) => error instanceof RootUserAlreadyAssignedError,
 			);
 			assert.strictEqual(await fetchLocalUserByUsernameFromDatabase(db, requiredUsername), null);
 
-			const result = await createLocalSignupAccount(
-				{
-					config: loadConfig(),
-					db,
-					meta: staleMeta,
-				},
-				{
-					username: `staleroot${suffix}`,
-					host: null,
-					passwordHash: null,
-				},
-			);
+			const result = await createLocalSignupAccount(db, staleMeta, {
+				username: `staleroot${suffix}`,
+				host: null,
+				passwordHash: null,
+			});
 
 			assert.strictEqual(result.account.username, `staleroot${suffix}`);
 			assert.strictEqual((await fetchMetaFromDatabase(db)).rootUserId, before.rootUserId);
 
 			await assert.rejects(
-				createLocalSignupAccount(
-					{
-						config: loadConfig(),
-						db,
-						meta: staleMeta,
-					},
-					{
-						username: 'admin',
-						host: null,
-						passwordHash: null,
-					},
-				),
+				createLocalSignupAccount(db, staleMeta, {
+					username: 'admin',
+					host: null,
+					passwordHash: null,
+				}),
 				{ code: 'USED_USERNAME' },
 			);
 		});
@@ -336,7 +314,7 @@ describe('Endpoints', () => {
 
 	describe('signup-pending', () => {
 		test('pending user can complete signup and sign in', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const password = 'pending-password';
 			const salt = await bcrypt.genSalt(8);
 			const pending = await createUserPendingInDatabase(db, {
@@ -1125,7 +1103,7 @@ describe('Endpoints', () => {
 
 	describe('emoji endpoints', () => {
 		test('emojis and emoji return packed local emoji data', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const emoji = await insertEmojiInDatabase(db, {
 				id: genId(),
 				name: 'hono_emoji',
@@ -1186,7 +1164,7 @@ describe('Endpoints', () => {
 
 	describe('retention endpoint', () => {
 		test('retention supports GET and returns latest aggregation data', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			await createRetentionAggregationInDatabase(db, {
 				id: genId(now),
@@ -1222,11 +1200,11 @@ describe('Endpoints', () => {
 
 	describe('hashtag endpoints', () => {
 		test('list, search, and show return packed hashtag data', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const primary = `hono_hashtag_primary_${now}`;
 			const secondary = `hono_hashtag_secondary_${now}`;
-			await db.insert(hashtagTable).values([
+			await insertHashtags(db, [
 				{
 					id: genId(now),
 					name: primary,
@@ -1293,7 +1271,7 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files, drive/files/show, drive/files/find, and drive/files/find-by-hash scope results to the caller', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-drive-files-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
@@ -1347,7 +1325,7 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/stream は自分のファイルのみtype絞り込み・ページングして返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hdsm${suffix}` });
 			const otherUser = await signup({ username: `hdso${suffix}` });
@@ -1404,7 +1382,7 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files/attached-notes finds notes referencing a file and rejects non-owners', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-attached-notes-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
@@ -1440,7 +1418,7 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files/attached-chat-messages finds chat messages referencing a file and rejects non-owners', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const sender = await signup({ username: `achatsend${suffix}` });
 			const recipient = await signup({ username: `achatrecv${suffix}` });
@@ -1475,7 +1453,7 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files/update renames, moves, and toggles sensitivity, rejecting invalid input and foreign access', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-drive-update-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
@@ -1535,7 +1513,7 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files/delete removes a file, rejecting foreign access and missing files', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const md5 = createHash('md5').update(`hono-drive-delete-${suffix}`).digest('hex');
 			const file = await createDriveFileInDatabase(db, {
@@ -1570,7 +1548,7 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/files/move-bulk moves multiple files into a folder', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const md5A = createHash('md5').update(`hono-drive-move-a-${suffix}`).digest('hex');
 			const fileA = await createDriveFileInDatabase(db, {
@@ -2015,7 +1993,7 @@ describe('Endpoints', () => {
 		});
 
 		test('trend returns Redis-backed hashtag ranking charts', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const redis = createRedisClient(config);
 			const tag = `hono_trend_${Date.now()}`;
 			const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
@@ -2044,7 +2022,7 @@ describe('Endpoints', () => {
 
 	describe('avatar decoration endpoints', () => {
 		test('get-avatar-decorations filters unavailable role ids', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const createdRole = await createRoleInDatabase(db, {
 				id: genId(now),
@@ -2092,7 +2070,7 @@ describe('Endpoints', () => {
 
 	describe('federation endpoints', () => {
 		test('instances, show-instance, and stats return packed federation instances', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const alpha = await createInstanceInDatabase(db, {
 				id: genId(now),
@@ -2285,7 +2263,7 @@ describe('Endpoints', () => {
 		});
 
 		test('admin/federation/refresh-remote-instance-metadata は即時応答、token scope、roleを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const host = `hono-refresh-fed-${suffix}.invalid`;
@@ -2330,7 +2308,7 @@ describe('Endpoints', () => {
 		});
 
 		test('admin/federation/remove-all-following は remote follower の unfollow job を作る', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const host = `hono-remove-following-${suffix}.example`;
 			const follower = await signup({ username: `hafr${suffix}` });
@@ -2368,7 +2346,7 @@ describe('Endpoints', () => {
 		});
 
 		test('federation/users はhostでフィルタしUserDetailedNotMeを返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const host = `hono-fed-users-${suffix}.example`;
@@ -2401,7 +2379,7 @@ describe('Endpoints', () => {
 		});
 
 		test('federation/followers と federation/following はhostでフィルタしFollowingを返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const remoteFollowerHost = `hono-fed-follower-${suffix}.example`;
 			const remoteFolloweeHost = `hono-fed-followee-${suffix}.example`;
@@ -2439,7 +2417,7 @@ describe('Endpoints', () => {
 
 	describe('ap/get', () => {
 		test('管理者かつread:federationスコープでのみ呼べ、ローカルNote/UserをActivityPubオブジェクトとして解決できる', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 
 			const note = await post(alice, { text: 'ap/get resolve target' });
 			const noteUri = `${config.instance.url}/notes/${note.id}`;
@@ -2471,7 +2449,7 @@ describe('Endpoints', () => {
 		});
 
 		test('questions/likes/followsのローカルURIも解決できる', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36);
 
@@ -2557,7 +2535,7 @@ describe('Endpoints', () => {
 
 	describe('federation/update-remote-user', () => {
 		test('リモートアクターを再フェッチしてプロフィールを更新する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36);
 
@@ -2676,7 +2654,7 @@ describe('Endpoints', () => {
 
 	describe('ap/show', () => {
 		test('ローカルのユーザー/ノートをtype付きで返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 
 			const userRes = await api('ap/show', { uri: `${config.instance.url}/users/${alice.id}` }, alice);
 			assert.strictEqual(userRes.status, 200);
@@ -2691,7 +2669,7 @@ describe('Endpoints', () => {
 		});
 
 		test('連合が許可されていないホストはFEDERATION_NOT_ALLOWEDを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const blockedHost = `ap-show-blocked-${Date.now().toString(36)}.example`;
 
 			const before = await api('admin/meta', {}, alice);
@@ -2714,7 +2692,7 @@ describe('Endpoints', () => {
 		});
 
 		test('未知のリモートUser/Noteを新規作成して返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 
 			const originalMeta = await fetchMetaFromDatabase(db);
@@ -2788,7 +2766,7 @@ describe('Endpoints', () => {
 
 	describe('admin/drive', () => {
 		test('admin/drive/files は filter、pagination、DriveFile packing、token scopeを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const fileType = 'application/x-hono-admin-drive';
@@ -2930,7 +2908,7 @@ describe('Endpoints', () => {
 		});
 
 		test('admin/drive/show-file は fileId/url、秘匿 header、token scope、role、404を維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const bobMd5 = createHash('md5').update(`hono-admin-drive-bob-${suffix}`).digest('hex');
 			const bobFile = await createDriveFileInDatabase(db, {
@@ -3062,7 +3040,7 @@ describe('Endpoints', () => {
 		});
 
 		test('admin drive deletion endpoints は DB削除、objectStorage job、scope、roleを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const remoteHost = `hono-drive-delete-${suffix}.remote`;
@@ -3203,7 +3181,7 @@ describe('Endpoints', () => {
 
 	describe('admin/emoji', () => {
 		test('admin/emoji/list と list-remote は filter、pagination、packing、scope、role policyを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haem${suffix}` });
@@ -3386,7 +3364,7 @@ describe('Endpoints', () => {
 		});
 
 		test('v2/admin/emoji/list はquery、hostType、pagination、count/allCount/allPages、role policyを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `hav2${suffix}` });
@@ -4184,7 +4162,7 @@ describe('Endpoints', () => {
 		});
 
 		test('admin/emoji/import-zip は import job、secure credential、role policyを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemi${suffix}` });
@@ -4273,7 +4251,7 @@ describe('Endpoints', () => {
 
 	describe('announcement endpoints', () => {
 		test('announcements list and show respect user-specific visibility', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const globalAnnouncement = await createAnnouncementInDatabase(db, {
 				id: genId(now),
@@ -4347,7 +4325,7 @@ describe('Endpoints', () => {
 		});
 
 		test('i/read-announcement は既読化し全既読ならreadAllAnnouncementsを発行する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const reader = await signup({ username: `hra${suffix}` });
@@ -4425,7 +4403,7 @@ describe('Endpoints', () => {
 
 	describe('signin history endpoints', () => {
 		test('i/signin-history returns own signin records', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const older = await createSigninInDatabase(db, {
 				id: genId(now - 2000),
@@ -5064,7 +5042,7 @@ describe('Endpoints', () => {
 
 	describe('promo/read endpoint', () => {
 		test('admin/promo/create はpromo note作成、重複、権限を維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const noteId = genId();
 			await createNoteInDatabase(db, {
@@ -5121,7 +5099,7 @@ describe('Endpoints', () => {
 		});
 
 		test('promo/read records a promoted note as read idempotently', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
@@ -5145,7 +5123,7 @@ describe('Endpoints', () => {
 		});
 
 		test('promo/read requires write account permission for app tokens', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const noteId = genId();
 			await createNoteInDatabase(db, {
 				id: noteId,
@@ -5164,7 +5142,7 @@ describe('Endpoints', () => {
 
 	describe('favorite and like endpoints', () => {
 		async function createFavoriteFixtures(prefix: string) {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -5320,7 +5298,7 @@ describe('Endpoints', () => {
 
 	describe('Hono account data endpoints', () => {
 		test('drive/files/check-existence returns ownership-scoped md5 existence', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const md5 = createHash('md5').update(`hono-drive-${Date.now()}`).digest('hex');
 			await createDriveFileInDatabase(db, {
 				id: genId(),
@@ -5348,7 +5326,7 @@ describe('Endpoints', () => {
 		});
 
 		test('drive/folders list, find, and show preserve ownership and detail fields', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const stamp = Date.now().toString(36);
 			const parent = await createDriveFolderInDatabase(db, {
 				id: genId(),
@@ -5467,7 +5445,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/drafts/count returns the caller draft count and rejects moved users', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const before = await api('notes/drafts/count', {}, alice);
 			assert.strictEqual(before.status, 200);
 
@@ -5509,7 +5487,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/drafts/create creates a draft with reply/renote/poll/channel and schedules it', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const channel = await createChannelInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -5640,7 +5618,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/drafts/update updates a draft, reschedules it, and rejects foreign or missing drafts', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const draft = await createNoteDraftInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -5760,7 +5738,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/drafts/delete removes a draft and its schedule, rejecting missing drafts', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
 			const draft = await createNoteDraftInDatabase(db, {
 				id: genId(),
@@ -5798,7 +5776,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/drafts/list paginates and filters by scheduled state', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const scheduledDraft = await createNoteDraftInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -5854,7 +5832,7 @@ describe('Endpoints', () => {
 		});
 
 		test('charts/instance groups results by the given host', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const host = `chart-${Date.now().toString(36)}.example.com`;
 			await createInstanceInDatabase(db, {
 				id: genId(),
@@ -5940,7 +5918,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(noSuchList.status, 400);
 			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
 
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -6094,7 +6072,7 @@ describe('Endpoints', () => {
 		});
 
 		test('antennas/notes returns fanout-timeline notes and antennas/remove-note removes one', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const created = await api(
 				'antennas/create',
 				{
@@ -6329,7 +6307,7 @@ describe('Endpoints', () => {
 		});
 
 		test('pages/update updates a page and rejects missing pages, foreign pages, and name conflicts', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const other = await createPageInDatabase(db, {
 				id: genId(),
@@ -6413,7 +6391,7 @@ describe('Endpoints', () => {
 		});
 
 		test("pages/delete removes a page, rejects foreign pages, and allows moderators to delete others' pages", async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
 				id: genId(),
@@ -6460,7 +6438,7 @@ describe('Endpoints', () => {
 		});
 
 		test('pages/show finds a page by id or by name and username, and pages/featured lists liked pages', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
 				id: genId(),
@@ -6503,7 +6481,7 @@ describe('Endpoints', () => {
 		});
 
 		test("i/pages lists the caller's pages and i/page-likes lists liked pages", async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
 				id: genId(),
@@ -6540,7 +6518,7 @@ describe('Endpoints', () => {
 		});
 
 		test("users/pages lists only a user's public pages without credentials", async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const publicPage = await createPageInDatabase(db, {
 				id: genId(),
@@ -6568,7 +6546,7 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/push adds a member, rejects duplicates, missing lists/users, and blocked users', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
@@ -6608,7 +6586,7 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/pull removes a member and rejects missing lists or users', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
@@ -6640,7 +6618,7 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/update-membership toggles withReplies for a member', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
@@ -6671,7 +6649,7 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/get-memberships supports forPublic without credentials', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
@@ -6702,7 +6680,7 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/create-from-public copies members from an existing public list', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36);
 			// alice はこのファイルの他テストでリストを作り続けるので、リスト数上限に達していると
 			// ブロック判定より先に TOO_MANY_USERLISTS が返る。コピー元は共有し、コピーする側は専用ユーザーにする
@@ -6827,7 +6805,7 @@ describe('Endpoints', () => {
 		});
 
 		test('i/webhooks list, show, update, and delete are scoped to the caller', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const latestSentAt = new Date('2024-01-02T03:04:05.000Z');
 			const webhook = await createWebhookInDatabase(db, {
 				id: genId(),
@@ -6913,7 +6891,7 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists/delete removes only the caller list and preserves error id', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const userList = await createUserListInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -6936,7 +6914,7 @@ describe('Endpoints', () => {
 		});
 
 		test('users/lists list, show, and update preserve visibility and ownership semantics', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const privateList = await createUserListInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -7030,7 +7008,7 @@ describe('Endpoints', () => {
 		test('Hono account data endpoints require matching app token permissions', async () => {
 			const readAccountToken = await createAppToken(alice, ['read:account']);
 			const readDriveToken = await createAppToken(alice, ['read:drive']);
-			const config = loadConfig();
+			const config = fixtureConfig;
 
 			for (const [endpoint, params, token] of [
 				['drive/files/check-existence', { md5: '0'.repeat(32) }, readAccountToken],
@@ -7129,7 +7107,7 @@ describe('Endpoints', () => {
 		});
 
 		test('following/update は notify/withReplies 変更、scope、エラーを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const follower = await signup({ username: `hfu${suffix}` });
 			const followee = await signup({ username: `hfue${suffix}` });
@@ -7260,7 +7238,7 @@ describe('Endpoints', () => {
 		});
 
 		test('following/requests/accept は保留リクエストを承認しfollowレコードを作成する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const followee = await signup({ username: `hra${suffix}` });
 			const follower = await signup({ username: `hrae${suffix}` });
@@ -7300,7 +7278,7 @@ describe('Endpoints', () => {
 		});
 
 		test('following/requests/cancel は送信済みリクエストを取消しUserLiteを返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const follower = await signup({ username: `hrc${suffix}` });
 			const followee = await signup({ username: `hrce${suffix}` });
@@ -7331,7 +7309,7 @@ describe('Endpoints', () => {
 		});
 
 		test('following/requests/reject は受信済みリクエストを拒否し再実行しても冪等', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const followee = await signup({ username: `hrr${suffix}` });
 			const follower = await signup({ username: `hrre${suffix}` });
@@ -7414,7 +7392,7 @@ describe('Endpoints', () => {
 		});
 
 		test('following/update-all updates only the caller followings', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			// 共有fixture (alice/bob) に直接DBのfollowing行を残すと、後続のblocking系テストの
 			// unfollow副作用がカウンタを負値に汚染するため、使い捨てユーザーで完結させる
 			const suffix = Date.now().toString(36).slice(-8);
@@ -7465,7 +7443,7 @@ describe('Endpoints', () => {
 		});
 
 		test('flash/update updates own flash and preserves ownership errors', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const flash = await createFlashInDatabase(db, {
 				id: genId(),
 				updatedAt: new Date(),
@@ -7518,7 +7496,7 @@ describe('Endpoints', () => {
 		});
 
 		test('flash/update rejects moved users before side effects', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const movedUser = await signup({ username: `mvflash${Date.now().toString(36)}` });
 			const flash = await createFlashInDatabase(db, {
 				id: genId(),
@@ -7543,7 +7521,7 @@ describe('Endpoints', () => {
 		});
 
 		test('Hono rate limited write endpoints require matching app token permissions', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const readAccountToken = await createAppToken(alice, ['read:account']);
 			const flash = await createFlashInDatabase(db, {
 				id: genId(),
@@ -7617,7 +7595,7 @@ describe('Endpoints', () => {
 
 	describe('i/claim-achievement', () => {
 		test('達成を記録しachievementEarned通知を作成、二重取得しない', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hca${suffix}` });
 
@@ -7729,7 +7707,7 @@ describe('Endpoints', () => {
 		}
 
 		async function makeDriveFile(userId: string, suffix: string, size: number) {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const md5 = createHash('md5').update(`hono-import-${suffix}-${size}`).digest('hex');
 			return await createDriveFileInDatabase(db, {
 				id: genId(),
@@ -7801,7 +7779,7 @@ describe('Endpoints', () => {
 
 		// i/import-antennas はファイル内容を自分自身のURL(config.instance.url)からHTTPダウンロードする。
 		test('i/import-antennas はrole policy、ファイル検証、ダウンロードしたJSON件数によるantennaLimitを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hia${suffix}` });
 
@@ -7936,7 +7914,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('notifications', () => {
-		async function readNotificationTimeline(config: ReturnType<typeof loadConfig>, userId: string) {
+		async function readNotificationTimeline(config: typeof fixtureConfig, userId: string) {
 			const redis = createRedisClient(config);
 			try {
 				const entries = await redis.xrevrange(`notificationTimeline:${userId}`, '+', '-', 'COUNT', 10);
@@ -7956,7 +7934,7 @@ describe('Endpoints', () => {
 		}
 
 		test('notifications/create は scope 保護つきで app 通知を作成しwrite:notifications 以外は拒否される', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnc${suffix}` });
 
@@ -7984,7 +7962,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notifications/create は通知設定が never の場合は作成しない', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hncn${suffix}` });
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
@@ -8007,7 +7985,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notifications/test-notification はテスト通知を作成する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hntn${suffix}` });
 
@@ -8020,7 +7998,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notifications/mark-all-as-read は既読状態を更新しreadAllNotificationsを発行する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnmar${suffix}` });
 
@@ -8041,7 +8019,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notifications/delete は本人の通知だけを個別に削除する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnd${suffix}` });
 			const other = await signup({ username: `hndo${suffix}` });
@@ -8072,7 +8050,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notifications/delete はグルーピングされた通知をまとめて削除する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hndg${suffix}` });
 			const redis = createRedisClient(config);
@@ -8120,7 +8098,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notifications/flush はタイムラインと既読状態を消去する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnf${suffix}` });
 
@@ -8377,7 +8355,7 @@ describe('Endpoints', () => {
 
 	describe('role endpoints', () => {
 		test('roles/list and roles/show return packed public role data', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const createdRole = await createRoleInDatabase(db, {
 				id: genId(now - 1000),
@@ -8438,7 +8416,7 @@ describe('Endpoints', () => {
 		});
 
 		test('roles/users は explorable な role のみ users を一覧しUserDetailedを返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const explorableRole = await createRoleInDatabase(db, {
@@ -8515,7 +8493,7 @@ describe('Endpoints', () => {
 		});
 
 		test('roles/notes はfanoutタイムラインの投稿をpublicのみpackして返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const explorableRole = await createRoleInDatabase(db, {
@@ -8688,7 +8666,7 @@ describe('Endpoints', () => {
 		});
 
 		test('users/gallery/posts はページングして投稿を返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hug${suffix}` });
 			const fileMd5 = createHash('md5').update(`hono-users-gallery-${suffix}`).digest('hex');
@@ -9151,7 +9129,7 @@ describe('Endpoints', () => {
 		// ランキング書き込み側 (ReactionService.create 等の30%確率更新) はHono未移植のため、
 		// ここではRedis ZSETに直接書き込んで読み取りロジックのみを単体検証する。
 		test('per-userランキングに載ったノートをid降順で返し、untilId絞り込み、ブロックによる早期returnを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hufn${suffix}` });
 			const noteOld = await post(owner, { text: 'hono featured old' });
@@ -9278,7 +9256,7 @@ describe('Endpoints', () => {
 		});
 
 		test('通報時にmoderatorのadminStreamへnewAbuseUserReportイベントを配信する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const reporter = await signup({ username: `hurs${suffix}` });
 			const target = await signup({ username: `hurst${suffix}` });
@@ -9328,7 +9306,7 @@ describe('Endpoints', () => {
 
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hgc${suffix}` });
 			const stranger = await signup({ username: `hgcs${suffix}` });
@@ -9406,7 +9384,7 @@ describe('Endpoints', () => {
 		});
 
 		test('gallery/posts/{like,unlike} はカウント、ランキング、二重操作エラーを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hgl${suffix}` });
 			const liker = await signup({ username: `hgll${suffix}` });
@@ -9466,7 +9444,7 @@ describe('Endpoints', () => {
 		});
 
 		test('gallery/posts と gallery/popular はページングして投稿を返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hgp${suffix}` });
 			const fileMd5 = createHash('md5').update(`hono-gallery-list-${suffix}`).digest('hex');
@@ -9509,7 +9487,7 @@ describe('Endpoints', () => {
 		});
 
 		test('i/gallery/posts は自分の投稿のみをページングして返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `higp${suffix}` });
 			const other = await signup({ username: `higpo${suffix}` });
@@ -9578,7 +9556,7 @@ describe('Endpoints', () => {
 		});
 
 		test('i/gallery/likes はいいねした投稿一覧を返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `higl${suffix}` });
 			const liker = await signup({ username: `higll${suffix}` });
@@ -9686,7 +9664,7 @@ describe('Endpoints', () => {
 		});
 
 		test('clips/{add-note,remove-note} はNOTEカウント、重複、404を維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hcn${suffix}` });
 			const noteId = genId();
@@ -9745,7 +9723,7 @@ describe('Endpoints', () => {
 		});
 
 		test('clips/notes は可視性とNO_SUCH_CLIPを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hcn2${suffix}` });
 			const stranger = await signup({ username: `hcn2s${suffix}` });
@@ -9788,7 +9766,7 @@ describe('Endpoints', () => {
 
 	describe('notes/show', () => {
 		test('基本フィールド、reply/renote、poll、reactionを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hns${suffix}` });
 			const reactor = await signup({ username: `hnsr${suffix}` });
@@ -9882,7 +9860,7 @@ describe('Endpoints', () => {
 		});
 
 		test('可視性(specified/followers)とrequireSigninToViewContentsを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnv${suffix}` });
 			const addressee = await signup({ username: `hnva${suffix}` });
@@ -9948,7 +9926,7 @@ describe('Endpoints', () => {
 
 	describe('notes relations (children/conversation/mentions/replies/renotes)', () => {
 		test('reply/renoteの親子関係とmentionsを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnr${suffix}` });
 			const mentioned = await signup({ username: `hnrm${suffix}` });
@@ -10047,7 +10025,7 @@ describe('Endpoints', () => {
 
 	describe('notes/state and notes/favorites', () => {
 		test('notes/state、notes/favorites/{create,delete}はfavorite状態とachievementを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnf${suffix}` });
 			const favoriter = await signup({ username: `hnff${suffix}` });
@@ -10090,7 +10068,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/thread-muting/{create,delete}はミュート状態を維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `htm${suffix}` });
 			const muter = await signup({ username: `htmm${suffix}` });
@@ -10171,7 +10149,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/featured はランキング、mute/blockフィルタを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnff2${suffix}` });
 			const viewer = await signup({ username: `hnff2v${suffix}` });
@@ -10222,7 +10200,7 @@ describe('Endpoints', () => {
 
 	describe('notes (bare, インスタンス全体のpublicノート一覧)', () => {
 		test('publicかつlocalOnly=falseなノートのみ返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hn${suffix}` });
 
@@ -10266,7 +10244,7 @@ describe('Endpoints', () => {
 		});
 
 		test('local/reply/renote/withFiles/pollフィルタを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnf${suffix}` });
 			const file = await uploadFile(author);
@@ -10381,7 +10359,7 @@ describe('Endpoints', () => {
 		});
 
 		test('認証済みで呼んでもmeを渡さず常に匿名としてパックする(元実装がpackMany(notes)をme無しで呼ぶため)', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnm${suffix}` });
 			const reactor = await signup({ username: `hnmr${suffix}` });
@@ -10405,7 +10383,7 @@ describe('Endpoints', () => {
 		});
 
 		test('sinceId/untilIdによるページネーションを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnp${suffix}` });
 
@@ -10446,7 +10424,7 @@ describe('Endpoints', () => {
 
 	describe('users/notes', () => {
 		test('可視性フィルタとwithFiles/withRenotesフィルタを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hun${suffix}` });
 			const stranger = await signup({ username: `huns${suffix}` });
@@ -10518,7 +10496,7 @@ describe('Endpoints', () => {
 		});
 
 		test('withChannelNotesとミュート済みチャンネルの除外を維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hunc${suffix}` });
 			const viewer = await signup({ username: `huncv${suffix}` });
@@ -10584,7 +10562,7 @@ describe('Endpoints', () => {
 		});
 
 		test('sinceId/untilIdによるページネーションを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hunp${suffix}` });
 
@@ -10650,7 +10628,7 @@ describe('Endpoints', () => {
 
 	describe('notes/clips, search-by-tag, show-partial-bulk, timeline, user-list-timeline, polls/recommendation', () => {
 		test('notes/clips はpublicなclipのみ返しNO_SUCH_NOTEを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hncl${suffix}` });
 			const noteId = genId();
@@ -10685,7 +10663,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/search-by-tag はtagで検索する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnst${suffix}` });
 			const tag = `hono-tag-${suffix}`;
@@ -10717,7 +10695,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/show-partial-bulk はreactionsとreactionEmojisを返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnsp${suffix}` });
 			const noteId = genId();
@@ -10789,7 +10767,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/timeline はfolloweeの投稿のみ含む', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const viewer = await signup({ username: `hnt${suffix}` });
 			const followee = await signup({ username: `hntf${suffix}` });
@@ -10823,7 +10801,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/user-list-timeline はリストメンバーの投稿のみ含みNO_SUCH_LISTを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hult${suffix}` });
 			const member = await signup({ username: `hultm${suffix}` });
@@ -10871,7 +10849,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/polls/recommendation は未投票のpublic pollのみ返す', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnpr${suffix}` });
 			const voter = await signup({ username: `hnprv${suffix}` });
@@ -10903,7 +10881,7 @@ describe('Endpoints', () => {
 		});
 
 		test('notes/search はテキスト全文検索とROLE制限を維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const author = await signup({ username: `hnse${suffix}` });
 			const searchNoteId = genId();
@@ -10969,7 +10947,7 @@ describe('Endpoints', () => {
 
 	describe('page-push', () => {
 		test('page-push はNO_SUCH_PAGEとsecure保護を維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hpp${suffix}` });
 			const pusher = await signup({ username: `hppp${suffix}` });
@@ -11008,7 +10986,7 @@ describe('Endpoints', () => {
 	describe('admin/roles', () => {
 		test('admin/roles は作成、一覧、表示、scope、権限、ログを維持する', async () => {
 			const now = Date.now();
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const createPayload = {
 				name: `Hono admin role ${now}`,
 				description: 'Hono admin role endpoint test',
@@ -11786,7 +11764,7 @@ describe('Endpoints', () => {
 			suffix: string,
 			values: Partial<Parameters<typeof createAbuseUserReportInDatabase>[1]> = {},
 		) {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			return await createAbuseUserReportInDatabase(db, {
 				id: genId(),
 				targetUserId: bob.id,
@@ -11832,7 +11810,7 @@ describe('Endpoints', () => {
 		test('admin/abuse-user-reports は一覧、filter、token scope、roleを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const unresolved = await createReport(`${suffix}unresolved`, {
 				id: genId(now - 2000),
 				comment: `Hono abuse report list unresolved ${suffix}`,
@@ -12071,7 +12049,7 @@ describe('Endpoints', () => {
 		test('admin/forward-abuse-user-report は配送、forwarded、token scope、role、ログ、404を維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const targetId = genId(now - 1000);
 			const targetHost = `hono-abuse-forward-${suffix}.example`;
 			const targetInbox = `https://${targetHost}/inbox`;
@@ -12325,7 +12303,7 @@ describe('Endpoints', () => {
 		test('admin/show-user と admin/show-users は詳細、filter、token scope、roleを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const target = await signup({ username: `hashow${suffix}` });
 			await updateUserProfileInDatabase(db, target.id, {
 				email: `hashow-${suffix}@example.test`,
@@ -12568,7 +12546,7 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const target = await signup({ username: `haum${suffix}` });
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const avatarMd5 = createHash('md5').update(`hono-admin-avatar-${suffix}`).digest('hex');
 			const bannerMd5 = createHash('md5').update(`hono-admin-banner-${suffix}`).digest('hex');
 			const avatarFile = await createDriveFileInDatabase(db, {
@@ -12813,7 +12791,7 @@ describe('Endpoints', () => {
 			// 共有fixtureのbobをfolloweeにすると、suspend時のunfollowジョブがカウンタを負値に
 			// 汚染して後続のfollowing系テストを壊すため、使い捨てユーザーを用いる
 			const throwawayFollowee = await signup({ username: `hsusf${suffix}` });
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const following = await createFollowingInDatabase(db, {
 				id: genId(),
 				followerId: target.id,
@@ -12903,20 +12881,14 @@ describe('Endpoints', () => {
 		test('admin/get-user-ips は最新30件、admin権限、token scopeを維持する', async () => {
 			const now = Date.now();
 			const createdAtBase = new Date(now - 1000 * 60);
-			const rows = await db
-				.insert(userIp)
-				.values(
-					Array.from({ length: 32 }, (_, i) => ({
-						userId: bob.id,
-						ip: `hono-ip-${now}-${i}`,
-						createdAt: new Date(createdAtBase.getTime() + i * 1000),
-					})),
-				)
-				.returning({
-					id: userIp.id,
-					ip: userIp.ip,
-					createdAt: userIp.createdAt,
-				});
+			const rows = await insertUserIps(
+				db,
+				Array.from({ length: 32 }, (_, i) => ({
+					userId: bob.id,
+					ip: `hono-ip-${now}-${i}`,
+					createdAt: new Date(createdAtBase.getTime() + i * 1000),
+				})),
+			);
 			const expected = rows
 				.sort((a, b) => b.id - a.id)
 				.slice(0, 30)
@@ -13024,7 +12996,7 @@ describe('Endpoints', () => {
 		}
 
 		test('admin/relays/list はrelay一覧、moderator権限、token scopeを維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const relays = await Promise.all(
 				(
@@ -13563,7 +13535,7 @@ describe('Endpoints', () => {
 
 	describe('invite', () => {
 		test('invite/limit keeps role policy, token scope, and remaining count semantics', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const inviter = await signup({ username: `honoinv${now.toString(36)}` });
 			const deniedUser = await signup({ username: `honoinvdeny${now.toString(36)}` });
@@ -13639,7 +13611,7 @@ describe('Endpoints', () => {
 		});
 
 		test('invite/create したコードを invite/list で取得でき、invite/delete で削除できる', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const inviterRole = await createRoleInDatabase(db, {
 				id: genId(now + 10),
@@ -13761,7 +13733,7 @@ describe('Endpoints', () => {
 
 	describe('admin/show-moderation-logs', () => {
 		test('admin/show-moderation-logs は検索、ユーザー pack、権限を維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const marker = `hono moderation log ${now}`;
 			const id = genId(now);
@@ -13971,7 +13943,7 @@ describe('Endpoints', () => {
 		test('admin/avatar-decorations は作成、一覧、更新、削除、scope、ポリシー、ログを維持する', async () => {
 			const now = Date.now();
 			const manager = await signup({ username: `honoavmgr${now.toString(36)}` });
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const managerRole = await createRoleInDatabase(db, {
 				id: genId(now),
 				updatedAt: new Date(now),
@@ -14821,7 +14793,7 @@ describe('Endpoints', () => {
 		});
 
 		test('モデレータは他人のFlashを削除でき、モデレーションログが記録される', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hnflmd${suffix}` });
 			const created = await api(
@@ -15713,7 +15685,7 @@ describe('Endpoints', () => {
 
 	describe('Hono channel read endpoints', () => {
 		test('featured, owned, followed, and my-favorites preserve caller-scoped flags', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const stamp = Date.now().toString(36);
 			const owned = await createChannelInDatabase(db, {
 				id: genId(),
@@ -15815,7 +15787,7 @@ describe('Endpoints', () => {
 
 	describe('Hono channel write endpoints', () => {
 		const createOwnedDriveFile = async (userId: string, seed: string) => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const md5 = createHash('md5').update(seed).digest('hex');
 			return await createDriveFileInDatabase(db, {
 				id: genId(),
@@ -15886,7 +15858,7 @@ describe('Endpoints', () => {
 		});
 
 		test('keeps legacy channel create validation, policy, and moved-account errors', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const deniedUser = await signup({ username: `honochdeny${now.toString(36)}` });
 			const requester = await signup({ username: `honochreq${now.toString(36)}` });
@@ -15977,7 +15949,7 @@ describe('Endpoints', () => {
 		});
 
 		test('keeps legacy channel update authorization and file errors', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const now = Date.now();
 			const owner = await signup({ username: `hcupown${now.toString(36)}` });
 			const intruder = await signup({ username: `honochupintr${now.toString(36)}` });
@@ -16081,7 +16053,7 @@ describe('Endpoints', () => {
 
 	describe('Hono channel follow endpoints', () => {
 		test('follow and unfollow update the channel following row', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const target = await createChannelInDatabase(db, {
 				id: genId(),
 				userId: bob.id,
@@ -16120,7 +16092,7 @@ describe('Endpoints', () => {
 		});
 
 		test('keeps legacy validation, permission, and moved-account errors', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const target = await createChannelInDatabase(db, {
 				id: genId(),
 				userId: bob.id,
@@ -16174,7 +16146,7 @@ describe('Endpoints', () => {
 
 	describe('Hono channel mute endpoints', () => {
 		test('create, list, and delete preserve channel mute behavior', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const stamp = Date.now().toString(36);
 			const target = await createChannelInDatabase(db, {
 				id: genId(),
@@ -16261,7 +16233,7 @@ describe('Endpoints', () => {
 		});
 
 		test('keeps legacy validation, permission, and moved-account errors', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const target = await createChannelInDatabase(db, {
 				id: genId(),
 				userId: bob.id,
@@ -16340,7 +16312,7 @@ describe('Endpoints', () => {
 		async function ensureChannelSearchFixture() {
 			if (channelSearchFixture != null) return channelSearchFixture;
 
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const prefix = `hono-search-${Date.now().toString(36)}`;
 			const aaa = await createChannelInDatabase(db, {
 				id: genId(),
@@ -16497,7 +16469,7 @@ describe('Endpoints', () => {
 
 	describe('channels/show and channels/timeline', () => {
 		test('channels/show はpinnedNotesを含み、channels/timelineはNO_SUCH_CHANNELと投稿一覧を維持する', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hcs${suffix}` });
 			const channel = await createChannelInDatabase(db, {
@@ -17038,7 +17010,7 @@ describe('Endpoints', () => {
 
 	describe('drive/folders/delete', () => {
 		test('空フォルダを削除できる', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const folder = await createDriveFolderInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -17059,7 +17031,7 @@ describe('Endpoints', () => {
 		});
 
 		test('他人のフォルダを削除できない', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const folder = await createDriveFolderInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -17081,7 +17053,7 @@ describe('Endpoints', () => {
 		});
 
 		test('子フォルダがあるフォルダを削除できない', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const parent = await createDriveFolderInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
@@ -17109,7 +17081,7 @@ describe('Endpoints', () => {
 		});
 
 		test('子ファイルがあるフォルダを削除できない', async () => {
-			const config = loadConfig();
+			const config = fixtureConfig;
 			const parent = await createDriveFolderInDatabase(db, {
 				id: genId(),
 				userId: alice.id,
