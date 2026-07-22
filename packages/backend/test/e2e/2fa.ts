@@ -9,10 +9,13 @@ import * as assert from 'assert';
 import * as crypto from 'node:crypto';
 import { encode as encodeToCbor } from 'cbor2';
 import * as OTPAuth from 'otpauth';
-import { loadConfig } from '@/config.js';
-import { updateUserInDatabase } from '@/core/UserStore.js';
-import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
+import {
+	fixtureConfig,
+	openTestDatabase,
+	type TestDatabase,
+	updateUserInDatabase,
+	updateUserProfileInDatabase,
+} from '../fixtures.js';
 import { api, castAsError, signup, sendEnvUpdateRequest } from '../utils.js';
 import type {
 	AuthenticationResponseJSON,
@@ -27,10 +30,9 @@ import { describe, beforeAll, beforeEach, afterEach, afterAll, test } from 'vite
 
 describe('2要素認証', () => {
 	let alice: misskey.entities.SignupResponse;
-	let db: MiDrizzleDatabase;
-	let pool: MiDrizzlePool;
+	let database: TestDatabase;
 
-	const config = loadConfig();
+	const config = fixtureConfig;
 	const password = 'test';
 	const username = 'alice';
 
@@ -223,15 +225,14 @@ describe('2要素認証', () => {
 
 	beforeAll(
 		async () => {
-			pool = createDrizzlePool(config);
-			db = createDrizzleDatabase(pool, config);
+			database = openTestDatabase();
 			alice = await signup({ username, password });
 		},
 		1000 * 60 * 2,
 	);
 
 	afterAll(async () => {
-		await pool.end();
+		await database.close();
 	});
 
 	beforeEach(async () => {
@@ -552,14 +553,14 @@ describe('2要素認証', () => {
 				'2d84773e-f7b7-4d0b-8f72-bb69b584c912',
 			);
 
-			await updateUserProfileInDatabase(db, passkeyUser.id, { usePasswordLessLogin: true });
-			await updateUserInDatabase(db, passkeyUser.id, { isSuspended: true });
+			await updateUserProfileInDatabase(database, passkeyUser.id, { usePasswordLessLogin: true });
+			await updateUserInDatabase(database, passkeyUser.id, { isSuspended: true });
 
 			const suspended = await callPasskey(await createCredential());
 			assert.strictEqual(suspended.status, 403);
 			assert.strictEqual(castAsError(suspended.body as any).error.id, 'e03a5f46-d309-4865-9b69-56282d94e1eb');
 
-			await updateUserInDatabase(db, passkeyUser.id, { isSuspended: false });
+			await updateUserInDatabase(database, passkeyUser.id, { isSuspended: false });
 
 			const completed = await callPasskey(await createCredential());
 			assert.strictEqual(completed.status, 200);
@@ -567,8 +568,8 @@ describe('2要素認証', () => {
 			assert.strictEqual(completedBody.signinResponse.finished, true);
 			assert.notEqual(completedBody.signinResponse.i, undefined);
 		} finally {
-			await updateUserInDatabase(db, passkeyUser.id, { isSuspended: false });
-			await updateUserProfileInDatabase(db, passkeyUser.id, { usePasswordLessLogin: false });
+			await updateUserInDatabase(database, passkeyUser.id, { isSuspended: false });
+			await updateUserProfileInDatabase(database, passkeyUser.id, { usePasswordLessLogin: false });
 			await api(
 				'i/2fa/unregister',
 				{

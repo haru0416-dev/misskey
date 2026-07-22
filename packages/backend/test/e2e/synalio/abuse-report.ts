@@ -17,10 +17,10 @@ import {
 	role,
 	signup,
 	startJobQueue,
+	type TestJobQueueRuntime,
 	UserToken,
 	WEBHOOK_HOST,
 } from '../../utils.js';
-import type { JobQueueRuntime } from '@/boot/common.js';
 
 function first<T>(values: readonly T[]): T {
 	const value = values[0];
@@ -29,7 +29,7 @@ function first<T>(values: readonly T[]): T {
 }
 
 describe('[シナリオ] ユーザ通報', () => {
-	let queue: JobQueueRuntime;
+	let queue: TestJobQueueRuntime;
 	let admin: entities.SignupResponse;
 	let alice: entities.SignupResponse;
 	let bob: entities.SignupResponse;

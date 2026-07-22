@@ -11,19 +11,30 @@ process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
 import { afterAll, beforeAll, afterEach, describe, test, vi } from 'vitest';
-import { loadConfig } from '@/config.js';
-import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
-import { jobQueue, type JobQueueRuntime } from '@/boot/common.js';
-import { api, castAsError, signup, successfulApiCall, uploadFile } from '../utils.js';
+import {
+	fetchUserByIdOrFailFromDatabase,
+	openTestDatabase,
+	type TestDatabase,
+	updateUserInDatabase,
+} from '../fixtures.js';
+import {
+	api,
+	castAsError,
+	origin,
+	signup,
+	startJobQueue,
+	successfulApiCall,
+	type TestJobQueueRuntime,
+	uploadFile,
+} from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 const waitForMoveJobOptions = { timeout: 5000, interval: 50 };
 const waitForDelayedUnfollowJobOptions = { timeout: 15000, interval: 100 };
 
 describe('Account Move', () => {
-	let jq: JobQueueRuntime;
+	let jq: TestJobQueueRuntime;
 	let url: URL;
 
 	let root: misskey.entities.SignupResponse;
@@ -34,17 +45,14 @@ describe('Account Move', () => {
 	let eve: misskey.entities.SignupResponse;
 	let frank: misskey.entities.SignupResponse;
 
-	let db: MiDrizzleDatabase;
-	let pool: MiDrizzlePool | undefined;
+	let db: TestDatabase;
 
 	beforeAll(
 		async () => {
-			jq = await jobQueue();
+			jq = await startJobQueue();
 
-			const config = loadConfig();
-			url = new URL(config.instance.url);
-			pool = createDrizzlePool(config);
-			db = createDrizzleDatabase(pool, config);
+			url = new URL(origin);
+			db = openTestDatabase();
 			root = await signup({ username: 'root' });
 			alice = await signup({ username: 'alice' });
 			bob = await signup({ username: 'bob' });
@@ -57,7 +65,7 @@ describe('Account Move', () => {
 	);
 
 	afterAll(async () => {
-		await pool?.end();
+		await db.close();
 		await jq.close();
 	});
 

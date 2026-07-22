@@ -11,18 +11,28 @@ process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
 import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
-import { loadConfig } from '@/config.js';
-import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { updateDriveFileInDatabase } from '@/core/DriveFileStore.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { api, port, post, role, signup, startJobQueue, uploadFile } from '../utils.js';
-import type { JobQueueRuntime } from '@/boot/common.js';
+import {
+	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
+	openTestDatabase,
+	type TestDatabase,
+	updateDriveFileInDatabase,
+} from '../fixtures.js';
+import {
+	api,
+	post,
+	relativeFetch,
+	resolveTargetUrl,
+	role,
+	signup,
+	startJobQueue,
+	uploadFile,
+	type TestJobQueueRuntime,
+} from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('export-clips', () => {
-	let queue: JobQueueRuntime;
-	let db: MiDrizzleDatabase;
-	let pool: MiDrizzlePool;
+	let queue: TestJobQueueRuntime;
+	let db: TestDatabase;
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 
@@ -45,7 +55,7 @@ describe('export-clips', () => {
 			const fileResponse = await api('drive/files/show', { fileId: file.id }, alice);
 			assert.strictEqual(fileResponse.status, 200);
 			const shownFile = fileResponse.body;
-			const res = await fetch(new URL(new URL(shownFile.url).pathname, `http://127.0.0.1:${port}`));
+			const res = await relativeFetch(new URL(shownFile.url).pathname);
 			assert.strictEqual(res.status, 200);
 			return await res.json();
 		}
@@ -54,9 +64,7 @@ describe('export-clips', () => {
 
 	beforeAll(
 		async () => {
-			const config = loadConfig();
-			pool = createDrizzlePool(config);
-			db = createDrizzleDatabase(pool, config);
+			db = openTestDatabase();
 			queue = await startJobQueue();
 			alice = await signup({ username: 'alice' });
 			bob = await signup({ username: 'bob' });
@@ -66,7 +74,7 @@ describe('export-clips', () => {
 
 	afterAll(async () => {
 		await queue.close();
-		await pool.end();
+		await db.close();
 	});
 
 	beforeEach(async () => {
@@ -374,9 +382,9 @@ describe('export-clips', () => {
 		assert.ok(uploaded.body);
 		const uploadedPath = new URL(uploaded.body.url).pathname;
 		await updateDriveFileInDatabase(db, uploaded.body.id, {
-			url: `http://127.0.0.1:${port}${uploadedPath}`,
+			url: resolveTargetUrl(uploadedPath).toString(),
 		});
-		const uploadedContent = await fetch(`http://127.0.0.1:${port}${uploadedPath}`);
+		const uploadedContent = await relativeFetch(uploadedPath);
 		assert.strictEqual(uploadedContent.status, 200);
 		assert.strictEqual(await uploadedContent.text(), csv);
 

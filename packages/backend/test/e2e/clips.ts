@@ -7,12 +7,14 @@ process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
 import { afterAll, describe, beforeAll, beforeEach, afterEach, test } from 'vitest';
-import { loadConfig } from '@/config.js';
-import { createNoteInDatabase } from '@/core/NoteStore.js';
-import { DEFAULT_POLICIES } from '@/core/role-policies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { genId } from '@/misc/id/gen-id.js';
+import {
+	DEFAULT_POLICIES,
+	createNoteInDatabase,
+	createUserWithProfileAndPublickeyInDatabase,
+	genId,
+	openTestDatabase,
+	type TestDatabase,
+} from '../fixtures.js';
 import { api, ApiRequest, failedApiCall, hiddenNote, post, signup, successfulApiCall } from '../utils.js';
 import type * as Misskey from 'misskey-js';
 
@@ -159,14 +161,11 @@ describe('クリップ', () => {
 		});
 	};
 
-	let pool: MiDrizzlePool | undefined;
-	let db: MiDrizzleDatabase;
+	let database: TestDatabase;
 
 	beforeAll(
 		async () => {
-			const config = loadConfig();
-			pool = createDrizzlePool(config);
-			db = createDrizzleDatabase(pool, config);
+			database = openTestDatabase();
 			alice = await signup({ username: 'alice' });
 			bob = await signup({ username: 'bob' });
 
@@ -193,7 +192,7 @@ describe('クリップ', () => {
 	});
 
 	afterAll(async () => {
-		await pool?.end();
+		await database.close();
 	});
 
 	test('の作成ができる', async () => {
@@ -1143,11 +1142,10 @@ describe('クリップ', () => {
 
 		test('Remoteのノートもクリップできる。', async () => {
 			// 連合の実サーバーは立てず、リモートユーザーとそのノートをDBに直接用意してクリップできることを検証する
-			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
 			const host = `clip-remote-${suffix}.example`;
 			const remoteUserId = genId();
-			await createUserWithProfileAndPublickeyInDatabase(db, {
+			await createUserWithProfileAndPublickeyInDatabase(database, {
 				user: {
 					id: remoteUserId,
 					username: `clipremote${suffix}`,
@@ -1162,7 +1160,7 @@ describe('クリップ', () => {
 				},
 			});
 			const remoteNoteId = genId();
-			await createNoteInDatabase(db, {
+			await createNoteInDatabase(database, {
 				id: remoteNoteId,
 				userId: remoteUserId,
 				userHost: host,

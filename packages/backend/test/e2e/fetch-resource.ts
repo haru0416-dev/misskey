@@ -7,10 +7,12 @@ process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
 import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
-import { loadConfig } from '@/config.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzlePool } from '@/drizzle.js';
-import { genId } from '@/misc/id/gen-id.js';
+import {
+	createUserWithProfileAndPublickeyInDatabase,
+	genId,
+	openTestDatabase,
+	type TestDatabase,
+} from '../fixtures.js';
 import { api, channel, clip, galleryPost, page, play, post, signup, simpleGet, uploadFile } from '../utils.js';
 import type { SimpleGetResponse } from '../utils.js';
 import type * as misskey from 'misskey-js';
@@ -38,7 +40,7 @@ describe('Webリソース', () => {
 
 	let bob: misskey.entities.SignupResponse;
 
-	let pool: MiDrizzlePool | undefined;
+	let database: TestDatabase;
 	// DBに直接用意したリモートユーザー (連合の実サーバーは立てない)
 	let remoteUserAcct: string;
 	let remoteUserUri: string;
@@ -108,15 +110,13 @@ describe('Webリソース', () => {
 
 			bob = await signup({ username: 'bob' });
 
-			const config = loadConfig();
-			pool = createDrizzlePool(config);
-			const db = createDrizzleDatabase(pool, config);
+			database = openTestDatabase();
 			const suffix = Date.now().toString(36).slice(-8);
 			const remoteHost = `fetch-remote-${suffix}.example`;
 			const remoteUserId = genId();
 			remoteUserAcct = `fetchremote${suffix}@${remoteHost}`;
 			remoteUserUri = `https://${remoteHost}/users/${remoteUserId}`;
-			await createUserWithProfileAndPublickeyInDatabase(db, {
+			await createUserWithProfileAndPublickeyInDatabase(database, {
 				user: {
 					id: remoteUserId,
 					username: `fetchremote${suffix}`,
@@ -136,7 +136,7 @@ describe('Webリソース', () => {
 	);
 
 	afterAll(async () => {
-		await pool?.end();
+		await database.close();
 	});
 
 	describe.each([

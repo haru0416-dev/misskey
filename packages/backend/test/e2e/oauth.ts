@@ -21,14 +21,14 @@ import {
 	ResourceOwnerPassword,
 } from 'simple-oauth2';
 import * as htmlParser from 'node-html-parser';
-import { api, port, sendEnvUpdateRequest, signup } from '../utils.js';
+import { api, oauthClientPort, resolveTargetUrl, sendEnvUpdateRequest, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 import { createS256CodeChallenge } from '@/misc/pkce.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 
-const host = `http://127.0.0.1:${port}`;
+const host = resolveTargetUrl('/').origin;
 
-const clientPort = port + 1;
+const clientPort = oauthClientPort;
 const redirect_uri = `http://127.0.0.1:${clientPort}/redirect`;
 const redirect_uri2 = `http://127.0.0.1:${clientPort}/redirect2`;
 
