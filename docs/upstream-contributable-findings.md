@@ -20,6 +20,29 @@ Rust 化に向けて TS backend を「仕様の正解」に固める過程で、
 
 ---
 
+## 意図判定（upstream にとって設計か、気づかれていないバグか）
+
+各項目を GitHub の issue/PR、セキュリティアドバイザリ(全37件)、コードコメント/TODO、
+該当行のコミット履歴、単体テストで裏取りした結果（2026-07-22）。**「意図的」= 逆貢献しても
+by-design で却下される。「未報告バグ」= 本当に投げる価値がある。**
+
+| 項目 | 判定 | 決め手の証跡 |
+|---|---|---|
+| #1 system-webhook kind 逆転 | 未報告バグ（無害） | 兄弟 EP は全て `write`、読み取り2件だけ `write`・test だけ `read`。issue/PR 無し。`secure` で実行時無影響 |
+| #2 dateUTC epoch-0 | 未報告バグ（潜在・到達不能） | `!d` の falsy 誤用。呼び出しは現在時刻のみで epoch に到達せず。issue 無し |
+| #3 / #3b quota TOCTOU | 未報告バグ | issue/PR/GHSA/TODO いずれも無し。check-then-act を非直列化 |
+| #4 follow request 無制限並行 | 未報告バグ | issue・コメント無し。未 await の全件発火ループ |
+| #5 カウンタ二重減算 | 未報告バグ（強い状況証拠） | upstream `ReactionService` は `affected===1` を検査してから減算するのに、note削除/unfollow は未検査＝適用漏れ |
+| #6 registry 重複行 | **既知・未対応** | `RegistryItem` entity にメンテナ自身の TODO「制約付けたい」。issue は無いが認識済み |
+| #7 hiddenBefore=0 で全非表示 | **意図的な設計** | upstream 単体テストが `0→hide` を明示アサート → **バグではない・逆貢献対象外**（#7 節参照） |
+| #8 広告ページネーション | 未報告バグ（2023〜未修正） | `#12385` で `orWhere` 混入と特定。fix PR 無し |
+| #9 admin 権限昇格 | root保護=意図的 / admin間ギャップ=未認識 | GHSA 全37件に該当無し。root 専用エラー有=root 保護は意図的だが、非root管理者の保護欠如・unset-mfa の root 無防備は空白 |
+
+要するに **9 件中「意図的」は #7 のみ**（＝除外）、**#6 は既知未対応**、残り 7 件は upstream が
+気づいていない本物のバグ（#9 は root 保護のみ意図的で admin 間ギャップは未認識）。
+
+---
+
 ## 1. system-webhook の権限 kind が read/write 逆 【upstream 確定】
 
 **upstream**: `packages/backend/src/server/api/endpoints/admin/system-webhook/{list,show,test}.ts`
@@ -191,15 +214,23 @@ fork `core/RegistryItemStore.ts:30-48` / upstream `RegistryApiService`。SELECT�
 `// TODO: 同じdomain、同じscope、同じkeyのレコードは二つ以上存在しないように制約付けたい`
 と明記**されており、既知の未対応。**影響度: 低〜中**。直し: unique 制約 + onConflict upsert。
 
-## 7. `makeNotesHiddenBefore` / `makeNotesFollowersOnlyBefore` が `0` で全ノートを隠す 【upstream 確定】
+## 7. `makeNotesHiddenBefore` の `0` 挙動 【意図的な設計・バグではない / 当初の誤検出を訂正】
 
-fork `misc/should-hide-note-by-time.ts:19` / upstream 同ファイル（**コード完全一致**）。
-`if (hiddenBefore <= 0)` が `0` を「相対秒数」分岐に振り分け、`elapsedSeconds >= Math.abs(0)`
-= `>= 0` で**常に true** → そのユーザーの全ノートが本人以外に hidden 化（`makeNotesFollowersOnlyBefore=0`
-なら全 public/home が followers 限定へ）。`i/update` の zod は下限なしで `0` を受理、
-`ap-person` はリモート actor 値を無検証取り込み。#2 の dateUTC epoch-0 と同じ「0 を
-falsy/sentinel 扱い」ファミリ。**影響度: 低〜中**（可視性。ちょうど 0 送信が必要、通常 UI は
-null か計算値を送る）。直し: 判定を `< 0` にして `0` を絶対時刻分岐（＝何も隠さない）へ落とす。
+**当初これを「`0` で全ノートが隠れるバグ」として挙げたが、upstream の意図的仕様と判明したので訂正する。**
+`misc/should-hide-note-by-time.ts:19` の `if (hiddenBefore <= 0)` は `0` を相対秒数分岐に含め、
+`elapsedSeconds >= Math.abs(0)` = `>= 0` で常に true → `0` で「ほぼ全ノート非表示」になる。
+これは **upstream が単体テストで明示的に固定した挙動**:
+
+```ts
+// upstream packages/backend/test/unit/misc/should-hide-note-by-time.ts (describe: 相対時間モード)
+test('hiddenBefore が 0 の場合に対応できる（0秒以上経過で非表示→ほぼ全て非表示）', () => {
+	expect(shouldHideNoteByTime(0, createdAt)).toBe(true);
+});
+```
+
+よって**バグではなく意図的**（実装は GHSA セキュリティフォークマージ由来）。逆貢献対象では無い。
+**このフォークでも挙動を変えない**（`< 0` に直すと upstream のテスト意図を壊す）。コード側マーカーも
+「意図的・変更するな」の `NOTE(rust)` へ訂正済み。ドキュメント上の `0` の扱いが未定義な点だけは齟齬。
 
 ## 8. admin 広告一覧 `publishing:false` のページネーションで予約広告が毎ページ重複 【upstream 確定】
 
