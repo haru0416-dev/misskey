@@ -84,15 +84,47 @@ hashtext(userId))` を取り、チェックと insert を atomic 化（commit `c
 upstream は TypeORM なので直し方は変わる（`SELECT ... FOR UPDATE` / serializable 分離 /
 DB 側 unique+件数制約など）が、**レースの所在は同一**。
 
+## 4. アカウント unlock 時の follow request 一括受理が無制限並行 + 浮いた Promise 【upstream 確定】
+
+**upstream**:
+- 引き金 `packages/backend/src/server/api/endpoints/i/update.ts:550-551`
+- 本体 `packages/backend/src/core/UserFollowingService.ts:610-623`
+
+鍵アカウント（`isLocked`）が `i/update` で `isLocked: false` に変えると、保留中の全 follow
+request を一括受理する。その連鎖が二重に await されていない:
+
+```ts
+// i/update.ts:550-551 — unlock を検知して呼ぶが await が無い
+if (user.isLocked && ps.isLocked === false) {
+	this.userFollowingService.acceptAllFollowRequests(user);
+}
+
+// UserFollowingService.ts:615-622 — 全件を for で回すが acceptFollowRequest を await しない
+const requests = await this.followRequestsRepository.findBy({ followeeId: user.id });
+for (const request of requests) {
+	const follower = await this.usersRepository.findOneByOrFail({ id: request.followerId });
+	this.acceptFollowRequest(user, follower);   // ← async メソッドを撃ちっぱなし
+}
+```
+
+`acceptFollowRequest` は `public async`（DB 書き込み + 連合 Accept 配送 + 通知を行う）。
+それを await せず for で全件発火するので、**保留件数ぶんの重い処理が一斉に in-flight** になる。
+数千件の保留を持つ人気鍵アカウントが unlock すると並行数が青天井になり、DB コネクション /
+連合配送の負荷スパイクを招く。加えて各呼び出しが**浮いた Promise**なので、1 件でも reject
+すると unhandledRejection になり、残りの受理も保証されない。
+
+**影響度: 低〜中（堅牢性）。** 正しさ・セキュリティの問題ではないが、保留件数に比例して
+悪化し、上限が無い。
+
+**fork 側の修正**: `promiseLimit(8)` で並行数を絞り、`Promise.all` で待ち、各件を try/catch で
+隔離、さらに受理直前に現存確認（stale request のスキップ）を追加（commit `ea14cfab5f`,
+`acceptAllFollowRequestsForHonoApi`）。upstream に出すなら最小形は「`for` を並行数制限付きの
+待機に変える + 各件を try/catch で囲む + 引き金側も `await`/`void` を明示」。
+
 ---
 
 ## 候補（upstream 未照合・出す前に要確認）
 
-- **follow request の全件受理が無制限並行**: ロック解除等で保留リクエストをまとめて受理する
-  際、fork は無制限 `Promise.all` を `promiseLimit` で絞った（commit `ea14cfab5f`,
-  `packages/backend/src/server/rest/following.ts`）。upstream の該当フロー
-  （`accept-all` / アカウント unlock 時）も無制限に見えるが、今回のパスでは upstream ソースを
-  未確認。リクエストが数千件ある鍵アカウントで DB コネクション / 負荷スパイクの恐れ。堅牢性の話。
 - **`secure: true` と `kind` の同時宣言（~11 件）**: `secure` がトークン認証を拒否するので
   `kind` は死んでいる。upstream にも同様に散在するが、意図的な冗長の可能性もあり「バグ」と
   言い切れない。優先度低。
