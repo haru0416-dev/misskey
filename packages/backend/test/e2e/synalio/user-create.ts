@@ -18,13 +18,13 @@ import {
 	role,
 	signup,
 	startJobQueue,
+	type TestJobQueueRuntime,
 	UserToken,
 	WEBHOOK_HOST,
 } from '../../utils.js';
-import type { JobQueueRuntime } from '@/boot/common.js';
 
 describe('[シナリオ] ユーザ作成', () => {
-	let queue: JobQueueRuntime;
+	let queue: TestJobQueueRuntime;
 	let admin: entities.SignupResponse;
 
 	async function createSystemWebhook(

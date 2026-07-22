@@ -8,18 +8,19 @@ process.env['NODE_ENV'] = 'test';
 import * as assert from 'assert';
 import { describe, beforeAll, afterAll, test } from 'vitest';
 import { WebSocket } from 'ws';
-import { eq } from 'drizzle-orm';
-import { loadConfig } from '@/config.js';
-import { createFollowingInDatabase } from '@/core/FollowingStore.js';
-import { hashtag } from '@/db/schema/hashtag.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { genId } from '@/misc/id/gen-id.js';
+import {
+	createFollowingInDatabase,
+	findHashtagsByName,
+	genId,
+	openTestDatabase,
+	type TestDatabase,
+} from '../fixtures.js';
 import {
 	api,
 	createAppToken,
 	initTestDb,
-	port,
 	post,
+	resolveStreamingUrl,
 	signup,
 	waitFire,
 	type StreamMessage,
@@ -28,8 +29,7 @@ import {
 import type * as misskey from 'misskey-js';
 
 describe('Streaming', () => {
-	let db: MiDrizzleDatabase;
-	let pool: MiDrizzlePool | undefined;
+	let db: TestDatabase;
 	const STREAMING_NEGATIVE_TIMEOUT_MS = 500;
 
 	const follow = async (follower: any, followee: any) => {
@@ -47,7 +47,7 @@ describe('Streaming', () => {
 	};
 
 	afterAll(async () => {
-		await pool?.end();
+		await db.close();
 	});
 
 	const waitFireWithoutEvent = <C extends keyof misskey.Channels>(
@@ -78,10 +78,8 @@ describe('Streaming', () => {
 
 		beforeAll(
 			async () => {
-				const config = loadConfig();
 				await initTestDb(true);
-				pool = createDrizzlePool(config);
-				db = createDrizzleDatabase(pool, config);
+				db = openTestDatabase();
 
 				ayano = await signup({ username: 'ayano' });
 				kyoko = await signup({ username: 'kyoko' });
@@ -866,7 +864,9 @@ describe('Streaming', () => {
 		test('Authentication', async () => {
 			const application = await createAppToken(ayano, []);
 			const application2 = await createAppToken(ayano, ['read:account']);
-			const socket = new WebSocket(`ws://127.0.0.1:${port}/streaming?i=${application}`);
+			const url = resolveStreamingUrl();
+			url.searchParams.set('i', application);
+			const socket = new WebSocket(url);
 			const established = await new Promise<boolean>((resolve, reject) => {
 				socket.on('error', () => resolve(false));
 				socket.on('unexpected-response', () => resolve(false));
@@ -935,7 +935,7 @@ describe('Streaming', () => {
 				const tag = `concurrenthashtag${Date.now().toString(36)}`;
 				await Promise.all([post(ayano, { text: `#${tag}` }), post(chitose, { text: `#${tag}` })]);
 
-				const rows = await db.select().from(hashtag).where(eq(hashtag.name, tag));
+				const rows = await findHashtagsByName(db, tag);
 				assert.strictEqual(rows.length, 1);
 				const row = rows[0];
 				assert.ok(row);
