@@ -18,12 +18,12 @@ Fixes #<issue-01>。
 （affected を見ずに）メソッド末尾で行っていました。そのため同じ返信に対する 2 本の並行削除で
 両方が親を減算し、実際に消すのは片方だけなので、クランプの無い `repliesCount` が負値になりえました。
 
-本 PR は `DELETE` をメソッド先頭に移し、その `affected` を権威的なガードにします。`affected !== 1`
+本 PR は `DELETE` をメソッド先頭に移し、その `affected` を「実際に削除できたか」の判定基準にします。`affected !== 1`
 なら別リクエストが既に処理済みなので、副作用を適用する前に return します。`ReactionService.delete()`
 の既存ガードと同じ考え方です。
 
 - 同じ返信を並行削除して親の `repliesCount` が `-1` でなく `0` になることを確認するリグレッションテストを追加。
-- `UserFollowingService.decrementFollowing()` にも同じ無ガードのパターンがあります
+- `UserFollowingService.decrementFollowing()` にも同じくガードの無いパターンがあります
   （`followingCount`/`followersCount`）。別 PR で対応してもよいです。
 
 CHANGELOG.md（`### Server`）: `- Fix: 同じ返信を同時に削除するとノートの repliesCount が負値になりうる問題を修正`
