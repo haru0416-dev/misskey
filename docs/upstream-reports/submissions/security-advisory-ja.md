@@ -10,9 +10,12 @@ GitHub の対象リポジトリ **Security → Report a vulnerability**（非公
 **概要**
 
 `admin/reset-password` と `admin/unset-mfa` は `requireModerator: true` のみでゲートされ、**対象**ユーザーが
-呼び出し元と同格/上位かを検査しません。そのため `write:admin:reset-password` /
-`write:admin:unset-mfa` を、対象の管理者より低い信頼レベルのロールに付与しているインスタンスでは、
-その保持者が非 root の上位管理者アカウントを乗っ取れます。
+呼び出し元と同格/上位かを検査しません。しかも `kind`（`write:admin:*`）権限のチェックは
+`ApiCallService.ts:412` の `if (token && …)` の**内側にあり、第三者アプリトークンにしか適用されません**。
+モデレーター自身の通常ログイン（ネイティブセッション）では `kind` は評価されず、`requireModerator` は
+`isModerator || isAdministrator` フラグだけを見ます（`ApiCallService.ts:381`）。そのため
+**モデレーターと管理者を分けている標準的な運用では、任意のモデレーターが通常の Web クライアントから、
+非 root の上位管理者アカウントを乗っ取れます**（特別な権限付与や設定は不要）。
 
 - `admin/reset-password` は対象の新パスワード（8 文字）を払い出し、それでログインできます。**root だけ**が
   保護されており、それ以外の管理者は保護されません。
@@ -21,9 +24,12 @@ GitHub の対象リポジトリ **Security → Report a vulnerability**（非公
 
 両者を併用すると、下位のモデレーターが非 root 管理者を完全に乗っ取れます（パスワードリセット + MFA 解除）。
 
-**深刻度:** 中。悪用可否はインスタンスのロール構成に依存します。`write:admin:reset-password`
-（および `write:admin:unset-mfa`）を、対象より低い信頼レベルのロールに付与した権限階層が前提です。
-単一管理者や、全モデレーターが同格に信頼される構成では実害はありません。
+**深刻度:** 高（CVSS 3.1 `AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H` ≈ 9.0。Scope を Unchanged と見ても ≈ 7.1 で High）。
+前提は特別な設定ではなく、**モデレーターと管理者を分けている標準的な二層スタッフ運用**そのものです。
+任意のモデレーター 1 アカウント（または乗っ取られたモデレーターアカウント）から非 root 管理者を乗っ取り、
+フル管理者権限＝インスタンス全体を掌握できます。唯一の緩和は「攻撃者が既にモデレーターであること」ですが、
+モデレーターは設計上管理者より低信頼の層なので、これは意図された信頼境界（モデレーター↛管理者）の
+突破であり緩和になりません。モデレーター層が存在せず管理者のみ、というインスタンスに限りこの経路は成立しません。
 
 **影響バージョン:** `develop`（2026.7.0-beta.2）。ソース確認により確定。
 
@@ -32,6 +38,9 @@ GitHub の対象リポジトリ **Security → Report a vulnerability**（非公
 - `packages/backend/src/server/api/endpoints/admin/reset-password.ts`: `serverSettings.rootUserId === user.id`
   のみ保護。対象が同格/上位の管理者かのチェックが無い。
 - `packages/backend/src/server/api/endpoints/admin/unset-mfa.ts`: 対象の階位チェックが一切無い（root ガードすら無い）。
+- `packages/backend/src/server/api/ApiCallService.ts:412`: `kind` 権限チェックが `if (token && …)` の内側にあり、
+  ネイティブセッション（通常ログイン）では skip される。`write:admin:reset-password` を明示付与していない
+  素のモデレーターでも、通常ログインなら両エンドポイントを叩ける。
 
 **PoC（e2e フロー）**
 
