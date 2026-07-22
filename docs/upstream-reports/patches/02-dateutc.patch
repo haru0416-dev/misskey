@@ -1,0 +1,13 @@
+diff --git a/packages/backend/src/misc/prelude/time.ts b/packages/backend/src/misc/prelude/time.ts
+index 275b67e..39f6325 100644
+--- a/packages/backend/src/misc/prelude/time.ts
++++ b/packages/backend/src/misc/prelude/time.ts
+@@ -19,7 +19,7 @@ export function dateUTC(time: number[]): Date {
+ 		: time.length === 7 ? Date.UTC(time[0], time[1], time[2], time[3], time[4], time[5], time[6])
+ 		: null;
+ 
+-	if (!d) throw new Error('wrong number of arguments');
++	if (d === null) throw new Error('wrong number of arguments');
+ 
+ 	return new Date(d);
+ }
