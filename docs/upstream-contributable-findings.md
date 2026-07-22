@@ -84,6 +84,31 @@ hashtext(userId))` を取り、チェックと insert を atomic 化（commit `c
 upstream は TypeORM なので直し方は変わる（`SELECT ... FOR UPDATE` / serializable 分離 /
 DB 側 unique+件数制約など）が、**レースの所在は同一**。
 
+### 3b. 同型 TOCTOU の高リスク版: ドライブ容量 【upstream 確定・fork でも未修正】
+
+#3 は単発ではなく「**読取 → 上限判定 → 書込 をロックせず行う**」クラスバグ。その最も
+stakes の高い実例が**ドライブ容量チェック**で、**fork でも upstream でも未修正**:
+
+- upstream `packages/backend/src/core/DriveService.ts:546-556`
+- fork `packages/backend/src/server/rest/drive-file-upload.ts:533-542`
+
+```ts
+const usage = await calcDriveUsageOf(user);          // 使用量を読む
+if (driveCapacity < usage + info.size) { expireOld() } // 判定（超過なら古いファイルを消して空ける）
+// ...ロック無しで insert
+```
+
+同一ユーザーの並行アップロードが全て同じ `usage` を読んで全部チェックを通過し、合算で
+`driveCapacity` を超える。list の「上限を数個超過」と違い、**ストレージ（ディスク / オブジェクト
+ストレージ）の実消費がクォータを超えられる**ぶん stakes が高い。超過幅は概ね
+`(並行数 - 1) × ファイルサイズ`（DB プール 30 と `maxFileSizeMb` で上限）。加えて超過時の
+`expireOld`（古いファイル削除）が並行すると、同じ古いファイルを二重に対象化して**必要以上に
+消す**可能性もある（自分の古いファイルの喪失）。
+
+**影響度: 低〜中。** 自分のクォータ超過なので直接の他者被害は無いが、共有インスタンスでは
+ストレージコスト転嫁になる。悪用の旨味は小さい（自分の割当を少し超えるだけ）が、list より実害寄り。
+antenna / clip / pin など他の件数上限も同型だが stakes は list と同程度。
+
 ## 4. アカウント unlock 時の follow request 一括受理が無制限並行 + 浮いた Promise 【upstream 確定】
 
 **upstream**:
@@ -115,6 +140,19 @@ for (const request of requests) {
 
 **影響度: 低〜中（堅牢性）。** 正しさ・セキュリティの問題ではないが、保留件数に比例して
 悪化し、上限が無い。
+
+**波及範囲は「unlock した本人」に閉じない（確認済み）:**
+- **クラッシュには昇格しない。** `boot/entry.ts:52` の `unhandledRejection` ハンドラは
+  telemetry 記録 + `console.dir` のみで `process.exit` を呼ばない（Node 15+ の
+  デフォルト crash を上書き抑止）。よって浮いた Promise の reject はログに消えるだけ
+- **ただし共有 DB プールを一時的に枯らす。** プール上限はデフォルト `30`/worker
+  （`config-schema.ts:152`）。一斉受理の各 `acceptFollowRequest` は複数の awaited DB 操作を
+  持つので、burst 時に 30 コネクションを奪い合う。pg プールは接続要求をキューするため
+  **クラッシュはしないが、同 worker 上の他ユーザーの HTTP リクエストが接続待ちで詰まる** →
+  unlock 実行中だけ instance-wide にレイテンシが悪化（自己回復）。つまり blast radius は
+  「本人の受理が遅い / 一部失敗」に留まらず、同居ユーザーの体感にも及ぶ
+- **fire-and-forget の副作用**: `i/update` は受理完了前に成功を返すので、失敗した request は
+  無言で保留に残る（unlock 済みなのに未受理が残る軽い不整合。破損ではない）
 
 **fork 側の修正**: `promiseLimit(8)` で並行数を絞り、`Promise.all` で待ち、各件を try/catch で
 隔離、さらに受理直前に現存確認（stale request のスキップ）を追加（commit `ea14cfab5f`,
