@@ -49,6 +49,16 @@ NODE_ENV=test npx vitest run --config vitest.config.unit.ts test/unit/<repro>.ts
 各 repro は「**正しい挙動を assert → 現行 develop では失敗**」の形なので、失敗出力が再現の証拠。
 修正 patch を当てると通る（#01/#02/#03 は検証済み）。
 
+### 反証（adversarial）済み
+
+「手組みのシナリオを再現しただけで実コードでは起きないのでは」を潰すため、追加検証した:
+
+- **#03**: 手書きクエリではなく**実 `QueryService.makePaginationQuery`** を駆動しても overlap は発生。
+- **#01 / #04**: interleave を手で強制せず、操作全体を 1 関数にして `Promise.all` で**自然に並行発火**したところ、
+  それぞれ **20/20 runs** で負値化 / 重複行が発生（読み取り相が同一 event-loop tick でまとまるため）。
+- **#01**: 実エンドポイント `notes/delete` が dedup も lock も無く `noteDeleteService.delete` を呼ぶことを確認。
+- **#05** は #04 と同じ check-then-insert クラスで、実 `DriveService.addFile` に lock が無いことを確認。
+
 ## 提出方針
 
 - **#01〜#05 は公開 issue + PR**。1 バグ 1 PR。各 PR は repro をリグレッションテストとして同梱する。
