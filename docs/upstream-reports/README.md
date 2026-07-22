@@ -22,6 +22,10 @@ upstream Misskey が気づかずに継承しているバグを複数見つけた
 | [05](./05-drive-capacity-toctou.md) | ドライブ容量チェックの TOCTOU で容量超過 | 未報告バグ | ✅ usage 120>100 | 提案(直列化要) | 公開 issue + PR |
 | [99](./99-SECURITY-admin-privesc.md) | admin reset-password/unset-mfa の権限昇格 | root保護=意図的/admin間=未認識 | (e2e) | 提案 | **非公開 Security Advisory** |
 
+- `submissions/` — **そのまま貼れる英語の提出文面**（upstream の慣習: issue/PR は英語推奨）:
+  - `issues.md` — 5 件の issue 本文（bug-report テンプレ形式）
+  - `pull-requests.md` — #01/#02/#03 の PR タイトル+本文（+CHANGELOG 文言）
+  - `security-advisory.md` — #99 の非公開 Advisory 文面
 - `patches/*.patch` — 検証済み修正の diff（#01/#02/#03）。`git apply` で upstream develop に当たる。
 - `repros/*.repro.ts` — upstream で動かした再現テスト（`packages/backend/test/unit/` に置いて実行）。
 
