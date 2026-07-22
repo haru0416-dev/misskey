@@ -42,9 +42,9 @@ GitHub の対象リポジトリ **Security → Report a vulnerability**（非公
   ネイティブセッション（通常ログイン）では skip される。`write:admin:reset-password` を明示付与していない
   素のモデレーターでも、通常ログインなら両エンドポイントを叩ける。
 
-**PoC（e2e フロー）**
+**PoC（実サーバ e2e で再現確認済み）**
 
-上記のとおりコードレベルで確定。動作 PoC は以下で再現できます:
+`develop` を clone し、実サーバを起動して以下を実行し、**実際に再現した**（2026-07-22）:
 
 ```
 root  = signup()                                   // 最初の signup = インスタンス root
@@ -52,11 +52,14 @@ admin = signup(); ロール { isAdministrator: true } を付与
 mod   = signup(); ロール { isModerator: true } を付与
 
 // モデレーター mod が、非 root の管理者 admin を対象に:
-POST /api/admin/reset-password { userId: admin.id }   // → 200 で新パスワードが返る（拒否されるべき）
-POST /api/admin/unset-mfa      { userId: admin.id }    // → 成功（拒否されるべき）
+POST /api/admin/reset-password { userId: admin.id }
+  → 実測: { status: 200, issuedPassword: "ghL99RfI" }   // モデレーターが管理者の新パスワードを取得
+POST /api/admin/unset-mfa      { userId: admin.id }
+  → 実測: status 204（成功。管理者の MFA を解除）
 ```
 
-期待挙動: いずれも権限昇格として拒否されるべき。
+いずれも本来は権限昇格として 403 で拒否されるべき。上の実測どおり、モデレーターは管理者の
+パスワードを払い出して（→そのままログインし乗っ取り可能）、MFA も解除できた。
 
 **修正案**
 

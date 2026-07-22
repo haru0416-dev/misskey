@@ -3,7 +3,8 @@
 > ⚠️ **これは公開 issue にしないこと。** GitHub の "Security" → "Report a vulnerability"
 > (private Security Advisory) から非公開で報告する。脆弱性を通常 issue/PR で出さないルールに従う。
 
-- **対象**: `misskey-dev/misskey` develop (`2026.7.0-beta.2`)、2026-07-22 実ソースで確認
+- **対象**: `misskey-dev/misskey` develop (`2026.7.0-beta.2`)、2026-07-22 **実サーバ e2e で再現確認済み**
+  （モデレーターが管理者のパスワードを実際に払い出し: `{status:200, password:"ghL99RfI"}`、MFA 解除: `204`）
 - **深刻度**: 高（CVSS 3.1 `AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H` ≈ 9.0、CWE-269 Improper Privilege Management）
 - **意図判定**: root 保護は**意図的**（`#15530` で `isRoot`→`rootUserId` にリファクタ、専用エラーあり）。
   しかし**非 root 管理者の保護欠如**と **`unset-mfa` の root 無防備**は未認識のギャップ。

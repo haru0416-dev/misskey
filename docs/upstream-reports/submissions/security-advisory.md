@@ -34,7 +34,8 @@ mitigating factor is that the attacker must already be a moderator, but since mo
 lower-trust tier than administrators, this is precisely the trust boundary (moderator ↛ administrator) that
 is being crossed. Only an instance with no moderator tier (administrators only) is unaffected.
 
-**Affected version:** `develop` (2026.7.0-beta.2); confirmed by source inspection.
+**Affected version:** `develop` (2026.7.0-beta.2); confirmed by source inspection **and reproduced against a
+running server** (see PoC).
 
 **Root cause**
 
@@ -47,7 +48,9 @@ is being crossed. Only an instance with no moderator tier (administrators only) 
   `if (token && …)`, so it is skipped for native sessions — a plain moderator without an explicit
   `write:admin:reset-password` grant can still call both endpoints from the normal web client.
 
-**Proof of concept** (e2e flow)
+**Proof of concept** (reproduced against a running server, 2026-07-22)
+
+Cloned `develop`, booted a real server, and ran the following — it **actually reproduced**:
 
 ```
 root  = signup()                                   // first signup = instance root
@@ -55,9 +58,14 @@ admin = signup(); assign role { isAdministrator: true }
 mod   = signup(); assign role { isModerator: true }
 
 // as the moderator, targeting the non-root administrator:
-POST /api/admin/reset-password { userId: admin.id }   // → 200 with a new password (should be denied)
-POST /api/admin/unset-mfa      { userId: admin.id }    // → succeeds (should be denied)
+POST /api/admin/reset-password { userId: admin.id }
+  → observed: { status: 200, issuedPassword: "ghL99RfI" }   // the moderator obtained the admin's new password
+POST /api/admin/unset-mfa      { userId: admin.id }
+  → observed: status 204 (success; the admin's MFA was removed)
 ```
+
+Both should be denied (403) as privilege escalation. As observed, the moderator obtained the administrator's
+password (and can log in as them) and stripped their MFA.
 
 **Suggested fix**
 
