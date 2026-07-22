@@ -16,10 +16,10 @@ GitHub の対象リポジトリ **Security → Report a vulnerability**（非公
 
 - `admin/reset-password` は対象の新パスワード（8 文字）を払い出し、それでログインできます。**root だけ**が
   保護されており、それ以外の管理者は保護されません。
-- `admin/unset-mfa` は対象の TOTP / パスキーを剥がします。**対象に対するガードが一切なく**（root すら）、
-  モデレーターが root の二要素認証すら外せます。
+- `admin/unset-mfa` は対象の TOTP / パスキーを解除します。**対象に対するガードが一切なく**（root すら）、
+  モデレーターが root の二要素認証すら解除できます。
 
-両者を併用すると、下位のモデレーターが非 root 管理者を完全に乗っ取れます（パスワードリセット + MFA 除去）。
+両者を併用すると、下位のモデレーターが非 root 管理者を完全に乗っ取れます（パスワードリセット + MFA 解除）。
 
 **深刻度:** 中。悪用可否はインスタンスのロール構成に依存します。`write:admin:reset-password`
 （および `write:admin:unset-mfa`）を、対象より低い信頼レベルのロールに付与した権限階層が前提です。
@@ -52,7 +52,7 @@ POST /api/admin/unset-mfa      { userId: admin.id }    // → 成功（拒否さ
 **修正案**
 
 両エンドポイントに「呼び出し元が対象を管理操作してよいか」の階位チェックを追加します（できれば
-`RoleService` に共通ヘルパを設け、suspend / delete-account 等の対人 admin 操作にも一貫適用):
+`RoleService` に共通ヘルパを設け、suspend / delete-account 等の対人 admin 操作にも一貫して適用するのが望ましい）:
 
 - 対象が root なら拒否（reset-password の既存ガードを unset-mfa にも広げる）。
 - 対象が管理者で、呼び出し元がそれを上回らない場合は拒否（例: 管理者でないモデレーターは管理者を操作不可）。

@@ -18,7 +18,7 @@ upstream の実運用は日本語が主流（直近 PR/Issue の ~92% が日本�
 両方が返信を非 null で観測して両方が親を減算する一方、実際に行を消すのは片方だけです。
 `repliesCount` は `col = col - 1` でクランプが無いため、恒久的にずれて**負値**になりえます。
 `notesCount` チャートも同様で、`UserFollowingService.decrementFollowing()` も
-`followingCount`/`followersCount` に対して同じ無ガードのパターンを持っています。
+`followingCount`/`followersCount` に対して同じくガードの無いパターンを持っています。
 
 なお `ReactionService.delete()` は `result.affected !== 1` を確認してからカウントを調整しており、
 まさにこの二重適用を防いでいます。`NoteDeleteService` と `UserFollowingService` にはその
@@ -27,7 +27,7 @@ upstream の実運用は日本語が主流（直近 PR/Issue の ~92% が日本�
 ### 🥰 Expected Behavior
 
 返信 1 件の削除に対応する親 `repliesCount` の減算は 1 回。同じ返信を同時に 2 回消しても、
-差し引きの減算は 1 回に収まる。
+減算は正味 1 回に収まる。
 
 ### 🤬 Actual Behavior
 
@@ -48,12 +48,12 @@ DB レベルの最小再現（`packages/backend/test/unit/` に置いて
 ### 🖥️ Server Environment
 
 * Misskey: `develop`（2026.7.0-beta.2）
-* サーバー側（バックエンド）の不具合で、フロントには依存しません。
+* サーバー側（バックエンド）の不具合で、フロント固有の問題ではありません。
 
 ### 原因 / 修正案
 
 `packages/backend/src/core/NoteDeleteService.ts`: `delete()` の先頭で `DELETE` を実行し、その
-affected 行数を権威的なガードにする（`affected !== 1` なら早期 return）。そのうえで親の減算と
+affected 行数を「実際に自分が削除したか」の判定基準にする（`affected !== 1` なら早期 return）。そのうえで親の減算と
 その他の副作用を行う。`ReactionService` と同じ形です。検証済みの修正 PR を別途出します。
 
 ---
@@ -67,7 +67,7 @@ affected 行数を権威的なガードにする（`affected !== 1` なら早期
 `misc/prelude/time.ts` の `dateUTC()` は `d = Date.UTC(...)` を計算し、引数の数を
 `if (!d) throw new Error('wrong number of arguments')` で検査します。しかし
 `Date.UTC(1970, 0)` は `0`（Unix epoch）を返すため、`!0 === true` となり、正当なタイムスタンプに
-対して無関係な「wrong number of arguments」を投げます。引数個数の検証と値の検証が混線しています。
+対して無関係な「wrong number of arguments」を投げます。引数個数の検証と値の検証が混同されています。
 
 実運用では潜在的です（呼び出しは `core/chart/core.ts` のみで、常に「現在時刻」近辺を渡すため
 epoch には到達しません）が、ガード自体は誤りです。
@@ -163,7 +163,7 @@ tri-state 化した際に混入）。
 `// TODO: 同じdomain、同じscope、同じkeyのレコードは二つ以上存在しないように制約付けたい` のとおり）。
 同一キーへの `set` が 2 本同時に来ると両方が「該当行なし」を観測して両方 `INSERT` し、同一キーに
 2 行できます。以後の読取は `getOne()`/`limit(1)` で非決定的にどちらかを返し、remove/update は片方の
-id しか触らないため、もう一方が残りロストアップデート化します。
+id しか触らないため、もう一方が残ってしまい、ロストアップデートの原因になります。
 
 ### 🥰 Expected Behavior
 
@@ -210,7 +210,7 @@ id しか触らないため、もう一方が残りロストアップデート�
 
 ### 🤬 Actual Behavior
 
-`usage` を両方が観測してから両方 insert すると、両方が通過して合計が `driveCapacity` を超える。
+両方のアップロードが同じ `usage` を読んでから insert すると、どちらもチェックを通過し、合計が `driveCapacity` を超える。
 
 ### 📝 Steps to Reproduce
 
