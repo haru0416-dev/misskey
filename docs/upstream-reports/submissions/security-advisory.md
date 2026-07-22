@@ -10,9 +10,13 @@ per CONTRIBUTING ("Security Advisory"). A fix can be offered as a PR on the priv
 **Summary**
 
 `admin/reset-password` and `admin/unset-mfa` are gated only by `requireModerator: true` and do not check
-whether the *target* user outranks (or equals) the caller. As a result, on an instance that grants
-`write:admin:reset-password` / `write:admin:unset-mfa` to a role that is less trusted than the administrators
-it can target, the holder of that role can take over higher, non-root administrator accounts:
+whether the *target* user outranks (or equals) the caller. Moreover, the `kind` (`write:admin:*`) permission
+check lives inside `if (token && …)` in `ApiCallService.ts:412`, so it **only applies to third-party app
+tokens**. For a moderator's own web-client login (native session) the `kind` is never evaluated, and
+`requireModerator` only checks the `isModerator || isAdministrator` flag (`ApiCallService.ts:381`). As a
+result, on any instance with the standard two-tier staff setup (moderators that are not administrators), **any
+moderator can take over any non-root administrator account from the normal web client** — no special
+permission grant or configuration is required:
 
 - `admin/reset-password` issues a new 8-character password for the target, which can then be used to log in.
   Only the **root** user is protected; other administrators are not.
@@ -22,9 +26,13 @@ it can target, the holder of that role can take over higher, non-root administra
 Combined, a lower-privileged moderator can fully take over a non-root administrator (password reset + MFA
 removal).
 
-**Severity:** Medium. Exploitability depends on the instance's role configuration: it requires a role
-hierarchy where a lower-trust role holds `write:admin:reset-password` (and/or `write:admin:unset-mfa`). On a
-single-admin instance, or where all moderators are equally trusted, there is no escalation.
+**Severity:** High (CVSS 3.1 `AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H` ≈ 9.0; even with Scope:Unchanged ≈ 7.1,
+still High). The precondition is not a misconfiguration — it is the standard two-tier staff setup
+(moderators distinct from administrators). Any single moderator account (or a compromised moderator account)
+can take over a non-root administrator and thereby gain full administrator control of the instance. The only
+mitigating factor is that the attacker must already be a moderator, but since moderators are by design a
+lower-trust tier than administrators, this is precisely the trust boundary (moderator ↛ administrator) that
+is being crossed. Only an instance with no moderator tier (administrators only) is unaffected.
 
 **Affected version:** `develop` (2026.7.0-beta.2); confirmed by source inspection.
 
@@ -35,6 +43,9 @@ single-admin instance, or where all moderators are equally trusted, there is no 
   administrator.
 - `packages/backend/src/server/api/endpoints/admin/unset-mfa.ts`: no target-rank check at all (not even the
   root guard).
+- `packages/backend/src/server/api/ApiCallService.ts:412`: the `kind` permission check is inside
+  `if (token && …)`, so it is skipped for native sessions — a plain moderator without an explicit
+  `write:admin:reset-password` grant can still call both endpoints from the normal web client.
 
 **Proof of concept** (e2e flow)
 
