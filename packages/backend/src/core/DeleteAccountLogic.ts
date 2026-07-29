@@ -77,30 +77,37 @@ export async function deleteAccountWithSideEffects(
 		throw new Error('cannot delete a system account');
 	}
 
-	if (moderator != null) {
-		void logModerationEventInDatabase(deps, moderator, 'deleteAccount', {
-			userId: user.id,
-			userUsername: fullUser.username,
-			userHost: user.host,
-		});
-	}
-
+	let delivery: {
+		localUser: { id: MiUser['id']; host: null };
+		content: IActivity;
+		inboxes: string[];
+	} | null = null;
 	if (user.host === null) {
 		const localUser = { id: user.id, host: null } as const;
 		const content = addActivityContext(deps.config, renderDelete(deps.config, genLocalUserUri(deps.config, localUser.id), localUser));
 		const inboxes = await listSharedInboxesFromFollowingsInDatabase(deps.db);
-
-		for (const inbox of inboxes) {
-			enqueueDeliverJob(deps.deliverQueue, deps.config, localUser, content as IActivity, inbox, true);
-		}
-
+		delivery = { localUser, content: content as IActivity, inboxes };
 	}
 
 	const outboxId = await deps.db.transaction(async transaction => {
-		const id = await enqueueDeleteAccountJob(transaction as MiDrizzleDatabase, deps.config, user, user.host !== null);
-		await updateUserDeletedStateInDatabase(transaction as MiDrizzleDatabase, user.id, true);
+		const tx = transaction as MiDrizzleDatabase;
+		const id = await enqueueDeleteAccountJob(tx, deps.config, user, user.host !== null);
+		await updateUserDeletedStateInDatabase(tx, user.id, true);
+		if (moderator != null) {
+			await logModerationEventInDatabase({ db: tx }, moderator, 'deleteAccount', {
+				userId: user.id,
+				userUsername: fullUser.username,
+				userHost: user.host,
+			});
+		}
 		return id;
 	});
+
+	if (delivery != null) {
+		for (const inbox of delivery.inboxes) {
+			enqueueDeliverJob(deps.deliverQueue, deps.config, delivery.localUser, delivery.content, inbox, true);
+		}
+	}
 
 	void addDbJob(deps.dbQueue, {
 		name: 'deleteAccount',
