@@ -6,6 +6,7 @@
 import { and, count, eq, inArray, lt, sql } from 'drizzle-orm';
 import { antenna, type AntennaInsert, type AntennaRow } from '@/db/schema/antenna.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { MiAntenna } from '@/models/Antenna.js';
 import type { MiUser } from '@/models/User.js';
@@ -44,6 +45,21 @@ export async function createAntennaInDatabase(
 	}
 
 	return deserializeAntenna(row);
+}
+
+export async function createAntennaWithinLimitInDatabase(
+	db: MiDrizzleDatabase,
+	data: AntennaInsert,
+	limit: number,
+): Promise<MiAntenna | null> {
+	return await db.transaction(async tx => {
+		await acquireAdvisoryTransactionLockInDatabase(tx, 'antenna-limit', data.userId);
+		if (await countAntennasByUserIdFromDatabase(tx, data.userId) >= limit) return null;
+
+		const [row] = await tx.insert(antenna).values(data).returning();
+		if (row == null) throw new Error('Failed to create antenna');
+		return deserializeAntenna(row);
+	});
 }
 
 export async function updateAntennaInDatabase(

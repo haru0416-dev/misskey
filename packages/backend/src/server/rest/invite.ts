@@ -9,6 +9,7 @@ import type { Config } from '@/config.js';
 import {
 	countRegistrationTicketsCreatedSinceFromDatabase,
 	createRegistrationTicketInDatabase,
+	createRegistrationTicketWithinLimitInDatabase,
 	createRegistrationTicketsInDatabase,
 	deleteRegistrationTicketInDatabase,
 	fetchRegistrationTicketByIdFromDatabase,
@@ -191,23 +192,19 @@ export async function handleHonoApiInviteCreate(
 ): Promise<Packed<'InviteCode'>> {
 	parseHonoApiParams(emptyParamDef, body);
 
-	if (policies.inviteLimit) {
-		const count = await countRegistrationTicketsCreatedSinceFromDatabase(deps.db, {
-			createdById: me.id,
-			sinceId: genId(Date.now() - (policies.inviteLimitCycle * 60 * 1000)),
-		});
-
-		if (count >= policies.inviteLimit) {
-			throw inviteCreateExceededCreateLimitError();
-		}
-	}
-
-	const ticket = await createRegistrationTicketInDatabase(deps.db, {
+	const ticketData = {
 		id: genId(),
 		createdById: me.id,
 		expiresAt: policies.inviteExpirationTime ? new Date(Date.now() + (policies.inviteExpirationTime * 60 * 1000)) : null,
 		code: generateInviteCode(),
-	});
+	};
+	const ticket = policies.inviteLimit
+		? await createRegistrationTicketWithinLimitInDatabase(deps.db, ticketData, {
+			sinceId: genId(Date.now() - (policies.inviteLimitCycle * 60 * 1000)),
+			limit: policies.inviteLimit,
+		})
+		: await createRegistrationTicketInDatabase(deps.db, ticketData);
+	if (ticket == null) throw inviteCreateExceededCreateLimitError();
 
 	return await packInviteCodeForHonoApi(deps, ticket);
 }
