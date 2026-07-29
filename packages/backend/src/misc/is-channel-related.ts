@@ -24,7 +24,7 @@ export function isChannelRelated(note: MiNote | Packed<'Note'>, channelIds: Set<
 		return true;
 	}
 
-	// NOTE: リプライはchannelIdのチェックだけでOKなはずなので見てない(チャンネルのノートにチャンネル外からのリプライまたはその逆はないはずなので）
+	// note作成時にreply先のchannelへ正規化されるため、replyを別途辿らなくてもnote.channelIdで判定できる。
 
 	return false;
 }

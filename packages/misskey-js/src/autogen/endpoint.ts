@@ -1133,7 +1133,7 @@ export type Endpoints = {
 };
 
 /**
- * NOTE: The content-type for all endpoints not listed here is application/json.
+ * Request Content-Type defaults to application/json for endpoints not listed here.
  */
 export const endpointReqTypes = {
     'drive/files/create': 'multipart/form-data',

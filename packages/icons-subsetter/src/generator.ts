@@ -9,20 +9,19 @@ import { generateSubsettedFont } from './subsetter.js';
 
 const filesToScan = {
 	frontend: 'packages/frontend/src/**/*.{ts,vue}',
-	//frontendShared: 'packages/frontend-shared/utility/**/*.{ts}',  // 現時点では該当がないのでスキップ。ここをコメントアウトするときは、各フロントエンドにこのチャンクのCSSのimportを追加すること
+	// frontendSharedは現在アイコン使用箇所がないため未生成。有効化する場合は利用側で生成CSSもimportする。
+	//frontendShared: 'packages/frontend-shared/utility/**/*.{ts}',
 	frontendEmbed: 'packages/frontend-embed/src/**/*.{ts,vue}',
 };
 
 async function main() {
 	const start = performance.now();
 
-	// 1. ビルドディレクトリを削除
 	if (existsSync('./built')) {
 		await fsp.rm('./built', { recursive: true });
 	}
 	await fsp.mkdir('./built');
 
-	// 2. tabler-icons.min.cssから、class名とUnicodeのマッピングを抽出
 	const css = await fsp.readFile('node_modules/@tabler/icons-webfont/dist/tabler-icons.min.css', 'utf-8');
 	const cssRegex = /\.(ti-[a-z0-9-]+)::?before\s*{\n?\s*content:\s*["']\\([a-fA-F0-9]+)["'];?\n?\s*}/g;
 	const rgMap = new Map<string, string>();
@@ -32,15 +31,12 @@ async function main() {
 		if (icon !== undefined && unicode !== undefined) rgMap.set(icon, unicode);
 	}
 
-	// 3. tabler-icons-classes.cssから、.tiのルールを抽出
 	const classTiBaseRule = css.match(/\.ti\s*{[^}]*}/)?.[0];
 	if (classTiBaseRule === undefined) throw new Error('Tabler Icons base CSS rule was not found.');
 
-	// 4. フォールバック用のtabler-icons.woff2をコピー
 	const fontPath = 'node_modules/@tabler/icons-webfont/dist/fonts/';
 	await fsp.copyFile(fontPath + 'tabler-icons.woff2', './built/tabler-icons.woff2');
 
-	// 5. 各チャンクごとにファイルをスキャンして、使用されているアイコンを抽出
 	const unicodeRangeValues = new Map<string, number[]>();
 	for (const [key, dir] of Object.entries(filesToScan)) {
 		console.log(`Scanning ${key}...`);
@@ -62,15 +58,12 @@ async function main() {
 			}
 		}
 
-		// 6. チャンク内で使用されているアイコンのUnicodeの配列を生成
 		const unicodeValues = Array.from(iconsToPack).map((icon) => parseInt(rgMap.get(icon)!, 16));
 		unicodeRangeValues.set(key, unicodeValues);
 	}
 
-	// 7. Tabler Iconフォントをサブセット化
 	const subsettedFonts = await generateSubsettedFont(fontPath + 'tabler-icons.ttf', unicodeRangeValues);
 
-	// 8. サブセット化したフォント・CSSを書き出し
 	await Promise.allSettled(Array.from(subsettedFonts.entries()).map(async ([key, buffer]) => {
 		const unicodeValues = unicodeRangeValues.get(key);
 		if (unicodeValues === undefined) throw new Error(`Unicode values for ${key} were not found.`);

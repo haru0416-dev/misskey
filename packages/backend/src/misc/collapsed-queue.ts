@@ -8,7 +8,7 @@ type Job<V> = {
 	timer: NodeJS.Timeout;
 };
 
-// TODO: redis使えるようにする
+// プロセス内限定の固定時間coalescing queue。再起動時には未処理分が失われ、worker間では集約されない。
 export class CollapsedQueue<K, V> {
 	private jobs: Map<K, Job<V>> = new Map();
 

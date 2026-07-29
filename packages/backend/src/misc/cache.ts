@@ -71,9 +71,8 @@ export class RedisKVCache<T> {
 	}
 
 	/**
-	 * Redisへの書き込み完了を待ち、worker間同期と連続更新の順序を保証する。
-	 *   * Other code uses this to synchronize changes between worker processes. A failed write can internally de-sync the cluster.
-	 *   * Without an `await`, consecutive calls could race. An unlucky race could result in the older write overwriting the newer value.
+	 * Redisへの共有キャッシュ書き込みが完了してから値を返す。
+	 * 同一キーの並行cache missは集約しないため、fetcherの完了順によっては古い値が後から書き込まれ得る。
 	 */
 	@bindThis
 	public async fetch(key: string): Promise<T> {

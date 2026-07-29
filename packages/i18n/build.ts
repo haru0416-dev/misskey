@@ -71,7 +71,7 @@ function copyLocales(): void {
  * Service Worker が HTTP 経由で取得するために必要
  */
 async function writeFrontendLocalesJson(useCachedLocales = false): Promise<void> {
-	// 動的 import でビルド済みモジュールから読み込み（循環参照回避）
+	// locale生成・コピー後の、今回ビルドしたモジュールを読む必要があるため動的importする。
 	const { locales, writeFrontendLocalesJson: write } = await import('./built/index.js');
 	await write(_frontendLocalesDir, _rootPackage.version, useCachedLocales ? locales : undefined);
 	console.log(`[${_package.name}] frontend locales JSON written to ${_frontendLocalesDir}`);
