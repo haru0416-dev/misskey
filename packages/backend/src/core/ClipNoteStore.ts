@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, eq, gt, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray, sql } from 'drizzle-orm';
 import { clipNote, type ClipNoteInsert, type ClipNoteRow } from '@/db/schema/clip-note.js';
+import { note } from '@/db/schema/note.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiClip } from '@/models/Clip.js';
 import type { MiClipNote } from '@/models/ClipNote.js';
@@ -102,17 +103,36 @@ export async function createClipNoteInDatabase(
 	return deserializeClipNote(row);
 }
 
-export async function deleteClipNoteInDatabase(
+export async function deleteClipNoteAndDecrementNoteClippedCountInDatabase(
 	db: MiDrizzleDatabase,
 	data: {
 		clipId: MiClip['id'];
 		noteId: MiNote['id'];
 	},
 ): Promise<void> {
-	await db
-		.delete(clipNote)
-		.where(and(
-			eq(clipNote.clipId, data.clipId),
-			eq(clipNote.noteId, data.noteId),
-		));
+	await db.transaction(async tx => {
+		// note削除はnote -> clip_noteの順にlockするため、ここも同じ順序にしてdeadlockを避ける。
+		const [lockedNote] = await tx
+			.select({ id: note.id })
+			.from(note)
+			.where(eq(note.id, data.noteId))
+			.for('update')
+			.limit(1);
+		if (lockedNote == null) return;
+
+		const [deleted] = await tx
+			.delete(clipNote)
+			.where(and(
+				eq(clipNote.clipId, data.clipId),
+				eq(clipNote.noteId, data.noteId),
+			))
+			.returning({ noteId: clipNote.noteId });
+
+		if (deleted == null) return;
+
+		await tx
+			.update(note)
+			.set({ clippedCount: sql`${note.clippedCount} - 1` })
+			.where(eq(note.id, deleted.noteId));
+	});
 }

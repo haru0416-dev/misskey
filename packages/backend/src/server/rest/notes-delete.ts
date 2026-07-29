@@ -8,8 +8,7 @@ import { z } from 'zod';
 import { adjustInstanceNotesCountFromDatabase } from '@/core/InstanceStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import {
-	decrementNoteRepliesCountInDatabase,
-	deleteNoteByIdAndUserIdFromDatabase,
+	deleteNoteAndDecrementParentRepliesCountInDatabase,
 	fetchNoteByIdFromDatabase,
 	listNotesByUserIdAndRenoteIdFromDatabase,
 } from '@/core/NoteStore.js';
@@ -60,10 +59,6 @@ export async function deleteNoteForHonoApi(
 ): Promise<void> {
 	const deletedAt = new Date();
 
-	if (note.replyId) {
-		await decrementNoteRepliesCountInDatabase(deps.db, note.replyId, 1);
-	}
-
 	deps.publishNoteStream?.(note, 'deleted', { deletedAt });
 
 	if (user.host == null && !note.localOnly) {
@@ -97,7 +92,7 @@ export async function deleteNoteForHonoApi(
 		}).catch(() => {});
 	}
 
-	await deleteNoteByIdAndUserIdFromDatabase(deps.db, note.id, user.id);
+	await deleteNoteAndDecrementParentRepliesCountInDatabase(deps.db, note.id, user.id);
 
 	if (deleter && note.userId !== deleter.id) {
 		const noteOwner = await fetchUserByIdOrFailFromDatabase(deps.db, note.userId);

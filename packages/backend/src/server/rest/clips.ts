@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { clipFavoriteExistsInDatabase, countClipFavoritesByClipIdsFromDatabase, countClipFavoritesFromDatabase, listFavoritedClipIdsByUserIdFromDatabase, listFavoritedClipIdsByUserIdAndClipIdsFromDatabase } from '@/core/ClipFavoriteStore.js';
-import { countClipNotesByClipIdFromDatabase, countClipNotesByClipIdsFromDatabase, createClipNoteInDatabase, deleteClipNoteInDatabase } from '@/core/ClipNoteStore.js';
+import { countClipNotesByClipIdFromDatabase, countClipNotesByClipIdsFromDatabase, createClipNoteInDatabase, deleteClipNoteAndDecrementNoteClippedCountInDatabase } from '@/core/ClipNoteStore.js';
 import {
 	countClipsByUserIdFromDatabase,
 	createClipInDatabase,
@@ -385,8 +385,7 @@ export async function handleHonoApiClipsRemoveNote(
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw clipsRemoveNoteNoSuchNoteError();
 
-	await deleteClipNoteInDatabase(deps.db, { noteId: params.noteId, clipId: clip.id });
-	await adjustNoteClippedCountInDatabase(deps.db, params.noteId, -1);
+	await deleteClipNoteAndDecrementNoteClippedCountInDatabase(deps.db, { noteId: params.noteId, clipId: clip.id });
 }
 
 function clipsNotesNoSuchClipError(): HonoApiError {
