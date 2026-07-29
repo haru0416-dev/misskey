@@ -142,4 +142,37 @@ describe('AdStore', () => {
 
 		await expect(fetchAdByIdFromDatabase(db, activeAd.id)).resolves.toBeNull();
 	});
+
+	test('applies the cursor to all unpublished ads', async () => {
+		const now = Date.now();
+		const idBase = now - 10_000;
+		const createAd = async (id: string, state: 'expired' | 'future') => createAdInDatabase(db, {
+			id,
+			expiresAt: new Date(now + (state === 'expired' ? -60_000 : 120_000)),
+			startsAt: new Date(now + (state === 'expired' ? -120_000 : 60_000)),
+			place: 'square',
+			priority: 'middle',
+			ratio: 1,
+			url: `https://example.com/${id}`,
+			imageUrl: `https://example.com/${id}.png`,
+			memo: state,
+			dayOfWeek: 0,
+			isSensitive: false,
+		});
+
+		const expiredInside = await createAd(genId(idBase), 'expired');
+		const futureInside = await createAd(genId(idBase + 1), 'future');
+		const cursor = genId(idBase + 2);
+		await createAd(genId(idBase + 3), 'expired');
+		await createAd(genId(idBase + 4), 'future');
+
+		await expect(listAdsFromDatabase(db, {
+			limit: 10,
+			untilId: cursor,
+			publishing: false,
+		}).then(ads => ads.map(x => x.id))).resolves.toEqual([
+			futureInside.id,
+			expiredInside.id,
+		]);
+	});
 });
