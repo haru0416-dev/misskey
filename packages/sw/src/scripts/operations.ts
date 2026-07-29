@@ -28,7 +28,7 @@ export async function api<
 
 	return (cli.request as <E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']>(
 		endpoint: E,
-		params: P,
+		params?: P,
 		credential?: string | null,
 	) => Promise<Misskey.api.SwitchCaseResponseType<E, P>>)(endpoint, params, account?.token);
 }

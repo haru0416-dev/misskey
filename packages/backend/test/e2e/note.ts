@@ -1045,6 +1045,7 @@ describe('Note', () => {
 				}, alice);
 
 				assert.strictEqual(res.status, 400);
+				assert.ok(res.body);
 				assert.strictEqual(castAsError(res.body).error.code, 'UNAVAILABLE');
 			});
 
@@ -1057,6 +1058,7 @@ describe('Note', () => {
 			const res = await api('notes/translate', { noteId: 'foo', targetLang: 'ja' }, alice);
 
 			assert.strictEqual(res.status, 400);
+			assert.ok(res.body);
 			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_NOTE');
 		});
 
@@ -1065,6 +1067,7 @@ describe('Note', () => {
 			const bobTranslateAttempt = await api('notes/translate', { noteId: aliceNote.id, targetLang: 'ja' }, bob);
 
 			assert.strictEqual(bobTranslateAttempt.status, 400);
+			assert.ok(bobTranslateAttempt.body);
 			assert.strictEqual(castAsError(bobTranslateAttempt.body).error.code, 'CANNOT_TRANSLATE_INVISIBLE_NOTE');
 		});
 
@@ -1081,6 +1084,7 @@ describe('Note', () => {
 
 			// NOTE: デフォルトでは登録されていないので落ちる
 			assert.strictEqual(res.status, 400);
+			assert.ok(res.body);
 			assert.strictEqual(castAsError(res.body).error.code, 'UNAVAILABLE');
 		});
 	});
