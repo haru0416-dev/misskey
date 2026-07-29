@@ -13,13 +13,20 @@ import { deleteAccountWithSideEffects, type DeleteAccountDependencies } from '@/
 import { listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import type { DbQueue, DeliverQueue } from '@/core/queues.js';
 import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { following } from '@/db/schema/following.js';
 import { queueOutbox, type QueueOutboxRow } from '@/db/schema/queue-outbox.js';
 import { genId } from '@/misc/id/gen-id.js';
+import { QUEUE } from '@/queue/const.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 
 function isDeleteAccountOutboxForUser(row: QueueOutboxRow, userId: string): boolean {
 	const data = row.data as { user?: { id?: unknown } };
 	return row.name === 'deleteAccount' && data.user?.id === userId;
+}
+
+function isDeliverOutboxForUser(row: QueueOutboxRow, userId: string): boolean {
+	const envelope = row.data as { data?: { user?: { id?: unknown } } };
+	return row.queue === QUEUE.DELIVER && row.name === 'deliver' && envelope.data?.user?.id === userId;
 }
 
 describe('DeleteAccountLogic', () => {
@@ -58,13 +65,13 @@ describe('DeleteAccountLogic', () => {
 		});
 	}
 
-	function createDependencies(add: ReturnType<typeof vi.fn>, publishInternalEvent = vi.fn()): DeleteAccountDependencies {
+	function createDependencies(add: ReturnType<typeof vi.fn>, publishInternalEvent = vi.fn(), deliverAdd = vi.fn().mockResolvedValue(undefined)): DeleteAccountDependencies {
 		return {
 			config: runtime.config,
 			meta: { rootUserId: null },
 			db: runtime.db,
 			dbQueue: { add } as unknown as DbQueue,
-			deliverQueue: {} as DeliverQueue,
+			deliverQueue: { add: deliverAdd } as unknown as DeliverQueue,
 			publishInternalEvent,
 		};
 	}
@@ -89,6 +96,51 @@ describe('DeleteAccountLogic', () => {
 			expect(publishInternalEvent).not.toHaveBeenCalled();
 		} finally {
 			await deleteUserByIdFromDatabase(runtime.db, target.id);
+		}
+	});
+
+	test('local account deletion commits ActivityPub deliveries to the outbox', async () => {
+		const target = await createLocalUser('deleteaccountlocal');
+		const remote = await createRemoteUser('deleteaccountremote');
+		const dbAdd = vi.fn().mockResolvedValue(undefined);
+		const deliverAdd = vi.fn().mockResolvedValue(undefined);
+		const sharedInbox = 'https://remote.example.com/inbox';
+		await runtime.db.insert(following).values({
+			id: genId(),
+			followerId: remote.id,
+			followeeId: target.id,
+			followerHost: remote.host,
+			followerInbox: `https://${remote.host}/users/${remote.id}/inbox`,
+			followerSharedInbox: sharedInbox,
+		});
+
+		try {
+			await deleteAccountWithSideEffects(createDependencies(dbAdd, vi.fn(), deliverAdd), target);
+
+			const outboxRows = (await runtime.db.select().from(queueOutbox))
+				.filter(row => isDeliverOutboxForUser(row, target.id));
+			expect(outboxRows).toHaveLength(1);
+			const coordinatorRows = (await runtime.db.select().from(queueOutbox))
+				.filter(row => isDeleteAccountOutboxForUser(row, target.id));
+			expect(coordinatorRows).toHaveLength(1);
+			expect(coordinatorRows[0]?.queue).toBe('accountDelete');
+			expect(outboxRows[0]?.data).toMatchObject({
+				coordinatorId: coordinatorRows[0]?.id,
+				data: {
+					user: { id: target.id },
+					to: sharedInbox,
+					isSharedInbox: true,
+				},
+			});
+			expect(deliverAdd).not.toHaveBeenCalled();
+			expect(dbAdd).not.toHaveBeenCalled();
+		} finally {
+			const outboxIds = (await runtime.db.select().from(queueOutbox))
+				.filter(row => isDeleteAccountOutboxForUser(row, target.id) || isDeliverOutboxForUser(row, target.id))
+				.map(row => row.id);
+			if (outboxIds.length > 0) await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, outboxIds));
+			await deleteUserByIdFromDatabase(runtime.db, target.id);
+			await deleteUserByIdFromDatabase(runtime.db, remote.id);
 		}
 	});
 

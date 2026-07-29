@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/UserStore.js';
 import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { createPageInDatabase, fetchPageByIdFromDatabase } from '@/core/PageStore.js';
@@ -81,7 +81,7 @@ describe('hono-queue-delete-account', () => {
 			visibility: 'public',
 		});
 
-		await handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: false }));
+		await handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: false, accountDeleteCoordinatorId: genId() }));
 
 		expect(await fetchNoteByIdFromDatabase(runtime.db, noteId)).toBeNull();
 		expect(await fetchDriveFileByIdFromDatabase(runtime.db, fileId)).toBeNull();
@@ -99,6 +99,21 @@ describe('hono-queue-delete-account', () => {
 		await handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: true }));
 
 		expect(await fetchUserByIdFromDatabase(runtime.db, user.id)).not.toBeNull();
+	});
+
+	test('調整IDのないローカル物理削除ジョブは拒否する', async () => {
+		const id = genId();
+		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+			user: { id, username: `honoqueuedelacctlegacy${id}`, usernameLower: `honoqueuedelacctlegacy${id}`.toLowerCase() },
+			profile: { userId: id },
+		});
+
+		try {
+			expect(await handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: false }))).toBe('skip: uncoordinated local account deletion');
+			expect(await fetchUserByIdFromDatabase(runtime.db, user.id)).not.toBeNull();
+		} finally {
+			await deleteUserByIdFromDatabase(runtime.db, user.id);
+		}
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
