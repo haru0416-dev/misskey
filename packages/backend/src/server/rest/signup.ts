@@ -7,11 +7,9 @@ import { domainToASCII } from 'node:url';
 import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
-import { createSignupAccountInDatabase } from '@/core/SignupStore.js';
+import { createSignupAccountInDatabase, DuplicatedUsernameError, UsedUsernameError } from '@/core/SignupStore.js';
 import { fetchRegistrationTicketByPendingUserIdFromDatabase, updateRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
-import { isUsedUsername } from '@/core/UsedUsernameStore.js';
 import { deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
-import { isLocalUsernameTaken } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
@@ -99,20 +97,13 @@ export async function createLocalSignupAccount(
 		passwordHash: string | null;
 		host: string | null;
 		ignorePreservedUsernames?: boolean;
+		claimRoot?: boolean;
 	},
 ): Promise<{
 	account: MiUser;
 	token: string;
 }> {
 	const usernameLower = params.username.toLowerCase();
-
-	if (await isLocalUsernameTaken(deps.db, params.username)) {
-		throw signupValidationError('DUPLICATED_USERNAME');
-	}
-
-	if (await isUsedUsername(deps.db, params.username)) {
-		throw signupValidationError('USED_USERNAME');
-	}
 
 	if (!params.ignorePreservedUsernames && deps.meta.rootUserId != null) {
 		if (deps.meta.preservedUsernames.map(x => x.toLowerCase()).includes(usernameLower)) {
@@ -128,21 +119,29 @@ export async function createLocalSignupAccount(
 	const keyPair = await genRsaKeyPair();
 	const remoteUri = params.host == null ? null : `https://${params.host}/users/${params.username}`;
 	const beforeMeta = { ...deps.meta };
-	const { account, rootClaimed } = await createSignupAccountInDatabase(deps.db, {
-		id: genId(),
-		username: params.username,
-		usernameLower,
-		host: params.host,
-		uri: remoteUri,
-		inbox: remoteUri == null ? null : `${remoteUri}/inbox`,
-		sharedInbox: params.host == null ? null : `https://${params.host}/inbox`,
-		followersUri: remoteUri == null ? null : `${remoteUri}/followers`,
-		token,
-		passwordHash: params.passwordHash,
-		publicKey: keyPair.publicKey,
-		privateKey: keyPair.privateKey,
-		claimRoot: deps.meta.rootUserId == null,
-	});
+	let account: MiUser;
+	let rootClaimed: boolean;
+	try {
+		({ account, rootClaimed } = await createSignupAccountInDatabase(deps.db, {
+			id: genId(),
+			username: params.username,
+			usernameLower,
+			host: params.host,
+			uri: remoteUri,
+			inbox: remoteUri == null ? null : `${remoteUri}/inbox`,
+			sharedInbox: params.host == null ? null : `https://${params.host}/inbox`,
+			followersUri: remoteUri == null ? null : `${remoteUri}/followers`,
+			token,
+			passwordHash: params.passwordHash,
+			publicKey: keyPair.publicKey,
+			privateKey: keyPair.privateKey,
+			claimRoot: params.claimRoot ?? (deps.meta.rootUserId == null),
+		}));
+	} catch (error) {
+		if (error instanceof DuplicatedUsernameError) throw signupValidationError('DUPLICATED_USERNAME');
+		if (error instanceof UsedUsernameError) throw signupValidationError('USED_USERNAME');
+		throw error;
+	}
 
 	if (rootClaimed) {
 		deps.meta.rootUserId = account.id;
