@@ -552,28 +552,27 @@ export async function deleteNotesByIdsFromDatabase(
 		.where(inArray(note.id, ids));
 }
 
-export async function deleteNoteByIdAndUserIdFromDatabase(
+export async function deleteNoteAndDecrementParentRepliesCountInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiNote['id'],
 	userId: MiUser['id'],
 ): Promise<void> {
-	await db
-		.delete(note)
-		.where(and(
-			eq(note.id, id),
-			eq(note.userId, userId),
-		));
-}
+	await db.transaction(async tx => {
+		const [deleted] = await tx
+			.delete(note)
+			.where(and(
+				eq(note.id, id),
+				eq(note.userId, userId),
+			))
+			.returning({ replyId: note.replyId });
 
-export async function decrementNoteRepliesCountInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiNote['id'],
-	amount: number,
-): Promise<void> {
-	await db
-		.update(note)
-		.set({ repliesCount: sql`${note.repliesCount} - ${amount}` })
-		.where(eq(note.id, id));
+		if (deleted?.replyId == null) return;
+
+		await tx
+			.update(note)
+			.set({ repliesCount: sql`${note.repliesCount} - 1` })
+			.where(eq(note.id, deleted.replyId));
+	});
 }
 
 export async function incrementNoteRepliesCountInDatabase(
