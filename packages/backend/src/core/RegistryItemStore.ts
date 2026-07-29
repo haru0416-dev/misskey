@@ -31,25 +31,16 @@ export async function setRegistryItemInDatabase(
 	db: MiDrizzleDatabase,
 	data: RegistryItemSet,
 ): Promise<void> {
-	const [existingItem] = await db
-		.select({ id: registryItem.id })
-		.from(registryItem)
-		.where(registryItemCondition(data.userId, data.domain ?? null, data.scope, data.key))
-		.limit(1);
-
-	if (existingItem) {
-		await db
-			.update(registryItem)
-			.set({
+	await db
+		.insert(registryItem)
+		.values(data)
+		.onConflictDoUpdate({
+			target: [registryItem.userId, registryItem.domain, registryItem.scope, registryItem.key],
+			set: {
 				updatedAt: data.updatedAt,
 				value: data.value,
-			})
-			.where(eq(registryItem.id, existingItem.id));
-	} else {
-		await db
-			.insert(registryItem)
-			.values(data);
-	}
+			},
+		});
 }
 
 export async function fetchRegistryItemFromDatabase(
