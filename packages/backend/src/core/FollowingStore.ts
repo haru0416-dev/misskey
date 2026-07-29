@@ -11,6 +11,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiUser } from '@/models/User.js';
+import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, updateUserInDatabase } from './UserStore.js';
 
 export type FollowingUpdate = Partial<Pick<FollowingRow, 'notify' | 'withReplies' | 'isFollowerHibernated' | 'followerSharedInbox'>>;
 export type FollowingOrder = 'asc' | 'desc';
@@ -443,13 +444,55 @@ export async function createFollowingInDatabase(
 	return deserializeFollowing(row);
 }
 
-export async function deleteFollowingByIdInDatabase(
+export async function deleteFollowingAndUpdateUserCountsByIdInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiFollowing['id'],
-): Promise<void> {
-	await db
-		.delete(following)
-		.where(eq(following.id, id));
+	followerId: MiUser['id'],
+	followeeId: MiUser['id'],
+): Promise<boolean> {
+	return await db.transaction(async transaction => {
+		const tx = transaction as typeof db;
+		const users = await tx
+			.select({ id: userTable.id, movedToUri: userTable.movedToUri })
+			.from(userTable)
+			.where(inArray(userTable.id, [followerId, followeeId]))
+			.orderBy(asc(userTable.id))
+			.for('update');
+		const movedToUriByUserId = new Map(users.map(user => [user.id, user.movedToUri]));
+
+		const deleted = await tx
+			.delete(following)
+			.where(and(
+				eq(following.id, id),
+				eq(following.followerId, followerId),
+				eq(following.followeeId, followeeId),
+			))
+			.returning({ id: following.id });
+		if (deleted.length === 0) return false;
+
+		if (!movedToUriByUserId.get(followerId) && !movedToUriByUserId.get(followeeId)) {
+			await Promise.all([
+				adjustUserFollowingCountInDatabase(tx, followerId, -1),
+				adjustUserFollowersCountInDatabase(tx, followeeId, -1),
+			]);
+			return true;
+		}
+
+		for (const userId of [followerId, followeeId]) {
+			if (movedToUriByUserId.get(userId)) continue;
+
+			const [nonMovedFollowees, nonMovedFollowers] = await Promise.all([
+				countNonMovedFolloweesByFollowerIdFromDatabase(tx, userId),
+				countNonMovedFollowersByFolloweeIdFromDatabase(tx, userId),
+			]);
+			await updateUserInDatabase(tx, userId, {
+				followingCount: nonMovedFollowees,
+				followersCount: nonMovedFollowers,
+			});
+		}
+
+		return true;
+	});
 }
 
 export async function fetchFollowingByIdOrFailFromDatabase(

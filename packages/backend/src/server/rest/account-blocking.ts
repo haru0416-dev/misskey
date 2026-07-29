@@ -9,10 +9,10 @@ import { z } from 'zod';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase, listBlockeeIdsByBlockerIdFromDatabase, listBlockerIdsByBlockeeIdFromDatabase, listBlockingsByBlockerIdWithPaginationFromDatabase, resolveBlockingPagination } from '@/core/BlockingStore.js';
 import { deleteFollowRequestByIdFromDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
-import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
+import { deleteFollowingAndUpdateUserCountsByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
-import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase } from '@/core/UserListMembershipStore.js';
 import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import type { IActivity, IBlock, IObject } from '@/core/activitypub/type.js';
@@ -208,11 +208,6 @@ export async function decrementFollowing(
 	deps.publishInternalEvent?.('unfollow', { followerId: follower.id, followeeId: followee.id });
 
 	if (!follower.movedToUri && !followee.movedToUri) {
-		await Promise.all([
-			adjustUserFollowingCountInDatabase(deps.db, follower.id, -1),
-			adjustUserFollowersCountInDatabase(deps.db, followee.id, -1),
-		]);
-
 		if (deps.meta.enableStatsForFederatedInstances) {
 			if (isRemoteUser(follower) && isLocalUser(followee)) {
 				const instance = await fetchOrRegisterFederatedInstance(deps, follower.host);
@@ -223,19 +218,6 @@ export async function decrementFollowing(
 			}
 		}
 		return;
-	}
-
-	for (const user of [follower, followee]) {
-		if (user.movedToUri) continue;
-
-		const [nonMovedFollowees, nonMovedFollowers] = await Promise.all([
-			countNonMovedFolloweesByFollowerIdFromDatabase(deps.db, user.id),
-			countNonMovedFollowersByFolloweeIdFromDatabase(deps.db, user.id),
-		]);
-		await updateUserInDatabase(deps.db, user.id, {
-			followingCount: nonMovedFollowees,
-			followersCount: nonMovedFollowers,
-		});
 	}
 }
 
@@ -254,7 +236,9 @@ export async function unfollow(
 	]);
 	if (followingFollower == null || followingFollowee == null) return;
 
-	await deleteFollowingByIdInDatabase(deps.db, following.id);
+	const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(deps.db, following.id, followingFollower.id, followingFollowee.id);
+	if (!deleted) return;
+
 	await refreshUserFollowingsCache(deps, follower.id);
 	await decrementFollowing(deps, followingFollower, followingFollowee);
 
@@ -286,9 +270,11 @@ export async function remoteRejectForHonoApi(
 			fetchUserByIdFromDatabase(deps.db, following.followeeId),
 		]);
 		if (followingFollower != null && followingFollowee != null) {
-			await deleteFollowingByIdInDatabase(deps.db, following.id);
-			await refreshUserFollowingsCache(deps, follower.id);
-			await decrementFollowing(deps, followingFollower, followingFollowee);
+			const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(deps.db, following.id, followingFollower.id, followingFollowee.id);
+			if (deleted) {
+				await refreshUserFollowingsCache(deps, follower.id);
+				await decrementFollowing(deps, followingFollower, followingFollowee);
+			}
 		}
 	}
 
