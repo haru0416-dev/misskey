@@ -143,7 +143,7 @@ export async function generateLocaleInterface(localesDir: string): Promise<void>
 	const outputPath = `${autogenDir}/locale.ts`;
 	if (fs.existsSync(outputPath) && fs.readFileSync(outputPath, 'utf-8') === printed) return;
 
-	// 一瞬ファイルが存在しなくなって途切れる→不安定になるらしいので、リネームで対処
+	// watcherや並行readerに未完成または一時欠落したファイルを見せないよう、atomicに置換する。
 	fs.writeFileSync(`${autogenDir}/_locale.ts`, printed, 'utf-8');
 	fs.renameSync(`${autogenDir}/_locale.ts`, outputPath);
 }

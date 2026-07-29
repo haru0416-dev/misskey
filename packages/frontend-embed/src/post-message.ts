@@ -41,6 +41,7 @@ export function postMessageToParentWindow<T extends PostMessageEventType = PostM
 		_iframeId = defaultIframeId;
 	}
 	if (_DEV_) console.log('postMessageToParentWindow', type, _iframeId, payload);
+	// embed先のoriginは事前に特定できない。機密情報は送らず、受信側がevent.sourceをiframeと照合する。
 	window.parent.postMessage({
 		type,
 		iframeId: _iframeId,

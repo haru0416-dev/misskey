@@ -56,7 +56,7 @@ export function openNote(noteId: string, loginId?: string): ReturnType<typeof op
 	return openClient('push', `/notes/${noteId}`, loginId, { noteId });
 }
 
-// noteIdからノートを開く
+// antennaIdからアンテナタイムラインを開く
 export function openAntenna(antennaId: string, loginId: string): ReturnType<typeof openClient> {
 	return openClient('push', `/timeline/antenna/${antennaId}`, loginId, { antennaId });
 }

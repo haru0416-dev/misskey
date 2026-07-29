@@ -7,9 +7,8 @@ import { throttle } from 'throttle-debounce';
 import { nextTick, onActivated, onDeactivated, onUnmounted, watch } from 'vue';
 import type { Ref } from 'vue';
 
-// note render skippingがオンだとズレるため、遷移直前にスクロール範囲に表示されているdata-scroll-anchor要素を特定して、復元時に当該要素までスクロールするようにする
-
-// TODO: data-scroll-anchor がひとつも存在しない場合、または手動で useAnchor みたいなフラグをfalseで呼ばれた場合、単純にスクロール位置を使用する処理にフォールバックするようにする
+// note render skippingによる高さの変化を避けるため表示中のanchorを基準に復元する。
+// 復元後も先頭に留まった場合は、保存したscrollTopへフォールバックする。
 
 export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | null | undefined>): void {
 	let anchorId: string | null = null;

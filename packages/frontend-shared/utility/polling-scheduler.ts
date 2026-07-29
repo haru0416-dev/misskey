@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+/**
+ * task完了後から一定間隔を空けて実行し、処理の重複を防ぐ。
+ * documentが非表示の間は停止し、再表示時も即時実行せず次のintervalを待つ。
+ */
 export class PollingScheduler {
 	#timerId: number | null = null;
 	#running = false;

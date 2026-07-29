@@ -47,6 +47,7 @@ export async function update(key: string, updater: (value: unknown) => unknown) 
 		const value = updater(miLocalStorage.getItemAsJson(storageKey));
 		miLocalStorage.setItemAsJson(storageKey, value);
 	};
+	// Web Locks対応環境ではtab間のread-modify-writeを直列化する。非対応環境ではbest-effortとなり、並行更新が上書きし得る。
 	if (typeof navigator !== 'undefined' && navigator.locks != null) {
 		return navigator.locks.request(storageKey, write);
 	}
