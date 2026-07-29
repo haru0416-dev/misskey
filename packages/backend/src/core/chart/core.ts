@@ -507,11 +507,13 @@ export default abstract class Chart<T extends Schema> {
 		// 次に save が行われるのは 02:10 ということになるが、もし 01:55 に新規ログが buffer に追加されたとすると、
 		// そのログは本来は 01:00~ のログとしてDBに保存されて欲しいのに、02:00~ のログ扱いになってしまう。
 		// これを回避するための実装は複雑になりそうなため、一旦保留。
+		const buffer = this.buffer.slice();
 
 		const update = async (logHour: RawRecord<T>, logDay: RawRecord<T>): Promise<void> => {
 			const finalDiffs = {} as Record<string, number | string[]>;
 
-			for (const diff of this.buffer.filter(q => q.group == null || (q.group === logHour.group)).map(q => q.diff)) {
+			const bufferedDiffs = buffer.filter(q => q.group == null || (q.group === logHour.group));
+			for (const { diff } of bufferedDiffs) {
 				for (const [k, v] of Object.entries(diff)) {
 					if (finalDiffs[k] == null) {
 						finalDiffs[k] = v;
@@ -592,12 +594,11 @@ export default abstract class Chart<T extends Schema> {
 
 			this.logger.info(`${this.name + (logHour.group ? `:${logHour.group}` : '')}: Updated`);
 
-			// TODO: DB書き込み前にgroup分をsnapshotまたはdrainする。現在のlive bufferをfilterすると、
-			// save()待機中に追加された同一groupのdiffまで削除される。
-			this.buffer = this.buffer.filter(q => q.group != null && (q.group !== logHour.group));
+			const savedEntries = new Set(bufferedDiffs);
+			this.buffer = this.buffer.filter(q => !savedEntries.has(q));
 		};
 
-		const groups = removeDuplicates(this.buffer.map(log => log.group));
+		const groups = removeDuplicates(buffer.map(log => log.group));
 
 		await Promise.all(
 			groups.map(group =>

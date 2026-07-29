@@ -451,6 +451,47 @@ describe('Chart', () => {
 				},
 			});
 		});
+
+		test('同じgroupのsave中に追加されたdiffは次のsaveまで保持される', async () => {
+			type UpdateLogById = (span: 'hour' | 'day', id: number, values: Record<string, unknown>) => Promise<void>;
+			const chartInternals = testGroupedChart as unknown as { updateLogById: UpdateLogById };
+			const updateLogById = chartInternals.updateLogById.bind(testGroupedChart);
+			const updateStarted = Promise.withResolvers<void>();
+			const continueUpdate = Promise.withResolvers<void>();
+
+			vi.spyOn(chartInternals, 'updateLogById').mockImplementation(async (...args) => {
+				updateStarted.resolve();
+				await continueUpdate.promise;
+				await updateLogById(...args);
+			});
+
+			await testGroupedChart.increment('alice');
+			const firstSave = testGroupedChart.save();
+			await updateStarted.promise;
+
+			await testGroupedChart.increment('alice');
+			continueUpdate.resolve();
+			await firstSave;
+			await testGroupedChart.save();
+
+			const aliceChartHours = await testGroupedChart.getChart('hour', 1, null, 'alice');
+			const aliceChartDays = await testGroupedChart.getChart('day', 1, null, 'alice');
+
+			assert.deepStrictEqual(aliceChartHours, {
+				foo: {
+					dec: [0],
+					inc: [2],
+					total: [2],
+				},
+			});
+			assert.deepStrictEqual(aliceChartDays, {
+				foo: {
+					dec: [0],
+					inc: [2],
+					total: [2],
+				},
+			});
+		});
 	});
 
 	describe('Unique increment', () => {
