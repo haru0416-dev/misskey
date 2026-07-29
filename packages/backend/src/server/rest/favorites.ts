@@ -76,11 +76,18 @@ export async function handleHonoApiUsersListsFavorite(
 		throw clientErrorWithStatus(400, 'The list has already been favorited.', 'ALREADY_FAVORITED', '6425bba0-985b-461e-af1b-518070e72081');
 	}
 
-	await createUserListFavoriteInDatabase(deps.db, {
-		id: genId(),
-		userId: me.id,
-		userListId: params.listId,
-	});
+	try {
+		await createUserListFavoriteInDatabase(deps.db, {
+			id: genId(),
+			userId: me.id,
+			userListId: params.listId,
+		});
+	} catch (err) {
+		if (isDuplicateKeyValueDatabaseError(err)) {
+			throw clientErrorWithStatus(400, 'The list has already been favorited.', 'ALREADY_FAVORITED', '6425bba0-985b-461e-af1b-518070e72081');
+		}
+		throw err;
+	}
 }
 
 export async function handleHonoApiUsersListsUnfavorite(
@@ -117,11 +124,18 @@ export async function handleHonoApiClipsFavorite(
 		throw clientErrorWithStatus(400, 'The clip has already been favorited.', 'ALREADY_FAVORITED', '92658936-c625-4273-8326-2d790129256e');
 	}
 
-	await createClipFavoriteInDatabase(deps.db, {
-		id: genId(),
-		clipId: clip.id,
-		userId: me.id,
-	});
+	try {
+		await createClipFavoriteInDatabase(deps.db, {
+			id: genId(),
+			clipId: clip.id,
+			userId: me.id,
+		});
+	} catch (err) {
+		if (isDuplicateKeyValueDatabaseError(err)) {
+			throw clientErrorWithStatus(400, 'The clip has already been favorited.', 'ALREADY_FAVORITED', '92658936-c625-4273-8326-2d790129256e');
+		}
+		throw err;
+	}
 }
 
 export async function handleHonoApiClipsUnfavorite(
