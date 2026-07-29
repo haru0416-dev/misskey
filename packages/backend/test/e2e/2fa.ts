@@ -411,7 +411,7 @@ describe('2要素認証', () => {
 		assert.strictEqual(keyDoneResponse.status, 200);
 
 		let lastPasskeyCallAt = 0;
-		const callPasskey = async (params: misskey.entities.SigninWithPasskeyRequest) => {
+		const callPasskey = async <P extends misskey.entities.SigninWithPasskeyRequest>(params: P) => {
 			const wait = lastPasskeyCallAt + 300 - Date.now();
 			if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
 			lastPasskeyCallAt = Date.now();
