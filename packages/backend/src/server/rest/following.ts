@@ -13,7 +13,7 @@ import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { createFollowRequestInDatabase, deleteFollowRequestByIdFromDatabase, deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase, followRequestExistsInDatabase, listAllFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
 import type { FollowRequestRow } from '@/db/schema/follow-request.js';
-import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, listFollowersByFolloweeIdWithPaginationFromDatabase, listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
+import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingAndUpdateUserCountsByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, listFollowersByFolloweeIdWithPaginationFromDatabase, listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
 import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
 import { mutingExistsInDatabase } from '@/core/MutingStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
@@ -504,11 +504,6 @@ async function decrementFollowing(
 	deps.publishInternalEvent?.('unfollow', { followerId: follower.id, followeeId: followee.id });
 
 	if (!follower.movedToUri && !followee.movedToUri) {
-		await Promise.all([
-			adjustUserFollowingCountInDatabase(deps.db, follower.id, -1),
-			adjustUserFollowersCountInDatabase(deps.db, followee.id, -1),
-		]);
-
 		if (deps.meta.enableStatsForFederatedInstances) {
 			if (isRemoteUser(follower) && isLocalUser(followee)) {
 				const instance = await fetchOrRegisterFederatedInstance(deps, follower.host);
@@ -520,19 +515,6 @@ async function decrementFollowing(
 		}
 		return;
 	}
-
-	for (const user of [follower, followee]) {
-		if (user.movedToUri) continue;
-
-		const [nonMovedFollowees, nonMovedFollowers] = await Promise.all([
-			countNonMovedFolloweesByFollowerIdFromDatabase(deps.db, user.id),
-			countNonMovedFollowersByFolloweeIdFromDatabase(deps.db, user.id),
-		]);
-		await updateUserInDatabase(deps.db, user.id, {
-			followingCount: nonMovedFollowees,
-			followersCount: nonMovedFollowers,
-		});
-	}
 }
 
 async function deleteFollowingWithSideEffects(
@@ -540,8 +522,10 @@ async function deleteFollowingWithSideEffects(
 	follower: MiUser,
 	followee: MiUser,
 	followingId: string,
-): Promise<void> {
-	await deleteFollowingByIdInDatabase(deps.db, followingId);
+): Promise<boolean> {
+	const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(deps.db, followingId, follower.id, followee.id);
+	if (!deleted) return false;
+
 	await refreshUserFollowingsCache(deps, follower.id);
 	await decrementFollowing(deps, follower, followee);
 	await publishUnfollowToLocalFollower(deps, follower, followee);
@@ -555,6 +539,8 @@ async function deleteFollowingWithSideEffects(
 		const content = addActivityContext(deps.config, renderReject(deps.config, renderFollow(deps.config, follower, followee), followee));
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 	}
+
+	return true;
 }
 
 export async function insertFollowingWithSideEffects(
@@ -716,7 +702,9 @@ export async function handleHonoApiFollowingDelete(
 		throw followingDeleteNotFollowingError();
 	}
 
-	await deleteFollowingWithSideEffects(deps, follower, followee, following.id);
+	if (!await deleteFollowingWithSideEffects(deps, follower, followee, following.id)) {
+		throw followingDeleteNotFollowingError();
+	}
 
 	return await packUserLiteForHonoApi(deps, followee);
 }
@@ -770,7 +758,9 @@ export async function handleHonoApiFollowingInvalidate(
 		throw followingInvalidateNotFollowingError();
 	}
 
-	await deleteFollowingWithSideEffects(deps, follower, followee, following.id);
+	if (!await deleteFollowingWithSideEffects(deps, follower, followee, following.id)) {
+		throw followingInvalidateNotFollowingError();
+	}
 
 	return await packUserLiteForHonoApi(deps, follower);
 }
