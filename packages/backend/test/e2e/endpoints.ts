@@ -10571,6 +10571,103 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin/user-maintenance', () => {
+		test('root と administrator の認証情報を権限階層に従って保護する', async () => {
+			const now = Date.now();
+			const suffix = now.toString(36).slice(-8);
+			const moderator = await signup({ username: `haumm${suffix}` });
+			const administrator = await signup({ username: `hauma${suffix}` });
+			const adminTarget = await signup({ username: `haumat${suffix}` });
+			const ordinaryTarget = await signup({ username: `haumu${suffix}` });
+			const moderatorRole = await role(alice, { name: `maintenance moderator ${suffix}`, isModerator: true });
+			const administratorRole = await role(alice, { name: `maintenance administrator ${suffix}`, isAdministrator: true });
+
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(now + 1),
+				userId: moderator.id,
+				roleId: moderatorRole.id,
+				expiresAt: null,
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(now + 2),
+				userId: administrator.id,
+				roleId: administratorRole.id,
+				expiresAt: null,
+			});
+			await createRoleAssignmentInDatabase(db, {
+				id: genId(now + 3),
+				userId: adminTarget.id,
+				roleId: administratorRole.id,
+				expiresAt: null,
+			});
+
+			const originalRootProfile = await fetchUserProfileByUserIdOrFailFromDatabase(db, alice.id);
+			const rootPassword = await bcrypt.hash('root-password', 8);
+			const adminPassword = await bcrypt.hash('admin-password', 8);
+			await updateUserProfileInDatabase(db, alice.id, {
+				password: rootPassword,
+				twoFactorSecret: 'root-two-factor-secret',
+				twoFactorEnabled: true,
+			});
+			await updateUserProfileInDatabase(db, adminTarget.id, {
+				password: adminPassword,
+				twoFactorSecret: 'admin-two-factor-secret',
+				twoFactorEnabled: true,
+			});
+			await updateUserProfileInDatabase(db, ordinaryTarget.id, {
+				password: await bcrypt.hash('ordinary-password', 8),
+				twoFactorSecret: 'ordinary-two-factor-secret',
+				twoFactorEnabled: true,
+			});
+
+			try {
+				const resetRoot = await api('admin/reset-password', { userId: alice.id }, alice);
+				assert.strictEqual(resetRoot.status, 400);
+				assert.strictEqual(castAsError(resetRoot.body as any).error.code, 'CANNOT_RESET_PASSWORD_OF_ROOT_USER');
+				const unsetRootMfa = await api('admin/unset-mfa', { userId: alice.id }, alice);
+				assert.strictEqual(unsetRootMfa.status, 403);
+				assert.strictEqual(castAsError(unsetRootMfa.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, alice.id);
+				assert.strictEqual(profile.password, rootPassword);
+				assert.strictEqual(profile.twoFactorEnabled, true);
+			} finally {
+				await updateUserProfileInDatabase(db, alice.id, {
+					password: originalRootProfile.password,
+					twoFactorSecret: originalRootProfile.twoFactorSecret,
+					twoFactorBackupSecret: originalRootProfile.twoFactorBackupSecret,
+					twoFactorEnabled: originalRootProfile.twoFactorEnabled,
+					usePasswordLessLogin: originalRootProfile.usePasswordLessLogin,
+				});
+			}
+
+			const resetAdminByModerator = await api('admin/reset-password', { userId: adminTarget.id }, moderator);
+			assert.strictEqual(resetAdminByModerator.status, 403);
+			assert.strictEqual(castAsError(resetAdminByModerator.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			const unsetAdminMfaByModerator = await api('admin/unset-mfa', { userId: adminTarget.id }, moderator);
+			assert.strictEqual(unsetAdminMfaByModerator.status, 403);
+			assert.strictEqual(castAsError(unsetAdminMfaByModerator.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, adminTarget.id);
+			assert.strictEqual(profile.password, adminPassword);
+			assert.strictEqual(profile.twoFactorEnabled, true);
+
+			const resetOrdinaryByModerator = await api('admin/reset-password', { userId: ordinaryTarget.id }, moderator);
+			assert.strictEqual(resetOrdinaryByModerator.status, 200);
+			assert.strictEqual(resetOrdinaryByModerator.body.password.length, 8);
+			const unsetOrdinaryMfaByModerator = await api('admin/unset-mfa', { userId: ordinaryTarget.id }, moderator);
+			assert.strictEqual(unsetOrdinaryMfaByModerator.status, 204);
+			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, ordinaryTarget.id);
+			assert.strictEqual(await bcrypt.compare(resetOrdinaryByModerator.body.password, profile.password!), true);
+			assert.strictEqual(profile.twoFactorEnabled, false);
+
+			const resetAdminByAdministrator = await api('admin/reset-password', { userId: adminTarget.id }, administrator);
+			assert.strictEqual(resetAdminByAdministrator.status, 200);
+			assert.strictEqual(resetAdminByAdministrator.body.password.length, 8);
+			const unsetAdminMfaByAdministrator = await api('admin/unset-mfa', { userId: adminTarget.id }, administrator);
+			assert.strictEqual(unsetAdminMfaByAdministrator.status, 204);
+			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, adminTarget.id);
+			assert.strictEqual(await bcrypt.compare(resetAdminByAdministrator.body.password, profile.password!), true);
+			assert.strictEqual(profile.twoFactorEnabled, false);
+		});
+
 		test('admin/reset-password と unset 系 endpoint は DB 更新、token scope、role、ログを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
