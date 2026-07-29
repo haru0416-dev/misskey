@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { user as userTable } from '@/db/schema/user.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { userProfile } from '@/db/schema/user-profile.js';
@@ -30,9 +30,13 @@ type SignupAccountInsert = {
 };
 
 export class RootUserAlreadyAssignedError extends Error {}
+export class DuplicatedUsernameError extends Error {}
+export class UsedUsernameError extends Error {}
 
 export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data: SignupAccountInsert): Promise<{ account: MiUser; rootClaimed: boolean }> {
 	const result = await db.transaction(async (tx) => {
+		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`signup:${data.usernameLower}`}))`);
+
 		const [existing] = await tx
 			.select({ id: userTable.id })
 			.from(userTable)
@@ -43,7 +47,17 @@ export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data:
 			.limit(1);
 
 		if (existing) {
-			throw new Error('DUPLICATED_USERNAME');
+			throw new DuplicatedUsernameError();
+		}
+
+		const [used] = await tx
+			.select({ username: usedUsername.username })
+			.from(usedUsername)
+			.where(eq(usedUsername.username, data.usernameLower))
+			.limit(1);
+
+		if (used) {
+			throw new UsedUsernameError();
 		}
 
 		const [account] = await tx
