@@ -57,7 +57,7 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	httpRequestService: HttpRequestService;
 	imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
 	internalStorageService: Pick<InternalStorageService, 'del' | 'saveFromBuffer' | 'saveFromPath'>;
-	s3Service: Pick<S3Service, 'upload'>;
+	s3Service: Pick<S3Service, 'upload' | 'delete'>;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate' | 'validateOtp'>;
 	videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
 	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication' | 'initiateRegistration' | 'verifyRegistration'>;

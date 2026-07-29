@@ -9,6 +9,7 @@ import { Readable } from 'node:stream';
 import * as streamPromises from 'node:stream/promises';
 import { z } from 'zod';
 import sharp from 'sharp';
+import { sql } from 'drizzle-orm';
 import type { Sharp } from 'sharp';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import type { PutObjectCommandInput } from '@aws-sdk/client-s3';
@@ -60,7 +61,7 @@ export type HonoApiDriveFileUploadDependencies = Omit<HonoApiDriveFilesDependenc
 	fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
 	imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
 	internalStorageService: Pick<InternalStorageService, 'del' | 'saveFromBuffer' | 'saveFromPath'>;
-	s3Service: Pick<S3Service, 'upload'>;
+	s3Service: Pick<S3Service, 'upload' | 'delete'>;
 	videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 	publishMainStream?: HonoApiMainStreamPublisher;
@@ -276,6 +277,11 @@ async function uploadDriveFileToObjectStorageForHonoApi(
 	}
 }
 
+type StoredDriveFile = {
+	file: MiDriveFile;
+	cleanup: () => Promise<void>;
+};
+
 async function saveDriveFileForHonoApi(
 	deps: HonoApiDriveFileUploadDependencies,
 	file: MiDriveFile,
@@ -284,7 +290,7 @@ async function saveDriveFileForHonoApi(
 	type: string,
 	hash: string,
 	size: number,
-): Promise<MiDriveFile> {
+): Promise<StoredDriveFile> {
 	const alts = await generateDriveFileAltsForHonoApi(deps, path, type, !file.uri);
 
 	if (deps.meta.useObjectStorage) {
@@ -347,7 +353,22 @@ async function saveDriveFileForHonoApi(
 		file.size = size;
 		file.storedInternal = false;
 
-		return await createDriveFileInDatabase(deps.db, file);
+		const keys = [key, thumbnailKey, webpublicKey].filter((value): value is string => value != null);
+		return {
+			file,
+			cleanup: async () => {
+				await Promise.all(keys.map(async accessKey => {
+					try {
+						await deps.s3Service.delete(deps.meta, {
+							Bucket: deps.meta.objectStorageBucket ?? undefined,
+							Key: accessKey,
+						});
+					} catch (err) {
+						deps.logger.error(`Failed to clean up uploaded object: key = ${accessKey}`, err as Error);
+					}
+				}));
+			},
+		};
 	} else {
 		const accessKey = randomUUID();
 		const thumbnailAccessKey = 'thumbnail-' + randomUUID();
@@ -379,7 +400,91 @@ async function saveDriveFileForHonoApi(
 		file.md5 = hash;
 		file.size = size;
 
-		return await createDriveFileInDatabase(deps.db, file);
+		const keys = [accessKey, alts.thumbnail ? thumbnailAccessKey : null, alts.webpublic ? webpublicAccessKey : null]
+			.filter((value): value is string => value != null);
+		return {
+			file,
+			cleanup: async () => {
+				await Promise.all(keys.map(async accessKey => {
+					try {
+						await deps.internalStorageService.del(accessKey);
+					} catch (err) {
+						deps.logger.error(`Failed to clean up uploaded file: key = ${accessKey}`, err as Error);
+					}
+				}));
+			},
+		};
+	}
+}
+
+async function persistStoredDriveFileForHonoApi(
+	deps: HonoApiDriveFileUploadDependencies,
+	stored: StoredDriveFile,
+	user: MiUser | null,
+	force: boolean,
+	sensitive: boolean | null,
+): Promise<{ file: MiDriveFile; inserted: boolean }> {
+	if (user == null) {
+		try {
+			return { file: await createDriveFileInDatabase(deps.db, stored.file), inserted: true };
+		} catch (err) {
+			await stored.cleanup();
+			throw err;
+		}
+	}
+
+	try {
+		const result = await deps.db.transaction(async transaction => {
+			await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtext('drive-quota'), hashtext(${user.id}))`);
+
+			if (!force) {
+				const matched = await fetchDriveFileByMd5AndUserIdFromDatabase(transaction, stored.file.md5, user.id);
+				if (matched) {
+					if (sensitive && !matched.isSensitive) {
+						await updateDriveFileInDatabase(transaction, matched.id, { isSensitive: true });
+						matched.isSensitive = true;
+					}
+					return { file: matched, inserted: false, expiredFiles: [] };
+				}
+			}
+
+			const isLocalUser = user.host == null;
+			const isModerator = isLocalUser ? await isHonoApiModerator({ ...deps, db: transaction }, user) : false;
+			let expiredFiles: MiDriveFile[] = [];
+
+			if (!stored.file.isLink && !isModerator) {
+				const policies = await getHonoApiRolePolicies({ ...deps, db: transaction }, user);
+				const driveCapacity = 1024 * 1024 * policies.driveCapacityMb;
+				const usage = await sumDriveFileSizeByUserIdFromDatabase(transaction, user.id);
+
+				if (driveCapacity < usage + stored.file.size) {
+					if (isLocalUser) {
+						throw new IdentifiableError('c6244ed2-a39a-4e1c-bf93-f0fbd7764fa6', 'No free space.');
+					}
+
+					const latestUser = await fetchUserByIdOrFailFromDatabase(transaction, user.id);
+					const exceedFileIds = await listDriveFileIdsExceedingUserCapacityFromDatabase(transaction, {
+						userId: user.id,
+						driveCapacity: driveCapacity - stored.file.size,
+						avatarId: latestUser.avatarId,
+						bannerId: latestUser.bannerId,
+					});
+					expiredFiles = await listDriveFilesByIdsFromDatabase(transaction, exceedFileIds);
+				}
+			}
+
+			const file = await createDriveFileInDatabase(transaction, stored.file);
+			return { file, inserted: true, expiredFiles };
+		});
+
+		if (!result.inserted) await stored.cleanup();
+		for (const expiredFile of result.expiredFiles) {
+			startDriveFileDeletion(buildDriveFileDeletionDependencies(deps), expiredFile, true);
+		}
+		return { file: result.file, inserted: result.inserted };
+	} catch (err) {
+		await stored.cleanup();
+		throw err;
 	}
 }
 
@@ -592,7 +697,10 @@ export async function addDriveFileForHonoApi(
 			}
 		}
 	} else {
-		file = await saveDriveFileForHonoApi(deps, file, path, detectedName, info.type.mime, info.md5, info.size);
+		const stored = await saveDriveFileForHonoApi(deps, file, path, detectedName, info.type.mime, info.md5, info.size);
+		const persisted = await persistStoredDriveFileForHonoApi(deps, stored, user, force, sensitive);
+		if (!persisted.inserted) return persisted.file;
+		file = persisted.file;
 	}
 
 	if (user != null) {
