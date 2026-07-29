@@ -4,7 +4,7 @@
  */
 
 import { sql } from 'drizzle-orm';
-import { index, jsonb, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgTable, timestamp, unique, varchar } from 'drizzle-orm/pg-core';
 import type { MiRegistryItem } from '@/models/RegistryItem.js';
 import type { MiUser } from '@/models/User.js';
 import { user } from './user.js';
@@ -23,6 +23,7 @@ export const registryItem = pgTable('registry_item', {
 	index('IDX_REGISTRY_ITEM_USER_ID').on(table.userId),
 	index('IDX_REGISTRY_ITEM_SCOPE').on(table.scope),
 	index('IDX_REGISTRY_ITEM_DOMAIN').on(table.domain),
+	unique('UQ_REGISTRY_ITEM_USER_ID_DOMAIN_SCOPE_KEY').on(table.userId, table.domain, table.scope, table.key).nullsNotDistinct(),
 ]);
 
 export type RegistryItemRow = typeof registryItem.$inferSelect;
