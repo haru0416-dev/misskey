@@ -80,6 +80,7 @@ export type DBExportAntennasData = {
 export type DbUserDeleteJobData = {
 	user: ThinUser;
 	soft?: boolean;
+	accountDeleteCoordinatorId?: string;
 };
 
 export type DbUserImportJobData = {

@@ -23,6 +23,16 @@ export type SystemQueue = Bull.Queue<Record<string, unknown>>;
 export type EndedPollNotificationQueue = Bull.Queue<EndedPollNotificationJobData>;
 export type PostScheduledNoteQueue = Bull.Queue<PostScheduledNoteJobData>;
 export type DeliverQueue = Bull.Queue<DeliverJobData>;
+export type DeliverJobInput = {
+	name: string;
+	data: DeliverJobData;
+	opts?: Bull.JobsOptions;
+};
+export type DeliverJobBulkInput = {
+	name: string;
+	data: DeliverJobData;
+	opts?: Bull.BulkJobOptions;
+};
 export type InboxQueue = Bull.Queue<InboxJobData>;
 type RawDbQueue = Bull.Queue<DbJobData<DbJobName>, unknown, DbJobName>;
 export type DbQueue = Omit<RawDbQueue, 'add' | 'addBulk'>;
@@ -51,6 +61,14 @@ export async function addDbJob(queue: DbQueue, job: DbJobInput): Promise<void> {
 
 export async function addDbJobs<K extends DbJobName>(queue: DbQueue, jobs: DbJobBulkInput<K>[]): Promise<void> {
 	await (queue as RawDbQueue).addBulk(jobs);
+}
+
+export async function addDeliverJob(queue: DeliverQueue, job: DeliverJobInput): Promise<void> {
+	await queue.add(job.name, job.data, job.opts);
+}
+
+export async function addDeliverJobs(queue: DeliverQueue, jobs: DeliverJobBulkInput[]): Promise<void> {
+	await queue.addBulk(jobs);
 }
 
 export function createSystemQueue(config: Config): SystemQueue {

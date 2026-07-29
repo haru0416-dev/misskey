@@ -5,19 +5,18 @@
 
 import type { Config } from '@/config.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
-import type { DeliverQueue } from '@/core/queues.js';
+import { addDeliverJob, type DeliverJobInput, type DeliverQueue } from '@/core/queues.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverJobData, ThinUser } from '@/queue/types.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 
-export function enqueueDeliverJob(
-	queue: DeliverQueue,
+export function createDeliverJob(
 	config: Pick<Config, 'queues'>,
 	user: ThinUser,
 	content: IActivity | null,
 	to: string | null,
 	isSharedInbox: boolean,
-) {
+): DeliverJobInput | null {
 	if (content == null) return null;
 	if (to == null) return null;
 
@@ -34,11 +33,27 @@ export function enqueueDeliverJob(
 	};
 	const label = to.replace('https://', '').replace('/inbox', '');
 
-	return queue.add(label, data, {
-		attempts: config.queues.deliver.maximumAttempts ?? 12,
-		backoff: {
-			type: 'custom',
+	return {
+		name: label,
+		data,
+		opts: {
+			attempts: config.queues.deliver.maximumAttempts ?? 12,
+			backoff: {
+				type: 'custom',
+			},
+			...queueRetentionOptions(config),
 		},
-		...queueRetentionOptions(config),
-	});
+	};
+}
+
+export function enqueueDeliverJob(
+	queue: DeliverQueue,
+	config: Pick<Config, 'queues'>,
+	user: ThinUser,
+	content: IActivity | null,
+	to: string | null,
+	isSharedInbox: boolean,
+) {
+	const job = createDeliverJob(config, user, content, to, isSharedInbox);
+	return job == null ? null : addDeliverJob(queue, job);
 }
