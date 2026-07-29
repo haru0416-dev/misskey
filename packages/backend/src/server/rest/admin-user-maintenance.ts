@@ -5,6 +5,7 @@
 
 import { hashPasswordSync } from '@/misc/password.js';
 import { z } from 'zod';
+import type { Config } from '@/config.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, unsetUserMfaInDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
@@ -13,11 +14,13 @@ import { secureRndstr } from '@/misc/secure-rndstr.js';
 import type { SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
-import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError } from './error.js';
+import type { MiLocalUser, MiUser } from '@/models/User.js';
+import { HonoApiError, rolePermissionDeniedError } from './error.js';
+import { isHonoApiAdministrator } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminUserMaintenanceDependencies = {
+	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 };
@@ -54,6 +57,16 @@ function cannotResetPasswordOfRootUserError(): HonoApiError {
 	});
 }
 
+async function assertCanMaintainUser(
+	deps: HonoApiAdminUserMaintenanceDependencies,
+	me: MiLocalUser,
+	user: MiUser,
+): Promise<void> {
+	if (!await isHonoApiAdministrator(deps, me) && await isHonoApiAdministrator(deps, user)) {
+		throw rolePermissionDeniedError();
+	}
+}
+
 export async function handleHonoApiAdminResetPassword(
 	deps: HonoApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
@@ -63,6 +76,7 @@ export async function handleHonoApiAdminResetPassword(
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw noSuchUserError();
 	if (deps.meta.rootUserId === user.id) throw cannotResetPasswordOfRootUserError();
+	await assertCanMaintainUser(deps, me, user);
 
 	const passwd = secureRndstr(8);
 	await updateUserProfileInDatabase(deps.db, user.id, {
@@ -86,6 +100,8 @@ export async function handleHonoApiAdminUnsetMfa(
 	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw noSuchUserError();
+	if (deps.meta.rootUserId === user.id) throw rolePermissionDeniedError();
+	await assertCanMaintainUser(deps, me, user);
 
 	await unsetUserMfaInDatabase(deps.db, user.id);
 	await logModerationEventInDatabase(deps, me, 'unsetMfa', {
