@@ -22,7 +22,6 @@ const options = {
 	sourcemap: 'linked',
 };
 
-// built配下をすべて削除する
 const args = process.argv.slice(2).map((arg) => arg.toLowerCase());
 
 // built配下をすべて削除する

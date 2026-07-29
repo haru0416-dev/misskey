@@ -118,6 +118,8 @@ export async function enqueueDbJobInOutbox(
 
 export async function dispatchQueueOutbox(db: MiDrizzleDatabase, dbQueue: DbQueue): Promise<number> {
 	return await db.transaction(async tx => {
+		// SKIP LOCKEDでdispatcher間の処理対象を分割する。RedisへのenqueueとDB行削除は
+		// atomicではないためconsumerは再配送を許容し、安定したjobIdで保持中の重複を抑える。
 		const rows = await tx
 			.select()
 			.from(queueOutbox)

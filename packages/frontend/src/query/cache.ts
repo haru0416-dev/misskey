@@ -8,6 +8,7 @@ import { hashKey } from '@tanstack/vue-query';
 import type { QueryKey } from '@tanstack/vue-query';
 import { queryClient } from '@/query/client.js';
 
+/** QueryCacheの購読を保持し続けるため、page lifetimeのsingletonとして使用する。 */
 export class QueryBackedCache<T> {
 	public readonly value = shallowRef<T>();
 

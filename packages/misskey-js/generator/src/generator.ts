@@ -173,8 +173,8 @@ async function generateEndpoints(
 	}
 
 	endpointOutputLine.push(`/**
- * NOTE: The content-type for all endpoints not listed here is application/json.
- */`);
+	 * Request Content-Type defaults to application/json for endpoints not listed here.
+	 */`);
 	endpointOutputLine.push('export const endpointReqTypes = {');
 
 	endpointOutputLine.push(

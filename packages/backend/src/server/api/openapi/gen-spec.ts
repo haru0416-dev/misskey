@@ -114,7 +114,8 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 			|| ['allOf', 'oneOf', 'anyOf'].some(o => (Array.isArray(schema[o]) && schema[o].length >= 0));
 
 		const info = {
-			operationId: endpoint.name.replaceAll('/', '___'), // NOTE: スラッシュは使えない
+			// misskey-js generator treats `___` as the encoded endpoint path separator.
+			operationId: endpoint.name.replaceAll('/', '___'),
 			summary: endpoint.name,
 			description: desc,
 			externalDocs: {

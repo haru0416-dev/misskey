@@ -13,6 +13,10 @@ end
 return 0
 `;
 
+/**
+ * 自動延長しない固定期限のleaseを取得する。
+ * token付き解放により、期限切れ後の旧ownerが新しいleaseを削除することだけは防ぐ。
+ */
 export async function acquireDistributedLock(
 	redis: Redis.Redis,
 	name: string,

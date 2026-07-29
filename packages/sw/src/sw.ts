@@ -33,7 +33,7 @@ async function respondToNavigation(request: Request): Promise<Response> {
 		globalThis.clearTimeout(timeout);
 	}
 
-	// Only show offline page when network request actually fails
+	// fetchの失敗・timeout・5xx応答時にoffline pageへフォールバックする。
 	const html = await offlineContentHTML();
 	return new Response(html, {
 		status: 200,

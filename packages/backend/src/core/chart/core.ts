@@ -592,7 +592,8 @@ export default abstract class Chart<T extends Schema> {
 
 			this.logger.info(`${this.name + (logHour.group ? `:${logHour.group}` : '')}: Updated`);
 
-			// TODO: この一連の処理が始まった後に新たにbufferに入ったものは消さないようにする
+			// TODO: DB書き込み前にgroup分をsnapshotまたはdrainする。現在のlive bufferをfilterすると、
+			// save()待機中に追加された同一groupのdiffまで削除される。
 			this.buffer = this.buffer.filter(q => q.group != null && (q.group !== logHour.group));
 		};
 
