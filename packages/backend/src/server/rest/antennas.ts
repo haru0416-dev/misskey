@@ -9,8 +9,7 @@ import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
 	appendUserToAntennasInDatabase,
-	countAntennasByUserIdFromDatabase,
-	createAntennaInDatabase,
+	createAntennaWithinLimitInDatabase,
 	deleteAntennaFromDatabase,
 	fetchAntennaByIdAndUserIdFromDatabase,
 	fetchAntennaByIdOrFailFromDatabase,
@@ -347,11 +346,6 @@ export async function handleHonoApiAntennasCreate(
 	}
 
 	const policies = await getHonoApiRolePolicies(deps, me);
-	const currentAntennasCount = await countAntennasByUserIdFromDatabase(deps.db, me.id);
-	if (currentAntennasCount >= policies.antennaLimit) {
-		throw new HonoApiError({ status: 400, message: 'You cannot create antenna any more.', code: 'TOO_MANY_ANTENNAS', id: 'faf47050-e8b5-438c-913c-db2b1576fde4' });
-	}
-
 	let userList;
 	if (params.src === 'list' && params.userListId) {
 		userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.userListId, me.id);
@@ -359,7 +353,7 @@ export async function handleHonoApiAntennasCreate(
 	}
 
 	const now = new Date();
-	const antenna = await createAntennaInDatabase(deps.db, {
+	const antenna = await createAntennaWithinLimitInDatabase(deps.db, {
 		id: genId(now.getTime()),
 		lastUsedAt: now,
 		userId: me.id,
@@ -375,7 +369,10 @@ export async function handleHonoApiAntennasCreate(
 		withReplies: params.withReplies,
 		withFile: params.withFile,
 		excludeNotesInSensitiveChannel: params.excludeNotesInSensitiveChannel ?? false,
-	});
+	}, policies.antennaLimit);
+	if (antenna == null) {
+		throw new HonoApiError({ status: 400, message: 'You cannot create antenna any more.', code: 'TOO_MANY_ANTENNAS', id: 'faf47050-e8b5-438c-913c-db2b1576fde4' });
+	}
 
 	deps.publishInternalEvent?.('antennaCreated', antenna);
 

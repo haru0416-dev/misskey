@@ -6,10 +6,9 @@
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { clipFavoriteExistsInDatabase, countClipFavoritesByClipIdsFromDatabase, countClipFavoritesFromDatabase, listFavoritedClipIdsByUserIdFromDatabase, listFavoritedClipIdsByUserIdAndClipIdsFromDatabase } from '@/core/ClipFavoriteStore.js';
-import { countClipNotesByClipIdFromDatabase, countClipNotesByClipIdsFromDatabase, createClipNoteInDatabase, deleteClipNoteAndDecrementNoteClippedCountInDatabase } from '@/core/ClipNoteStore.js';
+import { countClipNotesByClipIdFromDatabase, countClipNotesByClipIdsFromDatabase, createClipNoteWithinLimitInDatabase, deleteClipNoteAndDecrementNoteClippedCountInDatabase } from '@/core/ClipNoteStore.js';
 import {
-	countClipsByUserIdFromDatabase,
-	createClipInDatabase,
+	createClipWithinLimitInDatabase,
 	deleteClipInDatabase,
 	fetchClipByIdAndUserIdFromDatabase,
 	fetchClipByIdFromDatabase,
@@ -19,7 +18,7 @@ import {
 	resolveClipPagination,
 	updateClipInDatabase,
 } from '@/core/ClipStore.js';
-import { adjustNoteClippedCountInDatabase, fetchNoteByIdFromDatabase, listClipNotesFromDatabase } from '@/core/NoteStore.js';
+import { fetchNoteByIdFromDatabase, listClipNotesFromDatabase } from '@/core/NoteStore.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -294,18 +293,14 @@ export async function handleHonoApiClipsCreate(
 ): Promise<Packed<'Clip'>> {
 	const params = parseHonoApiParams(clipsCreateParamDef, body);
 
-	const currentCount = await countClipsByUserIdFromDatabase(deps.db, me.id);
-	if (currentCount >= (await getHonoApiRolePolicies(deps, me)).clipLimit) {
-		throw clipsCreateTooManyClipsError();
-	}
-
-	const clip = await createClipInDatabase(deps.db, {
+	const clip = await createClipWithinLimitInDatabase(deps.db, {
 		id: genId(),
 		userId: me.id,
 		name: params.name,
 		isPublic: params.isPublic,
 		description: params.description || null,
-	});
+	}, (await getHonoApiRolePolicies(deps, me)).clipLimit);
+	if (clip == null) throw clipsCreateTooManyClipsError();
 
 	return await packClipForHonoApi(deps, clip, me);
 }
@@ -349,28 +344,21 @@ export async function handleHonoApiClipsAddNote(
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsAddNoteNoSuchClipError();
 
-	const currentCount = await countClipNotesByClipIdFromDatabase(deps.db, clip.id);
-	if (currentCount >= (await getHonoApiRolePolicies(deps, me)).noteEachClipsLimit) {
-		throw clipsAddNoteTooManyClipNotesError();
-	}
-
-	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null) throw clipsAddNoteNoSuchNoteError();
-
 	try {
-		await createClipNoteInDatabase(deps.db, {
+		const result = await createClipNoteWithinLimitInDatabase(deps.db, {
 			id: genId(),
 			noteId: params.noteId,
 			clipId: clip.id,
-		});
+		}, (await getHonoApiRolePolicies(deps, me)).noteEachClipsLimit);
+		if (result === 'tooManyClipNotes') throw clipsAddNoteTooManyClipNotesError();
+		if (result === 'noSuchNote') throw clipsAddNoteNoSuchNoteError();
 	} catch (e: unknown) {
+		if (e instanceof HonoApiError) throw e;
 		if (isDuplicateKeyValueDatabaseError(e)) throw clipsAddNoteAlreadyClippedError();
 		if (getDatabaseErrorCode(e) === '23503') throw clipsAddNoteNoSuchNoteError();
 		throw e;
 	}
 
-	await updateClipInDatabase(deps.db, clip.id, { lastClippedAt: new Date() });
-	await adjustNoteClippedCountInDatabase(deps.db, params.noteId, 1);
 }
 
 export async function handleHonoApiClipsRemoveNote(

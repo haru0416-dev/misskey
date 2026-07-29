@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { createUserNotePiningInDatabase, deleteUserNotePiningFromDatabase, listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
+import { createUserNotePiningWithinLimitInDatabase, deleteUserNotePiningFromDatabase } from '@/core/UserNotePiningStore.js';
 import { fetchNoteByIdAndUserIdFromDatabase } from '@/core/NoteStore.js';
 import type { Config } from '@/config.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -74,18 +74,14 @@ export async function addPinnedForHonoApi(
 	const note = await fetchNoteByIdAndUserIdFromDatabase(deps.db, noteId, user.id);
 	if (note == null) throw iPinNoSuchNoteError();
 
-	const pinings = await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id);
-
 	const policies = await getHonoApiRolePolicies(deps, user as MiUser);
-	if (pinings.length >= policies.pinLimit) throw iPinLimitExceededError();
-
-	if (pinings.some(pining => pining.noteId === note.id)) throw iPinAlreadyPinnedError();
-
-	await createUserNotePiningInDatabase(deps.db, {
+	const result = await createUserNotePiningWithinLimitInDatabase(deps.db, {
 		id: genId(),
 		userId: user.id,
 		noteId: note.id,
-	});
+	}, policies.pinLimit);
+	if (result === 'limitExceeded') throw iPinLimitExceededError();
+	if (result === 'alreadyPinned') throw iPinAlreadyPinnedError();
 
 	if (user.host == null && !note.localOnly && (note.visibility === 'public' || note.visibility === 'home')) {
 		void deliverPinnedChangeForHonoApi(deps, user as MiLocalUser, note.id, true).catch(() => {});

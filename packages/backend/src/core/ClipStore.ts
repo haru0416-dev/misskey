@@ -6,6 +6,7 @@
 import { and, asc, count, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
 import { clip, type ClipInsert, type ClipRow } from '@/db/schema/clip.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { MiClip } from '@/models/Clip.js';
@@ -77,6 +78,21 @@ export async function createClipInDatabase(
 	}
 
 	return deserializeClip(row);
+}
+
+export async function createClipWithinLimitInDatabase(
+	db: MiDrizzleDatabase,
+	data: ClipInsert,
+	limit: number,
+): Promise<MiClip | null> {
+	return await db.transaction(async tx => {
+		await acquireAdvisoryTransactionLockInDatabase(tx, 'clip-limit', data.userId);
+		if (await countClipsByUserIdFromDatabase(tx, data.userId) >= limit) return null;
+
+		const [row] = await tx.insert(clip).values(data).returning();
+		if (row == null) throw new Error('Failed to create clip');
+		return deserializeClip(row);
+	});
 }
 
 export async function fetchClipByIdFromDatabase(
