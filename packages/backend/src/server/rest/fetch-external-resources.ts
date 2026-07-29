@@ -10,7 +10,7 @@ import type { Config } from '@/config.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError, rateLimitExceededError } from './error.js';
-import { isHonoApiRateLimited } from './rate-limit.js';
+import { isHonoApiRateLimitedForUser } from './rate-limit.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiFetchExternalResourcesDependencies = {
@@ -62,7 +62,7 @@ export async function handleHonoApiFetchExternalResources(
 ): Promise<ExternalResourceResponse> {
 	const params = parseHonoApiParams(fetchExternalResourcesParamDef, body);
 
-	if (await isHonoApiRateLimited(deps, {
+	if (await isHonoApiRateLimitedForUser(deps, {
 		key: 'fetch-external-resources',
 		duration: 60 * 60 * 1000,
 		max: 50,
