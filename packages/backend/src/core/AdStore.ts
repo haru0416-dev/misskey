@@ -167,12 +167,12 @@ export async function listAdsFromDatabase(
 			lte(ad.startsAt, now),
 		);
 	} else if (options.publishing === false) {
-		where = or(
-			and(
-				...(paginationConditions.length > 0 ? paginationConditions : []),
+		where = and(
+			...(where == null ? [] : [where]),
+			or(
 				lte(ad.expiresAt, now),
+				gt(ad.startsAt, now),
 			),
-			gt(ad.startsAt, now),
 		);
 	}
 
