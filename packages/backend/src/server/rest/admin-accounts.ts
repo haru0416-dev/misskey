@@ -9,6 +9,7 @@ import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { DbQueue, DeliverQueue } from '@/core/queues.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
 import { updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js';
+import { RootUserAlreadyAssignedError } from '@/core/SignupStore.js';
 import { fetchUserProfileByEmailFromDatabase } from '@/core/UserProfileStore.js';
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { SchemaType } from '@/misc/json-schema.js';
@@ -83,8 +84,9 @@ export async function handleHonoApiAdminAccountsCreate(
 	body: Record<string, unknown>,
 ): Promise<SignupResponse> {
 	const params = parseHonoApiParams(adminAccountCreateParamDef, body);
+	const isInitialRootClaim = deps.meta.rootUserId == null && auth.user == null && auth.token == null;
 
-	if (deps.meta.rootUserId == null && auth.user == null && auth.token == null) {
+	if (isInitialRootClaim) {
 		if (deps.config.instance.setupPassword != null) {
 			if (params.setupPassword !== deps.config.instance.setupPassword) {
 				throw adminAccountCreateWrongInitialPasswordError();
@@ -96,12 +98,22 @@ export async function handleHonoApiAdminAccountsCreate(
 		throw adminAccountCreateAccessDeniedError();
 	}
 
-		const { account, token } = await createLocalSignupAccount(deps, {
-		username: params.username,
-		passwordHash: await hashPassword(params.password),
-		host: null,
-		ignorePreservedUsernames: true,
-	});
+	let account: MiUser;
+	let token: string;
+	try {
+		({ account, token } = await createLocalSignupAccount(deps, {
+			username: params.username,
+			passwordHash: await hashPassword(params.password),
+			host: null,
+			ignorePreservedUsernames: true,
+			claimRoot: isInitialRootClaim,
+		}));
+	} catch (error) {
+		if (error instanceof RootUserAlreadyAssignedError) {
+			throw adminAccountCreateAccessDeniedError();
+		}
+		throw error;
+	}
 
 	return await packSignupUser(deps, account, token);
 }
