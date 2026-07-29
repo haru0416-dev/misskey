@@ -131,7 +131,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 		if (isDispatchingOutbox) return;
 		isDispatchingOutbox = true;
 		try {
-			await dispatchQueueOutbox(deps.db, deps.dbQueue);
+			await dispatchQueueOutbox(deps.db, deps.dbQueue, deps.deliverQueue);
 		} catch (error) {
 			outboxLogger.error('Failed to dispatch queue outbox', { e: renderError(error instanceof Error ? error : new Error(String(error))) });
 		} finally {

@@ -4,13 +4,13 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
+import { createDeliverJob } from '@/core/DeliverQueue.js';
 import { listSharedInboxesFromFollowingsInDatabase } from '@/core/FollowingStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { addDbJob, type DbQueue, type DeliverQueue } from '@/core/queues.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserDeletedStateInDatabase } from '@/core/UserStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
-import { enqueueDbJobInOutbox } from '@/core/QueueOutboxStore.js';
+import { enqueueAccountDeleteCoordinatorInOutbox, enqueueDbJobInOutbox, enqueueDeliverJobsInOutbox } from '@/core/QueueOutboxStore.js';
 import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -77,21 +77,29 @@ export async function deleteAccountWithSideEffects(
 		throw new Error('cannot delete a system account');
 	}
 
-	let delivery: {
-		localUser: { id: MiUser['id']; host: null };
-		content: IActivity;
-		inboxes: string[];
-	} | null = null;
+	let deliveryJobs = [] as NonNullable<ReturnType<typeof createDeliverJob>>[];
 	if (user.host === null) {
 		const localUser = { id: user.id, host: null } as const;
 		const content = addActivityContext(deps.config, renderDelete(deps.config, genLocalUserUri(deps.config, localUser.id), localUser));
 		const inboxes = await listSharedInboxesFromFollowingsInDatabase(deps.db);
-		delivery = { localUser, content: content as IActivity, inboxes };
+		deliveryJobs = inboxes.flatMap(inbox => {
+			const job = createDeliverJob(deps.config, localUser, content as IActivity, inbox, true);
+			return job == null ? [] : [job];
+		});
 	}
 
-	const outboxId = await deps.db.transaction(async transaction => {
+	const outbox = await deps.db.transaction(async transaction => {
 		const tx = transaction as MiDrizzleDatabase;
-		const id = await enqueueDeleteAccountJob(tx, deps.config, user, user.host !== null);
+		let dbJobId: string;
+		if (user.host !== null) {
+			dbJobId = await enqueueDeleteAccountJob(tx, deps.config, user, user.host !== null);
+		} else {
+			dbJobId = await enqueueAccountDeleteCoordinatorInOutbox(tx, {
+				user: { id: user.id },
+				soft: false,
+			}, queueRetentionOptions(deps.config));
+			await enqueueDeliverJobsInOutbox(tx, deliveryJobs, dbJobId);
+		}
 		await updateUserDeletedStateInDatabase(tx, user.id, true);
 		if (moderator != null) {
 			await logModerationEventInDatabase({ db: tx }, moderator, 'deleteAccount', {
@@ -100,28 +108,24 @@ export async function deleteAccountWithSideEffects(
 				userHost: user.host,
 			});
 		}
-		return id;
+		return { dbJobId, hasCoordinator: user.host === null };
 	});
 
-	if (delivery != null) {
-		for (const inbox of delivery.inboxes) {
-			enqueueDeliverJob(deps.deliverQueue, deps.config, delivery.localUser, delivery.content, inbox, true);
-		}
+	if (!outbox.hasCoordinator) {
+		void addDbJob(deps.dbQueue, {
+			name: 'deleteAccount',
+			data: {
+				user: { id: user.id },
+				soft: user.host !== null,
+			},
+			opts: {
+				...queueRetentionOptions(deps.config),
+				jobId: `outbox-${outbox.dbJobId}`,
+			},
+		}).catch(() => {
+			// The outbox dispatcher retries when the low-latency enqueue path is unavailable.
+		});
 	}
-
-	void addDbJob(deps.dbQueue, {
-		name: 'deleteAccount',
-		data: {
-			user: { id: user.id },
-			soft: user.host !== null,
-		},
-		opts: {
-			...queueRetentionOptions(deps.config),
-			jobId: `outbox-${outboxId}`,
-		},
-	}).catch(() => {
-		// The outbox dispatcher retries when the low-latency enqueue path is unavailable.
-	});
 
 	deps.publishInternalEvent?.('userChangeDeletedState', { id: user.id, isDeleted: true });
 }

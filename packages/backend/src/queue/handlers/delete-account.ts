@@ -37,6 +37,9 @@ async function unindexNoteForHonoApi(deps: HonoQueueDeleteAccountDependencies, n
 export async function handleHonoQueueDeleteAccount(deps: HonoQueueDeleteAccountDependencies, job: Bull.Job<DbUserDeleteJobData>): Promise<string | void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
+	if (user.host == null && !job.data.soft && job.data.accountDeleteCoordinatorId == null) {
+		return 'skip: uncoordinated local account deletion';
+	}
 
 	{ // Delete notes
 		let cursor: MiNote['id'] | null = null;

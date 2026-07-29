@@ -6,14 +6,15 @@
 process.env['NODE_ENV'] = 'test';
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
+import * as Bull from 'bullmq';
 import { eq, inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
-import { dispatchQueueOutbox, enqueueDbJobInOutbox, getQueueOutboxStats } from '@/core/QueueOutboxStore.js';
+import { dispatchQueueOutbox, enqueueAccountDeleteCoordinatorInOutbox, enqueueDbJobInOutbox, enqueueDeliverJobInOutbox, enqueueDeliverJobsInOutbox, getQueueOutboxStats } from '@/core/QueueOutboxStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { QUEUE } from '@/queue/const.js';
+import { baseWorkerOptions, QUEUE } from '@/queue/const.js';
 
 describe('queue outbox', () => {
 	let runtime: RuntimeDependencies;
@@ -41,15 +42,155 @@ describe('queue outbox', () => {
 
 		expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, outboxId))).toHaveLength(1);
 		expect((await getQueueOutboxStats(runtime.db)).pending).toBeGreaterThanOrEqual(1);
-		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue)).toBe(1);
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(1);
 		expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, outboxId))).toHaveLength(0);
 
 		const job = await runtime.dbQueue.getJob(`outbox-${outboxId}`);
 		expect(job?.name).toBe('deleteAccount');
 		expect(job?.data).toEqual({ user: { id: 'queue-outbox-test-user' }, soft: true });
-		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue)).toBe(0);
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(0);
 		expect(await getQueueOutboxStats(runtime.db)).toEqual({ pending: 0, oldestPendingAgeMs: null });
 		await job?.remove();
+	});
+
+	test('committed delivery outbox row is dispatched with a deterministic job id', async () => {
+		const outboxId = await enqueueDeliverJobInOutbox(runtime.db, {
+			name: 'remote.example.test',
+			data: {
+				user: { id: 'queue-outbox-deliver-user' },
+				content: '{"type":"Delete"}',
+				digest: 'SHA-256=test',
+				to: 'https://remote.example.test/inbox',
+				isSharedInbox: true,
+			},
+			opts: {
+				attempts: 12,
+				backoff: { type: 'custom' },
+				removeOnComplete: true,
+			},
+		});
+
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(1);
+		const job = await runtime.deliverQueue.getJob(`outbox-${outboxId}`);
+		expect(job?.name).toBe('remote.example.test');
+		expect(job?.data).toMatchObject({
+			user: { id: 'queue-outbox-deliver-user' },
+			to: 'https://remote.example.test/inbox',
+			isSharedInbox: true,
+		});
+		expect(job?.opts.removeOnComplete).toBe(false);
+		expect(job?.opts.removeOnFail).toBe(false);
+		expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, outboxId))).toHaveLength(1);
+		await job?.remove();
+		await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, outboxId));
+	});
+
+	test('waits for account deletion deliveries to settle before dispatching the database job', async () => {
+		const dbOutboxId = await enqueueAccountDeleteCoordinatorInOutbox(runtime.db, {
+			user: { id: 'queue-outbox-ordered-delete-user' },
+			soft: false,
+		}, { removeOnComplete: true });
+		const deliverOutboxId = await enqueueDeliverJobInOutbox(runtime.db, {
+			name: 'remote.example.test',
+			data: {
+				user: { id: 'queue-outbox-ordered-delete-user' },
+				content: '{"type":"Delete"}',
+				digest: 'SHA-256=test',
+				to: 'https://remote.example.test/inbox',
+				isSharedInbox: true,
+			},
+			opts: {
+				attempts: 12,
+				backoff: { type: 'custom' },
+				removeOnComplete: true,
+			},
+		}, dbOutboxId);
+
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(1);
+		expect(await runtime.dbQueue.getJob(`outbox-${dbOutboxId}`)).toBeUndefined();
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(0);
+		expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, dbOutboxId))).toHaveLength(1);
+
+		let deliverJob = await runtime.deliverQueue.getJob(`outbox-${deliverOutboxId}`);
+		await deliverJob?.remove();
+		await new Promise(resolve => setTimeout(resolve, 1100));
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(1);
+		expect(await runtime.dbQueue.getJob(`outbox-${dbOutboxId}`)).toBeUndefined();
+		deliverJob = await runtime.deliverQueue.getJob(`outbox-${deliverOutboxId}`);
+		expect(deliverJob).toBeDefined();
+
+		const worker = new Bull.Worker(QUEUE.DELIVER, async () => 'delivered', {
+			...baseWorkerOptions(runtime.config, QUEUE.DELIVER),
+		});
+		try {
+			await vi.waitFor(async () => {
+				expect(await runtime.deliverQueue.getJobState(`outbox-${deliverOutboxId}`)).toBe('completed');
+			});
+		} finally {
+			await worker.close();
+		}
+
+		await new Promise(resolve => setTimeout(resolve, 1100));
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(1);
+		const dbJob = await runtime.dbQueue.getJob(`outbox-${dbOutboxId}`);
+		expect(dbJob?.data).toEqual({
+			user: { id: 'queue-outbox-ordered-delete-user' },
+			soft: false,
+			accountDeleteCoordinatorId: dbOutboxId,
+		});
+		expect(await runtime.db.select().from(queueOutbox).where(inArray(queueOutbox.id, [deliverOutboxId, dbOutboxId]))).toHaveLength(0);
+		await dbJob?.remove();
+	});
+
+	test('quarantines malformed delivery rows and keeps account deletion blocked', async () => {
+		const coordinatorId = await enqueueAccountDeleteCoordinatorInOutbox(runtime.db, {
+			user: { id: 'queue-outbox-invalid-deliver-user' },
+			soft: false,
+		}, { removeOnComplete: true });
+		const invalidDeliverId = genId();
+		await runtime.db.insert(queueOutbox).values({
+			id: invalidDeliverId,
+			queue: QUEUE.DELIVER,
+			name: 'deliver',
+			data: { coordinatorId, name: 'remote.example.test', data: {} },
+			opts: {},
+		});
+
+		try {
+			expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(0);
+			const [invalidRow] = await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, invalidDeliverId));
+			expect(invalidRow?.queue).toBe('invalid');
+			expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, coordinatorId))).toHaveLength(1);
+			expect(await runtime.dbQueue.getJob(`outbox-${coordinatorId}`)).toBeUndefined();
+		} finally {
+			await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, [invalidDeliverId, coordinatorId]));
+		}
+	});
+
+	test('rotates pending delivery reconciliation beyond the oldest batch', async () => {
+		const jobs = Array.from({ length: 30 }, (_, index) => ({
+			name: `remote-${index}.example.test`,
+			data: {
+				user: { id: 'queue-outbox-rotation-user' },
+				content: '{"type":"Delete"}',
+				digest: 'SHA-256=test',
+				to: `https://remote-${index}.example.test/inbox`,
+				isSharedInbox: true,
+			},
+			opts: { attempts: 12, backoff: { type: 'custom' } },
+		}));
+		const outboxIds = await enqueueDeliverJobsInOutbox(runtime.db, jobs, genId());
+
+		try {
+			expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(30);
+			expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(0);
+			const rows = await runtime.db.select().from(queueOutbox).where(inArray(queueOutbox.id, outboxIds));
+			expect(rows).toHaveLength(30);
+			expect(rows.every(row => typeof (row.opts as { nextCheckAt?: unknown }).nextCheckAt === 'string')).toBe(true);
+		} finally {
+			await Promise.all(outboxIds.map(async id => await (await runtime.deliverQueue.getJob(`outbox-${id}`))?.remove()));
+			await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, outboxIds));
+		}
 	});
 
 	test('outbox row is rolled back with its surrounding transaction', async () => {
@@ -77,9 +218,9 @@ describe('queue outbox', () => {
 			}
 		});
 
-		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue)).toBe(100);
-		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue)).toBe(100);
-		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue)).toBe(50);
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(100);
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(100);
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(50);
 		expect(await getQueueOutboxStats(runtime.db)).toEqual({ pending: 0, oldestPendingAgeMs: null });
 
 		await Promise.all(outboxIds.map(async id => await (await runtime.dbQueue.getJob(`outbox-${id}`))?.remove()));
@@ -114,7 +255,7 @@ describe('queue outbox', () => {
 				soft: true,
 			}, { removeOnComplete: true });
 
-			expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue)).toBe(1);
+			expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(1);
 			expect(await runtime.db.select().from(queueOutbox).where(inArray(queueOutbox.id, [invalidNameId, invalidDataId, invalidOptionsId, validId]))).toHaveLength(0);
 			const job = await runtime.dbQueue.getJob(`outbox-${validId}`);
 			expect(job?.data).toEqual({ user: { id: 'queue-outbox-after-malformed-user' }, soft: true });
