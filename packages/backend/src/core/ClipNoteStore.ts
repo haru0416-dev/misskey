@@ -5,8 +5,10 @@
 
 import { and, asc, count, eq, gt, inArray, sql } from 'drizzle-orm';
 import { clipNote, type ClipNoteInsert, type ClipNoteRow } from '@/db/schema/clip-note.js';
+import { clip } from '@/db/schema/clip.js';
 import { note } from '@/db/schema/note.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import type { MiClip } from '@/models/Clip.js';
 import type { MiClipNote } from '@/models/ClipNote.js';
 import type { MiNote } from '@/models/Note.js';
@@ -101,6 +103,31 @@ export async function createClipNoteInDatabase(
 	}
 
 	return deserializeClipNote(row);
+}
+
+export async function createClipNoteWithinLimitInDatabase(
+	db: MiDrizzleDatabase,
+	data: ClipNoteInsert,
+	limit: number,
+): Promise<'created' | 'tooManyClipNotes' | 'noSuchNote'> {
+	return await db.transaction(async tx => {
+		await acquireAdvisoryTransactionLockInDatabase(tx, 'clip-note-limit', data.clipId);
+		if (await countClipNotesByClipIdFromDatabase(tx, data.clipId) >= limit) return 'tooManyClipNotes';
+
+		// Note deletion locks the note before cascading to clip_note, so keep the same lock order here.
+		const [lockedNote] = await tx
+			.select({ id: note.id })
+			.from(note)
+			.where(eq(note.id, data.noteId))
+			.for('update')
+			.limit(1);
+		if (lockedNote == null) return 'noSuchNote';
+
+		await tx.insert(clipNote).values(data);
+		await tx.update(clip).set({ lastClippedAt: new Date() }).where(eq(clip.id, data.clipId));
+		await tx.update(note).set({ clippedCount: sql`${note.clippedCount} + 1` }).where(eq(note.id, data.noteId));
+		return 'created';
+	});
 }
 
 export async function deleteClipNoteAndDecrementNoteClippedCountInDatabase(

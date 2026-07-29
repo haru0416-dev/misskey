@@ -6,6 +6,7 @@
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { userNotePining, type UserNotePiningInsert, type UserNotePiningRow } from '@/db/schema/user-note-pining.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUserNotePining } from '@/models/UserNotePining.js';
 import type { MiUser } from '@/models/User.js';
@@ -66,6 +67,22 @@ export async function createUserNotePiningInDatabase(
 	await db
 		.insert(userNotePining)
 		.values(data);
+}
+
+export async function createUserNotePiningWithinLimitInDatabase(
+	db: MiDrizzleDatabase,
+	data: UserNotePiningInsert,
+	limit: number,
+): Promise<'created' | 'limitExceeded' | 'alreadyPinned'> {
+	return await db.transaction(async tx => {
+		await acquireAdvisoryTransactionLockInDatabase(tx, 'account-pin-limit', data.userId);
+		const pinings = await listUserNotePiningsByUserIdFromDatabase(tx, data.userId);
+		if (pinings.length >= limit) return 'limitExceeded';
+		if (pinings.some(pining => pining.noteId === data.noteId)) return 'alreadyPinned';
+
+		await tx.insert(userNotePining).values(data);
+		return 'created';
+	});
 }
 
 export async function replaceUserNotePiningsInDatabase(

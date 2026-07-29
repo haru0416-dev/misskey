@@ -6,6 +6,7 @@
 import { and, asc, count, desc, eq, gt, isNotNull, isNull, lt, sql, type SQL } from 'drizzle-orm';
 import { registrationTicket, type RegistrationTicketInsert, type RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -95,6 +96,28 @@ export async function createRegistrationTicketInDatabase(
 	}
 
 	return row;
+}
+
+export async function createRegistrationTicketWithinLimitInDatabase(
+	db: MiDrizzleDatabase,
+	data: RegistrationTicketInsert & { createdById: MiUser['id'] },
+	options: {
+		sinceId: string;
+		limit: number;
+	},
+): Promise<RegistrationTicketRow | null> {
+	return await db.transaction(async tx => {
+		await acquireAdvisoryTransactionLockInDatabase(tx, 'invitation-limit', data.createdById);
+		const count = await countRegistrationTicketsCreatedSinceFromDatabase(tx, {
+			createdById: data.createdById,
+			sinceId: options.sinceId,
+		});
+		if (count >= options.limit) return null;
+
+		const [row] = await tx.insert(registrationTicket).values(data).returning();
+		if (row == null) throw new Error('Failed to create registration ticket');
+		return row;
+	});
 }
 
 export async function createRegistrationTicketsInDatabase(
