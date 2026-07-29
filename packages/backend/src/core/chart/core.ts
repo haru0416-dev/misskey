@@ -172,6 +172,7 @@ export default abstract class Chart<T extends Schema> {
 		diff: Commit<T>;
 		group: string | null;
 	}[] = [];
+	private saveTail: Promise<void> = Promise.resolve();
 	private tableForHour: string;
 	private tableForDay: string;
 	private chartDb: MiDrizzleDatabase;
@@ -496,7 +497,13 @@ export default abstract class Chart<T extends Schema> {
 	}
 
 	@bindThis
-	public async save(): Promise<void> {
+	public save(): Promise<void> {
+		const save = this.saveTail.then(() => this.saveBuffer());
+		this.saveTail = save.catch(() => undefined);
+		return save;
+	}
+
+	private async saveBuffer(): Promise<void> {
 		if (this.buffer.length === 0) {
 			this.logger.info(`${this.name}: Write skipped`);
 			return;
