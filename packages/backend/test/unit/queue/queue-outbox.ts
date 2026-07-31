@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as Bull from 'bullmq';
 import { eq, inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
+import { retryQueueJob } from '@/core/QueueAdminLogic.js';
 import { dispatchQueueOutbox, enqueueAccountDeleteCoordinatorInOutbox, enqueueDbJobInOutbox, enqueueDeliverJobInOutbox, enqueueDeliverJobsInOutbox, getQueueOutboxStats } from '@/core/QueueOutboxStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -140,6 +141,56 @@ describe('queue outbox', () => {
 		});
 		expect(await runtime.db.select().from(queueOutbox).where(inArray(queueOutbox.id, [deliverOutboxId, dbOutboxId]))).toHaveLength(0);
 		await dbJob?.remove();
+	});
+
+	test('waits for the outbox row lock before retrying a delivery', async () => {
+		const outboxId = await enqueueDeliverJobInOutbox(runtime.db, {
+			name: 'retry.example.test',
+			data: {
+				user: { id: 'queue-outbox-retry-user' },
+				content: '{"type":"Delete"}',
+				digest: 'SHA-256=test',
+				to: 'https://retry.example.test/inbox',
+				isSharedInbox: true,
+			},
+			opts: { attempts: 1, backoff: { type: 'custom' } },
+		});
+		await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue);
+		const jobId = `outbox-${outboxId}`;
+		const worker = new Bull.Worker(QUEUE.DELIVER, async () => {
+			throw new Error('expected delivery failure');
+		}, {
+			...baseWorkerOptions(runtime.config, QUEUE.DELIVER),
+		});
+		try {
+			await vi.waitFor(async () => {
+				expect(await runtime.deliverQueue.getJobState(jobId)).toBe('failed');
+			});
+		} finally {
+			await worker.close();
+		}
+
+		let releaseLock: (() => void) | undefined;
+		let markLocked: (() => void) | undefined;
+		const locked = new Promise<void>(resolve => { markLocked = resolve; });
+		const holdLock = new Promise<void>(resolve => { releaseLock = resolve; });
+		const blocker = runtime.db.transaction(async tx => {
+			await tx.select({ id: queueOutbox.id }).from(queueOutbox).where(eq(queueOutbox.id, outboxId)).for('update');
+			markLocked?.();
+			await holdLock;
+		});
+		await locked;
+		let retryFinished = false;
+		const retry = retryQueueJob(runtime, 'deliver', jobId).then(() => { retryFinished = true; });
+		await new Promise(resolve => setTimeout(resolve, 50));
+		expect(retryFinished).toBe(false);
+		releaseLock?.();
+		await blocker;
+		await retry;
+		expect(await runtime.deliverQueue.getJobState(jobId)).toBe('waiting');
+
+		await (await runtime.deliverQueue.getJob(jobId))?.remove();
+		await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, outboxId));
 	});
 
 	test('quarantines malformed delivery rows and keeps account deletion blocked', async () => {
