@@ -234,6 +234,22 @@ export async function enqueueAccountDeleteCoordinatorInOutbox(
 	return id;
 }
 
+export async function ensureAccountDeleteCoordinatorInOutbox(
+	db: MiDrizzleDatabase,
+	id: string,
+	data: DbJobMap['deleteAccount'],
+	opts: Pick<Bull.BulkJobOptions, 'removeOnComplete' | 'removeOnFail'>,
+): Promise<boolean> {
+	const inserted = await db.insert(queueOutbox).values({
+		id,
+		queue: ACCOUNT_DELETE_OUTBOX_QUEUE,
+		name: 'deleteAccount',
+		data: { ...data, accountDeleteCoordinatorId: id },
+		opts,
+	}).onConflictDoNothing().returning({ id: queueOutbox.id });
+	return inserted.length > 0;
+}
+
 async function dispatchReadyDeliveries(db: MiDrizzleDatabase, deliverQueue: DeliverQueue): Promise<number> {
 	return await db.transaction(async tx => {
 		const rows = await tx
@@ -282,34 +298,38 @@ async function reconcilePendingDeliveries(db: MiDrizzleDatabase, deliverQueue: D
 				THEN ${queueOutbox.opts} ->> 'nextCheckAt' ELSE '' END`, queueOutbox.createdAt)
 			.limit(100)
 			.for('update', { skipLocked: true });
-		let reconciled = 0;
-		for (const row of rows) {
-			const jobInput = parseDeliverOutboxJob(row);
-			if (jobInput == null) {
-				await tx.update(queueOutbox).set({ queue: INVALID_OUTBOX_QUEUE }).where(eq(queueOutbox.id, row.id));
-				continue;
-			}
+		const parsedRows = rows.map(row => ({ row, jobInput: parseDeliverOutboxJob(row) }));
+		const invalidIds = parsedRows.flatMap(({ row, jobInput }) => jobInput == null ? [row.id] : []);
+		const validRows = parsedRows.flatMap(({ row, jobInput }) => jobInput == null ? [] : [{ row, jobInput }]);
+		const states = await Promise.all(validRows.map(async ({ row }) => await deliverQueue.getJobState(`outbox-${row.id}`)));
+		const unknownRows = validRows.filter((_, index) => states[index] === 'unknown');
+		const terminalRows = validRows.filter((_, index) => states[index] === 'completed' || states[index] === 'failed');
+		const waitingIds = validRows.flatMap(({ row }, index) => states[index] === 'completed' || states[index] === 'failed' ? [] : [row.id]);
 
-			const jobId = `outbox-${row.id}`;
-			const opts = isRecord(row.opts) ? row.opts : {};
-			const state = await deliverQueue.getJobState(jobId);
-			if (state === 'unknown') {
-				await addDeliverJobs(deliverQueue, [jobInput]);
-				await tx.update(queueOutbox).set({ opts: { ...opts, nextCheckAt: new Date(Date.now() + 1000).toISOString() } }).where(eq(queueOutbox.id, row.id));
-				reconciled++;
-				continue;
-			}
-			if (state !== 'completed' && state !== 'failed') {
-				await tx.update(queueOutbox).set({ opts: { ...opts, nextCheckAt: new Date(Date.now() + 1000).toISOString() } }).where(eq(queueOutbox.id, row.id));
-				continue;
-			}
-
-			const job = await deliverQueue.getJob(jobId);
-			if (job == null) continue;
-			await job.remove();
-			await tx.delete(queueOutbox).where(eq(queueOutbox.id, row.id));
+		if (unknownRows.length > 0) {
+			await addDeliverJobs(deliverQueue, unknownRows.map(({ jobInput }) => jobInput));
 		}
-		return reconciled;
+		const terminalJobs = await Promise.all(terminalRows.map(async ({ row }) => ({
+			row,
+			job: await deliverQueue.getJob(`outbox-${row.id}`),
+		})));
+		const removableJobs = terminalJobs.filter((entry): entry is typeof entry & { job: NonNullable<typeof entry.job> } => entry.job != null);
+		await Promise.all(removableJobs.map(async ({ job }) => await job.remove()));
+
+		if (invalidIds.length > 0) {
+			await tx.update(queueOutbox).set({ queue: INVALID_OUTBOX_QUEUE }).where(inArray(queueOutbox.id, invalidIds));
+		}
+		if (waitingIds.length > 0) {
+			const nextCheckAt = new Date(Date.now() + 1000).toISOString();
+			await tx.update(queueOutbox).set({
+				opts: sql`jsonb_set(${queueOutbox.opts}, '{nextCheckAt}', to_jsonb(${nextCheckAt}::text), true)`,
+			}).where(inArray(queueOutbox.id, waitingIds));
+		}
+		const removableIds = removableJobs.map(({ row }) => row.id);
+		if (removableIds.length > 0) {
+			await tx.delete(queueOutbox).where(inArray(queueOutbox.id, removableIds));
+		}
+		return unknownRows.length;
 	});
 }
 
@@ -371,8 +391,8 @@ async function dispatchDbJobs(db: MiDrizzleDatabase, dbQueue: DbQueue): Promise<
 export async function dispatchQueueOutbox(db: MiDrizzleDatabase, dbQueue: DbQueue, deliverQueue: DeliverQueue): Promise<number> {
 	// RedisとDBはatomicに更新できない。outbox deliveryはBullMQ側で自動削除せず、
 	// terminal stateを確認してBullMQ job、DB rowの順に消すことでクラッシュ時は再配送側へ倒す。
-	const readyDeliveries = await dispatchReadyDeliveries(db, deliverQueue);
 	const reconciledDeliveries = await reconcilePendingDeliveries(db, deliverQueue);
+	const readyDeliveries = await dispatchReadyDeliveries(db, deliverQueue);
 	const accountDeletes = await dispatchReadyAccountDeletes(db, dbQueue);
 	const dbJobs = await dispatchDbJobs(db, dbQueue);
 	return readyDeliveries + reconciledDeliveries + accountDeletes + dbJobs;

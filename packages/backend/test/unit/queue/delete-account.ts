@@ -11,6 +11,7 @@ process.env['NODE_ENV'] = 'test';
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
+import { eq } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/UserStore.js';
@@ -21,9 +22,10 @@ import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies } from '@/queue/handlers/delete-account.js';
 import type { DbUserDeleteJobData } from '@/queue/types.js';
+import { queueOutbox } from '@/db/schema/queue-outbox.js';
 
-function fakeJob(data: DbUserDeleteJobData): Bull.Job<DbUserDeleteJobData> {
-	return { data, updateProgress: async () => {} } as unknown as Bull.Job<DbUserDeleteJobData>;
+function fakeJob(data: DbUserDeleteJobData, id?: string): Bull.Job<DbUserDeleteJobData> {
+	return { data, id, updateProgress: async () => {} } as unknown as Bull.Job<DbUserDeleteJobData>;
 }
 
 describe('hono-queue-delete-account', () => {
@@ -101,17 +103,27 @@ describe('hono-queue-delete-account', () => {
 		expect(await fetchUserByIdFromDatabase(runtime.db, user.id)).not.toBeNull();
 	});
 
-	test('調整IDのないローカル物理削除ジョブは拒否する', async () => {
+	test('調整IDのないローカル物理削除ジョブは新しいoutboxへ再投入する', async () => {
 		const id = genId();
 		const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 			user: { id, username: `honoqueuedelacctlegacy${id}`, usernameLower: `honoqueuedelacctlegacy${id}`.toLowerCase() },
 			profile: { userId: id },
 		});
 
+		let coordinatorId: string | undefined;
 		try {
-			expect(await handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: false }))).toBe('skip: uncoordinated local account deletion');
+			const legacyJob = fakeJob({ user: { id: user.id }, soft: false }, `legacy-${user.id}`);
+			expect(await handleHonoQueueDeleteAccount(deps, legacyJob)).toBe('Account deletion re-coordinated');
+			expect(await handleHonoQueueDeleteAccount(deps, legacyJob)).toBe('Account deletion re-coordinated');
 			expect(await fetchUserByIdFromDatabase(runtime.db, user.id)).not.toBeNull();
+			const rows = (await runtime.db.select().from(queueOutbox)).filter(row => {
+				const data = row.data as { user?: { id?: unknown } };
+				return row.queue === 'accountDelete' && data.user?.id === user.id;
+			});
+			expect(rows).toHaveLength(1);
+			coordinatorId = rows[0]?.id;
 		} finally {
+			if (coordinatorId != null) await runtime.db.delete(queueOutbox).where(eq(queueOutbox.id, coordinatorId));
 			await deleteUserByIdFromDatabase(runtime.db, user.id);
 		}
 	});

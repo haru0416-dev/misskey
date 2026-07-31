@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { createHash } from 'node:crypto';
 import type { Meilisearch } from 'meilisearch';
 import type * as Bull from 'bullmq';
+import { deleteAccountWithSideEffects } from '@/core/DeleteAccountLogic.js';
 import type { EmailService } from '@/core/EmailService.js';
 import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/PageStore.js';
 import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
@@ -12,8 +14,10 @@ import { deleteNotesByIdsFromDatabase, listNotesByUserIdWithPaginationFromDataba
 import { deleteUserByIdFromDatabase, fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { Config } from '@/config.js';
+import type { DbQueue, DeliverQueue } from '@/core/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
+import type { MiMeta, MiUser } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { DbUserDeleteJobData } from '@/queue/types.js';
 import { deletePageForHonoApi, type HonoApiPageDependencies } from '../../server/rest/pages.js';
@@ -21,9 +25,13 @@ import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } fro
 
 export type HonoQueueDeleteAccountDependencies = HonoQueueObjectStorageDependencies & HonoApiPageDependencies & {
 	db: MiDrizzleDatabase;
-	config: Pick<Config, 'search'>;
+	config: Config;
+	meta: Pick<MiMeta, 'rootUserId'>;
+	dbQueue: DbQueue;
+	deliverQueue: DeliverQueue;
 	meilisearch: Meilisearch | null;
 	emailService: Pick<EmailService, 'sendEmail'>;
+	publishInternalEvent?: <K extends 'userChangeDeletedState'>(type: K, value: { id: MiUser['id']; isDeleted: true }) => void;
 };
 
 async function unindexNoteForHonoApi(deps: HonoQueueDeleteAccountDependencies, note: Pick<MiNote, 'id' | 'visibility'>): Promise<void> {
@@ -38,7 +46,12 @@ export async function handleHonoQueueDeleteAccount(deps: HonoQueueDeleteAccountD
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 	if (user.host == null && !job.data.soft && job.data.accountDeleteCoordinatorId == null) {
-		return 'skip: uncoordinated local account deletion';
+		const coordinatorId = createHash('sha256')
+			.update(`legacy-account-delete:${job.id ?? user.id}`)
+			.digest('hex')
+			.slice(0, 32);
+		await deleteAccountWithSideEffects(deps, user, undefined, coordinatorId);
+		return 'Account deletion re-coordinated';
 	}
 
 	{ // Delete notes
