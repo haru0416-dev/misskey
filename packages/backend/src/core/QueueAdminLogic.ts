@@ -4,6 +4,7 @@
  */
 
 import { MetricsTime, type JobType } from 'bullmq';
+import { eq } from 'drizzle-orm';
 import type { Packed } from '@/misc/json-schema.js';
 import type {
 	DbQueue,
@@ -20,6 +21,7 @@ import type {
 import type * as Bull from 'bullmq';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { getQueueOutboxStats } from '@/core/QueueOutboxStore.js';
+import { queueOutbox } from '@/db/schema/queue-outbox.js';
 
 export const QUEUE_TYPES = [
 	'system',
@@ -165,14 +167,25 @@ export async function resumeQueue(deps: AdminQueueDependencies, queueType: Queue
 
 export async function retryQueueJob(deps: AdminQueueDependencies, queueType: QueueType, jobId: string): Promise<void> {
 	const queue = getQueue(deps, queueType);
-	const job = await queue.getJob(jobId);
-	if (job != null) {
-		if (job.finishedOn != null) {
-			await job.retry();
-		} else {
-			await job.promote();
+	const retry = async () => {
+		const job = await queue.getJob(jobId);
+		if (job != null) {
+			if (job.finishedOn != null) {
+				await job.retry();
+			} else {
+				await job.promote();
+			}
 		}
+	};
+	const outboxId = queueType === 'deliver' && jobId.startsWith('outbox-') ? jobId.slice('outbox-'.length) : null;
+	if (outboxId == null || outboxId.length === 0) {
+		await retry();
+		return;
 	}
+	await deps.db.transaction(async tx => {
+		await tx.select({ id: queueOutbox.id }).from(queueOutbox).where(eq(queueOutbox.id, outboxId)).for('update');
+		await retry();
+	});
 }
 
 export async function removeQueueJob(deps: AdminQueueDependencies, queueType: QueueType, jobId: string): Promise<void> {

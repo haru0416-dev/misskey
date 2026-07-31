@@ -10,7 +10,7 @@ import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { addDbJob, type DbQueue, type DeliverQueue } from '@/core/queues.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserDeletedStateInDatabase } from '@/core/UserStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
-import { enqueueAccountDeleteCoordinatorInOutbox, enqueueDbJobInOutbox, enqueueDeliverJobsInOutbox } from '@/core/QueueOutboxStore.js';
+import { enqueueAccountDeleteCoordinatorInOutbox, enqueueDbJobInOutbox, enqueueDeliverJobsInOutbox, ensureAccountDeleteCoordinatorInOutbox } from '@/core/QueueOutboxStore.js';
 import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -44,9 +44,9 @@ function renderDelete(config: Config, object: IObject | string, user: { id: MiUs
 	};
 }
 
-function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
+function addActivityContext<T extends IObject>(config: Config, activity: T, id?: string): T & { '@context': typeof CONTEXT; id: string } {
 	if (activity.id == null) {
-		activity.id = `${config.instance.url}/${randomUUID()}`;
+		activity.id = id ?? `${config.instance.url}/${randomUUID()}`;
 	}
 
 	return Object.assign({ '@context': CONTEXT }, activity as T & { id: string });
@@ -68,6 +68,7 @@ export async function deleteAccountWithSideEffects(
 	deps: DeleteAccountDependencies,
 	user: DeleteAccountTarget,
 	moderator?: Pick<MiUser, 'id'>,
+	coordinatorId?: string,
 ): Promise<void> {
 	if (deps.meta.rootUserId === user.id) throw new Error('cannot delete a root account');
 
@@ -80,7 +81,11 @@ export async function deleteAccountWithSideEffects(
 	let deliveryJobs = [] as NonNullable<ReturnType<typeof createDeliverJob>>[];
 	if (user.host === null) {
 		const localUser = { id: user.id, host: null } as const;
-		const content = addActivityContext(deps.config, renderDelete(deps.config, genLocalUserUri(deps.config, localUser.id), localUser));
+		const content = addActivityContext(
+			deps.config,
+			renderDelete(deps.config, genLocalUserUri(deps.config, localUser.id), localUser),
+			coordinatorId == null ? undefined : `${deps.config.instance.url}/activities/delete/${coordinatorId}`,
+		);
 		const inboxes = await listSharedInboxesFromFollowingsInDatabase(deps.db);
 		deliveryJobs = inboxes.flatMap(inbox => {
 			const job = createDeliverJob(deps.config, localUser, content as IActivity, inbox, true);
@@ -94,11 +99,16 @@ export async function deleteAccountWithSideEffects(
 		if (user.host !== null) {
 			dbJobId = await enqueueDeleteAccountJob(tx, deps.config, user, user.host !== null);
 		} else {
-			dbJobId = await enqueueAccountDeleteCoordinatorInOutbox(tx, {
-				user: { id: user.id },
-				soft: false,
-			}, queueRetentionOptions(deps.config));
-			await enqueueDeliverJobsInOutbox(tx, deliveryJobs, dbJobId);
+			const data = { user: { id: user.id }, soft: false } as const;
+			if (coordinatorId == null) {
+				dbJobId = await enqueueAccountDeleteCoordinatorInOutbox(tx, data, queueRetentionOptions(deps.config));
+				await enqueueDeliverJobsInOutbox(tx, deliveryJobs, dbJobId);
+			} else {
+				dbJobId = coordinatorId;
+				if (await ensureAccountDeleteCoordinatorInOutbox(tx, dbJobId, data, queueRetentionOptions(deps.config))) {
+					await enqueueDeliverJobsInOutbox(tx, deliveryJobs, dbJobId);
+				}
+			}
 		}
 		await updateUserDeletedStateInDatabase(tx, user.id, true);
 		if (moderator != null) {
