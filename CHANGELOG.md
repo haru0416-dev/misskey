@@ -158,6 +158,7 @@
 - Enhance: 固定長APIリクエストの本文解析を高速化
 - Enhance: HTTPリクエスト処理、OpenAPIの遅延読み込み、起動時の設定ロードを最適化
 - Enhance: Fanout Timelineのノート取得とreply・renoteのpack処理を一括化
+- Enhance: Fanout TimelineのRedisリスト結合時の重複した並べ替えを削減
 - Enhance: single-process構成でserverとqueueのDB・Valkey接続とruntime servicesを共有
 - Enhance: ユーザー一覧の関係状態取得を対象ユーザーだけに絞り、大規模アカウントでのDB転送量を削減
 - Enhance: チャット履歴の相手・ルームごとの最新メッセージ取得を単一DBクエリへ集約
