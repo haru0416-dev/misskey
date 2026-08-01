@@ -16,8 +16,6 @@ const LAST_ACTIVE_UPDATE_INTERVAL_MS = 1000 * 60 * 5;
 
 type WsData = {
 	connection: HonoStreamConnection;
-	subscriber: EventEmitter;
-	onMessage: (data: { channel: string; message: unknown }) => void;
 	cleanup?: () => void;
 };
 
@@ -40,6 +38,7 @@ function errorResponse(error: HonoApiError): Response {
  */
 export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies, streamingPath = '/streaming') {
 	const globalEv = new EventEmitter();
+	globalEv.setMaxListeners(0);
 	const onRedisMessage = (_channelName: string, data: string) => {
 		let parsed: { channel: string; message: unknown };
 		try {
@@ -47,7 +46,7 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 		} catch {
 			return;
 		}
-		globalEv.emit('message', parsed);
+		globalEv.emit(parsed.channel, parsed.message);
 	};
 	deps.redisForSub.on('message', onRedisMessage);
 	const activeConnections = new Map<HonoStreamConnection, () => void>();
@@ -106,23 +105,15 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 			return errorResponse(new HonoApiError({ status: 403, message: 'Your account has been suspended.', code: 'YOUR_ACCOUNT_SUSPENDED', id: 'a8c724b3-6e9c-4b46-b1a8-bc3ed57db7f7' }));
 		}
 
-		const subscriber = new EventEmitter();
-		const onMessage = (data: { channel: string; message: unknown }) => {
-			subscriber.emit(data.channel, data.message);
-		};
-		globalEv.on('message', onMessage);
-
 		const connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
 		try {
-			await connection.init(subscriber);
-		} catch (error) {
-			globalEv.off('message', onMessage);
-			throw error;
+			await connection.init(globalEv);
+		} catch {
+			return new Response('Stream initialization failed', { status: 503 });
 		}
 
-		const upgraded = server.upgrade<WsData>(request, { data: { connection, subscriber, onMessage } });
+		const upgraded = server.upgrade<WsData>(request, { data: { connection } });
 		if (!upgraded) {
-			globalEv.off('message', onMessage);
 			connection.dispose();
 			return new Response('WebSocket upgrade failed', { status: 400 });
 		}
@@ -131,11 +122,11 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 
 	const websocket: Bun.WebSocketHandler<WsData> = {
 		open(ws) {
-			const { connection, subscriber, onMessage } = ws.data;
+			const { connection } = ws.data;
 			activeConnections.set(connection, () => ws.terminate());
 			connections.set(ws, Date.now());
 
-			connection.listen(subscriber, raw => { ws.send(raw); });
+			connection.listen(globalEv, raw => { ws.send(raw); });
 
 			let lastActiveIntervalId: NodeJS.Timeout | undefined;
 			if (connection.user) {
@@ -147,7 +138,6 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 
 			ws.data.cleanup = () => {
 				activeConnections.delete(connection);
-				globalEv.off('message', onMessage);
 				connection.dispose();
 				connections.delete(ws);
 				if (lastActiveIntervalId) clearInterval(lastActiveIntervalId);

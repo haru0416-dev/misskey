@@ -15,6 +15,11 @@ import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiUser } from '@/models/User.js';
 import type { Awaitable } from '@/types.js';
 
+export type HonoStreamChannelSubscriber = {
+	on: (eventName: string | symbol, listener: Parameters<EventEmitter['on']>[1]) => void;
+	off: (eventName: string | symbol, listener: Parameters<EventEmitter['off']>[1]) => void;
+};
+
 /**
  * Connection.ts が持っていた「フォロー/ミュート/ブロック関係のスナップショット」を
  * プレーンオブジェクトとして channel 初期化関数に渡すための型。Channel 基底クラスの
@@ -32,7 +37,7 @@ export type HonoStreamChannelContext = {
 	userIdsWhoMeMutingRenotes: Set<string>;
 	userIdsWhoBlockingMe: Set<string>;
 	userMutedInstances: Set<string>;
-	subscriber: EventEmitter;
+	subscriber: HonoStreamChannelSubscriber;
 	send: (type: string, body: JsonValue) => void;
 };
 
