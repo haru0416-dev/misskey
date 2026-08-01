@@ -100,12 +100,12 @@ async function getMultiFromRedis(redisForTimelines: Redis.Redis, names: string[]
 	const tls = res.map(r => r[1] as string[]);
 	return tls.map(ids =>
 		(untilId && sinceId)
-			? ids.filter(id => id < untilId && id > sinceId).sort((a, b) => a > b ? -1 : 1)
+			? ids.filter(id => id < untilId && id > sinceId)
 			: untilId
-				? ids.filter(id => id < untilId).sort((a, b) => a > b ? -1 : 1)
+				? ids.filter(id => id < untilId)
 				: sinceId
-					? ids.filter(id => id > sinceId).sort((a, b) => a < b ? -1 : 1)
-					: ids.sort((a, b) => a > b ? -1 : 1),
+					? ids.filter(id => id > sinceId)
+					: ids,
 	);
 }
 
