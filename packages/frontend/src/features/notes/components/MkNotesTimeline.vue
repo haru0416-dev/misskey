@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					:data-index="row.index"
 					:data-scroll-anchor="row.note.id"
 					:class="[$style.row, { [$style.gapped]: !noGap, [$style.last]: row.index === notes.length - 1 }]"
-					:style="{ top: `${row.start - scrollMargin}px` }"
+					:style="{ transform: `translateY(${row.start - scrollMargin}px)` }"
 				>
 					<div v-if="row.separatorInfo" :class="[$style.date, { [$style.noGap]: noGap }]">
 						<span><i class="ti ti-chevron-up"></i> {{ row.separatorInfo.prevText }}</span>
