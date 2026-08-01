@@ -5,7 +5,7 @@
 
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import * as Bull from 'bullmq';
-import { QUEUE, baseQueueOptions } from '@/queue/const.js';
+import { QUEUE, baseQueueEventsOptions } from '@/queue/const.js';
 import type { DeliverQueue, InboxQueue } from '@/core/queues.js';
 import type { Config } from '@/config.js';
 
@@ -31,8 +31,8 @@ export function startHonoQueueStatsDaemon(deps: HonoDaemonQueueStatsDependencies
 	let activeDeliverJobs = 0;
 	let activeInboxJobs = 0;
 
-	const deliverQueueEvents = new Bull.QueueEvents(QUEUE.DELIVER, baseQueueOptions(deps.config, QUEUE.DELIVER));
-	const inboxQueueEvents = new Bull.QueueEvents(QUEUE.INBOX, baseQueueOptions(deps.config, QUEUE.INBOX));
+	const deliverQueueEvents = new Bull.QueueEvents(QUEUE.DELIVER, baseQueueEventsOptions(deps.config, QUEUE.DELIVER));
+	const inboxQueueEvents = new Bull.QueueEvents(QUEUE.INBOX, baseQueueEventsOptions(deps.config, QUEUE.INBOX));
 
 	const onDeliverActive = () => { activeDeliverJobs++; };
 	const onInboxActive = () => { activeInboxJobs++; };

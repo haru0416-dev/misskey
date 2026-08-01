@@ -20,7 +20,7 @@ export const QUEUE = {
 	SYSTEM_WEBHOOK_DELIVER: 'systemWebhookDeliver',
 };
 
-export function baseQueueOptions(config: Config, queueName: typeof QUEUE[keyof typeof QUEUE]): Bull.QueueOptions {
+export function baseQueueOptions(config: Config, queueName: typeof QUEUE[keyof typeof QUEUE]) {
 	return {
 		connection: {
 			host: config.valkey.jobQueue.host,
@@ -37,13 +37,30 @@ export function baseQueueOptions(config: Config, queueName: typeof QUEUE[keyof t
 	};
 }
 
+function baseBlockingQueueOptions(config: Config, queueName: typeof QUEUE[keyof typeof QUEUE]) {
+	const queueOptions = baseQueueOptions(config, queueName);
+	const { commandTimeout: _commandTimeout, ...connection } = queueOptions.connection;
+
+	return {
+		...queueOptions,
+		connection: {
+			...connection,
+			maxRetriesPerRequest: null,
+		},
+	};
+}
+
 export function baseWorkerOptions(config: Config, queueName: typeof QUEUE[keyof typeof QUEUE]): Bull.WorkerOptions {
 	return {
-		...baseQueueOptions(config, queueName),
+		...baseBlockingQueueOptions(config, queueName),
 		metrics: {
 			maxDataPoints: MetricsTime.ONE_WEEK,
 		},
 	};
+}
+
+export function baseQueueEventsOptions(config: Config, queueName: typeof QUEUE[keyof typeof QUEUE]): Bull.QueueEventsOptions {
+	return baseBlockingQueueOptions(config, queueName);
 }
 
 export function queueRetentionOptions(config: Pick<Config, 'queues'>): Pick<Bull.JobsOptions, 'removeOnComplete' | 'removeOnFail'> {
