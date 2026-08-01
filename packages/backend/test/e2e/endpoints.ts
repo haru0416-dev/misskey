@@ -10446,6 +10446,24 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin/show-user', () => {
+		test('admin/show-users は作成日時順のoffsetを維持する', async () => {
+			const firstPage = await api('admin/show-users', {
+				limit: 3,
+				sort: '-createdAt',
+			}, alice);
+			assert.strictEqual(firstPage.status, 200);
+			assert.strictEqual(firstPage.body.length, 3);
+
+			const listed = await api('admin/show-users', {
+				limit: 1,
+				offset: 1,
+				sort: '-createdAt',
+			}, alice);
+
+			assert.strictEqual(listed.status, 200);
+			assert.deepStrictEqual(listed.body.map(user => user.id), [firstPage.body[1]!.id]);
+		});
+
 		test('admin/show-user と admin/show-users は詳細、filter、token scope、roleを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
