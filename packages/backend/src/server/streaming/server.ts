@@ -65,6 +65,7 @@ async function authenticateStreamingRequest(
 export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDependencies, streamingPath = '/streaming'): { detach: () => Promise<void> } {
 	const wss = new WebSocket.WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
 	const globalEv = new EventEmitter();
+	globalEv.setMaxListeners(0);
 
 	const onRedisMessage = (_channelName: string, data: string) => {
 		let parsed: { channel: string; message: unknown };
@@ -73,7 +74,7 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 		} catch {
 			return;
 		}
-		globalEv.emit('message', parsed);
+		globalEv.emit(parsed.channel, parsed.message);
 	};
 	deps.redisForSub.on('message', onRedisMessage);
 	const activeConnections = new Map<HonoStreamConnection, () => void>();
@@ -99,6 +100,12 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 	const connections = new Map<WebSocket.WebSocket, number>();
 
 	const upgradeHandler = async (request: IncomingMessage, socket: Socket, head: Buffer) => {
+		let connection: HonoStreamConnection | undefined;
+		let socketClosed = false;
+		socket.once('close', () => {
+			socketClosed = true;
+			connection?.dispose();
+		});
 		if (request.url == null) {
 			socket.destroy();
 			return;
@@ -108,38 +115,33 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 		if (url.pathname !== streamingPath) return;
 
 		const authenticated = await authenticateStreamingRequest(deps, request, url);
+		if (socketClosed) return;
 		if (authenticated instanceof HonoApiError) {
 			writeRawHttpError(socket, authenticated);
 			return;
 		}
 
-		const ev = new EventEmitter();
-		const onMessage = (data: { channel: string; message: unknown }) => {
-			ev.emit(data.channel, data.message);
-		};
-		globalEv.on('message', onMessage);
-
-		const connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
+		connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
 		try {
-			await connection.init(ev);
-		} catch (error) {
-			globalEv.off('message', onMessage);
-			throw error;
+			await connection.init(globalEv);
+		} catch {
+			socket.destroy();
+			return;
 		}
 
 		wss.handleUpgrade(request, socket, head, ws => {
-			wss.emit('connection', ws, request, connection, ev, onMessage);
+			wss.emit('connection', ws, request, connection);
 		});
 	};
 	server.on('upgrade', (request, socket, head) => {
 		void upgradeHandler(request, socket as Socket, head);
 	});
 
-	wss.on('connection', (ws: WebSocket.WebSocket, _request: IncomingMessage, connection: HonoStreamConnection, ev: EventEmitter, onMessage: (data: { channel: string; message: unknown }) => void) => {
+	wss.on('connection', (ws: WebSocket.WebSocket, _request: IncomingMessage, connection: HonoStreamConnection) => {
 		activeConnections.set(connection, () => ws.terminate());
 		connections.set(ws, Date.now());
 
-		connection.listen(ev, raw => ws.send(raw));
+		connection.listen(globalEv, raw => ws.send(raw));
 
 		ws.on('message', (data: WebSocket.RawData) => connection.handleClientMessage(data.toString()));
 
@@ -153,7 +155,6 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 
 		ws.on('close', () => {
 			activeConnections.delete(connection);
-			globalEv.off('message', onMessage);
 			connection.dispose();
 			connections.delete(ws);
 			if (lastActiveIntervalId) clearInterval(lastActiveIntervalId);

@@ -13,6 +13,7 @@ import { EventEmitter } from 'node:events';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { createChatRoomInDatabase } from '@/core/ChatRoomStore.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { HonoStreamConnection, refreshHonoStreamConnections, type HonoStreamConnectionDependencies } from '@/server/streaming/connection.js';
@@ -271,6 +272,38 @@ describe('hono-stream-connection', () => {
 
 		const channelMessages = raw.map(r => JSON.parse(r)).filter(m => m.type === 'channel');
 		expect(channelMessages.length).toBe(0);
+	});
+
+	test('チャンネル初期化中にdisposeしてもlistenerを残さない', async () => {
+		const user = await createTestUser(deps, 'honostreamdisposeduringinit');
+		const room = await createChatRoomInDatabase(deps.db, { id: genId(), ownerId: user.id, name: 'test room' });
+		const connection = new HonoStreamConnection(deps, user, null);
+		await connection.init();
+
+		const subscriber = new EventEmitter();
+		connection.listen(subscriber, () => {});
+
+		const connecting = connection.connectChannel('conn1', { roomId: room.id }, 'chatRoom', false);
+		connection.dispose();
+		await connecting;
+
+		expect(subscriber.listenerCount(`chatRoomStream:${room.id}`)).toBe(0);
+	});
+
+	test('チャンネル初期化中にdisconnectしてもチャンネルを復活させない', async () => {
+		const user = await createTestUser(deps, 'honostreamdisconnectduringinit');
+		const room = await createChatRoomInDatabase(deps.db, { id: genId(), ownerId: user.id, name: 'test room' });
+		const connection = new HonoStreamConnection(deps, user, null);
+		await connection.init();
+
+		const subscriber = new EventEmitter();
+		connection.listen(subscriber, () => {});
+
+		const connecting = connection.connectChannel('conn1', { roomId: room.id }, 'chatRoom', false);
+		connection.disconnectChannel('conn1');
+		await connecting;
+
+		expect(subscriber.listenerCount(`chatRoomStream:${room.id}`)).toBe(0);
 	});
 
 	test('Redis再接続後の再同期が失敗し続けた接続を切断する', async () => {
