@@ -569,15 +569,35 @@ export async function listAdminUsersFromDatabase(
 			break;
 	}
 
-	const rows = await db
-		.select()
+	const where = conditions.length > 0 ? and(...conditions) : sql`TRUE`;
+	const canPageIdsFromIndex = conditions.length === 0 && (options.sort == null || options.sort === '+createdAt' || options.sort === '-createdAt');
+	if (options.offset === 0 || !canPageIdsFromIndex) {
+		const rows = await db
+			.select()
+			.from(userTable)
+			.where(where)
+			.orderBy(orderBy)
+			.limit(options.limit)
+			.offset(options.offset);
+
+		return rows.map(row => deserializeUser(row));
+	}
+
+	const page = db
+		.select({ id: userTable.id })
 		.from(userTable)
-		.where(conditions.length > 0 ? and(...conditions) : sql`TRUE`)
+		.where(where)
 		.orderBy(orderBy)
 		.limit(options.limit)
-		.offset(options.offset);
+		.offset(options.offset)
+		.as('admin_user_page');
+	const rows = await db
+		.select({ user: userTable })
+		.from(page)
+		.innerJoin(userTable, eq(userTable.id, page.id))
+		.orderBy(orderBy);
 
-	return rows.map(row => deserializeUser(row));
+	return rows.map(row => deserializeUser(row.user));
 }
 
 export async function listUsersByHostWithPaginationFromDatabase(

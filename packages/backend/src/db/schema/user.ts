@@ -59,6 +59,7 @@ export const user = pgTable('user', {
 }, table => [
 	index('IDX_USER_FOLLOWERS_COUNT').on(table.followersCount),
 	index('IDX_USER_UPDATED_AT').on(table.updatedAt),
+	index('IDX_USER_UPDATED_AT_DESC_NULLS_LAST').on(table.updatedAt.desc().nullsLast()),
 	index('IDX_USER_LAST_ACTIVE_DATE').on(table.lastActiveDate),
 	index('IDX_USER_USERNAME_LOWER').on(table.usernameLower),
 	index('IDX_USER_TAGS').on(table.tags),
