@@ -22,7 +22,7 @@ import { iPageLikesParamDef, iPagesParamDef } from '@/server/rest/pages.js';
 import { registryGetParamDef, registryScopeParamDef, registryScopesWithDomainParamDef, registrySetParamDef } from '@/server/rest/registry.js';
 import { webhooksCreateParamDef, webhooksDeleteParamDef, webhooksListParamDef, webhooksShowParamDef, webhooksTestParamDef, webhooksUpdateParamDef } from '@/server/rest/webhooks.js';
 import { z } from 'zod';
-import { MINUTE, HOUR, DAY } from '@/const.js';
+import { SECOND, MINUTE, HOUR, DAY } from '@/const.js';
 
 export const endpointMetas = {
 	'i': {
@@ -332,6 +332,20 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			secure: true,
+
+			errors: {
+				incorrectPassword: {
+					message: 'Incorrect password.',
+					code: 'INCORRECT_PASSWORD',
+					id: 'b31b9d69-a1cc-47d9-a494-750046029bef',
+				},
+
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: '540239bb-cf8b-4870-8ca7-3a7f2bf8d0a1',
+				},
+			},
 		} as const,
 		paramDef: changePasswordParamDef,
 	},
@@ -348,6 +362,20 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			secure: true,
+
+			errors: {
+				incorrectPassword: {
+					message: 'Incorrect password.',
+					code: 'INCORRECT_PASSWORD',
+					id: 'e7a9051d-adf7-454d-bfa7-95b3e5e2f5ac',
+				},
+
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: '05b2bab3-0825-4a3e-a13d-8793701af4de',
+				},
+			},
 		} as const,
 		paramDef: deleteAccountParamDef,
 	},
@@ -517,9 +545,11 @@ export const endpointMetas = {
 			requiredRolePolicy: 'canImportAntennas',
 			prohibitMoved: true,
 
+			// duration/max はファイル検証を通ったリクエストだけが消費する (実装は routes/export-import.ts)
 			limit: {
 				duration: HOUR,
 				max: 1,
+				minInterval: 5 * SECOND,
 			},
 			errors: {
 				noSuchFile: {
@@ -541,6 +571,11 @@ export const endpointMetas = {
 					message: 'You cannot create antenna any more.',
 					code: 'TOO_MANY_ANTENNAS',
 					id: '600917d4-a4cb-4cc5-8ba8-7ac8ea3c7779',
+				},
+				invalidImportFile: {
+					message: 'The antenna import file is invalid.',
+					code: 'INVALID_ANTENNA_IMPORT_FILE',
+					id: 'f9755af1-12aa-44af-a75f-80a729a9e845',
 				},
 			},
 		} as const,
@@ -911,6 +946,14 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			secure: true,
+
+			errors: {
+				incorrectPassword: {
+					message: 'Incorrect password.',
+					code: 'INCORRECT_PASSWORD',
+					id: '0fef3578-b802-47b5-abb6-38d737baaf03',
+				},
+			},
 		} as const,
 		paramDef: regenerateTokenParamDef,
 	},
@@ -1224,6 +1267,12 @@ export const endpointMetas = {
 					message: 'Email address is required.',
 					code: 'EMAIL_REQUIRED',
 					id: '324c7a88-59f2-492f-903f-89134f93e47e',
+				},
+
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: '624fde07-67a7-4da7-b27d-086e529666b6',
 				},
 			},
 

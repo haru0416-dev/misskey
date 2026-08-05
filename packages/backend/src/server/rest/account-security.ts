@@ -36,21 +36,33 @@ export type HonoApiAccountSecurityDependencies = UserPackingDependencies & {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
+// パスワード誤入力も2FA失敗も利用者の入力ミスであってサーバー内部の異常ではない。
+// 生の Error を投げると 500 INTERNAL_ERROR になり、クライアントが原因を出し分けられないうえ
+// 予期しない例外としてサーバーログに残り続けるので、明示的なAPIエラーとして返す
+function incorrectPasswordError(id: string): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Incorrect password.', code: 'INCORRECT_PASSWORD', id });
+}
+
+function twoFactorAuthenticationFailedError(id: string): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'Two-factor authentication failed.', code: 'TWO_FACTOR_AUTHENTICATION_FAILED', id });
+}
+
 async function assertHonoApiTwoFactorIfEnabled(
 	deps: Pick<HonoApiAccountSecurityDependencies, 'userAuthService'>,
 	profile: MiUserProfile,
 	token: string | null | undefined,
+	errorId: string,
 ): Promise<void> {
 	if (!profile.twoFactorEnabled) return;
 
 	if (token == null) {
-		throw new Error('authentication failed');
+		throw twoFactorAuthenticationFailedError(errorId);
 	}
 
 	try {
 		await deps.userAuthService.twoFactorAuthenticate(profile, token);
 	} catch {
-		throw new Error('authentication failed');
+		throw twoFactorAuthenticationFailedError(errorId);
 	}
 }
 
@@ -74,11 +86,11 @@ export async function handleHonoApiIChangePassword(
 	const params = parseHonoApiParams(changePasswordParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
-	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token);
+	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token, '540239bb-cf8b-4870-8ca7-3a7f2bf8d0a1');
 
 	const passwordMatched = await comparePassword(params.currentPassword, profile.password!);
 	if (!passwordMatched) {
-		throw new Error('incorrect password');
+		throw incorrectPasswordError('b31b9d69-a1cc-47d9-a494-750046029bef');
 	}
 
 	const hash = await hashPassword(params.newPassword);
@@ -109,7 +121,7 @@ export async function handleHonoApiIRegenerateToken(
 
 	const same = await comparePassword(params.password, profile.password!);
 	if (!same) {
-		throw new Error('incorrect password');
+		throw incorrectPasswordError('0fef3578-b802-47b5-abb6-38d737baaf03');
 	}
 
 	const newToken = generateNativeUserToken();
@@ -140,14 +152,14 @@ export async function handleHonoApiIDeleteAccount(
 	const params = parseHonoApiParams(deleteAccountParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
-	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token);
+	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token, '05b2bab3-0825-4a3e-a13d-8793701af4de');
 
 	const userDetailed = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 	if (userDetailed.isDeleted) return;
 
 	const passwordMatched = await comparePassword(params.password, profile.password!);
 	if (!passwordMatched) {
-		throw new Error('incorrect password');
+		throw incorrectPasswordError('e7a9051d-adf7-454d-bfa7-95b3e5e2f5ac');
 	}
 
 	await deleteAccountWithSideEffects(deps, me);
@@ -183,7 +195,7 @@ export async function handleHonoApiIUpdateEmail(
 	const params = parseHonoApiParams(updateEmailParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
-	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token);
+	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token, '624fde07-67a7-4da7-b27d-086e529666b6');
 
 	const passwordMatched = await comparePassword(params.password, profile.password!);
 	if (!passwordMatched) throw iUpdateEmailIncorrectPasswordError();
