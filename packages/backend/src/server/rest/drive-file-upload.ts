@@ -265,16 +265,29 @@ async function uploadDriveFileToObjectStorageForHonoApi(
 	}
 	if (deps.meta.objectStorageSetPublicRead) params.ACL = 'public-read';
 
-	try {
-		const result = await deps.s3Service.upload(deps.meta, params);
-		if ('Bucket' in result) {
-			deps.logger.debug(`Uploaded: ${result.Bucket}/${result.Key} => ${result.Location}`);
-		} else {
-			deps.logger.error(`Upload Result Aborted: key = ${key}, filename = ${filename}`);
-		}
-	} catch (err) {
-		deps.logger.error(`Upload Failed: key = ${key}, filename = ${filename}`, err as Error);
+	// 失敗をここで握り潰すと、実体の無いオブジェクトを指す DriveFile が DB に入り、
+	// APIは成功を返すのにファイルURLだけ404になる。呼び出し元へ伝播させて中断させる
+	const result = await deps.s3Service.upload(deps.meta, params);
+	if (!('Bucket' in result)) {
+		throw new Error(`Upload aborted: key = ${key}, filename = ${filename}`);
 	}
+	deps.logger.debug(`Uploaded: ${result.Bucket}/${result.Key} => ${result.Location}`);
+}
+
+async function deleteDriveFileObjectsForHonoApi(
+	deps: HonoApiDriveFileUploadDependencies,
+	keys: string[],
+): Promise<void> {
+	await Promise.all(keys.map(async accessKey => {
+		try {
+			await deps.s3Service.delete(deps.meta, {
+				Bucket: deps.meta.objectStorageBucket ?? undefined,
+				Key: accessKey,
+			});
+		} catch (err) {
+			deps.logger.error(`Failed to clean up uploaded object: key = ${accessKey}`, err as Error);
+		}
+	}));
 }
 
 type StoredDriveFile = {
@@ -338,7 +351,15 @@ async function saveDriveFileForHonoApi(
 			uploads.push(uploadDriveFileToObjectStorageForHonoApi(deps, thumbnailKey, alts.thumbnail.data, alts.thumbnail.type, alts.thumbnail.ext, `${name}.thumbnail`));
 		}
 
-		await Promise.all(uploads);
+		const keys = [key, thumbnailKey, webpublicKey].filter((value): value is string => value != null);
+
+		try {
+			await Promise.all(uploads);
+		} catch (err) {
+			// 一部だけ成功していることがあるため、DBに載らないオブジェクトを残さないよう掃除してから中断する
+			await deleteDriveFileObjectsForHonoApi(deps, keys);
+			throw err;
+		}
 
 		file.url = url;
 		file.thumbnailUrl = thumbnailUrl;
@@ -353,21 +374,9 @@ async function saveDriveFileForHonoApi(
 		file.size = size;
 		file.storedInternal = false;
 
-		const keys = [key, thumbnailKey, webpublicKey].filter((value): value is string => value != null);
 		return {
 			file,
-			cleanup: async () => {
-				await Promise.all(keys.map(async accessKey => {
-					try {
-						await deps.s3Service.delete(deps.meta, {
-							Bucket: deps.meta.objectStorageBucket ?? undefined,
-							Key: accessKey,
-						});
-					} catch (err) {
-						deps.logger.error(`Failed to clean up uploaded object: key = ${accessKey}`, err as Error);
-					}
-				}));
-			},
+			cleanup: () => deleteDriveFileObjectsForHonoApi(deps, keys),
 		};
 	} else {
 		const accessKey = randomUUID();
