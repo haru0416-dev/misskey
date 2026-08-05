@@ -139,6 +139,8 @@ export type AdminInviteListResponse =
 export type AdminMetaResponse = operations['admin___meta']['responses']['200']['content']['application/json'];
 export type AdminPromoCreateRequest =
     operations['admin___promo___create']['requestBody']['content']['application/json'];
+export type AdminQueueAbandonOutboxDeadLetterRequest =
+    operations['admin___queue___abandon-outbox-dead-letter']['requestBody']['content']['application/json'];
 export type AdminQueueClearRequest = operations['admin___queue___clear']['requestBody']['content']['application/json'];
 export type AdminQueueDeliverDelayedResponse =
     operations['admin___queue___deliver-delayed']['responses']['200']['content']['application/json'];
@@ -147,6 +149,10 @@ export type AdminQueueInboxDelayedResponse =
 export type AdminQueueJobsRequest = operations['admin___queue___jobs']['requestBody']['content']['application/json'];
 export type AdminQueueJobsResponse =
     operations['admin___queue___jobs']['responses']['200']['content']['application/json'];
+export type AdminQueueOutboxDeadLettersRequest =
+    operations['admin___queue___outbox-dead-letters']['requestBody']['content']['application/json'];
+export type AdminQueueOutboxDeadLettersResponse =
+    operations['admin___queue___outbox-dead-letters']['responses']['200']['content']['application/json'];
 export type AdminQueuePauseRequest = operations['admin___queue___pause']['requestBody']['content']['application/json'];
 export type AdminQueuePromoteJobsRequest =
     operations['admin___queue___promote-jobs']['requestBody']['content']['application/json'];
@@ -162,6 +168,8 @@ export type AdminQueueResumeRequest =
     operations['admin___queue___resume']['requestBody']['content']['application/json'];
 export type AdminQueueRetryJobRequest =
     operations['admin___queue___retry-job']['requestBody']['content']['application/json'];
+export type AdminQueueRetryOutboxDeadLetterRequest =
+    operations['admin___queue___retry-outbox-dead-letter']['requestBody']['content']['application/json'];
 export type AdminQueueShowJobRequest =
     operations['admin___queue___show-job']['requestBody']['content']['application/json'];
 export type AdminQueueShowJobResponse =

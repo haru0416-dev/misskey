@@ -264,6 +264,9 @@ type AdminMetaResponse = operations['admin___meta']['responses']['200']['content
 type AdminPromoCreateRequest = operations['admin___promo___create']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
+type AdminQueueAbandonOutboxDeadLetterRequest = operations['admin___queue___abandon-outbox-dead-letter']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
 type AdminQueueClearRequest = operations['admin___queue___clear']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -277,6 +280,12 @@ type AdminQueueJobsRequest = operations['admin___queue___jobs']['requestBody']['
 
 // @public (undocumented)
 type AdminQueueJobsResponse = operations['admin___queue___jobs']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AdminQueueOutboxDeadLettersRequest = operations['admin___queue___outbox-dead-letters']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AdminQueueOutboxDeadLettersResponse = operations['admin___queue___outbox-dead-letters']['responses']['200']['content']['application/json'];
 
 // @public (undocumented)
 type AdminQueuePauseRequest = operations['admin___queue___pause']['requestBody']['content']['application/json'];
@@ -301,6 +310,9 @@ type AdminQueueResumeRequest = operations['admin___queue___resume']['requestBody
 
 // @public (undocumented)
 type AdminQueueRetryJobRequest = operations['admin___queue___retry-job']['requestBody']['content']['application/json'];
+
+// @public (undocumented)
+type AdminQueueRetryOutboxDeadLetterRequest = operations['admin___queue___retry-outbox-dead-letter']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
 type AdminQueueShowJobLogsRequest = operations['admin___queue___show-job-logs']['requestBody']['content']['application/json'];
@@ -1552,11 +1564,14 @@ declare namespace entities {
         AdminInviteListResponse,
         AdminMetaResponse,
         AdminPromoCreateRequest,
+        AdminQueueAbandonOutboxDeadLetterRequest,
         AdminQueueClearRequest,
         AdminQueueDeliverDelayedResponse,
         AdminQueueInboxDelayedResponse,
         AdminQueueJobsRequest,
         AdminQueueJobsResponse,
+        AdminQueueOutboxDeadLettersRequest,
+        AdminQueueOutboxDeadLettersResponse,
         AdminQueuePauseRequest,
         AdminQueuePromoteJobsRequest,
         AdminQueueQueueStatsRequest,
@@ -1565,6 +1580,7 @@ declare namespace entities {
         AdminQueueRemoveJobRequest,
         AdminQueueResumeRequest,
         AdminQueueRetryJobRequest,
+        AdminQueueRetryOutboxDeadLetterRequest,
         AdminQueueShowJobRequest,
         AdminQueueShowJobResponse,
         AdminQueueShowJobLogsRequest,
