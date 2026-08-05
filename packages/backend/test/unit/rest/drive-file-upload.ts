@@ -135,4 +135,98 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 		expect(storedKeys).toEqual(new Set([files[0]?.accessKey]));
 		expect(deletedKeys).toHaveLength(1);
 	});
+
+	// 失敗を握り潰すと、実体の無いオブジェクトを指す DriveFile が DB に残り、API は成功を返すのに URL が 404 になる
+	test('object storage upload failure rejects the request and leaves no drive file behind', async () => {
+		const filePath = path.join(tempDir, 'upload-failure.bin');
+		await fs.writeFile(filePath, Buffer.alloc(1));
+
+		const before = await listAllDriveFilesByUserIdFromDatabase(db, user.id);
+		const uploadedKeys: string[] = [];
+		const deletedKeys: string[] = [];
+		const upload = vi.fn(async (_meta, input) => {
+			uploadedKeys.push(input.Key as string);
+			throw new Error('object storage is down');
+		});
+		const deleteObject = vi.fn(async (_meta, input) => {
+			deletedKeys.push(input.Key as string);
+			return {};
+		});
+		const update = vi.fn();
+		const deps = {
+			config,
+			db,
+			meta,
+			fileInfoService: {
+				getFileInfo: vi.fn(async () => ({
+					size: 1024,
+					md5: '33333333333333333333333333333333',
+					type: { mime: 'text/plain', ext: 'txt' },
+					width: undefined,
+					height: undefined,
+					orientation: undefined,
+					blurhash: undefined,
+					sensitive: false,
+					porn: false,
+				})),
+			},
+			imageProcessingService: {},
+			videoProcessingService: {},
+			internalStorageService: { del: vi.fn(), saveFromBuffer: vi.fn(), saveFromPath: vi.fn() },
+			s3Service: { upload, delete: deleteObject },
+			chartWriters: {
+				driveChart: { update },
+				perUserDriveChart: { update },
+				instanceChart: { updateDrive: update },
+			},
+			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+		} as unknown as HonoApiDriveFileUploadDependencies;
+
+		await expect(addDriveFileForHonoApi(deps, { user, path: filePath, force: true })).rejects.toThrow('object storage is down');
+
+		const after = await listAllDriveFilesByUserIdFromDatabase(db, user.id);
+		expect(after).toHaveLength(before.length);
+		// 途中まで書けている可能性があるので、中断時も掃除を試みる
+		expect(deletedKeys).toEqual(uploadedKeys);
+	});
+
+	test('aborted upload result is treated as a failure', async () => {
+		const filePath = path.join(tempDir, 'upload-aborted.bin');
+		await fs.writeFile(filePath, Buffer.alloc(1));
+
+		const before = await listAllDriveFilesByUserIdFromDatabase(db, user.id);
+		const update = vi.fn();
+		const deps = {
+			config,
+			db,
+			meta,
+			fileInfoService: {
+				getFileInfo: vi.fn(async () => ({
+					size: 1024,
+					md5: '44444444444444444444444444444444',
+					type: { mime: 'text/plain', ext: 'txt' },
+					width: undefined,
+					height: undefined,
+					orientation: undefined,
+					blurhash: undefined,
+					sensitive: false,
+					porn: false,
+				})),
+			},
+			imageProcessingService: {},
+			videoProcessingService: {},
+			internalStorageService: { del: vi.fn(), saveFromBuffer: vi.fn(), saveFromPath: vi.fn() },
+			// マルチパートアップロードの中断結果には Bucket が含まれない
+			s3Service: { upload: vi.fn(async () => ({ Key: 'aborted' })), delete: vi.fn(async () => ({})) },
+			chartWriters: {
+				driveChart: { update },
+				perUserDriveChart: { update },
+				instanceChart: { updateDrive: update },
+			},
+			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+		} as unknown as HonoApiDriveFileUploadDependencies;
+
+		await expect(addDriveFileForHonoApi(deps, { user, path: filePath, force: true })).rejects.toThrow(/Upload aborted/);
+		expect(await listAllDriveFilesByUserIdFromDatabase(db, user.id)).toHaveLength(before.length);
+	});
 });
