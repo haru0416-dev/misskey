@@ -32,6 +32,7 @@ coverage/
 
 # Local config and secrets
 /.config/*
+/dev/sonarqube/.env
 !/.config/example.yml
 !/.config/docker_example.yml
 !/.config/docker_example.env
