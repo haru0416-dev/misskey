@@ -20,29 +20,27 @@ const deleteBlockers = {
 		advisoryLockKey: 71001,
 		queryPattern: 'delete from "note"%',
 	},
-	clip_note: {
-		functionName: 'test_block_clip_note_delete',
-		triggerName: 'test_block_clip_note_delete',
-		advisoryLockKey: 71002,
-		queryPattern: 'delete from "clip_note"%',
-	},
 } as const;
 
-async function waitForBlockedDeletes(pool: MiDrizzlePool, queryPattern: string): Promise<void> {
+async function waitForBlockedStatements(
+	pool: MiDrizzlePool,
+	queryPattern: string,
+	waitEventType: string,
+): Promise<void> {
 	const deadline = Date.now() + 10_000;
 	while (Date.now() < deadline) {
 		const result = await pool.query<{ count: number }>(`
 			SELECT count(*)::int AS count
 			FROM pg_stat_activity
 			WHERE datname = current_database()
-				AND wait_event = 'advisory'
+				AND wait_event_type = $2
 				AND query LIKE $1
-		`, [queryPattern]);
+		`, [queryPattern, waitEventType]);
 		if (result.rows[0]?.count === 2) return;
 		await new Promise<void>(resolve => setImmediate(resolve));
 	}
 
-	throw new Error(`Timed out waiting for concurrent deletes matching ${queryPattern}`);
+	throw new Error(`Timed out waiting for concurrent statements matching ${queryPattern}`);
 }
 
 async function runAfterBothDeletesStart<T>(
@@ -74,7 +72,7 @@ async function runAfterBothDeletesStart<T>(
 		lockHeld = true;
 
 		const pending = actions.map(action => action()) as [Promise<T>, Promise<T>];
-		await waitForBlockedDeletes(pool, blocker.queryPattern);
+		await waitForBlockedStatements(pool, blocker.queryPattern, 'Lock');
 		await lockClient.query('COMMIT');
 		lockHeld = false;
 
@@ -84,6 +82,38 @@ async function runAfterBothDeletesStart<T>(
 		lockClient.release();
 		await pool.query(`DROP TRIGGER IF EXISTS "${blocker.triggerName}" ON "${table}"`);
 		await pool.query(`DROP FUNCTION IF EXISTS "${blocker.functionName}"()`);
+	}
+}
+
+/**
+ * clip_note の削除は「note を FOR UPDATE で押さえてから clip_note を消す」順序で直列化されている
+ * (note 削除の cascade と lock 順序を揃えて deadlock を避けるため)。
+ * そのため DELETE 文自体は同時に走らず、両者がぶつかるのは note 行ロックの取得地点になる。
+ * ここを塞いで両リクエストを待たせてから解放することで、同時実行の交錯を再現する。
+ */
+async function runAfterBothBlockOnNoteRowLock<T>(
+	pool: MiDrizzlePool,
+	noteId: string,
+	actions: readonly [() => Promise<T>, () => Promise<T>],
+): Promise<[T, T]> {
+	const lockClient = await pool.connect();
+	let lockHeld = false;
+
+	try {
+		await lockClient.query('BEGIN');
+		await lockClient.query('SELECT "id" FROM "note" WHERE "id" = $1 FOR UPDATE', [noteId]);
+		lockHeld = true;
+
+		const pending = actions.map(action => action()) as [Promise<T>, Promise<T>];
+		// 2人目の待機者は transactionid ではなく tuple ロックで待つため、wait_event ではなく種別で数える
+		await waitForBlockedStatements(pool, 'select "id" from "note"%for update%', 'Lock');
+		await lockClient.query('COMMIT');
+		lockHeld = false;
+
+		return await Promise.all(pending);
+	} finally {
+		if (lockHeld) await lockClient.query('ROLLBACK');
+		lockClient.release();
 	}
 }
 
@@ -125,7 +155,7 @@ describe('counter integrity under concurrent deletion', () => {
 		assert.strictEqual(clip.status, 200);
 		assert.strictEqual((await api('clips/add-note', { clipId: clip.body.id, noteId: note.id }, owner)).status, 204);
 
-		const responses = await runAfterBothDeletesStart(pool, 'clip_note', [
+		const responses = await runAfterBothBlockOnNoteRowLock(pool, note.id, [
 			async () => await api('clips/remove-note', { clipId: clip.body.id, noteId: note.id }, owner),
 			async () => await api('clips/remove-note', { clipId: clip.body.id, noteId: note.id }, owner),
 		]);
