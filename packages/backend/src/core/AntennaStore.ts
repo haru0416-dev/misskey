@@ -47,18 +47,56 @@ export async function createAntennaInDatabase(
 	return deserializeAntenna(row);
 }
 
-export async function createAntennaWithinLimitInDatabase(
-	db: MiDrizzleDatabase,
-	data: AntennaInsert,
-	limit: number,
-): Promise<MiAntenna | null> {
-	return await db.transaction(async tx => {
-		await acquireAdvisoryTransactionLockInDatabase(tx, 'antenna-limit', data.userId);
-		if (await countAntennasByUserIdFromDatabase(tx, data.userId) >= limit) return null;
+export type AntennaCreateValues = Omit<AntennaInsert, 'userId'>;
 
-		const [row] = await tx.insert(antenna).values(data).returning();
-		if (row == null) throw new Error('Failed to create antenna');
-		return deserializeAntenna(row);
+export type CreateAntennasWithinLimitResult = {
+	status: 'created';
+	antennas: MiAntenna[];
+	previousCount: number;
+	limit: number;
+} | {
+	status: 'limitExceeded';
+	currentCount: number;
+	requestedCount: number;
+	limit: number;
+};
+
+export async function createAntennasWithinLimitInDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	values: AntennaCreateValues[],
+	resolveLimit: (tx: MiDrizzleDatabase) => Promise<number>,
+): Promise<CreateAntennasWithinLimitResult> {
+	return await db.transaction(async tx => {
+		await acquireAdvisoryTransactionLockInDatabase(tx, 'antenna-limit', userId);
+
+		const limit = await resolveLimit(tx);
+		const currentCount = await countAntennasByUserIdFromDatabase(tx, userId);
+		if (currentCount + values.length > limit) {
+			return {
+				status: 'limitExceeded',
+				currentCount,
+				requestedCount: values.length,
+				limit,
+			};
+		}
+
+		if (values.length === 0) {
+			return { status: 'created', antennas: [], previousCount: currentCount, limit };
+		}
+
+		const rows = await tx
+			.insert(antenna)
+			.values(values.map(value => ({ ...value, userId })))
+			.returning();
+		if (rows.length !== values.length) throw new Error('Failed to create all antennas');
+
+		return {
+			status: 'created',
+			antennas: rows.map(deserializeAntenna),
+			previousCount: currentCount,
+			limit,
+		};
 	});
 }
 

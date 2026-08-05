@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiNote } from '@/models/Note.js';
 import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
@@ -13,8 +12,6 @@ import type { IActivity } from '@/core/activitypub/type.js';
 import type { SystemWebhookPayload } from '@/core/system-webhook-types.js';
 import type { UserWebhookPayload } from '@/core/user-webhook-types.js';
 import type httpSignature from '@peertube/http-signature';
-
-export type Antenna = (MiAntenna & { userListAccts: string[] | null })[];
 
 export type DeliverJobData = {
 	user: ThinUser;
@@ -50,7 +47,6 @@ export type DbJobMap = {
 	exportMuting: DbJobDataWithUser;
 	exportBlocking: DbJobDataWithUser;
 	exportUserLists: DbJobDataWithUser;
-	importAntennas: DBAntennaImportJobData;
 	importFollowing: DbUserImportJobData;
 	importFollowingToDb: DbUserImportToDbJobData;
 	importMuting: DbUserImportJobData;
@@ -87,11 +83,6 @@ export type DbUserImportJobData = {
 	user: ThinUser;
 	fileId: MiDriveFile['id'];
 	withReplies?: boolean;
-};
-
-export type DBAntennaImportJobData = {
-	user: ThinUser,
-	antenna: Antenna
 };
 
 export type DbUserImportToDbJobData = {

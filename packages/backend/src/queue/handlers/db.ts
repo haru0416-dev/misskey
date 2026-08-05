@@ -9,9 +9,9 @@ import { Writable } from 'node:stream';
 import { domainToASCII } from 'node:url';
 import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import { omitUndefined } from '@/misc/clone.js';
-import { z } from 'zod';
 import type * as Bull from 'bullmq';
-import { createAntennaInDatabase, listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
+import { listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
+import type { ExportedAntenna } from '@/core/AntennaImport.js';
 import { countDriveFilesByUserIdFromDatabase, listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
 import { listFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { countMutingsByMuterIdFromDatabase, createMutingInDatabase, listMuteeIdsByMuterIdFromDatabase, listPermanentMutingsByMuterIdFromDatabase } from '@/core/MutingStore.js';
@@ -39,7 +39,7 @@ import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
 import { addDbJobs, type DbJobBulkInput, type DbQueue, type RelationshipQueue } from '@/core/queues.js';
-import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser, DbUserImportJobData, DbUserImportToDbJobData, RelationshipJobData } from '@/queue/types.js';
+import type { DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser, DbUserImportJobData, DbUserImportToDbJobData, RelationshipJobData } from '@/queue/types.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from '../../server/rest/drive-file-upload.js';
 import { packDriveFileManyByIdsForHonoApi } from '../../server/rest/drive-file.js';
@@ -108,27 +108,6 @@ function writeToStream(stream: fs.WriteStream, content: string): Promise<void> {
 			}
 		});
 	});
-}
-
-export const exportedAntennaZodSchema = z.object({
-	name: z.string().min(1).max(100),
-	src: z.enum(['home', 'all', 'users', 'list', 'users_blacklist']),
-	userListAccts: z.array(z.string()).nullable().optional(),
-	keywords: z.array(z.array(z.string())),
-	excludeKeywords: z.array(z.array(z.string())),
-	users: z.array(z.string()),
-	caseSensitive: z.boolean(),
-	localOnly: z.boolean().optional(),
-	excludeBots: z.boolean().optional(),
-	withReplies: z.boolean(),
-	withFile: z.boolean(),
-	excludeNotesInSensitiveChannel: z.boolean().optional(),
-});
-
-export type ExportedAntenna = z.infer<typeof exportedAntennaZodSchema>;
-
-function validateExportedAntenna(data: unknown): data is ExportedAntenna {
-	return exportedAntennaZodSchema.safeParse(data).success;
 }
 
 export async function handleHonoQueueDeleteDriveFiles(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
@@ -404,42 +383,6 @@ export async function handleHonoQueueExportFollowing(deps: HonoQueueDbDependenci
 		createExportCompletedNotification(deps, user.id, 'following', driveFile.id);
 	} finally {
 		cleanup();
-	}
-}
-
-/**
- * ImportAntennasProcessorService.process 相当。元実装同様、ループ全体をtry/catchし
- * エラーはログのみで再送しない (1件の失敗で残りのアンテナ作成が中断されうる挙動も含めて再現)。
- */
-export async function handleHonoQueueImportAntennas(deps: HonoQueueDbDependencies, job: Bull.Job<DBAntennaImportJobData>): Promise<void> {
-	const now = new Date();
-	try {
-		for (const antenna of job.data.antenna) {
-			if (antenna.keywords.length === 0 || antenna.keywords[0]?.every(x => x === '')) continue;
-			if (!validateExportedAntenna(antenna)) continue;
-
-			const result = await createAntennaInDatabase(deps.db, {
-				id: genId(now.getTime()),
-				lastUsedAt: now,
-				userId: job.data.user.id,
-				name: antenna.name,
-				src: antenna.src === 'list' && antenna.userListAccts ? 'users' : antenna.src,
-				userListId: null,
-				keywords: antenna.keywords,
-				excludeKeywords: antenna.excludeKeywords,
-				users: (antenna.src === 'list' && antenna.userListAccts !== null ? antenna.userListAccts : antenna.users).filter(Boolean),
-				caseSensitive: antenna.caseSensitive,
-				localOnly: antenna.localOnly,
-				excludeBots: antenna.excludeBots,
-				withReplies: antenna.withReplies,
-				withFile: antenna.withFile,
-				excludeNotesInSensitiveChannel: antenna.excludeNotesInSensitiveChannel,
-			});
-
-			deps.publishInternalEvent?.('antennaCreated', result);
-		}
-	} catch {
-		// 元実装同様、ここでのエラーは再送しない
 	}
 }
 

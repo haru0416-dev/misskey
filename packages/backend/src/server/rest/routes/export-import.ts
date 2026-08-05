@@ -233,12 +233,17 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportAntennas'))) {
 				throw rolePermissionDeniedError();
 			}
+			// 連打自体はここで抑え、時間あたりの実行枠はファイル検証を通ってから消費する
+			// (壊れたファイル1回で1時間ロックアウトされないように)。
 			await assertHonoApiRateLimitForUser(deps, 'i/import-antennas', {
-				duration: 60 * 60 * 1000,
-				max: 1,
+				key: 'i/import-antennas:attempt',
+				minInterval: 5 * 1000,
 			}, auth.user);
 
-			await handleHonoApiIImportAntennas(deps, auth.user, body);
+			await handleHonoApiIImportAntennas(deps, auth.user, body, () => assertHonoApiRateLimitForUser(deps, 'i/import-antennas', {
+				duration: 60 * 60 * 1000,
+				max: 1,
+			}, auth.user));
 			return emptyResponse(c);
 		});
 	});
