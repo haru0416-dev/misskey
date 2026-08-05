@@ -156,6 +156,8 @@
 - Fix: WebSocket接続の初期化中に切断された場合、閉じたソケットに対する接続が残り続ける問題を修正
 - Fix: チャートのhour/day更新が別トランザクションに分かれており、片方だけ失敗すると次回保存で成功済みの期間へ同じ差分が二重加算される問題を修正
 - Fix: outboxに未処理の行が1件でもあると `admin/queue/queues` と `admin/queue/queue-stats` が必ず500になる問題を修正
+- Fix: APIの予期しない例外がサーバーログに一切残らず、500の原因を追跡できない問題を修正 (エラーIDを添えて記録するように)
+- Fix: パスワード誤入力・2FA失敗・パスワードリセットリンクの期限切れ・存在しないユーザー指定が500 (`INTERNAL_ERROR`) として返る問題を修正 (`i/change-password` / `i/regenerate-token` / `i/delete-account` / `i/update-email` / `reset-password` / `federation/update-remote-user` に原因が分かるAPIエラーを定義)
 - Fix: ActivityPub Delete配送を待つ必要が無いアカウント削除で、ジョブ発行がoutboxのポーリング周期ぶん遅れる問題を修正 (即時発行した行を確実に削除し、ジョブ完了後にディスパッチャが同じジョブを作り直して削除処理が二重実行される問題も防止)
 - Enhance: Queue outboxの配送突合を1ジョブ1往復のBullMQ問い合わせから一括pipelineへ変更し、1周あたりの処理件数を100→500件に拡大 (500件の突合でValkeyコマンド 3,500→1,500回、ドレインに要するpoll 5周→1周)
 - Fix: アンテナのインポートを上限判定と一括作成を含む単一トランザクションへ統合し、並行作成による上限超過と部分インポートを防止

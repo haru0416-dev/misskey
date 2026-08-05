@@ -1370,7 +1370,11 @@ export const endpointMetas = {
 			description: 'Complete the password reset that was previously requested.',
 
 			errors: {
-
+				invalidToken: {
+					message: 'Invalid or expired token.',
+					code: 'INVALID_TOKEN',
+					id: 'e04a2320-6ee2-4a11-8ad2-c9ea9e2ab84f',
+				},
 			},
 		} as const,
 		paramDef: resetPasswordParamDef,

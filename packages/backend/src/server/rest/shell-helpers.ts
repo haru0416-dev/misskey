@@ -5,6 +5,7 @@
 
 import { randomUUID } from 'node:crypto';
 import ipaddr from 'ipaddr.js';
+import Logger from '@/logger.js';
 import { recordException } from '@/telemetry.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
@@ -171,6 +172,8 @@ export function getRequestIp(c: Context, config: Config): string {
 	return addresses[0] ?? remoteAddress;
 }
 
+const apiLogger = new Logger('api', 'gray');
+
 export async function runApiEndpoint(c: Context, handler: () => Promise<Response>): Promise<Response> {
 	try {
 		return await handler();
@@ -179,16 +182,19 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 			return apiErrorResponse(c, err);
 		}
 
-		// 予期しない例外の詳細はテレメトリにのみ記録し、クライアントには公開しない。
+		// 予期しない例外の詳細はクライアントには公開しないが、サーバー側には必ず痕跡を残す
+		// (テレメトリだけだと OTel 未設定の環境 — 開発・テスト含む — で 500 の原因が完全に消える)。
 		if (err instanceof Error) {
+			const errorId = randomUUID();
 			recordException(err);
+			apiLogger.error(`Unexpected error while handling ${new URL(c.req.url).pathname}`, { errorId, e: err });
 			return apiErrorResponse(c, new HonoApiError({
 				status: 500,
 				message: 'Internal error occurred. Please contact us if the error persists.',
 				code: 'INTERNAL_ERROR',
 				id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
 				kind: 'server',
-				info: { id: randomUUID() },
+				info: { id: errorId },
 			}));
 		}
 

@@ -125,6 +125,20 @@ export const endpointMetas = {
 			tags: ['federation'],
 
 			requireCredential: false,
+
+			errors: {
+				noSuchUser: {
+					message: 'No such user.',
+					code: 'NO_SUCH_USER',
+					id: '15348ddd-432d-49c2-8a5a-8069753becff',
+				},
+
+				notRemoteUser: {
+					message: 'User is not a remote user.',
+					code: 'NOT_REMOTE_USER',
+					id: 'e3ad347a-2493-4f8f-bac0-f91c88daa754',
+				},
+			},
 		} as const,
 		paramDef: federationUpdateRemoteUserParamDef,
 	},
