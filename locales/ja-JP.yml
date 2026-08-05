@@ -87,6 +87,7 @@ cancelFollowRequestConfirm: "{name}へのフォロー申請をキャンセルし
 rejectFollowRequestConfirm: "{name}からのフォロー申請を拒否しますか？"
 exportRequested: "エクスポートをリクエストしました。これには時間がかかる場合があります。エクスポートが終わると、「ドライブ」に追加されます。"
 importRequested: "インポートをリクエストしました。これには時間がかかる場合があります。"
+importCompleted: "インポートが完了しました。"
 lists: "リスト"
 noLists: "リストはありません"
 note: "ノート"

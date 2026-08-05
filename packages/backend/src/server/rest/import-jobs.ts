@@ -9,14 +9,15 @@ import { addDbJob, type DbQueue } from '@/core/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import type { DownloadService } from '@/core/DownloadService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
+import { countAntennasByUserIdFromDatabase, createAntennasWithinLimitInDatabase } from '@/core/AntennaStore.js';
+import { exportedAntennasSchema, importedAntennaToCreateValues } from '@/core/AntennaImport.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
 import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { omitUndefined } from '@/misc/clone.js';
-import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError } from './error.js';
+import { HonoApiError, rolePermissionDeniedError } from './error.js';
+import type { HonoApiInternalEventPublisher } from './events.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { resolveAlsoKnownAsForHonoApi, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -27,8 +28,9 @@ export type HonoApiImportJobDependencies = UserPackingDependencies & {
 	dbQueue: DbQueue;
 };
 
-export type HonoApiIImportAntennasDependencies = HonoApiImportJobDependencies & HonoApiRolePolicyDependencies & {
+export type HonoApiIImportAntennasDependencies = HonoApiRolePolicyDependencies & {
 	downloadService: Pick<DownloadService, 'downloadTextFile'>;
+	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
 const importJobOptions = (config: Pick<Config, 'queues'>) => ({
@@ -207,10 +209,20 @@ function importAntennasTooManyAntennasError(): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'You cannot create antenna any more.', code: 'TOO_MANY_ANTENNAS', id: '600917d4-a4cb-4cc5-8ba8-7ac8ea3c7779' });
 }
 
+function invalidAntennaImportFileError(): HonoApiError {
+	return new HonoApiError({ status: 400, message: 'The antenna import file is invalid.', code: 'INVALID_ANTENNA_IMPORT_FILE', id: 'f9755af1-12aa-44af-a75f-80a729a9e845' });
+}
+
 export async function handleHonoApiIImportAntennas(
 	deps: HonoApiIImportAntennasDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
+	/**
+	 * ファイルが妥当だと分かってから (= 実際にアンテナを作る直前に) 呼ばれる。
+	 * 他の import と違いこの endpoint は同期的に検証まで行うので、レート制限を入口で消費すると
+	 * 壊れたファイルを1回投げただけで1時間ロックアウトされてしまう。消費はここまで遅らせる。
+	 */
+	consumeRateLimit?: () => Promise<void>,
 ): Promise<void> {
 	const params = parseHonoApiParams(importAntennasParamDef, body);
 
@@ -221,17 +233,42 @@ export async function handleHonoApiIImportAntennas(
 	if (file == null) throw importAntennasNoSuchFileError();
 	if (file.size === 0) throw importAntennasEmptyFileError();
 
-	const antennas: (MiAntenna & { userListAccts: string[] | null })[] = JSON.parse(await deps.downloadService.downloadTextFile(file.url));
-
-	const currentAntennasCount = await countAntennasByUserIdFromDatabase(deps.db, me.id);
-	const policies = await getHonoApiRolePolicies(deps, me);
-	if (currentAntennasCount + antennas.length >= policies.antennaLimit) {
-		throw importAntennasTooManyAntennasError();
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(await deps.downloadService.downloadTextFile(file.url));
+	} catch {
+		throw invalidAntennaImportFileError();
 	}
+	const validated = exportedAntennasSchema.safeParse(parsed);
+	if (!validated.success) throw invalidAntennaImportFileError();
 
-	void addDbJob(deps.dbQueue, {
-		name: 'importAntennas',
-		data: { user: { id: me.id }, antenna: antennas },
-		opts: importJobOptions(deps.config),
-	});
+	// 上限超過で1件も作られないのに実行枠 (1回/時) を消費すると、アンテナを整理しても
+	// 1時間再試行できなくなる。先に概算で弾いておく (競合を考慮した厳密な判定は下の transaction 内)
+	const policies = await getHonoApiRolePolicies(deps, user);
+	const currentCount = await countAntennasByUserIdFromDatabase(deps.db, me.id);
+	if (currentCount + validated.data.length > policies.antennaLimit) throw importAntennasTooManyAntennasError();
+
+	await consumeRateLimit?.();
+
+	const now = new Date();
+	const result = await createAntennasWithinLimitInDatabase(
+		deps.db,
+		me.id,
+		validated.data.map(antenna => importedAntennaToCreateValues(antenna, now)),
+		async tx => {
+			const currentUser = await fetchUserByIdFromDatabase(tx, me.id);
+			if (currentUser == null) throw importAntennasNoSuchUserError();
+
+			const policies = await getHonoApiRolePolicies({ ...deps, db: tx }, currentUser);
+			if (currentUser.id !== deps.meta.rootUserId && !policies.canImportAntennas) {
+				throw rolePermissionDeniedError();
+			}
+			return policies.antennaLimit;
+		},
+	);
+	if (result.status === 'limitExceeded') throw importAntennasTooManyAntennasError();
+
+	for (const antenna of result.antennas) {
+		deps.publishInternalEvent?.('antennaCreated', antenna);
+	}
 }

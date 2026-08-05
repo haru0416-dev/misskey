@@ -8,7 +8,7 @@ process.env['NODE_ENV'] = 'test';
 import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { countAntennasByUserIdFromDatabase, createAntennaWithinLimitInDatabase } from '@/core/AntennaStore.js';
+import { countAntennasByUserIdFromDatabase, createAntennasWithinLimitInDatabase, listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { countClipNotesByClipIdFromDatabase, createClipNoteWithinLimitInDatabase } from '@/core/ClipNoteStore.js';
 import { countClipsByUserIdFromDatabase, createClipInDatabase, createClipWithinLimitInDatabase } from '@/core/ClipStore.js';
 import { fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
@@ -114,20 +114,48 @@ describe('count-check-insert limits', () => {
 
 	test('antenna create limit serializes concurrent inserts', async () => {
 		const results = await runBehindInsertBarrier(barrierKeys.antenna, async () => await Promise.all([0, 1].map(index =>
-			createAntennaWithinLimitInDatabase(db, {
+			createAntennasWithinLimitInDatabase(db, user.id, [{
 				id: `limit-race-antenna-${index}`,
 				lastUsedAt: new Date(),
-				userId: user.id,
 				name: `race ${index}`,
 				src: 'all',
 				users: [],
 				keywords: [['race']],
 				excludeKeywords: [],
 				withFile: false,
-			}, 1))));
+			}], async () => 1))));
 
-		assert.strictEqual(results.filter(result => result != null).length, 1);
+		assert.deepStrictEqual(results.map(result => result.status).sort(), ['created', 'limitExceeded']);
 		assert.strictEqual(await countAntennasByUserIdFromDatabase(db, user.id), 1);
+	});
+
+	test('antenna bulk import is atomic against a concurrent create', async () => {
+		const bulkUser = await signup({ username: 'limit_bulk_antennas' });
+		const createValues = (id: string) => ({
+			id,
+			lastUsedAt: new Date(),
+			name: id,
+			src: 'all' as const,
+			users: [],
+			keywords: [['race']],
+			excludeKeywords: [],
+			withFile: false,
+		});
+		const results = await runBehindInsertBarrier(barrierKeys.antenna, async () => await Promise.all([
+			createAntennasWithinLimitInDatabase(db, bulkUser.id, [
+				createValues('limit-race-antenna-bulk-1'),
+				createValues('limit-race-antenna-bulk-2'),
+			], async () => 2),
+			createAntennasWithinLimitInDatabase(db, bulkUser.id, [
+				createValues('limit-race-antenna-single'),
+			], async () => 2),
+		]));
+
+		assert.deepStrictEqual(results.map(result => result.status).sort(), ['created', 'limitExceeded']);
+		const imported = await listAntennasByUserIdFromDatabase(db, bulkUser.id);
+		const bulkCount = imported.filter(item => item.id.startsWith('limit-race-antenna-bulk-')).length;
+		assert.ok(bulkCount === 0 || bulkCount === 2, `bulk import was partially committed: ${bulkCount}`);
+		assert.ok(imported.length <= 2);
 	});
 
 	test('clip create limit serializes concurrent inserts', async () => {

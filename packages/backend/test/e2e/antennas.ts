@@ -218,13 +218,70 @@ describe('アンテナ', () => {
 		});
 	});
 
+	test('を作成するとき src=list でリストを指定しないとエラーになる', async () => {
+		// userListId の無い src='list' アンテナは checkHitAntenna が常に false を返すため何にもマッチしない
+		await failedApiCall({
+			endpoint: 'antennas/create',
+			parameters: { ...defaultParam, src: 'list', userListId: null },
+			user: alice,
+		}, {
+			status: 400,
+			code: 'INVALID_PARAM',
+			id: '3d81ceae-475f-4600-b2a8-2bc116157532',
+		});
+	});
+
+	test('を src=list に変更するときリストを指定しないとエラーになる', async () => {
+		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
+		await failedApiCall({
+			endpoint: 'antennas/update',
+			parameters: { antennaId: antenna.id, ...defaultParam, src: 'list', userListId: null },
+			user: alice,
+		}, {
+			status: 400,
+			code: 'INVALID_PARAM',
+			id: '3d81ceae-475f-4600-b2a8-2bc116157532',
+		});
+	});
+
+	test('は src=list のまま userListId を省略しても紐付けが残る', async () => {
+		const antenna = await successfulApiCall({
+			endpoint: 'antennas/create',
+			parameters: { ...defaultParam, src: 'list', userListId: aliceList.id },
+			user: alice,
+		});
+		const response = await successfulApiCall({
+			endpoint: 'antennas/update',
+			parameters: { antennaId: antenna.id, name: 'renamed' },
+			user: alice,
+		});
+		assert.strictEqual(response.name, 'renamed');
+		assert.strictEqual(response.src, 'list');
+		assert.strictEqual(response.userListId, aliceList.id);
+	});
+
+	test('を src=list 以外に変更するとリストの紐付けが外れる', async () => {
+		const antenna = await successfulApiCall({
+			endpoint: 'antennas/create',
+			parameters: { ...defaultParam, src: 'list', userListId: aliceList.id },
+			user: alice,
+		});
+		assert.strictEqual(antenna.userListId, aliceList.id);
+		const response = await successfulApiCall({
+			endpoint: 'antennas/update',
+			parameters: { antennaId: antenna.id, ...defaultParam, src: 'all' },
+			user: alice,
+		});
+		assert.strictEqual(response.src, 'all');
+		assert.strictEqual(response.userListId, null);
+	});
+
 	const antennaParamPattern = [
 		{ parameters: () => ({ name: 'x'.repeat(100) }) },
 		{ parameters: () => ({ name: 'x' }) },
 		{ parameters: () => ({ src: 'home' as const }) },
 		{ parameters: () => ({ src: 'all' as const }) },
 		{ parameters: () => ({ src: 'users' as const }) },
-		{ parameters: () => ({ src: 'list' as const }) },
 		{ parameters: () => ({ userListId: null }) },
 		{ parameters: () => ({ src: 'list' as const, userListId: aliceList.id }) },
 		{ parameters: () => ({ keywords: [['x']] }) },
@@ -521,14 +578,14 @@ describe('アンテナ', () => {
 				],
 			},
 			{
-				// BUG e4144a1 以降home指定は壊れている(allと同じ)
-				label: 'ホーム指定はallと同じ',
+				// ホーム指定は自分の投稿とフォロー中ユーザーの投稿だけにマッチする
+				label: 'ホーム指定で',
 				parameters: () => ({ src: 'home' }),
 				posts: [
 					{ note: (): Promise<Note> => post(alice, { text: `${keyword}` }), included: true },
 					{ note: (): Promise<Note> => post(userFollowedByAlice, { text: `${keyword}` }), included: true },
-					{ note: (): Promise<Note> => post(bob, { text: `test ${keyword}` }), included: true },
-					{ note: (): Promise<Note> => post(carol, { text: `test ${keyword}` }), included: true },
+					{ note: (): Promise<Note> => post(bob, { text: `test ${keyword}` }) },
+					{ note: (): Promise<Note> => post(carol, { text: `test ${keyword}` }) },
 				],
 			},
 			{
