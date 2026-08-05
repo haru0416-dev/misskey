@@ -61,21 +61,34 @@ async function authenticateStreamingRequest(
 	return authenticated;
 }
 
+/**
+ * Redis pub/sub の payload はプロセス外から来るので、形が壊れている前提で扱う。
+ * この関数は ioredis の 'message' リスナーとして同期的に呼ばれるため、ここで例外を投げると
+ * 誰も捕捉できずストリーミングサーバーのプロセスごと落ちる。
+ * また EventEmitter は listener の無い 'error' を emit すると throw するので、チャンネル名としては通さない。
+ */
+export function emitHonoStreamRedisMessage(globalEv: EventEmitter, data: string): void {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(data);
+	} catch {
+		return;
+	}
+	if (typeof parsed !== 'object' || parsed === null) return;
+
+	const { channel, message } = parsed as { channel?: unknown; message?: unknown };
+	if (typeof channel !== 'string' || channel === '' || channel === 'error') return;
+
+	globalEv.emit(channel, message);
+}
+
 /** StreamingApiServerService 相当。`server.on('upgrade', ...)` を直接フックし、Hono の fetch パイプラインは経由しない。 */
 export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDependencies, streamingPath = '/streaming'): { detach: () => Promise<void> } {
 	const wss = new WebSocket.WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
 	const globalEv = new EventEmitter();
 	globalEv.setMaxListeners(0);
 
-	const onRedisMessage = (_channelName: string, data: string) => {
-		let parsed: { channel: string; message: unknown };
-		try {
-			parsed = JSON.parse(data);
-		} catch {
-			return;
-		}
-		globalEv.emit(parsed.channel, parsed.message);
-	};
+	const onRedisMessage = (_channelName: string, data: string) => emitHonoStreamRedisMessage(globalEv, data);
 	deps.redisForSub.on('message', onRedisMessage);
 	const activeConnections = new Map<HonoStreamConnection, () => void>();
 	let reconnectRefreshPromise: Promise<void> | undefined;
@@ -125,6 +138,14 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 		try {
 			await connection.init(globalEv);
 		} catch {
+			socket.destroy();
+			return;
+		}
+
+		// init 中に切断された場合、close ハンドラの dispose は初期化途中の状態に対して走っている。
+		// そのまま upgrade すると閉じたソケットに対するコネクションが残るので、ここで作り直させる
+		if (socketClosed) {
+			connection.dispose();
 			socket.destroy();
 			return;
 		}
