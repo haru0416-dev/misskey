@@ -110,6 +110,20 @@ export async function getHonoApiUserRoles(
 	return computeHonoApiUserRoles(deps, user, roles, assignments);
 }
 
+/**
+ * policies は jsonb で、role.policies も meta.policies も管理APIから任意の JSON を書き込めてしまう
+ * (`admin/roles/update-default-policies` の paramDef は値を検証していない)。
+ * 数値ポリシーに文字列や null が入ると `Math.max(...)` が NaN を返し、
+ * 「上限0」でも「無制限」でもない壊れた制限値が全ユーザーへ適用されるため、
+ * コード側の DEFAULT_POLICIES と形が一致しない値は採用しない。
+ */
+function isValidPolicyValue<T extends keyof RolePolicies>(name: T, value: unknown): value is RolePolicies[T] {
+	const defaultValue = DEFAULT_POLICIES[name];
+	if (Array.isArray(defaultValue)) return Array.isArray(value) && value.every(item => typeof item === 'string');
+	if (typeof defaultValue === 'number') return typeof value === 'number' && Number.isFinite(value);
+	return typeof value === typeof defaultValue;
+}
+
 function aggregateChatAvailability(values: RolePolicies['chatAvailability'][]): RolePolicies['chatAvailability'] {
 	if (values.some(value => value === 'available')) return 'available';
 	if (values.some(value => value === 'readonly')) return 'readonly';
@@ -125,11 +139,20 @@ export async function getHonoApiRolePolicies(
 	const roles = precomputedRoles ?? await getHonoApiUserRoles(deps, user);
 
 	function calc<T extends keyof RolePolicies>(name: T, aggregate: (values: RolePolicies[T][]) => RolePolicies[T]): RolePolicies[T] {
-		if (roles.length === 0) return aggregate([basePolicies[name]]);
+		// meta.policies 側も検証を通っていないので、インスタンス既定値も同様に形を確かめる
+		const baseValue = isValidPolicyValue(name, basePolicies[name]) ? basePolicies[name] : DEFAULT_POLICIES[name];
+		if (roles.length === 0) return aggregate([baseValue]);
 
-		const policies = roles.map(role => role.policies[name] ?? { priority: 0, useDefault: true });
+		// policies は jsonb なので、過去に壊れた形で書き込まれた値が入っていることがある。
+		// ここで例外を投げるとそのロールを持つユーザーの全APIが500になるため、既定値へフォールバックする。
+		const policies = roles.map(role => {
+			const policy = role.policies[name] as unknown;
+			return typeof policy === 'object' && policy !== null
+				? policy as { priority?: number; useDefault?: boolean; value?: unknown }
+				: { priority: 0, useDefault: true };
+		});
 		const resolve = (policy: typeof policies[number]): RolePolicies[T] =>
-			policy.useDefault || !('value' in policy) ? basePolicies[name] : policy.value;
+			policy.useDefault || !isValidPolicyValue(name, policy.value) ? baseValue : policy.value;
 		const p2 = policies.filter(policy => policy.priority === 2);
 		if (p2.length > 0) return aggregate(p2.map(resolve));
 

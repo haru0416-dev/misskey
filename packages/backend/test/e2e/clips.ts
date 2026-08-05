@@ -579,11 +579,13 @@ describe('クリップ', () => {
 		});
 
 		test('は11を超えて設定できる。', async () => {
+			// 自分で持てるクリップ数はポリシー上限までなので、超過分は他人のPublicクリップで稼ぐ
 			const clips = [
 				aliceClip,
-				...await createMany({}, 10, alice),
-				...await createMany({ isPublic: true }, 10, bob),
+				...await createMany({}, DEFAULT_POLICIES.clipLimit - 1, alice),
+				...await createMany({ isPublic: true }, DEFAULT_POLICIES.clipLimit, bob),
 			];
+			assert.ok(clips.length > 11);
 			for (const clip of clips) {
 				await favorite({ clipId: clip.id });
 			}
