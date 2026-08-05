@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createHash } from 'node:crypto';
 import type { Meilisearch } from 'meilisearch';
-import type * as Bull from 'bullmq';
-import { deleteAccountWithSideEffects } from '@/core/DeleteAccountLogic.js';
+import * as Bull from 'bullmq';
 import type { EmailService } from '@/core/EmailService.js';
 import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/PageStore.js';
 import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
@@ -46,12 +44,7 @@ export async function handleHonoQueueDeleteAccount(deps: HonoQueueDeleteAccountD
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 	if (user.host == null && !job.data.soft && job.data.accountDeleteCoordinatorId == null) {
-		const coordinatorId = createHash('sha256')
-			.update(`legacy-account-delete:${job.id ?? user.id}`)
-			.digest('hex')
-			.slice(0, 32);
-		await deleteAccountWithSideEffects(deps, user, undefined, coordinatorId);
-		return 'Account deletion re-coordinated';
+		throw new Bull.UnrecoverableError('Local account deletion requires an outbox coordinator');
 	}
 
 	{ // Delete notes

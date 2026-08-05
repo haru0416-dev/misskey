@@ -1660,6 +1660,13 @@ _delivery:
     autoSuspendedForNotResponding: "サーバー応答なしのため停止中"
     softwareSuspended: "配信停止中のソフトウェアであるため停止中"
 
+_queueOutbox:
+  deadLetters: "デッドレター"
+  deadLettersDescription: "リトライ上限に達したか、内容が壊れていて処理を諦めたジョブです。原因を解消してから再試行するか、破棄してください。どちらも行わない限り、このジョブに紐づく処理 (アカウントの完全削除など) は先に進みません。"
+  noDeadLetters: "デッドレターはありません。"
+  retryConfirm: "このジョブをキューに戻して再試行します。原因が解消していない場合は、再びデッドレターになります。"
+  abandonConfirm: "このジョブを破棄します。破棄すると再試行できなくなり、このジョブが行うはずだった処理 (リモートサーバーへの配送など) は永久に実行されません。"
+
 _announcement:
   forExistingUsers: "既存ユーザーのみ"
   forExistingUsersDescription: "有効にすると、このお知らせ作成時点で存在するユーザーにのみお知らせが表示されます。無効にすると、このお知らせ作成後にアカウントを作成したユーザーにもお知らせが表示されます。"
