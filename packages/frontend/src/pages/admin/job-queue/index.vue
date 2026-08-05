@@ -23,10 +23,45 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<template #key>Waiting</template>
 							<template #value>{{ kmg(q.counts.waiting ?? null, 2) }}</template>
 						</MkKeyValue>
+						<MkKeyValue v-if="q.outbox">
+							<template #key>Outbox</template>
+							<template #value>{{ kmg(q.outbox.pending, 2) }}</template>
+						</MkKeyValue>
+						<MkKeyValue v-if="q.outbox && q.outbox.deadLetter > 0">
+							<template #key>Dead</template>
+							<template #value><span style="color: var(--MI_THEME-error);">{{ kmg(q.outbox.deadLetter, 2) }}</span></template>
+						</MkKeyValue>
 					</div>
 					<XChart :dataSet="{ completed: q.metrics.completed.data, failed: q.metrics.failed.data }"/>
 				</div>
 			</div>
+		</div>
+		<div v-else-if="tab === 'outbox'" class="_gaps">
+			<MkFolder :defaultOpen="true" :withSpacer="false">
+				<template #label>{{ i18n.ts._queueOutbox.deadLetters }}</template>
+				<template #icon><i class="ti ti-alert-triangle"></i></template>
+				<template #suffix>{{ deadLetters.length }}</template>
+				<template #caption>{{ i18n.ts._queueOutbox.deadLettersDescription }}</template>
+				<template #footer>
+					<div class="_buttons">
+						<MkButton rounded @click="fetchDeadLetters()"><i class="ti ti-reload"></i> Refresh view</MkButton>
+					</div>
+				</template>
+
+				<div class="_spacer">
+					<MkLoading v-if="deadLettersInitializing"/>
+					<MkResult v-else-if="deadLetters.length === 0" type="empty" :text="i18n.ts._queueOutbox.noDeadLetters"/>
+					<div v-else class="_gaps_s _monospace">
+						<XOutboxDeadLetter
+							v-for="deadLetter in deadLetters"
+							:key="deadLetter.id"
+							:deadLetter="deadLetter"
+							@needRefresh="fetchDeadLetters()"
+						/>
+						<MkButton v-if="deadLettersCanFetchMore" :disabled="deadLettersFetchingMore" rounded style="margin: 0 auto;" @click="fetchMoreDeadLetters()">{{ i18n.ts.loadMore }}</MkButton>
+					</div>
+				</div>
+			</MkFolder>
 		</div>
 		<div v-else-if="queueInfo" class="_gaps">
 			<MkFolder :defaultOpen="true">
@@ -60,6 +95,26 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<template #value>{{ kmg(queueInfo.counts.waiting ?? null, 2) }}</template>
 						</MkKeyValue>
 					</div>
+					<template v-if="queueInfo.outbox">
+						<hr>
+						<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+							<MkKeyValue>
+								<template #key>Outbox: Pending</template>
+								<template #value>{{ kmg(queueInfo.outbox.pending, 2) }}</template>
+							</MkKeyValue>
+							<MkKeyValue>
+								<template #key>Outbox: Oldest pending</template>
+								<template #value>{{ queueInfo.outbox.oldestPendingAgeMs == null ? 'N/A' : `${Math.floor(queueInfo.outbox.oldestPendingAgeMs / 1000)}s` }}</template>
+							</MkKeyValue>
+							<MkKeyValue>
+								<template #key>Outbox: Dead letters</template>
+								<template #value>
+									<span :style="queueInfo.outbox.deadLetter > 0 ? 'color: var(--MI_THEME-error);' : ''">{{ kmg(queueInfo.outbox.deadLetter, 2) }}</span>
+									<span v-if="queueInfo.outbox.deadLetter > 0" style="margin-left: 0.5em;">(<button class="_textButton" @click="tab = 'outbox'">{{ i18n.ts._queueOutbox.deadLetters }}</button>)</span>
+								</template>
+							</MkKeyValue>
+						</div>
+					</template>
 					<hr>
 					<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
 						<MkKeyValue>
@@ -161,7 +216,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						class="_monospace"
 					>
 						<template #right="{ event: job }">
-							<XJob :job="job" :queueType="tab" style="margin: 4px 0;" @needRefresh="refreshJob(job.id)"/>
+							<XJob v-if="currentQueue" :job="job" :queueType="currentQueue" style="margin: 4px 0;" @needRefresh="refreshJob(job.id)"/>
 						</template>
 					</MkTl>
 				</div>
@@ -178,6 +233,7 @@ import { debounce } from 'throttle-debounce';
 import { useInterval } from '@shared/utility/use-interval.js';
 import XChart from './chart.vue';
 import XJob from './job.vue';
+import XOutboxDeadLetter from './outbox-dead-letter.vue';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
@@ -212,13 +268,26 @@ type QueueJob = Omit<Misskey.entities.QueueJob, 'opts'> & {
 	};
 };
 
-const tab = ref<typeof Misskey.queueTypes[number] | '-'>('-');
+const tab = ref<typeof Misskey.queueTypes[number] | '-' | 'outbox'>('-');
 const jobState = ref<'all' | 'latest' | 'completed' | 'failed' | 'active' | 'delayed' | 'wait' | 'paused'>('all');
 const jobs = ref<QueueJob[]>([]);
 const jobsFetching = ref(true);
 const queueInfos = ref<QueueInfo[]>([]);
 const queueInfo = ref<CurrentQueueInfo | null>(null);
 const searchQuery = ref('');
+const DEAD_LETTERS_FETCH_LIMIT = 50;
+const deadLetters = ref<Misskey.entities.AdminQueueOutboxDeadLettersResponse>([]);
+// 定期更新のたびにローディング表示へ差し替えると、展開中の折りたたみが毎回閉じてしまうため、
+// スピナーは初回取得が終わるまでの間だけ出す
+const deadLettersInitializing = ref(true);
+const deadLettersCanFetchMore = ref(false);
+const deadLettersFetchingMore = ref(false);
+
+// tab はキュー名以外 (概要 / デッドレター) も取りうるので、キュー指定APIにはこちらを渡す
+const currentQueue = computed<typeof Misskey.queueTypes[number] | null>(() => {
+	const queue = Misskey.queueTypes.find(q => q === tab.value);
+	return queue ?? null;
+});
 
 async function fetchQueues() {
 	if (tab.value !== '-') return;
@@ -226,16 +295,58 @@ async function fetchQueues() {
 }
 
 async function fetchCurrentQueue() {
-	if (tab.value === '-') return;
-	queueInfo.value = await misskeyApi('admin/queue/queue-stats', { queue: tab.value });
+	const queue = currentQueue.value;
+	if (queue == null) return;
+	queueInfo.value = await misskeyApi('admin/queue/queue-stats', { queue });
+}
+
+// 「もっと見る」で広げた表示範囲は10秒ごとの自動更新でも維持する必要があるため、
+// 読み込み済みのページ数だけカーソルを辿り直す (先頭50件だけを取り直すと展開した分が毎回消える)
+async function fetchDeadLetters() {
+	if (deadLettersFetchingMore.value) return;
+
+	const pages = Math.max(1, Math.ceil(deadLetters.value.length / DEAD_LETTERS_FETCH_LIMIT));
+	const rows: Misskey.entities.AdminQueueOutboxDeadLettersResponse = [];
+	let hasMore = false;
+	for (let i = 0; i < pages; i++) {
+		const page = await misskeyApi('admin/queue/outbox-dead-letters', {
+			limit: DEAD_LETTERS_FETCH_LIMIT,
+			...(rows.length === 0 ? {} : { untilId: rows.at(-1)!.id }),
+		});
+		rows.push(...page);
+		hasMore = page.length === DEAD_LETTERS_FETCH_LIMIT;
+		if (!hasMore) break;
+	}
+
+	deadLetters.value = rows;
+	deadLettersCanFetchMore.value = hasMore;
+	deadLettersInitializing.value = false;
+}
+
+async function fetchMoreDeadLetters() {
+	const oldest = deadLetters.value.at(-1);
+	if (oldest == null || deadLettersFetchingMore.value) return;
+
+	deadLettersFetchingMore.value = true;
+	try {
+		const page = await misskeyApi('admin/queue/outbox-dead-letters', {
+			limit: DEAD_LETTERS_FETCH_LIMIT,
+			untilId: oldest.id,
+		});
+		deadLetters.value = [...deadLetters.value, ...page];
+		deadLettersCanFetchMore.value = page.length === DEAD_LETTERS_FETCH_LIMIT;
+	} finally {
+		deadLettersFetchingMore.value = false;
+	}
 }
 
 async function fetchJobs() {
-	if (tab.value === '-') return;
+	const queue = currentQueue.value;
+	if (queue == null) return;
 	jobsFetching.value = true;
 	const state = jobState.value;
 	jobs.value = await misskeyApi('admin/queue/jobs', {
-		queue: tab.value,
+		queue,
 		state: state === 'all' ? ['completed', 'failed', 'active', 'delayed', 'wait'] : state === 'latest' ? ['completed', 'failed'] : [state],
 		...(searchQuery.value.trim() === '' ? {} : { search: searchQuery.value }),
 	}).then((res: Misskey.entities.AdminQueueJobsResponse) => {
@@ -254,6 +365,8 @@ async function fetchJobs() {
 watch([tab], async () => {
 	if (tab.value === '-') {
 		fetchQueues();
+	} else if (tab.value === 'outbox') {
+		fetchDeadLetters();
 	} else {
 		fetchCurrentQueue();
 		fetchJobs();
@@ -275,6 +388,8 @@ watch([searchQuery], () => {
 useInterval(() => {
 	if (tab.value === '-') {
 		fetchQueues();
+	} else if (tab.value === 'outbox') {
+		fetchDeadLetters();
 	} else {
 		fetchCurrentQueue();
 	}
@@ -284,7 +399,8 @@ useInterval(() => {
 });
 
 async function clearQueue() {
-	if (tab.value === '-') return;
+	const queue = currentQueue.value;
+	if (queue == null) return;
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
@@ -292,14 +408,15 @@ async function clearQueue() {
 	});
 	if (canceled) return;
 
-	os.apiWithDialog('admin/queue/clear', { queue: tab.value, state: '*' });
+	os.apiWithDialog('admin/queue/clear', { queue, state: '*' });
 
 	fetchCurrentQueue();
 	fetchJobs();
 }
 
 async function promoteAllJobs() {
-	if (tab.value === '-') return;
+	const queue = currentQueue.value;
+	if (queue == null) return;
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
@@ -307,14 +424,15 @@ async function promoteAllJobs() {
 	});
 	if (canceled) return;
 
-	os.apiWithDialog('admin/queue/promote-jobs', { queue: tab.value });
+	os.apiWithDialog('admin/queue/promote-jobs', { queue });
 
 	fetchCurrentQueue();
 	fetchJobs();
 }
 
 async function pauseQueue() {
-	if (tab.value === '-') return;
+	const queue = currentQueue.value;
+	if (queue == null) return;
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
@@ -322,23 +440,25 @@ async function pauseQueue() {
 	});
 	if (canceled) return;
 
-	await os.apiWithDialog('admin/queue/pause', { queue: tab.value });
+	await os.apiWithDialog('admin/queue/pause', { queue });
 
 	fetchCurrentQueue();
 	fetchJobs();
 }
 
 async function resumeQueue() {
-	if (tab.value === '-') return;
+	const queue = currentQueue.value;
+	if (queue == null) return;
 
-	await os.apiWithDialog('admin/queue/resume', { queue: tab.value });
+	await os.apiWithDialog('admin/queue/resume', { queue });
 
 	fetchCurrentQueue();
 	fetchJobs();
 }
 
 async function removeJobs() {
-	if (tab.value === '-' || jobState.value === 'latest') return;
+	const queue = currentQueue.value;
+	if (queue == null || jobState.value === 'latest') return;
 
 	const { canceled } = await os.confirm({
 		type: 'warning',
@@ -346,15 +466,16 @@ async function removeJobs() {
 	});
 	if (canceled) return;
 
-	os.apiWithDialog('admin/queue/clear', { queue: tab.value, state: jobState.value === 'all' ? '*' : jobState.value });
+	os.apiWithDialog('admin/queue/clear', { queue, state: jobState.value === 'all' ? '*' : jobState.value });
 
 	fetchCurrentQueue();
 	fetchJobs();
 }
 
 async function refreshJob(jobId: string) {
-	if (tab.value === '-') return;
-	const newJob = await misskeyApi('admin/queue/show-job', { queue: tab.value, jobId });
+	const queue = currentQueue.value;
+	if (queue == null) return;
+	const newJob = await misskeyApi('admin/queue/show-job', { queue, jobId });
 	const index = jobs.value.findIndex((job) => job.id === jobId);
 	if (index !== -1) {
 		jobs.value[index] = newJob;
@@ -371,6 +492,10 @@ const headerTabs = computed<{
 	key: '-',
 	title: i18n.ts.jobQueue,
 	icon: 'ti ti-list-check',
+}, {
+	key: 'outbox',
+	title: i18n.ts._queueOutbox.deadLetters,
+	icon: 'ti ti-alert-triangle',
 }, ...Misskey.queueTypes.map((q) => ({
 	key: q,
 	title: q,

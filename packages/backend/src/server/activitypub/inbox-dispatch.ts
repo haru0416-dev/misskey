@@ -59,8 +59,8 @@ import { followingExistsInDatabase } from '@/core/FollowingStore.js';
 import { fetchNoteByUriAndUserIdFromDatabase } from '@/core/NoteStore.js';
 import { listUsersByIdsFromDatabase, updateUserDeletedStateIfNotDeletedInDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { addDbJob, type DbQueue } from '@/core/queues.js';
-import { enqueueDbJobInOutbox } from '@/core/QueueOutboxStore.js';
+import { type DbQueue } from '@/core/queues.js';
+import { enqueueDbJobInOutbox, publishDbOutboxRowEagerly } from '@/core/QueueOutboxStore.js';
 import type { Config } from '@/config.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import {
@@ -451,15 +451,10 @@ async function deleteActorFromApForHonoApi(deps: HonoApiInboxDependencies, actor
 		return 'skip: already deleted or actor not found';
 	}
 
-	void addDbJob(deps.dbQueue, {
+	void publishDbOutboxRowEagerly(deps.db, deps.dbQueue, outboxId, {
 		name: 'deleteAccount',
 		data: { user: { id: actor.id } },
-		opts: {
-			...queueRetentionOptions(deps.config),
-			jobId: `outbox-${outboxId}`,
-		},
-	}).catch(() => {
-		// The outbox dispatcher retries when the low-latency enqueue path is unavailable.
+		opts: queueRetentionOptions(deps.config),
 	});
 	deps.publishInternalEvent?.('remoteUserUpdated', { id: actor.id });
 

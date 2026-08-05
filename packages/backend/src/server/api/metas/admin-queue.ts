@@ -4,7 +4,7 @@
  */
 
 import { QUEUE_TYPES } from '@/core/QueueAdminLogic.js';
-import { adminQueueClearParamDef, adminQueueJobParamDef, adminQueueJobsParamDef, adminQueueSelectParamDef } from '@/server/rest/admin-queue.js';
+import { adminQueueClearParamDef, adminQueueJobParamDef, adminQueueJobsParamDef, adminQueueOutboxJobParamDef, adminQueueOutboxJobsParamDef, adminQueueSelectParamDef } from '@/server/rest/admin-queue.js';
 import { z } from 'zod';
 
 export const endpointMetas = {
@@ -185,6 +185,73 @@ export const endpointMetas = {
 		} as const,
 		paramDef: adminQueueJobsParamDef,
 	},
+	'admin/queue/outbox-dead-letters': {
+		meta: {
+			tags: ['admin'],
+
+			requireCredential: true,
+			requireModerator: true,
+			kind: 'read:admin:queue',
+
+			res: {
+				type: 'array',
+				optional: false, nullable: false,
+				items: {
+					type: 'object',
+					optional: false, nullable: false,
+					properties: {
+						id: { type: 'string', optional: false, nullable: false },
+						queue: { type: 'string', optional: false, nullable: false, enum: ['deliver', 'db'] },
+						name: { type: 'string', optional: false, nullable: false },
+						coordinatorId: { type: 'string', optional: false, nullable: true },
+						externalJobId: { type: 'string', optional: false, nullable: true },
+						deadLetterReason: { type: 'string', optional: false, nullable: false, enum: ['deliveryFailed', 'invalidPayload'] },
+						lastError: { type: 'object', optional: false, nullable: true, additionalProperties: true },
+						revision: { type: 'number', optional: false, nullable: false },
+						// deadLetterReason='invalidPayload' の行は「data / opts がジョブとして解釈できない値だった」ことが隔離理由そのものなので、
+						// 配列・文字列・null など object 以外もそのまま入っている。object と宣言すると生成SDKの型が実物と食い違う
+						data: { optional: false, nullable: true },
+						opts: { optional: false, nullable: true },
+						createdAt: { type: 'string', optional: false, nullable: false, format: 'date-time' },
+						updatedAt: { type: 'string', optional: false, nullable: false, format: 'date-time' },
+					},
+				},
+			},
+		} as const,
+		paramDef: adminQueueOutboxJobsParamDef,
+	},
+	'admin/queue/retry-outbox-dead-letter': {
+		meta: {
+			tags: ['admin'],
+			requireCredential: true,
+			requireModerator: true,
+			kind: 'write:admin:queue',
+			errors: {
+				stateChanged: {
+					message: 'The queue outbox item has changed.',
+					code: 'QUEUE_OUTBOX_STATE_CHANGED',
+					id: '9209ed67-4fa3-44e9-955b-a6c5d6df172f',
+				},
+			},
+		} as const,
+		paramDef: adminQueueOutboxJobParamDef,
+	},
+	'admin/queue/abandon-outbox-dead-letter': {
+		meta: {
+			tags: ['admin'],
+			requireCredential: true,
+			requireModerator: true,
+			kind: 'write:admin:queue',
+			errors: {
+				stateChanged: {
+					message: 'The queue outbox item has changed.',
+					code: 'QUEUE_OUTBOX_STATE_CHANGED',
+					id: '9209ed67-4fa3-44e9-955b-a6c5d6df172f',
+				},
+			},
+		} as const,
+		paramDef: adminQueueOutboxJobParamDef,
+	},
 	'admin/queue/stats': {
 		meta: {
 			tags: ['admin'],
@@ -254,6 +321,9 @@ export const endpointMetas = {
 							optional: false, nullable: true,
 							properties: {
 								pending: { type: 'number', optional: false, nullable: false },
+								deadLetter: { type: 'number', optional: false, nullable: false },
+								deliveryFailed: { type: 'number', optional: false, nullable: false },
+								invalidPayload: { type: 'number', optional: false, nullable: false },
 								oldestPendingAgeMs: { type: 'number', optional: false, nullable: true },
 							},
 						},
@@ -314,6 +384,9 @@ export const endpointMetas = {
 						optional: false, nullable: true,
 						properties: {
 							pending: { type: 'number', optional: false, nullable: false },
+							deadLetter: { type: 'number', optional: false, nullable: false },
+							deliveryFailed: { type: 'number', optional: false, nullable: false },
+							invalidPayload: { type: 'number', optional: false, nullable: false },
 							oldestPendingAgeMs: { type: 'number', optional: false, nullable: true },
 						},
 					},

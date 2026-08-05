@@ -71,6 +71,20 @@
       "when": 1785600381422,
       "tag": "0009_closed_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785908749845,
+      "tag": "0010_sharp_union_jack",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785940244606,
+      "tag": "0012_soft_tag",
+      "breakpoints": true
     }
   ]
 }
