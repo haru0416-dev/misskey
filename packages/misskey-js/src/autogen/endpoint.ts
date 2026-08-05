@@ -75,11 +75,14 @@ import type {
     AdminInviteListResponse,
     AdminMetaResponse,
     AdminPromoCreateRequest,
+    AdminQueueAbandonOutboxDeadLetterRequest,
     AdminQueueClearRequest,
     AdminQueueDeliverDelayedResponse,
     AdminQueueInboxDelayedResponse,
     AdminQueueJobsRequest,
     AdminQueueJobsResponse,
+    AdminQueueOutboxDeadLettersRequest,
+    AdminQueueOutboxDeadLettersResponse,
     AdminQueuePauseRequest,
     AdminQueuePromoteJobsRequest,
     AdminQueueQueueStatsRequest,
@@ -88,6 +91,7 @@ import type {
     AdminQueueRemoveJobRequest,
     AdminQueueResumeRequest,
     AdminQueueRetryJobRequest,
+    AdminQueueRetryOutboxDeadLetterRequest,
     AdminQueueShowJobRequest,
     AdminQueueShowJobResponse,
     AdminQueueShowJobLogsRequest,
@@ -733,10 +737,15 @@ export type Endpoints = {
     'admin/invite/list': { req: AdminInviteListRequest; res: AdminInviteListResponse };
     'admin/meta': { req: EmptyRequest; res: AdminMetaResponse };
     'admin/promo/create': { req: AdminPromoCreateRequest; res: EmptyResponse };
+    'admin/queue/abandon-outbox-dead-letter': { req: AdminQueueAbandonOutboxDeadLetterRequest; res: EmptyResponse };
     'admin/queue/clear': { req: AdminQueueClearRequest; res: EmptyResponse };
     'admin/queue/deliver-delayed': { req: EmptyRequest; res: AdminQueueDeliverDelayedResponse };
     'admin/queue/inbox-delayed': { req: EmptyRequest; res: AdminQueueInboxDelayedResponse };
     'admin/queue/jobs': { req: AdminQueueJobsRequest; res: AdminQueueJobsResponse };
+    'admin/queue/outbox-dead-letters': {
+        req: AdminQueueOutboxDeadLettersRequest;
+        res: AdminQueueOutboxDeadLettersResponse;
+    };
     'admin/queue/pause': { req: AdminQueuePauseRequest; res: EmptyResponse };
     'admin/queue/promote-jobs': { req: AdminQueuePromoteJobsRequest; res: EmptyResponse };
     'admin/queue/queue-stats': { req: AdminQueueQueueStatsRequest; res: AdminQueueQueueStatsResponse };
@@ -744,6 +753,7 @@ export type Endpoints = {
     'admin/queue/remove-job': { req: AdminQueueRemoveJobRequest; res: EmptyResponse };
     'admin/queue/resume': { req: AdminQueueResumeRequest; res: EmptyResponse };
     'admin/queue/retry-job': { req: AdminQueueRetryJobRequest; res: EmptyResponse };
+    'admin/queue/retry-outbox-dead-letter': { req: AdminQueueRetryOutboxDeadLetterRequest; res: EmptyResponse };
     'admin/queue/show-job': { req: AdminQueueShowJobRequest; res: AdminQueueShowJobResponse };
     'admin/queue/show-job-logs': { req: AdminQueueShowJobLogsRequest; res: AdminQueueShowJobLogsResponse };
     'admin/queue/stats': { req: EmptyRequest; res: AdminQueueStatsResponse };

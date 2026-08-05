@@ -491,6 +491,15 @@ export type paths = {
          */
         post: operations['admin___promo___create'];
     };
+    '/admin/queue/abandon-outbox-dead-letter': {
+        /**
+         * admin/queue/abandon-outbox-dead-letter
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:admin:queue*
+         */
+        post: operations['admin___queue___abandon-outbox-dead-letter'];
+    };
     '/admin/queue/clear': {
         /**
          * admin/queue/clear
@@ -526,6 +535,15 @@ export type paths = {
          *     **Credential required**: *Yes* / **Permission**: *read:admin:queue*
          */
         post: operations['admin___queue___jobs'];
+    };
+    '/admin/queue/outbox-dead-letters': {
+        /**
+         * admin/queue/outbox-dead-letters
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *read:admin:queue*
+         */
+        post: operations['admin___queue___outbox-dead-letters'];
     };
     '/admin/queue/pause': {
         /**
@@ -589,6 +607,15 @@ export type paths = {
          *     **Credential required**: *Yes* / **Permission**: *write:admin:queue*
          */
         post: operations['admin___queue___retry-job'];
+    };
+    '/admin/queue/retry-outbox-dead-letter': {
+        /**
+         * admin/queue/retry-outbox-dead-letter
+         * @description No description provided.
+         *
+         *     **Credential required**: *Yes* / **Permission**: *write:admin:queue*
+         */
+        post: operations['admin___queue___retry-outbox-dead-letter'];
     };
     '/admin/queue/show-job': {
         /**
@@ -9708,6 +9735,69 @@ export interface operations {
             };
         };
     };
+    'admin___queue___abandon-outbox-dead-letter': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    outboxId: string;
+                    revision: number;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (without any results) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
     admin___queue___clear: {
         requestBody: {
             content: {
@@ -9977,6 +10067,91 @@ export interface operations {
             };
         };
     };
+    'admin___queue___outbox-dead-letters': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    limit?: number;
+                    untilId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (with results) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': {
+                        id: string;
+                        /** @enum {string} */
+                        queue: 'deliver' | 'db';
+                        name: string;
+                        coordinatorId: string | null;
+                        externalJobId: string | null;
+                        /** @enum {string} */
+                        deadLetterReason: 'deliveryFailed' | 'invalidPayload';
+                        lastError: {
+                            [key: string]: unknown;
+                        } | null;
+                        revision: number;
+                        data: unknown;
+                        opts: unknown;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        updatedAt: string;
+                    }[];
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
     admin___queue___pause: {
         requestBody: {
             content: {
@@ -10169,6 +10344,9 @@ export interface operations {
                         isPaused: boolean;
                         outbox: {
                             pending: number;
+                            deadLetter: number;
+                            deliveryFailed: number;
+                            invalidPayload: number;
                             oldestPendingAgeMs: number | null;
                         } | null;
                         metrics: {
@@ -10272,6 +10450,9 @@ export interface operations {
                         isPaused: boolean;
                         outbox: {
                             pending: number;
+                            deadLetter: number;
+                            deliveryFailed: number;
+                            invalidPayload: number;
                             oldestPendingAgeMs: number | null;
                         } | null;
                         metrics: {
@@ -10492,6 +10673,69 @@ export interface operations {
                         | 'userWebhookDeliver'
                         | 'systemWebhookDeliver';
                     jobId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK (without any results) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+            };
+            /** @description Client error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Authentication error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Forbidden error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description I'm Ai */
+            418: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+        };
+    };
+    'admin___queue___retry-outbox-dead-letter': {
+        requestBody: {
+            content: {
+                'application/json': {
+                    outboxId: string;
+                    revision: number;
                 };
             };
         };
@@ -11192,7 +11436,11 @@ export interface operations {
                     canEditMembersByModerator: boolean;
                     displayOrder: number;
                     policies: {
-                        [key: string]: unknown;
+                        [key: string]: {
+                            useDefault: boolean;
+                            priority: number;
+                            value: unknown;
+                        };
                     };
                 };
             };
@@ -11530,7 +11778,11 @@ export interface operations {
                     canEditMembersByModerator?: boolean;
                     displayOrder?: number;
                     policies?: {
-                        [key: string]: unknown;
+                        [key: string]: {
+                            useDefault: boolean;
+                            priority: number;
+                            value: unknown;
+                        };
                     };
                 };
             };
