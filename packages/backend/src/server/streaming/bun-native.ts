@@ -8,6 +8,7 @@ import { updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
 import { HonoApiError } from '../rest/error.js';
 import { authenticateHonoApiToken } from '../rest/auth.js';
 import { HonoStreamConnection, refreshHonoStreamConnections } from './connection.js';
+import { emitHonoStreamRedisMessage } from './server.js';
 import type { HonoStreamServerDependencies } from './server.js';
 
 const IDLE_TIMEOUT_MS = 1000 * 60 * 2;
@@ -39,15 +40,7 @@ function errorResponse(error: HonoApiError): Response {
 export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies, streamingPath = '/streaming') {
 	const globalEv = new EventEmitter();
 	globalEv.setMaxListeners(0);
-	const onRedisMessage = (_channelName: string, data: string) => {
-		let parsed: { channel: string; message: unknown };
-		try {
-			parsed = JSON.parse(data);
-		} catch {
-			return;
-		}
-		globalEv.emit(parsed.channel, parsed.message);
-	};
+	const onRedisMessage = (_channelName: string, data: string) => emitHonoStreamRedisMessage(globalEv, data);
 	deps.redisForSub.on('message', onRedisMessage);
 	const activeConnections = new Map<HonoStreamConnection, () => void>();
 	let reconnectRefreshPromise: Promise<void> | undefined;
