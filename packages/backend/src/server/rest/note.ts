@@ -1278,6 +1278,9 @@ export async function handleHonoApiUsersNotes(
 			excludeReplies: params.withChannelNotes && !params.withReplies,
 			excludeNoFiles: params.withChannelNotes && params.withFiles,
 			excludePureRenotes: !params.withRenotes,
+			// noteFilter が note.channel.isSensitive を読むため必須 (他の呼び出し元は読まないので付けない)。
+			// 自分自身の一覧ではセンシティブ判定自体が無効なので、その分のチャンネル取得も要らない
+			hydrateChannels: !isSelf,
 			noteFilter: note => {
 				if (note.channel?.isSensitive && !isSelf) return false;
 				if (note.visibility === 'specified' && (!me || (me.id !== note.userId && !note.visibleUserIds.some(v => v === me.id)))) return false;

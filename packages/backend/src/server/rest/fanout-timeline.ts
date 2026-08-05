@@ -6,6 +6,7 @@
 import type * as Redis from 'ioredis';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
+import { listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/RenoteMutingStore.js';
@@ -18,6 +19,7 @@ import { isReply } from '@/misc/is-reply.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
+import type { MiChannel } from '@/models/Channel.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -32,30 +34,38 @@ type NoteFilter = (note: MiNote) => boolean;
 async function listFanoutTimelineNotesByIds(
 	db: MiDrizzleDatabase,
 	noteIds: MiNote['id'][],
+	hydrateChannels: boolean,
 ): Promise<MiNote[]> {
 	const notes = await listNotesByIdsFromDatabase(db, noteIds);
 	const relationIds = new Set<MiNote['id']>();
 	const userIds = new Set<MiUser['id']>();
+	const channelIds = new Set<MiChannel['id']>();
 	for (const note of notes) {
 		userIds.add(note.userId);
 		if (note.replyId != null) relationIds.add(note.replyId);
 		if (note.renoteId != null) relationIds.add(note.renoteId);
 		if (note.replyUserId != null) userIds.add(note.replyUserId);
 		if (note.renoteUserId != null) userIds.add(note.renoteUserId);
+		if (hydrateChannels && note.channelId != null) channelIds.add(note.channelId);
 	}
 
-	const [relations, users] = await Promise.all([
+	const [relations, users, channels] = await Promise.all([
 		listNotesByIdsFromDatabase(db, [...relationIds]),
 		listUsersByIdsFromDatabase(db, [...userIds], { includeSuspended: true }),
+		// 空配列なら listChannelsByIdsFromDatabase 側で早期 return されるので、
+		// note.channel を読まない呼び出し元にクエリ1本を課金せずに済む
+		listChannelsByIdsFromDatabase(db, [...channelIds]),
 	]);
 	const relationById = new Map(relations.map(note => [note.id, note]));
 	const userById = new Map(users.map(user => [user.id, user]));
+	const channelById = new Map(channels.map(channel => [channel.id, channel]));
 
 	return notes.flatMap(note => {
 		const user = userById.get(note.userId);
 		if (user == null) return [];
 
 		note.user = user;
+		if (hydrateChannels) note.channel = note.channelId == null ? null : (channelById.get(note.channelId) ?? null);
 		note.reply = note.replyId == null ? null : (relationById.get(note.replyId) ?? null);
 		note.renote = note.renoteId == null ? null : (relationById.get(note.renoteId) ?? null);
 		if (note.reply != null) note.reply.user = userById.get(note.reply.userId) ?? null;
@@ -73,6 +83,13 @@ export type FanoutTimelineReadOptions = {
 	useDbFallback: boolean;
 	redisTimelines: string[];
 	noteFilter?: NoteFilter;
+	/**
+	 * noteFilter が `note.channel` を読むなら必ず true にすること。false のままだと
+	 * `note.channel` は undefined のままなので、チャンネル起因の除外が黙って素通りする。
+	 * 逆に読まない呼び出し元で true にすると、捨てるだけのチャンネル取得が1本増える
+	 * (`note.channelId` / `note.renoteChannelId` を見るだけの判定にはhydrate不要)。
+	 */
+	hydrateChannels?: boolean;
 	alwaysIncludeMyNotes?: boolean;
 	ignoreAuthorFromBlock?: boolean;
 	ignoreAuthorFromMute?: boolean;
@@ -221,7 +238,7 @@ export async function getFanoutTimelineNotesForHonoApi(deps: FanoutTimelineReadD
 
 			readFromRedis += noteIds.length;
 
-			const notes = (await listFanoutTimelineNotesByIds(deps.db, noteIds)).filter(filter);
+			const notes = (await listFanoutTimelineNotesByIds(deps.db, noteIds, ps.hydrateChannels ?? false)).filter(filter);
 			notes.sort((a, b) => idCompare(a.id, b.id));
 			redisTimeline.push(...notes);
 			lastSuccessfulRate = notes.length / noteIds.length;
