@@ -1033,7 +1033,7 @@ describe('Note', () => {
 			let cannotTranslateRole: misskey.entities.Role;
 
 			beforeAll(async () => {
-				cannotTranslateRole = await role(root, {}, { canUseTranslator: false });
+				cannotTranslateRole = await role(root, {}, { canUseTranslator: { priority: 1, useDefault: false, value: false } });
 				await api('admin/roles/assign', { roleId: cannotTranslateRole.id, userId: alice.id }, root);
 			});
 

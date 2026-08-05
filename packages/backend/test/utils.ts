@@ -278,11 +278,12 @@ export const role = async (user: UserToken, role: Partial<misskey.entities.Role>
 		name: 'New Role',
 		target: 'manual',
 		policies: {
-			...Object.entries(DEFAULT_POLICIES).map(([k, v]) => [k, {
+			// spread するのは配列ではなくオブジェクト (以前は 0,1,2... の数値キーになっていた)
+			...Object.fromEntries(Object.entries(DEFAULT_POLICIES).map(([k, v]) => [k, {
 				priority: 0,
 				useDefault: true,
 				value: v,
-			}]),
+			}])),
 			...policies,
 		},
 		...role,
