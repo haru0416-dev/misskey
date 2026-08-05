@@ -51,6 +51,14 @@ export type HonoApiAdminRoleDependencies = {
 	publishMainStream?: HonoApiMainStreamPublisher;
 };
 
+// policies は jsonb へそのまま保存され、ロール適用のたびに読まれる。
+// ここで形を保証しないと、壊れた値がそのロールを持つ全ユーザーの全APIを500にする。
+const rolePoliciesRecord = z.record(z.string(), z.object({
+	useDefault: z.boolean(),
+	priority: z.number().int(),
+	value: z.unknown(),
+}));
+
 export const adminRolesAssignParamDef = z.object({
 	roleId: misskeyId(),
 	userId: misskeyId(),
@@ -72,7 +80,7 @@ export const adminRolesCreateParamDef = z.object({
 	preserveAssignmentOnMoveAccount: z.boolean().optional(),
 	canEditMembersByModerator: z.boolean(),
 	displayOrder: z.number(),
-	policies: z.record(z.string(), z.unknown()),
+	policies: rolePoliciesRecord,
 });
 
 export const adminRolesListParamDef = z.object({});
@@ -106,7 +114,7 @@ export const adminRolesUpdateParamDef = z.object({
 	preserveAssignmentOnMoveAccount: z.boolean().optional(),
 	canEditMembersByModerator: z.boolean().optional(),
 	displayOrder: z.number().optional(),
-	policies: z.record(z.string(), z.unknown()).optional(),
+	policies: rolePoliciesRecord.optional(),
 });
 
 export const adminRolesUpdateDefaultPoliciesParamDef = z.object({
