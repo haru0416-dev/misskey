@@ -13,7 +13,7 @@ function hasKeyword(matrix: string[][]): boolean {
 	return matrix.some(group => group.some(keyword => keyword !== ''));
 }
 
-export const exportedAntennaSchema = z.object({
+const exportedAntennaSchema = z.object({
 	name: z.string().min(1).max(100),
 	src: z.enum(['home', 'all', 'users', 'list', 'users_blacklist']),
 	userListAccts: z.array(z.string()).nullable(),
