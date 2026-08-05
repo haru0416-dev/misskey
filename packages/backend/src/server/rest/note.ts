@@ -1282,7 +1282,8 @@ export async function handleHonoApiUsersNotes(
 			// 自分自身の一覧ではセンシティブ判定自体が無効なので、その分のチャンネル取得も要らない
 			hydrateChannels: !isSelf,
 			noteFilter: note => {
-				if (note.channel?.isSensitive && !isSelf) return false;
+				// リノート経由でも本文が露出するので、リノート先のチャンネルも同じ基準で弾く
+				if (!isSelf && (note.channel?.isSensitive || note.renote?.channel?.isSensitive)) return false;
 				if (note.visibility === 'specified' && (!me || (me.id !== note.userId && !note.visibleUserIds.some(v => v === me.id)))) return false;
 				if (note.visibility === 'followers' && !isFollowing && !isSelf) return false;
 

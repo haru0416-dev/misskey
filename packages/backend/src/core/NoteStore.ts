@@ -1543,6 +1543,15 @@ export async function listUserTimelineNotesFromDatabase(
 		)`);
 	}
 
+	// リノートは note 自体のチャンネルが NULL なので withChannelNotes の分岐に入れてはいけない
+	// (withChannelNotes: false でもセンシティブチャンネル投稿のリノートは本文ごと出てしまう)
+	if (!isSelf) {
+		conditions.push(sql`(
+			"note"."renoteChannelId" IS NULL
+			OR "renoteChannel"."isSensitive" = FALSE
+		)`);
+	}
+
 	if (options.withFiles) {
 		conditions.push(sql`${note.fileIds} != '{}'`);
 	}
@@ -1560,6 +1569,7 @@ export async function listUserTimelineNotesFromDatabase(
 		INNER JOIN "user" AS "user" ON "user"."id" = "note"."userId"
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "channel" AS "channel" ON "channel"."id" = "note"."channelId"
+		LEFT JOIN "channel" AS "renoteChannel" ON "renoteChannel"."id" = "note"."renoteChannelId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
 		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
