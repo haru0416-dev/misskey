@@ -8,7 +8,7 @@ import { assertCredential, assertTokenPermission, authenticateHonoApiToken } fro
 import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from '../admin-stats.js';
 import { rolePermissionDeniedError } from '../error.js';
 import { handleHonoApiAdminCaptchaCurrent, handleHonoApiAdminCaptchaSave } from '../captcha.js';
-import { handleHonoApiAdminQueueClear, handleHonoApiAdminQueueDeliverDelayed, handleHonoApiAdminQueueInboxDelayed, handleHonoApiAdminQueueJobs, handleHonoApiAdminQueuePause, handleHonoApiAdminQueuePromoteJobs, handleHonoApiAdminQueueQueueStats, handleHonoApiAdminQueueQueues, handleHonoApiAdminQueueRemoveJob, handleHonoApiAdminQueueResume, handleHonoApiAdminQueueRetryJob, handleHonoApiAdminQueueShowJob, handleHonoApiAdminQueueShowJobLogs, handleHonoApiAdminQueueStats } from '../admin-queue.js';
+import { handleHonoApiAdminQueueAbandonOutboxDeadLetter, handleHonoApiAdminQueueClear, handleHonoApiAdminQueueDeliverDelayed, handleHonoApiAdminQueueInboxDelayed, handleHonoApiAdminQueueJobs, handleHonoApiAdminQueueOutboxDeadLetters, handleHonoApiAdminQueuePause, handleHonoApiAdminQueuePromoteJobs, handleHonoApiAdminQueueQueueStats, handleHonoApiAdminQueueQueues, handleHonoApiAdminQueueRemoveJob, handleHonoApiAdminQueueResume, handleHonoApiAdminQueueRetryJob, handleHonoApiAdminQueueRetryOutboxDeadLetter, handleHonoApiAdminQueueShowJob, handleHonoApiAdminQueueShowJobLogs, handleHonoApiAdminQueueStats } from '../admin-queue.js';
 import { isHonoApiAdministrator } from '../role-policy.js';
 import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint, assertHonoApiModerator, assertHonoApiAdmin } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
@@ -83,6 +83,44 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 			await assertHonoApiModerator(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminQueueJobs(deps, body));
+		});
+	});
+
+	app.post('/admin/queue/outbox-dead-letters', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'read:admin:queue');
+			await assertHonoApiModerator(deps, auth);
+
+			return jsonResponse(c, await handleHonoApiAdminQueueOutboxDeadLetters(deps, body));
+		});
+	});
+
+	app.post('/admin/queue/retry-outbox-dead-letter', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:queue');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminQueueRetryOutboxDeadLetter(deps, body);
+			return emptyResponse(c);
+		});
+	});
+
+	app.post('/admin/queue/abandon-outbox-dead-letter', async (c) => {
+		return await runApiEndpoint(c, async () => {
+			const body = await jsonBody(c);
+			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			assertCredential(auth);
+			assertTokenPermission(auth, 'write:admin:queue');
+			await assertHonoApiModerator(deps, auth);
+
+			await handleHonoApiAdminQueueAbandonOutboxDeadLetter(deps, body);
+			return emptyResponse(c);
 		});
 	});
 

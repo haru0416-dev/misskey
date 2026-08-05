@@ -5,10 +5,11 @@
 
 import { z } from 'zod';
 import type { JobType } from 'bullmq';
-import { clearQueue, getDelayedDeliverHosts, getDelayedInboxHosts, getLegacyQueueCounts, getQueueJob, getQueueJobLogs, getQueueJobs, getQueues, getQueueStats, pauseQueue, promoteQueueJobs, QUEUE_TYPES, removeQueueJob, resumeQueue, retryQueueJob, type AdminQueueDependencies, type QueueClearState, type QueueType } from '@/core/QueueAdminLogic.js';
+import { abandonQueueOutboxDeadLetter, clearQueue, getDelayedDeliverHosts, getDelayedInboxHosts, getLegacyQueueCounts, getQueueJob, getQueueJobLogs, getQueueJobs, getQueues, getQueueStats, listQueueOutboxDeadLetters, pauseQueue, promoteQueueJobs, QUEUE_TYPES, removeQueueJob, resumeQueue, retryQueueJob, retryQueueOutboxDeadLetter, type AdminQueueDependencies, type QueueClearState, type QueueType } from '@/core/QueueAdminLogic.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
+import { HonoApiError } from './error.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminQueueDependencies = AdminQueueDependencies & {
@@ -35,6 +36,16 @@ export const adminQueueJobsParamDef = z.object({
 export const adminQueueJobParamDef = z.object({
 	queue: z.enum(QUEUE_TYPES),
 	jobId: z.string(),
+});
+
+export const adminQueueOutboxJobsParamDef = z.object({
+	limit: z.number().int().min(1).max(100).optional(),
+	untilId: z.string().min(1).max(32).optional(),
+});
+
+export const adminQueueOutboxJobParamDef = z.object({
+	outboxId: z.string().min(1).max(32),
+	revision: z.number().int().min(0),
 });
 
 type AdminQueueSelectParams = z.infer<typeof adminQueueSelectParamDef> & {
@@ -107,6 +118,53 @@ export async function handleHonoApiAdminQueueJobs(
 	const ps = parseHonoApiParams(adminQueueJobsParamDef, body);
 
 	return await getQueueJobs(deps, ps.queue, ps.state, ps.search);
+}
+
+export async function handleHonoApiAdminQueueOutboxDeadLetters(
+	deps: HonoApiAdminQueueDependencies,
+	body: Record<string, unknown>,
+) {
+	const ps = parseHonoApiParams(adminQueueOutboxJobsParamDef, body);
+	const rows = await listQueueOutboxDeadLetters(deps, ps.limit ?? 50, ps.untilId);
+	return rows.map(row => ({
+		id: row.id,
+		queue: row.queue,
+		name: row.name,
+		coordinatorId: row.coordinatorId,
+		externalJobId: row.externalJobId,
+		deadLetterReason: row.deadLetterReason,
+		lastError: row.lastError,
+		revision: row.revision,
+		data: row.data,
+		opts: row.opts,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+	}));
+}
+
+function outboxStateChangedError(): HonoApiError {
+	return new HonoApiError({
+		status: 409,
+		message: 'The queue outbox item has changed.',
+		code: 'QUEUE_OUTBOX_STATE_CHANGED',
+		id: '9209ed67-4fa3-44e9-955b-a6c5d6df172f',
+	});
+}
+
+export async function handleHonoApiAdminQueueRetryOutboxDeadLetter(
+	deps: HonoApiAdminQueueDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const ps = parseHonoApiParams(adminQueueOutboxJobParamDef, body);
+	if (!await retryQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision)) throw outboxStateChangedError();
+}
+
+export async function handleHonoApiAdminQueueAbandonOutboxDeadLetter(
+	deps: HonoApiAdminQueueDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
+	const ps = parseHonoApiParams(adminQueueOutboxJobParamDef, body);
+	if (!await abandonQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision)) throw outboxStateChangedError();
 }
 
 export async function handleHonoApiAdminQueueShowJob(

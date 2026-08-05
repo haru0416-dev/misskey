@@ -4,7 +4,6 @@
  */
 
 import { MetricsTime, type JobType } from 'bullmq';
-import { eq } from 'drizzle-orm';
 import type { Packed } from '@/misc/json-schema.js';
 import type {
 	DbQueue,
@@ -20,8 +19,7 @@ import type {
 } from '@/core/queues.js';
 import type * as Bull from 'bullmq';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { getQueueOutboxStats } from '@/core/QueueOutboxStore.js';
-import { queueOutbox } from '@/db/schema/queue-outbox.js';
+import { abandonDeadLetterOutboxInDatabase, fetchQueueOutboxByIdFromDatabase, getQueueOutboxStats, listDeadLetterQueueOutboxFromDatabase, retryDeadLetterOutboxInDatabase } from '@/core/QueueOutboxStore.js';
 
 export const QUEUE_TYPES = [
 	'system',
@@ -167,33 +165,56 @@ export async function resumeQueue(deps: AdminQueueDependencies, queueType: Queue
 
 export async function retryQueueJob(deps: AdminQueueDependencies, queueType: QueueType, jobId: string): Promise<void> {
 	const queue = getQueue(deps, queueType);
-	const retry = async () => {
-		const job = await queue.getJob(jobId);
-		if (job != null) {
-			if (job.finishedOn != null) {
-				await job.retry();
-			} else {
-				await job.promote();
-			}
-		}
-	};
 	const outboxId = queueType === 'deliver' && jobId.startsWith('outbox-') ? jobId.slice('outbox-'.length) : null;
-	if (outboxId == null || outboxId.length === 0) {
-		await retry();
-		return;
+	if (outboxId != null && outboxId.length > 0) {
+		const outbox = await fetchQueueOutboxByIdFromDatabase(deps.db, outboxId);
+		if (outbox?.state === 'deadLetter') {
+			await (await queue.getJob(jobId))?.remove();
+			await retryDeadLetterOutboxInDatabase(deps.db, outboxId, outbox.revision);
+			return;
+		}
 	}
-	await deps.db.transaction(async tx => {
-		await tx.select({ id: queueOutbox.id }).from(queueOutbox).where(eq(queueOutbox.id, outboxId)).for('update');
-		await retry();
-	});
+
+	const job = await queue.getJob(jobId);
+	if (job != null) {
+		if (job.finishedOn != null) {
+			await job.retry();
+		} else {
+			await job.promote();
+		}
+	}
 }
 
 export async function removeQueueJob(deps: AdminQueueDependencies, queueType: QueueType, jobId: string): Promise<void> {
 	const queue = getQueue(deps, queueType);
-	const job = await queue.getJob(jobId);
-	if (job != null) {
-		await job.remove();
+	const outboxId = queueType === 'deliver' && jobId.startsWith('outbox-') ? jobId.slice('outbox-'.length) : null;
+	const outbox = outboxId == null || outboxId.length === 0 ? null : await fetchQueueOutboxByIdFromDatabase(deps.db, outboxId);
+	await (await queue.getJob(jobId))?.remove();
+	if (outbox?.state === 'deadLetter') {
+		await abandonDeadLetterOutboxInDatabase(deps.db, outbox.id, outbox.revision);
 	}
+}
+
+export async function listQueueOutboxDeadLetters(deps: Pick<AdminQueueDependencies, 'db'>, limit: number, untilId?: string) {
+	return await listDeadLetterQueueOutboxFromDatabase(deps.db, limit, untilId);
+}
+
+export async function retryQueueOutboxDeadLetter(deps: AdminQueueDependencies, id: string, revision: number): Promise<boolean> {
+	const outbox = await fetchQueueOutboxByIdFromDatabase(deps.db, id);
+	if (outbox?.state !== 'deadLetter' || outbox.revision !== revision) return false;
+	if (outbox.queue === 'deliver') {
+		await (await deps.deliverQueue.getJob(outbox.externalJobId ?? `outbox-${outbox.id}`))?.remove();
+	}
+	return await retryDeadLetterOutboxInDatabase(deps.db, id, revision);
+}
+
+export async function abandonQueueOutboxDeadLetter(deps: AdminQueueDependencies, id: string, revision: number): Promise<boolean> {
+	const outbox = await fetchQueueOutboxByIdFromDatabase(deps.db, id);
+	if (outbox?.state !== 'deadLetter' || outbox.revision !== revision) return false;
+	if (outbox.queue === 'deliver') {
+		await (await deps.deliverQueue.getJob(outbox.externalJobId ?? `outbox-${outbox.id}`))?.remove();
+	}
+	return await abandonDeadLetterOutboxInDatabase(deps.db, id, revision);
 }
 
 export function packQueueJob(job: Bull.Job): Packed<'QueueJob'> {
