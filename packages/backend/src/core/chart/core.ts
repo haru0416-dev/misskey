@@ -10,6 +10,9 @@ import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
+/** `chartDb` 本体でもトランザクションでも同じように使えるよう、必要な口だけ切り出したもの */
+type ChartQueryExecutor = Pick<MiDrizzleDatabase, 'execute'>;
+
 const COLUMN_PREFIX = '___' as const;
 const UNIQUE_TEMP_COLUMN_PREFIX = 'unique_temp___' as const;
 const COLUMN_DELIMITER = '_' as const;
@@ -354,11 +357,11 @@ export default abstract class Chart<T extends Schema> {
 		return result.rows[0] as RawRecord<T>;
 	}
 
-	private async updateLogById(span: 'hour' | 'day', id: number, values: Record<string, number | SQL | unknown[]>): Promise<void> {
+	private async updateLogById(span: 'hour' | 'day', id: number, values: Record<string, number | SQL | unknown[]>, executor: ChartQueryExecutor = this.chartDb): Promise<void> {
 		const entries = Object.entries(values);
 		if (entries.length === 0) return;
 
-		await this.chartDb.execute(sql`
+		await executor.execute(sql`
 			UPDATE ${identifierSql(this.getTable(span))}
 			SET ${sql.join(entries.map(([column, value]) => sql`${identifierSql(column)} = ${assignmentValueSql(value)}`), sql`, `)}
 			WHERE "id" = ${id}
@@ -594,10 +597,12 @@ export default abstract class Chart<T extends Schema> {
 			}
 
 			// ログ更新
-			await Promise.all([
-				this.updateLogById('hour', logHour.id, queryForHour),
-				this.updateLogById('day', logDay.id, queryForDay),
-			]);
+			// hour と day を別トランザクションで書くと、片方だけ成功したときも buffer が残り、
+			// 次回 save で成功済みの span へ同じ diff がもう一度加算されて値が二重になる
+			await this.chartDb.transaction(async transaction => {
+				await this.updateLogById('hour', logHour.id, queryForHour, transaction);
+				await this.updateLogById('day', logDay.id, queryForDay, transaction);
+			});
 
 			this.logger.info(`${this.name + (logHour.group ? `:${logHour.group}` : '')}: Updated`);
 
@@ -631,10 +636,11 @@ export default abstract class Chart<T extends Schema> {
 		}
 
 		const update = async (logHour: RawRecord<T>, logDay: RawRecord<T>): Promise<void> => {
-			await Promise.all([
-				this.updateLogById('hour', logHour.id, columns),
-				this.updateLogById('day', logDay.id, columns),
-			]);
+			// save() 側と同じ理由で、hour と day は同一トランザクションで更新する
+			await this.chartDb.transaction(async transaction => {
+				await this.updateLogById('hour', logHour.id, columns, transaction);
+				await this.updateLogById('day', logDay.id, columns, transaction);
+			});
 		};
 
 		return Promise.all([
