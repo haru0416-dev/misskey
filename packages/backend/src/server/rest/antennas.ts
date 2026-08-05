@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
 	appendUserToAntennasInDatabase,
-	createAntennaWithinLimitInDatabase,
+	createAntennasWithinLimitInDatabase,
 	deleteAntennaFromDatabase,
 	fetchAntennaByIdAndUserIdFromDatabase,
 	fetchAntennaByIdOrFailFromDatabase,
@@ -23,6 +23,7 @@ import { followingExistsInDatabase, listFollowerIdsByFolloweeIdAndFollowerIdsFro
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listUserListIdsContainingUserFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
 import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import * as Acct from '@/misc/acct.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -34,6 +35,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
+import type { MiUserList } from '@/models/UserList.js';
 import { HonoApiError } from './error.js';
 import type { HonoApiAntennaStreamPublisher, HonoApiInternalEventPublisher } from './events.js';
 import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
@@ -111,7 +113,16 @@ export async function checkHitAntennaForHonoApi(
 		if (!isFollowing && antenna.userId !== note.userId) return false;
 	}
 
-	if (antenna.src === 'list') {
+	if (antenna.src === 'home') {
+		// ホーム = アンテナ所有者のホームタイムラインに流れるノート (自分の投稿 + フォロー中ユーザーの投稿)。
+		// hint.followerIds は「note.userId をフォローしている候補ユーザー」なので所有者が居れば follow 済み。
+		if (note.userId !== antenna.userId) {
+			const isFollowing = hint?.followerIds != null
+				? hint.followerIds.has(antenna.userId)
+				: await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
+			if (!isFollowing) return false;
+		}
+	} else if (antenna.src === 'list') {
 		if (antenna.userListId == null) return false;
 		const exists = hint
 			? hint.listMembershipUserListIds.has(antenna.userListId)
@@ -219,11 +230,12 @@ export async function addNoteToAntennasForHonoApi(
 			.filter((antenna): antenna is MiAntenna & { userListId: string } => antenna.src === 'list' && antenna.userListId != null)
 			.map(antenna => antenna.userListId),
 	)];
-	const followerCandidateIds = note.visibility === 'followers'
-		? [...new Set(antennas
-			.filter(antenna => antenna.userId !== note.userId && passesAntennaPreconditions(antenna, note, noteUser))
-			.map(antenna => antenna.userId))]
-		: [];
+	// followers 限定ノートの可視性判定と src === 'home' の判定はどちらも「そのアンテナの所有者が
+	// ノート投稿者をフォローしているか」なので、候補をまとめて1クエリで引く。
+	const followerCandidateIds = [...new Set(antennas
+		.filter(antenna => note.visibility === 'followers' || antenna.src === 'home')
+		.filter(antenna => antenna.userId !== note.userId && passesAntennaPreconditions(antenna, note, noteUser))
+		.map(antenna => antenna.userId))];
 	const [listMembershipUserListIds, followerIds] = await Promise.all([
 		listUserListIdsContainingUserFromDatabase(deps.db, note.userId, listAntennaUserListIds),
 		followerCandidateIds.length > 0
@@ -317,6 +329,14 @@ export const antennasCreateParamDef = z.object({
 	withReplies: z.boolean(),
 	withFile: z.boolean(),
 	excludeNotesInSensitiveChannel: z.boolean().optional(),
+}).superRefine((value, ctx) => {
+	if (value.src === 'list' && value.userListId == null) {
+		ctx.addIssue({
+			code: 'custom',
+			path: ['userListId'],
+			message: 'userListId is required when src is "list".',
+		});
+	}
 });
 
 type AntennasCreateParams = {
@@ -345,21 +365,23 @@ export async function handleHonoApiAntennasCreate(
 		throw emptyKeywordError('53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
 	}
 
-	const policies = await getHonoApiRolePolicies(deps, me);
-	let userList;
-	if (params.src === 'list' && params.userListId) {
-		userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.userListId, me.id);
+	// src が 'list' のアンテナは userListId を必ず持つ (持たないと checkHitAntenna が常に false になり、
+	// 何にもマッチしないアンテナが出来てしまう)。DB 側にも CHK_ANTENNA_LIST_SRC_REQUIRES_USER_LIST がある。
+	let userListId: MiUserList['id'] | null = null;
+	if (params.src === 'list') {
+		if (params.userListId == null) throw noSuchUserListError('95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
+		const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.userListId, me.id);
 		if (userList == null) throw noSuchUserListError('95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
+		userListId = userList.id;
 	}
 
 	const now = new Date();
-	const antenna = await createAntennaWithinLimitInDatabase(deps.db, {
+	const result = await createAntennasWithinLimitInDatabase(deps.db, me.id, [{
 		id: genId(now.getTime()),
 		lastUsedAt: now,
-		userId: me.id,
 		name: params.name,
 		src: params.src,
-		userListId: userList ? userList.id : null,
+		userListId,
 		keywords: params.keywords,
 		excludeKeywords: params.excludeKeywords,
 		users: params.users,
@@ -369,11 +391,17 @@ export async function handleHonoApiAntennasCreate(
 		withReplies: params.withReplies,
 		withFile: params.withFile,
 		excludeNotesInSensitiveChannel: params.excludeNotesInSensitiveChannel ?? false,
-	}, policies.antennaLimit);
-	if (antenna == null) {
+	}], async tx => {
+		const currentUser = await fetchUserByIdFromDatabase(tx, me.id);
+		if (currentUser == null) throw new Error('Authenticated user no longer exists');
+		return (await getHonoApiRolePolicies({ ...deps, db: tx }, currentUser)).antennaLimit;
+	});
+	if (result.status === 'limitExceeded') {
 		throw new HonoApiError({ status: 400, message: 'You cannot create antenna any more.', code: 'TOO_MANY_ANTENNAS', id: 'faf47050-e8b5-438c-913c-db2b1576fde4' });
 	}
 
+	const antenna = result.antennas[0];
+	if (antenna == null) throw new Error('Failed to create antenna');
 	deps.publishInternalEvent?.('antennaCreated', antenna);
 
 	return await packAntennaForHonoApi(deps, antenna);
@@ -393,6 +421,14 @@ export const antennasUpdateParamDef = z.object({
 	withReplies: z.boolean().optional(),
 	withFile: z.boolean().optional(),
 	excludeNotesInSensitiveChannel: z.boolean().optional(),
+}).superRefine((value, ctx) => {
+	if (value.src === 'list' && value.userListId === null) {
+		ctx.addIssue({
+			code: 'custom',
+			path: ['userListId'],
+			message: 'userListId is required when src is "list".',
+		});
+	}
 });
 
 type AntennasUpdateParams = {
@@ -427,16 +463,30 @@ export async function handleHonoApiAntennasUpdate(
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) throw noSuchAntennaError('10c673ac-8852-48eb-aa1f-f5b67f069290');
 
-	let userList;
-	if ((params.src === 'list' || antenna.src === 'list') && params.userListId) {
-		userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.userListId, me.id);
+	// undefined = 変更しない
+	let userListIdUpdate: MiUserList['id'] | null | undefined = undefined;
+	if (params.userListId != null) {
+		const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.userListId, me.id);
 		if (userList == null) throw noSuchUserListError('1c6b35c9-943e-48c2-81e4-2844989407f7');
+		userListIdUpdate = userList.id;
+	} else if (params.userListId === null) {
+		userListIdUpdate = null;
+	}
+
+	const nextSrc = params.src ?? antenna.src;
+	if (nextSrc === 'list') {
+		// list のアンテナを userListId 無しの状態にはできない (create と同じ不変条件)
+		const nextUserListId = userListIdUpdate !== undefined ? userListIdUpdate : antenna.userListId;
+		if (nextUserListId == null) throw noSuchUserListError('1c6b35c9-943e-48c2-81e4-2844989407f7');
+	} else if (userListIdUpdate != null || antenna.userListId != null) {
+		// list 以外では userListId は評価に使われないので保持しない
+		userListIdUpdate = null;
 	}
 
 	await updateAntennaInDatabase(deps.db, antenna.id, omitUndefined({
 		name: params.name,
 		src: params.src,
-		userListId: params.userListId !== undefined ? (userList ? userList.id : null) : undefined,
+		userListId: userListIdUpdate,
 		keywords: params.keywords,
 		excludeKeywords: params.excludeKeywords,
 		users: params.users,

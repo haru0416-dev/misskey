@@ -4,7 +4,7 @@
  */
 
 import { sql } from 'drizzle-orm';
-import { boolean, index, jsonb, pgEnum, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { boolean, check, index, jsonb, pgEnum, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 import { user } from './user.js';
@@ -37,6 +37,9 @@ export const antenna = pgTable('antenna', {
 	index('IDX_ANTENNA_USER_ID').on(table.userId),
 	index('IDX_ANTENNA_IS_ACTIVE').on(table.isActive),
 	index('IDX_ANTENNA_USER_LIST_ID').on(table.userListId),
+	// src='list' で userListId が無いアンテナは checkHitAntenna が常に false を返すため、
+	// 何にもマッチしない壊れたアンテナになる。表現不可能にしておく。
+	check('CHK_ANTENNA_LIST_SRC_REQUIRES_USER_LIST', sql`${table.src} <> 'list' OR ${table.userListId} IS NOT NULL`),
 ]);
 
 export type AntennaRow = typeof antenna.$inferSelect;
