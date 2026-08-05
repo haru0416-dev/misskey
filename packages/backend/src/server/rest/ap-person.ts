@@ -39,7 +39,6 @@ import {
 	createUserWithProfileAndPublickeyInDatabase,
 } from '@/core/UserStore.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
-import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { fetchUserPublickeyByUserIdFromDatabase, updateUserPublickeyInDatabase } from '@/core/UserPublickeyStore.js';
 import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
@@ -64,6 +63,7 @@ import {
 	type HonoApiApResolveDependencies,
 	type HonoApiAuthUser,
 } from './ap-resolve.js';
+import { HonoApiError } from './error.js';
 import { postMoveProcessForHonoApi, type HonoApiAccountMoveDependencies } from './account-move.js';
 import { uploadDriveFileFromUrlForHonoApi, type HonoApiDriveFileUploadDependencies } from './drive-file-upload.js';
 import { updateUsertagsForHonoApi } from './account-update.js';
@@ -736,11 +736,13 @@ export async function handleHonoApiFederationUpdateRemoteUser(deps: HonoApiApPer
 	const params = parseHonoApiParams(federationUpdateRemoteUserParamDef, body);
 
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
+	// IdentifiableError も生の Error も runApiEndpoint では 500 INTERNAL_ERROR になってしまうため、
+	// 「そのIDのユーザーが居ない」「ローカルユーザーを指定した」は明示的なAPIエラーとして返す
 	if (user == null) {
-		throw new IdentifiableError('15348ddd-432d-49c2-8a5a-8069753becff', 'No such user.');
+		throw new HonoApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id: '15348ddd-432d-49c2-8a5a-8069753becff' });
 	}
 	if (user.host == null) {
-		throw new Error('user is not a remote user');
+		throw new HonoApiError({ status: 400, message: 'User is not a remote user.', code: 'NOT_REMOTE_USER', id: 'e3ad347a-2493-4f8f-bac0-f91c88daa754' });
 	}
 
 	await updatePersonForHonoApi(deps, user.uri!, user as MiRemoteUser);

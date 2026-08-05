@@ -8,17 +8,16 @@ import { hashPassword } from '@/misc/password.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { EmailService } from '@/core/EmailService.js';
-import { consumePasswordResetRequestInDatabase, createPasswordResetRequestInDatabase, fetchPasswordResetRequestByTokenFromDatabase } from '@/core/PasswordResetRequestStore.js';
+import { consumePasswordResetRequestInDatabase, createPasswordResetRequestInDatabase, fetchPasswordResetRequestByTokenFromDatabase, isPasswordResetRequestExpired } from '@/core/PasswordResetRequestStore.js';
 import { fetchLocalUserByUsernameFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { parseId } from '@/misc/id/parse-id.js';
 import { getIpHash } from '@/misc/get-ip-hash.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
 import { passwordSchema } from '@/models/User.js';
-import { rateLimitExceededError } from './error.js';
+import { HonoApiError, rateLimitExceededError } from './error.js';
 import { isHonoApiRateLimited } from './rate-limit.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -38,6 +37,15 @@ type RequestResetPasswordParams = {
 	username: string;
 	email: string;
 };
+
+function invalidPasswordResetTokenError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'Invalid or expired token.',
+		code: 'INVALID_TOKEN',
+		id: 'e04a2320-6ee2-4a11-8ad2-c9ea9e2ab84f',
+	});
+}
 
 export const resetPasswordParamDef = z.object({
 	token: z.string(),
@@ -93,11 +101,17 @@ export async function handleHonoApiResetPassword(
 	const params = parseHonoApiParams(resetPasswordParamDef, body);
 	const req = await fetchPasswordResetRequestByTokenFromDatabase(deps.db, params.token);
 
-	if (Date.now() - parseId(req.id).date.getTime() > 1000 * 60 * 30) {
-		throw new Error();
+	// メールのリンクは30分で切れる。これは利用者にとって普通に起こることなので、
+	// 生の Error (= 500 INTERNAL_ERROR) ではなく理由の分かるAPIエラーを返す。
+	// ハッシュ計算の前に弾くのは、無効なトークンの連投でCPUを浪費させないため
+	if (req == null || isPasswordResetRequestExpired(req)) {
+		throw invalidPasswordResetTokenError();
 	}
 
 	const hash = await hashPassword(params.password);
 
-	await consumePasswordResetRequestInDatabase(deps.db, params.token, hash);
+	const result = await consumePasswordResetRequestInDatabase(deps.db, params.token, hash);
+	if (result !== 'ok') {
+		throw invalidPasswordResetTokenError();
+	}
 }

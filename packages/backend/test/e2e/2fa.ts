@@ -647,7 +647,9 @@ describe('2要素認証', () => {
 				currentPassword: password,
 				newPassword,
 			}, user);
-			assert.notStrictEqual(missingTokenResponse.status, 204);
+			// 2FA失敗は利用者の入力ミスなので、500 INTERNAL_ERROR ではなく明示的なAPIエラーであること
+			assert.strictEqual(missingTokenResponse.status, 400, JSON.stringify(missingTokenResponse.body));
+			assert.strictEqual(castAsError(missingTokenResponse.body as any).error.code, 'TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertPasswordUnchanged();
 
 			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
@@ -657,7 +659,8 @@ describe('2要素認証', () => {
 					newPassword,
 					token: invalidOtpToken(secret),
 				}, user);
-				assert.notStrictEqual(invalidTokenResponse.status, 204);
+				assert.strictEqual(invalidTokenResponse.status, 400, JSON.stringify(invalidTokenResponse.body));
+				assert.strictEqual(castAsError(invalidTokenResponse.body as any).error.code, 'TWO_FACTOR_AUTHENTICATION_FAILED');
 			} finally {
 				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
 			}
@@ -688,7 +691,8 @@ describe('2要素認証', () => {
 				password,
 				email: 'missing-token@example.com',
 			}, user);
-			assert.notStrictEqual(missingTokenResponse.status, 200);
+			assert.strictEqual(missingTokenResponse.status, 400, JSON.stringify(missingTokenResponse.body));
+			assert.strictEqual(castAsError(missingTokenResponse.body as any).error.code, 'TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertEmailUnchanged();
 
 			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
@@ -698,7 +702,8 @@ describe('2要素認証', () => {
 					email: 'invalid-token@example.com',
 					token: invalidOtpToken(secret),
 				}, user);
-				assert.notStrictEqual(invalidTokenResponse.status, 200);
+				assert.strictEqual(invalidTokenResponse.status, 400, JSON.stringify(invalidTokenResponse.body));
+				assert.strictEqual(castAsError(invalidTokenResponse.body as any).error.code, 'TWO_FACTOR_AUTHENTICATION_FAILED');
 			} finally {
 				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
 			}
@@ -725,7 +730,8 @@ describe('2要素認証', () => {
 			const missingTokenResponse = await api('i/delete-account', {
 				password,
 			}, user);
-			assert.notStrictEqual(missingTokenResponse.status, 204);
+			assert.strictEqual(missingTokenResponse.status, 400, JSON.stringify(missingTokenResponse.body));
+			assert.strictEqual(castAsError(missingTokenResponse.body as any).error.code, 'TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertAccountNotDeleted();
 
 			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
@@ -734,7 +740,8 @@ describe('2要素認証', () => {
 					password,
 					token: invalidOtpToken(secret),
 				}, user);
-				assert.notStrictEqual(invalidTokenResponse.status, 204);
+				assert.strictEqual(invalidTokenResponse.status, 400, JSON.stringify(invalidTokenResponse.body));
+				assert.strictEqual(castAsError(invalidTokenResponse.body as any).error.code, 'TWO_FACTOR_AUTHENTICATION_FAILED');
 			} finally {
 				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
 			}

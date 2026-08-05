@@ -65,7 +65,9 @@ export default class Logger {
 
 	@bindThis
 	private log(level: Level, message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false, subContexts: Context[] = []): void {
-		if (envOption.quiet || !shouldLog(level)) return;
+		// NODE_ENV=test は暗黙に quiet になるが、MK_VERBOSE を明示した時だけはそれより優先させる
+		// (e2e で発生したサーバー側例外を追うにはログを出せる手段が要る)。
+		if ((envOption.quiet && !envOption.verbose) || !shouldLog(level)) return;
 
 		if (this.parentLogger) {
 			this.parentLogger.log(level, message, data, important, [this.context].concat(subContexts));

@@ -11,6 +11,7 @@ import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import bcrypt from 'bcryptjs';
 import * as Bull from 'bullmq';
+import { inArray } from 'drizzle-orm';
 import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
@@ -57,6 +58,7 @@ import { createSigninInDatabase } from '@/core/SigninStore.js';
 import { createSwSubscriptionInDatabase } from '@/core/SwSubscriptionStore.js';
 import { fetchSystemWebhookByIdFromDatabase } from '@/core/SystemWebhookStore.js';
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
+import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { userIp } from '@/db/schema/user-ip.js';
 import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
@@ -73,6 +75,8 @@ import { genId } from '@/misc/id/gen-id.js';
 import { toXListId } from '@/server/rest/notification.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
+import { dispatchQueueOutbox, fetchQueueOutboxByIdFromDatabase } from '@/core/QueueOutboxStore.js';
+import type { DbQueue } from '@/core/queues.js';
 import type { DbJobData, DeliverJobData, InboxJobData, ObjectStorageJobData, PostScheduledNoteJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
 import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
@@ -506,6 +510,9 @@ describe('Endpoints', () => {
 			};
 			const waitDeleteAccountJob = async (userId: string) => {
 				for (let i = 0; i < 10; i++) {
+					// outbox のディスパッチャはジョブキュー側プロセスの担当で e2e のサーバーでは動いていないため、
+					// 配送待ちを挟むコーディネータ経由の発行を進めるにはテスト側から回す必要がある
+					await dispatchQueueOutbox(db, dbQueue as unknown as DbQueue, deliverQueue!);
 					const jobs = await getDeleteAccountJobs(userId);
 					if (jobs[0] != null) return jobs[0];
 					await new Promise(resolve => setTimeout(resolve, 100));
@@ -2198,9 +2205,16 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('存在しないuserIdは失敗する', async () => {
+		test('存在しないuserIdは500ではなくNO_SUCH_USERを返す', async () => {
 			const res = await api('federation/update-remote-user', { userId: '000000000000000000000000' });
-			assert.notStrictEqual(res.status, 204);
+			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
+			assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_USER');
+		});
+
+		test('ローカルユーザーを指定すると500ではなくNOT_REMOTE_USERを返す', async () => {
+			const res = await api('federation/update-remote-user', { userId: alice.id });
+			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
+			assert.strictEqual(castAsError(res.body as any).error.code, 'NOT_REMOTE_USER');
 		});
 	});
 
@@ -4123,11 +4137,35 @@ describe('Endpoints', () => {
 			assert.strictEqual(reset.status, 204);
 			assert.strictEqual(reset.body, null);
 
+			// 使用済み・存在しない・期限切れのトークンは利用者側の事情なので、
+			// 500 INTERNAL_ERROR ではなく理由の分かるAPIエラーで返す
 			const reused = await api('reset-password', {
 				token,
 				password: 'reused-reset-password',
 			});
-			assert.notStrictEqual(reused.status, 204);
+			assert.strictEqual(reused.status, 400, JSON.stringify(reused.body));
+			assert.strictEqual(castAsError(reused.body as any).error.code, 'INVALID_TOKEN');
+
+			const unknown = await api('reset-password', {
+				token: `reset-token-${genId()}`,
+				password: 'unknown-reset-password',
+			});
+			assert.strictEqual(unknown.status, 400, JSON.stringify(unknown.body));
+			assert.strictEqual(castAsError(unknown.body as any).error.code, 'INVALID_TOKEN');
+
+			// 30分より前に発行されたトークン (idに時刻が埋まっている) は期限切れ扱い
+			const expiredToken = `reset-token-expired-${genId()}`;
+			await createPasswordResetRequestInDatabase(db, {
+				id: genId(Date.now() - 1000 * 60 * 31),
+				userId: carol.id,
+				token: expiredToken,
+			});
+			const expired = await api('reset-password', {
+				token: expiredToken,
+				password: 'expired-reset-password',
+			});
+			assert.strictEqual(expired.status, 400, JSON.stringify(expired.body));
+			assert.strictEqual(castAsError(expired.body as any).error.code, 'INVALID_TOKEN');
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
 			const [matchesNewPassword, matchesReusedPassword] = await Promise.all([
@@ -4136,6 +4174,47 @@ describe('Endpoints', () => {
 			]);
 			assert.strictEqual(matchesNewPassword, true);
 			assert.strictEqual(matchesReusedPassword, false);
+		});
+	});
+
+	describe('パスワード確認を伴うエンドポイント', () => {
+		// パスワード誤入力は利用者の入力ミスであって内部エラーではないので、
+		// 500 INTERNAL_ERROR ではなく INCORRECT_PASSWORD を返し、副作用も起きないこと
+		test('i/change-password は誤ったパスワードでINCORRECT_PASSWORDを返し、パスワードを変えない', async () => {
+			const user = await signup();
+
+			const res = await api('i/change-password', {
+				currentPassword: 'wrong-password',
+				newPassword: 'changed-password',
+			}, user);
+			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
+			assert.strictEqual(castAsError(res.body as any).error.code, 'INCORRECT_PASSWORD');
+
+			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(await bcrypt.compare('test', profile.password!), true);
+		});
+
+		test('i/regenerate-token は誤ったパスワードでINCORRECT_PASSWORDを返し、トークンを変えない', async () => {
+			const user = await signup();
+			const before = await fetchUserByIdOrFailFromDatabase(db, user.id);
+
+			const res = await api('i/regenerate-token', { password: 'wrong-password' }, user);
+			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
+			assert.strictEqual(castAsError(res.body as any).error.code, 'INCORRECT_PASSWORD');
+
+			const after = await fetchUserByIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(after.token, before.token);
+		});
+
+		test('i/delete-account は誤ったパスワードでINCORRECT_PASSWORDを返し、アカウントを消さない', async () => {
+			const user = await signup();
+
+			const res = await api('i/delete-account', { password: 'wrong-password' }, user);
+			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
+			assert.strictEqual(castAsError(res.body as any).error.code, 'INCORRECT_PASSWORD');
+
+			const after = await fetchUserByIdOrFailFromDatabase(db, user.id);
+			assert.strictEqual(after.isDeleted, false);
 		});
 	});
 
@@ -5537,6 +5616,10 @@ describe('Endpoints', () => {
 		test('users/lists/create-from-public copies members from an existing public list', async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
+			// alice はこのファイルの他テストでリストを作り続けるので、リスト数上限に達していると
+			// ブロック判定より先に TOO_MANY_USERLISTS が返る。コピー元は共有し、コピーする側は専用ユーザーにする
+			const copier = await signup({ username: `listcopier${suffix}` });
+			const copier2 = await signup({ username: `listcopier2${suffix}` });
 			const sourceList = await createUserListInDatabase(db, {
 				id: genId(),
 				userId: bob.id,
@@ -5557,11 +5640,11 @@ describe('Endpoints', () => {
 				isPublic: false,
 			});
 
-			const noSuchList = await api('users/lists/create-from-public', { name: 'copy', listId: privateList.id }, alice);
+			const noSuchList = await api('users/lists/create-from-public', { name: 'copy', listId: privateList.id }, copier);
 			assert.strictEqual(noSuchList.status, 400);
 			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '9292f798-6175-4f7d-93f4-b6742279667d');
 
-			const copied = await api('users/lists/create-from-public', { name: `hono-copied-list-${suffix}`, listId: sourceList.id }, alice);
+			const copied = await api('users/lists/create-from-public', { name: `hono-copied-list-${suffix}`, listId: sourceList.id }, copier);
 			assert.strictEqual(copied.status, 200);
 			assert.strictEqual(copied.body.name, `hono-copied-list-${suffix}`);
 			assert.deepStrictEqual(copied.body.userIds, [carol.id]);
@@ -5582,14 +5665,14 @@ describe('Endpoints', () => {
 			const blocking = await createBlockingInDatabase(db, {
 				id: genId(),
 				blockerId: dave.id,
-				blockeeId: alice.id,
+				blockeeId: copier.id,
 			});
 			const blockedCopyName = `hono-blocked-copy-${suffix}`;
 			try {
-				const blocked = await api('users/lists/create-from-public', { name: blockedCopyName, listId: blockedSourceList.id }, alice);
+				const blocked = await api('users/lists/create-from-public', { name: blockedCopyName, listId: blockedSourceList.id }, copier);
 				assert.strictEqual(blocked.status, 400);
 				assert.strictEqual(castAsError(blocked.body as any).error.id, 'a2497f2a-2389-439c-8626-5298540530f4');
-				assert.strictEqual(await fetchUserListByNameAndUserIdFromDatabase(db, blockedCopyName, alice.id), null);
+				assert.strictEqual(await fetchUserListByNameAndUserIdFromDatabase(db, blockedCopyName, copier.id), null);
 			} finally {
 				await deleteBlockingByIdFromDatabase(db, blocking.id);
 			}
@@ -5600,7 +5683,7 @@ describe('Endpoints', () => {
 				name: `hono-concurrent-source-list-${suffix}`,
 				isPublic: true,
 			});
-			await Promise.all([alice.id, bob.id].map(userId =>
+			await Promise.all([copier.id, bob.id].map(userId =>
 				createUserListMembershipInDatabase(db, {
 					id: genId(),
 					userId,
@@ -5608,17 +5691,18 @@ describe('Endpoints', () => {
 					userListUserId: carol.id,
 				}),
 			));
-			const [aliceCopy, bobCopy] = await Promise.all([
-				api('users/lists/create-from-public', { name: `hono-concurrent-alice-${suffix}`, listId: concurrentSourceList.id }, alice),
-				api('users/lists/create-from-public', { name: `hono-concurrent-bob-${suffix}`, listId: concurrentSourceList.id }, bob),
+			const [firstCopy, secondCopy] = await Promise.all([
+				api('users/lists/create-from-public', { name: `hono-concurrent-first-${suffix}`, listId: concurrentSourceList.id }, copier),
+				api('users/lists/create-from-public', { name: `hono-concurrent-second-${suffix}`, listId: concurrentSourceList.id }, copier2),
 			]);
-			assert.strictEqual(aliceCopy.status, 200);
-			assert.strictEqual(bobCopy.status, 200);
-			assert.deepStrictEqual(new Set(aliceCopy.body.userIds), new Set([alice.id, bob.id]));
-			assert.deepStrictEqual(new Set(bobCopy.body.userIds), new Set([alice.id, bob.id]));
+			assert.strictEqual(firstCopy.status, 200);
+			assert.strictEqual(secondCopy.status, 200);
+			assert.deepStrictEqual(new Set(firstCopy.body.userIds), new Set([copier.id, bob.id]));
+			assert.deepStrictEqual(new Set(secondCopy.body.userIds), new Set([copier.id, bob.id]));
 			await Promise.all([
-				deleteUserListByIdInDatabase(db, aliceCopy.body.id),
-				deleteUserListByIdInDatabase(db, bobCopy.body.id),
+				deleteUserListByIdInDatabase(db, firstCopy.body.id),
+				deleteUserListByIdInDatabase(db, copied.body.id),
+				deleteUserListByIdInDatabase(db, secondCopy.body.id),
 			]);
 		});
 
@@ -6579,20 +6663,56 @@ describe('Endpoints', () => {
 
 			// i/import-antennas はファイル内容(DriveFile.url)を実際にHTTPダウンロードするため、
 			// admin/emoji/copy のテストと同様にループバックの一時HTTPサーバーでJSONを配信して検証する。
-			const antennas = [{ name: `hono-antenna-${suffix}`, keywords: [['hono']], excludeKeywords: [], src: 'all', userListId: null, userListAccts: null }];
+			const antennas = [{
+				name: `hono-antenna-${suffix}`,
+				src: 'all',
+				userListAccts: null,
+				keywords: [['hono']],
+				excludeKeywords: [],
+				users: [],
+				caseSensitive: false,
+				localOnly: false,
+				excludeBots: false,
+				withReplies: false,
+				withFile: false,
+				excludeNotesInSensitiveChannel: false,
+			}];
 			const antennasJson = Buffer.from(JSON.stringify(antennas));
 			let antennaServer: Server | undefined;
 			await new Promise<void>((resolve) => {
-				antennaServer = createServer((_req, res) => {
+				antennaServer = createServer((req, res) => {
 					res.writeHead(200, { 'Content-Type': 'application/json' });
-					res.end(antennasJson);
+					res.end(req.url?.includes('broken') ? Buffer.from('{ this is not json') : antennasJson);
 				});
 				antennaServer.listen(0, '127.0.0.1', () => resolve());
 			});
 			const address = antennaServer!.address() as AddressInfo;
 			const antennasUrl = `http://127.0.0.1:${address.port}/${suffix}.json`;
+			const brokenAntennasUrl = `http://127.0.0.1:${address.port}/${suffix}-broken.json`;
 
 			try {
+				// 壊れたファイルは INVALID_ANTENNA_IMPORT_FILE を返し、かつ 1回/時 の実行枠を消費しない
+				// (消費してしまうと、ファイルを直してもその1時間は再試行できなくなる)
+				const brokenFile = await createDriveFileInDatabase(db, {
+					id: genId(),
+					userId: user.id,
+					userHost: null,
+					md5: createHash('md5').update(`hono-import-antennas-broken-${suffix}`).digest('hex'),
+					name: `hono-import-antennas-broken-${suffix}.json`,
+					type: 'application/json',
+					size: 17,
+					blurhash: null,
+					properties: {},
+					storedInternal: false,
+					url: brokenAntennasUrl,
+					thumbnailUrl: null,
+					comment: null,
+					folderId: null,
+				});
+				const brokenRes = await api('i/import-antennas', { fileId: brokenFile.id }, user);
+				assert.strictEqual(brokenRes.status, 400, JSON.stringify(brokenRes.body));
+				assert.strictEqual(castAsError(brokenRes.body as any).error.code, 'INVALID_ANTENNA_IMPORT_FILE');
+
 				const antennaFile = await createDriveFileInDatabase(db, {
 					id: genId(),
 					userId: user.id,
@@ -6613,6 +6733,7 @@ describe('Endpoints', () => {
 				const beforeCount = await countAntennasByUserIdFromDatabase(db, user.id);
 				const okRes = await api('i/import-antennas', { fileId: antennaFile.id }, user);
 				assert.strictEqual(okRes.status, 204);
+				assert.strictEqual(await countAntennasByUserIdFromDatabase(db, user.id), beforeCount + 1);
 
 				const zeroLimitRole = await role(alice, {
 					name: `hono import antennas zero limit ${suffix}`,
@@ -11406,6 +11527,138 @@ describe('Endpoints', () => {
 				await retryJob?.remove().catch(() => undefined);
 				await removeJob.remove().catch(() => undefined);
 				await clearJob.remove().catch(() => undefined);
+			}
+		});
+	});
+
+	describe('admin/queue outbox dead letter endpoints', () => {
+		test('デッドレターの一覧・再試行・破棄がrevision競合と権限を維持する', async () => {
+			const now = Date.now();
+			const deliverOutboxId = genId(now);
+			const dbOutboxId = genId(now + 1);
+			const deliverContent = JSON.stringify({ type: 'QueueOutboxDeadLetterTest', id: now });
+			const deliverJob = await deliverQueue!.add(`hono-outbox-deadletter-${now}`, {
+				user: { id: alice.id },
+				content: deliverContent,
+				digest: `SHA-256=${createHash('sha256').update(deliverContent).digest('base64')}`,
+				to: `https://queue-outbox-${now}.example/inbox`,
+				isSharedInbox: false,
+			}, { jobId: `outbox-${deliverOutboxId}`, delay: 600_000, removeOnComplete: true, removeOnFail: true });
+
+			try {
+				await db.insert(queueOutbox).values([{
+					id: deliverOutboxId,
+					queue: 'deliver',
+					name: 'deliver',
+					kind: 'job',
+					state: 'deadLetter',
+					data: { to: `https://queue-outbox-${now}.example/inbox` },
+					opts: { attempts: 8 },
+					externalJobId: `outbox-${deliverOutboxId}`,
+					deadLetterReason: 'deliveryFailed',
+					lastError: { message: `deliver failed ${now}`, attemptsMade: 8 },
+					revision: 3,
+				}, {
+					id: dbOutboxId,
+					queue: 'db',
+					name: 'deleteAccount',
+					kind: 'job',
+					state: 'deadLetter',
+					data: { user: { id: alice.id }, soft: false },
+					opts: {},
+					deadLetterReason: 'invalidPayload',
+					lastError: { message: `invalid payload ${now}` },
+					revision: 0,
+				}]);
+
+				const listed = await api('admin/queue/outbox-dead-letters', {}, alice);
+				assert.strictEqual(listed.status, 200);
+				const listedDeliver = listed.body.find(row => row.id === deliverOutboxId);
+				assert.ok(listedDeliver);
+				assert.strictEqual(listedDeliver.queue, 'deliver');
+				assert.strictEqual(listedDeliver.name, 'deliver');
+				assert.strictEqual(listedDeliver.deadLetterReason, 'deliveryFailed');
+				assert.strictEqual(listedDeliver.externalJobId, `outbox-${deliverOutboxId}`);
+				assert.strictEqual(listedDeliver.revision, 3);
+				assert.strictEqual((listedDeliver.lastError as { message: string } | null)?.message, `deliver failed ${now}`);
+				assert.ok(listed.body.some(row => row.id === dbOutboxId && row.deadLetterReason === 'invalidPayload'));
+
+				// 新しいデッドレターで先頭が埋まっても古いものへ到達できるよう、id 降順 + untilId で辿れること
+				const listedIds = listed.body.map(row => row.id);
+				assert.ok(listedIds.indexOf(dbOutboxId) < listedIds.indexOf(deliverOutboxId));
+				const firstPage = await api('admin/queue/outbox-dead-letters', { limit: 1 }, alice);
+				assert.strictEqual(firstPage.status, 200);
+				assert.strictEqual(firstPage.body.length, 1);
+				const nextPage = await api('admin/queue/outbox-dead-letters', { untilId: dbOutboxId }, alice);
+				assert.strictEqual(nextPage.status, 200);
+				assert.ok(!nextPage.body.some(row => row.id === dbOutboxId));
+				assert.ok(nextPage.body.some(row => row.id === deliverOutboxId));
+
+				// 一覧を取得してから他の管理者やワーカーが触っていた場合、古い revision の操作は弾かれる
+				const staleRetry = await api('admin/queue/retry-outbox-dead-letter', { outboxId: deliverOutboxId, revision: 2 }, alice);
+				assert.strictEqual(staleRetry.status, 409);
+				assert.strictEqual(castAsError(staleRetry.body as any).error.code, 'QUEUE_OUTBOX_STATE_CHANGED');
+				const staleAbandon = await api('admin/queue/abandon-outbox-dead-letter', { outboxId: dbOutboxId, revision: 1 }, alice);
+				assert.strictEqual(staleAbandon.status, 409);
+				assert.strictEqual(castAsError(staleAbandon.body as any).error.code, 'QUEUE_OUTBOX_STATE_CHANGED');
+				assert.strictEqual((await fetchQueueOutboxByIdFromDatabase(db, deliverOutboxId))?.state, 'deadLetter');
+				assert.strictEqual((await fetchQueueOutboxByIdFromDatabase(db, dbOutboxId))?.state, 'deadLetter');
+
+				const missing = await api('admin/queue/retry-outbox-dead-letter', { outboxId: genId(now + 2), revision: 0 }, alice);
+				assert.strictEqual(missing.status, 409);
+				assert.strictEqual(castAsError(missing.body as any).error.code, 'QUEUE_OUTBOX_STATE_CHANGED');
+
+				const statsBefore = await api('admin/queue/queue-stats', { queue: 'db' }, alice);
+				assert.strictEqual(statsBefore.status, 200);
+				assert.ok(statsBefore.body.outbox);
+				assert.ok(statsBefore.body.outbox.deadLetter >= 2);
+				assert.ok(statsBefore.body.outbox.deliveryFailed >= 1);
+				assert.ok(statsBefore.body.outbox.invalidPayload >= 1);
+
+				const retried = await api('admin/queue/retry-outbox-dead-letter', { outboxId: deliverOutboxId, revision: 3 }, alice);
+				assert.strictEqual(retried.status, 204);
+				const retriedRow = await fetchQueueOutboxByIdFromDatabase(db, deliverOutboxId);
+				assert.ok(retriedRow);
+				assert.strictEqual(retriedRow.state, 'ready');
+				assert.strictEqual(retriedRow.deadLetterReason, null);
+				assert.strictEqual(retriedRow.lastError, null);
+				assert.strictEqual(retriedRow.leaseToken, null);
+				assert.strictEqual(retriedRow.leaseExpiresAt, null);
+				assert.strictEqual(retriedRow.revision, 4);
+				// 再試行で改めて publish されるので、古い BullMQ ジョブは残していると二重配送になる
+				assert.strictEqual(await deliverQueue!.getJob(`outbox-${deliverOutboxId}`), undefined);
+
+				const abandoned = await api('admin/queue/abandon-outbox-dead-letter', { outboxId: dbOutboxId, revision: 0 }, alice);
+				assert.strictEqual(abandoned.status, 204);
+				assert.strictEqual(await fetchQueueOutboxByIdFromDatabase(db, dbOutboxId), null);
+
+				const afterList = await api('admin/queue/outbox-dead-letters', {}, alice);
+				assert.strictEqual(afterList.status, 200);
+				assert.ok(!afterList.body.some(row => row.id === deliverOutboxId || row.id === dbOutboxId));
+
+				const readToken = await createAppToken(alice, ['read:admin:queue']);
+				const listedWithToken = await api('admin/queue/outbox-dead-letters', {}, { token: readToken });
+				assert.strictEqual(listedWithToken.status, 200);
+				const writeScopeDenied = await api('admin/queue/retry-outbox-dead-letter', { outboxId: deliverOutboxId, revision: 4 }, { token: readToken });
+				assert.strictEqual(writeScopeDenied.status, 403);
+				assert.strictEqual(castAsError(writeScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const writeToken = await createAppToken(alice, ['write:admin:queue']);
+				const readScopeDenied = await api('admin/queue/outbox-dead-letters', {}, { token: writeToken });
+				assert.strictEqual(readScopeDenied.status, 403);
+				assert.strictEqual(castAsError(readScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+
+				const normalUser = await signup({ username: `honooutbox${now.toString(36)}` });
+				const roleDenied = await api('admin/queue/outbox-dead-letters', {}, normalUser);
+				assert.strictEqual(roleDenied.status, 403);
+				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				const roleDeniedWrite = await api('admin/queue/abandon-outbox-dead-letter', { outboxId: deliverOutboxId, revision: 4 }, normalUser);
+				assert.strictEqual(roleDeniedWrite.status, 403);
+				assert.strictEqual(castAsError(roleDeniedWrite.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			} finally {
+				await deliverJob.remove().catch(() => undefined);
+				await deliverQueue!.getJob(`outbox-${deliverOutboxId}`).then(job => job?.remove()).catch(() => undefined);
+				await db.delete(queueOutbox).where(inArray(queueOutbox.id, [deliverOutboxId, dbOutboxId]));
 			}
 		});
 	});
