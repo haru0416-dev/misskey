@@ -46,7 +46,12 @@ async function listFanoutTimelineNotesByIds(
 		if (note.renoteId != null) relationIds.add(note.renoteId);
 		if (note.replyUserId != null) userIds.add(note.replyUserId);
 		if (note.renoteUserId != null) userIds.add(note.renoteUserId);
-		if (hydrateChannels && note.channelId != null) channelIds.add(note.channelId);
+		if (hydrateChannels) {
+			// renoteChannelId は note 作成時に renote 先の channelId を非正規化したもの。
+			// リノート経由でチャンネルの素性を判定する側は relations を待たずにここで引ける
+			if (note.channelId != null) channelIds.add(note.channelId);
+			if (note.renoteChannelId != null) channelIds.add(note.renoteChannelId);
+		}
 	}
 
 	const [relations, users, channels] = await Promise.all([
@@ -69,7 +74,10 @@ async function listFanoutTimelineNotesByIds(
 		note.reply = note.replyId == null ? null : (relationById.get(note.replyId) ?? null);
 		note.renote = note.renoteId == null ? null : (relationById.get(note.renoteId) ?? null);
 		if (note.reply != null) note.reply.user = userById.get(note.reply.userId) ?? null;
-		if (note.renote != null) note.renote.user = userById.get(note.renote.userId) ?? null;
+		if (note.renote != null) {
+			note.renote.user = userById.get(note.renote.userId) ?? null;
+			if (hydrateChannels) note.renote.channel = note.renote.channelId == null ? null : (channelById.get(note.renote.channelId) ?? null);
+		}
 		return [note];
 	});
 }
@@ -84,8 +92,8 @@ export type FanoutTimelineReadOptions = {
 	redisTimelines: string[];
 	noteFilter?: NoteFilter;
 	/**
-	 * noteFilter が `note.channel` を読むなら必ず true にすること。false のままだと
-	 * `note.channel` は undefined のままなので、チャンネル起因の除外が黙って素通りする。
+	 * noteFilter が `note.channel` / `note.renote.channel` を読むなら必ず true にすること。
+	 * false のままだと両方 undefined のままなので、チャンネル起因の除外が黙って素通りする。
 	 * 逆に読まない呼び出し元で true にすると、捨てるだけのチャンネル取得が1本増える
 	 * (`note.channelId` / `note.renoteChannelId` を見るだけの判定にはhydrate不要)。
 	 */

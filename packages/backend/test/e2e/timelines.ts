@@ -3358,6 +3358,67 @@ describe('Timelines', () => {
 					);
 				});
 
+				test('[withChannelNotes: true] 他人が取得した場合センシティブチャンネル投稿のリノートが含まれない', async () => {
+					const [alice, bob] = await Promise.all([signup(), signup()]);
+
+					const channel = await api('channels/create', { name: 'channel', isSensitive: true }, bob).then((x) => x.body);
+					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
+					const bobRenote = await post(bob, { renoteId: bobNote.id });
+
+					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
+
+					assert.strictEqual(
+						res.body.some((note) => note.id === bobRenote.id),
+						false,
+					);
+				});
+
+				// リノート自体は channelId が NULL なので、チャンネル投稿を除外する条件では弾けない
+				test('[withChannelNotes: false] 他人が取得した場合センシティブチャンネル投稿のリノートが含まれない', async () => {
+					const [alice, bob] = await Promise.all([signup(), signup()]);
+
+					const channel = await api('channels/create', { name: 'channel', isSensitive: true }, bob).then((x) => x.body);
+					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
+					const bobRenote = await post(bob, { renoteId: bobNote.id });
+
+					const res = await api('users/notes', { userId: bob.id }, alice);
+
+					assert.strictEqual(
+						res.body.some((note) => note.id === bobRenote.id),
+						false,
+					);
+				});
+
+				test('[withChannelNotes: false] 他人が取得した場合通常チャンネル投稿のリノートは含まれる', async () => {
+					const [alice, bob] = await Promise.all([signup(), signup()]);
+
+					const channel = await api('channels/create', { name: 'channel' }, bob).then((x) => x.body);
+					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
+					const bobRenote = await post(bob, { renoteId: bobNote.id });
+
+					const res = await api('users/notes', { userId: bob.id }, alice);
+
+					assert.strictEqual(
+						res.body.some((note) => note.id === bobRenote.id),
+						true,
+					);
+				});
+
+				test('[withChannelNotes: true] 自分が取得した場合センシティブチャンネル投稿のリノートが含まれる', async () => {
+					const [bob] = await Promise.all([signup()]);
+
+					const channel = await api('channels/create', { name: 'channel', isSensitive: true }, bob).then((x) => x.body);
+					const bobNote = await post(bob, { text: 'hi', channelId: channel.id });
+					const bobRenote = await post(bob, { renoteId: bobNote.id });
+
+					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, bob);
+
+					assert.strictEqual(
+						res.body.some((note) => note.id === bobRenote.id),
+						true,
+					);
+				});
+
 				test('ミュートしているユーザーに関連する投稿が含まれない', async () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
