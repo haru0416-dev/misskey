@@ -101,6 +101,7 @@
 | コピペ (重複コード) の検出 | `bun run lint:jscpd` |
 | Backend unit test | `bun run --bun --filter backend test` |
 | Backend e2e test | `bun run --bun --filter backend test:e2e` |
+| Backend e2e test (本番と同じ bun ランタイム + Bun.sql) | `bun run --bun --filter backend test:e2e:bun` |
 | Backend federation test | `bun run --bun --filter backend test:fed` |
 | Frontend unit test | `bun run --bun --filter frontend test` |
 | Migration 未適用チェック | `bun run --bun --filter backend check-migrations` |

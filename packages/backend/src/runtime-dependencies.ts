@@ -94,6 +94,7 @@ export type RuntimeDependencies = {
 
 type RuntimeResources = {
 	drizzlePool?: MiDrizzlePool;
+	bunSqlClose?: () => Promise<void>;
 	redis?: Redis.Redis;
 	redisForPub?: Redis.Redis;
 	redisForSub?: Redis.Redis;
@@ -204,6 +205,7 @@ async function disposeRuntimeResources(resources: RuntimeResources): Promise<voi
 		resources.userWebhookDeliverQueue?.close(),
 		resources.systemWebhookDeliverQueue?.close(),
 		resources.drizzlePool?.end(),
+		resources.bunSqlClose?.(),
 		resources.redis ? closeRedisConnection(resources.redis) : undefined,
 		resources.redisForPub ? closeRedisConnection(resources.redisForPub) : undefined,
 		resources.redisForSub ? closeRedisConnection(resources.redisForSub) : undefined,
@@ -212,11 +214,39 @@ async function disposeRuntimeResources(resources: RuntimeResources): Promise<voi
 	]);
 }
 
+/**
+ * 本番は bun で起動するため、DBドライバの既定は Bun.sql (node-postgres 比で実エンドポイントの
+ * p50 −5〜−18% / rps +4〜+23%)。node で動く経路 (unit / e2e のローカルモード) は Bun.sql を
+ * 持たないので自動的に node-postgres へ落ちる。`MK_DB_DRIVER=pg` で明示的に固定できる。
+ */
+function shouldUseBunSql(): boolean {
+	const driver = process.env['MK_DB_DRIVER'];
+	if (driver != null && driver !== '' && driver !== 'pg' && driver !== 'bun-sql') {
+		throw new Error(`Unknown MK_DB_DRIVER: ${driver} (expected 'pg' or 'bun-sql')`);
+	}
+	if (driver === 'pg') return false;
+	if (typeof Bun === 'undefined') {
+		if (driver === 'bun-sql') throw new Error('MK_DB_DRIVER=bun-sql requires the bun runtime');
+		return false;
+	}
+	return true;
+}
+
 export async function createRuntimeDependencies(config: Config): Promise<RuntimeDependencies> {
 	const resources: RuntimeResources = {};
 	try {
+		// Bun.sql 経路でもプールは作る。`reset-db` (テスト専用エンドポイント) が pg の Pool を要求するため。
+		// minimumConnections の既定は0で、クエリを流さない限り接続は張られない。
 		const drizzlePool = (resources.drizzlePool = createDrizzlePool(config));
-		const db = createDrizzleDatabase(drizzlePool, config);
+		// bun 限定モジュールなので、node で動くテスト経路から読まれないよう動的 import にしている。
+		const db = shouldUseBunSql()
+			? await (async () => {
+					const { createBunSqlRuntime } = await import('@/db/bun-sql.js');
+					const runtime = createBunSqlRuntime(config);
+					resources.bunSqlClose = runtime.close;
+					return runtime.db;
+				})()
+			: createDrizzleDatabase(drizzlePool, config);
 		const redis = (resources.redis = createRedisClient(config));
 		const redisForPub = (resources.redisForPub = createRedisForPub(config));
 		const redisForSub = (resources.redisForSub = await createRedisForSub(config));

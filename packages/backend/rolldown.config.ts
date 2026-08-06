@@ -76,6 +76,8 @@ export default defineConfig((args) => {
 		/^slacc-.*/,
 		/^@opentelemetry\/.*/,
 		/^@napi-rs\/.*/,
+		// `drizzle-orm/bun-sql` が `import { SQL } from 'bun'` を含む。bunランタイム組み込みなので解決させない
+		'bun',
 		'bullmq',
 		'ioredis',
 		'pg',

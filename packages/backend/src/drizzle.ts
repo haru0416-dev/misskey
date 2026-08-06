@@ -73,13 +73,17 @@ export function createDrizzlePool(config: Config): MiDrizzlePool {
 	return new pg.Pool(poolConfig);
 }
 
-export function createDrizzleDatabase(pool: MiDrizzlePool, config: Config): MiDrizzleDatabase {
-	const logger = config.observability.logging.sql.enabled
+export function createDrizzleQueryLogger(config: Config): DrizzleLogger | undefined {
+	return config.observability.logging.sql.enabled
 		? new MyDrizzleLogger({
 				maximumQueryLength: config.observability.logging.sql.maximumQueryLength,
 				logParameters: config.observability.logging.sql.logParameters,
 			})
 		: undefined;
+}
+
+export function createDrizzleDatabase(pool: MiDrizzlePool, config: Config): MiDrizzleDatabase {
+	const logger = createDrizzleQueryLogger(config);
 	return drizzle({
 		client: pool,
 		...(logger === undefined ? {} : { logger }),
