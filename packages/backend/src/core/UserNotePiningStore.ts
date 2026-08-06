@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { userNotePining, type UserNotePiningInsert, type UserNotePiningRow } from '@/db/schema/user-note-pining.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
@@ -31,11 +32,14 @@ export async function listUserNotePiningsByUserIdFromDatabase(
 		order?: UserNotePiningOrder;
 	} = {},
 ): Promise<MiUserNotePining[]> {
-	const rows = await db
+	const order = options.order ?? 'asc';
+	const statement = preparedQueryFor(db, `userNotePining:byUserId:${order}`, () => db
 		.select()
 		.from(userNotePining)
-		.where(eq(userNotePining.userId, userId))
-		.orderBy((options.order ?? 'asc') === 'desc' ? desc(userNotePining.id) : asc(userNotePining.id));
+		.where(eq(userNotePining.userId, sql.placeholder('userId')))
+		.orderBy(order === 'desc' ? desc(userNotePining.id) : asc(userNotePining.id))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ userId });
 
 	return rows.map(row => deserializeUserNotePining(row));
 }
@@ -51,11 +55,16 @@ export async function listUserNotePiningsByUserIdsFromDatabase(
 		return [];
 	}
 
-	const rows = await db
+	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
+	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
+	const order = options.order ?? 'asc';
+	const statement = preparedQueryFor(db, `userNotePining:byUserIds:${order}`, () => db
 		.select()
 		.from(userNotePining)
-		.where(inArray(userNotePining.userId, userIds))
-		.orderBy((options.order ?? 'asc') === 'desc' ? desc(userNotePining.id) : asc(userNotePining.id));
+		.where(sql`${userNotePining.userId} = ANY(${sql.placeholder('userIds')})`)
+		.orderBy(order === 'desc' ? desc(userNotePining.id) : asc(userNotePining.id))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ userIds });
 
 	return rows.map(row => deserializeUserNotePining(row));
 }

@@ -4,6 +4,7 @@
  */
 
 import { and, asc, desc, eq, inArray, gt, lt, sql, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { renoteMuting, type RenoteMutingInsert, type RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
@@ -116,10 +117,12 @@ export async function listRenoteMuteeIdsByMuterIdFromDatabase(
 	db: MiDrizzleDatabase,
 	muterId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const rows = await db
+	const statement = preparedQueryFor(db, 'renoteMuting:muteeIdsByMuterId', () => db
 		.select({ muteeId: renoteMuting.muteeId })
 		.from(renoteMuting)
-		.where(eq(renoteMuting.muterId, muterId));
+		.where(eq(renoteMuting.muterId, sql.placeholder('muterId')))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ muterId });
 
 	return rows.map(row => row.muteeId);
 }

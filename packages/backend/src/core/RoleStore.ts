@@ -4,6 +4,7 @@
  */
 
 import { and, desc, eq, inArray } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { role, type RoleInsert, type RoleRow } from '@/db/schema/role.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -19,9 +20,11 @@ function deserializeRole(row: RoleRow): MiRole {
 export async function listRolesFromDatabase(
 	db: MiDrizzleDatabase,
 ): Promise<MiRole[]> {
-	const rows = await db
+	const statement = preparedQueryFor(db, 'role:all', () => db
 		.select()
-		.from(role);
+		.from(role)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute();
 
 	return rows.map(row => deserializeRole(row));
 }

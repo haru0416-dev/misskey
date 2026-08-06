@@ -4,6 +4,7 @@
  */
 
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { muting, type MutingInsert, type MutingRow } from '@/db/schema/muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -188,10 +189,12 @@ export async function listMuteeIdsByMuterIdFromDatabase(
 	db: MiDrizzleDatabase,
 	muterId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const rows = await db
+	const statement = preparedQueryFor(db, 'muting:muteeIdsByMuterId', () => db
 		.select({ muteeId: muting.muteeId })
 		.from(muting)
-		.where(eq(muting.muterId, muterId));
+		.where(eq(muting.muterId, sql.placeholder('muterId')))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ muterId });
 
 	return rows.map(row => row.muteeId);
 }

@@ -4,6 +4,7 @@
  */
 
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, not, or, sql, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { following, type FollowingInsert, type FollowingRow } from '@/db/schema/following.js';
 import { user as userTable } from '@/db/schema/user.js';
 import { userProfile } from '@/db/schema/user-profile.js';
@@ -106,10 +107,12 @@ export async function listFolloweeIdsByFollowerIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followerId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const rows = await db
+	const statement = preparedQueryFor(db, 'following:followeeIdsByFollowerId', () => db
 		.select({ followeeId: following.followeeId })
 		.from(following)
-		.where(eq(following.followerId, followerId));
+		.where(eq(following.followerId, sql.placeholder('followerId')))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ followerId });
 
 	return rows.map(row => row.followeeId);
 }
@@ -517,14 +520,16 @@ export async function followingExistsInDatabase(
 	followerId: MiUser['id'],
 	followeeId: MiUser['id'],
 ): Promise<boolean> {
-	const [row] = await db
+	const statement = preparedQueryFor(db, 'following:exists', () => db
 		.select({ id: following.id })
 		.from(following)
 		.where(and(
-			eq(following.followerId, followerId),
-			eq(following.followeeId, followeeId),
+			eq(following.followerId, sql.placeholder('followerId')),
+			eq(following.followeeId, sql.placeholder('followeeId')),
 		))
-		.limit(1);
+		.limit(1)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const [row] = await statement.execute({ followerId, followeeId });
 
 	return row != null;
 }
