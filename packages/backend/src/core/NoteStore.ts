@@ -5,6 +5,7 @@
 
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { note, type NoteInsert, type NoteRow } from '@/db/schema/note.js';
 import { noteReaction } from '@/db/schema/note-reaction.js';
 import { driveFile } from '@/db/schema/drive-file.js';
@@ -384,11 +385,13 @@ export async function fetchNoteByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiNote['id'],
 ): Promise<MiNote | null> {
-	const [row] = await db
+	const statement = preparedQueryFor(db, 'note:byId', () => db
 		.select()
 		.from(note)
-		.where(eq(note.id, id))
-		.limit(1);
+		.where(eq(note.id, sql.placeholder('id')))
+		.limit(1)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const [row] = await statement.execute({ id });
 
 	return row ? deserializeNote(row) : null;
 }
@@ -442,10 +445,14 @@ export async function listNotesByIdsFromDatabase(
 ): Promise<MiNote[]> {
 	if (ids.length === 0) return [];
 
-	const rows = await db
+	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
+	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
+	const statement = preparedQueryFor(db, 'note:byIds', () => db
 		.select()
 		.from(note)
-		.where(inArray(note.id, ids));
+		.where(sql`${note.id} = ANY(${sql.placeholder('ids')})`)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ ids });
 
 	return rows.map(row => deserializeNote(row));
 }

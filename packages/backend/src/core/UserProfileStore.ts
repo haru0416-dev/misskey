@@ -4,6 +4,7 @@
  */
 
 import { and, count, eq, sql, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { userProfile, type UserProfileInsert, type UserProfileRow } from '@/db/schema/user-profile.js';
 import { userSecurityKey } from '@/db/schema/user-security-key.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -41,11 +42,13 @@ export async function fetchUserProfileByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiUserProfile | null> {
-	const [row] = await db
+	const statement = preparedQueryFor(db, 'userProfile:byUserId', () => db
 		.select()
 		.from(userProfile)
-		.where(eq(userProfile.userId, userId))
-		.limit(1);
+		.where(eq(userProfile.userId, sql.placeholder('userId')))
+		.limit(1)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const [row] = await statement.execute({ userId });
 
 	return row ? deserializeUserProfile(row) : null;
 }
@@ -110,10 +113,12 @@ export async function listUserProfilesByUserIdsFromDatabase(
 ): Promise<MiUserProfile[]> {
 	if (userIds.length === 0) return [];
 
-	const rows = await db
+	const statement = preparedQueryFor(db, 'userProfile:byUserIds', () => db
 		.select()
 		.from(userProfile)
-		.where(sql`${userProfile.userId} = ANY(${sql.param(userIds)})`);
+		.where(sql`${userProfile.userId} = ANY(${sql.placeholder('userIds')})`)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ userIds });
 
 	return rows.map(row => deserializeUserProfile(row));
 }

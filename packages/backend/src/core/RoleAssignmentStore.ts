@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { roleAssignment, type RoleAssignmentInsert, type RoleAssignmentRow } from '@/db/schema/role-assignment.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -97,10 +98,12 @@ export async function listRoleAssignmentsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiRoleAssignment[]> {
-	const rows = await db
+	const statement = preparedQueryFor(db, 'roleAssignment:byUserId', () => db
 		.select()
 		.from(roleAssignment)
-		.where(eq(roleAssignment.userId, userId));
+		.where(eq(roleAssignment.userId, sql.placeholder('userId')))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ userId });
 
 	return rows.map(row => deserializeRoleAssignment(row));
 }
@@ -112,10 +115,12 @@ export async function listRoleAssignmentsByUserIdsFromDatabase(
 ): Promise<MiRoleAssignment[]> {
 	if (userIds.length === 0) return [];
 
-	const rows = await db
+	const statement = preparedQueryFor(db, 'roleAssignment:byUserIds', () => db
 		.select()
 		.from(roleAssignment)
-		.where(inArray(roleAssignment.userId, userIds));
+		.where(sql`${roleAssignment.userId} = ANY(${sql.placeholder('userIds')})`)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ userIds });
 
 	return rows.map(row => deserializeRoleAssignment(row));
 }

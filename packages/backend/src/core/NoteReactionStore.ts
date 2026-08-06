@@ -4,6 +4,7 @@
  */
 
 import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { noteReaction, type NoteReactionInsert, type NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -103,13 +104,18 @@ export async function listNoteReactionsByUserAndNoteIdsFromDatabase(
 ): Promise<NoteReactionRow[]> {
 	if (noteIds.length === 0) return [];
 
-	return await db
+	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
+	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
+	const statement = preparedQueryFor(db, 'noteReaction:byUserIdAndNoteIds', () => db
 		.select()
 		.from(noteReaction)
 		.where(and(
-			eq(noteReaction.userId, userId),
-			inArray(noteReaction.noteId, noteIds),
-		));
+			eq(noteReaction.userId, sql.placeholder('userId')),
+			sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
+		))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+
+	return await statement.execute({ userId, noteIds });
 }
 
 export async function listNoteReactionsByNoteIdsAndUserIdsFromDatabase(
@@ -119,13 +125,16 @@ export async function listNoteReactionsByNoteIdsAndUserIdsFromDatabase(
 ): Promise<NoteReactionRow[]> {
 	if (noteIds.length === 0 || userIds.length === 0) return [];
 
-	return await db
+	const statement = preparedQueryFor(db, 'noteReaction:byNoteIdsAndUserIds', () => db
 		.select()
 		.from(noteReaction)
 		.where(and(
-			sql`${noteReaction.noteId} = ANY(${sql.param(noteIds)})`,
-			sql`${noteReaction.userId} = ANY(${sql.param(userIds)})`,
-		));
+			sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
+			sql`${noteReaction.userId} = ANY(${sql.placeholder('userIds')})`,
+		))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+
+	return await statement.execute({ noteIds, userIds });
 }
 
 export async function fetchNoteReactionByUserAndNoteOrFailFromDatabase(
@@ -180,13 +189,18 @@ export async function listNoteReactionsByUserIdAndNoteIdsFromDatabase(
 ): Promise<NoteReactionRow[]> {
 	if (noteIds.length === 0) return [];
 
-	return await db
+	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
+	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
+	const statement = preparedQueryFor(db, 'noteReaction:byUserIdAndNoteIds', () => db
 		.select()
 		.from(noteReaction)
 		.where(and(
-			eq(noteReaction.userId, userId),
-			inArray(noteReaction.noteId, noteIds),
-		));
+			eq(noteReaction.userId, sql.placeholder('userId')),
+			sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
+		))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+
+	return await statement.execute({ userId, noteIds });
 }
 
 export async function listNoteReactionsByNoteIdFromDatabase(

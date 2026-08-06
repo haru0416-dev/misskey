@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, lt, or, sql, type Placeholder } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { channelMuting, type ChannelMutingInsert, type ChannelMutingRow } from '@/db/schema/channel-muting.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiChannel } from '@/models/Channel.js';
@@ -16,7 +17,7 @@ function channelMutingCondition(userId: MiUser['id'], channelId: MiChannel['id']
 	);
 }
 
-function activeChannelMutingCondition(now: Date) {
+function activeChannelMutingCondition(now: Date | Placeholder) {
 	return or(
 		isNull(channelMuting.expiresAt),
 		gt(channelMuting.expiresAt, now),
@@ -54,13 +55,15 @@ export async function listActiveMutedChannelIdsByUserIdFromDatabase(
 	userId: MiUser['id'],
 	now: Date,
 ): Promise<MiChannel['id'][]> {
-	const rows = await db
+	const statement = preparedQueryFor(db, 'channelMuting:activeChannelIdsByUserId', () => db
 		.select({ channelId: channelMuting.channelId })
 		.from(channelMuting)
 		.where(and(
-			eq(channelMuting.userId, userId),
-			activeChannelMutingCondition(now),
-		));
+			eq(channelMuting.userId, sql.placeholder('userId')),
+			activeChannelMutingCondition(sql.placeholder('now')),
+		))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ userId, now });
 
 	return rows.map(row => row.channelId);
 }

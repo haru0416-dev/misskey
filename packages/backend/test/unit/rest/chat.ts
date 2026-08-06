@@ -9,21 +9,24 @@ process.env['NODE_ENV'] = 'test';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
 import type { MiUser } from '@/models/User.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { countPoolQueries, type QueryCounter } from '../../query-counter.js';
 import { packChatMessageDetailedForHonoApi, packChatMessagesDetailedForHonoApi, type HonoApiChatDependencies } from '@/server/rest/chat.js';
 
 describe('chat message packing', () => {
 	let runtime: RuntimeDependencies;
+	let queries: QueryCounter;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
+		queries = countPoolQueries(runtime.drizzlePool);
 	});
 
 	afterAll(async () => {
+		queries.restore();
 		await runtime.dispose();
 	});
 
@@ -59,40 +62,28 @@ describe('chat message packing', () => {
 			reactions: [`${reactor1.id}/👍`, `${deletedReactorId}/❌`, `${reactor2.id}/⭐`],
 		};
 
-		let selectCount = 0;
-		const db = new Proxy(runtime.db, {
-			get(target, property, receiver) {
-				if (property === 'select') {
-					return (...args: Parameters<MiDrizzleDatabase['select']>) => {
-						selectCount++;
-						return target.select(...args);
-					};
-				}
-				const value = Reflect.get(target, property, receiver);
-				return typeof value === 'function' ? value.bind(target) : value;
-			},
-		}) as MiDrizzleDatabase;
-		const deps = { ...runtime, db } as unknown as HonoApiChatDependencies;
+		const deps = runtime as unknown as HonoApiChatDependencies;
 
+		queries.reset();
 		const packedSingle = await packChatMessageDetailedForHonoApi(deps, message, sender);
-		expect(selectCount).toBe(1);
+		expect(queries.count()).toBe(1);
 		expect(packedSingle.reactions.map(reaction => [reaction.user.id, reaction.reaction])).toEqual([
 			[reactor1.id, '👍'],
 			[reactor2.id, '⭐'],
 		]);
 
-		selectCount = 0;
+		queries.reset();
 		const secondMessage = { ...message, id: genId(), reactions: [`${reactor2.id}/⭐`, `${reactor1.id}/👍`] };
 		const [packedMany, packedSecond] = await packChatMessagesDetailedForHonoApi(deps, [message, secondMessage], sender);
-		expect(selectCount).toBe(1);
+		expect(queries.count()).toBe(1);
 		expect(packedMany!.reactions).toEqual(packedSingle.reactions);
 		expect(packedSecond!.reactions.map(reaction => reaction.user.id)).toEqual([reactor2.id, reactor1.id]);
 
-		selectCount = 0;
+		queries.reset();
 		const packedWithPartialHint = await packChatMessageDetailedForHonoApi(deps, message, sender, {
 			_hint_: { packedUsers: new Map([[reactor1.id, packedSingle.reactions[0]!.user]]) },
 		});
-		expect(selectCount).toBe(1);
+		expect(queries.count()).toBe(1);
 		expect(packedWithPartialHint.reactions).toEqual(packedSingle.reactions);
 
 		const explicitSenderMessage = { ...message, fromUser: sender, reactions: [`${sender.id}/👍`] };
@@ -120,24 +111,12 @@ describe('chat message packing', () => {
 			reactions: [],
 		} satisfies MiChatMessage;
 
-		let selectCount = 0;
-		const db = new Proxy(runtime.db, {
-			get(target, property, receiver) {
-				if (property === 'select') {
-					return (...args: Parameters<MiDrizzleDatabase['select']>) => {
-						selectCount++;
-						return target.select(...args);
-					};
-				}
-				const value = Reflect.get(target, property, receiver);
-				return typeof value === 'function' ? value.bind(target) : value;
-			},
-		}) as MiDrizzleDatabase;
-		const deps = { ...runtime, db } as unknown as HonoApiChatDependencies;
+		const deps = runtime as unknown as HonoApiChatDependencies;
 
+		queries.reset();
 		await expect(packChatMessageDetailedForHonoApi(deps, message, sender)).rejects.toMatchObject({
 			name: 'EntityNotFoundError',
 		});
-		expect(selectCount).toBe(1);
+		expect(queries.count()).toBe(1);
 	});
 });
