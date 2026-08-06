@@ -200,14 +200,15 @@ export async function updateQuestionFromApForHonoApi(
 
 	let changed = false;
 
-	for (const choice of poll.choices) {
-		const oldCount = poll.votes[poll.choices.indexOf(choice)];
-		const newCount = apChoices.filter(ap => ap.name === choice).at(0)?.replies?.totalItems;
+	// 選択肢テキストが重複していても正しい位置を更新できるよう、indexOf ではなく列挙位置を使う。
+	for (const [index, choice] of poll.choices.entries()) {
+		const oldCount = poll.votes[index];
+		const newCount = apChoices.find(ap => ap.name === choice)?.replies?.totalItems;
 		if (newCount == null || !(Number.isInteger(newCount) && newCount >= 0)) throw new Error('invalid newCount: ' + newCount);
 
 		if (oldCount !== newCount) {
 			changed = true;
-			poll.votes[poll.choices.indexOf(choice)] = newCount;
+			poll.votes[index] = newCount;
 		}
 	}
 

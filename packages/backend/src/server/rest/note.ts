@@ -248,9 +248,10 @@ async function populatePoll(
 	},
 ): Promise<{ multiple: boolean; expiresAt: string | null; choices: { text: string; votes: number; isVoted: boolean }[] }> {
 	const poll = hint?.poll ?? await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id);
-	const choices = poll.choices.map(c => ({
+	// 選択肢テキストが重複していても正しい票数を引けるよう、indexOf ではなく列挙位置を使う。
+	const choices = poll.choices.map((c, index) => ({
 		text: c,
-		votes: poll.votes[poll.choices.indexOf(c)]!,
+		votes: poll.votes[index]!,
 		isVoted: false,
 	}));
 
