@@ -20,13 +20,21 @@ describe('REPRO upstream #3b drive-capacity TOCTOU', () => {
 	beforeAll(async () => {
 		const config = loadConfig();
 		db = new DataSource({
-			type: 'postgres', host: config.db.host, port: config.db.port,
-			username: config.db.user, password: config.db.pass, database: config.db.db,
-			synchronize: true, dropSchema: true, entities,
+			type: 'postgres',
+			host: config.db.host,
+			port: config.db.port,
+			username: config.db.user,
+			password: config.db.pass,
+			database: config.db.db,
+			synchronize: true,
+			dropSchema: true,
+			entities,
 		});
 		await db.initialize();
 	}, 1000 * 120);
-	afterAll(async () => { if (db?.isInitialized) await db.destroy(); });
+	afterAll(async () => {
+		if (db?.isInitialized) await db.destroy();
+	});
 
 	test('並行アップロードでドライブ容量(driveCapacity)を超過しないこと', async () => {
 		const users = db.getRepository(MiUser);
@@ -39,24 +47,39 @@ describe('REPRO upstream #3b drive-capacity TOCTOU', () => {
 
 		// DriveService.calcDriveUsageOf 相当 (SUM(size) WHERE userId AND isLink=FALSE)
 		const calcUsage = async (): Promise<number> => {
-			const { sum } = await files.createQueryBuilder('file')
+			const { sum } = await files
+				.createQueryBuilder('file')
 				.where('file.userId = :id', { id: uid })
 				.andWhere('file.isLink = FALSE')
 				.select('SUM(file.size)', 'sum')
 				.getRawOne();
 			return parseInt(sum, 10) || 0;
 		};
-		const insertFile = (i: number) => files.insert({
-			id: genAidx(Date.now() + i), userId: uid, userHost: null,
-			md5: `md5-${i}`, name: `f${i}`, type: 'image/png', size,
-			storedInternal: true, url: `http://example.com/f${i}`, isLink: false,
-		});
+		const insertFile = (i: number) =>
+			files.insert({
+				id: genAidx(Date.now() + i),
+				userId: uid,
+				userHost: null,
+				md5: `md5-${i}`,
+				name: `f${i}`,
+				type: 'image/png',
+				size,
+				storedInternal: true,
+				url: `http://example.com/f${i}`,
+				isLink: false,
+			});
 
 		// 並行アップロード 2 本が「両方とも usage=0 を観測」してから各自チェック+insert する並行スケジュール
 		const [u1, u2] = await Promise.all([calcUsage(), calcUsage()]);
 		await Promise.all([
-			(async () => { if (driveCapacity < u1 + size) throw new Error('No free space'); await insertFile(1); })(),
-			(async () => { if (driveCapacity < u2 + size) throw new Error('No free space'); await insertFile(2); })(),
+			(async () => {
+				if (driveCapacity < u1 + size) throw new Error('No free space');
+				await insertFile(1);
+			})(),
+			(async () => {
+				if (driveCapacity < u2 + size) throw new Error('No free space');
+				await insertFile(2);
+			})(),
 		]);
 
 		const finalUsage = await calcUsage();

@@ -55,10 +55,7 @@ describe('REPRO upstream #5 repliesCount double-decrement on concurrent reply de
 		// NoteDeleteService.delete() の該当ロジック:
 		//   67:  await this.notesRepository.decrement({ id: note.replyId }, 'repliesCount', 1);  (無条件)
 		//   113: await this.notesRepository.delete({ id: note.id, userId: note.userId });        (affected 未検査)
-		const [r1, r2] = await Promise.all([
-			notes.findOneBy({ id: replyId }),
-			notes.findOneBy({ id: replyId }),
-		]);
+		const [r1, r2] = await Promise.all([notes.findOneBy({ id: replyId }), notes.findOneBy({ id: replyId })]);
 		await Promise.all([
 			(async () => {
 				if (r1?.replyId) await notes.decrement({ id: r1.replyId }, 'repliesCount', 1);
