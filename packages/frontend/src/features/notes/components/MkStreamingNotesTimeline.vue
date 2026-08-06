@@ -45,7 +45,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				:data-index="row.index"
 				:data-scroll-anchor="row.note.id"
 				:class="$style.virtualRow"
-				:style="{ transform: `translateY(${row.start - scrollMargin}px)` }"
+				:style="{ top: `${row.start - scrollMargin}px` }"
 			>
 				<div :class="[$style.rowContent, { [$style.rowEntering]: enteringNoteIds.has(row.note.id), [$style.rowLeaving]: leavingNoteIds.has(row.note.id) }]">
 					<div v-if="row.separatorInfo" :class="$style.date">
