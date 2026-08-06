@@ -50,6 +50,29 @@ declare namespace Bun {
 	}
 }
 
+// `drizzle-orm/bun-sql` が型解決に使う 'bun' モジュールも、必要な範囲だけ手書きで宣言する。
+declare module 'bun' {
+	interface SQLQuery extends Promise<unknown[]> {
+		values(): Promise<unknown[][]>;
+	}
+
+	interface SQLOptions {
+		max?: number;
+		idleTimeout?: number;
+		connectionTimeout?: number;
+		prepare?: boolean;
+		ssl?: boolean | Record<string, unknown>;
+	}
+
+	class SQL {
+		constructor(url: string, options?: SQLOptions);
+		unsafe(query: string, params?: unknown[]): SQLQuery;
+		begin<T>(callback: (client: SQL) => Promise<T>): Promise<T>;
+		savepoint<T>(callback: (client: SQL) => Promise<T>): Promise<T>;
+		close(): Promise<void>;
+	}
+}
+
 declare const Bun:
 	| {
 			serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
