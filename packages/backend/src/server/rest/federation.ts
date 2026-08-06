@@ -19,6 +19,7 @@ import {
 	listInstancesOrderByFollowersCountDescFromDatabase,
 	listInstancesOrderByFollowingCountDescFromDatabase,
 	updateInstanceInDatabase,
+	type FederationInstancesSort,
 } from '@/core/InstanceStore.js';
 import { listAllDriveFilesByUserHostFromDatabase } from '@/core/DriveFileStore.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
@@ -109,23 +110,6 @@ export const federationStatsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 });
 
-type FederationInstancesSort =
-	| '+pubSub'
-	| '-pubSub'
-	| '+notes'
-	| '-notes'
-	| '+users'
-	| '-users'
-	| '+following'
-	| '-following'
-	| '+followers'
-	| '-followers'
-	| '+firstRetrievedAt'
-	| '-firstRetrievedAt'
-	| '+latestRequestReceivedAt'
-	| '-latestRequestReceivedAt'
-	| null;
-
 const federationIntegerQueryParams = new Set(['limit', 'offset']);
 const federationBooleanQueryParams = new Set([
 	'blocked',
@@ -167,73 +151,47 @@ export function normalizeHonoApiFederationQuery(query: Record<string, string>): 
 	return body;
 }
 
-type FederatedInstanceCacheDependencies = {
+type FederatedInstanceDependencies = {
 	db: MiDrizzleDatabase;
-	redis: Pick<Redis.Redis, 'set' | 'del'>;
 };
 
 export function toPuny(host: string): string {
 	return domainToASCII(host.toLowerCase());
 }
 
-/** FederatedInstanceService の federatedInstanceCache (RedisKVCache) と同じキー形式で書き込む。 */
-export async function updateFederatedInstanceCache(
-	deps: FederatedInstanceCacheDependencies,
-	instance: MiInstance,
-): Promise<void> {
-	await deps.redis.set(
-		`kvcache:federatedInstance:${instance.host}`,
-		JSON.stringify(instance),
-		'EX',
-		60 * 30,
-	);
-}
-
 export async function fetchOrRegisterFederatedInstance(
-	deps: FederatedInstanceCacheDependencies,
+	deps: FederatedInstanceDependencies,
 	host: string,
 ): Promise<MiInstance> {
 	host = toPuny(host);
 
 	const index = await fetchInstanceByHostFromDatabase(deps.db, host);
-	if (index != null) {
-		await updateFederatedInstanceCache(deps, index);
-		return index;
-	}
+	if (index != null) return index;
 
-	const created = await createInstanceInDatabase(deps.db, {
+	return await createInstanceInDatabase(deps.db, {
 		id: genId(),
 		host,
 		firstRetrievedAt: new Date(),
 	});
-
-	await updateFederatedInstanceCache(deps, created);
-	return created;
 }
 
 /** FederatedInstanceService.fetch() 相当 (登録はしない)。 */
 export async function fetchFederatedInstance(
-	deps: FederatedInstanceCacheDependencies,
+	deps: FederatedInstanceDependencies,
 	host: string,
 ): Promise<MiInstance | null> {
 	host = toPuny(host);
 
-	const index = await fetchInstanceByHostFromDatabase(deps.db, host);
-	if (index != null) {
-		await updateFederatedInstanceCache(deps, index);
-	}
-	return index;
+	return await fetchInstanceByHostFromDatabase(deps.db, host);
 }
 
-/** FederatedInstanceService.update() 相当。DB更新後にキャッシュも更新する。 */
-export async function updateFederatedInstanceAndCache(
-	deps: FederatedInstanceCacheDependencies,
+/** FederatedInstanceService.update() 相当。 */
+export async function updateFederatedInstance(
+	deps: FederatedInstanceDependencies,
 	id: MiInstance['id'],
 	data: Partial<MiInstance>,
 ): Promise<MiInstance> {
-	const updated = await updateInstanceInDatabase(deps.db, id, data);
-	await updateFederatedInstanceCache(deps, updated);
-	return updated;
+	return await updateInstanceInDatabase(deps.db, id, data);
 }
 
 export async function tryLockFetchInstanceMetadata(deps: { redis: Pick<Redis.Redis, 'set'> }, host: string): Promise<string | null> {
@@ -407,11 +365,10 @@ export async function handleHonoApiAdminFederationUpdateInstance(
 		suspensionState = params.isSuspended ? 'manuallySuspended' : 'none';
 	}
 
-	const updated = await updateInstanceInDatabase(deps.db, instance.id, {
+	await updateInstanceInDatabase(deps.db, instance.id, {
 		suspensionState,
 		moderationNote: params.moderationNote,
 	});
-	await updateFederatedInstanceCache(deps, updated);
 
 	if (params.isSuspended != null && isSuspendedBefore !== params.isSuspended) {
 		await logModerationEventInDatabase(deps, me, params.isSuspended ? 'suspendRemoteInstance' : 'unsuspendRemoteInstance', {
@@ -448,8 +405,7 @@ export async function handleHonoApiAdminFederationRefreshRemoteInstanceMetadata(
 		unlock: host => unlockFetchInstanceMetadata(deps, host),
 		fetchOrRegisterInstance: host => fetchOrRegisterFederatedInstance(deps, host),
 		updateInstance: async (id, updates) => {
-			const updated = await updateInstanceInDatabase(deps.db, id, updates);
-			await updateFederatedInstanceCache(deps, updated);
+			await updateInstanceInDatabase(deps.db, id, updates);
 		},
 	}, instance, true);
 }

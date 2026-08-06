@@ -611,8 +611,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('account blocking endpoints', () => {
-		test('blocking はDB、cache、follow cleanup、list membership cleanup、list、delete、scope、エラーを維持する', async () => {
-			const config = loadConfig();
+		test('blocking はDB、follow cleanup、list membership cleanup、list、delete、scope、エラーを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const blocker = await signup({ username: `hblock${suffix}` });
@@ -696,16 +695,6 @@ describe('Endpoints', () => {
 			assert.strictEqual(refreshedBlockee.followingCount, 0);
 			assert.strictEqual(refreshedBlockee.followersCount, 0);
 
-			const redis = createRedisClient(config);
-			try {
-				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userBlocking:${blocker.id}`) ?? '[]'), [blockee.id]);
-				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userBlocked:${blockee.id}`) ?? '[]'), [blocker.id]);
-				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${blocker.id}`) ?? '{}'), {});
-				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${blockee.id}`) ?? '{}'), {});
-			} finally {
-				await closeRedisConnection(redis);
-			}
-
 			const duplicate = await api('blocking/create', { userId: blockee.id }, blocker);
 			assert.strictEqual(duplicate.status, 400);
 			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_BLOCKING');
@@ -729,14 +718,6 @@ describe('Endpoints', () => {
 			assert.strictEqual(deleted.body.id, blockee.id);
 			assert.strictEqual(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, blocker.id, blockee.id), null);
 
-			const redisAfterDelete = createRedisClient(config);
-			try {
-				assert.deepStrictEqual(JSON.parse(await redisAfterDelete.get(`kvcache:userBlocking:${blocker.id}`) ?? '[]'), []);
-				assert.deepStrictEqual(JSON.parse(await redisAfterDelete.get(`kvcache:userBlocked:${blockee.id}`) ?? '[]'), []);
-			} finally {
-				await closeRedisConnection(redisAfterDelete);
-			}
-
 			const notBlocking = await api('blocking/delete', { userId: blockee.id }, blocker);
 			assert.strictEqual(notBlocking.status, 400);
 			assert.strictEqual(castAsError(notBlocking.body as any).error.code, 'NOT_BLOCKING');
@@ -745,8 +726,7 @@ describe('Endpoints', () => {
 	});
 
 	describe('account mute endpoints', () => {
-		test('mute と renote-mute はDB、cache、list、delete、scope、エラーを維持する', async () => {
-			const config = loadConfig();
+		test('mute と renote-mute はDB、list、delete、scope、エラーを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const muter = await signup({ username: `hmute${suffix}` });
 			const mutee = await signup({ username: `hmutee${suffix}` });
@@ -765,13 +745,6 @@ describe('Endpoints', () => {
 			assert.strictEqual(muting.muterId, muter.id);
 			assert.strictEqual(muting.muteeId, mutee.id);
 			assert.strictEqual(muting.expiresAt?.getTime(), expiresAt);
-
-			const redis = createRedisClient(config);
-			try {
-				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userMutings:${muter.id}`) ?? '[]'), [mutee.id]);
-			} finally {
-				await closeRedisConnection(redis);
-			}
 
 			const duplicate = await api('mute/create', { userId: mutee.id }, muter);
 			assert.strictEqual(duplicate.status, 400);
@@ -818,13 +791,6 @@ describe('Endpoints', () => {
 			assert.ok(renoteMuting);
 			assert.strictEqual(renoteMuting.muterId, muter.id);
 			assert.strictEqual(renoteMuting.muteeId, renoteMutee.id);
-
-			const redisAfterRenote = createRedisClient(config);
-			try {
-				assert.deepStrictEqual(JSON.parse(await redisAfterRenote.get(`kvcache:renoteMutings:${muter.id}`) ?? '[]'), [renoteMutee.id]);
-			} finally {
-				await closeRedisConnection(redisAfterRenote);
-			}
 
 			const renoteDuplicate = await api('renote-mute/create', { userId: renoteMutee.id }, muter);
 			assert.strictEqual(renoteDuplicate.status, 400);
@@ -1769,8 +1735,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(typeof statsBody.otherFollowingCount, 'number');
 		});
 
-		test('admin/federation/update-instance は suspension、moderationNote、cache、token scope、role、ログを維持する', async () => {
-			const config = loadConfig();
+		test('admin/federation/update-instance は suspension、moderationNote、token scope、role、ログを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const host = `hono-admin-fed-${suffix}.example`;
@@ -1793,18 +1758,6 @@ describe('Endpoints', () => {
 			assert.ok(after);
 			assert.strictEqual(after.suspensionState, 'manuallySuspended');
 			assert.strictEqual(after.moderationNote, `updated note ${suffix}`);
-
-			const redis = createRedisClient(config);
-			try {
-				const cached = await redis.get(`kvcache:federatedInstance:${host}`);
-				assert.ok(cached);
-				const cachedInstance = JSON.parse(cached);
-				assert.strictEqual(cachedInstance.id, instance.id);
-				assert.strictEqual(cachedInstance.suspensionState, 'manuallySuspended');
-				assert.strictEqual(cachedInstance.moderationNote, `updated note ${suffix}`);
-			} finally {
-				await closeRedisConnection(redis);
-			}
 
 			for (let i = 0; i < 10; i++) {
 				const [suspendLogs, noteLogs] = await Promise.all([
@@ -2953,8 +2906,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('admin/emoji/add と update はDB更新、cache、moderation log、scope、role policyを維持する', async () => {
-			const config = loadConfig();
+		test('admin/emoji/add と update はDB更新、moderation log、scope、role policyを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemw${suffix}` });
@@ -3067,19 +3019,6 @@ describe('Endpoints', () => {
 				}, manager);
 				assert.strictEqual(renamedDuplicate.status, 204);
 
-				const redis = createRedisClient(config);
-				try {
-					const cached = await redis.get('singlecache:localEmojis');
-					assert.ok(cached);
-					const cachedEmojis = JSON.parse(cached) as any[];
-					const cachedUpdated = cachedEmojis.find(emoji => emoji.id === after.id);
-					assert.ok(cachedUpdated);
-					assert.strictEqual(cachedUpdated.name, after.name);
-					assert.deepStrictEqual(cachedUpdated.aliases, [`updated_${suffix}`]);
-				} finally {
-					await closeRedisConnection(redis);
-				}
-
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 20,
 					order: 'desc',
@@ -3099,8 +3038,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('admin/emoji/copy は remote emoji を Drive に取り込み、local emoji、cache、log、scope、role policyを維持する', async () => {
-			const config = loadConfig();
+		test('admin/emoji/copy は remote emoji を Drive に取り込み、local emoji、log、scope、role policyを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemc${suffix}` });
@@ -3179,18 +3117,6 @@ describe('Endpoints', () => {
 				assert.strictEqual(driveFile.src, imageUrl);
 				assert.strictEqual(driveFile.type, 'image/png');
 
-				const redis = createRedisClient(config);
-				try {
-					const cached = await redis.get('singlecache:localEmojis');
-					assert.ok(cached);
-					const cachedEmojis = JSON.parse(cached) as any[];
-					const cachedCopied = cachedEmojis.find(emoji => emoji.id === copiedEmoji.id);
-					assert.ok(cachedCopied);
-					assert.strictEqual(cachedCopied.name, remote.name);
-				} finally {
-					await closeRedisConnection(redis);
-				}
-
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 10,
 					order: 'desc',
@@ -3217,8 +3143,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('admin/emoji bulk metadata 更新は aliases、category、license、cache、scope、role policyを維持する', async () => {
-			const config = loadConfig();
+		test('admin/emoji bulk metadata 更新は aliases、category、license、scope、role policyを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemb${suffix}` });
@@ -3315,23 +3240,6 @@ describe('Endpoints', () => {
 				assert.ok(afterFirst.updatedAt);
 				assert.ok(afterSecond.updatedAt);
 
-				const redis = createRedisClient(config);
-				try {
-					const cached = await redis.get('singlecache:localEmojis');
-					assert.ok(cached);
-					const cachedEmojis = JSON.parse(cached) as any[];
-					const cachedFirst = cachedEmojis.find(emoji => emoji.id === first.id);
-					const cachedSecond = cachedEmojis.find(emoji => emoji.id === second.id);
-					assert.ok(cachedFirst);
-					assert.ok(cachedSecond);
-					assert.deepStrictEqual(cachedFirst.aliases, [`added_${suffix}`]);
-					assert.deepStrictEqual(cachedSecond.aliases, [`final_${suffix}`]);
-					assert.strictEqual(cachedFirst.category, `bulk_category_${suffix}`);
-					assert.strictEqual(cachedSecond.license, null);
-				} finally {
-					await closeRedisConnection(redis);
-				}
-
 				const token = await createAppToken(manager, ['write:admin:emoji']);
 				const tokenUpdated = await api('admin/emoji/set-category-bulk', {
 					ids: [first.id],
@@ -3366,8 +3274,7 @@ describe('Endpoints', () => {
 			}
 		});
 
-		test('admin/emoji/delete と delete-bulk はDB削除、cache、moderation log、scope、role policyを維持する', async () => {
-			const config = loadConfig();
+		test('admin/emoji/delete と delete-bulk はDB削除、moderation log、scope、role policyを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemd${suffix}` });
@@ -3433,18 +3340,6 @@ describe('Endpoints', () => {
 				assert.strictEqual(deletedBulk.status, 204);
 				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, bulkFirst.id), null);
 				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, bulkSecond.id), null);
-
-				const redis = createRedisClient(config);
-				try {
-					const cached = await redis.get('singlecache:localEmojis');
-					assert.ok(cached);
-					const cachedEmojis = JSON.parse(cached) as any[];
-					assert.strictEqual(cachedEmojis.some(emoji => emoji.id === single.id), false);
-					assert.strictEqual(cachedEmojis.some(emoji => emoji.id === bulkFirst.id), false);
-					assert.strictEqual(cachedEmojis.some(emoji => emoji.id === bulkSecond.id), false);
-				} finally {
-					await closeRedisConnection(redis);
-				}
 
 				for (let i = 0; i < 10; i++) {
 					const logs = await listModerationLogsFromDatabase(db, {
@@ -5922,7 +5817,6 @@ describe('Endpoints', () => {
 
 	describe('Hono rate limited write endpoints', () => {
 		test('following/create は follow 作成、locked follow request、blocking、scope、エラーを維持する', async () => {
-			const config = loadConfig();
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const follower = await signup({ username: `hfc${suffix}` });
@@ -5955,15 +5849,6 @@ describe('Endpoints', () => {
 			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
 			assert.strictEqual(refreshedFollower.followingCount, 1);
 			assert.strictEqual(refreshedFollowee.followersCount, 1);
-
-			const redis = createRedisClient(config);
-			try {
-				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${follower.id}`) ?? '{}'), {
-					[followee.id]: { withReplies: true },
-				});
-			} finally {
-				await closeRedisConnection(redis);
-			}
 
 			const duplicate = await api('following/create', { userId: followee.id }, follower);
 			assert.strictEqual(duplicate.status, 400);
@@ -6037,8 +5922,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(refreshed?.withReplies, true);
 		});
 
-		test('following/delete は unfollow、カウント減算、キャッシュ更新、scope、エラーを維持する', async () => {
-			const config = loadConfig();
+		test('following/delete は unfollow、カウント減算、scope、エラーを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const follower = await signup({ username: `hfd${suffix}` });
 			const followee = await signup({ username: `hfde${suffix}` });
@@ -6077,16 +5961,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(refreshedFollower.followingCount, 0);
 			assert.strictEqual(refreshedFollowee.followersCount, 0);
 
-			const redis = createRedisClient(config);
-			try {
-				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${follower.id}`) ?? '{}'), {});
-			} finally {
-				await closeRedisConnection(redis);
-			}
 		});
 
-		test('following/invalidate は他人のフォローを解除、カウント減算、キャッシュ更新、scope、エラーを維持する', async () => {
-			const config = loadConfig();
+		test('following/invalidate は他人のフォローを解除、カウント減算、scope、エラーを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const followee = await signup({ username: `hfi${suffix}` });
 			const follower = await signup({ username: `hfie${suffix}` });
@@ -6125,12 +6002,6 @@ describe('Endpoints', () => {
 			assert.strictEqual(refreshedFollower.followingCount, 0);
 			assert.strictEqual(refreshedFollowee.followersCount, 0);
 
-			const redis = createRedisClient(config);
-			try {
-				assert.deepStrictEqual(JSON.parse(await redis.get(`kvcache:userFollowings:${follower.id}`) ?? '{}'), {});
-			} finally {
-				await closeRedisConnection(redis);
-			}
 		});
 
 		test('following/requests/accept は保留リクエストを承認しfollowレコードを作成する', async () => {

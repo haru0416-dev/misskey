@@ -110,7 +110,7 @@ type ConnectionSnapshot = {
 	userMutedInstances: Set<string>;
 };
 
-/** Connection#fetch 相当。RedisKVCache 経由の読み取りをすべて直接DB読みに置き換えている。 */
+/** Connection#fetch 相当。原典が Redis キャッシュ経由で読んでいた関連セットは直接DB読みに置き換えている。 */
 async function fetchStreamConnectionSnapshot(deps: HonoStreamConnectionDependencies, userId: MiUser['id']): Promise<ConnectionSnapshot> {
 	const [userProfile, followees, followingChannelIds, mutedChannelIds, muteeIds, blockerIds, renoteMuteeIds] = await Promise.all([
 		fetchUserProfileByUserIdFromDatabase(deps.db, userId),

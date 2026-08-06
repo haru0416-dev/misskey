@@ -7,6 +7,7 @@ import { Feed } from 'feed';
 import { parse as mfmParse } from 'mfm-js';
 import type { Config } from '@/config.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
+import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
 import { mfmToHtml } from '@/core/MfmToHtml.js';
 import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 import { listPublicFeedNotesByUserIdFromDatabase } from '@/core/NoteStore.js';
@@ -21,14 +22,6 @@ export type FeedPackerDependencies = {
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 };
-
-function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
-	if ((user.host == null || user.host === config.runtime.host) && user.username.includes('.') && meta.iconUrl) {
-		return meta.iconUrl;
-	}
-
-	return `${config.instance.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.runtime.host}`;
-}
 
 export async function packFeed(
 	deps: FeedPackerDependencies,

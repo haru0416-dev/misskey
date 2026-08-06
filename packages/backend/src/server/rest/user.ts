@@ -12,6 +12,7 @@ import * as Acct from '@/misc/acct.js';
 import { maximum } from '@/misc/prelude/array.js';
 import { listFrequentlyRepliedUsersFromDatabase, listHydratedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listAvatarDecorationsFromDatabaseCached } from '@/core/AvatarDecorationStore.js';
+import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
 import { listUserNotePiningsByUserIdFromDatabase, listUserNotePiningsByUserIdsFromDatabase } from '@/core/UserNotePiningStore.js';
 import { listRoleAssignmentsByUserIdsFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { listRolesFromDatabase } from '@/core/RoleStore.js';
@@ -523,14 +524,6 @@ function getOnlineStatus(user: MiUser): 'unknown' | 'online' | 'active' | 'offli
 		elapsed < 1000 * 60 * 60 * 24 * 3 ? 'active' :
 		'offline'
 	);
-}
-
-export function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
-	if ((user.host == null || user.host === config.runtime.host) && user.username.includes('.') && meta.iconUrl) {
-		return meta.iconUrl;
-	}
-
-	return `${config.instance.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.runtime.host}`;
 }
 
 function backupCodesStock(profile: MiUserProfile): 'none' | 'partial' | 'full' {

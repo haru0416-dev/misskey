@@ -27,7 +27,7 @@ import {
 	fetchOrRegisterFederatedInstance,
 	tryLockFetchInstanceMetadata,
 	unlockFetchInstanceMetadata,
-	updateFederatedInstanceAndCache,
+	updateFederatedInstance,
 } from '../../server/rest/federation.js';
 import { performActivityForHonoApi, type HonoApiInboxDependencies } from '../../server/activitypub/inbox-dispatch.js';
 
@@ -61,7 +61,7 @@ function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueu
 			timeout,
 			collapseUpdateInstanceJobs,
 			async (id, job) => {
-				await updateFederatedInstanceAndCache(deps, id, {
+				await updateFederatedInstance(deps, id, {
 					latestRequestReceivedAt: job.latestRequestReceivedAt,
 					isNotResponding: false,
 					// もしサーバーが死んでるために配信が止まっていた場合には自動的に復活させてあげる
@@ -257,7 +257,7 @@ export async function handleHonoQueueInbox(deps: HonoQueueInboxDependencies, job
 			tryLock: h => tryLockFetchInstanceMetadata(deps, h),
 			unlock: h => unlockFetchInstanceMetadata(deps, h),
 			fetchOrRegisterInstance: h => fetchOrRegisterFederatedInstance(deps, h),
-			updateInstance: (id, updates) => updateFederatedInstanceAndCache(deps, id, updates).then(() => {}),
+			updateInstance: (id, updates) => updateFederatedInstance(deps, id, updates).then(() => {}),
 		}, i);
 	});
 

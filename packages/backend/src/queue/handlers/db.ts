@@ -45,7 +45,6 @@ import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from 
 import { packDriveFileManyByIdsForHonoApi } from '../../server/rest/drive-file.js';
 import { isSelfHost } from '../../server/rest/ap-resolve.js';
 import { resolveUserForHonoApi, toPunyForHonoApi, type HonoApiApPersonDependencies } from '../../server/rest/ap-person.js';
-import { refreshUserMutingsCache } from '../../server/rest/account-mutes.js';
 import type { HonoApiInternalEventPublisher } from '../../server/rest/events.js';
 import { createExportCompletedNotification, type HonoApiNotificationDependencies } from '../../server/rest/notification.js';
 import { addUserListMemberForHonoApi, type HonoApiUsersListsDependencies } from '../../server/rest/users-lists.js';
@@ -438,7 +437,6 @@ export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies,
 				muterId: user.id,
 				muteeId: target.id,
 			});
-			await refreshUserMutingsCache(deps, user.id);
 			deps.publishInternalEvent?.('mute', { muterId: user.id, muteeId: target.id });
 		} catch {
 			// 元実装同様、行単位のエラーはログのみで処理を継続する

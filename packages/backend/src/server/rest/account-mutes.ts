@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { createMutingInDatabase, deleteMutingsByIdsFromDatabase, fetchMutingByMuterIdAndMuteeIdFromDatabase, listMuteeIdsByMuterIdFromDatabase, listMutingsByMuterIdWithPaginationFromDatabase, mutingExistsInDatabase, resolveMutingPagination } from '@/core/MutingStore.js';
-import { createRenoteMutingInDatabase, deleteRenoteMutingsByIdsFromDatabase, fetchRenoteMutingFromDatabase, listRenoteMuteeIdsByMuterIdFromDatabase, listRenoteMutingsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
+import { createMutingInDatabase, deleteMutingsByIdsFromDatabase, fetchMutingByMuterIdAndMuteeIdFromDatabase, listMutingsByMuterIdWithPaginationFromDatabase, mutingExistsInDatabase, resolveMutingPagination } from '@/core/MutingStore.js';
+import { createRenoteMutingInDatabase, deleteRenoteMutingsByIdsFromDatabase, fetchRenoteMutingFromDatabase, listRenoteMutingsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -26,7 +25,6 @@ import { parseHonoApiParams } from './validation.js';
 export type HonoApiAccountMuteDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
-	redis: Redis.Redis;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
@@ -88,16 +86,6 @@ async function getTargetUserOrThrow(
 	if (user == null) throw errorFactory();
 
 	return user;
-}
-
-export async function refreshUserMutingsCache(deps: { db: MiDrizzleDatabase; redis: Redis.Redis }, muterId: MiUser['id']): Promise<void> {
-	const muteeIds = await listMuteeIdsByMuterIdFromDatabase(deps.db, muterId);
-	await deps.redis.set(`kvcache:userMutings:${muterId}`, JSON.stringify(muteeIds), 'EX', 60 * 30);
-}
-
-async function refreshRenoteMutingsCache(deps: HonoApiAccountMuteDependencies, muterId: MiUser['id']): Promise<void> {
-	const muteeIds = await listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, muterId);
-	await deps.redis.set(`kvcache:renoteMutings:${muterId}`, JSON.stringify(muteeIds), 'EX', 60 * 30);
 }
 
 async function packHonoApiMuting(
@@ -167,7 +155,6 @@ export async function handleHonoApiMuteCreate(
 		muterId: me.id,
 		muteeId: mutee.id,
 	});
-	await refreshUserMutingsCache(deps, me.id);
 	deps.publishInternalEvent?.('mute', { muterId: me.id, muteeId: mutee.id });
 }
 
@@ -190,7 +177,6 @@ export async function handleHonoApiMuteDelete(
 	}
 
 	await deleteMutingsByIdsFromDatabase(deps.db, [muting.id]);
-	await refreshUserMutingsCache(deps, me.id);
 	deps.publishInternalEvent?.('unmute', { muterId: me.id, muteeId: mutee.id });
 }
 
@@ -232,7 +218,6 @@ export async function handleHonoApiRenoteMuteCreate(
 		muterId: me.id,
 		muteeId: mutee.id,
 	});
-	await refreshRenoteMutingsCache(deps, me.id);
 	deps.publishInternalEvent?.('renoteMute', { muterId: me.id, muteeId: mutee.id });
 }
 
@@ -255,7 +240,6 @@ export async function handleHonoApiRenoteMuteDelete(
 	}
 
 	await deleteRenoteMutingsByIdsFromDatabase(deps.db, [muting.id]);
-	await refreshRenoteMutingsCache(deps, me.id);
 	deps.publishInternalEvent?.('renoteUnmute', { muterId: me.id, muteeId: mutee.id });
 }
 

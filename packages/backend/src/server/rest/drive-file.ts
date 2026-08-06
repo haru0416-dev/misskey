@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
+import { getDriveFilePublicUrl, getProxiedUrl } from '@/core/DriveFilePublicUrl.js';
 import { fetchDriveFileByIdFromDatabase, fetchDriveFileByIdOrFailFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
 import type { Config } from '@/config.js';
 import { deepClone, omitUndefined } from '@/misc/clone.js';
@@ -23,16 +23,6 @@ type DriveFilePackOptions = {
 	self?: boolean;
 	withUser?: boolean;
 };
-
-function getProxiedUrl(config: Config, url: string, mode?: 'static' | 'avatar'): string {
-	return appendQuery(
-		`${config.media.proxyUrl}/${mode ?? 'image'}.webp`,
-		query({
-			url,
-			...(mode ? { [mode]: '1' } : {}),
-		}),
-	);
-}
 
 function getExternalVideoThumbnailUrl(config: Config, url: string): string | null {
 	if (config.media.videoThumbnailGeneratorUrl == null) return null;

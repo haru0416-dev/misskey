@@ -137,7 +137,7 @@ async function getMultiFromRedis(redisForTimelines: Redis.Redis, names: string[]
 /**
  * FanoutTimelineEndpointService.getMiNotes 相当。Redis の fanout タイムラインから note ID 群を読み、
  * DBでhydrateしつつ各種フィルタ (ミュート/ブロック/インスタンスミュート/チャンネルミュート/ブロック済み
- * ホスト/凍結ユーザー) を適用する。原典が RedisKVCache 経由で読んでいたミュート等の関連セットは
+ * ホスト/凍結ユーザー) を適用する。原典が Redis キャッシュ経由で読んでいたミュート等の関連セットは
  * 直接DB読みに置き換えている (このコードベースの確立パターン)。
  */
 export async function getFanoutTimelineNotesForHonoApi(deps: FanoutTimelineReadDependencies, ps: FanoutTimelineReadOptions): Promise<MiNote[]> {
