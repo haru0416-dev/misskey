@@ -4,26 +4,24 @@
  */
 
 import { and, count, eq, inArray } from 'drizzle-orm';
-import { announcementRead, type AnnouncementReadInsert, type AnnouncementReadRow } from '@/db/schema/announcement-read.js';
+import {
+	announcementRead,
+	type AnnouncementReadInsert,
+	type AnnouncementReadRow,
+} from '@/db/schema/announcement-read.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAnnouncement } from '@/models/Announcement.js';
 import type { MiUser } from '@/models/User.js';
 
 function announcementReadCondition(userId: MiUser['id'], announcementId: MiAnnouncement['id']) {
-	return and(
-		eq(announcementRead.userId, userId),
-		eq(announcementRead.announcementId, announcementId),
-	);
+	return and(eq(announcementRead.userId, userId), eq(announcementRead.announcementId, announcementId));
 }
 
 export async function listAnnouncementReadsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<AnnouncementReadRow[]> {
-	return await db
-		.select()
-		.from(announcementRead)
-		.where(eq(announcementRead.userId, userId));
+	return await db.select().from(announcementRead).where(eq(announcementRead.userId, userId));
 }
 
 export async function announcementReadExistsInDatabase(
@@ -50,12 +48,9 @@ export async function listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatab
 	const rows = await db
 		.select({ announcementId: announcementRead.announcementId })
 		.from(announcementRead)
-		.where(and(
-			eq(announcementRead.userId, userId),
-			inArray(announcementRead.announcementId, announcementIds),
-		));
+		.where(and(eq(announcementRead.userId, userId), inArray(announcementRead.announcementId, announcementIds)));
 
-	return rows.map(row => row.announcementId);
+	return rows.map((row) => row.announcementId);
 }
 
 export async function createAnnouncementReadInDatabase(
@@ -66,10 +61,7 @@ export async function createAnnouncementReadInDatabase(
 		.insert(announcementRead)
 		.values(data)
 		.onConflictDoNothing({
-			target: [
-				announcementRead.userId,
-				announcementRead.announcementId,
-			],
+			target: [announcementRead.userId, announcementRead.announcementId],
 		})
 		.returning({ id: announcementRead.id });
 
@@ -93,5 +85,5 @@ export async function countAnnouncementReadsByAnnouncementIdsFromDatabase(
 		.where(inArray(announcementRead.announcementId, announcementIds))
 		.groupBy(announcementRead.announcementId);
 
-	return new Map(rows.map(row => [row.announcementId, row.count]));
+	return new Map(rows.map((row) => [row.announcementId, row.count]));
 }

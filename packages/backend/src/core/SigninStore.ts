@@ -17,31 +17,18 @@ function deserializeSignin(row: SigninRow): MiSignin {
 
 function signinHistoryCondition(userId: MiUser['id'], sinceId?: string | null, untilId?: string | null) {
 	if (sinceId && untilId) {
-		return and(
-			eq(signin.userId, userId),
-			gt(signin.id, sinceId),
-			lt(signin.id, untilId),
-		);
+		return and(eq(signin.userId, userId), gt(signin.id, sinceId), lt(signin.id, untilId));
 	} else if (sinceId) {
-		return and(
-			eq(signin.userId, userId),
-			gt(signin.id, sinceId),
-		);
+		return and(eq(signin.userId, userId), gt(signin.id, sinceId));
 	} else if (untilId) {
-		return and(
-			eq(signin.userId, userId),
-			lt(signin.id, untilId),
-		);
+		return and(eq(signin.userId, userId), lt(signin.id, untilId));
 	} else {
 		return eq(signin.userId, userId);
 	}
 }
 
 export async function createSigninInDatabase(db: MiDrizzleDatabase, data: SigninInsert): Promise<MiSignin> {
-	const [row] = await db
-		.insert(signin)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(signin).values(data).returning();
 	if (row == null) throw new Error('Signin row was not created');
 
 	return deserializeSignin(row);
@@ -51,10 +38,7 @@ export async function listSigninsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiSignin[]> {
-	const rows = await db
-		.select()
-		.from(signin)
-		.where(eq(signin.userId, userId));
+	const rows = await db.select().from(signin).where(eq(signin.userId, userId));
 
 	return rows.map(deserializeSignin);
 }

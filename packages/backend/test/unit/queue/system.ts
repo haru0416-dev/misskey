@@ -14,11 +14,17 @@ import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/UserIpSt
 import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/AntennaStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createRoleAssignmentInDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/RoleAssignmentStore.js';
-import { createRetentionAggregationInDatabase, listRetentionAggregationsCreatedAfter } from '@/core/RetentionAggregationStore.js';
+import {
+	createRetentionAggregationInDatabase,
+	listRetentionAggregationsCreatedAfter,
+} from '@/core/RetentionAggregationStore.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
 import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
 import { createChannelInDatabase } from '@/core/ChannelStore.js';
-import { createChannelMutingInDatabase, listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
+import {
+	createChannelMutingInDatabase,
+	listActiveMutedChannelIdsByUserIdFromDatabase,
+} from '@/core/ChannelMutingStore.js';
 import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
 import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -91,7 +97,7 @@ describe('hono-queue-system', () => {
 			await handleHonoQueueClean(deps);
 
 			const assignmentsAfter = await listRoleAssignmentsByUserIdFromDatabase(db, userId);
-			expect(assignmentsAfter.some(a => a.id === assignmentId)).toBe(false);
+			expect(assignmentsAfter.some((a) => a.id === assignmentId)).toBe(false);
 		});
 
 		test('90日より古いUserIpを削除する', async () => {
@@ -105,7 +111,7 @@ describe('hono-queue-system', () => {
 			await recordUserIpInDatabase(db, {
 				userId,
 				ip: '203.0.113.1',
-				createdAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 91)),
+				createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 91),
 			});
 
 			await handleHonoQueueClean(deps);
@@ -131,7 +137,7 @@ describe('hono-queue-system', () => {
 				withFile: false,
 				keywords: [['test']],
 				excludeKeywords: [[]],
-				lastUsedAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 365)),
+				lastUsedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 365),
 			});
 
 			await handleHonoQueueClean({
@@ -146,11 +152,11 @@ describe('hono-queue-system', () => {
 
 	describe('handleHonoQueueAggregateRetention', () => {
 		test('本日分のretention_aggregationレコードを作成し、過去のレコードのretention数を更新する', async () => {
-			const pastId = genId(Date.now() - (1000 * 60 * 60 * 24 * 5));
+			const pastId = genId(Date.now() - 1000 * 60 * 60 * 24 * 5);
 			await createRetentionAggregationInDatabase(db, {
 				id: pastId,
-				createdAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 5)),
-				updatedAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 5)),
+				createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
+				updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
 				dateKey: `retentiontest-${pastId}`,
 				userIds: [],
 				usersCount: 0,
@@ -160,10 +166,10 @@ describe('hono-queue-system', () => {
 
 			const now = new Date();
 			const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-			const records = await listRetentionAggregationsCreatedAfter(db, new Date(Date.now() - (1000 * 60 * 60 * 24 * 31)));
-			expect(records.some(r => r.dateKey === dateKey)).toBe(true);
+			const records = await listRetentionAggregationsCreatedAfter(db, new Date(Date.now() - 1000 * 60 * 60 * 24 * 31));
+			expect(records.some((r) => r.dateKey === dateKey)).toBe(true);
 
-			const pastRecord = records.find(r => r.id === pastId);
+			const pastRecord = records.find((r) => r.id === pastId);
 			expect(pastRecord?.data[dateKey]).toBe(0);
 		});
 
@@ -222,7 +228,9 @@ describe('hono-queue-system', () => {
 
 			await handleHonoQueueCheckExpiredMutings({
 				...deps,
-				publishInternalEvent: (type, value) => { published.push({ type, value }); },
+				publishInternalEvent: (type, value) => {
+					published.push({ type, value });
+				},
 			});
 
 			expect(await mutingExistsInDatabase(db, muterId, muteeId)).toBe(false);
@@ -235,7 +243,9 @@ describe('hono-queue-system', () => {
 
 	describe('handleHonoQueueBakeBufferedReactions', () => {
 		test('enableReactionsBufferingがfalseの場合は何もしない', async () => {
-			await expect(handleHonoQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: false } })).resolves.toBeUndefined();
+			await expect(
+				handleHonoQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: false } }),
+			).resolves.toBeUndefined();
 		});
 
 		test('バッファされたリアクションをnoteに反映する', async () => {

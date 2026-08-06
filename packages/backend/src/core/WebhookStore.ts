@@ -9,16 +9,9 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
 import type { MiUser } from '@/models/User.js';
 
-type WebhookUpdate = Partial<Pick<
-	WebhookInsert,
-	| 'name'
-	| 'url'
-	| 'secret'
-	| 'on'
-	| 'active'
-	| 'latestSentAt'
-	| 'latestStatus'
->>;
+type WebhookUpdate = Partial<
+	Pick<WebhookInsert, 'name' | 'url' | 'secret' | 'on' | 'active' | 'latestSentAt' | 'latestStatus'>
+>;
 
 function webhookFilterCondition(options: {
 	ids?: MiWebhook['id'][];
@@ -40,7 +33,12 @@ function webhookFilterCondition(options: {
 	}
 
 	if (options.on != null && options.on.length > 0) {
-		conditions.push(sql`ARRAY[${sql.join(options.on.map(type => sql`${type}`), sql`, `)}]::varchar[] <@ ${webhook.on}`);
+		conditions.push(
+			sql`ARRAY[${sql.join(
+				options.on.map((type) => sql`${type}`),
+				sql`, `,
+			)}]::varchar[] <@ ${webhook.on}`,
+		);
 	}
 
 	return conditions.length > 0 ? and(...conditions) : undefined;
@@ -73,46 +71,28 @@ export async function listWebhooksFromDatabase(
 		on?: WebhookEventTypes[];
 	} = {},
 ): Promise<MiWebhook[]> {
-	const rows = await db
-		.select()
-		.from(webhook)
-		.where(webhookFilterCondition(options));
+	const rows = await db.select().from(webhook).where(webhookFilterCondition(options));
 
-	return rows.map(row => deserializeWebhook(row));
+	return rows.map((row) => deserializeWebhook(row));
 }
 
 export async function listWebhooksByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiWebhook[]> {
-	const rows = await db
-		.select()
-		.from(webhook)
-		.where(eq(webhook.userId, userId));
+	const rows = await db.select().from(webhook).where(eq(webhook.userId, userId));
 
-	return rows.map(row => deserializeWebhook(row));
+	return rows.map((row) => deserializeWebhook(row));
 }
 
-export async function countWebhooksByUserIdFromDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(webhook)
-		.where(eq(webhook.userId, userId));
+export async function countWebhooksByUserIdFromDatabase(db: MiDrizzleDatabase, userId: MiUser['id']): Promise<number> {
+	const [row] = await db.select({ count: count() }).from(webhook).where(eq(webhook.userId, userId));
 
 	return row?.count ?? 0;
 }
 
-export async function createWebhookInDatabase(
-	db: MiDrizzleDatabase,
-	data: WebhookInsert,
-): Promise<MiWebhook> {
-	const [row] = await db
-		.insert(webhook)
-		.values(data)
-		.returning();
+export async function createWebhookInDatabase(db: MiDrizzleDatabase, data: WebhookInsert): Promise<MiWebhook> {
+	const [row] = await db.insert(webhook).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create webhook');
@@ -126,20 +106,11 @@ export async function updateWebhookInDatabase(
 	id: MiWebhook['id'],
 	data: WebhookUpdate,
 ): Promise<MiWebhook | null> {
-	const [row] = await db
-		.update(webhook)
-		.set(data)
-		.where(eq(webhook.id, id))
-		.returning();
+	const [row] = await db.update(webhook).set(data).where(eq(webhook.id, id)).returning();
 
 	return row == null ? null : deserializeWebhook(row);
 }
 
-export async function deleteWebhookFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiWebhook['id'],
-): Promise<void> {
-	await db
-		.delete(webhook)
-		.where(eq(webhook.id, id));
+export async function deleteWebhookFromDatabase(db: MiDrizzleDatabase, id: MiWebhook['id']): Promise<void> {
+	await db.delete(webhook).where(eq(webhook.id, id));
 }

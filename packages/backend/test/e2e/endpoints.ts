@@ -18,22 +18,41 @@ import { countAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import { createAvatarDecorationInDatabase } from '@/core/AvatarDecorationStore.js';
 import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase } from '@/core/AnnouncementReadStore.js';
 import { createAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
-import { createAbuseUserReportInDatabase, fetchAbuseUserReportByIdOrFailFromDatabase } from '@/core/AbuseUserReportStore.js';
-import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import {
+	createAbuseUserReportInDatabase,
+	fetchAbuseUserReportByIdOrFailFromDatabase,
+} from '@/core/AbuseUserReportStore.js';
+import {
+	createBlockingInDatabase,
+	deleteBlockingByIdFromDatabase,
+	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
+} from '@/core/BlockingStore.js';
 import { channelFavoriteExistsInDatabase, createChannelFavoriteInDatabase } from '@/core/ChannelFavoriteStore.js';
 import { channelFollowingExistsInDatabase, createChannelFollowingInDatabase } from '@/core/ChannelFollowingStore.js';
 import { channelMutingExistsInDatabase, createChannelMutingInDatabase } from '@/core/ChannelMutingStore.js';
 import { createChannelInDatabase, updateChannelInDatabase } from '@/core/ChannelStore.js';
 import { clipFavoriteExistsInDatabase } from '@/core/ClipFavoriteStore.js';
 import { createClipInDatabase } from '@/core/ClipStore.js';
-import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase, updateDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import {
+	createDriveFileInDatabase,
+	fetchDriveFileByIdFromDatabase,
+	fetchDriveFileByUrlFromDatabase,
+	updateDriveFileInDatabase,
+} from '@/core/DriveFileStore.js';
 import { createDriveFolderInDatabase, fetchDriveFolderByIdFromDatabase } from '@/core/DriveFolderStore.js';
-import { fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
+import {
+	fetchEmojiByIdFromDatabase,
+	fetchEmojiByIdOrFailFromDatabase,
+	insertEmojiInDatabase,
+} from '@/core/EmojiStore.js';
 import { flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
 import { createFlashInDatabase, fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
 import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
-import { createFollowingInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
+import {
+	createFollowingInDatabase,
+	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
+} from '@/core/FollowingStore.js';
 import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { createModerationLogInDatabase, listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
@@ -49,7 +68,10 @@ import { createRelayInDatabase, fetchRelayByInboxFromDatabase } from '@/core/Rel
 import { fetchRenoteMutingFromDatabase } from '@/core/RenoteMutingStore.js';
 import { createRetentionAggregationInDatabase } from '@/core/RetentionAggregationStore.js';
 import { createRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
-import { createRoleAssignmentInDatabase, fetchRoleAssignmentByUserIdAndRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
+import {
+	createRoleAssignmentInDatabase,
+	fetchRoleAssignmentByUserIdAndRoleIdFromDatabase,
+} from '@/core/RoleAssignmentStore.js';
 import { createRoleInDatabase } from '@/core/RoleStore.js';
 import { createPasswordResetRequestInDatabase } from '@/core/PasswordResetRequestStore.js';
 import { isPromoNoteExists } from '@/core/PromoNoteStore.js';
@@ -61,10 +83,24 @@ import { fetchSystemWebhookByIdFromDatabase } from '@/core/SystemWebhookStore.js
 import { hashtag as hashtagTable } from '@/db/schema/hashtag.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { userIp } from '@/db/schema/user-ip.js';
-import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase, fetchLocalUserByUsernameFromDatabase, fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import {
+	createUserInDatabase,
+	createUserWithProfileAndPublickeyInDatabase,
+	fetchLocalUserByUsernameFromDatabase,
+	fetchUserByIdOrFailFromDatabase,
+	updateUserInDatabase,
+} from '@/core/UserStore.js';
 import { userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
-import { createUserListMembershipInDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
-import { createUserListInDatabase, deleteUserListByIdInDatabase, fetchUserListByIdAndUserIdFromDatabase, fetchUserListByNameAndUserIdFromDatabase } from '@/core/UserListStore.js';
+import {
+	createUserListMembershipInDatabase,
+	userListMembershipExistsInDatabase,
+} from '@/core/UserListMembershipStore.js';
+import {
+	createUserListInDatabase,
+	deleteUserListByIdInDatabase,
+	fetchUserListByIdAndUserIdFromDatabase,
+	fetchUserListByNameAndUserIdFromDatabase,
+} from '@/core/UserListStore.js';
 import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { createUserSecurityKeyInDatabase } from '@/core/UserSecurityKeyStore.js';
@@ -79,9 +115,28 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
 import { dispatchQueueOutbox, fetchQueueOutboxByIdFromDatabase } from '@/core/QueueOutboxStore.js';
 import type { DbQueue } from '@/core/queues.js';
-import type { DbJobData, DeliverJobData, InboxJobData, ObjectStorageJobData, PostScheduledNoteJobData, RelationshipJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
+import type {
+	DbJobData,
+	DeliverJobData,
+	InboxJobData,
+	ObjectStorageJobData,
+	PostScheduledNoteJobData,
+	RelationshipJobData,
+	SystemWebhookDeliverJobData,
+} from '@/queue/types.js';
 import { closeRedisConnection, createRedisClient } from '@/runtime-dependencies.js';
-import { api, castAsError, createAppToken, origin, post, relativeFetch, role, signup, simpleGet, uploadFile } from '../utils.js';
+import {
+	api,
+	castAsError,
+	createAppToken,
+	origin,
+	post,
+	relativeFetch,
+	role,
+	signup,
+	simpleGet,
+	uploadFile,
+} from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 function getAt<T>(values: readonly T[], index: number): T {
@@ -110,23 +165,41 @@ describe('Endpoints', () => {
 	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
 	let postScheduledNoteQueue: Bull.Queue<PostScheduledNoteJobData> | undefined;
 
-	beforeAll(async () => {
-		const config = loadConfig();
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
-		dbQueue = new Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>>(QUEUE.DB, baseQueueOptions(config, QUEUE.DB));
-		deliverQueue = new Bull.Queue<DeliverJobData>(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
-		inboxQueue = new Bull.Queue<InboxJobData>(QUEUE.INBOX, baseQueueOptions(config, QUEUE.INBOX));
-		relationshipQueue = new Bull.Queue<RelationshipJobData>(QUEUE.RELATIONSHIP, baseQueueOptions(config, QUEUE.RELATIONSHIP));
-		objectStorageQueue = new Bull.Queue<ObjectStorageJobData>(QUEUE.OBJECT_STORAGE, baseQueueOptions(config, QUEUE.OBJECT_STORAGE));
-		systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(QUEUE.SYSTEM_WEBHOOK_DELIVER, baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER));
-		postScheduledNoteQueue = new Bull.Queue<PostScheduledNoteJobData>(QUEUE.POST_SCHEDULED_NOTE, baseQueueOptions(config, QUEUE.POST_SCHEDULED_NOTE));
-		alice = await signup({ username: 'alice' });
-		bob = await signup({ username: 'bob' });
-		carol = await signup({ username: 'carol' });
-		dave = await signup({ username: 'dave' });
-		await api('admin/update-meta', { federation: 'all' }, alice as misskey.entities.SignupResponse);
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			const config = loadConfig();
+			pool = createDrizzlePool(config);
+			db = createDrizzleDatabase(pool, config);
+			dbQueue = new Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>>(
+				QUEUE.DB,
+				baseQueueOptions(config, QUEUE.DB),
+			);
+			deliverQueue = new Bull.Queue<DeliverJobData>(QUEUE.DELIVER, baseQueueOptions(config, QUEUE.DELIVER));
+			inboxQueue = new Bull.Queue<InboxJobData>(QUEUE.INBOX, baseQueueOptions(config, QUEUE.INBOX));
+			relationshipQueue = new Bull.Queue<RelationshipJobData>(
+				QUEUE.RELATIONSHIP,
+				baseQueueOptions(config, QUEUE.RELATIONSHIP),
+			);
+			objectStorageQueue = new Bull.Queue<ObjectStorageJobData>(
+				QUEUE.OBJECT_STORAGE,
+				baseQueueOptions(config, QUEUE.OBJECT_STORAGE),
+			);
+			systemWebhookDeliverQueue = new Bull.Queue<SystemWebhookDeliverJobData>(
+				QUEUE.SYSTEM_WEBHOOK_DELIVER,
+				baseQueueOptions(config, QUEUE.SYSTEM_WEBHOOK_DELIVER),
+			);
+			postScheduledNoteQueue = new Bull.Queue<PostScheduledNoteJobData>(
+				QUEUE.POST_SCHEDULED_NOTE,
+				baseQueueOptions(config, QUEUE.POST_SCHEDULED_NOTE),
+			);
+			alice = await signup({ username: 'alice' });
+			bob = await signup({ username: 'bob' });
+			carol = await signup({ username: 'carol' });
+			dave = await signup({ username: 'dave' });
+			await api('admin/update-meta', { federation: 'all' }, alice as misskey.entities.SignupResponse);
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await dbQueue?.close();
@@ -184,12 +257,9 @@ describe('Endpoints', () => {
 				password: 'test',
 				host: 'remote.example.com',
 			};
-			const results = await Promise.all([
-				api('signup', params),
-				api('signup', params),
-			]);
-			assert.strictEqual(results.filter(result => result.status === 200).length, 1);
-			const duplicated = results.find(result => result.status === 400);
+			const results = await Promise.all([api('signup', params), api('signup', params)]);
+			assert.strictEqual(results.filter((result) => result.status === 200).length, 1);
+			const duplicated = results.find((result) => result.status === 400);
 			assert.ok(duplicated);
 			assert.strictEqual(castAsError(duplicated.body as any).error.code, 'DUPLICATED_USERNAME');
 		});
@@ -200,8 +270,8 @@ describe('Endpoints', () => {
 				api('signup', { username, password: 'test', host: 'remote-a.example.com' }),
 				api('signup', { username, password: 'test', host: 'remote-b.example.com' }),
 			]);
-			assert.strictEqual(results.filter(result => result.status === 200).length, 1);
-			const used = results.find(result => result.status === 400);
+			assert.strictEqual(results.filter((result) => result.status === 200).length, 1);
+			const used = results.find((result) => result.status === 400);
 			assert.ok(used);
 			assert.strictEqual(castAsError(used.body as any).error.code, 'USED_USERNAME');
 		});
@@ -212,40 +282,55 @@ describe('Endpoints', () => {
 			const staleMeta = { ...before, rootUserId: null, rootUser: null };
 			const suffix = Date.now().toString(36).slice(-8);
 			const requiredUsername = `requiredroot${suffix}`;
-			await assert.rejects(createLocalSignupAccount({
-				config: loadConfig(),
-				db,
-				meta: staleMeta,
-			}, {
-				username: requiredUsername,
-				host: null,
-				passwordHash: null,
-				rootClaim: 'required',
-			}), error => error instanceof RootUserAlreadyAssignedError);
+			await assert.rejects(
+				createLocalSignupAccount(
+					{
+						config: loadConfig(),
+						db,
+						meta: staleMeta,
+					},
+					{
+						username: requiredUsername,
+						host: null,
+						passwordHash: null,
+						rootClaim: 'required',
+					},
+				),
+				(error) => error instanceof RootUserAlreadyAssignedError,
+			);
 			assert.strictEqual(await fetchLocalUserByUsernameFromDatabase(db, requiredUsername), null);
 
-			const result = await createLocalSignupAccount({
-				config: loadConfig(),
-				db,
-				meta: staleMeta,
-			}, {
-				username: `staleroot${suffix}`,
-				host: null,
-				passwordHash: null,
-			});
+			const result = await createLocalSignupAccount(
+				{
+					config: loadConfig(),
+					db,
+					meta: staleMeta,
+				},
+				{
+					username: `staleroot${suffix}`,
+					host: null,
+					passwordHash: null,
+				},
+			);
 
 			assert.strictEqual(result.account.username, `staleroot${suffix}`);
 			assert.strictEqual((await fetchMetaFromDatabase(db)).rootUserId, before.rootUserId);
 
-			await assert.rejects(createLocalSignupAccount({
-				config: loadConfig(),
-				db,
-				meta: staleMeta,
-			}, {
-				username: 'admin',
-				host: null,
-				passwordHash: null,
-			}), { code: 'USED_USERNAME' });
+			await assert.rejects(
+				createLocalSignupAccount(
+					{
+						config: loadConfig(),
+						db,
+						meta: staleMeta,
+					},
+					{
+						username: 'admin',
+						host: null,
+						passwordHash: null,
+					},
+				),
+				{ code: 'USED_USERNAME' },
+			);
 		});
 	});
 
@@ -296,7 +381,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			if (res.body == null) assert.fail('endpoint metadata is missing');
 			assert.ok(Array.isArray(res.body.params));
-			assert.ok(res.body.params.some(param => param.name === 'name' && param.type === 'String'));
+			assert.ok(res.body.params.some((param) => param.name === 'name' && param.type === 'String'));
 
 			const missing = await api('endpoint', {
 				endpoint: 'missing/endpoint',
@@ -349,7 +434,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=60');
 
-			const body = await res.json() as {
+			const body = (await res.json()) as {
 				machine: unknown;
 				cpu?: { model?: unknown; cores?: unknown };
 				mem?: { total?: unknown };
@@ -380,7 +465,7 @@ describe('Endpoints', () => {
 			});
 
 			assert.strictEqual(invalid.status, 400);
-			assert.strictEqual(castAsError(await invalid.json() as Record<string, unknown>).error.code, 'INVALID_PARAM');
+			assert.strictEqual(castAsError((await invalid.json()) as Record<string, unknown>).error.code, 'INVALID_PARAM');
 		});
 	});
 
@@ -433,35 +518,39 @@ describe('Endpoints', () => {
 
 			try {
 				const writeToken = await createAppToken(alice, ['write:admin:meta']);
-				const updated = await api('admin/update-meta', {
-					name: updatedName,
-					disableRegistration: null,
-					signupRateLimitMinIntervalSeconds: 15,
-					signupRateLimitMaxPerHour: 20,
-					translatorProvider: 'libreTranslate',
-					libreTranslateApiUrl: 'https://translate.example/base',
-					libreTranslateApiKey: 'test-key',
-					pinnedUsers: ['@alice', ''],
-					hiddenTags: [`hono-meta-${now}`, ''],
-					blockedHosts: ['Blocked.Example', ''],
-					silencedHosts: ['zzz.example', 'aaa.example', 'aaa.example', 'Blocked.Example', ''],
-					mediaSilencedHosts: ['media.example', 'media.example', 'Blocked.Example', ''],
-					langs: ['ja-JP', ''],
-					mcaptchaSiteKey: `mcaptcha-${now}`,
-					googleAnalyticsMeasurementId: '',
-					sensitiveMediaDetectionApiUrl: '',
-					deeplAuthKey: '',
-					truemailInstance: '',
-					tosUrl: `https://example.com/tos-${now}`,
-					repositoryUrl: 'not a url',
-					urlPreviewSummaryProxyUrl: ` https://example.com/summary-${now} `,
-					urlPreviewSensitiveList: [`  example.com ${now}  `, '   ', `/preview-${now}/`],
-					clientOptions: {
-						entrancePageStyle: 'simple',
-						showTimelineForVisitor: false,
+				const updated = await api(
+					'admin/update-meta',
+					{
+						name: updatedName,
+						disableRegistration: null,
+						signupRateLimitMinIntervalSeconds: 15,
+						signupRateLimitMaxPerHour: 20,
+						translatorProvider: 'libreTranslate',
+						libreTranslateApiUrl: 'https://translate.example/base',
+						libreTranslateApiKey: 'test-key',
+						pinnedUsers: ['@alice', ''],
+						hiddenTags: [`hono-meta-${now}`, ''],
+						blockedHosts: ['Blocked.Example', ''],
+						silencedHosts: ['zzz.example', 'aaa.example', 'aaa.example', 'Blocked.Example', ''],
+						mediaSilencedHosts: ['media.example', 'media.example', 'Blocked.Example', ''],
+						langs: ['ja-JP', ''],
+						mcaptchaSiteKey: `mcaptcha-${now}`,
+						googleAnalyticsMeasurementId: '',
+						sensitiveMediaDetectionApiUrl: '',
+						deeplAuthKey: '',
+						truemailInstance: '',
+						tosUrl: `https://example.com/tos-${now}`,
+						repositoryUrl: 'not a url',
+						urlPreviewSummaryProxyUrl: ` https://example.com/summary-${now} `,
+						urlPreviewSensitiveList: [`  example.com ${now}  `, '   ', `/preview-${now}/`],
+						clientOptions: {
+							entrancePageStyle: 'simple',
+							showTimelineForVisitor: false,
+						},
+						federationHosts: ['Remote.Example', ''],
 					},
-					federationHosts: ['Remote.Example', ''],
-				}, { token: writeToken });
+					{ token: writeToken },
+				);
 				assert.strictEqual(updated.status, 204);
 
 				const after = await fetchMetaFromDatabase(db);
@@ -504,31 +593,35 @@ describe('Endpoints', () => {
 				});
 				assert.ok(logs.length > 0);
 			} finally {
-				await api('admin/update-meta', {
-					name: before.name,
-					signupRateLimitMinIntervalSeconds: before.signupRateLimitMinIntervalSeconds,
-					signupRateLimitMaxPerHour: before.signupRateLimitMaxPerHour,
-					translatorProvider: before.translatorProvider,
-					libreTranslateApiUrl: before.libreTranslateApiUrl,
-					libreTranslateApiKey: before.libreTranslateApiKey,
-					pinnedUsers: before.pinnedUsers,
-					hiddenTags: before.hiddenTags,
-					blockedHosts: before.blockedHosts,
-					silencedHosts: before.silencedHosts,
-					mediaSilencedHosts: before.mediaSilencedHosts,
-					langs: before.langs,
-					mcaptchaSiteKey: before.mcaptchaSitekey,
-					googleAnalyticsMeasurementId: before.googleAnalyticsMeasurementId,
-					sensitiveMediaDetectionApiUrl: before.sensitiveMediaDetectionApiUrl,
-					deeplAuthKey: before.deeplAuthKey,
-					truemailInstance: before.truemailInstance,
-					tosUrl: before.termsOfServiceUrl,
-					repositoryUrl: before.repositoryUrl,
-					urlPreviewSummaryProxyUrl: before.urlPreviewSummaryProxyUrl,
-					urlPreviewSensitiveList: before.urlPreviewSensitiveList,
-					clientOptions: before.clientOptions,
-					federationHosts: before.federationHosts,
-				}, alice);
+				await api(
+					'admin/update-meta',
+					{
+						name: before.name,
+						signupRateLimitMinIntervalSeconds: before.signupRateLimitMinIntervalSeconds,
+						signupRateLimitMaxPerHour: before.signupRateLimitMaxPerHour,
+						translatorProvider: before.translatorProvider,
+						libreTranslateApiUrl: before.libreTranslateApiUrl,
+						libreTranslateApiKey: before.libreTranslateApiKey,
+						pinnedUsers: before.pinnedUsers,
+						hiddenTags: before.hiddenTags,
+						blockedHosts: before.blockedHosts,
+						silencedHosts: before.silencedHosts,
+						mediaSilencedHosts: before.mediaSilencedHosts,
+						langs: before.langs,
+						mcaptchaSiteKey: before.mcaptchaSitekey,
+						googleAnalyticsMeasurementId: before.googleAnalyticsMeasurementId,
+						sensitiveMediaDetectionApiUrl: before.sensitiveMediaDetectionApiUrl,
+						deeplAuthKey: before.deeplAuthKey,
+						truemailInstance: before.truemailInstance,
+						tosUrl: before.termsOfServiceUrl,
+						repositoryUrl: before.repositoryUrl,
+						urlPreviewSummaryProxyUrl: before.urlPreviewSummaryProxyUrl,
+						urlPreviewSensitiveList: before.urlPreviewSensitiveList,
+						clientOptions: before.clientOptions,
+						federationHosts: before.federationHosts,
+					},
+					alice,
+				);
 			}
 		});
 	});
@@ -561,7 +654,7 @@ describe('Endpoints', () => {
 					type: 'updateProxyAccountDescription',
 					userId: alice.id,
 				});
-				assert.ok(logs.some(log => (log.info as { after?: string | null }).after === description));
+				assert.ok(logs.some((log) => (log.info as { after?: string | null }).after === description));
 			} finally {
 				await api('admin/update-proxy-account', { description: null }, alice);
 			}
@@ -573,11 +666,17 @@ describe('Endpoints', () => {
 			const missingUserId = 'zzzzzzzzzzzzzzzzzzzzzzzzzz';
 			const missingFromAccountsDelete = await api('admin/accounts/delete', { userId: missingUserId }, alice);
 			assert.strictEqual(missingFromAccountsDelete.status, 400);
-			assert.strictEqual(castAsError(missingFromAccountsDelete.body as any).error.id, 'f26ff6c4-278d-4c07-af5a-224c9d1e53f3');
+			assert.strictEqual(
+				castAsError(missingFromAccountsDelete.body as any).error.id,
+				'f26ff6c4-278d-4c07-af5a-224c9d1e53f3',
+			);
 
 			const missingFromDeleteAccount = await api('admin/delete-account', { userId: missingUserId }, alice);
 			assert.strictEqual(missingFromDeleteAccount.status, 400);
-			assert.strictEqual(castAsError(missingFromDeleteAccount.body as any).error.id, '7ccf53b8-f359-45a7-b376-5f05a7bdfa93');
+			assert.strictEqual(
+				castAsError(missingFromDeleteAccount.body as any).error.id,
+				'7ccf53b8-f359-45a7-b376-5f05a7bdfa93',
+			);
 		});
 
 		test('admin/accounts/delete と admin/delete-account は削除状態、job、scope、roleを維持する', async () => {
@@ -589,7 +688,7 @@ describe('Endpoints', () => {
 			const targetIds = [accountDeleteTarget.id, accountTokenTarget.id, deleteAccountTarget.id, untouchedTarget.id];
 			const getDeleteAccountJobs = async (userId: string) => {
 				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-				return jobs.filter(job => job.name === 'deleteAccount' && job.data.user.id === userId);
+				return jobs.filter((job) => job.name === 'deleteAccount' && job.data.user.id === userId);
 			};
 			const waitDeleteAccountJob = async (userId: string) => {
 				for (let i = 0; i < 10; i++) {
@@ -598,15 +697,17 @@ describe('Endpoints', () => {
 					await dispatchQueueOutbox(db, dbQueue as unknown as DbQueue, deliverQueue!);
 					const jobs = await getDeleteAccountJobs(userId);
 					if (jobs[0] != null) return jobs[0];
-					await new Promise(resolve => setTimeout(resolve, 100));
+					await new Promise((resolve) => setTimeout(resolve, 100));
 				}
 				assert.fail(`deleteAccount job was not found for ${userId}`);
 			};
 			const removeDeleteAccountJobs = async () => {
 				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-				await Promise.all(jobs
-					.filter(job => job.name === 'deleteAccount' && targetIds.includes(job.data.user.id))
-					.map(job => job.remove()));
+				await Promise.all(
+					jobs
+						.filter((job) => job.name === 'deleteAccount' && targetIds.includes(job.data.user.id))
+						.map((job) => job.remove()),
+				);
 			};
 
 			try {
@@ -617,14 +718,22 @@ describe('Endpoints', () => {
 				assert.strictEqual((nativeJob.data as DbJobData<'deleteAccount'>).soft, false);
 
 				const accountToken = await createAppToken(alice, ['write:admin:account']);
-				const deletedByToken = await api('admin/accounts/delete', { userId: accountTokenTarget.id }, { token: accountToken });
+				const deletedByToken = await api(
+					'admin/accounts/delete',
+					{ userId: accountTokenTarget.id },
+					{ token: accountToken },
+				);
 				assert.strictEqual(deletedByToken.status, 204);
 				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, accountTokenTarget.id)).isDeleted, true);
 				const tokenJob = await waitDeleteAccountJob(accountTokenTarget.id);
 				assert.strictEqual((tokenJob.data as DbJobData<'deleteAccount'>).soft, false);
 
 				const deleteAccountToken = await createAppToken(alice, ['write:admin:delete-account']);
-				const deletedByDeleteAccount = await api('admin/delete-account', { userId: deleteAccountTarget.id }, { token: deleteAccountToken });
+				const deletedByDeleteAccount = await api(
+					'admin/delete-account',
+					{ userId: deleteAccountTarget.id },
+					{ token: deleteAccountToken },
+				);
 				assert.strictEqual(deletedByDeleteAccount.status, 204);
 				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, deleteAccountTarget.id)).isDeleted, true);
 				const deleteAccountJob = await waitDeleteAccountJob(deleteAccountTarget.id);
@@ -635,12 +744,20 @@ describe('Endpoints', () => {
 				assert.strictEqual((await getDeleteAccountJobs(deleteAccountTarget.id)).length, 1);
 
 				const wrongAccountScope = await createAppToken(alice, ['read:admin:account']);
-				const accountScopeDenied = await api('admin/accounts/delete', { userId: untouchedTarget.id }, { token: wrongAccountScope });
+				const accountScopeDenied = await api(
+					'admin/accounts/delete',
+					{ userId: untouchedTarget.id },
+					{ token: wrongAccountScope },
+				);
 				assert.strictEqual(accountScopeDenied.status, 403);
 				assert.strictEqual(castAsError(accountScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 				const wrongDeleteAccountScope = await createAppToken(alice, ['write:admin:account']);
-				const deleteAccountScopeDenied = await api('admin/delete-account', { userId: untouchedTarget.id }, { token: wrongDeleteAccountScope });
+				const deleteAccountScopeDenied = await api(
+					'admin/delete-account',
+					{ userId: untouchedTarget.id },
+					{ token: wrongDeleteAccountScope },
+				);
 				assert.strictEqual(deleteAccountScopeDenied.status, 403);
 				assert.strictEqual(castAsError(deleteAccountScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -658,13 +775,17 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin/accounts/create', () => {
-			test('root native token のみアカウント作成でき、external token と非rootは拒否される', async () => {
+		test('root native token のみアカウント作成でき、external token と非rootは拒否される', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
-			const created = await api('admin/accounts/create', {
-				username: `hacreate${suffix}`,
-				password: 'test',
-				setupPassword: null,
-			}, alice);
+			const created = await api(
+				'admin/accounts/create',
+				{
+					username: `hacreate${suffix}`,
+					password: 'test',
+					setupPassword: null,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.username, `hacreate${suffix}`);
 			assert.strictEqual(typeof (created.body as { token?: unknown }).token, 'string');
@@ -674,20 +795,28 @@ describe('Endpoints', () => {
 			assert.strictEqual(user.host, null);
 
 			const token = await createAppToken(alice, ['write:admin:account']);
-			const appDenied = await api('admin/accounts/create', {
-				username: `hacreatet${suffix}`,
-				password: 'test',
-				setupPassword: null,
-			}, { token });
+			const appDenied = await api(
+				'admin/accounts/create',
+				{
+					username: `hacreatet${suffix}`,
+					password: 'test',
+					setupPassword: null,
+				},
+				{ token },
+			);
 			assert.strictEqual(appDenied.status, 400);
 			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
 			assert.strictEqual(castAsError(appDenied.body as any).error.id, '1fb7cb09-d46a-4fff-b8df-057708cce513');
 
-			const nonRootDenied = await api('admin/accounts/create', {
-				username: `hacreateb${suffix}`,
-				password: 'test',
-				setupPassword: null,
-			}, bob);
+			const nonRootDenied = await api(
+				'admin/accounts/create',
+				{
+					username: `hacreateb${suffix}`,
+					password: 'test',
+					setupPassword: null,
+				},
+				bob,
+			);
 			assert.strictEqual(nonRootDenied.status, 400);
 			assert.strictEqual(castAsError(nonRootDenied.body as any).error.code, 'ACCESS_DENIED');
 		});
@@ -698,8 +827,8 @@ describe('Endpoints', () => {
 				api('admin/accounts/create', { username, password: 'test', setupPassword: null }, alice),
 				api('admin/accounts/create', { username, password: 'test', setupPassword: null }, alice),
 			]);
-			const successful = results.filter(result => result.status === 200);
-			const duplicated = results.filter(result => result.status === 400);
+			const successful = results.filter((result) => result.status === 200);
+			const duplicated = results.filter((result) => result.status === 400);
 
 			assert.strictEqual(successful.length, 1);
 			assert.strictEqual(duplicated.length, 1);
@@ -800,7 +929,7 @@ describe('Endpoints', () => {
 			const readToken = await createAppToken(blocker, ['read:blocks']);
 			const list = await api('blocking/list', { limit: 10 }, { token: readToken });
 			assert.strictEqual(list.status, 200);
-			const listed = (list.body as any[]).find(item => item.blockeeId === blockee.id);
+			const listed = (list.body as any[]).find((item) => item.blockeeId === blockee.id);
 			assert.ok(listed);
 			assert.strictEqual(listed.id, blocking.id);
 			assert.strictEqual(listed.blockee.id, blockee.id);
@@ -859,7 +988,7 @@ describe('Endpoints', () => {
 			const readToken = await createAppToken(muter, ['read:mutes']);
 			const list = await api('mute/list', { limit: 10 }, { token: readToken });
 			assert.strictEqual(list.status, 200);
-			const listed = (list.body as any[]).find(item => item.muteeId === mutee.id);
+			const listed = (list.body as any[]).find((item) => item.muteeId === mutee.id);
 			assert.ok(listed);
 			assert.strictEqual(listed.id, muting.id);
 			assert.strictEqual(listed.mutee.id, mutee.id);
@@ -895,7 +1024,7 @@ describe('Endpoints', () => {
 
 			const renoteList = await api('renote-mute/list', { limit: 10 }, { token: readToken });
 			assert.strictEqual(renoteList.status, 200);
-			const renoteListed = (renoteList.body as any[]).find(item => item.muteeId === renoteMutee.id);
+			const renoteListed = (renoteList.body as any[]).find((item) => item.muteeId === renoteMutee.id);
 			assert.ok(renoteListed);
 			assert.strictEqual(renoteListed.id, renoteMuting.id);
 			assert.strictEqual(renoteListed.mutee.id, renoteMutee.id);
@@ -952,7 +1081,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=60');
 
-			const body = await res.json() as { count?: unknown };
+			const body = (await res.json()) as { count?: unknown };
 			assert.strictEqual(typeof body.count, 'number');
 		});
 	});
@@ -1015,7 +1144,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(list.status, 200);
 			assert.strictEqual(list.headers.get('cache-control'), 'public, max-age=3600');
 
-			const listBody = await list.json() as {
+			const listBody = (await list.json()) as {
 				emojis?: {
 					name?: unknown;
 					url?: unknown;
@@ -1025,7 +1154,7 @@ describe('Endpoints', () => {
 					isSensitive?: unknown;
 				}[];
 			};
-			const listedEmoji = listBody.emojis?.find(item => item.name === emoji.name);
+			const listedEmoji = listBody.emojis?.find((item) => item.name === emoji.name);
 			assert.ok(listedEmoji);
 			assert.strictEqual(listedEmoji.url, emoji.publicUrl);
 			assert.strictEqual(listedEmoji.category, emoji.category);
@@ -1083,8 +1212,8 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=3600');
 
-			const body = await res.json() as { createdAt?: unknown; users?: unknown; data?: Record<string, unknown> }[];
-			const record = body.find(item => item.createdAt === latest.createdAt.toISOString());
+			const body = (await res.json()) as { createdAt?: unknown; users?: unknown; data?: Record<string, unknown> }[];
+			const record = body.find((item) => item.createdAt === latest.createdAt.toISOString());
 			assert.ok(record);
 			assert.strictEqual(record.users, latest.usersCount);
 			assert.deepStrictEqual(record.data, latest.data);
@@ -1097,37 +1226,40 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const primary = `hono_hashtag_primary_${now}`;
 			const secondary = `hono_hashtag_secondary_${now}`;
-			await db.insert(hashtagTable).values([{
-				id: genId(now),
-				name: primary,
-				mentionedUserIds: [alice.id, bob.id],
-				mentionedUsersCount: 1000002,
-				mentionedLocalUserIds: [alice.id, bob.id],
-				mentionedLocalUsersCount: 1000002,
-				mentionedRemoteUserIds: [],
-				mentionedRemoteUsersCount: 0,
-				attachedUserIds: [alice.id],
-				attachedUsersCount: 1000001,
-				attachedLocalUserIds: [alice.id],
-				attachedLocalUsersCount: 1000001,
-				attachedRemoteUserIds: [],
-				attachedRemoteUsersCount: 0,
-			}, {
-				id: genId(now + 1),
-				name: secondary,
-				mentionedUserIds: [alice.id],
-				mentionedUsersCount: 1000001,
-				mentionedLocalUserIds: [alice.id],
-				mentionedLocalUsersCount: 1000001,
-				mentionedRemoteUserIds: [],
-				mentionedRemoteUsersCount: 0,
-				attachedUserIds: [],
-				attachedUsersCount: 0,
-				attachedLocalUserIds: [],
-				attachedLocalUsersCount: 0,
-				attachedRemoteUserIds: [],
-				attachedRemoteUsersCount: 0,
-			}]);
+			await db.insert(hashtagTable).values([
+				{
+					id: genId(now),
+					name: primary,
+					mentionedUserIds: [alice.id, bob.id],
+					mentionedUsersCount: 1000002,
+					mentionedLocalUserIds: [alice.id, bob.id],
+					mentionedLocalUsersCount: 1000002,
+					mentionedRemoteUserIds: [],
+					mentionedRemoteUsersCount: 0,
+					attachedUserIds: [alice.id],
+					attachedUsersCount: 1000001,
+					attachedLocalUserIds: [alice.id],
+					attachedLocalUsersCount: 1000001,
+					attachedRemoteUserIds: [],
+					attachedRemoteUsersCount: 0,
+				},
+				{
+					id: genId(now + 1),
+					name: secondary,
+					mentionedUserIds: [alice.id],
+					mentionedUsersCount: 1000001,
+					mentionedLocalUserIds: [alice.id],
+					mentionedLocalUsersCount: 1000001,
+					mentionedRemoteUserIds: [],
+					mentionedRemoteUsersCount: 0,
+					attachedUserIds: [],
+					attachedUsersCount: 0,
+					attachedLocalUserIds: [],
+					attachedLocalUsersCount: 0,
+					attachedRemoteUserIds: [],
+					attachedRemoteUsersCount: 0,
+				},
+			]);
 
 			const list = await api('hashtags/list', {
 				limit: 5,
@@ -1178,7 +1310,10 @@ describe('Endpoints', () => {
 
 			const list = await api('drive/files', { limit: 100 }, alice);
 			assert.strictEqual(list.status, 200);
-			assert.strictEqual((list.body as any[]).some(f => f.id === file.id), true);
+			assert.strictEqual(
+				(list.body as any[]).some((f) => f.id === file.id),
+				true,
+			);
 
 			const shownById = await api('drive/files/show', { fileId: file.id }, alice);
 			assert.strictEqual(shownById.status, 200);
@@ -1198,11 +1333,17 @@ describe('Endpoints', () => {
 
 			const found = await api('drive/files/find', { name: file.name }, alice);
 			assert.strictEqual(found.status, 200);
-			assert.strictEqual((found.body as any[]).some(f => f.id === file.id), true);
+			assert.strictEqual(
+				(found.body as any[]).some((f) => f.id === file.id),
+				true,
+			);
 
 			const foundByHash = await api('drive/files/find-by-hash', { md5 }, alice);
 			assert.strictEqual(foundByHash.status, 200);
-			assert.strictEqual((foundByHash.body as any[]).some(f => f.id === file.id), true);
+			assert.strictEqual(
+				(foundByHash.body as any[]).some((f) => f.id === file.id),
+				true,
+			);
 		});
 
 		test('drive/stream は自分のファイルのみtype絞り込み・ページングして返す', async () => {
@@ -1256,7 +1397,10 @@ describe('Endpoints', () => {
 
 			const imagesOnly = await api('drive/stream', { limit: 100, type: 'image/png' }, user);
 			assert.strictEqual(imagesOnly.status, 200);
-			assert.deepStrictEqual(imagesOnly.body.map((f: any) => f.id), [imageFile.id]);
+			assert.deepStrictEqual(
+				imagesOnly.body.map((f: any) => f.id),
+				[imageFile.id],
+			);
 		});
 
 		test('drive/files/attached-notes finds notes referencing a file and rejects non-owners', async () => {
@@ -1285,7 +1429,10 @@ describe('Endpoints', () => {
 
 			const found = await api('drive/files/attached-notes', { fileId: file.id }, alice);
 			assert.strictEqual(found.status, 200);
-			assert.strictEqual((found.body as any[]).some(n => n.id === noteId), true);
+			assert.strictEqual(
+				(found.body as any[]).some((n) => n.id === noteId),
+				true,
+			);
 
 			const deniedForBob = await api('drive/files/attached-notes', { fileId: file.id }, bob);
 			assert.strictEqual(deniedForBob.status, 400);
@@ -1317,7 +1464,10 @@ describe('Endpoints', () => {
 
 			const found = await api('drive/files/attached-chat-messages', { fileId: file.id }, sender);
 			assert.strictEqual(found.status, 200);
-			assert.strictEqual((found.body as any[]).some(m => m.id === message.body.id), true);
+			assert.strictEqual(
+				(found.body as any[]).some((m) => m.id === message.body.id),
+				true,
+			);
 
 			const deniedForCarol = await api('drive/files/attached-chat-messages', { fileId: file.id }, carol);
 			assert.strictEqual(deniedForCarol.status, 400);
@@ -1354,17 +1504,25 @@ describe('Endpoints', () => {
 			assert.strictEqual(invalidName.status, 400);
 			assert.strictEqual(castAsError(invalidName.body as any).error.id, '395e7156-f9f0-475e-af89-53c3c23080c2');
 
-			const noSuchFolder = await api('drive/files/update', { fileId: file.id, folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			const noSuchFolder = await api(
+				'drive/files/update',
+				{ fileId: file.id, folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
+				alice,
+			);
 			assert.strictEqual(noSuchFolder.status, 400);
 			assert.strictEqual(castAsError(noSuchFolder.body as any).error.id, 'ea8fb7a5-af77-4a08-b608-c0218176cd73');
 
-			const updated = await api('drive/files/update', {
-				fileId: file.id,
-				name: `hono-drive-updated-${suffix}.bin`,
-				folderId: folder.id,
-				isSensitive: true,
-				comment: 'updated comment',
-			}, alice);
+			const updated = await api(
+				'drive/files/update',
+				{
+					fileId: file.id,
+					name: `hono-drive-updated-${suffix}.bin`,
+					folderId: folder.id,
+					isSensitive: true,
+					comment: 'updated comment',
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 200);
 			assert.strictEqual(updated.body.name, `hono-drive-updated-${suffix}.bin`);
 			assert.strictEqual(updated.body.folderId, folder.id);
@@ -1405,7 +1563,7 @@ describe('Endpoints', () => {
 			for (let i = 0; i < 20; i++) {
 				missing = await api('drive/files/delete', { fileId: file.id }, alice);
 				if (missing.status === 400) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 			assert.strictEqual(missing!.status, 400);
 			assert.strictEqual(castAsError(missing!.body as any).error.id, '908939ec-e52b-4458-b395-1025195cea58');
@@ -1454,7 +1612,11 @@ describe('Endpoints', () => {
 			assert.strictEqual(movedBack.status, 204);
 			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId, null);
 
-			const missingFolder = await api('drive/files/move-bulk', { fileIds: [fileA.id], folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			const missingFolder = await api(
+				'drive/files/move-bulk',
+				{ fileIds: [fileA.id], folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
+				alice,
+			);
 			assert.strictEqual(missingFolder.status, 400);
 			assert.strictEqual(castAsError(missingFolder.body as any).error.id, 'abdd73a9-6225-4140-a3e4-8089c77168bc');
 		});
@@ -1464,11 +1626,19 @@ describe('Endpoints', () => {
 			const sender = await signup({ username: `chatsender${suffix}` });
 			const recipient = await signup({ username: `chatrcpt${suffix}` });
 			const unavailableRecipient = await signup({ username: `chatunavail${suffix}` });
-			const unavailable = await api('chat/messages/create-to-user', { text: 'hi', toUserId: unavailableRecipient.id }, sender);
+			const unavailable = await api(
+				'chat/messages/create-to-user',
+				{ text: 'hi', toUserId: unavailableRecipient.id },
+				sender,
+			);
 			assert.strictEqual(unavailable.status, 400);
 			assert.strictEqual(castAsError(unavailable.body as any).error.code, 'CHAT_NOT_AVAILABLE');
 			await api('blocking/create', { userId: sender.id }, unavailableRecipient);
-			const unavailableAndBlocked = await api('chat/messages/create-to-user', { text: 'hi', toUserId: unavailableRecipient.id }, sender);
+			const unavailableAndBlocked = await api(
+				'chat/messages/create-to-user',
+				{ text: 'hi', toUserId: unavailableRecipient.id },
+				sender,
+			);
 			assert.strictEqual(unavailableAndBlocked.status, 400);
 			assert.strictEqual(castAsError(unavailableAndBlocked.body as any).error.code, 'CHAT_NOT_AVAILABLE');
 			// chatScope はデフォルト 'mutual' のため、相互フォローを確立してからチャットする
@@ -1483,19 +1653,41 @@ describe('Endpoints', () => {
 			assert.strictEqual(noContent.status, 400);
 			assert.strictEqual(castAsError(noContent.body as any).error.id, '25587321-b0e6-449c-9239-f8925092942c');
 
-			const noSuchUser = await api('chat/messages/create-to-user', { text: 'hi', toUserId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, sender);
+			const noSuchUser = await api(
+				'chat/messages/create-to-user',
+				{ text: 'hi', toUserId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
+				sender,
+			);
 			assert.strictEqual(noSuchUser.status, 400);
 			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, '11795c64-40ea-4198-b06e-3c873ed9039d');
 
-			const noSuchReactionTarget = await api('chat/messages/react', { messageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', reaction: '👍' }, recipient);
+			const noSuchReactionTarget = await api(
+				'chat/messages/react',
+				{ messageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', reaction: '👍' },
+				recipient,
+			);
 			assert.strictEqual(noSuchReactionTarget.status, 400);
-			assert.strictEqual(castAsError(noSuchReactionTarget.body as any).error.id, '9b5839b9-0ba0-4351-8c35-37082093d200');
+			assert.strictEqual(
+				castAsError(noSuchReactionTarget.body as any).error.id,
+				'9b5839b9-0ba0-4351-8c35-37082093d200',
+			);
 
-			const noSuchUnreactionTarget = await api('chat/messages/unreact', { messageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', reaction: '👍' }, recipient);
+			const noSuchUnreactionTarget = await api(
+				'chat/messages/unreact',
+				{ messageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', reaction: '👍' },
+				recipient,
+			);
 			assert.strictEqual(noSuchUnreactionTarget.status, 400);
-			assert.strictEqual(castAsError(noSuchUnreactionTarget.body as any).error.id, 'c39ea42f-e3ca-428a-ad57-390e0a711595');
+			assert.strictEqual(
+				castAsError(noSuchUnreactionTarget.body as any).error.id,
+				'c39ea42f-e3ca-428a-ad57-390e0a711595',
+			);
 
-			const created = await api('chat/messages/create-to-user', { text: 'hello there', toUserId: recipient.id }, sender);
+			const created = await api(
+				'chat/messages/create-to-user',
+				{ text: 'hello there', toUserId: recipient.id },
+				sender,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.text, 'hello there');
 			assert.strictEqual(created.body.toUserId, recipient.id);
@@ -1509,7 +1701,11 @@ describe('Endpoints', () => {
 			assert.strictEqual(shownByOutsider.status, 400);
 			assert.strictEqual(castAsError(shownByOutsider.body as any).error.id, '3710865b-1848-4da9-8d61-cfed15510b93');
 
-			const invalidReaction = await api('chat/messages/react', { messageId: created.body.id, reaction: 'not-an-emoji' }, recipient);
+			const invalidReaction = await api(
+				'chat/messages/react',
+				{ messageId: created.body.id, reaction: 'not-an-emoji' },
+				recipient,
+			);
 			assert.strictEqual(invalidReaction.status, 400);
 			assert.strictEqual(castAsError(invalidReaction.body as any).error.code, 'INVALID_PARAM');
 
@@ -1519,7 +1715,11 @@ describe('Endpoints', () => {
 
 			const reacted = await api('chat/messages/react', { messageId: created.body.id, reaction: '👍' }, recipient);
 			assert.strictEqual(reacted.status, 204);
-			const unreactedByOutsider = await api('chat/messages/unreact', { messageId: created.body.id, reaction: '👍' }, outsider);
+			const unreactedByOutsider = await api(
+				'chat/messages/unreact',
+				{ messageId: created.body.id, reaction: '👍' },
+				outsider,
+			);
 			assert.strictEqual(unreactedByOutsider.status, 400);
 			assert.strictEqual(castAsError(unreactedByOutsider.body as any).error.id, 'c39ea42f-e3ca-428a-ad57-390e0a711595');
 
@@ -1541,7 +1741,11 @@ describe('Endpoints', () => {
 			await api('i/update', { chatScope: 'everyone' }, recipient);
 			const blocked = await api('blocking/create', { userId: sender.id }, recipient);
 			assert.strictEqual(blocked.status, 200);
-			const sendAfterBlock = await api('chat/messages/create-to-user', { text: 'blocked', toUserId: recipient.id }, sender);
+			const sendAfterBlock = await api(
+				'chat/messages/create-to-user',
+				{ text: 'blocked', toUserId: recipient.id },
+				sender,
+			);
 			assert.strictEqual(sendAfterBlock.status, 400);
 			assert.strictEqual(castAsError(sendAfterBlock.body as any).error.id, 'c15a5199-7422-4968-941a-2a462c478f7d');
 		});
@@ -1553,16 +1757,23 @@ describe('Endpoints', () => {
 			await api('following/create', { userId: recipient.id }, sender);
 			await api('following/create', { userId: sender.id }, recipient);
 
-			const created = await api('chat/messages/create-to-user', { text: 'timeline message', toUserId: recipient.id }, sender);
+			const created = await api(
+				'chat/messages/create-to-user',
+				{ text: 'timeline message', toUserId: recipient.id },
+				sender,
+			);
 			assert.strictEqual(created.status, 200);
 
 			const timeline = await api('chat/messages/user-timeline', { userId: recipient.id }, sender);
 			assert.strictEqual(timeline.status, 200);
-			assert.strictEqual((timeline.body as any[]).some(m => m.id === created.body.id), true);
+			assert.strictEqual(
+				(timeline.body as any[]).some((m) => m.id === created.body.id),
+				true,
+			);
 
 			const history = await api('chat/history', {}, sender);
 			assert.strictEqual(history.status, 200);
-			const historyEntry = (history.body as any[]).find(m => m.id === created.body.id);
+			const historyEntry = (history.body as any[]).find((m) => m.id === created.body.id);
 			assert.ok(historyEntry);
 
 			const readAll = await api('chat/read-all', {}, recipient);
@@ -1588,9 +1799,17 @@ describe('Endpoints', () => {
 			assert.strictEqual(muteMissing.status, 400);
 			assert.strictEqual(castAsError(muteMissing.body as any).error.id, 'c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df');
 
-			const room = await api('chat/rooms/create', { name: `hono-chat-room-${suffix}`, description: 'test room' }, owner);
+			const room = await api(
+				'chat/rooms/create',
+				{ name: `hono-chat-room-${suffix}`, description: 'test room' },
+				owner,
+			);
 			assert.strictEqual(room.status, 200);
-			const missingInvitee = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, owner);
+			const missingInvitee = await api(
+				'chat/rooms/invitations/create',
+				{ roomId: room.body.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
+				owner,
+			);
 			assert.strictEqual(missingInvitee.status, 400);
 			assert.strictEqual(castAsError(missingInvitee.body as any).error.id, '0f451b9e-fc21-491a-b2bf-46331103a945');
 			assert.strictEqual(room.body.name, `hono-chat-room-${suffix}`);
@@ -1605,17 +1824,24 @@ describe('Endpoints', () => {
 
 			const owned = await api('chat/rooms/owned', {}, owner);
 			assert.strictEqual(owned.status, 200);
-			assert.strictEqual((owned.body as any[]).some(r => r.id === room.body.id), true);
+			assert.strictEqual(
+				(owned.body as any[]).some((r) => r.id === room.body.id),
+				true,
+			);
 
-			const invitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: invitee.id }, owner);
+			const invitation = await api(
+				'chat/rooms/invitations/create',
+				{ roomId: room.body.id, userId: invitee.id },
+				owner,
+			);
 			assert.strictEqual(invitation.status, 200);
 			assert.strictEqual(invitation.body.userId, invitee.id);
 			const parallelInvitations = await Promise.all([
 				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
 				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
 			]);
-			assert.strictEqual(parallelInvitations.filter(result => result.status === 200).length, 1);
-			const parallelDuplicate = parallelInvitations.find(result => result.status === 400);
+			assert.strictEqual(parallelInvitations.filter((result) => result.status === 200).length, 1);
+			const parallelDuplicate = parallelInvitations.find((result) => result.status === 400);
 			assert.ok(parallelDuplicate);
 			assert.strictEqual(castAsError(parallelDuplicate.body as any).error.code, 'CANNOT_CREATE_INVITATION');
 			const [parallelJoin, invitationDuringJoin] = await Promise.all([
@@ -1626,44 +1852,75 @@ describe('Endpoints', () => {
 			assert.strictEqual(invitationDuringJoin.status, 400);
 			assert.strictEqual(castAsError(invitationDuringJoin.body as any).error.code, 'CANNOT_CREATE_INVITATION');
 
-			const duplicateInvitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: invitee.id }, owner);
+			const duplicateInvitation = await api(
+				'chat/rooms/invitations/create',
+				{ roomId: room.body.id, userId: invitee.id },
+				owner,
+			);
 			assert.strictEqual(duplicateInvitation.status, 400);
 			assert.strictEqual(castAsError(duplicateInvitation.body as any).error.code, 'CANNOT_CREATE_INVITATION');
 
-			const selfInvitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: owner.id }, owner);
+			const selfInvitation = await api(
+				'chat/rooms/invitations/create',
+				{ roomId: room.body.id, userId: owner.id },
+				owner,
+			);
 			assert.strictEqual(selfInvitation.status, 400);
 			assert.strictEqual(castAsError(selfInvitation.body as any).error.code, 'INVALID_PARAM');
 
 			const outbox = await api('chat/rooms/invitations/outbox', { roomId: room.body.id }, owner);
 			assert.strictEqual(outbox.status, 200);
-			assert.strictEqual((outbox.body as any[]).some(i => i.id === invitation.body.id), true);
+			assert.strictEqual(
+				(outbox.body as any[]).some((i) => i.id === invitation.body.id),
+				true,
+			);
 
 			const inbox = await api('chat/rooms/invitations/inbox', {}, invitee);
 			assert.strictEqual(inbox.status, 200);
-			assert.strictEqual((inbox.body as any[]).some(i => i.id === invitation.body.id), true);
+			assert.strictEqual(
+				(inbox.body as any[]).some((i) => i.id === invitation.body.id),
+				true,
+			);
 
 			const joined = await api('chat/rooms/join', { roomId: room.body.id }, invitee);
 			assert.strictEqual(joined.status, 204);
 
 			const joining = await api('chat/rooms/joining', {}, invitee);
 			assert.strictEqual(joining.status, 200);
-			assert.strictEqual((joining.body as any[]).some(m => m.roomId === room.body.id), true);
+			assert.strictEqual(
+				(joining.body as any[]).some((m) => m.roomId === room.body.id),
+				true,
+			);
 
-			const roomMessage = await api('chat/messages/create-to-room', { text: 'hello room', toRoomId: room.body.id }, owner);
+			const roomMessage = await api(
+				'chat/messages/create-to-room',
+				{ text: 'hello room', toRoomId: room.body.id },
+				owner,
+			);
 			assert.strictEqual(roomMessage.status, 200);
 			assert.strictEqual(roomMessage.body.toRoomId, room.body.id);
 
 			const roomTimeline = await api('chat/messages/room-timeline', { roomId: room.body.id }, invitee);
 			assert.strictEqual(roomTimeline.status, 200);
-			assert.strictEqual((roomTimeline.body as any[]).some(m => m.id === roomMessage.body.id), true);
+			assert.strictEqual(
+				(roomTimeline.body as any[]).some((m) => m.id === roomMessage.body.id),
+				true,
+			);
 
 			const members = await api('chat/rooms/members', { roomId: room.body.id }, owner);
 			assert.strictEqual(members.status, 200);
-			assert.strictEqual((members.body as any[]).some(m => m.user.id === invitee.id), true);
+			assert.strictEqual(
+				(members.body as any[]).some((m) => m.user.id === invitee.id),
+				true,
+			);
 
 			// chat/rooms/members requires write:chat (not read:chat) per its original meta.kind.
 			const readOnlyToken = await createAppToken(owner, ['read:chat']);
-			const membersWithReadOnlyToken = await api('chat/rooms/members', { roomId: room.body.id }, { token: readOnlyToken });
+			const membersWithReadOnlyToken = await api(
+				'chat/rooms/members',
+				{ roomId: room.body.id },
+				{ token: readOnlyToken },
+			);
 			assert.strictEqual(membersWithReadOnlyToken.status, 403);
 
 			const muted = await api('chat/rooms/mute', { roomId: room.body.id, mute: true }, invitee);
@@ -1671,9 +1928,16 @@ describe('Endpoints', () => {
 
 			const searchResult = await api('chat/messages/search', { query: 'hello room', roomId: room.body.id }, owner);
 			assert.strictEqual(searchResult.status, 200);
-			assert.strictEqual((searchResult.body as any[]).some(m => m.id === roomMessage.body.id), true);
+			assert.strictEqual(
+				(searchResult.body as any[]).some((m) => m.id === roomMessage.body.id),
+				true,
+			);
 
-			const updated = await api('chat/rooms/update', { roomId: room.body.id, name: `hono-chat-room-renamed-${suffix}` }, owner);
+			const updated = await api(
+				'chat/rooms/update',
+				{ roomId: room.body.id, name: `hono-chat-room-renamed-${suffix}` },
+				owner,
+			);
 			assert.strictEqual(updated.status, 200);
 			assert.strictEqual(updated.body.name, `hono-chat-room-renamed-${suffix}`);
 
@@ -1693,14 +1957,22 @@ describe('Endpoints', () => {
 			const owner = await signup({ username: `chatigown${suffix}` });
 			const invitee = await signup({ username: `chatiginv${suffix}` });
 
-			const ignoreMissing = await api('chat/rooms/invitations/ignore', { roomId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, invitee);
+			const ignoreMissing = await api(
+				'chat/rooms/invitations/ignore',
+				{ roomId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
+				invitee,
+			);
 			assert.strictEqual(ignoreMissing.status, 400);
 			assert.strictEqual(castAsError(ignoreMissing.body as any).error.id, '5130557e-5a11-4cfb-9cc5-fe60cda5de0d');
 
 			const room = await api('chat/rooms/create', { name: `hono-ignore-room-${suffix}` }, owner);
 			assert.strictEqual(room.status, 200);
 
-			const invitation = await api('chat/rooms/invitations/create', { roomId: room.body.id, userId: invitee.id }, owner);
+			const invitation = await api(
+				'chat/rooms/invitations/create',
+				{ roomId: room.body.id, userId: invitee.id },
+				owner,
+			);
 			assert.strictEqual(invitation.status, 200);
 
 			const ignored = await api('chat/rooms/invitations/ignore', { roomId: room.body.id }, invitee);
@@ -1709,7 +1981,10 @@ describe('Endpoints', () => {
 			// Ignoring hides the invitation from the default inbox listing (ignored: false) without revoking it.
 			const inboxAfterIgnore = await api('chat/rooms/invitations/inbox', {}, invitee);
 			assert.strictEqual(inboxAfterIgnore.status, 200);
-			assert.strictEqual((inboxAfterIgnore.body as any[]).some(i => i.id === invitation.body.id), false);
+			assert.strictEqual(
+				(inboxAfterIgnore.body as any[]).some((i) => i.id === invitation.body.id),
+				false,
+			);
 
 			const joinAfterIgnore = await api('chat/rooms/join', { roomId: room.body.id }, invitee);
 			assert.strictEqual(joinAfterIgnore.status, 204);
@@ -1726,7 +2001,10 @@ describe('Endpoints', () => {
 				sort: '+follower',
 			});
 			assert.strictEqual(found.status, 200);
-			assert.strictEqual((found.body as any[]).some(u => u.id === tagged.id), true);
+			assert.strictEqual(
+				(found.body as any[]).some((u) => u.id === tagged.id),
+				true,
+			);
 
 			const notFound = await api('hashtags/users', {
 				tag: `missing_${tag}`,
@@ -1752,7 +2030,7 @@ describe('Endpoints', () => {
 
 				const trend = await api('hashtags/trend', {});
 				assert.strictEqual(trend.status, 200);
-				const ranked = trend.body.find(item => item.tag === tag);
+				const ranked = trend.body.find((item) => item.tag === tag);
 				assert.ok(ranked);
 				assert.strictEqual(ranked.chart.length, 20);
 				assert.ok(ranked.usersCount >= 1);
@@ -1802,7 +2080,7 @@ describe('Endpoints', () => {
 
 			const res = await api('get-avatar-decorations', {});
 			assert.strictEqual(res.status, 200);
-			const listed = res.body.find(item => item.id === decoration.id);
+			const listed = res.body.find((item) => item.id === decoration.id);
 			assert.ok(listed);
 			assert.strictEqual(listed.name, decoration.name);
 			assert.strictEqual(listed.description, decoration.description);
@@ -1874,7 +2152,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(instances.status, 200);
 			assert.strictEqual(instances.headers.get('cache-control'), 'public, max-age=3600');
 
-			const instancesBody = await instances.json() as {
+			const instancesBody = (await instances.json()) as {
 				id?: unknown;
 				host?: unknown;
 				name?: unknown;
@@ -1886,7 +2164,7 @@ describe('Endpoints', () => {
 				latestRequestReceivedAt?: unknown;
 				moderationNote?: unknown;
 			}[];
-			const listedAlpha = instancesBody.find(instance => instance.id === alpha.id);
+			const listedAlpha = instancesBody.find((instance) => instance.id === alpha.id);
 			assert.ok(listedAlpha);
 			assert.strictEqual(listedAlpha.host, alpha.host);
 			assert.strictEqual(listedAlpha.name, alpha.name);
@@ -1907,7 +2185,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(stats.status, 200);
 			assert.strictEqual(stats.headers.get('cache-control'), 'public, max-age=3600');
 
-			const statsBody = await stats.json() as {
+			const statsBody = (await stats.json()) as {
 				topSubInstances?: { id?: unknown }[];
 				topPubInstances?: { id?: unknown }[];
 				otherFollowersCount?: unknown;
@@ -1931,11 +2209,15 @@ describe('Endpoints', () => {
 				moderationNote: 'before update',
 			});
 
-			const suspended = await api('admin/federation/update-instance', {
-				host: host.toUpperCase(),
-				isSuspended: true,
-				moderationNote: `updated note ${suffix}`,
-			}, alice);
+			const suspended = await api(
+				'admin/federation/update-instance',
+				{
+					host: host.toUpperCase(),
+					isSuspended: true,
+					moderationNote: `updated note ${suffix}`,
+				},
+				alice,
+			);
 			assert.strictEqual(suspended.status, 204);
 
 			let after = await fetchInstanceByHostFromDatabase(db, host);
@@ -1959,19 +2241,32 @@ describe('Endpoints', () => {
 					}),
 				]);
 				if (suspendLogs.length > 0 && noteLogs.length > 0) {
-					assert.strictEqual(suspendLogs.some(log => (log.info as any).host === host), true);
-					assert.strictEqual(noteLogs.some(log => (log.info as any).before === 'before update' && (log.info as any).after === `updated note ${suffix}`), true);
+					assert.strictEqual(
+						suspendLogs.some((log) => (log.info as any).host === host),
+						true,
+					);
+					assert.strictEqual(
+						noteLogs.some(
+							(log) =>
+								(log.info as any).before === 'before update' && (log.info as any).after === `updated note ${suffix}`,
+						),
+						true,
+					);
 					break;
 				}
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 				if (i === 9) assert.fail('remote instance moderation logs were not found');
 			}
 
 			const token = await createAppToken(alice, ['write:admin:federation']);
-			const unsuspended = await api('admin/federation/update-instance', {
-				host,
-				isSuspended: false,
-			}, { token });
+			const unsuspended = await api(
+				'admin/federation/update-instance',
+				{
+					host,
+					isSuspended: false,
+				},
+				{ token },
+			);
 			assert.strictEqual(unsuspended.status, 204);
 			after = await fetchInstanceByHostFromDatabase(db, host);
 			assert.ok(after);
@@ -2000,19 +2295,31 @@ describe('Endpoints', () => {
 				firstRetrievedAt: new Date(now),
 			});
 
-			const refreshed = await api('admin/federation/refresh-remote-instance-metadata', {
-				host: host.toUpperCase(),
-			}, alice);
+			const refreshed = await api(
+				'admin/federation/refresh-remote-instance-metadata',
+				{
+					host: host.toUpperCase(),
+				},
+				alice,
+			);
 			assert.strictEqual(refreshed.status, 204);
 
 			const token = await createAppToken(alice, ['write:admin:federation']);
-			const refreshedByToken = await api('admin/federation/refresh-remote-instance-metadata', {
-				host,
-			}, { token });
+			const refreshedByToken = await api(
+				'admin/federation/refresh-remote-instance-metadata',
+				{
+					host,
+				},
+				{ token },
+			);
 			assert.strictEqual(refreshedByToken.status, 204);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
-			const scopeDenied = await api('admin/federation/refresh-remote-instance-metadata', { host }, { token: wrongScopeToken });
+			const scopeDenied = await api(
+				'admin/federation/refresh-remote-instance-metadata',
+				{ host },
+				{ token: wrongScopeToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -2041,13 +2348,15 @@ describe('Endpoints', () => {
 			let job: Bull.Job<RelationshipJobData> | undefined;
 			for (let i = 0; i < 10; i++) {
 				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-				job = jobs.find(job =>
-					job.name === 'unfollow' &&
-					job.data.from.id === following.followerId &&
-					job.data.to.id === following.followeeId &&
-					job.data.silent === true);
+				job = jobs.find(
+					(job) =>
+						job.name === 'unfollow' &&
+						job.data.from.id === following.followerId &&
+						job.data.to.id === following.followeeId &&
+						job.data.silent === true,
+				);
 				if (job != null) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 			assert.ok(job);
 			await job.remove();
@@ -2192,10 +2501,13 @@ describe('Endpoints', () => {
 			assert.strictEqual(questionRes.body['id'], questionUri);
 			const choices: unknown = Reflect.get(questionRes.body, 'oneOf');
 			if (!Array.isArray(choices)) throw new Error('ActivityPub Question choices are missing');
-			assert.deepStrictEqual(choices.map((choice: unknown) => {
-				assert.ok(typeof choice === 'object' && choice != null);
-				return Reflect.get(choice, 'name');
-			}), ['a', 'b']);
+			assert.deepStrictEqual(
+				choices.map((choice: unknown) => {
+					assert.ok(typeof choice === 'object' && choice != null);
+					return Reflect.get(choice, 'name');
+				}),
+				['a', 'b'],
+			);
 
 			const likeNote = await post(alice, { text: 'ap/get like target' });
 			const reactionId = genId(now + 1);
@@ -2259,7 +2571,10 @@ describe('Endpoints', () => {
 			const originalMeta = await fetchMetaFromDatabase(db);
 			const disableSigning = await api('admin/update-meta', { signToActivityPubGet: false }, alice);
 			assert.strictEqual(disableSigning.status, 204);
-			const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+			const onePixelPng = Buffer.from(
+				'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+				'base64',
+			);
 			try {
 				actorServer = createServer((req, res) => {
 					if (req.url === '/avatar.png') {
@@ -2269,29 +2584,33 @@ describe('Endpoints', () => {
 					}
 					if (req.url?.endsWith('/following') || req.url?.endsWith('/followers')) {
 						res.writeHead(200, { 'Content-Type': 'application/activity+json' });
-						res.end(JSON.stringify({
-							'@context': 'https://www.w3.org/ns/activitystreams',
-							id: `${actorUri}${req.url.endsWith('/following') ? '/following' : '/followers'}`,
-							type: 'OrderedCollection',
-							totalItems: 0,
-							orderedItems: [],
-						}));
+						res.end(
+							JSON.stringify({
+								'@context': 'https://www.w3.org/ns/activitystreams',
+								id: `${actorUri}${req.url.endsWith('/following') ? '/following' : '/followers'}`,
+								type: 'OrderedCollection',
+								totalItems: 0,
+								orderedItems: [],
+							}),
+						);
 						return;
 					}
 					res.writeHead(200, { 'Content-Type': 'application/activity+json' });
-					res.end(JSON.stringify({
-						'@context': 'https://www.w3.org/ns/activitystreams',
-						id: actorUri,
-						type: 'Person',
-						preferredUsername: `updateremote${suffix}`,
-						inbox: `${actorUri}/inbox`,
-						following: `${actorUri}/following`,
-						followers: `${actorUri}/followers`,
-						icon: { type: 'Image', url: `${actorUri}/avatar.png` },
-						name: 'Updated Remote Name',
-						summary: '<p>updated bio</p>',
-						manuallyApprovesFollowers: true,
-					}));
+					res.end(
+						JSON.stringify({
+							'@context': 'https://www.w3.org/ns/activitystreams',
+							id: actorUri,
+							type: 'Person',
+							preferredUsername: `updateremote${suffix}`,
+							inbox: `${actorUri}/inbox`,
+							following: `${actorUri}/following`,
+							followers: `${actorUri}/followers`,
+							icon: { type: 'Image', url: `${actorUri}/avatar.png` },
+							name: 'Updated Remote Name',
+							summary: '<p>updated bio</p>',
+							manuallyApprovesFollowers: true,
+						}),
+					);
 				});
 				await new Promise<void>((resolve, reject) => {
 					actorServer!.once('error', reject);
@@ -2409,25 +2728,29 @@ describe('Endpoints', () => {
 				server = createServer((req, res) => {
 					if (req.url === `/notes/note${suffix}`) {
 						res.writeHead(200, { 'Content-Type': 'application/activity+json' });
-						res.end(JSON.stringify({
-							'@context': 'https://www.w3.org/ns/activitystreams',
-							id: noteUri,
-							type: 'Note',
-							attributedTo: actorUri,
-							content: '<p>ap/show remote note</p>',
-							to: ['https://www.w3.org/ns/activitystreams#Public'],
-						}));
+						res.end(
+							JSON.stringify({
+								'@context': 'https://www.w3.org/ns/activitystreams',
+								id: noteUri,
+								type: 'Note',
+								attributedTo: actorUri,
+								content: '<p>ap/show remote note</p>',
+								to: ['https://www.w3.org/ns/activitystreams#Public'],
+							}),
+						);
 						return;
 					}
 					res.writeHead(200, { 'Content-Type': 'application/activity+json' });
-					res.end(JSON.stringify({
-						'@context': 'https://www.w3.org/ns/activitystreams',
-						id: actorUri,
-						type: 'Person',
-						preferredUsername: `apshowremote${suffix}`,
-						inbox: `${actorUri}/inbox`,
-						name: 'ap/show Remote Actor',
-					}));
+					res.end(
+						JSON.stringify({
+							'@context': 'https://www.w3.org/ns/activitystreams',
+							id: actorUri,
+							type: 'Person',
+							preferredUsername: `apshowremote${suffix}`,
+							inbox: `${actorUri}/inbox`,
+							name: 'ap/show Remote Actor',
+						}),
+					);
 				});
 				await new Promise<void>((resolve, reject) => {
 					server!.once('error', reject);
@@ -2518,14 +2841,21 @@ describe('Endpoints', () => {
 				url: `https://${remoteHost}/files/${remoteMd5}`,
 			});
 
-			const listed = await api('admin/drive/files', {
-				limit: 10,
-				sinceDate: now - 3000,
-				type: fileType,
-			}, alice);
+			const listed = await api(
+				'admin/drive/files',
+				{
+					limit: 10,
+					sinceDate: now - 3000,
+					type: fileType,
+				},
+				alice,
+			);
 			assert.strictEqual(listed.status, 200);
 			const localFiles = listed.body as any[];
-			assert.deepStrictEqual(localFiles.map(file => file.id), [firstLocal.id, secondLocal.id]);
+			assert.deepStrictEqual(
+				localFiles.map((file) => file.id),
+				[firstLocal.id, secondLocal.id],
+			);
 			assert.strictEqual(typeof localFiles[0].createdAt, 'string');
 			assert.strictEqual(localFiles[0].name, firstLocal.name);
 			assert.strictEqual(localFiles[0].type, fileType);
@@ -2544,34 +2874,52 @@ describe('Endpoints', () => {
 			assert.strictEqual(localFiles[0].userId, bob.id);
 			assert.strictEqual(localFiles[0].user.id, bob.id);
 
-			const byUser = await api('admin/drive/files', {
-				limit: 10,
-				sinceDate: now - 3000,
-				type: fileType,
-				userId: bob.id,
-			}, alice);
+			const byUser = await api(
+				'admin/drive/files',
+				{
+					limit: 10,
+					sinceDate: now - 3000,
+					type: fileType,
+					userId: bob.id,
+				},
+				alice,
+			);
 			assert.strictEqual(byUser.status, 200);
-			assert.deepStrictEqual((byUser.body as any[]).map(file => file.id), [firstLocal.id, secondLocal.id]);
+			assert.deepStrictEqual(
+				(byUser.body as any[]).map((file) => file.id),
+				[firstLocal.id, secondLocal.id],
+			);
 
-			const remoteFiles = await api('admin/drive/files', {
-				limit: 10,
-				sinceDate: now - 3000,
-				type: fileType,
-				origin: 'remote',
-				hostname: remoteHost,
-			}, alice);
+			const remoteFiles = await api(
+				'admin/drive/files',
+				{
+					limit: 10,
+					sinceDate: now - 3000,
+					type: fileType,
+					origin: 'remote',
+					hostname: remoteHost,
+				},
+				alice,
+			);
 			assert.strictEqual(remoteFiles.status, 200);
-			assert.deepStrictEqual((remoteFiles.body as any[]).map(file => file.id), [remote.id]);
+			assert.deepStrictEqual(
+				(remoteFiles.body as any[]).map((file) => file.id),
+				[remote.id],
+			);
 			assert.strictEqual((remoteFiles.body as any[])[0].userId, null);
 			assert.strictEqual((remoteFiles.body as any[])[0].user, null);
 
 			const token = await createAppToken(alice, ['read:admin:drive']);
-			const listedByToken = await api('admin/drive/files', {
-				limit: 1,
-				untilId: remote.id,
-				type: fileType,
-				origin: 'combined',
-			}, { token });
+			const listedByToken = await api(
+				'admin/drive/files',
+				{
+					limit: 1,
+					untilId: remote.id,
+					type: fileType,
+					origin: 'combined',
+				},
+				{ token },
+			);
 			assert.strictEqual(listedByToken.status, 200);
 			assert.strictEqual((listedByToken.body as any[])[0].id, secondLocal.id);
 
@@ -2694,9 +3042,9 @@ describe('Endpoints', () => {
 			let job: Bull.Job<ObjectStorageJobData> | undefined;
 			for (let i = 0; i < 10; i++) {
 				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-				job = jobs.find(job => job.name === 'cleanRemoteFiles');
+				job = jobs.find((job) => job.name === 'cleanRemoteFiles');
 				if (job != null) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 			assert.ok(job);
 			await job.remove();
@@ -2705,7 +3053,7 @@ describe('Endpoints', () => {
 			const cleanedByToken = await api('admin/drive/clean-remote-files', {}, { token });
 			assert.strictEqual(cleanedByToken.status, 204);
 			const tokenJobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-			await Promise.all(tokenJobs.filter(job => job.name === 'cleanRemoteFiles').map(job => job.remove()));
+			await Promise.all(tokenJobs.filter((job) => job.name === 'cleanRemoteFiles').map((job) => job.remove()));
 
 			const wrongScopeToken = await createAppToken(alice, ['read:admin:drive']);
 			const scopeDenied = await api('admin/drive/clean-remote-files', {}, { token: wrongScopeToken });
@@ -2718,11 +3066,7 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const remoteHost = `hono-drive-delete-${suffix}.remote`;
-			const makeFile = async (params: {
-				seed: string;
-				userId: string | null;
-				userHost: string | null;
-			}) => {
+			const makeFile = async (params: { seed: string; userId: string | null; userHost: string | null }) => {
 				const md5 = createHash('md5').update(`hono-drive-delete-${params.seed}-${suffix}`).digest('hex');
 				return await createDriveFileInDatabase(db, {
 					id: genId(),
@@ -2762,25 +3106,27 @@ describe('Endpoints', () => {
 			const targetKeys = [orphan.accessKey!, userFile.accessKey!, remoteFile.accessKey!];
 			const waitDeleted = async (fileId: string) => {
 				for (let i = 0; i < 10; i++) {
-					if (await fetchDriveFileByIdFromDatabase(db, fileId) == null) return;
-					await new Promise(resolve => setTimeout(resolve, 100));
+					if ((await fetchDriveFileByIdFromDatabase(db, fileId)) == null) return;
+					await new Promise((resolve) => setTimeout(resolve, 100));
 				}
 				assert.fail(`drive file was not deleted: ${fileId}`);
 			};
 			const waitDeleteObjectStorageJob = async (key: string) => {
 				for (let i = 0; i < 10; i++) {
 					const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-					const job = jobs.find(job => job.name === 'deleteFile' && (job.data as { key: string }).key === key);
+					const job = jobs.find((job) => job.name === 'deleteFile' && (job.data as { key: string }).key === key);
 					if (job != null) return job;
-					await new Promise(resolve => setTimeout(resolve, 100));
+					await new Promise((resolve) => setTimeout(resolve, 100));
 				}
 				assert.fail(`deleteFile objectStorage job was not found: ${key}`);
 			};
 			const removeObjectStorageJobs = async () => {
 				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-				await Promise.all(jobs
-					.filter(job => job.name === 'deleteFile' && targetKeys.includes((job.data as { key: string }).key))
-					.map(job => job.remove()));
+				await Promise.all(
+					jobs
+						.filter((job) => job.name === 'deleteFile' && targetKeys.includes((job.data as { key: string }).key))
+						.map((job) => job.remove()),
+				);
 			};
 
 			try {
@@ -2793,18 +3139,26 @@ describe('Endpoints', () => {
 
 				await Promise.all(targetIds.map(waitDeleted));
 				const jobs = await Promise.all(targetKeys.map(waitDeleteObjectStorageJob));
-				assert.deepStrictEqual(jobs.map(job => job.data.key).sort(), targetKeys.sort());
+				assert.deepStrictEqual(jobs.map((job) => job.data.key).sort(), targetKeys.sort());
 
 				const driveToken = await createAppToken(alice, ['write:admin:drive']);
 				const cleanupByToken = await api('admin/drive/cleanup', {}, { token: driveToken });
 				assert.strictEqual(cleanupByToken.status, 204);
 
 				const deleteFilesToken = await createAppToken(alice, ['write:admin:delete-all-files-of-a-user']);
-				const userDeleteByToken = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, { token: deleteFilesToken });
+				const userDeleteByToken = await api(
+					'admin/delete-all-files-of-a-user',
+					{ userId: bob.id },
+					{ token: deleteFilesToken },
+				);
 				assert.strictEqual(userDeleteByToken.status, 204);
 
 				const federationToken = await createAppToken(alice, ['write:admin:federation']);
-				const federationDeleteByToken = await api('admin/federation/delete-all-files', { host: remoteHost }, { token: federationToken });
+				const federationDeleteByToken = await api(
+					'admin/federation/delete-all-files',
+					{ host: remoteHost },
+					{ token: federationToken },
+				);
 				assert.strictEqual(federationDeleteByToken.status, 204);
 
 				const driveScopeDeniedToken = await createAppToken(alice, ['read:admin:drive']);
@@ -2813,12 +3167,20 @@ describe('Endpoints', () => {
 				assert.strictEqual(castAsError(cleanupScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 				const userDeleteScopeDeniedToken = await createAppToken(alice, ['write:admin:account']);
-				const userDeleteScopeDenied = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, { token: userDeleteScopeDeniedToken });
+				const userDeleteScopeDenied = await api(
+					'admin/delete-all-files-of-a-user',
+					{ userId: bob.id },
+					{ token: userDeleteScopeDeniedToken },
+				);
 				assert.strictEqual(userDeleteScopeDenied.status, 403);
 				assert.strictEqual(castAsError(userDeleteScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 				const federationScopeDeniedToken = await createAppToken(alice, ['write:admin:user-note']);
-				const federationScopeDenied = await api('admin/federation/delete-all-files', { host: remoteHost }, { token: federationScopeDeniedToken });
+				const federationScopeDenied = await api(
+					'admin/federation/delete-all-files',
+					{ host: remoteHost },
+					{ token: federationScopeDeniedToken },
+				);
 				assert.strictEqual(federationScopeDenied.status, 403);
 				assert.strictEqual(castAsError(federationScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -2845,15 +3207,23 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haem${suffix}` });
-			const emojiRole = await role(alice, {
-				name: `hono emoji manager ${suffix}`,
-			}, {
-				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
-			});
-			const assign = await api('admin/roles/assign', {
-				roleId: emojiRole.id,
-				userId: manager.id,
-			}, alice);
+			const emojiRole = await role(
+				alice,
+				{
+					name: `hono emoji manager ${suffix}`,
+				},
+				{
+					canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+				},
+			);
+			const assign = await api(
+				'admin/roles/assign',
+				{
+					roleId: emojiRole.id,
+					userId: manager.id,
+				},
+				alice,
+			);
 			assert.strictEqual(assign.status, 204);
 
 			const localFirst = await insertEmojiInDatabase(db, {
@@ -2911,14 +3281,21 @@ describe('Endpoints', () => {
 			});
 
 			try {
-				const listed = await api('admin/emoji/list', {
-					limit: 10,
-					query: suffix,
-					sinceDate: now - 3000,
-				}, manager);
+				const listed = await api(
+					'admin/emoji/list',
+					{
+						limit: 10,
+						query: suffix,
+						sinceDate: now - 3000,
+					},
+					manager,
+				);
 				assert.strictEqual(listed.status, 200);
 				const localEmojis = listed.body as any[];
-				assert.deepStrictEqual(localEmojis.map(emoji => emoji.id), [localFirst.id, localSecond.id]);
+				assert.deepStrictEqual(
+					localEmojis.map((emoji) => emoji.id),
+					[localFirst.id, localSecond.id],
+				);
 				assert.strictEqual(localEmojis[0].name, localFirst.name);
 				assert.deepStrictEqual(localEmojis[0].aliases, [`alias_${suffix}`]);
 				assert.strictEqual(localEmojis[0].category, `category_${suffix}`);
@@ -2929,36 +3306,57 @@ describe('Endpoints', () => {
 				assert.deepStrictEqual(localEmojis[0].roleIdsThatCanBeUsedThisEmojiAsReaction, []);
 				assert.strictEqual(localEmojis[1].url, localSecond.publicUrl);
 
-				const listedByColonQuery = await api('admin/emoji/list', {
-					limit: 10,
-					query: `:${localFirst.name}:`,
-					sinceDate: now - 3000,
-				}, manager);
+				const listedByColonQuery = await api(
+					'admin/emoji/list',
+					{
+						limit: 10,
+						query: `:${localFirst.name}:`,
+						sinceDate: now - 3000,
+					},
+					manager,
+				);
 				assert.strictEqual(listedByColonQuery.status, 200);
-				assert.deepStrictEqual((listedByColonQuery.body as any[]).map(emoji => emoji.id), [localFirst.id]);
+				assert.deepStrictEqual(
+					(listedByColonQuery.body as any[]).map((emoji) => emoji.id),
+					[localFirst.id],
+				);
 
-				const remoteListed = await api('admin/emoji/list-remote', {
-					limit: 10,
-					query: 'remote_',
-					host: remoteHost.toUpperCase(),
-					sinceDate: now - 3000,
-				}, manager);
+				const remoteListed = await api(
+					'admin/emoji/list-remote',
+					{
+						limit: 10,
+						query: 'remote_',
+						host: remoteHost.toUpperCase(),
+						sinceDate: now - 3000,
+					},
+					manager,
+				);
 				assert.strictEqual(remoteListed.status, 200);
 				const remoteEmojis = remoteListed.body as any[];
-				assert.deepStrictEqual(remoteEmojis.map(emoji => emoji.id), [remoteNewer.id, remoteOlder.id]);
+				assert.deepStrictEqual(
+					remoteEmojis.map((emoji) => emoji.id),
+					[remoteNewer.id, remoteOlder.id],
+				);
 				assert.strictEqual(remoteEmojis[0].host, remoteHost);
 				assert.strictEqual(remoteEmojis[0].url, remoteNewer.publicUrl);
 				assert.strictEqual(remoteEmojis[0].license, `remote license ${suffix}`);
 				assert.strictEqual(remoteEmojis[0].isSensitive, true);
 
 				const readToken = await createAppToken(manager, ['read:admin:emoji']);
-				const byToken = await api('admin/emoji/list-remote', {
-					limit: 1,
-					query: 'remote_',
-					host: remoteHost,
-				}, { token: readToken });
+				const byToken = await api(
+					'admin/emoji/list-remote',
+					{
+						limit: 1,
+						query: 'remote_',
+						host: remoteHost,
+					},
+					{ token: readToken },
+				);
 				assert.strictEqual(byToken.status, 200);
-				assert.deepStrictEqual((byToken.body as any[]).map(emoji => emoji.id), [remoteNewer.id]);
+				assert.deepStrictEqual(
+					(byToken.body as any[]).map((emoji) => emoji.id),
+					[remoteNewer.id],
+				);
 
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:meta']);
 				const scopeDenied = await api('admin/emoji/list', {}, { token: wrongScopeToken });
@@ -2969,13 +3367,21 @@ describe('Endpoints', () => {
 				assert.strictEqual(roleDenied.status, 403);
 				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 			} finally {
-				await api('admin/roles/unassign', {
-					roleId: emojiRole.id,
-					userId: manager.id,
-				}, alice);
-				await api('admin/roles/delete', {
-					roleId: emojiRole.id,
-				}, alice);
+				await api(
+					'admin/roles/unassign',
+					{
+						roleId: emojiRole.id,
+						userId: manager.id,
+					},
+					alice,
+				);
+				await api(
+					'admin/roles/delete',
+					{
+						roleId: emojiRole.id,
+					},
+					alice,
+				);
 			}
 		});
 
@@ -2984,15 +3390,23 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `hav2${suffix}` });
-			const emojiRole = await role(alice, {
-				name: `hono v2 emoji manager ${suffix}`,
-			}, {
-				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
-			});
-			const assign = await api('admin/roles/assign', {
-				roleId: emojiRole.id,
-				userId: manager.id,
-			}, alice);
+			const emojiRole = await role(
+				alice,
+				{
+					name: `hono v2 emoji manager ${suffix}`,
+				},
+				{
+					canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+				},
+			);
+			const assign = await api(
+				'admin/roles/assign',
+				{
+					roleId: emojiRole.id,
+					userId: manager.id,
+				},
+				alice,
+			);
 			assert.strictEqual(assign.status, 204);
 
 			const localFirst = await insertEmojiInDatabase(db, {
@@ -3037,13 +3451,20 @@ describe('Endpoints', () => {
 			});
 
 			try {
-				const listed = await api('v2/admin/emoji/list', {
-					query: { name: `hv2emoji${suffix}`, hostType: 'local' },
-					limit: 10,
-					sortKeys: ['+id'],
-				}, manager);
+				const listed = await api(
+					'v2/admin/emoji/list',
+					{
+						query: { name: `hv2emoji${suffix}`, hostType: 'local' },
+						limit: 10,
+						sortKeys: ['+id'],
+					},
+					manager,
+				);
 				assert.strictEqual(listed.status, 200);
-				assert.deepStrictEqual(listed.body.emojis.map((e: any) => e.id), [localFirst.id, localSecond.id]);
+				assert.deepStrictEqual(
+					listed.body.emojis.map((e: any) => e.id),
+					[localFirst.id, localSecond.id],
+				);
 				assert.strictEqual(listed.body.count, 2);
 				assert.strictEqual(listed.body.allCount, 2);
 				assert.strictEqual(listed.body.allPages, 1);
@@ -3051,22 +3472,36 @@ describe('Endpoints', () => {
 				assert.strictEqual(getAt(listed.body.emojis, 1).publicUrl, localSecond.publicUrl);
 				assert.strictEqual(getAt(listed.body.emojis, 1).isSensitive, true);
 
-				const remoteListed = await api('v2/admin/emoji/list', {
-					query: { name: `hv2emoji${suffix}`, hostType: 'remote' },
-					limit: 10,
-				}, manager);
+				const remoteListed = await api(
+					'v2/admin/emoji/list',
+					{
+						query: { name: `hv2emoji${suffix}`, hostType: 'remote' },
+						limit: 10,
+					},
+					manager,
+				);
 				assert.strictEqual(remoteListed.status, 200);
-				assert.deepStrictEqual(remoteListed.body.emojis.map((e: any) => e.id), [remoteEmoji.id]);
+				assert.deepStrictEqual(
+					remoteListed.body.emojis.map((e: any) => e.id),
+					[remoteEmoji.id],
+				);
 				assert.strictEqual(getAt(remoteListed.body.emojis, 0).host, remoteHost);
 
-				const paged = await api('v2/admin/emoji/list', {
-					query: { name: `hv2emoji${suffix}` },
-					limit: 1,
-					page: 2,
-					sortKeys: ['+id'],
-				}, manager);
+				const paged = await api(
+					'v2/admin/emoji/list',
+					{
+						query: { name: `hv2emoji${suffix}` },
+						limit: 1,
+						page: 2,
+						sortKeys: ['+id'],
+					},
+					manager,
+				);
 				assert.strictEqual(paged.status, 200);
-				assert.deepStrictEqual(paged.body.emojis.map((e: any) => e.id), [localSecond.id]);
+				assert.deepStrictEqual(
+					paged.body.emojis.map((e: any) => e.id),
+					[localSecond.id],
+				);
 				assert.strictEqual(paged.body.count, 1);
 				assert.strictEqual(paged.body.allCount, 3);
 				assert.strictEqual(paged.body.allPages, 3);
@@ -3080,13 +3515,21 @@ describe('Endpoints', () => {
 				assert.strictEqual(scopeDenied.status, 403);
 				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 			} finally {
-				await api('admin/roles/unassign', {
-					roleId: emojiRole.id,
-					userId: manager.id,
-				}, alice);
-				await api('admin/roles/delete', {
-					roleId: emojiRole.id,
-				}, alice);
+				await api(
+					'admin/roles/unassign',
+					{
+						roleId: emojiRole.id,
+						userId: manager.id,
+					},
+					alice,
+				);
+				await api(
+					'admin/roles/delete',
+					{
+						roleId: emojiRole.id,
+					},
+					alice,
+				);
 			}
 		});
 
@@ -3094,15 +3537,23 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemw${suffix}` });
-			const emojiRole = await role(alice, {
-				name: `hono emoji write manager ${suffix}`,
-			}, {
-				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
-			});
-			const assign = await api('admin/roles/assign', {
-				roleId: emojiRole.id,
-				userId: manager.id,
-			}, alice);
+			const emojiRole = await role(
+				alice,
+				{
+					name: `hono emoji write manager ${suffix}`,
+				},
+				{
+					canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+				},
+			);
+			const assign = await api(
+				'admin/roles/assign',
+				{
+					roleId: emojiRole.id,
+					userId: manager.id,
+				},
+				alice,
+			);
 			assert.strictEqual(assign.status, 204);
 
 			const addMd5 = createHash('md5').update(`hono-emoji-add-${suffix}`).digest('hex');
@@ -3132,23 +3583,31 @@ describe('Endpoints', () => {
 
 			try {
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
-				const scopeDenied = await api('admin/emoji/add', {
-					name: `honoemoji_scope_${suffix}`,
-					fileId: addFile.id,
-				}, { token: wrongScopeToken });
+				const scopeDenied = await api(
+					'admin/emoji/add',
+					{
+						name: `honoemoji_scope_${suffix}`,
+						fileId: addFile.id,
+					},
+					{ token: wrongScopeToken },
+				);
 				assert.strictEqual(scopeDenied.status, 403);
 				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
-				const added = await api('admin/emoji/add', {
-					name: `honoemoji_add_${suffix}`,
-					fileId: addFile.id,
-					category: `write_${suffix}`,
-					aliases: [`alias_${suffix}`],
-					license: `license ${suffix}`,
-					isSensitive: true,
-					localOnly: true,
-					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
-				}, manager);
+				const added = await api(
+					'admin/emoji/add',
+					{
+						name: `honoemoji_add_${suffix}`,
+						fileId: addFile.id,
+						category: `write_${suffix}`,
+						aliases: [`alias_${suffix}`],
+						license: `license ${suffix}`,
+						isSensitive: true,
+						localOnly: true,
+						roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+					},
+					manager,
+				);
 				assert.strictEqual(added.status, 200);
 				assert.strictEqual(added.body.name, `honoemoji_add_${suffix}`);
 				assert.strictEqual(added.body.url, addFile.url);
@@ -3158,31 +3617,43 @@ describe('Endpoints', () => {
 				assert.strictEqual(added.body.isSensitive, true);
 				assert.strictEqual(added.body.localOnly, true);
 
-				const duplicate = await api('admin/emoji/add', {
-					name: `honoemoji_add_${suffix}`,
-					fileId: addFile.id,
-				}, manager);
+				const duplicate = await api(
+					'admin/emoji/add',
+					{
+						name: `honoemoji_add_${suffix}`,
+						fileId: addFile.id,
+					},
+					manager,
+				);
 				assert.strictEqual(duplicate.status, 400);
 				assert.strictEqual(castAsError(duplicate.body as any).error.code, 'DUPLICATE_NAME');
 
-				const roleDenied = await api('admin/emoji/update', {
-					id: added.body.id,
-					category: `denied_${suffix}`,
-				}, bob);
+				const roleDenied = await api(
+					'admin/emoji/update',
+					{
+						id: added.body.id,
+						category: `denied_${suffix}`,
+					},
+					bob,
+				);
 				assert.strictEqual(roleDenied.status, 403);
 				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
-				const updated = await api('admin/emoji/update', {
-					id: added.body.id,
-					name: `honoemoji_updated_${suffix}`,
-					fileId: updateFile.id,
-					category: null,
-					aliases: [`updated_${suffix}`],
-					license: null,
-					isSensitive: false,
-					localOnly: false,
-					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
-				}, manager);
+				const updated = await api(
+					'admin/emoji/update',
+					{
+						id: added.body.id,
+						name: `honoemoji_updated_${suffix}`,
+						fileId: updateFile.id,
+						category: null,
+						aliases: [`updated_${suffix}`],
+						license: null,
+						isSensitive: false,
+						localOnly: false,
+						roleIdsThatCanBeUsedThisEmojiAsReaction: [],
+					},
+					manager,
+				);
 				assert.strictEqual(updated.status, 204);
 
 				const after = await fetchEmojiByIdOrFailFromDatabase(db, added.body.id);
@@ -3197,10 +3668,14 @@ describe('Endpoints', () => {
 				assert.strictEqual(after.type, updateFile.type);
 				assert.ok(after.updatedAt);
 
-				const renamedDuplicate = await api('admin/emoji/update', {
-					id: after.id,
-					name: after.name,
-				}, manager);
+				const renamedDuplicate = await api(
+					'admin/emoji/update',
+					{
+						id: after.id,
+						name: after.name,
+					},
+					manager,
+				);
 				assert.strictEqual(renamedDuplicate.status, 204);
 
 				const logs = await listModerationLogsFromDatabase(db, {
@@ -3209,16 +3684,24 @@ describe('Endpoints', () => {
 					userId: manager.id,
 					search: suffix,
 				});
-				assert.ok(logs.some(log => log.type === 'addCustomEmoji'));
-				assert.ok(logs.some(log => log.type === 'updateCustomEmoji'));
+				assert.ok(logs.some((log) => log.type === 'addCustomEmoji'));
+				assert.ok(logs.some((log) => log.type === 'updateCustomEmoji'));
 			} finally {
-				await api('admin/roles/unassign', {
-					roleId: emojiRole.id,
-					userId: manager.id,
-				}, alice);
-				await api('admin/roles/delete', {
-					roleId: emojiRole.id,
-				}, alice);
+				await api(
+					'admin/roles/unassign',
+					{
+						roleId: emojiRole.id,
+						userId: manager.id,
+					},
+					alice,
+				);
+				await api(
+					'admin/roles/delete',
+					{
+						roleId: emojiRole.id,
+					},
+					alice,
+				);
 			}
 		});
 
@@ -3226,18 +3709,29 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemc${suffix}` });
-			const emojiRole = await role(alice, {
-				name: `hono emoji copy manager ${suffix}`,
-			}, {
-				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
-			});
-			const assign = await api('admin/roles/assign', {
-				roleId: emojiRole.id,
-				userId: manager.id,
-			}, alice);
+			const emojiRole = await role(
+				alice,
+				{
+					name: `hono emoji copy manager ${suffix}`,
+				},
+				{
+					canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+				},
+			);
+			const assign = await api(
+				'admin/roles/assign',
+				{
+					roleId: emojiRole.id,
+					userId: manager.id,
+				},
+				alice,
+			);
 			assert.strictEqual(assign.status, 204);
 
-			const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64');
+			const png = Buffer.from(
+				'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+				'base64',
+			);
 			let imageServer: Server | undefined;
 			await new Promise<void>((resolve) => {
 				imageServer = createServer((_req, res) => {
@@ -3308,22 +3802,30 @@ describe('Endpoints', () => {
 					userId: manager.id,
 					search: suffix,
 				});
-				assert.ok(logs.some(log => (log.info as any).emojiId === copiedEmoji.id));
+				assert.ok(logs.some((log) => (log.info as any).emojiId === copiedEmoji.id));
 
 				const duplicate = await api('admin/emoji/copy', { emojiId: remote.id }, manager);
 				assert.strictEqual(duplicate.status, 400);
 				assert.strictEqual(castAsError(duplicate.body as any).error.code, 'DUPLICATE_NAME');
 			} finally {
 				await new Promise<void>((resolve, reject) => {
-					imageServer?.close(err => err ? reject(err) : resolve());
+					imageServer?.close((err) => (err ? reject(err) : resolve()));
 				});
-				await api('admin/roles/unassign', {
-					roleId: emojiRole.id,
-					userId: manager.id,
-				}, alice);
-				await api('admin/roles/delete', {
-					roleId: emojiRole.id,
-				}, alice);
+				await api(
+					'admin/roles/unassign',
+					{
+						roleId: emojiRole.id,
+						userId: manager.id,
+					},
+					alice,
+				);
+				await api(
+					'admin/roles/delete',
+					{
+						roleId: emojiRole.id,
+					},
+					alice,
+				);
 			}
 		});
 
@@ -3331,15 +3833,23 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemb${suffix}` });
-			const emojiRole = await role(alice, {
-				name: `hono emoji bulk manager ${suffix}`,
-			}, {
-				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
-			});
-			const assign = await api('admin/roles/assign', {
-				roleId: emojiRole.id,
-				userId: manager.id,
-			}, alice);
+			const emojiRole = await role(
+				alice,
+				{
+					name: `hono emoji bulk manager ${suffix}`,
+				},
+				{
+					canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+				},
+			);
+			const assign = await api(
+				'admin/roles/assign',
+				{
+					roleId: emojiRole.id,
+					userId: manager.id,
+				},
+				alice,
+			);
 			assert.strictEqual(assign.status, 204);
 
 			const first = await insertEmojiInDatabase(db, {
@@ -3370,18 +3880,26 @@ describe('Endpoints', () => {
 			});
 
 			try {
-				const missing = await api('admin/emoji/set-category-bulk', {
-					ids: [first.id, 'zzzzzzzzzzzzzzzzzzzzzzzzzz'],
-					category: `must_rollback_${suffix}`,
-				}, manager);
+				const missing = await api(
+					'admin/emoji/set-category-bulk',
+					{
+						ids: [first.id, 'zzzzzzzzzzzzzzzzzzzzzzzzzz'],
+						category: `must_rollback_${suffix}`,
+					},
+					manager,
+				);
 				assert.strictEqual(missing.status, 400);
 				assert.strictEqual(castAsError(missing.body as any).error.id, '756e37b2-8e81-421c-9d18-740a6932d57f');
 				assert.strictEqual((await fetchEmojiByIdOrFailFromDatabase(db, first.id)).category, null);
 
-				const addAliases = await api('admin/emoji/add-aliases-bulk', {
-					ids: [first.id, second.id],
-					aliases: [`added_${suffix}`, `base_${suffix}`],
-				}, manager);
+				const addAliases = await api(
+					'admin/emoji/add-aliases-bulk',
+					{
+						ids: [first.id, second.id],
+						aliases: [`added_${suffix}`, `base_${suffix}`],
+					},
+					manager,
+				);
 				assert.strictEqual(addAliases.status, 204);
 
 				let afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
@@ -3389,36 +3907,56 @@ describe('Endpoints', () => {
 				assert.deepStrictEqual(afterFirst.aliases, [`base_${suffix}`, `added_${suffix}`]);
 				assert.deepStrictEqual(afterSecond.aliases, [`added_${suffix}`, `base_${suffix}`]);
 
-				const removeAliases = await api('admin/emoji/remove-aliases-bulk', {
-					ids: [first.id],
-					aliases: [`base_${suffix}`],
-				}, manager);
+				const removeAliases = await api(
+					'admin/emoji/remove-aliases-bulk',
+					{
+						ids: [first.id],
+						aliases: [`base_${suffix}`],
+					},
+					manager,
+				);
 				assert.strictEqual(removeAliases.status, 204);
 				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
 				assert.deepStrictEqual(afterFirst.aliases, [`added_${suffix}`]);
 
-				const setAliases = await api('admin/emoji/set-aliases-bulk', {
-					ids: [second.id],
-					aliases: [`final_${suffix}`],
-				}, manager);
+				const setAliases = await api(
+					'admin/emoji/set-aliases-bulk',
+					{
+						ids: [second.id],
+						aliases: [`final_${suffix}`],
+					},
+					manager,
+				);
 				assert.strictEqual(setAliases.status, 204);
 
-				const setCategory = await api('admin/emoji/set-category-bulk', {
-					ids: [first.id, second.id],
-					category: `bulk_category_${suffix}`,
-				}, manager);
+				const setCategory = await api(
+					'admin/emoji/set-category-bulk',
+					{
+						ids: [first.id, second.id],
+						category: `bulk_category_${suffix}`,
+					},
+					manager,
+				);
 				assert.strictEqual(setCategory.status, 204);
 
-				const setLicense = await api('admin/emoji/set-license-bulk', {
-					ids: [first.id, second.id],
-					license: `bulk license ${suffix}`,
-				}, manager);
+				const setLicense = await api(
+					'admin/emoji/set-license-bulk',
+					{
+						ids: [first.id, second.id],
+						license: `bulk license ${suffix}`,
+					},
+					manager,
+				);
 				assert.strictEqual(setLicense.status, 204);
 
-				const resetLicense = await api('admin/emoji/set-license-bulk', {
-					ids: [second.id],
-					license: null,
-				}, manager);
+				const resetLicense = await api(
+					'admin/emoji/set-license-bulk',
+					{
+						ids: [second.id],
+						license: null,
+					},
+					manager,
+				);
 				assert.strictEqual(resetLicense.status, 204);
 
 				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
@@ -3433,36 +3971,56 @@ describe('Endpoints', () => {
 				assert.ok(afterSecond.updatedAt);
 
 				const token = await createAppToken(manager, ['write:admin:emoji']);
-				const tokenUpdated = await api('admin/emoji/set-category-bulk', {
-					ids: [first.id],
-					category: null,
-				}, { token });
+				const tokenUpdated = await api(
+					'admin/emoji/set-category-bulk',
+					{
+						ids: [first.id],
+						category: null,
+					},
+					{ token },
+				);
 				assert.strictEqual(tokenUpdated.status, 204);
 				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
 				assert.strictEqual(afterFirst.category, null);
 
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
-				const scopeDenied = await api('admin/emoji/set-aliases-bulk', {
-					ids: [first.id],
-					aliases: [],
-				}, { token: wrongScopeToken });
+				const scopeDenied = await api(
+					'admin/emoji/set-aliases-bulk',
+					{
+						ids: [first.id],
+						aliases: [],
+					},
+					{ token: wrongScopeToken },
+				);
 				assert.strictEqual(scopeDenied.status, 403);
 				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
-				const roleDenied = await api('admin/emoji/set-category-bulk', {
-					ids: [first.id],
-					category: `denied_${suffix}`,
-				}, bob);
+				const roleDenied = await api(
+					'admin/emoji/set-category-bulk',
+					{
+						ids: [first.id],
+						category: `denied_${suffix}`,
+					},
+					bob,
+				);
 				assert.strictEqual(roleDenied.status, 403);
 				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 			} finally {
-				await api('admin/roles/unassign', {
-					roleId: emojiRole.id,
-					userId: manager.id,
-				}, alice);
-				await api('admin/roles/delete', {
-					roleId: emojiRole.id,
-				}, alice);
+				await api(
+					'admin/roles/unassign',
+					{
+						roleId: emojiRole.id,
+						userId: manager.id,
+					},
+					alice,
+				);
+				await api(
+					'admin/roles/delete',
+					{
+						roleId: emojiRole.id,
+					},
+					alice,
+				);
 			}
 		});
 
@@ -3470,15 +4028,23 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemd${suffix}` });
-			const emojiRole = await role(alice, {
-				name: `hono emoji delete manager ${suffix}`,
-			}, {
-				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
-			});
-			const assign = await api('admin/roles/assign', {
-				roleId: emojiRole.id,
-				userId: manager.id,
-			}, alice);
+			const emojiRole = await role(
+				alice,
+				{
+					name: `hono emoji delete manager ${suffix}`,
+				},
+				{
+					canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+				},
+			);
+			const assign = await api(
+				'admin/roles/assign',
+				{
+					roleId: emojiRole.id,
+					userId: manager.id,
+				},
+				alice,
+			);
 			assert.strictEqual(assign.status, 204);
 
 			const single = await insertEmojiInDatabase(db, {
@@ -3529,9 +4095,13 @@ describe('Endpoints', () => {
 				assert.strictEqual(deletedAgain.status, 400);
 				assert.strictEqual(castAsError(deletedAgain.body as any).error.id, 'be83669b-773a-44b7-b1f8-e5e5170ac3c2');
 
-				const deletedBulk = await api('admin/emoji/delete-bulk', {
-					ids: [bulkFirst.id, bulkSecond.id],
-				}, manager);
+				const deletedBulk = await api(
+					'admin/emoji/delete-bulk',
+					{
+						ids: [bulkFirst.id, bulkSecond.id],
+					},
+					manager,
+				);
 				assert.strictEqual(deletedBulk.status, 204);
 				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, bulkFirst.id), null);
 				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, bulkSecond.id), null);
@@ -3544,12 +4114,21 @@ describe('Endpoints', () => {
 						search: suffix,
 					});
 					if (logs.length >= 3) {
-						assert.strictEqual(logs.some(log => (log.info as any).emojiId === single.id), true);
-						assert.strictEqual(logs.some(log => (log.info as any).emojiId === bulkFirst.id), true);
-						assert.strictEqual(logs.some(log => (log.info as any).emojiId === bulkSecond.id), true);
+						assert.strictEqual(
+							logs.some((log) => (log.info as any).emojiId === single.id),
+							true,
+						);
+						assert.strictEqual(
+							logs.some((log) => (log.info as any).emojiId === bulkFirst.id),
+							true,
+						);
+						assert.strictEqual(
+							logs.some((log) => (log.info as any).emojiId === bulkSecond.id),
+							true,
+						);
 						break;
 					}
-					await new Promise(resolve => setTimeout(resolve, 100));
+					await new Promise((resolve) => setTimeout(resolve, 100));
 					if (i === 9) assert.fail('deleteCustomEmoji moderation logs were not found');
 				}
 
@@ -3572,9 +4151,13 @@ describe('Endpoints', () => {
 				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, tokenTarget.id), null);
 
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
-				const scopeDenied = await api('admin/emoji/delete-bulk', {
-					ids: [tokenTarget.id],
-				}, { token: wrongScopeToken });
+				const scopeDenied = await api(
+					'admin/emoji/delete-bulk',
+					{
+						ids: [tokenTarget.id],
+					},
+					{ token: wrongScopeToken },
+				);
 				assert.strictEqual(scopeDenied.status, 403);
 				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -3582,13 +4165,21 @@ describe('Endpoints', () => {
 				assert.strictEqual(roleDenied.status, 403);
 				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 			} finally {
-				await api('admin/roles/unassign', {
-					roleId: emojiRole.id,
-					userId: manager.id,
-				}, alice);
-				await api('admin/roles/delete', {
-					roleId: emojiRole.id,
-				}, alice);
+				await api(
+					'admin/roles/unassign',
+					{
+						roleId: emojiRole.id,
+						userId: manager.id,
+					},
+					alice,
+				);
+				await api(
+					'admin/roles/delete',
+					{
+						roleId: emojiRole.id,
+					},
+					alice,
+				);
 			}
 		});
 
@@ -3597,23 +4188,36 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const manager = await signup({ username: `haemi${suffix}` });
-			const emojiRole = await role(alice, {
-				name: `hono emoji import manager ${suffix}`,
-			}, {
-				canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
-			});
-			const assign = await api('admin/roles/assign', {
-				roleId: emojiRole.id,
-				userId: manager.id,
-			}, alice);
+			const emojiRole = await role(
+				alice,
+				{
+					name: `hono emoji import manager ${suffix}`,
+				},
+				{
+					canManageCustomEmojis: { priority: 0, useDefault: false, value: true },
+				},
+			);
+			const assign = await api(
+				'admin/roles/assign',
+				{
+					roleId: emojiRole.id,
+					userId: manager.id,
+				},
+				alice,
+			);
 			assert.strictEqual(assign.status, 204);
 
 			const fileId = genId(now);
 			const removeImportJobs = async () => {
 				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-				await Promise.all(jobs
-					.filter(job => job.name === 'importCustomEmojis' && (job.data as DbJobData<'importCustomEmojis'>).fileId === fileId)
-					.map(job => job.remove()));
+				await Promise.all(
+					jobs
+						.filter(
+							(job) =>
+								job.name === 'importCustomEmojis' && (job.data as DbJobData<'importCustomEmojis'>).fileId === fileId,
+						)
+						.map((job) => job.remove()),
+				);
 			};
 
 			try {
@@ -3623,9 +4227,14 @@ describe('Endpoints', () => {
 				let job: Bull.Job<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
 				for (let i = 0; i < 10; i++) {
 					const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-					job = jobs.find(job => job.name === 'importCustomEmojis' && (job.data as DbJobData<'importCustomEmojis'>).fileId === fileId && job.data.user.id === manager.id);
+					job = jobs.find(
+						(job) =>
+							job.name === 'importCustomEmojis' &&
+							(job.data as DbJobData<'importCustomEmojis'>).fileId === fileId &&
+							job.data.user.id === manager.id,
+					);
 					if (job != null) break;
-					await new Promise(resolve => setTimeout(resolve, 100));
+					await new Promise((resolve) => setTimeout(resolve, 100));
 				}
 				assert.ok(job);
 				assert.deepStrictEqual(job.data as DbJobData<'importCustomEmojis'>, {
@@ -3643,13 +4252,21 @@ describe('Endpoints', () => {
 				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 			} finally {
 				await removeImportJobs();
-				await api('admin/roles/unassign', {
-					roleId: emojiRole.id,
-					userId: manager.id,
-				}, alice);
-				await api('admin/roles/delete', {
-					roleId: emojiRole.id,
-				}, alice);
+				await api(
+					'admin/roles/unassign',
+					{
+						roleId: emojiRole.id,
+						userId: manager.id,
+					},
+					alice,
+				);
+				await api(
+					'admin/roles/delete',
+					{
+						roleId: emojiRole.id,
+					},
+					alice,
+				);
 			}
 		});
 	});
@@ -3694,13 +4311,13 @@ describe('Endpoints', () => {
 
 			const anonymousList = await api('announcements', { limit: 10 });
 			assert.strictEqual(anonymousList.status, 200);
-			assert.ok(anonymousList.body.some(announcement => announcement.id === globalAnnouncement.id));
-			assert.ok(!anonymousList.body.some(announcement => announcement.id === userAnnouncement.id));
+			assert.ok(anonymousList.body.some((announcement) => announcement.id === globalAnnouncement.id));
+			assert.ok(!anonymousList.body.some((announcement) => announcement.id === userAnnouncement.id));
 
 			const aliceList = await api('announcements', { limit: 10 }, alice);
 			assert.strictEqual(aliceList.status, 200);
-			const listedGlobal = aliceList.body.find(announcement => announcement.id === globalAnnouncement.id);
-			const listedUser = aliceList.body.find(announcement => announcement.id === userAnnouncement.id);
+			const listedGlobal = aliceList.body.find((announcement) => announcement.id === globalAnnouncement.id);
+			const listedUser = aliceList.body.find((announcement) => announcement.id === userAnnouncement.id);
 			assert.strictEqual(listedGlobal?.isRead, true);
 			assert.strictEqual(listedUser?.forYou, true);
 			assert.strictEqual(listedUser?.isRead, false);
@@ -3717,9 +4334,13 @@ describe('Endpoints', () => {
 			assert.strictEqual(hiddenUser.status, 404);
 			assert.strictEqual(castAsError(hiddenUser.body as any).error.code, 'NO_SUCH_ANNOUNCEMENT');
 
-			const shownUser = await api('announcements/show', {
-				announcementId: userAnnouncement.id,
-			}, alice);
+			const shownUser = await api(
+				'announcements/show',
+				{
+					announcementId: userAnnouncement.id,
+				},
+				alice,
+			);
 			assert.strictEqual(shownUser.status, 200);
 			assert.strictEqual(shownUser.body.forYou, true);
 			assert.strictEqual(shownUser.body.needConfirmationToRead, true);
@@ -3830,8 +4451,8 @@ describe('Endpoints', () => {
 
 			const history = await api('i/signin-history', { limit: 20 }, alice);
 			assert.strictEqual(history.status, 200);
-			const newerIndex = history.body.findIndex(item => item.id === newer.id);
-			const olderIndex = history.body.findIndex(item => item.id === older.id);
+			const newerIndex = history.body.findIndex((item) => item.id === newer.id);
+			const olderIndex = history.body.findIndex((item) => item.id === older.id);
 			assert.ok(newerIndex >= 0);
 			assert.ok(olderIndex >= 0);
 			assert.ok(newerIndex < olderIndex);
@@ -3839,12 +4460,21 @@ describe('Endpoints', () => {
 			assert.strictEqual(getAt(history.body, newerIndex).ip, newer.ip);
 			assert.deepStrictEqual(getAt(history.body, newerIndex).headers, newer.headers);
 			assert.strictEqual(getAt(history.body, newerIndex).success, false);
-			assert.strictEqual(history.body.some(item => item.id === otherUser.id), false);
+			assert.strictEqual(
+				history.body.some((item) => item.id === otherUser.id),
+				false,
+			);
 
 			const afterOlder = await api('i/signin-history', { sinceId: older.id, limit: 20 }, alice);
 			assert.strictEqual(afterOlder.status, 200);
-			assert.strictEqual(afterOlder.body.some(item => item.id === newer.id), true);
-			assert.strictEqual(afterOlder.body.some(item => item.id === older.id), false);
+			assert.strictEqual(
+				afterOlder.body.some((item) => item.id === newer.id),
+				true,
+			);
+			assert.strictEqual(
+				afterOlder.body.some((item) => item.id === older.id),
+				false,
+			);
 		});
 	});
 
@@ -3859,43 +4489,67 @@ describe('Endpoints', () => {
 				items: ['alpha', 'beta'],
 			};
 
-			const setNative = await api('i/registry/set', {
-				scope: nativeScope,
-				key: nativeKey,
-				value: nativeValue,
-			}, alice);
+			const setNative = await api(
+				'i/registry/set',
+				{
+					scope: nativeScope,
+					key: nativeKey,
+					value: nativeValue,
+				},
+				alice,
+			);
 			assert.strictEqual(setNative.status, 204);
 
-			const gotNative = await api('i/registry/get', {
-				scope: nativeScope,
-				key: nativeKey,
-			}, alice);
+			const gotNative = await api(
+				'i/registry/get',
+				{
+					scope: nativeScope,
+					key: nativeKey,
+				},
+				alice,
+			);
 			assert.strictEqual(gotNative.status, 200);
 			assert.deepStrictEqual(gotNative.body, nativeValue);
 
-			const detail = await api('i/registry/get-detail', {
-				scope: nativeScope,
-				key: nativeKey,
-			}, alice);
+			const detail = await api(
+				'i/registry/get-detail',
+				{
+					scope: nativeScope,
+					key: nativeKey,
+				},
+				alice,
+			);
 			assert.strictEqual(detail.status, 200);
 			assert.strictEqual(typeof detail.body.updatedAt, 'string');
 			assert.deepStrictEqual(detail.body.value, nativeValue);
 
-			const all = await api('i/registry/get-all', {
-				scope: nativeScope,
-			}, alice);
+			const all = await api(
+				'i/registry/get-all',
+				{
+					scope: nativeScope,
+				},
+				alice,
+			);
 			assert.strictEqual(all.status, 200);
 			assert.deepStrictEqual(all.body[nativeKey], nativeValue);
 
-			const keys = await api('i/registry/keys', {
-				scope: nativeScope,
-			}, alice);
+			const keys = await api(
+				'i/registry/keys',
+				{
+					scope: nativeScope,
+				},
+				alice,
+			);
 			assert.strictEqual(keys.status, 200);
 			assert.ok(keys.body.includes(nativeKey));
 
-			const keysWithType = await api('i/registry/keys-with-type', {
-				scope: nativeScope,
-			}, alice);
+			const keysWithType = await api(
+				'i/registry/keys-with-type',
+				{
+					scope: nativeScope,
+				},
+				alice,
+			);
 			assert.strictEqual(keysWithType.status, 200);
 			assert.strictEqual(keysWithType.body[nativeKey], 'object');
 
@@ -3903,45 +4557,73 @@ describe('Endpoints', () => {
 			const appScope = ['hono', 'registry_app'];
 			const appKey = `app_${now}`;
 			const appValue = ['from', 'app'];
-			const setApp = await api('i/registry/set', {
-				scope: appScope,
-				key: appKey,
-				value: appValue,
-			}, { token: appToken });
+			const setApp = await api(
+				'i/registry/set',
+				{
+					scope: appScope,
+					key: appKey,
+					value: appValue,
+				},
+				{ token: appToken },
+			);
 			assert.strictEqual(setApp.status, 204);
 
-			const gotApp = await api('i/registry/get', {
-				scope: appScope,
-				key: appKey,
-			}, { token: appToken });
+			const gotApp = await api(
+				'i/registry/get',
+				{
+					scope: appScope,
+					key: appKey,
+				},
+				{ token: appToken },
+			);
 			assert.strictEqual(gotApp.status, 200);
 			assert.deepStrictEqual(gotApp.body, appValue);
 
-			const nativeCannotReadAppDomain = await api('i/registry/get', {
-				scope: appScope,
-				key: appKey,
-			}, alice);
+			const nativeCannotReadAppDomain = await api(
+				'i/registry/get',
+				{
+					scope: appScope,
+					key: appKey,
+				},
+				alice,
+			);
 			assert.strictEqual(nativeCannotReadAppDomain.status, 400);
 			assert.strictEqual(castAsError(nativeCannotReadAppDomain.body as any).error.code, 'NO_SUCH_KEY');
 
 			const scopesWithDomain = await api('i/registry/scopes-with-domain', {}, alice);
 			assert.strictEqual(scopesWithDomain.status, 200);
-			assert.ok(scopesWithDomain.body.some(item => item.domain === null && item.scopes.some(scope => scope.join('.') === nativeScope.join('.'))));
-			assert.ok(scopesWithDomain.body.some(item => item.domain != null && item.scopes.some(scope => scope.join('.') === appScope.join('.'))));
+			assert.ok(
+				scopesWithDomain.body.some(
+					(item) => item.domain === null && item.scopes.some((scope) => scope.join('.') === nativeScope.join('.')),
+				),
+			);
+			assert.ok(
+				scopesWithDomain.body.some(
+					(item) => item.domain != null && item.scopes.some((scope) => scope.join('.') === appScope.join('.')),
+				),
+			);
 
 			const appDenied = await api('i/registry/scopes-with-domain', {}, { token: appToken });
 			assert.strictEqual(appDenied.status, 400);
 			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
 
-			const removed = await api('i/registry/remove', {
-				scope: nativeScope,
-				key: nativeKey,
-			}, alice);
+			const removed = await api(
+				'i/registry/remove',
+				{
+					scope: nativeScope,
+					key: nativeKey,
+				},
+				alice,
+			);
 			assert.strictEqual(removed.status, 204);
-			const afterRemove = await api('i/registry/get', {
-				scope: nativeScope,
-				key: nativeKey,
-			}, alice);
+			const afterRemove = await api(
+				'i/registry/get',
+				{
+					scope: nativeScope,
+					key: nativeKey,
+				},
+				alice,
+			);
 			assert.strictEqual(afterRemove.status, 400);
 			assert.strictEqual(castAsError(afterRemove.body as any).error.code, 'NO_SUCH_KEY');
 		});
@@ -3957,7 +4639,7 @@ describe('Endpoints', () => {
 					return;
 				}
 
-				rssServer.close(error => error ? reject(error) : resolve());
+				rssServer.close((error) => (error ? reject(error) : resolve()));
 			});
 		});
 
@@ -4004,7 +4686,7 @@ describe('Endpoints', () => {
 			const get = await relativeFetch(`api/fetch-rss?url=${encodeURIComponent(url)}`);
 			assert.strictEqual(get.status, 200);
 			assert.strictEqual(get.headers.get('cache-control'), 'public, max-age=180');
-			const getBody = await get.json() as { title?: string; items?: { title?: string }[] };
+			const getBody = (await get.json()) as { title?: string; items?: { title?: string }[] };
 			assert.strictEqual(getBody.title, 'Hono RSS Feed');
 			assert.strictEqual(getAt(getDefined(getBody.items), 0).title, 'First entry');
 		});
@@ -4017,9 +4699,10 @@ describe('Endpoints', () => {
 
 		beforeAll(async () => {
 			resourceServer = createServer((req, res) => {
-				const responseBody = req.url === '/invalid'
-					? JSON.stringify({ type: 'text/plain' })
-					: JSON.stringify({ type: 'text/plain', data });
+				const responseBody =
+					req.url === '/invalid'
+						? JSON.stringify({ type: 'text/plain' })
+						: JSON.stringify({ type: 'text/plain', data });
 
 				res.writeHead(200, {
 					'Content-Type': 'application/json; charset=utf-8',
@@ -4044,17 +4727,21 @@ describe('Endpoints', () => {
 					return;
 				}
 
-				resourceServer.close(error => error ? reject(error) : resolve());
+				resourceServer.close((error) => (error ? reject(error) : resolve()));
 			});
 		});
 
 		test('fetches, validates, and returns hashed external resources', async () => {
 			const hash = createHash('sha512').update(data.replace(/\r\n/g, '\n')).digest('hex');
 
-			const res = await api('fetch-external-resources', {
-				url: `${resourceUrl}/valid`,
-				hash,
-			}, alice);
+			const res = await api(
+				'fetch-external-resources',
+				{
+					url: `${resourceUrl}/valid`,
+					hash,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.deepStrictEqual(res.body, {
@@ -4065,24 +4752,36 @@ describe('Endpoints', () => {
 
 		test('rejects third-party app tokens and mismatched resources', async () => {
 			const appToken = await createAppToken(alice, ['read:account']);
-			const appDenied = await api('fetch-external-resources', {
-				url: `${resourceUrl}/valid`,
-				hash: 'bad',
-			}, { token: appToken });
+			const appDenied = await api(
+				'fetch-external-resources',
+				{
+					url: `${resourceUrl}/valid`,
+					hash: 'bad',
+				},
+				{ token: appToken },
+			);
 			assert.strictEqual(appDenied.status, 400);
 			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
 
-			const mismatched = await api('fetch-external-resources', {
-				url: `${resourceUrl}/valid`,
-				hash: 'bad',
-			}, alice);
+			const mismatched = await api(
+				'fetch-external-resources',
+				{
+					url: `${resourceUrl}/valid`,
+					hash: 'bad',
+				},
+				alice,
+			);
 			assert.strictEqual(mismatched.status, 400);
 			assert.strictEqual(castAsError(mismatched.body as any).error.code, 'EXT_RESOURCE_HASH_DIDNT_MATCH');
 
-			const invalid = await api('fetch-external-resources', {
-				url: `${resourceUrl}/invalid`,
-				hash: 'bad',
-			}, alice);
+			const invalid = await api(
+				'fetch-external-resources',
+				{
+					url: `${resourceUrl}/invalid`,
+					hash: 'bad',
+				},
+				alice,
+			);
 			assert.strictEqual(invalid.status, 400);
 			assert.strictEqual(castAsError(invalid.body as any).error.code, 'EXT_RESOURCE_RETURNED_INVALID_SCHEMA');
 		});
@@ -4121,31 +4820,43 @@ describe('Endpoints', () => {
 		test('sw registration lifecycle creates, updates, and unregisters subscriptions', async () => {
 			const endpoint = `https://push.example.test/lifecycle-${genId()}`;
 
-			const registered = await api('sw/register', {
-				endpoint,
-				auth: 'auth-1',
-				publickey: 'public-key-1',
-				sendReadMessage: true,
-			}, alice);
+			const registered = await api(
+				'sw/register',
+				{
+					endpoint,
+					auth: 'auth-1',
+					publickey: 'public-key-1',
+					sendReadMessage: true,
+				},
+				alice,
+			);
 			assert.strictEqual(registered.status, 200);
 			assert.strictEqual(registered.body.state, 'subscribed');
 			assert.strictEqual(registered.body.userId, alice.id);
 			assert.strictEqual(registered.body.endpoint, endpoint);
 			assert.strictEqual(registered.body.sendReadMessage, true);
 
-			const same = await api('sw/register', {
-				endpoint,
-				auth: 'auth-1',
-				publickey: 'public-key-1',
-				sendReadMessage: true,
-			}, alice);
+			const same = await api(
+				'sw/register',
+				{
+					endpoint,
+					auth: 'auth-1',
+					publickey: 'public-key-1',
+					sendReadMessage: true,
+				},
+				alice,
+			);
 			assert.strictEqual(same.status, 200);
 			assert.strictEqual(same.body.state, 'already-subscribed');
 
-			const updated = await api('sw/update-registration', {
-				endpoint,
-				sendReadMessage: false,
-			}, alice);
+			const updated = await api(
+				'sw/update-registration',
+				{
+					endpoint,
+					sendReadMessage: false,
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 200);
 			assert.deepStrictEqual(updated.body, {
 				userId: alice.id,
@@ -4153,9 +4864,13 @@ describe('Endpoints', () => {
 				sendReadMessage: false,
 			});
 
-			const missingUpdate = await api('sw/update-registration', {
-				endpoint,
-			}, bob);
+			const missingUpdate = await api(
+				'sw/update-registration',
+				{
+					endpoint,
+				},
+				bob,
+			);
 			assert.strictEqual(missingUpdate.status, 400);
 			assert.strictEqual(castAsError(missingUpdate.body as any).error.code, 'NO_SUCH_REGISTRATION');
 
@@ -4170,18 +4885,26 @@ describe('Endpoints', () => {
 
 		test('sw secure endpoints reject app tokens and unregister accepts anonymous requests', async () => {
 			const endpoint = `https://push.example.test/anonymous-${genId()}`;
-			await api('sw/register', {
-				endpoint,
-				auth: 'auth',
-				publickey: 'public-key',
-			}, alice);
+			await api(
+				'sw/register',
+				{
+					endpoint,
+					auth: 'auth',
+					publickey: 'public-key',
+				},
+				alice,
+			);
 
 			const appToken = await createAppToken(alice, ['read:account']);
-			const appRegisterDenied = await api('sw/register', {
-				endpoint: `${endpoint}-app`,
-				auth: 'auth',
-				publickey: 'public-key',
-			}, { token: appToken });
+			const appRegisterDenied = await api(
+				'sw/register',
+				{
+					endpoint: `${endpoint}-app`,
+					auth: 'auth',
+					publickey: 'public-key',
+				},
+				{ token: appToken },
+			);
 			assert.strictEqual(appRegisterDenied.status, 400);
 			assert.strictEqual(castAsError(appRegisterDenied.body as any).error.code, 'ACCESS_DENIED');
 
@@ -4277,10 +5000,14 @@ describe('Endpoints', () => {
 		test('i/change-password は誤ったパスワードでINCORRECT_PASSWORDを返し、パスワードを変えない', async () => {
 			const user = await signup();
 
-			const res = await api('i/change-password', {
-				currentPassword: 'wrong-password',
-				newPassword: 'changed-password',
-			}, user);
+			const res = await api(
+				'i/change-password',
+				{
+					currentPassword: 'wrong-password',
+					newPassword: 'changed-password',
+				},
+				user,
+			);
 			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
 			assert.strictEqual(castAsError(res.body as any).error.code, 'INCORRECT_PASSWORD');
 
@@ -4371,11 +5098,19 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const createdWithToken = await api('admin/promo/create', { noteId: tokenNoteId, expiresAt: now + 60_000 }, { token: writeToken });
+			const createdWithToken = await api(
+				'admin/promo/create',
+				{ noteId: tokenNoteId, expiresAt: now + 60_000 },
+				{ token: writeToken },
+			);
 			assert.strictEqual(createdWithToken.status, 204);
 
 			const deniedToken = await createAppToken(alice, ['read:admin:queue']);
-			const scopeDenied = await api('admin/promo/create', { noteId: genId(), expiresAt: now + 60_000 }, { token: deniedToken });
+			const scopeDenied = await api(
+				'admin/promo/create',
+				{ noteId: genId(), expiresAt: now + 60_000 },
+				{ token: deniedToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -4507,7 +5242,10 @@ describe('Endpoints', () => {
 
 			const duplicateClipFavorite = await api('clips/favorite', { clipId: clip.id }, bob);
 			assert.strictEqual(duplicateClipFavorite.status, 400);
-			assert.strictEqual(castAsError(duplicateClipFavorite.body as any).error.id, '92658936-c625-4273-8326-2d790129256e');
+			assert.strictEqual(
+				castAsError(duplicateClipFavorite.body as any).error.id,
+				'92658936-c625-4273-8326-2d790129256e',
+			);
 
 			const clipUnfavorite = await api('clips/unfavorite', { clipId: clip.id }, bob);
 			assert.strictEqual(clipUnfavorite.status, 204);
@@ -4547,7 +5285,9 @@ describe('Endpoints', () => {
 		});
 
 		test('favorite and like endpoints require matching app token permissions', async () => {
-			const { userList, clip, channel, page, flash } = await createFavoriteFixtures(`hono-favorite-permission-${Date.now()}`);
+			const { userList, clip, channel, page, flash } = await createFavoriteFixtures(
+				`hono-favorite-permission-${Date.now()}`,
+			);
 			const appToken = await createAppToken(bob, ['read:account']);
 
 			for (const [endpoint, params] of [
@@ -4649,29 +5389,61 @@ describe('Endpoints', () => {
 
 			const rootList = await api('drive/folders', { folderId: null }, alice);
 			assert.strictEqual(rootList.status, 200);
-			assert.strictEqual((rootList.body as any[]).some(item => item.id === parent.id), true);
-			assert.strictEqual((rootList.body as any[]).some(item => item.id === rootChildName.id), true);
-			assert.strictEqual((rootList.body as any[]).some(item => item.id === otherUserFolder.id), false);
+			assert.strictEqual(
+				(rootList.body as any[]).some((item) => item.id === parent.id),
+				true,
+			);
+			assert.strictEqual(
+				(rootList.body as any[]).some((item) => item.id === rootChildName.id),
+				true,
+			);
+			assert.strictEqual(
+				(rootList.body as any[]).some((item) => item.id === otherUserFolder.id),
+				false,
+			);
 
 			const childList = await api('drive/folders', { folderId: parent.id }, alice);
 			assert.strictEqual(childList.status, 200);
-			assert.deepStrictEqual((childList.body as any[]).map(item => item.id), [child.id]);
+			assert.deepStrictEqual(
+				(childList.body as any[]).map((item) => item.id),
+				[child.id],
+			);
 
-			const childFind = await api('drive/folders/find', {
-				name: child.name,
-				parentId: parent.id,
-			}, alice);
+			const childFind = await api(
+				'drive/folders/find',
+				{
+					name: child.name,
+					parentId: parent.id,
+				},
+				alice,
+			);
 			assert.strictEqual(childFind.status, 200);
-			assert.deepStrictEqual((childFind.body as any[]).map(item => item.id), [child.id]);
+			assert.deepStrictEqual(
+				(childFind.body as any[]).map((item) => item.id),
+				[child.id],
+			);
 
-			const rootFind = await api('drive/folders/find', {
-				name: child.name,
-				parentId: null,
-			}, alice);
+			const rootFind = await api(
+				'drive/folders/find',
+				{
+					name: child.name,
+					parentId: null,
+				},
+				alice,
+			);
 			assert.strictEqual(rootFind.status, 200);
-			assert.strictEqual((rootFind.body as any[]).some(item => item.id === rootChildName.id), true);
-			assert.strictEqual((rootFind.body as any[]).some(item => item.id === child.id), false);
-			assert.strictEqual((rootFind.body as any[]).some(item => item.id === otherUserFolder.id), false);
+			assert.strictEqual(
+				(rootFind.body as any[]).some((item) => item.id === rootChildName.id),
+				true,
+			);
+			assert.strictEqual(
+				(rootFind.body as any[]).some((item) => item.id === child.id),
+				false,
+			);
+			assert.strictEqual(
+				(rootFind.body as any[]).some((item) => item.id === otherUserFolder.id),
+				false,
+			);
 
 			const showParent = await api('drive/folders/show', { folderId: parent.id }, alice);
 			assert.strictEqual(showParent.status, 200);
@@ -4748,16 +5520,20 @@ describe('Endpoints', () => {
 			const file = await uploadFile(alice);
 
 			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
-			const created = await api('notes/drafts/create', {
-				text: 'hono draft create',
-				replyId: replyTarget.id,
-				renoteId: renoteTarget.id,
-				channelId: channel.id,
-				fileIds: [file.body!.id],
-				poll: { choices: ['a', 'b'], multiple: false },
-				isActuallyScheduled: true,
-				scheduledAt: futureScheduledAt,
-			}, alice);
+			const created = await api(
+				'notes/drafts/create',
+				{
+					text: 'hono draft create',
+					replyId: replyTarget.id,
+					renoteId: renoteTarget.id,
+					channelId: channel.id,
+					fileIds: [file.body!.id],
+					poll: { choices: ['a', 'b'], multiple: false },
+					isActuallyScheduled: true,
+					scheduledAt: futureScheduledAt,
+				},
+				alice,
+			);
 
 			assert.strictEqual(created.status, 200);
 			const createdDraft = (created.body as any).createdDraft;
@@ -4776,7 +5552,10 @@ describe('Endpoints', () => {
 			assert.strictEqual(createdDraft.scheduledAt, futureScheduledAt);
 
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-			assert.strictEqual(jobs.some(job => job.data.noteDraftId === createdDraft.id), true);
+			assert.strictEqual(
+				jobs.some((job) => job.data.noteDraftId === createdDraft.id),
+				true,
+			);
 
 			// scheduledNoteLimit (デフォルト1) を後続テストで消費しないよう後片付け
 			const cleanup = await api('notes/drafts/delete', { draftId: createdDraft.id }, alice);
@@ -4786,48 +5565,76 @@ describe('Endpoints', () => {
 		test('notes/drafts/create validates scheduling and referenced entities', async () => {
 			const noSuchId = 'zzzzzzzzzzzzzzzzzzzzzzzzzz';
 
-			const scheduledAtRequired = await api('notes/drafts/create', {
-				isActuallyScheduled: true,
-			}, alice);
+			const scheduledAtRequired = await api(
+				'notes/drafts/create',
+				{
+					isActuallyScheduled: true,
+				},
+				alice,
+			);
 			assert.strictEqual(scheduledAtRequired.status, 400);
 			assert.strictEqual(castAsError(scheduledAtRequired.body as any).error.id, '15e28a55-e74c-4d65-89b7-8880cdaaa87d');
 
-			const scheduledAtPast = await api('notes/drafts/create', {
-				isActuallyScheduled: true,
-				scheduledAt: Date.now() - 1000 * 60,
-			}, alice);
+			const scheduledAtPast = await api(
+				'notes/drafts/create',
+				{
+					isActuallyScheduled: true,
+					scheduledAt: Date.now() - 1000 * 60,
+				},
+				alice,
+			);
 			assert.strictEqual(scheduledAtPast.status, 400);
 			assert.strictEqual(castAsError(scheduledAtPast.body as any).error.id, 'e4bed6c9-017e-4934-aed0-01c22cc60ec1');
 
-			const noSuchFile = await api('notes/drafts/create', {
-				fileIds: [noSuchId],
-			}, alice);
+			const noSuchFile = await api(
+				'notes/drafts/create',
+				{
+					fileIds: [noSuchId],
+				},
+				alice,
+			);
 			assert.strictEqual(noSuchFile.status, 400);
 			assert.strictEqual(castAsError(noSuchFile.body as any).error.id, 'b6992544-63e7-67f0-fa7f-32444b1b5306');
 
-			const noSuchRenoteTarget = await api('notes/drafts/create', {
-				renoteId: noSuchId,
-			}, alice);
+			const noSuchRenoteTarget = await api(
+				'notes/drafts/create',
+				{
+					renoteId: noSuchId,
+				},
+				alice,
+			);
 			assert.strictEqual(noSuchRenoteTarget.status, 400);
 			assert.strictEqual(castAsError(noSuchRenoteTarget.body as any).error.id, 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4');
 
 			const original = await post(alice, { text: 'pure renote source' });
 			const pureRenote = await post(alice, { renoteId: original.id });
-			const cannotReRenote = await api('notes/drafts/create', {
-				renoteId: pureRenote.id,
-			}, alice);
+			const cannotReRenote = await api(
+				'notes/drafts/create',
+				{
+					renoteId: pureRenote.id,
+				},
+				alice,
+			);
 			assert.strictEqual(cannotReRenote.status, 400);
 			assert.strictEqual(castAsError(cannotReRenote.body as any).error.id, 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a');
 
-			const noSuchReplyTarget = await api('notes/drafts/create', {
-				replyId: noSuchId,
-			}, alice);
+			const noSuchReplyTarget = await api(
+				'notes/drafts/create',
+				{
+					replyId: noSuchId,
+				},
+				alice,
+			);
 			assert.strictEqual(noSuchReplyTarget.status, 400);
 			assert.strictEqual(castAsError(noSuchReplyTarget.body as any).error.id, '749ee0f6-d3da-459a-bf02-282e2da4292c');
 
-			const noSuchChannel = await api('notes/drafts/create', {
-				channelId: noSuchId,
-			}, alice);
+			const noSuchChannel = await api(
+				'notes/drafts/create',
+				{
+					channelId: noSuchId,
+				},
+				alice,
+			);
 			assert.strictEqual(noSuchChannel.status, 400);
 			assert.strictEqual(castAsError(noSuchChannel.body as any).error.id, 'b1653923-5453-4edc-b786-7c4f39bb0bbb');
 		});
@@ -4843,12 +5650,16 @@ describe('Endpoints', () => {
 			});
 
 			const futureScheduledAt = Date.now() + 1000 * 60 * 60;
-			const updated = await api('notes/drafts/update', {
-				draftId: draft.id,
-				text: 'after update',
-				isActuallyScheduled: true,
-				scheduledAt: futureScheduledAt,
-			}, alice);
+			const updated = await api(
+				'notes/drafts/update',
+				{
+					draftId: draft.id,
+					text: 'after update',
+					isActuallyScheduled: true,
+					scheduledAt: futureScheduledAt,
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 200);
 			const updatedDraft = (updated.body as any).updatedDraft;
 			assert.strictEqual(updatedDraft.id, draft.id);
@@ -4857,25 +5668,39 @@ describe('Endpoints', () => {
 			assert.strictEqual(updatedDraft.scheduledAt, futureScheduledAt);
 
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-			assert.strictEqual(jobs.some(job => job.data.noteDraftId === draft.id), true);
+			assert.strictEqual(
+				jobs.some((job) => job.data.noteDraftId === draft.id),
+				true,
+			);
 
-			const updatedWithoutSchedule = await api('notes/drafts/update', {
-				draftId: draft.id,
-				text: 'schedule omitted on update',
-			}, alice);
+			const updatedWithoutSchedule = await api(
+				'notes/drafts/update',
+				{
+					draftId: draft.id,
+					text: 'schedule omitted on update',
+				},
+				alice,
+			);
 			assert.strictEqual(updatedWithoutSchedule.status, 200);
 			assert.strictEqual((updatedWithoutSchedule.body as any).updatedDraft.scheduledAt, futureScheduledAt);
 			assert.strictEqual((updatedWithoutSchedule.body as any).updatedDraft.isActuallyScheduled, true);
 
 			const jobsAfterUpdate = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-			assert.strictEqual(jobsAfterUpdate.some(job => job.data.noteDraftId === draft.id), true);
+			assert.strictEqual(
+				jobsAfterUpdate.some((job) => job.data.noteDraftId === draft.id),
+				true,
+			);
 
 			const original = await post(alice, { text: 'update pure renote source' });
 			const pureRenote = await post(alice, { renoteId: original.id });
-			const cannotRenote = await api('notes/drafts/update', {
-				draftId: draft.id,
-				renoteId: pureRenote.id,
-			}, alice);
+			const cannotRenote = await api(
+				'notes/drafts/update',
+				{
+					draftId: draft.id,
+					renoteId: pureRenote.id,
+				},
+				alice,
+			);
 			assert.strictEqual(cannotRenote.status, 400);
 			assert.strictEqual(castAsError(cannotRenote.body as any).error.id, '76cc5583-5a14-4ad3-8717-0298507e32db');
 			assert.strictEqual(castAsError(cannotRenote.body as any).error.code, 'CANNOT_RENOTE');
@@ -4885,14 +5710,24 @@ describe('Endpoints', () => {
 				visibility: 'specified',
 				visibleUserIds: [alice.id],
 			});
-			const extendedVisibilityReply = await api('notes/drafts/update', {
-				draftId: draft.id,
-				replyId: specifiedReplyTarget.id,
-				visibility: 'public',
-			}, alice);
+			const extendedVisibilityReply = await api(
+				'notes/drafts/update',
+				{
+					draftId: draft.id,
+					replyId: specifiedReplyTarget.id,
+					visibility: 'public',
+				},
+				alice,
+			);
 			assert.strictEqual(extendedVisibilityReply.status, 400);
-			assert.strictEqual(castAsError(extendedVisibilityReply.body as any).error.id, '215dbc76-336c-4d2a-9605-95766ba7dab0');
-			assert.strictEqual(castAsError(extendedVisibilityReply.body as any).error.code, 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY');
+			assert.strictEqual(
+				castAsError(extendedVisibilityReply.body as any).error.id,
+				'215dbc76-336c-4d2a-9605-95766ba7dab0',
+			);
+			assert.strictEqual(
+				castAsError(extendedVisibilityReply.body as any).error.code,
+				'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
+			);
 
 			const foreignDraft = await createNoteDraftInDatabase(db, {
 				id: genId(),
@@ -4901,17 +5736,25 @@ describe('Endpoints', () => {
 				visibility: 'public',
 				pollMultiple: false,
 			});
-			const foreignUpdate = await api('notes/drafts/update', {
-				draftId: foreignDraft.id,
-				text: 'hijack attempt',
-			}, alice);
+			const foreignUpdate = await api(
+				'notes/drafts/update',
+				{
+					draftId: foreignDraft.id,
+					text: 'hijack attempt',
+				},
+				alice,
+			);
 			assert.strictEqual(foreignUpdate.status, 400);
 			assert.strictEqual(castAsError(foreignUpdate.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
 
-			const missingUpdate = await api('notes/drafts/update', {
-				draftId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
-				text: 'missing',
-			}, alice);
+			const missingUpdate = await api(
+				'notes/drafts/update',
+				{
+					draftId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+					text: 'missing',
+				},
+				alice,
+			);
 			assert.strictEqual(missingUpdate.status, 400);
 			assert.strictEqual(castAsError(missingUpdate.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
 		});
@@ -4928,10 +5771,14 @@ describe('Endpoints', () => {
 				isActuallyScheduled: true,
 				scheduledAt: new Date(futureScheduledAt),
 			});
-			await postScheduledNoteQueue!.add(draft.id, { noteDraftId: draft.id, scheduledAt: futureScheduledAt }, {
-				delay: 1000 * 60 * 60,
-				jobId: `scheduled-${draft.id}-${futureScheduledAt}`,
-			});
+			await postScheduledNoteQueue!.add(
+				draft.id,
+				{ noteDraftId: draft.id, scheduledAt: futureScheduledAt },
+				{
+					delay: 1000 * 60 * 60,
+					jobId: `scheduled-${draft.id}-${futureScheduledAt}`,
+				},
+			);
 
 			const deleted = await api('notes/drafts/delete', { draftId: draft.id }, alice);
 			assert.strictEqual(deleted.status, 204);
@@ -4940,7 +5787,10 @@ describe('Endpoints', () => {
 			assert.strictEqual(afterDelete, null);
 
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-			assert.strictEqual(jobs.some(job => job.data.noteDraftId === draft.id), false);
+			assert.strictEqual(
+				jobs.some((job) => job.data.noteDraftId === draft.id),
+				false,
+			);
 
 			const missingDelete = await api('notes/drafts/delete', { draftId: draft.id }, alice);
 			assert.strictEqual(missingDelete.status, 400);
@@ -4968,13 +5818,13 @@ describe('Endpoints', () => {
 
 			const scheduledOnly = await api('notes/drafts/list', { scheduled: true }, alice);
 			assert.strictEqual(scheduledOnly.status, 200);
-			const scheduledIds = (scheduledOnly.body as any[]).map(d => d.id);
+			const scheduledIds = (scheduledOnly.body as any[]).map((d) => d.id);
 			assert.strictEqual(scheduledIds.includes(scheduledDraft.id), true);
 			assert.strictEqual(scheduledIds.includes(plainDraft.id), false);
 
 			const unscheduledOnly = await api('notes/drafts/list', { scheduled: false }, alice);
 			assert.strictEqual(unscheduledOnly.status, 200);
-			const unscheduledIds = (unscheduledOnly.body as any[]).map(d => d.id);
+			const unscheduledIds = (unscheduledOnly.body as any[]).map((d) => d.id);
 			assert.strictEqual(unscheduledIds.includes(plainDraft.id), true);
 			assert.strictEqual(unscheduledIds.includes(scheduledDraft.id), false);
 
@@ -4989,14 +5839,17 @@ describe('Endpoints', () => {
 			const body = res.body as { local: { total: number[] }; remote: { total: number[] } };
 			assert.strictEqual(body.local.total.length, 5);
 			assert.strictEqual(body.remote.total.length, 5);
-			assert.strictEqual(body.local.total.every(v => typeof v === 'number'), true);
+			assert.strictEqual(
+				body.local.total.every((v) => typeof v === 'number'),
+				true,
+			);
 		});
 
 		test('charts/notes via GET sets a public cache-control header for anonymous requests', async () => {
 			const res = await relativeFetch('api/charts/notes?span=hour&limit=3');
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=3600');
-			const body = await res.json() as { local: { total: number[] } };
+			const body = (await res.json()) as { local: { total: number[] } };
 			assert.strictEqual(body.local.total.length, 3);
 		});
 
@@ -5033,45 +5886,57 @@ describe('Endpoints', () => {
 		test('antennas/create creates an antenna, rejects empty keywords, and validates the user list', async () => {
 			const suffix = Date.now().toString(36);
 
-			const created = await api('antennas/create', {
-				name: `antenna-${suffix}`,
-				src: 'home',
-				keywords: [['hello']],
-				excludeKeywords: [[]],
-				users: [],
-				caseSensitive: false,
-				withReplies: false,
-				withFile: false,
-			}, alice);
+			const created = await api(
+				'antennas/create',
+				{
+					name: `antenna-${suffix}`,
+					src: 'home',
+					keywords: [['hello']],
+					excludeKeywords: [[]],
+					users: [],
+					caseSensitive: false,
+					withReplies: false,
+					withFile: false,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.name, `antenna-${suffix}`);
 			assert.strictEqual(created.body.src, 'home');
 			assert.strictEqual(created.body.isActive, true);
 
-			const empty = await api('antennas/create', {
-				name: `antenna-empty-${suffix}`,
-				src: 'home',
-				keywords: [['']],
-				excludeKeywords: [['']],
-				users: [],
-				caseSensitive: false,
-				withReplies: false,
-				withFile: false,
-			}, alice);
+			const empty = await api(
+				'antennas/create',
+				{
+					name: `antenna-empty-${suffix}`,
+					src: 'home',
+					keywords: [['']],
+					excludeKeywords: [['']],
+					users: [],
+					caseSensitive: false,
+					withReplies: false,
+					withFile: false,
+				},
+				alice,
+			);
 			assert.strictEqual(empty.status, 400);
 			assert.strictEqual(castAsError(empty.body as any).error.id, '53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
 
-			const noSuchList = await api('antennas/create', {
-				name: `antenna-nolist-${suffix}`,
-				src: 'list',
-				userListId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
-				keywords: [['hello']],
-				excludeKeywords: [[]],
-				users: [],
-				caseSensitive: false,
-				withReplies: false,
-				withFile: false,
-			}, alice);
+			const noSuchList = await api(
+				'antennas/create',
+				{
+					name: `antenna-nolist-${suffix}`,
+					src: 'list',
+					userListId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+					keywords: [['hello']],
+					excludeKeywords: [[]],
+					users: [],
+					caseSensitive: false,
+					withReplies: false,
+					withFile: false,
+				},
+				alice,
+			);
 			assert.strictEqual(noSuchList.status, 400);
 			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
 
@@ -5081,77 +5946,105 @@ describe('Endpoints', () => {
 				userId: alice.id,
 				name: `antenna-list-${suffix}`,
 			});
-			const withList = await api('antennas/create', {
-				name: `antenna-list-src-${suffix}`,
-				src: 'list',
-				userListId: userList.id,
-				keywords: [['hello']],
-				excludeKeywords: [[]],
-				users: [],
-				caseSensitive: false,
-				withReplies: false,
-				withFile: false,
-			}, alice);
+			const withList = await api(
+				'antennas/create',
+				{
+					name: `antenna-list-src-${suffix}`,
+					src: 'list',
+					userListId: userList.id,
+					keywords: [['hello']],
+					excludeKeywords: [[]],
+					users: [],
+					caseSensitive: false,
+					withReplies: false,
+					withFile: false,
+				},
+				alice,
+			);
 			assert.strictEqual(withList.status, 200);
 			assert.strictEqual(withList.body.userListId, userList.id);
 		});
 
 		test('antennas/update updates an antenna and rejects foreign or missing antennas', async () => {
 			const suffix = Date.now().toString(36);
-			const created = await api('antennas/create', {
-				name: `antenna-upd-${suffix}`,
-				src: 'home',
-				keywords: [['before']],
-				excludeKeywords: [[]],
-				users: [],
-				caseSensitive: false,
-				withReplies: false,
-				withFile: false,
-			}, alice);
+			const created = await api(
+				'antennas/create',
+				{
+					name: `antenna-upd-${suffix}`,
+					src: 'home',
+					keywords: [['before']],
+					excludeKeywords: [[]],
+					users: [],
+					caseSensitive: false,
+					withReplies: false,
+					withFile: false,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 
-			const updated = await api('antennas/update', {
-				antennaId: created.body.id,
-				name: `antenna-upd-renamed-${suffix}`,
-			}, alice);
+			const updated = await api(
+				'antennas/update',
+				{
+					antennaId: created.body.id,
+					name: `antenna-upd-renamed-${suffix}`,
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 200);
 			assert.strictEqual(updated.body.name, `antenna-upd-renamed-${suffix}`);
 
-			const emptyKeywordUpdate = await api('antennas/update', {
-				antennaId: created.body.id,
-				keywords: [['']],
-				excludeKeywords: [['']],
-			}, alice);
+			const emptyKeywordUpdate = await api(
+				'antennas/update',
+				{
+					antennaId: created.body.id,
+					keywords: [['']],
+					excludeKeywords: [['']],
+				},
+				alice,
+			);
 			assert.strictEqual(emptyKeywordUpdate.status, 400);
 			assert.strictEqual(castAsError(emptyKeywordUpdate.body as any).error.id, '721aaff6-4e1b-4d88-8de6-877fae9f68c4');
 
-			const foreignUpdate = await api('antennas/update', {
-				antennaId: created.body.id,
-				name: 'hijack',
-			}, bob);
+			const foreignUpdate = await api(
+				'antennas/update',
+				{
+					antennaId: created.body.id,
+					name: 'hijack',
+				},
+				bob,
+			);
 			assert.strictEqual(foreignUpdate.status, 400);
 			assert.strictEqual(castAsError(foreignUpdate.body as any).error.id, '10c673ac-8852-48eb-aa1f-f5b67f069290');
 
-			const missingUpdate = await api('antennas/update', {
-				antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
-				name: 'missing',
-			}, alice);
+			const missingUpdate = await api(
+				'antennas/update',
+				{
+					antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+					name: 'missing',
+				},
+				alice,
+			);
 			assert.strictEqual(missingUpdate.status, 400);
 			assert.strictEqual(castAsError(missingUpdate.body as any).error.id, '10c673ac-8852-48eb-aa1f-f5b67f069290');
 		});
 
 		test('antennas/show and antennas/list scope antennas to the caller', async () => {
 			const suffix = Date.now().toString(36);
-			const created = await api('antennas/create', {
-				name: `antenna-show-${suffix}`,
-				src: 'home',
-				keywords: [['x']],
-				excludeKeywords: [[]],
-				users: [],
-				caseSensitive: false,
-				withReplies: false,
-				withFile: false,
-			}, alice);
+			const created = await api(
+				'antennas/create',
+				{
+					name: `antenna-show-${suffix}`,
+					src: 'home',
+					keywords: [['x']],
+					excludeKeywords: [[]],
+					users: [],
+					caseSensitive: false,
+					withReplies: false,
+					withFile: false,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 
 			const shown = await api('antennas/show', { antennaId: created.body.id }, alice);
@@ -5164,21 +6057,28 @@ describe('Endpoints', () => {
 
 			const list = await api('antennas/list', {}, alice);
 			assert.strictEqual(list.status, 200);
-			assert.strictEqual((list.body as any[]).some(a => a.id === created.body.id), true);
+			assert.strictEqual(
+				(list.body as any[]).some((a) => a.id === created.body.id),
+				true,
+			);
 		});
 
 		test('antennas/delete removes an antenna, rejecting foreign or missing antennas', async () => {
 			const suffix = Date.now().toString(36);
-			const created = await api('antennas/create', {
-				name: `antenna-del-${suffix}`,
-				src: 'home',
-				keywords: [['x']],
-				excludeKeywords: [[]],
-				users: [],
-				caseSensitive: false,
-				withReplies: false,
-				withFile: false,
-			}, alice);
+			const created = await api(
+				'antennas/create',
+				{
+					name: `antenna-del-${suffix}`,
+					src: 'home',
+					keywords: [['x']],
+					excludeKeywords: [[]],
+					users: [],
+					caseSensitive: false,
+					withReplies: false,
+					withFile: false,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 
 			const foreignDelete = await api('antennas/delete', { antennaId: created.body.id }, bob);
@@ -5195,16 +6095,20 @@ describe('Endpoints', () => {
 
 		test('antennas/notes returns fanout-timeline notes and antennas/remove-note removes one', async () => {
 			const config = loadConfig();
-			const created = await api('antennas/create', {
-				name: `antenna-notes-${Date.now().toString(36)}`,
-				src: 'home',
-				keywords: [['x']],
-				excludeKeywords: [[]],
-				users: [],
-				caseSensitive: false,
-				withReplies: false,
-				withFile: false,
-			}, alice);
+			const created = await api(
+				'antennas/create',
+				{
+					name: `antenna-notes-${Date.now().toString(36)}`,
+					src: 'home',
+					keywords: [['x']],
+					excludeKeywords: [[]],
+					users: [],
+					caseSensitive: false,
+					withReplies: false,
+					withFile: false,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 			const antennaId = created.body.id;
 
@@ -5222,7 +6126,10 @@ describe('Endpoints', () => {
 
 				const notes = await api('antennas/notes', { antennaId, limit: 10 }, alice);
 				assert.strictEqual(notes.status, 200);
-				assert.strictEqual((notes.body as any[]).some(n => n.id === noteId), true);
+				assert.strictEqual(
+					(notes.body as any[]).some((n) => n.id === noteId),
+					true,
+				);
 
 				const removed = await api('antennas/remove-note', { antennaId, noteId }, alice);
 				assert.strictEqual(removed.status, 204);
@@ -5230,7 +6137,11 @@ describe('Endpoints', () => {
 				const remaining = await redis.lrange(`list:antennaTimeline:${antennaId}`, 0, -1);
 				assert.strictEqual(remaining.includes(noteId), false);
 
-				const missingAntenna = await api('antennas/remove-note', { antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', noteId }, alice);
+				const missingAntenna = await api(
+					'antennas/remove-note',
+					{ antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', noteId },
+					alice,
+				);
 				assert.strictEqual(missingAntenna.status, 400);
 				assert.strictEqual(castAsError(missingAntenna.body as any).error.id, '850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
 			} finally {
@@ -5281,11 +6192,19 @@ describe('Endpoints', () => {
 		test('i/2fa/key-done requires a matching password and two-factor authentication to already be enabled', async () => {
 			const user = await signup({ username: `twofakeydone${Date.now().toString(36)}` });
 
-			const wrongPassword = await api('i/2fa/key-done', { password: 'wrong', name: 'my key', credential: {} as never }, user);
+			const wrongPassword = await api(
+				'i/2fa/key-done',
+				{ password: 'wrong', name: 'my key', credential: {} as never },
+				user,
+			);
 			assert.strictEqual(wrongPassword.status, 400);
 			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '0d7ec6d2-e652-443e-a7bf-9ee9a0cd77b0');
 
-			const notEnabled = await api('i/2fa/key-done', { password: 'test', name: 'my key', credential: {} as never }, user);
+			const notEnabled = await api(
+				'i/2fa/key-done',
+				{ password: 'test', name: 'my key', credential: {} as never },
+				user,
+			);
 			assert.strictEqual(notEnabled.status, 400);
 			assert.strictEqual(castAsError(notEnabled.body as any).error.id, '798d6847-b1ed-4f9c-b1f9-163c42655995');
 		});
@@ -5304,7 +6223,11 @@ describe('Endpoints', () => {
 				transports: [],
 			});
 
-			const noSuchKey = await api('i/2fa/update-key', { name: 'renamed', credentialId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, user);
+			const noSuchKey = await api(
+				'i/2fa/update-key',
+				{ name: 'renamed', credentialId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
+				user,
+			);
 			assert.strictEqual(noSuchKey.status, 400);
 			assert.strictEqual(castAsError(noSuchKey.body as any).error.id, 'f9c5467f-d492-4d3c-9a8g-a70dacc86512');
 
@@ -5357,38 +6280,50 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36);
 			const file = await uploadFile(alice);
 
-			const created = await api('pages/create', {
-				title: `hono page ${suffix}`,
-				name: `hono-page-${suffix}`,
-				content: [{ id: 'block1', type: 'text', text: 'hello' }],
-				variables: [],
-				script: '',
-				eyeCatchingImageId: file.body!.id,
-			}, alice);
+			const created = await api(
+				'pages/create',
+				{
+					title: `hono page ${suffix}`,
+					name: `hono-page-${suffix}`,
+					content: [{ id: 'block1', type: 'text', text: 'hello' }],
+					variables: [],
+					script: '',
+					eyeCatchingImageId: file.body!.id,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.name, `hono-page-${suffix}`);
 			assert.strictEqual(created.body.userId, alice.id);
 			assert.strictEqual(created.body.eyeCatchingImageId, file.body!.id);
 			assert.strictEqual(created.body.eyeCatchingImage!.id, file.body!.id);
 
-			const noSuchFile = await api('pages/create', {
-				title: 'no file',
-				name: `hono-page-nofile-${suffix}`,
-				content: [],
-				variables: [],
-				script: '',
-				eyeCatchingImageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
-			}, alice);
+			const noSuchFile = await api(
+				'pages/create',
+				{
+					title: 'no file',
+					name: `hono-page-nofile-${suffix}`,
+					content: [],
+					variables: [],
+					script: '',
+					eyeCatchingImageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+				},
+				alice,
+			);
 			assert.strictEqual(noSuchFile.status, 400);
 			assert.strictEqual(castAsError(noSuchFile.body as any).error.id, 'b7b97489-0f66-4b12-a5ff-b21bd63f6e1c');
 
-			const duplicateName = await api('pages/create', {
-				title: 'dup',
-				name: `hono-page-${suffix}`,
-				content: [],
-				variables: [],
-				script: '',
-			}, alice);
+			const duplicateName = await api(
+				'pages/create',
+				{
+					title: 'dup',
+					name: `hono-page-${suffix}`,
+					content: [],
+					variables: [],
+					script: '',
+				},
+				alice,
+			);
 			assert.strictEqual(duplicateName.status, 400);
 			assert.strictEqual(castAsError(duplicateName.body as any).error.id, '4650348e-301c-499a-83c9-6aa988c66bc1');
 		});
@@ -5429,39 +6364,55 @@ describe('Endpoints', () => {
 				visibility: 'public',
 			});
 
-			const updated = await api('pages/update', {
-				pageId: page.id,
-				title: `after update ${suffix}`,
-			}, alice);
+			const updated = await api(
+				'pages/update',
+				{
+					pageId: page.id,
+					title: `after update ${suffix}`,
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 204);
 
 			const shown = await api('pages/show', { pageId: page.id }, alice);
 			assert.strictEqual(shown.status, 200);
 			assert.strictEqual(shown.body.title, `after update ${suffix}`);
 
-			const missing = await api('pages/update', {
-				pageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
-				title: 'missing',
-			}, alice);
+			const missing = await api(
+				'pages/update',
+				{
+					pageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+					title: 'missing',
+				},
+				alice,
+			);
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.id, '21149b9e-3616-4778-9592-c4ce89f5a864');
 
-			const foreign = await api('pages/update', {
-				pageId: page.id,
-				title: 'hijack',
-			}, bob);
+			const foreign = await api(
+				'pages/update',
+				{
+					pageId: page.id,
+					title: 'hijack',
+				},
+				bob,
+			);
 			assert.strictEqual(foreign.status, 400);
 			assert.strictEqual(castAsError(foreign.body as any).error.id, '3c15cd52-3b4b-4274-967d-6456fc4f792b');
 
-			const nameConflict = await api('pages/update', {
-				pageId: page.id,
-				name: other.name,
-			}, alice);
+			const nameConflict = await api(
+				'pages/update',
+				{
+					pageId: page.id,
+					name: other.name,
+				},
+				alice,
+			);
 			assert.strictEqual(nameConflict.status, 400);
 			assert.strictEqual(castAsError(nameConflict.body as any).error.id, '2298a392-d4a1-44c5-9ebb-ac1aeaa5a9ab');
 		});
 
-		test('pages/delete removes a page, rejects foreign pages, and allows moderators to delete others\' pages', async () => {
+		test("pages/delete removes a page, rejects foreign pages, and allows moderators to delete others' pages", async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
@@ -5497,7 +6448,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(deleted.status, 204);
 
 			const logs = await listModerationLogsFromDatabase(db, { limit: 100, order: 'desc' });
-			const log = logs.find(l => l.userId === moderator.id && l.type === 'deletePage' && (l.info as any).pageId === page.id);
+			const log = logs.find(
+				(l) => l.userId === moderator.id && l.type === 'deletePage' && (l.info as any).pageId === page.id,
+			);
 			assert.ok(log);
 			assert.strictEqual((log!.info as any).pageUserId, alice.id);
 
@@ -5543,10 +6496,13 @@ describe('Endpoints', () => {
 
 			const featured = await api('pages/featured', {});
 			assert.strictEqual(featured.status, 200);
-			assert.strictEqual((featured.body as any[]).some(p => p.id === page.id), true);
+			assert.strictEqual(
+				(featured.body as any[]).some((p) => p.id === page.id),
+				true,
+			);
 		});
 
-		test('i/pages lists the caller\'s pages and i/page-likes lists liked pages', async () => {
+		test("i/pages lists the caller's pages and i/page-likes lists liked pages", async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const page = await createPageInDatabase(db, {
@@ -5568,19 +6524,22 @@ describe('Endpoints', () => {
 
 			const ownPages = await api('i/pages', {}, alice);
 			assert.strictEqual(ownPages.status, 200);
-			assert.strictEqual((ownPages.body as any[]).some(p => p.id === page.id), true);
+			assert.strictEqual(
+				(ownPages.body as any[]).some((p) => p.id === page.id),
+				true,
+			);
 
 			const liked = await api('pages/like', { pageId: page.id }, bob);
 			assert.strictEqual(liked.status, 204);
 
 			const likes = await api('i/page-likes', {}, bob);
 			assert.strictEqual(likes.status, 200);
-			const likeEntry = (likes.body as any[]).find(l => l.page.id === page.id);
+			const likeEntry = (likes.body as any[]).find((l) => l.page.id === page.id);
 			assert.ok(likeEntry);
 			assert.strictEqual(typeof likeEntry.id, 'string');
 		});
 
-		test('users/pages lists only a user\'s public pages without credentials', async () => {
+		test("users/pages lists only a user's public pages without credentials", async () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36);
 			const publicPage = await createPageInDatabase(db, {
@@ -5602,7 +6561,10 @@ describe('Endpoints', () => {
 
 			const shown = await api('users/pages', { userId: alice.id });
 			assert.strictEqual(shown.status, 200);
-			assert.strictEqual((shown.body as any[]).some(p => p.id === publicPage.id), true);
+			assert.strictEqual(
+				(shown.body as any[]).some((p) => p.id === publicPage.id),
+				true,
+			);
 		});
 
 		test('users/lists/push adds a member, rejects duplicates, missing lists/users, and blocked users', async () => {
@@ -5624,7 +6586,11 @@ describe('Endpoints', () => {
 			assert.strictEqual(noSuchList.status, 400);
 			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '2214501d-ac96-4049-b717-91e42272a711');
 
-			const noSuchUser = await api('users/lists/push', { listId: userList.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			const noSuchUser = await api(
+				'users/lists/push',
+				{ listId: userList.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
+				alice,
+			);
 			assert.strictEqual(noSuchUser.status, 400);
 			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, 'a89abd3d-f0bc-4cce-beb1-2f446f4f1e6a');
 
@@ -5660,7 +6626,11 @@ describe('Endpoints', () => {
 			assert.strictEqual(noSuchList.status, 400);
 			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
 
-			const noSuchUser = await api('users/lists/pull', { listId: userList.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
+			const noSuchUser = await api(
+				'users/lists/pull',
+				{ listId: userList.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
+				alice,
+			);
 			assert.strictEqual(noSuchUser.status, 400);
 			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, '588e7f72-c744-4a61-b180-d354e912bda2');
 
@@ -5685,12 +6655,16 @@ describe('Endpoints', () => {
 				withReplies: false,
 			});
 
-			const updated = await api('users/lists/update-membership', { listId: userList.id, userId: bob.id, withReplies: true }, alice);
+			const updated = await api(
+				'users/lists/update-membership',
+				{ listId: userList.id, userId: bob.id, withReplies: true },
+				alice,
+			);
 			assert.strictEqual(updated.status, 204);
 
 			const memberships = await api('users/lists/get-memberships', { listId: userList.id }, alice);
 			assert.strictEqual(memberships.status, 200);
-			const membership = (memberships.body as any[]).find(m => m.userId === bob.id);
+			const membership = (memberships.body as any[]).find((m) => m.userId === bob.id);
 			assert.ok(membership);
 			assert.strictEqual(membership.withReplies, true);
 			assert.strictEqual(membership.user.id, bob.id);
@@ -5714,9 +6688,15 @@ describe('Endpoints', () => {
 
 			const publicMemberships = await api('users/lists/get-memberships', { listId: userList.id, forPublic: true });
 			assert.strictEqual(publicMemberships.status, 200);
-			assert.strictEqual((publicMemberships.body as any[]).some(m => m.userId === bob.id), true);
+			assert.strictEqual(
+				(publicMemberships.body as any[]).some((m) => m.userId === bob.id),
+				true,
+			);
 
-			const missing = await api('users/lists/get-memberships', { listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', forPublic: true });
+			const missing = await api('users/lists/get-memberships', {
+				listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
+				forPublic: true,
+			});
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.id, '7bc05c21-1d7a-41ae-88f1-66820f4dc686');
 		});
@@ -5752,7 +6732,11 @@ describe('Endpoints', () => {
 			assert.strictEqual(noSuchList.status, 400);
 			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '9292f798-6175-4f7d-93f4-b6742279667d');
 
-			const copied = await api('users/lists/create-from-public', { name: `hono-copied-list-${suffix}`, listId: sourceList.id }, copier);
+			const copied = await api(
+				'users/lists/create-from-public',
+				{ name: `hono-copied-list-${suffix}`, listId: sourceList.id },
+				copier,
+			);
 			assert.strictEqual(copied.status, 200);
 			assert.strictEqual(copied.body.name, `hono-copied-list-${suffix}`);
 			assert.deepStrictEqual(copied.body.userIds, [carol.id]);
@@ -5777,7 +6761,11 @@ describe('Endpoints', () => {
 			});
 			const blockedCopyName = `hono-blocked-copy-${suffix}`;
 			try {
-				const blocked = await api('users/lists/create-from-public', { name: blockedCopyName, listId: blockedSourceList.id }, copier);
+				const blocked = await api(
+					'users/lists/create-from-public',
+					{ name: blockedCopyName, listId: blockedSourceList.id },
+					copier,
+				);
 				assert.strictEqual(blocked.status, 400);
 				assert.strictEqual(castAsError(blocked.body as any).error.id, 'a2497f2a-2389-439c-8626-5298540530f4');
 				assert.strictEqual(await fetchUserListByNameAndUserIdFromDatabase(db, blockedCopyName, copier.id), null);
@@ -5791,17 +6779,27 @@ describe('Endpoints', () => {
 				name: `hono-concurrent-source-list-${suffix}`,
 				isPublic: true,
 			});
-			await Promise.all([copier.id, bob.id].map(userId =>
-				createUserListMembershipInDatabase(db, {
-					id: genId(),
-					userId,
-					userListId: concurrentSourceList.id,
-					userListUserId: carol.id,
-				}),
-			));
+			await Promise.all(
+				[copier.id, bob.id].map((userId) =>
+					createUserListMembershipInDatabase(db, {
+						id: genId(),
+						userId,
+						userListId: concurrentSourceList.id,
+						userListUserId: carol.id,
+					}),
+				),
+			);
 			const [firstCopy, secondCopy] = await Promise.all([
-				api('users/lists/create-from-public', { name: `hono-concurrent-first-${suffix}`, listId: concurrentSourceList.id }, copier),
-				api('users/lists/create-from-public', { name: `hono-concurrent-second-${suffix}`, listId: concurrentSourceList.id }, copier2),
+				api(
+					'users/lists/create-from-public',
+					{ name: `hono-concurrent-first-${suffix}`, listId: concurrentSourceList.id },
+					copier,
+				),
+				api(
+					'users/lists/create-from-public',
+					{ name: `hono-concurrent-second-${suffix}`, listId: concurrentSourceList.id },
+					copier2,
+				),
 			]);
 			assert.strictEqual(firstCopy.status, 200);
 			assert.strictEqual(secondCopy.status, 200);
@@ -5815,10 +6813,12 @@ describe('Endpoints', () => {
 		});
 
 		test('users/achievements returns profile achievements without credentials', async () => {
-			const achievements = [{
-				name: 'notes1' as const,
-				unlockedAt: Date.now(),
-			}];
+			const achievements = [
+				{
+					name: 'notes1' as const,
+					unlockedAt: Date.now(),
+				},
+			];
 			await updateUserProfileInDatabase(db, alice.id, { achievements });
 
 			const res = await api('users/achievements', { userId: alice.id });
@@ -5863,9 +6863,12 @@ describe('Endpoints', () => {
 
 			const list = await api('i/webhooks/list', {}, alice);
 			assert.strictEqual(list.status, 200);
-			const listed = (list.body as any[]).find(item => item.id === webhook.id);
+			const listed = (list.body as any[]).find((item) => item.id === webhook.id);
 			assert.deepStrictEqual(listed, expected);
-			assert.strictEqual((list.body as any[]).some(item => item.id === otherWebhook.id), false);
+			assert.strictEqual(
+				(list.body as any[]).some((item) => item.id === otherWebhook.id),
+				false,
+			);
 
 			const show = await api('i/webhooks/show', { webhookId: webhook.id }, alice);
 			assert.strictEqual(show.status, 200);
@@ -5879,14 +6882,18 @@ describe('Endpoints', () => {
 			assert.strictEqual(updateOther.status, 400);
 			assert.strictEqual(castAsError(updateOther.body as any).error.id, 'fb0fea69-da18-45b1-828d-bd4fd1612518');
 
-			const update = await api('i/webhooks/update', {
-				webhookId: webhook.id,
-				name: 'hono webhook updated',
-				on: ['followed'],
-				url: 'https://example.com/hono-webhook-updated',
-				secret: null,
-				active: false,
-			}, alice);
+			const update = await api(
+				'i/webhooks/update',
+				{
+					webhookId: webhook.id,
+					name: 'hono webhook updated',
+					on: ['followed'],
+					url: 'https://example.com/hono-webhook-updated',
+					secret: null,
+					active: false,
+				},
+				alice,
+			);
 			assert.strictEqual(update.status, 204);
 
 			const updated = await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, alice.id);
@@ -5951,17 +6958,32 @@ describe('Endpoints', () => {
 
 			const ownList = await api('users/lists/list', {}, alice);
 			assert.strictEqual(ownList.status, 200);
-			assert.strictEqual((ownList.body as any[]).some(item => item.id === privateList.id), true);
-			assert.strictEqual((ownList.body as any[]).some(item => item.id === publicList.id), true);
+			assert.strictEqual(
+				(ownList.body as any[]).some((item) => item.id === privateList.id),
+				true,
+			);
+			assert.strictEqual(
+				(ownList.body as any[]).some((item) => item.id === publicList.id),
+				true,
+			);
 
 			const publicOnly = await api('users/lists/list', { userId: alice.id });
 			assert.strictEqual(publicOnly.status, 200);
-			assert.strictEqual((publicOnly.body as any[]).some(item => item.id === publicList.id), true);
-			assert.strictEqual((publicOnly.body as any[]).some(item => item.id === privateList.id), false);
+			assert.strictEqual(
+				(publicOnly.body as any[]).some((item) => item.id === publicList.id),
+				true,
+			);
+			assert.strictEqual(
+				(publicOnly.body as any[]).some((item) => item.id === privateList.id),
+				false,
+			);
 
 			const invalidAnonymousList = await api('users/lists/list', {});
 			assert.strictEqual(invalidAnonymousList.status, 400);
-			assert.strictEqual(castAsError(invalidAnonymousList.body as any).error.id, 'ab36de0e-29e9-48cb-9732-d82f1281620d');
+			assert.strictEqual(
+				castAsError(invalidAnonymousList.body as any).error.id,
+				'ab36de0e-29e9-48cb-9732-d82f1281620d',
+			);
 
 			const privateShowByOwner = await api('users/lists/show', { listId: privateList.id }, alice);
 			assert.strictEqual(privateShowByOwner.status, 200);
@@ -5969,7 +6991,10 @@ describe('Endpoints', () => {
 
 			const privateShowAnonymous = await api('users/lists/show', { listId: privateList.id });
 			assert.strictEqual(privateShowAnonymous.status, 400);
-			assert.strictEqual(castAsError(privateShowAnonymous.body as any).error.id, '7bc05c21-1d7a-41ae-88f1-66820f4dc686');
+			assert.strictEqual(
+				castAsError(privateShowAnonymous.body as any).error.id,
+				'7bc05c21-1d7a-41ae-88f1-66820f4dc686',
+			);
 
 			const favorite = await api('users/lists/favorite', { listId: publicList.id }, bob);
 			assert.strictEqual(favorite.status, 204);
@@ -5983,11 +7008,15 @@ describe('Endpoints', () => {
 			assert.strictEqual(otherUserUpdate.status, 400);
 			assert.strictEqual(castAsError(otherUserUpdate.body as any).error.id, '796666fe-3dff-4d39-becb-8a5932c1d5b7');
 
-			const update = await api('users/lists/update', {
-				listId: privateList.id,
-				name: 'hono updated list',
-				isPublic: true,
-			}, alice);
+			const update = await api(
+				'users/lists/update',
+				{
+					listId: privateList.id,
+					name: 'hono updated list',
+					isPublic: true,
+				},
+				alice,
+			);
 			assert.strictEqual(update.status, 200);
 			assert.strictEqual(update.body.id, privateList.id);
 			assert.strictEqual(update.body.name, 'hono updated list');
@@ -6082,10 +7111,17 @@ describe('Endpoints', () => {
 			const requestFollower = await signup({ username: `hfcr${suffix}` });
 			await updateUserInDatabase(db, lockedFollowee.id, { isLocked: true });
 
-			const requested = await api('following/create', { userId: lockedFollowee.id, withReplies: false }, requestFollower);
+			const requested = await api(
+				'following/create',
+				{ userId: lockedFollowee.id, withReplies: false },
+				requestFollower,
+			);
 			assert.strictEqual(requested.status, 200);
 			assert.strictEqual(requested.body.id, lockedFollowee.id);
-			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, requestFollower.id, lockedFollowee.id), null);
+			assert.strictEqual(
+				await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, requestFollower.id, lockedFollowee.id),
+				null,
+			);
 
 			const followRequest = await fetchFollowRequestFromDatabase(db, requestFollower.id, lockedFollowee.id);
 			assert.ok(followRequest);
@@ -6099,7 +7135,11 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hfue${suffix}` });
 
 			const wrongWriteToken = await createAppToken(follower, ['read:following']);
-			const scopeDenied = await api('following/update', { userId: followee.id, notify: 'normal' }, { token: wrongWriteToken });
+			const scopeDenied = await api(
+				'following/update',
+				{ userId: followee.id, notify: 'normal' },
+				{ token: wrongWriteToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -6120,7 +7160,11 @@ describe('Endpoints', () => {
 
 			await api('following/create', { userId: followee.id, withReplies: false }, follower);
 
-			const updated = await api('following/update', { userId: followee.id, notify: 'normal', withReplies: true }, follower);
+			const updated = await api(
+				'following/update',
+				{ userId: followee.id, notify: 'normal', withReplies: true },
+				follower,
+			);
 			assert.strictEqual(updated.status, 200);
 			assert.strictEqual(updated.body.id, follower.id);
 
@@ -6173,7 +7217,6 @@ describe('Endpoints', () => {
 			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
 			assert.strictEqual(refreshedFollower.followingCount, 0);
 			assert.strictEqual(refreshedFollowee.followersCount, 0);
-
 		});
 
 		test('following/invalidate は他人のフォローを解除、カウント減算、scope、エラーを維持する', async () => {
@@ -6214,7 +7257,6 @@ describe('Endpoints', () => {
 			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
 			assert.strictEqual(refreshedFollower.followingCount, 0);
 			assert.strictEqual(refreshedFollowee.followersCount, 0);
-
 		});
 
 		test('following/requests/accept は保留リクエストを承認しfollowレコードを作成する', async () => {
@@ -6401,10 +7443,14 @@ describe('Endpoints', () => {
 				withReplies: false,
 			});
 
-			const res = await api('following/update-all', {
-				notify: 'none',
-				withReplies: true,
-			}, updater);
+			const res = await api(
+				'following/update-all',
+				{
+					notify: 'none',
+					withReplies: true,
+				},
+				updater,
+			);
 			assert.strictEqual(res.status, 204);
 
 			const updaterToA = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, updater.id, targetA.id);
@@ -6441,14 +7487,18 @@ describe('Endpoints', () => {
 				visibility: 'public',
 			});
 
-			const updated = await api('flash/update', {
-				flashId: flash.id,
-				title: 'new title',
-				summary: 'new summary',
-				script: 'new script',
-				permissions: ['read:account'],
-				visibility: 'private',
-			}, alice);
+			const updated = await api(
+				'flash/update',
+				{
+					flashId: flash.id,
+					title: 'new title',
+					summary: 'new summary',
+					script: 'new script',
+					permissions: ['read:account'],
+					visibility: 'private',
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 204);
 
 			const fetched = await fetchFlashByIdFromDatabase(db, flash.id);
@@ -6520,13 +7570,13 @@ describe('Endpoints', () => {
 	describe('export jobs', () => {
 		const getExportJobs = async (jobName: string, userId: string) => {
 			const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-			return jobs.filter(job => job.name === jobName && (job.data as any).user?.id === userId);
+			return jobs.filter((job) => job.name === jobName && (job.data as any).user?.id === userId);
 		};
 		const waitExportJob = async (jobName: string, userId: string) => {
 			for (let i = 0; i < 10; i++) {
 				const jobs = await getExportJobs(jobName, userId);
 				if (jobs[0] != null) return jobs[0];
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 			assert.fail(`${jobName} job was not found for ${userId}`);
 		};
@@ -6575,17 +7625,17 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 204);
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			assert.ok(profile.achievements.some(a => a.name === 'notes1'));
+			assert.ok(profile.achievements.some((a) => a.name === 'notes1'));
 
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 			const redis = createRedisClient(config);
 			try {
 				const entries = await redis.xrevrange(`notificationTimeline:${user.id}`, '+', '-', 'COUNT', 10);
 				const notifications = entries.map(([, values]) => {
-					const dataIndex = values.findIndex(value => value === 'data');
+					const dataIndex = values.findIndex((value) => value === 'data');
 					return JSON.parse(values[dataIndex + 1]!) as { type?: string; achievement?: string };
 				});
-				assert.ok(notifications.some(n => n.type === 'achievementEarned' && n.achievement === 'notes1'));
+				assert.ok(notifications.some((n) => n.type === 'achievementEarned' && n.achievement === 'notes1'));
 			} finally {
 				await closeRedisConnection(redis);
 			}
@@ -6593,7 +7643,7 @@ describe('Endpoints', () => {
 			const again = await api('i/claim-achievement', { name: 'notes1' }, user);
 			assert.strictEqual(again.status, 204);
 			const profileAfter = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(profileAfter.achievements.filter(a => a.name === 'notes1').length, 1);
+			assert.strictEqual(profileAfter.achievements.filter((a) => a.name === 'notes1').length, 1);
 		});
 	});
 
@@ -6603,11 +7653,19 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hwc${suffix}` });
 
 			const wrongScopeToken = await createAppToken(user, ['read:account']);
-			const scopeDenied = await api('i/webhooks/create', { name: 'hook', url: 'https://example.com/hook', on: ['note'] }, { token: wrongScopeToken });
+			const scopeDenied = await api(
+				'i/webhooks/create',
+				{ name: 'hook', url: 'https://example.com/hook', on: ['note'] },
+				{ token: wrongScopeToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
-			const created = await api('i/webhooks/create', { name: 'hook', url: 'https://example.com/hook', on: ['note'], secret: 'sh' }, user);
+			const created = await api(
+				'i/webhooks/create',
+				{ name: 'hook', url: 'https://example.com/hook', on: ['note'], secret: 'sh' },
+				user,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.name, 'hook');
 			assert.strictEqual(created.body.url, 'https://example.com/hook');
@@ -6628,10 +7686,23 @@ describe('Endpoints', () => {
 			const owner = await signup({ username: `hwt${suffix}` });
 			const stranger = await signup({ username: `hwts${suffix}` });
 
-			const created = await api('i/webhooks/create', { name: 'test-hook', url: 'https://example.com/test-hook', on: ['note'] }, owner);
+			const created = await api(
+				'i/webhooks/create',
+				{ name: 'test-hook', url: 'https://example.com/test-hook', on: ['note'] },
+				owner,
+			);
 			assert.strictEqual(created.status, 200);
 
-			for (const type of ['note', 'reply', 'renote', 'mention', 'follow', 'followed', 'unfollow', 'reaction'] as const) {
+			for (const type of [
+				'note',
+				'reply',
+				'renote',
+				'mention',
+				'follow',
+				'followed',
+				'unfollow',
+				'reaction',
+			] as const) {
 				const res = await api('i/webhooks/test', { webhookId: created.body.id, type }, owner);
 				assert.strictEqual(res.status, 204, `type=${type} should succeed`);
 			}
@@ -6644,11 +7715,15 @@ describe('Endpoints', () => {
 
 	describe('i/import-blocking, i/import-following, i/import-muting, i/import-user-lists', () => {
 		async function grantImportPolicy(userId: string, suffix: string, policyKey: string) {
-			const importRole = await role(alice, {
-				name: `hono import role ${policyKey} ${suffix}`,
-			}, {
-				[policyKey]: { priority: 0, useDefault: false, value: true },
-			});
+			const importRole = await role(
+				alice,
+				{
+					name: `hono import role ${policyKey} ${suffix}`,
+				},
+				{
+					[policyKey]: { priority: 0, useDefault: false, value: true },
+				},
+			);
 			const assign = await api('admin/roles/assign', { roleId: importRole.id, userId }, alice);
 			assert.strictEqual(assign.status, 204);
 		}
@@ -6747,20 +7822,22 @@ describe('Endpoints', () => {
 
 			// i/import-antennas はファイル内容(DriveFile.url)を実際にHTTPダウンロードするため、
 			// admin/emoji/copy のテストと同様にループバックの一時HTTPサーバーでJSONを配信して検証する。
-			const antennas = [{
-				name: `hono-antenna-${suffix}`,
-				src: 'all',
-				userListAccts: null,
-				keywords: [['hono']],
-				excludeKeywords: [],
-				users: [],
-				caseSensitive: false,
-				localOnly: false,
-				excludeBots: false,
-				withReplies: false,
-				withFile: false,
-				excludeNotesInSensitiveChannel: false,
-			}];
+			const antennas = [
+				{
+					name: `hono-antenna-${suffix}`,
+					src: 'all',
+					userListAccts: null,
+					keywords: [['hono']],
+					excludeKeywords: [],
+					users: [],
+					caseSensitive: false,
+					localOnly: false,
+					excludeBots: false,
+					withReplies: false,
+					withFile: false,
+					excludeNotesInSensitiveChannel: false,
+				},
+			];
 			const antennasJson = Buffer.from(JSON.stringify(antennas));
 			let antennaServer: Server | undefined;
 			await new Promise<void>((resolve) => {
@@ -6819,11 +7896,15 @@ describe('Endpoints', () => {
 				assert.strictEqual(okRes.status, 204);
 				assert.strictEqual(await countAntennasByUserIdFromDatabase(db, user.id), beforeCount + 1);
 
-				const zeroLimitRole = await role(alice, {
-					name: `hono import antennas zero limit ${suffix}`,
-				}, {
-					antennaLimit: { priority: 1, useDefault: false, value: beforeCount },
-				});
+				const zeroLimitRole = await role(
+					alice,
+					{
+						name: `hono import antennas zero limit ${suffix}`,
+					},
+					{
+						antennaLimit: { priority: 1, useDefault: false, value: beforeCount },
+					},
+				);
 				const assignZeroLimit = await api('admin/roles/assign', { roleId: zeroLimitRole.id, userId: user.id }, alice);
 				assert.strictEqual(assignZeroLimit.status, 204);
 
@@ -6848,7 +7929,7 @@ describe('Endpoints', () => {
 				assert.strictEqual(castAsError(tooManyRes.body as any).error.code, 'TOO_MANY_ANTENNAS');
 			} finally {
 				await new Promise<void>((resolve, reject) => {
-					antennaServer?.close(err => err ? reject(err) : resolve());
+					antennaServer?.close((err) => (err ? reject(err) : resolve()));
 				});
 			}
 		});
@@ -6860,8 +7941,14 @@ describe('Endpoints', () => {
 			try {
 				const entries = await redis.xrevrange(`notificationTimeline:${userId}`, '+', '-', 'COUNT', 10);
 				return entries.map(([, values]) => {
-					const dataIndex = values.findIndex(value => value === 'data');
-					return JSON.parse(values[dataIndex + 1]!) as { id: string; type?: string; customBody?: string; customHeader?: string | null; customIcon?: string | null };
+					const dataIndex = values.findIndex((value) => value === 'data');
+					return JSON.parse(values[dataIndex + 1]!) as {
+						id: string;
+						type?: string;
+						customBody?: string;
+						customHeader?: string | null;
+						customIcon?: string | null;
+					};
 				});
 			} finally {
 				await closeRedisConnection(redis);
@@ -6878,12 +7965,16 @@ describe('Endpoints', () => {
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
-			const created = await api('notifications/create', { body: 'hello world', header: 'my header', icon: 'https://example.com/icon.png' }, user);
+			const created = await api(
+				'notifications/create',
+				{ body: 'hello world', header: 'my header', icon: 'https://example.com/icon.png' },
+				user,
+			);
 			assert.strictEqual(created.status, 204);
 
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 			const notifications = await readNotificationTimeline(config, user.id);
-			const appNotification = notifications.find(n => n.type === 'app');
+			const appNotification = notifications.find((n) => n.type === 'app');
 			assert.ok(appNotification);
 			// Redis stream 上の生の通知は customBody/customHeader/customIcon で保持され、
 			// body/header/icon への改名は i/notifications の pack 時に行われる (原典と同じ)
@@ -6907,9 +7998,12 @@ describe('Endpoints', () => {
 			const created = await api('notifications/create', { body: 'should be suppressed' }, user);
 			assert.strictEqual(created.status, 204);
 
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 			const notifications = await readNotificationTimeline(config, user.id);
-			assert.strictEqual(notifications.some(n => n.type === 'app'), false);
+			assert.strictEqual(
+				notifications.some((n) => n.type === 'app'),
+				false,
+			);
 		});
 
 		test('notifications/test-notification はテスト通知を作成する', async () => {
@@ -6920,9 +8014,9 @@ describe('Endpoints', () => {
 			const res = await api('notifications/test-notification', {}, user);
 			assert.strictEqual(res.status, 204);
 
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 			const notifications = await readNotificationTimeline(config, user.id);
-			assert.ok(notifications.some(n => n.type === 'test'));
+			assert.ok(notifications.some((n) => n.type === 'test'));
 		});
 
 		test('notifications/mark-all-as-read は既読状態を更新しreadAllNotificationsを発行する', async () => {
@@ -6931,12 +8025,12 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hnmar${suffix}` });
 
 			await api('notifications/test-notification', {}, user);
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const res = await api('notifications/mark-all-as-read', {}, user);
 			assert.strictEqual(res.status, 204);
 
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 			const redis = createRedisClient(config);
 			try {
 				const latestReadNotificationId = await redis.get(`latestReadNotification:${user.id}`);
@@ -6953,21 +8047,28 @@ describe('Endpoints', () => {
 			const other = await signup({ username: `hndo${suffix}` });
 
 			await api('notifications/test-notification', {}, user);
-			await new Promise(resolve => setTimeout(resolve, 100));
-			const notification = (await readNotificationTimeline(config, user.id)).find(item => item.type === 'test');
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			const notification = (await readNotificationTimeline(config, user.id)).find((item) => item.type === 'test');
 			assert.ok(notification);
 
 			const wrongScopeToken = await createAppToken(user, ['read:account']);
-			const scopeDenied = await api('notifications/delete', { notificationId: notification.id }, { token: wrongScopeToken });
+			const scopeDenied = await api(
+				'notifications/delete',
+				{ notificationId: notification.id },
+				{ token: wrongScopeToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 
 			const otherDelete = await api('notifications/delete', { notificationId: notification.id }, other);
 			assert.strictEqual(otherDelete.status, 204);
-			assert.ok((await readNotificationTimeline(config, user.id)).some(item => item.id === notification.id));
+			assert.ok((await readNotificationTimeline(config, user.id)).some((item) => item.id === notification.id));
 
 			const deleted = await api('notifications/delete', { notificationId: notification.id }, user);
 			assert.strictEqual(deleted.status, 204);
-			assert.strictEqual((await readNotificationTimeline(config, user.id)).some(item => item.id === notification.id), false);
+			assert.strictEqual(
+				(await readNotificationTimeline(config, user.id)).some((item) => item.id === notification.id),
+				false,
+			);
 		});
 
 		test('notifications/delete はグルーピングされた通知をまとめて削除する', async () => {
@@ -6977,7 +8078,14 @@ describe('Endpoints', () => {
 			const redis = createRedisClient(config);
 			const streamKey = `notificationTimeline:${user.id}`;
 			const unrelatedBefore = { id: genId(), createdAt: new Date().toISOString(), type: 'test' };
-			const reaction1 = { id: genId(), createdAt: new Date().toISOString(), type: 'reaction', noteId: genId(), notifierId: user.id, reaction: '❤' };
+			const reaction1 = {
+				id: genId(),
+				createdAt: new Date().toISOString(),
+				type: 'reaction',
+				noteId: genId(),
+				notifierId: user.id,
+				reaction: '❤',
+			};
 			const reaction2 = { ...reaction1, id: genId() };
 			const unrelatedAfter = { id: genId(), createdAt: new Date().toISOString(), type: 'login' };
 
@@ -6990,10 +8098,22 @@ describe('Endpoints', () => {
 				assert.strictEqual(deleted.status, 204);
 
 				const remaining = await readNotificationTimeline(config, user.id);
-				assert.strictEqual(remaining.some(item => item.id === reaction1.id), false);
-				assert.strictEqual(remaining.some(item => item.id === reaction2.id), false);
-				assert.strictEqual(remaining.some(item => item.id === unrelatedBefore.id), true);
-				assert.strictEqual(remaining.some(item => item.id === unrelatedAfter.id), true);
+				assert.strictEqual(
+					remaining.some((item) => item.id === reaction1.id),
+					false,
+				);
+				assert.strictEqual(
+					remaining.some((item) => item.id === reaction2.id),
+					false,
+				);
+				assert.strictEqual(
+					remaining.some((item) => item.id === unrelatedBefore.id),
+					true,
+				);
+				assert.strictEqual(
+					remaining.some((item) => item.id === unrelatedAfter.id),
+					true,
+				);
 			} finally {
 				await closeRedisConnection(redis);
 			}
@@ -7005,12 +8125,12 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hnf${suffix}` });
 
 			await api('notifications/test-notification', {}, user);
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const res = await api('notifications/flush', {}, user);
 			assert.strictEqual(res.status, 204);
 
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 			const redis = createRedisClient(config);
 			try {
 				const exists = await redis.exists(`notificationTimeline:${user.id}`);
@@ -7057,9 +8177,13 @@ describe('Endpoints', () => {
 			assert.strictEqual(pending.status, 400);
 			assert.strictEqual(castAsError(pending.body as any).error.code, 'PENDING_SESSION');
 
-			const accepted = await api('auth/accept', {
-				token: sessionToken,
-			}, alice);
+			const accepted = await api(
+				'auth/accept',
+				{
+					token: sessionToken,
+				},
+				alice,
+			);
 			assert.strictEqual(accepted.status, 204);
 
 			const userkey = await api('auth/session/userkey', {
@@ -7073,9 +8197,13 @@ describe('Endpoints', () => {
 			}
 			assert.strictEqual(userkey.body.user.id, alice.id);
 
-			const credential = await api('i', {}, {
-				token: accessToken,
-			});
+			const credential = await api(
+				'i',
+				{},
+				{
+					token: accessToken,
+				},
+			);
 			assert.strictEqual(credential.status, 200);
 			assert.strictEqual(credential.body.id, alice.id);
 
@@ -7090,10 +8218,14 @@ describe('Endpoints', () => {
 	describe('miauth', () => {
 		test('session check returns issued token once', async () => {
 			const session = 'miauth-session-test';
-			const issued = await api('miauth/gen-token', {
-				session,
-				permission: ['read:account'],
-			}, alice);
+			const issued = await api(
+				'miauth/gen-token',
+				{
+					session,
+					permission: ['read:account'],
+				},
+				alice,
+			);
 			assert.strictEqual(issued.status, 200);
 			assert.strictEqual(typeof issued.body.token, 'string');
 
@@ -7101,7 +8233,7 @@ describe('Endpoints', () => {
 				method: 'POST',
 			});
 			assert.strictEqual(checked.status, 200);
-			const checkedBody = await checked.json() as { ok: boolean; token?: string; user?: { id?: string } };
+			const checkedBody = (await checked.json()) as { ok: boolean; token?: string; user?: { id?: string } };
 			assert.strictEqual(checkedBody.ok, true);
 			assert.strictEqual(checkedBody.token, issued.body.token);
 			assert.strictEqual(checkedBody.user?.id, alice.id);
@@ -7119,12 +8251,16 @@ describe('Endpoints', () => {
 			app: { id: string; name: string; description?: string | null };
 			accessToken: string;
 		}> {
-			const created = await api('app/create', {
-				name,
-				description: `${name} description`,
-				permission: ['read:account'],
-				callbackUrl: null,
-			}, alice);
+			const created = await api(
+				'app/create',
+				{
+					name,
+					description: `${name} description`,
+					permission: ['read:account'],
+					callbackUrl: null,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 			const appSecret = created.body.secret;
 			if (typeof appSecret !== 'string') {
@@ -7138,9 +8274,13 @@ describe('Endpoints', () => {
 			const sessionToken = generated.body.token;
 			assert.strictEqual(typeof sessionToken, 'string');
 
-			const accepted = await api('auth/accept', {
-				token: sessionToken,
-			}, alice);
+			const accepted = await api(
+				'auth/accept',
+				{
+					token: sessionToken,
+				},
+				alice,
+			);
 			assert.strictEqual(accepted.status, 204);
 
 			const userkey = await api('auth/session/userkey', {
@@ -7160,12 +8300,16 @@ describe('Endpoints', () => {
 		}
 
 		test('app/create したアプリを app/show と my/apps で取得できる', async () => {
-			const created = await api('app/create', {
-				name: 'test app',
-				description: 'test app description',
-				permission: ['read:account'],
-				callbackUrl: null,
-			}, alice);
+			const created = await api(
+				'app/create',
+				{
+					name: 'test app',
+					description: 'test app description',
+					permission: ['read:account'],
+					callbackUrl: null,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.name, 'test app');
 
@@ -7182,7 +8326,7 @@ describe('Endpoints', () => {
 
 			const mine = await api('my/apps', { limit: 100 }, alice);
 			assert.strictEqual(mine.status, 200);
-			assert.ok(mine.body.some(app => app.id === created.body.id));
+			assert.ok(mine.body.some((app) => app.id === created.body.id));
 		});
 
 		test('i/apps と i/authorized-apps で連携アプリトークンを取得して revoke できる', async () => {
@@ -7191,8 +8335,8 @@ describe('Endpoints', () => {
 
 			const list = await api('i/apps', { sort: '-createdAt' }, alice);
 			assert.strictEqual(list.status, 200);
-			const tokenItem = list.body.find(item => item.name === byToken.app.name);
-			const tokenIdItem = list.body.find(item => item.name === byTokenId.app.name);
+			const tokenItem = list.body.find((item) => item.name === byToken.app.name);
+			const tokenIdItem = list.body.find((item) => item.name === byTokenId.app.name);
 			assert.ok(tokenItem);
 			assert.ok(tokenIdItem);
 			assert.strictEqual(tokenItem.permission.includes('read:account'), true);
@@ -7201,7 +8345,7 @@ describe('Endpoints', () => {
 
 			const authorized = await api('i/authorized-apps', { limit: 100, sort: 'desc' }, alice);
 			assert.strictEqual(authorized.status, 200);
-			const authorizedApp = authorized.body.find(app => app.id === byToken.app.id);
+			const authorizedApp = authorized.body.find((app) => app.id === byToken.app.id);
 			assert.ok(authorizedApp);
 			assert.strictEqual(authorizedApp.name, byToken.app.name);
 			assert.strictEqual(authorizedApp.isAuthorized, true);
@@ -7220,8 +8364,14 @@ describe('Endpoints', () => {
 			assert.strictEqual(revokedByTokenId.status, 204);
 			const afterRevoke = await api('i/authorized-apps', { limit: 100 }, alice);
 			assert.strictEqual(afterRevoke.status, 200);
-			assert.strictEqual(afterRevoke.body.some(app => app.id === byToken.app.id), false);
-			assert.strictEqual(afterRevoke.body.some(app => app.id === byTokenId.app.id), false);
+			assert.strictEqual(
+				afterRevoke.body.some((app) => app.id === byToken.app.id),
+				false,
+			);
+			assert.strictEqual(
+				afterRevoke.body.some((app) => app.id === byTokenId.app.id),
+				false,
+			);
 		});
 	});
 
@@ -7265,7 +8415,7 @@ describe('Endpoints', () => {
 
 			const list = await api('roles/list', {}, alice);
 			assert.strictEqual(list.status, 200);
-			const listedRole = list.body.find(item => item.id === createdRole.id);
+			const listedRole = list.body.find((item) => item.id === createdRole.id);
 			assert.ok(listedRole);
 			assert.strictEqual(listedRole.name, createdRole.name);
 			assert.strictEqual(listedRole.description, createdRole.description);
@@ -7462,9 +8612,13 @@ describe('Endpoints', () => {
 			assert.strictEqual(getAt(single.body, 0).isMuted, false);
 			assert.strictEqual(getAt(single.body, 0).isRenoteMuted, false);
 
-			const batch = await api('users/relation', {
-				userId: [followee.id, blockee.id, mutee.id, renoteMutee.id, stranger.id],
-			}, me);
+			const batch = await api(
+				'users/relation',
+				{
+					userId: [followee.id, blockee.id, mutee.id, renoteMutee.id, stranger.id],
+				},
+				me,
+			);
 			assert.strictEqual(batch.status, 200);
 			assert.ok(Array.isArray(batch.body));
 			assert.strictEqual(batch.body.length, 5);
@@ -7501,21 +8655,29 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `huf${suffix}` });
 
-			const pub = await api('flash/create', {
-				title: `hono users/flashs public ${suffix}`,
-				summary: 's',
-				script: '1',
-				permissions: [],
-				visibility: 'public',
-			}, owner);
+			const pub = await api(
+				'flash/create',
+				{
+					title: `hono users/flashs public ${suffix}`,
+					summary: 's',
+					script: '1',
+					permissions: [],
+					visibility: 'public',
+				},
+				owner,
+			);
 			assert.strictEqual(pub.status, 200);
-			const priv = await api('flash/create', {
-				title: `hono users/flashs private ${suffix}`,
-				summary: 's',
-				script: '1',
-				permissions: [],
-				visibility: 'private',
-			}, owner);
+			const priv = await api(
+				'flash/create',
+				{
+					title: `hono users/flashs private ${suffix}`,
+					summary: 's',
+					script: '1',
+					permissions: [],
+					visibility: 'private',
+				},
+				owner,
+			);
 			assert.strictEqual(priv.status, 200);
 
 			const listed = await api('users/flashs', { userId: owner.id, limit: 100 });
@@ -7546,10 +8708,14 @@ describe('Endpoints', () => {
 				comment: null,
 				folderId: null,
 			});
-			const post = await api('gallery/posts/create', {
-				title: `hono users/gallery/posts ${suffix}`,
-				fileIds: [file.id],
-			}, owner);
+			const post = await api(
+				'gallery/posts/create',
+				{
+					title: `hono users/gallery/posts ${suffix}`,
+					fileIds: [file.id],
+				},
+				owner,
+			);
 			assert.strictEqual(post.status, 200);
 
 			const listed = await api('users/gallery/posts', { userId: owner.id, limit: 100 });
@@ -7650,8 +8816,14 @@ describe('Endpoints', () => {
 			const all = await api('users', { limit: 100, sort: '+createdAt' });
 			assert.strictEqual(all.status, 200);
 			assert.ok(all.body.some((u: any) => u.id === explorable.id));
-			assert.strictEqual(all.body.some((u: any) => u.id === notExplorable.id), false);
-			assert.strictEqual(all.body.some((u: any) => u.id === remoteUser.id), false);
+			assert.strictEqual(
+				all.body.some((u: any) => u.id === notExplorable.id),
+				false,
+			);
+			assert.strictEqual(
+				all.body.some((u: any) => u.id === remoteUser.id),
+				false,
+			);
 
 			const combined = await api('users', { limit: 100, origin: 'combined', sort: '+createdAt' });
 			assert.strictEqual(combined.status, 200);
@@ -7660,19 +8832,28 @@ describe('Endpoints', () => {
 			const remoteOnly = await api('users', { limit: 100, origin: 'remote', sort: '+createdAt' });
 			assert.strictEqual(remoteOnly.status, 200);
 			assert.ok(remoteOnly.body.some((u: any) => u.id === remoteUser.id));
-			assert.strictEqual(remoteOnly.body.some((u: any) => u.id === explorable.id), false);
+			assert.strictEqual(
+				remoteOnly.body.some((u: any) => u.id === explorable.id),
+				false,
+			);
 
 			const byHostname = await api('users', { limit: 100, origin: 'combined', hostname: remoteHost });
 			assert.strictEqual(byHostname.status, 200);
 			assert.ok(byHostname.body.some((u: any) => u.id === remoteUser.id));
-			assert.strictEqual(byHostname.body.some((u: any) => u.id === explorable.id), false);
+			assert.strictEqual(
+				byHostname.body.some((u: any) => u.id === explorable.id),
+				false,
+			);
 
 			const mutedIncludedForAnon = await api('users', { limit: 100, sort: '+createdAt' });
 			assert.ok(mutedIncludedForAnon.body.some((u: any) => u.id === muted.id));
 
 			const mutedExcludedForMuter = await api('users', { limit: 100, sort: '+createdAt' }, muter);
 			assert.strictEqual(mutedExcludedForMuter.status, 200);
-			assert.strictEqual(mutedExcludedForMuter.body.some((u: any) => u.id === muted.id), false);
+			assert.strictEqual(
+				mutedExcludedForMuter.body.some((u: any) => u.id === muted.id),
+				false,
+			);
 		});
 
 		test('sort=+followerとstate=aliveを維持する', async () => {
@@ -7691,7 +8872,10 @@ describe('Endpoints', () => {
 			const alive = await api('users', { limit: 100, state: 'alive', sort: '+createdAt' });
 			assert.strictEqual(alive.status, 200);
 			assert.ok(alive.body.some((u: any) => u.id === popular.id));
-			assert.strictEqual(alive.body.some((u: any) => u.id === stale.id), false);
+			assert.strictEqual(
+				alive.body.some((u: any) => u.id === stale.id),
+				false,
+			);
 		});
 	});
 
@@ -7728,7 +8912,11 @@ describe('Endpoints', () => {
 			assert.ok(byHost.body.some((u: any) => u.id === remoteUser.id));
 
 			await api('following/create', { userId: target.id }, searcher);
-			const followedFirst = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, limit: 1 }, searcher);
+			const followedFirst = await api(
+				'users/search-by-username-and-host',
+				{ username: `hsbuh${suffix}`, limit: 1 },
+				searcher,
+			);
 			assert.strictEqual(followedFirst.status, 200);
 			assert.strictEqual(getAt(followedFirst.body, 0).id, target.id);
 
@@ -7761,19 +8949,30 @@ describe('Endpoints', () => {
 			await api('following/create', { userId: followee1.id }, me);
 			await api('following/create', { userId: followee2.id }, me);
 
-			const single = await api('users/get-following-users-by-birthday', {
-				birthday: { month: 6, day: 15 },
-			}, me);
+			const single = await api(
+				'users/get-following-users-by-birthday',
+				{
+					birthday: { month: 6, day: 15 },
+				},
+				me,
+			);
 			assert.strictEqual(single.status, 200);
 			assert.strictEqual(single.body.length, 1);
 			assert.strictEqual(getAt(single.body, 0).id, followee1.id);
 			assert.strictEqual(getAt(single.body, 0).user.id, followee1.id);
 
-			const range = await api('users/get-following-users-by-birthday', {
-				birthday: { begin: { month: 6, day: 14 }, end: { month: 6, day: 21 } },
-			}, me);
+			const range = await api(
+				'users/get-following-users-by-birthday',
+				{
+					birthday: { begin: { month: 6, day: 14 }, end: { month: 6, day: 21 } },
+				},
+				me,
+			);
 			assert.strictEqual(range.status, 200);
-			assert.deepStrictEqual(range.body.map((u: any) => u.id), [followee1.id, followee2.id]);
+			assert.deepStrictEqual(
+				range.body.map((u: any) => u.id),
+				[followee1.id, followee2.id],
+			);
 			assert.ok(!range.body.some((u: any) => u.id === notFollowed.id));
 
 			const unauthorized = await api('users/get-following-users-by-birthday', { birthday: { month: 6, day: 15 } });
@@ -7996,7 +9195,11 @@ describe('Endpoints', () => {
 			const author = await signup({ username: `hnt${suffix}` });
 			const viewer = await signup({ username: `hntv${suffix}` });
 			const publicNote = await post(author, { text: 'hono translate target', visibility: 'public' });
-			const specifiedNote = await post(author, { text: 'hono translate specified', visibility: 'specified', visibleUserIds: [author.id] });
+			const specifiedNote = await post(author, {
+				text: 'hono translate specified',
+				visibility: 'specified',
+				visibleUserIds: [author.id],
+			});
 
 			// deeplAuthKeyがテスト環境では未設定のため、可視な公開ノートに対してもUNAVAILABLEになる
 			const unavailableNoKey = await api('notes/translate', { noteId: publicNote.id, targetLang: 'en' }, viewer);
@@ -8011,11 +9214,15 @@ describe('Endpoints', () => {
 			assert.strictEqual(invisible.status, 400);
 			assert.strictEqual(castAsError(invisible.body as any).error.code, 'CANNOT_TRANSLATE_INVISIBLE_NOTE');
 
-			const noTranslatorRole = await role(alice, {
-				name: `hono notes translate denied ${suffix}`,
-			}, {
-				canUseTranslator: { priority: 1, useDefault: false, value: false },
-			});
+			const noTranslatorRole = await role(
+				alice,
+				{
+					name: `hono notes translate denied ${suffix}`,
+				},
+				{
+					canUseTranslator: { priority: 1, useDefault: false, value: false },
+				},
+			);
 			const assignDenied = await api('admin/roles/assign', { roleId: noTranslatorRole.id, userId: viewer.id }, alice);
 			assert.strictEqual(assignDenied.status, 204);
 
@@ -8043,7 +9250,11 @@ describe('Endpoints', () => {
 			const reporter = await signup({ username: `hura${suffix}` });
 			const target = await signup({ username: `hurat${suffix}` });
 
-			const reported = await api('users/report-abuse', { userId: target.id, comment: `hono report abuse ${suffix}` }, reporter);
+			const reported = await api(
+				'users/report-abuse',
+				{ userId: target.id, comment: `hono report abuse ${suffix}` },
+				reporter,
+			);
 			assert.strictEqual(reported.status, 204);
 
 			const listed = await api('admin/abuse-user-reports', { limit: 100 }, alice);
@@ -8098,7 +9309,11 @@ describe('Endpoints', () => {
 				});
 				await sub.subscribe(config.runtime.host);
 
-				const reported = await api('users/report-abuse', { userId: target.id, comment: `hono adminStream ${suffix}` }, reporter);
+				const reported = await api(
+					'users/report-abuse',
+					{ userId: target.id, comment: `hono adminStream ${suffix}` },
+					reporter,
+				);
 				assert.strictEqual(reported.status, 204);
 
 				const event = await received;
@@ -8135,11 +9350,15 @@ describe('Endpoints', () => {
 				folderId: null,
 			});
 
-			const created = await api('gallery/posts/create', {
-				title: `Hono gallery post ${suffix}`,
-				description: 'created via e2e',
-				fileIds: [file.id],
-			}, owner);
+			const created = await api(
+				'gallery/posts/create',
+				{
+					title: `Hono gallery post ${suffix}`,
+					description: 'created via e2e',
+					fileIds: [file.id],
+				},
+				owner,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.title, `Hono gallery post ${suffix}`);
 			assert.strictEqual(created.body.userId, owner.id);
@@ -8159,11 +9378,15 @@ describe('Endpoints', () => {
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_POST');
 
-			const updated = await api('gallery/posts/update', {
-				postId: created.body.id,
-				title: `${created.body.title} updated`,
-				isSensitive: true,
-			}, owner);
+			const updated = await api(
+				'gallery/posts/update',
+				{
+					postId: created.body.id,
+					title: `${created.body.title} updated`,
+					isSensitive: true,
+				},
+				owner,
+			);
 			assert.strictEqual(updated.status, 200);
 			assert.strictEqual(updated.body.title, `${created.body.title} updated`);
 			assert.strictEqual(updated.body.isSensitive, true);
@@ -8177,7 +9400,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(await fetchGalleryPostByIdFromDatabase(db, created.body.id), null);
 
 			const logs = await listModerationLogsFromDatabase(db, { limit: 100, order: 'desc' });
-			const log = logs.find(l => l.type === 'deleteGalleryPost' && (l.info as any).postId === created.body.id);
+			const log = logs.find((l) => l.type === 'deleteGalleryPost' && (l.info as any).postId === created.body.id);
 			assert.ok(log);
 			assert.strictEqual((log!.info as any).postUserId, owner.id);
 		});
@@ -8204,10 +9427,14 @@ describe('Endpoints', () => {
 				comment: null,
 				folderId: null,
 			});
-			const post = await api('gallery/posts/create', {
-				title: `Hono gallery like ${suffix}`,
-				fileIds: [file.id],
-			}, owner);
+			const post = await api(
+				'gallery/posts/create',
+				{
+					title: `Hono gallery like ${suffix}`,
+					fileIds: [file.id],
+				},
+				owner,
+			);
 			assert.strictEqual(post.status, 200);
 
 			const selfLikeDenied = await api('gallery/posts/like', { postId: post.body.id }, owner);
@@ -8259,10 +9486,14 @@ describe('Endpoints', () => {
 				comment: null,
 				folderId: null,
 			});
-			const post = await api('gallery/posts/create', {
-				title: `Hono gallery list ${suffix}`,
-				fileIds: [file.id],
-			}, owner);
+			const post = await api(
+				'gallery/posts/create',
+				{
+					title: `Hono gallery list ${suffix}`,
+					fileIds: [file.id],
+				},
+				owner,
+			);
 			assert.strictEqual(post.status, 200);
 
 			const list = await api('gallery/posts', { limit: 100 });
@@ -8299,10 +9530,14 @@ describe('Endpoints', () => {
 				comment: null,
 				folderId: null,
 			});
-			const post = await api('gallery/posts/create', {
-				title: `Hono i gallery posts ${suffix}`,
-				fileIds: [file.id],
-			}, owner);
+			const post = await api(
+				'gallery/posts/create',
+				{
+					title: `Hono i gallery posts ${suffix}`,
+					fileIds: [file.id],
+				},
+				owner,
+			);
 			assert.strictEqual(post.status, 200);
 
 			const otherFileMd5 = createHash('md5').update(`hono-i-gallery-posts-other-${suffix}`).digest('hex');
@@ -8322,10 +9557,14 @@ describe('Endpoints', () => {
 				comment: null,
 				folderId: null,
 			});
-			const otherPost = await api('gallery/posts/create', {
-				title: `Hono i gallery posts other ${suffix}`,
-				fileIds: [otherFile.id],
-			}, other);
+			const otherPost = await api(
+				'gallery/posts/create',
+				{
+					title: `Hono i gallery posts other ${suffix}`,
+					fileIds: [otherFile.id],
+				},
+				other,
+			);
 			assert.strictEqual(otherPost.status, 200);
 
 			const mine = await api('i/gallery/posts', { limit: 100 }, owner);
@@ -8360,10 +9599,14 @@ describe('Endpoints', () => {
 				comment: null,
 				folderId: null,
 			});
-			const post = await api('gallery/posts/create', {
-				title: `Hono i gallery likes ${suffix}`,
-				fileIds: [file.id],
-			}, owner);
+			const post = await api(
+				'gallery/posts/create',
+				{
+					title: `Hono i gallery likes ${suffix}`,
+					fileIds: [file.id],
+				},
+				owner,
+			);
 			assert.strictEqual(post.status, 200);
 
 			const empty = await api('i/gallery/likes', {}, liker);
@@ -8390,7 +9633,11 @@ describe('Endpoints', () => {
 			const owner = await signup({ username: `hcc${suffix}` });
 			const stranger = await signup({ username: `hccs${suffix}` });
 
-			const created = await api('clips/create', { name: `Hono clip ${suffix}`, isPublic: false, description: 'desc' }, owner);
+			const created = await api(
+				'clips/create',
+				{ name: `Hono clip ${suffix}`, isPublic: false, description: 'desc' },
+				owner,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.name, `Hono clip ${suffix}`);
 			assert.strictEqual(created.body.isPublic, false);
@@ -8410,7 +9657,11 @@ describe('Endpoints', () => {
 			assert.strictEqual(list.status, 200);
 			assert.ok(list.body.some((c: any) => c.id === created.body.id));
 
-			const updated = await api('clips/update', { clipId: created.body.id, isPublic: true, name: `${created.body.name} updated` }, owner);
+			const updated = await api(
+				'clips/update',
+				{ clipId: created.body.id, isPublic: true, name: `${created.body.name} updated` },
+				owner,
+			);
 			assert.strictEqual(updated.status, 200);
 			assert.strictEqual(updated.body.isPublic, true);
 			assert.strictEqual(updated.body.name, `${created.body.name} updated`);
@@ -8506,7 +9757,11 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const privateClip = await api('clips/create', { name: `Hono clip notes private ${suffix}`, isPublic: false }, owner);
+			const privateClip = await api(
+				'clips/create',
+				{ name: `Hono clip notes private ${suffix}`, isPublic: false },
+				owner,
+			);
 			assert.strictEqual(privateClip.status, 200);
 			await api('clips/add-note', { clipId: privateClip.body.id, noteId }, owner);
 
@@ -8776,11 +10031,17 @@ describe('Endpoints', () => {
 			const mentions = await api('notes/mentions', {}, mentioned);
 			assert.strictEqual(mentions.status, 200);
 			assert.ok(mentions.body.some((n: any) => n.id === mentionNoteId));
-			assert.strictEqual(mentions.body.some((n: any) => n.id === rootId), false);
+			assert.strictEqual(
+				mentions.body.some((n: any) => n.id === rootId),
+				false,
+			);
 
 			const noMentionsForStranger = await api('notes/mentions', {}, stranger);
 			assert.strictEqual(noMentionsForStranger.status, 200);
-			assert.strictEqual(noMentionsForStranger.body.some((n: any) => n.id === mentionNoteId), false);
+			assert.strictEqual(
+				noMentionsForStranger.body.some((n: any) => n.id === mentionNoteId),
+				false,
+			);
 		});
 	});
 
@@ -8819,7 +10080,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(stateAfter.body.isFavorited, true);
 
 			const authorProfile = await fetchUserProfileByUserIdOrFailFromDatabase(db, author.id);
-			assert.ok(authorProfile.achievements.some(a => a.name === 'myNoteFavorited1'));
+			assert.ok(authorProfile.achievements.some((a) => a.name === 'myNoteFavorited1'));
 
 			const unfavorited = await api('notes/favorites/delete', { noteId }, favoriter);
 			assert.strictEqual(unfavorited.status, 204);
@@ -8867,17 +10128,25 @@ describe('Endpoints', () => {
 
 			// fanout タイムライン (Redis) 経由の読み取りを検証するため、直接DB挿入ではなく実APIで投稿する
 			const publicNoteId = (await post(author, { text: 'global/local timeline public note', visibility: 'public' })).id;
-			const homeNoteId = (await post(author, { text: 'home-only note (excluded from global/local)', visibility: 'home' })).id;
+			const homeNoteId = (
+				await post(author, { text: 'home-only note (excluded from global/local)', visibility: 'home' })
+			).id;
 
 			const global = await api('notes/global-timeline', { limit: 100 });
 			assert.strictEqual(global.status, 200);
 			assert.ok(global.body.some((n: any) => n.id === publicNoteId));
-			assert.strictEqual(global.body.some((n: any) => n.id === homeNoteId), false);
+			assert.strictEqual(
+				global.body.some((n: any) => n.id === homeNoteId),
+				false,
+			);
 
 			const local = await api('notes/local-timeline', { limit: 100 });
 			assert.strictEqual(local.status, 200);
 			assert.ok(local.body.some((n: any) => n.id === publicNoteId));
-			assert.strictEqual(local.body.some((n: any) => n.id === homeNoteId), false);
+			assert.strictEqual(
+				local.body.some((n: any) => n.id === homeNoteId),
+				false,
+			);
 		});
 
 		test('hybrid-timeline はfolloweeの投稿のみ含む', async () => {
@@ -8888,12 +10157,17 @@ describe('Endpoints', () => {
 			await api('following/create', { userId: followee.id }, viewer);
 
 			const followeeNoteId = (await post(followee, { text: 'from followee', visibility: 'public' })).id;
-			const strangerNoteId = (await post(stranger, { text: 'from stranger, not followed, not local timeline eligible', visibility: 'home' })).id;
+			const strangerNoteId = (
+				await post(stranger, { text: 'from stranger, not followed, not local timeline eligible', visibility: 'home' })
+			).id;
 
 			const hybrid = await api('notes/hybrid-timeline', { limit: 100 }, viewer);
 			assert.strictEqual(hybrid.status, 200);
 			assert.ok(hybrid.body.some((n: any) => n.id === followeeNoteId));
-			assert.strictEqual(hybrid.body.some((n: any) => n.id === strangerNoteId), false);
+			assert.strictEqual(
+				hybrid.body.some((n: any) => n.id === strangerNoteId),
+				false,
+			);
 		});
 
 		test('notes/featured はランキング、mute/blockフィルタを維持する', async () => {
@@ -8930,12 +10204,15 @@ describe('Endpoints', () => {
 				await api('mute/create', { userId: author.id }, viewer);
 				const featuredAsViewer = await api('notes/featured', { limit: 100 }, viewer);
 				assert.strictEqual(featuredAsViewer.status, 200);
-				assert.strictEqual(featuredAsViewer.body.some((n: any) => n.id === noteId), false);
+				assert.strictEqual(
+					featuredAsViewer.body.some((n: any) => n.id === noteId),
+					false,
+				);
 
 				const getFeatured = await relativeFetch(`api/notes/featured?limit=100`);
 				assert.strictEqual(getFeatured.status, 200);
-				const getFeaturedBody = await getFeatured.json() as { id?: unknown }[];
-				assert.ok(getFeaturedBody.some(n => n.id === noteId));
+				const getFeaturedBody = (await getFeatured.json()) as { id?: unknown }[];
+				assert.ok(getFeaturedBody.some((n) => n.id === noteId));
 			} finally {
 				await redis.del(windowKey);
 				await closeRedisConnection(redis);
@@ -8978,8 +10255,14 @@ describe('Endpoints', () => {
 			const res = await api('notes', { limit: 100 });
 			assert.strictEqual(res.status, 200);
 			assert.ok(res.body.some((n: any) => n.id === publicNoteId));
-			assert.strictEqual(res.body.some((n: any) => n.id === homeNoteId), false);
-			assert.strictEqual(res.body.some((n: any) => n.id === localOnlyNoteId), false);
+			assert.strictEqual(
+				res.body.some((n: any) => n.id === homeNoteId),
+				false,
+			);
+			assert.strictEqual(
+				res.body.some((n: any) => n.id === localOnlyNoteId),
+				false,
+			);
 		});
 
 		test('local/reply/renote/withFiles/pollフィルタを維持する', async () => {
@@ -9039,22 +10322,34 @@ describe('Endpoints', () => {
 			const local = await api('notes', { local: true, limit: 100 });
 			assert.strictEqual(local.status, 200);
 			assert.ok(local.body.some((n: any) => n.id === localNoteId));
-			assert.strictEqual(local.body.some((n: any) => n.id === remoteNoteId), false);
+			assert.strictEqual(
+				local.body.some((n: any) => n.id === remoteNoteId),
+				false,
+			);
 
 			const replies = await api('notes', { reply: true, limit: 100 });
 			assert.strictEqual(replies.status, 200);
 			assert.ok(replies.body.some((n: any) => n.id === replyNoteId));
-			assert.strictEqual(replies.body.some((n: any) => n.id === localNoteId), false);
+			assert.strictEqual(
+				replies.body.some((n: any) => n.id === localNoteId),
+				false,
+			);
 
 			const renotes = await api('notes', { renote: true, limit: 100 });
 			assert.strictEqual(renotes.status, 200);
 			assert.ok(renotes.body.some((n: any) => n.id === renoteNoteId));
-			assert.strictEqual(renotes.body.some((n: any) => n.id === localNoteId), false);
+			assert.strictEqual(
+				renotes.body.some((n: any) => n.id === localNoteId),
+				false,
+			);
 
 			const withFiles = await api('notes', { withFiles: true, limit: 100 });
 			assert.strictEqual(withFiles.status, 200);
 			assert.ok(withFiles.body.some((n: any) => n.id === fileNoteId));
-			assert.strictEqual(withFiles.body.some((n: any) => n.id === localNoteId), false);
+			assert.strictEqual(
+				withFiles.body.some((n: any) => n.id === localNoteId),
+				false,
+			);
 
 			const pollNoteId = genId();
 			await createNoteInDatabase(db, {
@@ -9079,7 +10374,10 @@ describe('Endpoints', () => {
 			const polls = await api('notes', { poll: true, limit: 100 });
 			assert.strictEqual(polls.status, 200);
 			assert.ok(polls.body.some((n: any) => n.id === pollNoteId));
-			assert.strictEqual(polls.body.some((n: any) => n.id === localNoteId), false);
+			assert.strictEqual(
+				polls.body.some((n: any) => n.id === localNoteId),
+				false,
+			);
 		});
 
 		test('認証済みで呼んでもmeを渡さず常に匿名としてパックする(元実装がpackMany(notes)をme無しで呼ぶため)', async () => {
@@ -9131,12 +10429,18 @@ describe('Endpoints', () => {
 			const afterOld = await api('notes', { sinceId: oldNoteId, limit: 100 });
 			assert.strictEqual(afterOld.status, 200);
 			assert.ok(afterOld.body.some((n: any) => n.id === newNoteId));
-			assert.strictEqual(afterOld.body.some((n: any) => n.id === oldNoteId), false);
+			assert.strictEqual(
+				afterOld.body.some((n: any) => n.id === oldNoteId),
+				false,
+			);
 
 			const beforeNew = await api('notes', { untilId: newNoteId, limit: 100 });
 			assert.strictEqual(beforeNew.status, 200);
 			assert.ok(beforeNew.body.some((n: any) => n.id === oldNoteId));
-			assert.strictEqual(beforeNew.body.some((n: any) => n.id === newNoteId), false);
+			assert.strictEqual(
+				beforeNew.body.some((n: any) => n.id === newNoteId),
+				false,
+			);
 		});
 	});
 
@@ -9169,7 +10473,10 @@ describe('Endpoints', () => {
 			const asAnon = await api('users/notes', { userId: author.id, limit: 100 });
 			assert.strictEqual(asAnon.status, 200);
 			assert.ok(asAnon.body.some((n: any) => n.id === publicNoteId));
-			assert.strictEqual(asAnon.body.some((n: any) => n.id === specifiedNoteId), false);
+			assert.strictEqual(
+				asAnon.body.some((n: any) => n.id === specifiedNoteId),
+				false,
+			);
 
 			const asVisibleUser = await api('users/notes', { userId: author.id, limit: 100 }, stranger);
 			assert.strictEqual(asVisibleUser.status, 200);
@@ -9187,7 +10494,10 @@ describe('Endpoints', () => {
 			const withFiles = await api('users/notes', { userId: author.id, withFiles: true, limit: 100 });
 			assert.strictEqual(withFiles.status, 200);
 			assert.ok(withFiles.body.some((n: any) => n.id === fileNoteId));
-			assert.strictEqual(withFiles.body.some((n: any) => n.id === publicNoteId), false);
+			assert.strictEqual(
+				withFiles.body.some((n: any) => n.id === publicNoteId),
+				false,
+			);
 
 			const pureRenoteId = genId();
 			await createNoteInDatabase(db, {
@@ -9200,7 +10510,10 @@ describe('Endpoints', () => {
 			});
 			const withoutRenotes = await api('users/notes', { userId: author.id, withRenotes: false, limit: 100 });
 			assert.strictEqual(withoutRenotes.status, 200);
-			assert.strictEqual(withoutRenotes.body.some((n: any) => n.id === pureRenoteId), false);
+			assert.strictEqual(
+				withoutRenotes.body.some((n: any) => n.id === pureRenoteId),
+				false,
+			);
 			assert.ok(withoutRenotes.body.some((n: any) => n.id === publicNoteId));
 		});
 
@@ -9227,7 +10540,10 @@ describe('Endpoints', () => {
 
 			const withoutChannelNotes = await api('users/notes', { userId: author.id, limit: 100 });
 			assert.strictEqual(withoutChannelNotes.status, 200);
-			assert.strictEqual(withoutChannelNotes.body.some((n: any) => n.id === channelNoteId), false);
+			assert.strictEqual(
+				withoutChannelNotes.body.some((n: any) => n.id === channelNoteId),
+				false,
+			);
 
 			const withChannelNotes = await api('users/notes', { userId: author.id, withChannelNotes: true, limit: 100 });
 			assert.strictEqual(withChannelNotes.status, 200);
@@ -9239,9 +10555,16 @@ describe('Endpoints', () => {
 				channelId: channel.id,
 				expiresAt: null,
 			});
-			const asMutingViewer = await api('users/notes', { userId: author.id, withChannelNotes: true, limit: 100 }, viewer);
+			const asMutingViewer = await api(
+				'users/notes',
+				{ userId: author.id, withChannelNotes: true, limit: 100 },
+				viewer,
+			);
 			assert.strictEqual(asMutingViewer.status, 200);
-			assert.strictEqual(asMutingViewer.body.some((n: any) => n.id === channelNoteId), false);
+			assert.strictEqual(
+				asMutingViewer.body.some((n: any) => n.id === channelNoteId),
+				false,
+			);
 		});
 
 		test('BOTH_WITH_REPLIES_AND_WITH_FILESと、対象からブロックされている場合は空配列を維持する', async () => {
@@ -9285,12 +10608,18 @@ describe('Endpoints', () => {
 			const afterOld = await api('users/notes', { userId: author.id, sinceId: oldNoteId, limit: 100 });
 			assert.strictEqual(afterOld.status, 200);
 			assert.ok(afterOld.body.some((n: any) => n.id === newNoteId));
-			assert.strictEqual(afterOld.body.some((n: any) => n.id === oldNoteId), false);
+			assert.strictEqual(
+				afterOld.body.some((n: any) => n.id === oldNoteId),
+				false,
+			);
 
 			const beforeNew = await api('users/notes', { userId: author.id, untilId: newNoteId, limit: 100 });
 			assert.strictEqual(beforeNew.status, 200);
 			assert.ok(beforeNew.body.some((n: any) => n.id === oldNoteId));
-			assert.strictEqual(beforeNew.body.some((n: any) => n.id === newNoteId), false);
+			assert.strictEqual(
+				beforeNew.body.some((n: any) => n.id === newNoteId),
+				false,
+			);
 		});
 
 		test('withReplies指定に応じて他人へのリプライの包含が切り替わる', async () => {
@@ -9301,12 +10630,17 @@ describe('Endpoints', () => {
 			// author の userTimeline (Redis) を空にしないための通常投稿。空だとDBフォールバックになり、
 			// DBフォールバック経路は原典同様リプライを除外しない。
 			const normalNoteId = (await post(author, { text: 'users/notes withReplies normal', visibility: 'public' })).id;
-			const replyNoteId = (await post(author, { text: 'users/notes withReplies reply', visibility: 'public', replyId: rootNote.id })).id;
+			const replyNoteId = (
+				await post(author, { text: 'users/notes withReplies reply', visibility: 'public', replyId: rootNote.id })
+			).id;
 
 			const withRepliesFalse = await api('users/notes', { userId: author.id, withReplies: false, limit: 100 });
 			assert.strictEqual(withRepliesFalse.status, 200);
 			assert.ok(withRepliesFalse.body.some((n: any) => n.id === normalNoteId));
-			assert.strictEqual(withRepliesFalse.body.some((n: any) => n.id === replyNoteId), false);
+			assert.strictEqual(
+				withRepliesFalse.body.some((n: any) => n.id === replyNoteId),
+				false,
+			);
 
 			const withRepliesTrue = await api('users/notes', { userId: author.id, withReplies: true, limit: 100 });
 			assert.strictEqual(withRepliesTrue.status, 200);
@@ -9327,8 +10661,16 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const publicClip = await api('clips/create', { name: `hono notes/clips public ${suffix}`, isPublic: true }, owner);
-			const privateClip = await api('clips/create', { name: `hono notes/clips private ${suffix}`, isPublic: false }, owner);
+			const publicClip = await api(
+				'clips/create',
+				{ name: `hono notes/clips public ${suffix}`, isPublic: true },
+				owner,
+			);
+			const privateClip = await api(
+				'clips/create',
+				{ name: `hono notes/clips private ${suffix}`, isPublic: false },
+				owner,
+			);
 			await api('clips/add-note', { clipId: publicClip.body.id, noteId }, owner);
 			await api('clips/add-note', { clipId: privateClip.body.id, noteId }, owner);
 
@@ -9368,7 +10710,10 @@ describe('Endpoints', () => {
 			const res = await api('notes/search-by-tag', { tag });
 			assert.strictEqual(res.status, 200);
 			assert.ok(res.body.some((n: any) => n.id === taggedNoteId));
-			assert.strictEqual(res.body.some((n: any) => n.id === untaggedNoteId), false);
+			assert.strictEqual(
+				res.body.some((n: any) => n.id === untaggedNoteId),
+				false,
+			);
 		});
 
 		test('notes/show-partial-bulk はreactionsとreactionEmojisを返す', async () => {
@@ -9406,7 +10751,10 @@ describe('Endpoints', () => {
 			for (const user of [undefined, viewer]) {
 				const res = await api('notes/show-partial-bulk', { noteIds: [publicNote.id, specifiedNote.id] }, user);
 				assert.strictEqual(res.status, 200);
-				assert.deepStrictEqual(res.body.map(note => note.id), [publicNote.id]);
+				assert.deepStrictEqual(
+					res.body.map((note) => note.id),
+					[publicNote.id],
+				);
 			}
 		});
 
@@ -9426,11 +10774,18 @@ describe('Endpoints', () => {
 				visibility: 'followers',
 			});
 
-			const res = await api('notes/show-partial-bulk', {
-				noteIds: [followeeNote.id, strangerNote.id],
-			}, viewer);
+			const res = await api(
+				'notes/show-partial-bulk',
+				{
+					noteIds: [followeeNote.id, strangerNote.id],
+				},
+				viewer,
+			);
 			assert.strictEqual(res.status, 200);
-			assert.deepStrictEqual(res.body.map(note => note.id), [followeeNote.id]);
+			assert.deepStrictEqual(
+				res.body.map((note) => note.id),
+				[followeeNote.id],
+			);
 		});
 
 		test('notes/timeline はfolloweeの投稿のみ含む', async () => {
@@ -9461,7 +10816,10 @@ describe('Endpoints', () => {
 			const timeline = await api('notes/timeline', { limit: 100 }, viewer);
 			assert.strictEqual(timeline.status, 200);
 			assert.ok(timeline.body.some((n: any) => n.id === followeeNoteId));
-			assert.strictEqual(timeline.body.some((n: any) => n.id === strangerNoteId), false);
+			assert.strictEqual(
+				timeline.body.some((n: any) => n.id === strangerNoteId),
+				false,
+			);
 		});
 
 		test('notes/user-list-timeline はリストメンバーの投稿のみ含みNO_SUCH_LISTを維持する', async () => {
@@ -9502,7 +10860,10 @@ describe('Endpoints', () => {
 			const timeline = await api('notes/user-list-timeline', { listId: list.id, limit: 100 }, owner);
 			assert.strictEqual(timeline.status, 200);
 			assert.ok(timeline.body.some((n: any) => n.id === memberNoteId));
-			assert.strictEqual(timeline.body.some((n: any) => n.id === nonMemberNoteId), false);
+			assert.strictEqual(
+				timeline.body.some((n: any) => n.id === nonMemberNoteId),
+				false,
+			);
 
 			const missingList = await api('notes/user-list-timeline', { listId: genId() }, owner);
 			assert.strictEqual(missingList.status, 400);
@@ -9589,7 +10950,7 @@ describe('Endpoints', () => {
 			const searchIds = async (params: Record<string, unknown>) => {
 				const result = await api('notes/search', { query, limit: 100, ...params }, author);
 				assert.strictEqual(result.status, 200);
-				return new Set(result.body.map(note => note.id));
+				return new Set(result.body.map((note) => note.id));
 			};
 
 			assert.deepStrictEqual(await searchIds({ withReplies: true }), new Set([reply.id]));
@@ -9686,7 +11047,7 @@ describe('Endpoints', () => {
 
 			const list = await api('admin/roles/list', {}, alice);
 			assert.strictEqual(list.status, 200);
-			const listedRole = list.body.find(item => item.id === created.body.id);
+			const listedRole = list.body.find((item) => item.id === created.body.id);
 			assert.ok(listedRole);
 			assert.strictEqual(listedRole.name, createPayload.name);
 			assert.strictEqual(listedRole.usersCount, 0);
@@ -9697,18 +11058,22 @@ describe('Endpoints', () => {
 			assert.strictEqual(shown.body.name, createPayload.name);
 			assert.strictEqual(getDefined(shown.body.policies['canInvite']).value, true);
 
-			const updated = await api('admin/roles/update', {
-				roleId: created.body.id,
-				name: `Hono admin role updated ${now}`,
-				description: 'updated role description',
-				color: null,
-				isPublic: false,
-				preserveAssignmentOnMoveAccount: false,
-				displayOrder: 314,
-				policies: {
-					canInvite: { useDefault: false, priority: 0, value: false },
-				} as any,
-			}, alice);
+			const updated = await api(
+				'admin/roles/update',
+				{
+					roleId: created.body.id,
+					name: `Hono admin role updated ${now}`,
+					description: 'updated role description',
+					color: null,
+					isPublic: false,
+					preserveAssignmentOnMoveAccount: false,
+					displayOrder: 314,
+					policies: {
+						canInvite: { useDefault: false, priority: 0, value: false },
+					} as any,
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 204);
 
 			const afterUpdate = await api('admin/roles/show', { roleId: created.body.id }, alice);
@@ -9741,10 +11106,14 @@ describe('Endpoints', () => {
 				roleId: created.body.id,
 				expiresAt: new Date(now + 60 * 1000),
 			});
-			const users = await api('admin/roles/users', {
-				roleId: created.body.id,
-				limit: 1,
-			}, { token: readToken });
+			const users = await api(
+				'admin/roles/users',
+				{
+					roleId: created.body.id,
+					limit: 1,
+				},
+				{ token: readToken },
+			);
 			assert.strictEqual(users.status, 200);
 			assert.strictEqual(users.body.length, 1);
 			assert.strictEqual(getAt(users.body, 0).id, carolRoleAssignment.id);
@@ -9757,48 +11126,69 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(missingUsersRole.body as any).error.code, 'NO_SUCH_ROLE');
 
 			const assignTarget = await signup({ username: `hrolasg${now.toString(36)}` });
-			const assignableRole = await api('admin/roles/create', {
-				...createPayload,
-				name: `Hono admin assign role ${now}`,
-				isPublic: true,
-				canEditMembersByModerator: true,
-			}, alice);
+			const assignableRole = await api(
+				'admin/roles/create',
+				{
+					...createPayload,
+					name: `Hono admin assign role ${now}`,
+					isPublic: true,
+					canEditMembersByModerator: true,
+				},
+				alice,
+			);
 			assert.strictEqual(assignableRole.status, 200);
 
-			const scopeDenied = await api('admin/roles/create', {
-				...createPayload,
-				name: `Hono admin role denied ${now}`,
-			}, { token: readToken });
+			const scopeDenied = await api(
+				'admin/roles/create',
+				{
+					...createPayload,
+					name: `Hono admin role denied ${now}`,
+				},
+				{ token: readToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
-			const assignScopeDenied = await api('admin/roles/assign', {
-				roleId: assignableRole.body.id,
-				userId: assignTarget.id,
-			}, { token: readToken });
+			const assignScopeDenied = await api(
+				'admin/roles/assign',
+				{
+					roleId: assignableRole.body.id,
+					userId: assignTarget.id,
+				},
+				{ token: readToken },
+			);
 			assert.strictEqual(assignScopeDenied.status, 403);
 			assert.strictEqual(castAsError(assignScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 			const assignExpiresAt = now + 60 * 60 * 1000;
-			const assigned = await api('admin/roles/assign', {
-				roleId: assignableRole.body.id,
-				userId: assignTarget.id,
-				expiresAt: assignExpiresAt,
-			}, alice);
+			const assigned = await api(
+				'admin/roles/assign',
+				{
+					roleId: assignableRole.body.id,
+					userId: assignTarget.id,
+					expiresAt: assignExpiresAt,
+				},
+				alice,
+			);
 			assert.strictEqual(assigned.status, 204, JSON.stringify(assigned.body));
-			const assignment = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id);
+			const assignment = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(
+				db,
+				assignTarget.id,
+				assignableRole.body.id,
+			);
 			assert.ok(assignment);
 			assert.strictEqual(assignment.expiresAt?.toISOString(), new Date(assignExpiresAt).toISOString());
 
 			const redis = createRedisClient(config);
 			try {
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 				const entries = await redis.xrevrange(`notificationTimeline:${assignTarget.id}`, '+', '-', 'COUNT', 10);
 				const notifications = entries.map(([, values]) => {
-					const dataIndex = values.findIndex(value => value === 'data');
+					const dataIndex = values.findIndex((value) => value === 'data');
 					return JSON.parse(values[dataIndex + 1]!) as { type?: string; roleId?: string };
 				});
-				const roleAssignedNotification = notifications.find(notification =>
-					notification.type === 'roleAssigned' && notification.roleId === assignableRole.body.id);
+				const roleAssignedNotification = notifications.find(
+					(notification) => notification.type === 'roleAssigned' && notification.roleId === assignableRole.body.id,
+				);
 				assert.ok(roleAssignedNotification);
 			} finally {
 				await closeRedisConnection(redis);
@@ -9811,7 +11201,11 @@ describe('Endpoints', () => {
 			const usersRoleDenied = await api('admin/roles/users', { roleId: created.body.id }, normalUser);
 			assert.strictEqual(usersRoleDenied.status, 403);
 			assert.strictEqual(castAsError(usersRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
-			const assignRoleDenied = await api('admin/roles/assign', { roleId: assignableRole.body.id, userId: assignTarget.id }, normalUser);
+			const assignRoleDenied = await api(
+				'admin/roles/assign',
+				{ roleId: assignableRole.body.id, userId: assignTarget.id },
+				normalUser,
+			);
 			assert.strictEqual(assignRoleDenied.status, 403);
 			assert.strictEqual(castAsError(assignRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
@@ -9844,52 +11238,79 @@ describe('Endpoints', () => {
 				roleId: moderatorRole.id,
 				expiresAt: null,
 			});
-			const accessDenied = await api('admin/roles/assign', {
-				roleId: created.body.id,
-				userId: assignTarget.id,
-			}, normalUser);
+			const accessDenied = await api(
+				'admin/roles/assign',
+				{
+					roleId: created.body.id,
+					userId: assignTarget.id,
+				},
+				normalUser,
+			);
 			assert.strictEqual(accessDenied.status, 400);
 			assert.strictEqual(castAsError(accessDenied.body as any).error.code, 'ACCESS_DENIED');
 
-			const unassigned = await api('admin/roles/unassign', {
-				roleId: assignableRole.body.id,
-				userId: assignTarget.id,
-			}, alice);
+			const unassigned = await api(
+				'admin/roles/unassign',
+				{
+					roleId: assignableRole.body.id,
+					userId: assignTarget.id,
+				},
+				alice,
+			);
 			assert.strictEqual(unassigned.status, 204);
-			assert.strictEqual(await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id), null);
+			assert.strictEqual(
+				await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id),
+				null,
+			);
 
-			const unassignedAgain = await api('admin/roles/unassign', {
-				roleId: assignableRole.body.id,
-				userId: assignTarget.id,
-			}, alice);
+			const unassignedAgain = await api(
+				'admin/roles/unassign',
+				{
+					roleId: assignableRole.body.id,
+					userId: assignTarget.id,
+				},
+				alice,
+			);
 			assert.strictEqual(unassignedAgain.status, 400);
 			assert.strictEqual(castAsError(unassignedAgain.body as any).error.code, 'NOT_ASSIGNED');
 
-			const missingAssignUser = await api('admin/roles/assign', {
-				roleId: assignableRole.body.id,
-				userId: '000000000000000000000000',
-			}, alice);
+			const missingAssignUser = await api(
+				'admin/roles/assign',
+				{
+					roleId: assignableRole.body.id,
+					userId: '000000000000000000000000',
+				},
+				alice,
+			);
 			assert.strictEqual(missingAssignUser.status, 400);
 			assert.strictEqual(castAsError(missingAssignUser.body as any).error.code, 'NO_SUCH_USER');
-			const missingUnassignRole = await api('admin/roles/unassign', {
-				roleId: '000000000000000000000000',
-				userId: assignTarget.id,
-			}, alice);
+			const missingUnassignRole = await api(
+				'admin/roles/unassign',
+				{
+					roleId: '000000000000000000000000',
+					userId: assignTarget.id,
+				},
+				alice,
+			);
 			assert.strictEqual(missingUnassignRole.status, 400);
 			assert.strictEqual(castAsError(missingUnassignRole.body as any).error.code, 'NO_SUCH_ROLE');
 
 			const defaultPolicyUser = await signup({ username: `honorolepol${now.toString(36)}` });
 			const beforeMeta = await fetchMetaFromDatabase(db);
 			try {
-				const updatedDefaultPolicies = await api('admin/roles/update-default-policies', {
-					policies: {
-						...beforeMeta.policies,
-						canInvite: true,
-						inviteLimit: 2,
-						inviteLimitCycle: 60,
-						inviteExpirationTime: 0,
-					} as any,
-				}, alice);
+				const updatedDefaultPolicies = await api(
+					'admin/roles/update-default-policies',
+					{
+						policies: {
+							...beforeMeta.policies,
+							canInvite: true,
+							inviteLimit: 2,
+							inviteLimitCycle: 60,
+							inviteExpirationTime: 0,
+						} as any,
+					},
+					alice,
+				);
 				assert.strictEqual(updatedDefaultPolicies.status, 204);
 
 				const afterMeta = await fetchMetaFromDatabase(db);
@@ -9900,9 +11321,13 @@ describe('Endpoints', () => {
 				assert.strictEqual(inviteLimit.status, 200);
 				assert.strictEqual(inviteLimit.body.remaining, 2);
 
-				const updateDefaultScopeDenied = await api('admin/roles/update-default-policies', {
-					policies: afterMeta.policies as any,
-				}, { token: readToken });
+				const updateDefaultScopeDenied = await api(
+					'admin/roles/update-default-policies',
+					{
+						policies: afterMeta.policies as any,
+					},
+					{ token: readToken },
+				);
 				assert.strictEqual(updateDefaultScopeDenied.status, 403);
 				assert.strictEqual(castAsError(updateDefaultScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -9930,7 +11355,7 @@ describe('Endpoints', () => {
 					if (logs.length > 0) assignmentLogged.add(type);
 				}
 				if (assignmentLogged.size === assignmentLogTypes.length) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.deepStrictEqual([...assignmentLogged].sort(), [...assignmentLogTypes].sort());
@@ -9962,7 +11387,7 @@ describe('Endpoints', () => {
 					if (logs.length > 0) logged.add(type);
 				}
 				if (logged.size === logTypes.length) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
@@ -9977,9 +11402,12 @@ describe('Endpoints', () => {
 		): Promise<Bull.Job<SystemWebhookDeliverJobData>> {
 			for (let i = 0; i < 10; i++) {
 				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-				const job = jobs.find(job => job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type && job.data.to === url);
+				const job = jobs.find(
+					(job) =>
+						job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type && job.data.to === url,
+				);
 				if (job != null) return job;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
@@ -9988,12 +11416,16 @@ describe('Endpoints', () => {
 		test('admin/system-webhook は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
 			const now = Date.now();
 			const name = `Hono system webhook ${now}`;
-			const created = await api('admin/system-webhook/create', {
-				isActive: true,
-				name,
-				on: ['abuseReport'],
-				url: 'https://example.test/system-webhook',
-			}, alice);
+			const created = await api(
+				'admin/system-webhook/create',
+				{
+					isActive: true,
+					name,
+					on: ['abuseReport'],
+					url: 'https://example.test/system-webhook',
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.isActive, true);
 			assert.strictEqual(created.body.name, name);
@@ -10001,23 +11433,36 @@ describe('Endpoints', () => {
 			assert.strictEqual(created.body.url, 'https://example.test/system-webhook');
 			assert.strictEqual(created.body.secret, '');
 
-			const createdInactive = await api('admin/system-webhook/create', {
-				isActive: false,
-				name: `${name} inactive`,
-				on: ['userCreated'],
-				url: 'https://example.test/system-webhook-inactive',
-				secret: 'secret',
-			}, alice);
+			const createdInactive = await api(
+				'admin/system-webhook/create',
+				{
+					isActive: false,
+					name: `${name} inactive`,
+					on: ['userCreated'],
+					url: 'https://example.test/system-webhook-inactive',
+					secret: 'secret',
+				},
+				alice,
+			);
 			assert.strictEqual(createdInactive.status, 200);
 
 			const listed = await api('admin/system-webhook/list', { on: ['abuseReport'] }, alice);
 			assert.strictEqual(listed.status, 200);
-			assert.strictEqual(listed.body.some(webhook => webhook.id === created.body.id), true);
-			assert.strictEqual(listed.body.some(webhook => webhook.id === createdInactive.body.id), false);
+			assert.strictEqual(
+				listed.body.some((webhook) => webhook.id === created.body.id),
+				true,
+			);
+			assert.strictEqual(
+				listed.body.some((webhook) => webhook.id === createdInactive.body.id),
+				false,
+			);
 
 			const listedInactive = await api('admin/system-webhook/list', { isActive: false }, alice);
 			assert.strictEqual(listedInactive.status, 200);
-			assert.strictEqual(listedInactive.body.some(webhook => webhook.id === createdInactive.body.id), true);
+			assert.strictEqual(
+				listedInactive.body.some((webhook) => webhook.id === createdInactive.body.id),
+				true,
+			);
 
 			const shown = await api('admin/system-webhook/show', { id: created.body.id }, alice);
 			assert.strictEqual(shown.status, 200);
@@ -10028,14 +11473,18 @@ describe('Endpoints', () => {
 			assert.strictEqual(missing.status, 404);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_SYSTEM_WEBHOOK');
 
-			const updated = await api('admin/system-webhook/update', {
-				id: created.body.id,
-				isActive: false,
-				name: `${name} updated`,
-				on: ['userCreated'],
-				url: 'https://example.test/system-webhook-updated',
-				secret: 'updated-secret',
-			}, alice);
+			const updated = await api(
+				'admin/system-webhook/update',
+				{
+					id: created.body.id,
+					isActive: false,
+					name: `${name} updated`,
+					on: ['userCreated'],
+					url: 'https://example.test/system-webhook-updated',
+					secret: 'updated-secret',
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 200);
 			assert.strictEqual(updated.body.id, created.body.id);
 			assert.strictEqual(updated.body.isActive, false);
@@ -10044,14 +11493,18 @@ describe('Endpoints', () => {
 			assert.strictEqual(updated.body.secret, 'updated-secret');
 
 			const overrideUrl = 'https://example.test/system-webhook-test';
-			const tested = await api('admin/system-webhook/test', {
-				webhookId: created.body.id,
-				type: 'userCreated',
-				override: {
-					url: overrideUrl,
-					secret: 'override-secret',
+			const tested = await api(
+				'admin/system-webhook/test',
+				{
+					webhookId: created.body.id,
+					type: 'userCreated',
+					override: {
+						url: overrideUrl,
+						secret: 'override-secret',
+					},
 				},
-			}, alice);
+				alice,
+			);
 			assert.strictEqual(tested.status, 204);
 			const testJob = await findSystemWebhookDeliverJob(created.body.id, 'userCreated', overrideUrl);
 			assert.strictEqual(testJob.opts.attempts, 1);
@@ -10059,10 +11512,14 @@ describe('Endpoints', () => {
 			assert.strictEqual((testJob.data.content as any).id, 'dummy-user-1');
 			await testJob.remove();
 
-			const missingTest = await api('admin/system-webhook/test', {
-				webhookId: '000000000000000000000000',
-				type: 'userCreated',
-			}, alice);
+			const missingTest = await api(
+				'admin/system-webhook/test',
+				{
+					webhookId: '000000000000000000000000',
+					type: 'userCreated',
+				},
+				alice,
+			);
 			assert.strictEqual(missingTest.status, 400);
 			assert.strictEqual(castAsError(missingTest.body as any).error.code, 'NO_SUCH_WEBHOOK');
 
@@ -10096,7 +11553,7 @@ describe('Endpoints', () => {
 					if (logs.length > 0) logged.add(type);
 				}
 				if (logged.size === logTypes.length) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
@@ -10117,26 +11574,38 @@ describe('Endpoints', () => {
 				name: `Hono abuse recipient moderator ${suffix}`,
 				isModerator: true,
 			});
-			const assign = await api('admin/roles/assign', {
-				roleId: moderatorRole.id,
-				userId: emailUser.id,
-			}, alice);
+			const assign = await api(
+				'admin/roles/assign',
+				{
+					roleId: moderatorRole.id,
+					userId: emailUser.id,
+				},
+				alice,
+			);
 			assert.strictEqual(assign.status, 204);
 
-			const webhook = await api('admin/system-webhook/create', {
-				isActive: true,
-				name: `${name} webhook`,
-				on: ['abuseReport'],
-				url: 'https://example.test/abuse-recipient-webhook',
-			}, alice);
+			const webhook = await api(
+				'admin/system-webhook/create',
+				{
+					isActive: true,
+					name: `${name} webhook`,
+					on: ['abuseReport'],
+					url: 'https://example.test/abuse-recipient-webhook',
+				},
+				alice,
+			);
 			assert.strictEqual(webhook.status, 200);
 
-			const createdWebhookRecipient = await api('admin/abuse-report/notification-recipient/create', {
-				isActive: true,
-				name,
-				method: 'webhook',
-				systemWebhookId: webhook.body.id,
-			}, alice);
+			const createdWebhookRecipient = await api(
+				'admin/abuse-report/notification-recipient/create',
+				{
+					isActive: true,
+					name,
+					method: 'webhook',
+					systemWebhookId: webhook.body.id,
+				},
+				alice,
+			);
 			assert.strictEqual(createdWebhookRecipient.status, 200);
 			assert.strictEqual(createdWebhookRecipient.body.isActive, true);
 			assert.strictEqual(createdWebhookRecipient.body.name, name);
@@ -10145,12 +11614,16 @@ describe('Endpoints', () => {
 			assert.ok(createdWebhookRecipient.body.systemWebhook);
 			assert.strictEqual(createdWebhookRecipient.body.systemWebhook.id, webhook.body.id);
 
-			const createdEmailRecipient = await api('admin/abuse-report/notification-recipient/create', {
-				isActive: true,
-				name: `${name} email`,
-				method: 'email',
-				userId: emailUser.id,
-			}, alice);
+			const createdEmailRecipient = await api(
+				'admin/abuse-report/notification-recipient/create',
+				{
+					isActive: true,
+					name: `${name} email`,
+					method: 'email',
+					userId: emailUser.id,
+				},
+				alice,
+			);
 			assert.strictEqual(createdEmailRecipient.status, 200);
 			assert.strictEqual(createdEmailRecipient.body.method, 'email');
 			assert.strictEqual(createdEmailRecipient.body.userId, emailUser.id);
@@ -10159,30 +11632,51 @@ describe('Endpoints', () => {
 
 			const listedWebhook = await api('admin/abuse-report/notification-recipient/list', { method: ['webhook'] }, alice);
 			assert.strictEqual(listedWebhook.status, 200);
-			assert.strictEqual(listedWebhook.body.some(recipient => recipient.id === createdWebhookRecipient.body.id), true);
-			assert.strictEqual(listedWebhook.body.some(recipient => recipient.id === createdEmailRecipient.body.id), false);
+			assert.strictEqual(
+				listedWebhook.body.some((recipient) => recipient.id === createdWebhookRecipient.body.id),
+				true,
+			);
+			assert.strictEqual(
+				listedWebhook.body.some((recipient) => recipient.id === createdEmailRecipient.body.id),
+				false,
+			);
 
 			const listedEmail = await api('admin/abuse-report/notification-recipient/list', { method: ['email'] }, alice);
 			assert.strictEqual(listedEmail.status, 200);
-			assert.strictEqual(listedEmail.body.some(recipient => recipient.id === createdEmailRecipient.body.id), true);
+			assert.strictEqual(
+				listedEmail.body.some((recipient) => recipient.id === createdEmailRecipient.body.id),
+				true,
+			);
 
-			const shown = await api('admin/abuse-report/notification-recipient/show', { id: createdWebhookRecipient.body.id }, alice);
+			const shown = await api(
+				'admin/abuse-report/notification-recipient/show',
+				{ id: createdWebhookRecipient.body.id },
+				alice,
+			);
 			assert.strictEqual(shown.status, 200);
 			assert.strictEqual(shown.body.id, createdWebhookRecipient.body.id);
 			assert.ok(shown.body.systemWebhook);
 			assert.strictEqual(shown.body.systemWebhook.id, webhook.body.id);
 
-			const missing = await api('admin/abuse-report/notification-recipient/show', { id: '000000000000000000000000' }, alice);
+			const missing = await api(
+				'admin/abuse-report/notification-recipient/show',
+				{ id: '000000000000000000000000' },
+				alice,
+			);
 			assert.strictEqual(missing.status, 404);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_RECIPIENT');
 
-			const updated = await api('admin/abuse-report/notification-recipient/update', {
-				id: createdWebhookRecipient.body.id,
-				isActive: false,
-				name: `${name} updated`,
-				method: 'email',
-				userId: emailUser.id,
-			}, alice);
+			const updated = await api(
+				'admin/abuse-report/notification-recipient/update',
+				{
+					id: createdWebhookRecipient.body.id,
+					isActive: false,
+					name: `${name} updated`,
+					method: 'email',
+					userId: emailUser.id,
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 200);
 			assert.strictEqual(updated.body.id, createdWebhookRecipient.body.id);
 			assert.strictEqual(updated.body.isActive, false);
@@ -10191,29 +11685,41 @@ describe('Endpoints', () => {
 			assert.strictEqual(updated.body.userId, emailUser.id);
 			assert.strictEqual(updated.body.systemWebhookId, undefined);
 
-			const missingEmailUser = await api('admin/abuse-report/notification-recipient/create', {
-				isActive: true,
-				name: `${name} missing email user`,
-				method: 'email',
-			}, alice);
+			const missingEmailUser = await api(
+				'admin/abuse-report/notification-recipient/create',
+				{
+					isActive: true,
+					name: `${name} missing email user`,
+					method: 'email',
+				},
+				alice,
+			);
 			assert.strictEqual(missingEmailUser.status, 400);
 			assert.strictEqual(castAsError(missingEmailUser.body as any).error.code, 'CORRELATION_CHECK_EMAIL');
 
 			const unverifiedUser = await signup({ username: `hanu${suffix}` });
-			const unverifiedEmailUser = await api('admin/abuse-report/notification-recipient/create', {
-				isActive: true,
-				name: `${name} unverified email`,
-				method: 'email',
-				userId: unverifiedUser.id,
-			}, alice);
+			const unverifiedEmailUser = await api(
+				'admin/abuse-report/notification-recipient/create',
+				{
+					isActive: true,
+					name: `${name} unverified email`,
+					method: 'email',
+					userId: unverifiedUser.id,
+				},
+				alice,
+			);
 			assert.strictEqual(unverifiedEmailUser.status, 400);
 			assert.strictEqual(castAsError(unverifiedEmailUser.body as any).error.code, 'EMAIL_ADDRESS_NOT_SET');
 
-			const missingWebhook = await api('admin/abuse-report/notification-recipient/create', {
-				isActive: true,
-				name: `${name} missing webhook`,
-				method: 'webhook',
-			}, alice);
+			const missingWebhook = await api(
+				'admin/abuse-report/notification-recipient/create',
+				{
+					isActive: true,
+					name: `${name} missing webhook`,
+					method: 'webhook',
+				},
+				alice,
+			);
 			assert.strictEqual(missingWebhook.status, 400);
 			assert.strictEqual(castAsError(missingWebhook.body as any).error.code, 'CORRELATION_CHECK_WEBHOOK');
 
@@ -10227,19 +11733,35 @@ describe('Endpoints', () => {
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
-			const deletedUpdated = await api('admin/abuse-report/notification-recipient/delete', { id: createdWebhookRecipient.body.id }, alice);
+			const deletedUpdated = await api(
+				'admin/abuse-report/notification-recipient/delete',
+				{ id: createdWebhookRecipient.body.id },
+				alice,
+			);
 			assert.strictEqual(deletedUpdated.status, 204);
-			const deletedEmail = await api('admin/abuse-report/notification-recipient/delete', { id: createdEmailRecipient.body.id }, alice);
+			const deletedEmail = await api(
+				'admin/abuse-report/notification-recipient/delete',
+				{ id: createdEmailRecipient.body.id },
+				alice,
+			);
 			assert.strictEqual(deletedEmail.status, 204);
 
-			const shownDeleted = await api('admin/abuse-report/notification-recipient/show', { id: createdWebhookRecipient.body.id }, alice);
+			const shownDeleted = await api(
+				'admin/abuse-report/notification-recipient/show',
+				{ id: createdWebhookRecipient.body.id },
+				alice,
+			);
 			assert.strictEqual(shownDeleted.status, 404);
 			assert.strictEqual(castAsError(shownDeleted.body as any).error.code, 'NO_SUCH_RECIPIENT');
 
 			const deletedWebhook = await api('admin/system-webhook/delete', { id: webhook.body.id }, alice);
 			assert.strictEqual(deletedWebhook.status, 204);
 
-			const logTypes = ['createAbuseReportNotificationRecipient', 'updateAbuseReportNotificationRecipient', 'deleteAbuseReportNotificationRecipient'] as const;
+			const logTypes = [
+				'createAbuseReportNotificationRecipient',
+				'updateAbuseReportNotificationRecipient',
+				'deleteAbuseReportNotificationRecipient',
+			] as const;
 			const logged = new Set<string>();
 			for (let i = 0; i < 10; i++) {
 				for (const type of logTypes) {
@@ -10252,7 +11774,7 @@ describe('Endpoints', () => {
 					if (logs.length > 0) logged.add(type);
 				}
 				if (logged.size === logTypes.length) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
@@ -10260,7 +11782,10 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin/abuse-user-reports', () => {
-		async function createReport(suffix: string, values: Partial<Parameters<typeof createAbuseUserReportInDatabase>[1]> = {}) {
+		async function createReport(
+			suffix: string,
+			values: Partial<Parameters<typeof createAbuseUserReportInDatabase>[1]> = {},
+		) {
 			const config = loadConfig();
 			return await createAbuseUserReportInDatabase(db, {
 				id: genId(),
@@ -10279,18 +11804,17 @@ describe('Endpoints', () => {
 		): Promise<Bull.Job<SystemWebhookDeliverJobData>> {
 			for (let i = 0; i < 10; i++) {
 				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-				const job = jobs.find(job => job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type);
+				const job = jobs.find(
+					(job) => job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type,
+				);
 				if (job != null) return job;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
 		}
 
-		async function findDeliverJob(
-			inbox: string,
-			type: 'Flag',
-		): Promise<Bull.Job<DeliverJobData>> {
+		async function findDeliverJob(inbox: string, type: 'Flag'): Promise<Bull.Job<DeliverJobData>> {
 			for (let i = 0; i < 10; i++) {
 				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
 				for (const job of jobs) {
@@ -10299,7 +11823,7 @@ describe('Endpoints', () => {
 					const content = JSON.parse(job.data.content) as { type?: unknown };
 					if (content.type === type) return job;
 				}
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.fail(`deliver job was not found: ${inbox} ${type}`);
@@ -10327,18 +11851,21 @@ describe('Endpoints', () => {
 				comment: `Hono abuse report list remote ${suffix}`,
 			});
 
-			const listed = await api('admin/abuse-user-reports', {
-				limit: 10,
-				sinceDate: now - 3000,
-			}, alice);
+			const listed = await api(
+				'admin/abuse-user-reports',
+				{
+					limit: 10,
+					sinceDate: now - 3000,
+				},
+				alice,
+			);
 			assert.strictEqual(listed.status, 200);
 			const listedReports = listed.body as any[];
-			assert.deepStrictEqual(listedReports.slice(0, 3).map(report => report.id), [
-				unresolved.id,
-				resolved.id,
-				remoteReporter.id,
-			]);
-			const packedResolved = listedReports.find(report => report.id === resolved.id);
+			assert.deepStrictEqual(
+				listedReports.slice(0, 3).map((report) => report.id),
+				[unresolved.id, resolved.id, remoteReporter.id],
+			);
+			const packedResolved = listedReports.find((report) => report.id === resolved.id);
 			assert.strictEqual(packedResolved.comment, `Hono abuse report list resolved ${suffix}`);
 			assert.strictEqual(packedResolved.resolved, true);
 			assert.strictEqual(packedResolved.resolvedAs, 'reject');
@@ -10351,40 +11878,74 @@ describe('Endpoints', () => {
 			assert.strictEqual(packedResolved.assignee.id, alice.id);
 			assert.strictEqual(typeof packedResolved.createdAt, 'string');
 
-			const unresolvedOnly = await api('admin/abuse-user-reports', {
-				state: 'unresolved',
-				sinceDate: now - 3000,
-				limit: 10,
-			}, alice);
+			const unresolvedOnly = await api(
+				'admin/abuse-user-reports',
+				{
+					state: 'unresolved',
+					sinceDate: now - 3000,
+					limit: 10,
+				},
+				alice,
+			);
 			assert.strictEqual(unresolvedOnly.status, 200);
-			assert.strictEqual((unresolvedOnly.body as any[]).some(report => report.id === unresolved.id), true);
-			assert.strictEqual((unresolvedOnly.body as any[]).some(report => report.id === resolved.id), false);
+			assert.strictEqual(
+				(unresolvedOnly.body as any[]).some((report) => report.id === unresolved.id),
+				true,
+			);
+			assert.strictEqual(
+				(unresolvedOnly.body as any[]).some((report) => report.id === resolved.id),
+				false,
+			);
 
-			const resolvedOnly = await api('admin/abuse-user-reports', {
-				state: 'resolved',
-				sinceDate: now - 3000,
-				limit: 10,
-			}, alice);
+			const resolvedOnly = await api(
+				'admin/abuse-user-reports',
+				{
+					state: 'resolved',
+					sinceDate: now - 3000,
+					limit: 10,
+				},
+				alice,
+			);
 			assert.strictEqual(resolvedOnly.status, 200);
-			assert.strictEqual((resolvedOnly.body as any[]).some(report => report.id === resolved.id), true);
-			assert.strictEqual((resolvedOnly.body as any[]).some(report => report.id === unresolved.id), false);
+			assert.strictEqual(
+				(resolvedOnly.body as any[]).some((report) => report.id === resolved.id),
+				true,
+			);
+			assert.strictEqual(
+				(resolvedOnly.body as any[]).some((report) => report.id === unresolved.id),
+				false,
+			);
 
-			const remoteReporters = await api('admin/abuse-user-reports', {
-				reporterOrigin: 'remote',
-				sinceDate: now - 3000,
-				limit: 10,
-			}, alice);
+			const remoteReporters = await api(
+				'admin/abuse-user-reports',
+				{
+					reporterOrigin: 'remote',
+					sinceDate: now - 3000,
+					limit: 10,
+				},
+				alice,
+			);
 			assert.strictEqual(remoteReporters.status, 200);
-			assert.deepStrictEqual((remoteReporters.body as any[]).map(report => report.id), [remoteReporter.id]);
+			assert.deepStrictEqual(
+				(remoteReporters.body as any[]).map((report) => report.id),
+				[remoteReporter.id],
+			);
 
 			const token = await createAppToken(alice, ['read:admin:abuse-user-reports']);
-			const listedByToken = await api('admin/abuse-user-reports', {
-				state: 'resolved',
-				sinceDate: now - 3000,
-				limit: 10,
-			}, { token });
+			const listedByToken = await api(
+				'admin/abuse-user-reports',
+				{
+					state: 'resolved',
+					sinceDate: now - 3000,
+					limit: 10,
+				},
+				{ token },
+			);
 			assert.strictEqual(listedByToken.status, 200);
-			assert.strictEqual((listedByToken.body as any[]).some(report => report.id === resolved.id), true);
+			assert.strictEqual(
+				(listedByToken.body as any[]).some((report) => report.id === resolved.id),
+				true,
+			);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api('admin/abuse-user-reports', {}, { token: wrongScopeToken });
@@ -10401,18 +11962,26 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
 			const report = await createReport(suffix);
-			const webhook = await api('admin/system-webhook/create', {
-				isActive: true,
-				name: `Hono resolve abuse report webhook ${suffix}`,
-				on: ['abuseReportResolved'],
-				url: `https://example.test/resolve-abuse-report/${suffix}`,
-			}, alice);
+			const webhook = await api(
+				'admin/system-webhook/create',
+				{
+					isActive: true,
+					name: `Hono resolve abuse report webhook ${suffix}`,
+					on: ['abuseReportResolved'],
+					url: `https://example.test/resolve-abuse-report/${suffix}`,
+				},
+				alice,
+			);
 			assert.strictEqual(webhook.status, 200);
 
-			const resolved = await api('admin/resolve-abuse-user-report', {
-				reportId: report.id,
-				resolvedAs: 'accept',
-			}, alice);
+			const resolved = await api(
+				'admin/resolve-abuse-user-report',
+				{
+					reportId: report.id,
+					resolvedAs: 'accept',
+				},
+				alice,
+			);
 			assert.strictEqual(resolved.status, 204);
 
 			let after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
@@ -10433,9 +12002,13 @@ describe('Endpoints', () => {
 
 			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
 			const tokenReport = await createReport(`${suffix}token`);
-			const resolvedByToken = await api('admin/resolve-abuse-user-report', {
-				reportId: tokenReport.id,
-			}, { token });
+			const resolvedByToken = await api(
+				'admin/resolve-abuse-user-report',
+				{
+					reportId: tokenReport.id,
+				},
+				{ token },
+			);
 			assert.strictEqual(resolvedByToken.status, 204);
 
 			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, tokenReport.id);
@@ -10444,22 +12017,34 @@ describe('Endpoints', () => {
 			assert.strictEqual(after.resolvedAs, null);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
-			const scopeDenied = await api('admin/resolve-abuse-user-report', {
-				reportId: report.id,
-			}, { token: wrongScopeToken });
+			const scopeDenied = await api(
+				'admin/resolve-abuse-user-report',
+				{
+					reportId: report.id,
+				},
+				{ token: wrongScopeToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `har${suffix}` });
-			const roleDenied = await api('admin/resolve-abuse-user-report', {
-				reportId: report.id,
-			}, normalUser);
+			const roleDenied = await api(
+				'admin/resolve-abuse-user-report',
+				{
+					reportId: report.id,
+				},
+				normalUser,
+			);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
-			const missing = await api('admin/resolve-abuse-user-report', {
-				reportId: '000000000000000000000000',
-			}, alice);
+			const missing = await api(
+				'admin/resolve-abuse-user-report',
+				{
+					reportId: '000000000000000000000000',
+				},
+				alice,
+			);
 			assert.strictEqual(missing.status, 404);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
 			assert.strictEqual(castAsError(missing.body as any).error.id, 'ac3794dd-2ce4-d878-e546-73c60c06b398');
@@ -10472,10 +12057,13 @@ describe('Endpoints', () => {
 					search: report.id,
 				});
 				if (logs.length > 0) {
-					assert.strictEqual(logs.some(log => (log.info as any).reportId === report.id && (log.info as any).resolvedAs === 'accept'), true);
+					assert.strictEqual(
+						logs.some((log) => (log.info as any).reportId === report.id && (log.info as any).resolvedAs === 'accept'),
+						true,
+					);
 					break;
 				}
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 				if (i === 9) assert.fail('resolveAbuseReport moderation log was not found');
 			}
 		});
@@ -10509,9 +12097,13 @@ describe('Endpoints', () => {
 				comment: `Hono abuse report forward ${suffix}`,
 			});
 
-			const forwarded = await api('admin/forward-abuse-user-report', {
-				reportId: report.id,
-			}, alice);
+			const forwarded = await api(
+				'admin/forward-abuse-user-report',
+				{
+					reportId: report.id,
+				},
+				alice,
+			);
 			assert.strictEqual(forwarded.status, 204);
 
 			const after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
@@ -10520,7 +12112,10 @@ describe('Endpoints', () => {
 			const deliverJob = await findDeliverJob(targetInbox, 'Flag');
 			assert.strictEqual(deliverJob.data.to, targetInbox);
 			assert.strictEqual(deliverJob.data.isSharedInbox, false);
-			assert.strictEqual(deliverJob.data.digest, `SHA-256=${createHash('sha256').update(deliverJob.data.content).digest('base64')}`);
+			assert.strictEqual(
+				deliverJob.data.digest,
+				`SHA-256=${createHash('sha256').update(deliverJob.data.content).digest('base64')}`,
+			);
 			const flag = JSON.parse(deliverJob.data.content) as any;
 			assert.strictEqual(flag.type, 'Flag');
 			assert.strictEqual(flag.actor.startsWith(`${origin}/users/`), true);
@@ -10537,9 +12132,13 @@ describe('Endpoints', () => {
 				targetUserHost: targetHost,
 				comment: `Hono abuse report forward token ${suffix}`,
 			});
-			const forwardedByToken = await api('admin/forward-abuse-user-report', {
-				reportId: tokenReport.id,
-			}, { token });
+			const forwardedByToken = await api(
+				'admin/forward-abuse-user-report',
+				{
+					reportId: tokenReport.id,
+				},
+				{ token },
+			);
 			assert.strictEqual(forwardedByToken.status, 204);
 
 			const afterToken = await fetchAbuseUserReportByIdOrFailFromDatabase(db, tokenReport.id);
@@ -10548,22 +12147,34 @@ describe('Endpoints', () => {
 			await tokenDeliverJob.remove();
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
-			const scopeDenied = await api('admin/forward-abuse-user-report', {
-				reportId: report.id,
-			}, { token: wrongScopeToken });
+			const scopeDenied = await api(
+				'admin/forward-abuse-user-report',
+				{
+					reportId: report.id,
+				},
+				{ token: wrongScopeToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hafr${suffix}` });
-			const roleDenied = await api('admin/forward-abuse-user-report', {
-				reportId: report.id,
-			}, normalUser);
+			const roleDenied = await api(
+				'admin/forward-abuse-user-report',
+				{
+					reportId: report.id,
+				},
+				normalUser,
+			);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
-			const missing = await api('admin/forward-abuse-user-report', {
-				reportId: '000000000000000000000000',
-			}, alice);
+			const missing = await api(
+				'admin/forward-abuse-user-report',
+				{
+					reportId: '000000000000000000000000',
+				},
+				alice,
+			);
 			assert.strictEqual(missing.status, 404);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
 			assert.strictEqual(castAsError(missing.body as any).error.id, '8763e21b-d9bc-40be-acf6-54c1a6986493');
@@ -10576,10 +12187,13 @@ describe('Endpoints', () => {
 					search: report.id,
 				});
 				if (logs.length > 0) {
-					assert.strictEqual(logs.some(log => (log.info as any).reportId === report.id), true);
+					assert.strictEqual(
+						logs.some((log) => (log.info as any).reportId === report.id),
+						true,
+					);
 					break;
 				}
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 				if (i === 9) assert.fail('forwardAbuseReport moderation log was not found');
 			}
 		});
@@ -10590,45 +12204,65 @@ describe('Endpoints', () => {
 			const report = await createReport(`${suffix}note`);
 			const moderationNote = `updated moderation note ${suffix}`;
 
-			const updated = await api('admin/update-abuse-user-report', {
-				reportId: report.id,
-				moderationNote,
-			}, alice);
+			const updated = await api(
+				'admin/update-abuse-user-report',
+				{
+					reportId: report.id,
+					moderationNote,
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 204);
 
 			let after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
 			assert.strictEqual(after.moderationNote, moderationNote);
 
 			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
-			const updatedByToken = await api('admin/update-abuse-user-report', {
-				reportId: report.id,
-				moderationNote: `${moderationNote} by token`,
-			}, { token });
+			const updatedByToken = await api(
+				'admin/update-abuse-user-report',
+				{
+					reportId: report.id,
+					moderationNote: `${moderationNote} by token`,
+				},
+				{ token },
+			);
 			assert.strictEqual(updatedByToken.status, 204);
 
 			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
 			assert.strictEqual(after.moderationNote, `${moderationNote} by token`);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
-			const scopeDenied = await api('admin/update-abuse-user-report', {
-				reportId: report.id,
-				moderationNote: 'denied',
-			}, { token: wrongScopeToken });
+			const scopeDenied = await api(
+				'admin/update-abuse-user-report',
+				{
+					reportId: report.id,
+					moderationNote: 'denied',
+				},
+				{ token: wrongScopeToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `haur${suffix}` });
-			const roleDenied = await api('admin/update-abuse-user-report', {
-				reportId: report.id,
-				moderationNote: 'denied',
-			}, normalUser);
+			const roleDenied = await api(
+				'admin/update-abuse-user-report',
+				{
+					reportId: report.id,
+					moderationNote: 'denied',
+				},
+				normalUser,
+			);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
-			const missing = await api('admin/update-abuse-user-report', {
-				reportId: '000000000000000000000000',
-				moderationNote: 'missing',
-			}, alice);
+			const missing = await api(
+				'admin/update-abuse-user-report',
+				{
+					reportId: '000000000000000000000000',
+					moderationNote: 'missing',
+				},
+				alice,
+			);
 			assert.strictEqual(missing.status, 404);
 			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
 			assert.strictEqual(castAsError(missing.body as any).error.id, '15f51cf5-46d1-4b1d-a618-b35bcbed0662');
@@ -10641,10 +12275,18 @@ describe('Endpoints', () => {
 					search: report.id,
 				});
 				if (logs.length > 0) {
-					assert.strictEqual(logs.some(log => (log.info as any).reportId === report.id && (log.info as any).before === report.moderationNote && (log.info as any).after === moderationNote), true);
+					assert.strictEqual(
+						logs.some(
+							(log) =>
+								(log.info as any).reportId === report.id &&
+								(log.info as any).before === report.moderationNote &&
+								(log.info as any).after === moderationNote,
+						),
+						true,
+					);
 					break;
 				}
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 				if (i === 9) assert.fail('updateAbuseReportNote moderation log was not found');
 			}
 		});
@@ -10652,21 +12294,32 @@ describe('Endpoints', () => {
 
 	describe('admin/show-user', () => {
 		test('admin/show-users は作成日時順のoffsetを維持する', async () => {
-			const firstPage = await api('admin/show-users', {
-				limit: 3,
-				sort: '-createdAt',
-			}, alice);
+			const firstPage = await api(
+				'admin/show-users',
+				{
+					limit: 3,
+					sort: '-createdAt',
+				},
+				alice,
+			);
 			assert.strictEqual(firstPage.status, 200);
 			assert.strictEqual(firstPage.body.length, 3);
 
-			const listed = await api('admin/show-users', {
-				limit: 1,
-				offset: 1,
-				sort: '-createdAt',
-			}, alice);
+			const listed = await api(
+				'admin/show-users',
+				{
+					limit: 1,
+					offset: 1,
+					sort: '-createdAt',
+				},
+				alice,
+			);
 
 			assert.strictEqual(listed.status, 200);
-			assert.deepStrictEqual(listed.body.map(user => user.id), [firstPage.body[1]!.id]);
+			assert.deepStrictEqual(
+				listed.body.map((user) => user.id),
+				[firstPage.body[1]!.id],
+			);
 		});
 
 		test('admin/show-user と admin/show-users は詳細、filter、token scope、roleを維持する', async () => {
@@ -10758,23 +12411,40 @@ describe('Endpoints', () => {
 			assert.strictEqual(shown.body.isHibernated, true);
 			assert.strictEqual(shown.body.lastActiveDate, new Date(now - 1234).toISOString());
 			assert.strictEqual(shown.body.policies.canPublicNote, false);
-			assert.ok(shown.body.roles.some(item => item.id === showRole.id && item.name === showRole.name && item.usersCount === 1));
-			assert.ok(shown.body.roleAssigns.some(item => item.roleId === showRole.id && item.createdAt === parseId(assign.id).date.toISOString() && item.expiresAt === assign.expiresAt?.toISOString()));
-			assert.ok(shown.body.signins.some(item => item.id === signin.id && item.ip === signin.ip && item.success === true));
+			assert.ok(
+				shown.body.roles.some(
+					(item) => item.id === showRole.id && item.name === showRole.name && item.usersCount === 1,
+				),
+			);
+			assert.ok(
+				shown.body.roleAssigns.some(
+					(item) =>
+						item.roleId === showRole.id &&
+						item.createdAt === parseId(assign.id).date.toISOString() &&
+						item.expiresAt === assign.expiresAt?.toISOString(),
+				),
+			);
+			assert.ok(
+				shown.body.signins.some((item) => item.id === signin.id && item.ip === signin.ip && item.success === true),
+			);
 
-			const listed = await api('admin/show-users', {
-				state: 'moderator',
-				username: target.username.slice(0, 6),
-				limit: 10,
-				sort: '+createdAt',
-			}, alice);
+			const listed = await api(
+				'admin/show-users',
+				{
+					state: 'moderator',
+					username: target.username.slice(0, 6),
+					limit: 10,
+					sort: '+createdAt',
+				},
+				alice,
+			);
 			assert.strictEqual(listed.status, 200);
-			const listedTarget = listed.body.find(item => item.id === target.id);
+			const listedTarget = listed.body.find((item) => item.id === target.id);
 			assert.ok(listedTarget);
 			assert.strictEqual(listedTarget.username, target.username);
 			assert.strictEqual(listedTarget.moderationNote, `moderation ${suffix}`);
 			assert.strictEqual(listedTarget.isSilenced, true);
-			assert.ok(listedTarget.roles.some(item => item.id === showRole.id && item.displayOrder === 4242));
+			assert.ok(listedTarget.roles.some((item) => item.id === showRole.id && item.displayOrder === 4242));
 
 			const token = await createAppToken(alice, ['read:admin:show-user']);
 			const shownByToken = await api('admin/show-user', { userId: target.id }, { token });
@@ -10802,7 +12472,10 @@ describe('Endpoints', () => {
 			const adminTarget = await signup({ username: `haumat${suffix}` });
 			const ordinaryTarget = await signup({ username: `haumu${suffix}` });
 			const moderatorRole = await role(alice, { name: `maintenance moderator ${suffix}`, isModerator: true });
-			const administratorRole = await role(alice, { name: `maintenance administrator ${suffix}`, isAdministrator: true });
+			const administratorRole = await role(alice, {
+				name: `maintenance administrator ${suffix}`,
+				isAdministrator: true,
+			});
 
 			await createRoleAssignmentInDatabase(db, {
 				id: genId(now + 1),
@@ -11009,7 +12682,7 @@ describe('Endpoints', () => {
 					if (logs.length > 0) logged.add(type);
 				}
 				if (logged.size === logTypes.length) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
@@ -11024,38 +12697,54 @@ describe('Endpoints', () => {
 			});
 
 			const text = `after note ${suffix}`;
-			const updated = await api('admin/update-user-note', {
-				userId: target.id,
-				text,
-			}, alice);
+			const updated = await api(
+				'admin/update-user-note',
+				{
+					userId: target.id,
+					text,
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 204);
 
 			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
 			assert.strictEqual(profile.moderationNote, text);
 
 			const token = await createAppToken(alice, ['write:admin:user-note']);
-			const updatedByToken = await api('admin/update-user-note', {
-				userId: target.id,
-				text: `${text} by token`,
-			}, { token });
+			const updatedByToken = await api(
+				'admin/update-user-note',
+				{
+					userId: target.id,
+					text: `${text} by token`,
+				},
+				{ token },
+			);
 			assert.strictEqual(updatedByToken.status, 204);
 
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
 			assert.strictEqual(profile.moderationNote, `${text} by token`);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:reset-password']);
-			const scopeDenied = await api('admin/update-user-note', {
-				userId: target.id,
-				text: 'denied',
-			}, { token: wrongScopeToken });
+			const scopeDenied = await api(
+				'admin/update-user-note',
+				{
+					userId: target.id,
+					text: 'denied',
+				},
+				{ token: wrongScopeToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hunn${suffix}` });
-			const roleDenied = await api('admin/update-user-note', {
-				userId: target.id,
-				text: 'denied',
-			}, normalUser);
+			const roleDenied = await api(
+				'admin/update-user-note',
+				{
+					userId: target.id,
+					text: 'denied',
+				},
+				normalUser,
+			);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
@@ -11067,10 +12756,13 @@ describe('Endpoints', () => {
 					search: target.id,
 				});
 				if (logs.length > 0) {
-					assert.strictEqual(logs.some(log => (log.info as any).before === 'before note' && (log.info as any).after === text), true);
+					assert.strictEqual(
+						logs.some((log) => (log.info as any).before === 'before note' && (log.info as any).after === text),
+						true,
+					);
 					break;
 				}
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 				if (i === 9) assert.fail('updateUserNote moderation log was not found');
 			}
 		});
@@ -11105,7 +12797,11 @@ describe('Endpoints', () => {
 				to: payload.to,
 				subject: payload.subject,
 			};
-			const invalid = await api('admin/send-email', invalidPayload as misskey.Endpoints['admin/send-email']['req'], alice);
+			const invalid = await api(
+				'admin/send-email',
+				invalidPayload as misskey.Endpoints['admin/send-email']['req'],
+				alice,
+			);
 			assert.strictEqual(invalid.status, 400);
 			assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAM');
 		});
@@ -11132,22 +12828,28 @@ describe('Endpoints', () => {
 
 			for (let i = 0; i < 10; i++) {
 				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
-				const job = jobs.find(job =>
-					job.name === 'unfollow' &&
-					job.data.from.id === following.followerId &&
-					job.data.to.id === following.followeeId &&
-					job.data.silent === true);
+				const job = jobs.find(
+					(job) =>
+						job.name === 'unfollow' &&
+						job.data.from.id === following.followerId &&
+						job.data.to.id === following.followeeId &&
+						job.data.silent === true,
+				);
 				if (job != null) {
 					await job.remove();
 					break;
 				}
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 				if (i === 9) assert.fail('suspend-user unfollow job was not created');
 			}
 
 			const suspendTokenTarget = await signup({ username: `hstt${suffix}` });
 			const suspendToken = await createAppToken(alice, ['write:admin:suspend-user']);
-			const suspendedByToken = await api('admin/suspend-user', { userId: suspendTokenTarget.id }, { token: suspendToken });
+			const suspendedByToken = await api(
+				'admin/suspend-user',
+				{ userId: suspendTokenTarget.id },
+				{ token: suspendToken },
+			);
 			assert.strictEqual(suspendedByToken.status, 204);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
@@ -11190,7 +12892,7 @@ describe('Endpoints', () => {
 					if (logs.length > 0) logged.add(type);
 				}
 				if (logged.size === 2) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.deepStrictEqual([...logged].sort(), ['suspend', 'unsuspend']);
@@ -11203,11 +12905,13 @@ describe('Endpoints', () => {
 			const createdAtBase = new Date(now - 1000 * 60);
 			const rows = await db
 				.insert(userIp)
-				.values(Array.from({ length: 32 }, (_, i) => ({
-					userId: bob.id,
-					ip: `hono-ip-${now}-${i}`,
-					createdAt: new Date(createdAtBase.getTime() + i * 1000),
-				})))
+				.values(
+					Array.from({ length: 32 }, (_, i) => ({
+						userId: bob.id,
+						ip: `hono-ip-${now}-${i}`,
+						createdAt: new Date(createdAtBase.getTime() + i * 1000),
+					})),
+				)
 				.returning({
 					id: userIp.id,
 					ip: userIp.ip,
@@ -11216,35 +12920,51 @@ describe('Endpoints', () => {
 			const expected = rows
 				.sort((a, b) => b.id - a.id)
 				.slice(0, 30)
-				.map(row => ({
+				.map((row) => ({
 					ip: row.ip,
 					createdAt: row.createdAt.toISOString(),
 				}));
 
-			const listed = await api('admin/get-user-ips', {
-				userId: bob.id,
-			}, alice);
+			const listed = await api(
+				'admin/get-user-ips',
+				{
+					userId: bob.id,
+				},
+				alice,
+			);
 			assert.strictEqual(listed.status, 200);
 			assert.deepStrictEqual(listed.body, expected);
 
 			const readToken = await createAppToken(alice, ['read:admin:user-ips']);
-			const listedWithApp = await api('admin/get-user-ips', {
-				userId: bob.id,
-			}, { token: readToken });
+			const listedWithApp = await api(
+				'admin/get-user-ips',
+				{
+					userId: bob.id,
+				},
+				{ token: readToken },
+			);
 			assert.strictEqual(listedWithApp.status, 200);
 			assert.deepStrictEqual(listedWithApp.body, expected);
 
 			const deniedToken = await createAppToken(alice, ['read:admin:roles']);
-			const scopeDenied = await api('admin/get-user-ips', {
-				userId: bob.id,
-			}, { token: deniedToken });
+			const scopeDenied = await api(
+				'admin/get-user-ips',
+				{
+					userId: bob.id,
+				},
+				{ token: deniedToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honoips${now.toString(36)}` });
-			const roleDenied = await api('admin/get-user-ips', {
-				userId: bob.id,
-			}, normalUser);
+			const roleDenied = await api(
+				'admin/get-user-ips',
+				{
+					userId: bob.id,
+				},
+				normalUser,
+			);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 		});
@@ -11297,7 +13017,7 @@ describe('Endpoints', () => {
 					const content = JSON.parse(job.data.content) as { type?: unknown };
 					if (content.type === type) return job;
 				}
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.fail(`deliver job was not found: ${inbox} ${type}`);
@@ -11306,17 +13026,23 @@ describe('Endpoints', () => {
 		test('admin/relays/list はrelay一覧、moderator権限、token scopeを維持する', async () => {
 			const config = loadConfig();
 			const now = Date.now();
-			const relays = await Promise.all(([
-				['requesting', 'requesting'],
-				['accepted', 'accepted'],
-				['rejected', 'rejected'],
-			] as const).map(([label, status], i) => createRelayInDatabase(db, {
-				id: genId(now + i),
-				inbox: `https://relay-${label}-${now}.example/inbox`,
-				status,
-			})));
+			const relays = await Promise.all(
+				(
+					[
+						['requesting', 'requesting'],
+						['accepted', 'accepted'],
+						['rejected', 'rejected'],
+					] as const
+				).map(([label, status], i) =>
+					createRelayInDatabase(db, {
+						id: genId(now + i),
+						inbox: `https://relay-${label}-${now}.example/inbox`,
+						status,
+					}),
+				),
+			);
 			const expected = relays
-				.map(relay => ({
+				.map((relay) => ({
 					id: relay.id,
 					inbox: relay.inbox,
 					status: relay.status,
@@ -11325,16 +13051,22 @@ describe('Endpoints', () => {
 
 			const listed = await api('admin/relays/list', {}, alice);
 			assert.strictEqual(listed.status, 200);
-			assert.deepStrictEqual(listed.body
-				.filter(relay => expected.some(expectedRelay => expectedRelay.id === relay.id))
-				.sort((a, b) => a.id.localeCompare(b.id)), expected);
+			assert.deepStrictEqual(
+				listed.body
+					.filter((relay) => expected.some((expectedRelay) => expectedRelay.id === relay.id))
+					.sort((a, b) => a.id.localeCompare(b.id)),
+				expected,
+			);
 
 			const readToken = await createAppToken(alice, ['read:admin:relays']);
 			const listedWithApp = await api('admin/relays/list', {}, { token: readToken });
 			assert.strictEqual(listedWithApp.status, 200);
-			assert.deepStrictEqual(listedWithApp.body
-				.filter(relay => expected.some(expectedRelay => expectedRelay.id === relay.id))
-				.sort((a, b) => a.id.localeCompare(b.id)), expected);
+			assert.deepStrictEqual(
+				listedWithApp.body
+					.filter((relay) => expected.some((expectedRelay) => expectedRelay.id === relay.id))
+					.sort((a, b) => a.id.localeCompare(b.id)),
+				expected,
+			);
 
 			const deniedToken = await createAppToken(alice, ['read:admin:user-ips']);
 			const scopeDenied = await api('admin/relays/list', {}, { token: deniedToken });
@@ -11364,7 +13096,10 @@ describe('Endpoints', () => {
 			const followJob = await findDeliverJob(inbox, 'Follow');
 			assert.strictEqual(followJob.data.to, inbox);
 			assert.strictEqual(followJob.data.isSharedInbox, false);
-			assert.strictEqual(followJob.data.digest, `SHA-256=${createHash('sha256').update(followJob.data.content).digest('base64')}`);
+			assert.strictEqual(
+				followJob.data.digest,
+				`SHA-256=${createHash('sha256').update(followJob.data.content).digest('base64')}`,
+			);
 
 			const follow = JSON.parse(followJob.data.content) as any;
 			assert.strictEqual(follow.type, 'Follow');
@@ -11380,12 +13115,20 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(invalidUrl.body as any).error.id, 'fb8c92d3-d4e5-44e7-b3d4-800d5cef8b2c');
 
 			const readToken = await createAppToken(alice, ['read:admin:relays']);
-			const scopeDenied = await api('admin/relays/add', { inbox: `https://relay-denied-${now}.example/inbox` }, { token: readToken });
+			const scopeDenied = await api(
+				'admin/relays/add',
+				{ inbox: `https://relay-denied-${now}.example/inbox` },
+				{ token: readToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honorelayw${now.toString(36)}` });
-			const roleDenied = await api('admin/relays/add', { inbox: `https://relay-role-denied-${now}.example/inbox` }, normalUser);
+			const roleDenied = await api(
+				'admin/relays/add',
+				{ inbox: `https://relay-role-denied-${now}.example/inbox` },
+				normalUser,
+			);
 			assert.strictEqual(roleDenied.status, 403);
 			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 
@@ -11396,7 +13139,10 @@ describe('Endpoints', () => {
 			const undoJob = await findDeliverJob(inbox, 'Undo');
 			assert.strictEqual(undoJob.data.to, inbox);
 			assert.strictEqual(undoJob.data.isSharedInbox, false);
-			assert.strictEqual(undoJob.data.digest, `SHA-256=${createHash('sha256').update(undoJob.data.content).digest('base64')}`);
+			assert.strictEqual(
+				undoJob.data.digest,
+				`SHA-256=${createHash('sha256').update(undoJob.data.content).digest('base64')}`,
+			);
 
 			const undo = JSON.parse(undoJob.data.content) as any;
 			assert.strictEqual(undo.type, 'Undo');
@@ -11418,30 +13164,42 @@ describe('Endpoints', () => {
 			const waitingInbox = `https://queue-waiting-${now}.example/inbox`;
 			const waitingName = `hono-queue-waiting-${now}`;
 			const waitingContent = JSON.stringify({ type: 'QueueTest', id: now });
-			const waitingJob = await deliverQueue!.add(waitingName, {
-				user: { id: alice.id },
-				content: waitingContent,
-				digest: `SHA-256=${createHash('sha256').update(waitingContent).digest('base64')}`,
-				to: waitingInbox,
-				isSharedInbox: false,
-			}, { removeOnComplete: true, removeOnFail: true });
-			const delayedDeliverJob = await deliverQueue!.add(`hono-queue-delayed-${now}`, {
-				user: { id: alice.id },
-				content: waitingContent,
-				digest: `SHA-256=${createHash('sha256').update(waitingContent).digest('base64')}`,
-				to: `https://${delayedDeliverHost}/inbox`,
-				isSharedInbox: false,
-			}, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
-			const delayedInboxJob = await inboxQueue!.add(`hono-inbox-delayed-${now}`, {
-				activity: {
-					type: 'Create',
-					actor: `https://${delayedInboxHost}/actor`,
-					object: `https://${delayedInboxHost}/notes/${now}`,
+			const waitingJob = await deliverQueue!.add(
+				waitingName,
+				{
+					user: { id: alice.id },
+					content: waitingContent,
+					digest: `SHA-256=${createHash('sha256').update(waitingContent).digest('base64')}`,
+					to: waitingInbox,
+					isSharedInbox: false,
 				},
-				signature: {
-					keyId: `https://${delayedInboxHost}/actor#main-key`,
+				{ removeOnComplete: true, removeOnFail: true },
+			);
+			const delayedDeliverJob = await deliverQueue!.add(
+				`hono-queue-delayed-${now}`,
+				{
+					user: { id: alice.id },
+					content: waitingContent,
+					digest: `SHA-256=${createHash('sha256').update(waitingContent).digest('base64')}`,
+					to: `https://${delayedDeliverHost}/inbox`,
+					isSharedInbox: false,
 				},
-			} as InboxJobData, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
+				{ delay: 60_000, removeOnComplete: true, removeOnFail: true },
+			);
+			const delayedInboxJob = await inboxQueue!.add(
+				`hono-inbox-delayed-${now}`,
+				{
+					activity: {
+						type: 'Create',
+						actor: `https://${delayedInboxHost}/actor`,
+						object: `https://${delayedInboxHost}/notes/${now}`,
+					},
+					signature: {
+						keyId: `https://${delayedInboxHost}/actor#main-key`,
+					},
+				} as InboxJobData,
+				{ delay: 60_000, removeOnComplete: true, removeOnFail: true },
+			);
 
 			try {
 				await waitingJob.log(`hono queue log ${now}`);
@@ -11449,7 +13207,7 @@ describe('Endpoints', () => {
 
 				const queues = await api('admin/queue/queues', {}, alice);
 				assert.strictEqual(queues.status, 200);
-				const deliverQueueInfo = queues.body.find(queue => queue.name === 'deliver');
+				const deliverQueueInfo = queues.body.find((queue) => queue.name === 'deliver');
 				assert.ok(deliverQueueInfo);
 				assert.strictEqual(typeof deliverQueueInfo.isPaused, 'boolean');
 				assert.strictEqual(typeof deliverQueueInfo.counts, 'object');
@@ -11479,7 +13237,7 @@ describe('Endpoints', () => {
 
 				const jobs = await api('admin/queue/jobs', { queue: 'deliver', state: ['wait'], search: waitingName }, alice);
 				assert.strictEqual(jobs.status, 200);
-				assert.ok(jobs.body.some(job => job.id === waitingJob.id && job.name === waitingName));
+				assert.ok(jobs.body.some((job) => job.id === waitingJob.id && job.name === waitingName));
 
 				const shown = await api('admin/queue/show-job', { queue: 'deliver', jobId: waitingJob.id }, alice);
 				assert.strictEqual(shown.status, 200);
@@ -11517,7 +13275,9 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin/queue write endpoints', () => {
-		async function expectModerationLog(type: 'clearQueue' | 'promoteQueue' | 'pauseQueue' | 'resumeQueue'): Promise<void> {
+		async function expectModerationLog(
+			type: 'clearQueue' | 'promoteQueue' | 'pauseQueue' | 'resumeQueue',
+		): Promise<void> {
 			for (let i = 0; i < 10; i++) {
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 20,
@@ -11526,7 +13286,7 @@ describe('Endpoints', () => {
 					userId: alice.id,
 				});
 				if (logs.length > 0) return;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.fail(`moderation log was not found: ${type}`);
@@ -11543,15 +13303,27 @@ describe('Endpoints', () => {
 				isSharedInbox: false,
 			};
 			let retryJob: Bull.Job<DeliverJobData> | undefined;
-			const promoteJob = await deliverQueue!.add(`hono-queue-promote-${now}`, baseJobData, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
-			const removeJob = await deliverQueue!.add(`hono-queue-remove-${now}`, {
-				...baseJobData,
-				to: `https://queue-remove-${now}.example/inbox`,
-			}, { removeOnComplete: true, removeOnFail: true });
-			const clearJob = await deliverQueue!.add(`hono-queue-clear-${now}`, {
-				...baseJobData,
-				to: `https://queue-clear-${now}.example/inbox`,
-			}, { removeOnComplete: true, removeOnFail: true });
+			const promoteJob = await deliverQueue!.add(`hono-queue-promote-${now}`, baseJobData, {
+				delay: 60_000,
+				removeOnComplete: true,
+				removeOnFail: true,
+			});
+			const removeJob = await deliverQueue!.add(
+				`hono-queue-remove-${now}`,
+				{
+					...baseJobData,
+					to: `https://queue-remove-${now}.example/inbox`,
+				},
+				{ removeOnComplete: true, removeOnFail: true },
+			);
+			const clearJob = await deliverQueue!.add(
+				`hono-queue-clear-${now}`,
+				{
+					...baseJobData,
+					to: `https://queue-clear-${now}.example/inbox`,
+				},
+				{ removeOnComplete: true, removeOnFail: true },
+			);
 
 			try {
 				assert.ok(promoteJob.id);
@@ -11573,10 +13345,14 @@ describe('Endpoints', () => {
 				assert.notStrictEqual(await promoteJob.getState(), 'delayed');
 				await expectModerationLog('promoteQueue');
 
-				retryJob = await deliverQueue!.add(`hono-queue-retry-${now}`, {
-					...baseJobData,
-					to: `https://queue-retry-${now}.example/inbox`,
-				}, { delay: 60_000, removeOnComplete: true, removeOnFail: true });
+				retryJob = await deliverQueue!.add(
+					`hono-queue-retry-${now}`,
+					{
+						...baseJobData,
+						to: `https://queue-retry-${now}.example/inbox`,
+					},
+					{ delay: 60_000, removeOnComplete: true, removeOnFail: true },
+				);
 				assert.ok(retryJob.id);
 				const retried = await api('admin/queue/retry-job', { queue: 'deliver', jobId: retryJob.id }, alice);
 				assert.strictEqual(retried.status, 204);
@@ -11621,43 +13397,50 @@ describe('Endpoints', () => {
 			const deliverOutboxId = genId(now);
 			const dbOutboxId = genId(now + 1);
 			const deliverContent = JSON.stringify({ type: 'QueueOutboxDeadLetterTest', id: now });
-			const deliverJob = await deliverQueue!.add(`hono-outbox-deadletter-${now}`, {
-				user: { id: alice.id },
-				content: deliverContent,
-				digest: `SHA-256=${createHash('sha256').update(deliverContent).digest('base64')}`,
-				to: `https://queue-outbox-${now}.example/inbox`,
-				isSharedInbox: false,
-			}, { jobId: `outbox-${deliverOutboxId}`, delay: 600_000, removeOnComplete: true, removeOnFail: true });
+			const deliverJob = await deliverQueue!.add(
+				`hono-outbox-deadletter-${now}`,
+				{
+					user: { id: alice.id },
+					content: deliverContent,
+					digest: `SHA-256=${createHash('sha256').update(deliverContent).digest('base64')}`,
+					to: `https://queue-outbox-${now}.example/inbox`,
+					isSharedInbox: false,
+				},
+				{ jobId: `outbox-${deliverOutboxId}`, delay: 600_000, removeOnComplete: true, removeOnFail: true },
+			);
 
 			try {
-				await db.insert(queueOutbox).values([{
-					id: deliverOutboxId,
-					queue: 'deliver',
-					name: 'deliver',
-					kind: 'job',
-					state: 'deadLetter',
-					data: { to: `https://queue-outbox-${now}.example/inbox` },
-					opts: { attempts: 8 },
-					externalJobId: `outbox-${deliverOutboxId}`,
-					deadLetterReason: 'deliveryFailed',
-					lastError: { message: `deliver failed ${now}`, attemptsMade: 8 },
-					revision: 3,
-				}, {
-					id: dbOutboxId,
-					queue: 'db',
-					name: 'deleteAccount',
-					kind: 'job',
-					state: 'deadLetter',
-					data: { user: { id: alice.id }, soft: false },
-					opts: {},
-					deadLetterReason: 'invalidPayload',
-					lastError: { message: `invalid payload ${now}` },
-					revision: 0,
-				}]);
+				await db.insert(queueOutbox).values([
+					{
+						id: deliverOutboxId,
+						queue: 'deliver',
+						name: 'deliver',
+						kind: 'job',
+						state: 'deadLetter',
+						data: { to: `https://queue-outbox-${now}.example/inbox` },
+						opts: { attempts: 8 },
+						externalJobId: `outbox-${deliverOutboxId}`,
+						deadLetterReason: 'deliveryFailed',
+						lastError: { message: `deliver failed ${now}`, attemptsMade: 8 },
+						revision: 3,
+					},
+					{
+						id: dbOutboxId,
+						queue: 'db',
+						name: 'deleteAccount',
+						kind: 'job',
+						state: 'deadLetter',
+						data: { user: { id: alice.id }, soft: false },
+						opts: {},
+						deadLetterReason: 'invalidPayload',
+						lastError: { message: `invalid payload ${now}` },
+						revision: 0,
+					},
+				]);
 
 				const listed = await api('admin/queue/outbox-dead-letters', {}, alice);
 				assert.strictEqual(listed.status, 200);
-				const listedDeliver = listed.body.find(row => row.id === deliverOutboxId);
+				const listedDeliver = listed.body.find((row) => row.id === deliverOutboxId);
 				assert.ok(listedDeliver);
 				assert.strictEqual(listedDeliver.queue, 'deliver');
 				assert.strictEqual(listedDeliver.name, 'deliver');
@@ -11665,30 +13448,42 @@ describe('Endpoints', () => {
 				assert.strictEqual(listedDeliver.externalJobId, `outbox-${deliverOutboxId}`);
 				assert.strictEqual(listedDeliver.revision, 3);
 				assert.strictEqual((listedDeliver.lastError as { message: string } | null)?.message, `deliver failed ${now}`);
-				assert.ok(listed.body.some(row => row.id === dbOutboxId && row.deadLetterReason === 'invalidPayload'));
+				assert.ok(listed.body.some((row) => row.id === dbOutboxId && row.deadLetterReason === 'invalidPayload'));
 
 				// 新しいデッドレターで先頭が埋まっても古いものへ到達できるよう、id 降順 + untilId で辿れること
-				const listedIds = listed.body.map(row => row.id);
+				const listedIds = listed.body.map((row) => row.id);
 				assert.ok(listedIds.indexOf(dbOutboxId) < listedIds.indexOf(deliverOutboxId));
 				const firstPage = await api('admin/queue/outbox-dead-letters', { limit: 1 }, alice);
 				assert.strictEqual(firstPage.status, 200);
 				assert.strictEqual(firstPage.body.length, 1);
 				const nextPage = await api('admin/queue/outbox-dead-letters', { untilId: dbOutboxId }, alice);
 				assert.strictEqual(nextPage.status, 200);
-				assert.ok(!nextPage.body.some(row => row.id === dbOutboxId));
-				assert.ok(nextPage.body.some(row => row.id === deliverOutboxId));
+				assert.ok(!nextPage.body.some((row) => row.id === dbOutboxId));
+				assert.ok(nextPage.body.some((row) => row.id === deliverOutboxId));
 
 				// 一覧を取得してから他の管理者やワーカーが触っていた場合、古い revision の操作は弾かれる
-				const staleRetry = await api('admin/queue/retry-outbox-dead-letter', { outboxId: deliverOutboxId, revision: 2 }, alice);
+				const staleRetry = await api(
+					'admin/queue/retry-outbox-dead-letter',
+					{ outboxId: deliverOutboxId, revision: 2 },
+					alice,
+				);
 				assert.strictEqual(staleRetry.status, 409);
 				assert.strictEqual(castAsError(staleRetry.body as any).error.code, 'QUEUE_OUTBOX_STATE_CHANGED');
-				const staleAbandon = await api('admin/queue/abandon-outbox-dead-letter', { outboxId: dbOutboxId, revision: 1 }, alice);
+				const staleAbandon = await api(
+					'admin/queue/abandon-outbox-dead-letter',
+					{ outboxId: dbOutboxId, revision: 1 },
+					alice,
+				);
 				assert.strictEqual(staleAbandon.status, 409);
 				assert.strictEqual(castAsError(staleAbandon.body as any).error.code, 'QUEUE_OUTBOX_STATE_CHANGED');
 				assert.strictEqual((await fetchQueueOutboxByIdFromDatabase(db, deliverOutboxId))?.state, 'deadLetter');
 				assert.strictEqual((await fetchQueueOutboxByIdFromDatabase(db, dbOutboxId))?.state, 'deadLetter');
 
-				const missing = await api('admin/queue/retry-outbox-dead-letter', { outboxId: genId(now + 2), revision: 0 }, alice);
+				const missing = await api(
+					'admin/queue/retry-outbox-dead-letter',
+					{ outboxId: genId(now + 2), revision: 0 },
+					alice,
+				);
 				assert.strictEqual(missing.status, 409);
 				assert.strictEqual(castAsError(missing.body as any).error.code, 'QUEUE_OUTBOX_STATE_CHANGED');
 
@@ -11699,7 +13494,11 @@ describe('Endpoints', () => {
 				assert.ok(statsBefore.body.outbox.deliveryFailed >= 1);
 				assert.ok(statsBefore.body.outbox.invalidPayload >= 1);
 
-				const retried = await api('admin/queue/retry-outbox-dead-letter', { outboxId: deliverOutboxId, revision: 3 }, alice);
+				const retried = await api(
+					'admin/queue/retry-outbox-dead-letter',
+					{ outboxId: deliverOutboxId, revision: 3 },
+					alice,
+				);
 				assert.strictEqual(retried.status, 204);
 				const retriedRow = await fetchQueueOutboxByIdFromDatabase(db, deliverOutboxId);
 				assert.ok(retriedRow);
@@ -11712,18 +13511,26 @@ describe('Endpoints', () => {
 				// 再試行で改めて publish されるので、古い BullMQ ジョブは残していると二重配送になる
 				assert.strictEqual(await deliverQueue!.getJob(`outbox-${deliverOutboxId}`), undefined);
 
-				const abandoned = await api('admin/queue/abandon-outbox-dead-letter', { outboxId: dbOutboxId, revision: 0 }, alice);
+				const abandoned = await api(
+					'admin/queue/abandon-outbox-dead-letter',
+					{ outboxId: dbOutboxId, revision: 0 },
+					alice,
+				);
 				assert.strictEqual(abandoned.status, 204);
 				assert.strictEqual(await fetchQueueOutboxByIdFromDatabase(db, dbOutboxId), null);
 
 				const afterList = await api('admin/queue/outbox-dead-letters', {}, alice);
 				assert.strictEqual(afterList.status, 200);
-				assert.ok(!afterList.body.some(row => row.id === deliverOutboxId || row.id === dbOutboxId));
+				assert.ok(!afterList.body.some((row) => row.id === deliverOutboxId || row.id === dbOutboxId));
 
 				const readToken = await createAppToken(alice, ['read:admin:queue']);
 				const listedWithToken = await api('admin/queue/outbox-dead-letters', {}, { token: readToken });
 				assert.strictEqual(listedWithToken.status, 200);
-				const writeScopeDenied = await api('admin/queue/retry-outbox-dead-letter', { outboxId: deliverOutboxId, revision: 4 }, { token: readToken });
+				const writeScopeDenied = await api(
+					'admin/queue/retry-outbox-dead-letter',
+					{ outboxId: deliverOutboxId, revision: 4 },
+					{ token: readToken },
+				);
 				assert.strictEqual(writeScopeDenied.status, 403);
 				assert.strictEqual(castAsError(writeScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -11736,12 +13543,19 @@ describe('Endpoints', () => {
 				const roleDenied = await api('admin/queue/outbox-dead-letters', {}, normalUser);
 				assert.strictEqual(roleDenied.status, 403);
 				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
-				const roleDeniedWrite = await api('admin/queue/abandon-outbox-dead-letter', { outboxId: deliverOutboxId, revision: 4 }, normalUser);
+				const roleDeniedWrite = await api(
+					'admin/queue/abandon-outbox-dead-letter',
+					{ outboxId: deliverOutboxId, revision: 4 },
+					normalUser,
+				);
 				assert.strictEqual(roleDeniedWrite.status, 403);
 				assert.strictEqual(castAsError(roleDeniedWrite.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 			} finally {
 				await deliverJob.remove().catch(() => undefined);
-				await deliverQueue!.getJob(`outbox-${deliverOutboxId}`).then(job => job?.remove()).catch(() => undefined);
+				await deliverQueue!
+					.getJob(`outbox-${deliverOutboxId}`)
+					.then((job) => job?.remove())
+					.catch(() => undefined);
 				await db.delete(queueOutbox).where(inArray(queueOutbox.id, [deliverOutboxId, dbOutboxId]));
 			}
 		});
@@ -11804,7 +13618,7 @@ describe('Endpoints', () => {
 				createdById: inviter.id,
 			});
 			await createRegistrationTicketInDatabase(db, {
-				id: genId(now - (1000 * 60 * 120)),
+				id: genId(now - 1000 * 60 * 120),
 				code: `hono-invite-old-${now}`,
 				createdById: inviter.id,
 			});
@@ -11881,7 +13695,7 @@ describe('Endpoints', () => {
 
 			const list = await api('invite/list', {}, bob);
 			assert.strictEqual(list.status, 200);
-			assert.ok(list.body.some(ticket => ticket.id === created.body.id));
+			assert.ok(list.body.some((ticket) => ticket.id === created.body.id));
 
 			const deletedByStranger = await api('invite/delete', { inviteId: created.body.id }, carol);
 			assert.strictEqual(deletedByStranger.status, 400);
@@ -11892,7 +13706,7 @@ describe('Endpoints', () => {
 
 			const listAfterDelete = await api('invite/list', {}, bob);
 			assert.strictEqual(listAfterDelete.status, 200);
-			assert.ok(!listAfterDelete.body.some(ticket => ticket.id === created.body.id));
+			assert.ok(!listAfterDelete.body.some((ticket) => ticket.id === created.body.id));
 		});
 
 		test('admin/invite/create したコードを admin/invite/list で取得できる', async () => {
@@ -11908,7 +13722,7 @@ describe('Endpoints', () => {
 			const list = await api('admin/invite/list', { type: 'unused' }, alice);
 			assert.strictEqual(list.status, 200);
 			for (const ticket of created.body) {
-				assert.ok(list.body.some(x => x.id === ticket.id));
+				assert.ok(list.body.some((x) => x.id === ticket.id));
 			}
 
 			const invalidDate = await api('admin/invite/create', { expiresAt: 'invalid-date' }, alice);
@@ -11934,12 +13748,12 @@ describe('Endpoints', () => {
 					type: 'createInvitation',
 					userId: alice.id,
 				});
-				logged = logs.some(log => {
+				logged = logs.some((log) => {
 					const info = log.info as { invitations?: { id?: string }[] };
-					return info.invitations?.some(ticket => ticket.id === getAt(created.body, 0).id) === true;
+					return info.invitations?.some((ticket) => ticket.id === getAt(created.body, 0).id) === true;
 				});
 				if (logged) break;
-				await new Promise(resolve => setTimeout(resolve, 10));
+				await new Promise((resolve) => setTimeout(resolve, 10));
 			}
 			assert.ok(logged);
 		});
@@ -11962,11 +13776,15 @@ describe('Endpoints', () => {
 				},
 			});
 
-			const list = await api('admin/show-moderation-logs', {
-				type: 'updateUserNote',
-				userId: alice.id,
-				search: marker,
-			}, alice);
+			const list = await api(
+				'admin/show-moderation-logs',
+				{
+					type: 'updateUserNote',
+					userId: alice.id,
+					search: marker,
+				},
+				alice,
+			);
 			assert.strictEqual(list.status, 200);
 			assert.strictEqual(list.body.length, 1);
 			assert.strictEqual(getAt(list.body, 0).id, id);
@@ -12000,17 +13818,25 @@ describe('Endpoints', () => {
 			assert.ok(initial.body.turnstile);
 
 			try {
-				const invalid = await api('admin/captcha/save', {
-					provider: 'testcaptcha',
-				}, alice);
+				const invalid = await api(
+					'admin/captcha/save',
+					{
+						provider: 'testcaptcha',
+					},
+					alice,
+				);
 				assert.strictEqual(invalid.status, 400);
 				assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAMETERS');
 				assert.strictEqual(castAsError(invalid.body as any).error.message, 'Invalid parameters.');
 
-				const saved = await api('admin/captcha/save', {
-					provider: 'testcaptcha',
-					captchaResult: 'testcaptcha-passed',
-				}, alice);
+				const saved = await api(
+					'admin/captcha/save',
+					{
+						provider: 'testcaptcha',
+						captchaResult: 'testcaptcha-passed',
+					},
+					alice,
+				);
 				assert.strictEqual(saved.status, 204);
 
 				const current = await api('admin/captcha/current', {}, alice);
@@ -12036,16 +13862,20 @@ describe('Endpoints', () => {
 		test('admin/announcements は作成、一覧、更新、削除、scope、権限、ログを維持する', async () => {
 			const now = Date.now();
 			const title = `hono-announcement-${now}`;
-			const created = await api('admin/announcements/create', {
-				title,
-				text: 'announcement body',
-				imageUrl: null,
-				icon: 'info',
-				display: 'normal',
-				forExistingUsers: false,
-				silence: false,
-				needConfirmationToRead: true,
-			}, alice);
+			const created = await api(
+				'admin/announcements/create',
+				{
+					title,
+					text: 'announcement body',
+					imageUrl: null,
+					icon: 'info',
+					display: 'normal',
+					forExistingUsers: false,
+					silence: false,
+					needConfirmationToRead: true,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.title, title);
 			assert.strictEqual(created.body.imageUrl, null);
@@ -12053,43 +13883,55 @@ describe('Endpoints', () => {
 
 			const list = await api('admin/announcements/list', { limit: 20, status: 'active' }, alice);
 			assert.strictEqual(list.status, 200);
-			const listed = list.body.find(announcement => announcement.id === created.body.id);
+			const listed = list.body.find((announcement) => announcement.id === created.body.id);
 			assert.ok(listed);
 			assert.strictEqual(listed.title, title);
 			assert.strictEqual(listed.reads, 0);
 			assert.strictEqual(listed.isActive, true);
 
-			const updated = await api('admin/announcements/update', {
-				id: created.body.id,
-				title: `${title}-updated`,
-				text: 'updated body',
-				imageUrl: '',
-				isActive: false,
-			}, alice);
+			const updated = await api(
+				'admin/announcements/update',
+				{
+					id: created.body.id,
+					title: `${title}-updated`,
+					text: 'updated body',
+					imageUrl: '',
+					isActive: false,
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 204);
 
 			const updatedList = await api('admin/announcements/list', { limit: 20, status: 'all' }, alice);
 			assert.strictEqual(updatedList.status, 200);
-			const updatedAnnouncement = updatedList.body.find(announcement => announcement.id === created.body.id);
+			const updatedAnnouncement = updatedList.body.find((announcement) => announcement.id === created.body.id);
 			assert.ok(updatedAnnouncement);
 			assert.strictEqual(updatedAnnouncement.title, `${title}-updated`);
 			assert.strictEqual(updatedAnnouncement.text, 'updated body');
 			assert.strictEqual(updatedAnnouncement.imageUrl, null);
 			assert.strictEqual(updatedAnnouncement.isActive, false);
 
-			const noSuch = await api('admin/announcements/update', {
-				id: '0000000000000000',
-				title: 'missing',
-			}, alice);
+			const noSuch = await api(
+				'admin/announcements/update',
+				{
+					id: '0000000000000000',
+					title: 'missing',
+				},
+				alice,
+			);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_ANNOUNCEMENT');
 
 			const readToken = await createAppToken(alice, ['read:admin:announcements']);
-			const scopeDenied = await api('admin/announcements/create', {
-				title,
-				text: 'announcement body',
-				imageUrl: null,
-			}, { token: readToken });
+			const scopeDenied = await api(
+				'admin/announcements/create',
+				{
+					title,
+					text: 'announcement body',
+					imageUrl: null,
+				},
+				{ token: readToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -12103,7 +13945,7 @@ describe('Endpoints', () => {
 
 			const afterDelete = await api('admin/announcements/list', { limit: 20, status: 'all' }, alice);
 			assert.strictEqual(afterDelete.status, 200);
-			assert.ok(!afterDelete.body.some(announcement => announcement.id === created.body.id));
+			assert.ok(!afterDelete.body.some((announcement) => announcement.id === created.body.id));
 
 			const logTypes = ['createGlobalAnnouncement', 'updateGlobalAnnouncement', 'deleteGlobalAnnouncement'] as const;
 			const logged = new Set<string>();
@@ -12118,7 +13960,7 @@ describe('Endpoints', () => {
 					if (logs.length > 0) logged.add(type);
 				}
 				if (logged.size === logTypes.length) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
@@ -12162,13 +14004,17 @@ describe('Endpoints', () => {
 				expiresAt: null,
 			});
 
-			const created = await api('admin/avatar-decorations/create', {
-				name: `hono-avatar-${now}`,
-				description: 'avatar decoration body',
-				url: 'https://example.test/avatar-decoration.png',
-				roleIdsThatCanBeUsedThisDecoration: [managerRole.id],
-				category: 'hono',
-			}, manager);
+			const created = await api(
+				'admin/avatar-decorations/create',
+				{
+					name: `hono-avatar-${now}`,
+					description: 'avatar decoration body',
+					url: 'https://example.test/avatar-decoration.png',
+					roleIdsThatCanBeUsedThisDecoration: [managerRole.id],
+					category: 'hono',
+				},
+				manager,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.name, `hono-avatar-${now}`);
 			assert.strictEqual(created.body.category, 'hono');
@@ -12176,30 +14022,38 @@ describe('Endpoints', () => {
 
 			const list = await api('admin/avatar-decorations/list', {}, manager);
 			assert.strictEqual(list.status, 200);
-			assert.ok(list.body.some(decoration => decoration.id === created.body.id));
+			assert.ok(list.body.some((decoration) => decoration.id === created.body.id));
 
-			const updated = await api('admin/avatar-decorations/update', {
-				id: created.body.id,
-				name: `hono-avatar-${now}-updated`,
-				description: 'updated body',
-				category: null,
-			}, manager);
+			const updated = await api(
+				'admin/avatar-decorations/update',
+				{
+					id: created.body.id,
+					name: `hono-avatar-${now}-updated`,
+					description: 'updated body',
+					category: null,
+				},
+				manager,
+			);
 			assert.strictEqual(updated.status, 204);
 
 			const updatedList = await api('admin/avatar-decorations/list', {}, manager);
 			assert.strictEqual(updatedList.status, 200);
-			const updatedDecoration = updatedList.body.find(decoration => decoration.id === created.body.id);
+			const updatedDecoration = updatedList.body.find((decoration) => decoration.id === created.body.id);
 			assert.ok(updatedDecoration);
 			assert.strictEqual(updatedDecoration.name, `hono-avatar-${now}-updated`);
 			assert.strictEqual(updatedDecoration.description, 'updated body');
 			assert.strictEqual(updatedDecoration.category, null);
 
 			const readToken = await createAppToken(manager, ['read:admin:avatar-decorations']);
-			const scopeDenied = await api('admin/avatar-decorations/create', {
-				name: `hono-avatar-${now}-denied`,
-				description: 'avatar decoration body',
-				url: 'https://example.test/avatar-decoration.png',
-			}, { token: readToken });
+			const scopeDenied = await api(
+				'admin/avatar-decorations/create',
+				{
+					name: `hono-avatar-${now}-denied`,
+					description: 'avatar decoration body',
+					url: 'https://example.test/avatar-decoration.png',
+				},
+				{ token: readToken },
+			);
 			assert.strictEqual(scopeDenied.status, 403);
 			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -12213,7 +14067,7 @@ describe('Endpoints', () => {
 
 			const afterDelete = await api('admin/avatar-decorations/list', {}, manager);
 			assert.strictEqual(afterDelete.status, 200);
-			assert.ok(!afterDelete.body.some(decoration => decoration.id === created.body.id));
+			assert.ok(!afterDelete.body.some((decoration) => decoration.id === created.body.id));
 
 			const logTypes = ['createAvatarDecoration', 'updateAvatarDecoration', 'deleteAvatarDecoration'] as const;
 			const logged = new Set<string>();
@@ -12228,7 +14082,7 @@ describe('Endpoints', () => {
 					if (logs.length > 0) logged.add(type);
 				}
 				if (logged.size === logTypes.length) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
@@ -12258,28 +14112,36 @@ describe('Endpoints', () => {
 
 			const list = await api('admin/ad/list', { limit: 20 }, alice);
 			assert.strictEqual(list.status, 200);
-			assert.ok(list.body.some(ad => ad.id === created.body.id));
+			assert.ok(list.body.some((ad) => ad.id === created.body.id));
 
-			const updated = await api('admin/ad/update', {
-				id: created.body.id,
-				memo: `${createPayload.memo}-updated`,
-				ratio: 3,
-				isSensitive: false,
-			}, alice);
+			const updated = await api(
+				'admin/ad/update',
+				{
+					id: created.body.id,
+					memo: `${createPayload.memo}-updated`,
+					ratio: 3,
+					isSensitive: false,
+				},
+				alice,
+			);
 			assert.strictEqual(updated.status, 204);
 
 			const updatedList = await api('admin/ad/list', { limit: 20 }, alice);
 			assert.strictEqual(updatedList.status, 200);
-			const updatedAd = updatedList.body.find(ad => ad.id === created.body.id);
+			const updatedAd = updatedList.body.find((ad) => ad.id === created.body.id);
 			assert.ok(updatedAd);
 			assert.strictEqual(updatedAd.memo, `${createPayload.memo}-updated`);
 			assert.strictEqual(updatedAd.ratio, 3);
 			assert.strictEqual(updatedAd.isSensitive, false);
 
-			const noSuch = await api('admin/ad/update', {
-				id: '0000000000000000',
-				memo: 'missing',
-			}, alice);
+			const noSuch = await api(
+				'admin/ad/update',
+				{
+					id: '0000000000000000',
+					memo: 'missing',
+				},
+				alice,
+			);
 			assert.strictEqual(noSuch.status, 400);
 			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_AD');
 
@@ -12298,7 +14160,7 @@ describe('Endpoints', () => {
 
 			const afterDelete = await api('admin/ad/list', { limit: 20 }, alice);
 			assert.strictEqual(afterDelete.status, 200);
-			assert.ok(!afterDelete.body.some(ad => ad.id === created.body.id));
+			assert.ok(!afterDelete.body.some((ad) => ad.id === created.body.id));
 
 			const logTypes = ['createAd', 'updateAd', 'deleteAd'] as const;
 			const logged = new Set<string>();
@@ -12313,7 +14175,7 @@ describe('Endpoints', () => {
 					if (logs.length > 0) logged.add(type);
 				}
 				if (logged.size === logTypes.length) break;
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
@@ -12325,12 +14187,14 @@ describe('Endpoints', () => {
 			const indexes = await api('admin/get-index-stats', {}, alice);
 			assert.strictEqual(indexes.status, 200);
 			assert.ok(Array.isArray(indexes.body));
-			assert.ok(indexes.body.some(row => typeof row.tablename === 'string' && typeof row.indexname === 'string'));
+			assert.ok(indexes.body.some((row) => typeof row.tablename === 'string' && typeof row.indexname === 'string'));
 
 			const tables = await api('admin/get-table-stats', {}, alice);
 			assert.strictEqual(tables.status, 200);
 			assert.ok(Object.keys(tables.body).length > 0);
-			assert.ok(Object.values(tables.body).some(row => typeof row.count === 'number' && typeof row.size === 'number'));
+			assert.ok(
+				Object.values(tables.body).some((row) => typeof row.count === 'number' && typeof row.size === 'number'),
+			);
 
 			const indexToken = await createAppToken(alice, ['read:admin:index-stats']);
 			const tableScopeDenied = await api('admin/get-table-stats', {}, { token: indexToken });
@@ -12350,11 +14214,15 @@ describe('Endpoints', () => {
 			const myLocation = '七森中';
 			const myBirthday = '2000-09-07';
 
-			const res = await api('i/update', {
-				name: myName,
-				location: myLocation,
-				birthday: myBirthday,
-			}, alice);
+			const res = await api(
+				'i/update',
+				{
+					name: myName,
+					location: myLocation,
+					birthday: myBirthday,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -12364,30 +14232,46 @@ describe('Endpoints', () => {
 		});
 
 		test('名前を空白のみにした場合nullになる', async () => {
-			const res = await api('i/update', {
-				name: ' ',
-			}, alice);
+			const res = await api(
+				'i/update',
+				{
+					name: ' ',
+				},
+				alice,
+			);
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.name, null);
 		});
 
 		test('名前の前後に空白（ホワイトスペース）を入れてもトリムされる', async () => {
-			const res = await api('i/update', {
-				// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#white_space
-				name: ' あ い う \u0009\u000b\u000c\u0020\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\ufeff',
-			}, alice);
+			const res = await api(
+				'i/update',
+				{
+					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#white_space
+					name: ' あ い う \u0009\u000b\u000c\u0020\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\ufeff',
+				},
+				alice,
+			);
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.name, 'あ い う');
 		});
 
 		test('誕生日の設定を削除できる', async () => {
-			await api('i/update', {
-				birthday: '2000-09-07',
-			}, alice);
+			await api(
+				'i/update',
+				{
+					birthday: '2000-09-07',
+				},
+				alice,
+			);
 
-			const res = await api('i/update', {
-				birthday: null,
-			}, alice);
+			const res = await api(
+				'i/update',
+				{
+					birthday: null,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -12395,18 +14279,26 @@ describe('Endpoints', () => {
 		});
 
 		test('不正な誕生日の形式で怒られる', async () => {
-			const res = await api('i/update', {
-				birthday: '2000/09/07',
-			}, alice);
+			const res = await api(
+				'i/update',
+				{
+					birthday: '2000/09/07',
+				},
+				alice,
+			);
 			assert.strictEqual(res.status, 400);
 		});
 	});
 
 	describe('users/show', () => {
 		test('ユーザーが取得できる', async () => {
-			const res = await api('users/show', {
-				userId: alice.id,
-			}, alice);
+			const res = await api(
+				'users/show',
+				{
+					userId: alice.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -12575,7 +14467,7 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hnnfie${suffix}` });
 			const follower = await signup({ username: `hnnfir${suffix}` });
 			await api('following/create', { userId: followee.id }, follower);
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const res = await api('i/notifications', { includeTypes: ['follow'] }, followee);
 
@@ -12589,7 +14481,7 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hnnexe${suffix}` });
 			const follower = await signup({ username: `hnnexr${suffix}` });
 			await api('following/create', { userId: followee.id }, follower);
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const res = await api('i/notifications', { excludeTypes: ['follow'] }, followee);
 
@@ -12602,7 +14494,7 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hnniee${suffix}` });
 			const follower = await signup({ username: `hnnier${suffix}` });
 			await api('following/create', { userId: followee.id }, follower);
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const res = await api('i/notifications', { includeTypes: [] }, followee);
 
@@ -12620,7 +14512,7 @@ describe('Endpoints', () => {
 			const note = await post(author, { text: 'hi' });
 			await api('notes/reactions/create', { noteId: note.id, reaction: '🚀' }, reactor1);
 			await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, reactor2);
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const res = await api('i/notifications-grouped', {}, author);
 
@@ -12641,7 +14533,7 @@ describe('Endpoints', () => {
 			const note = await post(author, { text: 'hi' });
 			await post(renoter1, { renoteId: note.id });
 			await post(renoter2, { renoteId: note.id });
-			await new Promise(resolve => setTimeout(resolve, 300));
+			await new Promise((resolve) => setTimeout(resolve, 300));
 
 			const res = await api('i/notifications-grouped', {}, author);
 
@@ -12703,7 +14595,11 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hncp2${suffix}`, password: 'oldpassword' });
 
-			const res = await api('i/change-password', { currentPassword: 'wrongpassword', newPassword: 'newpassword' }, user);
+			const res = await api(
+				'i/change-password',
+				{ currentPassword: 'wrongpassword', newPassword: 'newpassword' },
+				user,
+			);
 			assert.notStrictEqual(res.status, 204);
 		});
 	});
@@ -12776,12 +14672,16 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnflc${suffix}` });
 
-			const res = await api('flash/create', {
-				title: 'test flash',
-				summary: 'summary',
-				script: 'Ui:render([])',
-				permissions: [],
-			}, user);
+			const res = await api(
+				'flash/create',
+				{
+					title: 'test flash',
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				user,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.title, 'test flash');
@@ -12792,12 +14692,16 @@ describe('Endpoints', () => {
 		test('作成したFlashを取得できる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnfls${suffix}` });
-			const created = await api('flash/create', {
-				title: 'test flash',
-				summary: 'summary',
-				script: 'Ui:render([])',
-				permissions: [],
-			}, user);
+			const created = await api(
+				'flash/create',
+				{
+					title: 'test flash',
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				user,
+			);
 
 			const res = await api('flash/show', { flashId: created.body.id }, user);
 
@@ -12814,12 +14718,16 @@ describe('Endpoints', () => {
 		test('自分のFlash一覧が取得できる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnflm${suffix}` });
-			await api('flash/create', {
-				title: 'test flash',
-				summary: 'summary',
-				script: 'Ui:render([])',
-				permissions: [],
-			}, user);
+			await api(
+				'flash/create',
+				{
+					title: 'test flash',
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				user,
+			);
 
 			const res = await api('flash/my', {}, user);
 
@@ -12830,12 +14738,16 @@ describe('Endpoints', () => {
 		test('削除できる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnfld${suffix}` });
-			const created = await api('flash/create', {
-				title: 'test flash',
-				summary: 'summary',
-				script: 'Ui:render([])',
-				permissions: [],
-			}, user);
+			const created = await api(
+				'flash/create',
+				{
+					title: 'test flash',
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				user,
+			);
 
 			const res = await api('flash/delete', { flashId: created.body.id }, user);
 			assert.strictEqual(res.status, 204);
@@ -12848,12 +14760,16 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hnflo${suffix}` });
 			const other = await signup({ username: `hnfloo${suffix}` });
-			const created = await api('flash/create', {
-				title: 'test flash',
-				summary: 'summary',
-				script: 'Ui:render([])',
-				permissions: [],
-			}, owner);
+			const created = await api(
+				'flash/create',
+				{
+					title: 'test flash',
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				owner,
+			);
 
 			const res = await api('flash/delete', { flashId: created.body.id }, other);
 			assert.strictEqual(res.status, 400);
@@ -12863,12 +14779,16 @@ describe('Endpoints', () => {
 		test('タイトルでキーワード検索できる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnflse${suffix}` });
-			await api('flash/create', {
-				title: `findme-${suffix}`,
-				summary: 'summary',
-				script: 'Ui:render([])',
-				permissions: [],
-			}, user);
+			await api(
+				'flash/create',
+				{
+					title: `findme-${suffix}`,
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				user,
+			);
 
 			const res = await api('flash/search', { query: `findme-${suffix}` });
 
@@ -12880,12 +14800,16 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hnflla${suffix}` });
 			const liker = await signup({ username: `hnfllb${suffix}` });
-			const created = await api('flash/create', {
-				title: 'test flash',
-				summary: 'summary',
-				script: 'Ui:render([])',
-				permissions: [],
-			}, owner);
+			const created = await api(
+				'flash/create',
+				{
+					title: 'test flash',
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				owner,
+			);
 			await api('flash/like', { flashId: created.body.id }, liker);
 
 			const res = await api('flash/my-likes', {}, liker);
@@ -12900,12 +14824,16 @@ describe('Endpoints', () => {
 			const config = loadConfig();
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hnflmd${suffix}` });
-			const created = await api('flash/create', {
-				title: 'test flash',
-				summary: 'summary',
-				script: 'Ui:render([])',
-				permissions: [],
-			}, owner);
+			const created = await api(
+				'flash/create',
+				{
+					title: 'test flash',
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				owner,
+			);
 
 			const moderatorRole = await role(alice, { isModerator: true });
 			const moderator = await signup({ username: `hnflmo${suffix}` });
@@ -12922,7 +14850,9 @@ describe('Endpoints', () => {
 			assert.strictEqual(shown.status, 400);
 
 			const logs = await listModerationLogsFromDatabase(db, { limit: 100, order: 'desc' });
-			const log = logs.find(l => l.userId === moderator.id && l.type === 'deleteFlash' && (l.info as any).flashId === created.body.id);
+			const log = logs.find(
+				(l) => l.userId === moderator.id && l.type === 'deleteFlash' && (l.info as any).flashId === created.body.id,
+			);
 			assert.ok(log);
 			assert.strictEqual((log!.info as any).flashUserId, owner.id);
 		});
@@ -12930,12 +14860,26 @@ describe('Endpoints', () => {
 		test('sinceId/untilIdで自分のFlash一覧を絞り込める', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnflpg${suffix}` });
-			const first = await api('flash/create', {
-				title: 'first', summary: 'summary', script: 'Ui:render([])', permissions: [],
-			}, user);
-			const second = await api('flash/create', {
-				title: 'second', summary: 'summary', script: 'Ui:render([])', permissions: [],
-			}, user);
+			const first = await api(
+				'flash/create',
+				{
+					title: 'first',
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				user,
+			);
+			const second = await api(
+				'flash/create',
+				{
+					title: 'second',
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				user,
+			);
 
 			const res = await api('flash/my', { sinceId: first.body.id }, user);
 
@@ -12947,13 +14891,17 @@ describe('Endpoints', () => {
 		test('非公開のFlashは検索結果に出ない', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const user = await signup({ username: `hnflpv${suffix}` });
-			await api('flash/create', {
-				title: `private-${suffix}`,
-				summary: 'summary',
-				script: 'Ui:render([])',
-				permissions: [],
-				visibility: 'private',
-			}, user);
+			await api(
+				'flash/create',
+				{
+					title: `private-${suffix}`,
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+					visibility: 'private',
+				},
+				user,
+			);
 
 			const res = await api('flash/search', { query: `private-${suffix}` });
 
@@ -12965,12 +14913,16 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hnflfa${suffix}` });
 			const liker = await signup({ username: `hnflfb${suffix}` });
-			const created = await api('flash/create', {
-				title: 'test flash',
-				summary: 'summary',
-				script: 'Ui:render([])',
-				permissions: [],
-			}, owner);
+			const created = await api(
+				'flash/create',
+				{
+					title: 'test flash',
+					summary: 'summary',
+					script: 'Ui:render([])',
+					permissions: [],
+				},
+				owner,
+			);
 			assert.strictEqual(created.status, 200);
 			const liked = await api('flash/like', { flashId: created.body.id }, liker);
 			assert.strictEqual(liked.status, 204);
@@ -12991,9 +14943,13 @@ describe('Endpoints', () => {
 				text: 'test',
 			});
 
-			const res = await api('notes/show', {
-				noteId: myPost.id,
-			}, alice);
+			const res = await api(
+				'notes/show',
+				{
+					noteId: myPost.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -13057,27 +15013,39 @@ describe('Endpoints', () => {
 		});
 
 		test('投票を作成できる', async () => {
-			const res = await api('notes/create', {
-				text: 'poll time',
-				poll: { choices: ['a', 'b'], multiple: false },
-			}, alice);
+			const res = await api(
+				'notes/create',
+				{
+					text: 'poll time',
+					poll: { choices: ['a', 'b'], multiple: false },
+				},
+				alice,
+			);
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.createdNote.poll!.choices.length, 2);
 
-			const expired = await api('notes/create', {
-				text: 'expired poll',
-				poll: { choices: ['a', 'b'], expiresAt: Date.now() - 10000 },
-			}, alice);
+			const expired = await api(
+				'notes/create',
+				{
+					text: 'expired poll',
+					poll: { choices: ['a', 'b'], expiresAt: Date.now() - 10000 },
+				},
+				alice,
+			);
 			assert.strictEqual(expired.status, 400);
 			assert.strictEqual(castAsError(expired.body as any).error.id, '04da457d-b083-4055-9082-955525eda5a5');
 		});
 
 		test('visibility: specified で visibleUserIds を保存できる', async () => {
-			const res = await api('notes/create', {
-				text: 'secret',
-				visibility: 'specified',
-				visibleUserIds: [bob.id],
-			}, alice);
+			const res = await api(
+				'notes/create',
+				{
+					text: 'secret',
+					visibility: 'specified',
+					visibleUserIds: [bob.id],
+				},
+				alice,
+			);
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(res.body.createdNote.visibility, 'specified');
 			assert.deepStrictEqual(res.body.createdNote.visibleUserIds, [bob.id]);
@@ -13138,16 +15106,24 @@ describe('Endpoints', () => {
 		test('リアクションできる', async () => {
 			const bobPost = await post(bob, { text: 'hi' });
 
-			const res = await api('notes/reactions/create', {
-				noteId: bobPost.id,
-				reaction: '🚀',
-			}, alice);
+			const res = await api(
+				'notes/reactions/create',
+				{
+					noteId: bobPost.id,
+					reaction: '🚀',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 204);
 
-			const resNote = await api('notes/show', {
-				noteId: bobPost.id,
-			}, alice);
+			const resNote = await api(
+				'notes/show',
+				{
+					noteId: bobPost.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(resNote.status, 200);
 			assert.strictEqual(resNote.body.reactions['🚀'], 1);
@@ -13156,10 +15132,14 @@ describe('Endpoints', () => {
 		test('自分の投稿にもリアクションできる', async () => {
 			const myPost = await post(alice, { text: 'hi' });
 
-			const res = await api('notes/reactions/create', {
-				noteId: myPost.id,
-				reaction: '🚀',
-			}, alice);
+			const res = await api(
+				'notes/reactions/create',
+				{
+					noteId: myPost.id,
+					reaction: '🚀',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 204);
 		});
@@ -13167,21 +15147,33 @@ describe('Endpoints', () => {
 		test('二重にリアクションすると上書きされる', async () => {
 			const bobPost = await post(bob, { text: 'hi' });
 
-			await api('notes/reactions/create', {
-				noteId: bobPost.id,
-				reaction: '🥰',
-			}, alice);
+			await api(
+				'notes/reactions/create',
+				{
+					noteId: bobPost.id,
+					reaction: '🥰',
+				},
+				alice,
+			);
 
-			const res = await api('notes/reactions/create', {
-				noteId: bobPost.id,
-				reaction: '🚀',
-			}, alice);
+			const res = await api(
+				'notes/reactions/create',
+				{
+					noteId: bobPost.id,
+					reaction: '🚀',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 204);
 
-			const resNote = await api('notes/show', {
-				noteId: bobPost.id,
-			}, alice);
+			const resNote = await api(
+				'notes/show',
+				{
+					noteId: bobPost.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(resNote.status, 200);
 			assert.deepStrictEqual(resNote.body.reactions, { '🚀': 1 });
@@ -13214,10 +15206,14 @@ describe('Endpoints', () => {
 		});
 
 		test('存在しない投稿にはリアクションできない', async () => {
-			const res = await api('notes/reactions/create', {
-				noteId: '000000000000000000000000',
-				reaction: '🚀',
-			}, alice);
+			const res = await api(
+				'notes/reactions/create',
+				{
+					noteId: '000000000000000000000000',
+					reaction: '🚀',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -13226,10 +15222,14 @@ describe('Endpoints', () => {
 			const bobNote = await post(bob, { text: 'hi' });
 			const bobRenote = await post(bob, { renoteId: bobNote.id });
 
-			const res = await api('notes/reactions/create', {
-				noteId: bobRenote.id,
-				reaction: '🚀',
-			}, alice);
+			const res = await api(
+				'notes/reactions/create',
+				{
+					noteId: bobRenote.id,
+					reaction: '🚀',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.ok(res.body);
@@ -13240,10 +15240,14 @@ describe('Endpoints', () => {
 			const bobNote = await post(bob, { text: 'hi' });
 			const bobRenote = await post(bob, { text: 'hi again', renoteId: bobNote.id });
 
-			const res = await api('notes/reactions/create', {
-				noteId: bobRenote.id,
-				reaction: '🚀',
-			}, alice);
+			const res = await api(
+				'notes/reactions/create',
+				{
+					noteId: bobRenote.id,
+					reaction: '🚀',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 204);
 		});
@@ -13251,10 +15255,14 @@ describe('Endpoints', () => {
 		test('空文字列のリアクションは\u2764にフォールバックされる', async () => {
 			const bobNote = await post(bob, { text: 'hi' });
 
-			const res = await api('notes/reactions/create', {
-				noteId: bobNote.id,
-				reaction: '',
-			}, alice);
+			const res = await api(
+				'notes/reactions/create',
+				{
+					noteId: bobNote.id,
+					reaction: '',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 204);
 
@@ -13269,10 +15277,14 @@ describe('Endpoints', () => {
 		test('絵文字ではない文字列のリアクションは\u2764にフォールバックされる', async () => {
 			const bobNote = await post(bob, { text: 'hi' });
 
-			const res = await api('notes/reactions/create', {
-				noteId: bobNote.id,
-				reaction: 'Hello!',
-			}, alice);
+			const res = await api(
+				'notes/reactions/create',
+				{
+					noteId: bobNote.id,
+					reaction: 'Hello!',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 204);
 
@@ -13292,10 +15304,14 @@ describe('Endpoints', () => {
 		});
 
 		test('間違ったIDで怒られる', async () => {
-			const res = await api('notes/reactions/create', {
-				noteId: 'kyoppie',
-				reaction: '🚀',
-			}, alice);
+			const res = await api(
+				'notes/reactions/create',
+				{
+					noteId: 'kyoppie',
+					reaction: '🚀',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -13312,7 +15328,10 @@ describe('Endpoints', () => {
 			];
 
 			for (const note of notes) {
-				assert.strictEqual((await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, author)).status, 204);
+				assert.strictEqual(
+					(await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, author)).status,
+					204,
+				);
 				for (const user of [undefined, viewer]) {
 					const res = await api('notes/reactions', { noteId: note.id }, user);
 					assert.strictEqual(res.status, 400);
@@ -13354,10 +15373,14 @@ describe('Endpoints', () => {
 
 	describe('notes/polls/vote', () => {
 		test('投票できる', async () => {
-			const created = await api('notes/create', {
-				text: 'poll',
-				poll: { choices: ['a', 'b'], multiple: false },
-			}, bob);
+			const created = await api(
+				'notes/create',
+				{
+					text: 'poll',
+					poll: { choices: ['a', 'b'], multiple: false },
+				},
+				bob,
+			);
 			assert.strictEqual(created.status, 200);
 
 			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
@@ -13370,10 +15393,14 @@ describe('Endpoints', () => {
 		});
 
 		test('複数投票可能な場合は複数選べる', async () => {
-			const created = await api('notes/create', {
-				text: 'multi poll',
-				poll: { choices: ['a', 'b', 'c'], multiple: true },
-			}, bob);
+			const created = await api(
+				'notes/create',
+				{
+					text: 'multi poll',
+					poll: { choices: ['a', 'b', 'c'], multiple: true },
+				},
+				bob,
+			);
 			assert.strictEqual(created.status, 200);
 
 			const first = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
@@ -13387,10 +15414,14 @@ describe('Endpoints', () => {
 		});
 
 		test('複数投票不可の場合は二重投票できない', async () => {
-			const created = await api('notes/create', {
-				text: 'single poll',
-				poll: { choices: ['a', 'b'], multiple: false },
-			}, bob);
+			const created = await api(
+				'notes/create',
+				{
+					text: 'single poll',
+					poll: { choices: ['a', 'b'], multiple: false },
+				},
+				bob,
+			);
 			assert.strictEqual(created.status, 200);
 
 			const first = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
@@ -13402,10 +15433,14 @@ describe('Endpoints', () => {
 		});
 
 		test('複数投票不可の場合は並行投票の一方だけ成功する', async () => {
-			const created = await api('notes/create', {
-				text: 'concurrent single poll',
-				poll: { choices: ['a', 'b'], multiple: false },
-			}, bob);
+			const created = await api(
+				'notes/create',
+				{
+					text: 'concurrent single poll',
+					poll: { choices: ['a', 'b'], multiple: false },
+				},
+				bob,
+			);
 			assert.strictEqual(created.status, 200);
 			const noteId = created.body.createdNote.id;
 
@@ -13413,22 +15448,29 @@ describe('Endpoints', () => {
 				api('notes/polls/vote', { noteId, choice: 0 }, alice),
 				api('notes/polls/vote', { noteId, choice: 1 }, alice),
 			]);
-			assert.deepStrictEqual(results.map(result => result.status).sort(), [204, 400]);
+			assert.deepStrictEqual(results.map((result) => result.status).sort(), [204, 400]);
 
 			const votes = await listPollVotesByNoteAndUserFromDatabase(db, noteId, alice.id);
 			const poll = await fetchPollByNoteIdOrFailFromDatabase(db, noteId);
 			assert.strictEqual(votes.length, 1);
-			assert.strictEqual(poll.votes.reduce((sum, count) => sum + count, 0), 1);
+			assert.strictEqual(
+				poll.votes.reduce((sum, count) => sum + count, 0),
+				1,
+			);
 			assert.strictEqual(poll.votes[votes[0]!.choice], 1);
 		});
 
 		test('閲覧できないpollには投票できない', async () => {
-			const created = await api('notes/create', {
-				text: 'private poll',
-				visibility: 'specified',
-				visibleUserIds: [bob.id],
-				poll: { choices: ['a', 'b'], multiple: false },
-			}, bob);
+			const created = await api(
+				'notes/create',
+				{
+					text: 'private poll',
+					visibility: 'specified',
+					visibleUserIds: [bob.id],
+					poll: { choices: ['a', 'b'], multiple: false },
+				},
+				bob,
+			);
 			assert.strictEqual(created.status, 200);
 
 			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
@@ -13437,10 +15479,14 @@ describe('Endpoints', () => {
 		});
 
 		test('無効な選択肢では怒られる', async () => {
-			const created = await api('notes/create', {
-				text: 'poll for invalid choice',
-				poll: { choices: ['a', 'b'], multiple: false },
-			}, bob);
+			const created = await api(
+				'notes/create',
+				{
+					text: 'poll for invalid choice',
+					poll: { choices: ['a', 'b'], multiple: false },
+				},
+				bob,
+			);
 			assert.strictEqual(created.status, 200);
 
 			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 5 }, alice);
@@ -13458,13 +15504,17 @@ describe('Endpoints', () => {
 		});
 
 		test('期限切れの投票には投票できない', async () => {
-			const created = await api('notes/create', {
-				text: 'expiring poll',
-				poll: { choices: ['a', 'b'], multiple: false, expiredAfter: 100 },
-			}, bob);
+			const created = await api(
+				'notes/create',
+				{
+					text: 'expiring poll',
+					poll: { choices: ['a', 'b'], multiple: false, expiredAfter: 100 },
+				},
+				bob,
+			);
 			assert.strictEqual(created.status, 200);
 
-			await new Promise(resolve => setTimeout(resolve, 300));
+			await new Promise((resolve) => setTimeout(resolve, 300));
 
 			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
 			assert.strictEqual(res.status, 400);
@@ -13478,10 +15528,14 @@ describe('Endpoints', () => {
 		});
 
 		test('ブロックされていると投票できない', async () => {
-			const created = await api('notes/create', {
-				text: 'blocked poll',
-				poll: { choices: ['a', 'b'], multiple: false },
-			}, bob);
+			const created = await api(
+				'notes/create',
+				{
+					text: 'blocked poll',
+					poll: { choices: ['a', 'b'], multiple: false },
+				},
+				bob,
+			);
 			assert.strictEqual(created.status, 200);
 
 			const block = await api('blocking/create', { userId: alice.id }, bob);
@@ -13499,9 +15553,13 @@ describe('Endpoints', () => {
 
 	describe('following/create', () => {
 		test('フォローできる', async () => {
-			const res = await api('following/create', {
-				userId: alice.id,
-			}, bob);
+			const res = await api(
+				'following/create',
+				{
+					userId: alice.id,
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 200);
 
@@ -13514,25 +15572,37 @@ describe('Endpoints', () => {
 		});
 
 		test('既にフォローしている場合は怒る', async () => {
-			const res = await api('following/create', {
-				userId: alice.id,
-			}, bob);
+			const res = await api(
+				'following/create',
+				{
+					userId: alice.id,
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('存在しないユーザーはフォローできない', async () => {
-			const res = await api('following/create', {
-				userId: '000000000000000000000000',
-			}, alice);
+			const res = await api(
+				'following/create',
+				{
+					userId: '000000000000000000000000',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('自分自身はフォローできない', async () => {
-			const res = await api('following/create', {
-				userId: alice.id,
-			}, alice);
+			const res = await api(
+				'following/create',
+				{
+					userId: alice.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -13545,9 +15615,13 @@ describe('Endpoints', () => {
 		});
 
 		test('間違ったIDで怒られる', async () => {
-			const res = await api('following/create', {
-				userId: 'foo',
-			}, alice);
+			const res = await api(
+				'following/create',
+				{
+					userId: 'foo',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -13555,13 +15629,21 @@ describe('Endpoints', () => {
 
 	describe('following/delete', () => {
 		test('フォロー解除できる', async () => {
-			await api('following/create', {
-				userId: alice.id,
-			}, bob);
+			await api(
+				'following/create',
+				{
+					userId: alice.id,
+				},
+				bob,
+			);
 
-			const res = await api('following/delete', {
-				userId: alice.id,
-			}, bob);
+			const res = await api(
+				'following/delete',
+				{
+					userId: alice.id,
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 200);
 
@@ -13574,25 +15656,37 @@ describe('Endpoints', () => {
 		});
 
 		test('フォローしていない場合は怒る', async () => {
-			const res = await api('following/delete', {
-				userId: alice.id,
-			}, bob);
+			const res = await api(
+				'following/delete',
+				{
+					userId: alice.id,
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('存在しないユーザーはフォロー解除できない', async () => {
-			const res = await api('following/delete', {
-				userId: '000000000000000000000000',
-			}, alice);
+			const res = await api(
+				'following/delete',
+				{
+					userId: '000000000000000000000000',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('自分自身はフォロー解除できない', async () => {
-			const res = await api('following/delete', {
-				userId: alice.id,
-			}, alice);
+			const res = await api(
+				'following/delete',
+				{
+					userId: alice.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -13605,9 +15699,13 @@ describe('Endpoints', () => {
 		});
 
 		test('間違ったIDで怒られる', async () => {
-			const res = await api('following/delete', {
-				userId: 'kyoppie',
-			}, alice);
+			const res = await api(
+				'following/delete',
+				{
+					userId: 'kyoppie',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -13657,14 +15755,17 @@ describe('Endpoints', () => {
 
 			const featuredAnonymous = await api('channels/featured', {});
 			assert.strictEqual(featuredAnonymous.status, 200);
-			const anonymousFeatured = (featuredAnonymous.body as any[]).find(channel => channel.id === followed.id);
+			const anonymousFeatured = (featuredAnonymous.body as any[]).find((channel) => channel.id === followed.id);
 			assert.ok(anonymousFeatured);
 			assert.strictEqual(Object.hasOwn(anonymousFeatured, 'isFollowing'), false);
-			assert.strictEqual((featuredAnonymous.body as any[]).some(channel => channel.id === archived.id), false);
+			assert.strictEqual(
+				(featuredAnonymous.body as any[]).some((channel) => channel.id === archived.id),
+				false,
+			);
 
 			const featured = await api('channels/featured', {}, alice);
 			assert.strictEqual(featured.status, 200);
-			const featuredFollowed = (featured.body as any[]).find(channel => channel.id === followed.id);
+			const featuredFollowed = (featured.body as any[]).find((channel) => channel.id === followed.id);
 			assert.ok(featuredFollowed);
 			assert.strictEqual(featuredFollowed.isFollowing, true);
 			assert.strictEqual(featuredFollowed.isFavorited, true);
@@ -13672,16 +15773,27 @@ describe('Endpoints', () => {
 
 			const ownedList = await api('channels/owned', { limit: 20 }, alice);
 			assert.strictEqual(ownedList.status, 200);
-			assert.strictEqual((ownedList.body as any[]).some(channel => channel.id === owned.id), true);
-			assert.strictEqual((ownedList.body as any[]).some(channel => channel.id === archived.id), false);
+			assert.strictEqual(
+				(ownedList.body as any[]).some((channel) => channel.id === owned.id),
+				true,
+			);
+			assert.strictEqual(
+				(ownedList.body as any[]).some((channel) => channel.id === archived.id),
+				false,
+			);
 
 			const followedList = await api('channels/followed', { limit: 20 }, alice);
 			assert.strictEqual(followedList.status, 200);
-			assert.deepStrictEqual((followedList.body as any[]).filter(channel => channel.id === followed.id).map(channel => channel.isFollowing), [true]);
+			assert.deepStrictEqual(
+				(followedList.body as any[])
+					.filter((channel) => channel.id === followed.id)
+					.map((channel) => channel.isFollowing),
+				[true],
+			);
 
 			const favorites = await api('channels/my-favorites', {}, alice);
 			assert.strictEqual(favorites.status, 200);
-			const favorite = (favorites.body as any[]).find(channel => channel.id === followed.id);
+			const favorite = (favorites.body as any[]).find((channel) => channel.id === followed.id);
 			assert.ok(favorite);
 			assert.strictEqual(favorite.isFavorited, true);
 		});
@@ -13721,14 +15833,18 @@ describe('Endpoints', () => {
 		test('create and update return packed channels with caller-scoped flags', async () => {
 			const owner = await signup({ username: `honochnowner${Date.now().toString(36)}` });
 			const createdBanner = await createOwnedDriveFile(owner.id, `hono-channel-create-${Date.now()}`);
-			const created = await api('channels/create', {
-				name: `hono-channel-create-${Date.now().toString(36)}`,
-				description: 'hono channel create target',
-				bannerId: createdBanner.id,
-				color: '#123456',
-				isSensitive: true,
-				allowRenoteToExternal: false,
-			}, owner);
+			const created = await api(
+				'channels/create',
+				{
+					name: `hono-channel-create-${Date.now().toString(36)}`,
+					description: 'hono channel create target',
+					bannerId: createdBanner.id,
+					color: '#123456',
+					isSensitive: true,
+					allowRenoteToExternal: false,
+				},
+				owner,
+			);
 			assert.strictEqual(created.status, 200);
 			assert.strictEqual(created.body.userId, owner.id);
 			assert.strictEqual(created.body.description, 'hono channel create target');
@@ -13742,17 +15858,21 @@ describe('Endpoints', () => {
 
 			const updatedBanner = await createOwnedDriveFile(owner.id, `hono-channel-update-${Date.now()}`);
 			const pinnedNoteId = '000000000000000000000001';
-			const updated = await api('channels/update', {
-				channelId: created.body.id,
-				name: 'hono channel updated',
-				description: null,
-				bannerId: updatedBanner.id,
-				isArchived: true,
-				pinnedNoteIds: [pinnedNoteId],
-				color: '#654321',
-				isSensitive: false,
-				allowRenoteToExternal: true,
-			}, owner);
+			const updated = await api(
+				'channels/update',
+				{
+					channelId: created.body.id,
+					name: 'hono channel updated',
+					description: null,
+					bannerId: updatedBanner.id,
+					isArchived: true,
+					pinnedNoteIds: [pinnedNoteId],
+					color: '#654321',
+					isSensitive: false,
+					allowRenoteToExternal: true,
+				},
+				owner,
+			);
 			assert.strictEqual(updated.status, 200);
 			assert.strictEqual(updated.body.id, created.body.id);
 			assert.strictEqual(updated.body.name, 'hono channel updated');
@@ -13807,25 +15927,37 @@ describe('Endpoints', () => {
 				expiresAt: null,
 			});
 
-			const policyDenied = await api('channels/create', {
-				name: 'hono policy denied channel',
-			}, deniedUser);
+			const policyDenied = await api(
+				'channels/create',
+				{
+					name: 'hono policy denied channel',
+				},
+				deniedUser,
+			);
 			assert.strictEqual(policyDenied.status, 403);
 			assert.strictEqual(castAsError(policyDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
 			assert.strictEqual(castAsError(policyDenied.body as any).error.id, 'c3d38592-54c0-429d-be96-5636b0431a61');
 
 			const otherFile = await createOwnedDriveFile(fileOwner.id, `hono-channel-other-file-${now}`);
-			const missingFile = await api('channels/create', {
-				name: 'hono channel missing file',
-				bannerId: otherFile.id,
-			}, requester);
+			const missingFile = await api(
+				'channels/create',
+				{
+					name: 'hono channel missing file',
+					bannerId: otherFile.id,
+				},
+				requester,
+			);
 			assert.strictEqual(missingFile.status, 400);
 			assert.strictEqual(castAsError(missingFile.body as any).error.id, 'cd1e9f3e-5a12-4ab4-96f6-5d0a2cc32050');
 
 			const readToken = await createAppToken(requester, ['read:channels']);
-			const permissionDenied = await api('channels/create', {
-				name: 'hono channel app denied',
-			}, { token: readToken });
+			const permissionDenied = await api(
+				'channels/create',
+				{
+					name: 'hono channel app denied',
+				},
+				{ token: readToken },
+			);
 			assert.strictEqual(permissionDenied.status, 403);
 			assert.strictEqual(castAsError(permissionDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -13833,9 +15965,13 @@ describe('Endpoints', () => {
 			await updateUserInDatabase(db, movedUser.id, {
 				movedToUri: `${origin}/users/${alice.id}`,
 			});
-			const movedDenied = await api('channels/create', {
-				name: 'hono moved denied channel',
-			}, movedUser);
+			const movedDenied = await api(
+				'channels/create',
+				{
+					name: 'hono moved denied channel',
+				},
+				movedUser,
+			);
 			assert.strictEqual(movedDenied.status, 403);
 			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
 		});
@@ -13852,33 +15988,49 @@ describe('Endpoints', () => {
 				description: 'hono update target',
 			});
 
-			const missing = await api('channels/update', {
-				channelId: '000000000000000000000000',
-				name: 'missing',
-			}, intruder);
+			const missing = await api(
+				'channels/update',
+				{
+					channelId: '000000000000000000000000',
+					name: 'missing',
+				},
+				intruder,
+			);
 			assert.strictEqual(missing.status, 400);
 			assert.strictEqual(castAsError(missing.body as any).error.id, 'f9c5467f-d492-4c3c-9a8d-a70dacc86512');
 
-			const denied = await api('channels/update', {
-				channelId: target.id,
-				name: 'denied',
-			}, intruder);
+			const denied = await api(
+				'channels/update',
+				{
+					channelId: target.id,
+					name: 'denied',
+				},
+				intruder,
+			);
 			assert.strictEqual(denied.status, 400);
 			assert.strictEqual(castAsError(denied.body as any).error.id, '1fb7cb09-d46a-4fdf-b8df-057788cce513');
 
 			const intruderFile = await createOwnedDriveFile(intruder.id, `hono-channel-intruder-file-${now}`);
-			const missingFile = await api('channels/update', {
-				channelId: target.id,
-				bannerId: intruderFile.id,
-			}, owner);
+			const missingFile = await api(
+				'channels/update',
+				{
+					channelId: target.id,
+					bannerId: intruderFile.id,
+				},
+				owner,
+			);
 			assert.strictEqual(missingFile.status, 400);
 			assert.strictEqual(castAsError(missingFile.body as any).error.id, 'e86c14a4-0da2-4032-8df3-e737a04c7f3b');
 
 			const readToken = await createAppToken(owner, ['read:channels']);
-			const permissionDenied = await api('channels/update', {
-				channelId: target.id,
-				name: 'denied by app scope',
-			}, { token: readToken });
+			const permissionDenied = await api(
+				'channels/update',
+				{
+					channelId: target.id,
+					name: 'denied by app scope',
+				},
+				{ token: readToken },
+			);
 			assert.strictEqual(permissionDenied.status, 403);
 			assert.strictEqual(castAsError(permissionDenied.body as any).error.code, 'PERMISSION_DENIED');
 
@@ -13913,10 +16065,14 @@ describe('Endpoints', () => {
 				expiresAt: null,
 			});
 
-			const moderatorUpdate = await api('channels/update', {
-				channelId: target.id,
-				name: 'moderator updated channel',
-			}, moderator);
+			const moderatorUpdate = await api(
+				'channels/update',
+				{
+					channelId: target.id,
+					name: 'moderator updated channel',
+				},
+				moderator,
+			);
 			assert.strictEqual(moderatorUpdate.status, 200);
 			assert.strictEqual(moderatorUpdate.body.id, target.id);
 			assert.strictEqual(moderatorUpdate.body.name, 'moderator updated channel');
@@ -13933,21 +16089,33 @@ describe('Endpoints', () => {
 				description: 'hono follow target',
 			});
 
-			const followed = await api('channels/follow', {
-				channelId: target.id,
-			}, alice);
+			const followed = await api(
+				'channels/follow',
+				{
+					channelId: target.id,
+				},
+				alice,
+			);
 			assert.strictEqual(followed.status, 204);
 			assert.strictEqual(await channelFollowingExistsInDatabase(db, alice.id, target.id), true);
 
-			const unfollowed = await api('channels/unfollow', {
-				channelId: target.id,
-			}, alice);
+			const unfollowed = await api(
+				'channels/unfollow',
+				{
+					channelId: target.id,
+				},
+				alice,
+			);
 			assert.strictEqual(unfollowed.status, 204);
 			assert.strictEqual(await channelFollowingExistsInDatabase(db, alice.id, target.id), false);
 
-			const unfollowedAgain = await api('channels/unfollow', {
-				channelId: target.id,
-			}, alice);
+			const unfollowedAgain = await api(
+				'channels/unfollow',
+				{
+					channelId: target.id,
+				},
+				alice,
+			);
 			assert.strictEqual(unfollowedAgain.status, 204);
 		});
 
@@ -13960,15 +16128,23 @@ describe('Endpoints', () => {
 				description: 'hono follow validation target',
 			});
 
-			const missingFollow = await api('channels/follow', {
-				channelId: '000000000000000000000000',
-			}, alice);
+			const missingFollow = await api(
+				'channels/follow',
+				{
+					channelId: '000000000000000000000000',
+				},
+				alice,
+			);
 			assert.strictEqual(missingFollow.status, 400);
 			assert.strictEqual(castAsError(missingFollow.body as any).error.id, 'c0031718-d573-4e85-928e-10039f1fbb68');
 
-			const missingUnfollow = await api('channels/unfollow', {
-				channelId: '000000000000000000000000',
-			}, alice);
+			const missingUnfollow = await api(
+				'channels/unfollow',
+				{
+					channelId: '000000000000000000000000',
+				},
+				alice,
+			);
 			assert.strictEqual(missingUnfollow.status, 400);
 			assert.strictEqual(castAsError(missingUnfollow.body as any).error.id, '19959ee9-0153-4c51-bbd9-a98c49dc59d6');
 
@@ -13983,9 +16159,13 @@ describe('Endpoints', () => {
 			await updateUserInDatabase(db, movedUser.id, {
 				movedToUri: `${origin}/users/${alice.id}`,
 			});
-			const movedDenied = await api('channels/follow', {
-				channelId: target.id,
-			}, movedUser);
+			const movedDenied = await api(
+				'channels/follow',
+				{
+					channelId: target.id,
+				},
+				movedUser,
+			);
 			assert.strictEqual(movedDenied.status, 403);
 			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
 			assert.strictEqual(await channelFollowingExistsInDatabase(db, movedUser.id, target.id), false);
@@ -14017,42 +16197,65 @@ describe('Endpoints', () => {
 				expiresAt: new Date(Date.now() - 60_000),
 			});
 
-			const created = await api('channels/mute/create', {
-				channelId: target.id,
-				expiresAt: Date.now() + 60_000,
-			}, alice);
+			const created = await api(
+				'channels/mute/create',
+				{
+					channelId: target.id,
+					expiresAt: Date.now() + 60_000,
+				},
+				alice,
+			);
 			assert.strictEqual(created.status, 204);
 			assert.strictEqual(await channelMutingExistsInDatabase(db, alice.id, target.id), true);
 
-			const duplicate = await api('channels/mute/create', {
-				channelId: target.id,
-			}, alice);
+			const duplicate = await api(
+				'channels/mute/create',
+				{
+					channelId: target.id,
+				},
+				alice,
+			);
 			assert.strictEqual(duplicate.status, 400);
 			assert.strictEqual(castAsError(duplicate.body as any).error.id, '5a251978-769a-da44-3e89-3931e43bb592');
 
-			const expiredDuplicate = await api('channels/mute/create', {
-				channelId: expiredTarget.id,
-			}, alice);
+			const expiredDuplicate = await api(
+				'channels/mute/create',
+				{
+					channelId: expiredTarget.id,
+				},
+				alice,
+			);
 			assert.strictEqual(expiredDuplicate.status, 400);
 			assert.strictEqual(castAsError(expiredDuplicate.body as any).error.id, '5a251978-769a-da44-3e89-3931e43bb592');
 
 			const list = await api('channels/mute/list', {}, alice);
 			assert.strictEqual(list.status, 200);
 			const mutedChannels = list.body as any[];
-			const muted = mutedChannels.find(channel => channel.id === target.id);
+			const muted = mutedChannels.find((channel) => channel.id === target.id);
 			assert.ok(muted);
 			assert.strictEqual(muted.isMuting, true);
-			assert.strictEqual(mutedChannels.some(channel => channel.id === expiredTarget.id), false);
+			assert.strictEqual(
+				mutedChannels.some((channel) => channel.id === expiredTarget.id),
+				false,
+			);
 
-			const deleted = await api('channels/mute/delete', {
-				channelId: target.id,
-			}, alice);
+			const deleted = await api(
+				'channels/mute/delete',
+				{
+					channelId: target.id,
+				},
+				alice,
+			);
 			assert.strictEqual(deleted.status, 204);
 			assert.strictEqual(await channelMutingExistsInDatabase(db, alice.id, target.id), false);
 
-			const missingDelete = await api('channels/mute/delete', {
-				channelId: target.id,
-			}, alice);
+			const missingDelete = await api(
+				'channels/mute/delete',
+				{
+					channelId: target.id,
+				},
+				alice,
+			);
 			assert.strictEqual(missingDelete.status, 400);
 			assert.strictEqual(castAsError(missingDelete.body as any).error.id, '14d55962-6ea8-d990-1333-d6bef78dc2ab');
 		});
@@ -14066,22 +16269,34 @@ describe('Endpoints', () => {
 				description: 'hono mute validation target',
 			});
 
-			const missingCreate = await api('channels/mute/create', {
-				channelId: '000000000000000000000000',
-			}, alice);
+			const missingCreate = await api(
+				'channels/mute/create',
+				{
+					channelId: '000000000000000000000000',
+				},
+				alice,
+			);
 			assert.strictEqual(missingCreate.status, 400);
 			assert.strictEqual(castAsError(missingCreate.body as any).error.id, '7174361e-d58f-31d6-2e7c-6fb830786a3f');
 
-			const missingDelete = await api('channels/mute/delete', {
-				channelId: '000000000000000000000000',
-			}, alice);
+			const missingDelete = await api(
+				'channels/mute/delete',
+				{
+					channelId: '000000000000000000000000',
+				},
+				alice,
+			);
 			assert.strictEqual(missingDelete.status, 400);
 			assert.strictEqual(castAsError(missingDelete.body as any).error.id, 'e7998769-6e94-d9c2-6b8f-94a527314aba');
 
-			const pastExpiration = await api('channels/mute/create', {
-				channelId: target.id,
-				expiresAt: Date.now() - 60_000,
-			}, alice);
+			const pastExpiration = await api(
+				'channels/mute/create',
+				{
+					channelId: target.id,
+					expiresAt: Date.now() - 60_000,
+				},
+				alice,
+			);
 			assert.strictEqual(pastExpiration.status, 400);
 			assert.strictEqual(castAsError(pastExpiration.body as any).error.id, '42b32236-df2c-a45f-fdbf-def67268f749');
 
@@ -14101,9 +16316,13 @@ describe('Endpoints', () => {
 			await updateUserInDatabase(db, movedUser.id, {
 				movedToUri: `${origin}/users/${alice.id}`,
 			});
-			const movedDenied = await api('channels/mute/create', {
-				channelId: target.id,
-			}, movedUser);
+			const movedDenied = await api(
+				'channels/mute/create',
+				{
+					channelId: target.id,
+				},
+				movedUser,
+			);
 			assert.strictEqual(movedDenied.status, 403);
 			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
 			assert.strictEqual(await channelMutingExistsInDatabase(db, movedUser.id, target.id), false);
@@ -14155,23 +16374,31 @@ describe('Endpoints', () => {
 		test('空白検索で一覧を取得できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
 
-			const res = await api('channels/search', {
-				query: '',
-			}, bob);
+			const res = await api(
+				'channels/search',
+				{
+					query: '',
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
-			const ids = (res.body as any[]).map(channel => channel.id);
+			const ids = (res.body as any[]).map((channel) => channel.id);
 			assert.strictEqual(ids.includes(fixture.aaa.id), true);
 			assert.strictEqual(ids.includes(fixture.ccc1.id), true);
 			assert.strictEqual(ids.includes(fixture.ccc2.id), true);
 		});
 		test('名前のみの検索で名前を検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
-			const res = await api('channels/search', {
-				query: fixture.aaa.name,
-				type: 'nameOnly',
-			}, bob);
+			const res = await api(
+				'channels/search',
+				{
+					query: fixture.aaa.name,
+					type: 'nameOnly',
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
@@ -14180,10 +16407,14 @@ describe('Endpoints', () => {
 		});
 		test('名前のみの検索で名前を複数検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
-			const res = await api('channels/search', {
-				query: `${fixture.prefix}-ccc`,
-				type: 'nameOnly',
-			}, bob);
+			const res = await api(
+				'channels/search',
+				{
+					query: `${fixture.prefix}-ccc`,
+					type: 'nameOnly',
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
@@ -14191,10 +16422,14 @@ describe('Endpoints', () => {
 		});
 		test('名前のみの検索で説明は検索できない', async () => {
 			const fixture = await ensureChannelSearchFixture();
-			const res = await api('channels/search', {
-				query: fixture.aaa.description,
-				type: 'nameOnly',
-			}, bob);
+			const res = await api(
+				'channels/search',
+				{
+					query: fixture.aaa.description,
+					type: 'nameOnly',
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
@@ -14202,9 +16437,13 @@ describe('Endpoints', () => {
 		});
 		test('名前と説明の検索で名前を検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
-			const res = await api('channels/search', {
-				query: fixture.ccc1.name,
-			}, bob);
+			const res = await api(
+				'channels/search',
+				{
+					query: fixture.ccc1.name,
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
@@ -14213,9 +16452,13 @@ describe('Endpoints', () => {
 		});
 		test('名前と説明での検索で説明を検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
-			const res = await api('channels/search', {
-				query: fixture.ccc1.description,
-			}, bob);
+			const res = await api(
+				'channels/search',
+				{
+					query: fixture.ccc1.description,
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
@@ -14224,9 +16467,13 @@ describe('Endpoints', () => {
 		});
 		test('名前と説明の検索で名前を複数検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
-			const res = await api('channels/search', {
-				query: `${fixture.prefix}-ccc`,
-			}, bob);
+			const res = await api(
+				'channels/search',
+				{
+					query: `${fixture.prefix}-ccc`,
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
@@ -14234,9 +16481,13 @@ describe('Endpoints', () => {
 		});
 		test('名前と説明での検索で説明を複数検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
-			const res = await api('channels/search', {
-				query: `${fixture.prefix}-ddd`,
-			}, bob);
+			const res = await api(
+				'channels/search',
+				{
+					query: `${fixture.prefix}-ddd`,
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
@@ -14320,10 +16571,14 @@ describe('Endpoints', () => {
 		const assignRole = async (userId: string, policies: Record<string, unknown>) => {
 			const createdRole = await role(alice, {}, policies);
 
-			const assign = await api('admin/roles/assign', {
-				userId,
-				roleId: createdRole.id,
-			}, alice);
+			const assign = await api(
+				'admin/roles/assign',
+				{
+					userId,
+					roleId: createdRole.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(assign.status, 204);
 
@@ -14331,14 +16586,22 @@ describe('Endpoints', () => {
 		};
 
 		const cleanupRole = async (userId: string, roleId: string) => {
-			await api('admin/roles/unassign', {
-				userId,
-				roleId,
-			}, alice);
+			await api(
+				'admin/roles/unassign',
+				{
+					userId,
+					roleId,
+				},
+				alice,
+			);
 
-			await api('admin/roles/delete', {
-				roleId,
-			}, alice);
+			await api(
+				'admin/roles/delete',
+				{
+					roleId,
+				},
+				alice,
+			);
 		};
 
 		test('ファイルを作成できる', async () => {
@@ -14381,7 +16644,10 @@ describe('Endpoints', () => {
 			assert.strictEqual(res.status, 400);
 			assert.ok(res.body);
 			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.code, 'NO_SUCH_FOLDER');
-			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.id, '12e7caa8-224f-471d-978a-653a81cf4c90');
+			assert.strictEqual(
+				castAsError(res.body as unknown as Record<string, unknown>).error.id,
+				'12e7caa8-224f-471d-978a-653a81cf4c90',
+			);
 		});
 
 		test('SVGファイルを作成できる', async () => {
@@ -14532,25 +16798,33 @@ describe('Endpoints', () => {
 	});
 
 	describe('drive/files/upload-from-url', () => {
-		test('URLからファイルをアップロードできる', async () => {
-			const res = await api('drive/files/upload-from-url', {
-				url: 'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg',
-				force: true,
-			}, alice);
-			assert.strictEqual(res.status, 204);
+		test(
+			'URLからファイルをアップロードできる',
+			async () => {
+				const res = await api(
+					'drive/files/upload-from-url',
+					{
+						url: 'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg',
+						force: true,
+					},
+					alice,
+				);
+				assert.strictEqual(res.status, 204);
 
-			// upload-from-url はサーバー側でダウンロードを待たずに応答するため、ファイルの出現をポーリングで待つ
-			let found: misskey.entities.DriveFile | undefined;
-			for (let i = 0; i < 20; i++) {
-				const list = await api('drive/files/find', { name: '192.jpg' }, alice);
-				found = (list.body as misskey.entities.DriveFile[]).find(f => f.name === '192.jpg');
-				if (found) break;
-				await new Promise(resolve => setTimeout(resolve, 500));
-			}
+				// upload-from-url はサーバー側でダウンロードを待たずに応答するため、ファイルの出現をポーリングで待つ
+				let found: misskey.entities.DriveFile | undefined;
+				for (let i = 0; i < 20; i++) {
+					const list = await api('drive/files/find', { name: '192.jpg' }, alice);
+					found = (list.body as misskey.entities.DriveFile[]).find((f) => f.name === '192.jpg');
+					if (found) break;
+					await new Promise((resolve) => setTimeout(resolve, 500));
+				}
 
-			assert.ok(found);
-			assert.strictEqual(found!.name, '192.jpg');
-		}, 1000 * 15);
+				assert.ok(found);
+				assert.strictEqual(found!.name, '192.jpg');
+			},
+			1000 * 15,
+		);
 	});
 
 	describe('drive/files/update', () => {
@@ -14558,10 +16832,14 @@ describe('Endpoints', () => {
 			const file = (await uploadFile(alice)).body;
 			const newName = 'いちごパスタ.png';
 
-			const res = await api('drive/files/update', {
-				fileId: file!.id,
-				name: newName,
-			}, alice);
+			const res = await api(
+				'drive/files/update',
+				{
+					fileId: file!.id,
+					name: newName,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -14571,24 +16849,38 @@ describe('Endpoints', () => {
 		test('他人のファイルは更新できない', async () => {
 			const file = (await uploadFile(alice)).body;
 
-			const res = await api('drive/files/update', {
-				fileId: file!.id,
-				name: 'いちごパスタ.png',
-			}, bob);
+			const res = await api(
+				'drive/files/update',
+				{
+					fileId: file!.id,
+					name: 'いちごパスタ.png',
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('親フォルダを更新できる', async () => {
 			const file = (await uploadFile(alice)).body;
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
 
-			const res = await api('drive/files/update', {
-				fileId: file!.id,
-				folderId: folder.id,
-			}, alice);
+			const res = await api(
+				'drive/files/update',
+				{
+					fileId: file!.id,
+					folderId: folder.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -14598,19 +16890,33 @@ describe('Endpoints', () => {
 		test('親フォルダを無しにできる', async () => {
 			const file = (await uploadFile(alice)).body;
 
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
 
-			await api('drive/files/update', {
-				fileId: file!.id,
-				folderId: folder.id,
-			}, alice);
+			await api(
+				'drive/files/update',
+				{
+					fileId: file!.id,
+					folderId: folder.id,
+				},
+				alice,
+			);
 
-			const res = await api('drive/files/update', {
-				fileId: file!.id,
-				folderId: null,
-			}, alice);
+			const res = await api(
+				'drive/files/update',
+				{
+					fileId: file!.id,
+					folderId: null,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -14619,14 +16925,24 @@ describe('Endpoints', () => {
 
 		test('他人のフォルダには入れられない', async () => {
 			const file = (await uploadFile(alice)).body;
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, bob)).body;
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					bob,
+				)
+			).body;
 
-			const res = await api('drive/files/update', {
-				fileId: file!.id,
-				folderId: folder.id,
-			}, alice);
+			const res = await api(
+				'drive/files/update',
+				{
+					fileId: file!.id,
+					folderId: folder.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -14634,10 +16950,14 @@ describe('Endpoints', () => {
 		test('存在しないフォルダで怒られる', async () => {
 			const file = (await uploadFile(alice)).body;
 
-			const res = await api('drive/files/update', {
-				fileId: file!.id,
-				folderId: '000000000000000000000000',
-			}, alice);
+			const res = await api(
+				'drive/files/update',
+				{
+					fileId: file!.id,
+					folderId: '000000000000000000000000',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -14645,19 +16965,27 @@ describe('Endpoints', () => {
 		test('不正なフォルダIDで怒られる', async () => {
 			const file = (await uploadFile(alice)).body;
 
-			const res = await api('drive/files/update', {
-				fileId: file!.id,
-				folderId: 'foo',
-			}, alice);
+			const res = await api(
+				'drive/files/update',
+				{
+					fileId: file!.id,
+					folderId: 'foo',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('ファイルが存在しなかったら怒る', async () => {
-			const res = await api('drive/files/update', {
-				fileId: '000000000000000000000000',
-				name: 'いちごパスタ.png',
-			}, alice);
+			const res = await api(
+				'drive/files/update',
+				{
+					fileId: '000000000000000000000000',
+					name: 'いちごパスタ.png',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -14666,19 +16994,27 @@ describe('Endpoints', () => {
 			const file = (await uploadFile(alice)).body;
 			const newName = '';
 
-			const res = await api('drive/files/update', {
-				fileId: file!.id,
-				name: newName,
-			}, alice);
+			const res = await api(
+				'drive/files/update',
+				{
+					fileId: file!.id,
+					name: newName,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('間違ったIDで怒られる', async () => {
-			const res = await api('drive/files/update', {
-				fileId: 'kyoppie',
-				name: 'いちごパスタ.png',
-			}, alice);
+			const res = await api(
+				'drive/files/update',
+				{
+					fileId: 'kyoppie',
+					name: 'いちごパスタ.png',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -14686,9 +17022,13 @@ describe('Endpoints', () => {
 
 	describe('drive/folders/create', () => {
 		test('フォルダを作成できる', async () => {
-			const res = await api('drive/folders/create', {
-				name: 'test',
-			}, alice);
+			const res = await api(
+				'drive/folders/create',
+				{
+					name: 'test',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -14706,9 +17046,13 @@ describe('Endpoints', () => {
 				parentId: null,
 			});
 
-			const res = await api('drive/folders/delete', {
-				folderId: folder.id,
-			}, alice);
+			const res = await api(
+				'drive/folders/delete',
+				{
+					folderId: folder.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 204);
 			assert.strictEqual(await fetchDriveFolderByIdFromDatabase(db, folder.id), null);
@@ -14723,9 +17067,13 @@ describe('Endpoints', () => {
 				parentId: null,
 			});
 
-			const res = await api('drive/folders/delete', {
-				folderId: folder.id,
-			}, bob);
+			const res = await api(
+				'drive/folders/delete',
+				{
+					folderId: folder.id,
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body as any).error.id, '1069098f-c281-440f-b085-f9932edbe091');
@@ -14747,9 +17095,13 @@ describe('Endpoints', () => {
 				parentId: parent.id,
 			});
 
-			const res = await api('drive/folders/delete', {
-				folderId: parent.id,
-			}, alice);
+			const res = await api(
+				'drive/folders/delete',
+				{
+					folderId: parent.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body as any).error.id, 'b0fc8a17-963c-405d-bfbc-859a487295e1');
@@ -14777,9 +17129,13 @@ describe('Endpoints', () => {
 				folderId: parent.id,
 			});
 
-			const res = await api('drive/folders/delete', {
-				folderId: parent.id,
-			}, alice);
+			const res = await api(
+				'drive/folders/delete',
+				{
+					folderId: parent.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body as any).error.id, 'b0fc8a17-963c-405d-bfbc-859a487295e1');
@@ -14789,14 +17145,24 @@ describe('Endpoints', () => {
 
 	describe('drive/folders/update', () => {
 		test('名前を更新できる', async () => {
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
 
-			const res = await api('drive/folders/update', {
-				folderId: folder.id,
-				name: 'new name',
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: folder.id,
+					name: 'new name',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -14804,30 +17170,56 @@ describe('Endpoints', () => {
 		});
 
 		test('他人のフォルダを更新できない', async () => {
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, bob)).body;
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					bob,
+				)
+			).body;
 
-			const res = await api('drive/folders/update', {
-				folderId: folder.id,
-				name: 'new name',
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: folder.id,
+					name: 'new name',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('親フォルダを更新できる', async () => {
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
-			const parentFolder = (await api('drive/folders/create', {
-				name: 'parent',
-			}, alice)).body;
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
+			const parentFolder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'parent',
+					},
+					alice,
+				)
+			).body;
 
-			const res = await api('drive/folders/update', {
-				folderId: folder.id,
-				parentId: parentFolder.id,
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: folder.id,
+					parentId: parentFolder.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -14835,21 +17227,41 @@ describe('Endpoints', () => {
 		});
 
 		test('親フォルダを無しに更新できる', async () => {
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
-			const parentFolder = (await api('drive/folders/create', {
-				name: 'parent',
-			}, alice)).body;
-			await api('drive/folders/update', {
-				folderId: folder.id,
-				parentId: parentFolder.id,
-			}, alice);
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
+			const parentFolder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'parent',
+					},
+					alice,
+				)
+			).body;
+			await api(
+				'drive/folders/update',
+				{
+					folderId: folder.id,
+					parentId: parentFolder.id,
+				},
+				alice,
+			);
 
-			const res = await api('drive/folders/update', {
-				folderId: folder.id,
-				parentId: null,
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: folder.id,
+					parentId: null,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
@@ -14857,119 +17269,223 @@ describe('Endpoints', () => {
 		});
 
 		test('他人のフォルダを親フォルダに設定できない', async () => {
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
-			const parentFolder = (await api('drive/folders/create', {
-				name: 'parent',
-			}, bob)).body;
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
+			const parentFolder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'parent',
+					},
+					bob,
+				)
+			).body;
 
-			const res = await api('drive/folders/update', {
-				folderId: folder.id,
-				parentId: parentFolder.id,
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: folder.id,
+					parentId: parentFolder.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('フォルダが循環するような構造にできない', async () => {
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
-			const parentFolder = (await api('drive/folders/create', {
-				name: 'parent',
-			}, alice)).body;
-			await api('drive/folders/update', {
-				folderId: parentFolder.id,
-				parentId: folder.id,
-			}, alice);
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
+			const parentFolder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'parent',
+					},
+					alice,
+				)
+			).body;
+			await api(
+				'drive/folders/update',
+				{
+					folderId: parentFolder.id,
+					parentId: folder.id,
+				},
+				alice,
+			);
 
-			const res = await api('drive/folders/update', {
-				folderId: folder.id,
-				parentId: parentFolder.id,
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: folder.id,
+					parentId: parentFolder.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('フォルダが循環するような構造にできない(再帰的)', async () => {
-			const folderA = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
-			const folderB = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
-			const folderC = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
-			await api('drive/folders/update', {
-				folderId: folderB.id,
-				parentId: folderA.id,
-			}, alice);
-			await api('drive/folders/update', {
-				folderId: folderC.id,
-				parentId: folderB.id,
-			}, alice);
+			const folderA = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
+			const folderB = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
+			const folderC = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
+			await api(
+				'drive/folders/update',
+				{
+					folderId: folderB.id,
+					parentId: folderA.id,
+				},
+				alice,
+			);
+			await api(
+				'drive/folders/update',
+				{
+					folderId: folderC.id,
+					parentId: folderB.id,
+				},
+				alice,
+			);
 
-			const res = await api('drive/folders/update', {
-				folderId: folderA.id,
-				parentId: folderC.id,
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: folderA.id,
+					parentId: folderC.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('フォルダが循環するような構造にできない(自身)', async () => {
-			const folderA = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
+			const folderA = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
 
-			const res = await api('drive/folders/update', {
-				folderId: folderA.id,
-				parentId: folderA.id,
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: folderA.id,
+					parentId: folderA.id,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('存在しない親フォルダを設定できない', async () => {
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
 
-			const res = await api('drive/folders/update', {
-				folderId: folder.id,
-				parentId: '000000000000000000000000',
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: folder.id,
+					parentId: '000000000000000000000000',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('不正な親フォルダIDで怒られる', async () => {
-			const folder = (await api('drive/folders/create', {
-				name: 'test',
-			}, alice)).body;
+			const folder = (
+				await api(
+					'drive/folders/create',
+					{
+						name: 'test',
+					},
+					alice,
+				)
+			).body;
 
-			const res = await api('drive/folders/update', {
-				folderId: folder.id,
-				parentId: 'foo',
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: folder.id,
+					parentId: 'foo',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('存在しないフォルダを更新できない', async () => {
-			const res = await api('drive/folders/update', {
-				folderId: '000000000000000000000000',
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: '000000000000000000000000',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
 
 		test('不正なフォルダIDで怒られる', async () => {
-			const res = await api('drive/folders/update', {
-				folderId: 'foo',
-			}, alice);
+			const res = await api(
+				'drive/folders/update',
+				{
+					folderId: 'foo',
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 		});
@@ -14988,9 +17504,13 @@ describe('Endpoints', () => {
 				visibleUserIds: [alice.id],
 			});
 
-			const res = await api('notes/replies', {
-				noteId: alicePost.id,
-			}, carol);
+			const res = await api(
+				'notes/replies',
+				{
+					noteId: alicePost.id,
+				},
+				carol,
+			);
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
@@ -15000,9 +17520,13 @@ describe('Endpoints', () => {
 
 	describe('notes/timeline', () => {
 		test('フォロワー限定投稿が含まれる', async () => {
-			await api('following/create', {
-				userId: carol.id,
-			}, dave);
+			await api(
+				'following/create',
+				{
+					userId: carol.id,
+				},
+				dave,
+			);
 
 			const carolPost = await post(carol, {
 				text: 'foo',
@@ -15030,14 +17554,22 @@ describe('Endpoints', () => {
 		test('他者に関するメモを更新できる', async () => {
 			const memo = '10月まで低浮上とのこと。';
 
-			const res1 = await api('users/update-memo', {
-				memo,
-				userId: bob.id,
-			}, alice);
+			const res1 = await api(
+				'users/update-memo',
+				{
+					memo,
+					userId: bob.id,
+				},
+				alice,
+			);
 
-			const res2 = await api('users/show', {
-				userId: bob.id,
-			}, alice);
+			const res2 = await api(
+				'users/show',
+				{
+					userId: bob.id,
+				},
+				alice,
+			);
 			assert.strictEqual(res1.status, 204);
 			assert.strictEqual((res2.body as unknown as { memo: string })?.memo, memo);
 		});
@@ -15045,14 +17577,22 @@ describe('Endpoints', () => {
 		test('自分に関するメモを更新できる', async () => {
 			const memo = 'チケットを月末までに買う。';
 
-			const res1 = await api('users/update-memo', {
-				memo,
-				userId: alice.id,
-			}, alice);
+			const res1 = await api(
+				'users/update-memo',
+				{
+					memo,
+					userId: alice.id,
+				},
+				alice,
+			);
 
-			const res2 = await api('users/show', {
-				userId: alice.id,
-			}, alice);
+			const res2 = await api(
+				'users/show',
+				{
+					userId: alice.id,
+				},
+				alice,
+			);
 			assert.strictEqual(res1.status, 204);
 			assert.strictEqual((res2.body as unknown as { memo: string })?.memo, memo);
 		});
@@ -15060,19 +17600,31 @@ describe('Endpoints', () => {
 		test('メモを削除できる', async () => {
 			const memo = '10月まで低浮上とのこと。';
 
-			await api('users/update-memo', {
-				memo,
-				userId: bob.id,
-			}, alice);
+			await api(
+				'users/update-memo',
+				{
+					memo,
+					userId: bob.id,
+				},
+				alice,
+			);
 
-			await api('users/update-memo', {
-				memo: '',
-				userId: bob.id,
-			}, alice);
+			await api(
+				'users/update-memo',
+				{
+					memo: '',
+					userId: bob.id,
+				},
+				alice,
+			);
 
-			const res = await api('users/show', {
-				userId: bob.id,
-			}, alice);
+			const res = await api(
+				'users/show',
+				{
+					userId: bob.id,
+				},
+				alice,
+			);
 
 			// memoには常に文字列かnullが入っている(5cac151)
 			assert.strictEqual((res.body as unknown as { memo: string | null }).memo, null);
@@ -15083,23 +17635,39 @@ describe('Endpoints', () => {
 			const memoCarolToBob = '例の件について今度問いただす。';
 
 			await Promise.all([
-				api('users/update-memo', {
-					memo: memoAliceToBob,
-					userId: bob.id,
-				}, alice),
-				api('users/update-memo', {
-					memo: memoCarolToBob,
-					userId: bob.id,
-				}, carol),
+				api(
+					'users/update-memo',
+					{
+						memo: memoAliceToBob,
+						userId: bob.id,
+					},
+					alice,
+				),
+				api(
+					'users/update-memo',
+					{
+						memo: memoCarolToBob,
+						userId: bob.id,
+					},
+					carol,
+				),
 			]);
 
 			const [resAlice, resCarol] = await Promise.all([
-				api('users/show', {
-					userId: bob.id,
-				}, alice),
-				api('users/show', {
-					userId: bob.id,
-				}, carol),
+				api(
+					'users/show',
+					{
+						userId: bob.id,
+					},
+					alice,
+				),
+				api(
+					'users/show',
+					{
+						userId: bob.id,
+					},
+					carol,
+				),
 			]);
 
 			assert.strictEqual((resAlice.body as unknown as { memo: string }).memo, memoAliceToBob);
@@ -15107,10 +17675,14 @@ describe('Endpoints', () => {
 		});
 
 		test('存在しないユーザーに対してはNO_SUCH_USERを維持する', async () => {
-			const res = await api('users/update-memo', {
-				memo: 'test',
-				userId: genId(),
-			}, alice);
+			const res = await api(
+				'users/update-memo',
+				{
+					memo: 'test',
+					userId: genId(),
+				},
+				alice,
+			);
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_USER');
 			assert.strictEqual(castAsError(res.body as any).error.id, '6fef56f3-e765-4957-88e5-c6f65329b8a5');

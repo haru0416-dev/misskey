@@ -50,11 +50,21 @@ export function createImageProcessingService() {
 	 * Convert to WebP
 	 *   with resize, remove metadata, resolve orientation, stop animation
 	 */
-	async function convertToWebp(path: string, width: number, height: number, options: WebpOptions = webpDefault): Promise<IImage> {
+	async function convertToWebp(
+		path: string,
+		width: number,
+		height: number,
+		options: WebpOptions = webpDefault,
+	): Promise<IImage> {
 		return convertSharpToWebp(sharp(path), width, height, options);
 	}
 
-	async function convertSharpToWebp(sharp: Sharp, width: number, height: number, options: WebpOptions = webpDefault): Promise<IImage> {
+	async function convertSharpToWebp(
+		sharp: Sharp,
+		width: number,
+		height: number,
+		options: WebpOptions = webpDefault,
+	): Promise<IImage> {
 		const result = convertSharpToWebpStream(sharp, width, height, options);
 
 		return {
@@ -64,11 +74,21 @@ export function createImageProcessingService() {
 		};
 	}
 
-	function convertToWebpStream(path: string, width: number, height: number, options: WebpOptions = webpDefault): IImageSharp {
+	function convertToWebpStream(
+		path: string,
+		width: number,
+		height: number,
+		options: WebpOptions = webpDefault,
+	): IImageSharp {
 		return convertSharpToWebpStream(sharp(path), width, height, options);
 	}
 
-	function convertSharpToWebpStream(sharp: Sharp, width: number, height: number, options: WebpOptions = webpDefault): IImageSharp {
+	function convertSharpToWebpStream(
+		sharp: Sharp,
+		width: number,
+		height: number,
+		options: WebpOptions = webpDefault,
+	): IImageSharp {
 		const data = sharp
 			.resize(width, height, {
 				fit: 'inside',
@@ -88,11 +108,21 @@ export function createImageProcessingService() {
 	 * Convert to Avif
 	 *   with resize, remove metadata, resolve orientation, stop animation
 	 */
-	async function convertToAvif(path: string, width: number, height: number, options: AvifOptions = avifDefault): Promise<IImage> {
+	async function convertToAvif(
+		path: string,
+		width: number,
+		height: number,
+		options: AvifOptions = avifDefault,
+	): Promise<IImage> {
 		return convertSharpToAvif(sharp(path), width, height, options);
 	}
 
-	async function convertSharpToAvif(sharp: Sharp, width: number, height: number, options: AvifOptions = avifDefault): Promise<IImage> {
+	async function convertSharpToAvif(
+		sharp: Sharp,
+		width: number,
+		height: number,
+		options: AvifOptions = avifDefault,
+	): Promise<IImage> {
 		const result = convertSharpToAvifStream(sharp, width, height, options);
 
 		return {
@@ -102,11 +132,21 @@ export function createImageProcessingService() {
 		};
 	}
 
-	function convertToAvifStream(path: string, width: number, height: number, options: AvifOptions = avifDefault): IImageSharp {
+	function convertToAvifStream(
+		path: string,
+		width: number,
+		height: number,
+		options: AvifOptions = avifDefault,
+	): IImageSharp {
 		return convertSharpToAvifStream(sharp(path), width, height, options);
 	}
 
-	function convertSharpToAvifStream(sharp: Sharp, width: number, height: number, options: AvifOptions = avifDefault): IImageSharp {
+	function convertSharpToAvifStream(
+		sharp: Sharp,
+		width: number,
+		height: number,
+		options: AvifOptions = avifDefault,
+	): IImageSharp {
 		const data = sharp
 			.resize(width, height, {
 				fit: 'inside',

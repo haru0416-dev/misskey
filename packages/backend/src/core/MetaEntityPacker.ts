@@ -32,10 +32,7 @@ function parseTheme(theme: string | null): string | null {
 	}
 }
 
-export async function packMetaLite(
-	deps: MetaEntityPackerDependencies,
-	meta = deps.meta,
-): Promise<Packed<'MetaLite'>> {
+export async function packMetaLite(deps: MetaEntityPackerDependencies, meta = deps.meta): Promise<Packed<'MetaLite'>> {
 	const ads = await (deps.listActiveAds ?? listActiveAdsFromDatabase)(deps.db);
 
 	return {
@@ -83,7 +80,7 @@ export async function packMetaLite(
 		defaultLightTheme: parseTheme(meta.defaultLightTheme),
 		defaultDarkTheme: parseTheme(meta.defaultDarkTheme),
 		clientOptions: meta.clientOptions,
-		ads: ads.map(ad => ({
+		ads: ads.map((ad) => ({
 			id: ad.id,
 			url: ad.url,
 			place: ad.place,
@@ -96,23 +93,28 @@ export async function packMetaLite(
 		enableEmail: meta.enableEmail,
 		enableServiceWorker: meta.enableServiceWorker,
 
-		translatorAvailable: meta.translatorProvider === 'deepl'
-			? meta.deeplAuthKey != null
-			: meta.libreTranslateApiUrl != null,
+		translatorAvailable:
+			meta.translatorProvider === 'deepl' ? meta.deeplAuthKey != null : meta.libreTranslateApiUrl != null,
 
 		serverRules: meta.serverRules,
 
 		policies: { ...DEFAULT_POLICIES, ...meta.policies },
 
-		telemetryForFrontend: deps.config.observability.telemetry.frontend == null ? null : {
-			endpoint: deps.config.observability.telemetry.frontend.endpoint,
-			serviceName: deps.config.observability.telemetry.frontend.serviceName,
-			tracesSampleRatio: deps.config.observability.telemetry.frontend.tracesSampleRatio,
-			propagateTraceHeaderCorsUrls: deps.config.observability.telemetry.frontend.propagateTraceHeaderCorsUrls,
-		},
+		telemetryForFrontend:
+			deps.config.observability.telemetry.frontend == null
+				? null
+				: {
+						endpoint: deps.config.observability.telemetry.frontend.endpoint,
+						serviceName: deps.config.observability.telemetry.frontend.serviceName,
+						tracesSampleRatio: deps.config.observability.telemetry.frontend.tracesSampleRatio,
+						propagateTraceHeaderCorsUrls: deps.config.observability.telemetry.frontend.propagateTraceHeaderCorsUrls,
+					},
 		mediaProxy: deps.config.media.proxyUrl,
 		enableUrlPreview: meta.urlPreviewEnabled,
-		noteSearchableScope: (deps.config.search.provider === 'meilisearch' && deps.config.search.meilisearch?.scope === 'local') ? 'local' : 'global',
+		noteSearchableScope:
+			deps.config.search.provider === 'meilisearch' && deps.config.search.meilisearch?.scope === 'local'
+				? 'local'
+				: 'global',
 		maxFileSize: deps.config.limits.maximumFileSizeBytes,
 		federation: deps.meta.federation,
 	};
@@ -123,7 +125,9 @@ export async function packMetaDetailed(
 	meta = deps.meta,
 ): Promise<Packed<'MetaDetailed'>> {
 	const packed = await packMetaLite(deps, meta);
-	const proxyAccount = await (deps.fetchProxyAccount ?? (() => fetchOrCreateSystemAccount(deps.db, deps.config, deps.meta, 'proxy')))();
+	const proxyAccount = await (
+		deps.fetchProxyAccount ?? (() => fetchOrCreateSystemAccount(deps.db, deps.config, deps.meta, 'proxy'))
+	)();
 
 	return {
 		...packed,

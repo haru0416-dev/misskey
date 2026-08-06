@@ -8,7 +8,12 @@ import { hashPassword } from '@/misc/password.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { EmailService } from '@/core/EmailService.js';
-import { consumePasswordResetRequestInDatabase, createPasswordResetRequestInDatabase, fetchPasswordResetRequestByTokenFromDatabase, isPasswordResetRequestExpired } from '@/core/PasswordResetRequestStore.js';
+import {
+	consumePasswordResetRequestInDatabase,
+	createPasswordResetRequestInDatabase,
+	fetchPasswordResetRequestByTokenFromDatabase,
+	isPasswordResetRequestExpired,
+} from '@/core/PasswordResetRequestStore.js';
 import { fetchLocalUserByUsernameFromDatabase } from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -64,11 +69,17 @@ export async function handleHonoApiRequestResetPassword(
 ): Promise<void> {
 	const params = parseHonoApiParams(requestResetPasswordParamDef, body);
 
-	if (await isHonoApiRateLimited(deps, {
-		key: 'request-reset-password',
-		duration: 60 * 60 * 1000,
-		max: 3,
-	}, getIpHash(ip))) {
+	if (
+		await isHonoApiRateLimited(
+			deps,
+			{
+				key: 'request-reset-password',
+				duration: 60 * 60 * 1000,
+				max: 3,
+			},
+			getIpHash(ip),
+		)
+	) {
 		throw rateLimitExceededError();
 	}
 
@@ -89,9 +100,14 @@ export async function handleHonoApiRequestResetPassword(
 
 	const link = `${deps.config.instance.url}/reset-password/${token}`;
 
-	trackPromise(deps.emailService.sendEmail(params.email, 'Password reset requested',
-		`To reset password, please click this link:<br><a href="${link}">${link}</a>`,
-		`To reset password, please click this link: ${link}`));
+	trackPromise(
+		deps.emailService.sendEmail(
+			params.email,
+			'Password reset requested',
+			`To reset password, please click this link:<br><a href="${link}">${link}</a>`,
+			`To reset password, please click this link: ${link}`,
+		),
+	);
 }
 
 export async function handleHonoApiResetPassword(

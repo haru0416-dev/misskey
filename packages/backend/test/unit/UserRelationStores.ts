@@ -8,11 +8,27 @@ process.env['NODE_ENV'] = 'test';
 
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createBlockingInDatabase, listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase, listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase } from '@/core/BlockingStore.js';
-import { createFollowRequestInDatabase, listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase, listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase } from '@/core/FollowRequestStore.js';
-import { createFollowingInDatabase, deleteFollowingAndUpdateUserCountsByIdInDatabase, listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase, listFollowingsByFollowerIdAndFolloweeIdsFromDatabase } from '@/core/FollowingStore.js';
+import {
+	createBlockingInDatabase,
+	listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase,
+	listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase,
+} from '@/core/BlockingStore.js';
+import {
+	createFollowRequestInDatabase,
+	listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
+	listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
+} from '@/core/FollowRequestStore.js';
+import {
+	createFollowingInDatabase,
+	deleteFollowingAndUpdateUserCountsByIdInDatabase,
+	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
+	listFollowingsByFollowerIdAndFolloweeIdsFromDatabase,
+} from '@/core/FollowingStore.js';
 import { createMutingInDatabase, listMuteeIdsByMuterIdAndMuteeIdsFromDatabase } from '@/core/MutingStore.js';
-import { createRenoteMutingInDatabase, listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase } from '@/core/RenoteMutingStore.js';
+import {
+	createRenoteMutingInDatabase,
+	listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase,
+} from '@/core/RenoteMutingStore.js';
 import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -30,13 +46,15 @@ describe('targeted user relation stores', () => {
 	});
 
 	test('returns only requested users in both relation directions', async () => {
-		const users = await Promise.all(['viewer', 'target', 'unrelated'].map(async prefix => {
-			const id = genId();
-			return await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
-				user: { id, username: `relation${prefix}${id}`, usernameLower: `relation${prefix}${id}` },
-				profile: { userId: id },
-			});
-		}));
+		const users = await Promise.all(
+			['viewer', 'target', 'unrelated'].map(async (prefix) => {
+				const id = genId();
+				return await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
+					user: { id, username: `relation${prefix}${id}`, usernameLower: `relation${prefix}${id}` },
+					profile: { userId: id },
+				});
+			}),
+		);
 		const [viewer, target, unrelated] = users;
 		if (viewer == null || target == null || unrelated == null) throw new Error('Failed to create relation test users');
 
@@ -54,27 +72,19 @@ describe('targeted user relation stores', () => {
 		}
 
 		const targetIds = [target.id];
-		const [
-			followings,
-			followers,
-			outgoingRequests,
-			incomingRequests,
-			blockees,
-			blockers,
-			mutees,
-			renoteMutees,
-		] = await Promise.all([
-			listFollowingsByFollowerIdAndFolloweeIdsFromDatabase(runtime.db, viewer.id, targetIds),
-			listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(runtime.db, viewer.id, targetIds),
-			listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(runtime.db, viewer.id, targetIds),
-			listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(runtime.db, viewer.id, targetIds),
-			listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(runtime.db, viewer.id, targetIds),
-			listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(runtime.db, viewer.id, targetIds),
-			listMuteeIdsByMuterIdAndMuteeIdsFromDatabase(runtime.db, viewer.id, targetIds),
-			listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase(runtime.db, viewer.id, targetIds),
-		]);
+		const [followings, followers, outgoingRequests, incomingRequests, blockees, blockers, mutees, renoteMutees] =
+			await Promise.all([
+				listFollowingsByFollowerIdAndFolloweeIdsFromDatabase(runtime.db, viewer.id, targetIds),
+				listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(runtime.db, viewer.id, targetIds),
+				listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(runtime.db, viewer.id, targetIds),
+				listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(runtime.db, viewer.id, targetIds),
+				listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(runtime.db, viewer.id, targetIds),
+				listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(runtime.db, viewer.id, targetIds),
+				listMuteeIdsByMuterIdAndMuteeIdsFromDatabase(runtime.db, viewer.id, targetIds),
+				listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase(runtime.db, viewer.id, targetIds),
+			]);
 
-		expect(followings.map(following => following.followeeId)).toEqual(targetIds);
+		expect(followings.map((following) => following.followeeId)).toEqual(targetIds);
 		expect(followers).toEqual(targetIds);
 		expect(outgoingRequests).toEqual(targetIds);
 		expect(incomingRequests).toEqual(targetIds);
@@ -89,11 +99,21 @@ describe('targeted user relation stores', () => {
 		const followeeId = genId();
 		const [follower, followee] = await Promise.all([
 			createUserWithProfileAndPublickeyInDatabase(runtime.db, {
-				user: { id: followerId, username: `deletefollower${followerId}`, usernameLower: `deletefollower${followerId}`, followingCount: 1 },
+				user: {
+					id: followerId,
+					username: `deletefollower${followerId}`,
+					usernameLower: `deletefollower${followerId}`,
+					followingCount: 1,
+				},
 				profile: { userId: followerId },
 			}),
 			createUserWithProfileAndPublickeyInDatabase(runtime.db, {
-				user: { id: followeeId, username: `deletefollowee${followeeId}`, usernameLower: `deletefollowee${followeeId}`, followersCount: 1 },
+				user: {
+					id: followeeId,
+					username: `deletefollowee${followeeId}`,
+					usernameLower: `deletefollowee${followeeId}`,
+					followersCount: 1,
+				},
 				profile: { userId: followeeId },
 			}),
 		]);
@@ -119,11 +139,21 @@ describe('targeted user relation stores', () => {
 		const followeeId = genId();
 		const [follower, followee] = await Promise.all([
 			createUserWithProfileAndPublickeyInDatabase(runtime.db, {
-				user: { id: followerId, username: `blockfollower${followerId}`, usernameLower: `blockfollower${followerId}`, followingCount: 1 },
+				user: {
+					id: followerId,
+					username: `blockfollower${followerId}`,
+					usernameLower: `blockfollower${followerId}`,
+					followingCount: 1,
+				},
 				profile: { userId: followerId },
 			}),
 			createUserWithProfileAndPublickeyInDatabase(runtime.db, {
-				user: { id: followeeId, username: `blockfollowee${followeeId}`, usernameLower: `blockfollowee${followeeId}`, followersCount: 1 },
+				user: {
+					id: followeeId,
+					username: `blockfollowee${followeeId}`,
+					usernameLower: `blockfollowee${followeeId}`,
+					followersCount: 1,
+				},
 				profile: { userId: followeeId },
 			}),
 		]);
@@ -139,10 +169,7 @@ describe('targeted user relation stores', () => {
 			publishInternalEvent,
 		} as unknown as HonoApiAccountBlockingDependencies;
 
-		await Promise.all([
-			unfollow(deps, follower, followee, true),
-			unfollow(deps, follower, followee, true),
-		]);
+		await Promise.all([unfollow(deps, follower, followee, true), unfollow(deps, follower, followee, true)]);
 		const [updatedFollower, updatedFollowee] = await Promise.all([
 			fetchUserByIdOrFailFromDatabase(runtime.db, followerId),
 			fetchUserByIdOrFailFromDatabase(runtime.db, followeeId),

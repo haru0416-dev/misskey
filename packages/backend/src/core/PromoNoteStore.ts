@@ -19,7 +19,5 @@ export async function isPromoNoteExists(db: MiDrizzleDatabase, noteId: MiNote['i
 }
 
 export async function createPromoNoteInDatabase(db: MiDrizzleDatabase, data: PromoNoteInsert): Promise<void> {
-	await db
-		.insert(promoNote)
-		.values(data);
+	await db.insert(promoNote).values(data);
 }

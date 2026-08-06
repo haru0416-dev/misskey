@@ -54,7 +54,8 @@ async function checkLimiter(options: {
 	}
 	const start = now - durationMicroseconds;
 
-	const res = await options.db.multi()
+	const res = await options.db
+		.multi()
 		.zremrangebyscore(key, 0, start)
 		.zcard(key)
 		.zadd(key, now, randomUUID())
@@ -132,10 +133,17 @@ export async function assertHonoApiRateLimit(
 	actor: string,
 	factor = 1,
 ): Promise<void> {
-	if (await isHonoApiRateLimited(deps, {
-		...limitation,
-		key: limitation.key ?? endpointName,
-	}, actor, factor)) {
+	if (
+		await isHonoApiRateLimited(
+			deps,
+			{
+				...limitation,
+				key: limitation.key ?? endpointName,
+			},
+			actor,
+			factor,
+		)
+	) {
 		throw rateLimitExceededError();
 	}
 }
@@ -153,10 +161,17 @@ export async function assertHonoApiRateLimitForUser(
 	const factor = (await getHonoApiRolePolicies(deps, user)).rateLimitFactor;
 	if (factor <= 0) return;
 
-	if (await isHonoApiRateLimitedForUser(deps, {
-		...limitation,
-		key: limitation.key ?? endpointName,
-	}, user.id, factor)) {
+	if (
+		await isHonoApiRateLimitedForUser(
+			deps,
+			{
+				...limitation,
+				key: limitation.key ?? endpointName,
+			},
+			user.id,
+			factor,
+		)
+	) {
 		throw rateLimitExceededError();
 	}
 }

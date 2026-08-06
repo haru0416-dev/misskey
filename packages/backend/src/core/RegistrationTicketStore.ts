@@ -4,7 +4,11 @@
  */
 
 import { and, asc, count, desc, eq, gt, isNotNull, isNull, lt, sql, type SQL } from 'drizzle-orm';
-import { registrationTicket, type RegistrationTicketInsert, type RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
+import {
+	registrationTicket,
+	type RegistrationTicketInsert,
+	type RegistrationTicketRow,
+} from '@/db/schema/registration-ticket.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -16,11 +20,7 @@ export async function fetchRegistrationTicketByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: RegistrationTicketRow['id'],
 ): Promise<RegistrationTicketRow | null> {
-	const [row] = await db
-		.select()
-		.from(registrationTicket)
-		.where(eq(registrationTicket.id, id))
-		.limit(1);
+	const [row] = await db.select().from(registrationTicket).where(eq(registrationTicket.id, id)).limit(1);
 
 	return row ?? null;
 }
@@ -42,11 +42,7 @@ export async function fetchRegistrationTicketByCodeFromDatabase(
 	db: MiDrizzleDatabase,
 	code: RegistrationTicketRow['code'],
 ): Promise<RegistrationTicketRow | null> {
-	const [row] = await db
-		.select()
-		.from(registrationTicket)
-		.where(eq(registrationTicket.code, code))
-		.limit(1);
+	const [row] = await db.select().from(registrationTicket).where(eq(registrationTicket.code, code)).limit(1);
 
 	return row ?? null;
 }
@@ -74,10 +70,7 @@ export async function countRegistrationTicketsCreatedSinceFromDatabase(
 	const [row] = await db
 		.select({ count: count() })
 		.from(registrationTicket)
-		.where(and(
-			eq(registrationTicket.createdById, options.createdById),
-			gt(registrationTicket.id, options.sinceId),
-		));
+		.where(and(eq(registrationTicket.createdById, options.createdById), gt(registrationTicket.id, options.sinceId)));
 
 	return row?.count ?? 0;
 }
@@ -86,10 +79,7 @@ export async function createRegistrationTicketInDatabase(
 	db: MiDrizzleDatabase,
 	data: RegistrationTicketInsert,
 ): Promise<RegistrationTicketRow> {
-	const [row] = await db
-		.insert(registrationTicket)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(registrationTicket).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create registration ticket');
@@ -106,7 +96,7 @@ export async function createRegistrationTicketWithinLimitInDatabase(
 		limit: number;
 	},
 ): Promise<RegistrationTicketRow | null> {
-	return await db.transaction(async tx => {
+	return await db.transaction(async (tx) => {
 		await acquireAdvisoryTransactionLockInDatabase(tx, 'invitation-limit', data.createdById);
 		const count = await countRegistrationTicketsCreatedSinceFromDatabase(tx, {
 			createdById: data.createdById,
@@ -126,13 +116,10 @@ export async function createRegistrationTicketsInDatabase(
 ): Promise<RegistrationTicketRow[]> {
 	if (data.length === 0) return [];
 
-	const rows = await db
-		.insert(registrationTicket)
-		.values(data)
-		.returning();
-	const rowById = new Map(rows.map(row => [row.id, row]));
+	const rows = await db.insert(registrationTicket).values(data).returning();
+	const rowById = new Map(rows.map((row) => [row.id, row]));
 
-	return data.map(ticket => {
+	return data.map((ticket) => {
 		const row = rowById.get(ticket.id);
 		if (row == null) {
 			throw new Error(`Failed to create registration ticket ${ticket.id}`);
@@ -146,19 +133,14 @@ export async function updateRegistrationTicketInDatabase(
 	id: RegistrationTicketRow['id'],
 	values: Partial<RegistrationTicketInsert>,
 ): Promise<void> {
-	await db
-		.update(registrationTicket)
-		.set(values)
-		.where(eq(registrationTicket.id, id));
+	await db.update(registrationTicket).set(values).where(eq(registrationTicket.id, id));
 }
 
 export async function deleteRegistrationTicketInDatabase(
 	db: MiDrizzleDatabase,
 	id: RegistrationTicketRow['id'],
 ): Promise<void> {
-	await db
-		.delete(registrationTicket)
-		.where(eq(registrationTicket.id, id));
+	await db.delete(registrationTicket).where(eq(registrationTicket.id, id));
 }
 
 function applyRegistrationTicketPaginationCondition(
@@ -235,18 +217,34 @@ export async function listRegistrationTicketsForAdminFromDatabase(
 	const conditions: SQL[] = [];
 
 	switch (options.type) {
-		case 'unused': conditions.push(isNull(registrationTicket.usedById)); break;
-		case 'used': conditions.push(isNotNull(registrationTicket.usedById)); break;
-		case 'expired': conditions.push(lt(registrationTicket.expiresAt, new Date())); break;
+		case 'unused':
+			conditions.push(isNull(registrationTicket.usedById));
+			break;
+		case 'used':
+			conditions.push(isNotNull(registrationTicket.usedById));
+			break;
+		case 'expired':
+			conditions.push(lt(registrationTicket.expiresAt, new Date()));
+			break;
 	}
 
 	let orderBy: SQL;
 	switch (options.sort) {
-		case '+createdAt': orderBy = desc(registrationTicket.id); break;
-		case '-createdAt': orderBy = asc(registrationTicket.id); break;
-		case '+usedAt': orderBy = sql`${registrationTicket.usedAt} DESC NULLS LAST`; break;
-		case '-usedAt': orderBy = sql`${registrationTicket.usedAt} ASC NULLS FIRST`; break;
-		default: orderBy = desc(registrationTicket.id); break;
+		case '+createdAt':
+			orderBy = desc(registrationTicket.id);
+			break;
+		case '-createdAt':
+			orderBy = asc(registrationTicket.id);
+			break;
+		case '+usedAt':
+			orderBy = sql`${registrationTicket.usedAt} DESC NULLS LAST`;
+			break;
+		case '-usedAt':
+			orderBy = sql`${registrationTicket.usedAt} ASC NULLS FIRST`;
+			break;
+		default:
+			orderBy = desc(registrationTicket.id);
+			break;
 	}
 
 	return await db

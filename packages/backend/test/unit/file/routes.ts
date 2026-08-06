@@ -61,14 +61,16 @@ async function close(server: Server): Promise<void> {
 	if (!server.listening) return;
 
 	await new Promise<void>((resolve, reject) => {
-		server.close(err => err ? reject(err) : resolve());
+		server.close((err) => (err ? reject(err) : resolve()));
 	});
 }
 
 async function createRemoteFileServer() {
 	const flatPngBuffer = await sharp({
 		create: { width: 8, height: 8, channels: 3, background: { r: 0, g: 0, b: 0 } },
-	}).png().toBuffer();
+	})
+		.png()
+		.toBuffer();
 	const server = createServer((req, res) => {
 		const pathname = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
 
@@ -285,7 +287,9 @@ describe('createFileServerApp', () => {
 				});
 
 				expect(res.statusCode).toBe(200);
-				expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
+				expect(res.headers['content-security-policy']).toBe(
+					"default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
+				);
 				expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
 				expect(res.headers['content-type']).toBe('image/jpeg');
 				expect(res.headers['access-control-allow-origin']).toBeUndefined();
@@ -319,7 +323,9 @@ describe('createFileServerApp', () => {
 
 			expect(res.statusCode).toBe(301);
 			expect(res.headers['location']).toBe('/files/app-default.jpg');
-			expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
+			expect(res.headers['content-security-policy']).toBe(
+				"default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
+			);
 		});
 	});
 
@@ -351,7 +357,9 @@ describe('createFileServerApp', () => {
 			});
 
 			expect(res.statusCode).toBe(200);
-			expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
+			expect(res.headers['content-security-policy']).toBe(
+				"default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
+			);
 			expect(res.headers['cache-control']).toBe('max-age=31536000, immutable');
 			expect(res.headers['content-type']).toBe('image/png');
 			expect(res.headers['content-length']).toBe(String(dummySize));
@@ -620,7 +628,9 @@ describe('createFileServerApp', () => {
 
 			expect(res.statusCode).toBe(301);
 			expect(res.headers['location']).toBe(`${config.instance.url}/files/testkey`);
-			expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
+			expect(res.headers['content-security-policy']).toBe(
+				"default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
+			);
 		});
 	});
 
@@ -636,7 +646,9 @@ describe('createFileServerApp', () => {
 			expect(res.headers['location']).toContain('https://media-proxy.test/');
 			expect(res.headers['location']).toContain('url=https%3A%2F%2Fexample.com%2Fimg.png');
 			expect(res.headers['location']).toContain('static=1');
-			expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
+			expect(res.headers['content-security-policy']).toBe(
+				"default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
+			);
 		});
 
 		test('GET /proxy/:url* misskey User-Agent を拒否する', async () => {
@@ -664,7 +676,9 @@ describe('createFileServerApp', () => {
 			expect(res.statusCode).toBe(400);
 			expect(res.headers['cache-control']).toBe('max-age=300');
 			expect(res.headers['location']).toBeUndefined();
-			expect(res.headers['content-security-policy']).toBe('default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'');
+			expect(res.headers['content-security-policy']).toBe(
+				"default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
+			);
 		});
 
 		test('GET /proxy/:url* emoji 指定で非画像は 404 を返す', async () => {

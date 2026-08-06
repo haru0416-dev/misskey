@@ -29,10 +29,14 @@ export function createS3Service(httpRequestService: HttpRequestService) {
 
 		return new S3Client({
 			...(meta.objectStorageEndpoint ? { endpoint: u } : {}),
-			...((meta.objectStorageAccessKey !== null && meta.objectStorageSecretKey !== null) ? { credentials: {
-				accessKeyId: meta.objectStorageAccessKey,
-				secretAccessKey: meta.objectStorageSecretKey,
-			} } : {}),
+			...(meta.objectStorageAccessKey !== null && meta.objectStorageSecretKey !== null
+				? {
+						credentials: {
+							accessKeyId: meta.objectStorageAccessKey,
+							secretAccessKey: meta.objectStorageSecretKey,
+						},
+					}
+				: {}),
 			...(meta.objectStorageRegion ? { region: meta.objectStorageRegion } : {}), // 空文字列も省略するため ?? は使わない
 			tls: meta.objectStorageUseSSL,
 			forcePathStyle: meta.objectStorageEndpoint ? meta.objectStorageS3ForcePathStyle : false, // AWS with endPoint omitted
@@ -47,9 +51,10 @@ export function createS3Service(httpRequestService: HttpRequestService) {
 		return new Upload({
 			client,
 			params: input,
-			partSize: (client.config.endpoint && (await client.config.endpoint()).hostname === 'storage.googleapis.com')
-				? 500 * 1024 * 1024
-				: 8 * 1024 * 1024,
+			partSize:
+				client.config.endpoint && (await client.config.endpoint()).hostname === 'storage.googleapis.com'
+					? 500 * 1024 * 1024
+					: 8 * 1024 * 1024,
 		}).done();
 	}
 

@@ -28,10 +28,7 @@ async function connectToRedis(redisOptions) {
 			showFriendlyErrorStack: true,
 		});
 
-		await Promise.race([
-			new Promise((_, reject) => redis.on('error', e => reject(e))),
-			redis.connect(),
-		]);
+		await Promise.race([new Promise((_, reject) => redis.on('error', (e) => reject(e))), redis.connect()]);
 	} finally {
 		redis.disconnect(false);
 	}
@@ -39,17 +36,16 @@ async function connectToRedis(redisOptions) {
 
 // If not all of these are defined, the default one gets reused.
 // so we use a Set to only try connecting once to each **uniq** redis.
-const promises = Array
-	.from(new Set([
+const promises = Array.from(
+	new Set([
 		config.valkey.primary,
 		config.valkey.pubsub,
 		config.valkey.jobQueue,
 		config.valkey.timelines,
 		config.valkey.reactions,
-	]))
+	]),
+)
 	.map(connectToRedis)
-	.concat([
-		connectToPostgres(),
-	]);
+	.concat([connectToPostgres()]);
 
 await Promise.all(promises);

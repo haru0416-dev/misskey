@@ -32,15 +32,15 @@ const clusterLogger = logger.createSubLogger('cluster', 'orange');
 let shuttingDown = false;
 let disposeRuntime: (() => Promise<void>) | undefined;
 
-cluster.on('fork', worker => {
+cluster.on('fork', (worker) => {
 	clusterLogger.debug(`Process forked: [${worker.id}]`);
 });
 
-cluster.on('online', worker => {
+cluster.on('online', (worker) => {
 	clusterLogger.debug(`Process is now online: [${worker.id}]`);
 });
 
-cluster.on('exit', worker => {
+cluster.on('exit', (worker) => {
 	clusterLogger.error(chalk.red(`[${worker.id}] died :(`));
 	if (!shuttingDown) cluster.fork();
 });
@@ -51,7 +51,7 @@ if (!envOption.quiet) {
 
 process.on('unhandledRejection', recordException);
 
-process.on('uncaughtException', err => {
+process.on('uncaughtException', (err) => {
 	recordException(err);
 	try {
 		logger.error(err);
@@ -63,7 +63,7 @@ process.on('uncaughtException', err => {
 	void shutdownTelemetry().finally(() => process.exit(1));
 });
 
-process.on('exit', code => {
+process.on('exit', (code) => {
 	logger.info(`The process is going to exit with code ${code}`);
 });
 
@@ -87,13 +87,12 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 				}),
 			]).finally(() => clearTimeout(timeout));
 			process.exit(0);
-		})().catch(error => {
+		})().catch((error) => {
 			logger.error(error);
 			process.exit(1);
 		});
 	});
 }
-
 
 if (!envOption.disableClustering) {
 	if (cluster.isPrimary) {
@@ -116,7 +115,7 @@ if (!envOption.disableClustering) {
 	globalEventBus.mount();
 }
 
-process.on('message', msg => {
+process.on('message', (msg) => {
 	if (msg === 'gc') {
 		if (global.gc != null) {
 			logger.info('Manual GC triggered');
@@ -125,7 +124,9 @@ process.on('message', msg => {
 			}
 			if (process.send != null) process.send('gc ok');
 		} else {
-			logger.warn('Manual GC requested but gc is not available. Start the process with --expose-gc to enable this feature.');
+			logger.warn(
+				'Manual GC requested but gc is not available. Start the process with --expose-gc to enable this feature.',
+			);
 			if (process.send != null) process.send('gc unavailable');
 		}
 	} else if (msg === 'memory usage') {
@@ -135,7 +136,14 @@ process.on('message', msg => {
 				value: process.memoryUsage(),
 			});
 		}
-	} else if (msg != null && typeof msg === 'object' && 'type' in msg && msg.type === 'heap snapshot' && 'path' in msg && typeof msg.path === 'string') {
+	} else if (
+		msg != null &&
+		typeof msg === 'object' &&
+		'type' in msg &&
+		msg.type === 'heap snapshot' &&
+		'path' in msg &&
+		typeof msg.path === 'string'
+	) {
 		if (process.send != null) {
 			try {
 				const path = writeHeapSnapshot(msg.path);

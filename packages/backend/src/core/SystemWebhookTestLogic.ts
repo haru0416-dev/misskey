@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { AbuseReportPayload, InactiveModeratorsWarningPayload, SystemWebhookPayload } from '@/core/system-webhook-types.js';
+import type {
+	AbuseReportPayload,
+	InactiveModeratorsWarningPayload,
+	SystemWebhookPayload,
+} from '@/core/system-webhook-types.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiAbuseUserReport, MiUser } from '@/models/_.js';
 import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
@@ -23,8 +27,7 @@ export type SystemWebhookTestDependencies = {
 	populateEmojis: PopulateDummyEmojis;
 };
 
-export class NoSuchSystemWebhookForTestError extends Error {
-}
+export class NoSuchSystemWebhookForTestError extends Error {}
 
 function generateDummyUser(override?: Partial<MiUser>): MiUser {
 	return {
@@ -114,7 +117,7 @@ async function toPackedUserLiteForSystemWebhookTest(
 		host: user.host,
 		avatarUrl: (user.avatarId == null ? null : user.avatarUrl) ?? '',
 		avatarBlurhash: user.avatarId == null ? null : user.avatarBlurhash,
-		avatarDecorations: user.avatarDecorations.map(it => ({
+		avatarDecorations: user.avatarDecorations.map((it) => ({
 			id: it.id,
 			angle: it.angle,
 			flipH: it.flipH,
@@ -155,7 +158,9 @@ async function generateSystemWebhookTestAbuseReport(
 
 	return {
 		...result,
-		targetUser: result.targetUser ? await toPackedUserLiteForSystemWebhookTest(populateEmojis, result.targetUser) : null,
+		targetUser: result.targetUser
+			? await toPackedUserLiteForSystemWebhookTest(populateEmojis, result.targetUser)
+			: null,
 		reporter: result.reporter ? await toPackedUserLiteForSystemWebhookTest(populateEmojis, result.reporter) : null,
 		assignee: result.assignee ? await toPackedUserLiteForSystemWebhookTest(populateEmojis, result.assignee) : null,
 	};
@@ -167,15 +172,15 @@ async function createSystemWebhookTestPayload<T extends SystemWebhookEventType>(
 ): Promise<SystemWebhookPayload<T>> {
 	switch (type) {
 		case 'abuseReport': {
-			return await generateSystemWebhookTestAbuseReport(populateEmojis, {
+			return (await generateSystemWebhookTestAbuseReport(populateEmojis, {
 				targetUserId: dummyUser1.id,
 				targetUser: dummyUser1,
 				reporterId: dummyUser2.id,
 				reporter: dummyUser2,
-			}) as SystemWebhookPayload<T>;
+			})) as SystemWebhookPayload<T>;
 		}
 		case 'abuseReportResolved': {
-			return await generateSystemWebhookTestAbuseReport(populateEmojis, {
+			return (await generateSystemWebhookTestAbuseReport(populateEmojis, {
 				targetUserId: dummyUser1.id,
 				targetUser: dummyUser1,
 				reporterId: dummyUser2.id,
@@ -183,10 +188,10 @@ async function createSystemWebhookTestPayload<T extends SystemWebhookEventType>(
 				assigneeId: dummyUser3.id,
 				assignee: dummyUser3,
 				resolved: true,
-			}) as SystemWebhookPayload<T>;
+			})) as SystemWebhookPayload<T>;
 		}
 		case 'userCreated': {
-			return await toPackedUserLiteForSystemWebhookTest(populateEmojis, dummyUser1) as SystemWebhookPayload<T>;
+			return (await toPackedUserLiteForSystemWebhookTest(populateEmojis, dummyUser1)) as SystemWebhookPayload<T>;
 		}
 		case 'inactiveModeratorsWarning': {
 			const dummyTime: InactiveModeratorsWarningPayload['remainingTime'] = {

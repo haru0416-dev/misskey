@@ -11,13 +11,12 @@ type ApiEndpoints = typeof import('../api/endpoints.js').default;
 let endpointsPromise: Promise<ApiEndpoints> | undefined;
 
 function getEndpoints(): Promise<ApiEndpoints> {
-	return endpointsPromise ??= import('../api/endpoints.js').then(module => module.default);
+	return (endpointsPromise ??= import('../api/endpoints.js').then((module) => module.default));
 }
 
 export const endpointParamDef = z.object({
 	endpoint: z.string(),
 });
-
 
 function apiParamTypeLabel(value: unknown): string {
 	if (value != null && typeof value === 'object' && 'type' in value) {
@@ -28,9 +27,16 @@ function apiParamTypeLabel(value: unknown): string {
 	// Zod の `.nullable()` は標準 JSON Schema では `anyOf: [{type: X}, {type: 'null'}]` になり、
 	// 直下に `type` を持たない (旧 ajv 版の `{type: X, nullable: true}` とは形が異なる)。
 	// その場合は null 以外の枝から type を拾う。
-	if (value != null && typeof value === 'object' && 'anyOf' in value && Array.isArray((value as { anyOf: unknown }).anyOf)) {
+	if (
+		value != null &&
+		typeof value === 'object' &&
+		'anyOf' in value &&
+		Array.isArray((value as { anyOf: unknown }).anyOf)
+	) {
 		const branches = (value as { anyOf: unknown[] }).anyOf;
-		const nonNullBranch = branches.find(branch => branch != null && typeof branch === 'object' && (branch as { type?: unknown }).type !== 'null');
+		const nonNullBranch = branches.find(
+			(branch) => branch != null && typeof branch === 'object' && (branch as { type?: unknown }).type !== 'null',
+		);
 		if (nonNullBranch != null) return apiParamTypeLabel(nonNullBranch);
 	}
 
@@ -52,7 +58,7 @@ function paramProperties(params: unknown): Record<string, unknown> {
 
 export async function handleHonoApiEndpoints(): Promise<string[]> {
 	const endpoints = await getEndpoints();
-	return endpoints.map(endpoint => endpoint.name);
+	return endpoints.map((endpoint) => endpoint.name);
 }
 
 export async function handleHonoApiEndpoint(body: Record<string, unknown>): Promise<{
@@ -63,7 +69,7 @@ export async function handleHonoApiEndpoint(body: Record<string, unknown>): Prom
 } | null> {
 	const params = parseHonoApiParams(endpointParamDef, body);
 	const endpoints = await getEndpoints();
-	const endpoint = endpoints.find(item => item.name === params.endpoint);
+	const endpoint = endpoints.find((item) => item.name === params.endpoint);
 	if (endpoint == null) return null;
 
 	return {

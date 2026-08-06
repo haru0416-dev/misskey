@@ -4,7 +4,13 @@
  */
 
 import { pageParamDef } from '@/server/rest/favorites.js';
-import { pagesCreateParamDef, pagesDeleteParamDef, pagesFeaturedParamDef, pagesShowParamDef, pagesUpdateParamDef } from '@/server/rest/pages.js';
+import {
+	pagesCreateParamDef,
+	pagesDeleteParamDef,
+	pagesFeaturedParamDef,
+	pagesShowParamDef,
+	pagesUpdateParamDef,
+} from '@/server/rest/pages.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -25,7 +31,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Page',
 			},
 
@@ -76,10 +83,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Page',
 				},
 			},
@@ -126,7 +135,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Page',
 			},
 

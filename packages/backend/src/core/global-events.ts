@@ -146,8 +146,8 @@ export interface RoleTimelineEventTypes {
 export interface AdminEventTypes {
 	newAbuseUserReport: {
 		id: MiAbuseUserReport['id'];
-		targetUserId: MiUser['id'],
-		reporterId: MiUser['id'],
+		targetUserId: MiUser['id'];
+		reporterId: MiUser['id'];
 		comment: string;
 	};
 }
@@ -167,15 +167,11 @@ export interface ChatEventTypes {
 	};
 }
 
-
 // 辞書(interface or type)から{ type, body }ユニオンを定義
 // https://stackoverflow.com/questions/49311989/can-i-infer-the-type-of-a-value-using-extends-keyof-type
 // VS Codeの展開を防止するためにEvents型を定義
-type Events<T extends object> = { [K in keyof T]: { type: K; body: T[K]; } };
-type EventUnionFromDictionary<
-	T extends object,
-	U = Events<T>,
-> = U[keyof U];
+type Events<T extends object> = { [K in keyof T]: { type: K; body: T[K] } };
+type EventUnionFromDictionary<T extends object, U = Events<T>> = U[keyof U];
 
 type SerializedAll<T> = {
 	[K in keyof T]: Serialized<T[K]>;
@@ -186,17 +182,17 @@ type UndefinedAsNullAll<T> = {
 };
 
 export interface InternalEventTypes {
-	userChangeSuspendedState: { id: MiUser['id']; isSuspended: MiUser['isSuspended']; };
-	userChangeDeletedState: { id: MiUser['id']; isDeleted: MiUser['isDeleted']; };
-	userTokenRegenerated: { id: MiUser['id']; oldToken: string; newToken: string; };
-	remoteUserUpdated: { id: MiUser['id']; };
-	localUserUpdated: { id: MiUser['id']; };
-	follow: { followerId: MiUser['id']; followeeId: MiUser['id']; withReplies: MiFollowing['withReplies']; };
-	unfollow: { followerId: MiUser['id']; followeeId: MiUser['id']; };
-	followingUpdated: { followerId: MiUser['id']; followeeId: MiUser['id']; withReplies: MiFollowing['withReplies']; };
-	followingsUpdated: { followerId: MiUser['id']; withReplies: MiFollowing['withReplies']; };
-	blockingCreated: { blockerId: MiUser['id']; blockeeId: MiUser['id']; };
-	blockingDeleted: { blockerId: MiUser['id']; blockeeId: MiUser['id']; };
+	userChangeSuspendedState: { id: MiUser['id']; isSuspended: MiUser['isSuspended'] };
+	userChangeDeletedState: { id: MiUser['id']; isDeleted: MiUser['isDeleted'] };
+	userTokenRegenerated: { id: MiUser['id']; oldToken: string; newToken: string };
+	remoteUserUpdated: { id: MiUser['id'] };
+	localUserUpdated: { id: MiUser['id'] };
+	follow: { followerId: MiUser['id']; followeeId: MiUser['id']; withReplies: MiFollowing['withReplies'] };
+	unfollow: { followerId: MiUser['id']; followeeId: MiUser['id'] };
+	followingUpdated: { followerId: MiUser['id']; followeeId: MiUser['id']; withReplies: MiFollowing['withReplies'] };
+	followingsUpdated: { followerId: MiUser['id']; withReplies: MiFollowing['withReplies'] };
+	blockingCreated: { blockerId: MiUser['id']; blockeeId: MiUser['id'] };
+	blockingDeleted: { blockerId: MiUser['id']; blockeeId: MiUser['id'] };
 	// 実際に publish しているのは root ポリシー上書き (MiMeta['policies']、フラットな Partial<RolePolicies>) であり、
 	// ロール個別の Record<string, {useDefault,priority,value}> 形式 (MiRole['policies']) ではない。
 	policiesUpdated: MiMeta['policies'];
@@ -217,18 +213,18 @@ export interface InternalEventTypes {
 	avatarDecorationCreated: MiAvatarDecoration;
 	avatarDecorationDeleted: MiAvatarDecoration;
 	avatarDecorationUpdated: MiAvatarDecoration;
-	metaUpdated: { before?: MiMeta; after: MiMeta; };
-	followChannel: { userId: MiUser['id']; channelId: MiChannel['id']; };
-	unfollowChannel: { userId: MiUser['id']; channelId: MiChannel['id']; };
-	muteChannel: { userId: MiUser['id']; channelId: MiChannel['id']; };
-	unmuteChannel: { userId: MiUser['id']; channelId: MiChannel['id']; };
+	metaUpdated: { before?: MiMeta; after: MiMeta };
+	followChannel: { userId: MiUser['id']; channelId: MiChannel['id'] };
+	unfollowChannel: { userId: MiUser['id']; channelId: MiChannel['id'] };
+	muteChannel: { userId: MiUser['id']; channelId: MiChannel['id'] };
+	unmuteChannel: { userId: MiUser['id']; channelId: MiChannel['id'] };
 	updateUserProfile: MiUserProfile;
-	mute: { muterId: MiUser['id']; muteeId: MiUser['id']; };
-	unmute: { muterId: MiUser['id']; muteeId: MiUser['id']; };
-	renoteMute: { muterId: MiUser['id']; muteeId: MiUser['id']; };
-	renoteUnmute: { muterId: MiUser['id']; muteeId: MiUser['id']; };
-	userListMemberAdded: { userListId: MiUserList['id']; memberId: MiUser['id']; };
-	userListMemberRemoved: { userListId: MiUserList['id']; memberId: MiUser['id']; };
+	mute: { muterId: MiUser['id']; muteeId: MiUser['id'] };
+	unmute: { muterId: MiUser['id']; muteeId: MiUser['id'] };
+	renoteMute: { muterId: MiUser['id']; muteeId: MiUser['id'] };
+	renoteUnmute: { muterId: MiUser['id']; muteeId: MiUser['id'] };
+	userListMemberAdded: { userListId: MiUserList['id']; memberId: MiUser['id'] };
+	userListMemberRemoved: { userListId: MiUserList['id']; memberId: MiUser['id'] };
 }
 
 type EventTypesToEventPayload<T> = EventUnionFromDictionary<UndefinedAsNullAll<SerializedAll<T>>>;

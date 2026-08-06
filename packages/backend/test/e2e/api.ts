@@ -25,21 +25,24 @@ import type * as misskey from 'misskey-js';
 /** /streaming へのWebSocketアップグレード要求を送り、拒否時のHTTPレスポンスを返す */
 function requestStreamingUpgrade(headers: Record<string, string>): Promise<IncomingMessage> {
 	return new Promise((resolve, reject) => {
-		const req = http.get({
-			host: '127.0.0.1',
-			port,
-			path: '/streaming',
-			headers: {
-				...headers,
-				'Connection': 'Upgrade',
-				'Upgrade': 'websocket',
-				'Sec-WebSocket-Version': '13',
-				'Sec-WebSocket-Key': Buffer.from('0123456789abcdef').toString('base64'),
+		const req = http.get(
+			{
+				host: '127.0.0.1',
+				port,
+				path: '/streaming',
+				headers: {
+					...headers,
+					Connection: 'Upgrade',
+					Upgrade: 'websocket',
+					'Sec-WebSocket-Version': '13',
+					'Sec-WebSocket-Key': Buffer.from('0123456789abcdef').toString('base64'),
+				},
 			},
-		}, (res) => {
-			res.resume();
-			resolve(res);
-		});
+			(res) => {
+				res.resume();
+				resolve(res);
+			},
+		);
 		req.on('upgrade', (res, socket) => {
 			socket.destroy();
 			reject(new Error(`unexpected upgrade success (status ${res.statusCode})`));
@@ -52,10 +55,13 @@ describe('API', () => {
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'alice' });
-		bob = await signup({ username: 'bob' });
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			alice = await signup({ username: 'alice' });
+			bob = await signup({ username: 'bob' });
+		},
+		1000 * 60 * 2,
+	);
 
 	describe('General validation', () => {
 		test('wrong type', async () => {
@@ -132,37 +138,46 @@ describe('API', () => {
 		});
 
 		// bobは一般ユーザーだからダメ
-		await failedApiCall({
-			endpoint: 'admin/get-index-stats',
-			parameters: {},
-			user: bob,
-		}, {
-			status: 403,
-			code: 'ROLE_PERMISSION_DENIED',
-			id: 'c3d38592-54c0-429d-be96-5636b0431a61',
-		});
+		await failedApiCall(
+			{
+				endpoint: 'admin/get-index-stats',
+				parameters: {},
+				user: bob,
+			},
+			{
+				status: 403,
+				code: 'ROLE_PERMISSION_DENIED',
+				id: 'c3d38592-54c0-429d-be96-5636b0431a61',
+			},
+		);
 
 		// publicアクセスももちろんダメ
-		await failedApiCall({
-			endpoint: 'admin/get-index-stats',
-			parameters: {},
-			user: undefined,
-		}, {
-			status: 401,
-			code: 'CREDENTIAL_REQUIRED',
-			id: '1384574d-a912-4b81-8601-c7b1c4085df1',
-		});
+		await failedApiCall(
+			{
+				endpoint: 'admin/get-index-stats',
+				parameters: {},
+				user: undefined,
+			},
+			{
+				status: 401,
+				code: 'CREDENTIAL_REQUIRED',
+				id: '1384574d-a912-4b81-8601-c7b1c4085df1',
+			},
+		);
 
 		// ごまがしもダメ
-		await failedApiCall({
-			endpoint: 'admin/get-index-stats',
-			parameters: {},
-			user: { token: 'tsukawasete' },
-		}, {
-			status: 401,
-			code: 'AUTHENTICATION_FAILED',
-			id: 'b0a7f5f8-dc2f-4171-b91f-de88ad238e14',
-		});
+		await failedApiCall(
+			{
+				endpoint: 'admin/get-index-stats',
+				parameters: {},
+				user: { token: 'tsukawasete' },
+			},
+			{
+				status: 401,
+				code: 'AUTHENTICATION_FAILED',
+				id: 'b0a7f5f8-dc2f-4171-b91f-de88ad238e14',
+			},
+		);
 
 		await successfulApiCall({
 			endpoint: 'admin/get-index-stats',
@@ -170,35 +185,44 @@ describe('API', () => {
 			user: { token: application2 },
 		});
 
-		await failedApiCall({
-			endpoint: 'admin/get-index-stats',
-			parameters: {},
-			user: { token: application },
-		}, {
-			status: 403,
-			code: 'PERMISSION_DENIED',
-			id: '1370e5b7-d4eb-4566-bb1d-7748ee6a1838',
-		});
+		await failedApiCall(
+			{
+				endpoint: 'admin/get-index-stats',
+				parameters: {},
+				user: { token: application },
+			},
+			{
+				status: 403,
+				code: 'PERMISSION_DENIED',
+				id: '1370e5b7-d4eb-4566-bb1d-7748ee6a1838',
+			},
+		);
 
-		await failedApiCall({
-			endpoint: 'admin/get-index-stats',
-			parameters: {},
-			user: { token: application3 },
-		}, {
-			status: 403,
-			code: 'ROLE_PERMISSION_DENIED',
-			id: 'c3d38592-54c0-429d-be96-5636b0431a61',
-		});
+		await failedApiCall(
+			{
+				endpoint: 'admin/get-index-stats',
+				parameters: {},
+				user: { token: application3 },
+			},
+			{
+				status: 403,
+				code: 'ROLE_PERMISSION_DENIED',
+				id: 'c3d38592-54c0-429d-be96-5636b0431a61',
+			},
+		);
 
-		await failedApiCall({
-			endpoint: 'admin/get-index-stats',
-			parameters: {},
-			user: { token: application4 },
-		}, {
-			status: 403,
-			code: 'ROLE_PERMISSION_DENIED',
-			id: 'c3d38592-54c0-429d-be96-5636b0431a61',
-		});
+		await failedApiCall(
+			{
+				endpoint: 'admin/get-index-stats',
+				parameters: {},
+				user: { token: application4 },
+			},
+			{
+				status: 403,
+				code: 'ROLE_PERMISSION_DENIED',
+				id: 'c3d38592-54c0-429d-be96-5636b0431a61',
+			},
+		);
 	});
 
 	describe('Authentication header', () => {
@@ -229,7 +253,7 @@ describe('API', () => {
 				},
 				'homeTimeline',
 				() => api('notes/create', { text: 'foo' }, alice),
-				msg => msg.type === 'note' && msg.body['text'] === 'foo',
+				(msg) => msg.type === 'note' && msg.body['text'] === 'foo',
 			);
 			assert.strictEqual(fired, true);
 		});
@@ -238,12 +262,20 @@ describe('API', () => {
 	describe('tokenエラー応答でWWW-Authenticate headerを送る', () => {
 		describe('invalid_token', () => {
 			test('一般リクエスト', async () => {
-				const result = await api('admin/get-index-stats', {}, {
-					token: 'syuilo',
-					bearer: true,
-				});
+				const result = await api(
+					'admin/get-index-stats',
+					{},
+					{
+						token: 'syuilo',
+						bearer: true,
+					},
+				);
 				assert.strictEqual(result.status, 401);
-				assert.ok(result.headers.get('WWW-Authenticate')?.startsWith('Bearer realm="Misskey", error="invalid_token", error_description'));
+				assert.ok(
+					result.headers
+						.get('WWW-Authenticate')
+						?.startsWith('Bearer realm="Misskey", error="invalid_token", error_description'),
+				);
 			});
 
 			test('multipartリクエスト', async () => {
@@ -252,7 +284,11 @@ describe('API', () => {
 					bearer: true,
 				});
 				assert.strictEqual(result.status, 401);
-				assert.ok(result.headers.get('WWW-Authenticate')?.startsWith('Bearer realm="Misskey", error="invalid_token", error_description'));
+				assert.ok(
+					result.headers
+						.get('WWW-Authenticate')
+						?.startsWith('Bearer realm="Misskey", error="invalid_token", error_description'),
+				);
 			});
 
 			test('streaming', async () => {
@@ -261,7 +297,11 @@ describe('API', () => {
 				// アップグレード要求への拒否応答はnode:httpで直接検証する
 				const res = await requestStreamingUpgrade({ Authorization: 'Bearer syuilo' });
 				assert.strictEqual(res.statusCode, 401);
-				assert.ok(res.headers['www-authenticate']?.startsWith('Bearer realm="Misskey", error="invalid_token", error_description'));
+				assert.ok(
+					res.headers['www-authenticate']?.startsWith(
+						'Bearer realm="Misskey", error="invalid_token", error_description',
+					),
+				);
 			});
 		});
 
@@ -280,13 +320,21 @@ describe('API', () => {
 		});
 
 		test('invalid_request', async () => {
-			// @ts-expect-error text must be string
-			const result = await api('notes/create', { text: true }, {
-				token: alice.token,
-				bearer: true,
-			});
+			const result = await api(
+				'notes/create',
+				// @ts-expect-error text must be string
+				{ text: true },
+				{
+					token: alice.token,
+					bearer: true,
+				},
+			);
 			assert.strictEqual(result.status, 400);
-			assert.ok(result.headers.get('WWW-Authenticate')?.startsWith('Bearer realm="Misskey", error="invalid_request", error_description'));
+			assert.ok(
+				result.headers
+					.get('WWW-Authenticate')
+					?.startsWith('Bearer realm="Misskey", error="invalid_request", error_description'),
+			);
 		});
 
 		describe('invalid bearer format', () => {

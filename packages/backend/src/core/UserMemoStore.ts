@@ -14,12 +14,7 @@ export async function deleteUserMemoFromDatabase(
 	userId: MiUser['id'],
 	targetUserId: MiUser['id'],
 ): Promise<void> {
-	await db
-		.delete(userMemo)
-		.where(and(
-			eq(userMemo.userId, userId),
-			eq(userMemo.targetUserId, targetUserId),
-		));
+	await db.delete(userMemo).where(and(eq(userMemo.userId, userId), eq(userMemo.targetUserId, targetUserId)));
 }
 
 export async function upsertUserMemoInDatabase(db: MiDrizzleDatabase, data: UserMemoInsert): Promise<void> {
@@ -39,15 +34,16 @@ export async function fetchUserMemoTextFromDatabase(
 	userId: MiUser['id'],
 	targetUserId: MiUser['id'],
 ): Promise<string | null> {
-	const statement = preparedQueryFor(db, 'userMemo:textByUserIdAndTargetUserId', () => db
-		.select({ memo: userMemo.memo })
-		.from(userMemo)
-		.where(and(
-			eq(userMemo.userId, sql.placeholder('userId')),
-			eq(userMemo.targetUserId, sql.placeholder('targetUserId')),
-		))
-		.limit(1)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'userMemo:textByUserIdAndTargetUserId', () =>
+		db
+			.select({ memo: userMemo.memo })
+			.from(userMemo)
+			.where(
+				and(eq(userMemo.userId, sql.placeholder('userId')), eq(userMemo.targetUserId, sql.placeholder('targetUserId'))),
+			)
+			.limit(1)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const [row] = await statement.execute({ userId, targetUserId });
 
 	return row?.memo ?? null;
@@ -57,15 +53,17 @@ export async function listUserMemoTextsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<Map<MiUser['id'], string | null>> {
-	const statement = preparedQueryFor(db, 'userMemo:textsByUserId', () => db
-		.select({
-			targetUserId: userMemo.targetUserId,
-			memo: userMemo.memo,
-		})
-		.from(userMemo)
-		.where(eq(userMemo.userId, sql.placeholder('userId')))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'userMemo:textsByUserId', () =>
+		db
+			.select({
+				targetUserId: userMemo.targetUserId,
+				memo: userMemo.memo,
+			})
+			.from(userMemo)
+			.where(eq(userMemo.userId, sql.placeholder('userId')))
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ userId });
 
-	return new Map(rows.map(row => [row.targetUserId, row.memo]));
+	return new Map(rows.map((row) => [row.targetUserId, row.memo]));
 }

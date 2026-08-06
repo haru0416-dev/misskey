@@ -22,8 +22,14 @@ export type SystemWebhookUpdateOptions = Pick<MiSystemWebhook, 'id' | 'isActive'
 export type SystemWebhookLogicDependencies = {
 	db: MiDrizzleDatabase;
 	genId: () => string;
-	publishInternalEvent?: (<K extends keyof InternalEventTypes>(type: K, value?: InternalEventTypes[K]) => void) | undefined;
-	logModeration?: <T extends keyof ModerationLogPayloads>(moderator: { id: MiUser['id'] }, type: T, info?: ModerationLogPayloads[T]) => void | Promise<void>;
+	publishInternalEvent?:
+		| (<K extends keyof InternalEventTypes>(type: K, value?: InternalEventTypes[K]) => void)
+		| undefined;
+	logModeration?: <T extends keyof ModerationLogPayloads>(
+		moderator: { id: MiUser['id'] },
+		type: T,
+		info?: ModerationLogPayloads[T],
+	) => void | Promise<void>;
 };
 
 export async function createSystemWebhookWithSideEffects(

@@ -22,11 +22,7 @@ function deserializeChannel(row: ChannelRow): MiChannel {
 	} as MiChannel;
 }
 
-function applyChannelPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
+function applyChannelPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
 	if (sinceId && untilId) {
 		conditions.push(gt(channel.id, sinceId));
 		conditions.push(lt(channel.id, untilId));
@@ -59,22 +55,13 @@ export async function listChannelsByIdsFromDatabase(
 ): Promise<MiChannel[]> {
 	if (ids.length === 0) return [];
 
-	const rows = await db
-		.select()
-		.from(channel)
-		.where(inArray(channel.id, ids));
+	const rows = await db.select().from(channel).where(inArray(channel.id, ids));
 
-	return rows.map(row => deserializeChannel(row));
+	return rows.map((row) => deserializeChannel(row));
 }
 
-export async function createChannelInDatabase(
-	db: MiDrizzleDatabase,
-	data: ChannelInsert,
-): Promise<MiChannel> {
-	const [row] = await db
-		.insert(channel)
-		.values(data)
-		.returning();
+export async function createChannelInDatabase(db: MiDrizzleDatabase, data: ChannelInsert): Promise<MiChannel> {
+	const [row] = await db.insert(channel).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create channel');
@@ -88,10 +75,7 @@ export async function updateChannelInDatabase(
 	id: MiChannel['id'],
 	values: ChannelUpdate,
 ): Promise<void> {
-	await db
-		.update(channel)
-		.set(values)
-		.where(eq(channel.id, id));
+	await db.update(channel).set(values).where(eq(channel.id, id));
 }
 
 export async function listOwnedChannelsFromDatabase(
@@ -104,10 +88,7 @@ export async function listOwnedChannelsFromDatabase(
 		order: ChannelOrder;
 	},
 ): Promise<MiChannel[]> {
-	const conditions: SQL[] = [
-		eq(channel.isArchived, false),
-		eq(channel.userId, userId),
-	];
+	const conditions: SQL[] = [eq(channel.isArchived, false), eq(channel.userId, userId)];
 
 	applyChannelPaginationCondition(conditions, options.sinceId, options.untilId);
 
@@ -118,7 +99,7 @@ export async function listOwnedChannelsFromDatabase(
 		.orderBy(options.order === 'asc' ? asc(channel.id) : desc(channel.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeChannel(row));
+	return rows.map((row) => deserializeChannel(row));
 }
 
 export async function listRecentlyActiveChannelsFromDatabase(
@@ -128,14 +109,11 @@ export async function listRecentlyActiveChannelsFromDatabase(
 	const rows = await db
 		.select()
 		.from(channel)
-		.where(and(
-			isNotNull(channel.lastNotedAt),
-			eq(channel.isArchived, false),
-		))
+		.where(and(isNotNull(channel.lastNotedAt), eq(channel.isArchived, false)))
 		.orderBy(desc(channel.lastNotedAt))
 		.limit(limit);
 
-	return rows.map(row => deserializeChannel(row));
+	return rows.map((row) => deserializeChannel(row));
 }
 
 export async function listChannelsBySearchFromDatabase(
@@ -149,19 +127,14 @@ export async function listChannelsBySearchFromDatabase(
 		order: 'asc' | 'desc';
 	},
 ): Promise<MiChannel[]> {
-	const conditions: SQL[] = [
-		eq(channel.isArchived, false),
-	];
+	const conditions: SQL[] = [eq(channel.isArchived, false)];
 
 	applyChannelPaginationCondition(conditions, options.sinceId, options.untilId);
 
 	if (options.query !== '') {
 		const like = `%${options.query}%`;
 		if (options.type === 'nameAndDescription') {
-			conditions.push(or(
-				sql`${channel.name} ILIKE ${like}`,
-				sql`${channel.description} ILIKE ${like}`,
-			)!);
+			conditions.push(or(sql`${channel.name} ILIKE ${like}`, sql`${channel.description} ILIKE ${like}`)!);
 		} else {
 			conditions.push(sql`${channel.name} ILIKE ${like}`);
 		}
@@ -174,18 +147,14 @@ export async function listChannelsBySearchFromDatabase(
 		.orderBy(options.order === 'asc' ? asc(channel.id) : desc(channel.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeChannel(row));
+	return rows.map((row) => deserializeChannel(row));
 }
 
 export async function fetchChannelByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiChannel['id'],
 ): Promise<MiChannel | null> {
-	const [row] = await db
-		.select()
-		.from(channel)
-		.where(eq(channel.id, id))
-		.limit(1);
+	const [row] = await db.select().from(channel).where(eq(channel.id, id)).limit(1);
 
 	return row ? deserializeChannel(row) : null;
 }
@@ -217,10 +186,7 @@ export async function incrementChannelNotesCountAndUpdateLastNotedAtInDatabase(
 		.where(eq(channel.id, id));
 }
 
-export async function incrementChannelUsersCountInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiChannel['id'],
-): Promise<void> {
+export async function incrementChannelUsersCountInDatabase(db: MiDrizzleDatabase, id: MiChannel['id']): Promise<void> {
 	await db
 		.update(channel)
 		.set({ usersCount: sql`${channel.usersCount} + 1` })

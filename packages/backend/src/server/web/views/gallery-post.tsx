@@ -8,16 +8,20 @@ import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { CommonProps } from '@/server/web/views/_.js';
 import { Layout } from '@/server/web/views/base.js';
 
-export function GalleryPostPage(props: CommonProps<{
-	galleryPost: Packed<'GalleryPost'>;
-	profile: MiUserProfile;
-}>) {
+export function GalleryPostPage(
+	props: CommonProps<{
+		galleryPost: Packed<'GalleryPost'>;
+		profile: MiUserProfile;
+	}>,
+) {
 	function ogBlock() {
 		return (
 			<>
 				<meta property="og:type" content="article" />
 				<meta property="og:title" content={props.galleryPost.title} />
-				{props.galleryPost.description != null ? <meta property="og:description" content={props.galleryPost.description} /> : null}
+				{props.galleryPost.description != null ? (
+					<meta property="og:description" content={props.galleryPost.description} />
+				) : null}
 				<meta property="og:url" content={`${props.config.instance.url}/gallery/${props.galleryPost.id}`} />
 				{props.galleryPost.isSensitive && props.galleryPost.user.avatarUrl ? (
 					<>
@@ -27,7 +31,10 @@ export function GalleryPostPage(props: CommonProps<{
 				) : null}
 				{!props.galleryPost.isSensitive && props.galleryPost.files != null ? (
 					<>
-						<meta property="og:image" content={props.galleryPost.files[0]!.thumbnailUrl ?? props.galleryPost.files[0]!.url} />
+						<meta
+							property="og:image"
+							content={props.galleryPost.files[0]!.thumbnailUrl ?? props.galleryPost.files[0]!.url}
+						/>
 						<meta property="twitter:card" content="summary_large_image" />
 					</>
 				) : null}
@@ -59,7 +66,6 @@ export function GalleryPostPage(props: CommonProps<{
 			desc={props.galleryPost.description ?? ''}
 			metaSlot={metaBlock()}
 			ogSlot={ogBlock()}
-		>
-		</Layout>
+		></Layout>
 	);
 }

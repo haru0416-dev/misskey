@@ -33,11 +33,13 @@ export const adminUpdateMetaParamDef = z.object({
 	description: z.string().nullable().optional(),
 	defaultLightTheme: z.string().nullable().optional(),
 	defaultDarkTheme: z.string().nullable().optional(),
-	clientOptions: z.object({
-		entrancePageStyle: z.enum(['classic', 'simple']).optional(),
-		showTimelineForVisitor: z.boolean().optional(),
-		showActivitiesForVisitor: z.boolean().optional(),
-	}).optional(),
+	clientOptions: z
+		.object({
+			entrancePageStyle: z.enum(['classic', 'simple']).optional(),
+			showTimelineForVisitor: z.boolean().optional(),
+			showActivitiesForVisitor: z.boolean().optional(),
+		})
+		.optional(),
 	cacheRemoteFiles: z.boolean().optional(),
 	cacheRemoteSensitiveFiles: z.boolean().optional(),
 	emailRequiredForSignup: z.boolean().optional(),
@@ -70,7 +72,10 @@ export const adminUpdateMetaParamDef = z.object({
 	deeplAuthKey: z.string().nullable().optional(),
 	deeplIsPro: z.boolean().optional(),
 	translatorProvider: z.enum(['deepl', 'libreTranslate']).optional(),
-	libreTranslateApiUrl: z.union([z.string().url(), z.literal('')]).nullable().optional(),
+	libreTranslateApiUrl: z
+		.union([z.string().url(), z.literal('')])
+		.nullable()
+		.optional(),
 	libreTranslateApiKey: z.string().nullable().optional(),
 	enableEmail: z.boolean().optional(),
 	email: z.string().nullable().optional(),
@@ -91,7 +96,11 @@ export const adminUpdateMetaParamDef = z.object({
 	useObjectStorage: z.boolean().optional(),
 	objectStorageBaseUrl: z.string().nullable().optional(),
 	objectStorageBucket: z.string().nullable().optional(),
-	objectStoragePrefix: z.string().regex(/^[a-zA-Z0-9-._]*$/).nullable().optional(),
+	objectStoragePrefix: z
+		.string()
+		.regex(/^[a-zA-Z0-9-._]*$/)
+		.nullable()
+		.optional(),
 	objectStorageEndpoint: z.string().nullable().optional(),
 	objectStorageRegion: z.string().nullable().optional(),
 	objectStoragePort: z.number().int().nullable().optional(),
@@ -137,10 +146,14 @@ export const adminUpdateMetaParamDef = z.object({
 	urlPreviewSensitiveList: z.array(z.string()).nullable().optional(),
 	federation: z.enum(['all', 'none', 'specified']).optional(),
 	federationHosts: z.array(z.string()).optional(),
-	deliverSuspendedSoftware: z.array(z.object({
-		software: z.string(),
-		versionRange: z.string(),
-	})).optional(),
+	deliverSuspendedSoftware: z
+		.array(
+			z.object({
+				software: z.string(),
+				versionRange: z.string(),
+			}),
+		)
+		.optional(),
 	singleUserMode: z.boolean().optional(),
 	ugcVisibilityForVisitor: z.enum(['all', 'local', 'none']).optional(),
 	proxyRemoteFiles: z.boolean().optional(),
@@ -162,32 +175,44 @@ export const adminUpdateMetaJsonSchema = {
 		signupRateLimitMinIntervalSeconds: { type: 'integer', minimum: 0, maximum: 86400 },
 		signupRateLimitMaxPerHour: { type: 'integer', minimum: 0, maximum: 100000 },
 		pinnedUsers: {
-			type: 'array', nullable: true, items: {
+			type: 'array',
+			nullable: true,
+			items: {
 				type: 'string',
 			},
 		},
 		hiddenTags: {
-			type: 'array', nullable: true, items: {
+			type: 'array',
+			nullable: true,
+			items: {
 				type: 'string',
 			},
 		},
 		blockedHosts: {
-			type: 'array', nullable: true, items: {
+			type: 'array',
+			nullable: true,
+			items: {
 				type: 'string',
 			},
 		},
 		sensitiveWords: {
-			type: 'array', nullable: true, items: {
+			type: 'array',
+			nullable: true,
+			items: {
 				type: 'string',
 			},
 		},
 		prohibitedWords: {
-			type: 'array', nullable: true, items: {
+			type: 'array',
+			nullable: true,
+			items: {
 				type: 'string',
 			},
 		},
 		prohibitedWordsForNameOfUser: {
-			type: 'array', nullable: true, items: {
+			type: 'array',
+			nullable: true,
+			items: {
 				type: 'string',
 			},
 		},
@@ -208,7 +233,8 @@ export const adminUpdateMetaJsonSchema = {
 		defaultLightTheme: { type: 'string', nullable: true },
 		defaultDarkTheme: { type: 'string', nullable: true },
 		clientOptions: {
-			type: 'object', nullable: false,
+			type: 'object',
+			nullable: false,
 			properties: {
 				entrancePageStyle: { type: 'string', nullable: false, enum: ['classic', 'simple'] },
 				showTimelineForVisitor: { type: 'boolean', nullable: false },
@@ -244,7 +270,8 @@ export const adminUpdateMetaJsonSchema = {
 		maintainerName: { type: 'string', nullable: true },
 		maintainerEmail: { type: 'string', nullable: true },
 		langs: {
-			type: 'array', items: {
+			type: 'array',
+			items: {
 				type: 'string',
 			},
 		},
@@ -498,7 +525,7 @@ function filterTruthyStrings(values: string[]): string[] {
 }
 
 function normalizeHostList(values: string[]): string[] {
-	return values.filter(Boolean).map(x => x.toLowerCase());
+	return values.filter(Boolean).map((x) => x.toLowerCase());
 }
 
 function normalizeSilencedHosts(values: string[], blockedHosts: string[] | undefined): string[] {
@@ -514,10 +541,7 @@ function emptyStringToNull(value: string | null): string | null {
 	return value === '' ? null : value;
 }
 
-export function buildAdminUpdateMetaPatch(
-	serverSettings: MiMeta,
-	params: AdminUpdateMetaParams,
-): Partial<MiMeta> {
+export function buildAdminUpdateMetaPatch(serverSettings: MiMeta, params: AdminUpdateMetaParams): Partial<MiMeta> {
 	const set = {} as Partial<MiMeta>;
 
 	if (typeof params.disableRegistration === 'boolean') {
@@ -557,7 +581,7 @@ export function buildAdminUpdateMetaPatch(
 	}
 
 	if (Array.isArray(params.urlPreviewSensitiveList)) {
-		set.urlPreviewSensitiveList = params.urlPreviewSensitiveList.map(value => value.trim()).filter(Boolean);
+		set.urlPreviewSensitiveList = params.urlPreviewSensitiveList.map((value) => value.trim()).filter(Boolean);
 	}
 
 	copyDefinedMetaFields(set, params);

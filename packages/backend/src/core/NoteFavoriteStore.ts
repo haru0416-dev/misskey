@@ -12,10 +12,7 @@ import type { MiUser } from '@/models/User.js';
 export type NoteFavoriteOrder = 'asc' | 'desc';
 
 function noteFavoriteCondition(userId: MiUser['id'], noteId: MiNote['id']) {
-	return and(
-		eq(noteFavorite.userId, userId),
-		eq(noteFavorite.noteId, noteId),
-	);
+	return and(eq(noteFavorite.userId, userId), eq(noteFavorite.noteId, noteId));
 }
 
 function applyNoteFavoritePaginationCondition(
@@ -52,11 +49,7 @@ export async function fetchNoteFavoriteFromDatabase(
 	userId: MiUser['id'],
 	noteId: MiNote['id'],
 ): Promise<NoteFavoriteRow | null> {
-	const [row] = await db
-		.select()
-		.from(noteFavorite)
-		.where(noteFavoriteCondition(userId, noteId))
-		.limit(1);
+	const [row] = await db.select().from(noteFavorite).where(noteFavoriteCondition(userId, noteId)).limit(1);
 
 	return row ?? null;
 }
@@ -65,11 +58,7 @@ export async function fetchNoteFavoriteByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: NoteFavoriteRow['id'],
 ): Promise<NoteFavoriteRow> {
-	const [row] = await db
-		.select()
-		.from(noteFavorite)
-		.where(eq(noteFavorite.id, id))
-		.limit(1);
+	const [row] = await db.select().from(noteFavorite).where(eq(noteFavorite.id, id)).limit(1);
 
 	if (row == null) {
 		throw new Error(`Note favorite ${id} not found`);
@@ -78,32 +67,22 @@ export async function fetchNoteFavoriteByIdOrFailFromDatabase(
 	return row;
 }
 
-export async function createNoteFavoriteInDatabase(
-	db: MiDrizzleDatabase,
-	data: NoteFavoriteInsert,
-): Promise<void> {
-	await db
-		.insert(noteFavorite)
-		.values(data);
+export async function createNoteFavoriteInDatabase(db: MiDrizzleDatabase, data: NoteFavoriteInsert): Promise<void> {
+	await db.insert(noteFavorite).values(data);
 }
 
 export async function deleteNoteFavoriteByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: NoteFavoriteRow['id'],
 ): Promise<void> {
-	await db
-		.delete(noteFavorite)
-		.where(eq(noteFavorite.id, id));
+	await db.delete(noteFavorite).where(eq(noteFavorite.id, id));
 }
 
 export async function countNoteFavoritesByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(noteFavorite)
-		.where(eq(noteFavorite.userId, userId));
+	const [row] = await db.select({ count: count() }).from(noteFavorite).where(eq(noteFavorite.userId, userId));
 
 	return row?.count ?? 0;
 }
@@ -118,9 +97,7 @@ export async function listNoteFavoritesByUserIdFromDatabase(
 		untilId?: string | null;
 	},
 ): Promise<NoteFavoriteRow[]> {
-	const conditions: SQL[] = [
-		eq(noteFavorite.userId, userId),
-	];
+	const conditions: SQL[] = [eq(noteFavorite.userId, userId)];
 
 	applyNoteFavoritePaginationCondition(conditions, options.sinceId, options.untilId);
 

@@ -4,7 +4,13 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import {
+	assertCredential,
+	assertProhibitMoved,
+	assertSecureCredential,
+	assertTokenPermission,
+	authenticateHonoApiToken,
+} from '../auth.js';
 import { handleHonoApiUsersReportAbuse } from '../admin-abuse-reports.js';
 import { handleHonoApiUsernameAvailable } from '../availability.js';
 import { handleHonoApiMyApps } from '../app.js';
@@ -13,18 +19,58 @@ import { handleHonoApiUsersGalleryPosts } from '../gallery.js';
 import { handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from '../favorites.js';
 import { handleHonoApiUsersClips } from '../clips.js';
 import { handleHonoApiUsersFlashs } from '../flash.js';
-import { handleHonoApiUsersFollowers, handleHonoApiUsersFollowing, handleHonoApiUsersGetFollowingUsersByBirthday } from '../following.js';
-import { handleHonoApiUsers, handleHonoApiUsersGetFrequentlyRepliedUsers, handleHonoApiUsersRecommendation, handleHonoApiUsersRelation, handleHonoApiUsersSearch, handleHonoApiUsersSearchByUsernameAndHost, handleHonoApiUsersShow, handleHonoApiUsersUpdateMemo } from '../user.js';
+import {
+	handleHonoApiUsersFollowers,
+	handleHonoApiUsersFollowing,
+	handleHonoApiUsersGetFollowingUsersByBirthday,
+} from '../following.js';
+import {
+	handleHonoApiUsers,
+	handleHonoApiUsersGetFrequentlyRepliedUsers,
+	handleHonoApiUsersRecommendation,
+	handleHonoApiUsersRelation,
+	handleHonoApiUsersSearch,
+	handleHonoApiUsersSearchByUsernameAndHost,
+	handleHonoApiUsersShow,
+	handleHonoApiUsersUpdateMemo,
+} from '../user.js';
 import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from '../miauth.js';
-import { handleHonoApiNotesDraftsCount, handleHonoApiNotesDraftsCreate, handleHonoApiNotesDraftsDelete, handleHonoApiNotesDraftsList, handleHonoApiNotesDraftsUpdate } from '../note-drafts.js';
+import {
+	handleHonoApiNotesDraftsCount,
+	handleHonoApiNotesDraftsCreate,
+	handleHonoApiNotesDraftsDelete,
+	handleHonoApiNotesDraftsList,
+	handleHonoApiNotesDraftsUpdate,
+} from '../note-drafts.js';
 import { handleHonoApiUsersReactions } from '../user-reactions.js';
 import { handleHonoApiUsersPages } from '../pages.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { getHonoApiRolePolicies } from '../role-policy.js';
-import { handleHonoApiUsersAchievements, handleHonoApiUsersListsDelete, handleHonoApiUsersListsList, handleHonoApiUsersListsShow, handleHonoApiUsersListsUpdate } from '../users.js';
-import { handleHonoApiUsersListsCreate, handleHonoApiUsersListsCreateFromPublic, handleHonoApiUsersListsGetMemberships, handleHonoApiUsersListsPull, handleHonoApiUsersListsPush, handleHonoApiUsersListsUpdateMembership } from '../users-lists.js';
+import {
+	handleHonoApiUsersAchievements,
+	handleHonoApiUsersListsDelete,
+	handleHonoApiUsersListsList,
+	handleHonoApiUsersListsShow,
+	handleHonoApiUsersListsUpdate,
+} from '../users.js';
+import {
+	handleHonoApiUsersListsCreate,
+	handleHonoApiUsersListsCreateFromPublic,
+	handleHonoApiUsersListsGetMemberships,
+	handleHonoApiUsersListsPull,
+	handleHonoApiUsersListsPush,
+	handleHonoApiUsersListsUpdateMembership,
+} from '../users-lists.js';
 import { handleHonoApiVerifyEmail } from '../verify-email.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, getRequestIp, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	getRequestIp,
+	runApiEndpoint,
+	authenticateOptionalRequest,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -92,10 +138,15 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(deps, 'notes/drafts/create', {
-				duration: 60 * 60 * 1000,
-				max: 300,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'notes/drafts/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 300,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiNotesDraftsCreate(deps, auth.user, body));
 		});
@@ -108,10 +159,15 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(deps, 'notes/drafts/update', {
-				duration: 60 * 60 * 1000,
-				max: 300,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'notes/drafts/update',
+				{
+					duration: 60 * 60 * 1000,
+					max: 300,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiNotesDraftsUpdate(deps, auth.user, body));
 		});
@@ -426,10 +482,15 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(deps, 'users/lists/push', {
-				duration: 60 * 60 * 1000,
-				max: 30,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'users/lists/push',
+				{
+					duration: 60 * 60 * 1000,
+					max: 30,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiUsersListsPush(deps, auth.user, body);
 			return emptyResponse(c);

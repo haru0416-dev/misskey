@@ -62,7 +62,7 @@ describe('misc:MemoryKVCache', () => {
 		cache.dispose();
 	});
 
-	test.each([0, -1, 1.5, Infinity, Number.NaN])('rejects invalid limit %s', limit => {
+	test.each([0, -1, 1.5, Infinity, Number.NaN])('rejects invalid limit %s', (limit) => {
 		expect(() => new MemoryKVCache(1000, limit)).toThrow(TypeError);
 	});
 
@@ -204,9 +204,12 @@ describe('misc:MemoryKVCache', () => {
 		test('shares an in-flight fetch for the same key', async () => {
 			const cache = new MemoryKVCache<string>(1000);
 			let resolveFetch!: (value: string) => void;
-			const fetcher = vi.fn(() => new Promise<string>(resolve => {
-				resolveFetch = resolve;
-			}));
+			const fetcher = vi.fn(
+				() =>
+					new Promise<string>((resolve) => {
+						resolveFetch = resolve;
+					}),
+			);
 
 			const first = cache.fetchMaybe('key', fetcher);
 			const second = cache.fetchMaybe('key', fetcher);

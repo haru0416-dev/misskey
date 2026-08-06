@@ -6,12 +6,41 @@
 import { supportedCaptchaProviders } from '@/core/CaptchaLogic.js';
 import { notificationRecieveConfig } from '@/models/json-schema/user.js';
 import { adminUpdateMetaJsonSchema } from '@/server/rest/AdminUpdateMetaLogic.js';
-import { adminAbuseUserReportsParamDef, adminForwardAbuseUserReportParamDef, adminResolveAbuseUserReportParamDef, adminUpdateAbuseUserReportParamDef } from '@/server/rest/admin-abuse-reports.js';
-import { adminAccountCreateParamDef, adminAccountDeleteParamDef, adminAccountsFindByEmailParamDef, adminUpdateProxyAccountParamDef } from '@/server/rest/admin-accounts.js';
-import { adminAdCreateParamDef, adminAdDeleteParamDef, adminAdListParamDef, adminAdUpdateParamDef } from '@/server/rest/admin-ad.js';
-import { adminAnnouncementsCreateParamDef, adminAnnouncementsDeleteParamDef, adminAnnouncementsListParamDef, adminAnnouncementsUpdateParamDef } from '@/server/rest/admin-announcements.js';
-import { adminAvatarDecorationsCreateParamDef, adminAvatarDecorationsDeleteParamDef, adminAvatarDecorationsListParamDef, adminAvatarDecorationsUpdateParamDef } from '@/server/rest/admin-avatar-decorations.js';
-import { adminDriveFilesParamDef, adminDriveShowFileDocsParamDef, adminDriveUserParamDef } from '@/server/rest/admin-drive.js';
+import {
+	adminAbuseUserReportsParamDef,
+	adminForwardAbuseUserReportParamDef,
+	adminResolveAbuseUserReportParamDef,
+	adminUpdateAbuseUserReportParamDef,
+} from '@/server/rest/admin-abuse-reports.js';
+import {
+	adminAccountCreateParamDef,
+	adminAccountDeleteParamDef,
+	adminAccountsFindByEmailParamDef,
+	adminUpdateProxyAccountParamDef,
+} from '@/server/rest/admin-accounts.js';
+import {
+	adminAdCreateParamDef,
+	adminAdDeleteParamDef,
+	adminAdListParamDef,
+	adminAdUpdateParamDef,
+} from '@/server/rest/admin-ad.js';
+import {
+	adminAnnouncementsCreateParamDef,
+	adminAnnouncementsDeleteParamDef,
+	adminAnnouncementsListParamDef,
+	adminAnnouncementsUpdateParamDef,
+} from '@/server/rest/admin-announcements.js';
+import {
+	adminAvatarDecorationsCreateParamDef,
+	adminAvatarDecorationsDeleteParamDef,
+	adminAvatarDecorationsListParamDef,
+	adminAvatarDecorationsUpdateParamDef,
+} from '@/server/rest/admin-avatar-decorations.js';
+import {
+	adminDriveFilesParamDef,
+	adminDriveShowFileDocsParamDef,
+	adminDriveUserParamDef,
+} from '@/server/rest/admin-drive.js';
 import { adminSendEmailParamDef } from '@/server/rest/admin-email.js';
 import { adminRelaysListParamDef, adminRelaysWriteParamDef } from '@/server/rest/admin-relays.js';
 import { adminServerInfoParamDef } from '@/server/rest/admin-server-info.js';
@@ -38,73 +67,88 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							nullable: false, optional: false,
+							nullable: false,
+							optional: false,
 							format: 'id',
 							example: 'xxxxxxxxxx',
 						},
 						createdAt: {
 							type: 'string',
-							nullable: false, optional: false,
+							nullable: false,
+							optional: false,
 							format: 'date-time',
 						},
 						comment: {
 							type: 'string',
-							nullable: false, optional: false,
+							nullable: false,
+							optional: false,
 						},
 						resolved: {
 							type: 'boolean',
-							nullable: false, optional: false,
+							nullable: false,
+							optional: false,
 							example: false,
 						},
 						reporterId: {
 							type: 'string',
-							nullable: false, optional: false,
+							nullable: false,
+							optional: false,
 							format: 'id',
 						},
 						targetUserId: {
 							type: 'string',
-							nullable: false, optional: false,
+							nullable: false,
+							optional: false,
 							format: 'id',
 						},
 						assigneeId: {
 							type: 'string',
-							nullable: true, optional: false,
+							nullable: true,
+							optional: false,
 							format: 'id',
 						},
 						reporter: {
 							type: 'object',
-							nullable: false, optional: false,
+							nullable: false,
+							optional: false,
 							ref: 'UserDetailedNotMe',
 						},
 						targetUser: {
 							type: 'object',
-							nullable: false, optional: false,
+							nullable: false,
+							optional: false,
 							ref: 'UserDetailedNotMe',
 						},
 						assignee: {
 							type: 'object',
-							nullable: true, optional: false,
+							nullable: true,
+							optional: false,
 							ref: 'UserDetailedNotMe',
 						},
 						forwarded: {
 							type: 'boolean',
-							nullable: false, optional: false,
+							nullable: false,
+							optional: false,
 						},
 						resolvedAs: {
 							type: 'string',
-							nullable: true, optional: false,
+							nullable: true,
+							optional: false,
 							enum: ['accept', 'reject', null],
 						},
 						moderationNote: {
 							type: 'string',
-							nullable: false, optional: false,
+							nullable: false,
+							optional: false,
 						},
 					},
 				},
@@ -144,7 +188,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				allOf: [
 					{
 						type: 'object',
@@ -152,14 +197,16 @@ export const endpointMetas = {
 					},
 					{
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							token: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 						},
-					}
+					},
 				],
 			},
 		} as const,
@@ -200,7 +247,8 @@ export const endpointMetas = {
 			},
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserDetailedNotMe',
 			},
 		} as const,
@@ -289,35 +337,42 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					id: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'id',
 						example: 'xxxxxxxxxx',
 					},
 					createdAt: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'date-time',
 					},
 					updatedAt: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						format: 'date-time',
 					},
 					title: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					text: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					imageUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 				},
 			},
@@ -352,72 +407,88 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 							example: 'xxxxxxxxxx',
 						},
 						createdAt: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'date-time',
 						},
 						updatedAt: {
 							type: 'string',
-							optional: false, nullable: true,
+							optional: false,
+							nullable: true,
 							format: 'date-time',
 						},
 						text: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						title: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						icon: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							enum: ['info', 'warning', 'error', 'success'],
 						},
 						display: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							enum: ['normal', 'banner', 'dialog'],
 						},
 						isActive: {
 							type: 'boolean',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						forExistingUsers: {
 							type: 'boolean',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						silence: {
 							type: 'boolean',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						needConfirmationToRead: {
 							type: 'boolean',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						userId: {
 							type: 'string',
-							optional: false, nullable: true,
+							optional: false,
+							nullable: true,
 						},
 						imageUrl: {
 							type: 'string',
-							optional: false, nullable: true,
+							optional: false,
+							nullable: true,
 						},
 						reads: {
 							type: 'number',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 					},
 				},
@@ -453,47 +524,57 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					id: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'id',
 					},
 					createdAt: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'date-time',
 					},
 					updatedAt: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						format: 'date-time',
 					},
 					name: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					description: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					url: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					roleIdsThatCanBeUsedThisDecoration: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 					},
 					category: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 				},
 			},
@@ -507,8 +588,7 @@ export const endpointMetas = {
 			requireCredential: true,
 			requiredRolePolicy: 'canManageAvatarDecorations',
 			kind: 'write:admin:avatar-decorations',
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: adminAvatarDecorationsDeleteParamDef,
 	},
@@ -522,51 +602,62 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 							example: 'xxxxxxxxxx',
 						},
 						createdAt: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'date-time',
 						},
 						updatedAt: {
 							type: 'string',
-							optional: false, nullable: true,
+							optional: false,
+							nullable: true,
 							format: 'date-time',
 						},
 						name: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						description: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						url: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						roleIdsThatCanBeUsedThisDecoration: {
 							type: 'array',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							items: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								format: 'id',
 							},
 						},
 						category: {
 							type: 'string',
-							optional: true, nullable: true,
+							optional: true,
+							nullable: true,
 						},
 					},
 				},
@@ -582,8 +673,7 @@ export const endpointMetas = {
 			requiredRolePolicy: 'canManageAvatarDecorations',
 			kind: 'write:admin:avatar-decorations',
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: adminAvatarDecorationsUpdateParamDef,
 	},
@@ -737,10 +827,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFile',
 				},
 			},
@@ -765,150 +857,182 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					id: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'id',
 						example: 'xxxxxxxxxx',
 					},
 					createdAt: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'date-time',
 					},
 					userId: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						format: 'id',
 						example: 'xxxxxxxxxx',
 					},
 					userHost: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						description: 'The local host is represented with `null`.',
 					},
 					md5: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'md5',
 						example: '15eca7fba0480996e2245f5185bf39f2',
 					},
 					name: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						example: '192.jpg',
 					},
 					type: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						example: 'image/jpeg',
 					},
 					size: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						example: 51469,
 					},
 					comment: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					blurhash: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					properties: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							width: {
 								type: 'number',
-								optional: true, nullable: false,
+								optional: true,
+								nullable: false,
 							},
 							height: {
 								type: 'number',
-								optional: true, nullable: false,
+								optional: true,
+								nullable: false,
 							},
 							orientation: {
 								type: 'number',
-								optional: true, nullable: false,
+								optional: true,
+								nullable: false,
 							},
 							avgColor: {
 								type: 'string',
-								optional: true, nullable: false,
+								optional: true,
+								nullable: false,
 							},
 						},
 					},
 					storedInternal: {
 						type: 'boolean',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						example: true,
 					},
 					url: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						format: 'url',
 					},
 					thumbnailUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						format: 'url',
 					},
 					webpublicUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						format: 'url',
 					},
 					accessKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					thumbnailAccessKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					webpublicAccessKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					uri: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					src: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					folderId: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						format: 'id',
 						example: 'xxxxxxxxxx',
 					},
 					isSensitive: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					isLink: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					maybeSensitive: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					maybePorn: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					requestIp: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					requestHeaders: {
 						type: 'object',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 				},
 			},
@@ -1005,7 +1129,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				additionalProperties: {
 					type: 'object',
 					properties: {
@@ -1075,10 +1200,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'InviteCode',
 				},
 			},
@@ -1095,10 +1222,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'InviteCode',
 				},
 			},
@@ -1115,112 +1244,139 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					cacheRemoteFiles: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					cacheRemoteSensitiveFiles: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					emailRequiredForSignup: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableHcaptcha: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					hcaptchaSiteKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					enableMcaptcha: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					mcaptchaSiteKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					mcaptchaInstanceUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					enableRecaptcha: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					recaptchaSiteKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					enableTurnstile: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					turnstileSiteKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					enableTestcaptcha: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					googleAnalyticsMeasurementId: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					swPublickey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					mascotImageUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						default: '/assets/ai.png',
 					},
 					bannerUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					serverErrorImageUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					infoImageUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					notFoundImageUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					iconUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					app192IconUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					app512IconUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					enableEmail: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableServiceWorker: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					translatorAvailable: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					silencedHosts: {
 						type: 'array',
@@ -1244,491 +1400,605 @@ export const endpointMetas = {
 					},
 					pinnedUsers: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
 						},
 					},
 					hiddenTags: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
 						},
 					},
 					blockedHosts: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
 						},
 					},
 					sensitiveWords: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
 						},
 					},
 					prohibitedWords: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
 						},
 					},
 					prohibitedWordsForNameOfUser: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
 						},
 					},
 					bannedEmailDomains: {
 						type: 'array',
-						optional: true, nullable: false,
+						optional: true,
+						nullable: false,
 						items: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 					},
 					preservedUsernames: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
 						},
 					},
 					hcaptchaSecretKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					mcaptchaSecretKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					recaptchaSecretKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					turnstileSecretKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					sensitiveMediaDetection: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						enum: ['none', 'all', 'local', 'remote'],
 					},
 					sensitiveMediaDetectionSensitivity: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						enum: ['medium', 'low', 'high', 'veryLow', 'veryHigh'],
 					},
 					setSensitiveFlagAutomatically: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableSensitiveMediaDetectionForVideos: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					sensitiveMediaDetectionApiUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					sensitiveMediaDetectionApiKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					sensitiveMediaDetectionTimeout: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					sensitiveMediaDetectionMaxImagesPerRequest: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					proxyAccountId: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'id',
 					},
 					email: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					smtpSecure: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					smtpHost: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					smtpPort: {
 						type: 'number',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					smtpUser: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					smtpPass: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					swPrivateKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					useObjectStorage: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					objectStorageBaseUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					objectStorageBucket: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					objectStoragePrefix: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					objectStorageEndpoint: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					objectStorageRegion: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					objectStoragePort: {
 						type: 'number',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					objectStorageAccessKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					objectStorageSecretKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					objectStorageUseSSL: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					objectStorageUseProxy: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					objectStorageSetPublicRead: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableIpLogging: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableActiveEmailValidation: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableVerifymailApi: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					verifymailAuthKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					enableTruemailApi: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					truemailInstance: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					truemailAuthKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					enableChartsForRemoteUser: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableChartsForFederatedInstances: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableStatsForFederatedInstances: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableServerMachineStats: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableIdenticonGeneration: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					manifestJsonOverride: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					policies: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableFanoutTimeline: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableFanoutTimelineDbFallback: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					perLocalUserUserTimelineCacheMax: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					perRemoteUserUserTimelineCacheMax: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					perUserHomeTimelineCacheMax: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					perUserListTimelineCacheMax: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableReactionsBuffering: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					notesPerOneAd: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					backgroundImageUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					deeplAuthKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					deeplIsPro: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					translatorProvider: {
 						type: 'string',
 						enum: ['deepl', 'libreTranslate'],
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					libreTranslateApiUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					libreTranslateApiKey: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					defaultDarkTheme: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					defaultLightTheme: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					clientOptions: {
 						ref: 'MetaClientOptions',
 					},
 					description: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					disableRegistration: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					signupRateLimitMinIntervalSeconds: {
 						type: 'integer',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					signupRateLimitMaxPerHour: {
 						type: 'integer',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					impressumUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					maintainerEmail: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					maintainerName: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					name: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					shortName: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					objectStorageS3ForcePathStyle: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					privacyPolicyUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					inquiryUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					repositoryUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					feedbackUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					themeColor: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					tosUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					uri: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					version: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					urlPreviewEnabled: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					urlPreviewAllowRedirect: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					urlPreviewTimeout: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					urlPreviewMaximumContentLength: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					urlPreviewRequireContentLength: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					urlPreviewUserAgent: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					urlPreviewSummaryProxyUrl: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					urlPreviewSensitiveList: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 					},
 					federation: {
 						type: 'string',
 						enum: ['all', 'specified', 'none'],
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					federationHosts: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 					},
 					deliverSuspendedSoftware: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							properties: {
 								software: {
 									type: 'string',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								versionRange: {
 									type: 'string',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 							},
 						},
 					},
 					singleUserMode: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					ugcVisibilityForVisitor: {
 						type: 'string',
 						enum: ['all', 'local', 'none'],
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					proxyRemoteFiles: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					signToActivityPubGet: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					allowExternalApRedirect: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					enableRemoteNotesCleaning: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					remoteNotesCleaningExpiryDaysForEachNotes: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					remoteNotesCleaningMaxProcessingDurationInMinutes: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					showRoleBadgesOfRemoteUsers: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1777,27 +2047,27 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					id: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'id',
 					},
 					inbox: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'url',
 					},
 					status: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						default: 'requesting',
-						enum: [
-							'requesting',
-							'accepted',
-							'rejected',
-						],
+						enum: ['requesting', 'accepted', 'rejected'],
 					},
 				},
 			},
@@ -1814,30 +2084,31 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						inbox: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'url',
 						},
 						status: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							default: 'requesting',
-							enum: [
-								'requesting',
-								'accepted',
-								'rejected',
-							],
+							enum: ['requesting', 'accepted', 'rejected'],
 						},
 					},
 				},
@@ -1878,11 +2149,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					password: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						minLength: 8,
 						maxLength: 8,
 					},
@@ -1931,78 +2204,94 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					machine: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					os: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						example: 'linux',
 					},
 					node: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					psql: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					redis: {
 						type: 'string',
-						optional: true, nullable: false,
+						optional: true,
+						nullable: false,
 						description: 'Valkey server version. The property name is retained for API compatibility.',
 					},
 					cpu: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							model: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							cores: {
 								type: 'number',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 						},
 					},
 					mem: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							total: {
 								type: 'number',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								format: 'bytes',
 							},
 						},
 					},
 					fs: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							total: {
 								type: 'number',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								format: 'bytes',
 							},
 							used: {
 								type: 'number',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								format: 'bytes',
 							},
 						},
 					},
 					net: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							interface: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								example: 'eth0',
 							},
 						},
@@ -2022,37 +2311,45 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						createdAt: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'date-time',
 						},
 						type: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						info: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						userId: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						user: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'UserDetailedNotMe',
 						},
 					},
@@ -2071,55 +2368,68 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				nullable: false, optional: false,
+				nullable: false,
+				optional: false,
 				properties: {
 					email: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					emailVerified: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					followedMessage: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					autoAcceptFollowed: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					noCrawle: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					preventAiLearning: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					alwaysMarkNsfw: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					autoSensitive: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					carefulBot: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					injectFeaturedNote: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					receiveAnnouncementEmail: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					mutedWords: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							anyOf: [
 								{
@@ -2136,14 +2446,16 @@ export const endpointMetas = {
 					},
 					mutedInstances: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'string',
 						},
 					},
 					notificationRecieveConfig: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							note: { optional: true, ...notificationRecieveConfig },
 							follow: { optional: true, ...notificationRecieveConfig },
@@ -2166,43 +2478,52 @@ export const endpointMetas = {
 					},
 					isModerator: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					isSilenced: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					isSuspended: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					isHibernated: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					lastActiveDate: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					moderationNote: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					signins: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							ref: 'Signin',
 						},
 					},
 					policies: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'RolePolicies',
 					},
 					roles: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'object',
 							ref: 'Role',
@@ -2210,21 +2531,25 @@ export const endpointMetas = {
 					},
 					roleAssigns: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'object',
 							properties: {
 								createdAt: {
 									type: 'string',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								expiresAt: {
 									type: 'string',
-									optional: false, nullable: true,
+									optional: false,
+									nullable: true,
 								},
 								roleId: {
 									type: 'string',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 							},
 						},
@@ -2244,10 +2569,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				nullable: false, optional: false,
+				nullable: false,
+				optional: false,
 				items: {
 					type: 'object',
-					nullable: false, optional: false,
+					nullable: false,
+					optional: false,
 					ref: 'UserDetailed',
 				},
 			},
@@ -2352,7 +2679,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				nullable: false, optional: false,
+				nullable: false,
+				optional: false,
 				ref: 'UserDetailed',
 			},
 		} as const,

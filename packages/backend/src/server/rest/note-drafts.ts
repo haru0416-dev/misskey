@@ -6,7 +6,10 @@
 import { z } from 'zod';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
 import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
-import { listDriveFilesByIdsFromDatabase, listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
+import {
+	listDriveFilesByIdsFromDatabase,
+	listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase,
+} from '@/core/DriveFileStore.js';
 import {
 	countNoteDraftsByUserIdFromDatabase,
 	createNoteDraftInDatabase,
@@ -32,15 +35,21 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
-import { isVisibleForMeForHonoApi, packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
+import {
+	isVisibleForMeForHonoApi,
+	packNoteForHonoApi,
+	packNoteManyForHonoApi,
+	type HonoApiNoteDependencies,
+} from './note.js';
 import { packDriveFileManyByIdsForHonoApi, packDriveFileManyForHonoApi } from './drive-file.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiNoteDraftDependencies = HonoApiNoteDependencies & HonoApiRolePolicyDependencies & {
-	postScheduledNoteQueue: PostScheduledNoteQueue;
-};
+export type HonoApiNoteDraftDependencies = HonoApiNoteDependencies &
+	HonoApiRolePolicyDependencies & {
+		postScheduledNoteQueue: PostScheduledNoteQueue;
+	};
 
 export const countNoteDraftsParamDef = z.object({});
 
@@ -53,12 +62,14 @@ export async function handleHonoApiNotesDraftsCount(
 	return await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 }
 
-export const notePollParamDef = z.object({
-	choices: uniqueItems(z.array(z.string().min(1).max(50)).min(0).max(10)),
-	multiple: z.boolean().optional(),
-	expiresAt: z.number().int().nullable().optional(),
-	expiredAfter: z.number().int().min(1).nullable().optional(),
-}).nullable();
+export const notePollParamDef = z
+	.object({
+		choices: uniqueItems(z.array(z.string().min(1).max(50)).min(0).max(10)),
+		multiple: z.boolean().optional(),
+		expiresAt: z.number().int().nullable().optional(),
+		expiredAfter: z.number().int().min(1).nullable().optional(),
+	})
+	.nullable();
 
 export const notesDraftsCreateParamDef = z.object({
 	visibility: z.enum(['public', 'home', 'followers', 'specified']).default('public'),
@@ -66,10 +77,12 @@ export const notesDraftsCreateParamDef = z.object({
 	cw: z.string().min(1).max(100).nullable().optional(),
 	hashtag: z.string().max(200).nullable().optional(),
 	localOnly: z.boolean().default(false),
-	reactionAcceptance: z.union([
-		z.enum(['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote']),
-		z.null(),
-	]).default(null),
+	reactionAcceptance: z
+		.union([
+			z.enum(['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote']),
+			z.null(),
+		])
+		.default(null),
 	replyId: misskeyId().nullable().optional(),
 	renoteId: misskeyId().nullable().optional(),
 	channelId: misskeyId().nullable().optional(),
@@ -109,10 +122,12 @@ export const notesDraftsUpdateParamDef = z.object({
 	cw: z.string().min(1).max(100).nullable().optional(),
 	hashtag: z.string().max(200).nullable().optional(),
 	localOnly: z.boolean().optional(),
-	reactionAcceptance: z.union([
-		z.enum(['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote']),
-		z.null(),
-	]).optional(),
+	reactionAcceptance: z
+		.union([
+			z.enum(['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote']),
+			z.null(),
+		])
+		.optional(),
 	replyId: misskeyId().nullable().optional(),
 	renoteId: misskeyId().nullable().optional(),
 	channelId: misskeyId().nullable().optional(),
@@ -173,7 +188,12 @@ type NotesDraftsListParams = {
 };
 
 function draftNoSuchNoteDraftError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note draft.', code: 'NO_SUCH_NOTE_DRAFT', id: '49cd6b9d-848e-41ee-b0b9-adaca711a6b1' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note draft.',
+		code: 'NO_SUCH_NOTE_DRAFT',
+		id: '49cd6b9d-848e-41ee-b0b9-adaca711a6b1',
+	});
 }
 
 type DraftValidationErrorMap = {
@@ -251,8 +271,9 @@ async function validateNoteDraft(
 		const reply = await fetchNoteByIdFromDatabase(deps.db, data.replyId);
 		if (reply == null) throw errors.noSuchReplyTarget;
 		if (isRenote(reply) && !isQuote(reply)) throw errors.cannotReplyToPureRenote;
-		if (!await isVisibleForMeForHonoApi(deps, reply, me.id)) throw errors.cannotReplyToInvisibleNote;
-		if (reply.visibility === 'specified' && data.visibility !== 'specified') throw errors.cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility;
+		if (!(await isVisibleForMeForHonoApi(deps, reply, me.id))) throw errors.cannotReplyToInvisibleNote;
+		if (reply.visibility === 'specified' && data.visibility !== 'specified')
+			throw errors.cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility;
 
 		if (reply.userId !== me.id) {
 			const blockExist = await blockingExistsInDatabase(deps.db, reply.userId, me.id);
@@ -272,25 +293,29 @@ async function scheduleNoteDraft(deps: HonoApiNoteDraftDependencies, draft: MiNo
 	if (draft.scheduledAt.getTime() <= Date.now()) return;
 
 	const delay = draft.scheduledAt.getTime() - Date.now();
-	await deps.postScheduledNoteQueue.add(draft.id, {
-		noteDraftId: draft.id,
-		scheduledAt: draft.scheduledAt.getTime(),
-	}, {
-		jobId: `scheduled-${draft.id}-${draft.scheduledAt.getTime()}`,
-		delay,
-		attempts: 3,
-		backoff: {
-			type: 'exponential',
-			delay: 30_000,
+	await deps.postScheduledNoteQueue.add(
+		draft.id,
+		{
+			noteDraftId: draft.id,
+			scheduledAt: draft.scheduledAt.getTime(),
 		},
-		...queueRetentionOptions(deps.config),
-	});
+		{
+			jobId: `scheduled-${draft.id}-${draft.scheduledAt.getTime()}`,
+			delay,
+			attempts: 3,
+			backoff: {
+				type: 'exponential',
+				delay: 30_000,
+			},
+			...queueRetentionOptions(deps.config),
+		},
+	);
 }
 
 async function clearNoteDraftSchedule(deps: HonoApiNoteDraftDependencies, draft: MiNoteDraft): Promise<void> {
 	if (draft.scheduledAt != null) {
 		const job = await deps.postScheduledNoteQueue.getJob(`scheduled-${draft.id}-${draft.scheduledAt.getTime()}`);
-		if (job != null && !await job.isActive()) await job.remove();
+		if (job != null && !(await job.isActive())) await job.remove();
 	}
 
 	// Stale revisions are rejected by the worker, so request handling never scans the entire queue.
@@ -309,7 +334,9 @@ async function packNoteDraftForHonoApi(
 	},
 ): Promise<Packed<'NoteDraft'>> {
 	const channel = draft.channelId
-		? (hint?.channel !== undefined ? hint.channel : await fetchChannelByIdFromDatabase(deps.db, draft.channelId))
+		? hint?.channel !== undefined
+			? hint.channel
+			: await fetchChannelByIdFromDatabase(deps.db, draft.channelId)
 		: null;
 
 	async function nullIfEntityNotFound<T>(promise: Promise<T>): Promise<T | null> {
@@ -324,13 +351,19 @@ async function packNoteDraftForHonoApi(
 	const [user, files, reply, renote] = await Promise.all([
 		hint?.packedUser ?? packUserLiteForHonoApi(deps, draft.userId),
 		hint?.packedFiles
-			? draft.fileIds.map(fileId => hint.packedFiles?.get(fileId)).filter((file): file is Packed<'DriveFile'> => file != null)
+			? draft.fileIds
+					.map((fileId) => hint.packedFiles?.get(fileId))
+					.filter((file): file is Packed<'DriveFile'> => file != null)
 			: packDriveFileManyByIdsForHonoApi(deps, draft.fileIds),
 		draft.replyId
-			? (hint?.reply !== undefined ? hint.reply : nullIfEntityNotFound(packNoteForHonoApi(deps, draft.replyId, me, { detail: false })))
+			? hint?.reply !== undefined
+				? hint.reply
+				: nullIfEntityNotFound(packNoteForHonoApi(deps, draft.replyId, me, { detail: false }))
 			: Promise.resolve(undefined),
 		draft.renoteId
-			? (hint?.renote !== undefined ? hint.renote : nullIfEntityNotFound(packNoteForHonoApi(deps, draft.renoteId, me, { detail: true })))
+			? hint?.renote !== undefined
+				? hint.renote
+				: nullIfEntityNotFound(packNoteForHonoApi(deps, draft.renoteId, me, { detail: true }))
 			: Promise.resolve(undefined),
 	]);
 
@@ -353,20 +386,24 @@ async function packNoteDraftForHonoApi(
 		replyId: draft.replyId,
 		renoteId: draft.renoteId,
 		channelId: draft.channelId,
-		channel: channel ? {
-			id: channel.id,
-			name: channel.name,
-			color: channel.color,
-			isSensitive: channel.isSensitive,
-			allowRenoteToExternal: channel.allowRenoteToExternal,
-			userId: channel.userId,
-		} : undefined,
-		poll: draft.hasPoll ? {
-			choices: draft.pollChoices,
-			multiple: draft.pollMultiple,
-			expiresAt: draft.pollExpiresAt?.toISOString(),
-			expiredAfter: draft.pollExpiredAfter,
-		} : null,
+		channel: channel
+			? {
+					id: channel.id,
+					name: channel.name,
+					color: channel.color,
+					isSensitive: channel.isSensitive,
+					allowRenoteToExternal: channel.allowRenoteToExternal,
+					userId: channel.userId,
+				}
+			: undefined,
+		poll: draft.hasPoll
+			? {
+					choices: draft.pollChoices,
+					multiple: draft.pollMultiple,
+					expiresAt: draft.pollExpiresAt?.toISOString(),
+					expiredAfter: draft.pollExpiredAfter,
+				}
+			: null,
 		reply: draft.replyId ? reply : undefined,
 		renote: draft.renoteId ? renote : undefined,
 	} satisfies Packed<'NoteDraft'>;
@@ -379,11 +416,11 @@ async function packNoteDraftManyForHonoApi(
 ): Promise<Packed<'NoteDraft'>[]> {
 	if (drafts.length === 0) return [];
 
-	const userSources = [...new Set(drafts.map(draft => draft.userId))];
-	const fileIds = [...new Set(drafts.flatMap(draft => draft.fileIds))];
-	const channelIds = [...new Set(drafts.map(draft => draft.channelId).filter((id): id is string => id != null))];
-	const replyIds = [...new Set(drafts.map(draft => draft.replyId).filter((id): id is string => id != null))];
-	const renoteIds = [...new Set(drafts.map(draft => draft.renoteId).filter((id): id is string => id != null))];
+	const userSources = [...new Set(drafts.map((draft) => draft.userId))];
+	const fileIds = [...new Set(drafts.flatMap((draft) => draft.fileIds))];
+	const channelIds = [...new Set(drafts.map((draft) => draft.channelId).filter((id): id is string => id != null))];
+	const replyIds = [...new Set(drafts.map((draft) => draft.replyId).filter((id): id is string => id != null))];
+	const renoteIds = [...new Set(drafts.map((draft) => draft.renoteId).filter((id): id is string => id != null))];
 
 	const [packedUsers, files, channels, replyNotes, renoteNotes] = await Promise.all([
 		packUserLiteManyForHonoApi(deps, userSources),
@@ -399,19 +436,28 @@ async function packNoteDraftManyForHonoApi(
 		packNoteManyForHonoApi(deps, renoteNotes, me, { detail: true }),
 	]);
 
-	const userById = new Map(packedUsers.map(user => [user.id, user]));
-	const fileById = new Map(packedFiles.map(file => [file.id, file]));
-	const channelById = new Map(channels.map(channel => [channel.id, channel]));
-	const replyById = new Map(packedReplies.map(note => [note.id, note]));
-	const renoteById = new Map(packedRenotes.map(note => [note.id, note]));
+	const userById = new Map(packedUsers.map((user) => [user.id, user]));
+	const fileById = new Map(packedFiles.map((file) => [file.id, file]));
+	const channelById = new Map(channels.map((channel) => [channel.id, channel]));
+	const replyById = new Map(packedReplies.map((note) => [note.id, note]));
+	const renoteById = new Map(packedRenotes.map((note) => [note.id, note]));
 
-	return await Promise.all(drafts.map(draft => packNoteDraftForHonoApi(deps, draft, me, omitUndefined({
-		packedUser: userById.get(draft.userId),
-		packedFiles: fileById,
-		channel: draft.channelId ? (channelById.get(draft.channelId) ?? null) : null,
-		reply: draft.replyId ? (replyById.get(draft.replyId) ?? null) : undefined,
-		renote: draft.renoteId ? (renoteById.get(draft.renoteId) ?? null) : undefined,
-	}))));
+	return await Promise.all(
+		drafts.map((draft) =>
+			packNoteDraftForHonoApi(
+				deps,
+				draft,
+				me,
+				omitUndefined({
+					packedUser: userById.get(draft.userId),
+					packedFiles: fileById,
+					channel: draft.channelId ? (channelById.get(draft.channelId) ?? null) : null,
+					reply: draft.replyId ? (replyById.get(draft.replyId) ?? null) : undefined,
+					renote: draft.renoteId ? (renoteById.get(draft.renoteId) ?? null) : undefined,
+				}),
+			),
+		),
+	);
 }
 
 export async function handleHonoApiNotesDraftsCreate(
@@ -424,45 +470,132 @@ export async function handleHonoApiNotesDraftsCreate(
 	const policies = await getHonoApiRolePolicies(deps, me);
 	const currentCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id);
 	if (currentCount >= policies.noteDraftLimit) {
-		throw new HonoApiError({ status: 400, message: 'You cannot create drafts any more.', code: 'TOO_MANY_DRAFTS', id: '9ee33bbe-fde3-4c71-9b51-e50492c6b9c8' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'You cannot create drafts any more.',
+			code: 'TOO_MANY_DRAFTS',
+			id: '9ee33bbe-fde3-4c71-9b51-e50492c6b9c8',
+		});
 	}
 
 	if (params.isActuallyScheduled) {
-		const currentScheduledCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id, { isActuallyScheduled: true });
+		const currentScheduledCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id, {
+			isActuallyScheduled: true,
+		});
 		if (currentScheduledCount >= policies.scheduledNoteLimit) {
-			throw new HonoApiError({ status: 400, message: 'You cannot create scheduled notes any more.', code: 'TOO_MANY_SCHEDULED_NOTES', id: '22ae69eb-09e3-4541-a850-773cfa45e693' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'You cannot create scheduled notes any more.',
+				code: 'TOO_MANY_SCHEDULED_NOTES',
+				id: '22ae69eb-09e3-4541-a850-773cfa45e693',
+			});
 		}
 	}
 
 	const scheduledAt = params.scheduledAt ? new Date(params.scheduledAt) : null;
 	const pollExpiresAt = params.poll?.expiresAt ? new Date(params.poll.expiresAt) : null;
 
-	await validateNoteDraft(deps, me, omitUndefined({
-		isActuallyScheduled: params.isActuallyScheduled,
-		scheduledAt,
-		pollExpiresAt,
-		visibleUserIds: params.visibleUserIds,
-		fileIds: params.fileIds,
-		renoteId: params.renoteId,
-		replyId: params.replyId,
-		visibility: params.visibility,
-		channelId: params.channelId,
-	}), {
-		scheduledAtRequired: new HonoApiError({ status: 400, message: 'scheduledAt is required when isActuallyScheduled is true.', code: 'SCHEDULED_AT_REQUIRED', id: '15e28a55-e74c-4d65-89b7-8880cdaaa87d' }),
-		scheduledAtMustBeInFuture: new HonoApiError({ status: 400, message: 'scheduledAt must be in the future.', code: 'SCHEDULED_AT_MUST_BE_IN_FUTURE', id: 'e4bed6c9-017e-4934-aed0-01c22cc60ec1' }),
-		cannotCreateAlreadyExpiredPoll: new HonoApiError({ status: 400, message: 'Poll is already expired.', code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL', id: '04da457d-b083-4055-9082-955525eda5a5' }),
-		noSuchFile: new HonoApiError({ status: 400, message: 'Some files are not found.', code: 'NO_SUCH_FILE', id: 'b6992544-63e7-67f0-fa7f-32444b1b5306' }),
-		noSuchRenoteTarget: new HonoApiError({ status: 400, message: 'No such renote target.', code: 'NO_SUCH_RENOTE_TARGET', id: 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4' }),
-		cannotReRenote: new HonoApiError({ status: 400, message: 'You can not Renote a pure Renote.', code: 'CANNOT_RENOTE_TO_A_PURE_RENOTE', id: 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a' }),
-		youHaveBeenBlocked: new HonoApiError({ status: 400, message: 'You have been blocked by this user.', code: 'YOU_HAVE_BEEN_BLOCKED', id: 'b390d7e1-8a5e-46ed-b625-06271cafd3d3' }),
-		cannotRenoteDueToVisibility: new HonoApiError({ status: 400, message: 'You can not Renote due to target visibility.', code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY', id: 'be9529e9-fe72-4de0-ae43-0b363c4938af' }),
-		noSuchChannel: new HonoApiError({ status: 400, message: 'No such channel.', code: 'NO_SUCH_CHANNEL', id: 'b1653923-5453-4edc-b786-7c4f39bb0bbb' }),
-		cannotRenoteToExternal: new HonoApiError({ status: 400, message: 'Cannot Renote to External.', code: 'CANNOT_RENOTE_TO_EXTERNAL', id: 'ed1952ac-2d26-4957-8b30-2deda76bedf7' }),
-		noSuchReplyTarget: new HonoApiError({ status: 400, message: 'No such reply target.', code: 'NO_SUCH_REPLY_TARGET', id: '749ee0f6-d3da-459a-bf02-282e2da4292c' }),
-		cannotReplyToPureRenote: new HonoApiError({ status: 400, message: 'You can not reply to a pure Renote.', code: 'CANNOT_REPLY_TO_A_PURE_RENOTE', id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15' }),
-		cannotReplyToInvisibleNote: new HonoApiError({ status: 400, message: 'You cannot reply to an invisible Note.', code: 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE', id: 'b98980fa-3780-406c-a935-b6d0eeee10d1' }),
-		cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: new HonoApiError({ status: 400, message: 'You cannot reply to a specified visibility note with extended visibility.', code: 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY', id: 'ed940410-535c-4d5e-bfa3-af798671e93c' }),
-	});
+	await validateNoteDraft(
+		deps,
+		me,
+		omitUndefined({
+			isActuallyScheduled: params.isActuallyScheduled,
+			scheduledAt,
+			pollExpiresAt,
+			visibleUserIds: params.visibleUserIds,
+			fileIds: params.fileIds,
+			renoteId: params.renoteId,
+			replyId: params.replyId,
+			visibility: params.visibility,
+			channelId: params.channelId,
+		}),
+		{
+			scheduledAtRequired: new HonoApiError({
+				status: 400,
+				message: 'scheduledAt is required when isActuallyScheduled is true.',
+				code: 'SCHEDULED_AT_REQUIRED',
+				id: '15e28a55-e74c-4d65-89b7-8880cdaaa87d',
+			}),
+			scheduledAtMustBeInFuture: new HonoApiError({
+				status: 400,
+				message: 'scheduledAt must be in the future.',
+				code: 'SCHEDULED_AT_MUST_BE_IN_FUTURE',
+				id: 'e4bed6c9-017e-4934-aed0-01c22cc60ec1',
+			}),
+			cannotCreateAlreadyExpiredPoll: new HonoApiError({
+				status: 400,
+				message: 'Poll is already expired.',
+				code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL',
+				id: '04da457d-b083-4055-9082-955525eda5a5',
+			}),
+			noSuchFile: new HonoApiError({
+				status: 400,
+				message: 'Some files are not found.',
+				code: 'NO_SUCH_FILE',
+				id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
+			}),
+			noSuchRenoteTarget: new HonoApiError({
+				status: 400,
+				message: 'No such renote target.',
+				code: 'NO_SUCH_RENOTE_TARGET',
+				id: 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4',
+			}),
+			cannotReRenote: new HonoApiError({
+				status: 400,
+				message: 'You can not Renote a pure Renote.',
+				code: 'CANNOT_RENOTE_TO_A_PURE_RENOTE',
+				id: 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a',
+			}),
+			youHaveBeenBlocked: new HonoApiError({
+				status: 400,
+				message: 'You have been blocked by this user.',
+				code: 'YOU_HAVE_BEEN_BLOCKED',
+				id: 'b390d7e1-8a5e-46ed-b625-06271cafd3d3',
+			}),
+			cannotRenoteDueToVisibility: new HonoApiError({
+				status: 400,
+				message: 'You can not Renote due to target visibility.',
+				code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY',
+				id: 'be9529e9-fe72-4de0-ae43-0b363c4938af',
+			}),
+			noSuchChannel: new HonoApiError({
+				status: 400,
+				message: 'No such channel.',
+				code: 'NO_SUCH_CHANNEL',
+				id: 'b1653923-5453-4edc-b786-7c4f39bb0bbb',
+			}),
+			cannotRenoteToExternal: new HonoApiError({
+				status: 400,
+				message: 'Cannot Renote to External.',
+				code: 'CANNOT_RENOTE_TO_EXTERNAL',
+				id: 'ed1952ac-2d26-4957-8b30-2deda76bedf7',
+			}),
+			noSuchReplyTarget: new HonoApiError({
+				status: 400,
+				message: 'No such reply target.',
+				code: 'NO_SUCH_REPLY_TARGET',
+				id: '749ee0f6-d3da-459a-bf02-282e2da4292c',
+			}),
+			cannotReplyToPureRenote: new HonoApiError({
+				status: 400,
+				message: 'You can not reply to a pure Renote.',
+				code: 'CANNOT_REPLY_TO_A_PURE_RENOTE',
+				id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15',
+			}),
+			cannotReplyToInvisibleNote: new HonoApiError({
+				status: 400,
+				message: 'You cannot reply to an invisible Note.',
+				code: 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE',
+				id: 'b98980fa-3780-406c-a935-b6d0eeee10d1',
+			}),
+			cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: new HonoApiError({
+				status: 400,
+				message: 'You cannot reply to a specified visibility note with extended visibility.',
+				code: 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
+				id: 'ed940410-535c-4d5e-bfa3-af798671e93c',
+			}),
+		},
+	);
 
 	const draft = await createNoteDraftInDatabase(deps.db, {
 		id: genId(),
@@ -506,44 +639,129 @@ export async function handleHonoApiNotesDraftsUpdate(
 
 	const policies = await getHonoApiRolePolicies(deps, me);
 	if (!existing.isActuallyScheduled && params.isActuallyScheduled) {
-		const currentScheduledCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id, { isActuallyScheduled: true });
+		const currentScheduledCount = await countNoteDraftsByUserIdFromDatabase(deps.db, me.id, {
+			isActuallyScheduled: true,
+		});
 		if (currentScheduledCount >= policies.scheduledNoteLimit) {
-			throw new HonoApiError({ status: 400, message: 'You cannot create scheduled notes any more.', code: 'TOO_MANY_SCHEDULED_NOTES', id: '02f5df79-08ae-4a33-8524-f1503c8f6212' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'You cannot create scheduled notes any more.',
+				code: 'TOO_MANY_SCHEDULED_NOTES',
+				id: '02f5df79-08ae-4a33-8524-f1503c8f6212',
+			});
 		}
 	}
 
-	const scheduledAt = params.scheduledAt === undefined
-		? existing.scheduledAt
-		: params.scheduledAt == null ? null : new Date(params.scheduledAt);
+	const scheduledAt =
+		params.scheduledAt === undefined
+			? existing.scheduledAt
+			: params.scheduledAt == null
+				? null
+				: new Date(params.scheduledAt);
 	const pollExpiresAt = params.poll?.expiresAt ? new Date(params.poll.expiresAt) : null;
 	const isActuallyScheduled = params.isActuallyScheduled ?? existing.isActuallyScheduled;
 
-	await validateNoteDraft(deps, me, omitUndefined({
-		isActuallyScheduled,
-		scheduledAt,
-		pollExpiresAt,
-		visibleUserIds: params.visibleUserIds,
-		fileIds: params.fileIds,
-		renoteId: params.renoteId,
-		replyId: params.replyId,
-		visibility: params.visibility,
-		channelId: params.channelId,
-	}), {
-		scheduledAtRequired: new HonoApiError({ status: 400, message: 'scheduledAt is required when isActuallyScheduled is true.', code: 'SCHEDULED_AT_REQUIRED', id: 'fe9737d5-cc41-498c-af9d-149207307530' }),
-		scheduledAtMustBeInFuture: new HonoApiError({ status: 400, message: 'scheduledAt must be in the future.', code: 'SCHEDULED_AT_MUST_BE_IN_FUTURE', id: 'ed1a6673-d0d1-4364-aaae-9bf3f139cbc5' }),
-		cannotCreateAlreadyExpiredPoll: new HonoApiError({ status: 400, message: 'Poll is already expired.', code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL', id: '04da457d-b083-4055-9082-955525eda5a5' }),
-		noSuchFile: new HonoApiError({ status: 400, message: 'Some files are not found.', code: 'NO_SUCH_FILE', id: 'b6992544-63e7-67f0-fa7f-32444b1b5306' }),
-		noSuchRenoteTarget: new HonoApiError({ status: 400, message: 'No such renote.', code: 'NO_SUCH_RENOTE', id: '64929870-2540-4d11-af41-3b484d78c956' }),
-		cannotReRenote: new HonoApiError({ status: 400, message: 'Cannot renote.', code: 'CANNOT_RENOTE', id: '76cc5583-5a14-4ad3-8717-0298507e32db' }),
-		youHaveBeenBlocked: new HonoApiError({ status: 400, message: 'You have been blocked by this user.', code: 'YOU_HAVE_BEEN_BLOCKED', id: 'b390d7e1-8a5e-46ed-b625-06271cafd3d3' }),
-		cannotRenoteDueToVisibility: new HonoApiError({ status: 400, message: 'You can not Renote due to target visibility.', code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY', id: 'be9529e9-fe72-4de0-ae43-0b363c4938af' }),
-		noSuchChannel: new HonoApiError({ status: 400, message: 'No such channel.', code: 'NO_SUCH_CHANNEL', id: 'b1653923-5453-4edc-b786-7c4f39bb0bbb' }),
-		cannotRenoteToExternal: new HonoApiError({ status: 400, message: 'Cannot Renote to External.', code: 'CANNOT_RENOTE_TO_EXTERNAL', id: 'ed1952ac-2d26-4957-8b30-2deda76bedf7' }),
-		noSuchReplyTarget: new HonoApiError({ status: 400, message: 'No such reply.', code: 'NO_SUCH_REPLY', id: 'c4721841-22fc-4bb7-ad3d-897ef1d375b5' }),
-		cannotReplyToPureRenote: new HonoApiError({ status: 400, message: 'You can not reply to a pure Renote.', code: 'CANNOT_REPLY_TO_A_PURE_RENOTE', id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15' }),
-		cannotReplyToInvisibleNote: new HonoApiError({ status: 400, message: 'You cannot reply to an invisible Note.', code: 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE', id: 'b98980fa-3780-406c-a935-b6d0eeee10d1' }),
-		cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: new HonoApiError({ status: 400, message: 'You cannot reply to a specified visibility note with extended visibility.', code: 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY', id: '215dbc76-336c-4d2a-9605-95766ba7dab0' }),
-	});
+	await validateNoteDraft(
+		deps,
+		me,
+		omitUndefined({
+			isActuallyScheduled,
+			scheduledAt,
+			pollExpiresAt,
+			visibleUserIds: params.visibleUserIds,
+			fileIds: params.fileIds,
+			renoteId: params.renoteId,
+			replyId: params.replyId,
+			visibility: params.visibility,
+			channelId: params.channelId,
+		}),
+		{
+			scheduledAtRequired: new HonoApiError({
+				status: 400,
+				message: 'scheduledAt is required when isActuallyScheduled is true.',
+				code: 'SCHEDULED_AT_REQUIRED',
+				id: 'fe9737d5-cc41-498c-af9d-149207307530',
+			}),
+			scheduledAtMustBeInFuture: new HonoApiError({
+				status: 400,
+				message: 'scheduledAt must be in the future.',
+				code: 'SCHEDULED_AT_MUST_BE_IN_FUTURE',
+				id: 'ed1a6673-d0d1-4364-aaae-9bf3f139cbc5',
+			}),
+			cannotCreateAlreadyExpiredPoll: new HonoApiError({
+				status: 400,
+				message: 'Poll is already expired.',
+				code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL',
+				id: '04da457d-b083-4055-9082-955525eda5a5',
+			}),
+			noSuchFile: new HonoApiError({
+				status: 400,
+				message: 'Some files are not found.',
+				code: 'NO_SUCH_FILE',
+				id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
+			}),
+			noSuchRenoteTarget: new HonoApiError({
+				status: 400,
+				message: 'No such renote.',
+				code: 'NO_SUCH_RENOTE',
+				id: '64929870-2540-4d11-af41-3b484d78c956',
+			}),
+			cannotReRenote: new HonoApiError({
+				status: 400,
+				message: 'Cannot renote.',
+				code: 'CANNOT_RENOTE',
+				id: '76cc5583-5a14-4ad3-8717-0298507e32db',
+			}),
+			youHaveBeenBlocked: new HonoApiError({
+				status: 400,
+				message: 'You have been blocked by this user.',
+				code: 'YOU_HAVE_BEEN_BLOCKED',
+				id: 'b390d7e1-8a5e-46ed-b625-06271cafd3d3',
+			}),
+			cannotRenoteDueToVisibility: new HonoApiError({
+				status: 400,
+				message: 'You can not Renote due to target visibility.',
+				code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY',
+				id: 'be9529e9-fe72-4de0-ae43-0b363c4938af',
+			}),
+			noSuchChannel: new HonoApiError({
+				status: 400,
+				message: 'No such channel.',
+				code: 'NO_SUCH_CHANNEL',
+				id: 'b1653923-5453-4edc-b786-7c4f39bb0bbb',
+			}),
+			cannotRenoteToExternal: new HonoApiError({
+				status: 400,
+				message: 'Cannot Renote to External.',
+				code: 'CANNOT_RENOTE_TO_EXTERNAL',
+				id: 'ed1952ac-2d26-4957-8b30-2deda76bedf7',
+			}),
+			noSuchReplyTarget: new HonoApiError({
+				status: 400,
+				message: 'No such reply.',
+				code: 'NO_SUCH_REPLY',
+				id: 'c4721841-22fc-4bb7-ad3d-897ef1d375b5',
+			}),
+			cannotReplyToPureRenote: new HonoApiError({
+				status: 400,
+				message: 'You can not reply to a pure Renote.',
+				code: 'CANNOT_REPLY_TO_A_PURE_RENOTE',
+				id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15',
+			}),
+			cannotReplyToInvisibleNote: new HonoApiError({
+				status: 400,
+				message: 'You cannot reply to an invisible Note.',
+				code: 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE',
+				id: 'b98980fa-3780-406c-a935-b6d0eeee10d1',
+			}),
+			cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility: new HonoApiError({
+				status: 400,
+				message: 'You cannot reply to a specified visibility note with extended visibility.',
+				code: 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
+				id: '215dbc76-336c-4d2a-9605-95766ba7dab0',
+			}),
+		},
+	);
 
 	const updatedDraft = await updateNoteDraftInDatabase(deps.db, params.draftId, {
 		fileIds: params.fileIds,
@@ -594,11 +812,15 @@ export async function handleHonoApiNotesDraftsList(
 	const params = parseHonoApiParams(notesDraftsListParamDef, body);
 	const pagination = resolveNoteDraftPagination({ gen: (time) => genId(time) }, params);
 
-	const drafts = await listNoteDraftsByUserIdFromDatabase(deps.db, me.id, omitUndefined({
-		limit: params.limit,
-		scheduled: params.scheduled,
-		...pagination,
-	}));
+	const drafts = await listNoteDraftsByUserIdFromDatabase(
+		deps.db,
+		me.id,
+		omitUndefined({
+			limit: params.limit,
+			scheduled: params.scheduled,
+			...pagination,
+		}),
+	);
 
 	return await packNoteDraftManyForHonoApi(deps, drafts, me);
 }

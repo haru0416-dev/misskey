@@ -64,7 +64,13 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 		// JSON.parse せず content 文字列に自分のアクティビティ id が含まれるかだけを見る。
 		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'delayed']);
 		const contentId = activity.id;
-		expect(jobs.find(j => typeof (j?.data as DeliverJobData | undefined)?.content === 'string' && (j.data as DeliverJobData).content.includes(contentId))).toBeUndefined();
+		expect(
+			jobs.find(
+				(j) =>
+					typeof (j?.data as DeliverJobData | undefined)?.content === 'string' &&
+					(j.data as DeliverJobData).content.includes(contentId),
+			),
+		).toBeUndefined();
 	});
 
 	test('attachLdSignature: RsaSignature2017 の signature フィールドを付与し、元のフィールドを保持する', async () => {
@@ -94,7 +100,11 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 		createdRelayIds.push(relay.id);
 		// requesting 状態のリレーには配送されないことも同時に確認する
 		const pendingInbox = `https://relay.example.com/pending-${genId()}`;
-		const pendingRelay = await createRelayInDatabase(runtime.db, { id: genId(), inbox: pendingInbox, status: 'requesting' });
+		const pendingRelay = await createRelayInDatabase(runtime.db, {
+			id: genId(),
+			inbox: pendingInbox,
+			status: 'requesting',
+		});
 		createdRelayIds.push(pendingRelay.id);
 
 		const activity = {
@@ -108,7 +118,7 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 		await deliverToRelaysForHonoApi(runtime, { id: user.id, host: null }, activity);
 
 		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'delayed']);
-		const relayJob = jobs.find(j => (j.data as DeliverJobData).to === inbox);
+		const relayJob = jobs.find((j) => (j.data as DeliverJobData).to === inbox);
 		expect(relayJob).toBeDefined();
 
 		const data = relayJob!.data as DeliverJobData;
@@ -124,9 +134,8 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 		expect('signature' in activity).toBe(false);
 
 		// requesting のリレーには配送されない
-		expect(jobs.find(j => (j.data as DeliverJobData).to === pendingInbox)).toBeUndefined();
+		expect(jobs.find((j) => (j.data as DeliverJobData).to === pendingInbox)).toBeUndefined();
 
 		await relayJob!.remove();
 	});
-
 });

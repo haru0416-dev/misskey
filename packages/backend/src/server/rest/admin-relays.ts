@@ -7,7 +7,11 @@ import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { addRelayWithSideEffects, removeRelayWithSideEffects } from '@/core/RelayLogic.js';
-import { listRelaysByStatusFromDatabaseCached, listRelaysFromDatabase, updateRelayStatusInDatabase } from '@/core/RelayStore.js';
+import {
+	listRelaysByStatusFromDatabaseCached,
+	listRelaysFromDatabase,
+	updateRelayStatusInDatabase,
+} from '@/core/RelayStore.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -56,12 +60,18 @@ function assertHttpsUrl(url: string): void {
 	}
 }
 
-export async function relayAcceptedForHonoApi(deps: Pick<HonoApiAdminRelaysDependencies, 'db'>, id: string): Promise<string> {
+export async function relayAcceptedForHonoApi(
+	deps: Pick<HonoApiAdminRelaysDependencies, 'db'>,
+	id: string,
+): Promise<string> {
 	const result = await updateRelayStatusInDatabase(deps.db, id, 'accepted');
 	return JSON.stringify(result);
 }
 
-export async function relayRejectedForHonoApi(deps: Pick<HonoApiAdminRelaysDependencies, 'db'>, id: string): Promise<string> {
+export async function relayRejectedForHonoApi(
+	deps: Pick<HonoApiAdminRelaysDependencies, 'db'>,
+	id: string,
+): Promise<string> {
 	const result = await updateRelayStatusInDatabase(deps.db, id, 'rejected');
 	return JSON.stringify(result);
 }
@@ -70,11 +80,15 @@ export async function relayRejectedForHonoApi(deps: Pick<HonoApiAdminRelaysDepen
  * RelayService.isRelayActor 相当。原典の10分キャッシュに対応する RelayStore 側の
  * 同期無効化付き短命キャッシュ (listRelaysByStatusFromDatabaseCached) を使う。
  */
-export async function isRelayActorForHonoApi(deps: Pick<HonoApiAdminRelaysDependencies, 'db'>, actor: { inbox: string | null; sharedInbox: string | null }): Promise<boolean> {
+export async function isRelayActorForHonoApi(
+	deps: Pick<HonoApiAdminRelaysDependencies, 'db'>,
+	actor: { inbox: string | null; sharedInbox: string | null },
+): Promise<boolean> {
 	const relays = await listRelaysByStatusFromDatabaseCached(deps.db, 'accepted');
-	return relays.some(relay =>
-		(actor.inbox != null && relay.inbox === actor.inbox)
-		|| (actor.sharedInbox != null && relay.inbox === actor.sharedInbox),
+	return relays.some(
+		(relay) =>
+			(actor.inbox != null && relay.inbox === actor.inbox) ||
+			(actor.sharedInbox != null && relay.inbox === actor.sharedInbox),
 	);
 }
 
@@ -86,7 +100,7 @@ export async function handleHonoApiAdminRelaysList(
 
 	const relays = await listRelaysFromDatabase(deps.db);
 
-	return relays.map(relay => ({
+	return relays.map((relay) => ({
 		id: relay.id,
 		inbox: relay.inbox,
 		status: relay.status,
@@ -100,17 +114,25 @@ export async function handleHonoApiAdminRelaysAdd(
 	const ps = parseHonoApiParams(adminRelaysWriteParamDef, body);
 	assertHttpsUrl(ps.inbox);
 
-	return await addRelayWithSideEffects({
-		config: deps.config,
-		db: deps.db,
-		genId,
-		fetchRelayActor: () => fetchOrCreateSystemAccountInDatabase({
+	return await addRelayWithSideEffects(
+		{
+			config: deps.config,
 			db: deps.db,
-			meta: deps.meta,
 			genId,
-		}, 'relay'),
-		enqueueDeliver: (user, content, to, isSharedInbox) => enqueueDeliverJob(deps.deliverQueue, deps.config, user, content, to, isSharedInbox),
-	}, ps.inbox);
+			fetchRelayActor: () =>
+				fetchOrCreateSystemAccountInDatabase(
+					{
+						db: deps.db,
+						meta: deps.meta,
+						genId,
+					},
+					'relay',
+				),
+			enqueueDeliver: (user, content, to, isSharedInbox) =>
+				enqueueDeliverJob(deps.deliverQueue, deps.config, user, content, to, isSharedInbox),
+		},
+		ps.inbox,
+	);
 }
 
 export async function handleHonoApiAdminRelaysRemove(
@@ -119,15 +141,23 @@ export async function handleHonoApiAdminRelaysRemove(
 ): Promise<void> {
 	const ps = parseHonoApiParams(adminRelaysWriteParamDef, body);
 
-	await removeRelayWithSideEffects({
-		config: deps.config,
-		db: deps.db,
-		genId,
-		fetchRelayActor: () => fetchOrCreateSystemAccountInDatabase({
+	await removeRelayWithSideEffects(
+		{
+			config: deps.config,
 			db: deps.db,
-			meta: deps.meta,
 			genId,
-		}, 'relay'),
-		enqueueDeliver: (user, content, to, isSharedInbox) => enqueueDeliverJob(deps.deliverQueue, deps.config, user, content, to, isSharedInbox),
-	}, ps.inbox);
+			fetchRelayActor: () =>
+				fetchOrCreateSystemAccountInDatabase(
+					{
+						db: deps.db,
+						meta: deps.meta,
+						genId,
+					},
+					'relay',
+				),
+			enqueueDeliver: (user, content, to, isSharedInbox) =>
+				enqueueDeliverJob(deps.deliverQueue, deps.config, user, content, to, isSharedInbox),
+		},
+		ps.inbox,
+	);
 }

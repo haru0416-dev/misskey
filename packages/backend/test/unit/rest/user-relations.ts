@@ -59,7 +59,17 @@ vi.mock('@/core/RenoteMutingStore.js', () => ({
 import { handleHonoApiUsersRelation } from '@/server/rest/user.js';
 
 const ids = Array.from({ length: 9 }, (_, index) => `019f587c6bc4785ead8d511d603959f${index}`);
-const [meId, followingId, followerId, outgoingRequestId, incomingRequestId, blockingId, blockerId, mutingId, renoteMutingId] = ids as [string, string, string, string, string, string, string, string, string];
+const [
+	meId,
+	followingId,
+	followerId,
+	outgoingRequestId,
+	incomingRequestId,
+	blockingId,
+	blockerId,
+	mutingId,
+	renoteMutingId,
+] = ids as [string, string, string, string, string, string, string, string, string];
 const db = {} as MiDrizzleDatabase;
 const following = {
 	id: 'following',
@@ -82,7 +92,15 @@ type Relation = {
 	isRenoteMuted: boolean;
 };
 
-type RelationFlag = 'isFollowing' | 'isFollowed' | 'hasPendingFollowRequestFromYou' | 'hasPendingFollowRequestToYou' | 'isBlocking' | 'isBlocked' | 'isMuted' | 'isRenoteMuted';
+type RelationFlag =
+	| 'isFollowing'
+	| 'isFollowed'
+	| 'hasPendingFollowRequestFromYou'
+	| 'hasPendingFollowRequestToYou'
+	| 'isBlocking'
+	| 'isBlocked'
+	| 'isMuted'
+	| 'isRenoteMuted';
 
 describe('users/relation batch loading', () => {
 	beforeEach(() => {
@@ -98,9 +116,22 @@ describe('users/relation batch loading', () => {
 	});
 
 	test('loads only requested targets while preserving every relation flag', async () => {
-		const targets = [followingId, followerId, outgoingRequestId, incomingRequestId, blockingId, blockerId, mutingId, renoteMutingId];
-		const result = await handleHonoApiUsersRelation({ db }, { id: meId }, { userId: [...targets, renoteMutingId] }) as Relation[];
-		const byId = new Map(result.map(relation => [relation.id, relation]));
+		const targets = [
+			followingId,
+			followerId,
+			outgoingRequestId,
+			incomingRequestId,
+			blockingId,
+			blockerId,
+			mutingId,
+			renoteMutingId,
+		];
+		const result = (await handleHonoApiUsersRelation(
+			{ db },
+			{ id: meId },
+			{ userId: [...targets, renoteMutingId] },
+		)) as Relation[];
+		const byId = new Map(result.map((relation) => [relation.id, relation]));
 		const expectedFlagById = new Map<string, RelationFlag>([
 			[followingId, 'isFollowing'],
 			[followerId, 'isFollowed'],
@@ -111,7 +142,16 @@ describe('users/relation batch loading', () => {
 			[mutingId, 'isMuted'],
 			[renoteMutingId, 'isRenoteMuted'],
 		]);
-		const flags: RelationFlag[] = ['isFollowing', 'isFollowed', 'hasPendingFollowRequestFromYou', 'hasPendingFollowRequestToYou', 'isBlocking', 'isBlocked', 'isMuted', 'isRenoteMuted'];
+		const flags: RelationFlag[] = [
+			'isFollowing',
+			'isFollowed',
+			'hasPendingFollowRequestFromYou',
+			'hasPendingFollowRequestToYou',
+			'isBlocking',
+			'isBlocked',
+			'isMuted',
+			'isRenoteMuted',
+		];
 
 		expect(result).toHaveLength(targets.length);
 		expect(byId.get(followingId)?.following).toEqual(following);

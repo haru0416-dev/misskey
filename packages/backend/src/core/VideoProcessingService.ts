@@ -11,10 +11,7 @@ import type { IImage } from '@/core/ImageProcessingService.js';
 import { createTempDir } from '@/misc/create-temp.js';
 import { appendQuery, query } from '@/misc/prelude/url.js';
 
-export function createVideoProcessingService(
-	config: Config,
-	imageProcessingService: ImageProcessingService,
-) {
+export function createVideoProcessingService(config: Config, imageProcessingService: ImageProcessingService) {
 	async function generateVideoThumbnail(source: string): Promise<IImage> {
 		const [dir, cleanup] = await createTempDir();
 
@@ -23,12 +20,7 @@ export function createVideoProcessingService(
 			const duration = Number((await ffprobe(source).catch(() => null))?.format.duration);
 			const seek = Number.isFinite(duration) ? duration * 0.05 : 0;
 
-			await runFfmpeg([
-				'-ss', seek.toFixed(3),
-				'-i', source,
-				'-frames:v', '1',
-				'-y', join(dir, 'out.png'),
-			]);
+			await runFfmpeg(['-ss', seek.toFixed(3), '-i', source, '-frames:v', '1', '-y', join(dir, 'out.png')]);
 
 			return await imageProcessingService.convertToWebp(`${dir}/out.png`, 498, 422);
 		} finally {

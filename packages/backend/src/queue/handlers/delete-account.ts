@@ -21,18 +21,25 @@ import type { DbUserDeleteJobData } from '@/queue/types.js';
 import { deletePageForHonoApi, type HonoApiPageDependencies } from '../../server/rest/pages.js';
 import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './object-storage.js';
 
-export type HonoQueueDeleteAccountDependencies = HonoQueueObjectStorageDependencies & HonoApiPageDependencies & {
-	db: MiDrizzleDatabase;
-	config: Config;
-	meta: Pick<MiMeta, 'rootUserId'>;
-	dbQueue: DbQueue;
-	deliverQueue: DeliverQueue;
-	meilisearch: Meilisearch | null;
-	emailService: Pick<EmailService, 'sendEmail'>;
-	publishInternalEvent?: <K extends 'userChangeDeletedState'>(type: K, value: { id: MiUser['id']; isDeleted: true }) => void;
-};
+export type HonoQueueDeleteAccountDependencies = HonoQueueObjectStorageDependencies &
+	HonoApiPageDependencies & {
+		db: MiDrizzleDatabase;
+		config: Config;
+		meta: Pick<MiMeta, 'rootUserId'>;
+		dbQueue: DbQueue;
+		deliverQueue: DeliverQueue;
+		meilisearch: Meilisearch | null;
+		emailService: Pick<EmailService, 'sendEmail'>;
+		publishInternalEvent?: <K extends 'userChangeDeletedState'>(
+			type: K,
+			value: { id: MiUser['id']; isDeleted: true },
+		) => void;
+	};
 
-async function unindexNoteForHonoApi(deps: HonoQueueDeleteAccountDependencies, note: Pick<MiNote, 'id' | 'visibility'>): Promise<void> {
+async function unindexNoteForHonoApi(
+	deps: HonoQueueDeleteAccountDependencies,
+	note: Pick<MiNote, 'id' | 'visibility'>,
+): Promise<void> {
 	if (!deps.meilisearch) return;
 	if (!['home', 'public'].includes(note.visibility)) return;
 
@@ -40,14 +47,18 @@ async function unindexNoteForHonoApi(deps: HonoQueueDeleteAccountDependencies, n
 	await index.deleteDocument(note.id);
 }
 
-export async function handleHonoQueueDeleteAccount(deps: HonoQueueDeleteAccountDependencies, job: Bull.Job<DbUserDeleteJobData>): Promise<string | void> {
+export async function handleHonoQueueDeleteAccount(
+	deps: HonoQueueDeleteAccountDependencies,
+	job: Bull.Job<DbUserDeleteJobData>,
+): Promise<string | void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 	if (user.host == null && !job.data.soft && job.data.accountDeleteCoordinatorId == null) {
 		throw new Bull.UnrecoverableError('Local account deletion requires an outbox coordinator');
 	}
 
-	{ // Delete notes
+	{
+		// Delete notes
 		let cursor: MiNote['id'] | null = null;
 
 		for (;;) {
@@ -60,7 +71,10 @@ export async function handleHonoQueueDeleteAccount(deps: HonoQueueDeleteAccountD
 
 			cursor = notes.at(-1)?.id ?? null;
 
-			await deleteNotesByIdsFromDatabase(deps.db, notes.map(note => note.id));
+			await deleteNotesByIdsFromDatabase(
+				deps.db,
+				notes.map((note) => note.id),
+			);
 
 			for (const note of notes) {
 				await unindexNoteForHonoApi(deps, note);
@@ -68,7 +82,8 @@ export async function handleHonoQueueDeleteAccount(deps: HonoQueueDeleteAccountD
 		}
 	}
 
-	{ // Delete files
+	{
+		// Delete files
 		let cursor: MiDriveFile['id'] | null = null;
 
 		for (;;) {
@@ -107,13 +122,17 @@ export async function handleHonoQueueDeleteAccount(deps: HonoQueueDeleteAccountD
 		}
 	}
 
-	{ // Send email notification
+	{
+		// Send email notification
 		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 		if (profile.email && profile.emailVerified) {
 			// 元実装同様、送信完了を待たない
-			void deps.emailService.sendEmail(profile.email, 'Account deleted',
+			void deps.emailService.sendEmail(
+				profile.email,
+				'Account deleted',
 				'Your account has been deleted.',
-				'Your account has been deleted.');
+				'Your account has been deleted.',
+			);
 		}
 	}
 

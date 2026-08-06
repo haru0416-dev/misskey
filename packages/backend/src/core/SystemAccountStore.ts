@@ -36,13 +36,19 @@ type SystemAccountProfileUpdateData = {
 export async function listSystemAccountsFromDatabase(db: MiDrizzleDatabase): Promise<MiSystemAccount[]> {
 	const rows = await db.select().from(systemAccountTable);
 
-	return rows.map(row => ({
-		...row,
-		user: null,
-	}) as MiSystemAccount);
+	return rows.map(
+		(row) =>
+			({
+				...row,
+				user: null,
+			}) as MiSystemAccount,
+	);
 }
 
-export async function fetchSystemAccountUserFromDatabase(db: MiDrizzleDatabase, type: string): Promise<MiLocalUser | null> {
+export async function fetchSystemAccountUserFromDatabase(
+	db: MiDrizzleDatabase,
+	type: string,
+): Promise<MiLocalUser | null> {
 	const [row] = await db
 		.select({ user: userTable })
 		.from(systemAccountTable)
@@ -50,10 +56,13 @@ export async function fetchSystemAccountUserFromDatabase(db: MiDrizzleDatabase, 
 		.where(eq(systemAccountTable.type, type))
 		.limit(1);
 
-	return row ? deserializeUser(row.user) as MiLocalUser : null;
+	return row ? (deserializeUser(row.user) as MiLocalUser) : null;
 }
 
-export async function createOrFetchSystemAccountInDatabase(db: MiDrizzleDatabase, data: SystemAccountCreateData): Promise<MiLocalUser> {
+export async function createOrFetchSystemAccountInDatabase(
+	db: MiDrizzleDatabase,
+	data: SystemAccountCreateData,
+): Promise<MiLocalUser> {
 	const account = await db.transaction(async (tx) => {
 		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`system-account:${data.type}`}))`);
 
@@ -71,25 +80,25 @@ export async function createOrFetchSystemAccountInDatabase(db: MiDrizzleDatabase
 		const [existingUser] = await tx
 			.select()
 			.from(userTable)
-			.where(and(
-				eq(userTable.usernameLower, data.usernameLower),
-				isNull(userTable.host),
-			))
+			.where(and(eq(userTable.usernameLower, data.usernameLower), isNull(userTable.host)))
 			.limit(1);
 
 		let account = existingUser;
 		if (account == null) {
-			const [created] = await tx.insert(userTable).values({
-				id: data.id,
-				username: data.username,
-				usernameLower: data.usernameLower,
-				host: null,
-				token: data.token,
-				isLocked: true,
-				isExplorable: false,
-				isBot: true,
-				name: data.name,
-			}).returning();
+			const [created] = await tx
+				.insert(userTable)
+				.values({
+					id: data.id,
+					username: data.username,
+					usernameLower: data.usernameLower,
+					host: null,
+					token: data.token,
+					isLocked: true,
+					isExplorable: false,
+					isBot: true,
+					name: data.name,
+				})
+				.returning();
 			if (created == null) throw new Error('User row was not created');
 			account = created;
 		}
@@ -142,27 +151,20 @@ export async function createOrFetchSystemAccountInDatabase(db: MiDrizzleDatabase
 	return deserializeUser(account) as MiLocalUser;
 }
 
-export async function updateSystemAccountUserInDatabase(db: MiDrizzleDatabase, data: SystemAccountProfileUpdateData): Promise<MiLocalUser> {
+export async function updateSystemAccountUserInDatabase(
+	db: MiDrizzleDatabase,
+	data: SystemAccountProfileUpdateData,
+): Promise<MiLocalUser> {
 	const user = await db.transaction(async (tx) => {
 		if (data.name !== undefined) {
-			await tx
-				.update(userTable)
-				.set({ name: data.name })
-				.where(eq(userTable.id, data.userId));
+			await tx.update(userTable).set({ name: data.name }).where(eq(userTable.id, data.userId));
 		}
 
 		if (data.description !== undefined) {
-			await tx
-				.update(userProfile)
-				.set({ description: data.description })
-				.where(eq(userProfile.userId, data.userId));
+			await tx.update(userProfile).set({ description: data.description }).where(eq(userProfile.userId, data.userId));
 		}
 
-		const [updated] = await tx
-			.select()
-			.from(userTable)
-			.where(eq(userTable.id, data.userId))
-			.limit(1);
+		const [updated] = await tx.select().from(userTable).where(eq(userTable.id, data.userId)).limit(1);
 
 		if (!updated) {
 			throw new Error('System account user was not found after update');

@@ -7,7 +7,14 @@ import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
-import { createGalleryLikeInDatabase, deleteGalleryLikeByIdFromDatabase, fetchGalleryLikeFromDatabase, galleryLikeExistsInDatabase, listGalleryLikesByUserIdFromDatabase, listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase } from '@/core/GalleryLikeStore.js';
+import {
+	createGalleryLikeInDatabase,
+	deleteGalleryLikeByIdFromDatabase,
+	fetchGalleryLikeFromDatabase,
+	galleryLikeExistsInDatabase,
+	listGalleryLikesByUserIdFromDatabase,
+	listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase,
+} from '@/core/GalleryLikeStore.js';
 import {
 	createGalleryPostInDatabase,
 	decrementGalleryPostLikedCountInDatabase,
@@ -37,9 +44,10 @@ import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-p
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiGalleryDependencies = HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies & {
-	redis: Redis.Redis;
-};
+export type HonoApiGalleryDependencies = HonoApiDriveFileDependencies &
+	HonoApiRolePolicyDependencies & {
+		redis: Redis.Redis;
+	};
 
 const GALLERY_POSTS_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 3;
 const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
@@ -49,11 +57,19 @@ function getCurrentFeaturedWindow(windowRange: number): number {
 	return Math.floor(passed / windowRange);
 }
 
-async function updateGalleryPostsRanking(deps: HonoApiGalleryDependencies, galleryPostId: string, score = 1): Promise<void> {
+async function updateGalleryPostsRanking(
+	deps: HonoApiGalleryDependencies,
+	galleryPostId: string,
+	score = 1,
+): Promise<void> {
 	const currentWindow = getCurrentFeaturedWindow(GALLERY_POSTS_RANKING_WINDOW);
 	const redisTransaction = deps.redis.multi();
 	redisTransaction.zincrby(`featuredGalleryPostsRanking:${currentWindow}`, score, galleryPostId);
-	redisTransaction.expire(`featuredGalleryPostsRanking:${currentWindow}`, (GALLERY_POSTS_RANKING_WINDOW * 3) / 1000, 'NX');
+	redisTransaction.expire(
+		`featuredGalleryPostsRanking:${currentWindow}`,
+		(GALLERY_POSTS_RANKING_WINDOW * 3) / 1000,
+		'NX',
+	);
 	await redisTransaction.exec();
 }
 
@@ -64,7 +80,9 @@ async function getGalleryPostsRanking(deps: HonoApiGalleryDependencies, threshol
 	const redisPipeline = deps.redis.pipeline();
 	redisPipeline.zrange(`featuredGalleryPostsRanking:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
 	redisPipeline.zrange(`featuredGalleryPostsRanking:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
-	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline.exec().then(result => result ? result.map(r => (r[1] ?? []) as string[]) : []);
+	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline
+		.exec()
+		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : []));
 
 	const ranking = new Map<string, number>();
 	for (let i = 0; i < currentRankingResult.length; i += 2) {
@@ -82,7 +100,10 @@ async function getGalleryPostsRanking(deps: HonoApiGalleryDependencies, threshol
 		ranking.set(id, exist != null ? (exist + score) / 2 : score);
 	}
 
-	return [...ranking.entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]).slice(0, threshold);
+	return [...ranking.entries()]
+		.sort((a, b) => b[1] - a[1])
+		.map((x) => x[0])
+		.slice(0, threshold);
 }
 
 let galleryPostsRankingCache: string[] = [];
@@ -269,23 +290,34 @@ export async function packGalleryPostsManyForHonoApi(
 ): Promise<Packed<'GalleryPost'>[]> {
 	if (posts.length === 0) return [];
 
-	const userIds = [...new Set(posts.map(post => post.userId))];
-	const fileIds = [...new Set(posts.flatMap(post => post.fileIds))];
-	const postIds = posts.map(post => post.id);
+	const userIds = [...new Set(posts.map((post) => post.userId))];
+	const fileIds = [...new Set(posts.flatMap((post) => post.fileIds))];
+	const postIds = posts.map((post) => post.id);
 	const [packedUsers, packedFiles, likedPostIds] = await Promise.all([
 		packUserLiteManyForHonoApi(deps, userIds),
 		packDriveFileManyByIdsForHonoApi(deps, fileIds),
 		me ? listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase(deps.db, me.id, postIds) : Promise.resolve([]),
 	]);
-	const userById = new Map(packedUsers.map(user => [user.id, user]));
-	const fileById = new Map(packedFiles.map(file => [file.id, file]));
+	const userById = new Map(packedUsers.map((user) => [user.id, user]));
+	const fileById = new Map(packedFiles.map((file) => [file.id, file]));
 	const likedPostIdSet = new Set(likedPostIds);
 
-	return await Promise.all(posts.map(post => packGalleryPostForHonoApi(deps, post, me, omitUndefined({
-		packedUser: userById.get(post.userId),
-		packedFiles: post.fileIds.map(fileId => fileById.get(fileId)).filter((file): file is Packed<'DriveFile'> => file != null),
-		isLiked: me ? likedPostIdSet.has(post.id) : undefined,
-	}))));
+	return await Promise.all(
+		posts.map((post) =>
+			packGalleryPostForHonoApi(
+				deps,
+				post,
+				me,
+				omitUndefined({
+					packedUser: userById.get(post.userId),
+					packedFiles: post.fileIds
+						.map((fileId) => fileById.get(fileId))
+						.filter((file): file is Packed<'DriveFile'> => file != null),
+					isLiked: me ? likedPostIdSet.has(post.id) : undefined,
+				}),
+			),
+		),
+	);
 }
 
 export async function handleHonoApiGalleryFeatured(
@@ -296,7 +328,10 @@ export async function handleHonoApiGalleryFeatured(
 	const params = parseHonoApiParams(galleryFeaturedParamDef, body);
 
 	let postIds: string[];
-	if (galleryPostsRankingCacheLastFetchedAt !== 0 && (Date.now() - galleryPostsRankingCacheLastFetchedAt < 1000 * 60 * 30)) {
+	if (
+		galleryPostsRankingCacheLastFetchedAt !== 0 &&
+		Date.now() - galleryPostsRankingCacheLastFetchedAt < 1000 * 60 * 30
+	) {
 		postIds = galleryPostsRankingCache;
 	} else {
 		postIds = await getGalleryPostsRanking(deps, 100);
@@ -304,9 +339,9 @@ export async function handleHonoApiGalleryFeatured(
 		galleryPostsRankingCacheLastFetchedAt = Date.now();
 	}
 
-	postIds = [...postIds].sort((a, b) => a > b ? -1 : 1);
+	postIds = [...postIds].sort((a, b) => (a > b ? -1 : 1));
 	if (params.untilId) {
-		postIds = postIds.filter(id => id < params.untilId!);
+		postIds = postIds.filter((id) => id < params.untilId!);
 	}
 	postIds = postIds.slice(0, params.limit);
 
@@ -371,7 +406,7 @@ export async function handleHonoApiGalleryPostsCreate(
 		description: params.description,
 		userId: me.id,
 		isSensitive: params.isSensitive,
-		fileIds: files.map(file => file.id),
+		fileIds: files.map((file) => file.id),
 	});
 
 	return await packGalleryPostForHonoApi(deps, post, me);
@@ -390,13 +425,18 @@ export async function handleHonoApiGalleryPostsUpdate(
 		if (files.length === 0) throw new Error();
 	}
 
-	await updateGalleryPostByIdAndUserIdInDatabase(deps.db, params.postId, me.id, omitUndefined({
-		updatedAt: new Date(),
-		title: params.title,
-		description: params.description,
-		isSensitive: params.isSensitive,
-		fileIds: files ? files.map(file => file.id) : undefined,
-	}));
+	await updateGalleryPostByIdAndUserIdInDatabase(
+		deps.db,
+		params.postId,
+		me.id,
+		omitUndefined({
+			updatedAt: new Date(),
+			title: params.title,
+			description: params.description,
+			isSensitive: params.isSensitive,
+			fileIds: files ? files.map((file) => file.id) : undefined,
+		}),
+	);
 
 	const post = await fetchGalleryPostByIdOrFailFromDatabase(deps.db, params.postId);
 	return await packGalleryPostForHonoApi(deps, post, me);
@@ -504,7 +544,7 @@ export async function handleHonoApiIGalleryPosts(
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
 	const params = parseHonoApiParams(iGalleryPostsParamDef, body);
-	const pagination = resolveGalleryPostPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(time) }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
 		limit: params.limit,
@@ -538,7 +578,7 @@ export async function handleHonoApiIGalleryLikes(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(iGalleryLikesParamDef, body);
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 
 	const likes = await listGalleryLikesByUserIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -549,15 +589,17 @@ export async function handleHonoApiIGalleryLikes(
 
 	if (likes.length === 0) return [];
 
-	const postIds = likes.map(like => like.postId);
+	const postIds = likes.map((like) => like.postId);
 	const posts = await listGalleryPostsByIdsFromDatabase(deps.db, postIds);
 	const packedPosts = await packGalleryPostsManyForHonoApi(deps, posts, me);
-	const packedPostById = new Map(packedPosts.map(post => [post.id, post]));
+	const packedPostById = new Map(packedPosts.map((post) => [post.id, post]));
 
-	return await Promise.all(likes.map(async like => ({
-		id: like.id,
-		post: packedPostById.get(like.postId) ?? await packGalleryPostForHonoApi(deps, like.postId, me),
-	})));
+	return await Promise.all(
+		likes.map(async (like) => ({
+			id: like.id,
+			post: packedPostById.get(like.postId) ?? (await packGalleryPostForHonoApi(deps, like.postId, me)),
+		})),
+	);
 }
 
 export const usersGalleryPostsParamDef = z.object({

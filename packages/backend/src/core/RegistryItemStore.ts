@@ -27,10 +27,7 @@ function registryItemCondition(userId: MiUser['id'], domain: string | null, scop
 	);
 }
 
-export async function setRegistryItemInDatabase(
-	db: MiDrizzleDatabase,
-	data: RegistryItemSet,
-): Promise<void> {
+export async function setRegistryItemInDatabase(db: MiDrizzleDatabase, data: RegistryItemSet): Promise<void> {
 	await db
 		.insert(registryItem)
 		.values(data)
@@ -84,7 +81,7 @@ export async function listRegistryKeysOfScopeFromDatabase(
 		.from(registryItem)
 		.where(registryItemCondition(userId, domain, scope));
 
-	return rows.map(row => row.key);
+	return rows.map((row) => row.key);
 }
 
 export async function listRegistryScopeAndDomainsFromDatabase(
@@ -107,7 +104,5 @@ export async function deleteRegistryItemFromDatabase(
 	scope: string[],
 	key: string,
 ): Promise<void> {
-	await db
-		.delete(registryItem)
-		.where(registryItemCondition(userId, domain, scope, key));
+	await db.delete(registryItem).where(registryItemCondition(userId, domain, scope, key));
 }

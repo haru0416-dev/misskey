@@ -35,11 +35,7 @@ function toNoteDraftUpdate(data: NoteDraftUpdate): NoteDraftUpdate {
 	return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) as NoteDraftUpdate;
 }
 
-function applyNoteDraftPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
+function applyNoteDraftPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
 	if (sinceId && untilId) {
 		conditions.push(gt(noteDraft.id, sinceId));
 		conditions.push(lt(noteDraft.id, untilId));
@@ -70,11 +66,7 @@ export async function fetchNoteDraftByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiNoteDraft['id'],
 ): Promise<MiNoteDraft | null> {
-	const [row] = await db
-		.select()
-		.from(noteDraft)
-		.where(eq(noteDraft.id, id))
-		.limit(1);
+	const [row] = await db.select().from(noteDraft).where(eq(noteDraft.id, id)).limit(1);
 
 	return row == null ? null : deserializeNoteDraft(row);
 }
@@ -99,10 +91,7 @@ export async function fetchNoteDraftByIdAndUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(noteDraft)
-		.where(and(
-			eq(noteDraft.id, id),
-			eq(noteDraft.userId, userId),
-		))
+		.where(and(eq(noteDraft.id, id), eq(noteDraft.userId, userId)))
 		.limit(1);
 
 	return row == null ? null : deserializeNoteDraft(row);
@@ -176,17 +165,11 @@ export async function listNoteDraftsByUserIdFromDatabase(
 		.orderBy(options.order === 'asc' ? asc(noteDraft.id) : desc(noteDraft.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeNoteDraft(row));
+	return rows.map((row) => deserializeNoteDraft(row));
 }
 
-export async function createNoteDraftInDatabase(
-	db: MiDrizzleDatabase,
-	data: NoteDraftInsert,
-): Promise<MiNoteDraft> {
-	const [row] = await db
-		.insert(noteDraft)
-		.values(data)
-		.returning();
+export async function createNoteDraftInDatabase(db: MiDrizzleDatabase, data: NoteDraftInsert): Promise<MiNoteDraft> {
+	const [row] = await db.insert(noteDraft).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create note draft');
@@ -205,11 +188,7 @@ export async function updateNoteDraftInDatabase(
 		return fetchNoteDraftByIdOrFailFromDatabase(db, id);
 	}
 
-	const [row] = await db
-		.update(noteDraft)
-		.set(update)
-		.where(eq(noteDraft.id, id))
-		.returning();
+	const [row] = await db.update(noteDraft).set(update).where(eq(noteDraft.id, id)).returning();
 
 	if (row == null) {
 		throw new Error(`Note draft ${id} not found`);
@@ -218,11 +197,6 @@ export async function updateNoteDraftInDatabase(
 	return deserializeNoteDraft(row);
 }
 
-export async function deleteNoteDraftByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiNoteDraft['id'],
-): Promise<void> {
-	await db
-		.delete(noteDraft)
-		.where(eq(noteDraft.id, id));
+export async function deleteNoteDraftByIdFromDatabase(db: MiDrizzleDatabase, id: MiNoteDraft['id']): Promise<void> {
+	await db.delete(noteDraft).where(eq(noteDraft.id, id));
 }

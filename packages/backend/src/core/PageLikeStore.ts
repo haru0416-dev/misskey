@@ -12,17 +12,10 @@ import type { MiUser } from '@/models/User.js';
 export type PageLikeOrder = 'asc' | 'desc';
 
 function pageLikeCondition(userId: MiUser['id'], pageId: MiPage['id']) {
-	return and(
-		eq(pageLike.userId, userId),
-		eq(pageLike.pageId, pageId),
-	);
+	return and(eq(pageLike.userId, userId), eq(pageLike.pageId, pageId));
 }
 
-function applyPageLikePaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
+function applyPageLikePaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
 	if (sinceId && untilId) {
 		conditions.push(gt(pageLike.id, sinceId));
 		conditions.push(lt(pageLike.id, untilId));
@@ -38,11 +31,7 @@ export async function pageLikeExistsInDatabase(
 	userId: MiUser['id'],
 	pageId: MiPage['id'],
 ): Promise<boolean> {
-	const [row] = await db
-		.select({ id: pageLike.id })
-		.from(pageLike)
-		.where(pageLikeCondition(userId, pageId))
-		.limit(1);
+	const [row] = await db.select({ id: pageLike.id }).from(pageLike).where(pageLikeCondition(userId, pageId)).limit(1);
 
 	return row != null;
 }
@@ -52,11 +41,7 @@ export async function fetchPageLikeFromDatabase(
 	userId: MiUser['id'],
 	pageId: MiPage['id'],
 ): Promise<PageLikeRow | null> {
-	const [row] = await db
-		.select()
-		.from(pageLike)
-		.where(pageLikeCondition(userId, pageId))
-		.limit(1);
+	const [row] = await db.select().from(pageLike).where(pageLikeCondition(userId, pageId)).limit(1);
 
 	return row ?? null;
 }
@@ -65,11 +50,7 @@ export async function fetchPageLikeByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: PageLikeRow['id'],
 ): Promise<PageLikeRow> {
-	const [row] = await db
-		.select()
-		.from(pageLike)
-		.where(eq(pageLike.id, id))
-		.limit(1);
+	const [row] = await db.select().from(pageLike).where(eq(pageLike.id, id)).limit(1);
 
 	if (row == null) {
 		throw new Error(`Page like ${id} not found`);
@@ -78,23 +59,12 @@ export async function fetchPageLikeByIdOrFailFromDatabase(
 	return row;
 }
 
-export async function createPageLikeInDatabase(
-	db: MiDrizzleDatabase,
-	data: PageLikeInsert,
-): Promise<void> {
-	await db
-		.insert(pageLike)
-		.values(data);
+export async function createPageLikeInDatabase(db: MiDrizzleDatabase, data: PageLikeInsert): Promise<void> {
+	await db.insert(pageLike).values(data);
 }
 
-export async function deletePageLikeByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: PageLikeRow['id'],
-): Promise<boolean> {
-	const deleted = await db
-		.delete(pageLike)
-		.where(eq(pageLike.id, id))
-		.returning({ id: pageLike.id });
+export async function deletePageLikeByIdFromDatabase(db: MiDrizzleDatabase, id: PageLikeRow['id']): Promise<boolean> {
+	const deleted = await db.delete(pageLike).where(eq(pageLike.id, id)).returning({ id: pageLike.id });
 	return deleted.length === 1;
 }
 
@@ -108,12 +78,9 @@ export async function listLikedPageIdsByUserIdAndPageIdsFromDatabase(
 	const rows = await db
 		.select({ pageId: pageLike.pageId })
 		.from(pageLike)
-		.where(and(
-			eq(pageLike.userId, userId),
-			inArray(pageLike.pageId, pageIds),
-		));
+		.where(and(eq(pageLike.userId, userId), inArray(pageLike.pageId, pageIds)));
 
-	return rows.map(row => row.pageId);
+	return rows.map((row) => row.pageId);
 }
 
 export async function listPageLikesByUserIdFromDatabase(
@@ -126,9 +93,7 @@ export async function listPageLikesByUserIdFromDatabase(
 		untilId?: string | null;
 	},
 ): Promise<PageLikeRow[]> {
-	const conditions: SQL[] = [
-		eq(pageLike.userId, userId),
-	];
+	const conditions: SQL[] = [eq(pageLike.userId, userId)];
 
 	applyPageLikePaginationCondition(conditions, options.sinceId, options.untilId);
 

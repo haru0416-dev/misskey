@@ -41,7 +41,7 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 	const { syncSystemJobSchedulers } = await import('../queue/system-job-schedulers.js');
 	const { createHonoEventPublishers } = await import('../server/rest/events.js');
 
-	const deps = dependencies ?? await createRuntimeDependencies(config);
+	const deps = dependencies ?? (await createRuntimeDependencies(config));
 	const logger = deps.loggerService.getLogger('queue', 'orange');
 	await syncSystemJobSchedulers(deps.systemQueue, deps.config);
 	// 原典の QueueProcessorService は DI 経由で GlobalEventService (全ストリーム配信) を持っていた。
@@ -81,7 +81,7 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 
 	// Bull.Worker#run() は内部のメインループが解決するまで (= close() されるまで) 待ち続けるため、
 	// 元の QueueProcessorService#start() 同様ここでは await しない。
-	void workers.start().catch(err => logger.error('Failed to start queue workers', { e: err }));
+	void workers.start().catch((err) => logger.error('Failed to start queue workers', { e: err }));
 
 	return {
 		close: async () => {

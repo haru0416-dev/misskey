@@ -13,10 +13,13 @@ import type * as misskey from 'misskey-js';
 describe('.well-known', () => {
 	let alice: misskey.entities.User;
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'alice' });
-		await api('admin/update-meta', { federation: 'all' }, alice as misskey.entities.SignupResponse);
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			alice = await signup({ username: 'alice' });
+			await api('admin/update-meta', { federation: 'all' }, alice as misskey.entities.SignupResponse);
+		},
+		1000 * 60 * 2,
+	);
 
 	test('nodeinfo', async () => {
 		const res = await relativeFetch('.well-known/nodeinfo');
@@ -25,13 +28,16 @@ describe('.well-known', () => {
 
 		const nodeInfo = await res.json();
 		assert.deepStrictEqual(nodeInfo, {
-			links: [{
-				rel: 'http://nodeinfo.diaspora.software/ns/schema/2.1',
-				href: `${origin}/nodeinfo/2.1`,
-			}, {
-				rel: 'http://nodeinfo.diaspora.software/ns/schema/2.0',
-				href: `${origin}/nodeinfo/2.0`,
-			}],
+			links: [
+				{
+					rel: 'http://nodeinfo.diaspora.software/ns/schema/2.1',
+					href: `${origin}/nodeinfo/2.1`,
+				},
+				{
+					rel: 'http://nodeinfo.diaspora.software/ns/schema/2.0',
+					href: `${origin}/nodeinfo/2.0`,
+				},
+			],
 		});
 	});
 
@@ -56,15 +62,18 @@ describe('.well-known', () => {
 
 		assert.deepStrictEqual(webfinger, {
 			subject: `acct:alice@${host}`,
-			links: [{
-				rel: 'self',
-				type: 'application/activity+json',
-				href: `${origin}/users/${alice.id}`,
-			}, {
-				rel: 'http://webfinger.net/rel/profile-page',
-				type: 'text/html',
-				href: `${origin}/@alice`,
-			}],
+			links: [
+				{
+					rel: 'self',
+					type: 'application/activity+json',
+					href: `${origin}/users/${alice.id}`,
+				},
+				{
+					rel: 'http://webfinger.net/rel/profile-page',
+					type: 'text/html',
+					href: `${origin}/@alice`,
+				},
+			],
 		});
 	});
 
@@ -81,11 +90,13 @@ describe('.well-known', () => {
 
 		const hostMeta = await res.json();
 		assert.deepStrictEqual(hostMeta, {
-			links: [{
-				rel: 'lrdd',
-				type: 'application/jrd+json',
-				template: `${origin}/.well-known/webfinger?resource={uri}`,
-			}],
+			links: [
+				{
+					rel: 'lrdd',
+					type: 'application/jrd+json',
+					template: `${origin}/.well-known/webfinger?resource={uri}`,
+				},
+			],
 		});
 	});
 
@@ -94,7 +105,7 @@ describe('.well-known', () => {
 		assert.ok(res.ok);
 		assert.strictEqual(res.headers.get('Access-Control-Allow-Origin'), '*');
 
-		const serverInfo = await res.json() as any;
+		const serverInfo = (await res.json()) as any;
 		assert.strictEqual(serverInfo.issuer, origin);
 		assert.strictEqual(serverInfo.authorization_endpoint, `${origin}/oauth/authorize`);
 		assert.strictEqual(serverInfo.token_endpoint, `${origin}/oauth/token`);

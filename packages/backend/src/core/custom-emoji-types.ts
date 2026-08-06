@@ -3,12 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export const fetchEmojisHostTypes = [
-	'local',
-	'remote',
-	'all',
-] as const;
-export type FetchEmojisHostTypes = typeof fetchEmojisHostTypes[number];
+export const fetchEmojisHostTypes = ['local', 'remote', 'all'] as const;
+export type FetchEmojisHostTypes = (typeof fetchEmojisHostTypes)[number];
 export const fetchEmojisSortKeys = [
 	'+id',
 	'-id',
@@ -37,4 +33,4 @@ export const fetchEmojisSortKeys = [
 	'+roleIdsThatCanBeUsedThisEmojiAsReaction',
 	'-roleIdsThatCanBeUsedThisEmojiAsReaction',
 ] as const;
-export type FetchEmojisSortKeys = typeof fetchEmojisSortKeys[number];
+export type FetchEmojisSortKeys = (typeof fetchEmojisSortKeys)[number];

@@ -9,10 +9,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 
 function noteThreadMutingCondition(userId: MiUser['id'], threadId: string) {
-	return and(
-		eq(noteThreadMuting.userId, userId),
-		eq(noteThreadMuting.threadId, threadId),
-	);
+	return and(eq(noteThreadMuting.userId, userId), eq(noteThreadMuting.threadId, threadId));
 }
 
 /** userIds のうち threadId をミュートしているユーザーID一覧 (メンション通知の一括判定用)。 */
@@ -26,12 +23,9 @@ export async function listNoteThreadMutedUserIdsFromDatabase(
 	const rows = await db
 		.select({ userId: noteThreadMuting.userId })
 		.from(noteThreadMuting)
-		.where(and(
-			eq(noteThreadMuting.threadId, threadId),
-			inArray(noteThreadMuting.userId, userIds),
-		));
+		.where(and(eq(noteThreadMuting.threadId, threadId), inArray(noteThreadMuting.userId, userIds)));
 
-	return rows.map(row => row.userId);
+	return rows.map((row) => row.userId);
 }
 
 export async function noteThreadMutingExistsInDatabase(
@@ -52,9 +46,7 @@ export async function createNoteThreadMutingInDatabase(
 	db: MiDrizzleDatabase,
 	data: NoteThreadMutingInsert,
 ): Promise<void> {
-	await db
-		.insert(noteThreadMuting)
-		.values(data);
+	await db.insert(noteThreadMuting).values(data);
 }
 
 export async function deleteNoteThreadMutingFromDatabase(
@@ -62,7 +54,5 @@ export async function deleteNoteThreadMutingFromDatabase(
 	userId: MiUser['id'],
 	threadId: string,
 ): Promise<void> {
-	await db
-		.delete(noteThreadMuting)
-		.where(noteThreadMutingCondition(userId, threadId));
+	await db.delete(noteThreadMuting).where(noteThreadMutingCondition(userId, threadId));
 }

@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export function BiosPage(props: {
-	version: string;
-}) {
+export function BiosPage(props: { version: string }) {
 	return (
 		<>
 			{'<!DOCTYPE html>'}

@@ -4,10 +4,18 @@
  */
 
 import { z } from 'zod';
-import { countActiveRoleAssignmentsByRoleIdFromDatabase, countActiveRoleAssignmentsByRoleIdsFromDatabase, listActiveRoleAssignmentsByRoleIdFromDatabase } from '@/core/RoleAssignmentStore.js';
+import {
+	countActiveRoleAssignmentsByRoleIdFromDatabase,
+	countActiveRoleAssignmentsByRoleIdsFromDatabase,
+	listActiveRoleAssignmentsByRoleIdFromDatabase,
+} from '@/core/RoleAssignmentStore.js';
 import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { fetchPublicExplorableRoleByIdFromDatabase, fetchPublicRoleByIdFromDatabase, listPublicExplorableRolesFromDatabase } from '@/core/RoleStore.js';
+import {
+	fetchPublicExplorableRoleByIdFromDatabase,
+	fetchPublicRoleByIdFromDatabase,
+	listPublicExplorableRolesFromDatabase,
+} from '@/core/RoleStore.js';
 import { DEFAULT_POLICIES } from '@/core/role-policies.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -20,7 +28,12 @@ import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
 import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
-import { packUserDetailedManyForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
+import {
+	packUserDetailedManyForHonoApi,
+	type MeDetailedHonoApiResponse,
+	type UserDetailedNotMeHonoApiResponse,
+	type UserPackingDependencies,
+} from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiRoleDependencies = {
@@ -44,7 +57,6 @@ export const rolesUsersParamDef = z.object({
 	untilDate: z.number().int().optional(),
 	limit: z.number().int().min(1).max(100).default(10),
 });
-
 
 function noSuchRoleError(): HonoApiError {
 	return new HonoApiError({
@@ -82,7 +94,6 @@ export const rolesNotesParamDef = z.object({
 	untilDate: z.number().int().optional(),
 });
 
-
 export async function packHonoApiRole(
 	deps: HonoApiRoleDependencies,
 	role: MiRole,
@@ -90,7 +101,8 @@ export async function packHonoApiRole(
 		assignedCount?: number;
 	},
 ): Promise<Packed<'Role'>> {
-	const assignedCount = options?.assignedCount ?? await countActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id);
+	const assignedCount =
+		options?.assignedCount ?? (await countActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id));
 	const policies = { ...role.policies };
 
 	for (const [key, value] of Object.entries(DEFAULT_POLICIES)) {
@@ -126,14 +138,18 @@ export async function packHonoApiRole(
 	};
 }
 
-export async function packHonoApiRoles(
-	deps: HonoApiRoleDependencies,
-	roles: MiRole[],
-): Promise<Packed<'Role'>[]> {
-	const assignedCountByRoleId = await countActiveRoleAssignmentsByRoleIdsFromDatabase(deps.db, roles.map(role => role.id));
-	return await Promise.all(roles.map(role => packHonoApiRole(deps, role, {
-		assignedCount: assignedCountByRoleId.get(role.id) ?? 0,
-	})));
+export async function packHonoApiRoles(deps: HonoApiRoleDependencies, roles: MiRole[]): Promise<Packed<'Role'>[]> {
+	const assignedCountByRoleId = await countActiveRoleAssignmentsByRoleIdsFromDatabase(
+		deps.db,
+		roles.map((role) => role.id),
+	);
+	return await Promise.all(
+		roles.map((role) =>
+			packHonoApiRole(deps, role, {
+				assignedCount: assignedCountByRoleId.get(role.id) ?? 0,
+			}),
+		),
+	);
 }
 
 export async function handleHonoApiRolesList(
@@ -165,7 +181,7 @@ export async function handleHonoApiRolesUsers(
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw rolesUsersNoSuchRoleError();
 
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -173,7 +189,11 @@ export async function handleHonoApiRolesUsers(
 		untilId: pagination.untilId,
 	});
 
-	const packedUsers = await packUserDetailedManyForHonoApi(deps, assigns.map(assign => assign.userId), me);
+	const packedUsers = await packUserDetailedManyForHonoApi(
+		deps,
+		assigns.map((assign) => assign.userId),
+		me,
+	);
 	return assigns.map((assign, index) => ({
 		id: assign.id,
 		user: packedUsers[index]!,
@@ -194,13 +214,14 @@ export async function handleHonoApiRolesNotes(
 	if (!role.isExplorable) return [];
 
 	const rawIds = await deps.redis.lrange(`list:roleTimeline:${role.id}`, 0, -1);
-	let noteIds = untilId && sinceId
-		? rawIds.filter(id => id < untilId && id > sinceId).sort((a, b) => a > b ? -1 : 1)
-		: untilId
-			? rawIds.filter(id => id < untilId).sort((a, b) => a > b ? -1 : 1)
-			: sinceId
-				? rawIds.filter(id => id > sinceId).sort((a, b) => a < b ? -1 : 1)
-				: rawIds.toSorted((a, b) => a > b ? -1 : 1);
+	let noteIds =
+		untilId && sinceId
+			? rawIds.filter((id) => id < untilId && id > sinceId).sort((a, b) => (a > b ? -1 : 1))
+			: untilId
+				? rawIds.filter((id) => id < untilId).sort((a, b) => (a > b ? -1 : 1))
+				: sinceId
+					? rawIds.filter((id) => id > sinceId).sort((a, b) => (a < b ? -1 : 1))
+					: rawIds.toSorted((a, b) => (a > b ? -1 : 1));
 	noteIds = noteIds.slice(0, params.limit);
 
 	if (noteIds.length === 0) return [];
@@ -214,7 +235,7 @@ export async function handleHonoApiRolesNotes(
 		publicOnly: true,
 		mutingChannelIds,
 	});
-	notes.sort((a, b) => a.id > b.id ? -1 : 1);
+	notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }

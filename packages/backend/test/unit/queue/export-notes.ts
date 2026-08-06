@@ -55,7 +55,7 @@ describe('hono-queue-db (exportNotes)', () => {
 		await handleHonoQueueExportNotes(deps, fakeJob({ user: { id: user.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
-		expect(files.some(f => f.name.startsWith('notes-') && f.name.endsWith('.json'))).toBe(true);
+		expect(files.some((f) => f.name.startsWith('notes-') && f.name.endsWith('.json'))).toBe(true);
 	});
 
 	test('存在しないuserIdは何もしない', async () => {

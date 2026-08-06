@@ -4,7 +4,11 @@
  */
 
 import { and, asc, count, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
-import { userListMembership, type UserListMembershipInsert, type UserListMembershipRow } from '@/db/schema/user-list-membership.js';
+import {
+	userListMembership,
+	type UserListMembershipInsert,
+	type UserListMembershipRow,
+} from '@/db/schema/user-list-membership.js';
 import { userList } from '@/db/schema/user-list.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -15,10 +19,7 @@ import type { MiUserList } from '@/models/UserList.js';
 export type UserListMembershipOrder = 'asc' | 'desc';
 
 function userListMembershipUserAndListCondition(userId: MiUser['id'], userListId: MiUserList['id']) {
-	return and(
-		eq(userListMembership.userId, userId),
-		eq(userListMembership.userListId, userListId),
-	);
+	return and(eq(userListMembership.userId, userId), eq(userListMembership.userListId, userListId));
 }
 
 function applyUserListMembershipPaginationCondition(
@@ -95,12 +96,14 @@ export async function listUserListIdsContainingUserFromDatabase(
 	const rows = await db
 		.select({ userListId: userListMembership.userListId })
 		.from(userListMembership)
-		.where(and(
-			eq(userListMembership.userId, userId),
-			sql`${userListMembership.userListId} = ANY(${sql.param(candidateUserListIds)})`,
-		));
+		.where(
+			and(
+				eq(userListMembership.userId, userId),
+				sql`${userListMembership.userListId} = ANY(${sql.param(candidateUserListIds)})`,
+			),
+		);
 
-	return new Set(rows.map(row => row.userListId));
+	return new Set(rows.map((row) => row.userListId));
 }
 
 export async function fetchUserListMembershipByUserIdAndUserListIdFromDatabase(
@@ -139,20 +142,14 @@ export async function listUserListMembershipsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<UserListMembershipRow[]> {
-	return await db
-		.select()
-		.from(userListMembership)
-		.where(eq(userListMembership.userId, userId));
+	return await db.select().from(userListMembership).where(eq(userListMembership.userId, userId));
 }
 
 export async function listUserListMembershipsByUserListIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userListId: MiUserList['id'],
 ): Promise<UserListMembershipRow[]> {
-	return await db
-		.select()
-		.from(userListMembership)
-		.where(eq(userListMembership.userListId, userListId));
+	return await db.select().from(userListMembership).where(eq(userListMembership.userListId, userListId));
 }
 
 export async function listUserListMembershipUserIdsByUserListIdFromDatabase(
@@ -164,7 +161,7 @@ export async function listUserListMembershipUserIdsByUserListIdFromDatabase(
 		.from(userListMembership)
 		.where(eq(userListMembership.userListId, userListId));
 
-	return rows.map(row => row.userId);
+	return rows.map((row) => row.userId);
 }
 
 export async function listUserListMembershipUserIdsByUserListIdsFromDatabase(
@@ -205,9 +202,7 @@ export async function listUserListMembershipsByUserListIdWithPaginationFromDatab
 		untilId?: string | null;
 	},
 ): Promise<UserListMembershipRow[]> {
-	const conditions: SQL[] = [
-		eq(userListMembership.userListId, userListId),
-	];
+	const conditions: SQL[] = [eq(userListMembership.userListId, userListId)];
 
 	applyUserListMembershipPaginationCondition(conditions, options.sinceId, options.untilId);
 
@@ -231,7 +226,7 @@ export async function createUserListMembershipWithinLimitInDatabase(
 	data: UserListMembershipInsert,
 	limit: number,
 ): Promise<boolean> {
-	return await db.transaction(async tx => {
+	return await db.transaction(async (tx) => {
 		const [lockedList] = await tx
 			.select({ id: userList.id })
 			.from(userList)
@@ -265,9 +260,7 @@ export async function deleteUserListMembershipInDatabase(
 	userId: MiUser['id'],
 	userListId: MiUserList['id'],
 ): Promise<void> {
-	await db
-		.delete(userListMembership)
-		.where(userListMembershipUserAndListCondition(userId, userListId));
+	await db.delete(userListMembership).where(userListMembershipUserAndListCondition(userId, userListId));
 }
 
 export async function deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase(
@@ -277,10 +270,7 @@ export async function deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase(
 ): Promise<void> {
 	await db
 		.delete(userListMembership)
-		.where(and(
-			eq(userListMembership.userId, userId),
-			eq(userListMembership.userListUserId, listOwnerId),
-		));
+		.where(and(eq(userListMembership.userId, userId), eq(userListMembership.userListUserId, listOwnerId)));
 }
 
 /**
@@ -296,8 +286,5 @@ export async function updateUserListMembershipWithRepliesInDatabase(
 		throw new UpdateValuesMissingError();
 	}
 
-	await db
-		.update(userListMembership)
-		.set({ withReplies })
-		.where(eq(userListMembership.id, id));
+	await db.update(userListMembership).set({ withReplies }).where(eq(userListMembership.id, id));
 }

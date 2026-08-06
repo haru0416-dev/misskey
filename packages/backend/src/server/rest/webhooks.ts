@@ -6,7 +6,14 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { countWebhooksByUserIdFromDatabase, createWebhookInDatabase, deleteWebhookFromDatabase, fetchWebhookByIdAndUserIdFromDatabase, listWebhooksByUserIdFromDatabase, updateWebhookInDatabase } from '@/core/WebhookStore.js';
+import {
+	countWebhooksByUserIdFromDatabase,
+	createWebhookInDatabase,
+	deleteWebhookFromDatabase,
+	fetchWebhookByIdAndUserIdFromDatabase,
+	listWebhooksByUserIdFromDatabase,
+	updateWebhookInDatabase,
+} from '@/core/WebhookStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -30,9 +37,10 @@ export type HonoApiWebhookDependencies = {
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-export type HonoApiWebhookTestDependencies = HonoApiWebhookDependencies & HonoApiEmojiPopulateDependencies & {
-	userWebhookDeliverQueue: UserWebhookDeliverQueue;
-};
+export type HonoApiWebhookTestDependencies = HonoApiWebhookDependencies &
+	HonoApiEmojiPopulateDependencies & {
+		userWebhookDeliverQueue: UserWebhookDeliverQueue;
+	};
 
 export type HonoApiUserWebhook = {
 	id: string;
@@ -117,7 +125,7 @@ export async function handleHonoApiIWebhooksList(
 ): Promise<HonoApiUserWebhook[]> {
 	parseHonoApiParams(webhooksListParamDef, body);
 	const webhooks = await listWebhooksByUserIdFromDatabase(deps.db, me.id);
-	return webhooks.map(webhook => packUserWebhook(webhook));
+	return webhooks.map((webhook) => packUserWebhook(webhook));
 }
 
 export async function handleHonoApiIWebhooksShow(
@@ -178,13 +186,17 @@ export async function handleHonoApiIWebhooksUpdate(
 		});
 	}
 
-	const updated = await updateWebhookInDatabase(deps.db, webhook.id, omitUndefined({
-		name: params.name,
-		url: params.url,
-		secret: params.secret === null ? '' : params.secret,
-		on: params.on,
-		active: params.active,
-	}));
+	const updated = await updateWebhookInDatabase(
+		deps.db,
+		webhook.id,
+		omitUndefined({
+			name: params.name,
+			url: params.url,
+			secret: params.secret === null ? '' : params.secret,
+			on: params.on,
+			active: params.active,
+		}),
+	);
 
 	if (updated == null) {
 		throw new Error(`Webhook ${webhook.id} not found`);
@@ -228,10 +240,12 @@ export async function handleHonoApiIWebhooksCreate(
 export const webhooksTestParamDef = z.object({
 	webhookId: misskeyId(),
 	type: z.enum(webhookEventTypes),
-	override: z.object({
-		url: z.string().optional(),
-		secret: z.string().optional(),
-	}).optional(),
+	override: z
+		.object({
+			url: z.string().optional(),
+			secret: z.string().optional(),
+		})
+		.optional(),
 });
 
 type WebhooksTestParams = {
@@ -374,7 +388,7 @@ async function toWebhookTestPackedUserLite(
 		host: user.host,
 		avatarUrl: (user.avatarId == null ? null : user.avatarUrl) ?? '',
 		avatarBlurhash: user.avatarId == null ? null : user.avatarBlurhash,
-		avatarDecorations: user.avatarDecorations.map(it => ({
+		avatarDecorations: user.avatarDecorations.map((it) => ({
 			id: it.id,
 			angle: it.angle,
 			flipH: it.flipH,
@@ -397,7 +411,7 @@ async function toWebhookTestPackedUserDetailedNotMe(
 	override?: Packed<'UserDetailedNotMe'>,
 ): Promise<Packed<'UserDetailedNotMe'>> {
 	return {
-		...await toWebhookTestPackedUserLite(deps, user),
+		...(await toWebhookTestPackedUserLite(deps, user)),
 		url: null,
 		uri: null,
 		movedTo: null,
@@ -485,12 +499,14 @@ async function toWebhookTestPackedNote(
 		uri: note.uri ?? undefined,
 		url: note.url ?? undefined,
 		reactionAndUserPairCache: note.reactionAndUserPairCache,
-		...(detail ? {
-			clippedCount: note.clippedCount,
-			reply: note.reply ? await toWebhookTestPackedNote(deps, note.reply, false) : null,
-			renote: note.renote ? await toWebhookTestPackedNote(deps, note.renote, true) : null,
-			myReaction: null,
-		} : {}),
+		...(detail
+			? {
+					clippedCount: note.clippedCount,
+					reply: note.reply ? await toWebhookTestPackedNote(deps, note.reply, false) : null,
+					renote: note.renote ? await toWebhookTestPackedNote(deps, note.renote, true) : null,
+					myReaction: null,
+				}
+			: {}),
 		...override,
 	} as Packed<'Note'>;
 }

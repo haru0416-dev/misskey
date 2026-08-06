@@ -4,7 +4,11 @@
  */
 
 import { getDriveFilePublicUrl, getProxiedUrl } from '@/core/DriveFilePublicUrl.js';
-import { fetchDriveFileByIdFromDatabase, fetchDriveFileByIdOrFailFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
+import {
+	fetchDriveFileByIdFromDatabase,
+	fetchDriveFileByIdOrFailFromDatabase,
+	listDriveFilesByIdsFromDatabase,
+} from '@/core/DriveFileStore.js';
 import type { Config } from '@/config.js';
 import { deepClone, omitUndefined } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -81,20 +85,23 @@ export async function packDriveFileForHonoApi(
 		packedFolder?: Packed<'DriveFolder'>;
 	},
 ): Promise<Packed<'DriveFile'> | null> {
-	const opts = Object.assign({
-		detail: false,
-		self: false,
-	}, options);
+	const opts = Object.assign(
+		{
+			detail: false,
+			self: false,
+		},
+		options,
+	);
 
 	const file = typeof src === 'object' ? src : await fetchDriveFileByIdFromDatabase(deps.db, src);
 	if (file == null) return null;
 
-	const folder = opts.detail && file.folderId
-		? (hint?.packedFolder ?? await packDriveFolderForHonoApi(deps, file.folderId, { detail: true }))
-		: null;
-	const user = (opts.withUser && file.userId)
-		? (hint?.packedUser ?? await packUserLiteForHonoApi(deps, file.userId))
-		: null;
+	const folder =
+		opts.detail && file.folderId
+			? (hint?.packedFolder ?? (await packDriveFolderForHonoApi(deps, file.folderId, { detail: true })))
+			: null;
+	const user =
+		opts.withUser && file.userId ? (hint?.packedUser ?? (await packUserLiteForHonoApi(deps, file.userId))) : null;
 
 	return {
 		id: file.id,
@@ -135,20 +142,35 @@ export async function packDriveFileManyForHonoApi(
 	let userMap: Map<string, Packed<'UserLite'>> | null = null;
 	let folderMap: Map<string, Packed<'DriveFolder'>> | null = null;
 	if (options?.withUser) {
-		const userIds = uniqueByKey(files.map(f => f.userId).filter((id): id is string => id != null), id => id);
+		const userIds = uniqueByKey(
+			files.map((f) => f.userId).filter((id): id is string => id != null),
+			(id) => id,
+		);
 		const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
-		userMap = new Map(packedUsers.map(user => [user.id, user]));
+		userMap = new Map(packedUsers.map((user) => [user.id, user]));
 	}
 	if (options?.detail) {
-		const folderIds = uniqueByKey(files.map(f => f.folderId).filter((id): id is string => id != null), id => id);
+		const folderIds = uniqueByKey(
+			files.map((f) => f.folderId).filter((id): id is string => id != null),
+			(id) => id,
+		);
 		const packedFolders = await packDriveFoldersManyForHonoApi(deps, folderIds, { detail: true });
-		folderMap = new Map(packedFolders.map(folder => [folder.id, folder]));
+		folderMap = new Map(packedFolders.map((folder) => [folder.id, folder]));
 	}
 
-	const items = await Promise.all(files.map(file => packDriveFileForHonoApi(deps, file, options, omitUndefined({
-		packedUser: file.userId ? (userMap?.get(file.userId) ?? undefined) : undefined,
-		packedFolder: file.folderId ? (folderMap?.get(file.folderId) ?? undefined) : undefined,
-	}))));
+	const items = await Promise.all(
+		files.map((file) =>
+			packDriveFileForHonoApi(
+				deps,
+				file,
+				options,
+				omitUndefined({
+					packedUser: file.userId ? (userMap?.get(file.userId) ?? undefined) : undefined,
+					packedFolder: file.folderId ? (folderMap?.get(file.folderId) ?? undefined) : undefined,
+				}),
+			),
+		),
+	);
 
 	return items.filter((item): item is Packed<'DriveFile'> => item != null);
 }
@@ -160,6 +182,6 @@ export async function packDriveFileManyByIdsForHonoApi(
 ): Promise<Packed<'DriveFile'>[]> {
 	if (fileIds.length === 0) return [];
 	const files = await listDriveFilesByIdsFromDatabase(deps.db, fileIds);
-	const packedById = new Map((await packDriveFileManyForHonoApi(deps, files, options)).map(f => [f.id, f]));
-	return fileIds.map(id => packedById.get(id)).filter((f): f is Packed<'DriveFile'> => f != null);
+	const packedById = new Map((await packDriveFileManyForHonoApi(deps, files, options)).map((f) => [f.id, f]));
+	return fileIds.map((id) => packedById.get(id)).filter((f): f is Packed<'DriveFile'> => f != null);
 }

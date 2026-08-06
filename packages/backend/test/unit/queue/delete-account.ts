@@ -19,7 +19,10 @@ import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/cor
 import { createPageInDatabase, fetchPageByIdFromDatabase } from '@/core/PageStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies } from '@/queue/handlers/delete-account.js';
+import {
+	handleHonoQueueDeleteAccount,
+	type HonoQueueDeleteAccountDependencies,
+} from '@/queue/handlers/delete-account.js';
 import type { DbUserDeleteJobData } from '@/queue/types.js';
 
 function fakeJob(data: DbUserDeleteJobData, id?: string): Bull.Job<DbUserDeleteJobData> {
@@ -81,7 +84,10 @@ describe('hono-queue-delete-account', () => {
 			visibility: 'public',
 		});
 
-		await handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: false, accountDeleteCoordinatorId: genId() }));
+		await handleHonoQueueDeleteAccount(
+			deps,
+			fakeJob({ user: { id: user.id }, soft: false, accountDeleteCoordinatorId: genId() }),
+		);
 
 		expect(await fetchNoteByIdFromDatabase(runtime.db, noteId)).toBeNull();
 		expect(await fetchDriveFileByIdFromDatabase(runtime.db, fileId)).toBeNull();
@@ -109,10 +115,9 @@ describe('hono-queue-delete-account', () => {
 		});
 
 		try {
-			await expect(handleHonoQueueDeleteAccount(
-				deps,
-				fakeJob({ user: { id: user.id }, soft: false }, `legacy-${user.id}`),
-			)).rejects.toThrow('Local account deletion requires an outbox coordinator');
+			await expect(
+				handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: false }, `legacy-${user.id}`)),
+			).rejects.toThrow('Local account deletion requires an outbox coordinator');
 			expect(await fetchUserByIdFromDatabase(runtime.db, user.id)).not.toBeNull();
 		} finally {
 			await deleteUserByIdFromDatabase(runtime.db, user.id);
@@ -120,6 +125,8 @@ describe('hono-queue-delete-account', () => {
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: genId() }, soft: false }))).resolves.toBeUndefined();
+		await expect(
+			handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: genId() }, soft: false })),
+		).resolves.toBeUndefined();
 	});
 });

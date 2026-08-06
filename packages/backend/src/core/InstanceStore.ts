@@ -14,21 +14,17 @@ function deserializeInstance(row: InstanceRow): MiInstance {
 	return row as MiInstance;
 }
 
-export async function fetchInstanceByHostFromDatabase(db: MiDrizzleDatabase, host: MiInstance['host']): Promise<MiInstance | null> {
-	const [row] = await db
-		.select()
-		.from(instance)
-		.where(eq(instance.host, host))
-		.limit(1);
+export async function fetchInstanceByHostFromDatabase(
+	db: MiDrizzleDatabase,
+	host: MiInstance['host'],
+): Promise<MiInstance | null> {
+	const [row] = await db.select().from(instance).where(eq(instance.host, host)).limit(1);
 
 	return row ? deserializeInstance(row) : null;
 }
 
 export async function createInstanceInDatabase(db: MiDrizzleDatabase, values: InstanceInsert): Promise<MiInstance> {
-	const [row] = await db
-		.insert(instance)
-		.values(values)
-		.returning();
+	const [row] = await db.insert(instance).values(values).returning();
 
 	if (row == null) {
 		throw new EntityNotFoundError('MiInstance', values);
@@ -42,11 +38,7 @@ export async function updateInstanceInDatabase(
 	id: MiInstance['id'],
 	values: Partial<InstanceInsert>,
 ): Promise<MiInstance> {
-	const [row] = await db
-		.update(instance)
-		.set(values)
-		.where(eq(instance.id, id))
-		.returning();
+	const [row] = await db.update(instance).set(values).where(eq(instance.id, id)).returning();
 
 	if (row == null) {
 		throw new EntityNotFoundError('MiInstance', { id });
@@ -55,28 +47,44 @@ export async function updateInstanceInDatabase(
 	return deserializeInstance(row);
 }
 
-export async function adjustInstanceUsersCountFromDatabase(db: MiDrizzleDatabase, id: MiInstance['id'], delta: number): Promise<void> {
+export async function adjustInstanceUsersCountFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiInstance['id'],
+	delta: number,
+): Promise<void> {
 	await db
 		.update(instance)
 		.set({ usersCount: sql`${instance.usersCount} + ${delta}` })
 		.where(eq(instance.id, id));
 }
 
-export async function adjustInstanceNotesCountFromDatabase(db: MiDrizzleDatabase, id: MiInstance['id'], delta: number): Promise<void> {
+export async function adjustInstanceNotesCountFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiInstance['id'],
+	delta: number,
+): Promise<void> {
 	await db
 		.update(instance)
 		.set({ notesCount: sql`${instance.notesCount} + ${delta}` })
 		.where(eq(instance.id, id));
 }
 
-export async function adjustInstanceFollowingCountFromDatabase(db: MiDrizzleDatabase, id: MiInstance['id'], delta: number): Promise<void> {
+export async function adjustInstanceFollowingCountFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiInstance['id'],
+	delta: number,
+): Promise<void> {
 	await db
 		.update(instance)
 		.set({ followingCount: sql`${instance.followingCount} + ${delta}` })
 		.where(eq(instance.id, id));
 }
 
-export async function adjustInstanceFollowersCountFromDatabase(db: MiDrizzleDatabase, id: MiInstance['id'], delta: number): Promise<void> {
+export async function adjustInstanceFollowersCountFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiInstance['id'],
+	delta: number,
+): Promise<void> {
 	await db
 		.update(instance)
 		.set({ followersCount: sql`${instance.followersCount} + ${delta}` })
@@ -84,20 +92,15 @@ export async function adjustInstanceFollowersCountFromDatabase(db: MiDrizzleData
 }
 
 export async function countInstancesFromDatabase(db: MiDrizzleDatabase): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(instance);
+	const [row] = await db.select({ value: count() }).from(instance);
 
 	return row?.value ?? 0;
 }
 
 export async function listActiveInstanceHostsFromDatabase(db: MiDrizzleDatabase): Promise<MiInstance['host'][]> {
-	const rows = await db
-		.select({ host: instance.host })
-		.from(instance)
-		.where(eq(instance.suspensionState, 'none'));
+	const rows = await db.select({ host: instance.host }).from(instance).where(eq(instance.suspensionState, 'none'));
 
-	return rows.map(row => row.host);
+	return rows.map((row) => row.host);
 }
 
 export type FederationInstancesSort =
@@ -120,21 +123,36 @@ export type FederationInstancesSort =
 function resolveFederationInstancesOrderBy(sort: FederationInstancesSort): SQL[] {
 	switch (sort) {
 		// Preserve the historical last-call-wins ordering for these aliases.
-		case '+pubSub': return [desc(instance.followersCount)];
-		case '-pubSub': return [asc(instance.followersCount)];
-		case '+notes': return [desc(instance.notesCount)];
-		case '-notes': return [asc(instance.notesCount)];
-		case '+users': return [desc(instance.usersCount)];
-		case '-users': return [asc(instance.usersCount)];
-		case '+following': return [desc(instance.followingCount)];
-		case '-following': return [asc(instance.followingCount)];
-		case '+followers': return [desc(instance.followersCount)];
-		case '-followers': return [asc(instance.followersCount)];
-		case '+firstRetrievedAt': return [desc(instance.firstRetrievedAt)];
-		case '-firstRetrievedAt': return [asc(instance.firstRetrievedAt)];
-		case '+latestRequestReceivedAt': return [sql`${instance.latestRequestReceivedAt} DESC NULLS LAST`];
-		case '-latestRequestReceivedAt': return [sql`${instance.latestRequestReceivedAt} ASC NULLS FIRST`];
-		default: return [desc(instance.id)];
+		case '+pubSub':
+			return [desc(instance.followersCount)];
+		case '-pubSub':
+			return [asc(instance.followersCount)];
+		case '+notes':
+			return [desc(instance.notesCount)];
+		case '-notes':
+			return [asc(instance.notesCount)];
+		case '+users':
+			return [desc(instance.usersCount)];
+		case '-users':
+			return [asc(instance.usersCount)];
+		case '+following':
+			return [desc(instance.followingCount)];
+		case '-following':
+			return [asc(instance.followingCount)];
+		case '+followers':
+			return [desc(instance.followersCount)];
+		case '-followers':
+			return [asc(instance.followersCount)];
+		case '+firstRetrievedAt':
+			return [desc(instance.firstRetrievedAt)];
+		case '-firstRetrievedAt':
+			return [asc(instance.firstRetrievedAt)];
+		case '+latestRequestReceivedAt':
+			return [sql`${instance.latestRequestReceivedAt} DESC NULLS LAST`];
+		case '-latestRequestReceivedAt':
+			return [sql`${instance.latestRequestReceivedAt} ASC NULLS FIRST`];
+		default:
+			return [desc(instance.id)];
 	}
 }
 
@@ -185,9 +203,11 @@ export async function listFederationInstancesFromDatabase(
 	}
 
 	if (typeof options.federating === 'boolean') {
-		conditions.push(options.federating
-			? or(gt(instance.followingCount, 0), gt(instance.followersCount, 0))!
-			: and(eq(instance.followingCount, 0), eq(instance.followersCount, 0))!);
+		conditions.push(
+			options.federating
+				? or(gt(instance.followingCount, 0), gt(instance.followersCount, 0))!
+				: and(eq(instance.followingCount, 0), eq(instance.followersCount, 0))!,
+		);
 	}
 
 	if (typeof options.subscribing === 'boolean') {
@@ -212,7 +232,7 @@ export async function listFederationInstancesFromDatabase(
 
 	const rows = await query;
 
-	return rows.map(row => deserializeInstance(row));
+	return rows.map((row) => deserializeInstance(row));
 }
 
 export async function listInstancesOrderByFollowersCountDescFromDatabase(
@@ -226,7 +246,7 @@ export async function listInstancesOrderByFollowersCountDescFromDatabase(
 		.orderBy(desc(instance.followersCount))
 		.limit(limit);
 
-	return rows.map(row => deserializeInstance(row));
+	return rows.map((row) => deserializeInstance(row));
 }
 
 export async function listInstancesOrderByFollowingCountDescFromDatabase(
@@ -240,14 +260,11 @@ export async function listInstancesOrderByFollowingCountDescFromDatabase(
 		.orderBy(desc(instance.followingCount))
 		.limit(limit);
 
-	return rows.map(row => deserializeInstance(row));
+	return rows.map((row) => deserializeInstance(row));
 }
 
 export async function listSuspendedInstancesFromDatabase(db: MiDrizzleDatabase): Promise<MiInstance[]> {
-	const rows = await db
-		.select()
-		.from(instance)
-		.where(ne(instance.suspensionState, 'none'));
+	const rows = await db.select().from(instance).where(ne(instance.suspensionState, 'none'));
 
-	return rows.map(row => deserializeInstance(row));
+	return rows.map((row) => deserializeInstance(row));
 }

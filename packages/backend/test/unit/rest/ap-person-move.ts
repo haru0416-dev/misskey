@@ -14,7 +14,11 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUriFromDatabase } from '@/core/UserStore.js';
+import {
+	createUserWithProfileAndPublickeyInDatabase,
+	fetchUserByIdOrFailFromDatabase,
+	fetchUserByUriFromDatabase,
+} from '@/core/UserStore.js';
 import { createFollowingInDatabase } from '@/core/FollowingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { updatePersonForHonoApi, type HonoApiUpdatePersonDependencies } from '@/server/rest/ap-person.js';
@@ -54,7 +58,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 	});
 
 	afterEach(async () => {
-		await Promise.all(servers.splice(0).map(s => new Promise<void>(resolve => s.close(() => resolve()))));
+		await Promise.all(servers.splice(0).map((s) => new Promise<void>((resolve) => s.close(() => resolve()))));
 	});
 
 	afterAll(async () => {
@@ -96,7 +100,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 		const srcUri = `http://${srcFixture.host}/users/src`;
 
 		const srcId = genId();
-		const srcUser = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
+		const srcUser = (await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: {
 				id: srcId,
 				username: 'honomovesrc',
@@ -107,7 +111,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 				lastFetchedAt: new Date(0),
 			},
 			profile: { userId: srcId },
-		}) as MiRemoteUser;
+		})) as MiRemoteUser;
 
 		const follower = await createLocalUser('honomovefollower');
 		await createFollowingInDatabase(deps.db, {
@@ -128,7 +132,9 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 		expect(dstUser).not.toBeNull();
 
 		const jobs = await deps.relationshipQueue.getJobs(['waiting', 'delayed']);
-		const followJob = jobs.find(j => j.name === 'follow' && (j.data as { from: { id: string } }).from.id === follower.id);
+		const followJob = jobs.find(
+			(j) => j.name === 'follow' && (j.data as { from: { id: string } }).from.id === follower.id,
+		);
 		expect(followJob).toBeDefined();
 		expect((followJob!.data as { to: { id: string } }).to.id).toBe(dstUser!.id);
 	});
@@ -157,7 +163,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 		const srcUri = `http://${srcFixture.host}/users/noacksrc`;
 
 		const srcId = genId();
-		const srcUser = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
+		const srcUser = (await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: {
 				id: srcId,
 				username: 'honomovenoacksrc',
@@ -168,7 +174,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 				lastFetchedAt: new Date(0),
 			},
 			profile: { userId: srcId },
-		}) as MiRemoteUser;
+		})) as MiRemoteUser;
 
 		const follower = await createLocalUser('honomovenoackfollower');
 		await createFollowingInDatabase(deps.db, {
@@ -185,7 +191,9 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 		expect(updatedSrc.movedToUri).toBe(dstUri);
 
 		const jobs = await deps.relationshipQueue.getJobs(['waiting', 'delayed']);
-		const followJob = jobs.find(j => j.name === 'follow' && (j.data as { from: { id: string } }).from.id === follower.id);
+		const followJob = jobs.find(
+			(j) => j.name === 'follow' && (j.data as { from: { id: string } }).from.id === follower.id,
+		);
 		expect(followJob).toBeUndefined();
 	});
 });

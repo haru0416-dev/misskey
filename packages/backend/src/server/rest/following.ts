@@ -11,14 +11,50 @@ import { omitUndefined } from '@/misc/clone.js';
 import type * as Redis from 'ioredis';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
-import { createFollowRequestInDatabase, deleteFollowRequestByIdFromDatabase, deleteFollowRequestFromDatabase, fetchFollowRequestFromDatabase, followRequestExistsInDatabase, listAllFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFolloweeIdFromDatabase, listFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
+import {
+	createFollowRequestInDatabase,
+	deleteFollowRequestByIdFromDatabase,
+	deleteFollowRequestFromDatabase,
+	fetchFollowRequestFromDatabase,
+	followRequestExistsInDatabase,
+	listAllFollowRequestsByFolloweeIdFromDatabase,
+	listFollowRequestsByFolloweeIdFromDatabase,
+	listFollowRequestsByFollowerIdFromDatabase,
+} from '@/core/FollowRequestStore.js';
 import type { FollowRequestRow } from '@/db/schema/follow-request.js';
-import { countNonMovedFolloweesByFollowerIdFromDatabase, countNonMovedFollowersByFolloweeIdFromDatabase, createFollowingInDatabase, deleteFollowingAndUpdateUserCountsByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase, listFollowersByFolloweeIdWithPaginationFromDatabase, listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase, updateFollowingByIdInDatabase, updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
-import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
+import {
+	countNonMovedFolloweesByFollowerIdFromDatabase,
+	countNonMovedFollowersByFolloweeIdFromDatabase,
+	createFollowingInDatabase,
+	deleteFollowingAndUpdateUserCountsByIdInDatabase,
+	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
+	followingExistsInDatabase,
+	listFolloweeIdsWithRepliesByFollowerIdFromDatabase,
+	listFollowersByFolloweeIdWithPaginationFromDatabase,
+	listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase,
+	listFollowingsByFollowerIdWithPaginationFromDatabase,
+	updateFollowingByIdInDatabase,
+	updateFollowingsByFollowerIdInDatabase,
+} from '@/core/FollowingStore.js';
+import {
+	adjustInstanceFollowersCountFromDatabase,
+	adjustInstanceFollowingCountFromDatabase,
+} from '@/core/InstanceStore.js';
 import { mutingExistsInDatabase } from '@/core/MutingStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
-import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, listUsersByIdsFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase, listFollowingUsersByBirthdayDateFromDatabase } from '@/core/UserProfileStore.js';
+import {
+	adjustUserFollowersCountInDatabase,
+	adjustUserFollowingCountInDatabase,
+	fetchUserByIdFromDatabase,
+	fetchUserByIdOrFailFromDatabase,
+	fetchUserByUsernameAndHostFromDatabase,
+	listUsersByIdsFromDatabase,
+	updateUserInDatabase,
+} from '@/core/UserStore.js';
+import {
+	fetchUserProfileByUserIdOrFailFromDatabase,
+	listFollowingUsersByBirthdayDateFromDatabase,
+} from '@/core/UserProfileStore.js';
 import { isHonoApiModerator } from './role-policy.js';
 import { fetchOrRegisterFederatedInstance } from './federation.js';
 import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
@@ -45,7 +81,16 @@ import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { HonoApiError, clientError } from './error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './events.js';
 import { xaddHonoApiNotification } from './notification.js';
-import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, packUserLiteForHonoApi, packUserLiteManyForHonoApi, resolveAlsoKnownAsForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
+import {
+	packMeDetailedForHonoApi,
+	packUserDetailedNotMeForHonoApi,
+	packUserDetailedNotMeManyForHonoApi,
+	packUserLiteForHonoApi,
+	packUserLiteManyForHonoApi,
+	resolveAlsoKnownAsForHonoApi,
+	type UserDetailedNotMeHonoApiResponse,
+	type UserPackingDependencies,
+} from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiFollowingDependencies = UserPackingDependencies & {
@@ -202,7 +247,10 @@ export function renderFollow(config: Config, follower: MiUser, followee: MiUser,
 }
 
 export function renderUndo(config: Config, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
-	const id = typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.instance.url) ? `${object.id}/undo` : undefined;
+	const id =
+		typeof object !== 'string' && typeof object.id === 'string' && object.id.startsWith(config.instance.url)
+			? `${object.id}/undo`
+			: undefined;
 
 	return {
 		type: 'Undo',
@@ -229,7 +277,10 @@ export function renderAccept(config: Config, object: string | IObject, user: { i
 	};
 }
 
-export function addActivityContext<T extends IObject>(config: Config, activity: T): T & { '@context': typeof CONTEXT; id: string } {
+export function addActivityContext<T extends IObject>(
+	config: Config,
+	activity: T,
+): T & { '@context': typeof CONTEXT; id: string } {
 	if (activity.id == null) {
 		activity.id = `${config.instance.url}/${randomUUID()}`;
 	}
@@ -297,7 +348,7 @@ async function createFollowingNotification(
 		message?: string | null;
 	} = {},
 ): Promise<void> {
-	if (!await isNotificationAllowed(deps, notifieeId, type, notifier.id)) return;
+	if (!(await isNotificationAllowed(deps, notifieeId, type, notifier.id))) return;
 
 	const notification: FollowingNotification = {
 		id: genId(),
@@ -317,11 +368,15 @@ async function createFollowingNotification(
 	};
 
 	deps.publishMainStream?.(notifieeId, 'notification', packed);
-	trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
-		const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${notifieeId}`);
-		if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-		deps.publishMainStream?.(notifieeId, 'unreadNotification', packed);
-	}).catch(() => {}));
+	trackPromise(
+		delay(2000, undefined, { ref: false })
+			.then(async () => {
+				const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${notifieeId}`);
+				if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+				deps.publishMainStream?.(notifieeId, 'unreadNotification', packed);
+			})
+			.catch(() => {}),
+	);
 }
 
 /** follow 系 webhook / mainStream 通知だけに必要な最小 deps (blocking 経路からも共有される)。 */
@@ -344,26 +399,28 @@ async function enqueueUserWebhook(
 		on: [type],
 	});
 
-	await Promise.all(webhooks.map(webhook => {
-		const data: UserWebhookDeliverJobData = {
-			type,
-			content: { user } as UserWebhookDeliverJobData['content'],
-			webhookId: webhook.id,
-			userId: webhook.userId,
-			to: webhook.url,
-			secret: webhook.secret,
-			createdAt: Date.now(),
-			eventId: randomUUID(),
-		};
+	await Promise.all(
+		webhooks.map((webhook) => {
+			const data: UserWebhookDeliverJobData = {
+				type,
+				content: { user } as UserWebhookDeliverJobData['content'],
+				webhookId: webhook.id,
+				userId: webhook.userId,
+				to: webhook.url,
+				secret: webhook.secret,
+				createdAt: Date.now(),
+				eventId: randomUUID(),
+			};
 
-		return deps.userWebhookDeliverQueue.add(webhook.id, data, {
-			attempts: 4,
-			backoff: {
-				type: 'custom',
-			},
-			...queueRetentionOptions(deps.config),
-		});
-	}));
+			return deps.userWebhookDeliverQueue.add(webhook.id, data, {
+				attempts: 4,
+				backoff: {
+					type: 'custom',
+				},
+				...queueRetentionOptions(deps.config),
+			});
+		}),
+	);
 }
 
 async function publishFollowToLocalFollower(
@@ -373,7 +430,11 @@ async function publishFollowToLocalFollower(
 ): Promise<void> {
 	if (!isLocalUser(follower)) return;
 
-	const packedFollowee = await packUserDetailedNotMeForHonoApi(deps, followee, follower) as Packed<'UserDetailedNotMe'>;
+	const packedFollowee = (await packUserDetailedNotMeForHonoApi(
+		deps,
+		followee,
+		follower,
+	)) as Packed<'UserDetailedNotMe'>;
 	deps.publishMainStream?.(follower.id, 'follow', packedFollowee);
 	await enqueueUserWebhook(deps, follower.id, 'follow', packedFollowee);
 }
@@ -404,7 +465,11 @@ export async function publishUnfollowToLocalFollower(
 ): Promise<void> {
 	if (!isLocalUser(follower)) return;
 
-	const packedFollowee = await packUserDetailedNotMeForHonoApi(deps, followee, follower) as Packed<'UserDetailedNotMe'>;
+	const packedFollowee = (await packUserDetailedNotMeForHonoApi(
+		deps,
+		followee,
+		follower,
+	)) as Packed<'UserDetailedNotMe'>;
 	deps.publishMainStream?.(follower.id, 'unfollow', packedFollowee);
 	await enqueueUserWebhook(deps, follower.id, 'unfollow', packedFollowee);
 }
@@ -447,14 +512,23 @@ export async function createFollowRequestWithSideEffects(
 	if (isLocalUser(followee)) {
 		const packedFollower = await packUserLiteForHonoApi(deps, follower);
 		deps.publishMainStream?.(followee.id, 'receiveFollowRequest', packedFollower);
-		deps.publishMainStream?.(followee.id, 'meUpdated', await packMeDetailedForHonoApi(deps, followee, {
-			includeSecrets: false,
-		}));
+		deps.publishMainStream?.(
+			followee.id,
+			'meUpdated',
+			await packMeDetailedForHonoApi(deps, followee, {
+				includeSecrets: false,
+			}),
+		);
 		trackPromise(createFollowingNotification(deps, followee.id, 'receiveFollowRequest', follower));
 	}
 
 	if (isLocalUser(follower) && isRemoteUser(followee)) {
-		await deliverFollowActivity(deps, follower, followee, requestId ?? `${deps.config.instance.url}/follows/${followRequest.id}`);
+		await deliverFollowActivity(
+			deps,
+			follower,
+			followee,
+			requestId ?? `${deps.config.instance.url}/follows/${followRequest.id}`,
+		);
 	}
 }
 
@@ -520,19 +594,30 @@ async function deleteFollowingWithSideEffects(
 	followee: MiUser,
 	followingId: string,
 ): Promise<boolean> {
-	const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(deps.db, followingId, follower.id, followee.id);
+	const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(
+		deps.db,
+		followingId,
+		follower.id,
+		followee.id,
+	);
 	if (!deleted) return false;
 
 	await decrementFollowing(deps, follower, followee);
 	await publishUnfollowToLocalFollower(deps, follower, followee);
 
 	if (isLocalUser(follower) && isRemoteUser(followee)) {
-		const content = addActivityContext(deps.config, renderUndo(deps.config, renderFollow(deps.config, follower, followee), follower));
+		const content = addActivityContext(
+			deps.config,
+			renderUndo(deps.config, renderFollow(deps.config, follower, followee), follower),
+		);
 		enqueueDeliverJob(deps.deliverQueue, deps.config, follower, content as IActivity, followee.inbox, false);
 	}
 
 	if (isLocalUser(followee) && isRemoteUser(follower)) {
-		const content = addActivityContext(deps.config, renderReject(deps.config, renderFollow(deps.config, follower, followee), followee));
+		const content = addActivityContext(
+			deps.config,
+			renderReject(deps.config, renderFollow(deps.config, follower, followee), followee),
+		);
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 	}
 
@@ -629,7 +714,11 @@ export async function handleHonoApiFollowingCreate(
 	if (blocked) throw clientError('You are blocked by that user.', 'BLOCKED', 'c4ab57cc-4e41-45e9-bfd9-584f61e35ce0');
 
 	if (await followingExistsInDatabase(deps.db, follower.id, followee.id)) {
-		throw clientError('You are already following that user.', 'ALREADY_FOLLOWING', '35387507-38c7-4cb9-9197-300b93783fa0');
+		throw clientError(
+			'You are already following that user.',
+			'ALREADY_FOLLOWING',
+			'35387507-38c7-4cb9-9197-300b93783fa0',
+		);
 	}
 
 	const followeeProfile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, followee.id);
@@ -654,10 +743,15 @@ export async function handleHonoApiFollowingCreate(
 		}
 	}
 
-	await insertFollowingWithSideEffects(deps, follower, followee, omitUndefined({
-		withReplies: params.withReplies,
-		followeeProfile,
-	}));
+	await insertFollowingWithSideEffects(
+		deps,
+		follower,
+		followee,
+		omitUndefined({
+			withReplies: params.withReplies,
+			followeeProfile,
+		}),
+	);
 
 	return await packUserLiteForHonoApi(deps, followee);
 }
@@ -668,10 +762,14 @@ export async function handleHonoApiFollowingUpdateAll(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(followingUpdateAllParamDef, body);
-	await updateFollowingsByFollowerIdInDatabase(deps.db, me.id, omitUndefined({
-		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
-		withReplies: params.withReplies != null ? params.withReplies : undefined,
-	}));
+	await updateFollowingsByFollowerIdInDatabase(
+		deps.db,
+		me.id,
+		omitUndefined({
+			notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
+			withReplies: params.withReplies != null ? params.withReplies : undefined,
+		}),
+	);
 	if (params.withReplies != null) {
 		deps.publishInternalEvent?.('followingsUpdated', { followerId: me.id, withReplies: params.withReplies });
 	}
@@ -696,7 +794,7 @@ export async function handleHonoApiFollowingDelete(
 		throw followingDeleteNotFollowingError();
 	}
 
-	if (!await deleteFollowingWithSideEffects(deps, follower, followee, following.id)) {
+	if (!(await deleteFollowingWithSideEffects(deps, follower, followee, following.id))) {
 		throw followingDeleteNotFollowingError();
 	}
 
@@ -722,12 +820,20 @@ export async function handleHonoApiFollowingUpdate(
 		throw followingUpdateNotFollowingError();
 	}
 
-	await updateFollowingByIdInDatabase(deps.db, exist.id, omitUndefined({
-		notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
-		withReplies: params.withReplies != null ? params.withReplies : undefined,
-	}));
+	await updateFollowingByIdInDatabase(
+		deps.db,
+		exist.id,
+		omitUndefined({
+			notify: params.notify != null ? (params.notify === 'none' ? null : params.notify) : undefined,
+			withReplies: params.withReplies != null ? params.withReplies : undefined,
+		}),
+	);
 	if (params.withReplies != null) {
-		deps.publishInternalEvent?.('followingUpdated', { followerId: me.id, followeeId: followee.id, withReplies: params.withReplies });
+		deps.publishInternalEvent?.('followingUpdated', {
+			followerId: me.id,
+			followeeId: followee.id,
+			withReplies: params.withReplies,
+		});
 	}
 
 	return await packUserLiteForHonoApi(deps, follower);
@@ -752,7 +858,7 @@ export async function handleHonoApiFollowingInvalidate(
 		throw followingInvalidateNotFollowingError();
 	}
 
-	if (!await deleteFollowingWithSideEffects(deps, follower, followee, following.id)) {
+	if (!(await deleteFollowingWithSideEffects(deps, follower, followee, following.id))) {
 		throw followingInvalidateNotFollowingError();
 	}
 
@@ -777,7 +883,14 @@ export async function acceptFollowRequestForHonoApi(
 	});
 
 	if (isRemoteUser(follower) && isLocalUser(followee)) {
-		const content = addActivityContext(deps.config, renderAccept(deps.config, renderFollow(deps.config, follower, followee, request.requestId ?? undefined), followee));
+		const content = addActivityContext(
+			deps.config,
+			renderAccept(
+				deps.config,
+				renderFollow(deps.config, follower, followee, request.requestId ?? undefined),
+				followee,
+			),
+		);
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 	}
 }
@@ -800,39 +913,63 @@ export async function acceptAllFollowRequestsForHonoApi(
 	const requests = await listAllFollowRequestsByFolloweeIdFromDatabase(deps.db, followee.id);
 	if (requests.length === 0) return;
 
-	const followerIds = [...new Set(requests.map(request => request.followerId))];
+	const followerIds = [...new Set(requests.map((request) => request.followerId))];
 	const [followeeProfile, followers] = await Promise.all([
 		fetchUserProfileByUserIdOrFailFromDatabase(deps.db, followee.id),
 		listUsersByIdsFromDatabase(deps.db, followerIds, { includeSuspended: true }),
 	]);
-	const followerById = new Map(followers.map(follower => [follower.id, follower]));
+	const followerById = new Map(followers.map((follower) => [follower.id, follower]));
 	const limit = promiseLimit<void>(ACCEPT_FOLLOW_REQUEST_CONCURRENCY);
 	let accepted = false;
 
-	await Promise.all(requests.map(request => limit(async () => {
-		try {
-			const currentRequest = await fetchFollowRequestFromDatabase(deps.db, request.followerId, followee.id);
-			if (currentRequest == null) return;
-			const follower = followerById.get(request.followerId) ?? await fetchUserByIdOrFailFromDatabase(deps.db, request.followerId);
-			await insertFollowingWithSideEffects(deps, follower, followee, {
-				withReplies: currentRequest.withReplies ?? undefined,
-				followeeProfile,
-				awaitNotification: true,
-			});
-			accepted = true;
+	await Promise.all(
+		requests.map((request) =>
+			limit(async () => {
+				try {
+					const currentRequest = await fetchFollowRequestFromDatabase(deps.db, request.followerId, followee.id);
+					if (currentRequest == null) return;
+					const follower =
+						followerById.get(request.followerId) ??
+						(await fetchUserByIdOrFailFromDatabase(deps.db, request.followerId));
+					await insertFollowingWithSideEffects(deps, follower, followee, {
+						withReplies: currentRequest.withReplies ?? undefined,
+						followeeProfile,
+						awaitNotification: true,
+					});
+					accepted = true;
 
-			if (isRemoteUser(follower) && isLocalUser(followee)) {
-				const content = addActivityContext(deps.config, renderAccept(deps.config, renderFollow(deps.config, follower, followee, currentRequest.requestId ?? undefined), followee));
-				await enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
-			}
-		} catch {
-			// One stale or invalid request must not prevent the remaining requests from being accepted.
-		}
-	})));
+					if (isRemoteUser(follower) && isLocalUser(followee)) {
+						const content = addActivityContext(
+							deps.config,
+							renderAccept(
+								deps.config,
+								renderFollow(deps.config, follower, followee, currentRequest.requestId ?? undefined),
+								followee,
+							),
+						);
+						await enqueueDeliverJob(
+							deps.deliverQueue,
+							deps.config,
+							followee,
+							content as IActivity,
+							follower.inbox,
+							false,
+						);
+					}
+				} catch {
+					// One stale or invalid request must not prevent the remaining requests from being accepted.
+				}
+			}),
+		),
+	);
 
 	if (accepted) {
 		const freshFollowee = await fetchUserByIdOrFailFromDatabase(deps.db, followee.id);
-		deps.publishMainStream?.(followee.id, 'meUpdated', await packMeDetailedForHonoApi(deps, freshFollowee, { includeSecrets: false }));
+		deps.publishMainStream?.(
+			followee.id,
+			'meUpdated',
+			await packMeDetailedForHonoApi(deps, freshFollowee, { includeSecrets: false }),
+		);
 	}
 }
 
@@ -846,7 +983,10 @@ export async function handleHonoApiFollowingRequestsCancel(
 	const followee = await getTargetUserOrThrow(deps, params.userId, followingRequestsCancelNoSuchUserError);
 
 	if (isRemoteUser(followee)) {
-		const content = addActivityContext(deps.config, renderUndo(deps.config, renderFollow(deps.config, follower, followee), follower));
+		const content = addActivityContext(
+			deps.config,
+			renderUndo(deps.config, renderFollow(deps.config, follower, followee), follower),
+		);
 		if (isLocalUser(follower)) {
 			enqueueDeliverJob(deps.deliverQueue, deps.config, follower, content as IActivity, followee.inbox, false);
 		}
@@ -860,9 +1000,13 @@ export async function handleHonoApiFollowingRequestsCancel(
 	await deleteFollowRequestFromDatabase(deps.db, follower.id, followee.id);
 
 	if (isLocalUser(followee)) {
-		deps.publishMainStream?.(followee.id, 'meUpdated', await packMeDetailedForHonoApi(deps, followee, {
-			includeSecrets: false,
-		}));
+		deps.publishMainStream?.(
+			followee.id,
+			'meUpdated',
+			await packMeDetailedForHonoApi(deps, followee, {
+				includeSecrets: false,
+			}),
+		);
 	}
 
 	return await packUserLiteForHonoApi(deps, followee);
@@ -880,7 +1024,14 @@ export async function handleHonoApiFollowingRequestsReject(
 	const request = await fetchFollowRequestFromDatabase(deps.db, follower.id, followee.id);
 
 	if (isRemoteUser(follower)) {
-		const content = addActivityContext(deps.config, renderReject(deps.config, renderFollow(deps.config, follower, followee, request?.requestId ?? undefined), followee));
+		const content = addActivityContext(
+			deps.config,
+			renderReject(
+				deps.config,
+				renderFollow(deps.config, follower, followee, request?.requestId ?? undefined),
+				followee,
+			),
+		);
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 	}
 
@@ -898,11 +1049,11 @@ async function packFollowRequestsForHonoApi(
 	requests: FollowRequestRow[],
 	me: MiLocalUser,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
-	const userIds = [...new Set([...requests.map(r => r.followerId), ...requests.map(r => r.followeeId)])];
+	const userIds = [...new Set([...requests.map((r) => r.followerId), ...requests.map((r) => r.followeeId)])];
 	const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
-	const userById = new Map(packedUsers.map(user => [user.id, user]));
+	const userById = new Map(packedUsers.map((user) => [user.id, user]));
 
-	return requests.map(request => ({
+	return requests.map((request) => ({
 		id: request.id,
 		follower: userById.get(request.followerId)!,
 		followee: userById.get(request.followeeId)!,
@@ -915,7 +1066,7 @@ export async function handleHonoApiFollowingRequestsList(
 	body: Record<string, unknown>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
 	const params = parseHonoApiParams(followingRequestsListParamDef, body);
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const requests = await listFollowRequestsByFolloweeIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -932,7 +1083,7 @@ export async function handleHonoApiFollowingRequestsSent(
 	body: Record<string, unknown>,
 ): Promise<{ id: string; follower: Packed<'UserLite'>; followee: Packed<'UserLite'> }[]> {
 	const params = parseHonoApiParams(followingRequestsListParamDef, body);
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const requests = await listFollowRequestsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -947,7 +1098,10 @@ export async function packFollowingsForHonoApi(
 	deps: UserPackingDependencies,
 	followings: MiFollowing[],
 ): Promise<FollowingListItem[]> {
-	const packedFollowees = await packUserDetailedNotMeManyForHonoApi(deps, followings.map(f => f.followee ?? f.followeeId));
+	const packedFollowees = await packUserDetailedNotMeManyForHonoApi(
+		deps,
+		followings.map((f) => f.followee ?? f.followeeId),
+	);
 
 	return followings.map((following, index) => {
 		const followee = packedFollowees[index];
@@ -968,7 +1122,7 @@ export async function handleHonoApiFollowingList(
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
 	const params = parseHonoApiParams(followingListParamDef, body);
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const followings = await listFollowingsByFollowerIdWithPaginationFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -992,7 +1146,10 @@ async function packFollowersForHonoApi(
 	deps: UserPackingDependencies,
 	followings: MiFollowing[],
 ): Promise<FollowerListItem[]> {
-	const packedFollowers = await packUserDetailedNotMeManyForHonoApi(deps, followings.map(f => f.follower ?? f.followerId));
+	const packedFollowers = await packUserDetailedNotMeManyForHonoApi(
+		deps,
+		followings.map((f) => f.follower ?? f.followerId),
+	);
 
 	return followings.map((following, index) => {
 		const follower = packedFollowers[index];
@@ -1026,21 +1183,22 @@ const usersPaginationShape = {
 // `.passthrough()` は元 ajv 版が `additionalProperties: false` を指定しておらず、
 // anyOf のもう一方の枝にしか属さないプロパティ (例: userId 枝に対する username/host) も
 // 素通りさせていた挙動を再現するために必要 (等価性検証スクリプトで確認済み)。
-export const usersByUserIdBaseParamDef = z.object({
-	userId: misskeyId(),
-	...usersPaginationShape,
-}).passthrough();
+export const usersByUserIdBaseParamDef = z
+	.object({
+		userId: misskeyId(),
+		...usersPaginationShape,
+	})
+	.passthrough();
 
-export const usersByUsernameHostBaseParamDef = z.object({
-	username: z.string(),
-	host: z.string().nullable(),
-	...usersPaginationShape,
-}).passthrough();
+export const usersByUsernameHostBaseParamDef = z
+	.object({
+		username: z.string(),
+		host: z.string().nullable(),
+		...usersPaginationShape,
+	})
+	.passthrough();
 
-export const usersFollowersOrFollowingParamDef = z.union([
-	usersByUserIdBaseParamDef,
-	usersByUsernameHostBaseParamDef,
-]);
+export const usersFollowersOrFollowingParamDef = z.union([usersByUserIdBaseParamDef, usersByUsernameHostBaseParamDef]);
 
 export const usersFollowingParamDef = z.union([
 	usersByUserIdBaseParamDef.extend({ birthday: birthdaySchema.nullable().optional() }),
@@ -1079,7 +1237,11 @@ function usersFollowingForbiddenError(): HonoApiError {
 	return clientError('Forbidden.', 'FORBIDDEN', 'f6cdb0df-c19f-ec5c-7dbb-0ba84a1f92ba');
 }
 function usersFollowingBirthdayInvalidError(): HonoApiError {
-	return clientError('Birthday date format is invalid.', 'BIRTHDAY_DATE_FORMAT_INVALID', 'a2b007b9-4782-4eba-abd3-93b05ed4130d');
+	return clientError(
+		'Birthday date format is invalid.',
+		'BIRTHDAY_DATE_FORMAT_INVALID',
+		'a2b007b9-4782-4eba-abd3-93b05ed4130d',
+	);
 }
 
 export async function handleHonoApiUsersFollowers(
@@ -1088,14 +1250,15 @@ export async function handleHonoApiUsersFollowers(
 	body: Record<string, unknown>,
 ): Promise<FollowerListItem[]> {
 	const params = parseHonoApiParams(usersFollowersOrFollowingParamDef, body) as UsersFollowersOrFollowingParams;
-	const user = params.userId != null
-		? await fetchUserByIdFromDatabase(deps.db, params.userId)
-		: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullableForHonoApi(params.host));
+	const user =
+		params.userId != null
+			? await fetchUserByIdFromDatabase(deps.db, params.userId)
+			: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullableForHonoApi(params.host));
 	if (user == null) throw usersFollowersNoSuchUserError();
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 
-	if (profile.followersVisibility !== 'public' && !await isHonoApiModerator(deps, me)) {
+	if (profile.followersVisibility !== 'public' && !(await isHonoApiModerator(deps, me))) {
 		if (profile.followersVisibility === 'private') {
 			if (me == null || me.id !== user.id) throw usersFollowersForbiddenError();
 		} else if (profile.followersVisibility === 'followers') {
@@ -1107,7 +1270,7 @@ export async function handleHonoApiUsersFollowers(
 		}
 	}
 
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const followings = await listFollowersByFolloweeIdWithPaginationFromDatabase(deps.db, user.id, {
 		limit: params.limit,
 		order: pagination.order,
@@ -1124,14 +1287,15 @@ export async function handleHonoApiUsersFollowing(
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
 	const params = parseHonoApiParams(usersFollowingParamDef, body) as UsersFollowingParams;
-	const user = params.userId != null
-		? await fetchUserByIdFromDatabase(deps.db, params.userId)
-		: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullableForHonoApi(params.host));
+	const user =
+		params.userId != null
+			? await fetchUserByIdFromDatabase(deps.db, params.userId)
+			: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullableForHonoApi(params.host));
 	if (user == null) throw usersFollowingNoSuchUserError();
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 
-	if (profile.followingVisibility !== 'public' && !await isHonoApiModerator(deps, me)) {
+	if (profile.followingVisibility !== 'public' && !(await isHonoApiModerator(deps, me))) {
 		if (profile.followingVisibility === 'private') {
 			if (me == null || me.id !== user.id) throw usersFollowingForbiddenError();
 		} else if (profile.followingVisibility === 'followers') {
@@ -1143,19 +1307,24 @@ export async function handleHonoApiUsersFollowing(
 		}
 	}
 
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	let followings: MiFollowing[];
 	if (params.birthday) {
 		try {
 			const parts = params.birthday.split('-');
 			parts.shift();
 			const birthdayNum = Number.parseInt(parts.join(''));
-			followings = await listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase(deps.db, user.id, birthdayNum, {
-				limit: params.limit,
-				order: pagination.order,
-				sinceId: pagination.sinceId,
-				untilId: pagination.untilId,
-			});
+			followings = await listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase(
+				deps.db,
+				user.id,
+				birthdayNum,
+				{
+					limit: params.limit,
+					order: pagination.order,
+					sinceId: pagination.sinceId,
+					untilId: pagination.untilId,
+				},
+			);
 		} catch {
 			throw usersFollowingBirthdayInvalidError();
 		}
@@ -1184,13 +1353,15 @@ const birthdayRangeSchema = z.object({
 // 元 ajv 版は `oneOf` (どちらか一方の形にのみ一致することを要求。両方の形に同時に一致する入力は拒否される) だった。
 // Zod の `z.union` は anyOf 相当 (どれか一つでも一致すれば可) のため oneOf の「ちょうど1つ」を表現できない。
 // そのため両方のサブスキーマで安全に safeParse し、一致した個数がちょうど1つであることを明示的に検証する。
-const birthdayOneOfSchema = z.custom<
-	z.infer<typeof birthdayMonthDaySchema> | z.infer<typeof birthdayRangeSchema>
->((value) => {
-	const matches = [birthdayMonthDaySchema.safeParse(value), birthdayRangeSchema.safeParse(value)]
-		.filter(result => result.success).length;
-	return matches === 1;
-}, { message: 'must match exactly one schema in oneOf' });
+const birthdayOneOfSchema = z.custom<z.infer<typeof birthdayMonthDaySchema> | z.infer<typeof birthdayRangeSchema>>(
+	(value) => {
+		const matches = [birthdayMonthDaySchema.safeParse(value), birthdayRangeSchema.safeParse(value)].filter(
+			(result) => result.success,
+		).length;
+		return matches === 1;
+	},
+	{ message: 'must match exactly one schema in oneOf' },
+);
 
 export const usersGetFollowingUsersByBirthdayParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
@@ -1230,12 +1401,17 @@ export async function handleHonoApiUsersGetFollowingUsersByBirthday(
 		limit: params.limit,
 	});
 
-	const users = new Map<string, Packed<'UserLite'>>((
-		await packUserLiteManyForHonoApi(deps, birthdayUsers.map(u => u.userId))
-	).map(u => [u.id, u]));
+	const users = new Map<string, Packed<'UserLite'>>(
+		(
+			await packUserLiteManyForHonoApi(
+				deps,
+				birthdayUsers.map((u) => u.userId),
+			)
+		).map((u) => [u.id, u]),
+	);
 
 	return birthdayUsers
-		.map(item => {
+		.map((item) => {
 			const birthday = new Date();
 			birthday.setHours(0, 0, 0, 0);
 			birthday.setMonth(Math.floor(item.birthdayDate / 100) - 1, item.birthdayDate % 100);
@@ -1244,7 +1420,7 @@ export async function handleHonoApiUsersGetFollowingUsersByBirthday(
 				birthday.setFullYear(new Date().getFullYear() + 1);
 			}
 
-			const birthdayStr = `${birthday.getFullYear()}-${(birthday.getMonth() + 1).toString().padStart(2, '0')}-${(birthday.getDate()).toString().padStart(2, '0')}`;
+			const birthdayStr = `${birthday.getFullYear()}-${(birthday.getMonth() + 1).toString().padStart(2, '0')}-${birthday.getDate().toString().padStart(2, '0')}`;
 			return {
 				id: item.userId,
 				birthday: birthdayStr,

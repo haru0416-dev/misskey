@@ -62,11 +62,17 @@ export async function handleHonoApiFetchExternalResources(
 ): Promise<ExternalResourceResponse> {
 	const params = parseHonoApiParams(fetchExternalResourcesParamDef, body);
 
-	if (await isHonoApiRateLimitedForUser(deps, {
-		key: 'fetch-external-resources',
-		duration: 60 * 60 * 1000,
-		max: 50,
-	}, me.id)) {
+	if (
+		await isHonoApiRateLimitedForUser(
+			deps,
+			{
+				key: 'fetch-external-resources',
+				duration: 60 * 60 * 1000,
+				max: 50,
+			},
+			me.id,
+		)
+	) {
 		throw rateLimitExceededError();
 	}
 

@@ -44,13 +44,15 @@ describe('Webリソース', () => {
 	let remoteUserUri: string;
 
 	type Request = {
-		path: string,
-		accept?: string,
-		cookie?: string,
+		path: string;
+		accept?: string;
+		cookie?: string;
 	};
-	const ok = async (param: Request & {
-		type?: string,
-	}):Promise<SimpleGetResponse> => {
+	const ok = async (
+		param: Request & {
+			type?: string;
+		},
+	): Promise<SimpleGetResponse> => {
 		const { path, accept, cookie, type } = param;
 		const res = await simpleGet(path, accept, cookie);
 		assert.strictEqual(res.status, 200);
@@ -59,10 +61,12 @@ describe('Webリソース', () => {
 		return res;
 	};
 
-	const notOk = async (param: Request & {
-		status?: number,
-		code?: string,
-	}): Promise<SimpleGetResponse> => {
+	const notOk = async (
+		param: Request & {
+			status?: number;
+			code?: string;
+		},
+	): Promise<SimpleGetResponse> => {
 		const { path, accept, cookie, status, code } = param;
 		const res = await simpleGet(path, accept, cookie);
 		assert.notStrictEqual(res.status, 200);
@@ -86,47 +90,50 @@ describe('Webリソース', () => {
 		return res.body.querySelector('meta[' + superkey + '="' + key + '"]')?.attributes.content;
 	};
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'alice' });
-		await api('admin/update-meta', { federation: 'all' }, alice as misskey.entities.SignupResponse);
-		aliceUploadedFile = (await uploadFile(alice)).body;
-		alicesPost = await post(alice, {
-			text: 'test',
-		});
-		alicePage = await page(alice, {});
-		alicePlay = await play(alice, {});
-		aliceClip = await clip(alice, {});
-		aliceGalleryPost = await galleryPost(alice, {
-			fileIds: [aliceUploadedFile!.id],
-		});
-		aliceChannel = await channel(alice, {});
+	beforeAll(
+		async () => {
+			alice = await signup({ username: 'alice' });
+			await api('admin/update-meta', { federation: 'all' }, alice as misskey.entities.SignupResponse);
+			aliceUploadedFile = (await uploadFile(alice)).body;
+			alicesPost = await post(alice, {
+				text: 'test',
+			});
+			alicePage = await page(alice, {});
+			alicePlay = await play(alice, {});
+			aliceClip = await clip(alice, {});
+			aliceGalleryPost = await galleryPost(alice, {
+				fileIds: [aliceUploadedFile!.id],
+			});
+			aliceChannel = await channel(alice, {});
 
-		bob = await signup({ username: 'bob' });
+			bob = await signup({ username: 'bob' });
 
-		const config = loadConfig();
-		pool = createDrizzlePool(config);
-		const db = createDrizzleDatabase(pool, config);
-		const suffix = Date.now().toString(36).slice(-8);
-		const remoteHost = `fetch-remote-${suffix}.example`;
-		const remoteUserId = genId();
-		remoteUserAcct = `fetchremote${suffix}@${remoteHost}`;
-		remoteUserUri = `https://${remoteHost}/users/${remoteUserId}`;
-		await createUserWithProfileAndPublickeyInDatabase(db, {
-			user: {
-				id: remoteUserId,
-				username: `fetchremote${suffix}`,
-				usernameLower: `fetchremote${suffix}`,
-				host: remoteHost,
-				inbox: `https://${remoteHost}/inbox`,
-				uri: remoteUserUri,
-				isExplorable: false,
-			},
-			profile: {
-				userId: remoteUserId,
-				userHost: remoteHost,
-			},
-		});
-	}, 1000 * 60 * 2);
+			const config = loadConfig();
+			pool = createDrizzlePool(config);
+			const db = createDrizzleDatabase(pool, config);
+			const suffix = Date.now().toString(36).slice(-8);
+			const remoteHost = `fetch-remote-${suffix}.example`;
+			const remoteUserId = genId();
+			remoteUserAcct = `fetchremote${suffix}@${remoteHost}`;
+			remoteUserUri = `https://${remoteHost}/users/${remoteUserId}`;
+			await createUserWithProfileAndPublickeyInDatabase(db, {
+				user: {
+					id: remoteUserId,
+					username: `fetchremote${suffix}`,
+					usernameLower: `fetchremote${suffix}`,
+					host: remoteHost,
+					inbox: `https://${remoteHost}/inbox`,
+					uri: remoteUserUri,
+					isExplorable: false,
+				},
+				profile: {
+					userId: remoteUserId,
+					userHost: remoteHost,
+				},
+			});
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await pool?.end();
@@ -178,20 +185,23 @@ describe('Webリソース', () => {
 	])('/@:username.$ext', ({ ext, type }) => {
 		const path = (username: string): string => `/@${username}.${ext}`;
 
-		test('がGETできる。', async () => await ok({
-			path: path(alice.username),
-			type,
-		}));
+		test('がGETできる。', async () =>
+			await ok({
+				path: path(alice.username),
+				type,
+			}));
 
-		test('がGETできる。(ノートが存在しない場合でも。)', async () => await ok({
-			path: path(bob.username),
-			type,
-		}));
+		test('がGETできる。(ノートが存在しない場合でも。)', async () =>
+			await ok({
+				path: path(bob.username),
+				type,
+			}));
 
-		test('は存在しないユーザーはGETできない。', async () => await notOk({
-			path: path('nonexisting'),
-			status: 404,
-		}));
+		test('は存在しないユーザーはGETできない。', async () =>
+			await notOk({
+				path: path('nonexisting'),
+				status: 404,
+			}));
 
 		describe(' has entry such ', () => {
 			beforeEach(() => {
@@ -199,40 +209,39 @@ describe('Webリソース', () => {
 			});
 
 			test('MFMを含まない。', async () => {
-				const content = await simpleGet(path(alice.username), '*/*', undefined, res => res.text());
+				const content = await simpleGet(path(alice.username), '*/*', undefined, (res) => res.text());
 				const _body: unknown = content.body;
 				// JSONフィードのときは改めて文字列化する
-				const body: string = typeof (_body) === 'object' ? JSON.stringify(_body) : _body as string;
+				const body: string = typeof _body === 'object' ? JSON.stringify(_body) : (_body as string);
 
 				if (body.includes('**a**')) {
-					throw new Error('MFM shouldn\'t be included');
+					throw new Error("MFM shouldn't be included");
 				}
 			});
 		});
 	});
 
 	describe.each([{ path: '/api/foo' }])('$path', ({ path }) => {
-		test('はGETできない。', async () => await notOk({
-			path,
-			status: 404,
-			code: 'UNKNOWN_API_ENDPOINT',
-		}));
+		test('はGETできない。', async () =>
+			await notOk({
+				path,
+				status: 404,
+				code: 'UNKNOWN_API_ENDPOINT',
+			}));
 	});
 
 	describe.each([{ path: '/streaming' }])('$path', ({ path }) => {
-		test('はGETできない。', async () => await notOk({
-			path,
-			status: 503,
-		}));
+		test('はGETできない。', async () =>
+			await notOk({
+				path,
+				status: 503,
+			}));
 	});
 
 	describe('/@:username', () => {
 		const path = (username: string): string => `/@${username}`;
 
-		describe.each([
-			{ accept: PREFER_HTML },
-			{ accept: UNSPECIFIED },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: PREFER_HTML }, { accept: UNSPECIFIED }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はHTMLとしてGETできる。', async () => {
 				const res = await ok({
 					path: path(alice.username),
@@ -247,10 +256,11 @@ describe('Webリソース', () => {
 				// TODO twitter:creatorの検証
 				// TODO <link rel="me" ...>の検証
 			});
-			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () => await ok({
-				path: path('xxxxxxxxxx'),
-				type: HTML,
-			}));
+			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () =>
+				await ok({
+					path: path('xxxxxxxxxx'),
+					type: HTML,
+				}));
 			test('はHTMLとしてGETできる。(リモートユーザーでもリダイレクトせず)', async () => {
 				const res = await ok({
 					path: path(remoteUserAcct),
@@ -261,10 +271,7 @@ describe('Webリソース', () => {
 			});
 		});
 
-		describe.each([
-			{ accept: ONLY_AP },
-			{ accept: PREFER_AP },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: ONLY_AP }, { accept: PREFER_AP }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はActivityPubとしてGETできる。', async () => {
 				const res = await ok({
 					path: path(alice.username),
@@ -274,10 +281,11 @@ describe('Webリソース', () => {
 				assert.strictEqual(res.body.type, 'Person');
 			});
 
-			test('は存在しないIDのときActivityPubとしてGETできない。', async () => await notFound({
-				path: path('xxxxxxxxxx'),
-				accept,
-			}));
+			test('は存在しないIDのときActivityPubとしてGETできない。', async () =>
+				await notFound({
+					path: path('xxxxxxxxxx'),
+					accept,
+				}));
 			test('はオリジナルにリダイレクトされる。(リモートユーザー)', async () => {
 				const res = await simpleGet(path(remoteUserAcct), accept);
 				assert.strictEqual(res.status, 301);
@@ -324,33 +332,29 @@ describe('Webリソース', () => {
 			// TODO twitter:creatorの検証
 		});
 
-		test('はGETできる。(存在しないIDでも。)', async () => await ok({
-			path: path(alice.username, 'xxxxxxxxxx'),
-		}));
+		test('はGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path(alice.username, 'xxxxxxxxxx'),
+			}));
 	});
 
 	describe('/users/:id', () => {
 		const path = (id: string): string => `/users/${id}`;
 
-		describe.each([
-			{ accept: PREFER_HTML },
-			{ accept: UNSPECIFIED },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: PREFER_HTML }, { accept: UNSPECIFIED }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('は/@:usernameにリダイレクトする', async () => {
 				const res = await simpleGet(path(alice.id), accept);
 				assert.strictEqual(res.status, 302);
 				assert.strictEqual(res.location, `/@${alice.username}`);
 			});
 
-			test('は存在しないユーザーはGETできない。', async () => await notFound({
-				path: path('xxxxxxxx'),
-			}));
+			test('は存在しないユーザーはGETできない。', async () =>
+				await notFound({
+					path: path('xxxxxxxx'),
+				}));
 		});
 
-		describe.each([
-			{ accept: ONLY_AP },
-			{ accept: PREFER_AP },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: ONLY_AP }, { accept: PREFER_AP }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はActivityPubとしてGETできる。', async () => {
 				const res = await ok({
 					path: path(alice.id),
@@ -360,18 +364,20 @@ describe('Webリソース', () => {
 				assert.strictEqual(res.body.type, 'Person');
 			});
 
-			test('は存在しないIDのときActivityPubとしてGETできない。', async () => await notOk({
-				path: path('xxxxxxxx'),
-				accept,
-				status: 404,
-			}));
+			test('は存在しないIDのときActivityPubとしてGETできない。', async () =>
+				await notOk({
+					path: path('xxxxxxxx'),
+					accept,
+					status: 404,
+				}));
 		});
 	});
 
 	describe('/users/inbox', () => {
-		test('がGETできる。(POST専用だけど4xx/5xxにならずHTMLが返ってくる)', async () => await ok({
-			path: '/inbox',
-		}));
+		test('がGETできる。(POST専用だけど4xx/5xxにならずHTMLが返ってくる)', async () =>
+			await ok({
+				path: '/inbox',
+			}));
 
 		// test.todo('POSTできる？');
 	});
@@ -379,9 +385,10 @@ describe('Webリソース', () => {
 	describe('/users/:id/inbox', () => {
 		const path = (id: string): string => `/users/${id}/inbox`;
 
-		test('がGETできる。(POST専用だけど4xx/5xxにならずHTMLが返ってくる)', async () => await ok({
-			path: path(alice.id),
-		}));
+		test('がGETできる。(POST専用だけど4xx/5xxにならずHTMLが返ってくる)', async () =>
+			await ok({
+				path: path(alice.id),
+			}));
 
 		// test.todo('POSTできる？');
 	});
@@ -401,10 +408,7 @@ describe('Webリソース', () => {
 	describe('/notes/:id', () => {
 		const path = (noteId: string): string => `/notes/${noteId}`;
 
-		describe.each([
-			{ accept: PREFER_HTML },
-			{ accept: UNSPECIFIED },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: PREFER_HTML }, { accept: UNSPECIFIED }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はHTMLとしてGETできる。', async () => {
 				const res = await ok({
 					path: path(alicesPost.id),
@@ -420,15 +424,13 @@ describe('Webリソース', () => {
 				// TODO twitter:creatorの検証
 			});
 
-			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () => await ok({
-				path: path('xxxxxxxxxx'),
-			}));
+			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () =>
+				await ok({
+					path: path('xxxxxxxxxx'),
+				}));
 		});
 
-		describe.each([
-			{ accept: ONLY_AP },
-			{ accept: PREFER_AP },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: ONLY_AP }, { accept: PREFER_AP }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はActivityPubとしてGETできる。', async () => {
 				const res = await ok({
 					path: path(alicesPost.id),
@@ -438,10 +440,11 @@ describe('Webリソース', () => {
 				assert.strictEqual(res.body.type, 'Note');
 			});
 
-			test('は存在しないIDのときActivityPubとしてGETできない。', async () => await notFound({
-				path: path('xxxxxxxxxx'),
-				accept,
-			}));
+			test('は存在しないIDのときActivityPubとしてGETできない。', async () =>
+				await notFound({
+					path: path('xxxxxxxxxx'),
+					accept,
+				}));
 		});
 	});
 
@@ -461,9 +464,10 @@ describe('Webリソース', () => {
 			// TODO twitter:creatorの検証
 		});
 
-		test('がGETできる。(存在しないIDでも。)', async () => await ok({
-			path: path('xxxxxxxxxx'),
-		}));
+		test('がGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path('xxxxxxxxxx'),
+			}));
 	});
 
 	describe('/clips/:clip', () => {
@@ -481,9 +485,10 @@ describe('Webリソース', () => {
 			// TODO profile.noCrawleの検証
 		});
 
-		test('がGETできる。(存在しないIDでも。)', async () => await ok({
-			path: path('xxxxxxxxxx'),
-		}));
+		test('がGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path('xxxxxxxxxx'),
+			}));
 	});
 
 	describe('/gallery/:post', () => {
@@ -501,9 +506,10 @@ describe('Webリソース', () => {
 			// TODO twitter:creatorの検証
 		});
 
-		test('がGETできる。(存在しないIDでも。)', async () => await ok({
-			path: path('xxxxxxxxxx'),
-		}));
+		test('がGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path('xxxxxxxxxx'),
+			}));
 	});
 
 	describe('/channels/:channel', () => {
@@ -518,8 +524,9 @@ describe('Webリソース', () => {
 			// TODO ogタグの検証
 		});
 
-		test('がGETできる。(存在しないIDでも。)', async () => await ok({
-			path: path('xxxxxxxxxx'),
-		}));
+		test('がGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path('xxxxxxxxxx'),
+			}));
 	});
 });

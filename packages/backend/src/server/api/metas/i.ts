@@ -6,35 +6,68 @@
 import { webhookEventTypes } from '@/models/Webhook.js';
 import { iMoveParamDef } from '@/server/rest/account-move.js';
 import { iPinOrUnpinParamDef } from '@/server/rest/account-pin.js';
-import { changePasswordParamDef, deleteAccountParamDef, regenerateTokenParamDef, updateEmailParamDef } from '@/server/rest/account-security.js';
+import {
+	changePasswordParamDef,
+	deleteAccountParamDef,
+	regenerateTokenParamDef,
+	updateEmailParamDef,
+} from '@/server/rest/account-security.js';
 import { iUpdateParamDef } from '@/server/rest/account-update.js';
 import { readAnnouncementParamDef } from '@/server/rest/announcements.js';
 import { iAppsParamDef, iAuthorizedAppsParamDef, iRevokeTokenParamDef } from '@/server/rest/app.js';
 import { exportFollowingParamDef } from '@/server/rest/export-jobs.js';
 import { iFavoritesParamDef } from '@/server/rest/favorites.js';
 import { iGalleryLikesParamDef, iGalleryPostsParamDef } from '@/server/rest/gallery.js';
-import { i2faDoneParamDef, i2faKeyDoneParamDef, i2faPasswordLessParamDef, i2faRegisterKeyParamDef, i2faRegisterParamDef, i2faRemoveKeyParamDef, i2faUnregisterParamDef, i2faUpdateKeyParamDef } from '@/server/rest/i-2fa.js';
+import {
+	i2faDoneParamDef,
+	i2faKeyDoneParamDef,
+	i2faPasswordLessParamDef,
+	i2faRegisterKeyParamDef,
+	i2faRegisterParamDef,
+	i2faRemoveKeyParamDef,
+	i2faUnregisterParamDef,
+	i2faUpdateKeyParamDef,
+} from '@/server/rest/i-2fa.js';
 import { iSigninHistoryParamDef } from '@/server/rest/i.js';
-import { importAntennasParamDef, importBlockingParamDef, importFollowingParamDef, importMutingParamDef, importUserListsParamDef } from '@/server/rest/import-jobs.js';
+import {
+	importAntennasParamDef,
+	importBlockingParamDef,
+	importFollowingParamDef,
+	importMutingParamDef,
+	importUserListsParamDef,
+} from '@/server/rest/import-jobs.js';
 import { claimAchievementParamDef } from '@/server/rest/notification.js';
 import { notificationsParamDef } from '@/server/rest/notifications-list.js';
 import { iPageLikesParamDef, iPagesParamDef } from '@/server/rest/pages.js';
-import { registryGetParamDef, registryScopeParamDef, registryScopesWithDomainParamDef, registrySetParamDef } from '@/server/rest/registry.js';
-import { webhooksCreateParamDef, webhooksDeleteParamDef, webhooksListParamDef, webhooksShowParamDef, webhooksTestParamDef, webhooksUpdateParamDef } from '@/server/rest/webhooks.js';
+import {
+	registryGetParamDef,
+	registryScopeParamDef,
+	registryScopesWithDomainParamDef,
+	registrySetParamDef,
+} from '@/server/rest/registry.js';
+import {
+	webhooksCreateParamDef,
+	webhooksDeleteParamDef,
+	webhooksListParamDef,
+	webhooksShowParamDef,
+	webhooksTestParamDef,
+	webhooksUpdateParamDef,
+} from '@/server/rest/webhooks.js';
 import { z } from 'zod';
 import { SECOND, MINUTE, HOUR, DAY } from '@/const.js';
 
 export const endpointMetas = {
-	'i': {
+	i: {
 		meta: {
 			tags: ['account'],
 
 			requireCredential: true,
-			kind: "read:account",
+			kind: 'read:account',
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'MeDetailed',
 			},
 
@@ -282,11 +315,13 @@ export const endpointMetas = {
 						},
 						iconUrl: {
 							type: 'string',
-							optional: true, nullable: true,
+							optional: true,
+							nullable: true,
 						},
 						description: {
 							type: 'string',
-							optional: true, nullable: true,
+							optional: true,
+							nullable: true,
 						},
 					},
 				},
@@ -316,7 +351,8 @@ export const endpointMetas = {
 						},
 						callbackUrl: {
 							type: 'string',
-							optional: false, nullable: true,
+							optional: false,
+							nullable: true,
 						},
 						permission: {
 							type: 'array',
@@ -486,10 +522,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'NoteFavorite',
 				},
 			},
@@ -506,19 +544,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						post: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'GalleryPost',
 						},
 					},
@@ -537,10 +579,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'GalleryPost',
 				},
 			},
@@ -738,13 +782,12 @@ export const endpointMetas = {
 
 			errors: {
 				destinationAccountForbids: {
-					message:
-						'Destination account doesn\'t have proper \'Known As\' alias, or has already moved.',
+					message: "Destination account doesn't have proper 'Known As' alias, or has already moved.",
 					code: 'DESTINATION_ACCOUNT_FORBIDS',
 					id: 'b5c90186-4ab0-49c8-9bba-a1f766282ba4',
 				},
 				rootForbidden: {
-					message: 'The root can\'t migrate.',
+					message: "The root can't migrate.",
 					code: 'NOT_ROOT_FORBIDDEN',
 					id: '4362e8dc-731f-4ad8-a694-be2a88922a24',
 				},
@@ -786,10 +829,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Notification',
 				},
 			},
@@ -811,10 +856,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Notification',
 				},
 			},
@@ -831,18 +878,21 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						page: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'Page',
 						},
 					},
@@ -861,10 +911,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Page',
 				},
 			},
@@ -902,7 +954,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'MeDetailed',
 			},
 		} as const,
@@ -916,8 +969,7 @@ export const endpointMetas = {
 
 			kind: 'write:account',
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: readAnnouncementParamDef,
 	},
@@ -952,7 +1004,7 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-			}
+			},
 		} as const,
 		paramDef: registryGetParamDef,
 	},
@@ -1027,7 +1079,6 @@ export const endpointMetas = {
 		meta: {
 			requireCredential: true,
 			kind: 'write:account',
-
 		} as const,
 		paramDef: registryGetParamDef,
 	},
@@ -1047,8 +1098,8 @@ export const endpointMetas = {
 								type: 'array',
 								items: {
 									type: 'string',
-								}
-							}
+								},
+							},
 						},
 						domain: {
 							type: 'string',
@@ -1056,7 +1107,7 @@ export const endpointMetas = {
 						},
 					},
 				},
-			}
+			},
 		} as const,
 		paramDef: registryScopesWithDomainParamDef,
 	},
@@ -1082,10 +1133,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Signin',
 				},
 			},
@@ -1110,7 +1163,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'MeDetailed',
 			},
 		} as const,
@@ -1185,7 +1239,7 @@ export const endpointMetas = {
 				},
 
 				forbiddenToSetYourself: {
-					message: 'You can\'t set yourself as your own alias.',
+					message: "You can't set yourself as your own alias.",
 					code: 'FORBIDDEN_TO_SET_YOURSELF',
 					id: '25c90186-4ab0-49c8-9bba-a1fa6c202ba4',
 				},
@@ -1214,7 +1268,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'MeDetailed',
 			},
 		} as const,
@@ -1406,7 +1461,6 @@ export const endpointMetas = {
 					id: 'fb0fea69-da18-45b1-828d-bd4fd1612518',
 				},
 			},
-
 		} as const,
 		paramDef: webhooksUpdateParamDef,
 	},

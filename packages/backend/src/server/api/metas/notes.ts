@@ -3,26 +3,55 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { countNoteDraftsParamDef, notesDraftsCreateParamDef, notesDraftsDeleteParamDef, notesDraftsListParamDef, notesDraftsUpdateParamDef } from '@/server/rest/note-drafts.js';
+import {
+	countNoteDraftsParamDef,
+	notesDraftsCreateParamDef,
+	notesDraftsDeleteParamDef,
+	notesDraftsListParamDef,
+	notesDraftsUpdateParamDef,
+} from '@/server/rest/note-drafts.js';
 import { notesTranslateParamDef } from '@/server/rest/note.js';
 import { notesCreateParamDef } from '@/server/rest/notes-create.js';
 import { notesDeleteParamDef, notesUnrenoteParamDef } from '@/server/rest/notes-delete.js';
 import { notesPollsVoteParamDef } from '@/server/rest/notes-polls-vote.js';
-import { notesReactionsParamDef, reactionsCreateParamDef, reactionsDeleteParamDef } from '@/server/rest/notes-reactions.js';
-import { noteIdOnlyParamDef, noteIdPaginationParamDef, notesConversationParamDef, notesFeaturedParamDef, notesGlobalTimelineParamDef, notesHybridTimelineParamDef, notesLocalTimelineParamDef, notesMentionsParamDef, notesParamDef, notesPollsRecommendationParamDef, notesSearchByTagDocsParamDef, notesSearchParamDef, notesShowParamDef, notesShowPartialBulkParamDef, notesTimelineParamDef, notesUserListTimelineParamDef } from '@/server/rest/notes.js';
+import {
+	notesReactionsParamDef,
+	reactionsCreateParamDef,
+	reactionsDeleteParamDef,
+} from '@/server/rest/notes-reactions.js';
+import {
+	noteIdOnlyParamDef,
+	noteIdPaginationParamDef,
+	notesConversationParamDef,
+	notesFeaturedParamDef,
+	notesGlobalTimelineParamDef,
+	notesHybridTimelineParamDef,
+	notesLocalTimelineParamDef,
+	notesMentionsParamDef,
+	notesParamDef,
+	notesPollsRecommendationParamDef,
+	notesSearchByTagDocsParamDef,
+	notesSearchParamDef,
+	notesShowParamDef,
+	notesShowPartialBulkParamDef,
+	notesTimelineParamDef,
+	notesUserListTimelineParamDef,
+} from '@/server/rest/notes.js';
 import { SECOND, HOUR } from '@/const.js';
 
 export const endpointMetas = {
-	'notes': {
+	notes: {
 		meta: {
 			tags: ['notes'],
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -37,10 +66,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -55,10 +86,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Clip',
 				},
 			},
@@ -81,10 +114,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -116,11 +151,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					createdNote: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'Note',
 					},
 				},
@@ -256,16 +293,17 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'NoteDraft',
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: notesDraftsListParamDef,
 	},
@@ -281,11 +319,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					createdDraft: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'NoteDraft',
 					},
 				},
@@ -428,11 +468,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					updatedDraft: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'NoteDraft',
 					},
 				},
@@ -555,12 +597,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'number',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				description: 'The number of drafts',
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: countNoteDraftsParamDef,
 	},
@@ -628,10 +670,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -644,10 +688,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -671,10 +717,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -701,10 +749,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -734,10 +784,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -753,10 +805,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -824,10 +878,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'NoteReaction',
 				},
 			},
@@ -918,10 +974,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -944,10 +1002,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -962,10 +1022,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -986,10 +1048,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -1004,7 +1068,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Note',
 			},
 
@@ -1038,24 +1103,28 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						reactions: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							additionalProperties: {
 								type: 'number',
 							},
 						},
 						reactionEmojis: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							additionalProperties: {
 								type: 'string',
 							},
@@ -1064,8 +1133,7 @@ export const endpointMetas = {
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: notesShowPartialBulkParamDef,
 	},
@@ -1078,15 +1146,18 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					isFavorited: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					isMutedThread: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1143,10 +1214,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -1162,7 +1235,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: true, nullable: false,
+				optional: true,
+				nullable: false,
 				properties: {
 					sourceLang: { type: 'string' },
 					text: { type: 'string' },
@@ -1222,10 +1296,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},

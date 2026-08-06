@@ -22,7 +22,11 @@ import type { MiChatMessage } from '@/models/ChatMessage.js';
 import type { MiUser } from '@/models/User.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { countPoolQueries, type QueryCounter } from '../../query-counter.js';
-import { packChatMessageDetailedForHonoApi, packChatMessagesDetailedForHonoApi, type HonoApiChatDependencies } from '@/server/rest/chat.js';
+import {
+	packChatMessageDetailedForHonoApi,
+	packChatMessagesDetailedForHonoApi,
+	type HonoApiChatDependencies,
+} from '@/server/rest/chat.js';
 
 describe('chat message packing', () => {
 	let runtime: RuntimeDependencies;
@@ -75,7 +79,7 @@ describe('chat message packing', () => {
 		queries.reset();
 		const packedSingle = await packChatMessageDetailedForHonoApi(deps, message, sender);
 		expect(queries.count()).toBe(1);
-		expect(packedSingle.reactions.map(reaction => [reaction.user.id, reaction.reaction])).toEqual([
+		expect(packedSingle.reactions.map((reaction) => [reaction.user.id, reaction.reaction])).toEqual([
 			[reactor1.id, '👍'],
 			[reactor2.id, '⭐'],
 		]);
@@ -85,7 +89,7 @@ describe('chat message packing', () => {
 		const [packedMany, packedSecond] = await packChatMessagesDetailedForHonoApi(deps, [message, secondMessage], sender);
 		expect(queries.count()).toBe(1);
 		expect(packedMany!.reactions).toEqual(packedSingle.reactions);
-		expect(packedSecond!.reactions.map(reaction => reaction.user.id)).toEqual([reactor2.id, reactor1.id]);
+		expect(packedSecond!.reactions.map((reaction) => reaction.user.id)).toEqual([reactor2.id, reactor1.id]);
 
 		queries.reset();
 		const packedWithPartialHint = await packChatMessageDetailedForHonoApi(deps, message, sender, {
@@ -145,20 +149,39 @@ describe('chat message packing', () => {
 			roomId: room.id,
 			userId: existingMember.id,
 		});
-		const invitations = await Promise.all([invitee1, invitee2].map(async user => await createChatRoomInvitationInDatabase(runtime.db, {
-			id: genId(),
-			roomId: room.id,
-			userId: user.id,
-		}, 2)));
+		const invitations = await Promise.all(
+			[invitee1, invitee2].map(
+				async (user) =>
+					await createChatRoomInvitationInDatabase(
+						runtime.db,
+						{
+							id: genId(),
+							roomId: room.id,
+							userId: user.id,
+						},
+						2,
+					),
+			),
+		);
 
-		const results = await Promise.allSettled([invitee1, invitee2].map(async (user, index) => await joinChatRoomFromInvitationInDatabase(runtime.db, {
-			id: genId(),
-			roomId: room.id,
-			userId: user.id,
-		}, invitations[index]!.id, 2)));
+		const results = await Promise.allSettled(
+			[invitee1, invitee2].map(
+				async (user, index) =>
+					await joinChatRoomFromInvitationInDatabase(
+						runtime.db,
+						{
+							id: genId(),
+							roomId: room.id,
+							userId: user.id,
+						},
+						invitations[index]!.id,
+						2,
+					),
+			),
+		);
 
-		expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
-		const rejected = results.find(result => result.status === 'rejected');
+		expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+		const rejected = results.find((result) => result.status === 'rejected');
 		expect(rejected).toBeDefined();
 		expect((rejected as PromiseRejectedResult).reason).toBeInstanceOf(ChatRoomCapacityExceededError);
 		expect(await countChatRoomMembershipsByRoomIdFromDatabase(runtime.db, room.id)).toBe(2);

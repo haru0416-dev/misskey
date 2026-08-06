@@ -19,7 +19,13 @@ import type {
 } from '@/core/queues.js';
 import type * as Bull from 'bullmq';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { abandonDeadLetterOutboxInDatabase, fetchQueueOutboxByIdFromDatabase, getQueueOutboxStats, listDeadLetterQueueOutboxFromDatabase, retryDeadLetterOutboxInDatabase } from '@/core/QueueOutboxStore.js';
+import {
+	abandonDeadLetterOutboxInDatabase,
+	fetchQueueOutboxByIdFromDatabase,
+	getQueueOutboxStats,
+	listDeadLetterQueueOutboxFromDatabase,
+	retryDeadLetterOutboxInDatabase,
+} from '@/core/QueueOutboxStore.js';
 
 export const QUEUE_TYPES = [
 	'system',
@@ -34,7 +40,7 @@ export const QUEUE_TYPES = [
 	'systemWebhookDeliver',
 ] as const;
 
-export type QueueType = typeof QUEUE_TYPES[number];
+export type QueueType = (typeof QUEUE_TYPES)[number];
 export type QueueClearState = '*' | 'completed' | 'wait' | 'active' | 'paused' | 'prioritized' | 'delayed' | 'failed';
 
 export type AdminQueueDependencies = {
@@ -54,8 +60,8 @@ export type AdminQueueDependencies = {
 function parseRedisInfo(infoText: string): Record<string, string> {
 	const lines = infoText
 		.split('\n')
-		.filter(line => line.length > 0 && !line.startsWith('#'))
-		.map(line => line.trim());
+		.filter((line) => line.length > 0 && !line.startsWith('#'))
+		.map((line) => line.trim());
 
 	const result: Record<string, string> = {};
 	for (const line of lines) {
@@ -102,7 +108,8 @@ export function parseQueueDatabaseInfo(infoText: string) {
 		os: requireRedisInfoString(db['os'], 'os'),
 		uptime: parseRedisInfoInteger(db['uptime_in_seconds'], 'uptime_in_seconds'),
 		memory: {
-			total: parseOptionalRedisInfoNumber(db['total_system_memory'], 0) || parseOptionalRedisInfoNumber(db['maxmemory'], 0),
+			total:
+				parseOptionalRedisInfoNumber(db['total_system_memory'], 0) || parseOptionalRedisInfoNumber(db['maxmemory'], 0),
 			used: usedMemory,
 			fragmentationRatio: parseOptionalRedisInfoNumber(db['mem_fragmentation_ratio'], 0),
 			peak: parseOptionalRedisInfoNumber(db['used_memory_peak'], usedMemory),
@@ -116,21 +123,36 @@ export function parseQueueDatabaseInfo(infoText: string) {
 
 export function getQueue(deps: AdminQueueDependencies, type: QueueType): Bull.Queue | DbQueue {
 	switch (type) {
-		case 'system': return deps.systemQueue;
-		case 'endedPollNotification': return deps.endedPollNotificationQueue;
-		case 'postScheduledNote': return deps.postScheduledNoteQueue;
-		case 'deliver': return deps.deliverQueue;
-		case 'inbox': return deps.inboxQueue;
-		case 'db': return deps.dbQueue;
-		case 'relationship': return deps.relationshipQueue;
-		case 'objectStorage': return deps.objectStorageQueue;
-		case 'userWebhookDeliver': return deps.userWebhookDeliverQueue;
-		case 'systemWebhookDeliver': return deps.systemWebhookDeliverQueue;
-		default: throw new Error(`Unrecognized queue type: ${type}`);
+		case 'system':
+			return deps.systemQueue;
+		case 'endedPollNotification':
+			return deps.endedPollNotificationQueue;
+		case 'postScheduledNote':
+			return deps.postScheduledNoteQueue;
+		case 'deliver':
+			return deps.deliverQueue;
+		case 'inbox':
+			return deps.inboxQueue;
+		case 'db':
+			return deps.dbQueue;
+		case 'relationship':
+			return deps.relationshipQueue;
+		case 'objectStorage':
+			return deps.objectStorageQueue;
+		case 'userWebhookDeliver':
+			return deps.userWebhookDeliverQueue;
+		case 'systemWebhookDeliver':
+			return deps.systemWebhookDeliverQueue;
+		default:
+			throw new Error(`Unrecognized queue type: ${type}`);
 	}
 }
 
-export async function clearQueue(deps: AdminQueueDependencies, queueType: QueueType, state: QueueClearState): Promise<void> {
+export async function clearQueue(
+	deps: AdminQueueDependencies,
+	queueType: QueueType,
+	state: QueueClearState,
+): Promise<void> {
 	const queue = getQueue(deps, queueType);
 
 	if (state === '*') {
@@ -188,18 +210,27 @@ export async function retryQueueJob(deps: AdminQueueDependencies, queueType: Que
 export async function removeQueueJob(deps: AdminQueueDependencies, queueType: QueueType, jobId: string): Promise<void> {
 	const queue = getQueue(deps, queueType);
 	const outboxId = queueType === 'deliver' && jobId.startsWith('outbox-') ? jobId.slice('outbox-'.length) : null;
-	const outbox = outboxId == null || outboxId.length === 0 ? null : await fetchQueueOutboxByIdFromDatabase(deps.db, outboxId);
+	const outbox =
+		outboxId == null || outboxId.length === 0 ? null : await fetchQueueOutboxByIdFromDatabase(deps.db, outboxId);
 	await (await queue.getJob(jobId))?.remove();
 	if (outbox?.state === 'deadLetter') {
 		await abandonDeadLetterOutboxInDatabase(deps.db, outbox.id, outbox.revision);
 	}
 }
 
-export async function listQueueOutboxDeadLetters(deps: Pick<AdminQueueDependencies, 'db'>, limit: number, untilId?: string) {
+export async function listQueueOutboxDeadLetters(
+	deps: Pick<AdminQueueDependencies, 'db'>,
+	limit: number,
+	untilId?: string,
+) {
 	return await listDeadLetterQueueOutboxFromDatabase(deps.db, limit, untilId);
 }
 
-export async function retryQueueOutboxDeadLetter(deps: AdminQueueDependencies, id: string, revision: number): Promise<boolean> {
+export async function retryQueueOutboxDeadLetter(
+	deps: AdminQueueDependencies,
+	id: string,
+	revision: number,
+): Promise<boolean> {
 	const outbox = await fetchQueueOutboxByIdFromDatabase(deps.db, id);
 	if (outbox?.state !== 'deadLetter' || outbox.revision !== revision) return false;
 	if (outbox.queue === 'deliver') {
@@ -208,7 +239,11 @@ export async function retryQueueOutboxDeadLetter(deps: AdminQueueDependencies, i
 	return await retryDeadLetterOutboxInDatabase(deps.db, id, revision);
 }
 
-export async function abandonQueueOutboxDeadLetter(deps: AdminQueueDependencies, id: string, revision: number): Promise<boolean> {
+export async function abandonQueueOutboxDeadLetter(
+	deps: AdminQueueDependencies,
+	id: string,
+	revision: number,
+): Promise<boolean> {
 	const outbox = await fetchQueueOutboxByIdFromDatabase(deps.db, id);
 	if (outbox?.state !== 'deadLetter' || outbox.revision !== revision) return false;
 	if (outbox.queue === 'deliver') {
@@ -241,7 +276,11 @@ export function packQueueJob(job: Bull.Job): Packed<'QueueJob'> {
 	};
 }
 
-export async function getQueueJob(deps: AdminQueueDependencies, queueType: QueueType, jobId: string): Promise<Packed<'QueueJob'>> {
+export async function getQueueJob(
+	deps: AdminQueueDependencies,
+	queueType: QueueType,
+	jobId: string,
+): Promise<Packed<'QueueJob'>> {
 	const queue = getQueue(deps, queueType);
 	const job = await queue.getJob(jobId);
 	if (job != null) {
@@ -251,13 +290,22 @@ export async function getQueueJob(deps: AdminQueueDependencies, queueType: Queue
 	}
 }
 
-export async function getQueueJobLogs(deps: AdminQueueDependencies, queueType: QueueType, jobId: string): Promise<string[]> {
+export async function getQueueJobLogs(
+	deps: AdminQueueDependencies,
+	queueType: QueueType,
+	jobId: string,
+): Promise<string[]> {
 	const queue = getQueue(deps, queueType);
 	const result = await queue.getJobLogs(jobId);
 	return result.logs;
 }
 
-export async function getQueueJobs(deps: AdminQueueDependencies, queueType: QueueType, jobTypes: JobType[], search?: string): Promise<Packed<'QueueJob'>[]> {
+export async function getQueueJobs(
+	deps: AdminQueueDependencies,
+	queueType: QueueType,
+	jobTypes: JobType[],
+	search?: string,
+): Promise<Packed<'QueueJob'>[]> {
 	const RETURN_LIMIT = 100;
 	const queue = getQueue(deps, queueType);
 	let jobs: Bull.Job[];
@@ -265,11 +313,14 @@ export async function getQueueJobs(deps: AdminQueueDependencies, queueType: Queu
 	if (search) {
 		jobs = await queue.getJobs(jobTypes, 0, 1000);
 
-		jobs = jobs.filter(job => {
+		jobs = jobs.filter((job) => {
 			const jobString = JSON.stringify(job).toLowerCase();
-			return search.toLowerCase().split(' ').every(term => {
-				return jobString.includes(term);
-			});
+			return search
+				.toLowerCase()
+				.split(' ')
+				.every((term) => {
+					return jobString.includes(term);
+				});
 		});
 
 		jobs = jobs.slice(0, RETURN_LIMIT);
@@ -281,7 +332,7 @@ export async function getQueueJobs(deps: AdminQueueDependencies, queueType: Queu
 }
 
 export async function getQueues(deps: AdminQueueDependencies) {
-	const fetchings = QUEUE_TYPES.map(async type => {
+	const fetchings = QUEUE_TYPES.map(async (type) => {
 		const queue = getQueue(deps, type);
 
 		const counts = await queue.getJobCounts();
@@ -326,7 +377,9 @@ export async function getQueueStats(deps: AdminQueueDependencies, queueType: Que
 	};
 }
 
-export async function getLegacyQueueCounts(deps: Pick<AdminQueueDependencies, 'deliverQueue' | 'inboxQueue' | 'dbQueue' | 'objectStorageQueue'>) {
+export async function getLegacyQueueCounts(
+	deps: Pick<AdminQueueDependencies, 'deliverQueue' | 'inboxQueue' | 'dbQueue' | 'objectStorageQueue'>,
+) {
 	const deliverJobCounts = await deps.deliverQueue.getJobCounts();
 	const inboxJobCounts = await deps.inboxQueue.getJobCounts();
 	const dbJobCounts = await deps.dbQueue.getJobCounts();

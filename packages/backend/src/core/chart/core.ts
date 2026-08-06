@@ -17,15 +17,18 @@ const COLUMN_PREFIX = '___' as const;
 const UNIQUE_TEMP_COLUMN_PREFIX = 'unique_temp___' as const;
 const COLUMN_DELIMITER = '_' as const;
 
-type Schema = Record<string, {
-	uniqueIncrement?: boolean;
+type Schema = Record<
+	string,
+	{
+		uniqueIncrement?: boolean;
 
-	intersection?: string[] | ReadonlyArray<string>;
+		intersection?: string[] | ReadonlyArray<string>;
 
-	range?: 'big' | 'small' | 'medium';
+		range?: 'big' | 'small' | 'medium';
 
-	accumulate?: boolean;
-}>;
+		accumulate?: boolean;
+	}
+>;
 
 type ChartColumnDefinition = {
 	type: 'integer' | 'bigint' | 'smallint' | 'varchar';
@@ -42,14 +45,18 @@ export type ChartEntity = {
 	uniqueColumns: string[];
 };
 
-type KeyToColumnName<T extends string> = T extends `${infer R1}.${infer R2}` ? `${R1}${typeof COLUMN_DELIMITER}${KeyToColumnName<R2>}` : T;
+type KeyToColumnName<T extends string> = T extends `${infer R1}.${infer R2}`
+	? `${R1}${typeof COLUMN_DELIMITER}${KeyToColumnName<R2>}`
+	: T;
 
 type Columns<S extends Schema> = {
 	[K in keyof S as `${typeof COLUMN_PREFIX}${KeyToColumnName<string & K>}`]: number;
 };
 
 type TempColumnsForUnique<S extends Schema> = {
-	[K in keyof S as `${typeof UNIQUE_TEMP_COLUMN_PREFIX}${KeyToColumnName<string & K>}`]: S[K]['uniqueIncrement'] extends true ? string[] : never;
+	[K in keyof S as `${typeof UNIQUE_TEMP_COLUMN_PREFIX}${KeyToColumnName<string & K>}`]: S[K]['uniqueIncrement'] extends true
+		? string[]
+		: never;
 };
 
 type RawRecord<S extends Schema> = {
@@ -58,13 +65,14 @@ type RawRecord<S extends Schema> = {
 	group?: string | null;
 
 	date: number;
-} & TempColumnsForUnique<S> & Columns<S>;
+} & TempColumnsForUnique<S> &
+	Columns<S>;
 
 const camelToSnake = (str: string): string => {
-	return str.replace(/([A-Z])/g, s => '_' + s.charAt(0).toLowerCase());
+	return str.replace(/([A-Z])/g, (s) => '_' + s.charAt(0).toLowerCase());
 };
 
-const removeDuplicates = <T,>(array: T[]) => Array.from(new Set(array));
+const removeDuplicates = <T>(array: T[]) => Array.from(new Set(array));
 
 const quoteIdentifier = (value: string): string => `"${value.replaceAll('"', '""')}"`;
 
@@ -76,7 +84,10 @@ const hashedRelationName = (prefix: string, ...parts: string[]): string => {
 };
 
 const arrayValueSql = (value: unknown[]): SQL => {
-	return sql`ARRAY[${sql.join(value.map(item => sql`${item}`), sql`, `)}]::varchar[]`;
+	return sql`ARRAY[${sql.join(
+		value.map((item) => sql`${item}`),
+		sql`, `,
+	)}]::varchar[]`;
 };
 
 const assignmentValueSql = (value: number | SQL | unknown[]): SQL => {
@@ -102,8 +113,8 @@ type ChartResult<T extends Schema> = {
 type UnionToIntersection<T> = (T extends any ? (x: T) => any : never) extends (x: infer R) => any ? R : never;
 
 type UnflattenSingleton<K extends string, V> = K extends `${infer A}.${infer B}`
-	? { [_ in A]: UnflattenSingleton<B, V>; }
-	: { [_ in K]: V; };
+	? { [_ in A]: UnflattenSingleton<B, V> }
+	: { [_ in K]: V };
 
 type Unflatten<T extends Record<string, unknown>> = UnionToIntersection<
 	{
@@ -114,8 +125,8 @@ type Unflatten<T extends Record<string, unknown>> = UnionToIntersection<
 type ToJsonSchema<S> = {
 	type: 'object';
 	properties: {
-		[K in keyof S]: S[K] extends number[] ? { type: 'array'; items: { type: 'number'; }; } : ToJsonSchema<S[K]>;
-	},
+		[K in keyof S]: S[K] extends number[] ? { type: 'array'; items: { type: 'number' } } : ToJsonSchema<S[K]>;
+	};
 	required: (keyof S)[];
 };
 
@@ -136,16 +147,18 @@ export function getJsonSchema<S extends Schema>(schema: S): ToJsonSchema<Unflatt
 
 		parent.properties ??= {};
 		if (parent.properties[key] == null) {
-			parent.properties[key] = nextKey ? {
-				type: 'object',
-				properties: {},
-				required: [],
-			} : {
-				type: 'array',
-				items: {
-					type: 'number',
-				},
-			};
+			parent.properties[key] = nextKey
+				? {
+						type: 'object',
+						properties: {},
+						required: [],
+					}
+				: {
+						type: 'array',
+						items: {
+							type: 'number',
+						},
+					};
 		}
 
 		if (nextKey) unflatten(keys.join('.'), parent.properties[key]);
@@ -236,24 +249,28 @@ export default abstract class Chart<T extends Schema> {
 	}
 
 	private static defaultValueSql(value: string | number): string {
-		return typeof value === 'number' ? value.toString() : `'${value.replaceAll('\'', '\'\'')}'`;
+		return typeof value === 'number' ? value.toString() : `'${value.replaceAll("'", "''")}'`;
 	}
 
 	private static columnDefinitionSql(name: string, definition: ChartColumnDefinition): string {
-		const type =
-			definition.generated ? 'SERIAL' :
-			definition.array ? `${definition.type}[]` :
-			definition.type === 'varchar' && definition.length != null ? `character varying(${definition.length})` :
-			definition.type;
+		const type = definition.generated
+			? 'SERIAL'
+			: definition.array
+				? `${definition.type}[]`
+				: definition.type === 'varchar' && definition.length != null
+					? `character varying(${definition.length})`
+					: definition.type;
 		const defaultValue = definition.default == null ? '' : ` DEFAULT ${Chart.defaultValueSql(definition.default)}`;
 
 		return `${quoteIdentifier(name)} ${type} NOT NULL${defaultValue}`;
 	}
 
 	public static entityToCreateTableSql(entity: ChartEntity): string[] {
-		const uniqueColumns = entity.uniqueColumns.map(column => quoteIdentifier(column)).join(', ');
+		const uniqueColumns = entity.uniqueColumns.map((column) => quoteIdentifier(column)).join(', ');
 		const tableName = quoteIdentifier(entity.tableName);
-		const columns = Object.entries(entity.columns).map(([name, definition]) => Chart.columnDefinitionSql(name, definition));
+		const columns = Object.entries(entity.columns).map(([name, definition]) =>
+			Chart.columnDefinitionSql(name, definition),
+		);
 		const relationKey = [entity.tableName, ...entity.uniqueColumns].join(':');
 
 		return [
@@ -266,19 +283,23 @@ export default abstract class Chart<T extends Schema> {
 		];
 	}
 
-	public static schemaToEntity(name: string, schema: Schema, grouped = false): {
-		hour: ChartEntity,
-		day: ChartEntity,
+	public static schemaToEntity(
+		name: string,
+		schema: Schema,
+		grouped = false,
+	): {
+		hour: ChartEntity;
+		day: ChartEntity;
 	} {
 		const createEntity = (span: 'hour' | 'day'): ChartEntity => ({
 			name:
-				span === 'hour' ? `ChartX${name}` :
-				span === 'day' ? `ChartDayX${name}` :
-				new Error('not happen') as never,
+				span === 'hour' ? `ChartX${name}` : span === 'day' ? `ChartDayX${name}` : (new Error('not happen') as never),
 			tableName:
-				span === 'hour' ? `__chart__${camelToSnake(name)}` :
-				span === 'day' ? `__chart_day__${camelToSnake(name)}` :
-				new Error('not happen') as never,
+				span === 'hour'
+					? `__chart__${camelToSnake(name)}`
+					: span === 'day'
+						? `__chart_day__${camelToSnake(name)}`
+						: (new Error('not happen') as never),
 			columns: {
 				id: {
 					type: 'integer',
@@ -287,12 +308,14 @@ export default abstract class Chart<T extends Schema> {
 				date: {
 					type: 'integer',
 				},
-				...(grouped ? {
-					group: {
-						type: 'varchar',
-						length: 128,
-					},
-				} : {}),
+				...(grouped
+					? {
+							group: {
+								type: 'varchar',
+								length: 128,
+							},
+						}
+					: {}),
 				...Chart.convertSchemaToColumnDefinitions(schema),
 			},
 			uniqueColumns: grouped ? ['date', 'group'] : ['date'],
@@ -341,40 +364,65 @@ export default abstract class Chart<T extends Schema> {
 			LIMIT 1
 		`);
 
-		return result.rows[0] as RawRecord<T> | undefined ?? null;
+		return (result.rows[0] as RawRecord<T> | undefined) ?? null;
 	}
 
-	private async insertLog(span: 'hour' | 'day', values: Record<string, number | string | null | unknown[]>): Promise<RawRecord<T>> {
+	private async insertLog(
+		span: 'hour' | 'day',
+		values: Record<string, number | string | null | unknown[]>,
+	): Promise<RawRecord<T>> {
 		const entries = Object.entries(values);
 		const result = await this.chartDb.execute(sql`
 			INSERT INTO ${identifierSql(this.getTable(span))}
-				(${sql.join(entries.map(([column]) => identifierSql(column)), sql`, `)})
+				(${sql.join(
+					entries.map(([column]) => identifierSql(column)),
+					sql`, `,
+				)})
 			VALUES
-				(${sql.join(entries.map(([, value]) => sql`${value}`), sql`, `)})
+				(${sql.join(
+					entries.map(([, value]) => sql`${value}`),
+					sql`, `,
+				)})
 			RETURNING *
 		`);
 
 		return result.rows[0] as RawRecord<T>;
 	}
 
-	private async updateLogById(span: 'hour' | 'day', id: number, values: Record<string, number | SQL | unknown[]>, executor: ChartQueryExecutor = this.chartDb): Promise<void> {
+	private async updateLogById(
+		span: 'hour' | 'day',
+		id: number,
+		values: Record<string, number | SQL | unknown[]>,
+		executor: ChartQueryExecutor = this.chartDb,
+	): Promise<void> {
 		const entries = Object.entries(values);
 		if (entries.length === 0) return;
 
 		await executor.execute(sql`
 			UPDATE ${identifierSql(this.getTable(span))}
-			SET ${sql.join(entries.map(([column, value]) => sql`${identifierSql(column)} = ${assignmentValueSql(value)}`), sql`, `)}
+			SET ${sql.join(
+				entries.map(([column, value]) => sql`${identifierSql(column)} = ${assignmentValueSql(value)}`),
+				sql`, `,
+			)}
 			WHERE "id" = ${id}
 		`);
 	}
 
-	private async updateLogsByDateRange(span: 'hour' | 'day', gt: number, lt: number, values: Record<string, unknown[]>): Promise<void> {
+	private async updateLogsByDateRange(
+		span: 'hour' | 'day',
+		gt: number,
+		lt: number,
+		values: Record<string, unknown[]>,
+	): Promise<void> {
 		const entries = Object.entries(values);
 		if (entries.length === 0) return;
 
 		await this.chartDb.execute(sql`
 			UPDATE ${identifierSql(this.getTable(span))}
-			SET ${sql.join(entries.map(([column, value]) => sql`${identifierSql(column)} = ${assignmentValueSql(value)}`), sql`, `)}
+			SET ${sql.join(
+				entries.map(([column, value]) => sql`${identifierSql(column)} = ${assignmentValueSql(value)}`),
+				sql`, `,
+			)}
 			WHERE "date" > ${gt}
 				AND "date" < ${lt}
 		`);
@@ -392,7 +440,7 @@ export default abstract class Chart<T extends Schema> {
 	@bindThis
 	private getNewLog(latest: KVs<T> | null): KVs<T> {
 		const log = {} as Record<keyof T, number>;
-		for (const [k, v] of Object.entries(this.schema) as ([keyof typeof this['schema'], this['schema'][string]])[]) {
+		for (const [k, v] of Object.entries(this.schema) as [keyof (typeof this)['schema'], this['schema'][string]][]) {
 			if (v.accumulate && latest) {
 				log[k] = latest[k];
 			} else {
@@ -404,14 +452,16 @@ export default abstract class Chart<T extends Schema> {
 
 	@bindThis
 	private getLatestLog(group: string | null, span: 'hour' | 'day'): Promise<RawRecord<T> | null> {
-		return this.chartDb.execute(sql`
+		return this.chartDb
+			.execute(sql`
 			SELECT *
 			FROM ${identifierSql(this.getTable(span))}
 			WHERE TRUE
 				${this.groupCondition(group)}
 			ORDER BY "date" DESC
 			LIMIT 1
-		`).then(result => result.rows[0] as RawRecord<T> | undefined ?? null);
+		`)
+			.then((result) => (result.rows[0] as RawRecord<T> | undefined) ?? null);
 	}
 
 	/**
@@ -422,9 +472,8 @@ export default abstract class Chart<T extends Schema> {
 		const [y, m, d, h] = Chart.getCurrentDate();
 
 		const current = dateUTC(
-			span === 'hour' ? [y, m, d, h] :
-			span === 'day' ? [y, m, d] :
-			new Error('not happen') as never);
+			span === 'hour' ? [y, m, d, h] : span === 'day' ? [y, m, d] : (new Error('not happen') as never),
+		);
 
 		// 現在(=今のHour or Day)のログ
 		const currentLog = await this.getLogByDate(group, span, Chart.dateToTimestamp(current));
@@ -495,7 +544,8 @@ export default abstract class Chart<T extends Schema> {
 			if (v == null || v === 0 || (Array.isArray(v) && v.length === 0)) delete diff[k];
 		}
 		this.buffer.push({
-			diff, group,
+			diff,
+			group,
 		});
 	}
 
@@ -522,7 +572,7 @@ export default abstract class Chart<T extends Schema> {
 		const update = async (logHour: RawRecord<T>, logDay: RawRecord<T>): Promise<void> => {
 			const finalDiffs = {} as Record<string, number | string[]>;
 
-			const bufferedDiffs = buffer.filter(q => q.group == null || (q.group === logHour.group));
+			const bufferedDiffs = buffer.filter((q) => q.group == null || q.group === logHour.group);
 			for (const { diff } of bufferedDiffs) {
 				for (const [k, v] of Object.entries(diff)) {
 					if (finalDiffs[k] == null) {
@@ -541,17 +591,23 @@ export default abstract class Chart<T extends Schema> {
 			const queryForDay: Record<string, number | SQL> = {};
 			for (const [k, v] of Object.entries(finalDiffs)) {
 				if (typeof v === 'number') {
-					const name = COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as string & keyof Columns<T>;
+					const name = (COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as string & keyof Columns<T>;
 					if (v > 0) queryForHour[name] = sql`${identifierSql(name)} + ${v}`;
 					if (v < 0) queryForHour[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
 					if (v > 0) queryForDay[name] = sql`${identifierSql(name)} + ${v}`;
 					if (v < 0) queryForDay[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
-				} else if (Array.isArray(v) && v.length > 0) { // ユニークインクリメント
-					const tempColumnName = UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as string & keyof TempColumnsForUnique<T>;
-					const itemsForHour = v.filter(item => !(logHour[tempColumnName] as unknown as string[]).includes(item));
-					const itemsForDay = v.filter(item => !(logDay[tempColumnName] as unknown as string[]).includes(item));
-					if (itemsForHour.length > 0) queryForHour[tempColumnName] = sql`array_cat(${identifierSql(tempColumnName)}, ${arrayValueSql(itemsForHour)})`;
-					if (itemsForDay.length > 0) queryForDay[tempColumnName] = sql`array_cat(${identifierSql(tempColumnName)}, ${arrayValueSql(itemsForDay)})`;
+				} else if (Array.isArray(v) && v.length > 0) {
+					// ユニークインクリメント
+					const tempColumnName = (UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as string &
+						keyof TempColumnsForUnique<T>;
+					const itemsForHour = v.filter((item) => !(logHour[tempColumnName] as unknown as string[]).includes(item));
+					const itemsForDay = v.filter((item) => !(logDay[tempColumnName] as unknown as string[]).includes(item));
+					if (itemsForHour.length > 0)
+						queryForHour[tempColumnName] =
+							sql`array_cat(${identifierSql(tempColumnName)}, ${arrayValueSql(itemsForHour)})`;
+					if (itemsForDay.length > 0)
+						queryForDay[tempColumnName] =
+							sql`array_cat(${identifierSql(tempColumnName)}, ${arrayValueSql(itemsForDay)})`;
 				}
 			}
 
@@ -559,10 +615,13 @@ export default abstract class Chart<T extends Schema> {
 				const schema = this.schema[k];
 				if (schema == null) throw new Error(`Unknown chart field: ${k}`);
 				if (schema.uniqueIncrement) {
-					const name = COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as keyof Columns<T>;
-					const tempColumnName = UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as keyof TempColumnsForUnique<T>;
-					const cardinalityOfHour = new Set([...(v as string[]), ...(logHour[tempColumnName] as unknown as string[])]).size;
-					const cardinalityOfDay = new Set([...(v as string[]), ...(logDay[tempColumnName] as unknown as string[])]).size;
+					const name = (COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as keyof Columns<T>;
+					const tempColumnName = (UNIQUE_TEMP_COLUMN_PREFIX +
+						k.replaceAll('.', COLUMN_DELIMITER)) as keyof TempColumnsForUnique<T>;
+					const cardinalityOfHour = new Set([...(v as string[]), ...(logHour[tempColumnName] as unknown as string[])])
+						.size;
+					const cardinalityOfDay = new Set([...(v as string[]), ...(logDay[tempColumnName] as unknown as string[])])
+						.size;
 					queryForHour[name] = cardinalityOfHour;
 					queryForDay[name] = cardinalityOfDay;
 				}
@@ -572,22 +631,36 @@ export default abstract class Chart<T extends Schema> {
 			for (const [k, v] of Object.entries(this.schema)) {
 				const intersection = v.intersection;
 				if (intersection) {
-					const name = COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as keyof Columns<T>;
+					const name = (COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as keyof Columns<T>;
 					const [firstKey, ...remainingKeys] = intersection;
 					if (firstKey == null) continue;
-					const firstTempColumnName = UNIQUE_TEMP_COLUMN_PREFIX + firstKey.replaceAll('.', COLUMN_DELIMITER) as keyof TempColumnsForUnique<T>;
+					const firstTempColumnName = (UNIQUE_TEMP_COLUMN_PREFIX +
+						firstKey.replaceAll('.', COLUMN_DELIMITER)) as keyof TempColumnsForUnique<T>;
 					const firstValues = finalDiffs[firstKey] as string[] | undefined;
-					const currentValuesForHour = new Set([...(firstValues ?? []), ...(logHour[firstTempColumnName] as unknown as string[])]);
-					const currentValuesForDay = new Set([...(firstValues ?? []), ...(logDay[firstTempColumnName] as unknown as string[])]);
+					const currentValuesForHour = new Set([
+						...(firstValues ?? []),
+						...(logHour[firstTempColumnName] as unknown as string[]),
+					]);
+					const currentValuesForDay = new Set([
+						...(firstValues ?? []),
+						...(logDay[firstTempColumnName] as unknown as string[]),
+					]);
 					for (const targetKey of remainingKeys) {
-						const targetTempColumnName = UNIQUE_TEMP_COLUMN_PREFIX + targetKey.replaceAll('.', COLUMN_DELIMITER) as keyof TempColumnsForUnique<T>;
+						const targetTempColumnName = (UNIQUE_TEMP_COLUMN_PREFIX +
+							targetKey.replaceAll('.', COLUMN_DELIMITER)) as keyof TempColumnsForUnique<T>;
 						const targetValues = finalDiffs[targetKey] as string[] | undefined;
-						const targetValuesForHour = new Set([...(targetValues ?? []), ...(logHour[targetTempColumnName] as unknown as string[])]);
-						const targetValuesForDay = new Set([...(targetValues ?? []), ...(logDay[targetTempColumnName] as unknown as string[])]);
-						currentValuesForHour.forEach(v => {
+						const targetValuesForHour = new Set([
+							...(targetValues ?? []),
+							...(logHour[targetTempColumnName] as unknown as string[]),
+						]);
+						const targetValuesForDay = new Set([
+							...(targetValues ?? []),
+							...(logDay[targetTempColumnName] as unknown as string[]),
+						]);
+						currentValuesForHour.forEach((v) => {
 							if (!targetValuesForHour.has(v)) currentValuesForHour.delete(v);
 						});
-						currentValuesForDay.forEach(v => {
+						currentValuesForDay.forEach((v) => {
 							if (!targetValuesForDay.has(v)) currentValuesForDay.delete(v);
 						});
 					}
@@ -599,7 +672,7 @@ export default abstract class Chart<T extends Schema> {
 			// ログ更新
 			// hour と day を別トランザクションで書くと、片方だけ成功したときも buffer が残り、
 			// 次回 save で成功済みの span へ同じ diff がもう一度加算されて値が二重になる
-			await this.chartDb.transaction(async transaction => {
+			await this.chartDb.transaction(async (transaction) => {
 				await this.updateLogById('hour', logHour.id, queryForHour, transaction);
 				await this.updateLogById('day', logDay.id, queryForDay, transaction);
 			});
@@ -607,18 +680,18 @@ export default abstract class Chart<T extends Schema> {
 			this.logger.info(`${this.name + (logHour.group ? `:${logHour.group}` : '')}: Updated`);
 
 			const savedEntries = new Set(bufferedDiffs);
-			this.buffer = this.buffer.filter(q => !savedEntries.has(q));
+			this.buffer = this.buffer.filter((q) => !savedEntries.has(q));
 		};
 
-		const groups = removeDuplicates(buffer.map(log => log.group));
+		const groups = removeDuplicates(buffer.map((log) => log.group));
 
 		await Promise.all(
-			groups.map(group =>
-				Promise.all([
-					this.claimCurrentLog(group, 'hour'),
-					this.claimCurrentLog(group, 'day'),
-				]).then(([logHour, logDay]) =>
-					update(logHour, logDay))));
+			groups.map((group) =>
+				Promise.all([this.claimCurrentLog(group, 'hour'), this.claimCurrentLog(group, 'day')]).then(
+					([logHour, logDay]) => update(logHour, logDay),
+				),
+			),
+		);
 	}
 
 	@bindThis
@@ -626,8 +699,8 @@ export default abstract class Chart<T extends Schema> {
 		const data = major ? await this.tickMajor(group) : await this.tickMinor(group);
 
 		const columns = {} as Record<keyof Columns<T>, number>;
-		for (const [k, v] of Object.entries(data) as ([keyof typeof data, number])[]) {
-			const name = COLUMN_PREFIX + (k as string).replaceAll('.', COLUMN_DELIMITER) as keyof Columns<T>;
+		for (const [k, v] of Object.entries(data) as [keyof typeof data, number][]) {
+			const name = (COLUMN_PREFIX + (k as string).replaceAll('.', COLUMN_DELIMITER)) as keyof Columns<T>;
 			columns[name] = v;
 		}
 
@@ -637,17 +710,15 @@ export default abstract class Chart<T extends Schema> {
 
 		const update = async (logHour: RawRecord<T>, logDay: RawRecord<T>): Promise<void> => {
 			// save() 側と同じ理由で、hour と day は同一トランザクションで更新する
-			await this.chartDb.transaction(async transaction => {
+			await this.chartDb.transaction(async (transaction) => {
 				await this.updateLogById('hour', logHour.id, columns, transaction);
 				await this.updateLogById('day', logDay.id, columns, transaction);
 			});
 		};
 
-		return Promise.all([
-			this.claimCurrentLog(group, 'hour'),
-			this.claimCurrentLog(group, 'day'),
-		]).then(([logHour, logDay]) =>
-			update(logHour, logDay));
+		return Promise.all([this.claimCurrentLog(group, 'hour'), this.claimCurrentLog(group, 'day')]).then(
+			([logHour, logDay]) => update(logHour, logDay),
+		);
 	}
 
 	@bindThis
@@ -660,13 +731,13 @@ export default abstract class Chart<T extends Schema> {
 		const current = dateUTC(Chart.getCurrentDate());
 
 		// 一日以上前かつ三日以内
-		const gt = Chart.dateToTimestamp(current) - (60 * 60 * 24 * 3);
-		const lt = Chart.dateToTimestamp(current) - (60 * 60 * 24);
+		const gt = Chart.dateToTimestamp(current) - 60 * 60 * 24 * 3;
+		const lt = Chart.dateToTimestamp(current) - 60 * 60 * 24;
 
 		const columns = {} as Record<keyof TempColumnsForUnique<T>, []>;
 		for (const [k, v] of Object.entries(this.schema)) {
 			if (v.uniqueIncrement) {
-				const name = UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER) as keyof TempColumnsForUnique<T>;
+				const name = (UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as keyof TempColumnsForUnique<T>;
 				columns[name] = [];
 			}
 		}
@@ -682,25 +753,36 @@ export default abstract class Chart<T extends Schema> {
 	}
 
 	@bindThis
-	public async getChartRaw(span: 'hour' | 'day', amount: number, cursor: Date | null, group: string | null = null): Promise<ChartResult<T>> {
-		const [y, m, d, h, _m, _s, _ms] = cursor ? Chart.parseDate(subtractTime(addTime(cursor, 1, span), 1)) : Chart.getCurrentDate();
-		const [y2, m2, d2, h2] = cursor ? Chart.parseDate(addTime(cursor, 1, span)) : [] as never;
+	public async getChartRaw(
+		span: 'hour' | 'day',
+		amount: number,
+		cursor: Date | null,
+		group: string | null = null,
+	): Promise<ChartResult<T>> {
+		const [y, m, d, h, _m, _s, _ms] = cursor
+			? Chart.parseDate(subtractTime(addTime(cursor, 1, span), 1))
+			: Chart.getCurrentDate();
+		const [y2, m2, d2, h2] = cursor ? Chart.parseDate(addTime(cursor, 1, span)) : ([] as never);
 
 		const lt = dateUTC([y, m, d, h, _m, _s, _ms]);
 
 		const gt =
-			span === 'day' ? subtractTime(cursor ? dateUTC([y2, m2, d2, 0]) : dateUTC([y, m, d, 0]), amount - 1, 'day') :
-			span === 'hour' ? subtractTime(cursor ? dateUTC([y2, m2, d2, h2]) : dateUTC([y, m, d, h]), amount - 1, 'hour') :
-			new Error('not happen') as never;
+			span === 'day'
+				? subtractTime(cursor ? dateUTC([y2, m2, d2, 0]) : dateUTC([y, m, d, 0]), amount - 1, 'day')
+				: span === 'hour'
+					? subtractTime(cursor ? dateUTC([y2, m2, d2, h2]) : dateUTC([y, m, d, h]), amount - 1, 'hour')
+					: (new Error('not happen') as never);
 
 		// ログ取得
-		let logs = (await this.chartDb.execute(sql`
+		let logs = (
+			await this.chartDb.execute(sql`
 			SELECT *
 			FROM ${identifierSql(this.getTable(span))}
 			WHERE "date" BETWEEN ${Chart.dateToTimestamp(gt)} AND ${Chart.dateToTimestamp(lt)}
 				${this.groupCondition(group)}
 			ORDER BY "date" DESC
-		`)).rows as RawRecord<T>[];
+		`)
+		).rows as RawRecord<T>[];
 
 		// 要求された範囲にログがひとつもなかったら
 		if (logs.length === 0) {
@@ -712,18 +794,20 @@ export default abstract class Chart<T extends Schema> {
 				logs = [recentLog];
 			}
 
-		// 要求された範囲の最も古い箇所に位置するログが存在しなかったら
+			// 要求された範囲の最も古い箇所に位置するログが存在しなかったら
 		} else if (!isTimeSame(new Date(logs.at(-1)!.date * 1000), gt)) {
 			// 要求された範囲の最も古い箇所時点での最も新しいログを持ってきて末尾に追加する
 			// (補間できないため)
-			const outdatedLog = (await this.chartDb.execute(sql`
+			const outdatedLog = (
+				await this.chartDb.execute(sql`
 				SELECT *
 				FROM ${identifierSql(this.getTable(span))}
 				WHERE "date" < ${Chart.dateToTimestamp(gt)}
 					${this.groupCondition(group)}
 				ORDER BY "date" DESC
 				LIMIT 1
-			`)).rows[0] as RawRecord<T> | undefined;
+			`)
+			).rows[0] as RawRecord<T> | undefined;
 
 			if (outdatedLog) {
 				logs.push(outdatedLog);
@@ -732,19 +816,21 @@ export default abstract class Chart<T extends Schema> {
 
 		const chart: KVs<T>[] = [];
 
-		for (let i = (amount - 1); i >= 0; i--) {
+		for (let i = amount - 1; i >= 0; i--) {
 			const current =
-				span === 'hour' ? subtractTime(dateUTC([y, m, d, h]), i, 'hour') :
-				span === 'day' ? subtractTime(dateUTC([y, m, d]), i, 'day') :
-				new Error('not happen') as never;
+				span === 'hour'
+					? subtractTime(dateUTC([y, m, d, h]), i, 'hour')
+					: span === 'day'
+						? subtractTime(dateUTC([y, m, d]), i, 'day')
+						: (new Error('not happen') as never);
 
-			const log = logs.find(l => isTimeSame(new Date(l.date * 1000), current));
+			const log = logs.find((l) => isTimeSame(new Date(l.date * 1000), current));
 
 			if (log) {
 				chart.unshift(this.convertRawRecord(log));
 			} else {
 				// 補間
-				const latest = logs.find(l => isTimeBefore(new Date(l.date * 1000), current));
+				const latest = logs.find((l) => isTimeBefore(new Date(l.date * 1000), current));
 				const data = latest ? this.convertRawRecord(latest) : null;
 				chart.unshift(this.getNewLog(data));
 			}
@@ -759,7 +845,7 @@ export default abstract class Chart<T extends Schema> {
 		 * にする
 		 */
 		for (const record of chart) {
-			for (const [k, v] of Object.entries(record) as ([keyof typeof record, number])[]) {
+			for (const [k, v] of Object.entries(record) as [keyof typeof record, number][]) {
 				if (res[k]) {
 					res[k].push(v);
 				} else {
@@ -772,7 +858,12 @@ export default abstract class Chart<T extends Schema> {
 	}
 
 	@bindThis
-	public async getChart(span: 'hour' | 'day', amount: number, cursor: Date | null, group: string | null = null): Promise<Unflatten<ChartResult<T>>> {
+	public async getChart(
+		span: 'hour' | 'day',
+		amount: number,
+		cursor: Date | null,
+		group: string | null = null,
+	): Promise<Unflatten<ChartResult<T>>> {
 		const result = await this.getChartRaw(span, amount, cursor, group);
 		const object: Record<string, unknown> = {};
 		for (const [k, v] of Object.entries(result)) {

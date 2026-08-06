@@ -18,7 +18,11 @@ import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-d
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueImportBlocking, handleHonoQueueImportBlockingToDb, type HonoQueueDbDependencies } from '@/queue/handlers/db.js';
+import {
+	handleHonoQueueImportBlocking,
+	handleHonoQueueImportBlockingToDb,
+	type HonoQueueDbDependencies,
+} from '@/queue/handlers/db.js';
 import type { DbUserImportJobData, DbUserImportToDbJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -92,7 +96,9 @@ describe('hono-queue-db (importBlocking)', () => {
 		await handleHonoQueueImportBlocking(deps, fakeJob<DbUserImportJobData>({ user: { id: blocker.id }, fileId }));
 
 		const waiting = await runtime.dbQueue.getJobs(['waiting', 'delayed']);
-		const enqueued = waiting.find(j => j.name === 'importBlockingToDb' && (j.data as DbUserImportToDbJobData).user.id === blocker.id);
+		const enqueued = waiting.find(
+			(j) => j.name === 'importBlockingToDb' && (j.data as DbUserImportToDbJobData).user.id === blocker.id,
+		);
 		expect(enqueued).toBeDefined();
 		expect((enqueued!.data as DbUserImportToDbJobData).target).toContain(target.username);
 	});
@@ -101,13 +107,18 @@ describe('hono-queue-db (importBlocking)', () => {
 		const blocker = await createTestUser('honoqueueimpblockdbme');
 		const target = await createTestUser('honoqueueimpblockdbtarget');
 
-		await handleHonoQueueImportBlockingToDb(deps, fakeJob<DbUserImportToDbJobData>({
-			user: { id: blocker.id },
-			target: `${target.username}@${runtime.config.runtime.host}`,
-		}));
+		await handleHonoQueueImportBlockingToDb(
+			deps,
+			fakeJob<DbUserImportToDbJobData>({
+				user: { id: blocker.id },
+				target: `${target.username}@${runtime.config.runtime.host}`,
+			}),
+		);
 
 		const waiting = await runtime.relationshipQueue.getJobs(['waiting', 'delayed']);
-		const enqueued = waiting.find(j => j.name === 'block' && j.data.from.id === blocker.id && j.data.to.id === target.id);
+		const enqueued = waiting.find(
+			(j) => j.name === 'block' && j.data.from.id === blocker.id && j.data.to.id === target.id,
+		);
 		expect(enqueued).toBeDefined();
 		expect(enqueued!.data.silent).toBe(true);
 	});
@@ -115,13 +126,18 @@ describe('hono-queue-db (importBlocking)', () => {
 	test('handleHonoQueueImportBlockingToDb: 自分自身はスキップされジョブを積まない', async () => {
 		const blocker = await createTestUser('honoqueueimpblockdbself');
 
-		await handleHonoQueueImportBlockingToDb(deps, fakeJob<DbUserImportToDbJobData>({
-			user: { id: blocker.id },
-			target: `${blocker.username}@${runtime.config.runtime.host}`,
-		}));
+		await handleHonoQueueImportBlockingToDb(
+			deps,
+			fakeJob<DbUserImportToDbJobData>({
+				user: { id: blocker.id },
+				target: `${blocker.username}@${runtime.config.runtime.host}`,
+			}),
+		);
 
 		const waiting = await runtime.relationshipQueue.getJobs(['waiting', 'delayed']);
-		const enqueued = waiting.find(j => j.name === 'block' && j.data.from.id === blocker.id && j.data.to.id === blocker.id);
+		const enqueued = waiting.find(
+			(j) => j.name === 'block' && j.data.from.id === blocker.id && j.data.to.id === blocker.id,
+		);
 		expect(enqueued).toBeUndefined();
 	});
 });

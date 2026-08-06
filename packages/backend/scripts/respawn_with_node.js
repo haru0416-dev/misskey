@@ -30,7 +30,7 @@ export async function respawnWithNode() {
 	if (process.env.MISSKEY_RESPAWNED_FOR_NODE === '1') {
 		console.error(
 			'[respawn_with_node] respawn loop detected: already respawned once but still running under Bun. ' +
-			'Refusing to respawn again to avoid a fork bomb.',
+				'Refusing to respawn again to avoid a fork bomb.',
 		);
 		process.exit(1);
 	}

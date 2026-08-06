@@ -3,7 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { hashtagsListParamDef, hashtagsSearchParamDef, hashtagsShowParamDef, hashtagsTrendParamDef, hashtagsUsersParamDef } from '@/server/rest/hashtags.js';
+import {
+	hashtagsListParamDef,
+	hashtagsSearchParamDef,
+	hashtagsShowParamDef,
+	hashtagsTrendParamDef,
+	hashtagsUsersParamDef,
+} from '@/server/rest/hashtags.js';
 
 export const endpointMetas = {
 	'hashtags/list': {
@@ -14,10 +20,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Hashtag',
 				},
 			},
@@ -32,10 +40,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'string',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 				},
 			},
 		} as const,
@@ -49,7 +59,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Hashtag',
 			},
 
@@ -73,26 +84,32 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						tag: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						chart: {
 							type: 'array',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							items: {
 								type: 'number',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 						},
 						usersCount: {
 							type: 'number',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 					},
 				},
@@ -108,10 +125,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserDetailed',
 				},
 			},

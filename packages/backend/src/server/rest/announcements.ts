@@ -4,8 +4,18 @@
  */
 
 import { z } from 'zod';
-import { announcementReadExistsInDatabase, createAnnouncementReadInDatabase, listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatabase } from '@/core/AnnouncementReadStore.js';
-import { fetchAnnouncementByIdFromDatabase, listAnnouncementsForUserFromDatabase, listUnreadAnnouncementsForUserFromDatabase, resolveAnnouncementPagination, updateAnnouncementInDatabase } from '@/core/AnnouncementStore.js';
+import {
+	announcementReadExistsInDatabase,
+	createAnnouncementReadInDatabase,
+	listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatabase,
+} from '@/core/AnnouncementReadStore.js';
+import {
+	fetchAnnouncementByIdFromDatabase,
+	listAnnouncementsForUserFromDatabase,
+	listUnreadAnnouncementsForUserFromDatabase,
+	resolveAnnouncementPagination,
+	updateAnnouncementInDatabase,
+} from '@/core/AnnouncementStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -40,7 +50,6 @@ export const announcementShowParamDef = z.object({
 export const readAnnouncementParamDef = z.object({
 	announcementId: misskeyId(),
 });
-
 
 function noSuchAnnouncementError(): HonoApiError {
 	return new HonoApiError({
@@ -83,22 +92,43 @@ export async function handleHonoApiAnnouncements(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Announcement'>[]> {
 	const params = parseHonoApiParams(announcementsParamDef, body);
-	const announcements = await listAnnouncementsForUserFromDatabase(deps.db, omitUndefined({
-		limit: params.limit,
-		...resolveAnnouncementPagination({
-			gen: time => genId(time),
-		}, params),
-		isActive: params.isActive,
-		requestUserId: user?.id,
-	}));
-	const readAnnouncementIds = user == null
-		? new Set<MiAnnouncement['id']>()
-		: new Set(await listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatabase(deps.db, user.id, announcements.map(announcement => announcement.id)));
+	const announcements = await listAnnouncementsForUserFromDatabase(
+		deps.db,
+		omitUndefined({
+			limit: params.limit,
+			...resolveAnnouncementPagination(
+				{
+					gen: (time) => genId(time),
+				},
+				params,
+			),
+			isActive: params.isActive,
+			requestUserId: user?.id,
+		}),
+	);
+	const readAnnouncementIds =
+		user == null
+			? new Set<MiAnnouncement['id']>()
+			: new Set(
+					await listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatabase(
+						deps.db,
+						user.id,
+						announcements.map((announcement) => announcement.id),
+					),
+				);
 
-	return await Promise.all(announcements.map(announcement => packHonoApiAnnouncement(deps, {
-		...announcement,
-		...(user == null ? {} : { isRead: readAnnouncementIds.has(announcement.id) }),
-	}, user)));
+	return await Promise.all(
+		announcements.map((announcement) =>
+			packHonoApiAnnouncement(
+				deps,
+				{
+					...announcement,
+					...(user == null ? {} : { isRead: readAnnouncementIds.has(announcement.id) }),
+				},
+				user,
+			),
+		),
+	);
 }
 
 export async function handleHonoApiAnnouncementShow(

@@ -56,7 +56,8 @@ export type MisskeyHonoAppDependencies = {
 const maybeApLookupRegex = /application\/activity\+json|application\/ld\+json.+activitystreams/i;
 
 function isInternalActivityPubRedirect(location: string, config: Config): boolean {
-	const effectiveLocation = process.env['NODE_ENV'] === 'production' ? location : location.replace(/^http:\/\//, 'https://');
+	const effectiveLocation =
+		process.env['NODE_ENV'] === 'production' ? location : location.replace(/^http:\/\//, 'https://');
 	return effectiveLocation.startsWith(`https://${config.runtime.host}/`);
 }
 
@@ -66,14 +67,17 @@ function activityPubRedirectRefusal(location: string, headers: Headers): Respons
 	nextHeaders.set('content-type', 'text/plain; charset=utf-8');
 	nextHeaders.set('link', `<${encodeURI(location)}>; rel="canonical"`);
 
-	return new Response([
-		'Refusing to relay remote ActivityPub object lookup.',
-		'',
-		`Please remove 'application/activity+json' and 'application/ld+json' from the Accept header or fetch using the authoritative URL at ${location}.`,
-	].join('\n'), {
-		status: 406,
-		headers: nextHeaders,
-	});
+	return new Response(
+		[
+			'Refusing to relay remote ActivityPub object lookup.',
+			'',
+			`Please remove 'application/activity+json' and 'application/ld+json' from the Accept header or fetch using the authoritative URL at ${location}.`,
+		].join('\n'),
+		{
+			status: 406,
+			headers: nextHeaders,
+		},
+	);
 }
 
 // これを超えたリクエストを endpoint + 所要時間つきで警告ログに出す (チューニング対象の発見用)。

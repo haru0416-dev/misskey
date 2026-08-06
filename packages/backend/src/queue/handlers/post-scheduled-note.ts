@@ -50,52 +50,67 @@ export async function handleHonoQueuePostScheduledNote(
 ): Promise<void> {
 	const draft = await fetchNoteDraftWithUserByIdFromDatabase(deps.db, job.data.noteDraftId);
 	if (
-		draft == null
-		|| draft.user == null
-		|| draft.scheduledAt == null
-		|| draft.scheduledAt.getTime() > Date.now()
-		|| (job.data.scheduledAt != null && draft.scheduledAt.getTime() !== job.data.scheduledAt)
-		|| !draft.isActuallyScheduled
+		draft == null ||
+		draft.user == null ||
+		draft.scheduledAt == null ||
+		draft.scheduledAt.getTime() > Date.now() ||
+		(job.data.scheduledAt != null && draft.scheduledAt.getTime() !== job.data.scheduledAt) ||
+		!draft.isActuallyScheduled
 	) {
 		return;
 	}
 
 	try {
-		const note = await fetchAndCreateNoteForHonoApi(deps, draft.user, {
-			createdAt: new Date(),
-			fileIds: draft.fileIds,
-			poll: draft.hasPoll ? {
-				choices: draft.pollChoices,
-				multiple: draft.pollMultiple,
-				expiresAt: draft.pollExpiredAfter ? new Date(Date.now() + draft.pollExpiredAfter) : draft.pollExpiresAt ? new Date(draft.pollExpiresAt) : null,
-			} : null,
-			text: draft.text ?? null,
-			replyId: draft.replyId,
-			renoteId: draft.renoteId,
-			cw: draft.cw,
-			localOnly: draft.localOnly,
-			reactionAcceptance: draft.reactionAcceptance,
-			visibility: draft.visibility,
-			visibleUserIds: draft.visibleUserIds,
-			channelId: draft.channelId,
-		}, async insert => deps.db.transaction(async transaction => {
-			// draftをlockしてrevisionを再検証し、note作成とdraft削除を同一transactionで確定する。
-			// この順序により、編集前のjobや並行jobによる二重投稿を防ぐ。
-			const [currentDraft] = await transaction
-				.select()
-				.from(noteDraft)
-				.where(eq(noteDraft.id, draft.id))
-				.for('update')
-				.limit(1);
+		const note = await fetchAndCreateNoteForHonoApi(
+			deps,
+			draft.user,
+			{
+				createdAt: new Date(),
+				fileIds: draft.fileIds,
+				poll: draft.hasPoll
+					? {
+							choices: draft.pollChoices,
+							multiple: draft.pollMultiple,
+							expiresAt: draft.pollExpiredAfter
+								? new Date(Date.now() + draft.pollExpiredAfter)
+								: draft.pollExpiresAt
+									? new Date(draft.pollExpiresAt)
+									: null,
+						}
+					: null,
+				text: draft.text ?? null,
+				replyId: draft.replyId,
+				renoteId: draft.renoteId,
+				cw: draft.cw,
+				localOnly: draft.localOnly,
+				reactionAcceptance: draft.reactionAcceptance,
+				visibility: draft.visibility,
+				visibleUserIds: draft.visibleUserIds,
+				channelId: draft.channelId,
+			},
+			async (insert) =>
+				deps.db.transaction(async (transaction) => {
+					// draftをlockしてrevisionを再検証し、note作成とdraft削除を同一transactionで確定する。
+					// この順序により、編集前のjobや並行jobによる二重投稿を防ぐ。
+					const [currentDraft] = await transaction
+						.select()
+						.from(noteDraft)
+						.where(eq(noteDraft.id, draft.id))
+						.for('update')
+						.limit(1);
 
-			if (currentDraft == null || scheduledNoteDraftFingerprint(currentDraft) !== scheduledNoteDraftFingerprint(draft)) {
-				throw new ScheduledNoteDraftUnavailableError();
-			}
+					if (
+						currentDraft == null ||
+						scheduledNoteDraftFingerprint(currentDraft) !== scheduledNoteDraftFingerprint(draft)
+					) {
+						throw new ScheduledNoteDraftUnavailableError();
+					}
 
-			const note = await insert(transaction as MiDrizzleDatabase);
-			await transaction.delete(noteDraft).where(eq(noteDraft.id, draft.id));
-			return note;
-		}));
+					const note = await insert(transaction as MiDrizzleDatabase);
+					await transaction.delete(noteDraft).where(eq(noteDraft.id, draft.id));
+					return note;
+				}),
+		);
 
 		createScheduledNotePostedNotification(deps, draft.userId, note.id);
 	} catch (error) {

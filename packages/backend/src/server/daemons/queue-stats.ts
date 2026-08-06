@@ -34,8 +34,12 @@ export function startHonoQueueStatsDaemon(deps: HonoDaemonQueueStatsDependencies
 	const deliverQueueEvents = new Bull.QueueEvents(QUEUE.DELIVER, baseQueueEventsOptions(deps.config, QUEUE.DELIVER));
 	const inboxQueueEvents = new Bull.QueueEvents(QUEUE.INBOX, baseQueueEventsOptions(deps.config, QUEUE.INBOX));
 
-	const onDeliverActive = () => { activeDeliverJobs++; };
-	const onInboxActive = () => { activeInboxJobs++; };
+	const onDeliverActive = () => {
+		activeDeliverJobs++;
+	};
+	const onInboxActive = () => {
+		activeInboxJobs++;
+	};
 	deliverQueueEvents.on('active', onDeliverActive);
 	inboxQueueEvents.on('active', onInboxActive);
 

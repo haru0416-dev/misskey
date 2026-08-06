@@ -5,7 +5,13 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { fetchDriveFileByIdFromDatabase, fetchDriveFileByUrlFromDatabase, listAllDriveFilesByUserIdFromDatabase, listDriveFilesForAdminFromDatabase, listOrphanDriveFilesFromDatabase } from '@/core/DriveFileStore.js';
+import {
+	fetchDriveFileByIdFromDatabase,
+	fetchDriveFileByUrlFromDatabase,
+	listAllDriveFilesByUserIdFromDatabase,
+	listDriveFilesForAdminFromDatabase,
+	listOrphanDriveFilesFromDatabase,
+} from '@/core/DriveFileStore.js';
 import { startDriveFileDeletion } from '@/core/DriveFileDeletionLogic.js';
 import type { InternalStorageService } from '@/core/InternalStorageService.js';
 import type { ObjectStorageQueue } from '@/core/queues.js';
@@ -41,14 +47,16 @@ export const adminDriveUserParamDef = z.object({
 });
 
 // Accepts either `fileId` or `url` (both may be present at once); at least one is required.
-export const adminDriveShowFileParamDef = z.object({
-	fileId: misskeyId().optional(),
-	url: z.string().optional(),
-}).superRefine((data, ctx) => {
-	if (data.fileId === undefined && data.url === undefined) {
-		ctx.addIssue({ code: 'custom', message: 'must match a schema in anyOf' });
-	}
-});
+export const adminDriveShowFileParamDef = z
+	.object({
+		fileId: misskeyId().optional(),
+		url: z.string().optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.fileId === undefined && data.url === undefined) {
+			ctx.addIssue({ code: 'custom', message: 'must match a schema in anyOf' });
+		}
+	});
 
 // OpenAPI/misskey-js コード生成専用。上の superRefine は JSON Schema 化できないため、
 // docs 用には「fileId 必須」または「url 必須」の anyOf として表現する。
@@ -64,7 +72,11 @@ export const adminDriveFilesParamDef = z.object({
 	sinceDate: z.number().int().optional(),
 	untilDate: z.number().int().optional(),
 	userId: misskeyId().nullable().optional(),
-	type: z.string().regex(/^[a-zA-Z0-9\/\-*]+$/).nullable().optional(),
+	type: z
+		.string()
+		.regex(/^[a-zA-Z0-9\/\-*]+$/)
+		.nullable()
+		.optional(),
 	origin: z.enum(['combined', 'local', 'remote']).default('local'),
 	/** The local host is represented with `null`. */
 	hostname: z.string().nullable().default(null),
@@ -150,43 +162,56 @@ function getAdminDriveFileThumbnailUrl(deps: HonoApiAdminDriveDependencies, file
 	return file.thumbnailUrl ?? (isMimeImage(file.type, 'sharp-convertible-image') ? url : null);
 }
 
-function enqueueDeleteObjectStorageFile(queue: ObjectStorageQueue, config: Pick<Config, 'queues'>, key: string): unknown {
-	return queue.add('deleteFile', { key }, {
-		attempts: 5,
-		backoff: { type: 'exponential', delay: 10_000 },
-		deduplication: { id: key },
-		...queueRetentionOptions(config),
-	});
+function enqueueDeleteObjectStorageFile(
+	queue: ObjectStorageQueue,
+	config: Pick<Config, 'queues'>,
+	key: string,
+): unknown {
+	return queue.add(
+		'deleteFile',
+		{ key },
+		{
+			attempts: 5,
+			backoff: { type: 'exponential', delay: 10_000 },
+			deduplication: { id: key },
+			...queueRetentionOptions(config),
+		},
+	);
 }
 
-export function startHonoApiAdminDriveFileDeletion(
-	deps: HonoApiAdminDriveDependencies,
-	file: MiDriveFile,
-): void {
-	startDriveFileDeletion({
-		db: deps.db,
-		meta: deps.meta,
-		deleteInternalFile: key => deps.internalStorageService.del(key),
-		enqueueDeleteObjectStorageFile: key => enqueueDeleteObjectStorageFile(deps.objectStorageQueue, deps.config, key),
-		publishDriveStream: deps.publishDriveStream,
-	}, file);
+export function startHonoApiAdminDriveFileDeletion(deps: HonoApiAdminDriveDependencies, file: MiDriveFile): void {
+	startDriveFileDeletion(
+		{
+			db: deps.db,
+			meta: deps.meta,
+			deleteInternalFile: (key) => deps.internalStorageService.del(key),
+			enqueueDeleteObjectStorageFile: (key) =>
+				enqueueDeleteObjectStorageFile(deps.objectStorageQueue, deps.config, key),
+			publishDriveStream: deps.publishDriveStream,
+		},
+		file,
+	);
 }
 
 async function packAdminDriveFilesForHonoApi(
 	deps: HonoApiAdminDriveDependencies,
 	files: MiDriveFile[],
 ): Promise<Packed<'DriveFile'>[]> {
-	const userRefs = files.map(({ user, userId }) => user ?? userId).filter(x => x != null);
-	const uniqueUserRefs = Array.from(new Map(userRefs.map(user => [typeof user === 'string' ? user : user.id, user])).values());
+	const userRefs = files.map(({ user, userId }) => user ?? userId).filter((x) => x != null);
+	const uniqueUserRefs = Array.from(
+		new Map(userRefs.map((user) => [typeof user === 'string' ? user : user.id, user])).values(),
+	);
 	const packedUsers = uniqueUserRefs.length > 0 ? await packUserLiteManyForHonoApi(deps, uniqueUserRefs) : [];
-	const userMap = new Map(packedUsers.map(user => [user.id, user]));
+	const userMap = new Map(packedUsers.map((user) => [user.id, user]));
 
-	const folderRefs = files.map(({ folder, folderId }) => folder ?? folderId).filter(x => x != null);
-	const uniqueFolderRefs = Array.from(new Map(folderRefs.map(folder => [typeof folder === 'string' ? folder : folder.id, folder])).values());
+	const folderRefs = files.map(({ folder, folderId }) => folder ?? folderId).filter((x) => x != null);
+	const uniqueFolderRefs = Array.from(
+		new Map(folderRefs.map((folder) => [typeof folder === 'string' ? folder : folder.id, folder])).values(),
+	);
 	const packedFolders = await packDriveFoldersManyForHonoApi(deps, uniqueFolderRefs, { detail: true });
-	const folderMap = new Map(packedFolders.map(folder => [folder.id, folder]));
+	const folderMap = new Map(packedFolders.map((folder) => [folder.id, folder]));
 
-	return files.map(file => ({
+	return files.map((file) => ({
 		id: file.id,
 		createdAt: parseId(file.id).date.toISOString(),
 		name: file.name,
@@ -200,9 +225,9 @@ async function packAdminDriveFilesForHonoApi(
 		thumbnailUrl: getAdminDriveFileThumbnailUrl(deps, file),
 		comment: file.comment,
 		folderId: file.folderId,
-		folder: file.folderId == null ? null : folderMap.get(file.folderId) ?? null,
+		folder: file.folderId == null ? null : (folderMap.get(file.folderId) ?? null),
 		userId: file.userId,
-		user: file.userId == null ? null : userMap.get(file.userId) ?? null,
+		user: file.userId == null ? null : (userMap.get(file.userId) ?? null),
 	}));
 }
 
@@ -212,12 +237,16 @@ export async function handleHonoApiAdminDriveCleanRemoteFiles(
 ): Promise<void> {
 	parseHonoApiParams(adminDriveNoParamsDef, body);
 
-	await deps.objectStorageQueue.add('cleanRemoteFiles', {}, {
-		attempts: 2,
-		backoff: { type: 'exponential', delay: 60_000 },
-		deduplication: { id: 'cleanRemoteFiles' },
-		...queueRetentionOptions(deps.config),
-	});
+	await deps.objectStorageQueue.add(
+		'cleanRemoteFiles',
+		{},
+		{
+			attempts: 2,
+			backoff: { type: 'exponential', delay: 60_000 },
+			deduplication: { id: 'cleanRemoteFiles' },
+			...queueRetentionOptions(deps.config),
+		},
+	);
 }
 
 export async function handleHonoApiAdminDriveCleanup(
@@ -257,15 +286,18 @@ export async function handleHonoApiAdminDriveFiles(
 		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
-	const files = await listDriveFilesForAdminFromDatabase(deps.db, omitUndefined({
-		limit: params.limit,
-		sinceId,
-		untilId,
-		userId: params.userId,
-		type: params.type,
-		origin: params.origin,
-		hostname: params.hostname,
-	}));
+	const files = await listDriveFilesForAdminFromDatabase(
+		deps.db,
+		omitUndefined({
+			limit: params.limit,
+			sinceId,
+			untilId,
+			userId: params.userId,
+			type: params.type,
+			origin: params.origin,
+			hostname: params.hostname,
+		}),
+	);
 
 	return await packAdminDriveFilesForHonoApi(deps, files);
 }
@@ -276,9 +308,10 @@ export async function handleHonoApiAdminDriveShowFile(
 	body: Record<string, unknown>,
 ): Promise<AdminDriveFileResponse> {
 	const params = parseHonoApiParams(adminDriveShowFileParamDef, body);
-	const file = params.fileId !== undefined
-		? await fetchDriveFileByIdFromDatabase(deps.db, params.fileId)
-		: await fetchDriveFileByUrlFromDatabase(deps.db, params.url!);
+	const file =
+		params.fileId !== undefined
+			? await fetchDriveFileByIdFromDatabase(deps.db, params.fileId)
+			: await fetchDriveFileByUrlFromDatabase(deps.db, params.url!);
 
 	if (file == null) {
 		throw noSuchFileError();

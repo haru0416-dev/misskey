@@ -7,7 +7,11 @@ import { isInstanceMuted, isUserFromMutedInstance } from '@/misc/is-instance-mut
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { packNoteForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
-import { isNoteMutedOrBlockedForHonoStream, isNoteVisibleForMeForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
+import {
+	isNoteMutedOrBlockedForHonoStream,
+	isNoteVisibleForMeForHonoStream,
+	type HonoStreamChannelDefinition,
+} from '../channel.js';
 
 type MainStreamNotificationBody = {
 	userId?: string;

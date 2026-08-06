@@ -16,7 +16,11 @@ import { genIdenticon } from '@/misc/gen-identicon.js';
 import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
 
 export type RootRouteStores = {
-	fetchEmojiByNameAndHost: (db: MiDrizzleDatabase, name: MiEmoji['name'], host: MiEmoji['host']) => Promise<MiEmoji | null>;
+	fetchEmojiByNameAndHost: (
+		db: MiDrizzleDatabase,
+		name: MiEmoji['name'],
+		host: MiEmoji['host'],
+	) => Promise<MiEmoji | null>;
 	fetchUserByUsernameAndHost: (db: MiDrizzleDatabase, username: string, host: MiUser['host']) => Promise<MiUser | null>;
 };
 
@@ -76,10 +80,10 @@ export function createRootRoutes(deps: RootRouteDependencies): Hono {
 		const emoji = await stores.fetchEmojiByNameAndHost(
 			deps.db,
 			name!,
-			(host === undefined || host === '.') ? null : host,
+			host === undefined || host === '.' ? null : host,
 		);
 
-		headers['Content-Security-Policy'] = 'default-src \'none\'; style-src \'unsafe-inline\'';
+		headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'";
 		c.header('Content-Security-Policy', headers['Content-Security-Policy']);
 
 		if (emoji == null) {
@@ -118,11 +122,13 @@ export function createRootRoutes(deps: RootRouteDependencies): Hono {
 		const user = await stores.fetchUserByUsernameAndHost(
 			deps.db,
 			username,
-			(host == null) || (host === deps.config.runtime.host) ? null : host,
+			host == null || host === deps.config.runtime.host ? null : host,
 		);
 
 		if (user && !user.isSuspended) {
-			return c.redirect((user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user));
+			return c.redirect(
+				(user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user),
+			);
 		}
 
 		return c.redirect('/static-assets/user-unknown.png');

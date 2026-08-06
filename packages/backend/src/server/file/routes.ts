@@ -42,7 +42,7 @@ export type FileServerDependencies = {
 class HonoFileReply implements FileServerReply {
 	public statusCode = 200;
 	public readonly headers = new Headers({
-		'Content-Security-Policy': 'default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'',
+		'Content-Security-Policy': "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
 	});
 
 	constructor() {
@@ -79,10 +79,11 @@ class HonoFileReply implements FileServerReply {
 	}
 }
 
-function createFileServerRequest<
-	Params extends Record<string, string>,
-	Query extends Record<string, unknown>,
->(c: Context, params: Params, query = c.req.query() as Query): FileServerRequest<Params, Query> {
+function createFileServerRequest<Params extends Record<string, string>, Query extends Record<string, unknown>>(
+	c: Context,
+	params: Params,
+	query = c.req.query() as Query,
+): FileServerRequest<Params, Query> {
 	const headers: FileServerHeaders = {};
 
 	c.req.raw.headers.forEach((value, key) => {
@@ -112,7 +113,12 @@ function isFileBody(value: unknown): value is FileBody {
 }
 
 function isReadable(value: unknown): value is NodeJS.ReadableStream {
-	return typeof value === 'object' && value !== null && 'pipe' in value && typeof (value as { pipe?: unknown }).pipe === 'function';
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		'pipe' in value &&
+		typeof (value as { pipe?: unknown }).pipe === 'function'
+	);
 }
 
 async function fileBodyToResponse(body: FileBody, reply: HonoFileReply, method: string): Promise<Response> {
@@ -130,10 +136,13 @@ async function fileBodyToResponse(body: FileBody, reply: HonoFileReply, method: 
 		reply.headers.set('Content-Type', contentType);
 	}
 
-	return new Response(method === 'HEAD' ? null : Readable.toWeb(createReadStream(body.path)) as ReadableStream<Uint8Array>, {
-		status: reply.statusCode,
-		headers: reply.headers,
-	});
+	return new Response(
+		method === 'HEAD' ? null : (Readable.toWeb(createReadStream(body.path)) as ReadableStream<Uint8Array>),
+		{
+			status: reply.statusCode,
+			headers: reply.headers,
+		},
+	);
 }
 
 async function toResponse(body: unknown, reply: HonoFileReply, method: string): Promise<Response> {
@@ -200,18 +209,8 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		deps.downloadService,
 		deps.internalStorageService,
 	);
-	const driveHandler = new FileServerDriveHandler(
-		deps.config,
-		fileResolver,
-		assetsPath,
-		deps.videoProcessingService,
-	);
-	const proxyHandler = new FileServerProxyHandler(
-		deps.config,
-		fileResolver,
-		assetsPath,
-		deps.imageProcessingService,
-	);
+	const driveHandler = new FileServerDriveHandler(deps.config, fileResolver, assetsPath, deps.videoProcessingService);
+	const proxyHandler = new FileServerProxyHandler(deps.config, fileResolver, assetsPath, deps.imageProcessingService);
 
 	app.get('/files/:key', async (c) => {
 		const reply = new HonoFileReply();
@@ -228,8 +227,9 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		}
 
 		const request = createFileServerRequest(c, { key: c.req.param('key') });
-		const body = await driveHandler.handle(request, reply)
-			.catch(err => errorHandler(request, reply, assetsPath, deps.logger, err));
+		const body = await driveHandler
+			.handle(request, reply)
+			.catch((err) => errorHandler(request, reply, assetsPath, deps.logger, err));
 		return await toResponse(body, reply, c.req.method);
 	});
 
@@ -256,8 +256,9 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 			// 不正なpercent-encodingはデコードせずそのまま扱う (旧パラメータ抽出と同じ寛容さ)
 		}
 		const request = createFileServerRequest(c, { url });
-		const body = await proxyHandler.handle(request, reply)
-			.catch(err => errorHandler(request, reply, assetsPath, deps.logger, err));
+		const body = await proxyHandler
+			.handle(request, reply)
+			.catch((err) => errorHandler(request, reply, assetsPath, deps.logger, err));
 		return await toResponse(body, reply, c.req.method);
 	});
 

@@ -5,7 +5,33 @@
 
 import type { Hono } from 'hono';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
-import { handleHonoApiChatHistory, handleHonoApiChatMessagesCreateToRoom, handleHonoApiChatMessagesCreateToUser, handleHonoApiChatMessagesDelete, handleHonoApiChatMessagesReact, handleHonoApiChatMessagesRoomTimeline, handleHonoApiChatMessagesSearch, handleHonoApiChatMessagesShow, handleHonoApiChatMessagesUnreact, handleHonoApiChatMessagesUserTimeline, handleHonoApiChatReadAll, handleHonoApiChatRoomsCreate, handleHonoApiChatRoomsDelete, handleHonoApiChatRoomsInvitationsCreate, handleHonoApiChatRoomsInvitationsIgnore, handleHonoApiChatRoomsInvitationsInbox, handleHonoApiChatRoomsInvitationsOutbox, handleHonoApiChatRoomsJoin, handleHonoApiChatRoomsJoining, handleHonoApiChatRoomsLeave, handleHonoApiChatRoomsMembers, handleHonoApiChatRoomsMute, handleHonoApiChatRoomsOwned, handleHonoApiChatRoomsShow, handleHonoApiChatRoomsUpdate } from '../chat.js';
+import {
+	handleHonoApiChatHistory,
+	handleHonoApiChatMessagesCreateToRoom,
+	handleHonoApiChatMessagesCreateToUser,
+	handleHonoApiChatMessagesDelete,
+	handleHonoApiChatMessagesReact,
+	handleHonoApiChatMessagesRoomTimeline,
+	handleHonoApiChatMessagesSearch,
+	handleHonoApiChatMessagesShow,
+	handleHonoApiChatMessagesUnreact,
+	handleHonoApiChatMessagesUserTimeline,
+	handleHonoApiChatReadAll,
+	handleHonoApiChatRoomsCreate,
+	handleHonoApiChatRoomsDelete,
+	handleHonoApiChatRoomsInvitationsCreate,
+	handleHonoApiChatRoomsInvitationsIgnore,
+	handleHonoApiChatRoomsInvitationsInbox,
+	handleHonoApiChatRoomsInvitationsOutbox,
+	handleHonoApiChatRoomsJoin,
+	handleHonoApiChatRoomsJoining,
+	handleHonoApiChatRoomsLeave,
+	handleHonoApiChatRoomsMembers,
+	handleHonoApiChatRoomsMute,
+	handleHonoApiChatRoomsOwned,
+	handleHonoApiChatRoomsShow,
+	handleHonoApiChatRoomsUpdate,
+} from '../chat.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
@@ -41,10 +67,15 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimitForUser(deps, 'chat/messages/create-to-user', {
-				duration: 60 * 60 * 1000,
-				max: 500,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'chat/messages/create-to-user',
+				{
+					duration: 60 * 60 * 1000,
+					max: 500,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiChatMessagesCreateToUser(deps, auth.user, body));
 		});
@@ -57,10 +88,15 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimitForUser(deps, 'chat/messages/create-to-room', {
-				duration: 60 * 60 * 1000,
-				max: 500,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'chat/messages/create-to-room',
+				{
+					duration: 60 * 60 * 1000,
+					max: 500,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiChatMessagesCreateToRoom(deps, auth.user, body));
 		});
@@ -153,10 +189,15 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimitForUser(deps, 'chat/rooms/create', {
-				duration: 24 * 60 * 60 * 1000,
-				max: 10,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'chat/rooms/create',
+				{
+					duration: 24 * 60 * 60 * 1000,
+					max: 10,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiChatRoomsCreate(deps, auth.user, body));
 		});
@@ -272,10 +313,15 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimitForUser(deps, 'chat/rooms/invitations/create', {
-				duration: 24 * 60 * 60 * 1000,
-				max: 50,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'chat/rooms/invitations/create',
+				{
+					duration: 24 * 60 * 60 * 1000,
+					max: 50,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiChatRoomsInvitationsCreate(deps, auth.user, body));
 		});

@@ -78,7 +78,7 @@ type AchievementEarnedNotification = {
 	id: string;
 	createdAt: string;
 	type: 'achievementEarned';
-	achievement: typeof ACHIEVEMENT_TYPES[number];
+	achievement: (typeof ACHIEVEMENT_TYPES)[number];
 };
 
 type ScheduledNotePostedNotification = {
@@ -106,11 +106,20 @@ type ExportCompletedNotification = {
 	id: string;
 	createdAt: string;
 	type: 'exportCompleted';
-	exportedEntity: typeof userExportableEntities[number];
+	exportedEntity: (typeof userExportableEntities)[number];
 	fileId: MiDriveFile['id'];
 };
 
-type HonoStoredNotification = HonoSimpleNotification | RoleAssignedNotification | AppNotification | TestNotification | AchievementEarnedNotification | ScheduledNotePostedNotification | ScheduledNotePostFailedNotification | PollEndedNotification | ExportCompletedNotification;
+type HonoStoredNotification =
+	| HonoSimpleNotification
+	| RoleAssignedNotification
+	| AppNotification
+	| TestNotification
+	| AchievementEarnedNotification
+	| ScheduledNotePostedNotification
+	| ScheduledNotePostFailedNotification
+	| PollEndedNotification
+	| ExportCompletedNotification;
 
 type HonoPackedRoleAssignedNotification = {
 	id: string;
@@ -150,7 +159,7 @@ export const claimAchievementParamDef = z.object({
 });
 
 type ClaimAchievementParams = {
-	name: typeof ACHIEVEMENT_TYPES[number];
+	name: (typeof ACHIEVEMENT_TYPES)[number];
 };
 
 export function toXListId(id: string): string {
@@ -167,9 +176,12 @@ export async function xaddHonoApiNotification(
 		try {
 			return (await deps.redis.xadd(
 				`notificationTimeline:${userId}`,
-				'MAXLEN', '~', deps.config.limits.userNotifications.toString(),
+				'MAXLEN',
+				'~',
+				deps.config.limits.userNotifications.toString(),
 				toXListId(notification.id),
-				'data', JSON.stringify(notification),
+				'data',
+				JSON.stringify(notification),
 			))!;
 		} catch (err) {
 			if (err instanceof ReplyError) continue;
@@ -194,22 +206,27 @@ export async function xaddHonoApiNotifications(
 		for (const item of batch) {
 			pipeline.xadd(
 				`notificationTimeline:${item.userId}`,
-				'MAXLEN', '~', deps.config.limits.userNotifications.toString(),
+				'MAXLEN',
+				'~',
+				deps.config.limits.userNotifications.toString(),
 				toXListId(item.notification.id),
-				'data', JSON.stringify(item.notification),
+				'data',
+				JSON.stringify(item.notification),
 			);
 		}
 		const results = await pipeline.exec();
 		if (results == null) throw new Error('Failed to append notifications');
 
-		await Promise.all(results.map(([error], index) => {
-			if (error == null) return Promise.resolve();
-			if (error instanceof ReplyError) {
-				const item = batch[index]!;
-				return xaddHonoApiNotification(deps, item.userId, item.notification).then(() => undefined);
-			}
-			return Promise.reject(error);
-		}));
+		await Promise.all(
+			results.map(([error], index) => {
+				if (error == null) return Promise.resolve();
+				if (error instanceof ReplyError) {
+					const item = batch[index]!;
+					return xaddHonoApiNotification(deps, item.userId, item.notification).then(() => undefined);
+				}
+				return Promise.reject(error);
+			}),
+		);
 	}
 }
 
@@ -226,26 +243,32 @@ function createSimpleNotification(
 	userId: MiUser['id'],
 	type: HonoSimpleNotification['type'],
 ): void {
-	trackPromise((async () => {
-		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-		if (profile?.notificationRecieveConfig[type]?.type === 'never') return;
+	trackPromise(
+		(async () => {
+			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+			if (profile?.notificationRecieveConfig[type]?.type === 'never') return;
 
-		const notification = {
-			id: genId(),
-			createdAt: new Date().toISOString(),
-			type,
-		} satisfies HonoSimpleNotification;
-		const redisId = await xaddNotification(deps, userId, notification);
+			const notification = {
+				id: genId(),
+				createdAt: new Date().toISOString(),
+				type,
+			} satisfies HonoSimpleNotification;
+			const redisId = await xaddNotification(deps, userId, notification);
 
-		deps.publishMainStream?.(userId, 'notification', notification);
-		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			deps.publishMainStream?.(userId, 'notification', notification);
+			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
-		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
-			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-			deps.publishMainStream?.(userId, 'unreadNotification', notification);
-		}).catch(() => {}));
-	})());
+			trackPromise(
+				delay(2000, undefined, { ref: false })
+					.then(async () => {
+						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						deps.publishMainStream?.(userId, 'unreadNotification', notification);
+					})
+					.catch(() => {}),
+			);
+		})(),
+	);
 }
 
 export function createTokenNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
@@ -261,81 +284,107 @@ export function createRoleAssignedNotification(
 	userId: MiUser['id'],
 	role: MiRole,
 ): void {
-	trackPromise((async () => {
-		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-		if (profile?.notificationRecieveConfig.roleAssigned?.type === 'never') return;
+	trackPromise(
+		(async () => {
+			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+			if (profile?.notificationRecieveConfig.roleAssigned?.type === 'never') return;
 
-		const notification = {
-			id: genId(),
-			createdAt: new Date().toISOString(),
-			type: 'roleAssigned',
-			roleId: role.id,
-		} satisfies RoleAssignedNotification;
-		const redisId = await xaddNotification(deps, userId, notification);
-		const packed = {
-			id: notification.id,
-			createdAt: notification.createdAt,
-			type: notification.type,
-			role: await packHonoApiRole(deps, role),
-		} satisfies HonoPackedRoleAssignedNotification;
+			const notification = {
+				id: genId(),
+				createdAt: new Date().toISOString(),
+				type: 'roleAssigned',
+				roleId: role.id,
+			} satisfies RoleAssignedNotification;
+			const redisId = await xaddNotification(deps, userId, notification);
+			const packed = {
+				id: notification.id,
+				createdAt: notification.createdAt,
+				type: notification.type,
+				role: await packHonoApiRole(deps, role),
+			} satisfies HonoPackedRoleAssignedNotification;
 
-		deps.publishMainStream?.(userId, 'notification', packed);
-		void pushSwNotificationForHonoApi(deps, userId, 'notification', packed);
+			deps.publishMainStream?.(userId, 'notification', packed);
+			void pushSwNotificationForHonoApi(deps, userId, 'notification', packed);
 
-		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
-			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-			deps.publishMainStream?.(userId, 'unreadNotification', packed);
-		}).catch(() => {}));
-	})());
+			trackPromise(
+				delay(2000, undefined, { ref: false })
+					.then(async () => {
+						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						deps.publishMainStream?.(userId, 'unreadNotification', packed);
+					})
+					.catch(() => {}),
+			);
+		})(),
+	);
 }
 
-export function createScheduledNotePostedNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id'], noteId: string): void {
-	trackPromise((async () => {
-		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-		if (profile?.notificationRecieveConfig.scheduledNotePosted?.type === 'never') return;
+export function createScheduledNotePostedNotification(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+	noteId: string,
+): void {
+	trackPromise(
+		(async () => {
+			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+			if (profile?.notificationRecieveConfig.scheduledNotePosted?.type === 'never') return;
 
-		const notification = {
-			id: genId(),
-			createdAt: new Date().toISOString(),
-			type: 'scheduledNotePosted',
-			noteId,
-		} satisfies ScheduledNotePostedNotification;
-		const redisId = await xaddNotification(deps, userId, notification);
+			const notification = {
+				id: genId(),
+				createdAt: new Date().toISOString(),
+				type: 'scheduledNotePosted',
+				noteId,
+			} satisfies ScheduledNotePostedNotification;
+			const redisId = await xaddNotification(deps, userId, notification);
 
-		deps.publishMainStream?.(userId, 'notification', notification);
-		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			deps.publishMainStream?.(userId, 'notification', notification);
+			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
-		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
-			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-			deps.publishMainStream?.(userId, 'unreadNotification', notification);
-		}).catch(() => {}));
-	})());
+			trackPromise(
+				delay(2000, undefined, { ref: false })
+					.then(async () => {
+						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						deps.publishMainStream?.(userId, 'unreadNotification', notification);
+					})
+					.catch(() => {}),
+			);
+		})(),
+	);
 }
 
-export function createScheduledNotePostFailedNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id'], noteDraftId: string): void {
-	trackPromise((async () => {
-		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-		if (profile?.notificationRecieveConfig.scheduledNotePostFailed?.type === 'never') return;
+export function createScheduledNotePostFailedNotification(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+	noteDraftId: string,
+): void {
+	trackPromise(
+		(async () => {
+			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+			if (profile?.notificationRecieveConfig.scheduledNotePostFailed?.type === 'never') return;
 
-		const notification = {
-			id: genId(),
-			createdAt: new Date().toISOString(),
-			type: 'scheduledNotePostFailed',
-			noteDraftId,
-		} satisfies ScheduledNotePostFailedNotification;
-		const redisId = await xaddNotification(deps, userId, notification);
+			const notification = {
+				id: genId(),
+				createdAt: new Date().toISOString(),
+				type: 'scheduledNotePostFailed',
+				noteDraftId,
+			} satisfies ScheduledNotePostFailedNotification;
+			const redisId = await xaddNotification(deps, userId, notification);
 
-		deps.publishMainStream?.(userId, 'notification', notification);
-		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			deps.publishMainStream?.(userId, 'notification', notification);
+			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
-		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
-			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-			deps.publishMainStream?.(userId, 'unreadNotification', notification);
-		}).catch(() => {}));
-	})());
+			trackPromise(
+				delay(2000, undefined, { ref: false })
+					.then(async () => {
+						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						deps.publishMainStream?.(userId, 'unreadNotification', notification);
+					})
+					.catch(() => {}),
+			);
+		})(),
+	);
 }
 
 export async function createPollEndedNotification(
@@ -344,7 +393,7 @@ export async function createPollEndedNotification(
 	noteId: string,
 	profile?: MiUserProfile,
 ): Promise<void> {
-	const resolvedProfile = profile ?? await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+	const resolvedProfile = profile ?? (await fetchUserProfileByUserIdFromDatabase(deps.db, userId));
 	if (resolvedProfile?.notificationRecieveConfig.pollEnded?.type === 'never') return;
 
 	const notification = {
@@ -358,41 +407,51 @@ export async function createPollEndedNotification(
 	deps.publishMainStream?.(userId, 'notification', notification);
 	void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
-	trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
-		const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-		if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-		deps.publishMainStream?.(userId, 'unreadNotification', notification);
-	}).catch(() => {}));
+	trackPromise(
+		delay(2000, undefined, { ref: false })
+			.then(async () => {
+				const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+				if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+				deps.publishMainStream?.(userId, 'unreadNotification', notification);
+			})
+			.catch(() => {}),
+	);
 }
 
 export function createExportCompletedNotification(
 	deps: HonoApiNotificationDependencies,
 	userId: MiUser['id'],
-	exportedEntity: typeof userExportableEntities[number],
+	exportedEntity: (typeof userExportableEntities)[number],
 	fileId: MiDriveFile['id'],
 ): void {
-	trackPromise((async () => {
-		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-		if (profile?.notificationRecieveConfig.exportCompleted?.type === 'never') return;
+	trackPromise(
+		(async () => {
+			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+			if (profile?.notificationRecieveConfig.exportCompleted?.type === 'never') return;
 
-		const notification = {
-			id: genId(),
-			createdAt: new Date().toISOString(),
-			type: 'exportCompleted',
-			exportedEntity,
-			fileId,
-		} satisfies ExportCompletedNotification;
-		const redisId = await xaddNotification(deps, userId, notification);
+			const notification = {
+				id: genId(),
+				createdAt: new Date().toISOString(),
+				type: 'exportCompleted',
+				exportedEntity,
+				fileId,
+			} satisfies ExportCompletedNotification;
+			const redisId = await xaddNotification(deps, userId, notification);
 
-		deps.publishMainStream?.(userId, 'notification', notification);
-		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			deps.publishMainStream?.(userId, 'notification', notification);
+			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
-		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
-			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-			deps.publishMainStream?.(userId, 'unreadNotification', notification);
-		}).catch(() => {}));
-	})());
+			trackPromise(
+				delay(2000, undefined, { ref: false })
+					.then(async () => {
+						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						deps.publishMainStream?.(userId, 'unreadNotification', notification);
+					})
+					.catch(() => {}),
+			);
+		})(),
+	);
 }
 
 export function createAppNotification(
@@ -405,105 +464,122 @@ export function createAppNotification(
 		customIcon: string | null;
 	},
 ): void {
-	trackPromise((async () => {
-		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-		if (profile?.notificationRecieveConfig.app?.type === 'never') return;
+	trackPromise(
+		(async () => {
+			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+			if (profile?.notificationRecieveConfig.app?.type === 'never') return;
 
-		const notification = {
-			id: genId(),
-			createdAt: new Date().toISOString(),
-			type: 'app',
-			appAccessTokenId: data.appAccessTokenId,
-			customBody: data.customBody,
-			customHeader: data.customHeader,
-			customIcon: data.customIcon,
-		} satisfies AppNotification;
-		const redisId = await xaddNotification(deps, userId, notification);
-		const packed = {
-			id: notification.id,
-			createdAt: notification.createdAt,
-			type: notification.type,
-			body: notification.customBody,
-			header: notification.customHeader,
-			icon: notification.customIcon,
-		} satisfies HonoPackedAppNotification;
+			const notification = {
+				id: genId(),
+				createdAt: new Date().toISOString(),
+				type: 'app',
+				appAccessTokenId: data.appAccessTokenId,
+				customBody: data.customBody,
+				customHeader: data.customHeader,
+				customIcon: data.customIcon,
+			} satisfies AppNotification;
+			const redisId = await xaddNotification(deps, userId, notification);
+			const packed = {
+				id: notification.id,
+				createdAt: notification.createdAt,
+				type: notification.type,
+				body: notification.customBody,
+				header: notification.customHeader,
+				icon: notification.customIcon,
+			} satisfies HonoPackedAppNotification;
 
-		deps.publishMainStream?.(userId, 'notification', packed);
-		void pushSwNotificationForHonoApi(deps, userId, 'notification', packed);
+			deps.publishMainStream?.(userId, 'notification', packed);
+			void pushSwNotificationForHonoApi(deps, userId, 'notification', packed);
 
-		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
-			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-			deps.publishMainStream?.(userId, 'unreadNotification', packed);
-		}).catch(() => {}));
-	})());
+			trackPromise(
+				delay(2000, undefined, { ref: false })
+					.then(async () => {
+						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						deps.publishMainStream?.(userId, 'unreadNotification', packed);
+					})
+					.catch(() => {}),
+			);
+		})(),
+	);
 }
 
 export function createTestNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
-	trackPromise((async () => {
-		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-		if (profile?.notificationRecieveConfig.test?.type === 'never') return;
+	trackPromise(
+		(async () => {
+			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+			if (profile?.notificationRecieveConfig.test?.type === 'never') return;
 
-		const notification = {
-			id: genId(),
-			createdAt: new Date().toISOString(),
-			type: 'test',
-		} satisfies TestNotification;
-		const redisId = await xaddNotification(deps, userId, notification);
+			const notification = {
+				id: genId(),
+				createdAt: new Date().toISOString(),
+				type: 'test',
+			} satisfies TestNotification;
+			const redisId = await xaddNotification(deps, userId, notification);
 
-		deps.publishMainStream?.(userId, 'notification', notification);
-		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			deps.publishMainStream?.(userId, 'notification', notification);
+			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
-		const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-		if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-		deps.publishMainStream?.(userId, 'unreadNotification', notification);
-	})());
+			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+			deps.publishMainStream?.(userId, 'unreadNotification', notification);
+		})(),
+	);
 }
 
 function createAchievementEarnedNotification(
 	deps: HonoApiNotificationDependencies,
 	userId: MiUser['id'],
-	achievement: typeof ACHIEVEMENT_TYPES[number],
+	achievement: (typeof ACHIEVEMENT_TYPES)[number],
 ): void {
-	trackPromise((async () => {
-		const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
-		if (profile?.notificationRecieveConfig.achievementEarned?.type === 'never') return;
+	trackPromise(
+		(async () => {
+			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
+			if (profile?.notificationRecieveConfig.achievementEarned?.type === 'never') return;
 
-		const notification = {
-			id: genId(),
-			createdAt: new Date().toISOString(),
-			type: 'achievementEarned',
-			achievement,
-		} satisfies AchievementEarnedNotification;
-		const redisId = await xaddNotification(deps, userId, notification);
+			const notification = {
+				id: genId(),
+				createdAt: new Date().toISOString(),
+				type: 'achievementEarned',
+				achievement,
+			} satisfies AchievementEarnedNotification;
+			const redisId = await xaddNotification(deps, userId, notification);
 
-		deps.publishMainStream?.(userId, 'notification', notification);
-		void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			deps.publishMainStream?.(userId, 'notification', notification);
+			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
 
-		trackPromise(delay(2000, undefined, { ref: false }).then(async () => {
-			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
-			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
-			deps.publishMainStream?.(userId, 'unreadNotification', notification);
-		}).catch(() => {}));
-	})());
+			trackPromise(
+				delay(2000, undefined, { ref: false })
+					.then(async () => {
+						const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
+						if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
+						deps.publishMainStream?.(userId, 'unreadNotification', notification);
+					})
+					.catch(() => {}),
+			);
+		})(),
+	);
 }
 
 export async function grantAchievementForHonoApi(
 	deps: HonoApiNotificationDependencies,
 	userId: MiUser['id'],
-	name: typeof ACHIEVEMENT_TYPES[number],
+	name: (typeof ACHIEVEMENT_TYPES)[number],
 ): Promise<void> {
 	if (!(ACHIEVEMENT_TYPES as readonly string[]).includes(name)) return;
 
 	const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
 	if (profile == null) return;
-	if (profile.achievements.some(a => a.name === name)) return;
+	if (profile.achievements.some((a) => a.name === name)) return;
 
 	await updateUserProfileInDatabase(deps.db, userId, {
-		achievements: [...profile.achievements, {
-			name,
-			unlockedAt: Date.now(),
-		}],
+		achievements: [
+			...profile.achievements,
+			{
+				name,
+				unlockedAt: Date.now(),
+			},
+		],
 	});
 
 	createAchievementEarnedNotification(deps, userId, name);
@@ -518,7 +594,10 @@ export async function handleHonoApiIClaimAchievement(
 	await grantAchievementForHonoApi(deps, me.id, params.name);
 }
 
-async function flushAllHonoApiNotifications(deps: HonoApiNotificationDependencies, userId: MiUser['id']): Promise<void> {
+async function flushAllHonoApiNotifications(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+): Promise<void> {
 	await Promise.all([
 		deps.redis.del(`notificationTimeline:${userId}`),
 		deps.redis.del(`latestReadNotification:${userId}`),
@@ -526,7 +605,11 @@ async function flushAllHonoApiNotifications(deps: HonoApiNotificationDependencie
 	deps.publishMainStream?.(userId, 'notificationFlushed');
 }
 
-export async function markAllHonoApiNotificationsAsRead(deps: HonoApiNotificationDependencies, userId: MiUser['id'], force: boolean): Promise<void> {
+export async function markAllHonoApiNotificationsAsRead(
+	deps: HonoApiNotificationDependencies,
+	userId: MiUser['id'],
+	force: boolean,
+): Promise<void> {
 	const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 
 	const latestNotificationIdsRes = await deps.redis.xrevrange(`notificationTimeline:${userId}`, '+', '-', 'COUNT', 1);
@@ -595,8 +678,13 @@ export async function handleHonoApiNotificationsDelete(
 			if (targetKey != null) {
 				let first = targetIndex;
 				let last = targetIndex;
-				while (first > 0 && notificationGroupKey(parseNotification(entries[first - 1]![1]) ?? {}) === targetKey) first--;
-				while (last + 1 < entries.length && notificationGroupKey(parseNotification(entries[last + 1]![1]) ?? {}) === targetKey) last++;
+				while (first > 0 && notificationGroupKey(parseNotification(entries[first - 1]![1]) ?? {}) === targetKey)
+					first--;
+				while (
+					last + 1 < entries.length &&
+					notificationGroupKey(parseNotification(entries[last + 1]![1]) ?? {}) === targetKey
+				)
+					last++;
 				idsToDelete = entries.slice(first, last + 1).map(([id]) => id);
 			}
 		}

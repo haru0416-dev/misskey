@@ -6,8 +6,10 @@
 import ipaddr from 'ipaddr.js';
 
 function ipPrefixBits(ip: string, bits: number): string {
-	const binary = ipaddr.parse(ip).toByteArray()
-		.map(byte => byte.toString(2).padStart(8, '0'))
+	const binary = ipaddr
+		.parse(ip)
+		.toByteArray()
+		.map((byte) => byte.toString(2).padStart(8, '0'))
 		.join('');
 	return binary.slice(0, bits);
 }

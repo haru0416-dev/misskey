@@ -22,8 +22,8 @@ type ApiRoute = {
 };
 
 export function assertApiRouteContract(app: Pick<Hono, 'routes'>): void {
-	const routes = app.routes.filter(route => route.path !== '/*' && route.path !== '*' && route.method !== 'OPTIONS');
-	const routeKeys = routes.map(route => `${route.method} ${route.path}`);
+	const routes = app.routes.filter((route) => route.path !== '/*' && route.path !== '*' && route.method !== 'OPTIONS');
+	const routeKeys = routes.map((route) => `${route.method} ${route.path}`);
 	const routeKeySet = new Set(routeKeys);
 	const errors: string[] = [];
 

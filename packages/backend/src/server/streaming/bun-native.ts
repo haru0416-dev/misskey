@@ -26,7 +26,10 @@ function resolveStreamingToken(authHeader: string | null, url: URL): string | nu
 }
 
 function errorResponse(error: HonoApiError): Response {
-	return new Response(error.message, { status: error.status, headers: { 'Content-Type': 'text/plain', ...error.headers } });
+	return new Response(error.message, {
+		status: error.status,
+		headers: { 'Content-Type': 'text/plain', ...error.headers },
+	});
 }
 
 /**
@@ -57,8 +60,11 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 				// eslint-disable-next-line no-await-in-loop
 				await refreshHonoStreamConnections(activeConnections);
 			} while (reconnectRefreshQueued);
-		})().catch(error => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
-			.finally(() => { reconnectRefreshPromise = undefined; });
+		})()
+			.catch((error) => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
+			.finally(() => {
+				reconnectRefreshPromise = undefined;
+			});
 	};
 	deps.redisForSub.on('ready', onRedisReady);
 
@@ -87,15 +93,24 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 		}
 
 		if (authenticated.token != null && !authenticated.token.permission.includes('read:account')) {
-			return errorResponse(new HonoApiError({
-				status: 403,
-				message: 'Your app does not have necessary permissions to use websocket API.',
-				code: 'PERMISSION_DENIED',
-				id: '1370e5b7-d4eb-4566-bb1d-7748ee6a1e3c',
-			}));
+			return errorResponse(
+				new HonoApiError({
+					status: 403,
+					message: 'Your app does not have necessary permissions to use websocket API.',
+					code: 'PERMISSION_DENIED',
+					id: '1370e5b7-d4eb-4566-bb1d-7748ee6a1e3c',
+				}),
+			);
 		}
 		if (authenticated.user?.isSuspended) {
-			return errorResponse(new HonoApiError({ status: 403, message: 'Your account has been suspended.', code: 'YOUR_ACCOUNT_SUSPENDED', id: 'a8c724b3-6e9c-4b46-b1a8-bc3ed57db7f7' }));
+			return errorResponse(
+				new HonoApiError({
+					status: 403,
+					message: 'Your account has been suspended.',
+					code: 'YOUR_ACCOUNT_SUSPENDED',
+					id: 'a8c724b3-6e9c-4b46-b1a8-bc3ed57db7f7',
+				}),
+			);
 		}
 
 		const connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
@@ -119,7 +134,9 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 			activeConnections.set(connection, () => ws.terminate());
 			connections.set(ws, Date.now());
 
-			connection.listen(globalEv, raw => { ws.send(raw); });
+			connection.listen(globalEv, (raw) => {
+				ws.send(raw);
+			});
 
 			let lastActiveIntervalId: NodeJS.Timeout | undefined;
 			if (connection.user) {

@@ -5,12 +5,43 @@
 
 import type { Hono } from 'hono';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
-import { handleHonoApiDrive, handleHonoApiDriveFilesCheckExistence, handleHonoApiDriveFolders, handleHonoApiDriveFoldersCreate, handleHonoApiDriveFoldersDelete, handleHonoApiDriveFoldersFind, handleHonoApiDriveFoldersShow, handleHonoApiDriveFoldersUpdate } from '../drive.js';
-import { handleHonoApiDriveFilesAttachedChatMessages, handleHonoApiDriveFilesAttachedNotes, handleHonoApiDriveFilesDelete, handleHonoApiDriveFilesFind, handleHonoApiDriveFilesFindByHash, handleHonoApiDriveFilesList, handleHonoApiDriveFilesMoveBulk, handleHonoApiDriveFilesShow, handleHonoApiDriveFilesUpdate, handleHonoApiDriveStream } from '../drive-files.js';
-import { handleHonoApiDriveFilesCreate, handleHonoApiDriveFilesUploadFromUrl, readHonoApiMultipartRequest } from '../drive-file-upload.js';
+import {
+	handleHonoApiDrive,
+	handleHonoApiDriveFilesCheckExistence,
+	handleHonoApiDriveFolders,
+	handleHonoApiDriveFoldersCreate,
+	handleHonoApiDriveFoldersDelete,
+	handleHonoApiDriveFoldersFind,
+	handleHonoApiDriveFoldersShow,
+	handleHonoApiDriveFoldersUpdate,
+} from '../drive.js';
+import {
+	handleHonoApiDriveFilesAttachedChatMessages,
+	handleHonoApiDriveFilesAttachedNotes,
+	handleHonoApiDriveFilesDelete,
+	handleHonoApiDriveFilesFind,
+	handleHonoApiDriveFilesFindByHash,
+	handleHonoApiDriveFilesList,
+	handleHonoApiDriveFilesMoveBulk,
+	handleHonoApiDriveFilesShow,
+	handleHonoApiDriveFilesUpdate,
+	handleHonoApiDriveStream,
+} from '../drive-files.js';
+import {
+	handleHonoApiDriveFilesCreate,
+	handleHonoApiDriveFilesUploadFromUrl,
+	readHonoApiMultipartRequest,
+} from '../drive-file-upload.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { invalidParamError, payloadTooLargeError } from '../error.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, getRequestIp, runApiEndpoint } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	getRequestIp,
+	runApiEndpoint,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -48,10 +79,15 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 				assertCredential(auth);
 				assertProhibitMoved(auth.user);
 				assertTokenPermission(auth, 'write:drive');
-				await assertHonoApiRateLimitForUser(deps, 'drive/files/create', {
-					duration: 60 * 60 * 1000,
-					max: 120,
-				}, auth.user);
+				await assertHonoApiRateLimitForUser(
+					deps,
+					'drive/files/create',
+					{
+						duration: 60 * 60 * 1000,
+						max: 120,
+					},
+					auth.user,
+				);
 
 				const ip = getRequestIp(c, deps.config);
 				const headers = Object.fromEntries(c.req.raw.headers.entries());
@@ -70,10 +106,15 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:drive');
-			await assertHonoApiRateLimitForUser(deps, 'drive/files/upload-from-url', {
-				duration: 60 * 60 * 1000,
-				max: 60,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'drive/files/upload-from-url',
+				{
+					duration: 60 * 60 * 1000,
+					max: 60,
+				},
+				auth.user,
+			);
 
 			const ip = getRequestIp(c, deps.config);
 			const headers = Object.fromEntries(c.req.raw.headers.entries());
@@ -212,10 +253,15 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:drive');
-			await assertHonoApiRateLimitForUser(deps, 'drive/folders/create', {
-				duration: 60 * 60 * 1000,
-				max: 10,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'drive/folders/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 10,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiDriveFoldersCreate(deps, auth.user, body));
 		});

@@ -18,7 +18,9 @@ export function validateContentTypeSetAsActivityPub(response: ResponseLike): voi
 	) {
 		return;
 	}
-	throw new Error('Validate content type of AP response: Content type is not application/activity+json or application/ld+json');
+	throw new Error(
+		'Validate content type of AP response: Content type is not application/activity+json or application/ld+json',
+	);
 }
 
 const plusJsonSuffixRegex = /^\s*(application|text)\/[a-zA-Z0-9\.\-\+]+\+json\s*(;|$)/;

@@ -17,7 +17,6 @@ export const adminGetUserIpsParamDef = z.object({
 	userId: misskeyId(),
 });
 
-
 type AdminGetUserIpsResponse = {
 	ip: string;
 	createdAt: string;
@@ -30,7 +29,7 @@ export async function handleHonoApiAdminGetUserIps(
 	const params = parseHonoApiParams(adminGetUserIpsParamDef, body);
 	const ips = await listUserIpsFromDatabase(deps.db, params.userId, 30);
 
-	return ips.map(row => ({
+	return ips.map((row) => ({
 		ip: row.ip,
 		createdAt: row.createdAt.toISOString(),
 	}));

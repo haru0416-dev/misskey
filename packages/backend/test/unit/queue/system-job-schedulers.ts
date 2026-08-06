@@ -21,7 +21,7 @@ const config = {
 
 function createQueue(registeredKeys: string[] = []) {
 	const upsertJobScheduler = vi.fn().mockResolvedValue(undefined);
-	const getJobSchedulers = vi.fn().mockResolvedValue(registeredKeys.map(key => ({ key })));
+	const getJobSchedulers = vi.fn().mockResolvedValue(registeredKeys.map((key) => ({ key })));
 	const removeJobScheduler = vi.fn().mockResolvedValue(true);
 
 	return {
@@ -44,16 +44,20 @@ describe('syncSystemJobSchedulers', () => {
 
 		expect(upsertJobScheduler).toHaveBeenCalledTimes(systemJobSchedulers.length);
 		for (const scheduler of systemJobSchedulers) {
-			expect(upsertJobScheduler).toHaveBeenCalledWith(scheduler.name, {
-				pattern: scheduler.pattern,
-				immediately: false,
-			}, {
-				name: scheduler.name,
-				opts: {
-					removeOnComplete: { age: 600, count: 20 },
-					removeOnFail: { age: 1200, count: 40 },
+			expect(upsertJobScheduler).toHaveBeenCalledWith(
+				scheduler.name,
+				{
+					pattern: scheduler.pattern,
+					immediately: false,
 				},
-			});
+				{
+					name: scheduler.name,
+					opts: {
+						removeOnComplete: { age: 600, count: 20 },
+						removeOnFail: { age: 1200, count: 40 },
+					},
+				},
+			);
 		}
 	});
 

@@ -8,8 +8,16 @@ import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
-import { createSignupAccountInDatabase, DuplicatedUsernameError, RootUserAlreadyAssignedError, UsedUsernameError } from '@/core/SignupStore.js';
-import { fetchRegistrationTicketByPendingUserIdFromDatabase, updateRegistrationTicketInDatabase } from '@/core/RegistrationTicketStore.js';
+import {
+	createSignupAccountInDatabase,
+	DuplicatedUsernameError,
+	RootUserAlreadyAssignedError,
+	UsedUsernameError,
+} from '@/core/SignupStore.js';
+import {
+	fetchRegistrationTicketByPendingUserIdFromDatabase,
+	updateRegistrationTicketInDatabase,
+} from '@/core/RegistrationTicketStore.js';
 import { deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -24,7 +32,12 @@ import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import { listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
 import type { SystemWebhookDeliverQueue } from '@/core/queues.js';
 import { HonoApiError, signupValidationError } from './error.js';
-import { completeHonoApiSignin, type HonoApiSigninDependencies, type HonoApiSigninFlowResult, type HonoApiSigninRequest } from './signin.js';
+import {
+	completeHonoApiSignin,
+	type HonoApiSigninDependencies,
+	type HonoApiSigninFlowResult,
+	type HonoApiSigninRequest,
+} from './signin.js';
 import { packMeDetailedForHonoApi, packUserLiteForHonoApi } from './user.js';
 
 type SignupBody = {
@@ -76,7 +89,8 @@ function assertSignupGateOpen(meta: MiMeta): void {
 	if (process.env['NODE_ENV'] === 'test') return;
 
 	if (meta.enableHcaptcha && meta.hcaptchaSecretKey) throw signupValidationError('CAPTCHA_REQUIRED');
-	if (meta.enableMcaptcha && meta.mcaptchaSecretKey && meta.mcaptchaSitekey && meta.mcaptchaInstanceUrl) throw signupValidationError('CAPTCHA_REQUIRED');
+	if (meta.enableMcaptcha && meta.mcaptchaSecretKey && meta.mcaptchaSitekey && meta.mcaptchaInstanceUrl)
+		throw signupValidationError('CAPTCHA_REQUIRED');
 	if (meta.enableRecaptcha && meta.recaptchaSecretKey) throw signupValidationError('CAPTCHA_REQUIRED');
 	if (meta.enableTurnstile && meta.turnstileSecretKey) throw signupValidationError('CAPTCHA_REQUIRED');
 	if (meta.enableTestcaptcha) throw signupValidationError('CAPTCHA_REQUIRED');
@@ -85,7 +99,7 @@ function assertSignupGateOpen(meta: MiMeta): void {
 }
 
 function assertUsernameAvailableForNonRoot(meta: MiMeta, usernameLower: string): void {
-	if (meta.preservedUsernames.map(x => x.toLowerCase()).includes(usernameLower)) {
+	if (meta.preservedUsernames.map((x) => x.toLowerCase()).includes(usernameLower)) {
 		throw signupValidationError('USED_USERNAME');
 	}
 
@@ -96,7 +110,7 @@ function assertUsernameAvailableForNonRoot(meta: MiMeta, usernameLower: string):
 
 export async function packSignupUser(deps: SignupDependencies, user: MiUser, token: string): Promise<SignupResponse> {
 	return {
-		...await packMeDetailedForHonoApi(deps, user, { includeSecrets: true }),
+		...(await packMeDetailedForHonoApi(deps, user, { includeSecrets: true })),
 		token,
 	};
 }
@@ -138,10 +152,11 @@ export async function createLocalSignupAccount(
 		publicKey: keyPair.publicKey,
 		privateKey: keyPair.privateKey,
 	};
-	const createAccount = async (claimRoot: boolean) => await createSignupAccountInDatabase(deps.db, {
-		...accountData,
-		claimRoot,
-	});
+	const createAccount = async (claimRoot: boolean) =>
+		await createSignupAccountInDatabase(deps.db, {
+			...accountData,
+			claimRoot,
+		});
 	const handleCreationError = (error: unknown): never => {
 		if (error instanceof DuplicatedUsernameError) throw signupValidationError('DUPLICATED_USERNAME');
 		if (error instanceof UsedUsernameError) throw signupValidationError('USED_USERNAME');
@@ -177,7 +192,9 @@ export async function createLocalSignupAccount(
 			const webhooks = await listSystemWebhooksFromDatabase(deps.db, { isActive: true, on: ['userCreated'] });
 			if (webhooks.length === 0) return;
 			const packed = await packUserLiteForHonoApi(deps, account);
-			await Promise.all(webhooks.map(webhook => enqueueSystemWebhookDeliverJob(queue, deps.config, webhook, 'userCreated', packed)));
+			await Promise.all(
+				webhooks.map((webhook) => enqueueSystemWebhookDeliverJob(queue, deps.config, webhook, 'userCreated', packed)),
+			);
 		})().catch(() => {});
 	}
 
@@ -214,7 +231,7 @@ export async function signupPendingWithHonoApi(
 	try {
 		const pendingUser = await fetchUserPendingByCodeFromDatabase(deps.db, code);
 
-		if (parseId(pendingUser.id).date.getTime() + (1000 * 60 * 30) < Date.now()) {
+		if (parseId(pendingUser.id).date.getTime() + 1000 * 60 * 30 < Date.now()) {
 			throw signupValidationError('EXPIRED');
 		}
 

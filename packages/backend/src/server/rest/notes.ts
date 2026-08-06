@@ -10,7 +10,12 @@ import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMut
 import { listClipNoteClipIdsByNoteIdFromDatabase } from '@/core/ClipNoteStore.js';
 import { listClipsByIdsFromDatabase } from '@/core/ClipStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
-import { createNoteFavoriteInDatabase, deleteNoteFavoriteByIdFromDatabase, fetchNoteFavoriteFromDatabase, noteFavoriteExistsInDatabase } from '@/core/NoteFavoriteStore.js';
+import {
+	createNoteFavoriteInDatabase,
+	deleteNoteFavoriteByIdFromDatabase,
+	fetchNoteFavoriteFromDatabase,
+	noteFavoriteExistsInDatabase,
+} from '@/core/NoteFavoriteStore.js';
 import {
 	fetchNoteByIdFromDatabase,
 	fetchNoteByIdOrFailFromDatabase,
@@ -29,11 +34,19 @@ import {
 	listUserListTimelineNotesFromDatabase,
 	searchNotesByTextFromDatabase,
 } from '@/core/NoteStore.js';
-import { createNoteThreadMutingInDatabase, deleteNoteThreadMutingFromDatabase, noteThreadMutingExistsInDatabase } from '@/core/NoteThreadMutingStore.js';
+import {
+	createNoteThreadMutingInDatabase,
+	deleteNoteThreadMutingFromDatabase,
+	noteThreadMutingExistsInDatabase,
+} from '@/core/NoteThreadMutingStore.js';
 import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/PollStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
-import { fanoutViewerRelationKinds, fetchViewerRelationSnapshotFromDatabase, homeTimelineViewerRelationKinds } from '@/core/ViewerRelationStore.js';
+import {
+	fanoutViewerRelationKinds,
+	fetchViewerRelationSnapshotFromDatabase,
+	homeTimelineViewerRelationKinds,
+} from '@/core/ViewerRelationStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
@@ -47,17 +60,24 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { packClipsManyForHonoApi, type HonoApiClipDependencies } from './clips.js';
 import { HonoApiError } from './error.js';
-import { fetchNoteDiffsForHonoApi, filterVisibleNotesForHonoApi, packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js';
+import {
+	fetchNoteDiffsForHonoApi,
+	filterVisibleNotesForHonoApi,
+	packNoteForHonoApi,
+	packNoteManyForHonoApi,
+	type HonoApiNoteDependencies,
+} from './note.js';
 import { grantAchievementForHonoApi, type HonoApiNotificationDependencies } from './notification.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { getFanoutTimelineNotesForHonoApi } from './fanout-timeline.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiNotesDependencies = HonoApiNoteDependencies & HonoApiNotificationDependencies & {
-	meta: MiMeta;
-	/** fanout タイムライン (Redis) 読み取りに必要。省略時は常にDBから読む。 */
-	redisForTimelines?: Redis.Redis;
-};
+export type HonoApiNotesDependencies = HonoApiNoteDependencies &
+	HonoApiNotificationDependencies & {
+		meta: MiMeta;
+		/** fanout タイムライン (Redis) 読み取りに必要。省略時は常にDBから読む。 */
+		redisForTimelines?: Redis.Redis;
+	};
 
 export const notesShowParamDef = z.object({
 	noteId: misskeyId(),
@@ -146,7 +166,12 @@ export async function handleHonoApiNotesChildren(
 }
 
 function notesConversationNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'e1035875-9551-45ec-afa8-1ded1fcb53c8' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: 'e1035875-9551-45ec-afa8-1ded1fcb53c8',
+	});
 }
 
 export const notesConversationParamDef = z.object({
@@ -195,7 +220,11 @@ export async function handleHonoApiNotesConversation(
 		await get(note.replyId);
 	}
 
-	return await packNoteManyForHonoApi(deps, conversation.filter(n => n != null), me);
+	return await packNoteManyForHonoApi(
+		deps,
+		conversation.filter((n) => n != null),
+		me,
+	);
 }
 
 export const notesMentionsParamDef = z.object({
@@ -226,15 +255,18 @@ export async function handleHonoApiNotesMentions(
 	const params = parseHonoApiParams(notesMentionsParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
-	const mentions = await listMentionNotesFromDatabase(deps.db, omitUndefined({
-		me,
-		limit: params.limit,
-		sinceId,
-		untilId,
-		visibility: params.visibility,
-		following: params.following,
-		blockedHosts: deps.meta.blockedHosts,
-	}));
+	const mentions = await listMentionNotesFromDatabase(
+		deps.db,
+		omitUndefined({
+			me,
+			limit: params.limit,
+			sinceId,
+			untilId,
+			visibility: params.visibility,
+			following: params.following,
+			blockedHosts: deps.meta.blockedHosts,
+		}),
+	);
 
 	return await packNoteManyForHonoApi(deps, mentions, me);
 }
@@ -260,7 +292,12 @@ export async function handleHonoApiNotesReplies(
 }
 
 function notesRenotesNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '12908022-2e21-46cd-ba6a-3edaf6093f46' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: '12908022-2e21-46cd-ba6a-3edaf6093f46',
+	});
 }
 
 export async function handleHonoApiNotesRenotes(
@@ -314,11 +351,21 @@ export async function handleHonoApiNotesState(
 }
 
 function notesFavoritesCreateNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '6dd26674-e060-4816-909a-45ba3f4da458' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: '6dd26674-e060-4816-909a-45ba3f4da458',
+	});
 }
 
 function notesFavoritesCreateAlreadyFavoritedError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'The note has already been marked as a favorite.', code: 'ALREADY_FAVORITED', id: 'a402c12b-34dd-41d2-97d8-4d2ffd96a1a6' });
+	return new HonoApiError({
+		status: 400,
+		message: 'The note has already been marked as a favorite.',
+		code: 'ALREADY_FAVORITED',
+		id: 'a402c12b-34dd-41d2-97d8-4d2ffd96a1a6',
+	});
 }
 
 export async function handleHonoApiNotesFavoritesCreate(
@@ -352,11 +399,21 @@ export async function handleHonoApiNotesFavoritesCreate(
 }
 
 function notesFavoritesDeleteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '80848a2c-398f-4343-baa9-df1d57696c56' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: '80848a2c-398f-4343-baa9-df1d57696c56',
+	});
 }
 
 function notesFavoritesDeleteNotFavoritedError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'You have not marked that note a favorite.', code: 'NOT_FAVORITED', id: 'b625fc69-635e-45e9-86f4-dbefbef35af5' });
+	return new HonoApiError({
+		status: 400,
+		message: 'You have not marked that note a favorite.',
+		code: 'NOT_FAVORITED',
+		id: 'b625fc69-635e-45e9-86f4-dbefbef35af5',
+	});
 }
 
 export async function handleHonoApiNotesFavoritesDelete(
@@ -375,7 +432,12 @@ export async function handleHonoApiNotesFavoritesDelete(
 }
 
 function notesThreadMutingCreateNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '5ff67ada-ed3b-2e71-8e87-a1a421e177d2' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: '5ff67ada-ed3b-2e71-8e87-a1a421e177d2',
+	});
 }
 
 export async function handleHonoApiNotesThreadMutingCreate(
@@ -395,7 +457,12 @@ export async function handleHonoApiNotesThreadMutingCreate(
 }
 
 function notesThreadMutingDeleteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'bddd57ac-ceb3-b29d-4334-86ea5fae481a' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: 'bddd57ac-ceb3-b29d-4334-86ea5fae481a',
+	});
 }
 
 export async function handleHonoApiNotesThreadMutingDelete(
@@ -439,7 +506,12 @@ export async function handleHonoApiNotesShow(
 }
 
 function notesGlobalTimelineDisabledError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Global timeline has been disabled.', code: 'GTL_DISABLED', id: '0332fc13-6ab2-4427-ae80-a9fadffd1a6b' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Global timeline has been disabled.',
+		code: 'GTL_DISABLED',
+		id: '0332fc13-6ab2-4427-ae80-a9fadffd1a6b',
+	});
 }
 
 export const notesGlobalTimelineParamDef = z.object({
@@ -520,27 +592,40 @@ export async function handleHonoApiNotes(
 	const params = parseHonoApiParams(notesParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
-	const notes = await listPublicNotesFromDatabase(deps.db, omitUndefined({
-		limit: params.limit,
-		sinceId,
-		untilId,
-		local: params.local,
-		reply: params.reply,
-		renote: params.renote,
-		withFiles: params.withFiles,
-		poll: params.poll,
-	}));
+	const notes = await listPublicNotesFromDatabase(
+		deps.db,
+		omitUndefined({
+			limit: params.limit,
+			sinceId,
+			untilId,
+			local: params.local,
+			reply: params.reply,
+			renote: params.renote,
+			withFiles: params.withFiles,
+			poll: params.poll,
+		}),
+	);
 
 	// 元実装 (notes.ts) は noteEntityService.packMany(notes) を me なしで呼んでおり、常に匿名扱いでパックする。
 	return await packNoteManyForHonoApi(deps, notes, null);
 }
 
 function notesLocalTimelineDisabledError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Local timeline has been disabled.', code: 'LTL_DISABLED', id: '45a6eb02-7695-4393-b023-dd3be9aaaefd' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Local timeline has been disabled.',
+		code: 'LTL_DISABLED',
+		id: '45a6eb02-7695-4393-b023-dd3be9aaaefd',
+	});
 }
 
 function notesLocalTimelineBothWithRepliesAndWithFilesError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Specifying both withReplies and withFiles is not supported', code: 'BOTH_WITH_REPLIES_AND_WITH_FILES', id: 'dd9c8400-1cb5-4eef-8a31-200c5f933793' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Specifying both withReplies and withFiles is not supported',
+		code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
+		id: 'dd9c8400-1cb5-4eef-8a31-200c5f933793',
+	});
 }
 
 export const notesLocalTimelineParamDef = z.object({
@@ -581,38 +666,46 @@ export async function handleHonoApiNotesLocalTimeline(
 	if (params.withReplies && params.withFiles) throw notesLocalTimelineBothWithRepliesAndWithFilesError();
 
 	// ローカルタイムラインはフォロー関係を見ないので、fanout のフィルタが読む種別だけで足りる
-	const viewerRelation = me ? await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), fanoutViewerRelationKinds) : undefined;
+	const viewerRelation = me
+		? await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), fanoutViewerRelationKinds)
+		: undefined;
 
-	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listLocalTimelineNotesFromDatabase(deps.db, {
-		limit,
-		sinceId: dbSinceId,
-		untilId: dbUntilId,
-		withFiles: params.withFiles,
-		withRenotes: params.withRenotes,
-		withReplies: params.withReplies,
-		me,
-		blockedHosts: deps.meta.blockedHosts,
-		mutedChannelIds: viewerRelation?.mutedChannelIds ?? [],
-	});
+	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) =>
+		listLocalTimelineNotesFromDatabase(deps.db, {
+			limit,
+			sinceId: dbSinceId,
+			untilId: dbUntilId,
+			withFiles: params.withFiles,
+			withRenotes: params.withRenotes,
+			withReplies: params.withReplies,
+			me,
+			blockedHosts: deps.meta.blockedHosts,
+			mutedChannelIds: viewerRelation?.mutedChannelIds ?? [],
+		});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
-		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
-			untilId,
-			sinceId,
-			limit: params.limit,
-			allowPartial: params.allowPartial,
-			me,
-			viewerRelation,
-			useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
-			redisTimelines:
-				params.withFiles ? ['localTimelineWithFiles']
-				: params.withReplies ? ['localTimeline', 'localTimelineWithReplies']
-				: me ? ['localTimeline', `localTimelineWithReplyTo:${me.id}`]
-				: ['localTimeline'],
-			alwaysIncludeMyNotes: true,
-			excludePureRenotes: !params.withRenotes,
-			dbFallback: getFromDb,
-		});
+		const notes = await getFanoutTimelineNotesForHonoApi(
+			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
+			{
+				untilId,
+				sinceId,
+				limit: params.limit,
+				allowPartial: params.allowPartial,
+				me,
+				viewerRelation,
+				useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
+				redisTimelines: params.withFiles
+					? ['localTimelineWithFiles']
+					: params.withReplies
+						? ['localTimeline', 'localTimelineWithReplies']
+						: me
+							? ['localTimeline', `localTimelineWithReplyTo:${me.id}`]
+							: ['localTimeline'],
+				alwaysIncludeMyNotes: true,
+				excludePureRenotes: !params.withRenotes,
+				dbFallback: getFromDb,
+			},
+		);
 
 		return await packNoteManyForHonoApi(deps, notes, me);
 	}
@@ -623,11 +716,21 @@ export async function handleHonoApiNotesLocalTimeline(
 }
 
 function notesHybridTimelineDisabledError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Hybrid timeline has been disabled.', code: 'STL_DISABLED', id: '620763f4-f621-4533-ab33-0577a1a3c342' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Hybrid timeline has been disabled.',
+		code: 'STL_DISABLED',
+		id: '620763f4-f621-4533-ab33-0577a1a3c342',
+	});
 }
 
 function notesHybridTimelineBothWithRepliesAndWithFilesError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Specifying both withReplies and withFiles is not supported', code: 'BOTH_WITH_REPLIES_AND_WITH_FILES', id: 'dfaa3eb7-8002-4cb7-bcc4-1095df46656f' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Specifying both withReplies and withFiles is not supported',
+		code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
+		id: 'dfaa3eb7-8002-4cb7-bcc4-1095df46656f',
+	});
 }
 
 export const notesHybridTimelineParamDef = z.object({
@@ -674,29 +777,35 @@ export async function handleHonoApiNotesHybridTimeline(
 	if (params.withReplies && params.withFiles) throw notesHybridTimelineBothWithRepliesAndWithFilesError();
 
 	// 閲覧者コンテキストは fanout 側のフィルタでも同じものが要るので、ここで1本にまとめて取って渡す
-	const viewerRelation = await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), homeTimelineViewerRelationKinds);
+	const viewerRelation = await fetchViewerRelationSnapshotFromDatabase(
+		deps.db,
+		me.id,
+		new Date(),
+		homeTimelineViewerRelationKinds,
+	);
 	const followeeIds = viewerRelation.followeeIds;
 	const followeeIdSet = new Set(followeeIds);
 	const mutingChannelIds = viewerRelation.mutedChannelIds;
 	const mutingChannelIdSet = new Set(mutingChannelIds);
-	const followingChannelIds = viewerRelation.followingChannelIds.filter(id => !mutingChannelIdSet.has(id));
+	const followingChannelIds = viewerRelation.followingChannelIds.filter((id) => !mutingChannelIdSet.has(id));
 
-	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHybridTimelineNotesFromDatabase(deps.db, {
-		me,
-		followeeIds,
-		followingChannelIds,
-		mutingChannelIds,
-		limit,
-		sinceId: dbSinceId,
-		untilId: dbUntilId,
-		includeMyRenotes: params.includeMyRenotes,
-		includeRenotedMyNotes: params.includeRenotedMyNotes,
-		includeLocalRenotes: params.includeLocalRenotes,
-		withFiles: params.withFiles,
-		withRenotes: params.withRenotes,
-		withReplies: params.withReplies,
-		blockedHosts: deps.meta.blockedHosts,
-	});
+	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) =>
+		listHybridTimelineNotesFromDatabase(deps.db, {
+			me,
+			followeeIds,
+			followingChannelIds,
+			mutingChannelIds,
+			limit,
+			sinceId: dbSinceId,
+			untilId: dbUntilId,
+			includeMyRenotes: params.includeMyRenotes,
+			includeRenotedMyNotes: params.includeRenotedMyNotes,
+			includeLocalRenotes: params.includeLocalRenotes,
+			withFiles: params.withFiles,
+			withRenotes: params.withRenotes,
+			withReplies: params.withReplies,
+			blockedHosts: deps.meta.blockedHosts,
+		});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
 		let timelineConfig: string[];
@@ -708,26 +817,29 @@ export async function handleHonoApiNotesHybridTimeline(
 			timelineConfig = [`homeTimeline:${me.id}`, 'localTimeline', `localTimelineWithReplyTo:${me.id}`];
 		}
 
-		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
-			untilId,
-			sinceId,
-			limit: params.limit,
-			allowPartial: params.allowPartial,
-			me,
-			viewerRelation,
-			useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
-			redisTimelines: timelineConfig,
-			alwaysIncludeMyNotes: true,
-			excludePureRenotes: !params.withRenotes,
-			noteFilter: note => {
-				if (note.reply && note.reply.visibility === 'followers') {
-					if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) return false;
-				}
+		const notes = await getFanoutTimelineNotesForHonoApi(
+			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
+			{
+				untilId,
+				sinceId,
+				limit: params.limit,
+				allowPartial: params.allowPartial,
+				me,
+				viewerRelation,
+				useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
+				redisTimelines: timelineConfig,
+				alwaysIncludeMyNotes: true,
+				excludePureRenotes: !params.withRenotes,
+				noteFilter: (note) => {
+					if (note.reply && note.reply.visibility === 'followers') {
+						if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) return false;
+					}
 
-				return true;
+					return true;
+				},
+				dbFallback: getFromDb,
 			},
-			dbFallback: getFromDb,
-		});
+		);
 
 		return await packNoteManyForHonoApi(deps, notes, me, { followeeIds: followeeIdSet });
 	}
@@ -756,7 +868,9 @@ async function getNotesFeaturedRanking(
 	const redisPipeline = deps.redis.pipeline();
 	redisPipeline.zrange(`${name}:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
 	redisPipeline.zrange(`${name}:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
-	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline.exec().then(result => result ? result.map(r => (r[1] ?? []) as string[]) : []);
+	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline
+		.exec()
+		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : []));
 
 	const ranking = new Map<string, number>();
 	for (let i = 0; i < currentRankingResult.length; i += 2) {
@@ -774,7 +888,10 @@ async function getNotesFeaturedRanking(
 		ranking.set(id, exist != null ? (exist + score) / 2 : score);
 	}
 
-	return [...ranking.entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]).slice(0, threshold);
+	return [...ranking.entries()]
+		.sort((a, b) => b[1] - a[1])
+		.map((x) => x[0])
+		.slice(0, threshold);
 }
 
 let globalNotesRankingCache: string[] = [];
@@ -818,7 +935,10 @@ export async function handleHonoApiNotesFeatured(
 	if (params.channelId) {
 		noteIds = await getNotesFeaturedRanking(deps, `featuredInChannelNotesRanking:${params.channelId}`, 50);
 	} else {
-		if (globalNotesRankingCacheLastFetchedAt !== 0 && (Date.now() - globalNotesRankingCacheLastFetchedAt < 1000 * 60 * 30)) {
+		if (
+			globalNotesRankingCacheLastFetchedAt !== 0 &&
+			Date.now() - globalNotesRankingCacheLastFetchedAt < 1000 * 60 * 30
+		) {
 			noteIds = globalNotesRankingCache;
 		} else {
 			noteIds = await getNotesFeaturedRanking(deps, 'featuredGlobalNotesRanking', 100);
@@ -827,9 +947,9 @@ export async function handleHonoApiNotesFeatured(
 		}
 	}
 
-	noteIds = [...noteIds].sort((a, b) => a > b ? -1 : 1);
+	noteIds = [...noteIds].sort((a, b) => (a > b ? -1 : 1));
 	if (params.untilId) {
-		noteIds = noteIds.filter(id => id < params.untilId!);
+		noteIds = noteIds.filter((id) => id < params.untilId!);
 	}
 	noteIds = noteIds.slice(0, params.limit);
 
@@ -837,26 +957,31 @@ export async function handleHonoApiNotesFeatured(
 
 	const [mutedByMe, blockedByOthers] = me
 		? await Promise.all([
-			listMuteeIdsByMuterIdFromDatabase(deps.db, me.id),
-			listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id),
-		])
+				listMuteeIdsByMuterIdFromDatabase(deps.db, me.id),
+				listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id),
+			])
 		: [[], []];
 	const mutedSet = new Set(mutedByMe);
 	const blockedSet = new Set(blockedByOthers);
 
-	const notes = (await listFeaturedNotesByIdsFromDatabase(deps.db, noteIds, deps.meta.blockedHosts)).filter(note => {
+	const notes = (await listFeaturedNotesByIdsFromDatabase(deps.db, noteIds, deps.meta.blockedHosts)).filter((note) => {
 		if (me && isUserRelated(note, blockedSet)) return false;
 		if (me && isUserRelated(note, mutedSet)) return false;
 		return true;
 	});
 
-	notes.sort((a, b) => a.id > b.id ? -1 : 1);
+	notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
 
 function notesClipsNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '47db1a1c-b0af-458d-8fb4-986e4efafe1e' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: '47db1a1c-b0af-458d-8fb4-986e4efafe1e',
+	});
 }
 
 export async function handleHonoApiNotesClips(
@@ -877,7 +1002,12 @@ export async function handleHonoApiNotesClips(
 }
 
 function notesSearchUnavailableError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Search of notes unavailable.', code: 'UNAVAILABLE', id: '0b44998d-77aa-4427-80d0-d2c9b8523011' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Search of notes unavailable.',
+		code: 'UNAVAILABLE',
+		id: '0b44998d-77aa-4427-80d0-d2c9b8523011',
+	});
 }
 
 export const notesSearchParamDef = z.object({
@@ -941,26 +1071,29 @@ export async function handleHonoApiNotesSearch(
 		throw notesSearchUnavailableError();
 	}
 
-	const notes = await searchNotesByTextFromDatabase(deps.db, omitUndefined({
-		query: params.query,
-		usePgroonga: provider === 'sqlPgroonga',
-		me,
-		blockedHosts: deps.meta.blockedHosts,
-		limit: params.limit,
-		sinceId,
-		untilId,
-		userId: params.userId,
-		channelId: params.channelId,
-		host: params.host,
-		rangeStartId: params.rangeStartAt != null ? genId(params.rangeStartAt - 1) : null,
-		rangeEndId: params.rangeEndAt != null ? genId(params.rangeEndAt + 1) : null,
-		withFiles: params.withFiles,
-		withSensitiveFiles: params.withSensitiveFiles,
-		withReplies: params.withReplies,
-		withQuotes: params.withQuotes,
-		withCw: params.withCw,
-		visibility: params.visibility,
-	}));
+	const notes = await searchNotesByTextFromDatabase(
+		deps.db,
+		omitUndefined({
+			query: params.query,
+			usePgroonga: provider === 'sqlPgroonga',
+			me,
+			blockedHosts: deps.meta.blockedHosts,
+			limit: params.limit,
+			sinceId,
+			untilId,
+			userId: params.userId,
+			channelId: params.channelId,
+			host: params.host,
+			rangeStartId: params.rangeStartAt != null ? genId(params.rangeStartAt - 1) : null,
+			rangeEndId: params.rangeEndAt != null ? genId(params.rangeEndAt + 1) : null,
+			withFiles: params.withFiles,
+			withSensitiveFiles: params.withSensitiveFiles,
+			withReplies: params.withReplies,
+			withQuotes: params.withQuotes,
+			withCw: params.withCw,
+			visibility: params.visibility,
+		}),
+	);
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
@@ -975,32 +1108,39 @@ function isValidTagBranch(tag: unknown): tag is string {
 }
 
 function isValidQueryBranch(query: unknown): query is string[][] {
-	return Array.isArray(query) && query.length >= 1 && query.every(inner =>
-		Array.isArray(inner) && inner.length >= 1 && inner.every(tag => typeof tag === 'string' && tag.length >= 1),
+	return (
+		Array.isArray(query) &&
+		query.length >= 1 &&
+		query.every(
+			(inner) =>
+				Array.isArray(inner) && inner.length >= 1 && inner.every((tag) => typeof tag === 'string' && tag.length >= 1),
+		)
 	);
 }
 
-export const notesSearchByTagParamDef = z.object({
-	tag: z.unknown().optional(),
-	query: z.unknown().optional(),
-	reply: z.boolean().nullable().optional().default(null),
-	renote: z.boolean().nullable().optional().default(null),
-	withFiles: z.boolean().optional().default(false),
-	poll: z.boolean().nullable().optional().default(null),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
-}).superRefine((data, ctx) => {
-	if (!isValidTagBranch(data.tag) && !isValidQueryBranch(data.query)) {
-		ctx.addIssue({
-			code: z.ZodIssueCode.custom,
-			message: 'must match "anyOf" schema (tag or query)',
-			path: [],
-		});
-	}
-});
+export const notesSearchByTagParamDef = z
+	.object({
+		tag: z.unknown().optional(),
+		query: z.unknown().optional(),
+		reply: z.boolean().nullable().optional().default(null),
+		renote: z.boolean().nullable().optional().default(null),
+		withFiles: z.boolean().optional().default(false),
+		poll: z.boolean().nullable().optional().default(null),
+		sinceId: misskeyId().optional(),
+		untilId: misskeyId().optional(),
+		sinceDate: z.number().int().optional(),
+		untilDate: z.number().int().optional(),
+		limit: z.number().int().min(1).max(100).optional().default(10),
+	})
+	.superRefine((data, ctx) => {
+		if (!isValidTagBranch(data.tag) && !isValidQueryBranch(data.query)) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: 'must match "anyOf" schema (tag or query)',
+				path: [],
+			});
+		}
+	});
 
 // OpenAPI/misskey-js コード生成専用。上の superRefine (tag/query の anyOf 判定) は
 // JSON Schema 化できないため、docs 用には元 ajv 版と同じ allOf+anyOf 構造を union+intersection で表現する。
@@ -1053,25 +1193,30 @@ export async function handleHonoApiNotesSearchByTag(
 			if (!safeForSql(tag)) throw new Error('Injection');
 			tagQuery = [[tag]];
 		} else {
-			tagQuery = params.query!.map(tags => tags.map(tag => {
-				const normalized = normalizeForSearch(tag);
-				if (!safeForSql(normalized)) throw new Error('Injection');
-				return normalized;
-			}));
+			tagQuery = params.query!.map((tags) =>
+				tags.map((tag) => {
+					const normalized = normalizeForSearch(tag);
+					if (!safeForSql(normalized)) throw new Error('Injection');
+					return normalized;
+				}),
+			);
 		}
 
-		const notes = await listNotesByTagSearchFromDatabase(deps.db, omitUndefined({
-			limit: params.limit,
-			sinceId,
-			untilId,
-			tagQuery,
-			reply: params.reply,
-			renote: params.renote,
-			withFiles: params.withFiles,
-			poll: params.poll,
-			me: me ?? null,
-			blockedHosts: deps.meta.blockedHosts,
-		}));
+		const notes = await listNotesByTagSearchFromDatabase(
+			deps.db,
+			omitUndefined({
+				limit: params.limit,
+				sinceId,
+				untilId,
+				tagQuery,
+				reply: params.reply,
+				renote: params.renote,
+				withFiles: params.withFiles,
+				poll: params.poll,
+				me: me ?? null,
+				blockedHosts: deps.meta.blockedHosts,
+			}),
+		);
 
 		return await packNoteManyForHonoApi(deps, notes, me);
 	} catch (e) {
@@ -1136,50 +1281,59 @@ export async function handleHonoApiNotesTimeline(
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	// 閲覧者コンテキストは fanout 側のフィルタでも同じものが要るので、ここで1本にまとめて取って渡す
-	const viewerRelation = await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), homeTimelineViewerRelationKinds);
+	const viewerRelation = await fetchViewerRelationSnapshotFromDatabase(
+		deps.db,
+		me.id,
+		new Date(),
+		homeTimelineViewerRelationKinds,
+	);
 	const followeeIds = viewerRelation.followeeIds;
 	const followeeIdSet = new Set(followeeIds);
 	const mutingChannelIds = viewerRelation.mutedChannelIds;
 	const mutingChannelIdSet = new Set(mutingChannelIds);
-	const followingChannelIds = viewerRelation.followingChannelIds.filter(id => !mutingChannelIdSet.has(id));
+	const followingChannelIds = viewerRelation.followingChannelIds.filter((id) => !mutingChannelIdSet.has(id));
 
-	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHomeTimelineNotesFromDatabase(deps.db, {
-		me,
-		followeeIds,
-		followingChannelIds,
-		mutingChannelIds,
-		limit,
-		sinceId: dbSinceId,
-		untilId: dbUntilId,
-		includeMyRenotes: params.includeMyRenotes,
-		includeRenotedMyNotes: params.includeRenotedMyNotes,
-		includeLocalRenotes: params.includeLocalRenotes,
-		withFiles: params.withFiles,
-		withRenotes: params.withRenotes,
-		blockedHosts: deps.meta.blockedHosts,
-	});
+	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) =>
+		listHomeTimelineNotesFromDatabase(deps.db, {
+			me,
+			followeeIds,
+			followingChannelIds,
+			mutingChannelIds,
+			limit,
+			sinceId: dbSinceId,
+			untilId: dbUntilId,
+			includeMyRenotes: params.includeMyRenotes,
+			includeRenotedMyNotes: params.includeRenotedMyNotes,
+			includeLocalRenotes: params.includeLocalRenotes,
+			withFiles: params.withFiles,
+			withRenotes: params.withRenotes,
+			blockedHosts: deps.meta.blockedHosts,
+		});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
-		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
-			untilId,
-			sinceId,
-			limit: params.limit,
-			allowPartial: params.allowPartial,
-			me,
-			viewerRelation,
-			useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
-			redisTimelines: params.withFiles ? [`homeTimelineWithFiles:${me.id}`] : [`homeTimeline:${me.id}`],
-			alwaysIncludeMyNotes: true,
-			excludePureRenotes: !params.withRenotes,
-			noteFilter: note => {
-				if (note.reply && note.reply.visibility === 'followers') {
-					if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) return false;
-				}
+		const notes = await getFanoutTimelineNotesForHonoApi(
+			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
+			{
+				untilId,
+				sinceId,
+				limit: params.limit,
+				allowPartial: params.allowPartial,
+				me,
+				viewerRelation,
+				useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
+				redisTimelines: params.withFiles ? [`homeTimelineWithFiles:${me.id}`] : [`homeTimeline:${me.id}`],
+				alwaysIncludeMyNotes: true,
+				excludePureRenotes: !params.withRenotes,
+				noteFilter: (note) => {
+					if (note.reply && note.reply.visibility === 'followers') {
+						if (!followeeIdSet.has(note.reply.userId) && note.reply.userId !== me.id) return false;
+					}
 
-				return true;
+					return true;
+				},
+				dbFallback: getFromDb,
 			},
-			dbFallback: getFromDb,
-		});
+		);
 
 		return await packNoteManyForHonoApi(deps, notes, me, { followeeIds: followeeIdSet });
 	}
@@ -1190,7 +1344,12 @@ export async function handleHonoApiNotesTimeline(
 }
 
 function notesUserListTimelineNoSuchListError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such list.', code: 'NO_SUCH_LIST', id: '8fb1fbd5-e476-4c37-9fb0-43d55b63a2ff' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such list.',
+		code: 'NO_SUCH_LIST',
+		id: '8fb1fbd5-e476-4c37-9fb0-43d55b63a2ff',
+	});
 }
 
 export const notesUserListTimelineParamDef = z.object({

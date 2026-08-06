@@ -16,32 +16,54 @@ describe('users/notes', () => {
 	let pngNote: misskey.entities.Note;
 	let jpgPngNote: misskey.entities.Note;
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'alice' });
-		const jpg = await uploadUrl(alice, 'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg');
-		const png = await uploadUrl(alice, 'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.png');
-		jpgNote = await post(alice, {
-			fileIds: [jpg.id],
-		});
-		pngNote = await post(alice, {
-			fileIds: [png.id],
-		});
-		jpgPngNote = await post(alice, {
-			fileIds: [jpg.id, png.id],
-		});
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			alice = await signup({ username: 'alice' });
+			const jpg = await uploadUrl(
+				alice,
+				'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg',
+			);
+			const png = await uploadUrl(
+				alice,
+				'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.png',
+			);
+			jpgNote = await post(alice, {
+				fileIds: [jpg.id],
+			});
+			pngNote = await post(alice, {
+				fileIds: [png.id],
+			});
+			jpgPngNote = await post(alice, {
+				fileIds: [jpg.id, png.id],
+			});
+		},
+		1000 * 60 * 2,
+	);
 
 	test('withFiles', async () => {
-		const res = await api('users/notes', {
-			userId: alice.id,
-			withFiles: true,
-		}, alice);
+		const res = await api(
+			'users/notes',
+			{
+				userId: alice.id,
+				withFiles: true,
+			},
+			alice,
+		);
 
 		assert.strictEqual(res.status, 200);
 		assert.strictEqual(Array.isArray(res.body), true);
 		assert.strictEqual(res.body.length, 3);
-		assert.strictEqual(res.body.some((note: any) => note.id === jpgNote.id), true);
-		assert.strictEqual(res.body.some((note: any) => note.id === pngNote.id), true);
-		assert.strictEqual(res.body.some((note: any) => note.id === jpgPngNote.id), true);
+		assert.strictEqual(
+			res.body.some((note: any) => note.id === jpgNote.id),
+			true,
+		);
+		assert.strictEqual(
+			res.body.some((note: any) => note.id === pngNote.id),
+			true,
+		);
+		assert.strictEqual(
+			res.body.some((note: any) => note.id === jpgPngNote.id),
+			true,
+		);
 	});
 });

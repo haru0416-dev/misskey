@@ -65,7 +65,6 @@ export const adminInviteListParamDef = z.object({
 	sort: z.enum(['+createdAt', '-createdAt', '+usedAt', '-usedAt']).optional(),
 });
 
-
 function adminInviteCreateInvalidDateTimeError(): HonoApiError {
 	return new HonoApiError({
 		status: 400,
@@ -96,7 +95,7 @@ function inviteDeleteNoSuchCodeError(): HonoApiError {
 function inviteDeleteCantDeleteError(): HonoApiError {
 	return new HonoApiError({
 		status: 400,
-		message: 'You can\'t delete this invite code.',
+		message: "You can't delete this invite code.",
 		code: 'CAN_NOT_DELETE_INVITE_CODE',
 		id: 'ff17af39-000c-4d4e-abdf-848fa30fc1ce',
 	});
@@ -115,17 +114,21 @@ async function packInviteCodesForHonoApi(
 	deps: HonoApiInviteDependencies,
 	tickets: RegistrationTicketRow[],
 ): Promise<Packed<'InviteCode'>[]> {
-	const userIds = [...new Set(tickets.flatMap(ticket => [ticket.createdById, ticket.usedById]).filter((id): id is string => id != null))];
+	const userIds = [
+		...new Set(
+			tickets.flatMap((ticket) => [ticket.createdById, ticket.usedById]).filter((id): id is string => id != null),
+		),
+	];
 	const packedUsers = userIds.length > 0 ? await packUserLiteManyForHonoApi(deps, userIds) : [];
-	const userById = new Map(packedUsers.map(user => [user.id, user]));
+	const userById = new Map(packedUsers.map((user) => [user.id, user]));
 
-	return tickets.map(ticket => ({
+	return tickets.map((ticket) => ({
 		id: ticket.id,
 		code: ticket.code,
 		expiresAt: ticket.expiresAt ? ticket.expiresAt.toISOString() : null,
 		createdAt: parseId(ticket.id).date.toISOString(),
-		createdBy: ticket.createdById ? userById.get(ticket.createdById) ?? null : null,
-		usedBy: ticket.usedById ? userById.get(ticket.usedById) ?? null : null,
+		createdBy: ticket.createdById ? (userById.get(ticket.createdById) ?? null) : null,
+		usedBy: ticket.usedById ? (userById.get(ticket.usedById) ?? null) : null,
 		usedAt: ticket.usedAt ? ticket.usedAt.toISOString() : null,
 		used: !!ticket.usedAt,
 	}));
@@ -150,12 +153,15 @@ export async function handleHonoApiAdminInviteCreate(
 		throw adminInviteCreateInvalidDateTimeError();
 	}
 
-	const tickets = await createRegistrationTicketsInDatabase(deps.db, Array.from({ length: params.count }, () => ({
-		id: genId(),
-		createdById: me.id,
-		expiresAt: params.expiresAt ? new Date(params.expiresAt) : null,
-		code: generateInviteCode(),
-	})));
+	const tickets = await createRegistrationTicketsInDatabase(
+		deps.db,
+		Array.from({ length: params.count }, () => ({
+			id: genId(),
+			createdById: me.id,
+			expiresAt: params.expiresAt ? new Date(params.expiresAt) : null,
+			code: generateInviteCode(),
+		})),
+	);
 
 	void createModerationLogInDatabase(deps.db, {
 		id: genId(),
@@ -174,12 +180,15 @@ export async function handleHonoApiAdminInviteList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>[]> {
 	const params = parseHonoApiParams(adminInviteListParamDef, body);
-	const tickets = await listRegistrationTicketsForAdminFromDatabase(deps.db, omitUndefined({
-		limit: params.limit,
-		offset: params.offset,
-		type: params.type,
-		sort: params.sort,
-	}));
+	const tickets = await listRegistrationTicketsForAdminFromDatabase(
+		deps.db,
+		omitUndefined({
+			limit: params.limit,
+			offset: params.offset,
+			type: params.type,
+			sort: params.sort,
+		}),
+	);
 
 	return await packInviteCodesForHonoApi(deps, tickets);
 }
@@ -195,14 +204,14 @@ export async function handleHonoApiInviteCreate(
 	const ticketData = {
 		id: genId(),
 		createdById: me.id,
-		expiresAt: policies.inviteExpirationTime ? new Date(Date.now() + (policies.inviteExpirationTime * 60 * 1000)) : null,
+		expiresAt: policies.inviteExpirationTime ? new Date(Date.now() + policies.inviteExpirationTime * 60 * 1000) : null,
 		code: generateInviteCode(),
 	};
 	const ticket = policies.inviteLimit
 		? await createRegistrationTicketWithinLimitInDatabase(deps.db, ticketData, {
-			sinceId: genId(Date.now() - (policies.inviteLimitCycle * 60 * 1000)),
-			limit: policies.inviteLimit,
-		})
+				sinceId: genId(Date.now() - policies.inviteLimitCycle * 60 * 1000),
+				limit: policies.inviteLimit,
+			})
 		: await createRegistrationTicketInDatabase(deps.db, ticketData);
 	if (ticket == null) throw inviteCreateExceededCreateLimitError();
 
@@ -241,10 +250,12 @@ export async function handleHonoApiInviteLimit(
 ): Promise<{ remaining: number | null }> {
 	parseHonoApiParams(emptyParamDef, body);
 
-	const count = policies.inviteLimit ? await countRegistrationTicketsCreatedSinceFromDatabase(deps.db, {
-		createdById: me.id,
-		sinceId: genId(Date.now() - (policies.inviteLimitCycle * 60 * 1000)),
-	}) : null;
+	const count = policies.inviteLimit
+		? await countRegistrationTicketsCreatedSinceFromDatabase(deps.db, {
+				createdById: me.id,
+				sinceId: genId(Date.now() - policies.inviteLimitCycle * 60 * 1000),
+			})
+		: null;
 
 	return {
 		remaining: count !== null ? Math.max(0, policies.inviteLimit - count) : null,
@@ -257,9 +268,12 @@ export async function handleHonoApiInviteList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>[]> {
 	const params = parseHonoApiParams(inviteListParamDef, body);
-	const { sinceId, untilId, order } = resolveRegistrationTicketPagination({
-		gen: (time?: number) => genId(time),
-	}, params);
+	const { sinceId, untilId, order } = resolveRegistrationTicketPagination(
+		{
+			gen: (time?: number) => genId(time),
+		},
+		params,
+	);
 
 	const tickets = await listRegistrationTicketsCreatedByFromDatabase(deps.db, {
 		createdById: me.id,

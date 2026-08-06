@@ -1,7 +1,16 @@
 import { describe, test, beforeAll } from 'vitest';
 import assert, { strictEqual } from 'node:assert';
 import * as Misskey from 'misskey-js';
-import { createAccount, deepStrictEqualWithExcludedFields, fetchAdmin, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep, uploadFile } from './utils.js';
+import {
+	createAccount,
+	deepStrictEqualWithExcludedFields,
+	fetchAdmin,
+	type LoginUser,
+	resolveRemoteNote,
+	resolveRemoteUser,
+	sleep,
+	uploadFile,
+} from './utils.js';
 
 const bAdmin = await fetchAdmin('b.test');
 
@@ -73,7 +82,8 @@ describe('Drive', () => {
 
 		describe('Re-update with attaching to Note', () => {
 			beforeAll(async () => {
-				const noteWithUpdatedImage = (await uploader.client.request('notes/create', { fileIds: [updatedImage.id] })).createdNote;
+				const noteWithUpdatedImage = (await uploader.client.request('notes/create', { fileIds: [updatedImage.id] }))
+					.createdNote;
 				const noteWithUpdatedImageInB = await resolveRemoteNote('a.test', noteWithUpdatedImage.id, bAdmin);
 				assert(noteWithUpdatedImageInB.files != null);
 				strictEqual(noteWithUpdatedImageInB.files.length, 1);
@@ -99,10 +109,7 @@ describe('Drive', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),
@@ -133,16 +140,14 @@ describe('Drive', () => {
 			let alice: LoginUser, bob: LoginUser;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 			});
 
 			test('Alice uploads sensitive image and it is shown as sensitive from Bob', async () => {
 				const file = await uploadFile('a.test', alice);
 				await alice.client.request('drive/files/update', { fileId: file.id, isSensitive: true });
-				const note = (await alice.client.request('notes/create', { text: 'sensitive', fileIds: [file.id] })).createdNote;
+				const note = (await alice.client.request('notes/create', { text: 'sensitive', fileIds: [file.id] }))
+					.createdNote;
 
 				const noteInB = await resolveRemoteNote('a.test', note.id, bob);
 				assert(noteInB.files != null);
@@ -156,19 +161,18 @@ describe('Drive', () => {
 			let alice: LoginUser, bob: LoginUser;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 			});
 
 			test('Alice uploads sensitive image and it is shown as sensitive from Bob', async () => {
-				const bobNote = (await bob.client.request('notes/create', { text: 'I\'m Bob' })).createdNote;
+				const bobNote = (await bob.client.request('notes/create', { text: "I'm Bob" })).createdNote;
 
 				const file = await uploadFile('a.test', alice);
 				await alice.client.request('drive/files/update', { fileId: file.id, isSensitive: true });
 				const bobNoteInA = await resolveRemoteNote('b.test', bobNote.id, alice);
-				const note = (await alice.client.request('notes/create', { text: 'sensitive', fileIds: [file.id], replyId: bobNoteInA.id })).createdNote;
+				const note = (
+					await alice.client.request('notes/create', { text: 'sensitive', fileIds: [file.id], replyId: bobNoteInA.id })
+				).createdNote;
 				await sleep();
 
 				const noteInB = await resolveRemoteNote('a.test', note.id, bob);

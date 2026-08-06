@@ -15,7 +15,11 @@ import {
 	fetchUserSecurityKeyByIdFromDatabase,
 	updateUserSecurityKeyNameByIdInDatabase,
 } from '@/core/UserSecurityKeyStore.js';
-import { fetchUserProfileByUserIdFromDatabase, fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import {
+	fetchUserProfileByUserIdFromDatabase,
+	fetchUserProfileByUserIdOrFailFromDatabase,
+	updateUserProfileInDatabase,
+} from '@/core/UserProfileStore.js';
 import type { UserAuthService } from '@/core/UserAuthService.js';
 import type { WebAuthnService } from '@/core/WebAuthnService.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -50,7 +54,11 @@ function incorrectPasswordError(id: string): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'Incorrect password.', code: 'INCORRECT_PASSWORD', id });
 }
 
-async function assertPasswordMatchedForHonoApi(profile: MiUserProfile, password: string, errorId: string): Promise<void> {
+async function assertPasswordMatchedForHonoApi(
+	profile: MiUserProfile,
+	password: string,
+	errorId: string,
+): Promise<void> {
 	const passwordMatched = await comparePassword(password, profile.password ?? '');
 	if (!passwordMatched) throw incorrectPasswordError(errorId);
 }
@@ -126,7 +134,7 @@ export async function handleHonoApiI2faDone(
 		throw new Error('二段階認証の設定が開始されていません');
 	}
 
-	if (!await deps.userAuthService.validateOtp(profile.userId, profile.twoFactorTempSecret, token)) {
+	if (!(await deps.userAuthService.validateOtp(profile.userId, profile.twoFactorTempSecret, token))) {
 		throw new Error('not verified');
 	}
 
@@ -154,7 +162,12 @@ type I2faRegisterKeyParams = {
 };
 
 function userNotFoundError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'User not found.', code: 'USER_NOT_FOUND', id: '652f899f-66d4-490e-993e-6606c8ec04c3' });
+	return new HonoApiError({
+		status: 400,
+		message: 'User not found.',
+		code: 'USER_NOT_FOUND',
+		id: '652f899f-66d4-490e-993e-6606c8ec04c3',
+	});
 }
 
 function twoFactorNotEnabledError(id: string): HonoApiError {
@@ -176,11 +189,7 @@ export async function handleHonoApiI2faRegisterKey(
 
 	if (!profile.twoFactorEnabled) throw twoFactorNotEnabledError('bf32b864-449b-47b8-974e-f9a5468546f1');
 
-	return await deps.webAuthnService.initiateRegistration(
-		me.id,
-		me.username,
-		me.name ?? undefined,
-	);
+	return await deps.webAuthnService.initiateRegistration(me.id, me.username, me.name ?? undefined);
 }
 
 export const i2faKeyDoneParamDef = z.object({
@@ -210,7 +219,10 @@ export async function handleHonoApiI2faKeyDone(
 
 	if (!profile.twoFactorEnabled) throw twoFactorNotEnabledError('798d6847-b1ed-4f9c-b1f9-163c42655995');
 
-	const keyInfo = await deps.webAuthnService.verifyRegistration(me.id, params.credential as unknown as RegistrationResponseJSON);
+	const keyInfo = await deps.webAuthnService.verifyRegistration(
+		me.id,
+		params.credential as unknown as RegistrationResponseJSON,
+	);
 	const keyId = keyInfo.credentialID;
 
 	await createUserSecurityKeyInDatabase(deps.db, {
@@ -251,10 +263,20 @@ export async function handleHonoApiI2faUpdateKey(
 
 	const key = await fetchUserSecurityKeyByIdFromDatabase(deps.db, params.credentialId);
 	if (key == null) {
-		throw new HonoApiError({ status: 400, message: 'No such key.', code: 'NO_SUCH_KEY', id: 'f9c5467f-d492-4d3c-9a8g-a70dacc86512' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'No such key.',
+			code: 'NO_SUCH_KEY',
+			id: 'f9c5467f-d492-4d3c-9a8g-a70dacc86512',
+		});
 	}
 	if (key.userId !== me.id) {
-		throw new HonoApiError({ status: 400, message: 'You do not have edit privilege of this key.', code: 'ACCESS_DENIED', id: '1fb7cb09-d46a-4fff-b8df-057708cce513' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'You do not have edit privilege of this key.',
+			code: 'ACCESS_DENIED',
+			id: '1fb7cb09-d46a-4fff-b8df-057708cce513',
+		});
 	}
 
 	await updateUserSecurityKeyNameByIdInDatabase(deps.db, key.id, params.name);
@@ -353,7 +375,12 @@ export async function handleHonoApiI2faPasswordLess(
 			await updateUserProfileInDatabase(deps.db, me.id, {
 				usePasswordLessLogin: false,
 			});
-			throw new HonoApiError({ status: 400, message: 'No security key.', code: 'NO_SECURITY_KEY', id: 'f9c54d7f-d4c2-4d3c-9a8g-a70daac86512' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'No security key.',
+				code: 'NO_SECURITY_KEY',
+				id: 'f9c54d7f-d4c2-4d3c-9a8g-a70daac86512',
+			});
 		}
 	}
 

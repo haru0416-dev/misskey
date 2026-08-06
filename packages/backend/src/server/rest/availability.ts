@@ -37,7 +37,7 @@ export async function handleHonoApiUsernameAvailable(
 		isUsedUsername(deps.db, params.username),
 	]);
 	const preserved = deps.meta.preservedUsernames
-		.map(username => username.toLowerCase())
+		.map((username) => username.toLowerCase())
 		.includes(params.username.toLowerCase());
 
 	return {

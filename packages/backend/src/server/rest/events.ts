@@ -3,7 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { AdminEventTypes, AntennaEventTypes, BroadcastTypes, ChatEventTypes, DriveEventTypes, InternalEventTypes, MainEventTypes, NoteEventTypes, UserListEventTypes } from '@/core/global-events.js';
+import type {
+	AdminEventTypes,
+	AntennaEventTypes,
+	BroadcastTypes,
+	ChatEventTypes,
+	DriveEventTypes,
+	InternalEventTypes,
+	MainEventTypes,
+	NoteEventTypes,
+	UserListEventTypes,
+} from '@/core/global-events.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
@@ -24,16 +34,9 @@ export type HonoApiAdminStreamPublisher = <K extends keyof AdminEventTypes>(
 	value?: AdminEventTypes[K],
 ) => void;
 
-export type HonoApiBroadcastStreamPublisher = <K extends keyof BroadcastTypes>(
-	type: K,
-	value?: unknown,
-) => void;
+export type HonoApiBroadcastStreamPublisher = <K extends keyof BroadcastTypes>(type: K, value?: unknown) => void;
 
-export type HonoApiMainStreamPublisher = (
-	userId: MiUser['id'],
-	type: keyof MainEventTypes,
-	value?: unknown,
-) => void;
+export type HonoApiMainStreamPublisher = (userId: MiUser['id'], type: keyof MainEventTypes, value?: unknown) => void;
 
 export type HonoApiDriveStreamPublisher = <K extends keyof DriveEventTypes>(
 	userId: MiUser['id'],
@@ -85,8 +88,13 @@ export type HonoRedisEventPublisherDependencies = {
  * GlobalEventService#publish 相当。`type == null` のときは body でラップせず
  * value をそのまま message にする (publishNotesStream が唯一 type=null で呼ばれる)。
  */
-function publishToChannel(deps: HonoRedisEventPublisherDependencies, channel: string, type: string | null, value?: unknown): void {
-	const message = type == null ? value : (value === undefined ? { type, body: null } : { type, body: value });
+function publishToChannel(
+	deps: HonoRedisEventPublisherDependencies,
+	channel: string,
+	type: string | null,
+	value?: unknown,
+): void {
+	const message = type == null ? value : value === undefined ? { type, body: null } : { type, body: value };
 
 	deps.publish(deps.config.runtime.host, JSON.stringify({ channel, message }));
 }
@@ -115,16 +123,19 @@ export function createHonoEventPublishers(deps: HonoRedisEventPublisherDependenc
 		publishDriveStream: (userId, type, value) => publishToChannel(deps, `driveStream:${userId}`, type, value),
 		publishUserListStream: (listId, type, value) => publishToChannel(deps, `userListStream:${listId}`, type, value),
 		publishAntennaStream: (antennaId, type, value) => publishToChannel(deps, `antennaStream:${antennaId}`, type, value),
-		publishChatUserStream: (fromUserId, toUserId, type, value) => publishToChannel(deps, `chatUserStream:${fromUserId}-${toUserId}`, type, value),
+		publishChatUserStream: (fromUserId, toUserId, type, value) =>
+			publishToChannel(deps, `chatUserStream:${fromUserId}-${toUserId}`, type, value),
 		publishChatRoomStream: (toRoomId, type, value) => publishToChannel(deps, `chatRoomStream:${toRoomId}`, type, value),
-		publishNotesStream: note => publishToChannel(deps, 'notesStream', null, note),
-		publishRoleTimelineStream: (roleId, type, value) => publishToChannel(deps, `roleTimelineStream:${roleId}`, type, value),
-		publishNoteStream: (note, type, value) => publishToChannel(deps, `noteStream:${note.id}`, type, {
-			id: note.id,
-			userId: note.userId,
-			visibility: note.visibility,
-			visibleUserIds: note.visibleUserIds,
-			body: value,
-		}),
+		publishNotesStream: (note) => publishToChannel(deps, 'notesStream', null, note),
+		publishRoleTimelineStream: (roleId, type, value) =>
+			publishToChannel(deps, `roleTimelineStream:${roleId}`, type, value),
+		publishNoteStream: (note, type, value) =>
+			publishToChannel(deps, `noteStream:${note.id}`, type, {
+				id: note.id,
+				userId: note.userId,
+				visibility: note.visibility,
+				visibleUserIds: note.visibleUserIds,
+				body: value,
+			}),
 	};
 }

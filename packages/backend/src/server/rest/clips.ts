@@ -5,8 +5,19 @@
 
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { clipFavoriteExistsInDatabase, countClipFavoritesByClipIdsFromDatabase, countClipFavoritesFromDatabase, listFavoritedClipIdsByUserIdFromDatabase, listFavoritedClipIdsByUserIdAndClipIdsFromDatabase } from '@/core/ClipFavoriteStore.js';
-import { countClipNotesByClipIdFromDatabase, countClipNotesByClipIdsFromDatabase, createClipNoteWithinLimitInDatabase, deleteClipNoteAndDecrementNoteClippedCountInDatabase } from '@/core/ClipNoteStore.js';
+import {
+	clipFavoriteExistsInDatabase,
+	countClipFavoritesByClipIdsFromDatabase,
+	countClipFavoritesFromDatabase,
+	listFavoritedClipIdsByUserIdFromDatabase,
+	listFavoritedClipIdsByUserIdAndClipIdsFromDatabase,
+} from '@/core/ClipFavoriteStore.js';
+import {
+	countClipNotesByClipIdFromDatabase,
+	countClipNotesByClipIdsFromDatabase,
+	createClipNoteWithinLimitInDatabase,
+	deleteClipNoteAndDecrementNoteClippedCountInDatabase,
+} from '@/core/ClipNoteStore.js';
 import {
 	createClipWithinLimitInDatabase,
 	deleteClipInDatabase,
@@ -140,43 +151,93 @@ type ClipsNoteParams = {
 };
 
 function clipsShowNoSuchClipError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such clip.', code: 'NO_SUCH_CLIP', id: 'c3c5fe33-d62c-44d2-9ea5-d997703f5c20' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such clip.',
+		code: 'NO_SUCH_CLIP',
+		id: 'c3c5fe33-d62c-44d2-9ea5-d997703f5c20',
+	});
 }
 
 function clipsCreateTooManyClipsError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'You cannot create clip any more.', code: 'TOO_MANY_CLIPS', id: '920f7c2d-6208-4b76-8082-e632020f5883' });
+	return new HonoApiError({
+		status: 400,
+		message: 'You cannot create clip any more.',
+		code: 'TOO_MANY_CLIPS',
+		id: '920f7c2d-6208-4b76-8082-e632020f5883',
+	});
 }
 
 function clipsUpdateNoSuchClipError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such clip.', code: 'NO_SUCH_CLIP', id: 'b4d92d70-b216-46fa-9a3f-a8c811699257' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such clip.',
+		code: 'NO_SUCH_CLIP',
+		id: 'b4d92d70-b216-46fa-9a3f-a8c811699257',
+	});
 }
 
 function clipsDeleteNoSuchClipError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such clip.', code: 'NO_SUCH_CLIP', id: '70ca08ba-6865-4630-b6fb-8494759aa754' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such clip.',
+		code: 'NO_SUCH_CLIP',
+		id: '70ca08ba-6865-4630-b6fb-8494759aa754',
+	});
 }
 
 function clipsAddNoteNoSuchClipError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such clip.', code: 'NO_SUCH_CLIP', id: 'd6e76cc0-a1b5-4c7c-a287-73fa9c716dcf' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such clip.',
+		code: 'NO_SUCH_CLIP',
+		id: 'd6e76cc0-a1b5-4c7c-a287-73fa9c716dcf',
+	});
 }
 
 function clipsAddNoteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'fc8c0b49-c7a3-4664-a0a6-b418d386bb8b' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: 'fc8c0b49-c7a3-4664-a0a6-b418d386bb8b',
+	});
 }
 
 function clipsAddNoteAlreadyClippedError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'The note has already been clipped.', code: 'ALREADY_CLIPPED', id: '734806c4-542c-463a-9311-15c512803965' });
+	return new HonoApiError({
+		status: 400,
+		message: 'The note has already been clipped.',
+		code: 'ALREADY_CLIPPED',
+		id: '734806c4-542c-463a-9311-15c512803965',
+	});
 }
 
 function clipsAddNoteTooManyClipNotesError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'You cannot add notes to the clip any more.', code: 'TOO_MANY_CLIP_NOTES', id: 'f0dba960-ff73-4615-8df4-d6ac5d9dc118' });
+	return new HonoApiError({
+		status: 400,
+		message: 'You cannot add notes to the clip any more.',
+		code: 'TOO_MANY_CLIP_NOTES',
+		id: 'f0dba960-ff73-4615-8df4-d6ac5d9dc118',
+	});
 }
 
 function clipsRemoveNoteNoSuchClipError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such clip.', code: 'NO_SUCH_CLIP', id: 'b80525c6-97f7-49d7-a42d-ebccd49cfd52' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such clip.',
+		code: 'NO_SUCH_CLIP',
+		id: 'b80525c6-97f7-49d7-a42d-ebccd49cfd52',
+	});
 }
 
 function clipsRemoveNoteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'aff017de-190e-434b-893e-33a9ff5049d8' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: 'aff017de-190e-434b-893e-33a9ff5049d8',
+	});
 }
 
 export async function packClipForHonoApi(
@@ -194,9 +255,19 @@ export async function packClipForHonoApi(
 
 	const [user, favoritedCount, isFavorited, notesCount] = await Promise.all([
 		hint?.packedUser ? Promise.resolve(hint.packedUser) : packUserLiteForHonoApi(deps, clip.userId),
-		hint?.favoritedCount !== undefined ? Promise.resolve(hint.favoritedCount) : countClipFavoritesFromDatabase(deps.db, clip.id),
-		hint?.isFavorited !== undefined ? Promise.resolve(hint.isFavorited) : meId ? clipFavoriteExistsInDatabase(deps.db, meId, clip.id) : Promise.resolve(undefined),
-		hint?.notesCount !== undefined ? Promise.resolve(hint.notesCount) : meId === clip.userId ? countClipNotesByClipIdFromDatabase(deps.db, clip.id) : Promise.resolve(undefined),
+		hint?.favoritedCount !== undefined
+			? Promise.resolve(hint.favoritedCount)
+			: countClipFavoritesFromDatabase(deps.db, clip.id),
+		hint?.isFavorited !== undefined
+			? Promise.resolve(hint.isFavorited)
+			: meId
+				? clipFavoriteExistsInDatabase(deps.db, meId, clip.id)
+				: Promise.resolve(undefined),
+		hint?.notesCount !== undefined
+			? Promise.resolve(hint.notesCount)
+			: meId === clip.userId
+				? countClipNotesByClipIdFromDatabase(deps.db, clip.id)
+				: Promise.resolve(undefined),
 	]);
 
 	return {
@@ -219,25 +290,34 @@ export async function packClipsManyForHonoApi(
 	clips: MiClip[],
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'Clip'>[]> {
-	const userIds = [...new Set(clips.map(c => c.userId))];
-	const clipIds = clips.map(clip => clip.id);
+	const userIds = [...new Set(clips.map((c) => c.userId))];
+	const clipIds = clips.map((clip) => clip.id);
 	const meId = me?.id ?? null;
-	const ownedClipIds = meId == null ? [] : clips.filter(clip => clip.userId === meId).map(clip => clip.id);
+	const ownedClipIds = meId == null ? [] : clips.filter((clip) => clip.userId === meId).map((clip) => clip.id);
 	const [packedUsers, favoriteCounts, favoritedClipIds, noteCounts] = await Promise.all([
 		packUserLiteManyForHonoApi(deps, userIds),
 		countClipFavoritesByClipIdsFromDatabase(deps.db, clipIds),
 		meId == null ? Promise.resolve([]) : listFavoritedClipIdsByUserIdAndClipIdsFromDatabase(deps.db, meId, clipIds),
 		countClipNotesByClipIdsFromDatabase(deps.db, ownedClipIds),
 	]);
-	const userById = new Map(packedUsers.map(u => [u.id, u]));
+	const userById = new Map(packedUsers.map((u) => [u.id, u]));
 	const favoritedClipIdSet = new Set(favoritedClipIds);
 
-	return await Promise.all(clips.map(clip => packClipForHonoApi(deps, clip, me, omitUndefined({
-		packedUser: userById.get(clip.userId),
-		favoritedCount: favoriteCounts.get(clip.id) ?? 0,
-		isFavorited: meId == null ? undefined : favoritedClipIdSet.has(clip.id),
-		notesCount: clip.userId === meId ? (noteCounts.get(clip.id) ?? 0) : undefined,
-	}))));
+	return await Promise.all(
+		clips.map((clip) =>
+			packClipForHonoApi(
+				deps,
+				clip,
+				me,
+				omitUndefined({
+					packedUser: userById.get(clip.userId),
+					favoritedCount: favoriteCounts.get(clip.id) ?? 0,
+					isFavorited: meId == null ? undefined : favoritedClipIdSet.has(clip.id),
+					notesCount: clip.userId === meId ? (noteCounts.get(clip.id) ?? 0) : undefined,
+				}),
+			),
+		),
+	);
 }
 
 export async function handleHonoApiClipsList(
@@ -280,8 +360,8 @@ export async function handleHonoApiClipsMyFavorites(
 	const clipIds = await listFavoritedClipIdsByUserIdFromDatabase(deps.db, me.id);
 	if (clipIds.length === 0) return [];
 
-	const clipById = new Map((await listClipsByIdsFromDatabase(deps.db, clipIds)).map(clip => [clip.id, clip]));
-	const clips = clipIds.map(id => clipById.get(id)).filter((clip): clip is MiClip => clip != null);
+	const clipById = new Map((await listClipsByIdsFromDatabase(deps.db, clipIds)).map((clip) => [clip.id, clip]));
+	const clips = clipIds.map((id) => clipById.get(id)).filter((clip): clip is MiClip => clip != null);
 
 	return await packClipsManyForHonoApi(deps, clips, me);
 }
@@ -293,13 +373,17 @@ export async function handleHonoApiClipsCreate(
 ): Promise<Packed<'Clip'>> {
 	const params = parseHonoApiParams(clipsCreateParamDef, body);
 
-	const clip = await createClipWithinLimitInDatabase(deps.db, {
-		id: genId(),
-		userId: me.id,
-		name: params.name,
-		isPublic: params.isPublic,
-		description: params.description || null,
-	}, (await getHonoApiRolePolicies(deps, me)).clipLimit);
+	const clip = await createClipWithinLimitInDatabase(
+		deps.db,
+		{
+			id: genId(),
+			userId: me.id,
+			name: params.name,
+			isPublic: params.isPublic,
+			description: params.description || null,
+		},
+		(await getHonoApiRolePolicies(deps, me)).clipLimit,
+	);
 	if (clip == null) throw clipsCreateTooManyClipsError();
 
 	return await packClipForHonoApi(deps, clip, me);
@@ -314,11 +398,15 @@ export async function handleHonoApiClipsUpdate(
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsUpdateNoSuchClipError();
 
-	await updateClipInDatabase(deps.db, clip.id, omitUndefined({
-		name: params.name,
-		description: params.description || null,
-		isPublic: params.isPublic,
-	}));
+	await updateClipInDatabase(
+		deps.db,
+		clip.id,
+		omitUndefined({
+			name: params.name,
+			description: params.description || null,
+			isPublic: params.isPublic,
+		}),
+	);
 
 	return await packClipForHonoApi(deps, await fetchClipByIdOrFailFromDatabase(deps.db, clip.id), me);
 }
@@ -345,11 +433,15 @@ export async function handleHonoApiClipsAddNote(
 	if (clip == null) throw clipsAddNoteNoSuchClipError();
 
 	try {
-		const result = await createClipNoteWithinLimitInDatabase(deps.db, {
-			id: genId(),
-			noteId: params.noteId,
-			clipId: clip.id,
-		}, (await getHonoApiRolePolicies(deps, me)).noteEachClipsLimit);
+		const result = await createClipNoteWithinLimitInDatabase(
+			deps.db,
+			{
+				id: genId(),
+				noteId: params.noteId,
+				clipId: clip.id,
+			},
+			(await getHonoApiRolePolicies(deps, me)).noteEachClipsLimit,
+		);
 		if (result === 'tooManyClipNotes') throw clipsAddNoteTooManyClipNotesError();
 		if (result === 'noSuchNote') throw clipsAddNoteNoSuchNoteError();
 	} catch (e: unknown) {
@@ -358,7 +450,6 @@ export async function handleHonoApiClipsAddNote(
 		if (getDatabaseErrorCode(e) === '23503') throw clipsAddNoteNoSuchNoteError();
 		throw e;
 	}
-
 }
 
 export async function handleHonoApiClipsRemoveNote(
@@ -377,7 +468,12 @@ export async function handleHonoApiClipsRemoveNote(
 }
 
 function clipsNotesNoSuchClipError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such clip.', code: 'NO_SUCH_CLIP', id: '1d7645e6-2b6d-4635-b0fe-fe22b0e72e00' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such clip.',
+		code: 'NO_SUCH_CLIP',
+		id: '1d7645e6-2b6d-4635-b0fe-fe22b0e72e00',
+	});
 }
 
 export async function handleHonoApiClipsNotes(
@@ -397,15 +493,24 @@ export async function handleHonoApiClipsNotes(
 		if (params.untilDate) untilId = genId(params.untilDate);
 	}
 
-	const notes = await listClipNotesFromDatabase(deps.db, omitUndefined({
-		clipId: clip.id,
-		limit: params.limit,
-		sinceId,
-		untilId,
-		searchWords: params.search != null ? params.search.trim().split(' ').map(word => sqlLikeEscape(word)) : undefined,
-		me: me ?? null,
-		blockedHosts: deps.meta.blockedHosts,
-	}));
+	const notes = await listClipNotesFromDatabase(
+		deps.db,
+		omitUndefined({
+			clipId: clip.id,
+			limit: params.limit,
+			sinceId,
+			untilId,
+			searchWords:
+				params.search != null
+					? params.search
+							.trim()
+							.split(' ')
+							.map((word) => sqlLikeEscape(word))
+					: undefined,
+			me: me ?? null,
+			blockedHosts: deps.meta.blockedHosts,
+		}),
+	);
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }

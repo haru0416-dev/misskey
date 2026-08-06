@@ -11,17 +11,11 @@ import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';
 
 function channelMutingCondition(userId: MiUser['id'], channelId: MiChannel['id']) {
-	return and(
-		eq(channelMuting.userId, userId),
-		eq(channelMuting.channelId, channelId),
-	);
+	return and(eq(channelMuting.userId, userId), eq(channelMuting.channelId, channelId));
 }
 
 function activeChannelMutingCondition(now: Date | Placeholder) {
-	return or(
-		isNull(channelMuting.expiresAt),
-		gt(channelMuting.expiresAt, now),
-	);
+	return or(isNull(channelMuting.expiresAt), gt(channelMuting.expiresAt, now));
 }
 
 export async function channelMutingExistsInDatabase(
@@ -47,7 +41,7 @@ export async function listMutedChannelIdsByUserIdFromDatabase(
 		.from(channelMuting)
 		.where(eq(channelMuting.userId, userId));
 
-	return rows.map(row => row.channelId);
+	return rows.map((row) => row.channelId);
 }
 
 export async function listActiveMutedChannelIdsByUserIdFromDatabase(
@@ -55,17 +49,18 @@ export async function listActiveMutedChannelIdsByUserIdFromDatabase(
 	userId: MiUser['id'],
 	now: Date,
 ): Promise<MiChannel['id'][]> {
-	const statement = preparedQueryFor(db, 'channelMuting:activeChannelIdsByUserId', () => db
-		.select({ channelId: channelMuting.channelId })
-		.from(channelMuting)
-		.where(and(
-			eq(channelMuting.userId, sql.placeholder('userId')),
-			activeChannelMutingCondition(sql.placeholder('now')),
-		))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'channelMuting:activeChannelIdsByUserId', () =>
+		db
+			.select({ channelId: channelMuting.channelId })
+			.from(channelMuting)
+			.where(
+				and(eq(channelMuting.userId, sql.placeholder('userId')), activeChannelMutingCondition(sql.placeholder('now'))),
+			)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ userId, now });
 
-	return rows.map(row => row.channelId);
+	return rows.map((row) => row.channelId);
 }
 
 export async function fetchMutedChannelIdsByUserIdAndChannelIdsFromDatabase(
@@ -80,31 +75,20 @@ export async function fetchMutedChannelIdsByUserIdAndChannelIdsFromDatabase(
 	const rows = await db
 		.select({ channelId: channelMuting.channelId })
 		.from(channelMuting)
-		.where(and(
-			eq(channelMuting.userId, userId),
-			inArray(channelMuting.channelId, channelIds),
-		));
+		.where(and(eq(channelMuting.userId, userId), inArray(channelMuting.channelId, channelIds)));
 
-	return new Set(rows.map(row => row.channelId));
+	return new Set(rows.map((row) => row.channelId));
 }
 
 export async function listExpiredChannelMutingsFromDatabase(
 	db: MiDrizzleDatabase,
 	now: Date,
 ): Promise<ChannelMutingRow[]> {
-	return await db
-		.select()
-		.from(channelMuting)
-		.where(lt(channelMuting.expiresAt, now));
+	return await db.select().from(channelMuting).where(lt(channelMuting.expiresAt, now));
 }
 
-export async function createChannelMutingInDatabase(
-	db: MiDrizzleDatabase,
-	data: ChannelMutingInsert,
-): Promise<void> {
-	await db
-		.insert(channelMuting)
-		.values(data);
+export async function createChannelMutingInDatabase(db: MiDrizzleDatabase, data: ChannelMutingInsert): Promise<void> {
+	await db.insert(channelMuting).values(data);
 }
 
 export async function updateChannelMutingExpirationInDatabase(
@@ -113,10 +97,7 @@ export async function updateChannelMutingExpirationInDatabase(
 	channelId: MiChannel['id'],
 	expiresAt: Date | null,
 ): Promise<void> {
-	await db
-		.update(channelMuting)
-		.set({ expiresAt })
-		.where(channelMutingCondition(userId, channelId));
+	await db.update(channelMuting).set({ expiresAt }).where(channelMutingCondition(userId, channelId));
 }
 
 export async function deleteChannelMutingFromDatabase(
@@ -124,9 +105,7 @@ export async function deleteChannelMutingFromDatabase(
 	userId: MiUser['id'],
 	channelId: MiChannel['id'],
 ): Promise<void> {
-	await db
-		.delete(channelMuting)
-		.where(channelMutingCondition(userId, channelId));
+	await db.delete(channelMuting).where(channelMutingCondition(userId, channelId));
 }
 
 export async function deleteChannelMutingsByIdsFromDatabase(
@@ -137,7 +116,5 @@ export async function deleteChannelMutingsByIdsFromDatabase(
 		return;
 	}
 
-	await db
-		.delete(channelMuting)
-		.where(inArray(channelMuting.id, ids));
+	await db.delete(channelMuting).where(inArray(channelMuting.id, ids));
 }

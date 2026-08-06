@@ -81,7 +81,11 @@ export function signinFlowResponse(c: Context, deps: ApiShellDependencies, resul
 	});
 }
 
-export function signinWithPasskeyResponse(c: Context, deps: ApiShellDependencies, result: HonoApiSigninWithPasskeyResult): Response {
+export function signinWithPasskeyResponse(
+	c: Context,
+	deps: ApiShellDependencies,
+	result: HonoApiSigninWithPasskeyResult,
+): Response {
 	setApiHeaders(c);
 	return new Response(JSON.stringify(result.body), {
 		status: result.status,
@@ -104,8 +108,14 @@ export function apiErrorResponse(c: Context, err: HonoApiError): Response {
 	// ApiCallService.#sendApiError 相当: 401以外のclient系エラーには invalid_request の
 	// WWW-Authenticate を付ける (401系/permission系は error.ts のファクトリが個別に設定済み)。
 	const extraHeaders: Record<string, string> = {};
-	if (err.kind === 'client' && err.status !== 401 && err.code !== 'RATE_LIMIT_EXCEEDED' && err.headers['WWW-Authenticate'] == null) {
-		extraHeaders['WWW-Authenticate'] = `Bearer realm="Misskey", error="invalid_request", error_description="${err.message}"`;
+	if (
+		err.kind === 'client' &&
+		err.status !== 401 &&
+		err.code !== 'RATE_LIMIT_EXCEEDED' &&
+		err.headers['WWW-Authenticate'] == null
+	) {
+		extraHeaders['WWW-Authenticate'] =
+			`Bearer realm="Misskey", error="invalid_request", error_description="${err.message}"`;
 	}
 
 	return new Response(JSON.stringify(err.toBody()), {
@@ -130,7 +140,7 @@ export async function jsonBody(c: Context): Promise<Record<string, unknown>> {
 	if (raw.byteLength === 0) return {};
 	try {
 		const body = JSON.parse(textDecoder.decode(raw)) as unknown;
-		return body != null && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : {};
+		return body != null && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
 	} catch {
 		throw invalidJsonBody();
 	}
@@ -152,12 +162,19 @@ export function getRequestIp(c: Context, config: Config): string {
 	const trustedNetworks = config.server.reverseProxy.trustedNetworks;
 	if (trustedNetworks.length === 0) return remoteAddress;
 
-	const forwarded = c.req.header('x-forwarded-for')?.split(',').map(address => address.trim()).filter(Boolean)
-		?? [c.req.header('x-real-ip') ?? c.req.header('cf-connecting-ip')].filter((address): address is string => address != null && address !== '');
+	const forwarded =
+		c.req
+			.header('x-forwarded-for')
+			?.split(',')
+			.map((address) => address.trim())
+			.filter(Boolean) ??
+		[c.req.header('x-real-ip') ?? c.req.header('cf-connecting-ip')].filter(
+			(address): address is string => address != null && address !== '',
+		);
 	if (forwarded.length === 0) return remoteAddress;
 
 	const addresses = [...forwarded, remoteAddress];
-	const networks = trustedNetworks.map(network => ipaddr.parseCIDR(network));
+	const networks = trustedNetworks.map((network) => ipaddr.parseCIDR(network));
 	const isTrusted = (address: string): boolean => {
 		if (!ipaddr.isValid(address)) return false;
 
@@ -189,14 +206,17 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 		const error = err instanceof Error ? err : new Error(String(err));
 		recordException(error);
 		apiLogger.error(`Unexpected error while handling ${new URL(c.req.url).pathname}`, { errorId, e: error });
-		return apiErrorResponse(c, new HonoApiError({
-			status: 500,
-			message: 'Internal error occurred. Please contact us if the error persists.',
-			code: 'INTERNAL_ERROR',
-			id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
-			kind: 'server',
-			info: { id: errorId },
-		}));
+		return apiErrorResponse(
+			c,
+			new HonoApiError({
+				status: 500,
+				message: 'Internal error occurred. Please contact us if the error persists.',
+				code: 'INTERNAL_ERROR',
+				id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
+				kind: 'server',
+				info: { id: errorId },
+			}),
+		);
 	}
 }
 
@@ -210,25 +230,37 @@ export async function authenticateOptionalRequest(
 	return auth;
 }
 
-export async function assertHonoApiModerator(deps: ApiShellDependencies, auth: { user: NonNullable<HonoApiAuthenticated['user']> }): Promise<void> {
-	if (!await isHonoApiModerator(deps, auth.user)) {
+export async function assertHonoApiModerator(
+	deps: ApiShellDependencies,
+	auth: { user: NonNullable<HonoApiAuthenticated['user']> },
+): Promise<void> {
+	if (!(await isHonoApiModerator(deps, auth.user))) {
 		throw rolePermissionDeniedError();
 	}
 }
 
-export async function assertHonoApiAdmin(deps: ApiShellDependencies, auth: { user: NonNullable<HonoApiAuthenticated['user']> }): Promise<void> {
-	if (!await isHonoApiAdministrator(deps, auth.user)) {
+export async function assertHonoApiAdmin(
+	deps: ApiShellDependencies,
+	auth: { user: NonNullable<HonoApiAuthenticated['user']> },
+): Promise<void> {
+	if (!(await isHonoApiAdministrator(deps, auth.user))) {
 		throw rolePermissionDeniedError();
 	}
 }
 
-export async function assertHonoApiCanManageAvatarDecorations(deps: ApiShellDependencies, auth: { user: NonNullable<HonoApiAuthenticated['user']> }): Promise<void> {
+export async function assertHonoApiCanManageAvatarDecorations(
+	deps: ApiShellDependencies,
+	auth: { user: NonNullable<HonoApiAuthenticated['user']> },
+): Promise<void> {
 	if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canManageAvatarDecorations'))) {
 		throw rolePermissionDeniedError();
 	}
 }
 
-export async function assertHonoApiCanManageCustomEmojis(deps: ApiShellDependencies, auth: { user: NonNullable<HonoApiAuthenticated['user']> }): Promise<void> {
+export async function assertHonoApiCanManageCustomEmojis(
+	deps: ApiShellDependencies,
+	auth: { user: NonNullable<HonoApiAuthenticated['user']> },
+): Promise<void> {
 	if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canManageCustomEmojis'))) {
 		throw rolePermissionDeniedError();
 	}

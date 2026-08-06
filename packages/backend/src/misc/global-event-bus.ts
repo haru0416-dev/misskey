@@ -37,7 +37,7 @@ class GlobalEventBus extends EventEmitter {
 
 		// worker では master からブリッジされた envelope が親プロセス経由で届く。
 		// (master は通常親を持たないためこのリスナーは発火しない)
-		process.on('message', message => {
+		process.on('message', (message) => {
 			if (isBusEnvelope(message)) this.deliverLocally(message);
 		});
 	}

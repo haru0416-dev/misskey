@@ -93,9 +93,7 @@ export async function handleHonoApiMeta(
 	return params.detail ? await packMetaDetailed(deps) : await packMetaLite(deps);
 }
 
-export async function handleHonoApiAdminMeta(
-	deps: HonoApiMetaDependencies,
-): Promise<Record<string, unknown>> {
+export async function handleHonoApiAdminMeta(deps: HonoApiMetaDependencies): Promise<Record<string, unknown>> {
 	const instance = await fetchMetaFromDatabase(deps.db);
 	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, instance, 'proxy');
 
@@ -146,9 +144,8 @@ export async function handleHonoApiAdminMeta(
 		clientOptions: instance.clientOptions,
 		enableEmail: instance.enableEmail,
 		enableServiceWorker: instance.enableServiceWorker,
-		translatorAvailable: instance.translatorProvider === 'deepl'
-			? instance.deeplAuthKey != null
-			: instance.libreTranslateApiUrl != null,
+		translatorAvailable:
+			instance.translatorProvider === 'deepl' ? instance.deeplAuthKey != null : instance.libreTranslateApiUrl != null,
 		cacheRemoteFiles: instance.cacheRemoteFiles,
 		cacheRemoteSensitiveFiles: instance.cacheRemoteSensitiveFiles,
 		pinnedUsers: instance.pinnedUsers,
@@ -256,7 +253,10 @@ export async function handleHonoApiAdminUpdateMeta(
 
 	Object.assign(deps.meta, after);
 	deps.meta.rootUser = null;
-	deps.publishInternalEvent?.('metaUpdated', { ...(updateBefore === undefined ? {} : { before: updateBefore }), after });
+	deps.publishInternalEvent?.('metaUpdated', {
+		...(updateBefore === undefined ? {} : { before: updateBefore }),
+		after,
+	});
 	scheduleHiddenTagsRankingRemoval(deps, updateBefore, set.hiddenTags);
 
 	await logModerationEventInDatabase(deps, me, 'updateServerSettings', {
@@ -307,10 +307,7 @@ export async function handleHonoApiServerInfo(meta: MiMeta): Promise<{
 	}
 
 	const systemInformation = await import('systeminformation');
-	const [memStats, fsStats] = await Promise.all([
-		systemInformation.mem(),
-		systemInformation.fsSize(),
-	]);
+	const [memStats, fsStats] = await Promise.all([systemInformation.mem(), systemInformation.fsSize()]);
 	const cpu = os.cpus()[0];
 	if (cpu == null) throw new Error('CPU information is unavailable');
 	const fs = fsStats[0];

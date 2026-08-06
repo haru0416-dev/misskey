@@ -15,7 +15,8 @@ import type { KVs } from '../core.js';
 /**
  * For testing
  */
-export default class TestIntersectionChart extends Chart<typeof schema> { // eslint-disable-line import/no-default-export
+export default class TestIntersectionChart extends Chart<typeof schema> {
+	// eslint-disable-line import/no-default-export
 	constructor(
 		private db: MiDrizzleDatabase,
 

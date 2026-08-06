@@ -19,10 +19,7 @@ export type DriveFolderChildFolderCount = {
 };
 
 function driveFolderByIdAndUserIdCondition(id: DriveFolderRow['id'], userId: MiUser['id'] | null) {
-	return and(
-		eq(driveFolder.id, id),
-		userId != null ? eq(driveFolder.userId, userId) : isNull(driveFolder.userId),
-	);
+	return and(eq(driveFolder.id, id), userId != null ? eq(driveFolder.userId, userId) : isNull(driveFolder.userId));
 }
 
 function applyDriveFolderPaginationCondition(
@@ -60,11 +57,7 @@ export async function fetchDriveFolderByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: DriveFolderRow['id'],
 ): Promise<DriveFolderRow | null> {
-	const [row] = await db
-		.select()
-		.from(driveFolder)
-		.where(eq(driveFolder.id, id))
-		.limit(1);
+	const [row] = await db.select().from(driveFolder).where(eq(driveFolder.id, id)).limit(1);
 
 	return row ?? null;
 }
@@ -87,11 +80,7 @@ export async function fetchDriveFolderByIdAndUserIdFromDatabase(
 	id: DriveFolderRow['id'],
 	userId: MiUser['id'] | null,
 ): Promise<DriveFolderRow | null> {
-	const [row] = await db
-		.select()
-		.from(driveFolder)
-		.where(driveFolderByIdAndUserIdCondition(id, userId))
-		.limit(1);
+	const [row] = await db.select().from(driveFolder).where(driveFolderByIdAndUserIdCondition(id, userId)).limit(1);
 
 	return row ?? null;
 }
@@ -119,20 +108,14 @@ export async function listDriveFoldersByIdsFromDatabase(
 ): Promise<DriveFolderRow[]> {
 	if (ids.length === 0) return [];
 
-	return await db
-		.select()
-		.from(driveFolder)
-		.where(inArray(driveFolder.id, ids));
+	return await db.select().from(driveFolder).where(inArray(driveFolder.id, ids));
 }
 
 export async function countDriveFoldersByParentIdFromDatabase(
 	db: MiDrizzleDatabase,
 	parentId: DriveFolderRow['id'],
 ): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(driveFolder)
-		.where(eq(driveFolder.parentId, parentId));
+	const [row] = await db.select({ count: count() }).from(driveFolder).where(eq(driveFolder.parentId, parentId));
 
 	return row?.count ?? 0;
 }
@@ -155,7 +138,7 @@ export async function countChildDriveFoldersGroupedByParentIdsFromDatabase(
 
 	return rows
 		.filter((row): row is { parentId: string; count: number } => row.parentId != null)
-		.map(row => ({ parentId: row.parentId, count: row.count }));
+		.map((row) => ({ parentId: row.parentId, count: row.count }));
 }
 
 export async function listDriveFoldersByUserIdFromDatabase(
@@ -195,21 +178,20 @@ export async function listDriveFoldersByNameFromDatabase(
 	return await db
 		.select()
 		.from(driveFolder)
-		.where(and(
-			eq(driveFolder.name, options.name),
-			eq(driveFolder.userId, options.userId),
-			options.parentId != null ? eq(driveFolder.parentId, options.parentId) : isNull(driveFolder.parentId),
-		));
+		.where(
+			and(
+				eq(driveFolder.name, options.name),
+				eq(driveFolder.userId, options.userId),
+				options.parentId != null ? eq(driveFolder.parentId, options.parentId) : isNull(driveFolder.parentId),
+			),
+		);
 }
 
 export async function createDriveFolderInDatabase(
 	db: MiDrizzleDatabase,
 	data: DriveFolderInsert,
 ): Promise<DriveFolderRow> {
-	const [row] = await db
-		.insert(driveFolder)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(driveFolder).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create drive folder');
@@ -226,17 +208,12 @@ export async function updateDriveFolderInDatabase(
 		parentId: DriveFolderRow['parentId'];
 	},
 ): Promise<void> {
-	await db
-		.update(driveFolder)
-		.set(values)
-		.where(eq(driveFolder.id, id));
+	await db.update(driveFolder).set(values).where(eq(driveFolder.id, id));
 }
 
 export async function deleteDriveFolderByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: DriveFolderRow['id'],
 ): Promise<void> {
-	await db
-		.delete(driveFolder)
-		.where(eq(driveFolder.id, id));
+	await db.delete(driveFolder).where(eq(driveFolder.id, id));
 }

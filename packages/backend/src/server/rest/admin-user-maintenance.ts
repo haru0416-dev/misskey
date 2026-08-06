@@ -8,7 +8,11 @@ import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase, unsetUserMfaInDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import {
+	fetchUserProfileByUserIdOrFailFromDatabase,
+	unsetUserMfaInDatabase,
+	updateUserProfileInDatabase,
+} from '@/core/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { misskeyId } from '@/misc/zod-params.js';
@@ -32,7 +36,6 @@ export const adminUpdateUserNoteParamDef = z.object({
 	userId: misskeyId(),
 	text: z.string(),
 });
-
 
 type ResetPasswordResponse = {
 	password: string;
@@ -61,7 +64,7 @@ async function assertCanMaintainUser(
 	me: MiLocalUser,
 	user: MiUser,
 ): Promise<void> {
-	if (!await isHonoApiAdministrator(deps, me) && await isHonoApiAdministrator(deps, user)) {
+	if (!(await isHonoApiAdministrator(deps, me)) && (await isHonoApiAdministrator(deps, user))) {
 		throw rolePermissionDeniedError();
 	}
 }

@@ -10,7 +10,11 @@ import { fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
 import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
 import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import { fetchPageByNameAndUserIdFromDatabase } from '@/core/PageStore.js';
-import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
+import {
+	fetchLocalUserByIdFromDatabase,
+	fetchUserByIdFromDatabase,
+	fetchUserByUsernameAndHostFromDatabase,
+} from '@/core/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import * as Acct from '@/misc/acct.js';
 import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
@@ -30,13 +34,11 @@ import { NotePage } from './views/note.js';
 import { PagePage } from './views/page.js';
 import { UserPage } from './views/user.js';
 
-export type ClientPagesDependencies =
-	& HonoApiNoteDependencies
-	& HonoApiClipDependencies
-	& HonoApiFlashDependencies
-	& HonoApiGalleryDependencies
-	& HonoApiPageDependencies
-	& {
+export type ClientPagesDependencies = HonoApiNoteDependencies &
+	HonoApiClipDependencies &
+	HonoApiFlashDependencies &
+	HonoApiGalleryDependencies &
+	HonoApiPageDependencies & {
 		getCommonData: () => Promise<CommonData>;
 	};
 
@@ -54,14 +56,15 @@ function htmlResponse(html: unknown, headers: Record<string, string>): Response 
 function entityPageHeaders(profile: MiUserProfile, cacheControl = 'public, max-age=15'): Record<string, string> {
 	return {
 		'Cache-Control': cacheControl,
-		'Vary': 'Accept',
+		Vary: 'Accept',
 		...(profile.preventAiLearning ? { 'X-Robots-Tag': 'noimageai, noai' } : {}),
 	};
 }
 
 function isUgcVisibleToVisitor(deps: Pick<ClientPagesDependencies, 'meta'>, userHost: string | null): boolean {
-	return deps.meta.ugcVisibilityForVisitor === 'all' ||
-		(deps.meta.ugcVisibilityForVisitor === 'local' && userHost == null);
+	return (
+		deps.meta.ugcVisibilityForVisitor === 'all' || (deps.meta.ugcVisibilityForVisitor === 'local' && userHost == null)
+	);
 }
 
 /**
@@ -76,7 +79,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		const user = await fetchLocalUserByIdFromDatabase(deps.db, c.req.param('user'));
 
 		if (user == null || user.isSuspended) {
-			return c.body(null, 404, { 'Vary': 'Accept' });
+			return c.body(null, 404, { Vary: 'Accept' });
 		}
 
 		return c.redirect(`/@${user.username}${user.host == null ? '' : '@' + user.host}`, 302);
@@ -84,9 +87,10 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 
 	app.get('/notes/:note', async (c, next) => {
 		const note = await fetchNoteByIdFromDatabase(deps.db, c.req.param('note'));
-		const noteUser = note != null && ['public', 'home'].includes(note.visibility)
-			? await fetchUserByIdFromDatabase(deps.db, note.userId)
-			: null;
+		const noteUser =
+			note != null && ['public', 'home'].includes(note.visibility)
+				? await fetchUserByIdFromDatabase(deps.db, note.userId)
+				: null;
 
 		if (
 			note != null &&
@@ -98,12 +102,15 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			const packedNote = await packNoteForHonoApi(deps, note, null, { detail: true });
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, note.userId);
 
-			return htmlResponse(NotePage({
-				note: packedNote,
-				profile,
-				...(await deps.getCommonData()),
-				clientCtxJson: htmlSafeJsonStringify({ note: packedNote }),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				NotePage({
+					note: packedNote,
+					profile,
+					...(await deps.getCommonData()),
+					clientCtxJson: htmlSafeJsonStringify({ note: packedNote }),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		await next();
@@ -116,14 +123,17 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		// 原典 (ClientServerService) は visibility を見ずに描画していたが、非公開 Play の
 		// タイトル等が匿名訪問者へ漏れるため public のみ SSR する (非公開は汎用ページへ)。
 		if (flash != null && flash.visibility === 'public') {
-			const packedFlash = await packFlashForHonoApi(deps, flash, null) as unknown as Packed<'Flash'>;
+			const packedFlash = (await packFlashForHonoApi(deps, flash, null)) as unknown as Packed<'Flash'>;
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, flash.userId);
 
-			return htmlResponse(FlashPage({
-				flash: packedFlash,
-				profile,
-				...(await deps.getCommonData()),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				FlashPage({
+					flash: packedFlash,
+					profile,
+					...(await deps.getCommonData()),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		await next();
@@ -137,12 +147,15 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			const packedClip = await packClipForHonoApi(deps, clip, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, clip.userId);
 
-			return htmlResponse(ClipPage({
-				clip: packedClip,
-				profile,
-				...(await deps.getCommonData()),
-				clientCtxJson: htmlSafeJsonStringify({ clip: packedClip }),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				ClipPage({
+					clip: packedClip,
+					profile,
+					...(await deps.getCommonData()),
+					clientCtxJson: htmlSafeJsonStringify({ clip: packedClip }),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		await next();
@@ -156,11 +169,14 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			const packedPost = await packGalleryPostForHonoApi(deps, post, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, post.userId);
 
-			return htmlResponse(GalleryPostPage({
-				galleryPost: packedPost,
-				profile,
-				...(await deps.getCommonData()),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				GalleryPostPage({
+					galleryPost: packedPost,
+					profile,
+					...(await deps.getCommonData()),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		await next();
@@ -176,7 +192,10 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return;
 		}
 
-		const segments = pathname.slice(2).split('/').map(segment => decodeURIComponent(segment));
+		const segments = pathname
+			.slice(2)
+			.split('/')
+			.map((segment) => decodeURIComponent(segment));
 		const acctStr = segments[0] ?? '';
 		if (acctStr === '') {
 			await next();
@@ -203,11 +222,14 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			const packedPage = await packPageForHonoApi(deps, page, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, page.userId);
 
-			return htmlResponse(PagePage({
-				page: packedPage,
-				profile,
-				...(await deps.getCommonData()),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				PagePage({
+					page: packedPage,
+					profile,
+					...(await deps.getCommonData()),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		// /@:user or /@:user/:sub
@@ -216,19 +238,20 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return;
 		}
 
-		if (
-			user != null && !user.isSuspended && isUgcVisibleToVisitor(deps, user.host)
-		) {
+		if (user != null && !user.isSuspended && isUgcVisibleToVisitor(deps, user.host)) {
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-			const packedUser = await packUserDetailedNotMeForHonoApi(deps, user, null) as unknown as Packed<'UserDetailed'>;
+			const packedUser = (await packUserDetailedNotMeForHonoApi(deps, user, null)) as unknown as Packed<'UserDetailed'>;
 
-			return htmlResponse(UserPage({
-				user: packedUser,
-				profile,
-				...(segments[1] === undefined ? {} : { sub: segments[1] }),
-				...(await deps.getCommonData()),
-				clientCtxJson: htmlSafeJsonStringify({ user: packedUser }),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				UserPage({
+					user: packedUser,
+					profile,
+					...(segments[1] === undefined ? {} : { sub: segments[1] }),
+					...(await deps.getCommonData()),
+					clientCtxJson: htmlSafeJsonStringify({ user: packedUser }),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		// リモートユーザー等: モデレータがAPI経由で参照可能にするために404にはせず汎用ページへ

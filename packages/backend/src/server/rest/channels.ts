@@ -5,7 +5,10 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase, listFavoritedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFavoriteStore.js';
+import {
+	fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase,
+	listFavoritedChannelIdsByUserIdFromDatabase,
+} from '@/core/ChannelFavoriteStore.js';
 import {
 	createChannelFollowingInDatabase,
 	deleteChannelFollowingFromDatabase,
@@ -187,11 +190,21 @@ type ChannelTimelineParams = {
 };
 
 function channelsShowNoSuchChannelError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such channel.', code: 'NO_SUCH_CHANNEL', id: '6f6c314b-7486-4897-8966-c04a66a02923' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such channel.',
+		code: 'NO_SUCH_CHANNEL',
+		id: '6f6c314b-7486-4897-8966-c04a66a02923',
+	});
 }
 
 function channelsTimelineNoSuchChannelError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such channel.', code: 'NO_SUCH_CHANNEL', id: '4d0eeeba-a02c-4c3c-9966-ef60d38d2e7f' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such channel.',
+		code: 'NO_SUCH_CHANNEL',
+		id: '4d0eeeba-a02c-4c3c-9966-ef60d38d2e7f',
+	});
 }
 
 function channelCreateNoSuchFileError(): HonoApiError {
@@ -305,13 +318,21 @@ async function buildChannelPackHint(
 	channels: MiChannel[],
 	me: MiLocalUser | null,
 ): Promise<ChannelPackHint> {
-	const channelIds = channels.map(channel => channel.id);
+	const channelIds = channels.map((channel) => channel.id);
 	const [bannerFiles, followings, favorites, muting] = await Promise.all([
-		listDriveFilesByIdsFromDatabase(deps.db, channels.map(channel => channel.bannerId).filter(id => id != null))
-			.then(files => new Map(files.map(file => [file.id, file]))),
-		me == null ? Promise.resolve(new Set<MiChannel['id']>()) : fetchFollowedChannelIdsByUserIdAndChannelIdsFromDatabase(deps.db, me.id, channelIds),
-		me == null ? Promise.resolve(new Set<MiChannel['id']>()) : fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase(deps.db, me.id, channelIds),
-		me == null ? Promise.resolve(new Set<MiChannel['id']>()) : fetchMutedChannelIdsByUserIdAndChannelIdsFromDatabase(deps.db, me.id, channelIds),
+		listDriveFilesByIdsFromDatabase(
+			deps.db,
+			channels.map((channel) => channel.bannerId).filter((id) => id != null),
+		).then((files) => new Map(files.map((file) => [file.id, file]))),
+		me == null
+			? Promise.resolve(new Set<MiChannel['id']>())
+			: fetchFollowedChannelIdsByUserIdAndChannelIdsFromDatabase(deps.db, me.id, channelIds),
+		me == null
+			? Promise.resolve(new Set<MiChannel['id']>())
+			: fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase(deps.db, me.id, channelIds),
+		me == null
+			? Promise.resolve(new Set<MiChannel['id']>())
+			: fetchMutedChannelIdsByUserIdAndChannelIdsFromDatabase(deps.db, me.id, channelIds),
 	]);
 
 	return {
@@ -328,7 +349,7 @@ function packChannelForHonoApi(
 	me: MiLocalUser | null,
 	hint: ChannelPackHint,
 ): HonoApiPackedChannel {
-	const bannerFile = channel.bannerId == null ? null : hint.bannerFiles.get(channel.bannerId) ?? null;
+	const bannerFile = channel.bannerId == null ? null : (hint.bannerFiles.get(channel.bannerId) ?? null);
 
 	return {
 		id: channel.id,
@@ -346,12 +367,14 @@ function packChannelForHonoApi(
 		notesCount: channel.notesCount,
 		isSensitive: channel.isSensitive,
 		allowRenoteToExternal: channel.allowRenoteToExternal,
-		...(me == null ? {} : {
-			isFollowing: hint.followings.has(channel.id),
-			isFavorited: hint.favorites.has(channel.id),
-			isMuting: hint.muting.has(channel.id),
-			hasUnreadNote: false,
-		}),
+		...(me == null
+			? {}
+			: {
+					isFollowing: hint.followings.has(channel.id),
+					isFavorited: hint.favorites.has(channel.id),
+					isMuting: hint.muting.has(channel.id),
+					hasUnreadNote: false,
+				}),
 	};
 }
 
@@ -361,7 +384,7 @@ async function packChannelsForHonoApi(
 	me: MiLocalUser | null,
 ): Promise<HonoApiPackedChannel[]> {
 	const hint = await buildChannelPackHint(deps, channels, me);
-	return channels.map(channel => packChannelForHonoApi(deps, channel, me, hint));
+	return channels.map((channel) => packChannelForHonoApi(deps, channel, me, hint));
 }
 
 async function packChannelDetailedForHonoApi(
@@ -372,11 +395,11 @@ async function packChannelDetailedForHonoApi(
 	const hint = await buildChannelPackHint(deps, [channel], me);
 	const packed = packChannelForHonoApi(deps, channel, me, hint);
 
-	const pinnedNotes = channel.pinnedNoteIds.length > 0
-		? await listNotesByIdsFromDatabase(deps.db, channel.pinnedNoteIds)
-		: [];
-	const packedPinnedNotes = (await packNoteManyForHonoApi(deps, pinnedNotes, me))
-		.sort((a, b) => channel.pinnedNoteIds.indexOf(a.id) - channel.pinnedNoteIds.indexOf(b.id));
+	const pinnedNotes =
+		channel.pinnedNoteIds.length > 0 ? await listNotesByIdsFromDatabase(deps.db, channel.pinnedNoteIds) : [];
+	const packedPinnedNotes = (await packNoteManyForHonoApi(deps, pinnedNotes, me)).sort(
+		(a, b) => channel.pinnedNoteIds.indexOf(a.id) - channel.pinnedNoteIds.indexOf(b.id),
+	);
 
 	return {
 		...packed,
@@ -421,9 +444,12 @@ export async function handleHonoApiChannelsOwned(
 ): Promise<HonoApiPackedChannel[]> {
 	const params = parseHonoApiParams(channelsListParamDef, body);
 	const channels = await listOwnedChannelsFromDatabase(deps.db, me.id, {
-		...resolveChannelPagination({
-			gen: (time?: number) => genId(time),
-		}, params),
+		...resolveChannelPagination(
+			{
+				gen: (time?: number) => genId(time),
+			},
+			params,
+		),
 		limit: params.limit,
 	});
 
@@ -438,15 +464,19 @@ export async function handleHonoApiChannelsFollowed(
 	const params = parseHonoApiParams(channelsListParamDef, body);
 	const followings = await listChannelFollowingsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
-		...resolveChannelPagination({
-			gen: (time?: number) => genId(time),
-		}, params),
+		...resolveChannelPagination(
+			{
+				gen: (time?: number) => genId(time),
+			},
+			params,
+		),
 	});
-	const channelIds = followings.map(following => following.followeeId);
-	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds)
-		.then(channels => new Map(channels.map(channel => [channel.id, channel])));
+	const channelIds = followings.map((following) => following.followeeId);
+	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds).then(
+		(channels) => new Map(channels.map((channel) => [channel.id, channel])),
+	);
 	const channels = channelIds
-		.map(id => channelById.get(id))
+		.map((id) => channelById.get(id))
 		.filter((channel): channel is MiChannel => channel != null);
 
 	return await packChannelsForHonoApi(deps, channels, me);
@@ -461,10 +491,11 @@ export async function handleHonoApiChannelsMyFavorites(
 	const channelIds = await listFavoritedChannelIdsByUserIdFromDatabase(deps.db, me.id);
 	if (channelIds.length === 0) return [];
 
-	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds)
-		.then(channels => new Map(channels.map(channel => [channel.id, channel])));
+	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds).then(
+		(channels) => new Map(channels.map((channel) => [channel.id, channel])),
+	);
 	const channels = channelIds
-		.map(id => channelById.get(id))
+		.map((id) => channelById.get(id))
 		.filter((channel): channel is MiChannel => channel != null);
 
 	return await packChannelsForHonoApi(deps, channels, me);
@@ -533,7 +564,9 @@ export async function handleHonoApiChannelsUpdate(
 		...(typeof params.isArchived === 'boolean' ? { isArchived: params.isArchived } : {}),
 		...(banner ? { bannerId: banner.id } : {}),
 		...(typeof params.isSensitive === 'boolean' ? { isSensitive: params.isSensitive } : {}),
-		...(typeof params.allowRenoteToExternal === 'boolean' ? { allowRenoteToExternal: params.allowRenoteToExternal } : {}),
+		...(typeof params.allowRenoteToExternal === 'boolean'
+			? { allowRenoteToExternal: params.allowRenoteToExternal }
+			: {}),
 	});
 
 	const updated = await fetchChannelByIdFromDatabase(deps.db, channel.id);
@@ -655,10 +688,11 @@ export async function handleHonoApiChannelsMuteList(
 	const channelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 	if (channelIds.length === 0) return [];
 
-	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds)
-		.then(channels => new Map(channels.map(channel => [channel.id, channel])));
+	const channelById = await listChannelsByIdsFromDatabase(deps.db, channelIds).then(
+		(channels) => new Map(channels.map((channel) => [channel.id, channel])),
+	);
 	const channels = channelIds
-		.map(id => channelById.get(id))
+		.map((id) => channelById.get(id))
 		.filter((channel): channel is MiChannel => channel != null)
 		.sort((a, b) => a.id.localeCompare(b.id));
 
@@ -691,8 +725,9 @@ export async function handleHonoApiChannelsTimeline(
 
 	let mutingChannelIds: string[] = [];
 	if (me) {
-		mutingChannelIds = (await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date()))
-			.filter(id => id !== channel.id);
+		mutingChannelIds = (await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date())).filter(
+			(id) => id !== channel.id,
+		);
 	}
 
 	const notes = await listChannelTimelineNotesFromDatabase(deps.db, {

@@ -23,12 +23,9 @@ export async function listPollVotesByNoteAndUserFromDatabase(
 	const rows = await db
 		.select()
 		.from(pollVote)
-		.where(and(
-			eq(pollVote.noteId, noteId),
-			eq(pollVote.userId, userId),
-		));
+		.where(and(eq(pollVote.noteId, noteId), eq(pollVote.userId, userId)));
 
-	return rows.map(row => deserializePollVote(row));
+	return rows.map((row) => deserializePollVote(row));
 }
 
 export async function fetchPollVoteByNoteAndUserFromDatabase(
@@ -39,10 +36,7 @@ export async function fetchPollVoteByNoteAndUserFromDatabase(
 	const [row] = await db
 		.select()
 		.from(pollVote)
-		.where(and(
-			eq(pollVote.noteId, noteId),
-			eq(pollVote.userId, userId),
-		))
+		.where(and(eq(pollVote.noteId, noteId), eq(pollVote.userId, userId)))
 		.limit(1);
 
 	return row == null ? null : deserializePollVote(row);
@@ -58,12 +52,9 @@ export async function listPollVotesByNoteIdsAndUserFromDatabase(
 	const rows = await db
 		.select()
 		.from(pollVote)
-		.where(and(
-			inArray(pollVote.noteId, noteIds),
-			eq(pollVote.userId, userId),
-		));
+		.where(and(inArray(pollVote.noteId, noteIds), eq(pollVote.userId, userId)));
 
-	return rows.map(row => deserializePollVote(row));
+	return rows.map((row) => deserializePollVote(row));
 }
 
 export async function listPollVotesByNoteIdsAndUserIdsFromDatabase(
@@ -76,22 +67,15 @@ export async function listPollVotesByNoteIdsAndUserIdsFromDatabase(
 	const rows = await db
 		.select()
 		.from(pollVote)
-		.where(and(
-			sql`${pollVote.noteId} = ANY(${sql.param(noteIds)})`,
-			sql`${pollVote.userId} = ANY(${sql.param(userIds)})`,
-		));
+		.where(
+			and(sql`${pollVote.noteId} = ANY(${sql.param(noteIds)})`, sql`${pollVote.userId} = ANY(${sql.param(userIds)})`),
+		);
 
-	return rows.map(row => deserializePollVote(row));
+	return rows.map((row) => deserializePollVote(row));
 }
 
-export async function createPollVoteInDatabase(
-	db: MiDrizzleDatabase,
-	data: PollVoteInsert,
-): Promise<MiPollVote> {
-	const [row] = await db
-		.insert(pollVote)
-		.values(data)
-		.returning();
+export async function createPollVoteInDatabase(db: MiDrizzleDatabase, data: PollVoteInsert): Promise<MiPollVote> {
+	const [row] = await db.insert(pollVote).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create poll vote');
@@ -108,10 +92,7 @@ export async function listLocalPollVoterIdsByNoteIdFromDatabase(
 		.selectDistinct({ userId: pollVote.userId })
 		.from(pollVote)
 		.innerJoin(user, eq(user.id, pollVote.userId))
-		.where(and(
-			eq(pollVote.noteId, noteId),
-			isNull(user.host),
-		));
+		.where(and(eq(pollVote.noteId, noteId), isNull(user.host)));
 
-	return rows.map(row => row.userId);
+	return rows.map((row) => row.userId);
 }

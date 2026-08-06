@@ -3,7 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { channelCreateParamDef, channelFollowParamDef, channelMuteCreateParamDef, channelMuteDeleteParamDef, channelShowParamDef, channelUpdateParamDef, channelsListParamDef, channelsSearchParamDef, emptyParamDef } from '@/server/rest/channels.js';
+import {
+	channelCreateParamDef,
+	channelFollowParamDef,
+	channelMuteCreateParamDef,
+	channelMuteDeleteParamDef,
+	channelShowParamDef,
+	channelUpdateParamDef,
+	channelsListParamDef,
+	channelsSearchParamDef,
+	emptyParamDef,
+} from '@/server/rest/channels.js';
 import { channelParamDef } from '@/server/rest/favorites.js';
 import { HOUR } from '@/const.js';
 
@@ -27,7 +37,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Channel',
 			},
 
@@ -69,10 +80,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},
@@ -109,10 +122,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},
@@ -129,10 +144,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},
@@ -149,10 +166,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},
@@ -167,10 +186,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},
@@ -185,7 +206,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Channel',
 			},
 
@@ -207,10 +229,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -286,7 +310,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Channel',
 			},
 
@@ -379,10 +404,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},

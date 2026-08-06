@@ -17,14 +17,8 @@ function deserializeClipNote(row: ClipNoteRow): MiClipNote {
 	return row as MiClipNote;
 }
 
-export async function countClipNotesByClipIdFromDatabase(
-	db: MiDrizzleDatabase,
-	clipId: MiClip['id'],
-): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(clipNote)
-		.where(eq(clipNote.clipId, clipId));
+export async function countClipNotesByClipIdFromDatabase(db: MiDrizzleDatabase, clipId: MiClip['id']): Promise<number> {
+	const [row] = await db.select({ count: count() }).from(clipNote).where(eq(clipNote.clipId, clipId));
 
 	return row?.count ?? 0;
 }
@@ -46,7 +40,7 @@ export async function countClipNotesByClipIdsFromDatabase(
 		.where(inArray(clipNote.clipId, clipIds))
 		.groupBy(clipNote.clipId);
 
-	return new Map(rows.map(row => [row.clipId, row.count]));
+	return new Map(rows.map((row) => [row.clipId, row.count]));
 }
 
 export async function listClipNotesByClipIdFromDatabase(
@@ -74,29 +68,20 @@ export async function listClipNotesByClipIdFromDatabase(
 	}
 
 	const rows = await query;
-	return rows.map(row => deserializeClipNote(row));
+	return rows.map((row) => deserializeClipNote(row));
 }
 
 export async function listClipNoteClipIdsByNoteIdFromDatabase(
 	db: MiDrizzleDatabase,
 	noteId: MiNote['id'],
 ): Promise<MiClip['id'][]> {
-	const rows = await db
-		.select({ clipId: clipNote.clipId })
-		.from(clipNote)
-		.where(eq(clipNote.noteId, noteId));
+	const rows = await db.select({ clipId: clipNote.clipId }).from(clipNote).where(eq(clipNote.noteId, noteId));
 
-	return rows.map(row => row.clipId);
+	return rows.map((row) => row.clipId);
 }
 
-export async function createClipNoteInDatabase(
-	db: MiDrizzleDatabase,
-	data: ClipNoteInsert,
-): Promise<MiClipNote> {
-	const [row] = await db
-		.insert(clipNote)
-		.values(data)
-		.returning();
+export async function createClipNoteInDatabase(db: MiDrizzleDatabase, data: ClipNoteInsert): Promise<MiClipNote> {
+	const [row] = await db.insert(clipNote).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create clip note');
@@ -110,9 +95,9 @@ export async function createClipNoteWithinLimitInDatabase(
 	data: ClipNoteInsert,
 	limit: number,
 ): Promise<'created' | 'tooManyClipNotes' | 'noSuchNote'> {
-	return await db.transaction(async tx => {
+	return await db.transaction(async (tx) => {
 		await acquireAdvisoryTransactionLockInDatabase(tx, 'clip-note-limit', data.clipId);
-		if (await countClipNotesByClipIdFromDatabase(tx, data.clipId) >= limit) return 'tooManyClipNotes';
+		if ((await countClipNotesByClipIdFromDatabase(tx, data.clipId)) >= limit) return 'tooManyClipNotes';
 
 		// Note deletion locks the note before cascading to clip_note, so keep the same lock order here.
 		const [lockedNote] = await tx
@@ -125,7 +110,10 @@ export async function createClipNoteWithinLimitInDatabase(
 
 		await tx.insert(clipNote).values(data);
 		await tx.update(clip).set({ lastClippedAt: new Date() }).where(eq(clip.id, data.clipId));
-		await tx.update(note).set({ clippedCount: sql`${note.clippedCount} + 1` }).where(eq(note.id, data.noteId));
+		await tx
+			.update(note)
+			.set({ clippedCount: sql`${note.clippedCount} + 1` })
+			.where(eq(note.id, data.noteId));
 		return 'created';
 	});
 }
@@ -137,7 +125,7 @@ export async function deleteClipNoteAndDecrementNoteClippedCountInDatabase(
 		noteId: MiNote['id'];
 	},
 ): Promise<void> {
-	await db.transaction(async tx => {
+	await db.transaction(async (tx) => {
 		// note削除はnote -> clip_noteの順にlockするため、ここも同じ順序にしてdeadlockを避ける。
 		const [lockedNote] = await tx
 			.select({ id: note.id })
@@ -149,10 +137,7 @@ export async function deleteClipNoteAndDecrementNoteClippedCountInDatabase(
 
 		const [deleted] = await tx
 			.delete(clipNote)
-			.where(and(
-				eq(clipNote.clipId, data.clipId),
-				eq(clipNote.noteId, data.noteId),
-			))
+			.where(and(eq(clipNote.clipId, data.clipId), eq(clipNote.noteId, data.noteId)))
 			.returning({ noteId: clipNote.noteId });
 
 		if (deleted == null) return;

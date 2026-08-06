@@ -4,13 +4,30 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import {
+	assertCredential,
+	assertProhibitMoved,
+	assertSecureCredential,
+	assertTokenPermission,
+	authenticateHonoApiToken,
+} from '../auth.js';
 import { handleHonoApiEmailAddressAvailable } from '../availability.js';
 import { handleHonoApiPinnedUsers } from '../user.js';
-import { handleHonoApiAnnouncements, handleHonoApiAnnouncementShow, handleHonoApiIReadAnnouncement } from '../announcements.js';
+import {
+	handleHonoApiAnnouncements,
+	handleHonoApiAnnouncementShow,
+	handleHonoApiIReadAnnouncement,
+} from '../announcements.js';
 import { handleHonoApiIClaimAchievement } from '../notification.js';
 import { handleHonoApiPagePush } from '../page-push.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	runApiEndpoint,
+	authenticateOptionalRequest,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencies): void {

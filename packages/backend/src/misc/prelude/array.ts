@@ -5,13 +5,12 @@
 
 import { Predicate } from './relation.js';
 
-
 export function countIf<T>(f: Predicate<T>, xs: T[]): number {
 	return xs.filter(f).length;
 }
 
 export function count<T>(a: T, xs: T[]): number {
-	return countIf(x => x === a, xs);
+	return countIf((x) => x === a, xs);
 }
 
 export function concat<T>(xss: T[][]): T[] {
@@ -19,15 +18,15 @@ export function concat<T>(xss: T[][]): T[] {
 }
 
 export function intersperse<T>(sep: T, xs: T[]): T[] {
-	return concat(xs.map(x => [sep, x])).slice(1);
+	return concat(xs.map((x) => [sep, x])).slice(1);
 }
 
 export function erase<T>(a: T, xs: T[]): T[] {
-	return xs.filter(x => x !== a);
+	return xs.filter((x) => x !== a);
 }
 
 export function difference<T>(xs: T[], ys: T[]): T[] {
-	return xs.filter(x => !ys.includes(x));
+	return xs.filter((x) => !ys.includes(x));
 }
 
 export function unique<T>(xs: T[]): T[] {
@@ -67,7 +66,7 @@ export function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
 
 export function cumulativeSum(xs: number[]): number[] {
 	let total = 0;
-	return xs.map(value => total += value);
+	return xs.map((value) => (total += value));
 }
 
 export function toArray<T>(x: T | T[] | undefined): T[] {

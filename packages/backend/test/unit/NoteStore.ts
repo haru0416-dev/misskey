@@ -116,7 +116,7 @@ describe('NoteStore renote filtering', () => {
 			blockedHosts: [],
 			mutingChannelIds: [],
 		});
-		const timelineIds = new Set(timeline.map(note => note.id));
+		const timelineIds = new Set(timeline.map((note) => note.id));
 		expect(timelineIds.has(pureRenoteId)).toBe(false);
 		expect(timelineIds.has(cwQuoteId)).toBe(true);
 		expect(timelineIds.has(replyQuoteId)).toBe(true);
@@ -129,7 +129,7 @@ describe('NoteStore renote filtering', () => {
 			me: null,
 			blockedHosts: [],
 		});
-		const childIds = new Set(children.map(note => note.id));
+		const childIds = new Set(children.map((note) => note.id));
 		expect(childIds.has(pureRenoteId)).toBe(false);
 		expect(childIds.has(cwQuoteId)).toBe(true);
 		expect(childIds.has(replyQuoteId)).toBe(true);
@@ -144,7 +144,7 @@ describe('NoteStore renote filtering', () => {
 			me: null,
 			blockedHosts: [],
 		});
-		const localTimelineIds = new Set(localTimeline.map(note => note.id));
+		const localTimelineIds = new Set(localTimeline.map((note) => note.id));
 		expect(localTimelineIds.has(pureRenoteId)).toBe(false);
 		expect(localTimelineIds.has(cwQuoteId)).toBe(true);
 		expect(localTimelineIds.has(replyQuoteId)).toBe(true);
@@ -163,7 +163,7 @@ describe('NoteStore renote filtering', () => {
 			withReplies: true,
 			blockedHosts: [],
 		});
-		const hybridTimelineIds = new Set(hybridTimeline.map(note => note.id));
+		const hybridTimelineIds = new Set(hybridTimeline.map((note) => note.id));
 		expect(hybridTimelineIds.has(pureRenoteId)).toBe(false);
 		expect(hybridTimelineIds.has(cwQuoteId)).toBe(true);
 		expect(hybridTimelineIds.has(replyQuoteId)).toBe(true);
@@ -222,7 +222,7 @@ describe('NoteStore renote filtering', () => {
 			me: viewer,
 			blockedHosts: [],
 		});
-		const timelineIds = new Set(timeline.map(note => note.id));
+		const timelineIds = new Set(timeline.map((note) => note.id));
 		expect(timelineIds.has(pureRenoteId)).toBe(false);
 		expect(timelineIds.has(cwQuoteId)).toBe(true);
 		expect(timelineIds.has(replyQuoteId)).toBe(true);

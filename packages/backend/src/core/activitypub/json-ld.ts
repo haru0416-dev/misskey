@@ -42,11 +42,7 @@ export class JsonLdForbiddenDirectiveError extends JsonLdError {
 }
 
 export class JsonLd {
-	private static forbiddenDirectives = new Set([
-		'@included',
-		'@graph',
-		'@reverse',
-	]);
+	private static forbiddenDirectives = new Set(['@included', '@graph', '@reverse']);
 
 	private frozen = false;
 	private cache: Map<string, RemoteDocument> = new Map();
@@ -55,13 +51,16 @@ export class JsonLd {
 	public preLoad = true;
 	public loderTimeout = 5000;
 
-	constructor(
-		private httpRequestService: HttpRequestService,
-	) {
-	}
+	constructor(private httpRequestService: HttpRequestService) {}
 
 	@bindThis
-	public async signRsaSignature2017(data: unknown, privateKey: string, creator: string, domain?: string, created?: Date): Promise<Record<string, unknown>> {
+	public async signRsaSignature2017(
+		data: unknown,
+		privateKey: string,
+		creator: string,
+		domain?: string,
+		created?: Date,
+	): Promise<Record<string, unknown>> {
 		const options: {
 			type: string;
 			creator: string;
@@ -150,7 +149,9 @@ export class JsonLd {
 	 * validating JSON-LD signatures.
 	 */
 	@bindThis
-	public freeze(): void { this.frozen = true; }
+	public freeze(): void {
+		this.frozen = true;
+	}
 
 	@bindThis
 	public checkForForbiddenDirectives(value: unknown): void {
@@ -216,25 +217,27 @@ export class JsonLd {
 
 	@bindThis
 	private async fetchDocument(url: string): Promise<JsonLdObject> {
-		const json = await this.httpRequestService.send(
-			url,
-			{
-				headers: {
-					Accept: 'application/ld+json, application/json',
+		const json = await this.httpRequestService
+			.send(
+				url,
+				{
+					headers: {
+						Accept: 'application/ld+json, application/json',
+					},
+					timeout: this.loderTimeout,
 				},
-				timeout: this.loderTimeout,
-			},
-			{
-				throwErrorWhenResponseNotOk: false,
-				validators: [validateContentTypeSetAsJsonLD],
-			},
-		).then(res => {
-			if (!res.ok) {
-				throw new Error(`${res.status} ${res.statusText}`);
-			} else {
-				return res.json();
-			}
-		});
+				{
+					throwErrorWhenResponseNotOk: false,
+					validators: [validateContentTypeSetAsJsonLD],
+				},
+			)
+			.then((res) => {
+				if (!res.ok) {
+					throw new Error(`${res.status} ${res.statusText}`);
+				} else {
+					return res.json();
+				}
+			});
 
 		return json as JsonLdObject;
 	}

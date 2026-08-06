@@ -5,11 +5,17 @@
 
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { filterNoteForStreamingHidingForHonoApi, populateMyReactionForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
+import {
+	filterNoteForStreamingHidingForHonoApi,
+	populateMyReactionForHonoApi,
+	type HonoApiNoteDependencies,
+} from '../../rest/note.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../../rest/role-policy.js';
 import { isNoteMutedOrBlockedForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
 
-export const honoStreamChannelGlobalTimeline: HonoStreamChannelDefinition<HonoApiNoteDependencies & HonoApiRolePolicyDependencies> = {
+export const honoStreamChannelGlobalTimeline: HonoStreamChannelDefinition<
+	HonoApiNoteDependencies & HonoApiRolePolicyDependencies
+> = {
 	shouldShare: false,
 	requireCredential: false,
 	kind: null,
@@ -25,9 +31,20 @@ export const honoStreamChannelGlobalTimeline: HonoStreamChannelDefinition<HonoAp
 
 			if (note.visibility !== 'public') return;
 			if (note.channelId != null) return;
-			if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) return;
-			if (note.renote && (note.renote.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) return;
-			if (note.reply && (note.reply.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) return;
+			if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null)
+				return;
+			if (
+				note.renote &&
+				(note.renote.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents &&
+				ctx.user == null
+			)
+				return;
+			if (
+				note.reply &&
+				(note.reply.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents &&
+				ctx.user == null
+			)
+				return;
 
 			if (isRenotePacked(note) && !isQuotePacked(note) && !withRenotes) return;
 
@@ -39,11 +56,15 @@ export const honoStreamChannelGlobalTimeline: HonoStreamChannelDefinition<HonoAp
 			if (ctx.user) {
 				if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 					if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-						filtered.renote.myReaction = await populateMyReactionForHonoApi(deps, {
-							id: filtered.renote.id,
-							reactions: filtered.renote.reactions,
-							reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
-						}, ctx.user.id);
+						filtered.renote.myReaction = await populateMyReactionForHonoApi(
+							deps,
+							{
+								id: filtered.renote.id,
+								reactions: filtered.renote.reactions,
+								reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
+							},
+							ctx.user.id,
+						);
 					}
 				}
 			}

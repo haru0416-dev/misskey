@@ -33,12 +33,18 @@ type ApGetParams = {
 	uri: string;
 };
 
-export async function handleHonoApiApGet(deps: HonoApiApResolveDependencies, body: Record<string, unknown>): Promise<IObject> {
+export async function handleHonoApiApGet(
+	deps: HonoApiApResolveDependencies,
+	body: Record<string, unknown>,
+): Promise<IObject> {
 	const params = parseHonoApiParams(apGetParamDef, body);
 	return await resolveApObjectForHonoApi(deps, params.uri);
 }
 
-export type HonoApiApShowDependencies = HonoApiApNoteDependencies & HonoApiApPersonDependencies & UserPackingDependencies & HonoApiNoteDependencies;
+export type HonoApiApShowDependencies = HonoApiApNoteDependencies &
+	HonoApiApPersonDependencies &
+	UserPackingDependencies &
+	HonoApiNoteDependencies;
 
 export const apShowParamDef = z.object({
 	uri: z.string(),
@@ -53,19 +59,44 @@ type ApShowResult =
 	| { type: 'Note'; object: Awaited<ReturnType<typeof packNoteForHonoApi>> };
 
 function apShowFederationNotAllowedError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Federation for this host is not allowed.', code: 'FEDERATION_NOT_ALLOWED', id: '974b799e-1a29-4889-b706-18d4dd93e266' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Federation for this host is not allowed.',
+		code: 'FEDERATION_NOT_ALLOWED',
+		id: '974b799e-1a29-4889-b706-18d4dd93e266',
+	});
 }
 function apShowUriInvalidError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'URI is invalid.', code: 'URI_INVALID', id: '1a5eab56-e47b-48c2-8d5e-217b897d70db' });
+	return new HonoApiError({
+		status: 400,
+		message: 'URI is invalid.',
+		code: 'URI_INVALID',
+		id: '1a5eab56-e47b-48c2-8d5e-217b897d70db',
+	});
 }
 function apShowRequestFailedError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Request failed.', code: 'REQUEST_FAILED', id: '81b539cf-4f57-4b29-bc98-032c33c0792e' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Request failed.',
+		code: 'REQUEST_FAILED',
+		id: '81b539cf-4f57-4b29-bc98-032c33c0792e',
+	});
 }
 function apShowResponseInvalidError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Response from remote server is invalid.', code: 'RESPONSE_INVALID', id: '70193c39-54f3-4813-82f0-70a680f7495b' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Response from remote server is invalid.',
+		code: 'RESPONSE_INVALID',
+		id: '70193c39-54f3-4813-82f0-70a680f7495b',
+	});
 }
 function apShowNoSuchObjectError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such object.', code: 'NO_SUCH_OBJECT', id: 'dc94d745-1262-4e63-a17d-fecaa57efc82' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such object.',
+		code: 'NO_SUCH_OBJECT',
+		id: 'dc94d745-1262-4e63-a17d-fecaa57efc82',
+	});
 }
 
 async function mergePackForHonoApi(
@@ -105,10 +136,11 @@ async function fetchAnyForHonoApi(
 		throw apShowFederationNotAllowedError();
 	}
 
-	let local = await mergePackForHonoApi(deps, me, ...await Promise.all([
-		getUserFromApIdForHonoApi(deps, uri),
-		getNoteFromApIdForHonoApi(deps, uri),
-	]));
+	let local = await mergePackForHonoApi(
+		deps,
+		me,
+		...(await Promise.all([getUserFromApIdForHonoApi(deps, uri), getNoteFromApIdForHonoApi(deps, uri)])),
+	);
 	if (local != null) return local;
 
 	const host = extractDbHost(uri);
@@ -116,7 +148,12 @@ async function fetchAnyForHonoApi(
 	if (isSelfHost(deps.config, host)) return null;
 
 	const history = new Set<string>();
-	const object = await resolveApObjectForHonoApi(deps, uri, FetchAllowSoftFailMask.CrossOrigin | FetchAllowSoftFailMask.NonCanonicalId, history).catch((err: unknown) => {
+	const object = await resolveApObjectForHonoApi(
+		deps,
+		uri,
+		FetchAllowSoftFailMask.CrossOrigin | FetchAllowSoftFailMask.NonCanonicalId,
+		history,
+	).catch((err: unknown) => {
 		if (err instanceof IdentifiableError) {
 			switch (err.id) {
 				case 'b94fd5b1-0e3b-4678-9df2-dad4cd515ab2':
@@ -146,10 +183,11 @@ async function fetchAnyForHonoApi(
 	}
 
 	if (uri !== object.id) {
-		local = await mergePackForHonoApi(deps, me, ...await Promise.all([
-			getUserFromApIdForHonoApi(deps, object.id),
-			getNoteFromApIdForHonoApi(deps, object.id),
-		]));
+		local = await mergePackForHonoApi(
+			deps,
+			me,
+			...(await Promise.all([getUserFromApIdForHonoApi(deps, object.id), getNoteFromApIdForHonoApi(deps, object.id)])),
+		);
 		if (local != null) return local;
 	}
 

@@ -15,7 +15,8 @@ import type { KVs } from '../core.js';
 /**
  * For testing
  */
-export default class TestGroupedChart extends Chart<typeof schema> { // eslint-disable-line import/no-default-export
+export default class TestGroupedChart extends Chart<typeof schema> {
+	// eslint-disable-line import/no-default-export
 	private total = {} as Record<string, number>;
 
 	constructor(
@@ -43,9 +44,12 @@ export default class TestGroupedChart extends Chart<typeof schema> { // eslint-d
 
 		this.total[group]++;
 
-		this.commit({
-			'foo.total': 1,
-			'foo.inc': 1,
-		}, group);
+		this.commit(
+			{
+				'foo.total': 1,
+				'foo.inc': 1,
+			},
+			group,
+		);
 	}
 }

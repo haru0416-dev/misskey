@@ -12,11 +12,11 @@ function deserializeUserPending(row: UserPendingRow): MiUserPending {
 	return row as MiUserPending;
 }
 
-export async function createUserPendingInDatabase(db: MiDrizzleDatabase, data: UserPendingInsert): Promise<MiUserPending> {
-	const [row] = await db
-		.insert(userPending)
-		.values(data)
-		.returning();
+export async function createUserPendingInDatabase(
+	db: MiDrizzleDatabase,
+	data: UserPendingInsert,
+): Promise<MiUserPending> {
+	const [row] = await db.insert(userPending).values(data).returning();
 
 	if (!row) {
 		throw new Error('Pending user row was not created');
@@ -26,11 +26,7 @@ export async function createUserPendingInDatabase(db: MiDrizzleDatabase, data: U
 }
 
 export async function fetchUserPendingByCodeFromDatabase(db: MiDrizzleDatabase, code: string): Promise<MiUserPending> {
-	const [row] = await db
-		.select()
-		.from(userPending)
-		.where(eq(userPending.code, code))
-		.limit(1);
+	const [row] = await db.select().from(userPending).where(eq(userPending.code, code)).limit(1);
 
 	if (!row) {
 		throw new Error(`Pending user not found: ${code}`);
@@ -40,7 +36,5 @@ export async function fetchUserPendingByCodeFromDatabase(db: MiDrizzleDatabase, 
 }
 
 export async function deleteUserPendingFromDatabase(db: MiDrizzleDatabase, id: MiUserPending['id']): Promise<void> {
-	await db
-		.delete(userPending)
-		.where(eq(userPending.id, id));
+	await db.delete(userPending).where(eq(userPending.id, id));
 }

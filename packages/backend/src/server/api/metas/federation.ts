@@ -4,7 +4,13 @@
  */
 
 import { federationUpdateRemoteUserParamDef } from '@/server/rest/ap-person.js';
-import { federationHostFollowingParamDef, federationInstancesParamDef, federationShowInstanceParamDef, federationStatsParamDef, federationUsersParamDef } from '@/server/rest/federation.js';
+import {
+	federationHostFollowingParamDef,
+	federationInstancesParamDef,
+	federationShowInstanceParamDef,
+	federationStatsParamDef,
+	federationUsersParamDef,
+} from '@/server/rest/federation.js';
 
 export const endpointMetas = {
 	'federation/followers': {
@@ -15,10 +21,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Following',
 				},
 			},
@@ -33,10 +41,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Following',
 				},
 			},
@@ -53,10 +63,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'FederationInstance',
 				},
 			},
@@ -71,7 +83,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: true,
+				optional: false,
+				nullable: true,
 				ref: 'FederationInstance',
 			},
 		} as const,
@@ -150,10 +163,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserDetailedNotMe',
 				},
 			},

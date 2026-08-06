@@ -7,10 +7,32 @@ import type { Hono } from 'hono';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
 import { rolePermissionDeniedError } from '../error.js';
 import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite } from '../favorites.js';
-import { handleHonoApiChannelsCreate, handleHonoApiChannelsFeatured, handleHonoApiChannelsFollow, handleHonoApiChannelsFollowed, handleHonoApiChannelsMuteCreate, handleHonoApiChannelsMuteDelete, handleHonoApiChannelsMuteList, handleHonoApiChannelsMyFavorites, handleHonoApiChannelsOwned, handleHonoApiChannelsSearch, handleHonoApiChannelsShow, handleHonoApiChannelsTimeline, handleHonoApiChannelsUnfollow, handleHonoApiChannelsUpdate } from '../channels.js';
+import {
+	handleHonoApiChannelsCreate,
+	handleHonoApiChannelsFeatured,
+	handleHonoApiChannelsFollow,
+	handleHonoApiChannelsFollowed,
+	handleHonoApiChannelsMuteCreate,
+	handleHonoApiChannelsMuteDelete,
+	handleHonoApiChannelsMuteList,
+	handleHonoApiChannelsMyFavorites,
+	handleHonoApiChannelsOwned,
+	handleHonoApiChannelsSearch,
+	handleHonoApiChannelsShow,
+	handleHonoApiChannelsTimeline,
+	handleHonoApiChannelsUnfollow,
+	handleHonoApiChannelsUpdate,
+} from '../channels.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { hasHonoApiRolePolicyOrIsRoot } from '../role-policy.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	runApiEndpoint,
+	authenticateOptionalRequest,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -37,10 +59,15 @@ export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): v
 			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canCreateChannel'))) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimitForUser(deps, 'channels/create', {
-				duration: 60 * 60 * 1000,
-				max: 10,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'channels/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 10,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiChannelsCreate(deps, auth.user, body));
 		});

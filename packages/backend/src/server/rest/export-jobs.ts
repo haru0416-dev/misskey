@@ -36,7 +36,11 @@ type SimpleExportJobName =
 	| 'exportUserLists'
 	| 'exportAntennas';
 
-function enqueueSimpleExportJob(deps: HonoApiExportJobDependencies, jobName: SimpleExportJobName, user: ThinUser): void {
+function enqueueSimpleExportJob(
+	deps: HonoApiExportJobDependencies,
+	jobName: SimpleExportJobName,
+	user: ThinUser,
+): void {
 	void addDbJob(deps.dbQueue, {
 		name: jobName,
 		data: { user: { id: user.id } },
