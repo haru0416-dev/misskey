@@ -7,16 +7,19 @@ export const packedRoleCondFormulaLogicsSchema = {
 	type: 'object',
 	properties: {
 		id: {
-			type: 'string', optional: false,
+			type: 'string',
+			optional: false,
 		},
 		type: {
 			type: 'string',
-			nullable: false, optional: false,
+			nullable: false,
+			optional: false,
 			enum: ['and', 'or'],
 		},
 		values: {
 			type: 'array',
-			nullable: false, optional: false,
+			nullable: false,
+			optional: false,
 			items: {
 				ref: 'RoleCondFormulaValue',
 			},
@@ -28,11 +31,13 @@ export const packedRoleCondFormulaValueNot = {
 	type: 'object',
 	properties: {
 		id: {
-			type: 'string', optional: false,
+			type: 'string',
+			optional: false,
 		},
 		type: {
 			type: 'string',
-			nullable: false, optional: false,
+			nullable: false,
+			optional: false,
 			enum: ['not'],
 		},
 		value: {
@@ -47,11 +52,13 @@ export const packedRoleCondFormulaValueIsLocalOrRemoteSchema = {
 	type: 'object',
 	properties: {
 		id: {
-			type: 'string', optional: false,
+			type: 'string',
+			optional: false,
 		},
 		type: {
 			type: 'string',
-			nullable: false, optional: false,
+			nullable: false,
+			optional: false,
 			enum: ['isLocal', 'isRemote'],
 		},
 	},
@@ -61,11 +68,13 @@ export const packedRoleCondFormulaValueUserSettingBooleanSchema = {
 	type: 'object',
 	properties: {
 		id: {
-			type: 'string', optional: false,
+			type: 'string',
+			optional: false,
 		},
 		type: {
 			type: 'string',
-			nullable: false, optional: false,
+			nullable: false,
+			optional: false,
 			enum: ['isSuspended', 'isLocked', 'isBot', 'isCat', 'isExplorable'],
 		},
 	},
@@ -75,16 +84,19 @@ export const packedRoleCondFormulaValueAssignedRoleSchema = {
 	type: 'object',
 	properties: {
 		id: {
-			type: 'string', optional: false,
+			type: 'string',
+			optional: false,
 		},
 		type: {
 			type: 'string',
-			nullable: false, optional: false,
+			nullable: false,
+			optional: false,
 			enum: ['roleAssignedTo'],
 		},
 		roleId: {
 			type: 'string',
-			nullable: false, optional: false,
+			nullable: false,
+			optional: false,
 			format: 'id',
 			example: 'xxxxxxxxxx',
 		},
@@ -95,19 +107,19 @@ export const packedRoleCondFormulaValueCreatedSchema = {
 	type: 'object',
 	properties: {
 		id: {
-			type: 'string', optional: false,
+			type: 'string',
+			optional: false,
 		},
 		type: {
 			type: 'string',
-			nullable: false, optional: false,
-			enum: [
-				'createdLessThan',
-				'createdMoreThan',
-			],
+			nullable: false,
+			optional: false,
+			enum: ['createdLessThan', 'createdMoreThan'],
 		},
 		sec: {
 			type: 'number',
-			nullable: false, optional: false,
+			nullable: false,
+			optional: false,
 		},
 	},
 } as const;
@@ -116,11 +128,13 @@ export const packedRoleCondFormulaFollowersOrFollowingOrNotesSchema = {
 	type: 'object',
 	properties: {
 		id: {
-			type: 'string', optional: false,
+			type: 'string',
+			optional: false,
 		},
 		type: {
 			type: 'string',
-			nullable: false, optional: false,
+			nullable: false,
+			optional: false,
 			enum: [
 				'followersLessThanOrEq',
 				'followersMoreThanOrEq',
@@ -132,7 +146,8 @@ export const packedRoleCondFormulaFollowersOrFollowingOrNotesSchema = {
 		},
 		value: {
 			type: 'number',
-			nullable: false, optional: false,
+			nullable: false,
+			optional: false,
 		},
 	},
 } as const;
@@ -166,168 +181,209 @@ export const packedRoleCondFormulaValueSchema = {
 
 export const packedRolePoliciesSchema = {
 	type: 'object',
-	optional: false, nullable: false,
+	optional: false,
+	nullable: false,
 	properties: {
 		gtlAvailable: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		ltlAvailable: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canPublicNote: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		mentionLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canInvite: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		inviteLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		inviteLimitCycle: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		inviteExpirationTime: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canManageCustomEmojis: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canManageAvatarDecorations: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canSearchNotes: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canSearchUsers: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canUseTranslator: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canHideAds: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canCreateChannel: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		driveCapacityMb: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		maxFileSizeMb: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		uploadableFileTypes: {
 			type: 'array',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 			items: {
 				type: 'string',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 			},
 		},
 		alwaysMarkNsfw: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canUpdateBioMedia: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		pinLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		antennaLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		wordMuteLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		webhookLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		clipLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		noteEachClipsLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		userListLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		userEachUserListsLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		rateLimitFactor: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		avatarDecorationLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canImportAntennas: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canImportBlocking: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canImportFollowing: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canImportMuting: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		canImportUserLists: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		chatAvailability: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 			enum: ['available', 'readonly', 'unavailable'],
 		},
 		noteDraftLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		scheduledNoteLimit: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		watermarkAvailable: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 	},
 } as const;
@@ -337,41 +393,49 @@ export const packedRoleLiteSchema = {
 	properties: {
 		id: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 			format: 'id',
 			example: 'xxxxxxxxxx',
 		},
 		name: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 			example: 'New Role',
 		},
 		color: {
 			type: 'string',
-			optional: false, nullable: true,
+			optional: false,
+			nullable: true,
 			example: '#000000',
 		},
 		iconUrl: {
 			type: 'string',
-			optional: false, nullable: true,
+			optional: false,
+			nullable: true,
 		},
 		description: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		isModerator: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 			example: false,
 		},
 		isAdministrator: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 			example: false,
 		},
 		displayOrder: {
 			type: 'integer',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 			example: 0,
 		},
 	},
@@ -389,79 +453,92 @@ export const packedRoleSchema = {
 			properties: {
 				createdAt: {
 					type: 'string',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					format: 'date-time',
 				},
 				updatedAt: {
 					type: 'string',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					format: 'date-time',
 				},
 				target: {
 					type: 'string',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					enum: ['manual', 'conditional'],
 				},
 				condFormula: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'RoleCondFormulaValue',
 				},
 				isPublic: {
 					type: 'boolean',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					example: false,
 				},
 				isExplorable: {
 					type: 'boolean',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					example: false,
 				},
 				asBadge: {
 					type: 'boolean',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					example: false,
 				},
 				preserveAssignmentOnMoveAccount: {
 					type: 'boolean',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					example: false,
 				},
 				canEditMembersByModerator: {
 					type: 'boolean',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					example: false,
 				},
 				policies: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					additionalProperties: {
-						anyOf: [{
-							type: 'object',
-							properties: {
-								value: {
-									oneOf: [
-										{
-											type: 'integer',
-										},
-										{
-											type: 'boolean',
-										},
-									],
-								},
-								priority: {
-									type: 'integer',
-								},
-								useDefault: {
-									type: 'boolean',
+						anyOf: [
+							{
+								type: 'object',
+								properties: {
+									value: {
+										oneOf: [
+											{
+												type: 'integer',
+											},
+											{
+												type: 'boolean',
+											},
+										],
+									},
+									priority: {
+										type: 'integer',
+									},
+									useDefault: {
+										type: 'boolean',
+									},
 								},
 							},
-						}],
+						],
 					},
 				},
 				usersCount: {
 					type: 'integer',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 				},
 			},
 		},

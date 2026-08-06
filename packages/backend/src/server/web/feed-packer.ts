@@ -23,10 +23,7 @@ export type FeedPackerDependencies = {
 	meta: MiMeta;
 };
 
-export async function packFeed(
-	deps: FeedPackerDependencies,
-	user: MiUser,
-): Promise<Feed> {
+export async function packFeed(deps: FeedPackerDependencies, user: MiUser): Promise<Feed> {
 	const author = {
 		link: `${deps.config.instance.url}/@${user.username}`,
 		name: user.name ?? user.username,
@@ -52,13 +49,13 @@ export async function packFeed(
 		copyright: user.name ?? user.username,
 	});
 
-	const allFileIds = [...new Set(notes.flatMap(note => note.fileIds))];
+	const allFileIds = [...new Set(notes.flatMap((note) => note.fileIds))];
 	const allFiles = allFileIds.length > 0 ? await listDriveFilesByIdsFromDatabase(deps.db, allFileIds) : [];
-	const filesById = new Map(allFiles.map(file => [file.id, file]));
+	const filesById = new Map(allFiles.map((file) => [file.id, file]));
 
 	for (const note of notes) {
-		const files = note.fileIds.map(id => filesById.get(id)).filter(file => file != null);
-		const file = files.find(file => file.type.startsWith('image/'));
+		const files = note.fileIds.map((id) => filesById.get(id)).filter((file) => file != null);
+		const file = files.find((file) => file.type.startsWith('image/'));
 		const text = note.text;
 		const content = text ? mfmToHtml(deps.config, mfmParse(text), JSON.parse(note.mentionedRemoteUsers)) : null;
 

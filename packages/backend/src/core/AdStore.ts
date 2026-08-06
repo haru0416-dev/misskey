@@ -8,19 +8,21 @@ import { ad, type AdInsert, type AdRow } from '@/db/schema/ad.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAd } from '@/models/Ad.js';
 
-type AdUpdate = Partial<Pick<
-	AdInsert,
-	| 'expiresAt'
-	| 'startsAt'
-	| 'place'
-	| 'priority'
-	| 'ratio'
-	| 'url'
-	| 'imageUrl'
-	| 'memo'
-	| 'dayOfWeek'
-	| 'isSensitive'
->>;
+type AdUpdate = Partial<
+	Pick<
+		AdInsert,
+		| 'expiresAt'
+		| 'startsAt'
+		| 'place'
+		| 'priority'
+		| 'ratio'
+		| 'url'
+		| 'imageUrl'
+		| 'memo'
+		| 'dayOfWeek'
+		| 'isSensitive'
+	>
+>;
 
 type AdOrder = ReturnType<typeof asc>;
 
@@ -30,10 +32,7 @@ function deserializeAd(row: AdRow): MiAd {
 
 function adPaginationCondition(sinceId?: string | null, untilId?: string | null): SQL[] {
 	if (sinceId && untilId) {
-		return [
-			gt(ad.id, sinceId),
-			lt(ad.id, untilId),
-		];
+		return [gt(ad.id, sinceId), lt(ad.id, untilId)];
 	} else if (sinceId) {
 		return [gt(ad.id, sinceId)];
 	} else if (untilId) {
@@ -68,14 +67,8 @@ function pruneUndefinedAdUpdate(data: AdUpdate): AdUpdate {
 	return set;
 }
 
-export async function createAdInDatabase(
-	db: MiDrizzleDatabase,
-	data: AdInsert,
-): Promise<MiAd> {
-	const [row] = await db
-		.insert(ad)
-		.values(data)
-		.returning();
+export async function createAdInDatabase(db: MiDrizzleDatabase, data: AdInsert): Promise<MiAd> {
+	const [row] = await db.insert(ad).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create ad');
@@ -84,65 +77,42 @@ export async function createAdInDatabase(
 	return deserializeAd(row);
 }
 
-export async function fetchAdByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiAd['id'],
-): Promise<MiAd | null> {
-	const [row] = await db
-		.select()
-		.from(ad)
-		.where(eq(ad.id, id))
-		.limit(1);
+export async function fetchAdByIdFromDatabase(db: MiDrizzleDatabase, id: MiAd['id']): Promise<MiAd | null> {
+	const [row] = await db.select().from(ad).where(eq(ad.id, id)).limit(1);
 
 	return row == null ? null : deserializeAd(row);
 }
 
-export async function updateAdInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiAd['id'],
-	data: AdUpdate,
-): Promise<MiAd | null> {
+export async function updateAdInDatabase(db: MiDrizzleDatabase, id: MiAd['id'], data: AdUpdate): Promise<MiAd | null> {
 	const set = pruneUndefinedAdUpdate(data);
 
 	if (Object.keys(set).length === 0) {
 		return fetchAdByIdFromDatabase(db, id);
 	}
 
-	const [row] = await db
-		.update(ad)
-		.set(set)
-		.where(eq(ad.id, id))
-		.returning();
+	const [row] = await db.update(ad).set(set).where(eq(ad.id, id)).returning();
 
 	return row == null ? null : deserializeAd(row);
 }
 
-export async function deleteAdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiAd['id'],
-): Promise<void> {
-	await db
-		.delete(ad)
-		.where(eq(ad.id, id));
+export async function deleteAdFromDatabase(db: MiDrizzleDatabase, id: MiAd['id']): Promise<void> {
+	await db.delete(ad).where(eq(ad.id, id));
 }
 
-export async function listActiveAdsFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiAd[]> {
+export async function listActiveAdsFromDatabase(db: MiDrizzleDatabase): Promise<MiAd[]> {
 	const now = new Date();
 	const dayOfWeek = 1 << now.getDay();
 
 	const rows = await db
 		.select()
 		.from(ad)
-		.where(and(
-			gt(ad.expiresAt, now),
-			lte(ad.startsAt, now),
-			or(
-				sql`(${ad.dayOfWeek} & ${dayOfWeek}) > 0`,
-				eq(ad.dayOfWeek, 0),
+		.where(
+			and(
+				gt(ad.expiresAt, now),
+				lte(ad.startsAt, now),
+				or(sql`(${ad.dayOfWeek} & ${dayOfWeek}) > 0`, eq(ad.dayOfWeek, 0)),
 			),
-		));
+		);
 
 	return rows.map(deserializeAd);
 }
@@ -161,19 +131,9 @@ export async function listAdsFromDatabase(
 	let where: SQL | undefined = paginationConditions.length > 0 ? and(...paginationConditions) : undefined;
 
 	if (options.publishing === true) {
-		where = and(
-			...(where == null ? [] : [where]),
-			gt(ad.expiresAt, now),
-			lte(ad.startsAt, now),
-		);
+		where = and(...(where == null ? [] : [where]), gt(ad.expiresAt, now), lte(ad.startsAt, now));
 	} else if (options.publishing === false) {
-		where = and(
-			...(where == null ? [] : [where]),
-			or(
-				lte(ad.expiresAt, now),
-				gt(ad.startsAt, now),
-			),
-		);
+		where = and(...(where == null ? [] : [where]), or(lte(ad.expiresAt, now), gt(ad.startsAt, now)));
 	}
 
 	const rows = await db

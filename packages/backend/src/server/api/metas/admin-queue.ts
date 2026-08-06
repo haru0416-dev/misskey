@@ -4,7 +4,14 @@
  */
 
 import { QUEUE_TYPES } from '@/core/QueueAdminLogic.js';
-import { adminQueueClearParamDef, adminQueueJobParamDef, adminQueueJobsParamDef, adminQueueOutboxJobParamDef, adminQueueOutboxJobsParamDef, adminQueueSelectParamDef } from '@/server/rest/admin-queue.js';
+import {
+	adminQueueClearParamDef,
+	adminQueueJobParamDef,
+	adminQueueJobsParamDef,
+	adminQueueOutboxJobParamDef,
+	adminQueueOutboxJobsParamDef,
+	adminQueueSelectParamDef,
+} from '@/server/rest/admin-queue.js';
 import { z } from 'zod';
 
 export const endpointMetas = {
@@ -28,10 +35,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'array',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					prefixItems: [
 						{
 							type: 'string',
@@ -42,10 +51,7 @@ export const endpointMetas = {
 					],
 					unevaluatedItems: false,
 				},
-				example: [[
-					'example.com',
-					12,
-				]],
+				example: [['example.com', 12]],
 			},
 		} as const,
 		paramDef: z.object({}),
@@ -60,10 +66,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'array',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					prefixItems: [
 						{
 							type: 'string',
@@ -74,10 +82,7 @@ export const endpointMetas = {
 					],
 					unevaluatedItems: false,
 				},
-				example: [[
-					'example.com',
-					12,
-				]],
+				example: [['example.com', 12]],
 			},
 		} as const,
 		paramDef: z.object({}),
@@ -111,7 +116,8 @@ export const endpointMetas = {
 			kind: 'read:admin:queue',
 
 			res: {
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'QueueJob',
 			},
 		} as const,
@@ -127,9 +133,11 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					type: 'string',
 				},
 			},
@@ -176,9 +184,11 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'QueueJob',
 				},
 			},
@@ -195,17 +205,24 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: { type: 'string', optional: false, nullable: false },
 						queue: { type: 'string', optional: false, nullable: false, enum: ['deliver', 'db'] },
 						name: { type: 'string', optional: false, nullable: false },
 						coordinatorId: { type: 'string', optional: false, nullable: true },
 						externalJobId: { type: 'string', optional: false, nullable: true },
-						deadLetterReason: { type: 'string', optional: false, nullable: false, enum: ['deliveryFailed', 'invalidPayload'] },
+						deadLetterReason: {
+							type: 'string',
+							optional: false,
+							nullable: false,
+							enum: ['deliveryFailed', 'invalidPayload'],
+						},
 						lastError: { type: 'object', optional: false, nullable: true, additionalProperties: true },
 						revision: { type: 'number', optional: false, nullable: false },
 						// deadLetterReason='invalidPayload' の行は「data / opts がジョブとして解釈できない値だった」ことが隔離理由そのものなので、
@@ -262,22 +279,27 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					deliver: {
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'QueueCount',
 					},
 					inbox: {
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'QueueCount',
 					},
 					db: {
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'QueueCount',
 					},
 					objectStorage: {
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'QueueCount',
 					},
 				},
@@ -295,30 +317,36 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						name: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							enum: QUEUE_TYPES,
 						},
 						counts: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							additionalProperties: {
 								type: 'number',
 							},
 						},
 						isPaused: {
 							type: 'boolean',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						outbox: {
 							type: 'object',
-							optional: false, nullable: true,
+							optional: false,
+							nullable: true,
 							properties: {
 								pending: { type: 'number', optional: false, nullable: false },
 								deadLetter: { type: 'number', optional: false, nullable: false },
@@ -329,14 +357,17 @@ export const endpointMetas = {
 						},
 						metrics: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							properties: {
 								completed: {
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 									ref: 'QueueMetrics',
 								},
 								failed: {
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 									ref: 'QueueMetrics',
 								},
 							},
@@ -357,31 +388,37 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					name: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						enum: QUEUE_TYPES,
 					},
 					qualifiedName: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					counts: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						additionalProperties: {
 							type: 'number',
 						},
 					},
 					isPaused: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					outbox: {
 						type: 'object',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 						properties: {
 							pending: { type: 'number', optional: false, nullable: false },
 							deadLetter: { type: 'number', optional: false, nullable: false },
@@ -392,89 +429,108 @@ export const endpointMetas = {
 					},
 					metrics: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							completed: {
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								ref: 'QueueMetrics',
 							},
 							failed: {
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								ref: 'QueueMetrics',
 							},
 						},
 					},
 					db: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							version: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							mode: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								enum: ['cluster', 'standalone', 'sentinel'],
 							},
 							runId: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							processId: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							port: {
 								type: 'number',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							os: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							uptime: {
 								type: 'number',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							memory: {
 								type: 'object',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								properties: {
 									total: {
 										type: 'number',
-										optional: false, nullable: false,
+										optional: false,
+										nullable: false,
 									},
 									used: {
 										type: 'number',
-										optional: false, nullable: false,
+										optional: false,
+										nullable: false,
 									},
 									fragmentationRatio: {
 										type: 'number',
-										optional: false, nullable: false,
+										optional: false,
+										nullable: false,
 									},
 									peak: {
 										type: 'number',
-										optional: false, nullable: false,
+										optional: false,
+										nullable: false,
 									},
 								},
 							},
 							clients: {
 								type: 'object',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								properties: {
 									blocked: {
 										type: 'number',
-										optional: false, nullable: false,
+										optional: false,
+										nullable: false,
 									},
 									connected: {
 										type: 'number',
-										optional: false, nullable: false,
+										optional: false,
+										nullable: false,
 									},
 								},
 							},
 						},
-					}
+					},
 				},
 			},
 		} as const,

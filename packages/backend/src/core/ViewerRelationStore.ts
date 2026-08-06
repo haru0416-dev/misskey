@@ -56,12 +56,18 @@ export type ViewerRelationSnapshot = {
 
 /** fanoutタイムラインのフィルタが読む種別。呼び出し元が渡すsnapshotはこれを満たす必要がある。 */
 export const fanoutViewerRelationKinds = [
-	'channelMuting', 'muting', 'renoteMuting', 'blocking', 'mutedInstance',
+	'channelMuting',
+	'muting',
+	'renoteMuting',
+	'blocking',
+	'mutedInstance',
 ] as const satisfies readonly ViewerRelationKind[];
 
 /** ホーム/ソーシャルタイムラインが読む種別 (fanoutのぶんに加えてフォロー関係が要る)。 */
 export const homeTimelineViewerRelationKinds = [
-	'following', 'channelFollowing', ...fanoutViewerRelationKinds,
+	'following',
+	'channelFollowing',
+	...fanoutViewerRelationKinds,
 ] as const satisfies readonly ViewerRelationKind[];
 
 /**
@@ -81,9 +87,9 @@ const branchByKind: Record<ViewerRelationKind, () => SQL> = {
 		select 'channelMuting' as "kind", ${channelMuting.channelId} as "id"
 		from ${channelMuting}
 		where ${and(
-		eq(channelMuting.userId, sql.placeholder('userId')),
-		or(isNull(channelMuting.expiresAt), gt(channelMuting.expiresAt, sql.placeholder('now'))),
-	)}`,
+			eq(channelMuting.userId, sql.placeholder('userId')),
+			or(isNull(channelMuting.expiresAt), gt(channelMuting.expiresAt, sql.placeholder('now'))),
+		)}`,
 	muting: () => sql`
 		select 'muting' as "kind", ${muting.muteeId} as "id"
 		from ${muting}
@@ -104,7 +110,13 @@ const branchByKind: Record<ViewerRelationKind, () => SQL> = {
 
 /** SQL文とキャッシュキーを種別集合から一意に決めるため、宣言順に正規化する。 */
 const kindOrder: readonly ViewerRelationKind[] = [
-	'following', 'channelFollowing', 'channelMuting', 'muting', 'renoteMuting', 'blocking', 'mutedInstance',
+	'following',
+	'channelFollowing',
+	'channelMuting',
+	'muting',
+	'renoteMuting',
+	'blocking',
+	'mutedInstance',
 ];
 
 export function emptyViewerRelationSnapshot(kinds: readonly ViewerRelationKind[] = []): ViewerRelationSnapshot {
@@ -124,7 +136,7 @@ export function viewerRelationSnapshotCovers(
 	snapshot: ViewerRelationSnapshot | undefined | null,
 	kinds: readonly ViewerRelationKind[],
 ): snapshot is ViewerRelationSnapshot {
-	return snapshot != null && kinds.every(kind => snapshot.kinds.has(kind));
+	return snapshot != null && kinds.every((kind) => snapshot.kinds.has(kind));
 }
 
 /**
@@ -149,25 +161,46 @@ export async function fetchViewerRelationSnapshotFromDatabase(
 	const snapshot = emptyViewerRelationSnapshot(kinds);
 	if (snapshot.kinds.size === 0) return snapshot;
 
-	const orderedKinds = kindOrder.filter(kind => snapshot.kinds.has(kind));
-	const statement = preparedQueryFor(db, `viewerRelation:${orderedKinds.join('+')}`, () => db
-		.select({
-			kind: sql<ViewerRelationKind>`"viewer_relation"."kind"`,
-			id: sql<string>`"viewer_relation"."id"`,
-		})
-		.from(sql`(${sql.join(orderedKinds.map(kind => branchByKind[kind]()), sql` union all `)}) as "viewer_relation"`)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const orderedKinds = kindOrder.filter((kind) => snapshot.kinds.has(kind));
+	const statement = preparedQueryFor(db, `viewerRelation:${orderedKinds.join('+')}`, () =>
+		db
+			.select({
+				kind: sql<ViewerRelationKind>`"viewer_relation"."kind"`,
+				id: sql<string>`"viewer_relation"."id"`,
+			})
+			.from(
+				sql`(${sql.join(
+					orderedKinds.map((kind) => branchByKind[kind]()),
+					sql` union all `,
+				)}) as "viewer_relation"`,
+			)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ userId, now });
 
 	for (const row of rows) {
 		switch (row.kind) {
-			case 'following': snapshot.followeeIds.push(row.id); break;
-			case 'channelFollowing': snapshot.followingChannelIds.push(row.id); break;
-			case 'channelMuting': snapshot.mutedChannelIds.push(row.id); break;
-			case 'muting': snapshot.muteeIds.push(row.id); break;
-			case 'renoteMuting': snapshot.renoteMuteeIds.push(row.id); break;
-			case 'blocking': snapshot.blockerIds.push(row.id); break;
-			case 'mutedInstance': snapshot.mutedInstances.push(row.id); break;
+			case 'following':
+				snapshot.followeeIds.push(row.id);
+				break;
+			case 'channelFollowing':
+				snapshot.followingChannelIds.push(row.id);
+				break;
+			case 'channelMuting':
+				snapshot.mutedChannelIds.push(row.id);
+				break;
+			case 'muting':
+				snapshot.muteeIds.push(row.id);
+				break;
+			case 'renoteMuting':
+				snapshot.renoteMuteeIds.push(row.id);
+				break;
+			case 'blocking':
+				snapshot.blockerIds.push(row.id);
+				break;
+			case 'mutedInstance':
+				snapshot.mutedInstances.push(row.id);
+				break;
 		}
 	}
 

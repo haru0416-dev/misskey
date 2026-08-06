@@ -6,13 +6,31 @@
 import type { Hono } from 'hono';
 import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
-import { handleHonoApiAntennasCreate, handleHonoApiAntennasDelete, handleHonoApiAntennasList, handleHonoApiAntennasNotes, handleHonoApiAntennasRemoveNote, handleHonoApiAntennasShow, handleHonoApiAntennasUpdate } from '../antennas.js';
+import {
+	handleHonoApiAntennasCreate,
+	handleHonoApiAntennasDelete,
+	handleHonoApiAntennasList,
+	handleHonoApiAntennasNotes,
+	handleHonoApiAntennasRemoveNote,
+	handleHonoApiAntennasShow,
+	handleHonoApiAntennasUpdate,
+} from '../antennas.js';
 import { handleHonoApiAppCreate, handleHonoApiAppShow } from '../app.js';
 import { handleHonoApiSigninFlow } from '../signin.js';
 import { handleHonoApiSigninWithPasskey } from '../signin-with-passkey.js';
 import { signupPendingWithHonoApi, signupWithHonoApi } from '../signup.js';
 import { assertHonoApiRateLimit, type HonoApiEndpointRateLimit } from '../rate-limit.js';
-import { jsonResponse, emptyResponse, signinFlowResponse, signinWithPasskeyResponse, jsonBody, tokenFromRequest, getRequestIp, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	signinFlowResponse,
+	signinWithPasskeyResponse,
+	jsonBody,
+	tokenFromRequest,
+	getRequestIp,
+	runApiEndpoint,
+	authenticateOptionalRequest,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -34,33 +52,45 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 	app.post('/signup-pending', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			return signinFlowResponse(c, deps, await signupPendingWithHonoApi(deps, {
-				body,
-				headers: c.req.raw.headers,
-				ip: getRequestIp(c, deps.config),
-			}));
+			return signinFlowResponse(
+				c,
+				deps,
+				await signupPendingWithHonoApi(deps, {
+					body,
+					headers: c.req.raw.headers,
+					ip: getRequestIp(c, deps.config),
+				}),
+			);
 		});
 	});
 
 	app.post('/signin-flow', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			return signinFlowResponse(c, deps, await handleHonoApiSigninFlow(deps, {
-				body,
-				headers: c.req.raw.headers,
-				ip: getRequestIp(c, deps.config),
-			}));
+			return signinFlowResponse(
+				c,
+				deps,
+				await handleHonoApiSigninFlow(deps, {
+					body,
+					headers: c.req.raw.headers,
+					ip: getRequestIp(c, deps.config),
+				}),
+			);
 		});
 	});
 
 	app.post('/signin-with-passkey', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			return signinWithPasskeyResponse(c, deps, await handleHonoApiSigninWithPasskey(deps, {
-				body,
-				headers: c.req.raw.headers,
-				ip: getRequestIp(c, deps.config),
-			}));
+			return signinWithPasskeyResponse(
+				c,
+				deps,
+				await handleHonoApiSigninWithPasskey(deps, {
+					body,
+					headers: c.req.raw.headers,
+					ip: getRequestIp(c, deps.config),
+				}),
+			);
 		});
 	});
 
@@ -160,15 +190,17 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
-			return jsonResponse(c, await handleHonoApiAppShow(deps, auth.user, auth.user != null && auth.token == null, body));
+			return jsonResponse(
+				c,
+				await handleHonoApiAppShow(deps, auth.user, auth.user != null && auth.token == null, body),
+			);
 		});
 	});
 }
 
 export function getSignupRateLimit(meta: ApiShellDependencies['meta']): HonoApiEndpointRateLimit | null {
-	const minInterval = meta.signupRateLimitMinIntervalSeconds > 0
-		? meta.signupRateLimitMinIntervalSeconds * 1000
-		: undefined;
+	const minInterval =
+		meta.signupRateLimitMinIntervalSeconds > 0 ? meta.signupRateLimitMinIntervalSeconds * 1000 : undefined;
 	const max = meta.signupRateLimitMaxPerHour > 0 ? meta.signupRateLimitMaxPerHour : undefined;
 
 	if (minInterval == null && max == null) return null;

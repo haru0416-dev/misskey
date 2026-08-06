@@ -5,8 +5,32 @@
 
 import type { Hono } from 'hono';
 import { assertCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
-import { handleHonoApiAdminEmojiAdd, handleHonoApiAdminEmojiAddAliasesBulk, handleHonoApiAdminEmojiCopy, handleHonoApiAdminEmojiDelete, handleHonoApiAdminEmojiDeleteBulk, handleHonoApiAdminEmojiImportZip, handleHonoApiAdminEmojiList, handleHonoApiAdminEmojiListRemote, handleHonoApiAdminEmojiRemoveAliasesBulk, handleHonoApiAdminEmojiSetAliasesBulk, handleHonoApiAdminEmojiSetCategoryBulk, handleHonoApiAdminEmojiSetLicenseBulk, handleHonoApiAdminEmojiUpdate, handleHonoApiEmoji, handleHonoApiEmojis, handleHonoApiV2AdminEmojiList } from '../emojis.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint, assertHonoApiCanManageCustomEmojis } from '../shell-helpers.js';
+import {
+	handleHonoApiAdminEmojiAdd,
+	handleHonoApiAdminEmojiAddAliasesBulk,
+	handleHonoApiAdminEmojiCopy,
+	handleHonoApiAdminEmojiDelete,
+	handleHonoApiAdminEmojiDeleteBulk,
+	handleHonoApiAdminEmojiImportZip,
+	handleHonoApiAdminEmojiList,
+	handleHonoApiAdminEmojiListRemote,
+	handleHonoApiAdminEmojiRemoveAliasesBulk,
+	handleHonoApiAdminEmojiSetAliasesBulk,
+	handleHonoApiAdminEmojiSetCategoryBulk,
+	handleHonoApiAdminEmojiSetLicenseBulk,
+	handleHonoApiAdminEmojiUpdate,
+	handleHonoApiEmoji,
+	handleHonoApiEmojis,
+	handleHonoApiV2AdminEmojiList,
+} from '../emojis.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	runApiEndpoint,
+	assertHonoApiCanManageCustomEmojis,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerEmojisRoutes(app: Hono, deps: ApiShellDependencies): void {

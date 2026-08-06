@@ -16,28 +16,43 @@ describe('Mute', () => {
 	let bob: misskey.entities.SignupResponse;
 	let carol: misskey.entities.SignupResponse;
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'alice' });
-		bob = await signup({ username: 'bob' });
-		carol = await signup({ username: 'carol' });
+	beforeAll(
+		async () => {
+			alice = await signup({ username: 'alice' });
+			bob = await signup({ username: 'bob' });
+			carol = await signup({ username: 'carol' });
 
-		// Mute: alice ==> carol
-		await api('mute/create', {
-			userId: carol.id,
-		}, alice);
-	}, 1000 * 60 * 2);
+			// Mute: alice ==> carol
+			await api(
+				'mute/create',
+				{
+					userId: carol.id,
+				},
+				alice,
+			);
+		},
+		1000 * 60 * 2,
+	);
 
 	test('ミュート作成', async () => {
-		const res = await api('mute/create', {
-			userId: bob.id,
-		}, alice);
+		const res = await api(
+			'mute/create',
+			{
+				userId: bob.id,
+			},
+			alice,
+		);
 
 		assert.strictEqual(res.status, 204);
 
 		// 単体でも走らせられるように副作用消す
-		await api('mute/delete', {
-			userId: bob.id,
-		}, alice);
+		await api(
+			'mute/delete',
+			{
+				userId: bob.id,
+			},
+			alice,
+		);
 	});
 
 	test('「自分宛ての投稿」にミュートしているユーザーの投稿が含まれない', async () => {
@@ -48,15 +63,26 @@ describe('Mute', () => {
 
 		assert.strictEqual(res.status, 200);
 		assert.strictEqual(Array.isArray(res.body), true);
-		assert.strictEqual(res.body.some(note => note.id === bobNote.id), true);
-		assert.strictEqual(res.body.some(note => note.id === carolNote.id), false);
+		assert.strictEqual(
+			res.body.some((note) => note.id === bobNote.id),
+			true,
+		);
+		assert.strictEqual(
+			res.body.some((note) => note.id === carolNote.id),
+			false,
+		);
 	});
 
 	test('ミュートしているユーザーからメンションされても、ストリームに unreadNotification イベントが流れてこない', async () => {
 		// 状態リセット
 		await api('notifications/mark-all-as-read', {}, alice);
 
-		const fired = await waitFire(alice, 'main', () => post(carol, { text: '@alice hi' }), msg => msg.type === 'unreadNotification');
+		const fired = await waitFire(
+			alice,
+			'main',
+			() => post(carol, { text: '@alice hi' }),
+			(msg) => msg.type === 'unreadNotification',
+		);
 
 		assert.strictEqual(fired, false);
 	});
@@ -71,9 +97,18 @@ describe('Mute', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
-			assert.strictEqual(res.body.some(note => note.id === aliceNote.id), true);
-			assert.strictEqual(res.body.some(note => note.id === bobNote.id), true);
-			assert.strictEqual(res.body.some(note => note.id === carolNote.id), false);
+			assert.strictEqual(
+				res.body.some((note) => note.id === aliceNote.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((note) => note.id === bobNote.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((note) => note.id === carolNote.id),
+				false,
+			);
 		});
 
 		test('タイムラインにミュートしているユーザーの投稿のRenoteが含まれない', async () => {
@@ -87,9 +122,18 @@ describe('Mute', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
-			assert.strictEqual(res.body.some(note => note.id === aliceNote.id), true);
-			assert.strictEqual(res.body.some(note => note.id === bobNote.id), false);
-			assert.strictEqual(res.body.some(note => note.id === carolNote.id), false);
+			assert.strictEqual(
+				res.body.some((note) => note.id === aliceNote.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((note) => note.id === bobNote.id),
+				false,
+			);
+			assert.strictEqual(
+				res.body.some((note) => note.id === carolNote.id),
+				false,
+			);
 		});
 	});
 
@@ -103,8 +147,14 @@ describe('Mute', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 
 		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
@@ -117,8 +167,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 
 		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
@@ -131,8 +187,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 
 		test('通知にミュートしているユーザーからの引用リノートが含まれない', async () => {
@@ -145,8 +207,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 
 		test('通知にミュートしているユーザーからのリノートが含まれない', async () => {
@@ -159,8 +227,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 
 		test('通知にミュートしているユーザーからのフォロー通知が含まれない', async () => {
@@ -172,8 +246,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 
 			await api('following/delete', { userId: alice.id }, bob);
 			await api('following/delete', { userId: alice.id }, carol);
@@ -189,8 +269,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 
 			await api('following/delete', { userId: alice.id }, bob);
 			await api('following/delete', { userId: alice.id }, carol);
@@ -207,8 +293,14 @@ describe('Mute', () => {
 
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
 			const aliceNote = await post(alice, { text: 'hi' });
@@ -220,8 +312,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 
 		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
@@ -234,8 +332,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 
 		test('通知にミュートしているユーザーからの引用リノートが含まれない', async () => {
@@ -248,8 +352,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 
 		test('通知にミュートしているユーザーからのリノートが含まれない', async () => {
@@ -262,8 +372,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 
 		test('通知にミュートしているユーザーからのフォロー通知が含まれない', async () => {
@@ -275,8 +391,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 
 			await api('following/delete', { userId: alice.id }, bob);
 			await api('following/delete', { userId: alice.id }, carol);
@@ -292,8 +414,14 @@ describe('Mute', () => {
 			assert.strictEqual(res.status, 200);
 			assert.strictEqual(Array.isArray(res.body), true);
 
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === bob.id), true);
-			assert.strictEqual(res.body.some(notification => 'userId' in notification && notification.userId === carol.id), false);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
+				true,
+			);
+			assert.strictEqual(
+				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
+				false,
+			);
 		});
 	});
 });

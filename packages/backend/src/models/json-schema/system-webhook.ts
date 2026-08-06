@@ -10,45 +10,54 @@ export const packedSystemWebhookSchema = {
 	properties: {
 		id: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		isActive: {
 			type: 'boolean',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		updatedAt: {
 			type: 'string',
 			format: 'date-time',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		latestSentAt: {
 			type: 'string',
 			format: 'date-time',
-			optional: false, nullable: true,
+			optional: false,
+			nullable: true,
 		},
 		latestStatus: {
 			type: 'number',
-			optional: false, nullable: true,
+			optional: false,
+			nullable: true,
 		},
 		name: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		on: {
 			type: 'array',
 			items: {
 				type: 'string',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				enum: systemWebhookEventTypes,
 			},
 		},
 		url: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		secret: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 	},
 } as const;

@@ -37,27 +37,12 @@
 			"@/*": ["./src/*"]
 		},
 		"outDir": "./built",
-		"plugins": [
-			{"name": "@kitajs/ts-html-plugin"}
-		],
-		"types": [
-			"node"
-		],
-		"typeRoots": [
-			"./src/@types",
-			"./node_modules/@types",
-			"./node_modules"
-		],
-		"lib": [
-			"esnext"
-		]
+		"plugins": [{ "name": "@kitajs/ts-html-plugin" }],
+		"types": ["node"],
+		"typeRoots": ["./src/@types", "./node_modules/@types", "./node_modules"],
+		"lib": ["esnext"]
 	},
 	"compileOnSave": false,
-	"include": [
-		"./src/**/*.ts",
-		"./src/**/*.tsx"
-	],
-	"exclude": [
-		"./src/**/*.test.ts"
-	]
+	"include": ["./src/**/*.ts", "./src/**/*.tsx"],
+	"exclude": ["./src/**/*.test.ts"]
 }

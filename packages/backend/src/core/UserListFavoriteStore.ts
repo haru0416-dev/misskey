@@ -4,16 +4,17 @@
  */
 
 import { and, count, eq } from 'drizzle-orm';
-import { userListFavorite, type UserListFavoriteInsert, type UserListFavoriteRow } from '@/db/schema/user-list-favorite.js';
+import {
+	userListFavorite,
+	type UserListFavoriteInsert,
+	type UserListFavoriteRow,
+} from '@/db/schema/user-list-favorite.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 
 function userListFavoriteCondition(userId: MiUser['id'], userListId: MiUserList['id']) {
-	return and(
-		eq(userListFavorite.userId, userId),
-		eq(userListFavorite.userListId, userListId),
-	);
+	return and(eq(userListFavorite.userId, userId), eq(userListFavorite.userListId, userListId));
 }
 
 export async function userListFavoriteExistsInDatabase(
@@ -35,11 +36,7 @@ export async function fetchUserListFavoriteFromDatabase(
 	userId: MiUser['id'],
 	userListId: MiUserList['id'],
 ): Promise<UserListFavoriteRow | null> {
-	const [row] = await db
-		.select()
-		.from(userListFavorite)
-		.where(userListFavoriteCondition(userId, userListId))
-		.limit(1);
+	const [row] = await db.select().from(userListFavorite).where(userListFavoriteCondition(userId, userListId)).limit(1);
 
 	return row ?? null;
 }
@@ -48,18 +45,14 @@ export async function createUserListFavoriteInDatabase(
 	db: MiDrizzleDatabase,
 	data: UserListFavoriteInsert,
 ): Promise<void> {
-	await db
-		.insert(userListFavorite)
-		.values(data);
+	await db.insert(userListFavorite).values(data);
 }
 
 export async function deleteUserListFavoriteByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: UserListFavoriteRow['id'],
 ): Promise<void> {
-	await db
-		.delete(userListFavorite)
-		.where(eq(userListFavorite.id, id));
+	await db.delete(userListFavorite).where(eq(userListFavorite.id, id));
 }
 
 export async function countUserListFavoritesFromDatabase(

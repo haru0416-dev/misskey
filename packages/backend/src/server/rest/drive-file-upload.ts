@@ -51,22 +51,27 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError, invalidParamError } from './error.js';
 import { readRequestBodyWithLimit } from '../body-limit.js';
 import { packDriveFileOrFailForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
-import { buildDriveFileDeletionDependencies, validateHonoApiDriveFileName, type HonoApiDriveFilesDependencies } from './drive-files.js';
+import {
+	buildDriveFileDeletionDependencies,
+	validateHonoApiDriveFileName,
+	type HonoApiDriveFilesDependencies,
+} from './drive-files.js';
 import type { HonoApiDriveStreamPublisher, HonoApiMainStreamPublisher } from './events.js';
 import { getHonoApiRolePolicies, isHonoApiModerator } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiDriveFileUploadDependencies = Omit<HonoApiDriveFilesDependencies, 'internalStorageService'> & HonoApiDriveFileDependencies & {
-	downloadService: Pick<DownloadService, 'downloadUrl'>;
-	fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
-	imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
-	internalStorageService: Pick<InternalStorageService, 'del' | 'saveFromBuffer' | 'saveFromPath'>;
-	s3Service: Pick<S3Service, 'upload' | 'delete'>;
-	videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
-	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
-	publishMainStream?: HonoApiMainStreamPublisher;
-	publishDriveStream?: HonoApiDriveStreamPublisher;
-};
+export type HonoApiDriveFileUploadDependencies = Omit<HonoApiDriveFilesDependencies, 'internalStorageService'> &
+	HonoApiDriveFileDependencies & {
+		downloadService: Pick<DownloadService, 'downloadUrl'>;
+		fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
+		imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
+		internalStorageService: Pick<InternalStorageService, 'del' | 'saveFromBuffer' | 'saveFromPath'>;
+		s3Service: Pick<S3Service, 'upload' | 'delete'>;
+		videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
+		logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
+		publishMainStream?: HonoApiMainStreamPublisher;
+		publishDriveStream?: HonoApiDriveStreamPublisher;
+	};
 
 // fastify の @fastify/multipart は truncated 判定・欠如判定のいずれもエラーボディ無しの生ステータスで返しており、
 // endpoint-base.ts の FILE_REQUIRED (4267801e-...) は HTTP 経由では到達しない dead code のため、ここでも再現しない。
@@ -87,7 +92,11 @@ export async function readHonoApiMultipartRequest(
 	class BodyLimitExceeded extends Error {}
 	let rawBody: Uint8Array;
 	try {
-		rawBody = await readRequestBodyWithLimit(c.req.raw, config.limits.maximumFileSizeBytes + MULTIPART_OVERHEAD, () => new BodyLimitExceeded());
+		rawBody = await readRequestBodyWithLimit(
+			c.req.raw,
+			config.limits.maximumFileSizeBytes + MULTIPART_OVERHEAD,
+			() => new BodyLimitExceeded(),
+		);
 	} catch (err) {
 		if (err instanceof BodyLimitExceeded) return { status: 'too-large' };
 		throw err;
@@ -117,7 +126,10 @@ export async function readHonoApiMultipartRequest(
 	if (fileValue.size > config.limits.maximumFileSizeBytes) return { status: 'too-large' };
 
 	const [path] = await createTemp();
-	await streamPromises.pipeline(Readable.fromWeb(fileValue.stream() as import('node:stream/web').ReadableStream), fs.createWriteStream(path));
+	await streamPromises.pipeline(
+		Readable.fromWeb(fileValue.stream() as import('node:stream/web').ReadableStream),
+		fs.createWriteStream(path),
+	);
 
 	return {
 		status: 'ok',
@@ -129,7 +141,10 @@ export async function readHonoApiMultipartRequest(
 	};
 }
 
-export function castHonoApiMultipartFields(paramDef: { properties?: Record<string, { type?: string }> }, fields: Record<string, unknown>): void {
+export function castHonoApiMultipartFields(
+	paramDef: { properties?: Record<string, { type?: string }> },
+	fields: Record<string, unknown>,
+): void {
 	const properties = paramDef.properties;
 	if (properties == null) return;
 
@@ -197,8 +212,10 @@ async function generateDriveFileAltsForHonoApi(
 			type !== 'image/svg+xml' &&
 			type !== 'image/avif' &&
 			!(metadata.exif ?? metadata.iptc ?? metadata.xmp ?? metadata.tifftagPhotoshop) &&
-			metadata.width && metadata.width <= 2048 &&
-			metadata.height && metadata.height <= 2048
+			metadata.width &&
+			metadata.width <= 2048 &&
+			metadata.height &&
+			metadata.height <= 2048
 		);
 	} catch (err) {
 		deps.logger.warn(`sharp failed: ${err}`);
@@ -223,7 +240,9 @@ async function generateDriveFileAltsForHonoApi(
 
 	try {
 		if (isAnimated) {
-			thumbnail = await deps.imageProcessingService.convertSharpToWebp(sharp(path, { animated: true }), 374, 317, { alphaQuality: 70 });
+			thumbnail = await deps.imageProcessingService.convertSharpToWebp(sharp(path, { animated: true }), 374, 317, {
+				alphaQuality: 70,
+			});
 		} else {
 			thumbnail = await deps.imageProcessingService.convertSharpToWebp(img, 498, 422);
 		}
@@ -272,16 +291,18 @@ async function deleteDriveFileObjectsForHonoApi(
 	deps: HonoApiDriveFileUploadDependencies,
 	keys: string[],
 ): Promise<void> {
-	await Promise.all(keys.map(async accessKey => {
-		try {
-			await deps.s3Service.delete(deps.meta, {
-				Bucket: deps.meta.objectStorageBucket ?? undefined,
-				Key: accessKey,
-			});
-		} catch (err) {
-			deps.logger.error(`Failed to clean up uploaded object: key = ${accessKey}`, err as Error);
-		}
-	}));
+	await Promise.all(
+		keys.map(async (accessKey) => {
+			try {
+				await deps.s3Service.delete(deps.meta, {
+					Bucket: deps.meta.objectStorageBucket ?? undefined,
+					Key: accessKey,
+				});
+			} catch (err) {
+				deps.logger.error(`Failed to clean up uploaded object: key = ${accessKey}`, err as Error);
+			}
+		}),
+	);
 }
 
 type StoredDriveFile = {
@@ -301,7 +322,7 @@ async function saveDriveFileForHonoApi(
 	const alts = await generateDriveFileAltsForHonoApi(deps, path, type, !file.uri);
 
 	if (deps.meta.useObjectStorage) {
-		const [ext] = (name.match(/\.([a-zA-Z0-9_-]+)$/) ?? ['']);
+		const [ext] = name.match(/\.([a-zA-Z0-9_-]+)$/) ?? [''];
 		let resolvedExt = ext;
 
 		if (resolvedExt === '') {
@@ -317,8 +338,9 @@ async function saveDriveFileForHonoApi(
 			resolvedExt = '';
 		}
 
-		const baseUrl = deps.meta.objectStorageBaseUrl
-			?? `${deps.meta.objectStorageUseSSL ? 'https' : 'http'}://${deps.meta.objectStorageEndpoint}${deps.meta.objectStoragePort ? `:${deps.meta.objectStoragePort}` : ''}/${deps.meta.objectStorageBucket}`;
+		const baseUrl =
+			deps.meta.objectStorageBaseUrl ??
+			`${deps.meta.objectStorageUseSSL ? 'https' : 'http'}://${deps.meta.objectStorageEndpoint}${deps.meta.objectStoragePort ? `:${deps.meta.objectStoragePort}` : ''}/${deps.meta.objectStorageBucket}`;
 
 		const prefix = deps.meta.objectStoragePrefix ? `${deps.meta.objectStoragePrefix}/` : '';
 		const key = `${prefix}${randomUUID()}${resolvedExt}`;
@@ -329,20 +351,36 @@ async function saveDriveFileForHonoApi(
 		let thumbnailKey: string | null = null;
 		let thumbnailUrl: string | null = null;
 
-		const uploads = [
-			uploadDriveFileToObjectStorageForHonoApi(deps, key, fs.createReadStream(path), type, null, name),
-		];
+		const uploads = [uploadDriveFileToObjectStorageForHonoApi(deps, key, fs.createReadStream(path), type, null, name)];
 
 		if (alts.webpublic) {
 			webpublicKey = `${prefix}webpublic-${randomUUID()}.${alts.webpublic.ext}`;
 			webpublicUrl = `${baseUrl}/${webpublicKey}`;
-			uploads.push(uploadDriveFileToObjectStorageForHonoApi(deps, webpublicKey, alts.webpublic.data, alts.webpublic.type, alts.webpublic.ext, name));
+			uploads.push(
+				uploadDriveFileToObjectStorageForHonoApi(
+					deps,
+					webpublicKey,
+					alts.webpublic.data,
+					alts.webpublic.type,
+					alts.webpublic.ext,
+					name,
+				),
+			);
 		}
 
 		if (alts.thumbnail) {
 			thumbnailKey = `${prefix}thumbnail-${randomUUID()}.${alts.thumbnail.ext}`;
 			thumbnailUrl = `${baseUrl}/${thumbnailKey}`;
-			uploads.push(uploadDriveFileToObjectStorageForHonoApi(deps, thumbnailKey, alts.thumbnail.data, alts.thumbnail.type, alts.thumbnail.ext, `${name}.thumbnail`));
+			uploads.push(
+				uploadDriveFileToObjectStorageForHonoApi(
+					deps,
+					thumbnailKey,
+					alts.thumbnail.data,
+					alts.thumbnail.type,
+					alts.thumbnail.ext,
+					`${name}.thumbnail`,
+				),
+			);
 		}
 
 		const keys = [key, thumbnailKey, webpublicKey].filter((value): value is string => value != null);
@@ -403,18 +441,23 @@ async function saveDriveFileForHonoApi(
 		file.md5 = hash;
 		file.size = size;
 
-		const keys = [accessKey, alts.thumbnail ? thumbnailAccessKey : null, alts.webpublic ? webpublicAccessKey : null]
-			.filter((value): value is string => value != null);
+		const keys = [
+			accessKey,
+			alts.thumbnail ? thumbnailAccessKey : null,
+			alts.webpublic ? webpublicAccessKey : null,
+		].filter((value): value is string => value != null);
 		return {
 			file,
 			cleanup: async () => {
-				await Promise.all(keys.map(async accessKey => {
-					try {
-						await deps.internalStorageService.del(accessKey);
-					} catch (err) {
-						deps.logger.error(`Failed to clean up uploaded file: key = ${accessKey}`, err as Error);
-					}
-				}));
+				await Promise.all(
+					keys.map(async (accessKey) => {
+						try {
+							await deps.internalStorageService.del(accessKey);
+						} catch (err) {
+							deps.logger.error(`Failed to clean up uploaded file: key = ${accessKey}`, err as Error);
+						}
+					}),
+				);
 			},
 		};
 	}
@@ -437,7 +480,7 @@ async function persistStoredDriveFileForHonoApi(
 	}
 
 	try {
-		const result = await deps.db.transaction(async transaction => {
+		const result = await deps.db.transaction(async (transaction) => {
 			await transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtext('drive-quota'), hashtext(${user.id}))`);
 
 			if (!force) {
@@ -553,17 +596,21 @@ export async function addDriveFileForHonoApi(
 		fileName: name,
 		skipSensitiveDetection: skipNsfwCheck,
 		sensitiveThreshold:
-			deps.meta.sensitiveMediaDetectionSensitivity === 'veryHigh' ? 0.1 :
-			deps.meta.sensitiveMediaDetectionSensitivity === 'high' ? 0.3 :
-			deps.meta.sensitiveMediaDetectionSensitivity === 'low' ? 0.7 :
-			deps.meta.sensitiveMediaDetectionSensitivity === 'veryLow' ? 0.9 :
-			0.5,
+			deps.meta.sensitiveMediaDetectionSensitivity === 'veryHigh'
+				? 0.1
+				: deps.meta.sensitiveMediaDetectionSensitivity === 'high'
+					? 0.3
+					: deps.meta.sensitiveMediaDetectionSensitivity === 'low'
+						? 0.7
+						: deps.meta.sensitiveMediaDetectionSensitivity === 'veryLow'
+							? 0.9
+							: 0.5,
 		sensitiveThresholdForPorn: 0.75,
 		enableSensitiveMediaDetectionForVideos: deps.meta.enableSensitiveMediaDetectionForVideos,
 	});
 
 	const detectedName = correctFilename(
-		(name != null && validateHonoApiDriveFileName(name)) ? name : 'untitled',
+		name != null && validateHonoApiDriveFileName(name) ? name : 'untitled',
 		ext ?? info.type.ext,
 	);
 
@@ -610,7 +657,11 @@ export async function addDriveFileForHonoApi(
 				if (isLocalUser) {
 					throw new IdentifiableError('c6244ed2-a39a-4e1c-bf93-f0fbd7764fa6', 'No free space.');
 				}
-				await expireOldDriveFileForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, user.id), driveCapacity - info.size);
+				await expireOldDriveFileForHonoApi(
+					deps,
+					await fetchUserByIdOrFailFromDatabase(deps.db, user.id),
+					driveCapacity - info.size,
+				);
 			}
 		}
 	}
@@ -620,7 +671,12 @@ export async function addDriveFileForHonoApi(
 
 		const driveFolder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, folderId, user ? user.id : null);
 		if (driveFolder == null) {
-			throw new HonoApiError({ status: 400, message: 'No such folder.', code: 'NO_SUCH_FOLDER', id: '12e7caa8-224f-471d-978a-653a81cf4c90' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'No such folder.',
+				code: 'NO_SUCH_FOLDER',
+				id: '12e7caa8-224f-471d-978a-653a81cf4c90',
+			});
 		}
 
 		return driveFolder;
@@ -654,9 +710,7 @@ export async function addDriveFileForHonoApi(
 		requestHeaders,
 		maybeSensitive: info.sensitive,
 		maybePorn: info.porn,
-		isSensitive: user
-			? (user.host == null && profile!.alwaysMarkNsfw) ? true : (sensitive ?? false)
-			: false,
+		isSensitive: user ? (user.host == null && profile!.alwaysMarkNsfw ? true : (sensitive ?? false)) : false,
 	} as MiDriveFile;
 
 	if (user != null && isMediaSilencedHostForHonoApi(deps.meta.mediaSilencedHosts, user.host)) file.isSensitive = true;
@@ -690,7 +744,11 @@ export async function addDriveFileForHonoApi(
 			file = await createDriveFileInDatabase(deps.db, file);
 		} catch (err) {
 			if (isDuplicateKeyValueError(err)) {
-				file = await fetchDriveFileByUriAndUserIdFromDatabase(deps.db, file.uri!, user ? user.id : null) as MiDriveFile;
+				file = (await fetchDriveFileByUriAndUserIdFromDatabase(
+					deps.db,
+					file.uri!,
+					user ? user.id : null,
+				)) as MiDriveFile;
 			} else {
 				deps.logger.error(err as Error);
 				throw err;
@@ -704,7 +762,7 @@ export async function addDriveFileForHonoApi(
 	}
 
 	if (user != null) {
-		packDriveFileOrFailForHonoApi(deps, file, { self: true }).then(packedFile => {
+		packDriveFileOrFailForHonoApi(deps, file, { self: true }).then((packedFile) => {
 			deps.publishMainStream?.(user.id, 'driveFileCreated', packedFile);
 			deps.publishDriveStream?.(user.id, 'fileCreated', packedFile);
 		});
@@ -767,7 +825,12 @@ export async function handleHonoApiDriveFilesCreate(
 		} else if (name === 'blob') {
 			name = null;
 		} else if (!validateHonoApiDriveFileName(name)) {
-			throw new HonoApiError({ status: 400, message: 'Invalid file name.', code: 'INVALID_FILE_NAME', id: 'f449b209-0c60-4e51-84d5-29486263bfd4' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'Invalid file name.',
+				code: 'INVALID_FILE_NAME',
+				id: 'f449b209-0c60-4e51-84d5-29486263bfd4',
+			});
 		}
 	}
 
@@ -791,13 +854,28 @@ export async function handleHonoApiDriveFilesCreate(
 		}
 		if (err instanceof IdentifiableError) {
 			if (err.id === 'c6244ed2-a39a-4e1c-bf93-f0fbd7764fa6') {
-				throw new HonoApiError({ status: 400, message: 'Cannot upload the file because you have no free space of drive.', code: 'NO_FREE_SPACE', id: 'd08dbc37-a6a9-463a-8c47-96c32ab5f064' });
+				throw new HonoApiError({
+					status: 400,
+					message: 'Cannot upload the file because you have no free space of drive.',
+					code: 'NO_FREE_SPACE',
+					id: 'd08dbc37-a6a9-463a-8c47-96c32ab5f064',
+				});
 			}
 			if (err.id === 'f9e4e5f3-4df4-40b5-b400-f236945f7073') {
-				throw new HonoApiError({ status: 413, message: 'Cannot upload the file because it exceeds the maximum file size.', code: 'MAX_FILE_SIZE_EXCEEDED', id: 'b9d8c348-33f0-4673-b9a9-5d4da058977a' });
+				throw new HonoApiError({
+					status: 413,
+					message: 'Cannot upload the file because it exceeds the maximum file size.',
+					code: 'MAX_FILE_SIZE_EXCEEDED',
+					id: 'b9d8c348-33f0-4673-b9a9-5d4da058977a',
+				});
 			}
 			if (err.id === 'bd71c601-f9b0-4808-9137-a330647ced9b') {
-				throw new HonoApiError({ status: 400, message: 'Cannot upload the file because it is an unallowed file type.', code: 'UNALLOWED_FILE_TYPE', id: '4becd248-7f2c-48c4-a9f0-75edc4f9a1ea' });
+				throw new HonoApiError({
+					status: 400,
+					message: 'Cannot upload the file because it is an unallowed file type.',
+					code: 'UNALLOWED_FILE_TYPE',
+					id: '4becd248-7f2c-48c4-a9f0-75edc4f9a1ea',
+				});
 			}
 		}
 		throw driveFileInternalError();
@@ -857,7 +935,20 @@ export async function uploadDriveFileFromUrlForHonoApi(
 			comment = null;
 		}
 
-		const driveFile = await addDriveFileForHonoApi(deps, { user, path, name, comment, folderId, force, isLink, url, uri, sensitive, requestIp, requestHeaders });
+		const driveFile = await addDriveFileForHonoApi(deps, {
+			user,
+			path,
+			name,
+			comment,
+			folderId,
+			force,
+			isLink,
+			url,
+			uri,
+			sensitive,
+			requestIp,
+			requestHeaders,
+		});
 		deps.logger.info(`Got: ${driveFile.id}`);
 		return driveFile;
 	} catch (err) {
@@ -888,8 +979,8 @@ export function handleHonoApiDriveFilesUploadFromUrl(
 		// 元の upload-from-url.ts は create.ts と異なり enableIpLogging によるゲートを行わず、常に ip/headers を渡す。
 		requestIp: ip,
 		requestHeaders: headers,
-	}).then(file => {
-		packDriveFileOrFailForHonoApi(deps, file, { self: true }).then(packedFile => {
+	}).then((file) => {
+		packDriveFileOrFailForHonoApi(deps, file, { self: true }).then((packedFile) => {
 			deps.publishMainStream?.(me.id, 'urlUploadFinished', {
 				marker: params.marker,
 				file: packedFile,

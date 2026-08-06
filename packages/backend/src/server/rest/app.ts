@@ -6,7 +6,13 @@
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
-import { createAppInDatabase, fetchAppByIdFromDatabase, fetchAppByIdOrFailFromDatabase, listAppsByIdsFromDatabase, listAppsByUserIdFromDatabase } from '@/core/AppStore.js';
+import {
+	createAppInDatabase,
+	fetchAppByIdFromDatabase,
+	fetchAppByIdOrFailFromDatabase,
+	listAppsByIdsFromDatabase,
+	listAppsByUserIdFromDatabase,
+} from '@/core/AppStore.js';
 import {
 	deleteAccessTokenByIdAndUserIdFromDatabase,
 	deleteAccessTokenByTokenAndUserIdFromDatabase,
@@ -99,9 +105,12 @@ export async function packHonoApiApp(
 		callbackUrl: app.callbackUrl,
 		permission: app.permission,
 		...(opts.includeSecret ? { secret: app.secret } : {}),
-		...(me ? {
-			isAuthorized: opts.isAuthorized ?? await existsAccessTokenByAppIdAndUserIdFromDatabase(deps.db, app.id, me.id),
-		} : {}),
+		...(me
+			? {
+					isAuthorized:
+						opts.isAuthorized ?? (await existsAccessTokenByAppIdAndUserIdFromDatabase(deps.db, app.id, me.id)),
+				}
+			: {}),
 	};
 }
 
@@ -112,7 +121,7 @@ export async function handleHonoApiAppCreate(
 ): Promise<Packed<'App'>> {
 	const params = parseHonoApiParams(appCreateParamDef, body);
 	const secret = secureRndstr(32);
-	const permission = unique(params.permission.map(v => v.replace(/^(.+)(\/|-)(read|write)$/, '$3:$1')));
+	const permission = unique(params.permission.map((v) => v.replace(/^(.+)(\/|-)(read|write)$/, '$3:$1')));
 	const app = await createAppInDatabase(deps.db, {
 		id: genId(),
 		userId: user ? user.id : null,
@@ -153,35 +162,48 @@ export async function handleHonoApiMyApps(
 		limit: params.limit,
 		offset: params.offset,
 	});
-	const authorizedAppIds = new Set(await listAuthorizedAppIdsByUserIdAndAppIdsFromDatabase(deps.db, user.id, apps.map(app => app.id)));
+	const authorizedAppIds = new Set(
+		await listAuthorizedAppIdsByUserIdAndAppIdsFromDatabase(
+			deps.db,
+			user.id,
+			apps.map((app) => app.id),
+		),
+	);
 
-	return await Promise.all(apps.map(app => packHonoApiApp(deps, app, user, {
-		isAuthorized: authorizedAppIds.has(app.id),
-	})));
+	return await Promise.all(
+		apps.map((app) =>
+			packHonoApiApp(deps, app, user, {
+				isAuthorized: authorizedAppIds.has(app.id),
+			}),
+		),
+	);
 }
 
 export async function handleHonoApiIApps(
 	deps: HonoApiAppDependencies,
 	user: { id: MiUser['id'] },
 	body: Record<string, unknown>,
-): Promise<{
-	id: string;
-	name?: string;
-	createdAt: string;
-	lastUsedAt?: string;
-	permission: string[];
-	iconUrl?: string | null;
-	description?: string | null;
-}[]> {
+): Promise<
+	{
+		id: string;
+		name?: string;
+		createdAt: string;
+		lastUsedAt?: string;
+		permission: string[];
+		iconUrl?: string | null;
+		description?: string | null;
+	}[]
+> {
 	const params = parseHonoApiParams(iAppsParamDef, body);
-	const field: AccessTokenOrderField = params.sort === '+lastUsedAt' || params.sort === '-lastUsedAt' ? 'lastUsedAt' : 'id';
+	const field: AccessTokenOrderField =
+		params.sort === '+lastUsedAt' || params.sort === '-lastUsedAt' ? 'lastUsedAt' : 'id';
 	const direction = params.sort === '+createdAt' || params.sort === '+lastUsedAt' ? 'desc' : 'asc';
 	const tokens = await listAccessTokensByUserIdFromDatabase(deps.db, user.id, { field, direction });
-	const appIds = [...new Set(tokens.map(token => token.appId).filter((id): id is string => id != null))];
+	const appIds = [...new Set(tokens.map((token) => token.appId).filter((id): id is string => id != null))];
 	const apps = await listAppsByIdsFromDatabase(deps.db, appIds);
-	const appById = new Map(apps.map(app => [app.id, app]));
+	const appById = new Map(apps.map((app) => [app.id, app]));
 
-	return tokens.map(token => {
+	return tokens.map((token) => {
 		const app = token.appId != null ? appById.get(token.appId) : undefined;
 
 		return omitUndefined({
@@ -207,11 +229,11 @@ export async function handleHonoApiIAuthorizedApps(
 		offset: params.offset,
 		direction: params.sort === 'asc' ? 'asc' : 'desc',
 	});
-	const appIds = tokens.map(token => token.appId).filter((id): id is string => id != null);
+	const appIds = tokens.map((token) => token.appId).filter((id): id is string => id != null);
 	const apps = await listAppsByIdsFromDatabase(deps.db, [...new Set(appIds)]);
-	const appById = new Map(apps.map(app => [app.id, app]));
+	const appById = new Map(apps.map((app) => [app.id, app]));
 
-	return tokens.map(token => {
+	return tokens.map((token) => {
 		const app = token.appId != null ? appById.get(token.appId) : undefined;
 		if (app == null) throw new Error(`App ${token.appId} not found`);
 

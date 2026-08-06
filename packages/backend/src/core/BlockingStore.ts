@@ -22,11 +22,7 @@ function deserializeBlocking(row: BlockingRow): MiBlocking {
 	} as MiBlocking;
 }
 
-function applyBlockingPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
+function applyBlockingPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
 	if (sinceId && untilId) {
 		conditions.push(gt(blocking.id, sinceId));
 		conditions.push(lt(blocking.id, untilId));
@@ -57,10 +53,7 @@ export async function countBlockingsByBlockerIdFromDatabase(
 	db: MiDrizzleDatabase,
 	blockerId: MiUser['id'],
 ): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(blocking)
-		.where(eq(blocking.blockerId, blockerId));
+	const [row] = await db.select({ value: count() }).from(blocking).where(eq(blocking.blockerId, blockerId));
 
 	return row?.value ?? 0;
 }
@@ -73,23 +66,14 @@ export async function blockingExistsInDatabase(
 	const [row] = await db
 		.select({ id: blocking.id })
 		.from(blocking)
-		.where(and(
-			eq(blocking.blockerId, blockerId),
-			eq(blocking.blockeeId, blockeeId),
-		))
+		.where(and(eq(blocking.blockerId, blockerId), eq(blocking.blockeeId, blockeeId)))
 		.limit(1);
 
 	return row != null;
 }
 
-export async function createBlockingInDatabase(
-	db: MiDrizzleDatabase,
-	data: BlockingInsert,
-): Promise<MiBlocking> {
-	const [row] = await db
-		.insert(blocking)
-		.values(data)
-		.returning();
+export async function createBlockingInDatabase(db: MiDrizzleDatabase, data: BlockingInsert): Promise<MiBlocking> {
+	const [row] = await db.insert(blocking).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create blocking');
@@ -106,33 +90,21 @@ export async function fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(blocking)
-		.where(and(
-			eq(blocking.blockerId, blockerId),
-			eq(blocking.blockeeId, blockeeId),
-		))
+		.where(and(eq(blocking.blockerId, blockerId), eq(blocking.blockeeId, blockeeId)))
 		.limit(1);
 
 	return row ? deserializeBlocking(row) : null;
 }
 
-export async function deleteBlockingByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiBlocking['id'],
-): Promise<void> {
-	await db
-		.delete(blocking)
-		.where(eq(blocking.id, id));
+export async function deleteBlockingByIdFromDatabase(db: MiDrizzleDatabase, id: MiBlocking['id']): Promise<void> {
+	await db.delete(blocking).where(eq(blocking.id, id));
 }
 
 export async function fetchBlockingByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiBlocking['id'],
 ): Promise<MiBlocking> {
-	const [row] = await db
-		.select()
-		.from(blocking)
-		.where(eq(blocking.id, id))
-		.limit(1);
+	const [row] = await db.select().from(blocking).where(eq(blocking.id, id)).limit(1);
 
 	if (row == null) {
 		throw new EntityNotFoundError('MiBlocking', { id });
@@ -162,7 +134,7 @@ export async function listBlockingsByBlockerIdFromDatabase(
 		.orderBy(asc(blocking.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeBlocking(row));
+	return rows.map((row) => deserializeBlocking(row));
 }
 
 export async function listBlockingsByBlockerIdWithPaginationFromDatabase(
@@ -186,21 +158,23 @@ export async function listBlockingsByBlockerIdWithPaginationFromDatabase(
 		.orderBy(options.order === 'asc' ? asc(blocking.id) : desc(blocking.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeBlocking(row));
+	return rows.map((row) => deserializeBlocking(row));
 }
 
 export async function listBlockeeIdsByBlockerIdFromDatabase(
 	db: MiDrizzleDatabase,
 	blockerId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const statement = preparedQueryFor(db, 'blocking:blockeeIdsByBlockerId', () => db
-		.select({ blockeeId: blocking.blockeeId })
-		.from(blocking)
-		.where(eq(blocking.blockerId, sql.placeholder('blockerId')))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'blocking:blockeeIdsByBlockerId', () =>
+		db
+			.select({ blockeeId: blocking.blockeeId })
+			.from(blocking)
+			.where(eq(blocking.blockerId, sql.placeholder('blockerId')))
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ blockerId });
 
-	return rows.map(row => row.blockeeId);
+	return rows.map((row) => row.blockeeId);
 }
 
 export async function listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(
@@ -213,26 +187,25 @@ export async function listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(
 	const rows = await db
 		.select({ blockeeId: blocking.blockeeId })
 		.from(blocking)
-		.where(and(
-			eq(blocking.blockerId, blockerId),
-			sql`${blocking.blockeeId} = ANY(${sql.param(blockeeIds)})`,
-		));
+		.where(and(eq(blocking.blockerId, blockerId), sql`${blocking.blockeeId} = ANY(${sql.param(blockeeIds)})`));
 
-	return rows.map(row => row.blockeeId);
+	return rows.map((row) => row.blockeeId);
 }
 
 export async function listBlockerIdsByBlockeeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	blockeeId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const statement = preparedQueryFor(db, 'blocking:blockerIdsByBlockeeId', () => db
-		.select({ blockerId: blocking.blockerId })
-		.from(blocking)
-		.where(eq(blocking.blockeeId, sql.placeholder('blockeeId')))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'blocking:blockerIdsByBlockeeId', () =>
+		db
+			.select({ blockerId: blocking.blockerId })
+			.from(blocking)
+			.where(eq(blocking.blockeeId, sql.placeholder('blockeeId')))
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ blockeeId });
 
-	return rows.map(row => row.blockerId);
+	return rows.map((row) => row.blockerId);
 }
 
 export async function listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(
@@ -245,10 +218,7 @@ export async function listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(
 	const rows = await db
 		.select({ blockerId: blocking.blockerId })
 		.from(blocking)
-		.where(and(
-			eq(blocking.blockeeId, blockeeId),
-			sql`${blocking.blockerId} = ANY(${sql.param(blockerIds)})`,
-		));
+		.where(and(eq(blocking.blockeeId, blockeeId), sql`${blocking.blockerId} = ANY(${sql.param(blockerIds)})`));
 
-	return rows.map(row => row.blockerId);
+	return rows.map((row) => row.blockerId);
 }

@@ -17,7 +17,14 @@ export type UserListSort = '+follower' | '-follower' | '+createdAt' | '-createdA
 export type UserListState = 'all' | 'alive';
 export type UserListOrigin = 'combined' | 'local' | 'remote';
 export type AdminUserListSort = UserListSort | '+lastActiveDate' | '-lastActiveDate';
-export type AdminUserListState = 'all' | 'alive' | 'available' | 'admin' | 'moderator' | 'adminOrModerator' | 'suspended';
+export type AdminUserListState =
+	| 'all'
+	| 'alive'
+	| 'available'
+	| 'admin'
+	| 'moderator'
+	| 'adminOrModerator'
+	| 'suspended';
 
 function deserializeNullableDate(value: Date | string | null): Date | null {
 	if (value == null) return null;
@@ -45,10 +52,7 @@ export function deserializeUser(row: UserRow): MiUser {
 	} as MiUser;
 }
 
-function userPaginationCondition(options: {
-	sinceId?: MiUser['id'] | null;
-	untilId?: MiUser['id'] | null;
-}): SQL {
+function userPaginationCondition(options: { sinceId?: MiUser['id'] | null; untilId?: MiUser['id'] | null }): SQL {
 	if (options.sinceId && options.untilId) {
 		return and(gt(userTable.id, options.sinceId), lt(userTable.id, options.untilId)) ?? sql`TRUE`;
 	}
@@ -81,14 +85,8 @@ function applyUserListOriginCondition(conditions: SQL[], origin: UserListOrigin)
 	}
 }
 
-export async function createUserInDatabase(
-	db: MiDrizzleDatabase,
-	values: UserInsert,
-): Promise<MiUser> {
-	const [row] = await db
-		.insert(userTable)
-		.values(values)
-		.returning();
+export async function createUserInDatabase(db: MiDrizzleDatabase, values: UserInsert): Promise<MiUser> {
+	const [row] = await db.insert(userTable).values(values).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create user');
@@ -105,20 +103,13 @@ export async function createUserWithProfileAndPublickeyInDatabase(
 		publickey?: UserPublickeyInsert;
 	},
 ): Promise<MiUser> {
-	const [row] = await db.transaction(async tx => {
-		const created = await tx
-			.insert(userTable)
-			.values(values.user)
-			.returning();
+	const [row] = await db.transaction(async (tx) => {
+		const created = await tx.insert(userTable).values(values.user).returning();
 
-		await tx
-			.insert(userProfile)
-			.values(values.profile);
+		await tx.insert(userProfile).values(values.profile);
 
 		if (values.publickey != null) {
-			await tx
-				.insert(userPublickey)
-				.values(values.publickey);
+			await tx.insert(userPublickey).values(values.publickey);
 		}
 
 		return created;
@@ -135,16 +126,16 @@ export async function isLocalUsernameTaken(db: MiDrizzleDatabase, username: stri
 	const [row] = await db
 		.select({ id: userTable.id })
 		.from(userTable)
-		.where(and(
-			eq(userTable.usernameLower, username.toLowerCase()),
-			isNull(userTable.host),
-		))
+		.where(and(eq(userTable.usernameLower, username.toLowerCase()), isNull(userTable.host)))
 		.limit(1);
 
 	return row != null;
 }
 
-export async function fetchLocalUserByUsernameFromDatabase(db: MiDrizzleDatabase, username: string): Promise<MiLocalUser | null> {
+export async function fetchLocalUserByUsernameFromDatabase(
+	db: MiDrizzleDatabase,
+	username: string,
+): Promise<MiLocalUser | null> {
 	const user = await fetchUserByUsernameAndHostFromDatabase(db, username, null);
 
 	return user as MiLocalUser | null;
@@ -158,10 +149,12 @@ export async function fetchUserByUsernameAndHostFromDatabase(
 	const [row] = await db
 		.select()
 		.from(userTable)
-		.where(and(
-			eq(userTable.usernameLower, username.toLowerCase()),
-			host == null ? isNull(userTable.host) : eq(userTable.host, host),
-		))
+		.where(
+			and(
+				eq(userTable.usernameLower, username.toLowerCase()),
+				host == null ? isNull(userTable.host) : eq(userTable.host, host),
+			),
+		)
 		.limit(1);
 
 	return row ? deserializeUser(row) : null;
@@ -183,18 +176,27 @@ export async function listUsersByUsernamesAndHostsFromDatabase(
 	const rows = await db
 		.select()
 		.from(userTable)
-		.where(or(...[...usernamesByHost.entries()].map(([host, usernames]) => and(
-			host == null ? isNull(userTable.host) : eq(userTable.host, host),
-			inArray(userTable.usernameLower, [...usernames]),
-		))));
+		.where(
+			or(
+				...[...usernamesByHost.entries()].map(([host, usernames]) =>
+					and(
+						host == null ? isNull(userTable.host) : eq(userTable.host, host),
+						inArray(userTable.usernameLower, [...usernames]),
+					),
+				),
+			),
+		);
 
-	return rows.map(row => deserializeUser(row));
+	return rows.map((row) => deserializeUser(row));
 }
 
-export async function fetchLocalUserByIdFromDatabase(db: MiDrizzleDatabase, id: MiUser['id']): Promise<MiLocalUser | null> {
+export async function fetchLocalUserByIdFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiUser['id'],
+): Promise<MiLocalUser | null> {
 	const user = await fetchUserByIdFromDatabase(db, id);
 
-	return user?.host == null ? user as MiLocalUser : null;
+	return user?.host == null ? (user as MiLocalUser) : null;
 }
 
 export async function fetchLocalUserByNativeTokenFromDatabase(
@@ -202,30 +204,37 @@ export async function fetchLocalUserByNativeTokenFromDatabase(
 	token: NonNullable<MiLocalUser['token']>,
 ): Promise<MiLocalUser | null> {
 	// 認証で全リクエストが通る。user は42列あり毎回の組み立てが 167µs かかっていた
-	const statement = preparedQueryFor(db, 'user:byNativeToken', () => db
-		.select()
-		.from(userTable)
-		.where(eq(userTable.token, sql.placeholder('token')))
-		.limit(1)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'user:byNativeToken', () =>
+		db
+			.select()
+			.from(userTable)
+			.where(eq(userTable.token, sql.placeholder('token')))
+			.limit(1)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const [row] = await statement.execute({ token });
 
-	return row ? deserializeUser(row) as MiLocalUser : null;
+	return row ? (deserializeUser(row) as MiLocalUser) : null;
 }
 
-export async function fetchRemoteUserByIdFromDatabase(db: MiDrizzleDatabase, id: MiUser['id']): Promise<MiRemoteUser | null> {
+export async function fetchRemoteUserByIdFromDatabase(
+	db: MiDrizzleDatabase,
+	id: MiUser['id'],
+): Promise<MiRemoteUser | null> {
 	const user = await fetchUserByIdFromDatabase(db, id);
 
-	return user?.host != null ? user as MiRemoteUser : null;
+	return user?.host != null ? (user as MiRemoteUser) : null;
 }
 
 export async function fetchUserByIdFromDatabase(db: MiDrizzleDatabase, id: MiUser['id']): Promise<MiUser | null> {
-	const statement = preparedQueryFor(db, 'user:byId', () => db
-		.select()
-		.from(userTable)
-		.where(eq(userTable.id, sql.placeholder('id')))
-		.limit(1)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'user:byId', () =>
+		db
+			.select()
+			.from(userTable)
+			.where(eq(userTable.id, sql.placeholder('id')))
+			.limit(1)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const [row] = await statement.execute({ id });
 
 	return row ? deserializeUser(row) : null;
@@ -241,29 +250,22 @@ export async function fetchUserByIdOrFailFromDatabase(db: MiDrizzleDatabase, id:
 	return user;
 }
 
-export async function fetchUserByUriFromDatabase(db: MiDrizzleDatabase, uri: NonNullable<MiUser['uri']>): Promise<MiUser | null> {
-	const [row] = await db
-		.select()
-		.from(userTable)
-		.where(eq(userTable.uri, uri))
-		.limit(1);
+export async function fetchUserByUriFromDatabase(
+	db: MiDrizzleDatabase,
+	uri: NonNullable<MiUser['uri']>,
+): Promise<MiUser | null> {
+	const [row] = await db.select().from(userTable).where(eq(userTable.uri, uri)).limit(1);
 
 	return row ? deserializeUser(row) : null;
 }
 
 export async function countUsersActiveAfterFromDatabase(db: MiDrizzleDatabase, since: Date): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(userTable)
-		.where(gt(userTable.lastActiveDate, since));
+	const [row] = await db.select({ value: count() }).from(userTable).where(gt(userTable.lastActiveDate, since));
 
 	return row?.value ?? 0;
 }
 
-export async function countUsersByHostFromDatabase(
-	db: MiDrizzleDatabase,
-	host: MiUser['host'],
-): Promise<number> {
+export async function countUsersByHostFromDatabase(db: MiDrizzleDatabase, host: MiUser['host']): Promise<number> {
 	const [row] = await db
 		.select({ value: count() })
 		.from(userTable)
@@ -272,13 +274,8 @@ export async function countUsersByHostFromDatabase(
 	return row?.value ?? 0;
 }
 
-export async function countUsersByHostNotNullFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(userTable)
-		.where(isNotNull(userTable.host));
+export async function countUsersByHostNotNullFromDatabase(db: MiDrizzleDatabase): Promise<number> {
+	const [row] = await db.select({ value: count() }).from(userTable).where(isNotNull(userTable.host));
 
 	return row?.value ?? 0;
 }
@@ -295,9 +292,7 @@ export async function listUsersByIdsFromDatabase(
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
 	const statement = preparedQueryFor(db, `user:byIds:${options.includeSuspended}`, () => {
-		const conditions: SQL[] = [
-			sql`${userTable.id} = ANY(${sql.placeholder('ids')})`,
-		];
+		const conditions: SQL[] = [sql`${userTable.id} = ANY(${sql.placeholder('ids')})`];
 
 		if (!options.includeSuspended) {
 			conditions.push(eq(userTable.isSuspended, false));
@@ -311,7 +306,7 @@ export async function listUsersByIdsFromDatabase(
 	});
 	const rows = await statement.execute({ ids });
 
-	return rows.map(row => deserializeUser(row));
+	return rows.map((row) => deserializeUser(row));
 }
 
 export async function listUsersByIdsForKeyShareFromDatabase(
@@ -327,7 +322,7 @@ export async function listUsersByIdsForKeyShareFromDatabase(
 		.orderBy(asc(userTable.id))
 		.for('key share');
 
-	return rows.map(row => deserializeUser(row));
+	return rows.map((row) => deserializeUser(row));
 }
 
 export async function listUsersByUrisOrIdsFromDatabase(
@@ -354,7 +349,7 @@ export async function listUsersByUrisOrIdsFromDatabase(
 		.from(userTable)
 		.where(or(...conditions));
 
-	return rows.map(row => deserializeUser(row));
+	return rows.map((row) => deserializeUser(row));
 }
 
 export async function listExplorableUsersFromDatabase(
@@ -369,10 +364,7 @@ export async function listExplorableUsersFromDatabase(
 		meId?: MiUser['id'] | null;
 	},
 ): Promise<MiUser[]> {
-	const conditions: SQL[] = [
-		eq(userTable.isExplorable, true),
-		eq(userTable.isSuspended, false),
-	];
+	const conditions: SQL[] = [eq(userTable.isExplorable, true), eq(userTable.isSuspended, false)];
 
 	if ((options.state ?? 'all') === 'alive') {
 		conditions.push(gt(userTable.updatedAt, new Date(Date.now() - 1000 * 60 * 60 * 24 * 5)));
@@ -420,7 +412,7 @@ export async function listExplorableUsersFromDatabase(
 		.limit(options.limit)
 		.offset(options.offset);
 
-	return rows.map(row => deserializeUser(row));
+	return rows.map((row) => deserializeUser(row));
 }
 
 export async function listUsersByTagFromDatabase(
@@ -475,7 +467,7 @@ export async function listUsersByTagFromDatabase(
 		.limit(options.limit)
 		.offset(options.offset);
 
-	return rows.map(row => deserializeUser(row));
+	return rows.map((row) => deserializeUser(row));
 }
 
 export async function listRecommendedUsersFromDatabase(
@@ -508,7 +500,7 @@ export async function listRecommendedUsersFromDatabase(
 		.limit(options.limit)
 		.offset(options.offset);
 
-	return rows.map(row => deserializeUser(row));
+	return rows.map((row) => deserializeUser(row));
 }
 
 export async function listAdminUsersFromDatabase(
@@ -582,7 +574,8 @@ export async function listAdminUsersFromDatabase(
 	}
 
 	const where = conditions.length > 0 ? and(...conditions) : sql`TRUE`;
-	const canPageIdsFromIndex = conditions.length === 0 && (options.sort == null || options.sort === '+createdAt' || options.sort === '-createdAt');
+	const canPageIdsFromIndex =
+		conditions.length === 0 && (options.sort == null || options.sort === '+createdAt' || options.sort === '-createdAt');
 	if (options.offset === 0 || !canPageIdsFromIndex) {
 		const rows = await db
 			.select()
@@ -592,7 +585,7 @@ export async function listAdminUsersFromDatabase(
 			.limit(options.limit)
 			.offset(options.offset);
 
-		return rows.map(row => deserializeUser(row));
+		return rows.map((row) => deserializeUser(row));
 	}
 
 	const page = db
@@ -609,7 +602,7 @@ export async function listAdminUsersFromDatabase(
 		.innerJoin(userTable, eq(userTable.id, page.id))
 		.orderBy(orderBy);
 
-	return rows.map(row => deserializeUser(row.user));
+	return rows.map((row) => deserializeUser(row.user));
 }
 
 export async function listUsersByHostWithPaginationFromDatabase(
@@ -624,14 +617,11 @@ export async function listUsersByHostWithPaginationFromDatabase(
 	const rows = await db
 		.select()
 		.from(userTable)
-		.where(and(
-			userPaginationCondition(options),
-			eq(userTable.host, options.host),
-		))
+		.where(and(userPaginationCondition(options), eq(userTable.host, options.host)))
 		.orderBy(options.sinceId && !options.untilId ? asc(userTable.id) : desc(userTable.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeUser(row));
+	return rows.map((row) => deserializeUser(row));
 }
 
 export async function updateUserLastFetchedAtInDatabase(
@@ -639,10 +629,7 @@ export async function updateUserLastFetchedAtInDatabase(
 	id: MiUser['id'],
 	lastFetchedAt: Date,
 ): Promise<void> {
-	await db
-		.update(userTable)
-		.set({ lastFetchedAt })
-		.where(eq(userTable.id, id));
+	await db.update(userTable).set({ lastFetchedAt }).where(eq(userTable.id, id));
 }
 
 export async function updateUserLastActiveDateInDatabase(
@@ -650,10 +637,7 @@ export async function updateUserLastActiveDateInDatabase(
 	id: MiUser['id'],
 	lastActiveDate: Date,
 ): Promise<void> {
-	await db
-		.update(userTable)
-		.set({ lastActiveDate })
-		.where(eq(userTable.id, id));
+	await db.update(userTable).set({ lastActiveDate }).where(eq(userTable.id, id));
 }
 
 export async function updateUserLastActiveDateReturningWasHibernatedInDatabase(
@@ -675,10 +659,7 @@ export async function updateUserHibernatedStateInDatabase(
 	id: MiUser['id'],
 	isHibernated: boolean,
 ): Promise<void> {
-	await db
-		.update(userTable)
-		.set({ isHibernated })
-		.where(eq(userTable.id, id));
+	await db.update(userTable).set({ isHibernated }).where(eq(userTable.id, id));
 }
 
 export async function updateUserDeletedStateInDatabase(
@@ -686,10 +667,7 @@ export async function updateUserDeletedStateInDatabase(
 	id: MiUser['id'],
 	isDeleted: boolean,
 ): Promise<void> {
-	await db
-		.update(userTable)
-		.set({ isDeleted })
-		.where(eq(userTable.id, id));
+	await db.update(userTable).set({ isDeleted }).where(eq(userTable.id, id));
 }
 
 export async function updateUserDeletedStateIfNotDeletedInDatabase(
@@ -700,10 +678,7 @@ export async function updateUserDeletedStateIfNotDeletedInDatabase(
 	const rows = await db
 		.update(userTable)
 		.set({ isDeleted })
-		.where(and(
-			eq(userTable.id, id),
-			eq(userTable.isDeleted, false),
-		))
+		.where(and(eq(userTable.id, id), eq(userTable.isDeleted, false)))
 		.returning({ id: userTable.id });
 
 	return rows.length > 0;
@@ -714,21 +689,11 @@ export async function updateUserSuspendedStateInDatabase(
 	id: MiUser['id'],
 	isSuspended: boolean,
 ): Promise<void> {
-	await db
-		.update(userTable)
-		.set({ isSuspended })
-		.where(eq(userTable.id, id));
+	await db.update(userTable).set({ isSuspended }).where(eq(userTable.id, id));
 }
 
-export async function updateUserInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiUser['id'],
-	values: UserUpdate,
-): Promise<void> {
-	await db
-		.update(userTable)
-		.set(values)
-		.where(eq(userTable.id, id));
+export async function updateUserInDatabase(db: MiDrizzleDatabase, id: MiUser['id'], values: UserUpdate): Promise<void> {
+	await db.update(userTable).set(values).where(eq(userTable.id, id));
 }
 
 export async function adjustUserFollowingCountInDatabase(
@@ -761,10 +726,7 @@ export async function updateUserIfNotDeletedInDatabase(
 	const rows = await db
 		.update(userTable)
 		.set(values)
-		.where(and(
-			eq(userTable.id, id),
-			eq(userTable.isDeleted, false),
-		))
+		.where(and(eq(userTable.id, id), eq(userTable.isDeleted, false)))
 		.returning({ id: userTable.id });
 
 	return rows.length > 0;
@@ -794,12 +756,9 @@ export async function listUserIdsByIdsAndLastActiveBeforeFromDatabase(
 	const rows = await db
 		.select({ id: userTable.id })
 		.from(userTable)
-		.where(and(
-			inArray(userTable.id, ids),
-			lt(userTable.lastActiveDate, before),
-		));
+		.where(and(inArray(userTable.id, ids), lt(userTable.lastActiveDate, before)));
 
-	return rows.map(row => row.id);
+	return rows.map((row) => row.id);
 }
 
 export async function updateUsersHibernatedStateInDatabase(
@@ -809,10 +768,7 @@ export async function updateUsersHibernatedStateInDatabase(
 ): Promise<void> {
 	if (ids.length === 0) return;
 
-	await db
-		.update(userTable)
-		.set({ isHibernated })
-		.where(inArray(userTable.id, ids));
+	await db.update(userTable).set({ isHibernated }).where(inArray(userTable.id, ids));
 }
 
 export async function decrementUsersFollowingCountInDatabase(
@@ -841,13 +797,8 @@ export async function decrementUsersFollowersCountInDatabase(
 		.where(inArray(userTable.id, ids));
 }
 
-export async function deleteUserByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiUser['id'],
-): Promise<void> {
-	await db
-		.delete(userTable)
-		.where(eq(userTable.id, id));
+export async function deleteUserByIdFromDatabase(db: MiDrizzleDatabase, id: MiUser['id']): Promise<void> {
+	await db.delete(userTable).where(eq(userTable.id, id));
 }
 
 export async function updateUserUriByUsernameAndHostInDatabase(
@@ -859,8 +810,5 @@ export async function updateUserUriByUsernameAndHostInDatabase(
 	await db
 		.update(userTable)
 		.set({ uri })
-		.where(and(
-			eq(userTable.usernameLower, usernameLower),
-			eq(userTable.host, host),
-		));
+		.where(and(eq(userTable.usernameLower, usernameLower), eq(userTable.host, host)));
 }

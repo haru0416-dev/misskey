@@ -83,5 +83,9 @@ export type HonoStreamChannelDefinition<Deps> = {
 	shouldShare: boolean;
 	requireCredential: boolean;
 	kind: string | null;
-	init: (deps: Deps, ctx: HonoStreamChannelContext, params: JsonObject) => Awaitable<HonoStreamChannelHandle | false | void>;
+	init: (
+		deps: Deps,
+		ctx: HonoStreamChannelContext,
+		params: JsonObject,
+	) => Awaitable<HonoStreamChannelHandle | false | void>;
 };

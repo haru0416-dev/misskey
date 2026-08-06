@@ -58,13 +58,22 @@ export const adminAbuseReportNotificationRecipientDeleteParamDef = z.object({
 	id: misskeyId(),
 });
 
-type AdminAbuseReportNotificationRecipientListParams = Omit<z.infer<typeof adminAbuseReportNotificationRecipientListParamDef>, 'method'> & {
+type AdminAbuseReportNotificationRecipientListParams = Omit<
+	z.infer<typeof adminAbuseReportNotificationRecipientListParamDef>,
+	'method'
+> & {
 	method?: RecipientMethod[];
 };
-type AdminAbuseReportNotificationRecipientCreateParams = Omit<z.infer<typeof adminAbuseReportNotificationRecipientCreateParamDef>, 'method'> & {
+type AdminAbuseReportNotificationRecipientCreateParams = Omit<
+	z.infer<typeof adminAbuseReportNotificationRecipientCreateParamDef>,
+	'method'
+> & {
 	method: RecipientMethod;
 };
-type AdminAbuseReportNotificationRecipientUpdateParams = Omit<z.infer<typeof adminAbuseReportNotificationRecipientUpdateParamDef>, 'method'> & {
+type AdminAbuseReportNotificationRecipientUpdateParams = Omit<
+	z.infer<typeof adminAbuseReportNotificationRecipientUpdateParamDef>,
+	'method'
+> & {
 	method: RecipientMethod;
 };
 
@@ -109,26 +118,26 @@ async function listModeratorIdsForAbuseReportNotification(
 	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
 ): Promise<MiUser['id'][]> {
 	const roles = await listRolesFromDatabase(deps.db);
-	const moderatorRoleIds = roles
-		.filter(role => role.isModerator || role.isAdministrator)
-		.map(role => role.id);
-	const assignments = moderatorRoleIds.length > 0
-		? await listRoleAssignmentsByRoleIdsFromDatabase(deps.db, moderatorRoleIds)
-		: [];
+	const moderatorRoleIds = roles.filter((role) => role.isModerator || role.isAdministrator).map((role) => role.id);
+	const assignments =
+		moderatorRoleIds.length > 0 ? await listRoleAssignmentsByRoleIdsFromDatabase(deps.db, moderatorRoleIds) : [];
 	const now = Date.now();
 
-	return [...new Set(assignments
-		.filter(assignment => assignment.expiresAt == null || assignment.expiresAt.getTime() > now)
-		.map(assignment => assignment.userId))]
-		.sort((a, b) => a.localeCompare(b));
+	return [
+		...new Set(
+			assignments
+				.filter((assignment) => assignment.expiresAt == null || assignment.expiresAt.getTime() > now)
+				.map((assignment) => assignment.userId),
+		),
+	].sort((a, b) => a.localeCompare(b));
 }
 
 async function removeUnauthorizedRecipientUsers(
 	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
 	recipients: MiAbuseReportNotificationRecipient[],
 ): Promise<MiAbuseReportNotificationRecipient[]> {
-	const userRecipients = recipients.filter(recipient => recipient.userId !== null);
-	const recipientUserIds = new Set(userRecipients.map(recipient => recipient.userId).filter(x => x != null));
+	const userRecipients = recipients.filter((recipient) => recipient.userId !== null);
+	const recipientUserIds = new Set(userRecipients.map((recipient) => recipient.userId).filter((x) => x != null));
 	if (recipientUserIds.size === 0) return recipients;
 
 	const authorizedUserIds = await listModeratorIdsForAbuseReportNotification(deps);
@@ -144,13 +153,15 @@ async function removeUnauthorizedRecipientUsers(
 	}
 
 	if (unauthorizedUserRecipients.length > 0) {
-		await deleteAbuseReportNotificationRecipientsFromDatabase(deps.db, unauthorizedUserRecipients.map(recipient => recipient.id));
+		await deleteAbuseReportNotificationRecipientsFromDatabase(
+			deps.db,
+			unauthorizedUserRecipients.map((recipient) => recipient.id),
+		);
 	}
 
-	return [
-		...recipients.filter(recipient => recipient.userId === null),
-		...authorizedUserRecipients,
-	].sort((a, b) => a.id.localeCompare(b.id));
+	return [...recipients.filter((recipient) => recipient.userId === null), ...authorizedUserRecipients].sort((a, b) =>
+		a.id.localeCompare(b.id),
+	);
 }
 
 async function fetchRecipients(
@@ -160,10 +171,13 @@ async function fetchRecipients(
 		method?: RecipientMethod[];
 	},
 ): Promise<MiAbuseReportNotificationRecipient[]> {
-	const recipients = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, omitUndefined({
-		ids: params?.ids,
-		method: params?.method,
-	}));
+	const recipients = await listAbuseReportNotificationRecipientsFromDatabase(
+		deps.db,
+		omitUndefined({
+			ids: params?.ids,
+			method: params?.method,
+		}),
+	);
 	if (recipients.length === 0) return [];
 
 	return await removeUnauthorizedRecipientUsers(deps, recipients);
@@ -174,7 +188,8 @@ async function assertRecipientCorrelation(
 	params: Pick<AdminAbuseReportNotificationRecipientCreateParams, 'method' | 'userId' | 'systemWebhookId'>,
 ): Promise<void> {
 	if (params.method === 'email') {
-		const userProfile = params.userId == null ? null : await fetchUserProfileByUserIdFromDatabase(deps.db, params.userId);
+		const userProfile =
+			params.userId == null ? null : await fetchUserProfileByUserIdFromDatabase(deps.db, params.userId);
 		if (params.userId == null || userProfile == null) {
 			throw correlationCheckEmailError();
 		}
@@ -197,14 +212,15 @@ async function packHonoApiAbuseReportNotificationRecipient(
 		webhooks: Map<string, ReturnType<typeof packHonoApiSystemWebhook>>;
 	},
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
-	const user = recipient.userId == null
-		? undefined
-		: refs?.users.get(recipient.userId) ?? await packUserLiteForHonoApi(deps, recipient.userId);
-	const systemWebhook = recipient.systemWebhookId == null
-		? undefined
-		: refs?.webhooks.get(recipient.systemWebhookId) ?? packHonoApiSystemWebhook(
-			await fetchSystemWebhookByIdOrFailFromDatabase(deps.db, recipient.systemWebhookId),
-		);
+	const user =
+		recipient.userId == null
+			? undefined
+			: (refs?.users.get(recipient.userId) ?? (await packUserLiteForHonoApi(deps, recipient.userId)));
+	const systemWebhook =
+		recipient.systemWebhookId == null
+			? undefined
+			: (refs?.webhooks.get(recipient.systemWebhookId) ??
+				packHonoApiSystemWebhook(await fetchSystemWebhookByIdOrFailFromDatabase(deps.db, recipient.systemWebhookId)));
 
 	return {
 		id: recipient.id,
@@ -223,20 +239,25 @@ async function packHonoApiAbuseReportNotificationRecipients(
 	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
 	recipients: MiAbuseReportNotificationRecipient[],
 ): Promise<Packed<'AbuseReportNotificationRecipient'>[]> {
-	const userIds = recipients.map(recipient => recipient.userId).filter(x => x != null);
+	const userIds = recipients.map((recipient) => recipient.userId).filter((x) => x != null);
 	const users = userIds.length > 0 ? await packUserLiteManyForHonoApi(deps, [...new Set(userIds)]) : [];
-	const usersById = new Map(users.map(user => [user.id, user]));
+	const usersById = new Map(users.map((user) => [user.id, user]));
 
-	const systemWebhookIds = recipients.map(recipient => recipient.systemWebhookId).filter(x => x != null);
-	const systemWebhooks = systemWebhookIds.length > 0
-		? await listSystemWebhooksFromDatabase(deps.db, { ids: [...new Set(systemWebhookIds)] })
-		: [];
-	const systemWebhooksById = new Map(systemWebhooks.map(webhook => [webhook.id, packHonoApiSystemWebhook(webhook)]));
+	const systemWebhookIds = recipients.map((recipient) => recipient.systemWebhookId).filter((x) => x != null);
+	const systemWebhooks =
+		systemWebhookIds.length > 0
+			? await listSystemWebhooksFromDatabase(deps.db, { ids: [...new Set(systemWebhookIds)] })
+			: [];
+	const systemWebhooksById = new Map(systemWebhooks.map((webhook) => [webhook.id, packHonoApiSystemWebhook(webhook)]));
 
-	return await Promise.all(recipients.map(recipient => packHonoApiAbuseReportNotificationRecipient(deps, recipient, {
-		users: usersById,
-		webhooks: systemWebhooksById,
-	}))).then(packed => packed.toSorted((a, b) => a.id.localeCompare(b.id)));
+	return await Promise.all(
+		recipients.map((recipient) =>
+			packHonoApiAbuseReportNotificationRecipient(deps, recipient, {
+				users: usersById,
+				webhooks: systemWebhooksById,
+			}),
+		),
+	).then((packed) => packed.toSorted((a, b) => a.id.localeCompare(b.id)));
 }
 
 export async function handleHonoApiAdminAbuseReportNotificationRecipientList(
@@ -275,8 +296,8 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientCreate(
 		isActive: params.isActive,
 		name: params.name,
 		method: params.method,
-		userId: params.method === 'email' ? params.userId ?? null : null,
-		systemWebhookId: params.method === 'webhook' ? params.systemWebhookId ?? null : null,
+		userId: params.method === 'email' ? (params.userId ?? null) : null,
+		systemWebhookId: params.method === 'webhook' ? (params.systemWebhookId ?? null) : null,
 	});
 
 	await logModerationEventInDatabase(deps, me, 'createAbuseReportNotificationRecipient', {
@@ -301,8 +322,8 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientUpdate(
 		updatedAt: new Date(),
 		name: params.name,
 		method: params.method,
-		userId: params.method === 'email' ? params.userId ?? null : null,
-		systemWebhookId: params.method === 'webhook' ? params.systemWebhookId ?? null : null,
+		userId: params.method === 'email' ? (params.userId ?? null) : null,
+		systemWebhookId: params.method === 'webhook' ? (params.systemWebhookId ?? null) : null,
 	});
 	if (after == null) {
 		throw new Error(`Abuse report notification recipient ${params.id} not found`);

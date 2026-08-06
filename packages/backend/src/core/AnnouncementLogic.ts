@@ -33,26 +33,36 @@ export type AnnouncementCreateValues = Pick<
 	updatedAt?: MiAnnouncement['updatedAt'];
 };
 
-export type AnnouncementUpdateValues = Partial<Pick<
-	MiAnnouncement,
-	| 'title'
-	| 'text'
-	| 'imageUrl'
-	| 'icon'
-	| 'display'
-	| 'forExistingUsers'
-	| 'silence'
-	| 'needConfirmationToRead'
-	| 'isActive'
->>;
+export type AnnouncementUpdateValues = Partial<
+	Pick<
+		MiAnnouncement,
+		| 'title'
+		| 'text'
+		| 'imageUrl'
+		| 'icon'
+		| 'display'
+		| 'forExistingUsers'
+		| 'silence'
+		| 'needConfirmationToRead'
+		| 'isActive'
+	>
+>;
 
 export type AnnouncementLogicDependencies = {
 	db: MiDrizzleDatabase;
 	genId: () => string;
 	packAnnouncement: (announcement: MiAnnouncement) => Promise<Packed<'Announcement'>>;
-	publishMainStream?: <K extends keyof MainEventTypes>(userId: MiUser['id'], type: K, value?: MainEventTypes[K]) => void;
+	publishMainStream?: <K extends keyof MainEventTypes>(
+		userId: MiUser['id'],
+		type: K,
+		value?: MainEventTypes[K],
+	) => void;
 	publishBroadcastStream?: <K extends keyof BroadcastTypes>(type: K, value?: BroadcastTypes[K]) => void;
-	logModeration?: <T extends keyof ModerationLogPayloads>(moderator: { id: MiUser['id'] }, type: T, info?: ModerationLogPayloads[T]) => void | Promise<void>;
+	logModeration?: <T extends keyof ModerationLogPayloads>(
+		moderator: { id: MiUser['id'] },
+		type: T,
+		info?: ModerationLogPayloads[T],
+	) => void | Promise<void>;
 };
 
 export async function createAnnouncementWithSideEffects(

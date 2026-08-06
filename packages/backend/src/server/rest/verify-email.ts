@@ -51,12 +51,16 @@ export async function handleHonoApiVerifyEmail(
 	});
 
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, profile.userId);
-	deps.publishMainStream?.(profile.userId, 'meUpdated', await packMeDetailedForHonoApi(deps, user, {
-		includeSecrets: true,
-		profile: {
-			...profile,
-			emailVerified: true,
-			emailVerifyCode: null,
-		},
-	}));
+	deps.publishMainStream?.(
+		profile.userId,
+		'meUpdated',
+		await packMeDetailedForHonoApi(deps, user, {
+			includeSecrets: true,
+			profile: {
+				...profile,
+				emailVerified: true,
+				emailVerifyCode: null,
+			},
+		}),
+	);
 }

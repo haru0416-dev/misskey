@@ -37,7 +37,11 @@ import { MiPage, pageNameSchema, type MiPageContentBlock } from '@/models/Page.j
 import type { PageLikeRow } from '@/db/schema/page-like.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
-import { packDriveFileForHonoApi, packDriveFileManyForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
+import {
+	packDriveFileForHonoApi,
+	packDriveFileManyForHonoApi,
+	type HonoApiDriveFileDependencies,
+} from './drive-file.js';
 import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
@@ -124,15 +128,18 @@ export async function packPageForHonoApi(
 		hint?.packedUser ?? packUserLiteForHonoApi(deps, pageEntity.user ?? pageEntity.userId),
 		hint?.packedEyeCatchingImage !== undefined
 			? hint.packedEyeCatchingImage
-			: pageEntity.eyeCatchingImageId ? packDriveFileForHonoApi(deps, pageEntity.eyeCatchingImageId) : Promise.resolve(null),
-		hint?.packedAttachedFiles ?? (async () => {
-			const files = attachedFiles.length > 0 ? await listDriveFilesByIdsFromDatabase(deps.db, attachedFiles) : [];
-			const fileById = new Map(files.map(file => [file.id, file]));
-			const orderedFiles = attachedFiles
-				.map(fileId => fileById.get(fileId))
-				.filter((file): file is NonNullable<typeof file> => file != null && file.userId === pageEntity.userId);
-			return await packDriveFileManyForHonoApi(deps, orderedFiles);
-		})(),
+			: pageEntity.eyeCatchingImageId
+				? packDriveFileForHonoApi(deps, pageEntity.eyeCatchingImageId)
+				: Promise.resolve(null),
+		hint?.packedAttachedFiles ??
+			(async () => {
+				const files = attachedFiles.length > 0 ? await listDriveFilesByIdsFromDatabase(deps.db, attachedFiles) : [];
+				const fileById = new Map(files.map((file) => [file.id, file]));
+				const orderedFiles = attachedFiles
+					.map((fileId) => fileById.get(fileId))
+					.filter((file): file is NonNullable<typeof file> => file != null && file.userId === pageEntity.userId);
+				return await packDriveFileManyForHonoApi(deps, orderedFiles);
+			})(),
 		hint?.isLiked ?? (meId ? pageLikeExistsInDatabase(deps.db, meId, pageEntity.id) : Promise.resolve(undefined)),
 	]);
 
@@ -167,36 +174,49 @@ export async function packPageManyForHonoApi(
 	if (pages.length === 0) return [];
 
 	const users = pages.map(({ user, userId }) => user ?? userId);
-	const pageIds = pages.map(pageEntity => pageEntity.id);
-	const fileIds = [...new Set(pages.flatMap(pageEntity => [
-		...(pageEntity.eyeCatchingImageId ? [pageEntity.eyeCatchingImageId] : []),
-		...collectAttachedFileIdsForHonoApi(pageEntity.content),
-	]))];
+	const pageIds = pages.map((pageEntity) => pageEntity.id);
+	const fileIds = [
+		...new Set(
+			pages.flatMap((pageEntity) => [
+				...(pageEntity.eyeCatchingImageId ? [pageEntity.eyeCatchingImageId] : []),
+				...collectAttachedFileIdsForHonoApi(pageEntity.content),
+			]),
+		),
+	];
 	const [packedUsers, files, likedPageIds] = await Promise.all([
 		packUserLiteManyForHonoApi(deps, users),
 		fileIds.length > 0 ? listDriveFilesByIdsFromDatabase(deps.db, fileIds) : Promise.resolve([]),
 		me ? listLikedPageIdsByUserIdAndPageIdsFromDatabase(deps.db, me.id, pageIds) : Promise.resolve([]),
 	]);
-	const packedUserById = new Map(packedUsers.map(u => [u.id, u]));
+	const packedUserById = new Map(packedUsers.map((u) => [u.id, u]));
 	const packedFiles = await packDriveFileManyForHonoApi(deps, files);
-	const packedFileById = new Map(packedFiles.map(file => [file.id, file]));
-	const fileById = new Map(files.map(file => [file.id, file]));
+	const packedFileById = new Map(packedFiles.map((file) => [file.id, file]));
+	const fileById = new Map(files.map((file) => [file.id, file]));
 	const likedPageIdSet = new Set(likedPageIds);
 
-	return await Promise.all(pages.map(pageEntity => {
-		const attachedFileIds = collectAttachedFileIdsForHonoApi(pageEntity.content);
-		return packPageForHonoApi(deps, pageEntity, me, omitUndefined({
-			packedUser: packedUserById.get(pageEntity.userId),
-			packedEyeCatchingImage: pageEntity.eyeCatchingImageId ? (packedFileById.get(pageEntity.eyeCatchingImageId) ?? null) : null,
-			packedAttachedFiles: attachedFileIds
-				.map(fileId => {
-					const file = fileById.get(fileId);
-					return file?.userId === pageEntity.userId ? packedFileById.get(fileId) : undefined;
-				})
-				.filter((file): file is Packed<'DriveFile'> => file != null),
-			isLiked: me ? likedPageIdSet.has(pageEntity.id) : undefined,
-		}));
-	}));
+	return await Promise.all(
+		pages.map((pageEntity) => {
+			const attachedFileIds = collectAttachedFileIdsForHonoApi(pageEntity.content);
+			return packPageForHonoApi(
+				deps,
+				pageEntity,
+				me,
+				omitUndefined({
+					packedUser: packedUserById.get(pageEntity.userId),
+					packedEyeCatchingImage: pageEntity.eyeCatchingImageId
+						? (packedFileById.get(pageEntity.eyeCatchingImageId) ?? null)
+						: null,
+					packedAttachedFiles: attachedFileIds
+						.map((fileId) => {
+							const file = fileById.get(fileId);
+							return file?.userId === pageEntity.userId ? packedFileById.get(fileId) : undefined;
+						})
+						.filter((file): file is Packed<'DriveFile'> => file != null),
+					isLiked: me ? likedPageIdSet.has(pageEntity.id) : undefined,
+				}),
+			);
+		}),
+	);
 }
 
 export async function packPageLikeForHonoApi(
@@ -250,12 +270,22 @@ export async function handleHonoApiPagesCreate(
 	if (params.eyeCatchingImageId != null) {
 		eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.eyeCatchingImageId, me.id);
 		if (eyeCatchingImage == null) {
-			throw new HonoApiError({ status: 400, message: 'No such file.', code: 'NO_SUCH_FILE', id: 'b7b97489-0f66-4b12-a5ff-b21bd63f6e1c' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'No such file.',
+				code: 'NO_SUCH_FILE',
+				id: 'b7b97489-0f66-4b12-a5ff-b21bd63f6e1c',
+			});
 		}
 	}
 
 	if (await pageNameExistsForUserInDatabase(deps.db, me.id, params.name)) {
-		throw new HonoApiError({ status: 400, message: 'Specified name already exists.', code: 'NAME_ALREADY_EXISTS', id: '4650348e-301c-499a-83c9-6aa988c66bc1' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'Specified name already exists.',
+			code: 'NAME_ALREADY_EXISTS',
+			id: '4650348e-301c-499a-83c9-6aa988c66bc1',
+		});
 	}
 
 	const pageEntity = await createPageInDatabase(deps.db, {
@@ -322,32 +352,57 @@ export async function handleHonoApiPagesUpdate(
 	if (params.eyeCatchingImageId !== undefined && params.eyeCatchingImageId != null) {
 		const eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.eyeCatchingImageId, me.id);
 		if (eyeCatchingImage == null) {
-			throw new HonoApiError({ status: 400, message: 'No such file.', code: 'NO_SUCH_FILE', id: 'cfc23c7c-3887-490e-af30-0ed576703c82' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'No such file.',
+				code: 'NO_SUCH_FILE',
+				id: 'cfc23c7c-3887-490e-af30-0ed576703c82',
+			});
 		}
 		eyeCatchingImageId = eyeCatchingImage.id;
 	}
 
-	const result = await updatePageInDatabase(deps.db, params.pageId, me.id, omitUndefined({
-		title: params.title,
-		name: params.name,
-		summary: params.summary,
-		content: params.content,
-		variables: params.variables,
-		script: params.script,
-		alignCenter: params.alignCenter,
-		hideTitleWhenPinned: params.hideTitleWhenPinned,
-		font: params.font,
-		eyeCatchingImageId: params.eyeCatchingImageId === undefined ? undefined : eyeCatchingImageId,
-	}));
+	const result = await updatePageInDatabase(
+		deps.db,
+		params.pageId,
+		me.id,
+		omitUndefined({
+			title: params.title,
+			name: params.name,
+			summary: params.summary,
+			content: params.content,
+			variables: params.variables,
+			script: params.script,
+			alignCenter: params.alignCenter,
+			hideTitleWhenPinned: params.hideTitleWhenPinned,
+			font: params.font,
+			eyeCatchingImageId: params.eyeCatchingImageId === undefined ? undefined : eyeCatchingImageId,
+		}),
+	);
 
 	if (result.status === 'not-found') {
-		throw new HonoApiError({ status: 400, message: 'No such page.', code: 'NO_SUCH_PAGE', id: '21149b9e-3616-4778-9592-c4ce89f5a864' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'No such page.',
+			code: 'NO_SUCH_PAGE',
+			id: '21149b9e-3616-4778-9592-c4ce89f5a864',
+		});
 	}
 	if (result.status === 'forbidden') {
-		throw new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id: '3c15cd52-3b4b-4274-967d-6456fc4f792b' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'Access denied.',
+			code: 'ACCESS_DENIED',
+			id: '3c15cd52-3b4b-4274-967d-6456fc4f792b',
+		});
 	}
 	if (result.status === 'name-conflict') {
-		throw new HonoApiError({ status: 400, message: 'Specified name already exists.', code: 'NAME_ALREADY_EXISTS', id: '2298a392-d4a1-44c5-9ebb-ac1aeaa5a9ab' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'Specified name already exists.',
+			code: 'NAME_ALREADY_EXISTS',
+			id: '2298a392-d4a1-44c5-9ebb-ac1aeaa5a9ab',
+		});
 	}
 
 	const { before } = result;
@@ -358,8 +413,8 @@ export async function handleHonoApiPagesUpdate(
 		const beforeReferencedNoteSet = new Set(beforeReferencedNotes);
 		const afterReferencedNoteSet = new Set(afterReferencedNotes);
 
-		const removedNotes = beforeReferencedNotes.filter(noteId => !afterReferencedNoteSet.has(noteId));
-		const addedNotes = afterReferencedNotes.filter(noteId => !beforeReferencedNoteSet.has(noteId));
+		const removedNotes = beforeReferencedNotes.filter((noteId) => !afterReferencedNoteSet.has(noteId));
+		const addedNotes = afterReferencedNotes.filter((noteId) => !beforeReferencedNoteSet.has(noteId));
 
 		if (removedNotes.length > 0) {
 			await adjustNotesPageCountInDatabase(deps.db, removedNotes, -1);
@@ -422,10 +477,20 @@ export async function handleHonoApiPagesDelete(
 	const result = await deletePageForHonoApi(deps, me, params.pageId);
 
 	if (result.status === 'not-found') {
-		throw new HonoApiError({ status: 400, message: 'No such page.', code: 'NO_SUCH_PAGE', id: 'eb0c6e1d-d519-4764-9486-52a7e1c6392a' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'No such page.',
+			code: 'NO_SUCH_PAGE',
+			id: 'eb0c6e1d-d519-4764-9486-52a7e1c6392a',
+		});
 	}
 	if (result.status === 'forbidden') {
-		throw new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id: '8b741b3e-2c22-44b3-a15f-29949aa1601e' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'Access denied.',
+			code: 'ACCESS_DENIED',
+			id: '8b741b3e-2c22-44b3-a15f-29949aa1601e',
+		});
 	}
 }
 
@@ -460,7 +525,12 @@ export async function handleHonoApiPagesShow(
 	}
 
 	if (pageEntity == null) {
-		throw new HonoApiError({ status: 400, message: 'No such page.', code: 'NO_SUCH_PAGE', id: '222120c0-3ead-4528-811b-b96f233388d7' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'No such page.',
+			code: 'NO_SUCH_PAGE',
+			id: '222120c0-3ead-4528-811b-b96f233388d7',
+		});
 	}
 
 	return await packPageForHonoApi(deps, pageEntity, me);
@@ -568,16 +638,23 @@ export async function handleHonoApiIPageLikes(
 
 	if (likes.length === 0) return [];
 
-	const pageIds = likes.map(like => like.pageId);
-	const pageById = await listPagesByIdsFromDatabase(deps.db, pageIds)
-		.then(pages => new Map(pages.map(pageEntity => [pageEntity.id, pageEntity])));
-	const packedPages = await packPageManyForHonoApi(deps, likes.map(like => pageById.get(like.pageId)).filter(page => page != null), me);
-	const packedPageById = new Map(packedPages.map(page => [page.id, page]));
+	const pageIds = likes.map((like) => like.pageId);
+	const pageById = await listPagesByIdsFromDatabase(deps.db, pageIds).then(
+		(pages) => new Map(pages.map((pageEntity) => [pageEntity.id, pageEntity])),
+	);
+	const packedPages = await packPageManyForHonoApi(
+		deps,
+		likes.map((like) => pageById.get(like.pageId)).filter((page) => page != null),
+		me,
+	);
+	const packedPageById = new Map(packedPages.map((page) => [page.id, page]));
 
-	return await Promise.all(likes.map(async like => ({
-		id: like.id,
-		page: packedPageById.get(like.pageId) ?? (await packPageLikeForHonoApi(deps, like, me)).page,
-	})));
+	return await Promise.all(
+		likes.map(async (like) => ({
+			id: like.id,
+			page: packedPageById.get(like.pageId) ?? (await packPageLikeForHonoApi(deps, like, me)).page,
+		})),
+	);
 }
 
 export const usersPagesParamDef = z.object({

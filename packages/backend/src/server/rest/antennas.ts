@@ -19,9 +19,15 @@ import {
 	updateAntennaInDatabase,
 } from '@/core/AntennaStore.js';
 import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
-import { followingExistsInDatabase, listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase } from '@/core/FollowingStore.js';
+import {
+	followingExistsInDatabase,
+	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
+} from '@/core/FollowingStore.js';
 import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { listUserListIdsContainingUserFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
+import {
+	listUserListIdsContainingUserFromDatabase,
+	userListMembershipExistsInDatabase,
+} from '@/core/UserListMembershipStore.js';
 import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import * as Acct from '@/misc/acct.js';
@@ -42,9 +48,10 @@ import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from './note.js'
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiAntennaDependencies = HonoApiNoteDependencies & HonoApiRolePolicyDependencies & {
-	publishInternalEvent?: HonoApiInternalEventPublisher;
-};
+export type HonoApiAntennaDependencies = HonoApiNoteDependencies &
+	HonoApiRolePolicyDependencies & {
+		publishInternalEvent?: HonoApiInternalEventPublisher;
+	};
 
 export type HonoApiAntennaFanoutDependencies = {
 	config: Config;
@@ -53,8 +60,14 @@ export type HonoApiAntennaFanoutDependencies = {
 	publishAntennaStream?: HonoApiAntennaStreamPublisher;
 };
 
-function getFullApAccount(config: { runtime: Pick<Config['runtime'], 'host'> }, username: string, host: string | null): string {
-	return host ? `${username}@${domainToASCII(host.toLowerCase())}` : `${username}@${domainToASCII(config.runtime.host.toLowerCase())}`;
+function getFullApAccount(
+	config: { runtime: Pick<Config['runtime'], 'host'> },
+	username: string,
+	host: string | null,
+): string {
+	return host
+		? `${username}@${domainToASCII(host.toLowerCase())}`
+		: `${username}@${domainToASCII(config.runtime.host.toLowerCase())}`;
 }
 
 export function antennaUsersIncludes(
@@ -107,9 +120,10 @@ export async function checkHitAntennaForHonoApi(
 	}
 
 	if (note.visibility === 'followers') {
-		const isFollowing = hint?.followerIds != null
-			? hint.followerIds.has(antenna.userId)
-			: await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
+		const isFollowing =
+			hint?.followerIds != null
+				? hint.followerIds.has(antenna.userId)
+				: await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
 		if (!isFollowing && antenna.userId !== note.userId) return false;
 	}
 
@@ -117,9 +131,10 @@ export async function checkHitAntennaForHonoApi(
 		// ホーム = アンテナ所有者のホームタイムラインに流れるノート (自分の投稿 + フォロー中ユーザーの投稿)。
 		// hint.followerIds は「note.userId をフォローしている候補ユーザー」なので所有者が居れば follow 済み。
 		if (note.userId !== antenna.userId) {
-			const isFollowing = hint?.followerIds != null
-				? hint.followerIds.has(antenna.userId)
-				: await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
+			const isFollowing =
+				hint?.followerIds != null
+					? hint.followerIds.has(antenna.userId)
+					: await followingExistsInDatabase(deps.db, antenna.userId, note.userId);
 			if (!isFollowing) return false;
 		}
 	} else if (antenna.src === 'list') {
@@ -134,40 +149,34 @@ export async function checkHitAntennaForHonoApi(
 		if (antennaUsersIncludes(deps.config, antenna.users, noteUser)) return false;
 	}
 
-	const keywords = antenna.keywords
-		.map(xs => xs.filter(x => x !== ''))
-		.filter(xs => xs.length > 0);
+	const keywords = antenna.keywords.map((xs) => xs.filter((x) => x !== '')).filter((xs) => xs.length > 0);
 
 	if (keywords.length > 0) {
 		if (note.text == null && note.cw == null) return false;
 
 		const _text = (note.text ?? '') + '\n' + (note.cw ?? '');
 
-		const matched = keywords.some(and =>
-			and.every(keyword =>
-				antenna.caseSensitive
-					? _text.includes(keyword)
-					: _text.toLowerCase().includes(keyword.toLowerCase()),
-			));
+		const matched = keywords.some((and) =>
+			and.every((keyword) =>
+				antenna.caseSensitive ? _text.includes(keyword) : _text.toLowerCase().includes(keyword.toLowerCase()),
+			),
+		);
 
 		if (!matched) return false;
 	}
 
-	const excludeKeywords = antenna.excludeKeywords
-		.map(xs => xs.filter(x => x !== ''))
-		.filter(xs => xs.length > 0);
+	const excludeKeywords = antenna.excludeKeywords.map((xs) => xs.filter((x) => x !== '')).filter((xs) => xs.length > 0);
 
 	if (excludeKeywords.length > 0) {
 		if (note.text == null && note.cw == null) return false;
 
 		const _text = (note.text ?? '') + '\n' + (note.cw ?? '');
 
-		const matched = excludeKeywords.some(and =>
-			and.every(keyword =>
-				antenna.caseSensitive
-					? _text.includes(keyword)
-					: _text.toLowerCase().includes(keyword.toLowerCase()),
-			));
+		const matched = excludeKeywords.some((and) =>
+			and.every((keyword) =>
+				antenna.caseSensitive ? _text.includes(keyword) : _text.toLowerCase().includes(keyword.toLowerCase()),
+			),
+		);
 
 		if (matched) return false;
 	}
@@ -185,15 +194,19 @@ export async function checkHitAntennaForHonoApi(
  * と同じ判断で毎回DBから読む。
  */
 export async function onMoveAccountForHonoApi(
-	deps: { config: { runtime: Pick<Config['runtime'], 'host'> }; db: MiDrizzleDatabase; publishInternalEvent?: HonoApiInternalEventPublisher },
+	deps: {
+		config: { runtime: Pick<Config['runtime'], 'host'> };
+		db: MiDrizzleDatabase;
+		publishInternalEvent?: HonoApiInternalEventPublisher;
+	},
 	src: MiUser,
 	dst: MiUser,
 ): Promise<void> {
 	// There is a possibility for users to add the srcUser to their antennas, but it's low, so we don't check it.
 
 	const srcUserAcct = getFullApAccount(deps.config, src.username, src.host).toLowerCase();
-	const antennasToMigrate = (await listActiveAntennasFromDatabase(deps.db)).filter(antenna => {
-		return antenna.users.some(user => {
+	const antennasToMigrate = (await listActiveAntennasFromDatabase(deps.db)).filter((antenna) => {
+		return antenna.users.some((user) => {
 			const { username, host } = Acct.parse(user);
 			return getFullApAccount(deps.config, username, host).toLowerCase() === srcUserAcct;
 		});
@@ -201,7 +214,7 @@ export async function onMoveAccountForHonoApi(
 
 	if (antennasToMigrate.length === 0) return;
 
-	const antennaIds = antennasToMigrate.map(x => x.id);
+	const antennaIds = antennasToMigrate.map((x) => x.id);
 
 	const dstUserAcct = '@' + Acct.toString({ username: dst.username, host: dst.host });
 
@@ -225,17 +238,26 @@ export async function addNoteToAntennasForHonoApi(
 	const antennas = await listActiveAntennasFromDatabase(deps.db);
 
 	// src === 'list' なアンテナの userListId をまとめて1クエリで所属判定する (アンテナ毎の exists クエリを回避)。
-	const listAntennaUserListIds = [...new Set(
-		antennas
-			.filter((antenna): antenna is MiAntenna & { userListId: string } => antenna.src === 'list' && antenna.userListId != null)
-			.map(antenna => antenna.userListId),
-	)];
+	const listAntennaUserListIds = [
+		...new Set(
+			antennas
+				.filter(
+					(antenna): antenna is MiAntenna & { userListId: string } =>
+						antenna.src === 'list' && antenna.userListId != null,
+				)
+				.map((antenna) => antenna.userListId),
+		),
+	];
 	// followers 限定ノートの可視性判定と src === 'home' の判定はどちらも「そのアンテナの所有者が
 	// ノート投稿者をフォローしているか」なので、候補をまとめて1クエリで引く。
-	const followerCandidateIds = [...new Set(antennas
-		.filter(antenna => note.visibility === 'followers' || antenna.src === 'home')
-		.filter(antenna => antenna.userId !== note.userId && passesAntennaPreconditions(antenna, note, noteUser))
-		.map(antenna => antenna.userId))];
+	const followerCandidateIds = [
+		...new Set(
+			antennas
+				.filter((antenna) => note.visibility === 'followers' || antenna.src === 'home')
+				.filter((antenna) => antenna.userId !== note.userId && passesAntennaPreconditions(antenna, note, noteUser))
+				.map((antenna) => antenna.userId),
+		),
+	];
 	const [listMembershipUserListIds, followerIds] = await Promise.all([
 		listUserListIdsContainingUserFromDatabase(deps.db, note.userId, listAntennaUserListIds),
 		followerCandidateIds.length > 0
@@ -247,10 +269,16 @@ export async function addNoteToAntennasForHonoApi(
 	const antennasWithMatchResult: (readonly [MiAntenna, boolean])[] = [];
 	for (let index = 0; index < antennas.length; index += 50) {
 		const batch = antennas.slice(index, index + 50);
-		antennasWithMatchResult.push(...await Promise.all(batch.map(antenna => checkHitAntennaForHonoApi(deps, antenna, note, noteUser, {
-			listMembershipUserListIds,
-			followerIds: followerIdSet,
-		}).then(hit => [antenna, hit] as const))));
+		antennasWithMatchResult.push(
+			...(await Promise.all(
+				batch.map((antenna) =>
+					checkHitAntennaForHonoApi(deps, antenna, note, noteUser, {
+						listMembershipUserListIds,
+						followerIds: followerIdSet,
+					}).then((hit) => [antenna, hit] as const),
+				),
+			)),
+		);
 	}
 	const matchedAntennas = antennasWithMatchResult.filter(([, hit]) => hit).map(([antenna]) => antenna);
 
@@ -284,7 +312,12 @@ function noSuchUserListError(id: string): HonoApiError {
 }
 
 function emptyKeywordError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Either keywords or excludeKeywords is required.', code: 'EMPTY_KEYWORD', id });
+	return new HonoApiError({
+		status: 400,
+		message: 'Either keywords or excludeKeywords is required.',
+		code: 'EMPTY_KEYWORD',
+		id,
+	});
 }
 
 async function packAntennaForHonoApi(
@@ -316,32 +349,34 @@ async function packAntennaForHonoApi(
 
 const antennaSrcEnum = ['home', 'all', 'users', 'list', 'users_blacklist'] as const;
 
-export const antennasCreateParamDef = z.object({
-	name: z.string().min(1).max(100),
-	src: z.enum(antennaSrcEnum),
-	userListId: misskeyId().nullable().optional(),
-	keywords: z.array(z.array(z.string())),
-	excludeKeywords: z.array(z.array(z.string())),
-	users: z.array(z.string()),
-	caseSensitive: z.boolean(),
-	localOnly: z.boolean().optional(),
-	excludeBots: z.boolean().optional(),
-	withReplies: z.boolean(),
-	withFile: z.boolean(),
-	excludeNotesInSensitiveChannel: z.boolean().optional(),
-}).superRefine((value, ctx) => {
-	if (value.src === 'list' && value.userListId == null) {
-		ctx.addIssue({
-			code: 'custom',
-			path: ['userListId'],
-			message: 'userListId is required when src is "list".',
-		});
-	}
-});
+export const antennasCreateParamDef = z
+	.object({
+		name: z.string().min(1).max(100),
+		src: z.enum(antennaSrcEnum),
+		userListId: misskeyId().nullable().optional(),
+		keywords: z.array(z.array(z.string())),
+		excludeKeywords: z.array(z.array(z.string())),
+		users: z.array(z.string()),
+		caseSensitive: z.boolean(),
+		localOnly: z.boolean().optional(),
+		excludeBots: z.boolean().optional(),
+		withReplies: z.boolean(),
+		withFile: z.boolean(),
+		excludeNotesInSensitiveChannel: z.boolean().optional(),
+	})
+	.superRefine((value, ctx) => {
+		if (value.src === 'list' && value.userListId == null) {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['userListId'],
+				message: 'userListId is required when src is "list".',
+			});
+		}
+	});
 
 type AntennasCreateParams = {
 	name: string;
-	src: typeof antennaSrcEnum[number];
+	src: (typeof antennaSrcEnum)[number];
 	userListId?: string | null;
 	keywords: string[][];
 	excludeKeywords: string[][];
@@ -361,7 +396,7 @@ export async function handleHonoApiAntennasCreate(
 ): Promise<Packed<'Antenna'>> {
 	const params = parseHonoApiParams(antennasCreateParamDef, body);
 
-	if (params.keywords.flat().every(x => x === '') && params.excludeKeywords.flat().every(x => x === '')) {
+	if (params.keywords.flat().every((x) => x === '') && params.excludeKeywords.flat().every((x) => x === '')) {
 		throw emptyKeywordError('53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
 	}
 
@@ -376,28 +411,40 @@ export async function handleHonoApiAntennasCreate(
 	}
 
 	const now = new Date();
-	const result = await createAntennasWithinLimitInDatabase(deps.db, me.id, [{
-		id: genId(now.getTime()),
-		lastUsedAt: now,
-		name: params.name,
-		src: params.src,
-		userListId,
-		keywords: params.keywords,
-		excludeKeywords: params.excludeKeywords,
-		users: params.users,
-		caseSensitive: params.caseSensitive,
-		localOnly: params.localOnly ?? false,
-		excludeBots: params.excludeBots ?? false,
-		withReplies: params.withReplies,
-		withFile: params.withFile,
-		excludeNotesInSensitiveChannel: params.excludeNotesInSensitiveChannel ?? false,
-	}], async tx => {
-		const currentUser = await fetchUserByIdFromDatabase(tx, me.id);
-		if (currentUser == null) throw new Error('Authenticated user no longer exists');
-		return (await getHonoApiRolePolicies({ ...deps, db: tx }, currentUser)).antennaLimit;
-	});
+	const result = await createAntennasWithinLimitInDatabase(
+		deps.db,
+		me.id,
+		[
+			{
+				id: genId(now.getTime()),
+				lastUsedAt: now,
+				name: params.name,
+				src: params.src,
+				userListId,
+				keywords: params.keywords,
+				excludeKeywords: params.excludeKeywords,
+				users: params.users,
+				caseSensitive: params.caseSensitive,
+				localOnly: params.localOnly ?? false,
+				excludeBots: params.excludeBots ?? false,
+				withReplies: params.withReplies,
+				withFile: params.withFile,
+				excludeNotesInSensitiveChannel: params.excludeNotesInSensitiveChannel ?? false,
+			},
+		],
+		async (tx) => {
+			const currentUser = await fetchUserByIdFromDatabase(tx, me.id);
+			if (currentUser == null) throw new Error('Authenticated user no longer exists');
+			return (await getHonoApiRolePolicies({ ...deps, db: tx }, currentUser)).antennaLimit;
+		},
+	);
 	if (result.status === 'limitExceeded') {
-		throw new HonoApiError({ status: 400, message: 'You cannot create antenna any more.', code: 'TOO_MANY_ANTENNAS', id: 'faf47050-e8b5-438c-913c-db2b1576fde4' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'You cannot create antenna any more.',
+			code: 'TOO_MANY_ANTENNAS',
+			id: 'faf47050-e8b5-438c-913c-db2b1576fde4',
+		});
 	}
 
 	const antenna = result.antennas[0];
@@ -407,34 +454,36 @@ export async function handleHonoApiAntennasCreate(
 	return await packAntennaForHonoApi(deps, antenna);
 }
 
-export const antennasUpdateParamDef = z.object({
-	antennaId: misskeyId(),
-	name: z.string().min(1).max(100).optional(),
-	src: z.enum(antennaSrcEnum).optional(),
-	userListId: misskeyId().nullable().optional(),
-	keywords: z.array(z.array(z.string())).optional(),
-	excludeKeywords: z.array(z.array(z.string())).optional(),
-	users: z.array(z.string()).optional(),
-	caseSensitive: z.boolean().optional(),
-	localOnly: z.boolean().optional(),
-	excludeBots: z.boolean().optional(),
-	withReplies: z.boolean().optional(),
-	withFile: z.boolean().optional(),
-	excludeNotesInSensitiveChannel: z.boolean().optional(),
-}).superRefine((value, ctx) => {
-	if (value.src === 'list' && value.userListId === null) {
-		ctx.addIssue({
-			code: 'custom',
-			path: ['userListId'],
-			message: 'userListId is required when src is "list".',
-		});
-	}
-});
+export const antennasUpdateParamDef = z
+	.object({
+		antennaId: misskeyId(),
+		name: z.string().min(1).max(100).optional(),
+		src: z.enum(antennaSrcEnum).optional(),
+		userListId: misskeyId().nullable().optional(),
+		keywords: z.array(z.array(z.string())).optional(),
+		excludeKeywords: z.array(z.array(z.string())).optional(),
+		users: z.array(z.string()).optional(),
+		caseSensitive: z.boolean().optional(),
+		localOnly: z.boolean().optional(),
+		excludeBots: z.boolean().optional(),
+		withReplies: z.boolean().optional(),
+		withFile: z.boolean().optional(),
+		excludeNotesInSensitiveChannel: z.boolean().optional(),
+	})
+	.superRefine((value, ctx) => {
+		if (value.src === 'list' && value.userListId === null) {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['userListId'],
+				message: 'userListId is required when src is "list".',
+			});
+		}
+	});
 
 type AntennasUpdateParams = {
 	antennaId: string;
 	name?: string;
-	src?: typeof antennaSrcEnum[number];
+	src?: (typeof antennaSrcEnum)[number];
 	userListId?: string | null;
 	keywords?: string[][];
 	excludeKeywords?: string[][];
@@ -455,7 +504,7 @@ export async function handleHonoApiAntennasUpdate(
 	const params = parseHonoApiParams(antennasUpdateParamDef, body);
 
 	if (params.keywords && params.excludeKeywords) {
-		if (params.keywords.flat().every(x => x === '') && params.excludeKeywords.flat().every(x => x === '')) {
+		if (params.keywords.flat().every((x) => x === '') && params.excludeKeywords.flat().every((x) => x === '')) {
 			throw emptyKeywordError('721aaff6-4e1b-4d88-8de6-877fae9f68c4');
 		}
 	}
@@ -483,22 +532,26 @@ export async function handleHonoApiAntennasUpdate(
 		userListIdUpdate = null;
 	}
 
-	await updateAntennaInDatabase(deps.db, antenna.id, omitUndefined({
-		name: params.name,
-		src: params.src,
-		userListId: userListIdUpdate,
-		keywords: params.keywords,
-		excludeKeywords: params.excludeKeywords,
-		users: params.users,
-		caseSensitive: params.caseSensitive,
-		localOnly: params.localOnly,
-		excludeBots: params.excludeBots,
-		withReplies: params.withReplies,
-		withFile: params.withFile,
-		excludeNotesInSensitiveChannel: params.excludeNotesInSensitiveChannel,
-		isActive: true,
-		lastUsedAt: new Date(),
-	}));
+	await updateAntennaInDatabase(
+		deps.db,
+		antenna.id,
+		omitUndefined({
+			name: params.name,
+			src: params.src,
+			userListId: userListIdUpdate,
+			keywords: params.keywords,
+			excludeKeywords: params.excludeKeywords,
+			users: params.users,
+			caseSensitive: params.caseSensitive,
+			localOnly: params.localOnly,
+			excludeBots: params.excludeBots,
+			withReplies: params.withReplies,
+			withFile: params.withFile,
+			excludeNotesInSensitiveChannel: params.excludeNotesInSensitiveChannel,
+			isActive: true,
+			lastUsedAt: new Date(),
+		}),
+	);
 
 	deps.publishInternalEvent?.('antennaUpdated', await fetchAntennaByIdOrFailFromDatabase(deps.db, antenna.id));
 
@@ -539,7 +592,7 @@ export async function handleHonoApiAntennasList(
 
 	const antennas = await listAntennasByUserIdFromDatabase(deps.db, me.id);
 
-	return await Promise.all(antennas.map(x => packAntennaForHonoApi(deps, x)));
+	return await Promise.all(antennas.map((x) => packAntennaForHonoApi(deps, x)));
 }
 
 export const antennasShowParamDef = z.object({
@@ -619,23 +672,26 @@ export async function handleHonoApiAntennasNotes(
 	const needPublishEvent = !antenna.isActive;
 	antenna.isActive = true;
 	antenna.lastUsedAt = new Date();
-	trackPromise(updateAntennaInDatabase(deps.db, antenna.id, {
-		isActive: antenna.isActive,
-		lastUsedAt: antenna.lastUsedAt,
-	}));
+	trackPromise(
+		updateAntennaInDatabase(deps.db, antenna.id, {
+			isActive: antenna.isActive,
+			lastUsedAt: antenna.lastUsedAt,
+		}),
+	);
 
 	if (needPublishEvent) {
 		deps.publishInternalEvent?.('antennaUpdated', antenna);
 	}
 
 	const rawIds = await deps.redis.lrange(`list:antennaTimeline:${antenna.id}`, 0, -1);
-	let noteIds = untilId && sinceId
-		? rawIds.filter(id => id < untilId && id > sinceId).sort((a, b) => a > b ? -1 : 1)
-		: untilId
-			? rawIds.filter(id => id < untilId).sort((a, b) => a > b ? -1 : 1)
-			: sinceId
-				? rawIds.filter(id => id > sinceId).sort((a, b) => a < b ? -1 : 1)
-				: rawIds.toSorted((a, b) => a > b ? -1 : 1);
+	let noteIds =
+		untilId && sinceId
+			? rawIds.filter((id) => id < untilId && id > sinceId).sort((a, b) => (a > b ? -1 : 1))
+			: untilId
+				? rawIds.filter((id) => id < untilId).sort((a, b) => (a > b ? -1 : 1))
+				: sinceId
+					? rawIds.filter((id) => id > sinceId).sort((a, b) => (a < b ? -1 : 1))
+					: rawIds.toSorted((a, b) => (a > b ? -1 : 1));
 	noteIds = noteIds.slice(0, params.limit);
 
 	if (noteIds.length === 0) return [];
@@ -649,9 +705,9 @@ export async function handleHonoApiAntennasNotes(
 		mutingChannelIds,
 	});
 	if (sinceId != null && untilId == null) {
-		notes.sort((a, b) => a.id < b.id ? -1 : 1);
+		notes.sort((a, b) => (a.id < b.id ? -1 : 1));
 	} else {
-		notes.sort((a, b) => a.id > b.id ? -1 : 1);
+		notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 	}
 
 	return await packNoteManyForHonoApi(deps, notes, me);

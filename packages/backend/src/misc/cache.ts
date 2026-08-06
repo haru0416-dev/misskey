@@ -6,7 +6,7 @@
 import { bindThis } from '@/decorators.js';
 
 export class MemoryKVCache<T> {
-	private readonly cache = new Map<string, { date: number; value: T; }>();
+	private readonly cache = new Map<string, { date: number; value: T }>();
 	private readonly pendingFetches = new Map<string, Promise<T | undefined>>();
 	private readonly gcIntervalHandle = setInterval(() => this.gc(), 1000 * 60 * 3); // 3m
 	private readonly limit: number;
@@ -48,7 +48,7 @@ export class MemoryKVCache<T> {
 	public get(key: string): T | undefined {
 		const cached = this.cache.get(key);
 		if (cached == null) return undefined;
-		if ((Date.now() - cached.date) > this.lifetime) {
+		if (Date.now() - cached.date > this.lifetime) {
 			this.cache.delete(key);
 			return undefined;
 		}
@@ -83,7 +83,11 @@ export class MemoryKVCache<T> {
 	}
 
 	@bindThis
-	public async fetchMaybe(key: string, fetcher: () => Promise<T | undefined>, validator?: (cachedValue: T) => boolean): Promise<T | undefined> {
+	public async fetchMaybe(
+		key: string,
+		fetcher: () => Promise<T | undefined>,
+		validator?: (cachedValue: T) => boolean,
+	): Promise<T | undefined> {
 		const cachedValue = this.get(key);
 		if (cachedValue !== undefined) {
 			if (validator) {
@@ -98,16 +102,18 @@ export class MemoryKVCache<T> {
 		const pendingFetch = this.pendingFetches.get(key);
 		if (pendingFetch !== undefined) return pendingFetch;
 
-		const fetchPromise = fetcher().then(value => {
-			if (value !== undefined) {
-				this.set(key, value);
-			}
-			return value;
-		}).finally(() => {
-			if (this.pendingFetches.get(key) === fetchPromise) {
-				this.pendingFetches.delete(key);
-			}
-		});
+		const fetchPromise = fetcher()
+			.then((value) => {
+				if (value !== undefined) {
+					this.set(key, value);
+				}
+				return value;
+			})
+			.finally(() => {
+				if (this.pendingFetches.get(key) === fetchPromise) {
+					this.pendingFetches.delete(key);
+				}
+			});
 		this.pendingFetches.set(key, fetchPromise);
 		return fetchPromise;
 	}
@@ -136,9 +142,7 @@ export class MemorySingleCache<T> {
 	private cachedAt: number | null = null;
 	private value: T | undefined;
 
-	constructor(
-		private lifetime: number,
-	) {}
+	constructor(private lifetime: number) {}
 
 	@bindThis
 	public set(value: T): void {
@@ -149,7 +153,7 @@ export class MemorySingleCache<T> {
 	@bindThis
 	public get(): T | undefined {
 		if (this.cachedAt == null) return undefined;
-		if ((Date.now() - this.cachedAt) > this.lifetime) {
+		if (Date.now() - this.cachedAt > this.lifetime) {
 			this.value = undefined;
 			this.cachedAt = null;
 			return undefined;
@@ -190,7 +194,10 @@ export class MemorySingleCache<T> {
 	 * optional: キャッシュが存在してもvalidatorでfalseを返すとキャッシュ無効扱いにします
 	 */
 	@bindThis
-	public async fetchMaybe(fetcher: () => Promise<T | undefined>, validator?: (cachedValue: T) => boolean): Promise<T | undefined> {
+	public async fetchMaybe(
+		fetcher: () => Promise<T | undefined>,
+		validator?: (cachedValue: T) => boolean,
+	): Promise<T | undefined> {
 		const cachedValue = this.get();
 		if (cachedValue !== undefined) {
 			if (validator) {

@@ -49,7 +49,7 @@ export interface IObject {
 export function getApIds(value: ApObject | undefined): string[] {
 	if (value == null) return [];
 	const array = Array.isArray(value) ? value : [value];
-	return array.map(x => getApId(x));
+	return array.map((x) => getApId(x));
 }
 
 export function getOneApId(value: ApObject): string {
@@ -160,8 +160,7 @@ export interface ITombstone extends IObject {
 	deleted?: Date;
 }
 
-export const isTombstone = (object: IObject): object is ITombstone =>
-	getApType(object) === 'Tombstone';
+export const isTombstone = (object: IObject): object is ITombstone => getApType(object) === 'Tombstone';
 
 export const validActor = ['Person', 'Service', 'Group', 'Organization', 'Application'];
 
@@ -179,7 +178,7 @@ export interface IActor extends IObject {
 	alsoKnownAs?: string[];
 	discoverable?: boolean;
 	inbox: string;
-	sharedInbox?: string;	// 後方互換性のため
+	sharedInbox?: string; // 後方互換性のため
 	publicKey?: {
 		id: string;
 		publicKeyPem: string;
@@ -197,8 +196,7 @@ export interface IActor extends IObject {
 	isCat?: boolean;
 }
 
-export const isCollection = (object: IObject): object is ICollection =>
-	getApType(object) === 'Collection';
+export const isCollection = (object: IObject): object is ICollection => getApType(object) === 'Collection';
 
 export const isOrderedCollection = (object: IObject): object is IOrderedCollection =>
 	getApType(object) === 'OrderedCollection';
@@ -226,8 +224,7 @@ export interface IApMention extends IObject {
 }
 
 export const isMention = (object: IObject): object is IApMention =>
-	getApType(object) === 'Mention' &&
-	typeof object.href === 'string';
+	getApType(object) === 'Mention' && typeof object.href === 'string';
 
 export interface IApHashtag extends IObject {
 	type: 'Hashtag';
@@ -235,8 +232,7 @@ export interface IApHashtag extends IObject {
 }
 
 export const isHashtag = (object: IObject): object is IApHashtag =>
-	getApType(object) === 'Hashtag' &&
-	typeof object.name === 'string';
+	getApType(object) === 'Hashtag' && typeof object.name === 'string';
 
 export interface IApEmoji extends IObject {
 	type: 'Emoji';

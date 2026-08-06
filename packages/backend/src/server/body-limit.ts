@@ -13,7 +13,11 @@ import { Buffer } from 'node:buffer';
  * 失われていた。content-length ヘッダは chunked 転送や虚偽申告で回避できるので、事前チェックに
  * 加えて実バイト数を数えながら読み、超過した時点で読み込みを打ち切る。
  */
-export async function readRequestBodyWithLimit(request: Request, limit: number, makeLimitError: () => Error): Promise<Uint8Array> {
+export async function readRequestBodyWithLimit(
+	request: Request,
+	limit: number,
+	makeLimitError: () => Error,
+): Promise<Uint8Array> {
 	const hasTransferEncoding = request.headers.has('transfer-encoding');
 	const contentLengthHeader = request.headers.get('content-length');
 	const hasDecimalContentLength = contentLengthHeader != null && /^\d+$/.test(contentLengthHeader);

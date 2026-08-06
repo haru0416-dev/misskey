@@ -59,7 +59,7 @@ async function closeServer(server: Server): Promise<void> {
 	if (!server.listening) return;
 
 	await new Promise<void>((resolve, reject) => {
-		server.close(err => err ? reject(err) : resolve());
+		server.close((err) => (err ? reject(err) : resolve()));
 	});
 }
 
@@ -85,7 +85,7 @@ export async function launchHonoServer(
 	logger = new Logger('hono', 'cyan'),
 	dependencies?: RuntimeDependencies,
 ): Promise<HonoServerRuntime> {
-	const deps = dependencies ?? await createRuntimeDependencies(config);
+	const deps = dependencies ?? (await createRuntimeDependencies(config));
 	const disposers: RuntimeDisposer[] = dependencies == null ? [() => deps.dispose()] : [];
 	try {
 		return await launchHonoServerWithDependencies(config, logger, deps, disposers);
@@ -310,9 +310,11 @@ async function launchHonoServerWithDependencies(
 		if ('unixSocket' in listen && listen.unixSocket.permissions) {
 			fs.chmodSync(listen.unixSocket.path, listen.unixSocket.permissions);
 		}
-		logger.info('unixSocket' in listen
-			? `Listening on ${listen.unixSocket.path}`
-			: `Listening on ${listen.tcp.address}:${listen.tcp.port}`);
+		logger.info(
+			'unixSocket' in listen
+				? `Listening on ${listen.unixSocket.path}`
+				: `Listening on ${listen.tcp.address}:${listen.tcp.port}`,
+		);
 
 		return {
 			server: bunServer,

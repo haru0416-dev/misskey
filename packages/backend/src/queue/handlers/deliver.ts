@@ -28,7 +28,15 @@ import type { HonoChartWriters } from '../../server/chart-runtime.js';
 export type HonoQueueDeliverDependencies = {
 	config: Pick<Config, 'instance' | 'runtime'>;
 	db: MiDrizzleDatabase;
-	meta: Pick<MiMeta, 'enableStatsForFederatedInstances' | 'enableChartsForFederatedInstances' | 'federation' | 'federationHosts' | 'blockedHosts' | 'deliverSuspendedSoftware'>;
+	meta: Pick<
+		MiMeta,
+		| 'enableStatsForFederatedInstances'
+		| 'enableChartsForFederatedInstances'
+		| 'federation'
+		| 'federationHosts'
+		| 'blockedHosts'
+		| 'deliverSuspendedSoftware'
+	>;
 	redis: Pick<import('ioredis').Redis, 'set' | 'del'>;
 	httpRequestService: Pick<HttpRequestService, 'getJson' | 'getHtml' | 'send'>;
 	chartWriters: Pick<HonoChartWriters, 'instanceChart' | 'apRequestChart' | 'federationChart'>;
@@ -41,7 +49,10 @@ export type HonoQueueDeliverDependencies = {
 // Set<string> で保持し、ジョブ毎の .map().includes() (配列再構築+線形探索) を避けてO(1)判定にする。
 const suspendedHostsCache = new MemorySingleCache<Set<string>>(1000 * 60 * 60); // 1h
 
-export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies, job: Bull.Job<DeliverJobData>): Promise<string> {
+export async function handleHonoQueueDeliver(
+	deps: HonoQueueDeliverDependencies,
+	job: Bull.Job<DeliverJobData>,
+): Promise<string> {
 	const { host } = new URL(job.data.to);
 
 	if (!isFederationAllowedUri(deps.config, deps.meta, job.data.to)) {
@@ -51,7 +62,7 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 	// isSuspendedなら中断
 	let suspendedHosts = suspendedHostsCache.get();
 	if (suspendedHosts == null) {
-		suspendedHosts = new Set((await listSuspendedInstancesFromDatabase(deps.db)).map(x => x.host));
+		suspendedHosts = new Set((await listSuspendedInstancesFromDatabase(deps.db)).map((x) => x.host));
 		suspendedHostsCache.set(suspendedHosts);
 	}
 	if (suspendedHosts.has(toPuny(host))) {
@@ -83,14 +94,17 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 			}
 
 			if (deps.meta.enableStatsForFederatedInstances) {
-				await fetchInstanceMetadataWithSideEffects({
-					httpRequestService: deps.httpRequestService,
-					logger: { error: () => {}, info: () => {} },
-					tryLock: h => tryLockFetchInstanceMetadata(deps, h),
-					unlock: h => unlockFetchInstanceMetadata(deps, h),
-					fetchOrRegisterInstance: h => fetchOrRegisterFederatedInstance(deps, h),
-					updateInstance: (id, updates) => updateFederatedInstance(deps, id, updates).then(() => {}),
-				}, i);
+				await fetchInstanceMetadataWithSideEffects(
+					{
+						httpRequestService: deps.httpRequestService,
+						logger: { error: () => {}, info: () => {} },
+						tryLock: (h) => tryLockFetchInstanceMetadata(deps, h),
+						unlock: (h) => unlockFetchInstanceMetadata(deps, h),
+						fetchOrRegisterInstance: (h) => fetchOrRegisterFederatedInstance(deps, h),
+						updateInstance: (id, updates) => updateFederatedInstance(deps, id, updates).then(() => {}),
+					},
+					i,
+				);
 			}
 
 			if (deps.meta.enableChartsForFederatedInstances) {
@@ -103,7 +117,7 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 		void deps.chartWriters.apRequestChart.deliverFail();
 		void deps.chartWriters.federationChart.deliverd(host, false);
 
-		fetchOrRegisterFederatedInstance(deps, host).then(async i2 => {
+		fetchOrRegisterFederatedInstance(deps, host).then(async (i2) => {
 			if (!i2.isNotResponding) {
 				await updateFederatedInstance(deps, i2.id, {
 					isNotResponding: true,
@@ -111,7 +125,7 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 				});
 			} else if (i2.notRespondingSince) {
 				// 1週間以上不通ならサスペンド
-				if (i2.suspensionState === 'none' && i2.notRespondingSince.getTime() <= Date.now() - (1000 * 60 * 60 * 24 * 7)) {
+				if (i2.suspensionState === 'none' && i2.notRespondingSince.getTime() <= Date.now() - 1000 * 60 * 60 * 24 * 7) {
 					await updateFederatedInstance(deps, i2.id, {
 						suspensionState: 'autoSuspendedForNotResponding',
 					});
@@ -134,9 +148,11 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 			if (!res.isRetryable) {
 				// 相手が閉鎖していることを明示しているため、配送停止する
 				if (job.data.isSharedInbox && res.statusCode === 410) {
-					fetchOrRegisterFederatedInstance(deps, host).then(i2 => updateFederatedInstance(deps, i2.id, {
-						suspensionState: 'goneSuspended',
-					}));
+					fetchOrRegisterFederatedInstance(deps, host).then((i2) =>
+						updateFederatedInstance(deps, i2.id, {
+							suspensionState: 'goneSuspended',
+						}),
+					);
 					throw new Bull.UnrecoverableError(`${host} is gone`);
 				}
 				throw new Bull.UnrecoverableError(`${res.statusCode} ${res.statusMessage}`);

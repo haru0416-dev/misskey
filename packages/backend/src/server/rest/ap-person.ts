@@ -43,7 +43,11 @@ import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js
 import { fetchUserPublickeyByUserIdFromDatabase, updateUserPublickeyInDatabase } from '@/core/UserPublickeyStore.js';
 import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 import { updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
-import { listEmojisByHostAndNamesFromDatabase, updateEmojiByHostAndNameInDatabase, insertEmojiInDatabase } from '@/core/EmojiStore.js';
+import {
+	listEmojisByHostAndNamesFromDatabase,
+	updateEmojiByHostAndNameInDatabase,
+	insertEmojiInDatabase,
+} from '@/core/EmojiStore.js';
 import { fetchDriveFileByIdOrFailFromDatabase, updateDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { adjustInstanceUsersCountFromDatabase } from '@/core/InstanceStore.js';
 import { StatusError } from '@/misc/status-error.js';
@@ -72,9 +76,10 @@ import { parseHonoApiParams } from './validation.js';
 import { fetchOrRegisterInstanceForHonoApi } from './notes-create.js';
 import type { RelationshipQueue } from '@/core/queues.js';
 
-export type HonoApiApPersonDependencies = HonoApiApResolveDependencies & HonoApiDriveFileUploadDependencies & {
-	relationshipQueue: RelationshipQueue;
-};
+export type HonoApiApPersonDependencies = HonoApiApResolveDependencies &
+	HonoApiDriveFileUploadDependencies & {
+		relationshipQueue: RelationshipQueue;
+	};
 
 const nameLength = 128;
 const summaryLength = 2048;
@@ -127,7 +132,14 @@ export function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IOb
 		}
 	}
 
-	if (!(typeof x.preferredUsername === 'string' && x.preferredUsername.length > 0 && x.preferredUsername.length <= 128 && /^\w([\w-.]*\w)?$/.test(x.preferredUsername))) {
+	if (
+		!(
+			typeof x.preferredUsername === 'string' &&
+			x.preferredUsername.length > 0 &&
+			x.preferredUsername.length <= 128 &&
+			/^\w([\w-.]*\w)?$/.test(x.preferredUsername)
+		)
+	) {
 		throw new Error('invalid Actor: wrong username');
 	}
 
@@ -174,7 +186,10 @@ export function punyHostForHonoApi(url: string): string {
 	return `${toPunyForHonoApi(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
 }
 
-export function analyzeAttachmentsForHonoApi(config: Pick<Config, 'instance'>, attachments: IObject | IObject[] | undefined): { name: string; value: string }[] {
+export function analyzeAttachmentsForHonoApi(
+	config: Pick<Config, 'instance'>,
+	attachments: IObject | IObject[] | undefined,
+): { name: string; value: string }[] {
 	const fields: { name: string; value: string }[] = [];
 
 	if (Array.isArray(attachments)) {
@@ -189,55 +204,75 @@ export function analyzeAttachmentsForHonoApi(config: Pick<Config, 'instance'>, a
 	return fields;
 }
 
-export async function extractEmojisForHonoApi(deps: HonoApiApPersonDependencies, tags: IObject | IObject[], host: string): Promise<MiEmoji[]> {
+export async function extractEmojisForHonoApi(
+	deps: HonoApiApPersonDependencies,
+	tags: IObject | IObject[],
+	host: string,
+): Promise<MiEmoji[]> {
 	const punyHost = toPunyForHonoApi(host);
 	const emojiTags = toArray(tags).filter(isEmoji);
 
-	const existingEmojis = await listEmojisByHostAndNamesFromDatabase(deps.db, punyHost, emojiTags.map(tag => tag.name.replaceAll(':', '')));
-	const existingEmojiByName = new Map(existingEmojis.map(emoji => [emoji.name, emoji]));
+	const existingEmojis = await listEmojisByHostAndNamesFromDatabase(
+		deps.db,
+		punyHost,
+		emojiTags.map((tag) => tag.name.replaceAll(':', '')),
+	);
+	const existingEmojiByName = new Map(existingEmojis.map((emoji) => [emoji.name, emoji]));
 
-	return await Promise.all(emojiTags.map(async (tag): Promise<MiEmoji> => {
-		const name = tag.name.replaceAll(':', '');
-		const icon = toSingle(tag.icon) as { url?: string } | undefined;
+	return await Promise.all(
+		emojiTags.map(async (tag): Promise<MiEmoji> => {
+			const name = tag.name.replaceAll(':', '');
+			const icon = toSingle(tag.icon) as { url?: string } | undefined;
 
-		const exists = existingEmojiByName.get(name);
+			const exists = existingEmojiByName.get(name);
 
-		if (exists) {
-			if ((exists.updatedAt == null)
-				|| (tag.id != null && exists.uri == null)
-				|| (new Date(tag.updated) > exists.updatedAt)
-				|| (icon?.url !== exists.originalUrl)
-			) {
-				const emoji = await updateEmojiByHostAndNameInDatabase(deps.db, punyHost, name, omitUndefined({
-					uri: tag.id,
-					originalUrl: icon?.url,
-					publicUrl: icon?.url,
-					updatedAt: new Date(),
-					license: tag._misskey_license?.freeText ?? null,
-				}));
-				if (emoji == null) throw new Error('emoji update failed');
-				return emoji;
+			if (exists) {
+				if (
+					exists.updatedAt == null ||
+					(tag.id != null && exists.uri == null) ||
+					new Date(tag.updated) > exists.updatedAt ||
+					icon?.url !== exists.originalUrl
+				) {
+					const emoji = await updateEmojiByHostAndNameInDatabase(
+						deps.db,
+						punyHost,
+						name,
+						omitUndefined({
+							uri: tag.id,
+							originalUrl: icon?.url,
+							publicUrl: icon?.url,
+							updatedAt: new Date(),
+							license: tag._misskey_license?.freeText ?? null,
+						}),
+					);
+					if (emoji == null) throw new Error('emoji update failed');
+					return emoji;
+				}
+
+				return exists;
 			}
 
-			return exists;
-		}
-
-		return await insertEmojiInDatabase(deps.db, {
-			id: genId(),
-			host: punyHost,
-			name,
-			uri: tag.id,
-			// isEmoji のtype guardによりこの時点で icon.url は存在が保証されている
-			originalUrl: icon!.url!,
-			publicUrl: icon!.url!,
-			updatedAt: new Date(),
-			aliases: [],
-			license: tag._misskey_license?.freeText ?? null,
-		});
-	}));
+			return await insertEmojiInDatabase(deps.db, {
+				id: genId(),
+				host: punyHost,
+				name,
+				uri: tag.id,
+				// isEmoji のtype guardによりこの時点で icon.url は存在が保証されている
+				originalUrl: icon!.url!,
+				publicUrl: icon!.url!,
+				updatedAt: new Date(),
+				aliases: [],
+				license: tag._misskey_license?.freeText ?? null,
+			});
+		}),
+	);
 }
 
-export async function resolveImageForHonoApi(deps: HonoApiApPersonDependencies, actor: MiRemoteUser, value: string | IObject): Promise<MiDriveFile | null> {
+export async function resolveImageForHonoApi(
+	deps: HonoApiApPersonDependencies,
+	actor: MiRemoteUser,
+	value: string | IObject,
+): Promise<MiDriveFile | null> {
 	if (actor.isSuspended) {
 		throw new Error('actor has been suspended');
 	}
@@ -251,14 +286,17 @@ export async function resolveImageForHonoApi(deps: HonoApiApPersonDependencies, 
 	const shouldBeCached = deps.meta.cacheRemoteFiles && (deps.meta.cacheRemoteSensitiveFiles || !image.sensitive);
 
 	try {
-		const file = await uploadDriveFileFromUrlForHonoApi(deps, omitUndefined({
-			url: image.url,
-			user: actor,
-			uri: image.url,
-			sensitive: image.sensitive,
-			isLink: !shouldBeCached,
-			comment: truncate(image.name ?? undefined, 512),
-		}));
+		const file = await uploadDriveFileFromUrlForHonoApi(
+			deps,
+			omitUndefined({
+				url: image.url,
+				user: actor,
+				uri: image.url,
+				sensitive: image.sensitive,
+				isLink: !shouldBeCached,
+				comment: truncate(image.name ?? undefined, 512),
+			}),
+		);
 
 		if (!file.isLink || file.url === image.url) return file;
 
@@ -275,36 +313,52 @@ export async function resolveAvatarAndBannerForHonoApi(
 	user: MiRemoteUser,
 	icon: unknown,
 	image: unknown,
-): Promise<Partial<Pick<MiRemoteUser, 'avatarId' | 'bannerId' | 'avatarUrl' | 'bannerUrl' | 'avatarBlurhash' | 'bannerBlurhash'>>> {
-	const [avatar, banner] = await Promise.all([icon, image].map(async img => {
-		if (Array.isArray(img)) {
-			img = img.find((item: unknown) => item && (item as { url?: unknown }).url) ?? null;
-		}
+): Promise<
+	Partial<Pick<MiRemoteUser, 'avatarId' | 'bannerId' | 'avatarUrl' | 'bannerUrl' | 'avatarBlurhash' | 'bannerBlurhash'>>
+> {
+	const [avatar, banner] = await Promise.all(
+		[icon, image].map(async (img) => {
+			if (Array.isArray(img)) {
+				img = img.find((item: unknown) => item && (item as { url?: unknown }).url) ?? null;
+			}
 
-		if ((img == null) || (typeof img === 'object' && (img as { url?: unknown }).url == null)) {
-			return { id: null, url: null, blurhash: null };
-		}
+			if (img == null || (typeof img === 'object' && (img as { url?: unknown }).url == null)) {
+				return { id: null, url: null, blurhash: null };
+			}
 
-		return await resolveImageForHonoApi(deps, user, img as string | IObject).catch(() => null);
-	}));
+			return await resolveImageForHonoApi(deps, user, img as string | IObject).catch(() => null);
+		}),
+	);
 
-	if (((avatar != null && avatar.id != null) || (banner != null && banner.id != null))
-			&& !(await getHonoApiRolePolicies(deps, user)).canUpdateBioMedia) {
+	if (
+		((avatar != null && avatar.id != null) || (banner != null && banner.id != null)) &&
+		!(await getHonoApiRolePolicies(deps, user)).canUpdateBioMedia
+	) {
 		return {};
 	}
 
 	return {
-		...(avatar ? {
-			avatarId: avatar.id,
-			avatarUrl: avatar.url ? getDriveFilePublicUrl(avatar as MiDriveFile, { config: deps.config, meta: deps.meta, mode: 'avatar' }) : null,
-			avatarBlurhash: (avatar as { blurhash?: string | null }).blurhash ?? null,
-		} : {}),
-		...(banner ? {
-			bannerId: banner.id,
-			bannerUrl: banner.url ? getDriveFilePublicUrl(banner as MiDriveFile, { config: deps.config, meta: deps.meta }) : null,
-			bannerBlurhash: (banner as { blurhash?: string | null }).blurhash ?? null,
-		} : {}),
-	} as Partial<Pick<MiRemoteUser, 'avatarId' | 'bannerId' | 'avatarUrl' | 'bannerUrl' | 'avatarBlurhash' | 'bannerBlurhash'>>;
+		...(avatar
+			? {
+					avatarId: avatar.id,
+					avatarUrl: avatar.url
+						? getDriveFilePublicUrl(avatar as MiDriveFile, { config: deps.config, meta: deps.meta, mode: 'avatar' })
+						: null,
+					avatarBlurhash: (avatar as { blurhash?: string | null }).blurhash ?? null,
+				}
+			: {}),
+		...(banner
+			? {
+					bannerId: banner.id,
+					bannerUrl: banner.url
+						? getDriveFilePublicUrl(banner as MiDriveFile, { config: deps.config, meta: deps.meta })
+						: null,
+					bannerBlurhash: (banner as { blurhash?: string | null }).blurhash ?? null,
+				}
+			: {}),
+	} as Partial<
+		Pick<MiRemoteUser, 'avatarId' | 'bannerId' | 'avatarUrl' | 'bannerUrl' | 'avatarBlurhash' | 'bannerBlurhash'>
+	>;
 }
 
 export async function isPublicCollectionForHonoApi(
@@ -331,7 +385,11 @@ export type HonoApiUpdatePersonDependencies = HonoApiApPersonDependencies & Hono
  * 確認した上で、hono-api-account-move.ts の postMoveProcessForHonoApi (フォロワーのフォロー先切り替え・
  * ブロック/ミュート/ロール/リストの引き継ぎ) を実行する。
  */
-async function processRemoteMoveForHonoApi(deps: HonoApiUpdatePersonDependencies, src: MiRemoteUser, movePreventUris: string[] = []): Promise<string> {
+async function processRemoteMoveForHonoApi(
+	deps: HonoApiUpdatePersonDependencies,
+	src: MiRemoteUser,
+	movePreventUris: string[] = [],
+): Promise<string> {
 	if (!src.movedToUri) return 'skip: no movedToUri';
 	if (src.uri === src.movedToUri) return 'skip: movedTo itself (src)';
 	if (movePreventUris.length > 10) return 'skip: too many moves';
@@ -340,14 +398,14 @@ async function processRemoteMoveForHonoApi(deps: HonoApiUpdatePersonDependencies
 
 	if (dst && dst.host == null) {
 		// ローカルユーザーだった場合はDBから読み直す
-		dst = await fetchUserByUriFromDatabase(deps.db, src.movedToUri) as MiLocalUser | null;
+		dst = (await fetchUserByUriFromDatabase(deps.db, src.movedToUri)) as MiLocalUser | null;
 		if (dst == null) throw new Error('user not found');
 	} else if (dst) {
 		if (movePreventUris.includes(src.movedToUri)) return 'skip: circular move';
 
 		// dst自体も移行済みの可能性があるので再取得しておく (連鎖的な引っ越しの追跡)
 		await updatePersonForHonoApi(deps, src.movedToUri, dst as MiRemoteUser, [...movePreventUris, src.uri]);
-		dst = await fetchPersonForHonoApi(deps, src.movedToUri) ?? dst;
+		dst = (await fetchPersonForHonoApi(deps, src.movedToUri)) ?? dst;
 	} else {
 		if (isSelfHost(deps.config, extractDbHost(src.movedToUri))) {
 			return 'failed: movedTo is local but not found';
@@ -375,34 +433,45 @@ async function processRemoteMoveForHonoApi(deps: HonoApiUpdatePersonDependencies
  *   更新されなくなるが、プロフィール本体の更新という本エンドポイントの主目的には影響しない。
  * - cacheService.uriPersonCache の更新: プロセス内メモリキャッシュのため省略 (既存の移行方針と同様)。
  */
-export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependencies, uri: string, exist: MiRemoteUser, movePreventUris: string[] = [], hint?: IObject): Promise<void> {
+export async function updatePersonForHonoApi(
+	deps: HonoApiUpdatePersonDependencies,
+	uri: string,
+	exist: MiRemoteUser,
+	movePreventUris: string[] = [],
+	hint?: IObject,
+): Promise<void> {
 	const history = new Set<string>();
 	// 原典 ApPersonService.updatePerson と同じく、Update activity に埋め込まれた
 	// オブジェクトが渡されていれば再フェッチしない (中間キャッシュ (nginx等) が
 	// 古い Person を返すと更新が反映されないため、hint の利用は正しさに直結する)
-	const object = hint ?? await resolveApObjectForHonoApi(deps, uri, FetchAllowSoftFailMask.Strict, history);
+	const object = hint ?? (await resolveApObjectForHonoApi(deps, uri, FetchAllowSoftFailMask.Strict, history));
 
 	const person = validateActorForHonoApi(deps.config, object, uri);
 
 	const emojis = await extractEmojisForHonoApi(deps, person.tag ?? [], exist.host).catch(() => [] as MiEmoji[]);
-	const emojiNames = emojis.map(emoji => emoji.name);
+	const emojiNames = emojis.map((emoji) => emoji.name);
 
 	const fields = analyzeAttachmentsForHonoApi(deps.config, person.attachment ?? []);
 
 	const tags = extractApHashtags(person.tag).map(normalizeForSearch).splice(0, 32);
 
-	const [followingVisibility, followersVisibility] = await Promise.all([
-		isPublicCollectionForHonoApi(deps, person.following, history),
-		isPublicCollectionForHonoApi(deps, person.followers, history),
-	].map((p): Promise<'public' | 'private' | undefined> => p
-		.then(isPublic => (isPublic ? 'public' : 'private') as 'public' | 'private')
-		.catch(err => {
-			if (!(err instanceof StatusError) || err.isRetryable) {
-				// 一時的なエラーでは既存の公開設定を保持する (更新しない)
-				return undefined;
-			}
-			return 'private';
-		})));
+	const [followingVisibility, followersVisibility] = await Promise.all(
+		[
+			isPublicCollectionForHonoApi(deps, person.following, history),
+			isPublicCollectionForHonoApi(deps, person.followers, history),
+		].map(
+			(p): Promise<'public' | 'private' | undefined> =>
+				p
+					.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private')
+					.catch((err) => {
+						if (!(err instanceof StatusError) || err.isRetryable) {
+							// 一時的なエラーでは既存の公開設定を保持する (更新しない)
+							return undefined;
+						}
+						return 'private';
+					}),
+		),
+	);
 
 	const bday = (person as { 'vcard:bday'?: string })['vcard:bday']?.match(/^\d{4}-\d{2}-\d{2}/);
 
@@ -442,21 +511,22 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
 
 	const moving = (() => {
 		if (exist.movedToUri === null && updates.movedToUri) return true;
-		if (
-			exist.movedToUri !== null &&
-			updates.movedToUri !== null &&
-			exist.movedToUri !== updates.movedToUri
-		) return true;
+		if (exist.movedToUri !== null && updates.movedToUri !== null && exist.movedToUri !== updates.movedToUri)
+			return true;
 		return false;
 	})();
 
 	const updatesWithMove = moving ? { ...updates, movedAt: new Date() } : updates;
 	const { alsoKnownAs, ...userUpdates } = updatesWithMove;
 	const serializedAlsoKnownAs = serializeAlsoKnownAs(alsoKnownAs);
-	const updated = await updateUserIfNotDeletedInDatabase(deps.db, exist.id, omitUndefined({
-		...userUpdates,
-		...(serializedAlsoKnownAs === undefined ? {} : { alsoKnownAs: serializedAlsoKnownAs }),
-	}));
+	const updated = await updateUserIfNotDeletedInDatabase(
+		deps.db,
+		exist.id,
+		omitUndefined({
+			...userUpdates,
+			...(serializedAlsoKnownAs === undefined ? {} : { alsoKnownAs: serializedAlsoKnownAs }),
+		}),
+	);
 	if (!updated) return;
 
 	if (person.publicKey) {
@@ -470,19 +540,26 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
 	if (person._misskey_summary) {
 		description = truncate(person._misskey_summary, summaryLength);
 	} else if (person.summary) {
-		description = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(truncate(person.summary, summaryLength), person.tag);
+		description = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(
+			truncate(person.summary, summaryLength),
+			person.tag,
+		);
 	}
 
-	await updateUserProfileInDatabase(deps.db, exist.id, omitUndefined({
-		url,
-		fields,
-		description,
-		followedMessage: person._misskey_followedMessage != null ? truncate(person._misskey_followedMessage, 256) : null,
-		followingVisibility,
-		followersVisibility,
-		birthday: bday?.[0] ?? null,
-		location: (person as { 'vcard:Address'?: string })['vcard:Address'] ?? null,
-	}));
+	await updateUserProfileInDatabase(
+		deps.db,
+		exist.id,
+		omitUndefined({
+			url,
+			fields,
+			description,
+			followedMessage: person._misskey_followedMessage != null ? truncate(person._misskey_followedMessage, 256) : null,
+			followingVisibility,
+			followersVisibility,
+			birthday: bday?.[0] ?? null,
+			location: (person as { 'vcard:Address'?: string })['vcard:Address'] ?? null,
+		}),
+	);
 
 	deps.publishInternalEvent?.('remoteUserUpdated', { id: exist.id });
 
@@ -496,10 +573,10 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
 
 	// 移行処理を行う: 初めての移行 (exist.movedAt == null) か、前回の移行から14日以上経過した場合のみ許可
 	// (Mastodonのクールダウン期間は30日だが若干緩めに設定)
-	if (mergedUpdated.movedAt && (
-		exist.movedAt == null ||
-		exist.movedAt.getTime() + 1000 * 60 * 60 * 24 * 14 < mergedUpdated.movedAt.getTime()
-	)) {
+	if (
+		mergedUpdated.movedAt &&
+		(exist.movedAt == null || exist.movedAt.getTime() + 1000 * 60 * 60 * 24 * 14 < mergedUpdated.movedAt.getTime())
+	) {
 		await processRemoteMoveForHonoApi(deps, mergedUpdated, movePreventUris).catch(() => 'failed');
 	}
 }
@@ -516,7 +593,11 @@ export async function updatePersonForHonoApi(deps: HonoApiUpdatePersonDependenci
  *   インスタンス行自体の作成/ユーザー数カウントは `fetchOrRegisterInstanceForHonoApi` +
  *   `adjustInstanceUsersCountFromDatabase` で再現する。
  */
-export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, uri: string, history: Set<string> = new Set()): Promise<MiRemoteUser> {
+export async function createPersonForHonoApi(
+	deps: HonoApiApPersonDependencies,
+	uri: string,
+	history: Set<string> = new Set(),
+): Promise<MiRemoteUser> {
 	const host = punyHostForHonoApi(uri);
 	if (host === toPunyForHonoApi(deps.config.runtime.host)) {
 		throw new StatusError('cannot resolve local user', 400, 'cannot resolve local user');
@@ -538,12 +619,15 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 	const tags = extractApHashtags(person.tag).map(normalizeForSearch).splice(0, 32);
 	const isBot = getApType(object) === 'Service' || getApType(object) === 'Application';
 
-	const [followingVisibility, followersVisibility] = await Promise.all([
-		isPublicCollectionForHonoApi(deps, person.following, history),
-		isPublicCollectionForHonoApi(deps, person.followers, history),
-	].map((p): Promise<'public' | 'private'> => p
-		.then(isPublic => (isPublic ? 'public' : 'private') as 'public' | 'private')
-		.catch(() => 'private' as const)));
+	const [followingVisibility, followersVisibility] = await Promise.all(
+		[
+			isPublicCollectionForHonoApi(deps, person.following, history),
+			isPublicCollectionForHonoApi(deps, person.followers, history),
+		].map(
+			(p): Promise<'public' | 'private'> =>
+				p.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private').catch(() => 'private' as const),
+		),
+	);
 
 	const bday = (person as { 'vcard:bday'?: string })['vcard:bday']?.match(/^\d{4}-\d{2}-\d{2}/);
 	const url = getOneApHrefNullable(person.url);
@@ -553,20 +637,23 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 	}
 
 	const emojis = await extractEmojisForHonoApi(deps, person.tag ?? [], host)
-		.then(_emojis => _emojis.map(emoji => emoji.name))
+		.then((_emojis) => _emojis.map((emoji) => emoji.name))
 		.catch(() => [] as string[]);
 
 	let description: string | null = null;
 	if (person._misskey_summary) {
 		description = truncate(person._misskey_summary, summaryLength);
 	} else if (person.summary) {
-		description = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(truncate(person.summary, summaryLength), person.tag);
+		description = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(
+			truncate(person.summary, summaryLength),
+			person.tag,
+		);
 	}
 
 	let user: MiRemoteUser;
 	const userId = genId();
 	try {
-		user = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
+		user = (await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 			user: omitUndefined({
 				id: userId,
 				avatarId: null,
@@ -589,15 +676,18 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 				tags,
 				isBot,
 				isCat: (person as { isCat?: unknown }).isCat === true,
-				requireSigninToViewContents: (person as { requireSigninToViewContents?: unknown }).requireSigninToViewContents === true,
-				makeNotesFollowersOnlyBefore: (person as { makeNotesFollowersOnlyBefore?: number | null }).makeNotesFollowersOnlyBefore ?? null,
+				requireSigninToViewContents:
+					(person as { requireSigninToViewContents?: unknown }).requireSigninToViewContents === true,
+				makeNotesFollowersOnlyBefore:
+					(person as { makeNotesFollowersOnlyBefore?: number | null }).makeNotesFollowersOnlyBefore ?? null,
 				makeNotesHiddenBefore: (person as { makeNotesHiddenBefore?: number | null }).makeNotesHiddenBefore ?? null,
 				emojis,
 			}),
 			profile: {
 				userId,
 				description,
-				followedMessage: person._misskey_followedMessage != null ? truncate(person._misskey_followedMessage, 256) : null,
+				followedMessage:
+					person._misskey_followedMessage != null ? truncate(person._misskey_followedMessage, 256) : null,
 				url,
 				fields,
 				followingVisibility,
@@ -606,12 +696,16 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 				location: (person as { 'vcard:Address'?: string })['vcard:Address'] ?? null,
 				userHost: host,
 			},
-			...(person.publicKey ? { publickey: {
-				userId,
-				keyId: person.publicKey.id,
-				keyPem: person.publicKey.publicKeyPem,
-			} } : {}),
-		}) as MiRemoteUser;
+			...(person.publicKey
+				? {
+						publickey: {
+							userId,
+							keyId: person.publicKey.id,
+							keyPem: person.publicKey.publicKeyPem,
+						},
+					}
+				: {}),
+		})) as MiRemoteUser;
 	} catch (e) {
 		if (isDuplicateKeyValueError(e)) {
 			// /users/@a => /users/:id のように入力がaliasなときにエラーになることがあるのを対応
@@ -624,9 +718,11 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 	}
 
 	if (deps.meta.enableStatsForFederatedInstances) {
-		fetchOrRegisterInstanceForHonoApi(deps, host).then(async i => {
-			await adjustInstanceUsersCountFromDatabase(deps.db, i.id, 1);
-		}).catch(() => {});
+		fetchOrRegisterInstanceForHonoApi(deps, host)
+			.then(async (i) => {
+				await adjustInstanceUsersCountFromDatabase(deps.db, i.id, 1);
+			})
+			.catch(() => {});
 	}
 
 	await updateUsertagsForHonoApi(deps, user, tags);
@@ -643,7 +739,10 @@ export async function createPersonForHonoApi(deps: HonoApiApPersonDependencies, 
 }
 
 /** ApPersonService.fetchPerson 相当。プロセス内キャッシュ (uriPersonCache) は既存の移行方針に沿って省略。 */
-export async function fetchPersonForHonoApi(deps: HonoApiApPersonDependencies, uri: string): Promise<MiLocalUser | MiRemoteUser | null> {
+export async function fetchPersonForHonoApi(
+	deps: HonoApiApPersonDependencies,
+	uri: string,
+): Promise<MiLocalUser | MiRemoteUser | null> {
 	if (uri.startsWith(`${deps.config.instance.url}/`)) {
 		const id = uri.split('/').pop();
 		if (id == null) return null;
@@ -651,10 +750,14 @@ export async function fetchPersonForHonoApi(deps: HonoApiApPersonDependencies, u
 		return u as MiLocalUser | null;
 	}
 
-	return await fetchUserByUriFromDatabase(deps.db, uri) as MiLocalUser | MiRemoteUser | null;
+	return (await fetchUserByUriFromDatabase(deps.db, uri)) as MiLocalUser | MiRemoteUser | null;
 }
 
-export async function resolvePersonForHonoApi(deps: HonoApiApPersonDependencies, uri: string, history: Set<string> = new Set()): Promise<MiLocalUser | MiRemoteUser> {
+export async function resolvePersonForHonoApi(
+	deps: HonoApiApPersonDependencies,
+	uri: string,
+	history: Set<string> = new Set(),
+): Promise<MiLocalUser | MiRemoteUser> {
 	const exist = await fetchPersonForHonoApi(deps, uri);
 	if (exist) return exist;
 
@@ -662,8 +765,11 @@ export async function resolvePersonForHonoApi(deps: HonoApiApPersonDependencies,
 }
 
 /** ApDbResolverService.getAuthUserFromApId 相当。キャッシュ省略は getUserFromApIdForHonoApi と同様の理由。 */
-export async function getAuthUserFromApIdForHonoApi(deps: HonoApiApPersonDependencies, uri: string): Promise<HonoApiAuthUser | null> {
-	const user = await resolvePersonForHonoApi(deps, uri) as MiRemoteUser;
+export async function getAuthUserFromApIdForHonoApi(
+	deps: HonoApiApPersonDependencies,
+	uri: string,
+): Promise<HonoApiAuthUser | null> {
+	const user = (await resolvePersonForHonoApi(deps, uri)) as MiRemoteUser;
 	if (user.isDeleted) return null;
 
 	const key = await fetchUserPublickeyByUserIdFromDatabase(deps.db, user.id);
@@ -681,7 +787,10 @@ function getUserUriForApPerson(config: Pick<Config, 'instance'>, user: MiLocalUs
 export async function validateAlsoKnownAsForHonoApi(
 	deps: HonoApiApPersonDependencies,
 	dstInput: MiLocalUser | MiRemoteUser,
-	check: (oldUser: MiLocalUser | MiRemoteUser | null, newUser: MiLocalUser | MiRemoteUser) => boolean | Promise<boolean> = () => true,
+	check: (
+		oldUser: MiLocalUser | MiRemoteUser | null,
+		newUser: MiLocalUser | MiRemoteUser,
+	) => boolean | Promise<boolean> = () => true,
 	instant = false,
 ): Promise<MiLocalUser | MiRemoteUser | null> {
 	let dst = dstInput;
@@ -732,17 +841,30 @@ type FederationUpdateRemoteUserParams = {
 	userId: MiUser['id'];
 };
 
-export async function handleHonoApiFederationUpdateRemoteUser(deps: HonoApiApPersonDependencies, body: Record<string, unknown>): Promise<void> {
+export async function handleHonoApiFederationUpdateRemoteUser(
+	deps: HonoApiApPersonDependencies,
+	body: Record<string, unknown>,
+): Promise<void> {
 	const params = parseHonoApiParams(federationUpdateRemoteUserParamDef, body);
 
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	// IdentifiableError も生の Error も runApiEndpoint では 500 INTERNAL_ERROR になってしまうため、
 	// 「そのIDのユーザーが居ない」「ローカルユーザーを指定した」は明示的なAPIエラーとして返す
 	if (user == null) {
-		throw new HonoApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id: '15348ddd-432d-49c2-8a5a-8069753becff' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'No such user.',
+			code: 'NO_SUCH_USER',
+			id: '15348ddd-432d-49c2-8a5a-8069753becff',
+		});
 	}
 	if (user.host == null) {
-		throw new HonoApiError({ status: 400, message: 'User is not a remote user.', code: 'NOT_REMOTE_USER', id: 'e3ad347a-2493-4f8f-bac0-f91c88daa754' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'User is not a remote user.',
+			code: 'NOT_REMOTE_USER',
+			id: 'e3ad347a-2493-4f8f-bac0-f91c88daa754',
+		});
 	}
 
 	await updatePersonForHonoApi(deps, user.uri!, user as MiRemoteUser);
@@ -761,7 +883,10 @@ type WebfingerResult = {
 const webfingerUrlRegex = /^https?:\/\//;
 const webfingerAcctRegex = /^([^@]+)@(.*)/;
 
-async function webfingerForHonoApi(deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> }, query: string): Promise<WebfingerResult> {
+async function webfingerForHonoApi(
+	deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> },
+	query: string,
+): Promise<WebfingerResult> {
 	let url: string;
 	if (webfingerUrlRegex.test(query)) {
 		const u = new URL(query);
@@ -770,18 +895,22 @@ async function webfingerForHonoApi(deps: { httpRequestService: Pick<HttpRequestS
 		const m = query.match(webfingerAcctRegex);
 		if (!m) throw new Error(`Invalid query (${query})`);
 		const hostname = m[2];
-		const useHttp = process.env['MISSKEY_WEBFINGER_USE_HTTP'] && process.env['MISSKEY_WEBFINGER_USE_HTTP'].toLowerCase() === 'true';
+		const useHttp =
+			process.env['MISSKEY_WEBFINGER_USE_HTTP'] && process.env['MISSKEY_WEBFINGER_USE_HTTP'].toLowerCase() === 'true';
 		url = `http${useHttp ? '' : 's'}://${hostname}/.well-known/webfinger?${urlQuery({ resource: `acct:${query}` })}`;
 	}
 
 	return await deps.httpRequestService.getJson<WebfingerResult>(url, 'application/jrd+json, application/json');
 }
 
-async function resolveSelfForHonoApi(deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> }, acctLower: string): Promise<WebfingerLink> {
-	const finger = await webfingerForHonoApi(deps, acctLower).catch(err => {
+async function resolveSelfForHonoApi(
+	deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> },
+	acctLower: string,
+): Promise<WebfingerLink> {
+	const finger = await webfingerForHonoApi(deps, acctLower).catch((err) => {
 		throw new Error(`Failed to WebFinger for ${acctLower}: ${err.statusCode ?? err.message}`);
 	});
-	const self = finger.links.find(link => link.rel != null && link.rel.toLowerCase() === 'self');
+	const self = finger.links.find((link) => link.rel != null && link.rel.toLowerCase() === 'self');
 	if (!self) {
 		throw new Error('self link not found');
 	}
@@ -809,7 +938,7 @@ export async function resolveUserForHonoApi(
 	}
 
 	const punyHost = toPunyForHonoApi(host);
-	const user = await fetchUserByUsernameAndHostFromDatabase(deps.db, usernameLower, punyHost) as MiRemoteUser | null;
+	const user = (await fetchUserByUsernameAndHostFromDatabase(deps.db, usernameLower, punyHost)) as MiRemoteUser | null;
 
 	const acctLower = `${usernameLower}@${punyHost}`;
 
@@ -831,7 +960,7 @@ export async function resolveUserForHonoApi(
 	}
 
 	// ユーザー情報が古い場合は、WebFingerからやりなおして返す
-	if (user.lastFetchedAt == null || Date.now() - user.lastFetchedAt.getTime() > (1000 * 60 * 60 * 24)) {
+	if (user.lastFetchedAt == null || Date.now() - user.lastFetchedAt.getTime() > 1000 * 60 * 60 * 24) {
 		// 繋がらないインスタンスに何回も試行するのを防ぐ, 後続の同様処理の連続試行を防ぐ ため 試行前にも更新する
 		await updateUserLastFetchedAtInDatabase(deps.db, user.id, new Date());
 

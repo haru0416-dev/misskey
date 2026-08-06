@@ -48,7 +48,12 @@ import {
 } from '@/core/queues.js';
 import { createVideoProcessingService, type VideoProcessingService } from '@/core/VideoProcessingService.js';
 import { createUrlPreviewService, type UrlPreviewService } from '@/server/web/UrlPreviewService.js';
-import { createHonoChartWriters, saveHonoChartWriters, startHonoChartWriterSaveInterval, type HonoChartWriters } from '@/server/chart-runtime.js';
+import {
+	createHonoChartWriters,
+	saveHonoChartWriters,
+	startHonoChartWriterSaveInterval,
+	type HonoChartWriters,
+} from '@/server/chart-runtime.js';
 
 export type RuntimeDependencies = {
 	config: Config;
@@ -210,23 +215,24 @@ export async function disposeRuntimeResources(resources: RuntimeResources): Prom
 export async function createRuntimeDependencies(config: Config): Promise<RuntimeDependencies> {
 	const resources: RuntimeResources = {};
 	try {
-		const drizzlePool = resources.drizzlePool = createDrizzlePool(config);
+		const drizzlePool = (resources.drizzlePool = createDrizzlePool(config));
 		const db = createDrizzleDatabase(drizzlePool, config);
-		const redis = resources.redis = createRedisClient(config);
-		const redisForPub = resources.redisForPub = createRedisForPub(config);
-		const redisForSub = resources.redisForSub = await createRedisForSub(config);
-		const redisForTimelines = resources.redisForTimelines = createRedisForTimelines(config);
-		const redisForReactions = resources.redisForReactions = createRedisForReactions(config);
-		const systemQueue = resources.systemQueue = createSystemQueue(config);
-		const endedPollNotificationQueue = resources.endedPollNotificationQueue = createEndedPollNotificationQueue(config);
-		const postScheduledNoteQueue = resources.postScheduledNoteQueue = createPostScheduledNoteQueue(config);
-		const deliverQueue = resources.deliverQueue = createDeliverQueue(config);
-		const inboxQueue = resources.inboxQueue = createInboxQueue(config);
-		const dbQueue = resources.dbQueue = createDbQueue(config);
-		const relationshipQueue = resources.relationshipQueue = createRelationshipQueue(config);
-		const objectStorageQueue = resources.objectStorageQueue = createObjectStorageQueue(config);
-		const userWebhookDeliverQueue = resources.userWebhookDeliverQueue = createUserWebhookDeliverQueue(config);
-		const systemWebhookDeliverQueue = resources.systemWebhookDeliverQueue = createSystemWebhookDeliverQueue(config);
+		const redis = (resources.redis = createRedisClient(config));
+		const redisForPub = (resources.redisForPub = createRedisForPub(config));
+		const redisForSub = (resources.redisForSub = await createRedisForSub(config));
+		const redisForTimelines = (resources.redisForTimelines = createRedisForTimelines(config));
+		const redisForReactions = (resources.redisForReactions = createRedisForReactions(config));
+		const systemQueue = (resources.systemQueue = createSystemQueue(config));
+		const endedPollNotificationQueue = (resources.endedPollNotificationQueue =
+			createEndedPollNotificationQueue(config));
+		const postScheduledNoteQueue = (resources.postScheduledNoteQueue = createPostScheduledNoteQueue(config));
+		const deliverQueue = (resources.deliverQueue = createDeliverQueue(config));
+		const inboxQueue = (resources.inboxQueue = createInboxQueue(config));
+		const dbQueue = (resources.dbQueue = createDbQueue(config));
+		const relationshipQueue = (resources.relationshipQueue = createRelationshipQueue(config));
+		const objectStorageQueue = (resources.objectStorageQueue = createObjectStorageQueue(config));
+		const userWebhookDeliverQueue = (resources.userWebhookDeliverQueue = createUserWebhookDeliverQueue(config));
+		const systemWebhookDeliverQueue = (resources.systemWebhookDeliverQueue = createSystemWebhookDeliverQueue(config));
 		const meilisearch = createMeilisearchClient(config);
 		const meta = await fetchReactiveMeta(db, redisForSub);
 		const loggerService = createLoggerService();
@@ -234,7 +240,12 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		const aiService = createAiService(meta, httpRequestService, loggerService);
 		const fileInfoService = createFileInfoService(aiService, loggerService);
 		const downloadService = createDownloadService(config, httpRequestService, loggerService);
-		const urlPreviewService = resources.urlPreviewService = createUrlPreviewService(config, meta, httpRequestService, loggerService);
+		const urlPreviewService = (resources.urlPreviewService = createUrlPreviewService(
+			config,
+			meta,
+			httpRequestService,
+			loggerService,
+		));
 		const imageProcessingService = createImageProcessingService();
 		const videoProcessingService = createVideoProcessingService(config, imageProcessingService);
 		const internalStorageService = createInternalStorageService(config);
@@ -248,51 +259,51 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		let disposed = false;
 
 		return {
-		config,
-		drizzlePool,
-		db,
-		meta,
-		meilisearch,
-		downloadService,
-		emailService,
-		fileInfoService,
-		httpRequestService,
-		imageProcessingService,
-		internalStorageService,
-		loggerService,
-		s3Service,
-		userAuthService,
-		urlPreviewService,
-		videoProcessingService,
-		webAuthnService,
-		systemQueue,
-		endedPollNotificationQueue,
-		postScheduledNoteQueue,
-		deliverQueue,
-		inboxQueue,
-		dbQueue,
-		relationshipQueue,
-		objectStorageQueue,
-		userWebhookDeliverQueue,
-		systemWebhookDeliverQueue,
-		redis,
-		redisForPub,
-		redisForSub,
-		redisForTimelines,
-		redisForReactions,
-		chartWriters,
-		dispose: async () => {
-			if (disposed) return;
-			disposed = true;
-			clearInterval(chartWriterSaveIntervalId);
-			try {
-				if (process.env['NODE_ENV'] !== 'test') {
-					await saveHonoChartWriters(chartWriters);
+			config,
+			drizzlePool,
+			db,
+			meta,
+			meilisearch,
+			downloadService,
+			emailService,
+			fileInfoService,
+			httpRequestService,
+			imageProcessingService,
+			internalStorageService,
+			loggerService,
+			s3Service,
+			userAuthService,
+			urlPreviewService,
+			videoProcessingService,
+			webAuthnService,
+			systemQueue,
+			endedPollNotificationQueue,
+			postScheduledNoteQueue,
+			deliverQueue,
+			inboxQueue,
+			dbQueue,
+			relationshipQueue,
+			objectStorageQueue,
+			userWebhookDeliverQueue,
+			systemWebhookDeliverQueue,
+			redis,
+			redisForPub,
+			redisForSub,
+			redisForTimelines,
+			redisForReactions,
+			chartWriters,
+			dispose: async () => {
+				if (disposed) return;
+				disposed = true;
+				clearInterval(chartWriterSaveIntervalId);
+				try {
+					if (process.env['NODE_ENV'] !== 'test') {
+						await saveHonoChartWriters(chartWriters);
+					}
+				} finally {
+					await disposeRuntimeResources(resources);
 				}
-			} finally {
-				await disposeRuntimeResources(resources);
-			}
-		},
+			},
 		};
 	} catch (error) {
 		await disposeRuntimeResources(resources);

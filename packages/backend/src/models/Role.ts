@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 type CondFormulaValueAnd = {
 	type: 'and';
 	values: RoleCondFormulaValue[];
@@ -93,25 +92,25 @@ type CondFormulaValueNotesMoreThanOrEq = {
 };
 
 export type RoleCondFormulaValue = { id: string } & (
-	CondFormulaValueAnd |
-	CondFormulaValueOr |
-	CondFormulaValueNot |
-	CondFormulaValueIsLocal |
-	CondFormulaValueIsRemote |
-	CondFormulaValueIsSuspended |
-	CondFormulaValueIsLocked |
-	CondFormulaValueIsBot |
-	CondFormulaValueIsCat |
-	CondFormulaValueIsExplorable |
-	CondFormulaValueRoleAssignedTo |
-	CondFormulaValueCreatedLessThan |
-	CondFormulaValueCreatedMoreThan |
-	CondFormulaValueFollowersLessThanOrEq |
-	CondFormulaValueFollowersMoreThanOrEq |
-	CondFormulaValueFollowingLessThanOrEq |
-	CondFormulaValueFollowingMoreThanOrEq |
-	CondFormulaValueNotesLessThanOrEq |
-	CondFormulaValueNotesMoreThanOrEq
+	| CondFormulaValueAnd
+	| CondFormulaValueOr
+	| CondFormulaValueNot
+	| CondFormulaValueIsLocal
+	| CondFormulaValueIsRemote
+	| CondFormulaValueIsSuspended
+	| CondFormulaValueIsLocked
+	| CondFormulaValueIsBot
+	| CondFormulaValueIsCat
+	| CondFormulaValueIsExplorable
+	| CondFormulaValueRoleAssignedTo
+	| CondFormulaValueCreatedLessThan
+	| CondFormulaValueCreatedMoreThan
+	| CondFormulaValueFollowersLessThanOrEq
+	| CondFormulaValueFollowersMoreThanOrEq
+	| CondFormulaValueFollowingLessThanOrEq
+	| CondFormulaValueFollowingMoreThanOrEq
+	| CondFormulaValueNotesLessThanOrEq
+	| CondFormulaValueNotesMoreThanOrEq
 );
 
 export class MiRole {
@@ -151,9 +150,12 @@ export class MiRole {
 	// UIに表示する際の並び順用(大きいほど先頭)
 	public displayOrder: number;
 
-	public policies: Record<string, {
-		useDefault: boolean;
-		priority: number;
-		value: any;
-	}>;
+	public policies: Record<
+		string,
+		{
+			useDefault: boolean;
+			priority: number;
+			value: any;
+		}
+	>;
 }

@@ -15,21 +15,14 @@ export type AccessTokenOrderField = 'id' | 'lastUsedAt';
 export type AccessTokenOrderDirection = 'asc' | 'desc';
 
 function accessTokenByAppAndUserCondition(appId: MiApp['id'], userId: MiUser['id']) {
-	return and(
-		eq(accessToken.appId, appId),
-		eq(accessToken.userId, userId),
-	);
+	return and(eq(accessToken.appId, appId), eq(accessToken.userId, userId));
 }
 
 export async function fetchAccessTokenBySessionFromDatabase(
 	db: MiDrizzleDatabase,
 	session: NonNullable<AccessTokenRow['session']>,
 ): Promise<AccessTokenRow | null> {
-	const [row] = await db
-		.select()
-		.from(accessToken)
-		.where(eq(accessToken.session, session))
-		.limit(1);
+	const [row] = await db.select().from(accessToken).where(eq(accessToken.session, session)).limit(1);
 
 	return row ?? null;
 }
@@ -42,10 +35,7 @@ export async function fetchAccessTokenByHashOrTokenFromDatabase(
 	const [row] = await db
 		.select()
 		.from(accessToken)
-		.where(or(
-			eq(accessToken.hash, hash),
-			eq(accessToken.token, token),
-		))
+		.where(or(eq(accessToken.hash, hash), eq(accessToken.token, token)))
 		.limit(1);
 
 	return row ?? null;
@@ -56,11 +46,7 @@ export async function fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase(
 	appId: MiApp['id'],
 	userId: MiUser['id'],
 ): Promise<AccessTokenRow> {
-	const [row] = await db
-		.select()
-		.from(accessToken)
-		.where(accessTokenByAppAndUserCondition(appId, userId))
-		.limit(1);
+	const [row] = await db.select().from(accessToken).where(accessTokenByAppAndUserCondition(appId, userId)).limit(1);
 
 	if (row == null) {
 		throw new EntityNotFoundError(MiAccessToken, { appId, userId });
@@ -73,11 +59,7 @@ export async function existsAccessTokenByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: AccessTokenRow['id'],
 ): Promise<boolean> {
-	const [row] = await db
-		.select({ id: accessToken.id })
-		.from(accessToken)
-		.where(eq(accessToken.id, id))
-		.limit(1);
+	const [row] = await db.select({ id: accessToken.id }).from(accessToken).where(eq(accessToken.id, id)).limit(1);
 
 	return row != null;
 }
@@ -86,11 +68,7 @@ export async function existsAccessTokenByTokenFromDatabase(
 	db: MiDrizzleDatabase,
 	token: AccessTokenRow['token'],
 ): Promise<boolean> {
-	const [row] = await db
-		.select({ id: accessToken.id })
-		.from(accessToken)
-		.where(eq(accessToken.token, token))
-		.limit(1);
+	const [row] = await db.select({ id: accessToken.id }).from(accessToken).where(eq(accessToken.token, token)).limit(1);
 
 	return row != null;
 }
@@ -119,12 +97,9 @@ export async function listAuthorizedAppIdsByUserIdAndAppIdsFromDatabase(
 	const rows = await db
 		.select({ appId: accessToken.appId })
 		.from(accessToken)
-		.where(and(
-			eq(accessToken.userId, userId),
-			inArray(accessToken.appId, appIds),
-		));
+		.where(and(eq(accessToken.userId, userId), inArray(accessToken.appId, appIds)));
 
-	return [...new Set(rows.map(row => row.appId).filter((id): id is MiApp['id'] => id != null))];
+	return [...new Set(rows.map((row) => row.appId).filter((id): id is MiApp['id'] => id != null))];
 }
 
 /**
@@ -162,32 +137,18 @@ export async function listAccessTokensWithAppByUserIdFromDatabase(
 	return await db
 		.select()
 		.from(accessToken)
-		.where(and(
-			eq(accessToken.userId, userId),
-			isNotNull(accessToken.appId),
-		))
+		.where(and(eq(accessToken.userId, userId), isNotNull(accessToken.appId)))
 		.orderBy(options.direction === 'asc' ? asc(accessToken.id) : desc(accessToken.id))
 		.limit(options.limit)
 		.offset(options.offset);
 }
 
-export async function createAccessTokenInDatabase(
-	db: MiDrizzleDatabase,
-	data: AccessTokenInsert,
-): Promise<void> {
-	await db
-		.insert(accessToken)
-		.values(data);
+export async function createAccessTokenInDatabase(db: MiDrizzleDatabase, data: AccessTokenInsert): Promise<void> {
+	await db.insert(accessToken).values(data);
 }
 
-export async function markAccessTokenFetchedInDatabase(
-	db: MiDrizzleDatabase,
-	id: AccessTokenRow['id'],
-): Promise<void> {
-	await db
-		.update(accessToken)
-		.set({ fetched: true })
-		.where(eq(accessToken.id, id));
+export async function markAccessTokenFetchedInDatabase(db: MiDrizzleDatabase, id: AccessTokenRow['id']): Promise<void> {
+	await db.update(accessToken).set({ fetched: true }).where(eq(accessToken.id, id));
 }
 
 export async function updateAccessTokenLastUsedAtInDatabase(
@@ -195,10 +156,7 @@ export async function updateAccessTokenLastUsedAtInDatabase(
 	id: AccessTokenRow['id'],
 	lastUsedAt: Date,
 ): Promise<void> {
-	await db
-		.update(accessToken)
-		.set({ lastUsedAt })
-		.where(eq(accessToken.id, id));
+	await db.update(accessToken).set({ lastUsedAt }).where(eq(accessToken.id, id));
 }
 
 export async function deleteAccessTokenByIdAndUserIdFromDatabase(
@@ -206,12 +164,7 @@ export async function deleteAccessTokenByIdAndUserIdFromDatabase(
 	id: AccessTokenRow['id'],
 	userId: MiUser['id'],
 ): Promise<void> {
-	await db
-		.delete(accessToken)
-		.where(and(
-			eq(accessToken.id, id),
-			eq(accessToken.userId, userId),
-		));
+	await db.delete(accessToken).where(and(eq(accessToken.id, id), eq(accessToken.userId, userId)));
 }
 
 export async function deleteAccessTokenByTokenAndUserIdFromDatabase(
@@ -219,19 +172,12 @@ export async function deleteAccessTokenByTokenAndUserIdFromDatabase(
 	token: AccessTokenRow['token'],
 	userId: MiUser['id'],
 ): Promise<void> {
-	await db
-		.delete(accessToken)
-		.where(and(
-			eq(accessToken.token, token),
-			eq(accessToken.userId, userId),
-		));
+	await db.delete(accessToken).where(and(eq(accessToken.token, token), eq(accessToken.userId, userId)));
 }
 
 export async function deleteAccessTokenByTokenFromDatabase(
 	db: MiDrizzleDatabase,
 	token: AccessTokenRow['token'],
 ): Promise<void> {
-	await db
-		.delete(accessToken)
-		.where(eq(accessToken.token, token));
+	await db.delete(accessToken).where(eq(accessToken.token, token));
 }

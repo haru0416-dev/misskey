@@ -5,6 +5,6 @@
 
 import { parseUuidv7 } from './uuidv7.js';
 
-export function parseId(id: string): { date: Date; } {
+export function parseId(id: string): { date: Date } {
 	return parseUuidv7(id);
 }

@@ -3,7 +3,23 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, like, lt, or, sql, sum, type SQL } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gt,
+	inArray,
+	isNotNull,
+	isNull,
+	like,
+	lt,
+	or,
+	sql,
+	sum,
+	type SQL,
+} from 'drizzle-orm';
 import { driveFile, type DriveFileInsert, type DriveFileRow } from '@/db/schema/drive-file.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -47,24 +63,25 @@ function driveFilePaginationOrder(options: {
 	sort?: DriveFileListSort;
 }): SQL {
 	switch (options.sort) {
-		case '+createdAt': return desc(driveFile.id);
-		case '-createdAt': return asc(driveFile.id);
-		case '+name': return desc(driveFile.name);
-		case '-name': return asc(driveFile.name);
-		case '+size': return desc(driveFile.size);
-		case '-size': return asc(driveFile.size);
-		default: return options.sinceId && !options.untilId ? asc(driveFile.id) : desc(driveFile.id);
+		case '+createdAt':
+			return desc(driveFile.id);
+		case '-createdAt':
+			return asc(driveFile.id);
+		case '+name':
+			return desc(driveFile.name);
+		case '-name':
+			return asc(driveFile.name);
+		case '+size':
+			return desc(driveFile.size);
+		case '-size':
+			return asc(driveFile.size);
+		default:
+			return options.sinceId && !options.untilId ? asc(driveFile.id) : desc(driveFile.id);
 	}
 }
 
-export async function createDriveFileInDatabase(
-	db: MiDrizzleDatabase,
-	data: DriveFileInsert,
-): Promise<MiDriveFile> {
-	const [row] = await db
-		.insert(driveFile)
-		.values(data)
-		.returning();
+export async function createDriveFileInDatabase(db: MiDrizzleDatabase, data: DriveFileInsert): Promise<MiDriveFile> {
+	const [row] = await db.insert(driveFile).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create drive file');
@@ -77,11 +94,7 @@ export async function fetchDriveFileByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiDriveFile['id'],
 ): Promise<MiDriveFile | null> {
-	const [row] = await db
-		.select()
-		.from(driveFile)
-		.where(eq(driveFile.id, id))
-		.limit(1);
+	const [row] = await db.select().from(driveFile).where(eq(driveFile.id, id)).limit(1);
 
 	return row ? deserializeDriveFile(row) : null;
 }
@@ -94,10 +107,7 @@ export async function fetchDriveFileByIdAndUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(driveFile)
-		.where(and(
-			eq(driveFile.id, id),
-			eq(driveFile.userId, userId),
-		))
+		.where(and(eq(driveFile.id, id), eq(driveFile.userId, userId)))
 		.limit(1);
 
 	return row ? deserializeDriveFile(row) : null;
@@ -123,11 +133,9 @@ export async function fetchDriveFileByAccessKeyFromDatabase(
 	const [row] = await db
 		.select()
 		.from(driveFile)
-		.where(or(
-			eq(driveFile.accessKey, key),
-			eq(driveFile.thumbnailAccessKey, key),
-			eq(driveFile.webpublicAccessKey, key),
-		))
+		.where(
+			or(eq(driveFile.accessKey, key), eq(driveFile.thumbnailAccessKey, key), eq(driveFile.webpublicAccessKey, key)),
+		)
 		.limit(1);
 
 	return row ? deserializeDriveFile(row) : null;
@@ -139,12 +147,9 @@ export async function listDriveFilesByIdsFromDatabase(
 ): Promise<MiDriveFile[]> {
 	if (ids.length === 0) return [];
 
-	const rows = await db
-		.select()
-		.from(driveFile)
-		.where(inArray(driveFile.id, ids));
+	const rows = await db.select().from(driveFile).where(inArray(driveFile.id, ids));
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
 export async function listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(
@@ -157,13 +162,15 @@ export async function listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(
 	const rows = await db
 		.select()
 		.from(driveFile)
-		.where(and(
-			eq(driveFile.userId, userId),
-			inArray(driveFile.id, ids),
-		))
-		.orderBy(sql`array_position(ARRAY[${sql.join(ids.map(id => sql`${id}`), sql`, `)}]::text[], ${driveFile.id}::text)`);
+		.where(and(eq(driveFile.userId, userId), inArray(driveFile.id, ids)))
+		.orderBy(
+			sql`array_position(ARRAY[${sql.join(
+				ids.map((id) => sql`${id}`),
+				sql`, `,
+			)}]::text[], ${driveFile.id}::text)`,
+		);
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
 export async function fetchDriveFileByMd5AndUserIdFromDatabase(
@@ -174,10 +181,7 @@ export async function fetchDriveFileByMd5AndUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(driveFile)
-		.where(and(
-			eq(driveFile.md5, md5),
-			eq(driveFile.userId, userId),
-		))
+		.where(and(eq(driveFile.md5, md5), eq(driveFile.userId, userId)))
 		.limit(1);
 
 	return row ? deserializeDriveFile(row) : null;
@@ -191,10 +195,7 @@ export async function driveFileExistsByMd5AndUserIdFromDatabase(
 	const [row] = await db
 		.select({ id: driveFile.id })
 		.from(driveFile)
-		.where(and(
-			eq(driveFile.md5, md5),
-			eq(driveFile.userId, userId),
-		))
+		.where(and(eq(driveFile.md5, md5), eq(driveFile.userId, userId)))
 		.limit(1);
 
 	return row != null;
@@ -208,26 +209,16 @@ export async function listDriveFilesByMd5AndUserIdFromDatabase(
 	const rows = await db
 		.select()
 		.from(driveFile)
-		.where(and(
-			eq(driveFile.md5, md5),
-			eq(driveFile.userId, userId),
-		));
+		.where(and(eq(driveFile.md5, md5), eq(driveFile.userId, userId)));
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
-export async function fetchDriveFileByUrlFromDatabase(
-	db: MiDrizzleDatabase,
-	url: string,
-): Promise<MiDriveFile | null> {
+export async function fetchDriveFileByUrlFromDatabase(db: MiDrizzleDatabase, url: string): Promise<MiDriveFile | null> {
 	const [row] = await db
 		.select()
 		.from(driveFile)
-		.where(or(
-			eq(driveFile.url, url),
-			eq(driveFile.webpublicUrl, url),
-			eq(driveFile.thumbnailUrl, url),
-		))
+		.where(or(eq(driveFile.url, url), eq(driveFile.webpublicUrl, url), eq(driveFile.thumbnailUrl, url)))
 		.limit(1);
 
 	return row ? deserializeDriveFile(row) : null;
@@ -241,10 +232,7 @@ export async function fetchDriveFileByUriAndUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(driveFile)
-		.where(and(
-			eq(driveFile.uri, uri),
-			userId == null ? isNull(driveFile.userId) : eq(driveFile.userId, userId),
-		))
+		.where(and(eq(driveFile.uri, uri), userId == null ? isNull(driveFile.userId) : eq(driveFile.userId, userId)))
 		.limit(1);
 
 	return row ? deserializeDriveFile(row) : null;
@@ -261,22 +249,21 @@ export async function listDriveFilesByNameUserIdAndFolderIdFromDatabase(
 	const rows = await db
 		.select()
 		.from(driveFile)
-		.where(and(
-			eq(driveFile.name, params.name),
-			eq(driveFile.userId, params.userId),
-			params.folderId == null ? isNull(driveFile.folderId) : eq(driveFile.folderId, params.folderId),
-		));
+		.where(
+			and(
+				eq(driveFile.name, params.name),
+				eq(driveFile.userId, params.userId),
+				params.folderId == null ? isNull(driveFile.folderId) : eq(driveFile.folderId, params.folderId),
+			),
+		);
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
 export async function listOrphanDriveFilesFromDatabase(db: MiDrizzleDatabase): Promise<MiDriveFile[]> {
-	const rows = await db
-		.select()
-		.from(driveFile)
-		.where(isNull(driveFile.userId));
+	const rows = await db.select().from(driveFile).where(isNull(driveFile.userId));
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
 export async function listDriveFilesForUserFromDatabase(
@@ -291,10 +278,7 @@ export async function listDriveFilesForUserFromDatabase(
 		sort?: DriveFileListSort;
 	},
 ): Promise<MiDriveFile[]> {
-	const conditions: SQL[] = [
-		driveFilePaginationCondition(params),
-		eq(driveFile.userId, params.userId),
-	];
+	const conditions: SQL[] = [driveFilePaginationCondition(params), eq(driveFile.userId, params.userId)];
 
 	if (params.folderId !== undefined) {
 		conditions.push(params.folderId == null ? isNull(driveFile.folderId) : eq(driveFile.folderId, params.folderId));
@@ -315,31 +299,25 @@ export async function listDriveFilesForUserFromDatabase(
 		.orderBy(driveFilePaginationOrder(params))
 		.limit(params.limit);
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
 export async function listAllDriveFilesByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: NonNullable<MiDriveFile['userId']>,
 ): Promise<MiDriveFile[]> {
-	const rows = await db
-		.select()
-		.from(driveFile)
-		.where(eq(driveFile.userId, userId));
+	const rows = await db.select().from(driveFile).where(eq(driveFile.userId, userId));
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
 export async function listAllDriveFilesByUserHostFromDatabase(
 	db: MiDrizzleDatabase,
 	userHost: NonNullable<MiDriveFile['userHost']>,
 ): Promise<MiDriveFile[]> {
-	const rows = await db
-		.select()
-		.from(driveFile)
-		.where(eq(driveFile.userHost, userHost));
+	const rows = await db.select().from(driveFile).where(eq(driveFile.userHost, userHost));
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
 export async function listDriveFilesForAdminFromDatabase(
@@ -354,9 +332,7 @@ export async function listDriveFilesForAdminFromDatabase(
 		hostname?: MiDriveFile['userHost'] | null;
 	},
 ): Promise<MiDriveFile[]> {
-	const conditions: SQL[] = [
-		driveFilePaginationCondition(params),
-	];
+	const conditions: SQL[] = [driveFilePaginationCondition(params)];
 
 	if (params.userId) {
 		conditions.push(eq(driveFile.userId, params.userId));
@@ -387,7 +363,7 @@ export async function listDriveFilesForAdminFromDatabase(
 		.orderBy(driveFilePaginationOrder(params))
 		.limit(params.limit);
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
 export async function listDriveFileIdsExceedingUserCapacityFromDatabase(
@@ -410,9 +386,7 @@ export async function listDriveFileIdsExceedingUserCapacityFromDatabase(
 		ORDER BY "id" ASC
 	`);
 
-	return rows.rows
-		.filter(row => Number(row.acc_usage) > params.driveCapacity)
-		.map(row => row.file_id);
+	return rows.rows.filter((row) => Number(row.acc_usage) > params.driveCapacity).map((row) => row.file_id);
 }
 
 export async function updateDriveFileInDatabase(
@@ -420,10 +394,7 @@ export async function updateDriveFileInDatabase(
 	id: MiDriveFile['id'],
 	values: DriveFileUpdate,
 ): Promise<void> {
-	await db
-		.update(driveFile)
-		.set(values)
-		.where(eq(driveFile.id, id));
+	await db.update(driveFile).set(values).where(eq(driveFile.id, id));
 }
 
 export async function updateDriveFilesFolderByIdsAndUserIdInDatabase(
@@ -437,29 +408,18 @@ export async function updateDriveFilesFolderByIdsAndUserIdInDatabase(
 	await db
 		.update(driveFile)
 		.set({ folderId })
-		.where(and(
-			inArray(driveFile.id, ids),
-			eq(driveFile.userId, userId),
-		));
+		.where(and(inArray(driveFile.id, ids), eq(driveFile.userId, userId)));
 }
 
-export async function deleteDriveFileByIdInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiDriveFile['id'],
-): Promise<void> {
-	await db
-		.delete(driveFile)
-		.where(eq(driveFile.id, id));
+export async function deleteDriveFileByIdInDatabase(db: MiDrizzleDatabase, id: MiDriveFile['id']): Promise<void> {
+	await db.delete(driveFile).where(eq(driveFile.id, id));
 }
 
 export async function countDriveFilesByUserHostFromDatabase(
 	db: MiDrizzleDatabase,
 	userHost: NonNullable<MiDriveFile['userHost']>,
 ): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(driveFile)
-		.where(eq(driveFile.userHost, userHost));
+	const [row] = await db.select({ value: count() }).from(driveFile).where(eq(driveFile.userHost, userHost));
 
 	return row?.value ?? 0;
 }
@@ -468,10 +428,7 @@ export async function countDriveFilesByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiDriveFile['userId'],
 ): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(driveFile)
-		.where(eq(driveFile.userId, userId));
+	const [row] = await db.select({ value: count() }).from(driveFile).where(eq(driveFile.userId, userId));
 
 	return row?.value ?? 0;
 }
@@ -480,10 +437,7 @@ export async function countDriveFilesByFolderIdFromDatabase(
 	db: MiDrizzleDatabase,
 	folderId: NonNullable<MiDriveFile['folderId']>,
 ): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(driveFile)
-		.where(eq(driveFile.folderId, folderId));
+	const [row] = await db.select({ value: count() }).from(driveFile).where(eq(driveFile.folderId, folderId));
 
 	return row?.value ?? 0;
 }
@@ -505,17 +459,14 @@ export async function countDriveFilesGroupedByFolderIdsFromDatabase(
 
 	return rows
 		.filter((row): row is { folderId: NonNullable<MiDriveFile['folderId']>; count: number } => row.folderId != null)
-		.map(row => ({ folderId: row.folderId, count: row.count }));
+		.map((row) => ({ folderId: row.folderId, count: row.count }));
 }
 
 export async function countRemoteCachedDriveFilesFromDatabase(db: MiDrizzleDatabase): Promise<number> {
 	const [row] = await db
 		.select({ value: count() })
 		.from(driveFile)
-		.where(and(
-			isNotNull(driveFile.userHost),
-			eq(driveFile.isLink, false),
-		));
+		.where(and(isNotNull(driveFile.userHost), eq(driveFile.isLink, false)));
 
 	return row?.value ?? 0;
 }
@@ -541,7 +492,7 @@ export async function listDriveFilesByUserIdWithPaginationFromDatabase(
 		.orderBy(asc(driveFile.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
 export async function listRemoteCachedDriveFilesWithPaginationFromDatabase(
@@ -551,10 +502,7 @@ export async function listRemoteCachedDriveFilesWithPaginationFromDatabase(
 		sinceId?: MiDriveFile['id'] | null;
 	},
 ): Promise<MiDriveFile[]> {
-	const conditions: SQL[] = [
-		isNotNull(driveFile.userHost),
-		eq(driveFile.isLink, false),
-	];
+	const conditions: SQL[] = [isNotNull(driveFile.userHost), eq(driveFile.isLink, false)];
 
 	if (options.sinceId) {
 		conditions.push(gt(driveFile.id, options.sinceId));
@@ -567,7 +515,7 @@ export async function listRemoteCachedDriveFilesWithPaginationFromDatabase(
 		.orderBy(asc(driveFile.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeDriveFile(row));
+	return rows.map((row) => deserializeDriveFile(row));
 }
 
 export async function sumDriveFileSizeByUserIdFromDatabase(
@@ -577,10 +525,7 @@ export async function sumDriveFileSizeByUserIdFromDatabase(
 	const [row] = await db
 		.select({ value: sum(driveFile.size) })
 		.from(driveFile)
-		.where(and(
-			eq(driveFile.userId, userId),
-			eq(driveFile.isLink, false),
-		));
+		.where(and(eq(driveFile.userId, userId), eq(driveFile.isLink, false)));
 
 	return Number(row?.value ?? 0);
 }
@@ -592,10 +537,7 @@ export async function sumDriveFileSizeByUserHostFromDatabase(
 	const [row] = await db
 		.select({ value: sum(driveFile.size) })
 		.from(driveFile)
-		.where(and(
-			eq(driveFile.userHost, userHost),
-			eq(driveFile.isLink, false),
-		));
+		.where(and(eq(driveFile.userHost, userHost), eq(driveFile.isLink, false)));
 
 	return Number(row?.value ?? 0);
 }
@@ -604,10 +546,7 @@ export async function sumLocalDriveFileSizeFromDatabase(db: MiDrizzleDatabase): 
 	const [row] = await db
 		.select({ value: sum(driveFile.size) })
 		.from(driveFile)
-		.where(and(
-			isNull(driveFile.userHost),
-			eq(driveFile.isLink, false),
-		));
+		.where(and(isNull(driveFile.userHost), eq(driveFile.isLink, false)));
 
 	return Number(row?.value ?? 0);
 }
@@ -616,10 +555,7 @@ export async function sumRemoteDriveFileSizeFromDatabase(db: MiDrizzleDatabase):
 	const [row] = await db
 		.select({ value: sum(driveFile.size) })
 		.from(driveFile)
-		.where(and(
-			isNotNull(driveFile.userHost),
-			eq(driveFile.isLink, false),
-		));
+		.where(and(isNotNull(driveFile.userHost), eq(driveFile.isLink, false)));
 
 	return Number(row?.value ?? 0);
 }

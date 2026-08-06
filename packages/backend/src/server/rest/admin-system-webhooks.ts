@@ -4,7 +4,11 @@
  */
 
 import { z } from 'zod';
-import { createSystemWebhookWithSideEffects, deleteSystemWebhookWithSideEffects, updateSystemWebhookWithSideEffects } from '@/core/SystemWebhookLogic.js';
+import {
+	createSystemWebhookWithSideEffects,
+	deleteSystemWebhookWithSideEffects,
+	updateSystemWebhookWithSideEffects,
+} from '@/core/SystemWebhookLogic.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
 import { fetchSystemWebhookByIdFromDatabase, listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
 import { NoSuchSystemWebhookForTestError, testSystemWebhookWithQueue } from '@/core/SystemWebhookTestLogic.js';
@@ -54,10 +58,12 @@ export const adminSystemWebhookShowParamDef = z.object({
 export const adminSystemWebhookTestParamDef = z.object({
 	webhookId: misskeyId(),
 	type: z.enum(systemWebhookEventTypes),
-	override: z.object({
-		url: z.string().optional(),
-		secret: z.string().optional(),
-	}).optional(),
+	override: z
+		.object({
+			url: z.string().optional(),
+			secret: z.string().optional(),
+		})
+		.optional(),
 });
 
 export const adminSystemWebhookUpdateParamDef = z.object({
@@ -97,9 +103,7 @@ export function packHonoApiSystemWebhook(webhook: MiSystemWebhook): Packed<'Syst
 }
 
 function packHonoApiSystemWebhooks(webhooks: MiSystemWebhook[]): Packed<'SystemWebhook'>[] {
-	return webhooks
-		.map(webhook => packHonoApiSystemWebhook(webhook))
-		.sort((a, b) => a.id.localeCompare(b.id));
+	return webhooks.map((webhook) => packHonoApiSystemWebhook(webhook)).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function noSuchSystemWebhookError(): HonoApiError {
@@ -127,12 +131,16 @@ export async function handleHonoApiAdminSystemWebhookCreate(
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>> {
 	const params = parseHonoApiParams(adminSystemWebhookCreateParamDef, body);
-	const webhook = await createSystemWebhookWithSideEffects({
-		db: deps.db,
-		genId,
-		publishInternalEvent: deps.publishInternalEvent,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, params, me);
+	const webhook = await createSystemWebhookWithSideEffects(
+		{
+			db: deps.db,
+			genId,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		params,
+		me,
+	);
 
 	return packHonoApiSystemWebhook(webhook);
 }
@@ -143,11 +151,15 @@ export async function handleHonoApiAdminSystemWebhookDelete(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminSystemWebhookDeleteParamDef, body);
-	await deleteSystemWebhookWithSideEffects({
-		db: deps.db,
-		publishInternalEvent: deps.publishInternalEvent,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, params.id, me);
+	await deleteSystemWebhookWithSideEffects(
+		{
+			db: deps.db,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		params.id,
+		me,
+	);
 }
 
 export async function handleHonoApiAdminSystemWebhookList(
@@ -155,10 +167,13 @@ export async function handleHonoApiAdminSystemWebhookList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>[]> {
 	const params = parseHonoApiParams(adminSystemWebhookListParamDef, body);
-	const webhooks = await listSystemWebhooksFromDatabase(deps.db, omitUndefined({
-		isActive: params.isActive,
-		on: params.on,
-	}));
+	const webhooks = await listSystemWebhooksFromDatabase(
+		deps.db,
+		omitUndefined({
+			isActive: params.isActive,
+			on: params.on,
+		}),
+	);
 
 	return packHonoApiSystemWebhooks(webhooks);
 }
@@ -179,20 +194,27 @@ export async function handleHonoApiAdminSystemWebhookTest(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminSystemWebhookTestParamDef, body);
-	const testParams = params.override === undefined ? {
-		webhookId: params.webhookId,
-		type: params.type,
-	} : {
-		webhookId: params.webhookId,
-		type: params.type,
-		override: omitUndefined(params.override),
-	};
+	const testParams =
+		params.override === undefined
+			? {
+					webhookId: params.webhookId,
+					type: params.type,
+				}
+			: {
+					webhookId: params.webhookId,
+					type: params.type,
+					override: omitUndefined(params.override),
+				};
 	try {
-		await testSystemWebhookWithQueue({
-			fetchSystemWebhooksByIds: ids => listSystemWebhooksFromDatabase(deps.db, { ids }),
-			enqueueSystemWebhookDeliver: (webhook, type, content, opts) => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, deps.config, webhook, type, content, opts),
-			populateEmojis: async () => ({}),
-		}, testParams);
+		await testSystemWebhookWithQueue(
+			{
+				fetchSystemWebhooksByIds: (ids) => listSystemWebhooksFromDatabase(deps.db, { ids }),
+				enqueueSystemWebhookDeliver: (webhook, type, content, opts) =>
+					enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, deps.config, webhook, type, content, opts),
+				populateEmojis: async () => ({}),
+			},
+			testParams,
+		);
 	} catch (e) {
 		if (e instanceof NoSuchSystemWebhookForTestError) {
 			throw noSuchWebhookError();
@@ -207,11 +229,15 @@ export async function handleHonoApiAdminSystemWebhookUpdate(
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>> {
 	const params = parseHonoApiParams(adminSystemWebhookUpdateParamDef, body);
-	const webhook = await updateSystemWebhookWithSideEffects({
-		db: deps.db,
-		publishInternalEvent: deps.publishInternalEvent,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, params, me);
+	const webhook = await updateSystemWebhookWithSideEffects(
+		{
+			db: deps.db,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		params,
+		me,
+	);
 
 	return packHonoApiSystemWebhook(webhook);
 }

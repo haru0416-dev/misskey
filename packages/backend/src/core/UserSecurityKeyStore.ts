@@ -21,20 +21,14 @@ export async function listUserSecurityKeysByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<UserSecurityKeyRow[]> {
-	return await db
-		.select()
-		.from(userSecurityKey)
-		.where(eq(userSecurityKey.userId, userId));
+	return await db.select().from(userSecurityKey).where(eq(userSecurityKey.userId, userId));
 }
 
 export async function countUserSecurityKeysByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(userSecurityKey)
-		.where(eq(userSecurityKey.userId, userId));
+	const [row] = await db.select({ count: count() }).from(userSecurityKey).where(eq(userSecurityKey.userId, userId));
 
 	return row?.count ?? 0;
 }
@@ -53,7 +47,7 @@ export async function listUserIdsWithSecurityKeysFromDatabase(
 		.where(inArray(userSecurityKey.userId, userIds))
 		.groupBy(userSecurityKey.userId);
 
-	return rows.map(row => row.userId);
+	return rows.map((row) => row.userId);
 }
 
 export async function listUserSecurityKeySummariesByUserIdFromDatabase(
@@ -74,11 +68,7 @@ export async function fetchUserSecurityKeyByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: UserSecurityKeyRow['id'],
 ): Promise<UserSecurityKeyRow | null> {
-	const [row] = await db
-		.select()
-		.from(userSecurityKey)
-		.where(eq(userSecurityKey.id, id))
-		.limit(1);
+	const [row] = await db.select().from(userSecurityKey).where(eq(userSecurityKey.id, id)).limit(1);
 
 	return row ?? null;
 }
@@ -91,10 +81,7 @@ export async function fetchUserSecurityKeyByIdAndUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(userSecurityKey)
-		.where(and(
-			eq(userSecurityKey.id, id),
-			eq(userSecurityKey.userId, userId),
-		))
+		.where(and(eq(userSecurityKey.id, id), eq(userSecurityKey.userId, userId)))
 		.limit(1);
 
 	return row ?? null;
@@ -104,9 +91,7 @@ export async function createUserSecurityKeyInDatabase(
 	db: MiDrizzleDatabase,
 	data: UserSecurityKeyInsert,
 ): Promise<void> {
-	await db
-		.insert(userSecurityKey)
-		.values(data);
+	await db.insert(userSecurityKey).values(data);
 }
 
 export async function deleteUserSecurityKeyByIdAndUserIdFromDatabase(
@@ -114,12 +99,7 @@ export async function deleteUserSecurityKeyByIdAndUserIdFromDatabase(
 	id: UserSecurityKeyRow['id'],
 	userId: MiUser['id'],
 ): Promise<void> {
-	await db
-		.delete(userSecurityKey)
-		.where(and(
-			eq(userSecurityKey.id, id),
-			eq(userSecurityKey.userId, userId),
-		));
+	await db.delete(userSecurityKey).where(and(eq(userSecurityKey.id, id), eq(userSecurityKey.userId, userId)));
 }
 
 export async function updateUserSecurityKeyNameByIdInDatabase(
@@ -127,10 +107,7 @@ export async function updateUserSecurityKeyNameByIdInDatabase(
 	id: UserSecurityKeyRow['id'],
 	name: string,
 ): Promise<void> {
-	await db
-		.update(userSecurityKey)
-		.set({ name })
-		.where(eq(userSecurityKey.id, id));
+	await db.update(userSecurityKey).set({ name }).where(eq(userSecurityKey.id, id));
 }
 
 export async function updateUserSecurityKeyPublicKeyByIdAndUserIdInDatabase(
@@ -142,10 +119,7 @@ export async function updateUserSecurityKeyPublicKeyByIdAndUserIdInDatabase(
 	await db
 		.update(userSecurityKey)
 		.set({ publicKey })
-		.where(and(
-			eq(userSecurityKey.id, id),
-			eq(userSecurityKey.userId, userId),
-		));
+		.where(and(eq(userSecurityKey.id, id), eq(userSecurityKey.userId, userId)));
 }
 
 export async function recordUserSecurityKeyUsageByIdInDatabase(
@@ -153,10 +127,7 @@ export async function recordUserSecurityKeyUsageByIdInDatabase(
 	id: UserSecurityKeyRow['id'],
 	usage: UserSecurityKeyUsage,
 ): Promise<void> {
-	await db
-		.update(userSecurityKey)
-		.set(usage)
-		.where(eq(userSecurityKey.id, id));
+	await db.update(userSecurityKey).set(usage).where(eq(userSecurityKey.id, id));
 }
 
 export async function recordUserSecurityKeyUsageByIdAndUserIdInDatabase(
@@ -168,8 +139,5 @@ export async function recordUserSecurityKeyUsageByIdAndUserIdInDatabase(
 	await db
 		.update(userSecurityKey)
 		.set(usage)
-		.where(and(
-			eq(userSecurityKey.id, id),
-			eq(userSecurityKey.userId, userId),
-		));
+		.where(and(eq(userSecurityKey.id, id), eq(userSecurityKey.userId, userId)));
 }

@@ -15,7 +15,7 @@ describe('nodeinfo', () => {
 		assert.ok(res.ok);
 		assert.strictEqual(res.headers.get('Access-Control-Allow-Origin'), '*');
 
-		const nodeInfo = await res.json() as any;
+		const nodeInfo = (await res.json()) as any;
 		assert.strictEqual(nodeInfo.software.name, 'erebia');
 		assert.strictEqual(nodeInfo.software.homepage, nodeInfo.metadata.repositoryUrl);
 		assert.strictEqual(nodeInfo.software.repository, nodeInfo.metadata.repositoryUrl);
@@ -26,7 +26,7 @@ describe('nodeinfo', () => {
 		assert.ok(res.ok);
 		assert.strictEqual(res.headers.get('Access-Control-Allow-Origin'), '*');
 
-		const nodeInfo = await res.json() as any;
+		const nodeInfo = (await res.json()) as any;
 		assert.strictEqual(nodeInfo.software.name, 'erebia');
 		assert.strictEqual(nodeInfo.software.homepage, nodeInfo.metadata.repositoryUrl);
 	});

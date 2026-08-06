@@ -438,10 +438,7 @@ describe('Timelines', () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 					await api('following/create', { userId: bob.id }, alice);
-					const [bobFile, carolFile] = await Promise.all([
-						uploadTimelineFile(bob),
-						uploadTimelineFile(carol),
-					]);
+					const [bobFile, carolFile] = await Promise.all([uploadTimelineFile(bob), uploadTimelineFile(carol)]);
 					const bobNote = await post(bob, { fileIds: [bobFile.id] });
 					const carolNote = await post(carol, { fileIds: [carolFile.id] });
 
@@ -657,10 +654,7 @@ describe('Timelines', () => {
 						const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
 						await api('following/create', { userId: bob.id }, alice);
-						const [bobFile, carolFile] = await Promise.all([
-							uploadTimelineFile(bob),
-							uploadTimelineFile(carol),
-						]);
+						const [bobFile, carolFile] = await Promise.all([uploadTimelineFile(bob), uploadTimelineFile(carol)]);
 						const bobNote1 = await post(bob, { text: 'hi' });
 						const bobNote2 = await post(bob, { fileIds: [bobFile.id] });
 						const carolNote1 = await post(carol, { text: 'hi' });

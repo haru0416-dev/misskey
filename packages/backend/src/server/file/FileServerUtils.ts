@@ -74,10 +74,7 @@ export type FileResponseOptions = {
 	cacheControl?: string;
 };
 
-export function setFileResponseHeaders(
-	reply: FileServerReply,
-	options: FileResponseOptions,
-): void {
+export function setFileResponseHeaders(reply: FileServerReply, options: FileResponseOptions): void {
 	reply.header('Content-Type', getSafeContentType(options.mime));
 	reply.header('Cache-Control', options.cacheControl ?? 'max-age=31536000, immutable');
 	reply.header('Content-Disposition', contentDisposition('inline', options.filename));
@@ -86,6 +83,8 @@ export function setFileResponseHeaders(
 	}
 }
 
-export function needsCleanup<T extends { kind?: string; cleanup?: () => void }>(file: T): file is T & { cleanup: () => void } {
+export function needsCleanup<T extends { kind?: string; cleanup?: () => void }>(
+	file: T,
+): file is T & { cleanup: () => void } {
 	return 'cleanup' in file && typeof file.cleanup === 'function';
 }

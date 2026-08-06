@@ -43,11 +43,7 @@ export type DriveFileUploadDependencies = {
 
 function validateDriveFileName(name: string): boolean {
 	return (
-		(name.trim().length > 0) &&
-		(name.length <= 200) &&
-		(!name.includes('\\')) &&
-		(!name.includes('/')) &&
-		(!name.includes('..'))
+		name.trim().length > 0 && name.length <= 200 && !name.includes('\\') && !name.includes('/') && !name.includes('..')
 	);
 }
 
@@ -104,8 +100,10 @@ async function generateDriveFileAlts(
 			type !== 'image/svg+xml' &&
 			type !== 'image/avif' &&
 			!(metadata.exif ?? metadata.iptc ?? metadata.xmp ?? metadata.tifftagPhotoshop) &&
-			metadata.width && metadata.width <= 2048 &&
-			metadata.height && metadata.height <= 2048
+			metadata.width &&
+			metadata.width <= 2048 &&
+			metadata.height &&
+			metadata.height <= 2048
 		);
 	} catch (err) {
 		deps.logger?.warn(`sharp failed: ${err}`);
@@ -141,7 +139,9 @@ async function generateDriveFileAlts(
 
 	try {
 		if (isAnimated) {
-			thumbnail = await deps.imageProcessingService.convertSharpToWebp(sharp(path, { animated: true }), 374, 317, { alphaQuality: 70 });
+			thumbnail = await deps.imageProcessingService.convertSharpToWebp(sharp(path, { animated: true }), 374, 317, {
+				alphaQuality: 70,
+			});
 		} else {
 			thumbnail = await deps.imageProcessingService.convertSharpToWebp(img, 498, 422);
 		}
@@ -176,22 +176,20 @@ async function uploadObjectStorageFile(
 	} as PutObjectCommandInput;
 
 	if (filename) {
-		params.ContentDisposition = contentDisposition(
-			'inline',
-			ext ? correctFilename(filename, ext) : filename,
-		);
+		params.ContentDisposition = contentDisposition('inline', ext ? correctFilename(filename, ext) : filename);
 	}
 	if (deps.meta.objectStorageSetPublicRead) params.ACL = 'public-read';
 
-	await deps.s3Service.upload(deps.meta, params)
-		.then(result => {
+	await deps.s3Service
+		.upload(deps.meta, params)
+		.then((result) => {
 			if ('Bucket' in result) {
 				deps.logger?.debug(`Uploaded: ${result.Bucket}/${result.Key} => ${result.Location}`);
 			} else {
 				deps.logger?.error(`Upload Result Aborted: key = ${key}, filename = ${filename}`);
 			}
 		})
-		.catch(err => {
+		.catch((err) => {
 			deps.logger?.error(`Upload Failed: key = ${key}, filename = ${filename}`, { e: err });
 		});
 }
@@ -208,7 +206,7 @@ async function saveSystemDriveFile(
 	const alts = await generateDriveFileAlts(deps, path, type, !file.uri);
 
 	if (deps.meta.useObjectStorage) {
-		let [ext] = (name.match(/\.([a-zA-Z0-9_-]+)$/) ?? ['']);
+		let [ext] = name.match(/\.([a-zA-Z0-9_-]+)$/) ?? [''];
 
 		if (ext === '') {
 			if (type === 'image/jpeg') ext = '.jpg';
@@ -223,11 +221,12 @@ async function saveSystemDriveFile(
 			ext = '';
 		}
 
-		const baseUrl = deps.meta.objectStorageBaseUrl
-			?? `${ deps.meta.objectStorageUseSSL ? 'https' : 'http' }://${ deps.meta.objectStorageEndpoint }${ deps.meta.objectStoragePort ? `:${deps.meta.objectStoragePort}` : '' }/${ deps.meta.objectStorageBucket }`;
+		const baseUrl =
+			deps.meta.objectStorageBaseUrl ??
+			`${deps.meta.objectStorageUseSSL ? 'https' : 'http'}://${deps.meta.objectStorageEndpoint}${deps.meta.objectStoragePort ? `:${deps.meta.objectStoragePort}` : ''}/${deps.meta.objectStorageBucket}`;
 		const prefix = deps.meta.objectStoragePrefix ? `${deps.meta.objectStoragePrefix}/` : '';
 		const key = `${prefix}${randomUUID()}${ext}`;
-		const url = `${ baseUrl }/${ key }`;
+		const url = `${baseUrl}/${key}`;
 
 		let webpublicKey: string | null = null;
 		let webpublicUrl: string | null = null;
@@ -235,22 +234,31 @@ async function saveSystemDriveFile(
 		let thumbnailUrl: string | null = null;
 
 		deps.logger?.info(`uploading original: ${key}`);
-		const uploads = [
-			uploadObjectStorageFile(deps, key, fs.createReadStream(path), type, null, name),
-		];
+		const uploads = [uploadObjectStorageFile(deps, key, fs.createReadStream(path), type, null, name)];
 
 		if (alts.webpublic) {
 			webpublicKey = `${prefix}webpublic-${randomUUID()}.${alts.webpublic.ext}`;
-			webpublicUrl = `${ baseUrl }/${ webpublicKey }`;
+			webpublicUrl = `${baseUrl}/${webpublicKey}`;
 			deps.logger?.info(`uploading webpublic: ${webpublicKey}`);
-			uploads.push(uploadObjectStorageFile(deps, webpublicKey, alts.webpublic.data, alts.webpublic.type, alts.webpublic.ext, name));
+			uploads.push(
+				uploadObjectStorageFile(deps, webpublicKey, alts.webpublic.data, alts.webpublic.type, alts.webpublic.ext, name),
+			);
 		}
 
 		if (alts.thumbnail) {
 			thumbnailKey = `${prefix}thumbnail-${randomUUID()}.${alts.thumbnail.ext}`;
-			thumbnailUrl = `${ baseUrl }/${ thumbnailKey }`;
+			thumbnailUrl = `${baseUrl}/${thumbnailKey}`;
 			deps.logger?.info(`uploading thumbnail: ${thumbnailKey}`);
-			uploads.push(uploadObjectStorageFile(deps, thumbnailKey, alts.thumbnail.data, alts.thumbnail.type, alts.thumbnail.ext, `${name}.thumbnail`));
+			uploads.push(
+				uploadObjectStorageFile(
+					deps,
+					thumbnailKey,
+					alts.thumbnail.data,
+					alts.thumbnail.type,
+					alts.thumbnail.ext,
+					`${name}.thumbnail`,
+				),
+			);
 		}
 
 		await Promise.all(uploads);
@@ -317,20 +325,21 @@ export async function uploadSystemDriveFileFromUrl(
 			fileName: name,
 			skipSensitiveDetection: true,
 			sensitiveThreshold:
-				deps.meta.sensitiveMediaDetectionSensitivity === 'veryHigh' ? 0.1 :
-					deps.meta.sensitiveMediaDetectionSensitivity === 'high' ? 0.3 :
-						deps.meta.sensitiveMediaDetectionSensitivity === 'low' ? 0.7 :
-							deps.meta.sensitiveMediaDetectionSensitivity === 'veryLow' ? 0.9 :
-								0.5,
+				deps.meta.sensitiveMediaDetectionSensitivity === 'veryHigh'
+					? 0.1
+					: deps.meta.sensitiveMediaDetectionSensitivity === 'high'
+						? 0.3
+						: deps.meta.sensitiveMediaDetectionSensitivity === 'low'
+							? 0.7
+							: deps.meta.sensitiveMediaDetectionSensitivity === 'veryLow'
+								? 0.9
+								: 0.5,
 			sensitiveThresholdForPorn: 0.75,
 			enableSensitiveMediaDetectionForVideos: deps.meta.enableSensitiveMediaDetectionForVideos,
 		});
 		deps.logger?.info(`${JSON.stringify(info)}`);
 
-		const detectedName = correctFilename(
-			(name && validateDriveFileName(name)) ? name : 'untitled',
-			info.type.ext,
-		);
+		const detectedName = correctFilename(name && validateDriveFileName(name) ? name : 'untitled', info.type.ext);
 
 		const properties: MiDriveFile['properties'] = {};
 		if (info.width != null && info.height != null) {

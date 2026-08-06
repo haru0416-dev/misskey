@@ -77,12 +77,7 @@ export class FileServerProxyHandler {
 
 			reply.header('Content-Type', image.type);
 			reply.header('Cache-Control', 'max-age=31536000, immutable');
-			reply.header('Content-Disposition',
-				contentDisposition(
-					'inline',
-					correctFilename(file.filename, image.ext),
-				),
-			);
+			reply.header('Content-Disposition', contentDisposition('inline', correctFilename(file.filename, image.ext)));
 			return image.data;
 		} catch (e) {
 			if (needsCleanup(file)) file.cleanup();
@@ -131,7 +126,8 @@ export class FileServerProxyHandler {
 	): Promise<IImageStreamable> {
 		const query = request.query;
 
-		const requiresImageConversion = 'emoji' in query || 'avatar' in query || 'static' in query || 'preview' in query || 'badge' in query;
+		const requiresImageConversion =
+			'emoji' in query || 'avatar' in query || 'static' in query || 'preview' in query || 'badge' in query;
 		const isConvertibleImage = isMimeImage(file.mime, 'sharp-convertible-image-with-bmp');
 		if (requiresImageConversion && !isConvertibleImage) {
 			throw new StatusError('Unexpected mime', 404);

@@ -53,12 +53,13 @@ export type HonoApiFederationDependencies = {
 	meta: MiMeta;
 };
 
-export type HonoApiAdminFederationDependencies = HonoApiFederationDependencies & HonoApiAdminDriveDependencies & {
-	redis: Redis.Redis;
-	httpRequestService: Pick<HttpRequestService, 'getJson' | 'getHtml' | 'send'>;
-	logger: Pick<Logger, 'error' | 'info'>;
-	relationshipQueue: RelationshipQueue;
-};
+export type HonoApiAdminFederationDependencies = HonoApiFederationDependencies &
+	HonoApiAdminDriveDependencies & {
+		redis: Redis.Redis;
+		httpRequestService: Pick<HttpRequestService, 'getJson' | 'getHtml' | 'send'>;
+		logger: Pick<Logger, 'error' | 'info'>;
+		relationshipQueue: RelationshipQueue;
+	};
 
 export const federationInstancesParamDef = z.object({
 	host: z.string().nullable().optional(),
@@ -71,25 +72,27 @@ export const federationInstancesParamDef = z.object({
 	publishing: z.boolean().nullable().optional(),
 	limit: z.number().int().min(1).max(100).default(30),
 	offset: z.number().int().default(0),
-	sort: z.union([
-		z.enum([
-			'+pubSub',
-			'-pubSub',
-			'+notes',
-			'-notes',
-			'+users',
-			'-users',
-			'+following',
-			'-following',
-			'+followers',
-			'-followers',
-			'+firstRetrievedAt',
-			'-firstRetrievedAt',
-			'+latestRequestReceivedAt',
-			'-latestRequestReceivedAt',
-		]),
-		z.null(),
-	]).optional(),
+	sort: z
+		.union([
+			z.enum([
+				'+pubSub',
+				'-pubSub',
+				'+notes',
+				'-notes',
+				'+users',
+				'-users',
+				'+following',
+				'-following',
+				'+followers',
+				'-followers',
+				'+firstRetrievedAt',
+				'-firstRetrievedAt',
+				'+latestRequestReceivedAt',
+				'-latestRequestReceivedAt',
+			]),
+			z.null(),
+		])
+		.optional(),
 });
 
 export const federationShowInstanceParamDef = z.object({
@@ -194,15 +197,17 @@ export async function updateFederatedInstance(
 	return await updateInstanceInDatabase(deps.db, id, data);
 }
 
-export async function tryLockFetchInstanceMetadata(deps: { redis: Pick<Redis.Redis, 'set'> }, host: string): Promise<string | null> {
-	return await deps.redis.set(
-		`fetchInstanceMetadata:mutex:v2:${host}`, '1',
-		'EX', 30,
-		'GET',
-	);
+export async function tryLockFetchInstanceMetadata(
+	deps: { redis: Pick<Redis.Redis, 'set'> },
+	host: string,
+): Promise<string | null> {
+	return await deps.redis.set(`fetchInstanceMetadata:mutex:v2:${host}`, '1', 'EX', 30, 'GET');
 }
 
-export async function unlockFetchInstanceMetadata(deps: { redis: Pick<Redis.Redis, 'del'> }, host: string): Promise<number> {
+export async function unlockFetchInstanceMetadata(
+	deps: { redis: Pick<Redis.Redis, 'del'> },
+	host: string,
+): Promise<number> {
 	return await deps.redis.del(`fetchInstanceMetadata:mutex:v2:${host}`);
 }
 
@@ -222,7 +227,7 @@ function toRelationshipJob(config: Pick<Config, 'queues'>, name: 'unfollow', dat
 
 function isHostMatched(targetHosts: string[], host: string): boolean {
 	const lowerHost = host.toLowerCase();
-	return targetHosts.some(target => `.${lowerHost}`.endsWith(`.${target}`));
+	return targetHosts.some((target) => `.${lowerHost}`.endsWith(`.${target}`));
 }
 
 function isBlockedHost(meta: MiMeta, host: string): boolean {
@@ -237,17 +242,22 @@ function isMediaSilencedHost(meta: MiMeta, host: string): boolean {
 	return isHostMatched(meta.mediaSilencedHosts, host);
 }
 
-export function isDeliverSuspendedSoftware(meta: Pick<MiMeta, 'deliverSuspendedSoftware'>, software: Pick<MiInstance, 'softwareName' | 'softwareVersion'>): boolean {
+export function isDeliverSuspendedSoftware(
+	meta: Pick<MiMeta, 'deliverSuspendedSoftware'>,
+	software: Pick<MiInstance, 'softwareName' | 'softwareVersion'>,
+): boolean {
 	if (software.softwareName == null) return false;
 	if (software.softwareVersion == null) {
-		return meta.deliverSuspendedSoftware.some(x =>
-			x.software === software.softwareName &&
-			x.versionRange.trim() === '*');
+		return meta.deliverSuspendedSoftware.some(
+			(x) => x.software === software.softwareName && x.versionRange.trim() === '*',
+		);
 	}
 
-	return meta.deliverSuspendedSoftware.some(x =>
-		x.software === software.softwareName &&
-		semver.satisfies(software.softwareVersion!, x.versionRange, { includePrerelease: true }));
+	return meta.deliverSuspendedSoftware.some(
+		(x) =>
+			x.software === software.softwareName &&
+			semver.satisfies(software.softwareVersion!, x.versionRange, { includePrerelease: true }),
+	);
 }
 
 function packHonoApiFederationInstance(
@@ -267,7 +277,8 @@ function packHonoApiFederationInstance(
 		followersCount: instance.followersCount,
 		isNotResponding: instance.isNotResponding,
 		isSuspended: instance.suspensionState !== 'none' || softwareSuspended,
-		suspensionState: instance.suspensionState === 'none' && softwareSuspended ? 'softwareSuspended' : instance.suspensionState,
+		suspensionState:
+			instance.suspensionState === 'none' && softwareSuspended ? 'softwareSuspended' : instance.suspensionState,
 		isBlocked: isBlockedHost(meta, instance.host),
 		softwareName: instance.softwareName,
 		softwareVersion: instance.softwareVersion,
@@ -302,7 +313,7 @@ function packHonoApiFederationInstancesWithModerator(
 	instances: MiInstance[],
 	isModerator: boolean,
 ): Packed<'FederationInstance'>[] {
-	return instances.map(instance => packHonoApiFederationInstance(meta, instance, isModerator));
+	return instances.map((instance) => packHonoApiFederationInstance(meta, instance, isModerator));
 }
 
 export async function handleHonoApiFederationInstances(
@@ -311,24 +322,28 @@ export async function handleHonoApiFederationInstances(
 	body: Record<string, unknown>,
 ): Promise<Packed<'FederationInstance'>[]> {
 	const params = parseHonoApiParams(federationInstancesParamDef, body);
-	const meta = typeof params.blocked === 'boolean' || typeof params.silenced === 'boolean'
-		? await fetchMetaFromDatabase(deps.db)
-		: deps.meta;
-	const instances = await listFederationInstancesFromDatabase(deps.db, omitUndefined({
-		host: params.host,
-		blocked: params.blocked,
-		blockedHosts: meta.blockedHosts,
-		notResponding: params.notResponding,
-		suspended: params.suspended,
-		silenced: params.silenced,
-		silencedHosts: meta.silencedHosts,
-		federating: params.federating,
-		subscribing: params.subscribing,
-		publishing: params.publishing,
-		limit: params.limit,
-		offset: params.offset,
-		sort: (params.sort ?? null) as FederationInstancesSort,
-	}));
+	const meta =
+		typeof params.blocked === 'boolean' || typeof params.silenced === 'boolean'
+			? await fetchMetaFromDatabase(deps.db)
+			: deps.meta;
+	const instances = await listFederationInstancesFromDatabase(
+		deps.db,
+		omitUndefined({
+			host: params.host,
+			blocked: params.blocked,
+			blockedHosts: meta.blockedHosts,
+			notResponding: params.notResponding,
+			suspended: params.suspended,
+			silenced: params.silenced,
+			silencedHosts: meta.silencedHosts,
+			federating: params.federating,
+			subscribing: params.subscribing,
+			publishing: params.publishing,
+			limit: params.limit,
+			offset: params.offset,
+			sort: (params.sort ?? null) as FederationInstancesSort,
+		}),
+	);
 
 	return await packHonoApiFederationInstances(deps, instances, user, meta);
 }
@@ -371,10 +386,15 @@ export async function handleHonoApiAdminFederationUpdateInstance(
 	});
 
 	if (params.isSuspended != null && isSuspendedBefore !== params.isSuspended) {
-		await logModerationEventInDatabase(deps, me, params.isSuspended ? 'suspendRemoteInstance' : 'unsuspendRemoteInstance', {
-			id: instance.id,
-			host: instance.host,
-		});
+		await logModerationEventInDatabase(
+			deps,
+			me,
+			params.isSuspended ? 'suspendRemoteInstance' : 'unsuspendRemoteInstance',
+			{
+				id: instance.id,
+				host: instance.host,
+			},
+		);
 	}
 
 	if (params.moderationNote != null && instance.moderationNote !== params.moderationNote) {
@@ -398,16 +418,20 @@ export async function handleHonoApiAdminFederationRefreshRemoteInstanceMetadata(
 		throw new Error('instance not found');
 	}
 
-	void fetchInstanceMetadataWithSideEffects({
-		httpRequestService: deps.httpRequestService,
-		logger: deps.logger,
-		tryLock: host => tryLockFetchInstanceMetadata(deps, host),
-		unlock: host => unlockFetchInstanceMetadata(deps, host),
-		fetchOrRegisterInstance: host => fetchOrRegisterFederatedInstance(deps, host),
-		updateInstance: async (id, updates) => {
-			await updateInstanceInDatabase(deps.db, id, updates);
+	void fetchInstanceMetadataWithSideEffects(
+		{
+			httpRequestService: deps.httpRequestService,
+			logger: deps.logger,
+			tryLock: (host) => tryLockFetchInstanceMetadata(deps, host),
+			unlock: (host) => unlockFetchInstanceMetadata(deps, host),
+			fetchOrRegisterInstance: (host) => fetchOrRegisterFederatedInstance(deps, host),
+			updateInstance: async (id, updates) => {
+				await updateInstanceInDatabase(deps.db, id, updates);
+			},
 		},
-	}, instance, true);
+		instance,
+		true,
+	);
 }
 
 export async function handleHonoApiAdminFederationDeleteAllFiles(
@@ -428,11 +452,13 @@ export async function handleHonoApiAdminFederationRemoveAllFollowing(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminFederationHostParamDef, body);
 	const followings = await listFollowingsByFollowerHostFromDatabase(deps.db, params.host);
-	const jobs = followings.map(following => toRelationshipJob(deps.config, 'unfollow', {
-		from: { id: following.followerId },
-		to: { id: following.followeeId },
-		silent: true,
-	}));
+	const jobs = followings.map((following) =>
+		toRelationshipJob(deps.config, 'unfollow', {
+			from: { id: following.followerId },
+			to: { id: following.followeeId },
+			silent: true,
+		}),
+	);
 
 	if (jobs.length > 0) {
 		await deps.relationshipQueue.addBulk(jobs);
@@ -456,8 +482,8 @@ export async function handleHonoApiFederationStats(
 		countFollowingsWithRemoteFolloweeHostFromDatabase(deps.db),
 		countFollowingsWithRemoteFollowerHostFromDatabase(deps.db),
 	]);
-	const gotSubCount = topSubInstances.map(x => x.followersCount).reduce((a, b) => a + b, 0);
-	const gotPubCount = topPubInstances.map(x => x.followingCount).reduce((a, b) => a + b, 0);
+	const gotSubCount = topSubInstances.map((x) => x.followersCount).reduce((a, b) => a + b, 0);
+	const gotPubCount = topPubInstances.map((x) => x.followingCount).reduce((a, b) => a + b, 0);
 
 	const isModerator = await isHonoApiModerator(deps, user);
 
@@ -477,7 +503,6 @@ export const federationUsersParamDef = z.object({
 	untilDate: z.number().int().optional(),
 	limit: z.number().int().min(1).max(100).default(10),
 });
-
 
 export async function handleHonoApiFederationUsers(
 	deps: HonoApiFederationDependencies,
@@ -512,13 +537,12 @@ export const federationHostFollowingParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 });
 
-
 export async function handleHonoApiFederationFollowers(
 	deps: HonoApiFederationDependencies,
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
 	const params = parseHonoApiParams(federationHostFollowingParamDef, body);
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'followee', params.host, {
 		limit: params.limit,
 		order: pagination.order,
@@ -534,7 +558,7 @@ export async function handleHonoApiFederationFollowing(
 	body: Record<string, unknown>,
 ): Promise<FollowingListItem[]> {
 	const params = parseHonoApiParams(federationHostFollowingParamDef, body);
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const followings = await listFollowingsByHostWithPaginationFromDatabase(deps.db, 'follower', params.host, {
 		limit: params.limit,
 		order: pagination.order,

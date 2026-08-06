@@ -5,14 +5,63 @@
 
 import type { Hono } from 'hono';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
-import { handleHonoApiNotes, handleHonoApiNotesChildren, handleHonoApiNotesClips, handleHonoApiNotesConversation, handleHonoApiNotesFavoritesCreate, handleHonoApiNotesFavoritesDelete, handleHonoApiNotesFeatured, handleHonoApiNotesGlobalTimeline, handleHonoApiNotesHybridTimeline, handleHonoApiNotesLocalTimeline, handleHonoApiNotesMentions, handleHonoApiNotesPollsRecommendation, handleHonoApiNotesRenotes, handleHonoApiNotesReplies, handleHonoApiNotesSearch, handleHonoApiNotesSearchByTag, handleHonoApiNotesShow, handleHonoApiNotesShowPartialBulk, handleHonoApiNotesState, handleHonoApiNotesThreadMutingCreate, handleHonoApiNotesThreadMutingDelete, handleHonoApiNotesTimeline, handleHonoApiNotesUserListTimeline, normalizeHonoApiNotesFeaturedQuery } from '../notes.js';
-import { handleHonoApiNotesTranslate, handleHonoApiUsersFeaturedNotes, handleHonoApiUsersNotes, normalizeHonoApiUsersFeaturedNotesQuery } from '../note.js';
+import {
+	handleHonoApiNotes,
+	handleHonoApiNotesChildren,
+	handleHonoApiNotesClips,
+	handleHonoApiNotesConversation,
+	handleHonoApiNotesFavoritesCreate,
+	handleHonoApiNotesFavoritesDelete,
+	handleHonoApiNotesFeatured,
+	handleHonoApiNotesGlobalTimeline,
+	handleHonoApiNotesHybridTimeline,
+	handleHonoApiNotesLocalTimeline,
+	handleHonoApiNotesMentions,
+	handleHonoApiNotesPollsRecommendation,
+	handleHonoApiNotesRenotes,
+	handleHonoApiNotesReplies,
+	handleHonoApiNotesSearch,
+	handleHonoApiNotesSearchByTag,
+	handleHonoApiNotesShow,
+	handleHonoApiNotesShowPartialBulk,
+	handleHonoApiNotesState,
+	handleHonoApiNotesThreadMutingCreate,
+	handleHonoApiNotesThreadMutingDelete,
+	handleHonoApiNotesTimeline,
+	handleHonoApiNotesUserListTimeline,
+	normalizeHonoApiNotesFeaturedQuery,
+} from '../notes.js';
+import {
+	handleHonoApiNotesTranslate,
+	handleHonoApiUsersFeaturedNotes,
+	handleHonoApiUsersNotes,
+	normalizeHonoApiUsersFeaturedNotesQuery,
+} from '../note.js';
 import { handleHonoApiNotesCreate } from '../notes-create.js';
-import { handleHonoApiNotesDelete, handleHonoApiNotesUnrenote, notesDeleteRateLimit, notesUnrenoteRateLimit } from '../notes-delete.js';
-import { handleHonoApiNotesReactions, handleHonoApiNotesReactionsCreate, handleHonoApiNotesReactionsDelete, normalizeHonoApiNotesReactionsQuery, reactionsDeleteRateLimit } from '../notes-reactions.js';
+import {
+	handleHonoApiNotesDelete,
+	handleHonoApiNotesUnrenote,
+	notesDeleteRateLimit,
+	notesUnrenoteRateLimit,
+} from '../notes-delete.js';
+import {
+	handleHonoApiNotesReactions,
+	handleHonoApiNotesReactionsCreate,
+	handleHonoApiNotesReactionsDelete,
+	normalizeHonoApiNotesReactionsQuery,
+	reactionsDeleteRateLimit,
+} from '../notes-reactions.js';
 import { handleHonoApiNotesPollsVote } from '../notes-polls-vote.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { jsonResponse, emptyResponse, publicCacheHeadersWhenAnonymous, jsonBody, tokenFromRequest, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	publicCacheHeadersWhenAnonymous,
+	jsonBody,
+	tokenFromRequest,
+	runApiEndpoint,
+	authenticateOptionalRequest,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -23,10 +72,15 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:notes');
-			await assertHonoApiRateLimitForUser(deps, 'notes/create', {
-				duration: 60 * 60 * 1000,
-				max: 300,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'notes/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 300,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiNotesCreate(deps, auth.user, body));
 		});
@@ -89,7 +143,12 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 			const query = normalizeHonoApiNotesReactionsQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
-			return jsonResponse(c, await handleHonoApiNotesReactions(deps, auth.user, query), 200, publicCacheHeadersWhenAnonymous(auth, 60));
+			return jsonResponse(
+				c,
+				await handleHonoApiNotesReactions(deps, auth.user, query),
+				200,
+				publicCacheHeadersWhenAnonymous(auth, 60),
+			);
 		});
 	});
 
@@ -98,7 +157,12 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
-			return jsonResponse(c, await handleHonoApiNotesReactions(deps, auth.user, body), 200, publicCacheHeadersWhenAnonymous(auth, 60));
+			return jsonResponse(
+				c,
+				await handleHonoApiNotesReactions(deps, auth.user, body),
+				200,
+				publicCacheHeadersWhenAnonymous(auth, 60),
+			);
 		});
 	});
 
@@ -189,10 +253,15 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:favorites');
-			await assertHonoApiRateLimitForUser(deps, 'notes/favorites/create', {
-				duration: 60 * 60 * 1000,
-				max: 20,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'notes/favorites/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 20,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiNotesFavoritesCreate(deps, auth.user, body);
 			return emptyResponse(c);
@@ -217,10 +286,15 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(deps, 'notes/thread-muting/create', {
-				duration: 60 * 60 * 1000,
-				max: 10,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'notes/thread-muting/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 10,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiNotesThreadMutingCreate(deps, auth.user, body);
 			return emptyResponse(c);
@@ -282,7 +356,12 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 			const query = normalizeHonoApiNotesFeaturedQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
-			return jsonResponse(c, await handleHonoApiNotesFeatured(deps, auth.user, query), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
+			return jsonResponse(
+				c,
+				await handleHonoApiNotesFeatured(deps, auth.user, query),
+				200,
+				publicCacheHeadersWhenAnonymous(auth, 3600),
+			);
 		});
 	});
 
@@ -291,7 +370,12 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
-			return jsonResponse(c, await handleHonoApiNotesFeatured(deps, auth.user, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
+			return jsonResponse(
+				c,
+				await handleHonoApiNotesFeatured(deps, auth.user, body),
+				200,
+				publicCacheHeadersWhenAnonymous(auth, 3600),
+			);
 		});
 	});
 
@@ -313,7 +397,12 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 			const query = normalizeHonoApiUsersFeaturedNotesQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
-			return jsonResponse(c, await handleHonoApiUsersFeaturedNotes(deps, auth.user, query), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
+			return jsonResponse(
+				c,
+				await handleHonoApiUsersFeaturedNotes(deps, auth.user, query),
+				200,
+				publicCacheHeadersWhenAnonymous(auth, 3600),
+			);
 		});
 	});
 
@@ -322,7 +411,12 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
-			return jsonResponse(c, await handleHonoApiUsersFeaturedNotes(deps, auth.user, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
+			return jsonResponse(
+				c,
+				await handleHonoApiUsersFeaturedNotes(deps, auth.user, body),
+				200,
+				publicCacheHeadersWhenAnonymous(auth, 3600),
+			);
 		});
 	});
 

@@ -22,7 +22,10 @@ function collectSentMessages(): { raw: string[]; send: (raw: string) => void } {
 }
 
 function channelMessages(raw: string[]): { id: string; type: string; body: unknown }[] {
-	return raw.map(r => JSON.parse(r)).filter(m => m.type === 'channel').map(m => m.body);
+	return raw
+		.map((r) => JSON.parse(r))
+		.filter((m) => m.type === 'channel')
+		.map((m) => m.body);
 }
 
 // globalEventBus はプロセス内シングルトンなので、チャンネル側と同じインスタンスを
@@ -34,7 +37,7 @@ async function waitUntil(condition: () => boolean, timeoutMs = 2000, intervalMs 
 	const start = Date.now();
 	while (!condition()) {
 		if (Date.now() - start > timeoutMs) return;
-		await new Promise(resolve => setTimeout(resolve, intervalMs));
+		await new Promise((resolve) => setTimeout(resolve, intervalMs));
 	}
 }
 
@@ -84,14 +87,16 @@ describe('hono-stream-connection: stats channels', () => {
 			connection.listen(subscriber, send);
 
 			await connection.connectChannel('conn1', {}, 'queueStats', false);
-			connection.handleClientMessage(JSON.stringify({
-				type: 'channel',
-				body: { id: 'conn1', type: 'requestLog', body: { id: 'req1', length: 10 } },
-			}));
+			connection.handleClientMessage(
+				JSON.stringify({
+					type: 'channel',
+					body: { id: 'conn1', type: 'requestLog', body: { id: 'req1', length: 10 } },
+				}),
+			);
 
-			await waitUntil(() => channelMessages(raw).some(m => (m as { type: string }).type === 'statsLog'));
+			await waitUntil(() => channelMessages(raw).some((m) => (m as { type: string }).type === 'statsLog'));
 
-			const statsLog = channelMessages(raw).find(m => (m as { type: string }).type === 'statsLog');
+			const statsLog = channelMessages(raw).find((m) => (m as { type: string }).type === 'statsLog');
 			expect(statsLog).not.toBeUndefined();
 		} finally {
 			testEv.off('requestQueueStatsLog', onRequest);
@@ -126,7 +131,7 @@ describe('hono-stream-connection: stats channels', () => {
 		connection.disconnectChannel('conn1');
 
 		testEv.emit('serverStats', { cpu: 0.2, mem: { used: 1, active: 1 }, net: { rx: 0, tx: 0 }, fs: { r: 0, w: 0 } });
-		await new Promise(resolve => setTimeout(resolve, 100));
+		await new Promise((resolve) => setTimeout(resolve, 100));
 
 		expect(channelMessages(raw).length).toBe(0);
 	});

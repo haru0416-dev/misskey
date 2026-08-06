@@ -11,36 +11,46 @@
 			localStorage.clear();
 			message('localStorage cleared.');
 
-			const idbPromises = ['MisskeyClient', 'keyval-store'].map((name, i, arr) => new Promise((res, rej) => {
-				const delidb = indexedDB.deleteDatabase(name);
-				delidb.onsuccess = () => res(message(`indexedDB "${name}" cleared. (${i + 1}/${arr.length})`));
-				delidb.onerror = e => rej(e)
-			}));
+			const idbPromises = ['MisskeyClient', 'keyval-store'].map(
+				(name, i, arr) =>
+					new Promise((res, rej) => {
+						const delidb = indexedDB.deleteDatabase(name);
+						delidb.onsuccess = () => res(message(`indexedDB "${name}" cleared. (${i + 1}/${arr.length})`));
+						delidb.onerror = (e) => rej(e);
+					}),
+			);
 
 			await Promise.all(idbPromises);
 
 			if (navigator.serviceWorker.controller) {
 				navigator.serviceWorker.controller.postMessage('clear');
-				await navigator.serviceWorker.getRegistrations()
-					.then(registrations => {
-						return Promise.all(registrations.map(registration => registration.unregister()));
+				await navigator.serviceWorker
+					.getRegistrations()
+					.then((registrations) => {
+						return Promise.all(registrations.map((registration) => registration.unregister()));
 					})
-					.catch(e => { throw new Error(e) });
+					.catch((e) => {
+						throw new Error(e);
+					});
 			}
 
 			message(successText);
 		} catch (e) {
-			message(`\n${e}\n\nFlush Failed. <a href="/flush">Please retry.</a>\n失敗しました。<a href="/flush">もう一度試してみてください。</a>`);
-			message(`\nIf you retry more than 3 times, try manually clearing the browser cache or contact to instance admin.\n3回以上試しても失敗する場合、ブラウザのキャッシュを手動で消去し、それでもだめならインスタンス管理者に連絡してみてください。\n`)
+			message(
+				`\n${e}\n\nFlush Failed. <a href="/flush">Please retry.</a>\n失敗しました。<a href="/flush">もう一度試してみてください。</a>`,
+			);
+			message(
+				`\nIf you retry more than 3 times, try manually clearing the browser cache or contact to instance admin.\n3回以上試しても失敗する場合、ブラウザのキャッシュを手動で消去し、それでもだめならインスタンス管理者に連絡してみてください。\n`,
+			);
 
 			console.error(e);
 			setTimeout(() => {
 				location = '/';
-			}, 10000)
+			}, 10000);
 		}
 	}
 
 	function message(text) {
-		msg.insertAdjacentHTML('beforeend', `<p>[${(new Date()).toString()}] ${text.replace(/\n/g,'<br>')}</p>`)
+		msg.insertAdjacentHTML('beforeend', `<p>[${new Date().toString()}] ${text.replace(/\n/g, '<br>')}</p>`);
 	}
 })();

@@ -56,11 +56,7 @@ export async function fetchAnnouncementByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiAnnouncement['id'],
 ): Promise<MiAnnouncement | null> {
-	const [row] = await db
-		.select()
-		.from(announcement)
-		.where(eq(announcement.id, id))
-		.limit(1);
+	const [row] = await db.select().from(announcement).where(eq(announcement.id, id)).limit(1);
 
 	return row == null ? null : deserializeAnnouncement(row);
 }
@@ -85,10 +81,7 @@ export async function fetchGlobalAnnouncementByIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(announcement)
-		.where(and(
-			eq(announcement.id, id),
-			isNull(announcement.userId),
-		))
+		.where(and(eq(announcement.id, id), isNull(announcement.userId)))
 		.limit(1);
 
 	return row == null ? null : deserializeAnnouncement(row);
@@ -98,10 +91,7 @@ export async function createAnnouncementInDatabase(
 	db: MiDrizzleDatabase,
 	data: AnnouncementInsert,
 ): Promise<MiAnnouncement> {
-	const [row] = await db
-		.insert(announcement)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(announcement).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create announcement');
@@ -115,19 +105,11 @@ export async function updateAnnouncementInDatabase(
 	id: MiAnnouncement['id'],
 	values: Partial<AnnouncementInsert>,
 ): Promise<void> {
-	await db
-		.update(announcement)
-		.set(values)
-		.where(eq(announcement.id, id));
+	await db.update(announcement).set(values).where(eq(announcement.id, id));
 }
 
-export async function deleteAnnouncementInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiAnnouncement['id'],
-): Promise<void> {
-	await db
-		.delete(announcement)
-		.where(eq(announcement.id, id));
+export async function deleteAnnouncementInDatabase(db: MiDrizzleDatabase, id: MiAnnouncement['id']): Promise<void> {
+	await db.delete(announcement).where(eq(announcement.id, id));
 }
 
 /**
@@ -140,25 +122,21 @@ export async function listUnreadAnnouncementsForUserFromDatabase(
 	const rows = await db
 		.select()
 		.from(announcement)
-		.where(and(
-			eq(announcement.isActive, true),
-			eq(announcement.silence, false),
-			or(
-				eq(announcement.userId, userId),
-				isNull(announcement.userId),
+		.where(
+			and(
+				eq(announcement.isActive, true),
+				eq(announcement.silence, false),
+				or(eq(announcement.userId, userId), isNull(announcement.userId)),
+				or(eq(announcement.forExistingUsers, false), gt(announcement.id, userId)),
+				notInArray(
+					announcement.id,
+					db
+						.select({ announcementId: announcementRead.announcementId })
+						.from(announcementRead)
+						.where(eq(announcementRead.userId, userId)),
+				),
 			),
-			or(
-				eq(announcement.forExistingUsers, false),
-				gt(announcement.id, userId),
-			),
-			notInArray(
-				announcement.id,
-				db
-					.select({ announcementId: announcementRead.announcementId })
-					.from(announcementRead)
-					.where(eq(announcementRead.userId, userId)),
-			),
-		));
+		);
 
 	return rows.map(deserializeAnnouncement);
 }
@@ -184,10 +162,7 @@ export async function listAnnouncementsForUserFromDatabase(
 
 	conditions.push(
 		options.requestUserId
-			? or(
-				eq(announcement.userId, options.requestUserId),
-				isNull(announcement.userId),
-			)!
+			? or(eq(announcement.userId, options.requestUserId), isNull(announcement.userId))!
 			: isNull(announcement.userId),
 	);
 
@@ -219,15 +194,15 @@ export async function listAnnouncementsForAdminFromDatabase(
 	applyAnnouncementPaginationCondition(conditions, options.sinceId, options.untilId);
 
 	switch (options.status) {
-		case 'active': conditions.push(eq(announcement.isActive, true)); break;
-		case 'archived': conditions.push(eq(announcement.isActive, false)); break;
+		case 'active':
+			conditions.push(eq(announcement.isActive, true));
+			break;
+		case 'archived':
+			conditions.push(eq(announcement.isActive, false));
+			break;
 	}
 
-	conditions.push(
-		options.userId
-			? eq(announcement.userId, options.userId)
-			: isNull(announcement.userId),
-	);
+	conditions.push(options.userId ? eq(announcement.userId, options.userId) : isNull(announcement.userId));
 
 	const rows = await db
 		.select()

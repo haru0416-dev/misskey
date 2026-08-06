@@ -10,10 +10,7 @@ import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';
 
 function channelFavoriteCondition(userId: MiUser['id'], channelId: MiChannel['id']) {
-	return and(
-		eq(channelFavorite.userId, userId),
-		eq(channelFavorite.channelId, channelId),
-	);
+	return and(eq(channelFavorite.userId, userId), eq(channelFavorite.channelId, channelId));
 }
 
 export async function channelFavoriteExistsInDatabase(
@@ -34,9 +31,7 @@ export async function createChannelFavoriteInDatabase(
 	db: MiDrizzleDatabase,
 	data: ChannelFavoriteInsert,
 ): Promise<void> {
-	await db
-		.insert(channelFavorite)
-		.values(data);
+	await db.insert(channelFavorite).values(data);
 }
 
 export async function deleteChannelFavoriteFromDatabase(
@@ -44,9 +39,7 @@ export async function deleteChannelFavoriteFromDatabase(
 	userId: MiUser['id'],
 	channelId: MiChannel['id'],
 ): Promise<void> {
-	await db
-		.delete(channelFavorite)
-		.where(channelFavoriteCondition(userId, channelId));
+	await db.delete(channelFavorite).where(channelFavoriteCondition(userId, channelId));
 }
 
 export async function listFavoritedChannelIdsByUserIdFromDatabase(
@@ -58,7 +51,7 @@ export async function listFavoritedChannelIdsByUserIdFromDatabase(
 		.from(channelFavorite)
 		.where(eq(channelFavorite.userId, userId));
 
-	return rows.map(row => row.channelId);
+	return rows.map((row) => row.channelId);
 }
 
 export async function fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase(
@@ -73,10 +66,7 @@ export async function fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase(
 	const rows = await db
 		.select({ channelId: channelFavorite.channelId })
 		.from(channelFavorite)
-		.where(and(
-			eq(channelFavorite.userId, userId),
-			inArray(channelFavorite.channelId, channelIds),
-		));
+		.where(and(eq(channelFavorite.userId, userId), inArray(channelFavorite.channelId, channelIds)));
 
-	return new Set(rows.map(row => row.channelId));
+	return new Set(rows.map((row) => row.channelId));
 }

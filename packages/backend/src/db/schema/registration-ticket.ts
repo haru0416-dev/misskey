@@ -7,20 +7,28 @@ import { index, pgTable, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-
 import type { MiUser } from '@/models/User.js';
 import { user } from './user.js';
 
-export const registrationTicket = pgTable('registration_ticket', {
-	id: varchar({ length: 32 }).primaryKey().notNull(),
-	code: varchar({ length: 64 }).notNull(),
-	expiresAt: timestamp({ withTimezone: true }),
-	createdById: varchar({ length: 32 }).$type<MiUser['id'] | null>().references(() => user.id, { onDelete: 'cascade' }),
-	usedById: varchar({ length: 32 }).$type<MiUser['id'] | null>().references(() => user.id, { onDelete: 'cascade' }),
-	usedAt: timestamp({ withTimezone: true }),
-	pendingUserId: varchar({ length: 32 }),
-}, table => [
-	uniqueIndex('IDX_REGISTRATION_TICKET_CODE_UNIQUE').on(table.code),
-	index('IDX_REGISTRATION_TICKET_CREATED_BY_ID').on(table.createdById),
-	index('IDX_REGISTRATION_TICKET_USED_BY_ID').on(table.usedById),
-	uniqueIndex('REL_b6f93f2f30bdbb9a5ebdc7c718').on(table.usedById),
-]);
+export const registrationTicket = pgTable(
+	'registration_ticket',
+	{
+		id: varchar({ length: 32 }).primaryKey().notNull(),
+		code: varchar({ length: 64 }).notNull(),
+		expiresAt: timestamp({ withTimezone: true }),
+		createdById: varchar({ length: 32 })
+			.$type<MiUser['id'] | null>()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		usedById: varchar({ length: 32 })
+			.$type<MiUser['id'] | null>()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		usedAt: timestamp({ withTimezone: true }),
+		pendingUserId: varchar({ length: 32 }),
+	},
+	(table) => [
+		uniqueIndex('IDX_REGISTRATION_TICKET_CODE_UNIQUE').on(table.code),
+		index('IDX_REGISTRATION_TICKET_CREATED_BY_ID').on(table.createdById),
+		index('IDX_REGISTRATION_TICKET_USED_BY_ID').on(table.usedById),
+		uniqueIndex('REL_b6f93f2f30bdbb9a5ebdc7c718').on(table.usedById),
+	],
+);
 
 export type RegistrationTicketRow = typeof registrationTicket.$inferSelect;
 export type RegistrationTicketInsert = typeof registrationTicket.$inferInsert;

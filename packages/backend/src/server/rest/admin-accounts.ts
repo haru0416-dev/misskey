@@ -23,14 +23,21 @@ import { HonoApiError } from './error.js';
 import type { HonoApiAuthenticated } from './auth.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
 import { createLocalSignupAccount, packSignupUser, type SignupDependencies, type SignupResponse } from './signup.js';
-import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
+import {
+	packMeDetailedForHonoApi,
+	packUserDetailedNotMeForHonoApi,
+	type MeDetailedHonoApiResponse,
+	type UserDetailedNotMeHonoApiResponse,
+	type UserPackingDependencies,
+} from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiAdminAccountsDependencies = UserPackingDependencies & SignupDependencies & {
-	dbQueue: DbQueue;
-	deliverQueue: DeliverQueue;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
-};
+export type HonoApiAdminAccountsDependencies = UserPackingDependencies &
+	SignupDependencies & {
+		dbQueue: DbQueue;
+		deliverQueue: DeliverQueue;
+		publishInternalEvent?: HonoApiInternalEventPublisher;
+	};
 
 export const adminAccountCreateParamDef = z.object({
 	username: localUsernameSchema,
@@ -49,7 +56,6 @@ export const adminAccountDeleteParamDef = z.object({
 export const adminUpdateProxyAccountParamDef = z.object({
 	description: descriptionSchema.nullable().optional(),
 });
-
 
 function userNotFoundError(): HonoApiError {
 	return new HonoApiError({
@@ -178,10 +184,13 @@ export async function handleHonoApiAdminUpdateProxyAccount(
 ): Promise<MeDetailedHonoApiResponse> {
 	const params = parseHonoApiParams(adminUpdateProxyAccountParamDef, body);
 	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, deps.meta, 'proxy');
-	const updated = await updateSystemAccountUserInDatabase(deps.db, omitUndefined({
-		userId: proxy.id,
-		description: params.description,
-	}));
+	const updated = await updateSystemAccountUserInDatabase(
+		deps.db,
+		omitUndefined({
+			userId: proxy.id,
+			description: params.description,
+		}),
+	);
 
 	if (params.description !== undefined) {
 		void logModerationEventInDatabase(deps, me, 'updateProxyAccountDescription', {

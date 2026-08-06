@@ -4,13 +4,32 @@
  */
 
 import { driveFilesCreateParamDef, driveFilesUploadFromUrlParamDef } from '@/server/rest/drive-file-upload.js';
-import { driveFilesAttachedChatMessagesParamDef, driveFilesAttachedNotesParamDef, driveFilesDeleteParamDef, driveFilesFindByHashParamDef, driveFilesFindParamDef, driveFilesMoveBulkParamDef, driveFilesParamDef, driveFilesShowParamDef, driveFilesUpdateParamDef, driveStreamParamDef } from '@/server/rest/drive-files.js';
-import { driveFilesCheckExistenceParamDef, driveFoldersCreateParamDef, driveFoldersDeleteParamDef, driveFoldersFindParamDef, driveFoldersParamDef, driveFoldersShowParamDef, driveFoldersUpdateParamDef } from '@/server/rest/drive.js';
+import {
+	driveFilesAttachedChatMessagesParamDef,
+	driveFilesAttachedNotesParamDef,
+	driveFilesDeleteParamDef,
+	driveFilesFindByHashParamDef,
+	driveFilesFindParamDef,
+	driveFilesMoveBulkParamDef,
+	driveFilesParamDef,
+	driveFilesShowParamDef,
+	driveFilesUpdateParamDef,
+	driveStreamParamDef,
+} from '@/server/rest/drive-files.js';
+import {
+	driveFilesCheckExistenceParamDef,
+	driveFoldersCreateParamDef,
+	driveFoldersDeleteParamDef,
+	driveFoldersFindParamDef,
+	driveFoldersParamDef,
+	driveFoldersShowParamDef,
+	driveFoldersUpdateParamDef,
+} from '@/server/rest/drive.js';
 import { z } from 'zod';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
-	'drive': {
+	drive: {
 		meta: {
 			tags: ['drive', 'account'],
 
@@ -20,15 +39,18 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					capacity: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					usage: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -45,10 +67,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFile',
 				},
 			},
@@ -67,10 +91,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -95,10 +121,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatMessage',
 				},
 			},
@@ -125,7 +153,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'boolean',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 			},
 		} as const,
 		paramDef: driveFilesCheckExistenceParamDef,
@@ -151,7 +180,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'DriveFile',
 			},
 
@@ -228,10 +258,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFile',
 				},
 			},
@@ -250,10 +282,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFile',
 				},
 			},
@@ -272,7 +306,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'DriveFile',
 			},
 
@@ -335,7 +370,8 @@ export const endpointMetas = {
 			},
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'DriveFile',
 			},
 		} as const,
@@ -388,10 +424,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFolder',
 				},
 			},
@@ -421,7 +459,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object' as const,
-				optional: false as const, nullable: false as const,
+				optional: false as const,
+				nullable: false as const,
 				ref: 'DriveFolder',
 			},
 		} as const,
@@ -461,10 +500,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFolder',
 				},
 			},
@@ -481,7 +522,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'DriveFolder',
 			},
 
@@ -525,7 +567,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'DriveFolder',
 			},
 		} as const,
@@ -541,10 +584,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFile',
 				},
 			},

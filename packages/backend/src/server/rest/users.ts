@@ -7,8 +7,18 @@ import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
 import { countUserListFavoritesFromDatabase, userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
-import { listUserListMembershipUserIdsByUserListIdFromDatabase, listUserListMembershipUserIdsByUserListIdsFromDatabase } from '@/core/UserListMembershipStore.js';
-import { deleteUserListByIdInDatabase, fetchPublicUserListByIdFromDatabase, fetchUserListByIdAndUserIdFromDatabase, fetchUserListByIdOrFailFromDatabase, listUserListsByUserIdFromDatabase, updateUserListInDatabase } from '@/core/UserListStore.js';
+import {
+	listUserListMembershipUserIdsByUserListIdFromDatabase,
+	listUserListMembershipUserIdsByUserListIdsFromDatabase,
+} from '@/core/UserListMembershipStore.js';
+import {
+	deleteUserListByIdInDatabase,
+	fetchPublicUserListByIdFromDatabase,
+	fetchUserListByIdAndUserIdFromDatabase,
+	fetchUserListByIdOrFailFromDatabase,
+	listUserListsByUserIdFromDatabase,
+	updateUserListInDatabase,
+} from '@/core/UserListStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -92,7 +102,8 @@ async function packUserListForHonoApi(
 	},
 ): Promise<HonoApiPackedUserList> {
 	const userList = typeof src === 'object' ? src : await fetchUserListByIdOrFailFromDatabase(deps.db, src);
-	const userIds = options?.userIds ?? await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, userList.id);
+	const userIds =
+		options?.userIds ?? (await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, userList.id));
 
 	return {
 		id: userList.id,
@@ -107,10 +118,17 @@ async function packUserListsManyForHonoApi(
 	deps: HonoApiUsersDependencies,
 	userLists: MiUserList[],
 ): Promise<HonoApiPackedUserList[]> {
-	const userIdsByListId = await listUserListMembershipUserIdsByUserListIdsFromDatabase(deps.db, userLists.map(userList => userList.id));
-	return await Promise.all(userLists.map(userList => packUserListForHonoApi(deps, userList, {
-		userIds: userIdsByListId.get(userList.id) ?? [],
-	})));
+	const userIdsByListId = await listUserListMembershipUserIdsByUserListIdsFromDatabase(
+		deps.db,
+		userLists.map((userList) => userList.id),
+	);
+	return await Promise.all(
+		userLists.map((userList) =>
+			packUserListForHonoApi(deps, userList, {
+				userIds: userIdsByListId.get(userList.id) ?? [],
+			}),
+		),
+	);
 }
 
 export async function handleHonoApiUsersAchievements(
@@ -142,7 +160,7 @@ export async function handleHonoApiUsersListsList(
 		if (user.host !== null) {
 			throw new HonoApiError({
 				status: 400,
-				message: 'Not allowed to load the remote user\'s list',
+				message: "Not allowed to load the remote user's list",
 				code: 'REMOTE_USER_NOT_ALLOWED',
 				id: '53858f1b-3315-4a01-81b7-db9b48d4b79a',
 			});
@@ -156,9 +174,10 @@ export async function handleHonoApiUsersListsList(
 		});
 	}
 
-	const userLists = params.userId === undefined
-		? await listUserListsByUserIdFromDatabase(deps.db, me!.id)
-		: await listUserListsByUserIdFromDatabase(deps.db, params.userId, { publicOnly: true });
+	const userLists =
+		params.userId === undefined
+			? await listUserListsByUserIdFromDatabase(deps.db, me!.id)
+			: await listUserListsByUserIdFromDatabase(deps.db, params.userId, { publicOnly: true });
 
 	return await packUserListsManyForHonoApi(deps, userLists);
 }
@@ -169,9 +188,10 @@ export async function handleHonoApiUsersListsShow(
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedUserListShow> {
 	const params = parseHonoApiParams(usersListsShowParamDef, body);
-	const userList = !params.forPublic && me !== null
-		? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
-		: await fetchPublicUserListByIdFromDatabase(deps.db, params.listId);
+	const userList =
+		!params.forPublic && me !== null
+			? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
+			: await fetchPublicUserListByIdFromDatabase(deps.db, params.listId);
 
 	if (userList == null) {
 		throw new HonoApiError({
@@ -185,9 +205,7 @@ export async function handleHonoApiUsersListsShow(
 	const packed: HonoApiPackedUserListShow = await packUserListForHonoApi(deps, userList);
 	if (params.forPublic && userList.isPublic) {
 		packed.likedCount = await countUserListFavoritesFromDatabase(deps.db, params.listId);
-		packed.isLiked = me !== null
-			? await userListFavoriteExistsInDatabase(deps.db, me.id, params.listId)
-			: false;
+		packed.isLiked = me !== null ? await userListFavoriteExistsInDatabase(deps.db, me.id, params.listId) : false;
 	}
 
 	return packed;
@@ -230,10 +248,14 @@ export async function handleHonoApiUsersListsUpdate(
 		});
 	}
 
-	await updateUserListInDatabase(deps.db, userList.id, omitUndefined({
-		name: params.name,
-		isPublic: params.isPublic,
-	}));
+	await updateUserListInDatabase(
+		deps.db,
+		userList.id,
+		omitUndefined({
+			name: params.name,
+			isPublic: params.isPublic,
+		}),
+	);
 
 	return await packUserListForHonoApi(deps, userList.id);
 }

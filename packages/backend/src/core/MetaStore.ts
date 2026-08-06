@@ -42,7 +42,10 @@ export async function fetchMetaFromDatabase(db: MiDrizzleDatabase): Promise<MiMe
 	});
 }
 
-export async function updateMetaInDatabase(db: MiDrizzleDatabase, data: Partial<MiMeta>): Promise<{
+export async function updateMetaInDatabase(
+	db: MiDrizzleDatabase,
+	data: Partial<MiMeta>,
+): Promise<{
 	before: MiMeta | undefined;
 	after: MiMeta;
 }> {

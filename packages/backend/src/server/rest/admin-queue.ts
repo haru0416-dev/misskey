@@ -5,7 +5,29 @@
 
 import { z } from 'zod';
 import type { JobType } from 'bullmq';
-import { abandonQueueOutboxDeadLetter, clearQueue, getDelayedDeliverHosts, getDelayedInboxHosts, getLegacyQueueCounts, getQueueJob, getQueueJobLogs, getQueueJobs, getQueues, getQueueStats, listQueueOutboxDeadLetters, pauseQueue, promoteQueueJobs, QUEUE_TYPES, removeQueueJob, resumeQueue, retryQueueJob, retryQueueOutboxDeadLetter, type AdminQueueDependencies, type QueueClearState, type QueueType } from '@/core/QueueAdminLogic.js';
+import {
+	abandonQueueOutboxDeadLetter,
+	clearQueue,
+	getDelayedDeliverHosts,
+	getDelayedInboxHosts,
+	getLegacyQueueCounts,
+	getQueueJob,
+	getQueueJobLogs,
+	getQueueJobs,
+	getQueues,
+	getQueueStats,
+	listQueueOutboxDeadLetters,
+	pauseQueue,
+	promoteQueueJobs,
+	QUEUE_TYPES,
+	removeQueueJob,
+	resumeQueue,
+	retryQueueJob,
+	retryQueueOutboxDeadLetter,
+	type AdminQueueDependencies,
+	type QueueClearState,
+	type QueueType,
+} from '@/core/QueueAdminLogic.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
@@ -84,10 +106,7 @@ export async function handleHonoApiAdminQueueQueueStats(
 	return await getQueueStats(deps, ps.queue);
 }
 
-export async function handleHonoApiAdminQueueStats(
-	deps: HonoApiAdminQueueDependencies,
-	body: Record<string, unknown>,
-) {
+export async function handleHonoApiAdminQueueStats(deps: HonoApiAdminQueueDependencies, body: Record<string, unknown>) {
 	parseHonoApiParams(adminQueueNoParamsDef, body);
 
 	return await getLegacyQueueCounts(deps);
@@ -111,10 +130,7 @@ export async function handleHonoApiAdminQueueInboxDelayed(
 	return await getDelayedInboxHosts(deps.inboxQueue);
 }
 
-export async function handleHonoApiAdminQueueJobs(
-	deps: HonoApiAdminQueueDependencies,
-	body: Record<string, unknown>,
-) {
+export async function handleHonoApiAdminQueueJobs(deps: HonoApiAdminQueueDependencies, body: Record<string, unknown>) {
 	const ps = parseHonoApiParams(adminQueueJobsParamDef, body);
 
 	return await getQueueJobs(deps, ps.queue, ps.state, ps.search);
@@ -126,7 +142,7 @@ export async function handleHonoApiAdminQueueOutboxDeadLetters(
 ) {
 	const ps = parseHonoApiParams(adminQueueOutboxJobsParamDef, body);
 	const rows = await listQueueOutboxDeadLetters(deps, ps.limit ?? 50, ps.untilId);
-	return rows.map(row => ({
+	return rows.map((row) => ({
 		id: row.id,
 		queue: row.queue,
 		name: row.name,
@@ -156,7 +172,7 @@ export async function handleHonoApiAdminQueueRetryOutboxDeadLetter(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const ps = parseHonoApiParams(adminQueueOutboxJobParamDef, body);
-	if (!await retryQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision)) throw outboxStateChangedError();
+	if (!(await retryQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision))) throw outboxStateChangedError();
 }
 
 export async function handleHonoApiAdminQueueAbandonOutboxDeadLetter(
@@ -164,7 +180,7 @@ export async function handleHonoApiAdminQueueAbandonOutboxDeadLetter(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const ps = parseHonoApiParams(adminQueueOutboxJobParamDef, body);
-	if (!await abandonQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision)) throw outboxStateChangedError();
+	if (!(await abandonQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision))) throw outboxStateChangedError();
 }
 
 export async function handleHonoApiAdminQueueShowJob(

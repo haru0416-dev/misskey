@@ -8,10 +8,12 @@ import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { CommonProps } from '@/server/web/views/_.js';
 import { Layout } from '@/server/web/views/base.js';
 
-export function ClipPage(props: CommonProps<{
-	clip: Packed<'Clip'>;
-	profile: MiUserProfile;
-}>) {
+export function ClipPage(
+	props: CommonProps<{
+		clip: Packed<'Clip'>;
+		profile: MiUserProfile;
+	}>,
+) {
 	function ogBlock() {
 		return (
 			<>
@@ -53,7 +55,6 @@ export function ClipPage(props: CommonProps<{
 			desc={props.clip.description ?? ''}
 			metaSlot={metaBlock()}
 			ogSlot={ogBlock()}
-		>
-		</Layout>
+		></Layout>
 	);
 }

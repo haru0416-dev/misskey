@@ -22,7 +22,7 @@ export type HealthDependencies = {
 
 export async function checkHealth(deps: HealthDependencies): Promise<boolean> {
 	return await Promise.all([
-		new Promise<void>((resolve, reject) => readyRef.value ? resolve() : reject(new Error('server is not ready'))),
+		new Promise<void>((resolve, reject) => (readyRef.value ? resolve() : reject(new Error('server is not ready')))),
 		deps.redis.ping(),
 		deps.redisForPub.ping(),
 		deps.redisForSub.ping(),
@@ -30,7 +30,10 @@ export async function checkHealth(deps: HealthDependencies): Promise<boolean> {
 		deps.redisForReactions.ping(),
 		deps.db.execute(sql`SELECT 1`),
 		...(deps.meilisearch ? [deps.meilisearch.health()] : []),
-	]).then(() => true, () => false);
+	]).then(
+		() => true,
+		() => false,
+	);
 }
 
 export function createHealthApp(deps: HealthDependencies): Hono {
@@ -38,7 +41,7 @@ export function createHealthApp(deps: HealthDependencies): Hono {
 
 	app.get('/', async (c) => {
 		c.header('Cache-Control', 'no-store');
-		return c.body(null, await checkHealth(deps) ? 200 : 503);
+		return c.body(null, (await checkHealth(deps)) ? 200 : 503);
 	});
 
 	return app;

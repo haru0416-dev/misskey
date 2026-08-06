@@ -4,7 +4,11 @@
  */
 
 import { and, eq, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
-import { abuseReportNotificationRecipient, type AbuseReportNotificationRecipientInsert, type AbuseReportNotificationRecipientRow } from '@/db/schema/abuse-report-notification-recipient.js';
+import {
+	abuseReportNotificationRecipient,
+	type AbuseReportNotificationRecipientInsert,
+	type AbuseReportNotificationRecipientRow,
+} from '@/db/schema/abuse-report-notification-recipient.js';
 import { systemWebhook, deserializeSystemWebhook } from '@/db/schema/system-webhook.js';
 import { user as userTable } from '@/db/schema/user.js';
 import { userProfile } from '@/db/schema/user-profile.js';
@@ -14,15 +18,12 @@ import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 
-type AbuseReportNotificationRecipientUpdate = Partial<Pick<
-	AbuseReportNotificationRecipientInsert,
-	| 'isActive'
-	| 'updatedAt'
-	| 'name'
-	| 'method'
-	| 'userId'
-	| 'systemWebhookId'
->>;
+type AbuseReportNotificationRecipientUpdate = Partial<
+	Pick<
+		AbuseReportNotificationRecipientInsert,
+		'isActive' | 'updatedAt' | 'name' | 'method' | 'userId' | 'systemWebhookId'
+	>
+>;
 
 type RecipientWithRelations = MiAbuseReportNotificationRecipient & {
 	user: MiUser | null;
@@ -61,17 +62,15 @@ function recipientFilterCondition(options: {
 		const methodConditions: SQL[] = [];
 
 		if (options.method.includes('email')) {
-			methodConditions.push(and(
-				eq(abuseReportNotificationRecipient.method, 'email'),
-				isNotNull(abuseReportNotificationRecipient.userId),
-			)!);
+			methodConditions.push(
+				and(eq(abuseReportNotificationRecipient.method, 'email'), isNotNull(abuseReportNotificationRecipient.userId))!,
+			);
 		}
 
 		if (options.method.includes('webhook')) {
-			methodConditions.push(and(
-				eq(abuseReportNotificationRecipient.method, 'webhook'),
-				isNull(abuseReportNotificationRecipient.userId),
-			)!);
+			methodConditions.push(
+				and(eq(abuseReportNotificationRecipient.method, 'webhook'), isNull(abuseReportNotificationRecipient.userId))!,
+			);
 		}
 
 		if (methodConditions.length === 0) return sql`false`;
@@ -115,35 +114,24 @@ export async function listAbuseReportNotificationRecipientsFromDatabase(
 		joinSystemWebhook?: boolean;
 	} = {},
 ): Promise<MiAbuseReportNotificationRecipient[]> {
-	const rows = await db
-		.select()
-		.from(abuseReportNotificationRecipient)
-		.where(recipientFilterCondition(options));
+	const rows = await db.select().from(abuseReportNotificationRecipient).where(recipientFilterCondition(options));
 
 	if (rows.length === 0) return [];
 
-	const userIds = options.joinUser
-		? rows.map(row => row.userId).filter(x => x != null)
-		: [];
-	const users = userIds.length > 0
-		? await db.select().from(userTable).where(inArray(userTable.id, userIds))
-		: [];
-	const userProfiles = userIds.length > 0
-		? await db.select().from(userProfile).where(inArray(userProfile.userId, userIds))
-		: [];
-	const userMap = new Map(users.map(row => [row.id, row as MiUser]));
-	const userProfileMap = new Map(userProfiles.map(row => [row.userId, row as MiUserProfile]));
+	const userIds = options.joinUser ? rows.map((row) => row.userId).filter((x) => x != null) : [];
+	const users = userIds.length > 0 ? await db.select().from(userTable).where(inArray(userTable.id, userIds)) : [];
+	const userProfiles =
+		userIds.length > 0 ? await db.select().from(userProfile).where(inArray(userProfile.userId, userIds)) : [];
+	const userMap = new Map(users.map((row) => [row.id, row as MiUser]));
+	const userProfileMap = new Map(userProfiles.map((row) => [row.userId, row as MiUserProfile]));
 
-	const webhookIds = options.joinSystemWebhook
-		? rows.map(row => row.systemWebhookId).filter(x => x != null)
-		: [];
-	const webhooks = webhookIds.length > 0
-		? await db.select().from(systemWebhook).where(inArray(systemWebhook.id, webhookIds))
-		: [];
-	const webhookMap = new Map(webhooks.map(row => [row.id, deserializeSystemWebhook(row)]));
+	const webhookIds = options.joinSystemWebhook ? rows.map((row) => row.systemWebhookId).filter((x) => x != null) : [];
+	const webhooks =
+		webhookIds.length > 0 ? await db.select().from(systemWebhook).where(inArray(systemWebhook.id, webhookIds)) : [];
+	const webhookMap = new Map(webhooks.map((row) => [row.id, deserializeSystemWebhook(row)]));
 
 	return rows
-		.map(row => {
+		.map((row) => {
 			const joinedUser = row.userId == null ? null : (userMap.get(row.userId) ?? null);
 			const joinedUserProfile = row.userId == null ? null : (userProfileMap.get(row.userId) ?? null);
 			const joinedWebhook = row.systemWebhookId == null ? null : (webhookMap.get(row.systemWebhookId) ?? null);
@@ -157,7 +145,7 @@ export async function listAbuseReportNotificationRecipientsFromDatabase(
 				systemWebhook: joinedWebhook,
 			});
 		})
-		.filter(x => x != null);
+		.filter((x) => x != null);
 }
 
 export async function listUserAbuseReportNotificationRecipientsFromDatabase(
@@ -168,17 +156,14 @@ export async function listUserAbuseReportNotificationRecipientsFromDatabase(
 		.from(abuseReportNotificationRecipient)
 		.where(isNotNull(abuseReportNotificationRecipient.userId));
 
-	return rows.map(row => deserializeRecipient(row));
+	return rows.map((row) => deserializeRecipient(row));
 }
 
 export async function createAbuseReportNotificationRecipientInDatabase(
 	db: MiDrizzleDatabase,
 	data: AbuseReportNotificationRecipientInsert,
 ): Promise<MiAbuseReportNotificationRecipient> {
-	const [row] = await db
-		.insert(abuseReportNotificationRecipient)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(abuseReportNotificationRecipient).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create abuse report notification recipient');
@@ -208,7 +193,5 @@ export async function deleteAbuseReportNotificationRecipientsFromDatabase(
 	const normalizedIds = Array.isArray(ids) ? ids : [ids];
 	if (normalizedIds.length === 0) return;
 
-	await db
-		.delete(abuseReportNotificationRecipient)
-		.where(inArray(abuseReportNotificationRecipient.id, normalizedIds));
+	await db.delete(abuseReportNotificationRecipient).where(inArray(abuseReportNotificationRecipient.id, normalizedIds));
 }

@@ -17,8 +17,19 @@ type ClientOptions = {
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
-export const metaSensitiveMediaDetectionEnum = pgEnum('meta_sensitivemediadetection_enum', ['none', 'all', 'local', 'remote']);
-export const metaSensitiveMediaDetectionSensitivityEnum = pgEnum('meta_sensitivemediadetectionsensitivity_enum', ['medium', 'low', 'high', 'veryLow', 'veryHigh']);
+export const metaSensitiveMediaDetectionEnum = pgEnum('meta_sensitivemediadetection_enum', [
+	'none',
+	'all',
+	'local',
+	'remote',
+]);
+export const metaSensitiveMediaDetectionSensitivityEnum = pgEnum('meta_sensitivemediadetectionsensitivity_enum', [
+	'medium',
+	'low',
+	'high',
+	'veryLow',
+	'veryHigh',
+]);
 
 export const meta = pgTable('meta', {
 	id: varchar({ length: 32 }).primaryKey().notNull(),
@@ -128,51 +139,54 @@ export const meta = pgTable('meta', {
 	serverRules: varchar({ length: 280 }).array().default(emptyVarcharArray).notNull(),
 	manifestJsonOverride: varchar({ length: 8192 }).default('{}').notNull(),
 	bannedEmailDomains: varchar({ length: 1024 }).array().default(emptyVarcharArray).notNull(),
-	preservedUsernames: varchar({ length: 1024 }).array().default([
-		'admin',
-		'administrator',
-		'root',
-		'system',
-		'maintainer',
-		'host',
-		'mod',
-		'moderator',
-		'owner',
-		'superuser',
-		'staff',
-		'auth',
-		'i',
-		'me',
-		'everyone',
-		'all',
-		'mention',
-		'mentions',
-		'example',
-		'user',
-		'users',
-		'account',
-		'accounts',
-		'official',
-		'help',
-		'helps',
-		'support',
-		'supports',
-		'info',
-		'information',
-		'informations',
-		'announce',
-		'announces',
-		'announcement',
-		'announcements',
-		'notice',
-		'notification',
-		'notifications',
-		'dev',
-		'developer',
-		'developers',
-		'tech',
-		'misskey',
-	]).notNull(),
+	preservedUsernames: varchar({ length: 1024 })
+		.array()
+		.default([
+			'admin',
+			'administrator',
+			'root',
+			'system',
+			'maintainer',
+			'host',
+			'mod',
+			'moderator',
+			'owner',
+			'superuser',
+			'staff',
+			'auth',
+			'i',
+			'me',
+			'everyone',
+			'all',
+			'mention',
+			'mentions',
+			'example',
+			'user',
+			'users',
+			'account',
+			'accounts',
+			'official',
+			'help',
+			'helps',
+			'support',
+			'supports',
+			'info',
+			'information',
+			'informations',
+			'announce',
+			'announces',
+			'announcement',
+			'announcements',
+			'notice',
+			'notification',
+			'notifications',
+			'dev',
+			'developer',
+			'developers',
+			'tech',
+			'misskey',
+		])
+		.notNull(),
 	enableFanoutTimeline: boolean().default(true).notNull(),
 	enableFanoutTimelineDbFallback: boolean().default(true).notNull(),
 	perLocalUserUserTimelineCacheMax: integer().default(300).notNull(),
@@ -184,14 +198,20 @@ export const meta = pgTable('meta', {
 	urlPreviewEnabled: boolean().default(true).notNull(),
 	urlPreviewAllowRedirect: boolean().default(true).notNull(),
 	urlPreviewTimeout: integer().default(10000).notNull(),
-	urlPreviewMaximumContentLength: bigint({ mode: 'number' }).default(1024 * 1024 * 10).notNull(),
+	urlPreviewMaximumContentLength: bigint({ mode: 'number' })
+		.default(1024 * 1024 * 10)
+		.notNull(),
 	urlPreviewRequireContentLength: boolean().default(false).notNull(),
 	urlPreviewSummaryProxyUrl: varchar({ length: 1024 }),
 	urlPreviewUserAgent: varchar({ length: 1024 }),
 	urlPreviewSensitiveList: varchar({ length: 3072 }).array().default(emptyVarcharArray).notNull(),
-	federation: varchar({ length: 128, enum: ['all', 'specified', 'none'] }).default('none').notNull(),
+	federation: varchar({ length: 128, enum: ['all', 'specified', 'none'] })
+		.default('none')
+		.notNull(),
 	federationHosts: varchar({ length: 1024 }).array().default(emptyVarcharArray).notNull(),
-	ugcVisibilityForVisitor: varchar({ length: 128, enum: ['all', 'local', 'none'] }).default('local').notNull(),
+	ugcVisibilityForVisitor: varchar({ length: 128, enum: ['all', 'local', 'none'] })
+		.default('local')
+		.notNull(),
 	googleAnalyticsMeasurementId: varchar({ length: 64 }),
 	deliverSuspendedSoftware: jsonb().$type<SoftwareSuspension[]>().default([]).notNull(),
 	singleUserMode: boolean().default(false).notNull(),
@@ -202,7 +222,10 @@ export const meta = pgTable('meta', {
 	remoteNotesCleaningMaxProcessingDurationInMinutes: integer().default(60).notNull(),
 	remoteNotesCleaningExpiryDaysForEachNotes: integer().default(90).notNull(),
 	showRoleBadgesOfRemoteUsers: boolean().default(false).notNull(),
-	clientOptions: jsonb().$type<ClientOptions>().default({} as ClientOptions).notNull(),
+	clientOptions: jsonb()
+		.$type<ClientOptions>()
+		.default({} as ClientOptions)
+		.notNull(),
 });
 
 export type MetaRow = typeof meta.$inferSelect;

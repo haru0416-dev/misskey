@@ -4,7 +4,11 @@
  */
 
 import { z } from 'zod';
-import { createAccessTokenInDatabase, fetchAccessTokenBySessionFromDatabase, markAccessTokenFetchedInDatabase } from '@/core/AccessTokenStore.js';
+import {
+	createAccessTokenInDatabase,
+	fetchAccessTokenBySessionFromDatabase,
+	markAccessTokenFetchedInDatabase,
+} from '@/core/AccessTokenStore.js';
 import type { Config } from '@/config.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -71,13 +75,16 @@ export async function handleHonoApiMiauthGenToken(
 export async function handleHonoApiMiauthCheck(
 	deps: HonoApiMiauthDependencies,
 	session: string,
-): Promise<{
-	ok: false;
-} | {
-	ok: true;
-	token: string;
-	user: Record<string, unknown>;
-}> {
+): Promise<
+	| {
+			ok: false;
+	  }
+	| {
+			ok: true;
+			token: string;
+			user: Record<string, unknown>;
+	  }
+> {
 	const token = await fetchAccessTokenBySessionFromDatabase(deps.db, session);
 
 	if (token == null || token.session == null || token.fetched) {

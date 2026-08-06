@@ -15,7 +15,10 @@ import {
 	updateRetentionAggregationDataInDatabase,
 } from '@/core/RetentionAggregationStore.js';
 import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/MutingStore.js';
-import { deleteChannelMutingsByIdsFromDatabase, listExpiredChannelMutingsFromDatabase } from '@/core/ChannelMutingStore.js';
+import {
+	deleteChannelMutingsByIdsFromDatabase,
+	listExpiredChannelMutingsFromDatabase,
+} from '@/core/ChannelMutingStore.js';
 import { rebuildNoteReactionsInDatabase } from '@/core/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { deepClone } from '@/misc/clone.js';
@@ -77,10 +80,13 @@ export async function handleHonoQueueCleanCharts(deps: HonoQueueSystemDependenci
 }
 
 export async function handleHonoQueueClean(deps: HonoQueueSystemDependencies): Promise<void> {
-	await deleteUserIpsOlderThanFromDatabase(deps.db, new Date(Date.now() - (1000 * 60 * 60 * 24 * 90)));
+	await deleteUserIpsOlderThanFromDatabase(deps.db, new Date(Date.now() - 1000 * 60 * 60 * 24 * 90));
 
 	if (deps.config.maintenance.antennaInactiveAfterMs > 0) {
-		void deactivateAntennasNotUsedSinceFromDatabase(deps.db, new Date(Date.now() - deps.config.maintenance.antennaInactiveAfterMs));
+		void deactivateAntennasNotUsedSinceFromDatabase(
+			deps.db,
+			new Date(Date.now() - deps.config.maintenance.antennaInactiveAfterMs),
+		);
 	}
 
 	await deleteExpiredRoleAssignmentsFromDatabase(deps.db, new Date());
@@ -90,9 +96,12 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 	const now = new Date();
 	const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
 
-	const pastRecords = await listRetentionAggregationsCreatedAfter(deps.db, new Date(Date.now() - (1000 * 60 * 60 * 24 * 31)));
+	const pastRecords = await listRetentionAggregationsCreatedAfter(
+		deps.db,
+		new Date(Date.now() - 1000 * 60 * 60 * 24 * 31),
+	);
 
-	const targetUserIds = await listLocalUserIdsCreatedAfter(deps.db, genId(Date.now() - (1000 * 60 * 60 * 24)));
+	const targetUserIds = await listLocalUserIdsCreatedAfter(deps.db, genId(Date.now() - 1000 * 60 * 60 * 24));
 
 	try {
 		await createRetentionAggregationInDatabase(deps.db, {
@@ -111,11 +120,11 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 		throw err;
 	}
 
-	const activeUsersIds = await listActiveLocalUserIdsAfter(deps.db, new Date(Date.now() - (1000 * 60 * 60 * 24)));
+	const activeUsersIds = await listActiveLocalUserIdsAfter(deps.db, new Date(Date.now() - 1000 * 60 * 60 * 24));
 	const activeUserIdSet = new Set(activeUsersIds);
 
 	for (const record of pastRecords) {
-		const retention = record.userIds.filter(id => activeUserIdSet.has(id)).length;
+		const retention = record.userIds.filter((id) => activeUserIdSet.has(id)).length;
 
 		const data = deepClone(record.data) as Record<string, number>;
 		data[dateKey] = retention;
@@ -128,7 +137,10 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDependencies): Promise<void> {
 	const expiredMutings = await listExpiredMutingsFromDatabase(deps.db, new Date());
 	if (expiredMutings.length > 0) {
-		await deleteMutingsByIdsFromDatabase(deps.db, expiredMutings.map(m => m.id));
+		await deleteMutingsByIdsFromDatabase(
+			deps.db,
+			expiredMutings.map((m) => m.id),
+		);
 
 		for (const muting of expiredMutings) {
 			deps.publishInternalEvent?.('unmute', { muterId: muting.muterId, muteeId: muting.muteeId });
@@ -137,7 +149,10 @@ export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDe
 
 	const expiredChannelMutings = await listExpiredChannelMutingsFromDatabase(deps.db, new Date());
 	if (expiredChannelMutings.length > 0) {
-		await deleteChannelMutingsByIdsFromDatabase(deps.db, expiredChannelMutings.map(m => m.id));
+		await deleteChannelMutingsByIdsFromDatabase(
+			deps.db,
+			expiredChannelMutings.map((m) => m.id),
+		);
 
 		for (const muting of expiredChannelMutings) {
 			deps.publishInternalEvent?.('unmuteChannel', { userId: muting.userId, channelId: muting.channelId });
@@ -158,7 +173,8 @@ export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystem
 			'MATCH',
 			`${reactionRedisPrefix}:${REACTIONS_BUFFER_DELTA_PREFIX}:*`,
 			'COUNT',
-			'1000');
+			'1000',
+		);
 
 		cursor = result[0];
 		for (const key of result[1]) {
@@ -172,7 +188,8 @@ export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystem
 			'MATCH',
 			`${reactionRedisPrefix}:${REACTIONS_BUFFER_REBUILD_PREFIX}:*`,
 			'COUNT',
-			'1000');
+			'1000',
+		);
 
 		cursor = result[0];
 		for (const key of result[1]) {

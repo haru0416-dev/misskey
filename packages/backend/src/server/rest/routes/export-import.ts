@@ -6,12 +6,35 @@
 import type { Hono } from 'hono';
 import { assertCredential, assertProhibitMoved, assertSecureCredential, authenticateHonoApiToken } from '../auth.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleHonoApiExportCustomEmojis, handleHonoApiIExportAntennas, handleHonoApiIExportBlocking, handleHonoApiIExportClips, handleHonoApiIExportFavorites, handleHonoApiIExportFollowing, handleHonoApiIExportMute, handleHonoApiIExportNotes, handleHonoApiIExportUserLists } from '../export-jobs.js';
-import { handleHonoApiIImportAntennas, handleHonoApiIImportBlocking, handleHonoApiIImportFollowing, handleHonoApiIImportMuting, handleHonoApiIImportUserLists } from '../import-jobs.js';
+import {
+	handleHonoApiExportCustomEmojis,
+	handleHonoApiIExportAntennas,
+	handleHonoApiIExportBlocking,
+	handleHonoApiIExportClips,
+	handleHonoApiIExportFavorites,
+	handleHonoApiIExportFollowing,
+	handleHonoApiIExportMute,
+	handleHonoApiIExportNotes,
+	handleHonoApiIExportUserLists,
+} from '../export-jobs.js';
+import {
+	handleHonoApiIImportAntennas,
+	handleHonoApiIImportBlocking,
+	handleHonoApiIImportFollowing,
+	handleHonoApiIImportMuting,
+	handleHonoApiIImportUserLists,
+} from '../import-jobs.js';
 import { handleHonoApiFetchRss } from '../fetch-rss.js';
 import { assertHonoApiRateLimit, assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { hasHonoApiRolePolicyOrIsRoot } from '../role-policy.js';
-import { jsonResponse, emptyResponse, getRequestIp, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	getRequestIp,
+	jsonBody,
+	tokenFromRequest,
+	runApiEndpoint,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -21,10 +44,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(deps, 'export-custom-emojis', {
-				duration: 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'export-custom-emojis',
+				{
+					duration: 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			handleHonoApiExportCustomEmojis(deps, auth.user);
 			return emptyResponse(c);
@@ -37,10 +65,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(deps, 'i/export-notes', {
-				duration: 24 * 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/export-notes',
+				{
+					duration: 24 * 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			handleHonoApiIExportNotes(deps, auth.user);
 			return emptyResponse(c);
@@ -53,10 +86,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(deps, 'i/export-clips', {
-				duration: 24 * 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/export-clips',
+				{
+					duration: 24 * 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			handleHonoApiIExportClips(deps, auth.user);
 			return emptyResponse(c);
@@ -69,10 +107,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(deps, 'i/export-favorites', {
-				duration: 24 * 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/export-favorites',
+				{
+					duration: 24 * 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			handleHonoApiIExportFavorites(deps, auth.user);
 			return emptyResponse(c);
@@ -85,10 +128,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(deps, 'i/export-following', {
-				duration: 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/export-following',
+				{
+					duration: 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			handleHonoApiIExportFollowing(deps, auth.user, body);
 			return emptyResponse(c);
@@ -101,10 +149,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(deps, 'i/export-mute', {
-				duration: 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/export-mute',
+				{
+					duration: 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			handleHonoApiIExportMute(deps, auth.user);
 			return emptyResponse(c);
@@ -117,10 +170,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(deps, 'i/export-blocking', {
-				duration: 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/export-blocking',
+				{
+					duration: 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			handleHonoApiIExportBlocking(deps, auth.user);
 			return emptyResponse(c);
@@ -133,10 +191,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(deps, 'i/export-user-lists', {
-				duration: 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/export-user-lists',
+				{
+					duration: 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			handleHonoApiIExportUserLists(deps, auth.user);
 			return emptyResponse(c);
@@ -153,10 +216,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportBlocking'))) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimitForUser(deps, 'i/import-blocking', {
-				duration: 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/import-blocking',
+				{
+					duration: 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiIImportBlocking(deps, auth.user, body);
 			return emptyResponse(c);
@@ -173,10 +241,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportFollowing'))) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimitForUser(deps, 'i/import-following', {
-				duration: 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/import-following',
+				{
+					duration: 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiIImportFollowing(deps, auth.user, body);
 			return emptyResponse(c);
@@ -193,10 +266,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportMuting'))) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimitForUser(deps, 'i/import-muting', {
-				duration: 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/import-muting',
+				{
+					duration: 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiIImportMuting(deps, auth.user, body);
 			return emptyResponse(c);
@@ -213,10 +291,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportUserLists'))) {
 				throw rolePermissionDeniedError();
 			}
-			await assertHonoApiRateLimitForUser(deps, 'i/import-user-lists', {
-				duration: 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/import-user-lists',
+				{
+					duration: 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiIImportUserLists(deps, auth.user, body);
 			return emptyResponse(c);
@@ -235,15 +318,27 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			}
 			// 連打自体はここで抑え、時間あたりの実行枠はファイル検証を通ってから消費する
 			// (壊れたファイル1回で1時間ロックアウトされないように)。
-			await assertHonoApiRateLimitForUser(deps, 'i/import-antennas', {
-				key: 'i/import-antennas:attempt',
-				minInterval: 5 * 1000,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/import-antennas',
+				{
+					key: 'i/import-antennas:attempt',
+					minInterval: 5 * 1000,
+				},
+				auth.user,
+			);
 
-			await handleHonoApiIImportAntennas(deps, auth.user, body, () => assertHonoApiRateLimitForUser(deps, 'i/import-antennas', {
-				duration: 60 * 60 * 1000,
-				max: 1,
-			}, auth.user));
+			await handleHonoApiIImportAntennas(deps, auth.user, body, () =>
+				assertHonoApiRateLimitForUser(
+					deps,
+					'i/import-antennas',
+					{
+						duration: 60 * 60 * 1000,
+						max: 1,
+					},
+					auth.user,
+				),
+			);
 			return emptyResponse(c);
 		});
 	});
@@ -254,10 +349,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(deps, 'i/export-antennas', {
-				duration: 60 * 60 * 1000,
-				max: 1,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/export-antennas',
+				{
+					duration: 60 * 60 * 1000,
+					max: 1,
+				},
+				auth.user,
+			);
 
 			handleHonoApiIExportAntennas(deps, auth.user);
 			return emptyResponse(c);

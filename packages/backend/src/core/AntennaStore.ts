@@ -19,26 +19,14 @@ function deserializeAntenna(row: AntennaRow): MiAntenna {
 	} as MiAntenna;
 }
 
-export async function countAntennasByUserIdFromDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(antenna)
-		.where(eq(antenna.userId, userId));
+export async function countAntennasByUserIdFromDatabase(db: MiDrizzleDatabase, userId: MiUser['id']): Promise<number> {
+	const [row] = await db.select({ count: count() }).from(antenna).where(eq(antenna.userId, userId));
 
 	return row?.count ?? 0;
 }
 
-export async function createAntennaInDatabase(
-	db: MiDrizzleDatabase,
-	data: AntennaInsert,
-): Promise<MiAntenna> {
-	const [row] = await db
-		.insert(antenna)
-		.values(data)
-		.returning();
+export async function createAntennaInDatabase(db: MiDrizzleDatabase, data: AntennaInsert): Promise<MiAntenna> {
+	const [row] = await db.insert(antenna).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create antenna');
@@ -49,17 +37,19 @@ export async function createAntennaInDatabase(
 
 export type AntennaCreateValues = Omit<AntennaInsert, 'userId'>;
 
-export type CreateAntennasWithinLimitResult = {
-	status: 'created';
-	antennas: MiAntenna[];
-	previousCount: number;
-	limit: number;
-} | {
-	status: 'limitExceeded';
-	currentCount: number;
-	requestedCount: number;
-	limit: number;
-};
+export type CreateAntennasWithinLimitResult =
+	| {
+			status: 'created';
+			antennas: MiAntenna[];
+			previousCount: number;
+			limit: number;
+	  }
+	| {
+			status: 'limitExceeded';
+			currentCount: number;
+			requestedCount: number;
+			limit: number;
+	  };
 
 export async function createAntennasWithinLimitInDatabase(
 	db: MiDrizzleDatabase,
@@ -67,7 +57,7 @@ export async function createAntennasWithinLimitInDatabase(
 	values: AntennaCreateValues[],
 	resolveLimit: (tx: MiDrizzleDatabase) => Promise<number>,
 ): Promise<CreateAntennasWithinLimitResult> {
-	return await db.transaction(async tx => {
+	return await db.transaction(async (tx) => {
 		await acquireAdvisoryTransactionLockInDatabase(tx, 'antenna-limit', userId);
 
 		const limit = await resolveLimit(tx);
@@ -87,7 +77,7 @@ export async function createAntennasWithinLimitInDatabase(
 
 		const rows = await tx
 			.insert(antenna)
-			.values(values.map(value => ({ ...value, userId })))
+			.values(values.map((value) => ({ ...value, userId })))
 			.returning();
 		if (rows.length !== values.length) throw new Error('Failed to create all antennas');
 
@@ -105,30 +95,18 @@ export async function updateAntennaInDatabase(
 	id: MiAntenna['id'],
 	values: Partial<AntennaInsert>,
 ): Promise<void> {
-	await db
-		.update(antenna)
-		.set(values)
-		.where(eq(antenna.id, id));
+	await db.update(antenna).set(values).where(eq(antenna.id, id));
 }
 
-export async function deleteAntennaFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiAntenna['id'],
-): Promise<void> {
-	await db
-		.delete(antenna)
-		.where(eq(antenna.id, id));
+export async function deleteAntennaFromDatabase(db: MiDrizzleDatabase, id: MiAntenna['id']): Promise<void> {
+	await db.delete(antenna).where(eq(antenna.id, id));
 }
 
 export async function fetchAntennaByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiAntenna['id'],
 ): Promise<MiAntenna | null> {
-	const [row] = await db
-		.select()
-		.from(antenna)
-		.where(eq(antenna.id, id))
-		.limit(1);
+	const [row] = await db.select().from(antenna).where(eq(antenna.id, id)).limit(1);
 
 	return row ? deserializeAntenna(row) : null;
 }
@@ -154,10 +132,7 @@ export async function fetchAntennaByIdAndUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(antenna)
-		.where(and(
-			eq(antenna.id, id),
-			eq(antenna.userId, userId),
-		))
+		.where(and(eq(antenna.id, id), eq(antenna.userId, userId)))
 		.limit(1);
 
 	return row ? deserializeAntenna(row) : null;
@@ -171,10 +146,7 @@ export async function antennaExistsForUserFromDatabase(
 	const [row] = await db
 		.select({ id: antenna.id })
 		.from(antenna)
-		.where(and(
-			eq(antenna.id, id),
-			eq(antenna.userId, userId),
-		))
+		.where(and(eq(antenna.id, id), eq(antenna.userId, userId)))
 		.limit(1);
 
 	return row != null;
@@ -184,10 +156,7 @@ export async function listAntennasByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiAntenna[]> {
-	const rows = await db
-		.select()
-		.from(antenna)
-		.where(eq(antenna.userId, userId));
+	const rows = await db.select().from(antenna).where(eq(antenna.userId, userId));
 
 	return rows.map(deserializeAntenna);
 }
@@ -196,13 +165,8 @@ export async function listAntennasByUserIdFromDatabase(
  * AntennaService のインメモリキャッシュ向け。isActive な Antenna を全件取得する。
  * ノート配信時のマッチ判定で使われるホットパスなので、フィルタ条件・全件取得の挙動を変えないこと。
  */
-export async function listActiveAntennasFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiAntenna[]> {
-	const rows = await db
-		.select()
-		.from(antenna)
-		.where(eq(antenna.isActive, true));
+export async function listActiveAntennasFromDatabase(db: MiDrizzleDatabase): Promise<MiAntenna[]> {
+	const rows = await db.select().from(antenna).where(eq(antenna.isActive, true));
 
 	return rows.map(deserializeAntenna);
 }
@@ -213,10 +177,7 @@ export async function listAntennasByIdsFromDatabase(
 ): Promise<MiAntenna[]> {
 	if (ids.length === 0) return [];
 
-	const rows = await db
-		.select()
-		.from(antenna)
-		.where(inArray(antenna.id, ids));
+	const rows = await db.select().from(antenna).where(inArray(antenna.id, ids));
 
 	return rows.map(deserializeAntenna);
 }
@@ -243,12 +204,6 @@ export async function appendUserToAntennasInDatabase(
 /**
  * CleanProcessorService 向け。しばらく使われていない Antenna を非アクティブ化する。
  */
-export async function deactivateAntennasNotUsedSinceFromDatabase(
-	db: MiDrizzleDatabase,
-	cutoff: Date,
-): Promise<void> {
-	await db
-		.update(antenna)
-		.set({ isActive: false })
-		.where(lt(antenna.lastUsedAt, cutoff));
+export async function deactivateAntennasNotUsedSinceFromDatabase(db: MiDrizzleDatabase, cutoff: Date): Promise<void> {
+	await db.update(antenna).set({ isActive: false }).where(lt(antenna.lastUsedAt, cutoff));
 }

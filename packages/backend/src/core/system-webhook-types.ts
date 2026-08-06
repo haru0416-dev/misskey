@@ -34,9 +34,12 @@ export type InactiveModeratorsWarningPayload = {
 	remainingTime: ModeratorInactivityRemainingTime;
 };
 
-export type SystemWebhookPayload<T extends SystemWebhookEventType> =
-	T extends 'abuseReport' | 'abuseReportResolved' ? AbuseReportPayload :
-	T extends 'userCreated' ? Packed<'UserLite'> :
-	T extends 'inactiveModeratorsWarning' ? InactiveModeratorsWarningPayload :
-	T extends 'inactiveModeratorsInvitationOnlyChanged' ? Record<string, never> :
-		never;
+export type SystemWebhookPayload<T extends SystemWebhookEventType> = T extends 'abuseReport' | 'abuseReportResolved'
+	? AbuseReportPayload
+	: T extends 'userCreated'
+		? Packed<'UserLite'>
+		: T extends 'inactiveModeratorsWarning'
+			? InactiveModeratorsWarningPayload
+			: T extends 'inactiveModeratorsInvitationOnlyChanged'
+				? Record<string, never>
+				: never;

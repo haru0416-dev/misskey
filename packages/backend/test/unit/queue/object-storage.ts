@@ -52,16 +52,25 @@ describe('hono-queue-object-storage', () => {
 			},
 			internalStorageService: { del: vi.fn() },
 			chartWriters: {
-				driveChart: { update: async () => {} } as unknown as HonoQueueObjectStorageDependencies['chartWriters']['driveChart'],
-				perUserDriveChart: { update: async () => {} } as unknown as HonoQueueObjectStorageDependencies['chartWriters']['perUserDriveChart'],
-				instanceChart: { updateDrive: async () => {} } as unknown as HonoQueueObjectStorageDependencies['chartWriters']['instanceChart'],
+				driveChart: {
+					update: async () => {},
+				} as unknown as HonoQueueObjectStorageDependencies['chartWriters']['driveChart'],
+				perUserDriveChart: {
+					update: async () => {},
+				} as unknown as HonoQueueObjectStorageDependencies['chartWriters']['perUserDriveChart'],
+				instanceChart: {
+					updateDrive: async () => {},
+				} as unknown as HonoQueueObjectStorageDependencies['chartWriters']['instanceChart'],
 			},
 		};
 	});
 
 	test('handleHonoQueueDeleteFile: object storageからキーを削除する', async () => {
 		deleteMock.mockClear();
-		const result = await handleHonoQueueDeleteFile(deps, fakeJob({ key: 'some-key' }) as unknown as Bull.Job<ObjectStorageFileJobData>);
+		const result = await handleHonoQueueDeleteFile(
+			deps,
+			fakeJob({ key: 'some-key' }) as unknown as Bull.Job<ObjectStorageFileJobData>,
+		);
 		expect(result).toBe('Success');
 		expect(deleteMock).toHaveBeenCalledOnce();
 	});
@@ -69,7 +78,9 @@ describe('hono-queue-object-storage', () => {
 	test('handleHonoQueueDeleteFile: NoSuchKeyエラーは握りつぶす', async () => {
 		deleteMock.mockClear();
 		deleteMock.mockRejectedValueOnce(Object.assign(new Error('no such key'), { name: 'NoSuchKey' }));
-		await expect(handleHonoQueueDeleteFile(deps, fakeJob({ key: 'missing-key' }) as unknown as Bull.Job<ObjectStorageFileJobData>)).resolves.toBe('Success');
+		await expect(
+			handleHonoQueueDeleteFile(deps, fakeJob({ key: 'missing-key' }) as unknown as Bull.Job<ObjectStorageFileJobData>),
+		).resolves.toBe('Success');
 	});
 
 	test('deleteFileSyncForHonoApi: storedInternalなファイルはinternalStorageServiceで削除しレコードも消える', async () => {

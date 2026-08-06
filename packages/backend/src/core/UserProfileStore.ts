@@ -26,10 +26,7 @@ export async function createUserProfileInDatabase(
 	db: MiDrizzleDatabase,
 	data: UserProfileInsert,
 ): Promise<MiUserProfile> {
-	const [row] = await db
-		.insert(userProfile)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(userProfile).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create user profile');
@@ -42,12 +39,14 @@ export async function fetchUserProfileByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiUserProfile | null> {
-	const statement = preparedQueryFor(db, 'userProfile:byUserId', () => db
-		.select()
-		.from(userProfile)
-		.where(eq(userProfile.userId, sql.placeholder('userId')))
-		.limit(1)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'userProfile:byUserId', () =>
+		db
+			.select()
+			.from(userProfile)
+			.where(eq(userProfile.userId, sql.placeholder('userId')))
+			.limit(1)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const [row] = await statement.execute({ userId });
 
 	return row ? deserializeUserProfile(row) : null;
@@ -70,11 +69,7 @@ export async function fetchUserProfileByEmailFromDatabase(
 	db: MiDrizzleDatabase,
 	email: NonNullable<MiUserProfile['email']>,
 ): Promise<MiUserProfile | null> {
-	const [row] = await db
-		.select()
-		.from(userProfile)
-		.where(eq(userProfile.email, email))
-		.limit(1);
+	const [row] = await db.select().from(userProfile).where(eq(userProfile.email, email)).limit(1);
 
 	return row ? deserializeUserProfile(row) : null;
 }
@@ -86,10 +81,7 @@ export async function countVerifiedUserProfilesByEmailFromDatabase(
 	const [row] = await db
 		.select({ value: count() })
 		.from(userProfile)
-		.where(and(
-			eq(userProfile.emailVerified, true),
-			eq(userProfile.email, email),
-		));
+		.where(and(eq(userProfile.emailVerified, true), eq(userProfile.email, email)));
 
 	return row?.value ?? 0;
 }
@@ -98,11 +90,7 @@ export async function fetchUserProfileByEmailVerifyCodeFromDatabase(
 	db: MiDrizzleDatabase,
 	emailVerifyCode: NonNullable<MiUserProfile['emailVerifyCode']>,
 ): Promise<MiUserProfile | null> {
-	const [row] = await db
-		.select()
-		.from(userProfile)
-		.where(eq(userProfile.emailVerifyCode, emailVerifyCode))
-		.limit(1);
+	const [row] = await db.select().from(userProfile).where(eq(userProfile.emailVerifyCode, emailVerifyCode)).limit(1);
 
 	return row ? deserializeUserProfile(row) : null;
 }
@@ -113,14 +101,16 @@ export async function listUserProfilesByUserIdsFromDatabase(
 ): Promise<MiUserProfile[]> {
 	if (userIds.length === 0) return [];
 
-	const statement = preparedQueryFor(db, 'userProfile:byUserIds', () => db
-		.select()
-		.from(userProfile)
-		.where(sql`${userProfile.userId} = ANY(${sql.placeholder('userIds')})`)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'userProfile:byUserIds', () =>
+		db
+			.select()
+			.from(userProfile)
+			.where(sql`${userProfile.userId} = ANY(${sql.placeholder('userIds')})`)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ userIds });
 
-	return rows.map(row => deserializeUserProfile(row));
+	return rows.map((row) => deserializeUserProfile(row));
 }
 
 export async function updateUserProfileInDatabase(
@@ -128,10 +118,7 @@ export async function updateUserProfileInDatabase(
 	userId: MiUser['id'],
 	data: UserProfileUpdate,
 ): Promise<void> {
-	await db
-		.update(userProfile)
-		.set(data)
-		.where(eq(userProfile.userId, userId));
+	await db.update(userProfile).set(data).where(eq(userProfile.userId, userId));
 }
 
 export async function appendVerifiedLinkToUserProfileInDatabase(
@@ -147,9 +134,7 @@ export async function appendVerifiedLinkToUserProfileInDatabase(
 		.where(eq(userProfile.userId, userId));
 }
 
-type BirthdayDateCondition =
-	| { type: 'single'; value: number }
-	| { type: 'range'; begin: number; end: number };
+type BirthdayDateCondition = { type: 'single'; value: number } | { type: 'range'; begin: number; end: number };
 
 function birthdayDateConditionSql(condition: BirthdayDateCondition): SQL {
 	if (condition.type === 'single') {
@@ -187,20 +172,15 @@ export async function listFollowingUsersByBirthdayDateFromDatabase(
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => ({
+	return result.rows.map((row) => ({
 		userId: row.user_id,
 		birthdayDate: Number(row.birthday_date),
 	}));
 }
 
-export async function unsetUserMfaInDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-): Promise<void> {
-	await db.transaction(async tx => {
-		await tx
-			.delete(userSecurityKey)
-			.where(eq(userSecurityKey.userId, userId));
+export async function unsetUserMfaInDatabase(db: MiDrizzleDatabase, userId: MiUser['id']): Promise<void> {
+	await db.transaction(async (tx) => {
+		await tx.delete(userSecurityKey).where(eq(userSecurityKey.userId, userId));
 
 		await tx
 			.update(userProfile)

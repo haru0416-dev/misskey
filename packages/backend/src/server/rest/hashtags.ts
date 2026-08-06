@@ -11,14 +11,24 @@ import {
 	searchHashtagNamesFromDatabase,
 	type HashtagSort,
 } from '@/core/HashtagStore.js';
-import { listUsersByTagFromDatabase, type UserListOrigin, type UserListSort, type UserListState } from '@/core/UserStore.js';
+import {
+	listUsersByTagFromDatabase,
+	type UserListOrigin,
+	type UserListSort,
+	type UserListState,
+} from '@/core/UserStore.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiHashtag } from '@/models/Hashtag.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
-import { packUserDetailedManyForHonoApi, type MeDetailedHonoApiResponse, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
+import {
+	packUserDetailedManyForHonoApi,
+	type MeDetailedHonoApiResponse,
+	type UserDetailedNotMeHonoApiResponse,
+	type UserPackingDependencies,
+} from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export const HASHTAG_RANKING_WINDOW = 1000 * 60 * 60;
@@ -35,7 +45,20 @@ export const hashtagsListParamDef = z.object({
 	attachedToUserOnly: z.boolean().optional().default(false),
 	attachedToLocalUserOnly: z.boolean().optional().default(false),
 	attachedToRemoteUserOnly: z.boolean().optional().default(false),
-	sort: z.enum(['+mentionedUsers', '-mentionedUsers', '+mentionedLocalUsers', '-mentionedLocalUsers', '+mentionedRemoteUsers', '-mentionedRemoteUsers', '+attachedUsers', '-attachedUsers', '+attachedLocalUsers', '-attachedLocalUsers', '+attachedRemoteUsers', '-attachedRemoteUsers']),
+	sort: z.enum([
+		'+mentionedUsers',
+		'-mentionedUsers',
+		'+mentionedLocalUsers',
+		'-mentionedLocalUsers',
+		'+mentionedRemoteUsers',
+		'-mentionedRemoteUsers',
+		'+attachedUsers',
+		'-attachedUsers',
+		'+attachedLocalUsers',
+		'-attachedLocalUsers',
+		'+attachedRemoteUsers',
+		'-attachedRemoteUsers',
+	]),
 });
 
 export const hashtagsSearchParamDef = z.object({
@@ -47,7 +70,6 @@ export const hashtagsSearchParamDef = z.object({
 export const hashtagsShowParamDef = z.object({
 	tag: z.string(),
 });
-
 
 export function getCurrentFeaturedWindow(windowRange: number): number {
 	const passed = new Date().getTime() - featuredEpoc;
@@ -71,7 +93,9 @@ async function getFeaturedRanking(
 	const redisPipeline = redis.pipeline();
 	redisPipeline.zrange(`${name}:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
 	redisPipeline.zrange(`${name}:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
-	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline.exec().then(result => result ? result.map(r => (r[1] ?? []) as string[]) : []);
+	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline
+		.exec()
+		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : []));
 
 	const ranking = new Map<string, number>();
 	for (let i = 0; i < currentRankingResult.length; i += 2) {
@@ -112,7 +136,7 @@ async function getHashtagCharts(
 		for (const hashtag of hashtags) {
 			redisPipeline.pfcount(`hashtagUsers:${hashtag}:${window}`);
 		}
-		now.setMinutes(now.getMinutes() - (i * 10), 0, 0);
+		now.setMinutes(now.getMinutes() - i * 10, 0, 0);
 	}
 
 	const result = await redisPipeline.exec();
@@ -126,8 +150,9 @@ async function getHashtagCharts(
 	for (let i = 0; i < range; i++) {
 		for (let j = 0; j < hashtags.length; j++) {
 			const hashtag = hashtags[j];
-			const entry = result[(i * hashtags.length) + j];
-			if (hashtag == null || entry == null || typeof entry[1] !== 'number') throw new Error('Hashtag chart pipeline returned an incomplete result');
+			const entry = result[i * hashtags.length + j];
+			if (hashtag == null || entry == null || typeof entry[1] !== 'number')
+				throw new Error('Hashtag chart pipeline returned an incomplete result');
 			const chart = charts[hashtag];
 			if (chart == null) throw new Error(`Hashtag chart is missing for ${hashtag}`);
 			chart.push(entry[1]);
@@ -161,16 +186,18 @@ function packHonoApiHashtag(src: MiHashtag): Packed<'Hashtag'> {
 export async function handleHonoApiHashtagsTrend(
 	deps: HonoApiHashtagDependencies,
 	body: Record<string, unknown>,
-): Promise<{
-	tag: string;
-	chart: number[];
-	usersCount: number;
-}[]> {
+): Promise<
+	{
+		tag: string;
+		chart: number[];
+		usersCount: number;
+	}[]
+> {
 	parseHonoApiParams(hashtagsTrendParamDef, body);
 	const ranking = await getFeaturedRanking(deps.redis, 'featuredHashtagsRanking', HASHTAG_RANKING_WINDOW, 10);
 	const charts = ranking.length === 0 ? {} : await getHashtagCharts(deps.redis, ranking, 20);
 
-	return ranking.map(tag => {
+	return ranking.map((tag) => {
 		const chart = charts[tag];
 		if (chart == null) throw new Error(`Hashtag chart is missing for ${tag}`);
 

@@ -5,7 +5,10 @@
 
 import push from 'web-push';
 import { getNoteSummary } from '@/misc/get-note-summary.js';
-import { deleteSwSubscriptionForPushEndpointFromDatabase, listSwSubscriptionsByUserIdFromDatabase } from '@/core/SwSubscriptionStore.js';
+import {
+	deleteSwSubscriptionForPushEndpointFromDatabase,
+	listSwSubscriptionsByUserIdFromDatabase,
+} from '@/core/SwSubscriptionStore.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -14,13 +17,13 @@ import type { MiUser } from '@/models/User.js';
 
 // packages/sw/src/types.ts の pushNotificationDataMap と対応 (原典 PushNotificationService と同じ)
 export type PushNotificationsTypes = {
-	'notification': Packed<'Notification'> | Record<string, unknown>;
-	'unreadAntennaNote': {
+	notification: Packed<'Notification'> | Record<string, unknown>;
+	unreadAntennaNote: {
 		antenna: { id: string; name: string };
 		note: Packed<'Note'>;
 	};
-	'readAllNotifications': undefined;
-	'newChatMessage': Packed<'ChatMessage'>;
+	readAllNotifications: undefined;
+	newChatMessage: Packed<'ChatMessage'>;
 };
 
 export type HonoApiPushNotificationDependencies = {
@@ -29,23 +32,32 @@ export type HonoApiPushNotificationDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-function truncateNotificationBody<T extends keyof PushNotificationsTypes>(type: T, body: PushNotificationsTypes[T]): PushNotificationsTypes[T] {
+function truncateNotificationBody<T extends keyof PushNotificationsTypes>(
+	type: T,
+	body: PushNotificationsTypes[T],
+): PushNotificationsTypes[T] {
 	if (typeof body !== 'object' || body == null) return body;
 
 	return {
 		...body,
-		...(('note' in body && body.note) ? {
-			note: {
-				...(body.note as Packed<'Note'>),
-				// textをgetNoteSummaryしたものに置き換える
-				text: getNoteSummary(('type' in body && body.type === 'renote') ? (body.note as Packed<'Note'>).renote as Packed<'Note'> : body.note as Packed<'Note'>),
+		...('note' in body && body.note
+			? {
+					note: {
+						...(body.note as Packed<'Note'>),
+						// textをgetNoteSummaryしたものに置き換える
+						text: getNoteSummary(
+							'type' in body && body.type === 'renote'
+								? ((body.note as Packed<'Note'>).renote as Packed<'Note'>)
+								: (body.note as Packed<'Note'>),
+						),
 
-				cw: undefined,
-				reply: undefined,
-				renote: undefined,
-				user: type === 'notification' ? undefined : (body.note as Packed<'Note'>).user,
-			},
-		} : {}),
+						cw: undefined,
+						reply: undefined,
+						renote: undefined,
+						user: type === 'notification' ? undefined : (body.note as Packed<'Note'>).user,
+					},
+				}
+			: {}),
 	};
 }
 
@@ -77,22 +89,28 @@ export async function pushSwNotificationForHonoApi<T extends keyof PushNotificat
 			},
 		};
 
-		push.sendNotification(pushSubscription, JSON.stringify({
-			type,
-			body: (type === 'notification' || type === 'unreadAntennaNote') ? truncateNotificationBody(type, body) : body,
-			userId,
-			dateTime: Date.now(),
-		}), {
-			proxy: deps.config.outboundNetwork.proxy.url,
-		}).catch((err: push.WebPushError) => {
-			if (err.statusCode === 410) {
-				void deleteSwSubscriptionForPushEndpointFromDatabase(deps.db, {
+		push
+			.sendNotification(
+				pushSubscription,
+				JSON.stringify({
+					type,
+					body: type === 'notification' || type === 'unreadAntennaNote' ? truncateNotificationBody(type, body) : body,
 					userId,
-					endpoint: subscription.endpoint,
-					auth: subscription.auth,
-					publickey: subscription.publickey,
-				});
-			}
-		});
+					dateTime: Date.now(),
+				}),
+				{
+					proxy: deps.config.outboundNetwork.proxy.url,
+				},
+			)
+			.catch((err: push.WebPushError) => {
+				if (err.statusCode === 410) {
+					void deleteSwSubscriptionForPushEndpointFromDatabase(deps.db, {
+						userId,
+						endpoint: subscription.endpoint,
+						auth: subscription.auth,
+						publickey: subscription.publickey,
+					});
+				}
+			});
 	}
 }

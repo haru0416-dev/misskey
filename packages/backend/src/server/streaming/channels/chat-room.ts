@@ -5,7 +5,11 @@
 
 import { fetchChatRoomByIdFromDatabase } from '@/core/ChatRoomStore.js';
 import type { JsonValue } from '@/misc/json-value.js';
-import { hasPermissionToViewRoomTimelineForHonoApi, readRoomChatMessageForHonoApi, type HonoApiChatDependencies } from '../../rest/chat.js';
+import {
+	hasPermissionToViewRoomTimelineForHonoApi,
+	readRoomChatMessageForHonoApi,
+	type HonoApiChatDependencies,
+} from '../../rest/chat.js';
 import type { HonoStreamChannelDefinition } from '../channel.js';
 
 export const honoStreamChannelChatRoom: HonoStreamChannelDefinition<HonoApiChatDependencies> = {

@@ -70,11 +70,7 @@ export const adminAvatarDecorationsUpdateParamDef = z.object({
 	category: z.string().nullable().optional(),
 });
 
-
-function packAdminAvatarDecorationForHonoApi(
-	config: Config,
-	decoration: MiAvatarDecoration,
-): AdminAvatarDecoration {
+function packAdminAvatarDecorationForHonoApi(config: Config, decoration: MiAvatarDecoration): AdminAvatarDecoration {
 	return {
 		id: decoration.id,
 		createdAt: parseId(decoration.id).date.toISOString(),
@@ -93,18 +89,22 @@ export async function handleHonoApiAdminAvatarDecorationsCreate(
 	body: Record<string, unknown>,
 ): Promise<AdminAvatarDecoration> {
 	const params = parseHonoApiParams(adminAvatarDecorationsCreateParamDef, body);
-	const created = await createAvatarDecorationWithSideEffects({
-		db: deps.db,
-		genId,
-		publishInternalEvent: deps.publishInternalEvent,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, {
-		name: params.name,
-		description: params.description,
-		url: params.url,
-		roleIdsThatCanBeUsedThisDecoration: params.roleIdsThatCanBeUsedThisDecoration,
-		category: params.category,
-	} as AvatarDecorationCreateOptions, me);
+	const created = await createAvatarDecorationWithSideEffects(
+		{
+			db: deps.db,
+			genId,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		{
+			name: params.name,
+			description: params.description,
+			url: params.url,
+			roleIdsThatCanBeUsedThisDecoration: params.roleIdsThatCanBeUsedThisDecoration,
+			category: params.category,
+		} as AvatarDecorationCreateOptions,
+		me,
+	);
 
 	return packAdminAvatarDecorationForHonoApi(deps.config, created);
 }
@@ -116,11 +116,15 @@ export async function handleHonoApiAdminAvatarDecorationsDelete(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminAvatarDecorationsDeleteParamDef, body);
 
-	await deleteAvatarDecorationWithSideEffects({
-		db: deps.db,
-		publishInternalEvent: deps.publishInternalEvent,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, params.id, me);
+	await deleteAvatarDecorationWithSideEffects(
+		{
+			db: deps.db,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		params.id,
+		me,
+	);
 }
 
 export async function handleHonoApiAdminAvatarDecorationsList(
@@ -130,7 +134,9 @@ export async function handleHonoApiAdminAvatarDecorationsList(
 	parseHonoApiParams(adminAvatarDecorationsListParamDef, body);
 	const decorations = await listAvatarDecorationsFromDatabase(deps.db);
 
-	return decorations.map(decoration => packAdminAvatarDecorationForHonoApi(deps.config, decoration as MiAvatarDecoration));
+	return decorations.map((decoration) =>
+		packAdminAvatarDecorationForHonoApi(deps.config, decoration as MiAvatarDecoration),
+	);
 }
 
 export async function handleHonoApiAdminAvatarDecorationsUpdate(
@@ -140,15 +146,20 @@ export async function handleHonoApiAdminAvatarDecorationsUpdate(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminAvatarDecorationsUpdateParamDef, body);
 
-	await updateAvatarDecorationWithSideEffects({
-		db: deps.db,
-		publishInternalEvent: deps.publishInternalEvent,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, params.id, {
-		name: params.name,
-		description: params.description,
-		url: params.url,
-		roleIdsThatCanBeUsedThisDecoration: params.roleIdsThatCanBeUsedThisDecoration,
-		category: params.category,
-	} as AvatarDecorationUpdateOptions, me);
+	await updateAvatarDecorationWithSideEffects(
+		{
+			db: deps.db,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		params.id,
+		{
+			name: params.name,
+			description: params.description,
+			url: params.url,
+			roleIdsThatCanBeUsedThisDecoration: params.roleIdsThatCanBeUsedThisDecoration,
+			category: params.category,
+		} as AvatarDecorationUpdateOptions,
+		me,
+	);
 }

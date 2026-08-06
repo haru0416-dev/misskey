@@ -194,23 +194,48 @@ export const importAntennasParamDef = z.object({
 type ImportAntennasParams = { fileId: string };
 
 function importAntennasNoSuchFileError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such file.', code: 'NO_SUCH_FILE', id: '3b71d086-c3fa-431c-b01d-ded65a777172' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such file.',
+		code: 'NO_SUCH_FILE',
+		id: '3b71d086-c3fa-431c-b01d-ded65a777172',
+	});
 }
 
 function importAntennasNoSuchUserError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id: 'e842c379-8ac7-4cf7-b07a-4d4de7e4671c' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such user.',
+		code: 'NO_SUCH_USER',
+		id: 'e842c379-8ac7-4cf7-b07a-4d4de7e4671c',
+	});
 }
 
 function importAntennasEmptyFileError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'That file is empty.', code: 'EMPTY_FILE', id: '7f60115d-8d93-4b0f-bd0e-3815dcbb389f' });
+	return new HonoApiError({
+		status: 400,
+		message: 'That file is empty.',
+		code: 'EMPTY_FILE',
+		id: '7f60115d-8d93-4b0f-bd0e-3815dcbb389f',
+	});
 }
 
 function importAntennasTooManyAntennasError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'You cannot create antenna any more.', code: 'TOO_MANY_ANTENNAS', id: '600917d4-a4cb-4cc5-8ba8-7ac8ea3c7779' });
+	return new HonoApiError({
+		status: 400,
+		message: 'You cannot create antenna any more.',
+		code: 'TOO_MANY_ANTENNAS',
+		id: '600917d4-a4cb-4cc5-8ba8-7ac8ea3c7779',
+	});
 }
 
 function invalidAntennaImportFileError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'The antenna import file is invalid.', code: 'INVALID_ANTENNA_IMPORT_FILE', id: 'f9755af1-12aa-44af-a75f-80a729a9e845' });
+	return new HonoApiError({
+		status: 400,
+		message: 'The antenna import file is invalid.',
+		code: 'INVALID_ANTENNA_IMPORT_FILE',
+		id: 'f9755af1-12aa-44af-a75f-80a729a9e845',
+	});
 }
 
 export async function handleHonoApiIImportAntennas(
@@ -254,8 +279,8 @@ export async function handleHonoApiIImportAntennas(
 	const result = await createAntennasWithinLimitInDatabase(
 		deps.db,
 		me.id,
-		validated.data.map(antenna => importedAntennaToCreateValues(antenna, now)),
-		async tx => {
+		validated.data.map((antenna) => importedAntennaToCreateValues(antenna, now)),
+		async (tx) => {
 			const currentUser = await fetchUserByIdFromDatabase(tx, me.id);
 			if (currentUser == null) throw importAntennasNoSuchUserError();
 

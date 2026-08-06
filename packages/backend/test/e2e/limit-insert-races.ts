@@ -8,12 +8,26 @@ process.env['NODE_ENV'] = 'test';
 import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { countAntennasByUserIdFromDatabase, createAntennasWithinLimitInDatabase, listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
+import {
+	countAntennasByUserIdFromDatabase,
+	createAntennasWithinLimitInDatabase,
+	listAntennasByUserIdFromDatabase,
+} from '@/core/AntennaStore.js';
 import { countClipNotesByClipIdFromDatabase, createClipNoteWithinLimitInDatabase } from '@/core/ClipNoteStore.js';
-import { countClipsByUserIdFromDatabase, createClipInDatabase, createClipWithinLimitInDatabase } from '@/core/ClipStore.js';
+import {
+	countClipsByUserIdFromDatabase,
+	createClipInDatabase,
+	createClipWithinLimitInDatabase,
+} from '@/core/ClipStore.js';
 import { fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
-import { countRegistrationTicketsCreatedSinceFromDatabase, createRegistrationTicketWithinLimitInDatabase } from '@/core/RegistrationTicketStore.js';
-import { createUserNotePiningWithinLimitInDatabase, listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
+import {
+	countRegistrationTicketsCreatedSinceFromDatabase,
+	createRegistrationTicketWithinLimitInDatabase,
+} from '@/core/RegistrationTicketStore.js';
+import {
+	createUserNotePiningWithinLimitInDatabase,
+	listUserNotePiningsByUserIdFromDatabase,
+} from '@/core/UserNotePiningStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { post, signup } from '../utils.js';
 import type * as Misskey from 'misskey-js';
@@ -39,15 +53,18 @@ describe('count-check-insert limits', () => {
 			const result = action();
 
 			for (;;) {
-				const waiting = await pool.query<{ count: string }>(`
+				const waiting = await pool.query<{ count: string }>(
+					`
 					SELECT count(*)::text AS count
 					FROM pg_locks
 					WHERE locktype = 'advisory'
 						AND objid = $1
 						AND NOT granted
-				`, [key]);
+				`,
+					[key],
+				);
 				if (Number(waiting.rows[0]?.count ?? 0) > 0) break;
-				await new Promise<void>(resolve => setImmediate(resolve));
+				await new Promise<void>((resolve) => setImmediate(resolve));
 			}
 
 			await blocker.query('COMMIT');
@@ -97,35 +114,57 @@ describe('count-check-insert limits', () => {
 	});
 
 	test('account pin limit serializes concurrent inserts', async () => {
-		const notes = await Promise.all([
-			post(user, { text: 'pin race 1' }),
-			post(user, { text: 'pin race 2' }),
-		]);
-		const results = await runBehindInsertBarrier(barrierKeys.pin, async () => await Promise.all(notes.map((note, index) =>
-			createUserNotePiningWithinLimitInDatabase(db, {
-				id: `limit-race-pin-${index}`,
-				userId: user.id,
-				noteId: note.id,
-			}, 1))));
+		const notes = await Promise.all([post(user, { text: 'pin race 1' }), post(user, { text: 'pin race 2' })]);
+		const results = await runBehindInsertBarrier(
+			barrierKeys.pin,
+			async () =>
+				await Promise.all(
+					notes.map((note, index) =>
+						createUserNotePiningWithinLimitInDatabase(
+							db,
+							{
+								id: `limit-race-pin-${index}`,
+								userId: user.id,
+								noteId: note.id,
+							},
+							1,
+						),
+					),
+				),
+		);
 
 		assert.deepStrictEqual(results.sort(), ['created', 'limitExceeded']);
 		assert.strictEqual((await listUserNotePiningsByUserIdFromDatabase(db, user.id)).length, 1);
 	});
 
 	test('antenna create limit serializes concurrent inserts', async () => {
-		const results = await runBehindInsertBarrier(barrierKeys.antenna, async () => await Promise.all([0, 1].map(index =>
-			createAntennasWithinLimitInDatabase(db, user.id, [{
-				id: `limit-race-antenna-${index}`,
-				lastUsedAt: new Date(),
-				name: `race ${index}`,
-				src: 'all',
-				users: [],
-				keywords: [['race']],
-				excludeKeywords: [],
-				withFile: false,
-			}], async () => 1))));
+		const results = await runBehindInsertBarrier(
+			barrierKeys.antenna,
+			async () =>
+				await Promise.all(
+					[0, 1].map((index) =>
+						createAntennasWithinLimitInDatabase(
+							db,
+							user.id,
+							[
+								{
+									id: `limit-race-antenna-${index}`,
+									lastUsedAt: new Date(),
+									name: `race ${index}`,
+									src: 'all',
+									users: [],
+									keywords: [['race']],
+									excludeKeywords: [],
+									withFile: false,
+								},
+							],
+							async () => 1,
+						),
+					),
+				),
+		);
 
-		assert.deepStrictEqual(results.map(result => result.status).sort(), ['created', 'limitExceeded']);
+		assert.deepStrictEqual(results.map((result) => result.status).sort(), ['created', 'limitExceeded']);
 		assert.strictEqual(await countAntennasByUserIdFromDatabase(db, user.id), 1);
 	});
 
@@ -141,32 +180,52 @@ describe('count-check-insert limits', () => {
 			excludeKeywords: [],
 			withFile: false,
 		});
-		const results = await runBehindInsertBarrier(barrierKeys.antenna, async () => await Promise.all([
-			createAntennasWithinLimitInDatabase(db, bulkUser.id, [
-				createValues('limit-race-antenna-bulk-1'),
-				createValues('limit-race-antenna-bulk-2'),
-			], async () => 2),
-			createAntennasWithinLimitInDatabase(db, bulkUser.id, [
-				createValues('limit-race-antenna-single'),
-			], async () => 2),
-		]));
+		const results = await runBehindInsertBarrier(
+			barrierKeys.antenna,
+			async () =>
+				await Promise.all([
+					createAntennasWithinLimitInDatabase(
+						db,
+						bulkUser.id,
+						[createValues('limit-race-antenna-bulk-1'), createValues('limit-race-antenna-bulk-2')],
+						async () => 2,
+					),
+					createAntennasWithinLimitInDatabase(
+						db,
+						bulkUser.id,
+						[createValues('limit-race-antenna-single')],
+						async () => 2,
+					),
+				]),
+		);
 
-		assert.deepStrictEqual(results.map(result => result.status).sort(), ['created', 'limitExceeded']);
+		assert.deepStrictEqual(results.map((result) => result.status).sort(), ['created', 'limitExceeded']);
 		const imported = await listAntennasByUserIdFromDatabase(db, bulkUser.id);
-		const bulkCount = imported.filter(item => item.id.startsWith('limit-race-antenna-bulk-')).length;
+		const bulkCount = imported.filter((item) => item.id.startsWith('limit-race-antenna-bulk-')).length;
 		assert.ok(bulkCount === 0 || bulkCount === 2, `bulk import was partially committed: ${bulkCount}`);
 		assert.ok(imported.length <= 2);
 	});
 
 	test('clip create limit serializes concurrent inserts', async () => {
-		const results = await runBehindInsertBarrier(barrierKeys.clip, async () => await Promise.all([0, 1].map(index =>
-			createClipWithinLimitInDatabase(db, {
-				id: `limit-race-clip-${index}`,
-				userId: user.id,
-				name: `race ${index}`,
-			}, 1))));
+		const results = await runBehindInsertBarrier(
+			barrierKeys.clip,
+			async () =>
+				await Promise.all(
+					[0, 1].map((index) =>
+						createClipWithinLimitInDatabase(
+							db,
+							{
+								id: `limit-race-clip-${index}`,
+								userId: user.id,
+								name: `race ${index}`,
+							},
+							1,
+						),
+					),
+				),
+		);
 
-		assert.strictEqual(results.filter(result => result != null).length, 1);
+		assert.strictEqual(results.filter((result) => result != null).length, 1);
 		assert.strictEqual(await countClipsByUserIdFromDatabase(db, user.id), 1);
 	});
 
@@ -177,33 +236,60 @@ describe('count-check-insert limits', () => {
 			userId: owner.id,
 			name: 'race owner',
 		});
-		const notes = await Promise.all([
-			post(owner, { text: 'clip race 1' }),
-			post(owner, { text: 'clip race 2' }),
-		]);
-		const results = await runBehindInsertBarrier(barrierKeys.clipNote, async () => await Promise.all(notes.map((note, index) =>
-			createClipNoteWithinLimitInDatabase(db, {
-				id: `limit-race-clip-note-${index}`,
-				clipId: clip.id,
-				noteId: note.id,
-			}, 1))));
+		const notes = await Promise.all([post(owner, { text: 'clip race 1' }), post(owner, { text: 'clip race 2' })]);
+		const results = await runBehindInsertBarrier(
+			barrierKeys.clipNote,
+			async () =>
+				await Promise.all(
+					notes.map((note, index) =>
+						createClipNoteWithinLimitInDatabase(
+							db,
+							{
+								id: `limit-race-clip-note-${index}`,
+								clipId: clip.id,
+								noteId: note.id,
+							},
+							1,
+						),
+					),
+				),
+		);
 
 		assert.deepStrictEqual(results.sort(), ['created', 'tooManyClipNotes']);
 		assert.strictEqual(await countClipNotesByClipIdFromDatabase(db, clip.id), 1);
-		const clippedCounts = await Promise.all(notes.map(async note => (await fetchNoteByIdOrFailFromDatabase(db, note.id)).clippedCount));
-		assert.strictEqual(clippedCounts.reduce((sum, count) => sum + count, 0), 1);
+		const clippedCounts = await Promise.all(
+			notes.map(async (note) => (await fetchNoteByIdOrFailFromDatabase(db, note.id)).clippedCount),
+		);
+		assert.strictEqual(
+			clippedCounts.reduce((sum, count) => sum + count, 0),
+			1,
+		);
 	});
 
 	test('invitation create limit serializes concurrent inserts', async () => {
-		const results = await runBehindInsertBarrier(barrierKeys.invitation, async () => await Promise.all([0, 1].map(index =>
-			createRegistrationTicketWithinLimitInDatabase(db, {
-				id: `limit-race-invite-${index}`,
-				createdById: user.id,
-				code: `limit-race-code-${index}`,
-				expiresAt: null,
-			}, { sinceId: '', limit: 1 }))));
+		const results = await runBehindInsertBarrier(
+			barrierKeys.invitation,
+			async () =>
+				await Promise.all(
+					[0, 1].map((index) =>
+						createRegistrationTicketWithinLimitInDatabase(
+							db,
+							{
+								id: `limit-race-invite-${index}`,
+								createdById: user.id,
+								code: `limit-race-code-${index}`,
+								expiresAt: null,
+							},
+							{ sinceId: '', limit: 1 },
+						),
+					),
+				),
+		);
 
-		assert.strictEqual(results.filter(result => result != null).length, 1);
-		assert.strictEqual(await countRegistrationTicketsCreatedSinceFromDatabase(db, { createdById: user.id, sinceId: '' }), 1);
+		assert.strictEqual(results.filter((result) => result != null).length, 1);
+		assert.strictEqual(
+			await countRegistrationTicketsCreatedSinceFromDatabase(db, { createdById: user.id, sinceId: '' }),
+			1,
+		);
 	});
 });

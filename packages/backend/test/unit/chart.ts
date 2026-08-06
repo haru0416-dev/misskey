@@ -46,10 +46,14 @@ describe('Chart', () => {
 		drizzlePool = createDrizzlePool(config);
 		await resetDatabase(drizzlePool);
 		for (const entity of [
-			TestChartEntity.hour, TestChartEntity.day,
-			TestGroupedChartEntity.hour, TestGroupedChartEntity.day,
-			TestUniqueChartEntity.hour, TestUniqueChartEntity.day,
-			TestIntersectionChartEntity.hour, TestIntersectionChartEntity.day,
+			TestChartEntity.hour,
+			TestChartEntity.day,
+			TestGroupedChartEntity.hour,
+			TestGroupedChartEntity.day,
+			TestUniqueChartEntity.hour,
+			TestUniqueChartEntity.day,
+			TestIntersectionChartEntity.hour,
+			TestIntersectionChartEntity.day,
 		]) {
 			for (const statement of Chart.entityToCreateTableSql(entity)) {
 				await drizzlePool.query(statement);

@@ -7,15 +7,43 @@ import { z } from 'zod';
 import type { Config } from '@/config.js';
 import { createChannelFavoriteInDatabase, deleteChannelFavoriteFromDatabase } from '@/core/ChannelFavoriteStore.js';
 import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
-import { clipFavoriteExistsInDatabase, createClipFavoriteInDatabase, deleteClipFavoriteByIdFromDatabase, fetchClipFavoriteFromDatabase } from '@/core/ClipFavoriteStore.js';
+import {
+	clipFavoriteExistsInDatabase,
+	createClipFavoriteInDatabase,
+	deleteClipFavoriteByIdFromDatabase,
+	fetchClipFavoriteFromDatabase,
+} from '@/core/ClipFavoriteStore.js';
 import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
-import { createFlashLikeInDatabase, deleteFlashLikeByIdFromDatabase, fetchFlashLikeFromDatabase, flashLikeExistsInDatabase } from '@/core/FlashLikeStore.js';
-import { decrementFlashLikedCountInDatabase, fetchFlashByIdFromDatabase, incrementFlashLikedCountInDatabase } from '@/core/FlashStore.js';
+import {
+	createFlashLikeInDatabase,
+	deleteFlashLikeByIdFromDatabase,
+	fetchFlashLikeFromDatabase,
+	flashLikeExistsInDatabase,
+} from '@/core/FlashLikeStore.js';
+import {
+	decrementFlashLikedCountInDatabase,
+	fetchFlashByIdFromDatabase,
+	incrementFlashLikedCountInDatabase,
+} from '@/core/FlashStore.js';
 import { listNoteFavoritesByUserIdFromDatabase } from '@/core/NoteFavoriteStore.js';
 import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { createPageLikeInDatabase, deletePageLikeByIdFromDatabase, fetchPageLikeFromDatabase, pageLikeExistsInDatabase } from '@/core/PageLikeStore.js';
-import { decrementPageLikedCountInDatabase, fetchPageByIdFromDatabase, incrementPageLikedCountInDatabase } from '@/core/PageStore.js';
-import { createUserListFavoriteInDatabase, deleteUserListFavoriteByIdFromDatabase, fetchUserListFavoriteFromDatabase, userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
+import {
+	createPageLikeInDatabase,
+	deletePageLikeByIdFromDatabase,
+	fetchPageLikeFromDatabase,
+	pageLikeExistsInDatabase,
+} from '@/core/PageLikeStore.js';
+import {
+	decrementPageLikedCountInDatabase,
+	fetchPageByIdFromDatabase,
+	incrementPageLikedCountInDatabase,
+} from '@/core/PageStore.js';
+import {
+	createUserListFavoriteInDatabase,
+	deleteUserListFavoriteByIdFromDatabase,
+	fetchUserListFavoriteFromDatabase,
+	userListFavoriteExistsInDatabase,
+} from '@/core/UserListFavoriteStore.js';
 import { userListExistsByIdAndPublicFromDatabase } from '@/core/UserListStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -73,7 +101,12 @@ export async function handleHonoApiUsersListsFavorite(
 	}
 
 	if (await userListFavoriteExistsInDatabase(deps.db, me.id, params.listId)) {
-		throw clientErrorWithStatus(400, 'The list has already been favorited.', 'ALREADY_FAVORITED', '6425bba0-985b-461e-af1b-518070e72081');
+		throw clientErrorWithStatus(
+			400,
+			'The list has already been favorited.',
+			'ALREADY_FAVORITED',
+			'6425bba0-985b-461e-af1b-518070e72081',
+		);
 	}
 
 	try {
@@ -84,7 +117,12 @@ export async function handleHonoApiUsersListsFavorite(
 		});
 	} catch (err) {
 		if (isDuplicateKeyValueDatabaseError(err)) {
-			throw clientErrorWithStatus(400, 'The list has already been favorited.', 'ALREADY_FAVORITED', '6425bba0-985b-461e-af1b-518070e72081');
+			throw clientErrorWithStatus(
+				400,
+				'The list has already been favorited.',
+				'ALREADY_FAVORITED',
+				'6425bba0-985b-461e-af1b-518070e72081',
+			);
 		}
 		throw err;
 	}
@@ -103,7 +141,12 @@ export async function handleHonoApiUsersListsUnfavorite(
 
 	const favorite = await fetchUserListFavoriteFromDatabase(deps.db, me.id, params.listId);
 	if (favorite == null) {
-		throw clientErrorWithStatus(400, 'You have not favorited the list.', 'ALREADY_FAVORITED', '835c4b27-463d-4cfa-969b-a9058678d465');
+		throw clientErrorWithStatus(
+			400,
+			'You have not favorited the list.',
+			'ALREADY_FAVORITED',
+			'835c4b27-463d-4cfa-969b-a9058678d465',
+		);
 	}
 
 	await deleteUserListFavoriteByIdFromDatabase(deps.db, favorite.id);
@@ -121,7 +164,12 @@ export async function handleHonoApiClipsFavorite(
 	}
 
 	if (await clipFavoriteExistsInDatabase(deps.db, me.id, clip.id)) {
-		throw clientErrorWithStatus(400, 'The clip has already been favorited.', 'ALREADY_FAVORITED', '92658936-c625-4273-8326-2d790129256e');
+		throw clientErrorWithStatus(
+			400,
+			'The clip has already been favorited.',
+			'ALREADY_FAVORITED',
+			'92658936-c625-4273-8326-2d790129256e',
+		);
 	}
 
 	try {
@@ -132,7 +180,12 @@ export async function handleHonoApiClipsFavorite(
 		});
 	} catch (err) {
 		if (isDuplicateKeyValueDatabaseError(err)) {
-			throw clientErrorWithStatus(400, 'The clip has already been favorited.', 'ALREADY_FAVORITED', '92658936-c625-4273-8326-2d790129256e');
+			throw clientErrorWithStatus(
+				400,
+				'The clip has already been favorited.',
+				'ALREADY_FAVORITED',
+				'92658936-c625-4273-8326-2d790129256e',
+			);
 		}
 		throw err;
 	}
@@ -151,7 +204,12 @@ export async function handleHonoApiClipsUnfavorite(
 
 	const favorite = await fetchClipFavoriteFromDatabase(deps.db, me.id, clip.id);
 	if (favorite == null) {
-		throw clientErrorWithStatus(400, 'You have not favorited the clip.', 'NOT_FAVORITED', '90c3a9e8-b321-4dae-bf57-2bf79bbcc187');
+		throw clientErrorWithStatus(
+			400,
+			'You have not favorited the clip.',
+			'NOT_FAVORITED',
+			'90c3a9e8-b321-4dae-bf57-2bf79bbcc187',
+		);
 	}
 
 	await deleteClipFavoriteByIdFromDatabase(deps.db, favorite.id);
@@ -204,11 +262,16 @@ export async function handleHonoApiPagesLike(
 	}
 
 	if (await pageLikeExistsInDatabase(deps.db, me.id, page.id)) {
-		throw clientErrorWithStatus(400, 'The page has already been liked.', 'ALREADY_LIKED', 'd4c1edbe-7da2-4eae-8714-1acfd2d63941');
+		throw clientErrorWithStatus(
+			400,
+			'The page has already been liked.',
+			'ALREADY_LIKED',
+			'd4c1edbe-7da2-4eae-8714-1acfd2d63941',
+		);
 	}
 
 	try {
-		await deps.db.transaction(async transaction => {
+		await deps.db.transaction(async (transaction) => {
 			const db = transaction as typeof deps.db;
 			await createPageLikeInDatabase(db, {
 				id: genId(),
@@ -219,7 +282,12 @@ export async function handleHonoApiPagesLike(
 		});
 	} catch (err) {
 		if (isDuplicateKeyValueDatabaseError(err)) {
-			throw clientErrorWithStatus(400, 'The page has already been liked.', 'ALREADY_LIKED', 'd4c1edbe-7da2-4eae-8714-1acfd2d63941');
+			throw clientErrorWithStatus(
+				400,
+				'The page has already been liked.',
+				'ALREADY_LIKED',
+				'd4c1edbe-7da2-4eae-8714-1acfd2d63941',
+			);
 		}
 		throw err;
 	}
@@ -238,13 +306,23 @@ export async function handleHonoApiPagesUnlike(
 
 	const like = await fetchPageLikeFromDatabase(deps.db, me.id, page.id);
 	if (like == null) {
-		throw clientErrorWithStatus(400, 'You have not liked that page.', 'NOT_LIKED', 'f5e586b0-ce93-4050-b0e3-7f31af5259ee');
+		throw clientErrorWithStatus(
+			400,
+			'You have not liked that page.',
+			'NOT_LIKED',
+			'f5e586b0-ce93-4050-b0e3-7f31af5259ee',
+		);
 	}
 
-	await deps.db.transaction(async transaction => {
+	await deps.db.transaction(async (transaction) => {
 		const db = transaction as typeof deps.db;
-		if (!await deletePageLikeByIdFromDatabase(db, like.id)) {
-			throw clientErrorWithStatus(400, 'You have not liked that page.', 'NOT_LIKED', 'f5e586b0-ce93-4050-b0e3-7f31af5259ee');
+		if (!(await deletePageLikeByIdFromDatabase(db, like.id))) {
+			throw clientErrorWithStatus(
+				400,
+				'You have not liked that page.',
+				'NOT_LIKED',
+				'f5e586b0-ce93-4050-b0e3-7f31af5259ee',
+			);
 		}
 		await decrementPageLikedCountInDatabase(db, page.id);
 	});
@@ -261,15 +339,25 @@ export async function handleHonoApiFlashLike(
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'c07c1491-9161-4c5c-9d75-01906f911f73');
 	}
 	if (flash.userId === me.id) {
-		throw clientErrorWithStatus(400, 'You cannot like your flash.', 'YOUR_FLASH', '3fd8a0e7-5955-4ba9-85bb-bf3e0c30e13b');
+		throw clientErrorWithStatus(
+			400,
+			'You cannot like your flash.',
+			'YOUR_FLASH',
+			'3fd8a0e7-5955-4ba9-85bb-bf3e0c30e13b',
+		);
 	}
 
 	if (await flashLikeExistsInDatabase(deps.db, me.id, flash.id)) {
-		throw clientErrorWithStatus(400, 'The flash has already been liked.', 'ALREADY_LIKED', '010065cf-ad43-40df-8067-abff9f4686e3');
+		throw clientErrorWithStatus(
+			400,
+			'The flash has already been liked.',
+			'ALREADY_LIKED',
+			'010065cf-ad43-40df-8067-abff9f4686e3',
+		);
 	}
 
 	try {
-		await deps.db.transaction(async transaction => {
+		await deps.db.transaction(async (transaction) => {
 			const db = transaction as typeof deps.db;
 			await createFlashLikeInDatabase(db, {
 				id: genId(),
@@ -280,7 +368,12 @@ export async function handleHonoApiFlashLike(
 		});
 	} catch (err) {
 		if (isDuplicateKeyValueDatabaseError(err)) {
-			throw clientErrorWithStatus(400, 'The flash has already been liked.', 'ALREADY_LIKED', '010065cf-ad43-40df-8067-abff9f4686e3');
+			throw clientErrorWithStatus(
+				400,
+				'The flash has already been liked.',
+				'ALREADY_LIKED',
+				'010065cf-ad43-40df-8067-abff9f4686e3',
+			);
 		}
 		throw err;
 	}
@@ -299,13 +392,23 @@ export async function handleHonoApiFlashUnlike(
 
 	const like = await fetchFlashLikeFromDatabase(deps.db, me.id, flash.id);
 	if (like == null) {
-		throw clientErrorWithStatus(400, 'You have not liked that flash.', 'NOT_LIKED', '755f25a7-9871-4f65-9f34-51eaad9ae0ac');
+		throw clientErrorWithStatus(
+			400,
+			'You have not liked that flash.',
+			'NOT_LIKED',
+			'755f25a7-9871-4f65-9f34-51eaad9ae0ac',
+		);
 	}
 
-	await deps.db.transaction(async transaction => {
+	await deps.db.transaction(async (transaction) => {
 		const db = transaction as typeof deps.db;
-		if (!await deleteFlashLikeByIdFromDatabase(db, like.id)) {
-			throw clientErrorWithStatus(400, 'You have not liked that flash.', 'NOT_LIKED', '755f25a7-9871-4f65-9f34-51eaad9ae0ac');
+		if (!(await deleteFlashLikeByIdFromDatabase(db, like.id))) {
+			throw clientErrorWithStatus(
+				400,
+				'You have not liked that flash.',
+				'NOT_LIKED',
+				'755f25a7-9871-4f65-9f34-51eaad9ae0ac',
+			);
 		}
 		await decrementFlashLikedCountInDatabase(db, flash.id);
 	});
@@ -333,7 +436,7 @@ export async function handleHonoApiIFavorites(
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(iFavoritesParamDef, body);
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 
 	const favorites = await listNoteFavoritesByUserIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
@@ -342,14 +445,22 @@ export async function handleHonoApiIFavorites(
 		untilId: pagination.untilId,
 	});
 
-	const notes = favorites.length === 0 ? [] : await listNotesByIdsFromDatabase(deps.db, favorites.map(f => f.noteId));
+	const notes =
+		favorites.length === 0
+			? []
+			: await listNotesByIdsFromDatabase(
+					deps.db,
+					favorites.map((f) => f.noteId),
+				);
 	const packedNotes = await packNoteManyForHonoApi(deps, notes, me);
-	const packedNoteMap = new Map(packedNotes.map(note => [note.id, note]));
+	const packedNoteMap = new Map(packedNotes.map((note) => [note.id, note]));
 
-	return await Promise.all(favorites.map(async favorite => ({
-		id: favorite.id,
-		createdAt: parseId(favorite.id).date.toISOString(),
-		noteId: favorite.noteId,
-		note: packedNoteMap.get(favorite.noteId) ?? await packNoteForHonoApi(deps, favorite.noteId, me),
-	})));
+	return await Promise.all(
+		favorites.map(async (favorite) => ({
+			id: favorite.id,
+			createdAt: parseId(favorite.id).date.toISOString(),
+			noteId: favorite.noteId,
+			note: packedNoteMap.get(favorite.noteId) ?? (await packNoteForHonoApi(deps, favorite.noteId, me)),
+		})),
+	);
 }

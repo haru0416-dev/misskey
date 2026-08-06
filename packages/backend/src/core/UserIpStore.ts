@@ -18,9 +18,7 @@ export async function recordUserIpInDatabase(db: MiDrizzleDatabase, data: UserIp
 }
 
 export async function deleteUserIpsOlderThanFromDatabase(db: MiDrizzleDatabase, cutoff: Date): Promise<void> {
-	await db
-		.delete(userIp)
-		.where(lt(userIp.createdAt, cutoff));
+	await db.delete(userIp).where(lt(userIp.createdAt, cutoff));
 }
 
 export async function listUserIpsFromDatabase(

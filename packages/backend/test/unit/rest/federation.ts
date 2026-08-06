@@ -14,13 +14,7 @@ describe('federation metadata lock', () => {
 
 		await expect(tryLockFetchInstanceMetadata({ redis }, 'example.com')).resolves.toBeNull();
 		expect(set).toHaveBeenCalledOnce();
-		expect(set).toHaveBeenCalledWith(
-			'fetchInstanceMetadata:mutex:v2:example.com',
-			'1',
-			'EX',
-			30,
-			'GET',
-		);
+		expect(set).toHaveBeenCalledWith('fetchInstanceMetadata:mutex:v2:example.com', '1', 'EX', 30, 'GET');
 	});
 
 	test('deletes the v2 lock key when unlocking', async () => {

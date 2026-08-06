@@ -11,21 +11,36 @@ import { fetchLocalUserByIdFromDatabase } from '@/core/UserStore.js';
 import { getIpHash } from '@/misc/get-ip-hash.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiUser } from '@/models/User.js';
-import { completeHonoApiSignin, failHonoApiSignin, honoApiSigninError, type HonoApiSigninDependencies, type HonoApiSigninErrorBody, type HonoApiSigninRequest, tooManyAuthenticationFailures } from './signin.js';
+import {
+	completeHonoApiSignin,
+	failHonoApiSignin,
+	honoApiSigninError,
+	type HonoApiSigninDependencies,
+	type HonoApiSigninErrorBody,
+	type HonoApiSigninRequest,
+	tooManyAuthenticationFailures,
+} from './signin.js';
 import { isHonoApiRateLimited } from './rate-limit.js';
 
 export type HonoApiSigninWithPasskeyResult = {
 	status: number;
-	body: Misskey.entities.SigninWithPasskeyInitResponse | Misskey.entities.SigninWithPasskeyResponse | HonoApiSigninErrorBody;
+	body:
+		| Misskey.entities.SigninWithPasskeyInitResponse
+		| Misskey.entities.SigninWithPasskeyResponse
+		| HonoApiSigninErrorBody;
 };
 
 async function isPasskeySigninRateLimited(deps: HonoApiSigninDependencies, ip: string): Promise<boolean> {
-	return await isHonoApiRateLimited(deps, {
-		key: 'signin-with-passkey',
-		duration: 60 * 30 * 1000,
-		max: 200,
-		minInterval: 250,
-	}, getIpHash(ip));
+	return await isHonoApiRateLimited(
+		deps,
+		{
+			key: 'signin-with-passkey',
+			duration: 60 * 30 * 1000,
+			max: 200,
+			minInterval: 250,
+		},
+		getIpHash(ip),
+	);
 }
 
 function passkeySigninError(status: number, id: string): HonoApiSigninWithPasskeyResult {

@@ -25,8 +25,8 @@ describe('Signup races', () => {
 				setupPassword,
 			}),
 		]);
-		const success = responses.filter(response => response.status === 200);
-		const denied = responses.filter(response => response.status === 400);
+		const success = responses.filter((response) => response.status === 200);
+		const denied = responses.filter((response) => response.status === 400);
 
 		assert.strictEqual(success.length, 1);
 		assert.strictEqual(denied.length, 1);
@@ -38,8 +38,8 @@ describe('Signup races', () => {
 			api('signup', { username: 'signupcollision', password: 'test' }),
 			api('signup', { username: 'signupcollision', password: 'test' }),
 		]);
-		const success = responses.filter(response => response.status === 200);
-		const rejected = responses.filter(response => response.status === 400);
+		const success = responses.filter((response) => response.status === 200);
+		const rejected = responses.filter((response) => response.status === 400);
 
 		assert.strictEqual(success.length, 1);
 		assert.strictEqual(rejected.length, 1);

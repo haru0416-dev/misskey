@@ -36,23 +36,17 @@ export async function acquireDistributedLock(
 			};
 		}
 
-		await new Promise(resolve => setTimeout(resolve, retryInterval));
+		await new Promise((resolve) => setTimeout(resolve, retryInterval));
 		retries++;
 	}
 
 	throw new Error(`Failed to acquire lock ${name}`);
 }
 
-export function acquireApObjectLock(
-	redis: Redis.Redis,
-	uri: string,
-): Promise<() => Promise<void>> {
+export function acquireApObjectLock(redis: Redis.Redis, uri: string): Promise<() => Promise<void>> {
 	return acquireDistributedLock(redis, `ap-object:${uri}`, 30 * 1000, 50, 100);
 }
 
-export function acquireChartInsertLock(
-	redis: Redis.Redis,
-	name: string,
-): Promise<() => Promise<void>> {
+export function acquireChartInsertLock(redis: Redis.Redis, name: string): Promise<() => Promise<void>> {
 	return acquireDistributedLock(redis, `chart-insert:${name}`, 30 * 1000, 50, 500);
 }

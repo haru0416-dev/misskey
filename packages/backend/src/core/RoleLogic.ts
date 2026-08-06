@@ -25,19 +25,54 @@ import type { ModerationLogPayloads } from '@/types.js';
 
 export type RoleCreateOptions = Pick<
 	MiRole,
-	'name' | 'description' | 'color' | 'iconUrl' | 'target' | 'condFormula' | 'isPublic' | 'isAdministrator' | 'isModerator' | 'asBadge' | 'canEditMembersByModerator' | 'displayOrder' | 'policies'
-> & Partial<Pick<MiRole, 'isExplorable' | 'preserveAssignmentOnMoveAccount'>>;
+	| 'name'
+	| 'description'
+	| 'color'
+	| 'iconUrl'
+	| 'target'
+	| 'condFormula'
+	| 'isPublic'
+	| 'isAdministrator'
+	| 'isModerator'
+	| 'asBadge'
+	| 'canEditMembersByModerator'
+	| 'displayOrder'
+	| 'policies'
+> &
+	Partial<Pick<MiRole, 'isExplorable' | 'preserveAssignmentOnMoveAccount'>>;
 
-export type RoleUpdateOptions = Partial<Pick<
-	MiRole,
-	'name' | 'description' | 'color' | 'iconUrl' | 'target' | 'condFormula' | 'isPublic' | 'isAdministrator' | 'isModerator' | 'isExplorable' | 'asBadge' | 'preserveAssignmentOnMoveAccount' | 'canEditMembersByModerator' | 'displayOrder' | 'policies'
->>;
+export type RoleUpdateOptions = Partial<
+	Pick<
+		MiRole,
+		| 'name'
+		| 'description'
+		| 'color'
+		| 'iconUrl'
+		| 'target'
+		| 'condFormula'
+		| 'isPublic'
+		| 'isAdministrator'
+		| 'isModerator'
+		| 'isExplorable'
+		| 'asBadge'
+		| 'preserveAssignmentOnMoveAccount'
+		| 'canEditMembersByModerator'
+		| 'displayOrder'
+		| 'policies'
+	>
+>;
 
 export type RoleLogicDependencies = {
 	db: MiDrizzleDatabase;
 	genId: (time?: number) => string;
-	publishInternalEvent?: (<K extends keyof InternalEventTypes>(type: K, value?: InternalEventTypes[K]) => void) | undefined;
-	logModeration?: <T extends keyof ModerationLogPayloads>(moderator: { id: MiUser['id'] }, type: T, info?: ModerationLogPayloads[T]) => void | Promise<void>;
+	publishInternalEvent?:
+		| (<K extends keyof InternalEventTypes>(type: K, value?: InternalEventTypes[K]) => void)
+		| undefined;
+	logModeration?: <T extends keyof ModerationLogPayloads>(
+		moderator: { id: MiUser['id'] },
+		type: T,
+		info?: ModerationLogPayloads[T],
+	) => void | Promise<void>;
 };
 
 export class RoleAlreadyAssignedError extends Error {}

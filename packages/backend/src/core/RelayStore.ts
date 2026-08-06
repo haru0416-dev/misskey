@@ -27,7 +27,10 @@ function invalidateRelayCache(): void {
  * リレーアクター判定ホットパス専用。リレーは管理者操作でしか変化せず、このプロセスの書き込みは
  * RelayStore の書き込み関数内で同期無効化される。管理系一覧は非キャッシュ版を使うこと。
  */
-export async function listRelaysByStatusFromDatabaseCached(db: MiDrizzleDatabase, status: MiRelay['status']): Promise<RelayRow[]> {
+export async function listRelaysByStatusFromDatabaseCached(
+	db: MiDrizzleDatabase,
+	status: MiRelay['status'],
+): Promise<RelayRow[]> {
 	const hit = relaysByStatusCache.get(status);
 	if (hit != null && Date.now() - hit.cachedAt < RELAY_CACHE_TTL_MS) {
 		return hit.rows;
@@ -39,10 +42,7 @@ export async function listRelaysByStatusFromDatabaseCached(db: MiDrizzleDatabase
 }
 
 export async function createRelayInDatabase(db: MiDrizzleDatabase, data: RelayInsert): Promise<RelayRow> {
-	const [row] = await db
-		.insert(relay)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(relay).values(data).returning();
 
 	if (!row) {
 		throw new Error('Relay row was not created');
@@ -52,43 +52,38 @@ export async function createRelayInDatabase(db: MiDrizzleDatabase, data: RelayIn
 	return row;
 }
 
-export async function fetchRelayByInboxFromDatabase(db: MiDrizzleDatabase, inbox: MiRelay['inbox']): Promise<RelayRow | null> {
-	const [row] = await db
-		.select()
-		.from(relay)
-		.where(eq(relay.inbox, inbox))
-		.limit(1);
+export async function fetchRelayByInboxFromDatabase(
+	db: MiDrizzleDatabase,
+	inbox: MiRelay['inbox'],
+): Promise<RelayRow | null> {
+	const [row] = await db.select().from(relay).where(eq(relay.inbox, inbox)).limit(1);
 
 	return row ?? null;
 }
 
 export async function deleteRelayFromDatabase(db: MiDrizzleDatabase, id: MiRelay['id']): Promise<void> {
-	await db
-		.delete(relay)
-		.where(eq(relay.id, id));
+	await db.delete(relay).where(eq(relay.id, id));
 
 	invalidateRelayCache();
 }
 
 export async function listRelaysFromDatabase(db: MiDrizzleDatabase): Promise<RelayRow[]> {
-	return db
-		.select()
-		.from(relay);
+	return db.select().from(relay);
 }
 
-export async function listRelaysByStatusFromDatabase(db: MiDrizzleDatabase, status: MiRelay['status']): Promise<RelayRow[]> {
-	return db
-		.select()
-		.from(relay)
-		.where(eq(relay.status, status));
+export async function listRelaysByStatusFromDatabase(
+	db: MiDrizzleDatabase,
+	status: MiRelay['status'],
+): Promise<RelayRow[]> {
+	return db.select().from(relay).where(eq(relay.status, status));
 }
 
-export async function updateRelayStatusInDatabase(db: MiDrizzleDatabase, id: MiRelay['id'], status: MiRelay['status']): Promise<UpdateResultLike> {
-	const rows = await db
-		.update(relay)
-		.set({ status })
-		.where(eq(relay.id, id))
-		.returning({ id: relay.id });
+export async function updateRelayStatusInDatabase(
+	db: MiDrizzleDatabase,
+	id: MiRelay['id'],
+	status: MiRelay['status'],
+): Promise<UpdateResultLike> {
+	const rows = await db.update(relay).set({ status }).where(eq(relay.id, id)).returning({ id: relay.id });
 
 	invalidateRelayCache();
 	return {

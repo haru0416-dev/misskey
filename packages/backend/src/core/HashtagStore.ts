@@ -10,21 +10,23 @@ import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiHashtag } from '@/models/Hashtag.js';
 import type { MiUser } from '@/models/User.js';
 
-type HashtagUpdateSet = Partial<Record<
-	| 'mentionedUserIds'
-	| 'mentionedUsersCount'
-	| 'mentionedLocalUserIds'
-	| 'mentionedLocalUsersCount'
-	| 'mentionedRemoteUserIds'
-	| 'mentionedRemoteUsersCount'
-	| 'attachedUserIds'
-	| 'attachedUsersCount'
-	| 'attachedLocalUserIds'
-	| 'attachedLocalUsersCount'
-	| 'attachedRemoteUserIds'
-	| 'attachedRemoteUsersCount',
-	SQL
->>;
+type HashtagUpdateSet = Partial<
+	Record<
+		| 'mentionedUserIds'
+		| 'mentionedUsersCount'
+		| 'mentionedLocalUserIds'
+		| 'mentionedLocalUsersCount'
+		| 'mentionedRemoteUserIds'
+		| 'mentionedRemoteUsersCount'
+		| 'attachedUserIds'
+		| 'attachedUsersCount'
+		| 'attachedLocalUserIds'
+		| 'attachedLocalUsersCount'
+		| 'attachedRemoteUserIds'
+		| 'attachedRemoteUsersCount',
+		SQL
+	>
+>;
 
 type HashtagUserIdsColumn =
 	| typeof hashtag.mentionedUserIds
@@ -60,22 +62,14 @@ function deserializeHashtag(row: HashtagRow): MiHashtag {
 	return row as MiHashtag;
 }
 
-function appendUserIdIfMissing(
-	userIds: HashtagUserIdsColumn,
-	count: HashtagUsersCountColumn,
-	userId: MiUser['id'],
-) {
+function appendUserIdIfMissing(userIds: HashtagUserIdsColumn, count: HashtagUsersCountColumn, userId: MiUser['id']) {
 	return {
 		userIds: sql`CASE WHEN array_position(${userIds}, ${userId}) IS NULL THEN array_append(${userIds}, ${userId}) ELSE ${userIds} END`,
 		count: sql`CASE WHEN array_position(${userIds}, ${userId}) IS NULL THEN ${count} + 1 ELSE ${count} END`,
 	};
 }
 
-function removeUserIdIfExists(
-	userIds: HashtagUserIdsColumn,
-	count: HashtagUsersCountColumn,
-	userId: MiUser['id'],
-) {
+function removeUserIdIfExists(userIds: HashtagUserIdsColumn, count: HashtagUsersCountColumn, userId: MiUser['id']) {
 	return {
 		userIds: sql`CASE WHEN array_position(${userIds}, ${userId}) IS NOT NULL THEN array_remove(${userIds}, ${userId}) ELSE ${userIds} END`,
 		count: sql`CASE WHEN array_position(${userIds}, ${userId}) IS NOT NULL THEN ${count} - 1 ELSE ${count} END`,
@@ -84,30 +78,35 @@ function removeUserIdIfExists(
 
 function getOrderBy(sort: HashtagSort) {
 	switch (sort) {
-		case '+mentionedUsers': return desc(hashtag.mentionedUsersCount);
-		case '-mentionedUsers': return asc(hashtag.mentionedUsersCount);
-		case '+mentionedLocalUsers': return desc(hashtag.mentionedLocalUsersCount);
-		case '-mentionedLocalUsers': return asc(hashtag.mentionedLocalUsersCount);
-		case '+mentionedRemoteUsers': return desc(hashtag.mentionedRemoteUsersCount);
-		case '-mentionedRemoteUsers': return asc(hashtag.mentionedRemoteUsersCount);
-		case '+attachedUsers': return desc(hashtag.attachedUsersCount);
-		case '-attachedUsers': return asc(hashtag.attachedUsersCount);
-		case '+attachedLocalUsers': return desc(hashtag.attachedLocalUsersCount);
-		case '-attachedLocalUsers': return asc(hashtag.attachedLocalUsersCount);
-		case '+attachedRemoteUsers': return desc(hashtag.attachedRemoteUsersCount);
-		case '-attachedRemoteUsers': return asc(hashtag.attachedRemoteUsersCount);
+		case '+mentionedUsers':
+			return desc(hashtag.mentionedUsersCount);
+		case '-mentionedUsers':
+			return asc(hashtag.mentionedUsersCount);
+		case '+mentionedLocalUsers':
+			return desc(hashtag.mentionedLocalUsersCount);
+		case '-mentionedLocalUsers':
+			return asc(hashtag.mentionedLocalUsersCount);
+		case '+mentionedRemoteUsers':
+			return desc(hashtag.mentionedRemoteUsersCount);
+		case '-mentionedRemoteUsers':
+			return asc(hashtag.mentionedRemoteUsersCount);
+		case '+attachedUsers':
+			return desc(hashtag.attachedUsersCount);
+		case '-attachedUsers':
+			return asc(hashtag.attachedUsersCount);
+		case '+attachedLocalUsers':
+			return desc(hashtag.attachedLocalUsersCount);
+		case '-attachedLocalUsers':
+			return asc(hashtag.attachedLocalUsersCount);
+		case '+attachedRemoteUsers':
+			return desc(hashtag.attachedRemoteUsersCount);
+		case '-attachedRemoteUsers':
+			return asc(hashtag.attachedRemoteUsersCount);
 	}
 }
 
-export async function fetchHashtagByNameFromDatabase(
-	db: MiDrizzleDatabase,
-	name: string,
-): Promise<MiHashtag | null> {
-	const [row] = await db
-		.select()
-		.from(hashtag)
-		.where(eq(hashtag.name, name))
-		.limit(1);
+export async function fetchHashtagByNameFromDatabase(db: MiDrizzleDatabase, name: string): Promise<MiHashtag | null> {
+	const [row] = await db.select().from(hashtag).where(eq(hashtag.name, name)).limit(1);
 
 	return row == null ? null : deserializeHashtag(row);
 }
@@ -154,7 +153,7 @@ export async function searchHashtagNamesFromDatabase(
 		.limit(options.limit)
 		.offset(options.offset);
 
-	return rows.map(row => row.name);
+	return rows.map((row) => row.name);
 }
 
 export async function recordHashtagUsagesInDatabase(
@@ -168,7 +167,7 @@ export async function recordHashtagUsagesInDatabase(
 		increment: boolean;
 	},
 ): Promise<void> {
-	const entries = [...new Map(data.entries.map(entry => [entry.name, entry])).values()];
+	const entries = [...new Map(data.entries.map((entry) => [entry.name, entry])).values()];
 	if (entries.length === 0) return;
 
 	if (!data.increment) {
@@ -180,11 +179,19 @@ export async function recordHashtagUsagesInDatabase(
 			set.attachedUsersCount = attachedUsers.count;
 
 			if (data.isLocalUser) {
-				const attachedLocalUsers = removeUserIdIfExists(hashtag.attachedLocalUserIds, hashtag.attachedLocalUsersCount, data.userId);
+				const attachedLocalUsers = removeUserIdIfExists(
+					hashtag.attachedLocalUserIds,
+					hashtag.attachedLocalUsersCount,
+					data.userId,
+				);
 				set.attachedLocalUserIds = attachedLocalUsers.userIds;
 				set.attachedLocalUsersCount = attachedLocalUsers.count;
 			} else {
-				const attachedRemoteUsers = removeUserIdIfExists(hashtag.attachedRemoteUserIds, hashtag.attachedRemoteUsersCount, data.userId);
+				const attachedRemoteUsers = removeUserIdIfExists(
+					hashtag.attachedRemoteUserIds,
+					hashtag.attachedRemoteUsersCount,
+					data.userId,
+				);
 				set.attachedRemoteUserIds = attachedRemoteUsers.userIds;
 				set.attachedRemoteUsersCount = attachedRemoteUsers.count;
 			}
@@ -194,43 +201,52 @@ export async function recordHashtagUsagesInDatabase(
 			await db
 				.update(hashtag)
 				.set(set)
-				.where(inArray(hashtag.name, entries.map(entry => entry.name)));
+				.where(
+					inArray(
+						hashtag.name,
+						entries.map((entry) => entry.name),
+					),
+				);
 		}
 
 		return;
 	}
 
-	const insertData: HashtagInsert[] = entries.map(entry => data.isUserAttached ? {
-		id: entry.id,
-		name: entry.name,
-		mentionedUserIds: [],
-		mentionedUsersCount: 0,
-		mentionedLocalUserIds: [],
-		mentionedLocalUsersCount: 0,
-		mentionedRemoteUserIds: [],
-		mentionedRemoteUsersCount: 0,
-		attachedUserIds: [data.userId],
-		attachedUsersCount: 1,
-		attachedLocalUserIds: data.isLocalUser ? [data.userId] : [],
-		attachedLocalUsersCount: data.isLocalUser ? 1 : 0,
-		attachedRemoteUserIds: data.isRemoteUser ? [data.userId] : [],
-		attachedRemoteUsersCount: data.isRemoteUser ? 1 : 0,
-	} : {
-		id: entry.id,
-		name: entry.name,
-		mentionedUserIds: [data.userId],
-		mentionedUsersCount: 1,
-		mentionedLocalUserIds: data.isLocalUser ? [data.userId] : [],
-		mentionedLocalUsersCount: data.isLocalUser ? 1 : 0,
-		mentionedRemoteUserIds: data.isRemoteUser ? [data.userId] : [],
-		mentionedRemoteUsersCount: data.isRemoteUser ? 1 : 0,
-		attachedUserIds: [],
-		attachedUsersCount: 0,
-		attachedLocalUserIds: [],
-		attachedLocalUsersCount: 0,
-		attachedRemoteUserIds: [],
-		attachedRemoteUsersCount: 0,
-	});
+	const insertData: HashtagInsert[] = entries.map((entry) =>
+		data.isUserAttached
+			? {
+					id: entry.id,
+					name: entry.name,
+					mentionedUserIds: [],
+					mentionedUsersCount: 0,
+					mentionedLocalUserIds: [],
+					mentionedLocalUsersCount: 0,
+					mentionedRemoteUserIds: [],
+					mentionedRemoteUsersCount: 0,
+					attachedUserIds: [data.userId],
+					attachedUsersCount: 1,
+					attachedLocalUserIds: data.isLocalUser ? [data.userId] : [],
+					attachedLocalUsersCount: data.isLocalUser ? 1 : 0,
+					attachedRemoteUserIds: data.isRemoteUser ? [data.userId] : [],
+					attachedRemoteUsersCount: data.isRemoteUser ? 1 : 0,
+				}
+			: {
+					id: entry.id,
+					name: entry.name,
+					mentionedUserIds: [data.userId],
+					mentionedUsersCount: 1,
+					mentionedLocalUserIds: data.isLocalUser ? [data.userId] : [],
+					mentionedLocalUsersCount: data.isLocalUser ? 1 : 0,
+					mentionedRemoteUserIds: data.isRemoteUser ? [data.userId] : [],
+					mentionedRemoteUsersCount: data.isRemoteUser ? 1 : 0,
+					attachedUserIds: [],
+					attachedUsersCount: 0,
+					attachedLocalUserIds: [],
+					attachedLocalUsersCount: 0,
+					attachedRemoteUserIds: [],
+					attachedRemoteUsersCount: 0,
+				},
+	);
 
 	const set: HashtagUpdateSet = {};
 
@@ -240,13 +256,21 @@ export async function recordHashtagUsagesInDatabase(
 		set.attachedUsersCount = attachedUsers.count;
 
 		if (data.isLocalUser) {
-			const attachedLocalUsers = appendUserIdIfMissing(hashtag.attachedLocalUserIds, hashtag.attachedLocalUsersCount, data.userId);
+			const attachedLocalUsers = appendUserIdIfMissing(
+				hashtag.attachedLocalUserIds,
+				hashtag.attachedLocalUsersCount,
+				data.userId,
+			);
 			set.attachedLocalUserIds = attachedLocalUsers.userIds;
 			set.attachedLocalUsersCount = attachedLocalUsers.count;
 		}
 
 		if (data.isRemoteUser) {
-			const attachedRemoteUsers = appendUserIdIfMissing(hashtag.attachedRemoteUserIds, hashtag.attachedRemoteUsersCount, data.userId);
+			const attachedRemoteUsers = appendUserIdIfMissing(
+				hashtag.attachedRemoteUserIds,
+				hashtag.attachedRemoteUsersCount,
+				data.userId,
+			);
 			set.attachedRemoteUserIds = attachedRemoteUsers.userIds;
 			set.attachedRemoteUsersCount = attachedRemoteUsers.count;
 		}
@@ -256,23 +280,28 @@ export async function recordHashtagUsagesInDatabase(
 		set.mentionedUsersCount = mentionedUsers.count;
 
 		if (data.isLocalUser) {
-			const mentionedLocalUsers = appendUserIdIfMissing(hashtag.mentionedLocalUserIds, hashtag.mentionedLocalUsersCount, data.userId);
+			const mentionedLocalUsers = appendUserIdIfMissing(
+				hashtag.mentionedLocalUserIds,
+				hashtag.mentionedLocalUsersCount,
+				data.userId,
+			);
 			set.mentionedLocalUserIds = mentionedLocalUsers.userIds;
 			set.mentionedLocalUsersCount = mentionedLocalUsers.count;
 		}
 
 		if (data.isRemoteUser) {
-			const mentionedRemoteUsers = appendUserIdIfMissing(hashtag.mentionedRemoteUserIds, hashtag.mentionedRemoteUsersCount, data.userId);
+			const mentionedRemoteUsers = appendUserIdIfMissing(
+				hashtag.mentionedRemoteUserIds,
+				hashtag.mentionedRemoteUsersCount,
+				data.userId,
+			);
 			set.mentionedRemoteUserIds = mentionedRemoteUsers.userIds;
 			set.mentionedRemoteUsersCount = mentionedRemoteUsers.count;
 		}
 	}
 
-	await db
-		.insert(hashtag)
-		.values(insertData)
-		.onConflictDoUpdate({
-			target: hashtag.name,
-			set,
-		});
+	await db.insert(hashtag).values(insertData).onConflictDoUpdate({
+		target: hashtag.name,
+		set,
+	});
 }

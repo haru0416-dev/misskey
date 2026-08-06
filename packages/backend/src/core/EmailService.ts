@@ -73,12 +73,14 @@ export function createEmailService(
 			secure: meta.smtpSecure,
 			ignoreTLS: !enableAuth,
 			...(config.outboundNetwork.proxy.smtpUrl == null ? {} : { proxy: config.outboundNetwork.proxy.smtpUrl }),
-			...(enableAuth ? {
-				auth: {
-					user: meta.smtpUser ?? '',
-					...(meta.smtpPass == null ? {} : { pass: meta.smtpPass }),
-				},
-			} : {}),
+			...(enableAuth
+				? {
+						auth: {
+							user: meta.smtpUser ?? '',
+							...(meta.smtpPass == null ? {} : { pass: meta.smtpPass }),
+						},
+					}
+				: {}),
 		};
 		const transporter = nodemailer.createTransport(options);
 
@@ -86,7 +88,7 @@ export function createEmailService(
 <html>
 	<head>
 		<meta charset="utf-8">
-		<title>${ subject }</title>
+		<title>${subject}</title>
 		<style>
 			html {
 				background: #eee;
@@ -147,18 +149,18 @@ export function createEmailService(
 	<body>
 		<main>
 			<header>
-				<img src="${ meta.logoImageUrl ?? meta.iconUrl ?? iconUrl }"/>
+				<img src="${meta.logoImageUrl ?? meta.iconUrl ?? iconUrl}"/>
 			</header>
 			<article>
-				<h1>${ subject }</h1>
-				<div>${ html }</div>
+				<h1>${subject}</h1>
+				<div>${html}</div>
 			</article>
 			<footer>
-				<a href="${ emailSettingUrl }">${ 'Email setting' }</a>
+				<a href="${emailSettingUrl}">${'Email setting'}</a>
 			</footer>
 		</main>
 		<nav>
-			<a href="${ config.instance.url }">${ config.runtime.host }</a>
+			<a href="${config.instance.url}">${config.runtime.host}</a>
 		</nav>
 	</body>
 </html>`;
@@ -168,10 +170,12 @@ export function createEmailService(
 		try {
 			// TODO: htmlサニタイズ
 			const info = await transporter.sendMail({
-				from: meta.name ? {
-					name: meta.name,
-					address: meta.email!,
-				} : meta.email!,
+				from: meta.name
+					? {
+							name: meta.name,
+							address: meta.email!,
+						}
+					: meta.email!,
 				to: to,
 				subject: subject,
 				text: text,
@@ -206,8 +210,8 @@ export function createEmailService(
 		}
 
 		let validated: {
-			valid: boolean,
-			reason?: string | null,
+			valid: boolean;
+			reason?: string | null;
 		} = { valid: true, reason: null };
 
 		if (meta.enableActiveEmailValidation) {
@@ -223,7 +227,10 @@ export function createEmailService(
 		}
 
 		if (!validated.valid) {
-			const formatReason: Record<string, 'format' | 'disposable' | 'mx' | 'smtp' | 'network' | 'blacklist' | undefined> = {
+			const formatReason: Record<
+				string,
+				'format' | 'disposable' | 'mx' | 'smtp' | 'network' | 'blacklist' | undefined
+			> = {
 				regex: 'format',
 				disposable: 'disposable',
 				mx: 'mx',
@@ -234,7 +241,7 @@ export function createEmailService(
 
 			return {
 				available: false,
-				reason: validated.reason ? formatReason[validated.reason] ?? null : null,
+				reason: validated.reason ? (formatReason[validated.reason] ?? null) : null,
 			};
 		}
 
@@ -254,7 +261,10 @@ export function createEmailService(
 		};
 	}
 
-	async function verifyMail(emailAddress: string, verifymailAuthKey: string): Promise<{
+	async function verifyMail(
+		emailAddress: string,
+		verifymailAuthKey: string,
+	): Promise<{
 		valid: boolean;
 		reason: 'used' | 'format' | 'disposable' | 'mx' | 'smtp' | null;
 	}> {
@@ -323,7 +333,11 @@ export function createEmailService(
 		};
 	}
 
-	async function trueMail<T>(truemailInstance: string, emailAddress: string, truemailAuthKey: string): Promise<{
+	async function trueMail<T>(
+		truemailInstance: string,
+		emailAddress: string,
+		truemailAuthKey: string,
+	): Promise<{
 		valid: boolean;
 		reason: 'used' | 'format' | 'blacklist' | 'mx' | 'smtp' | 'network' | T | null;
 	}> {
@@ -372,7 +386,7 @@ export function createEmailService(
 			if (!json.success) {
 				return {
 					valid: false,
-					reason: json.errors?.list_match as T || 'blacklist',
+					reason: (json.errors?.list_match as T) || 'blacklist',
 				};
 			}
 

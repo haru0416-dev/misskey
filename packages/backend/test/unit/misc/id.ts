@@ -30,7 +30,7 @@ describe('misc:id', () => {
 		expect([...ids].sort()).toEqual(ids);
 		expect(new Set(ids).size).toBe(ids.length);
 		// parseFull の additional も順序を保存する
-		const additionals = ids.map(id => parseUuidv7Full(id).additional);
+		const additionals = ids.map((id) => parseUuidv7Full(id).additional);
 		for (let i = 1; i < additionals.length; i++) {
 			const current = additionals[i];
 			const previous = additionals[i - 1];

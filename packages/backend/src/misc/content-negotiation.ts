@@ -45,10 +45,7 @@ function parseAcceptHeader(header: string): AcceptRange[] {
 			break; // q 以降は accept-ext (media type のパラメータではない)
 		}
 
-		const specificity =
-			type === '*' ? 0 :
-			subtype === '*' ? 1 :
-			2;
+		const specificity = type === '*' ? 0 : subtype === '*' ? 1 : 2;
 
 		ranges.push({ type, subtype, q, specificity, headerIndex });
 	}
@@ -106,7 +103,10 @@ function matchRange(ranges: AcceptRange[], candidate: string): AcceptRange | nul
 	return best;
 }
 
-export function preferredMediaType<T extends string>(acceptHeader: string | undefined | null, candidates: readonly T[]): T | null {
+export function preferredMediaType<T extends string>(
+	acceptHeader: string | undefined | null,
+	candidates: readonly T[],
+): T | null {
 	if (acceptHeader == null || acceptHeader.trim() === '') {
 		return candidates[0] ?? null;
 	}
@@ -127,7 +127,9 @@ export function preferredMediaType<T extends string>(acceptHeader: string | unde
 			bestRange == null ||
 			range.q > bestRange.q ||
 			(range.q === bestRange.q && range.specificity > bestRange.specificity) ||
-			(range.q === bestRange.q && range.specificity === bestRange.specificity && range.headerIndex < bestRange.headerIndex)
+			(range.q === bestRange.q &&
+				range.specificity === bestRange.specificity &&
+				range.headerIndex < bestRange.headerIndex)
 		) {
 			best = candidate;
 			bestRange = range;

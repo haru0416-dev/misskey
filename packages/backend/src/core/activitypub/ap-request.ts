@@ -53,19 +53,28 @@ function getCachedSigner(privateKeyPem: string): Signer {
 }
 
 export class ApRequestCreator {
-	static async createSignedPost(args: { key: PrivateKey, url: string, body: string, digest?: string, additionalHeaders: Record<string, string> }): Promise<Signed> {
+	static async createSignedPost(args: {
+		key: PrivateKey;
+		url: string;
+		body: string;
+		digest?: string;
+		additionalHeaders: Record<string, string>;
+	}): Promise<Signed> {
 		const u = new URL(args.url);
 		const digestHeader = args.digest ?? this.createDigest(args.body);
 
 		const request: Request = {
 			url: u.href,
 			method: 'POST',
-			headers: this.#objectAssignWithLcKey({
-				'Date': new Date().toUTCString(),
-				'Host': u.host,
-				'Content-Type': 'application/activity+json',
-				'Digest': digestHeader,
-			}, args.additionalHeaders),
+			headers: this.#objectAssignWithLcKey(
+				{
+					Date: new Date().toUTCString(),
+					Host: u.host,
+					'Content-Type': 'application/activity+json',
+					Digest: digestHeader,
+				},
+				args.additionalHeaders,
+			),
 		};
 
 		const result = await this.#signToRequest(request, args.key, ['(request-target)', 'date', 'host', 'digest']);
@@ -82,17 +91,24 @@ export class ApRequestCreator {
 		return `SHA-256=${crypto.createHash('sha256').update(body).digest('base64')}`;
 	}
 
-	static async createSignedGet(args: { key: PrivateKey, url: string, additionalHeaders: Record<string, string> }): Promise<Signed> {
+	static async createSignedGet(args: {
+		key: PrivateKey;
+		url: string;
+		additionalHeaders: Record<string, string>;
+	}): Promise<Signed> {
 		const u = new URL(args.url);
 
 		const request: Request = {
 			url: u.href,
 			method: 'GET',
-			headers: this.#objectAssignWithLcKey({
-				'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
-				'Date': new Date().toUTCString(),
-				'Host': new URL(args.url).host,
-			}, args.additionalHeaders),
+			headers: this.#objectAssignWithLcKey(
+				{
+					Accept: 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+					Date: new Date().toUTCString(),
+					Host: new URL(args.url).host,
+				},
+				args.additionalHeaders,
+			),
 		};
 
 		const result = await this.#signToRequest(request, args.key, ['(request-target)', 'date', 'host']);
@@ -131,7 +147,7 @@ export class ApRequestCreator {
 
 		const results: string[] = [];
 
-		for (const key of includeHeaders.map(x => x.toLowerCase())) {
+		for (const key of includeHeaders.map((x) => x.toLowerCase())) {
 			if (key === '(request-target)') {
 				const url = new URL(request.url);
 				results.push(`(request-target): ${request.method.toLowerCase()} ${url.pathname}${url.search}`);

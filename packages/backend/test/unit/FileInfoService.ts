@@ -27,7 +27,7 @@ describe('FileInfoService', () => {
 		delete fi.porn;
 
 		return fi;
-	}
+	};
 
 	beforeAll(() => {
 		const loggerService = createLoggerService();
@@ -159,7 +159,7 @@ describe('FileInfoService', () => {
 				size: 75933,
 				md5: '268c5dde99e17cf8fe09f1ab3f97df56',
 				type: {
-					mime: 'application/octet-stream',	// do not treat as image
+					mime: 'application/octet-stream', // do not treat as image
 					ext: null,
 				},
 				width: 25000,

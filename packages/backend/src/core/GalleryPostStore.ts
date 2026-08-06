@@ -55,11 +55,7 @@ export async function fetchGalleryPostByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiGalleryPost['id'],
 ): Promise<MiGalleryPost | null> {
-	const [row] = await db
-		.select()
-		.from(galleryPost)
-		.where(eq(galleryPost.id, id))
-		.limit(1);
+	const [row] = await db.select().from(galleryPost).where(eq(galleryPost.id, id)).limit(1);
 
 	return row == null ? null : deserializeGalleryPost(row);
 }
@@ -81,10 +77,7 @@ export async function createGalleryPostInDatabase(
 	db: MiDrizzleDatabase,
 	data: GalleryPostInsert,
 ): Promise<MiGalleryPost> {
-	const [row] = await db
-		.insert(galleryPost)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(galleryPost).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create gallery post');
@@ -102,19 +95,11 @@ export async function updateGalleryPostByIdAndUserIdInDatabase(
 	await db
 		.update(galleryPost)
 		.set(values)
-		.where(and(
-			eq(galleryPost.id, id),
-			eq(galleryPost.userId, userId),
-		));
+		.where(and(eq(galleryPost.id, id), eq(galleryPost.userId, userId)));
 }
 
-export async function deleteGalleryPostByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiGalleryPost['id'],
-): Promise<void> {
-	await db
-		.delete(galleryPost)
-		.where(eq(galleryPost.id, id));
+export async function deleteGalleryPostByIdFromDatabase(db: MiDrizzleDatabase, id: MiGalleryPost['id']): Promise<void> {
+	await db.delete(galleryPost).where(eq(galleryPost.id, id));
 }
 
 export async function incrementGalleryPostLikedCountInDatabase(
@@ -143,10 +128,7 @@ export async function listGalleryPostsByIdsFromDatabase(
 ): Promise<MiGalleryPost[]> {
 	if (ids.length === 0) return [];
 
-	const rows = await db
-		.select()
-		.from(galleryPost)
-		.where(inArray(galleryPost.id, ids));
+	const rows = await db.select().from(galleryPost).where(inArray(galleryPost.id, ids));
 
 	return rows.map(deserializeGalleryPost);
 }
@@ -179,9 +161,7 @@ export async function listGalleryPostsWithPaginationFromDatabase(
 	return rows.map(deserializeGalleryPost);
 }
 
-export async function listPopularGalleryPostsFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiGalleryPost[]> {
+export async function listPopularGalleryPostsFromDatabase(db: MiDrizzleDatabase): Promise<MiGalleryPost[]> {
 	const rows = await db
 		.select()
 		.from(galleryPost)

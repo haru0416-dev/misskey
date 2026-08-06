@@ -18,7 +18,12 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiFollowing, MiUserProfile } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
-import type { HonoStreamChannelContext, HonoStreamChannelDefinition, HonoStreamChannelHandle, HonoStreamChannelSubscriber } from './channel.js';
+import type {
+	HonoStreamChannelContext,
+	HonoStreamChannelDefinition,
+	HonoStreamChannelHandle,
+	HonoStreamChannelSubscriber,
+} from './channel.js';
 import { honoStreamChannelAdmin } from './channels/admin.js';
 import { honoStreamChannelDrive } from './channels/drive.js';
 import { honoStreamChannelMain } from './channels/main.js';
@@ -49,7 +54,10 @@ async function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> 
 		return await Promise.race([
 			promise,
 			new Promise<never>((_resolve, reject) => {
-				timeoutId = setTimeout(() => reject(new HonoStreamInitializationTimeoutError(message)), INITIALIZATION_TIMEOUT_MS);
+				timeoutId = setTimeout(
+					() => reject(new HonoStreamInitializationTimeoutError(message)),
+					INITIALIZATION_TIMEOUT_MS,
+				);
 			}),
 		]);
 	} finally {
@@ -71,7 +79,7 @@ class HonoStreamChannelSubscriberScope implements HonoStreamChannelSubscriber {
 
 	public off(eventName: string | symbol, listener: Parameters<EventEmitter['off']>[1]): void {
 		this.subscriber.off(eventName, listener);
-		const index = this.listeners.findLastIndex(entry => entry.eventName === eventName && entry.listener === listener);
+		const index = this.listeners.findLastIndex((entry) => entry.eventName === eventName && entry.listener === listener);
 		if (index !== -1) this.listeners.splice(index, 1);
 	}
 
@@ -82,20 +90,18 @@ class HonoStreamChannelSubscriberScope implements HonoStreamChannelSubscriber {
 	}
 }
 
-export type HonoStreamConnectionDependencies =
-	& HonoApiNotificationDependencies
-	& Parameters<typeof honoStreamChannelMain.init>[0]
-	& Parameters<typeof honoStreamChannelChatRoom.init>[0]
-	& Parameters<typeof honoStreamChannelHashtag.init>[0]
-	& Parameters<typeof honoStreamChannelAntenna.init>[0]
-	& Parameters<typeof honoStreamChannelChannel.init>[0]
-	& Parameters<typeof honoStreamChannelUserList.init>[0]
-	& Parameters<typeof honoStreamChannelRoleTimeline.init>[0]
-	& Parameters<typeof honoStreamChannelLocalTimeline.init>[0]
-	& Parameters<typeof honoStreamChannelGlobalTimeline.init>[0]
-	& Parameters<typeof honoStreamChannelHomeTimeline.init>[0]
-	& Parameters<typeof honoStreamChannelHybridTimeline.init>[0]
-	& {
+export type HonoStreamConnectionDependencies = HonoApiNotificationDependencies &
+	Parameters<typeof honoStreamChannelMain.init>[0] &
+	Parameters<typeof honoStreamChannelChatRoom.init>[0] &
+	Parameters<typeof honoStreamChannelHashtag.init>[0] &
+	Parameters<typeof honoStreamChannelAntenna.init>[0] &
+	Parameters<typeof honoStreamChannelChannel.init>[0] &
+	Parameters<typeof honoStreamChannelUserList.init>[0] &
+	Parameters<typeof honoStreamChannelRoleTimeline.init>[0] &
+	Parameters<typeof honoStreamChannelLocalTimeline.init>[0] &
+	Parameters<typeof honoStreamChannelGlobalTimeline.init>[0] &
+	Parameters<typeof honoStreamChannelHomeTimeline.init>[0] &
+	Parameters<typeof honoStreamChannelHybridTimeline.init>[0] & {
 		db: MiDrizzleDatabase;
 	};
 
@@ -111,16 +117,20 @@ type ConnectionSnapshot = {
 };
 
 /** Connection#fetch 相当。原典が Redis キャッシュ経由で読んでいた関連セットは直接DB読みに置き換えている。 */
-async function fetchStreamConnectionSnapshot(deps: HonoStreamConnectionDependencies, userId: MiUser['id']): Promise<ConnectionSnapshot> {
-	const [userProfile, followees, followingChannelIds, mutedChannelIds, muteeIds, blockerIds, renoteMuteeIds] = await Promise.all([
-		fetchUserProfileByUserIdFromDatabase(deps.db, userId),
-		listFolloweeIdsWithRepliesByFollowerIdFromDatabase(deps.db, userId),
-		listFollowedChannelIdsByUserIdFromDatabase(deps.db, userId),
-		listMutedChannelIdsByUserIdFromDatabase(deps.db, userId),
-		listMuteeIdsByMuterIdFromDatabase(deps.db, userId),
-		listBlockerIdsByBlockeeIdFromDatabase(deps.db, userId),
-		listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, userId),
-	]);
+async function fetchStreamConnectionSnapshot(
+	deps: HonoStreamConnectionDependencies,
+	userId: MiUser['id'],
+): Promise<ConnectionSnapshot> {
+	const [userProfile, followees, followingChannelIds, mutedChannelIds, muteeIds, blockerIds, renoteMuteeIds] =
+		await Promise.all([
+			fetchUserProfileByUserIdFromDatabase(deps.db, userId),
+			listFolloweeIdsWithRepliesByFollowerIdFromDatabase(deps.db, userId),
+			listFollowedChannelIdsByUserIdFromDatabase(deps.db, userId),
+			listMutedChannelIdsByUserIdFromDatabase(deps.db, userId),
+			listMuteeIdsByMuterIdFromDatabase(deps.db, userId),
+			listBlockerIdsByBlockeeIdFromDatabase(deps.db, userId),
+			listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, userId),
+		]);
 
 	const following: Record<string, Pick<MiFollowing, 'withReplies'> | undefined> = {};
 	for (const followee of followees) {
@@ -249,9 +259,15 @@ export class HonoStreamConnection {
 				break;
 		}
 	}
-	private readonly onNoteStreamMessage = (data: { type: string; body: { id: string; userId: string; visibility: string; visibleUserIds?: string[]; body: JsonValue } }): void => {
+	private readonly onNoteStreamMessage = (data: {
+		type: string;
+		body: { id: string; userId: string; visibility: string; visibleUserIds?: string[]; body: JsonValue };
+	}): void => {
 		if (data.body.userId !== this.user?.id) {
-			if (data.body.visibility === 'specified' && (this.user == null || !(data.body.visibleUserIds ?? []).includes(this.user.id))) {
+			if (
+				data.body.visibility === 'specified' &&
+				(this.user == null || !(data.body.visibleUserIds ?? []).includes(this.user.id))
+			) {
 				return;
 			}
 			if (data.body.visibility === 'followers' && !Object.hasOwn(this.following, data.body.userId)) {
@@ -341,12 +357,28 @@ export class HonoStreamConnection {
 		const { type, body } = obj;
 
 		switch (type) {
-			case 'readNotification': this.onReadNotification(); break;
-			case 'subNote': case 's': case 'sr': this.onSubscribeNote(body); break;
-			case 'unsubNote': case 'un': this.onUnsubscribeNote(body); break;
-			case 'connect': this.onChannelConnectRequested(body); break;
-			case 'disconnect': this.onChannelDisconnectRequested(body); break;
-			case 'channel': case 'ch': this.onChannelMessageRequested(body); break;
+			case 'readNotification':
+				this.onReadNotification();
+				break;
+			case 'subNote':
+			case 's':
+			case 'sr':
+				this.onSubscribeNote(body);
+				break;
+			case 'unsubNote':
+			case 'un':
+				this.onUnsubscribeNote(body);
+				break;
+			case 'connect':
+				this.onChannelConnectRequested(body);
+				break;
+			case 'disconnect':
+				this.onChannelDisconnectRequested(body);
+				break;
+			case 'channel':
+			case 'ch':
+				this.onChannelMessageRequested(body);
+				break;
 		}
 	}
 
@@ -399,7 +431,11 @@ export class HonoStreamConnection {
 		this.sendToClient?.(JSON.stringify({ type, body: payload }));
 	}
 
-	private buildChannelContext(id: string, subscriber: HonoStreamChannelSubscriber, send: (type: string, body: JsonValue) => void): HonoStreamChannelContext {
+	private buildChannelContext(
+		id: string,
+		subscriber: HonoStreamChannelSubscriber,
+		send: (type: string, body: JsonValue) => void,
+	): HonoStreamChannelContext {
 		return {
 			id,
 			...(this.user !== undefined ? { user: this.user } : {}),
@@ -417,7 +453,12 @@ export class HonoStreamConnection {
 		};
 	}
 
-	public async connectChannel(id: string, params: JsonObject | undefined, channelName: string, pong = false): Promise<void> {
+	public async connectChannel(
+		id: string,
+		params: JsonObject | undefined,
+		channelName: string,
+		pong = false,
+	): Promise<void> {
 		if (this.disposed) return;
 		this.disconnectChannel(id);
 
@@ -434,8 +475,11 @@ export class HonoStreamConnection {
 			return;
 		}
 
-		if (this.token && ((definition.kind && !this.token.permission.includes(definition.kind))
-			|| (!definition.kind && definition.requireCredential))) {
+		if (
+			this.token &&
+			((definition.kind && !this.token.permission.includes(definition.kind)) ||
+				(!definition.kind && definition.requireCredential))
+		) {
 			return;
 		}
 
@@ -463,7 +507,10 @@ export class HonoStreamConnection {
 		} catch (error) {
 			subscriber.dispose();
 			if (this.pendingChannels.get(id) === subscriber) this.pendingChannels.delete(id);
-			const cleanupLateResult = initialization.then(lateResult => lateResult && lateResult.dispose?.(), () => {});
+			const cleanupLateResult = initialization.then(
+				(lateResult) => lateResult && lateResult.dispose?.(),
+				() => {},
+			);
 			if (error instanceof HonoStreamInitializationTimeoutError) {
 				void cleanupLateResult.finally(() => this.pendingChannelScopes.delete(subscriber));
 			} else {
@@ -552,7 +599,7 @@ export async function refreshHonoStreamConnections(
 			for (const delayMs of REFRESH_RETRY_DELAYS_MS) {
 				// Retries are deliberately serialized to avoid amplifying a recovering database outage.
 				// eslint-disable-next-line no-await-in-loop
-				if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs));
+				if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
 				try {
 					// eslint-disable-next-line no-await-in-loop
 					await connection.refresh();
@@ -563,7 +610,10 @@ export async function refreshHonoStreamConnections(
 				}
 			}
 			if (!refreshed && connections.has(connection)) {
-				console.error('Failed to refresh a streaming connection after Redis reconnected; terminating the connection.', lastError);
+				console.error(
+					'Failed to refresh a streaming connection after Redis reconnected; terminating the connection.',
+					lastError,
+				);
 				try {
 					terminate();
 				} catch (error) {

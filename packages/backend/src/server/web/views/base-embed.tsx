@@ -8,20 +8,24 @@ import type { CommonProps } from '@/server/web/views/_.js';
 import { Splash } from '@/server/web/views/_splash.js';
 import type { PropsWithChildren, Children } from '@kitajs/html';
 
-export function BaseEmbed(props: PropsWithChildren<CommonProps<{
-	title?: string;
-	noindex?: boolean;
-	desc?: string;
-	img?: string;
-	serverErrorImageUrl?: string;
-	infoImageUrl?: string;
-	notFoundImageUrl?: string;
-	metaJson?: string;
-	embedCtxJson?: string;
+export function BaseEmbed(
+	props: PropsWithChildren<
+		CommonProps<{
+			title?: string;
+			noindex?: boolean;
+			desc?: string;
+			img?: string;
+			serverErrorImageUrl?: string;
+			infoImageUrl?: string;
+			notFoundImageUrl?: string;
+			metaJson?: string;
+			embedCtxJson?: string;
 
-	titleSlot?: Children;
-	metaSlot?: Children;
-}>>) {
+			titleSlot?: Children;
+			metaSlot?: Children;
+		}>
+	>,
+) {
 	const now = Date.now();
 
 	// 変数名をsafeで始めることでエラーをスキップ
@@ -41,7 +45,10 @@ export function BaseEmbed(props: PropsWithChildren<CommonProps<{
 					<meta name="theme-color-orig" content={props.themeColor ?? '#5c62d8'} />
 					<meta property="og:site_name" content={props.instanceName || 'Erebia'} />
 					<meta property="instance_url" content={props.instanceUrl} />
-					<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+					<meta
+						name="viewport"
+						content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+					/>
 					<meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no" />
 					<link rel="icon" href={props.icon ?? '/client-assets/erebia-icon.svg'} />
 					<link rel="apple-touch-icon" href={props.appleTouchIcon ?? '/client-assets/erebia-icon.png'} />
@@ -58,24 +65,41 @@ export function BaseEmbed(props: PropsWithChildren<CommonProps<{
 
 					<meta name="robots" content="noindex" />
 
-					{props.frontendEmbedBootloaderCss != null ? <style safe>{props.frontendEmbedBootloaderCss}</style> : <link rel="stylesheet" href="/embed_vite/loader/style.css" />}
+					{props.frontendEmbedBootloaderCss != null ? (
+						<style safe>{props.frontendEmbedBootloaderCss}</style>
+					) : (
+						<link rel="stylesheet" href="/embed_vite/loader/style.css" />
+					)}
 
 					<script>
-						const VERSION = '{props.version}';
-						const CLIENT_ENTRY = {JSON.stringify(props.frontendEmbedViteFiles?.entryJs ?? null)};
-						const CLIENT_PRELOADS = {JSON.stringify(props.frontendEmbedViteFiles?.modulePreloads ?? [])};
-						const LANGS = {JSON.stringify(props.langs)};
+						const VERSION = '{props.version}'; const CLIENT_ENTRY ={' '}
+						{JSON.stringify(props.frontendEmbedViteFiles?.entryJs ?? null)}; const CLIENT_PRELOADS ={' '}
+						{JSON.stringify(props.frontendEmbedViteFiles?.modulePreloads ?? [])}; const LANGS ={' '}
+						{JSON.stringify(props.langs)};
 					</script>
 
-					{safeMetaJson != null ? <script type="application/json" id="misskey_meta" data-generated-at={now}>{safeMetaJson}</script> : null}
-					{safeEmbedCtxJson != null ? <script type="application/json" id="misskey_embedCtx" data-generated-at={now}>{safeEmbedCtxJson}</script> : null}
+					{safeMetaJson != null ? (
+						<script type="application/json" id="misskey_meta" data-generated-at={now}>
+							{safeMetaJson}
+						</script>
+					) : null}
+					{safeEmbedCtxJson != null ? (
+						<script type="application/json" id="misskey_embedCtx" data-generated-at={now}>
+							{safeEmbedCtxJson}
+						</script>
+					) : null}
 
-					{props.frontendEmbedBootloaderJs != null ? <script>{props.frontendEmbedBootloaderJs}</script> : <script src="/embed_vite/loader/boot.js"></script>}
+					{props.frontendEmbedBootloaderJs != null ? (
+						<script>{props.frontendEmbedBootloaderJs}</script>
+					) : (
+						<script src="/embed_vite/loader/boot.js"></script>
+					)}
 				</head>
 				<body>
 					<noscript>
 						<p>
-							JavaScriptを有効にしてください<br />
+							JavaScriptを有効にしてください
+							<br />
 							Please turn on your JavaScript
 						</p>
 					</noscript>

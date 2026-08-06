@@ -30,17 +30,28 @@ import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-p
 import type { HonoChartWriters } from '../chart-runtime.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiNotesDeleteDependencies = HonoApiRelayDeliverDependencies & HonoApiRolePolicyDependencies & {
-	chartWriters: HonoChartWriters;
-	publishNoteStream?: HonoApiNoteStreamPublisher;
-};
+export type HonoApiNotesDeleteDependencies = HonoApiRelayDeliverDependencies &
+	HonoApiRolePolicyDependencies & {
+		chartWriters: HonoChartWriters;
+		publishNoteStream?: HonoApiNoteStreamPublisher;
+	};
 
 function notesDeleteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: '490be23f-8c1f-4796-819f-94cb4f9d1630' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: '490be23f-8c1f-4796-819f-94cb4f9d1630',
+	});
 }
 
 function notesDeleteAccessDeniedError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id: 'fe8d7103-0ea8-4ec3-814d-f8b401dc69e9' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Access denied.',
+		code: 'ACCESS_DENIED',
+		id: 'fe8d7103-0ea8-4ec3-814d-f8b401dc69e9',
+	});
 }
 
 export const notesDeleteParamDef = z.object({
@@ -84,12 +95,14 @@ export async function deleteNoteForHonoApi(
 	}
 
 	if (deps.meta.enableStatsForFederatedInstances && user.host != null) {
-		fetchOrRegisterInstanceForHonoApi(deps, user.host).then(async i => {
-			await adjustInstanceNotesCountFromDatabase(deps.db, i.id, -1);
-			if (deps.meta.enableChartsForFederatedInstances) {
-				void deps.chartWriters.instanceChart.updateNote(i.host, note, false);
-			}
-		}).catch(() => {});
+		fetchOrRegisterInstanceForHonoApi(deps, user.host)
+			.then(async (i) => {
+				await adjustInstanceNotesCountFromDatabase(deps.db, i.id, -1);
+				if (deps.meta.enableChartsForFederatedInstances) {
+					void deps.chartWriters.instanceChart.updateNote(i.host, note, false);
+				}
+			})
+			.catch(() => {});
 	}
 
 	await deleteNoteAndDecrementParentRepliesCountInDatabase(deps.db, note.id, user.id);
@@ -116,7 +129,7 @@ export async function handleHonoApiNotesDelete(
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesDeleteNoSuchNoteError();
 
-	if (!await isHonoApiModerator(deps, me) && note.userId !== me.id) {
+	if (!(await isHonoApiModerator(deps, me)) && note.userId !== me.id) {
 		throw notesDeleteAccessDeniedError();
 	}
 
@@ -132,7 +145,12 @@ export const notesDeleteRateLimit = {
 };
 
 function notesUnrenoteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such note.', code: 'NO_SUCH_NOTE', id: 'efd4a259-2442-496b-8dd7-b255aa1a160f' });
+	return new HonoApiError({
+		status: 400,
+		message: 'No such note.',
+		code: 'NO_SUCH_NOTE',
+		id: 'efd4a259-2442-496b-8dd7-b255aa1a160f',
+	});
 }
 
 export const notesUnrenoteParamDef = z.object({
@@ -156,7 +174,7 @@ export async function handleHonoApiNotesUnrenote(
 	const renotes = await listNotesByUserIdAndRenoteIdFromDatabase(deps.db, me.id, note.id);
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 
-	await Promise.all(renotes.map(renote => deleteNoteForHonoApi(deps, user, renote)));
+	await Promise.all(renotes.map((renote) => deleteNoteForHonoApi(deps, user, renote)));
 }
 
 export const notesUnrenoteRateLimit = {

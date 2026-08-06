@@ -27,7 +27,10 @@ describe('[シナリオ] ユーザ作成', () => {
 	let queue: JobQueueRuntime;
 	let admin: entities.SignupResponse;
 
-	async function createSystemWebhook(args?: Partial<entities.AdminSystemWebhookCreateRequest>, credential?: UserToken): Promise<entities.AdminSystemWebhookCreateResponse> {
+	async function createSystemWebhook(
+		args?: Partial<entities.AdminSystemWebhookCreateRequest>,
+		credential?: UserToken,
+	): Promise<entities.AdminSystemWebhookCreateResponse> {
 		const res = await api(
 			'admin/system-webhook/create',
 			{
@@ -45,12 +48,15 @@ describe('[シナリオ] ユーザ作成', () => {
 
 	// -------------------------------------------------------------------------------------------
 
-	beforeAll(async () => {
-		queue = await startJobQueue();
-		admin = await signup({ username: 'admin' });
+	beforeAll(
+		async () => {
+			queue = await startJobQueue();
+			admin = await signup({ username: 'admin' });
 
-		await role(admin, { isAdministrator: true });
-	}, 1000 * 60 * 2);
+			await role(admin, { isAdministrator: true });
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await queue.close();
@@ -111,7 +117,7 @@ describe('[シナリオ] ユーザ作成', () => {
 			let alice: any = null;
 			const webhookBody = await captureWebhook(async () => {
 				alice = await signup({ username: 'alice' });
-			}).catch(e => e.message);
+			}).catch((e) => e.message);
 
 			expect(webhookBody).toBe('timeout');
 			expect(alice.id).not.toBeNull();
@@ -126,7 +132,7 @@ describe('[シナリオ] ユーザ作成', () => {
 			let alice: any = null;
 			const webhookBody = await captureWebhook(async () => {
 				alice = await signup({ username: 'alice' });
-			}).catch(e => e.message);
+			}).catch((e) => e.message);
 
 			expect(webhookBody).toBe('timeout');
 			expect(alice.id).not.toBeNull();

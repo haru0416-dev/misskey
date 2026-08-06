@@ -2,7 +2,19 @@ import { describe, test, beforeAll, afterAll } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Announce, Note, Question } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
-import { addCustomEmoji, createAccount, createModerator, deepStrictEqualWithExcludedFields, fetchActivityPubObject, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep, uploadFile, waitFor } from './utils.js';
+import {
+	addCustomEmoji,
+	createAccount,
+	createModerator,
+	deepStrictEqualWithExcludedFields,
+	fetchActivityPubObject,
+	type LoginUser,
+	resolveRemoteNote,
+	resolveRemoteUser,
+	sleep,
+	uploadFile,
+	waitFor,
+} from './utils.js';
 
 function getAt<T>(values: readonly T[], index: number): T {
 	const value = values[index];
@@ -15,10 +27,7 @@ describe('Note', () => {
 	let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 	beforeAll(async () => {
-		[alice, bob] = await Promise.all([
-			createAccount('a.test'),
-			createAccount('b.test'),
-		]);
+		[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 		[bobInA, aliceInB] = await Promise.all([
 			resolveRemoteUser('b.test', bob.id, alice),
@@ -29,15 +38,17 @@ describe('Note', () => {
 	describe('Note content', () => {
 		test('Consistency of Public Note', async () => {
 			const image = await uploadFile('a.test', alice);
-			const note = (await alice.client.request('notes/create', {
-				text: 'I am Alice!',
-				fileIds: [image.id],
-				poll: {
-					choices: ['neko', 'inu'],
-					multiple: false,
-					expiredAfter: 60 * 60 * 1000,
-				},
-			})).createdNote;
+			const note = (
+				await alice.client.request('notes/create', {
+					text: 'I am Alice!',
+					fileIds: [image.id],
+					poll: {
+						choices: ['neko', 'inu'],
+						multiple: false,
+						expiredAfter: 60 * 60 * 1000,
+					},
+				})
+			).createdNote;
 
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
 			deepStrictEqualWithExcludedFields(note, resolvedNote, [
@@ -68,13 +79,17 @@ describe('Note', () => {
 		});
 
 		test('Consistency of reply', async () => {
-			const _replyedNote = (await alice.client.request('notes/create', {
-				text: 'a',
-			})).createdNote;
-			const note = (await alice.client.request('notes/create', {
-				text: 'b',
-				replyId: _replyedNote.id,
-			})).createdNote;
+			const _replyedNote = (
+				await alice.client.request('notes/create', {
+					text: 'a',
+				})
+			).createdNote;
+			const note = (
+				await alice.client.request('notes/create', {
+					text: 'b',
+					replyId: _replyedNote.id,
+				})
+			).createdNote;
 			await sleep();
 			// NOTE: the repliedCount is incremented, so fetch again
 			const replyedNote = await alice.client.request('notes/show', { noteId: _replyedNote.id });
@@ -117,12 +132,16 @@ describe('Note', () => {
 
 		test('Consistency of Renote', async () => {
 			// NOTE: the renoteCount is not incremented, so no need to fetch again
-			const renotedNote = (await alice.client.request('notes/create', {
-				text: 'a',
-			})).createdNote;
-			const note = (await alice.client.request('notes/create', {
-				renoteId: renotedNote.id,
-			})).createdNote;
+			const renotedNote = (
+				await alice.client.request('notes/create', {
+					text: 'a',
+				})
+			).createdNote;
+			const note = (
+				await alice.client.request('notes/create', {
+					renoteId: renotedNote.id,
+				})
+			).createdNote;
 
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
 			deepStrictEqualWithExcludedFields(note, resolvedNote, [
@@ -136,13 +155,7 @@ describe('Note', () => {
 			]);
 			assert(resolvedNote.renoteId != null);
 			assert(resolvedNote.renote != null);
-			deepStrictEqualWithExcludedFields(renotedNote, resolvedNote.renote, [
-				'id',
-				'emojis',
-				'userId',
-				'user',
-				'uri',
-			]);
+			deepStrictEqualWithExcludedFields(renotedNote, resolvedNote.renote, ['id', 'emojis', 'userId', 'user', 'uri']);
 			strictEqual(aliceInB.id, resolvedNote.userId);
 
 			const activityPubRenote = await fetchActivityPubObject(`https://a.test/notes/${note.id}/activity`);
@@ -159,21 +172,29 @@ describe('Note', () => {
 				resolveRemoteUser('b.test', follower.id, alice),
 			]);
 			await follower.client.request('following/create', { userId: aliceInFollower.id });
-			await waitFor(async () => (await alice.client.request('users/followers', { userId: alice.id }))
-				.some(({ followerId }) => followerId === followerInA.id));
+			await waitFor(async () =>
+				(await alice.client.request('users/followers', { userId: alice.id })).some(
+					({ followerId }) => followerId === followerInA.id,
+				),
+			);
 
 			try {
-				const originalNote = (await alice.client.request('notes/create', {
-					text: 'a',
-				})).createdNote;
-				const renote = (await alice.client.request('notes/create', {
-					renoteId: originalNote.id,
-				})).createdNote;
+				const originalNote = (
+					await alice.client.request('notes/create', {
+						text: 'a',
+					})
+				).createdNote;
+				const renote = (
+					await alice.client.request('notes/create', {
+						renoteId: originalNote.id,
+					})
+				).createdNote;
 
 				let renoteInB: Misskey.entities.Note | undefined;
 				await waitFor(async () => {
-					renoteInB = (await follower.client.request('notes/timeline', {}))
-						.find(note => note.uri === `https://a.test/notes/${renote.id}/activity`);
+					renoteInB = (await follower.client.request('notes/timeline', {})).find(
+						(note) => note.uri === `https://a.test/notes/${renote.id}/activity`,
+					);
 					return renoteInB != null;
 				});
 				assert(renoteInB != null);
@@ -182,10 +203,17 @@ describe('Note', () => {
 				const originalNoteInB = await follower.client.request('notes/show', { noteId: renoteInB.renoteId });
 
 				await alice.client.request('notes/delete', { noteId: renote.id });
-				await waitFor(async () => await follower.client.request('notes/show', { noteId: renoteInBId })
-					.then(() => false)
-					.catch(err => err.code === 'NO_SUCH_NOTE'));
-				strictEqual((await follower.client.request('notes/show', { noteId: originalNoteInB.id })).id, originalNoteInB.id);
+				await waitFor(
+					async () =>
+						await follower.client
+							.request('notes/show', { noteId: renoteInBId })
+							.then(() => false)
+							.catch((err) => err.code === 'NO_SUCH_NOTE'),
+				);
+				strictEqual(
+					(await follower.client.request('notes/show', { noteId: originalNoteInB.id })).id,
+					originalNoteInB.id,
+				);
 			} finally {
 				await follower.client.request('following/delete', { userId: aliceInFollower.id });
 			}
@@ -218,7 +246,7 @@ describe('Note', () => {
 				});
 
 				test('Check', async () => {
-					const note = (await bob.client.request('notes/create', { text: 'I\'m Bob.' })).createdNote;
+					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
 					const noteInA = await resolveRemoteNote('b.test', note.id, carol);
 					await bob.client.request('notes/delete', { noteId: note.id });
 					await sleep();
@@ -240,7 +268,7 @@ describe('Note', () => {
 
 			describe('To renoted and not followed user', () => {
 				test('Check', async () => {
-					const note = (await bob.client.request('notes/create', { text: 'I\'m Bob.' })).createdNote;
+					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
 					const noteInA = await resolveRemoteNote('b.test', note.id, alice);
 					await alice.client.request('notes/create', { renoteId: noteInA.id });
 					await sleep();
@@ -260,7 +288,7 @@ describe('Note', () => {
 
 			describe('To replied and not followed user', () => {
 				test('Check', async () => {
-					const note = (await bob.client.request('notes/create', { text: 'I\'m Bob.' })).createdNote;
+					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
 					const noteInA = await resolveRemoteNote('b.test', note.id, alice);
 					await alice.client.request('notes/create', { text: 'Hello Bob!', replyId: noteInA.id });
 					await sleep();
@@ -284,7 +312,7 @@ describe('Note', () => {
 			 */
 			describe('To only resolved and not followed user', () => {
 				test.skip('Check', async () => {
-					const note = (await bob.client.request('notes/create', { text: 'I\'m Bob.' })).createdNote;
+					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
 					const noteInA = await resolveRemoteNote('b.test', note.id, alice);
 					await sleep();
 
@@ -302,7 +330,7 @@ describe('Note', () => {
 			});
 		});
 
-		describe('Deletion of remote user\'s note for moderation', () => {
+		describe("Deletion of remote user's note for moderation", () => {
 			let note: Misskey.entities.Note;
 
 			test('Alice post is deleted in B', async () => {
@@ -377,7 +405,8 @@ describe('Note', () => {
 
 		describe('Acceptance', () => {
 			test('Even if likeOnly, remote users can react with custom emoji, but it is converted to like', async () => {
-				const note = (await alice.client.request('notes/create', { text: 'a', reactionAcceptance: 'likeOnly' })).createdNote;
+				const note = (await alice.client.request('notes/create', { text: 'a', reactionAcceptance: 'likeOnly' }))
+					.createdNote;
 				const noteInB = await resolveRemoteNote('a.test', note.id, bob);
 				const emoji = await addCustomEmoji('b.test');
 				await bob.client.request('notes/reactions/create', { noteId: noteInB.id, reaction: `:${emoji.name}:` });
@@ -393,7 +422,8 @@ describe('Note', () => {
 			 *       @see https://github.com/misskey-dev/misskey/issues/12409
 			 */
 			test('Even if nonSensitiveOnly, remote users can react with sensitive emoji, and it is not converted', async () => {
-				const note = (await alice.client.request('notes/create', { text: 'a', reactionAcceptance: 'nonSensitiveOnly' })).createdNote;
+				const note = (await alice.client.request('notes/create', { text: 'a', reactionAcceptance: 'nonSensitiveOnly' }))
+					.createdNote;
 				const noteInB = await resolveRemoteNote('a.test', note.id, bob);
 				const emoji = await addCustomEmoji('b.test', { isSensitive: true });
 				await bob.client.request('notes/reactions/create', { noteId: noteInB.id, reaction: `:${emoji.name}:` });
@@ -407,7 +437,7 @@ describe('Note', () => {
 	});
 
 	describe('Poll', () => {
-		describe('Any remote user\'s vote is delivered to the author', () => {
+		describe("Any remote user's vote is delivered to the author", () => {
 			let carol: LoginUser;
 
 			beforeAll(async () => {
@@ -427,23 +457,17 @@ describe('Note', () => {
 			});
 		});
 
-		describe('Local user\'s vote is delivered to the author\'s remote followers', () => {
+		describe("Local user's vote is delivered to the author's remote followers", () => {
 			let bobRemoteFollower: LoginUser, localVoter: LoginUser;
 
 			beforeAll(async () => {
-				[
-					bobRemoteFollower,
-					localVoter,
-				] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[bobRemoteFollower, localVoter] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				await bobRemoteFollower.client.request('following/create', { userId: bobInA.id });
 				await sleep();
 			});
 
-			test('A vote in Bob\'s server is delivered to Bob\'s remote followers', async () => {
+			test("A vote in Bob's server is delivered to Bob's remote followers", async () => {
 				const note = (await bob.client.request('notes/create', { poll: { choices: ['inu', 'neko'] } })).createdNote;
 				// NOTE: resolve before voting
 				const noteInA = await resolveRemoteNote('b.test', note.id, bobRemoteFollower);

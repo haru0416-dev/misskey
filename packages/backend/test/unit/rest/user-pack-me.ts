@@ -133,21 +133,25 @@ async function packWithRoles(roles: MiRole[], rootUserId: string | null = null) 
 	getHonoApiUserRolesMock.mockResolvedValue(roles);
 	getHonoApiRolePoliciesMock.mockResolvedValue(policies);
 
-	return await packMeDetailedForHonoApi({
-		config: {
-			instance: { url: 'https://example.test/' },
-			runtime: { host: 'example.test' },
-		} as Config,
-		db: {} as MiDrizzleDatabase,
-		meta: {
-			rootUserId,
-			showRoleBadgesOfRemoteUsers: true,
-			iconUrl: null,
-		} as MiMeta,
-	}, createUser(), {
-		includeSecrets: false,
-		profile: createProfile(),
-	});
+	return await packMeDetailedForHonoApi(
+		{
+			config: {
+				instance: { url: 'https://example.test/' },
+				runtime: { host: 'example.test' },
+			} as Config,
+			db: {} as MiDrizzleDatabase,
+			meta: {
+				rootUserId,
+				showRoleBadgesOfRemoteUsers: true,
+				iconUrl: null,
+			} as MiMeta,
+		},
+		createUser(),
+		{
+			includeSecrets: false,
+			profile: createProfile(),
+		},
+	);
 }
 
 describe('packMeDetailedForHonoApi', () => {

@@ -10,37 +10,40 @@ import { genId } from '@/misc/id/gen-id.js';
 const keywordMatrixSchema = z.array(z.array(z.string()));
 
 function hasKeyword(matrix: string[][]): boolean {
-	return matrix.some(group => group.some(keyword => keyword !== ''));
+	return matrix.some((group) => group.some((keyword) => keyword !== ''));
 }
 
-const exportedAntennaSchema = z.object({
-	name: z.string().min(1).max(100),
-	src: z.enum(['home', 'all', 'users', 'list', 'users_blacklist']),
-	userListAccts: z.array(z.string()).nullable(),
-	keywords: keywordMatrixSchema,
-	excludeKeywords: keywordMatrixSchema,
-	users: z.array(z.string()),
-	caseSensitive: z.boolean(),
-	localOnly: z.boolean(),
-	excludeBots: z.boolean(),
-	withReplies: z.boolean(),
-	withFile: z.boolean(),
-	excludeNotesInSensitiveChannel: z.boolean(),
-}).strict().superRefine((value, ctx) => {
-	if (!hasKeyword(value.keywords) && !hasKeyword(value.excludeKeywords)) {
-		ctx.addIssue({
-			code: 'custom',
-			message: 'Either keywords or excludeKeywords is required.',
-		});
-	}
-	if (value.src === 'list' && value.userListAccts == null) {
-		ctx.addIssue({
-			code: 'custom',
-			path: ['userListAccts'],
-			message: 'List antennas require exported list members.',
-		});
-	}
-});
+const exportedAntennaSchema = z
+	.object({
+		name: z.string().min(1).max(100),
+		src: z.enum(['home', 'all', 'users', 'list', 'users_blacklist']),
+		userListAccts: z.array(z.string()).nullable(),
+		keywords: keywordMatrixSchema,
+		excludeKeywords: keywordMatrixSchema,
+		users: z.array(z.string()),
+		caseSensitive: z.boolean(),
+		localOnly: z.boolean(),
+		excludeBots: z.boolean(),
+		withReplies: z.boolean(),
+		withFile: z.boolean(),
+		excludeNotesInSensitiveChannel: z.boolean(),
+	})
+	.strict()
+	.superRefine((value, ctx) => {
+		if (!hasKeyword(value.keywords) && !hasKeyword(value.excludeKeywords)) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Either keywords or excludeKeywords is required.',
+			});
+		}
+		if (value.src === 'list' && value.userListAccts == null) {
+			ctx.addIssue({
+				code: 'custom',
+				path: ['userListAccts'],
+				message: 'List antennas require exported list members.',
+			});
+		}
+	});
 
 export const exportedAntennasSchema = z.array(exportedAntennaSchema);
 export type ExportedAntenna = z.infer<typeof exportedAntennaSchema>;

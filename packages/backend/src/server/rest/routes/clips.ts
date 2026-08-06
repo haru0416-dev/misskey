@@ -6,9 +6,26 @@
 import type { Hono } from 'hono';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
 import { handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite } from '../favorites.js';
-import { handleHonoApiClipsAddNote, handleHonoApiClipsCreate, handleHonoApiClipsDelete, handleHonoApiClipsList, handleHonoApiClipsMyFavorites, handleHonoApiClipsNotes, handleHonoApiClipsRemoveNote, handleHonoApiClipsShow, handleHonoApiClipsUpdate } from '../clips.js';
+import {
+	handleHonoApiClipsAddNote,
+	handleHonoApiClipsCreate,
+	handleHonoApiClipsDelete,
+	handleHonoApiClipsList,
+	handleHonoApiClipsMyFavorites,
+	handleHonoApiClipsNotes,
+	handleHonoApiClipsRemoveNote,
+	handleHonoApiClipsShow,
+	handleHonoApiClipsUpdate,
+} from '../clips.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	runApiEndpoint,
+	authenticateOptionalRequest,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -123,10 +140,15 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(deps, 'clips/add-note', {
-				duration: 60 * 60 * 1000,
-				max: 20,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'clips/add-note',
+				{
+					duration: 60 * 60 * 1000,
+					max: 20,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiClipsAddNote(deps, auth.user, body);
 			return emptyResponse(c);

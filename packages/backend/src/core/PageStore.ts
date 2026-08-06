@@ -32,10 +32,7 @@ export type PageUpdateResult =
 	| { status: 'name-conflict' }
 	| { status: 'ok'; before: MiPage; after: MiPage };
 
-export type PageDeleteResult =
-	| { status: 'not-found' }
-	| { status: 'forbidden' }
-	| { status: 'ok'; page: MiPage };
+export type PageDeleteResult = { status: 'not-found' } | { status: 'forbidden' } | { status: 'ok'; page: MiPage };
 
 function deserializePage(row: PageRow): MiPage {
 	return {
@@ -45,11 +42,7 @@ function deserializePage(row: PageRow): MiPage {
 	} as MiPage;
 }
 
-function applyPagePaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
+function applyPagePaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
 	if (sinceId && untilId) {
 		conditions.push(gt(page.id, sinceId));
 		conditions.push(lt(page.id, untilId));
@@ -76,23 +69,13 @@ export function resolvePagePagination(
 	return resolveDateIdPagination(idService, options);
 }
 
-export async function fetchPageByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiPage['id'],
-): Promise<MiPage | null> {
-	const [row] = await db
-		.select()
-		.from(page)
-		.where(eq(page.id, id))
-		.limit(1);
+export async function fetchPageByIdFromDatabase(db: MiDrizzleDatabase, id: MiPage['id']): Promise<MiPage | null> {
+	const [row] = await db.select().from(page).where(eq(page.id, id)).limit(1);
 
 	return row == null ? null : deserializePage(row);
 }
 
-export async function fetchPageByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiPage['id'],
-): Promise<MiPage> {
+export async function fetchPageByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiPage['id']): Promise<MiPage> {
 	const found = await fetchPageByIdFromDatabase(db, id);
 
 	if (found == null) {
@@ -110,10 +93,7 @@ export async function fetchPageByNameAndUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(page)
-		.where(and(
-			eq(page.name, name),
-			eq(page.userId, userId),
-		))
+		.where(and(eq(page.name, name), eq(page.userId, userId)))
 		.limit(1);
 
 	return row == null ? null : deserializePage(row);
@@ -125,10 +105,7 @@ export async function pageNameExistsForUserInDatabase(
 	name: string,
 	excludeId?: MiPage['id'],
 ): Promise<boolean> {
-	const conditions: SQL[] = [
-		eq(page.userId, userId),
-		eq(page.name, name),
-	];
+	const conditions: SQL[] = [eq(page.userId, userId), eq(page.name, name)];
 
 	if (excludeId != null) {
 		conditions.push(ne(page.id, excludeId));
@@ -143,14 +120,8 @@ export async function pageNameExistsForUserInDatabase(
 	return row != null;
 }
 
-export async function createPageInDatabase(
-	db: MiDrizzleDatabase,
-	data: PageInsert,
-): Promise<MiPage> {
-	const [row] = await db
-		.insert(page)
-		.values(data)
-		.returning();
+export async function createPageInDatabase(db: MiDrizzleDatabase, data: PageInsert): Promise<MiPage> {
+	const [row] = await db.insert(page).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create page');
@@ -164,10 +135,7 @@ export async function updatePageContentInDatabase(
 	id: MiPage['id'],
 	content: Record<string, unknown>[],
 ): Promise<void> {
-	await db
-		.update(page)
-		.set({ content })
-		.where(eq(page.id, id));
+	await db.update(page).set({ content }).where(eq(page.id, id));
 }
 
 export async function updatePageInDatabase(
@@ -177,12 +145,7 @@ export async function updatePageInDatabase(
 	values: PageUpdateValues,
 ): Promise<PageUpdateResult> {
 	return await db.transaction(async (tx) => {
-		const [row] = await tx
-			.select()
-			.from(page)
-			.where(eq(page.id, id))
-			.for('no key update')
-			.limit(1);
+		const [row] = await tx.select().from(page).where(eq(page.id, id)).for('no key update').limit(1);
 
 		if (row == null) {
 			return { status: 'not-found' };
@@ -233,12 +196,7 @@ export async function deletePageInDatabase(
 	actor: { userId: MiUser['id']; isModerator: boolean },
 ): Promise<PageDeleteResult> {
 	return await db.transaction(async (tx) => {
-		const [row] = await tx
-			.select()
-			.from(page)
-			.where(eq(page.id, id))
-			.for('update')
-			.limit(1);
+		const [row] = await tx.select().from(page).where(eq(page.id, id)).for('update').limit(1);
 
 		if (row == null) {
 			return { status: 'not-found' };
@@ -250,44 +208,30 @@ export async function deletePageInDatabase(
 			return { status: 'forbidden' };
 		}
 
-		await tx
-			.delete(page)
-			.where(eq(page.id, id));
+		await tx.delete(page).where(eq(page.id, id));
 
 		return { status: 'ok', page: deleted };
 	});
 }
 
-export async function incrementPageLikedCountInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiPage['id'],
-): Promise<void> {
+export async function incrementPageLikedCountInDatabase(db: MiDrizzleDatabase, id: MiPage['id']): Promise<void> {
 	await db
 		.update(page)
 		.set({ likedCount: sql`${page.likedCount} + 1` })
 		.where(eq(page.id, id));
 }
 
-export async function decrementPageLikedCountInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiPage['id'],
-): Promise<void> {
+export async function decrementPageLikedCountInDatabase(db: MiDrizzleDatabase, id: MiPage['id']): Promise<void> {
 	await db
 		.update(page)
 		.set({ likedCount: sql`${page.likedCount} - 1` })
 		.where(eq(page.id, id));
 }
 
-export async function listPagesByIdsFromDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiPage['id'][],
-): Promise<MiPage[]> {
+export async function listPagesByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiPage['id'][]): Promise<MiPage[]> {
 	if (ids.length === 0) return [];
 
-	const rows = await db
-		.select()
-		.from(page)
-		.where(inArray(page.id, ids));
+	const rows = await db.select().from(page).where(inArray(page.id, ids));
 
 	return rows.map(deserializePage);
 }
@@ -303,9 +247,7 @@ export async function listPagesByUserIdWithPaginationFromDatabase(
 		publicOnly?: boolean;
 	},
 ): Promise<MiPage[]> {
-	const conditions: SQL[] = [
-		eq(page.userId, userId),
-	];
+	const conditions: SQL[] = [eq(page.userId, userId)];
 
 	if (options.publicOnly) {
 		conditions.push(eq(page.visibility, 'public'));
@@ -323,16 +265,11 @@ export async function listPagesByUserIdWithPaginationFromDatabase(
 	return rows.map(deserializePage);
 }
 
-export async function listFeaturedPagesFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiPage[]> {
+export async function listFeaturedPagesFromDatabase(db: MiDrizzleDatabase): Promise<MiPage[]> {
 	const rows = await db
 		.select()
 		.from(page)
-		.where(and(
-			eq(page.visibility, 'public'),
-			gt(page.likedCount, 0),
-		))
+		.where(and(eq(page.visibility, 'public'), gt(page.likedCount, 0)))
 		.orderBy(desc(page.likedCount))
 		.limit(10);
 

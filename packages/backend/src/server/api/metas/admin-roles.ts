@@ -3,7 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { adminRolesAssignParamDef, adminRolesCreateParamDef, adminRolesDeleteParamDef, adminRolesListParamDef, adminRolesShowParamDef, adminRolesUnassignParamDef, adminRolesUpdateDefaultPoliciesParamDef, adminRolesUpdateParamDef, adminRolesUsersParamDef } from '@/server/rest/admin-roles.js';
+import {
+	adminRolesAssignParamDef,
+	adminRolesCreateParamDef,
+	adminRolesDeleteParamDef,
+	adminRolesListParamDef,
+	adminRolesShowParamDef,
+	adminRolesUnassignParamDef,
+	adminRolesUpdateDefaultPoliciesParamDef,
+	adminRolesUpdateParamDef,
+	adminRolesUsersParamDef,
+} from '@/server/rest/admin-roles.js';
 
 export const endpointMetas = {
 	'admin/roles/assign': {
@@ -46,7 +56,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Role',
 			},
 		} as const,
@@ -80,10 +91,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Role',
 				},
 			},
@@ -108,7 +121,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Role',
 			},
 		} as const,

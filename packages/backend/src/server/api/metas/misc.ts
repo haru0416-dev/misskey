@@ -5,11 +5,19 @@
 
 import { fetchEmojisHostTypes, fetchEmojisSortKeys } from '@/core/custom-emoji-types.js';
 import { blockingListParamDef, userIdParamDef } from '@/server/rest/account-blocking.js';
-import { muteCreateParamDef, muteListParamDef, userIdParamDef as userIdParamDef_2 } from '@/server/rest/account-mutes.js';
+import {
+	muteCreateParamDef,
+	muteListParamDef,
+	userIdParamDef as userIdParamDef_2,
+} from '@/server/rest/account-mutes.js';
 import { announcementShowParamDef, announcementsParamDef } from '@/server/rest/announcements.js';
 import { apGetParamDef, apShowParamDef } from '@/server/rest/ap.js';
 import { appCreateParamDef, appShowParamDef, myAppsParamDef } from '@/server/rest/app.js';
-import { authSessionGenerateParamDef, authSessionShowParamDef, authSessionUserkeyParamDef } from '@/server/rest/auth-session.js';
+import {
+	authSessionGenerateParamDef,
+	authSessionShowParamDef,
+	authSessionUserkeyParamDef,
+} from '@/server/rest/auth-session.js';
 import { emailAddressAvailableParamDef, usernameAvailableParamDef } from '@/server/rest/availability.js';
 import { getAvatarDecorationsParamDef } from '@/server/rest/avatar-decorations.js';
 import { emojiParamDef } from '@/server/rest/emojis.js';
@@ -33,7 +41,7 @@ import { z } from 'zod';
 import { MINUTE, HOUR } from '@/const.js';
 
 export const endpointMetas = {
-	'announcements': {
+	announcements: {
 		meta: {
 			tags: ['meta'],
 
@@ -41,10 +49,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Announcement',
 				},
 			},
@@ -59,7 +69,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Announcement',
 			},
 
@@ -87,12 +98,12 @@ export const endpointMetas = {
 				max: 30,
 			},
 
-			errors: {
-			},
+			errors: {},
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 			},
 		} as const,
 		paramDef: apGetParamDef,
@@ -138,19 +149,22 @@ export const endpointMetas = {
 			},
 
 			res: {
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				oneOf: [
 					{
 						type: 'object',
 						properties: {
 							type: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								enum: ['User'],
 							},
 							object: {
 								type: 'object',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								ref: 'UserDetailedNotMe',
 							},
 						},
@@ -160,12 +174,14 @@ export const endpointMetas = {
 						properties: {
 							type: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								enum: ['Note'],
 							},
 							object: {
 								type: 'object',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								ref: 'Note',
 							},
 						},
@@ -183,7 +199,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'App',
 			},
 		} as const,
@@ -203,7 +220,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'App',
 			},
 		} as const,
@@ -235,15 +253,18 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					token: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					url: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'url',
 					},
 				},
@@ -275,21 +296,25 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					id: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'id',
 					},
 					app: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'App',
 					},
 					token: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -304,16 +329,19 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					accessToken: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 
 					user: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'UserDetailedNotMe',
 					},
 				},
@@ -376,7 +404,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserDetailedNotMe',
 			},
 		} as const,
@@ -417,7 +446,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserDetailedNotMe',
 			},
 		} as const,
@@ -433,10 +463,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Blocking',
 				},
 			},
@@ -451,22 +483,25 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					available: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					reason: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 				},
 			},
 		} as const,
 		paramDef: emailAddressAvailableParamDef,
 	},
-	'emoji': {
+	emoji: {
 		meta: {
 			tags: ['meta'],
 
@@ -485,13 +520,14 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'EmojiDetailed',
 			},
 		} as const,
 		paramDef: emojiParamDef,
 	},
-	'emojis': {
+	emojis: {
 		meta: {
 			tags: ['meta'],
 
@@ -501,14 +537,17 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					emojis: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'EmojiSimple',
 						},
 					},
@@ -517,7 +556,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'endpoint': {
+	endpoint: {
 		meta: {
 			requireCredential: false,
 
@@ -542,7 +581,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: endpointParamDef,
 	},
-	'endpoints': {
+	endpoints: {
 		meta: {
 			requireCredential: false,
 
@@ -550,17 +589,14 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'string',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 				},
-				example: [
-					'admin/abuse-user-reports',
-					'admin/accounts/create',
-					'admin/announcements/create',
-					'...',
-				],
+				example: ['admin/abuse-user-reports', 'admin/accounts/create', 'admin/announcements/create', '...'],
 			},
 		} as const,
 		paramDef: z.object({}),
@@ -824,41 +860,50 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 							example: 'xxxxxxxxxx',
 						},
 						name: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						description: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						url: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						roleIdsThatCanBeUsedThisDecoration: {
 							type: 'array',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							items: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								format: 'id',
 							},
 						},
 						category: {
 							type: 'string',
-							optional: true, nullable: true,
+							optional: true,
+							nullable: true,
 						},
 					},
 				},
@@ -875,7 +920,8 @@ export const endpointMetas = {
 			cacheSec: 60 * 1,
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					count: {
 						type: 'number',
@@ -904,7 +950,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'InviteCode',
 			},
 		} as const,
@@ -926,7 +973,7 @@ export const endpointMetas = {
 				},
 
 				cantDelete: {
-					message: 'You can\'t delete this invite code.',
+					message: "You can't delete this invite code.",
 					code: 'CAN_NOT_DELETE_INVITE_CODE',
 					id: 'ff17af39-000c-4d4e-abdf-848fa30fc1ce',
 				},
@@ -950,11 +997,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					remaining: {
 						type: 'integer',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 				},
 			},
@@ -971,17 +1020,19 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'InviteCode',
 				},
 			},
 		} as const,
 		paramDef: inviteListParamDef,
 	},
-	'meta': {
+	meta: {
 		meta: {
 			tags: ['meta'],
 
@@ -1007,11 +1058,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					token: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1094,10 +1147,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Muting',
 				},
 			},
@@ -1113,10 +1168,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'App',
 				},
 			},
@@ -1136,8 +1193,7 @@ export const endpointMetas = {
 				max: 10,
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: notificationsCreateParamDef,
 	},
@@ -1201,7 +1257,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: pagePushParamDef,
 	},
-	'ping': {
+	ping: {
 		meta: {
 			requireCredential: false,
 
@@ -1209,11 +1265,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					pong: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1228,10 +1286,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserDetailed',
 				},
 			},
@@ -1331,10 +1391,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'RenoteMuting',
 				},
 			},
@@ -1354,9 +1416,7 @@ export const endpointMetas = {
 				max: 3,
 			},
 
-			errors: {
-
-			},
+			errors: {},
 		} as const,
 		paramDef: requestResetPasswordParamDef,
 	},
@@ -1366,11 +1426,10 @@ export const endpointMetas = {
 
 			requireCredential: false,
 
-			description: 'Only available when running with <code>NODE_ENV=testing</code>. Reset the database and flush Valkey.',
+			description:
+				'Only available when running with <code>NODE_ENV=testing</code>. Reset the database and flush Valkey.',
 
-			errors: {
-
-			},
+			errors: {},
 		} as const,
 		paramDef: resetDbParamDef,
 	},
@@ -1392,7 +1451,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: resetPasswordParamDef,
 	},
-	'retention': {
+	retention: {
 		meta: {
 			tags: ['users'],
 
@@ -1413,17 +1472,15 @@ export const endpointMetas = {
 						data: {
 							type: 'object',
 							additionalProperties: {
-								anyOf: [{
-									type: 'number',
-								}],
+								anyOf: [
+									{
+										type: 'number',
+									},
+								],
 							},
 						},
 					},
-					required: [
-						'createdAt',
-						'users',
-						'data',
-					],
+					required: ['createdAt', 'users', 'data'],
 				},
 			},
 
@@ -1441,10 +1498,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Role',
 				},
 			},
@@ -1468,10 +1527,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -1494,7 +1555,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Role',
 			},
 		} as const,
@@ -1544,7 +1606,8 @@ export const endpointMetas = {
 			tags: ['meta'],
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					machine: {
 						type: 'string',
@@ -1592,7 +1655,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'stats': {
+	stats: {
 		meta: {
 			requireCredential: false,
 
@@ -1600,39 +1663,48 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					notesCount: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					originalNotesCount: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					usersCount: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					originalUsersCount: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					reactionsCount: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					instances: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					driveUsageLocal: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					driveUsageRemote: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1650,28 +1722,34 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					state: {
 						type: 'string',
-						optional: true, nullable: false,
+						optional: true,
+						nullable: false,
 						enum: ['already-subscribed', 'subscribed'],
 					},
 					key: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					userId: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					endpoint: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					sendReadMessage: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1689,19 +1767,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: true,
+				optional: false,
+				nullable: true,
 				properties: {
 					userId: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					endpoint: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					sendReadMessage: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1729,19 +1811,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					userId: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					endpoint: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					sendReadMessage: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1755,7 +1841,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: swUpdateRegistrationParamDef,
 	},
-	'test': {
+	test: {
 		meta: {
 			tags: ['non-productive'],
 
@@ -1769,24 +1855,29 @@ export const endpointMetas = {
 					id: {
 						type: 'string',
 						format: 'misskey:id',
-						optional: true, nullable: false,
+						optional: true,
+						nullable: false,
 					},
 					required: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					string: {
 						type: 'string',
-						optional: true, nullable: false,
+						optional: true,
+						nullable: false,
 					},
 					default: {
 						type: 'string',
-						optional: true, nullable: false,
+						optional: true,
+						nullable: false,
 					},
 					nullableDefault: {
 						type: 'string',
 						default: 'hello',
-						optional: true, nullable: true,
+						optional: true,
+						nullable: true,
 					},
 				},
 			},
@@ -1801,11 +1892,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					available: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},

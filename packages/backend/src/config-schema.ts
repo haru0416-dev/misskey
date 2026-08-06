@@ -15,19 +15,24 @@ export const secretSourceSchema = z.union([
 
 const durationSchema = z.string().regex(/^(0|[1-9][0-9]*)(ms|s|m|h|d)$/);
 const byteSizeSchema = z.string().regex(/^(0|[1-9][0-9]*)(B|KiB|MiB|GiB)$/);
-const httpUrlSchema = z.url().refine(value => {
+const httpUrlSchema = z.url().refine((value) => {
 	const url = new URL(value);
-	return (url.protocol === 'http:' || url.protocol === 'https:')
-		&& url.username === ''
-		&& url.password === ''
-		&& url.hash === '';
+	return (
+		(url.protocol === 'http:' || url.protocol === 'https:') &&
+		url.username === '' &&
+		url.password === '' &&
+		url.hash === ''
+	);
 }, 'Must be an HTTP(S) URL without credentials or a fragment');
-const originUrlSchema = httpUrlSchema.refine(value => {
+const originUrlSchema = httpUrlSchema.refine((value) => {
 	const url = new URL(value);
 	return url.pathname === '/' && url.search === '';
 }, 'Must be an HTTP(S) origin without a path or query parameters');
-const publicTelemetryUrlSchema = httpUrlSchema.refine(value => new URL(value).search === '', 'Public telemetry URLs must not contain query parameters');
-const cidrSchema = z.string().refine(value => {
+const publicTelemetryUrlSchema = httpUrlSchema.refine(
+	(value) => new URL(value).search === '',
+	'Public telemetry URLs must not contain query parameters',
+);
+const cidrSchema = z.string().refine((value) => {
 	try {
 		ipaddr.parseCIDR(value);
 		return true;
@@ -49,7 +54,10 @@ const tcpListenSchema = z.strictObject({
 const unixSocketListenSchema = z.strictObject({
 	unixSocket: z.strictObject({
 		path: z.string().min(1),
-		permissions: z.string().regex(/^[0-7]{3,4}$/).optional(),
+		permissions: z
+			.string()
+			.regex(/^[0-7]{3,4}$/)
+			.optional(),
 	}),
 });
 
@@ -101,157 +109,214 @@ export const sourceConfigV2Schema = z.strictObject({
 		setupPassword: secretSourceSchema.optional(),
 		publishSourceTarball: z.boolean().default(false),
 	}),
-	server: z.strictObject({
-		listen: z.union([tcpListenSchema, unixSocketListenSchema]).default({ tcp: { address: '0.0.0.0', port: 3000 } }),
-		reverseProxy: z.strictObject({
-			trustedNetworks: z.array(cidrSchema).default([
-				'10.0.0.0/8',
-				'172.16.0.0/12',
-				'192.168.0.0/16',
-				'127.0.0.1/32',
-				'::1/128',
-				'fc00::/7',
-			]),
-		}).prefault({}),
-		http: z.strictObject({
-			maximumRequestBodySize: byteSizeSchema.default('251MiB'),
-			gracefulShutdownTimeout: durationSchema.default('30s'),
-			hsts: z.boolean().default(true),
-			ipRateLimit: z.boolean().default(true),
-		}).prefault({}),
-		process: z.strictObject({
-			workers: positiveIntegerSchema.default(1),
-			computationThreadsPerWorker: positiveIntegerSchema.default(1),
-			pidFile: z.string().min(1).default('/tmp/misskey.pid'),
-		}).prefault({}),
-	}).prefault({}),
-	database: z.strictObject({
-		primary: z.strictObject({
-			host: z.string().min(1),
-			port: portSchema.default(5432),
-			name: z.string().min(1),
-			user: z.string().min(1),
-			password: secretSourceSchema,
-			ssl: z.boolean().optional(),
-		}),
-		pool: z.strictObject({
-			minimumConnections: nonNegativeIntegerSchema.default(0),
-			maximumConnections: positiveIntegerSchema.default(30),
-			connectionTimeout: durationSchema.default('5s'),
-			idleConnectionTimeout: durationSchema.default('30s'),
-			statementTimeout: durationSchema.default('10s'),
-		}).prefault({}),
-	}).refine(value => value.pool.minimumConnections <= value.pool.maximumConnections, {
-		message: 'minimumConnections must not exceed maximumConnections',
-		path: ['pool', 'minimumConnections'],
-	}),
-	valkey: z.strictObject({
-		connections: z.record(z.string().min(1), valkeyConnectionSchema).refine((value): value is typeof value & { primary: z.output<typeof valkeyConnectionSchema> } => value['primary'] != null, {
-			message: 'A primary connection is required',
-		}),
-		assignments: z.strictObject({
-			pubsub: z.string().min(1).default('primary'),
-			jobQueue: z.string().min(1).default('primary'),
-			timelines: z.string().min(1).default('primary'),
-			reactions: z.string().min(1).default('primary'),
-		}).prefault({}),
-	}).superRefine((value, context) => {
-		for (const [purpose, connection] of Object.entries(value.assignments)) {
-			if (value.connections[connection] == null) {
-				context.addIssue({
-					code: 'custom',
-					message: `Unknown Valkey connection: ${connection}`,
-					path: ['assignments', purpose],
-				});
-			}
-		}
-	}),
-	search: z.discriminatedUnion('provider', [
-		z.strictObject({ provider: z.enum(['sqlLike', 'sqlPgroonga']).default('sqlLike') }),
-		z.strictObject({
-			provider: z.literal('meilisearch'),
-			meilisearch: z.strictObject({
-				endpoint: originUrlSchema,
-				apiKey: secretSourceSchema,
-				index: z.string().min(1),
-				scope: z.union([z.enum(['local', 'global']), z.array(z.string().min(1))]).default('local'),
+	server: z
+		.strictObject({
+			listen: z.union([tcpListenSchema, unixSocketListenSchema]).default({ tcp: { address: '0.0.0.0', port: 3000 } }),
+			reverseProxy: z
+				.strictObject({
+					trustedNetworks: z
+						.array(cidrSchema)
+						.default(['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.1/32', '::1/128', 'fc00::/7']),
+				})
+				.prefault({}),
+			http: z
+				.strictObject({
+					maximumRequestBodySize: byteSizeSchema.default('251MiB'),
+					gracefulShutdownTimeout: durationSchema.default('30s'),
+					hsts: z.boolean().default(true),
+					ipRateLimit: z.boolean().default(true),
+				})
+				.prefault({}),
+			process: z
+				.strictObject({
+					workers: positiveIntegerSchema.default(1),
+					computationThreadsPerWorker: positiveIntegerSchema.default(1),
+					pidFile: z.string().min(1).default('/tmp/misskey.pid'),
+				})
+				.prefault({}),
+		})
+		.prefault({}),
+	database: z
+		.strictObject({
+			primary: z.strictObject({
+				host: z.string().min(1),
+				port: portSchema.default(5432),
+				name: z.string().min(1),
+				user: z.string().min(1),
+				password: secretSourceSchema,
+				ssl: z.boolean().optional(),
 			}),
+			pool: z
+				.strictObject({
+					minimumConnections: nonNegativeIntegerSchema.default(0),
+					maximumConnections: positiveIntegerSchema.default(30),
+					connectionTimeout: durationSchema.default('5s'),
+					idleConnectionTimeout: durationSchema.default('30s'),
+					statementTimeout: durationSchema.default('10s'),
+				})
+				.prefault({}),
+		})
+		.refine((value) => value.pool.minimumConnections <= value.pool.maximumConnections, {
+			message: 'minimumConnections must not exceed maximumConnections',
+			path: ['pool', 'minimumConnections'],
 		}),
-	]).default({ provider: 'sqlLike' }),
-	outboundNetwork: z.strictObject({
-		bindAddress: z.string().min(1).optional(),
-		addressFamily: z.enum(['ipv4', 'ipv6', 'dualStack']).default('dualStack'),
-		proxy: z.strictObject({
-			url: z.url().optional(),
-			smtpUrl: z.url().optional(),
-			bypassHosts: z.array(z.string().min(1)).default([]),
-		}).prefault({}),
-		http: z.strictObject({
-			connectionTimeout: durationSchema.default('10s'),
-			requestTimeout: durationSchema.default('5s'),
-			maximumResponseSize: byteSizeSchema.default('10MiB'),
-			maximumSockets: positiveIntegerSchema.default(256),
-			maximumFreeSockets: nonNegativeIntegerSchema.default(256),
-			keepAliveDuration: durationSchema.default('30s'),
-			maximumRedirects: nonNegativeIntegerSchema.default(20),
-		}).prefault({}),
-		dnsCache: z.strictObject({
-			successTtl: durationSchema.default('1h'),
-			failureTtl: durationSchema.default('30s'),
-		}).prefault({}),
-		privateNetworkAccess: z.strictObject({
-			allowedNetworks: z.array(cidrSchema).default([]),
-		}).prefault({}),
-	}).prefault({}),
-	media: z.strictObject({
-		externalProxyUrl: httpUrlSchema.optional(),
-		videoThumbnailGeneratorUrl: httpUrlSchema.optional(),
-	}).prefault({}),
-	limits: z.strictObject({
-		maximumFileSize: byteSizeSchema.default('250MiB'),
-		channelTimelineNotes: positiveIntegerSchema.default(1000),
-		userNotifications: positiveIntegerSchema.default(500),
-	}).prefault({}),
-	maintenance: z.strictObject({
-		antennaInactiveAfter: durationSchema.default('7d'),
-	}).prefault({}),
-	queues: z.strictObject({
-		deliver: retriedRateLimitedQueueSchema.default({ concurrencyPerWorker: 128, maximumStartsPerSecond: 128, maximumAttempts: 12 }),
-		inbox: retriedRateLimitedQueueSchema.default({ concurrencyPerWorker: 16, maximumStartsPerSecond: 32, maximumAttempts: 8 }),
-		relationships: rateLimitedQueueSchema.default({ concurrencyPerWorker: 16, maximumStartsPerSecond: 64 }),
-		database: queueConcurrencySchema.default({ concurrencyPerWorker: 1 }),
-		system: queueConcurrencySchema.default({ concurrencyPerWorker: 1 }),
-		objectStorage: queueConcurrencySchema.default({ concurrencyPerWorker: 16 }),
-		userWebhooks: rateLimitedQueueSchema.default({ concurrencyPerWorker: 64, maximumStartsPerSecond: 64 }),
-		systemWebhooks: rateLimitedQueueSchema.default({ concurrencyPerWorker: 16, maximumStartsPerSecond: 16 }),
-		backoff: z.strictObject({
-			initialDelay: durationSchema.default('1m'),
-			maximumDelay: durationSchema.default('8h'),
-			jitterRatio: z.number().min(0).max(1).default(0.2),
-		}).prefault({}),
-		retention: z.strictObject({
-			completedMaximumAge: durationSchema.default('7d'),
-			completedMaximumCount: positiveIntegerSchema.default(30),
-			failedMaximumAge: durationSchema.default('7d'),
-			failedMaximumCount: positiveIntegerSchema.default(100),
-		}).prefault({}),
-	}).prefault({}),
-	observability: z.strictObject({
-		logging: z.strictObject({
-			level: z.enum(['debug', 'info', 'warning', 'error']).default('info'),
-			format: z.enum(['pretty', 'json']).default('pretty'),
-			includeTimestamp: z.boolean().default(false),
-			sql: z.strictObject({
-				enabled: z.boolean().default(false),
-				logParameters: z.boolean().default(false),
-				maximumQueryLength: positiveIntegerSchema.default(100),
-			}).prefault({}),
-		}).prefault({}),
-		telemetry: z.strictObject({
-			backend: telemetryBackendSchema.optional(),
-			frontend: telemetryFrontendSchema.optional(),
-		}).prefault({}),
-	}).prefault({}),
+	valkey: z
+		.strictObject({
+			connections: z
+				.record(z.string().min(1), valkeyConnectionSchema)
+				.refine(
+					(value): value is typeof value & { primary: z.output<typeof valkeyConnectionSchema> } =>
+						value['primary'] != null,
+					{
+						message: 'A primary connection is required',
+					},
+				),
+			assignments: z
+				.strictObject({
+					pubsub: z.string().min(1).default('primary'),
+					jobQueue: z.string().min(1).default('primary'),
+					timelines: z.string().min(1).default('primary'),
+					reactions: z.string().min(1).default('primary'),
+				})
+				.prefault({}),
+		})
+		.superRefine((value, context) => {
+			for (const [purpose, connection] of Object.entries(value.assignments)) {
+				if (value.connections[connection] == null) {
+					context.addIssue({
+						code: 'custom',
+						message: `Unknown Valkey connection: ${connection}`,
+						path: ['assignments', purpose],
+					});
+				}
+			}
+		}),
+	search: z
+		.discriminatedUnion('provider', [
+			z.strictObject({ provider: z.enum(['sqlLike', 'sqlPgroonga']).default('sqlLike') }),
+			z.strictObject({
+				provider: z.literal('meilisearch'),
+				meilisearch: z.strictObject({
+					endpoint: originUrlSchema,
+					apiKey: secretSourceSchema,
+					index: z.string().min(1),
+					scope: z.union([z.enum(['local', 'global']), z.array(z.string().min(1))]).default('local'),
+				}),
+			}),
+		])
+		.default({ provider: 'sqlLike' }),
+	outboundNetwork: z
+		.strictObject({
+			bindAddress: z.string().min(1).optional(),
+			addressFamily: z.enum(['ipv4', 'ipv6', 'dualStack']).default('dualStack'),
+			proxy: z
+				.strictObject({
+					url: z.url().optional(),
+					smtpUrl: z.url().optional(),
+					bypassHosts: z.array(z.string().min(1)).default([]),
+				})
+				.prefault({}),
+			http: z
+				.strictObject({
+					connectionTimeout: durationSchema.default('10s'),
+					requestTimeout: durationSchema.default('5s'),
+					maximumResponseSize: byteSizeSchema.default('10MiB'),
+					maximumSockets: positiveIntegerSchema.default(256),
+					maximumFreeSockets: nonNegativeIntegerSchema.default(256),
+					keepAliveDuration: durationSchema.default('30s'),
+					maximumRedirects: nonNegativeIntegerSchema.default(20),
+				})
+				.prefault({}),
+			dnsCache: z
+				.strictObject({
+					successTtl: durationSchema.default('1h'),
+					failureTtl: durationSchema.default('30s'),
+				})
+				.prefault({}),
+			privateNetworkAccess: z
+				.strictObject({
+					allowedNetworks: z.array(cidrSchema).default([]),
+				})
+				.prefault({}),
+		})
+		.prefault({}),
+	media: z
+		.strictObject({
+			externalProxyUrl: httpUrlSchema.optional(),
+			videoThumbnailGeneratorUrl: httpUrlSchema.optional(),
+		})
+		.prefault({}),
+	limits: z
+		.strictObject({
+			maximumFileSize: byteSizeSchema.default('250MiB'),
+			channelTimelineNotes: positiveIntegerSchema.default(1000),
+			userNotifications: positiveIntegerSchema.default(500),
+		})
+		.prefault({}),
+	maintenance: z
+		.strictObject({
+			antennaInactiveAfter: durationSchema.default('7d'),
+		})
+		.prefault({}),
+	queues: z
+		.strictObject({
+			deliver: retriedRateLimitedQueueSchema.default({
+				concurrencyPerWorker: 128,
+				maximumStartsPerSecond: 128,
+				maximumAttempts: 12,
+			}),
+			inbox: retriedRateLimitedQueueSchema.default({
+				concurrencyPerWorker: 16,
+				maximumStartsPerSecond: 32,
+				maximumAttempts: 8,
+			}),
+			relationships: rateLimitedQueueSchema.default({ concurrencyPerWorker: 16, maximumStartsPerSecond: 64 }),
+			database: queueConcurrencySchema.default({ concurrencyPerWorker: 1 }),
+			system: queueConcurrencySchema.default({ concurrencyPerWorker: 1 }),
+			objectStorage: queueConcurrencySchema.default({ concurrencyPerWorker: 16 }),
+			userWebhooks: rateLimitedQueueSchema.default({ concurrencyPerWorker: 64, maximumStartsPerSecond: 64 }),
+			systemWebhooks: rateLimitedQueueSchema.default({ concurrencyPerWorker: 16, maximumStartsPerSecond: 16 }),
+			backoff: z
+				.strictObject({
+					initialDelay: durationSchema.default('1m'),
+					maximumDelay: durationSchema.default('8h'),
+					jitterRatio: z.number().min(0).max(1).default(0.2),
+				})
+				.prefault({}),
+			retention: z
+				.strictObject({
+					completedMaximumAge: durationSchema.default('7d'),
+					completedMaximumCount: positiveIntegerSchema.default(30),
+					failedMaximumAge: durationSchema.default('7d'),
+					failedMaximumCount: positiveIntegerSchema.default(100),
+				})
+				.prefault({}),
+		})
+		.prefault({}),
+	observability: z
+		.strictObject({
+			logging: z
+				.strictObject({
+					level: z.enum(['debug', 'info', 'warning', 'error']).default('info'),
+					format: z.enum(['pretty', 'json']).default('pretty'),
+					includeTimestamp: z.boolean().default(false),
+					sql: z
+						.strictObject({
+							enabled: z.boolean().default(false),
+							logParameters: z.boolean().default(false),
+							maximumQueryLength: positiveIntegerSchema.default(100),
+						})
+						.prefault({}),
+				})
+				.prefault({}),
+			telemetry: z
+				.strictObject({
+					backend: telemetryBackendSchema.optional(),
+					frontend: telemetryFrontendSchema.optional(),
+				})
+				.prefault({}),
+		})
+		.prefault({}),
 });
 
 export const compiledConfigEnvelopeSchema = z.strictObject({

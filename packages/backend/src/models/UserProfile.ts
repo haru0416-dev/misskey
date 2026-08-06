@@ -48,9 +48,9 @@ export class MiUserProfile {
 
 	public publicReactions: boolean;
 
-	public followingVisibility: typeof followingVisibilities[number];
+	public followingVisibility: (typeof followingVisibilities)[number];
 
-	public followersVisibility: typeof followersVisibilities[number];
+	public followersVisibility: (typeof followersVisibilities)[number];
 
 	public twoFactorTempSecret: string | null;
 
@@ -97,28 +97,35 @@ export class MiUserProfile {
 	public mutedInstances: string[];
 
 	public notificationRecieveConfig: {
-		[notificationType in typeof notificationTypes[number]]?: {
-			type: 'all';
-		} | {
-			type: 'never';
-		} | {
-			type: 'following';
-		} | {
-			type: 'follower';
-		} | {
-			type: 'mutualFollow';
-		} | {
-			type: 'followingOrFollower';
-		} | {
-			type: 'list';
-			userListId: MiUserList['id'];
-		};
+		[notificationType in (typeof notificationTypes)[number]]?:
+			| {
+					type: 'all';
+			  }
+			| {
+					type: 'never';
+			  }
+			| {
+					type: 'following';
+			  }
+			| {
+					type: 'follower';
+			  }
+			| {
+					type: 'mutualFollow';
+			  }
+			| {
+					type: 'followingOrFollower';
+			  }
+			| {
+					type: 'list';
+					userListId: MiUserList['id'];
+			  };
 	};
 
 	public loggedInDates: string[];
 
 	public achievements: {
-		name: typeof ACHIEVEMENT_TYPES[number];
+		name: (typeof ACHIEVEMENT_TYPES)[number];
 		unlockedAt: number;
 	}[];
 

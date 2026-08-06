@@ -4,10 +4,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import {
-	deleteDriveFileByIdInDatabase,
-	updateDriveFileInDatabase,
-} from '@/core/DriveFileStore.js';
+import { deleteDriveFileByIdInDatabase, updateDriveFileInDatabase } from '@/core/DriveFileStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
@@ -70,7 +67,13 @@ async function postProcessDriveFileDeletion(
 		deps.publishDriveStream?.(file.userId, 'fileDeleted', file.id);
 	}
 
-	if (deleter && deps.isModerator != null && deps.logDriveFileDeletion != null && await deps.isModerator(deleter) && (file.userId !== deleter.id)) {
+	if (
+		deleter &&
+		deps.isModerator != null &&
+		deps.logDriveFileDeletion != null &&
+		(await deps.isModerator(deleter)) &&
+		file.userId !== deleter.id
+	) {
 		const user = file.userId ? await fetchUserByIdOrFailFromDatabase(deps.db, file.userId) : null;
 		void deps.logDriveFileDeletion(deleter, {
 			fileId: file.id,

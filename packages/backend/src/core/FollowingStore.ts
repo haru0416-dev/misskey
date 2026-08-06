@@ -12,9 +12,15 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { MiFollowing } from '@/models/Following.js';
 import type { MiUser } from '@/models/User.js';
-import { adjustUserFollowersCountInDatabase, adjustUserFollowingCountInDatabase, updateUserInDatabase } from './UserStore.js';
+import {
+	adjustUserFollowersCountInDatabase,
+	adjustUserFollowingCountInDatabase,
+	updateUserInDatabase,
+} from './UserStore.js';
 
-export type FollowingUpdate = Partial<Pick<FollowingRow, 'notify' | 'withReplies' | 'isFollowerHibernated' | 'followerSharedInbox'>>;
+export type FollowingUpdate = Partial<
+	Pick<FollowingRow, 'notify' | 'withReplies' | 'isFollowerHibernated' | 'followerSharedInbox'>
+>;
 export type FollowingOrder = 'asc' | 'desc';
 
 function deserializeFollowing(row: FollowingRow): MiFollowing {
@@ -25,11 +31,7 @@ function deserializeFollowing(row: FollowingRow): MiFollowing {
 	} as MiFollowing;
 }
 
-function applyFollowingPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
+function applyFollowingPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
 	if (sinceId && untilId) {
 		conditions.push(gt(following.id, sinceId));
 		conditions.push(lt(following.id, untilId));
@@ -66,19 +68,16 @@ export async function listFollowingsByFollowerIdFromDatabase(
 		.orderBy(asc(following.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeFollowing(row));
+	return rows.map((row) => deserializeFollowing(row));
 }
 
 export async function listAllFollowingsByFollowerIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followerId: MiUser['id'],
 ): Promise<MiFollowing[]> {
-	const rows = await db
-		.select()
-		.from(following)
-		.where(eq(following.followerId, followerId));
+	const rows = await db.select().from(following).where(eq(following.followerId, followerId));
 
-	return rows.map(row => deserializeFollowing(row));
+	return rows.map((row) => deserializeFollowing(row));
 }
 
 export async function listFollowingsByFollowerIdAndFolloweeIdsFromDatabase(
@@ -91,12 +90,9 @@ export async function listFollowingsByFollowerIdAndFolloweeIdsFromDatabase(
 	const rows = await db
 		.select()
 		.from(following)
-		.where(and(
-			eq(following.followerId, followerId),
-			sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`,
-		));
+		.where(and(eq(following.followerId, followerId), sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`));
 
-	return rows.map(row => deserializeFollowing(row));
+	return rows.map((row) => deserializeFollowing(row));
 }
 
 /**
@@ -107,14 +103,16 @@ export async function listFolloweeIdsByFollowerIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followerId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const statement = preparedQueryFor(db, 'following:followeeIdsByFollowerId', () => db
-		.select({ followeeId: following.followeeId })
-		.from(following)
-		.where(eq(following.followerId, sql.placeholder('followerId')))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'following:followeeIdsByFollowerId', () =>
+		db
+			.select({ followeeId: following.followeeId })
+			.from(following)
+			.where(eq(following.followerId, sql.placeholder('followerId')))
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ followerId });
 
-	return rows.map(row => row.followeeId);
+	return rows.map((row) => row.followeeId);
 }
 
 export async function listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(
@@ -127,12 +125,9 @@ export async function listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(
 	const rows = await db
 		.select({ followeeId: following.followeeId })
 		.from(following)
-		.where(and(
-			eq(following.followerId, followerId),
-			sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`,
-		));
+		.where(and(eq(following.followerId, followerId), sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`));
 
-	return rows.map(row => row.followeeId);
+	return rows.map((row) => row.followeeId);
 }
 
 export async function listLocalFollowerFollowingsByFolloweeIdFromDatabase(
@@ -142,10 +137,7 @@ export async function listLocalFollowerFollowingsByFolloweeIdFromDatabase(
 		excludeFollowerIds?: MiUser['id'][];
 	} = {},
 ): Promise<Pick<MiFollowing, 'followerId' | 'followeeId'>[]> {
-	const conditions: SQL[] = [
-		eq(following.followeeId, followeeId),
-		isNull(following.followerHost),
-	];
+	const conditions: SQL[] = [eq(following.followeeId, followeeId), isNull(following.followerHost)];
 
 	if (options.excludeFollowerIds && options.excludeFollowerIds.length > 0) {
 		conditions.push(not(inArray(following.followerId, options.excludeFollowerIds))!);
@@ -169,7 +161,7 @@ export async function listFollowerIdsByFolloweeIdFromDatabase(
 		.from(following)
 		.where(eq(following.followeeId, followeeId));
 
-	return rows.map(row => row.followerId);
+	return rows.map((row) => row.followerId);
 }
 
 export async function listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(
@@ -182,12 +174,9 @@ export async function listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(
 	const rows = await db
 		.select({ followerId: following.followerId })
 		.from(following)
-		.where(and(
-			eq(following.followeeId, followeeId),
-			sql`${following.followerId} = ANY(${sql.param(followerIds)})`,
-		));
+		.where(and(eq(following.followeeId, followeeId), sql`${following.followerId} = ANY(${sql.param(followerIds)})`));
 
-	return rows.map(row => row.followerId);
+	return rows.map((row) => row.followerId);
 }
 
 export async function listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase(
@@ -203,10 +192,12 @@ export async function listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase(
 			followeeId: following.followeeId,
 		})
 		.from(following)
-		.where(and(
-			sql`${following.followerId} = ANY(${sql.param(followerIds)})`,
-			sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`,
-		));
+		.where(
+			and(
+				sql`${following.followerId} = ANY(${sql.param(followerIds)})`,
+				sql`${following.followeeId} = ANY(${sql.param(followeeIds)})`,
+			),
+		);
 }
 
 export async function listNotificationFollowerIdsByFolloweeIdFromDatabase(
@@ -216,12 +207,9 @@ export async function listNotificationFollowerIdsByFolloweeIdFromDatabase(
 	const rows = await db
 		.select({ followerId: following.followerId })
 		.from(following)
-		.where(and(
-			eq(following.followeeId, followeeId),
-			eq(following.notify, 'normal'),
-		));
+		.where(and(eq(following.followeeId, followeeId), eq(following.notify, 'normal')));
 
-	return rows.map(row => row.followerId);
+	return rows.map((row) => row.followerId);
 }
 
 export async function listFollowingsByFollowerIdWithPaginationFromDatabase(
@@ -250,7 +238,7 @@ export async function listFollowingsByFollowerIdWithPaginationFromDatabase(
 		.orderBy(options.order === 'asc' ? asc(following.id) : desc(following.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeFollowing(row));
+	return rows.map((row) => deserializeFollowing(row));
 }
 
 export async function listFollowersByFolloweeIdWithPaginationFromDatabase(
@@ -274,7 +262,7 @@ export async function listFollowersByFolloweeIdWithPaginationFromDatabase(
 		.orderBy(options.order === 'asc' ? asc(following.id) : desc(following.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeFollowing(row));
+	return rows.map((row) => deserializeFollowing(row));
 }
 
 export async function listFollowingsByFollowerIdAndBirthdayWithPaginationFromDatabase(
@@ -303,7 +291,7 @@ export async function listFollowingsByFollowerIdAndBirthdayWithPaginationFromDat
 		.orderBy(options.order === 'asc' ? asc(following.id) : desc(following.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeFollowing(row.following));
+	return rows.map((row) => deserializeFollowing(row.following));
 }
 
 export async function listFollowingsByHostWithPaginationFromDatabase(
@@ -318,9 +306,7 @@ export async function listFollowingsByHostWithPaginationFromDatabase(
 	},
 ): Promise<MiFollowing[]> {
 	const conditions: SQL[] = [
-		hostType === 'follower'
-			? eq(following.followerHost, host)
-			: eq(following.followeeHost, host),
+		hostType === 'follower' ? eq(following.followerHost, host) : eq(following.followeeHost, host),
 	];
 
 	applyFollowingPaginationCondition(conditions, options.sinceId, options.untilId);
@@ -332,7 +318,7 @@ export async function listFollowingsByHostWithPaginationFromDatabase(
 		.orderBy(options.order === 'asc' ? asc(following.id) : desc(following.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeFollowing(row));
+	return rows.map((row) => deserializeFollowing(row));
 }
 
 export async function listFolloweeIdsWithRepliesByFollowerIdFromDatabase(
@@ -358,31 +344,31 @@ export async function listActiveLocalFollowerFollowingsByFolloweeIdFromDatabase(
 			withReplies: following.withReplies,
 		})
 		.from(following)
-		.where(and(
-			eq(following.followeeId, followeeId),
-			isNull(following.followerHost),
-			eq(following.isFollowerHibernated, false),
-		));
+		.where(
+			and(
+				eq(following.followeeId, followeeId),
+				isNull(following.followerHost),
+				eq(following.isFollowerHibernated, false),
+			),
+		);
 }
 
-export async function listSharedInboxesFromFollowingsInDatabase(
-	db: MiDrizzleDatabase,
-): Promise<string[]> {
+export async function listSharedInboxesFromFollowingsInDatabase(db: MiDrizzleDatabase): Promise<string[]> {
 	const rows = await db
 		.select({
 			followerSharedInbox: following.followerSharedInbox,
 			followeeSharedInbox: following.followeeSharedInbox,
 		})
 		.from(following)
-		.where(or(
-			isNotNull(following.followerSharedInbox),
-			isNotNull(following.followeeSharedInbox),
-		));
+		.where(or(isNotNull(following.followerSharedInbox), isNotNull(following.followeeSharedInbox)));
 
-	return [...new Set(rows.flatMap(row => [
-		row.followerSharedInbox,
-		row.followeeSharedInbox,
-	]).filter((inbox): inbox is string => inbox != null))];
+	return [
+		...new Set(
+			rows
+				.flatMap((row) => [row.followerSharedInbox, row.followeeSharedInbox])
+				.filter((inbox): inbox is string => inbox != null),
+		),
+	];
 }
 
 export async function listFollowerInboxesByFolloweeIdFromDatabase(
@@ -395,10 +381,7 @@ export async function listFollowerInboxesByFolloweeIdFromDatabase(
 			followerInbox: following.followerInbox,
 		})
 		.from(following)
-		.where(and(
-			eq(following.followeeId, followeeId),
-			isNotNull(following.followerHost),
-		));
+		.where(and(eq(following.followeeId, followeeId), isNotNull(following.followerHost)));
 }
 
 export async function listFollowingsForUnfollowByFollowerIdFromDatabase(
@@ -422,23 +405,14 @@ export async function fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(following)
-		.where(and(
-			eq(following.followerId, followerId),
-			eq(following.followeeId, followeeId),
-		))
+		.where(and(eq(following.followerId, followerId), eq(following.followeeId, followeeId)))
 		.limit(1);
 
 	return row ? deserializeFollowing(row) : null;
 }
 
-export async function createFollowingInDatabase(
-	db: MiDrizzleDatabase,
-	data: FollowingInsert,
-): Promise<MiFollowing> {
-	const [row] = await db
-		.insert(following)
-		.values(data)
-		.returning();
+export async function createFollowingInDatabase(db: MiDrizzleDatabase, data: FollowingInsert): Promise<MiFollowing> {
+	const [row] = await db.insert(following).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create following');
@@ -453,7 +427,7 @@ export async function deleteFollowingAndUpdateUserCountsByIdInDatabase(
 	followerId: MiUser['id'],
 	followeeId: MiUser['id'],
 ): Promise<boolean> {
-	return await db.transaction(async transaction => {
+	return await db.transaction(async (transaction) => {
 		const tx = transaction as typeof db;
 		const users = await tx
 			.select({ id: userTable.id, movedToUri: userTable.movedToUri })
@@ -461,15 +435,11 @@ export async function deleteFollowingAndUpdateUserCountsByIdInDatabase(
 			.where(inArray(userTable.id, [followerId, followeeId]))
 			.orderBy(asc(userTable.id))
 			.for('update');
-		const movedToUriByUserId = new Map(users.map(user => [user.id, user.movedToUri]));
+		const movedToUriByUserId = new Map(users.map((user) => [user.id, user.movedToUri]));
 
 		const deleted = await tx
 			.delete(following)
-			.where(and(
-				eq(following.id, id),
-				eq(following.followerId, followerId),
-				eq(following.followeeId, followeeId),
-			))
+			.where(and(eq(following.id, id), eq(following.followerId, followerId), eq(following.followeeId, followeeId)))
 			.returning({ id: following.id });
 		if (deleted.length === 0) return false;
 
@@ -502,11 +472,7 @@ export async function fetchFollowingByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiFollowing['id'],
 ): Promise<MiFollowing> {
-	const [row] = await db
-		.select()
-		.from(following)
-		.where(eq(following.id, id))
-		.limit(1);
+	const [row] = await db.select().from(following).where(eq(following.id, id)).limit(1);
 
 	if (row == null) {
 		throw new EntityNotFoundError('MiFollowing', { id });
@@ -520,15 +486,19 @@ export async function followingExistsInDatabase(
 	followerId: MiUser['id'],
 	followeeId: MiUser['id'],
 ): Promise<boolean> {
-	const statement = preparedQueryFor(db, 'following:exists', () => db
-		.select({ id: following.id })
-		.from(following)
-		.where(and(
-			eq(following.followerId, sql.placeholder('followerId')),
-			eq(following.followeeId, sql.placeholder('followeeId')),
-		))
-		.limit(1)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'following:exists', () =>
+		db
+			.select({ id: following.id })
+			.from(following)
+			.where(
+				and(
+					eq(following.followerId, sql.placeholder('followerId')),
+					eq(following.followeeId, sql.placeholder('followeeId')),
+				),
+			)
+			.limit(1)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const [row] = await statement.execute({ followerId, followeeId });
 
 	return row != null;
@@ -539,10 +509,7 @@ export async function updateFollowingByIdInDatabase(
 	id: MiFollowing['id'],
 	values: FollowingUpdate,
 ): Promise<void> {
-	await db
-		.update(following)
-		.set(values)
-		.where(eq(following.id, id));
+	await db.update(following).set(values).where(eq(following.id, id));
 }
 
 export async function updateFollowingsByFollowerIdInDatabase(
@@ -550,10 +517,7 @@ export async function updateFollowingsByFollowerIdInDatabase(
 	followerId: MiUser['id'],
 	values: FollowingUpdate,
 ): Promise<void> {
-	await db
-		.update(following)
-		.set(values)
-		.where(eq(following.followerId, followerId));
+	await db.update(following).set(values).where(eq(following.followerId, followerId));
 }
 
 export async function listFollowingsByFollowerHostFromDatabase(
@@ -570,19 +534,13 @@ export async function listFollowingsByFollowerHostFromDatabase(
 }
 
 export async function countFollowingsWithRemoteFolloweeHostFromDatabase(db: MiDrizzleDatabase): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(following)
-		.where(isNotNull(following.followeeHost));
+	const [row] = await db.select({ value: count() }).from(following).where(isNotNull(following.followeeHost));
 
 	return row?.value ?? 0;
 }
 
 export async function countFollowingsWithRemoteFollowerHostFromDatabase(db: MiDrizzleDatabase): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(following)
-		.where(isNotNull(following.followerHost));
+	const [row] = await db.select({ value: count() }).from(following).where(isNotNull(following.followerHost));
 
 	return row?.value ?? 0;
 }
@@ -595,10 +553,7 @@ export async function countNonMovedFolloweesByFollowerIdFromDatabase(
 		.select({ value: count() })
 		.from(following)
 		.innerJoin(userTable, eq(userTable.id, following.followeeId))
-		.where(and(
-			eq(following.followerId, followerId),
-			isNull(userTable.movedToUri),
-		));
+		.where(and(eq(following.followerId, followerId), isNull(userTable.movedToUri)));
 
 	return row?.value ?? 0;
 }
@@ -611,10 +566,7 @@ export async function countNonMovedFollowersByFolloweeIdFromDatabase(
 		.select({ value: count() })
 		.from(following)
 		.innerJoin(userTable, eq(userTable.id, following.followerId))
-		.where(and(
-			eq(following.followeeId, followeeId),
-			isNull(userTable.movedToUri),
-		));
+		.where(and(eq(following.followeeId, followeeId), isNull(userTable.movedToUri)));
 
 	return row?.value ?? 0;
 }
@@ -627,16 +579,12 @@ export async function countMutualFollowingsBetweenUsersFromDatabase(
 	const [row] = await db
 		.select({ value: count() })
 		.from(following)
-		.where(or(
-			and(
-				eq(following.followerId, aUserId),
-				eq(following.followeeId, bUserId),
+		.where(
+			or(
+				and(eq(following.followerId, aUserId), eq(following.followeeId, bUserId)),
+				and(eq(following.followerId, bUserId), eq(following.followeeId, aUserId)),
 			),
-			and(
-				eq(following.followerId, bUserId),
-				eq(following.followeeId, aUserId),
-			),
-		));
+		);
 
 	return row?.value ?? 0;
 }
@@ -649,10 +597,12 @@ export async function countFollowingsByFollowerIdAndFolloweeHostStateFromDatabas
 	const [row] = await db
 		.select({ value: count() })
 		.from(following)
-		.where(and(
-			eq(following.followerId, followerId),
-			isRemoteFollowee ? isNotNull(following.followeeHost) : isNull(following.followeeHost),
-		));
+		.where(
+			and(
+				eq(following.followerId, followerId),
+				isRemoteFollowee ? isNotNull(following.followeeHost) : isNull(following.followeeHost),
+			),
+		);
 
 	return row?.value ?? 0;
 }
@@ -665,10 +615,12 @@ export async function countFollowingsByFolloweeIdAndFollowerHostStateFromDatabas
 	const [row] = await db
 		.select({ value: count() })
 		.from(following)
-		.where(and(
-			eq(following.followeeId, followeeId),
-			isRemoteFollower ? isNotNull(following.followerHost) : isNull(following.followerHost),
-		));
+		.where(
+			and(
+				eq(following.followeeId, followeeId),
+				isRemoteFollower ? isNotNull(following.followerHost) : isNull(following.followerHost),
+			),
+		);
 
 	return row?.value ?? 0;
 }
@@ -677,10 +629,7 @@ export async function countFollowingsByFollowerHostFromDatabase(
 	db: MiDrizzleDatabase,
 	followerHost: NonNullable<MiFollowing['followerHost']>,
 ): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(following)
-		.where(eq(following.followerHost, followerHost));
+	const [row] = await db.select({ value: count() }).from(following).where(eq(following.followerHost, followerHost));
 
 	return row?.value ?? 0;
 }
@@ -689,10 +638,7 @@ export async function countFollowingsByFolloweeHostFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeHost: NonNullable<MiFollowing['followeeHost']>,
 ): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(following)
-		.where(eq(following.followeeHost, followeeHost));
+	const [row] = await db.select({ value: count() }).from(following).where(eq(following.followeeHost, followeeHost));
 
 	return row?.value ?? 0;
 }
@@ -702,10 +648,7 @@ export async function updateFollowerHibernatedStateByFollowerIdInDatabase(
 	followerId: MiUser['id'],
 	isFollowerHibernated: boolean,
 ): Promise<void> {
-	await db
-		.update(following)
-		.set({ isFollowerHibernated })
-		.where(eq(following.followerId, followerId));
+	await db.update(following).set({ isFollowerHibernated }).where(eq(following.followerId, followerId));
 }
 
 export async function updateFollowerHibernatedStateByFollowerIdsInDatabase(
@@ -715,8 +658,5 @@ export async function updateFollowerHibernatedStateByFollowerIdsInDatabase(
 ): Promise<void> {
 	if (followerIds.length === 0) return;
 
-	await db
-		.update(following)
-		.set({ isFollowerHibernated })
-		.where(inArray(following.followerId, followerIds));
+	await db.update(following).set({ isFollowerHibernated }).where(inArray(following.followerId, followerIds));
 }

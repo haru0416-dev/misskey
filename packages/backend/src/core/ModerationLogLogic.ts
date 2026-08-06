@@ -10,7 +10,7 @@ import type { ModerationLogPayloads } from '@/types.js';
 import { moderationLogTypes } from '@/types.js';
 import { createModerationLogInDatabase, createModerationLogsInDatabase } from './ModerationLogStore.js';
 
-export async function logModerationEventInDatabase<T extends typeof moderationLogTypes[number]>(
+export async function logModerationEventInDatabase<T extends (typeof moderationLogTypes)[number]>(
 	deps: {
 		db: MiDrizzleDatabase;
 	},
@@ -26,7 +26,7 @@ export async function logModerationEventInDatabase<T extends typeof moderationLo
 	});
 }
 
-export async function logModerationEventsInDatabase<T extends typeof moderationLogTypes[number]>(
+export async function logModerationEventsInDatabase<T extends (typeof moderationLogTypes)[number]>(
 	deps: {
 		db: MiDrizzleDatabase;
 	},
@@ -34,10 +34,13 @@ export async function logModerationEventsInDatabase<T extends typeof moderationL
 	type: T,
 	infos: ModerationLogPayloads[T][],
 ): Promise<void> {
-	await createModerationLogsInDatabase(deps.db, infos.map(info => ({
-		id: genId(),
-		userId: moderator.id,
-		type,
-		info,
-	})));
+	await createModerationLogsInDatabase(
+		deps.db,
+		infos.map((info) => ({
+			id: genId(),
+			userId: moderator.id,
+			type,
+			info,
+		})),
+	);
 }

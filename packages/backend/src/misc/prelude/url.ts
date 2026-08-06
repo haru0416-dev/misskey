@@ -10,8 +10,8 @@
  */
 export function query(obj: Record<string, unknown>): string {
 	const params = Object.entries(obj)
-		.filter(([, v]) => Array.isArray(v) ? v.length : v !== undefined)
-		.reduce((a, [k, v]) => (a[k] = v, a), {} as Record<string, unknown>);
+		.filter(([, v]) => (Array.isArray(v) ? v.length : v !== undefined))
+		.reduce((a, [k, v]) => ((a[k] = v), a), {} as Record<string, unknown>);
 
 	return Object.entries(params)
 		.map((e) => `${e[0]}=${encodeURIComponent(String(e[1]))}`)
@@ -19,5 +19,5 @@ export function query(obj: Record<string, unknown>): string {
 }
 
 export function appendQuery(url: string, query: string): string {
-	return `${url}${/\?/.test(url) ? url.endsWith('?') ? '' : '&' : '?'}${query}`;
+	return `${url}${/\?/.test(url) ? (url.endsWith('?') ? '' : '&') : '?'}${query}`;
 }

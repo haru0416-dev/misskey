@@ -32,7 +32,11 @@ class InboxBodyLimitExceeded extends Error {}
 /**
  * QueueService.inbox 相当。ジョブ名はアクティビティIDから生成する。
  */
-function enqueueInboxJob(deps: InboxEndpointDependencies, activity: IActivity, signature: httpSignature.IParsedSignature) {
+function enqueueInboxJob(
+	deps: InboxEndpointDependencies,
+	activity: IActivity,
+	signature: httpSignature.IParsedSignature,
+) {
 	const data: InboxJobData = { activity, signature };
 	const label = (activity.id ?? '').replace('https://', '').replace('/activity', '');
 	return deps.inboxQueue.add(label, data, {
@@ -74,7 +78,10 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 			url: url.pathname + url.search,
 			headers,
 		} as unknown as IncomingMessage;
-		signature = httpSignature.parseRequest(requestShim, { headers: ['(request-target)', 'host', 'date'], authorizationHeaderName: 'signature' });
+		signature = httpSignature.parseRequest(requestShim, {
+			headers: ['(request-target)', 'host', 'date'],
+			authorizationHeaderName: 'signature',
+		});
 	} catch {
 		return rawStatus(401);
 	}
@@ -132,8 +139,8 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 export function createInboxApp(deps: InboxEndpointDependencies): Hono {
 	const app = new Hono();
 
-	app.post('/inbox', async c => handleInboxRequest(deps, c.req.raw));
-	app.post('/users/:user/inbox', async c => handleInboxRequest(deps, c.req.raw));
+	app.post('/inbox', async (c) => handleInboxRequest(deps, c.req.raw));
+	app.post('/users/:user/inbox', async (c) => handleInboxRequest(deps, c.req.raw));
 
 	return app;
 }

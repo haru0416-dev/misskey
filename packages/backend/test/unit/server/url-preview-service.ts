@@ -78,7 +78,10 @@ describe('createUrlPreviewService', () => {
 		try {
 			const firstReply = createReply();
 			const first = await service.handle({ query: { url: 'https://example.com/article', lang: 'en-US' } }, firstReply);
-			const second = await service.handle({ query: { url: 'https://example.com/article', lang: 'en-US' } }, createReply());
+			const second = await service.handle(
+				{ query: { url: 'https://example.com/article', lang: 'en-US' } },
+				createReply(),
+			);
 
 			expect(getJson).toHaveBeenCalledOnce();
 			expect(first).toEqual(second);

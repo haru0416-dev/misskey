@@ -10,27 +10,20 @@ import type { MiUserProfile } from '@/models/_.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
 
-export function createUserAuthService(
-	redisClient: Redis.Redis,
-	db: MiDrizzleDatabase,
-) {
+export function createUserAuthService(redisClient: Redis.Redis, db: MiDrizzleDatabase) {
 	async function twoFactorAuthenticate(profile: MiUserProfile, token: string): Promise<void> {
 		if (profile.twoFactorBackupSecret?.includes(token)) {
 			await updateUserProfileInDatabase(db, profile.userId, {
 				twoFactorBackupSecret: profile.twoFactorBackupSecret.filter((secret) => secret !== token),
 			});
 		} else {
-			if (!await validateOtp(profile.userId, profile.twoFactorSecret!, token)) {
+			if (!(await validateOtp(profile.userId, profile.twoFactorSecret!, token))) {
 				throw new Error('authentication failed');
 			}
 		}
 	}
 
-	async function validateOtp(
-		userId: MiUserProfile['userId'],
-		twoFactorSecret: string,
-		token: string,
-	) {
+	async function validateOtp(userId: MiUserProfile['userId'], twoFactorSecret: string, token: string) {
 		if (process.env['NODE_ENV'] === 'test' && process.env['MISSKEY_TEST_CHECK_DUPLICATED_TOTP'] !== '1') {
 			return true;
 		}

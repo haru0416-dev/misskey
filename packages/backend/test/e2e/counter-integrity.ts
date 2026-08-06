@@ -29,15 +29,18 @@ async function waitForBlockedStatements(
 ): Promise<void> {
 	const deadline = Date.now() + 10_000;
 	while (Date.now() < deadline) {
-		const result = await pool.query<{ count: number }>(`
+		const result = await pool.query<{ count: number }>(
+			`
 			SELECT count(*)::int AS count
 			FROM pg_stat_activity
 			WHERE datname = current_database()
 				AND wait_event_type = $2
 				AND query LIKE $1
-		`, [queryPattern, waitEventType]);
+		`,
+			[queryPattern, waitEventType],
+		);
 		if (result.rows[0]?.count === 2) return;
-		await new Promise<void>(resolve => setImmediate(resolve));
+		await new Promise<void>((resolve) => setImmediate(resolve));
 	}
 
 	throw new Error(`Timed out waiting for concurrent statements matching ${queryPattern}`);
@@ -71,7 +74,7 @@ async function runAfterBothDeletesStart<T>(
 		await lockClient.query('SELECT pg_advisory_xact_lock($1)', [blocker.advisoryLockKey]);
 		lockHeld = true;
 
-		const pending = actions.map(action => action()) as [Promise<T>, Promise<T>];
+		const pending = actions.map((action) => action()) as [Promise<T>, Promise<T>];
 		await waitForBlockedStatements(pool, blocker.queryPattern, 'Lock');
 		await lockClient.query('COMMIT');
 		lockHeld = false;
@@ -104,7 +107,7 @@ async function runAfterBothBlockOnNoteRowLock<T>(
 		await lockClient.query('SELECT "id" FROM "note" WHERE "id" = $1 FOR UPDATE', [noteId]);
 		lockHeld = true;
 
-		const pending = actions.map(action => action()) as [Promise<T>, Promise<T>];
+		const pending = actions.map((action) => action()) as [Promise<T>, Promise<T>];
 		// 2人目の待機者は transactionid ではなく tuple ロックで待つため、wait_event ではなく種別で数える
 		await waitForBlockedStatements(pool, 'select "id" from "note"%for update%', 'Lock');
 		await lockClient.query('COMMIT');
@@ -143,7 +146,10 @@ describe('counter integrity under concurrent deletion', () => {
 			async () => await api('notes/delete', { noteId: reply.id }, owner),
 		]);
 
-		assert.deepStrictEqual(responses.map(response => response.status), [204, 204]);
+		assert.deepStrictEqual(
+			responses.map((response) => response.status),
+			[204, 204],
+		);
 		const storedParent = await fetchNoteByIdFromDatabase(db, parent.id);
 		assert.ok(storedParent);
 		assert.strictEqual(storedParent.repliesCount, 0);
@@ -160,7 +166,10 @@ describe('counter integrity under concurrent deletion', () => {
 			async () => await api('clips/remove-note', { clipId: clip.body.id, noteId: note.id }, owner),
 		]);
 
-		assert.deepStrictEqual(responses.map(response => response.status), [204, 204]);
+		assert.deepStrictEqual(
+			responses.map((response) => response.status),
+			[204, 204],
+		);
 		const storedNote = await fetchNoteByIdFromDatabase(db, note.id);
 		assert.ok(storedNote);
 		assert.strictEqual(storedNote.clippedCount, 0);

@@ -26,11 +26,13 @@ describe('shouldPropagateTraceContext', () => {
 
 describe('getClientRequestTarget', () => {
 	test('preserves non-standard ports', () => {
-		expect(getClientRequestTarget({
-			host: 'service.internal',
-			path: '/api',
-			port: 8080,
-			protocol: 'http:',
-		})).toEqual(new URL('http://service.internal:8080/api'));
+		expect(
+			getClientRequestTarget({
+				host: 'service.internal',
+				path: '/api',
+				port: 8080,
+				protocol: 'http:',
+			}),
+		).toEqual(new URL('http://service.internal:8080/api'));
 	});
 });

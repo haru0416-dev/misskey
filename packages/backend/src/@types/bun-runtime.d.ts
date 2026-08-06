@@ -41,16 +41,22 @@ declare namespace Bun {
 		hostname?: string;
 		unix?: string;
 		maxRequestBodySize?: number;
-		fetch(this: Server, request: Request, server: Server): Response | Promise<Response> | undefined | Promise<Response | undefined>;
+		fetch(
+			this: Server,
+			request: Request,
+			server: Server,
+		): Response | Promise<Response> | undefined | Promise<Response | undefined>;
 		websocket?: WebSocketHandler<T>;
 	}
 }
 
-declare const Bun: {
-	serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
-	password: {
-		hash(password: string, options: { algorithm: 'bcrypt'; cost: number }): Promise<string>;
-		hashSync(password: string, options: { algorithm: 'bcrypt'; cost: number }): string;
-		verify(password: string, hash: string, algorithm?: 'bcrypt'): Promise<boolean>;
-	};
-} | undefined;
+declare const Bun:
+	| {
+			serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
+			password: {
+				hash(password: string, options: { algorithm: 'bcrypt'; cost: number }): Promise<string>;
+				hashSync(password: string, options: { algorithm: 'bcrypt'; cost: number }): string;
+				verify(password: string, hash: string, algorithm?: 'bcrypt'): Promise<boolean>;
+			};
+	  }
+	| undefined;

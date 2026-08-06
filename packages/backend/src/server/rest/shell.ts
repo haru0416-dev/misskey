@@ -22,7 +22,17 @@ import type { HonoChartWriters } from '../chart-runtime.js';
 import type Logger from '@/logger.js';
 import type { HonoApiAdminQueueDependencies } from './admin-queue.js';
 import type { HonoApiMainStreamPublisher } from './notification.js';
-import type { HonoApiAdminStreamPublisher, HonoApiBroadcastStreamPublisher, HonoApiChatRoomStreamPublisher, HonoApiChatUserStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher, HonoApiNoteStreamPublisher, HonoApiNotesStreamPublisher, HonoApiUserListStreamPublisher } from './events.js';
+import type {
+	HonoApiAdminStreamPublisher,
+	HonoApiBroadcastStreamPublisher,
+	HonoApiChatRoomStreamPublisher,
+	HonoApiChatUserStreamPublisher,
+	HonoApiDriveStreamPublisher,
+	HonoApiInternalEventPublisher,
+	HonoApiNoteStreamPublisher,
+	HonoApiNotesStreamPublisher,
+	HonoApiUserListStreamPublisher,
+} from './events.js';
 import { jsonResponse, setApiHeaders } from './shell-helpers.js';
 import { registerAuthAccountRoutes } from './routes/auth-account.js';
 import { registerAdminRoutes } from './routes/admin.js';
@@ -60,7 +70,15 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	s3Service: Pick<S3Service, 'upload' | 'delete'>;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate' | 'validateOtp'>;
 	videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
-	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication' | 'initiateRegistration' | 'verifyRegistration'>;
+	webAuthnService: Pick<
+		WebAuthnService,
+		| 'initiateAuthentication'
+		| 'verifyAuthentication'
+		| 'initiateSignInWithPasskeyAuthentication'
+		| 'verifySignInWithPasskeyAuthentication'
+		| 'initiateRegistration'
+		| 'verifyRegistration'
+	>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
 	chartWriters: HonoChartWriters;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;

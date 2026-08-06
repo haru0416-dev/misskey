@@ -16,11 +16,11 @@ function deserializeUserPublickey(row: UserPublickeyRow): MiUserPublickey {
 	} as MiUserPublickey;
 }
 
-export async function createUserPublickeyInDatabase(db: MiDrizzleDatabase, data: UserPublickeyInsert): Promise<MiUserPublickey> {
-	const [row] = await db
-		.insert(userPublickey)
-		.values(data)
-		.returning();
+export async function createUserPublickeyInDatabase(
+	db: MiDrizzleDatabase,
+	data: UserPublickeyInsert,
+): Promise<MiUserPublickey> {
+	const [row] = await db.insert(userPublickey).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create user publickey');
@@ -29,29 +29,28 @@ export async function createUserPublickeyInDatabase(db: MiDrizzleDatabase, data:
 	return deserializeUserPublickey(row);
 }
 
-export async function fetchUserPublickeyByKeyIdFromDatabase(db: MiDrizzleDatabase, keyId: string): Promise<MiUserPublickey | null> {
-	const [row] = await db
-		.select()
-		.from(userPublickey)
-		.where(eq(userPublickey.keyId, keyId))
-		.limit(1);
+export async function fetchUserPublickeyByKeyIdFromDatabase(
+	db: MiDrizzleDatabase,
+	keyId: string,
+): Promise<MiUserPublickey | null> {
+	const [row] = await db.select().from(userPublickey).where(eq(userPublickey.keyId, keyId)).limit(1);
 
 	return row ? deserializeUserPublickey(row) : null;
 }
 
-export async function fetchUserPublickeyByUserIdFromDatabase(db: MiDrizzleDatabase, userId: MiUser['id']): Promise<MiUserPublickey | null> {
-	const [row] = await db
-		.select()
-		.from(userPublickey)
-		.where(eq(userPublickey.userId, userId))
-		.limit(1);
+export async function fetchUserPublickeyByUserIdFromDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+): Promise<MiUserPublickey | null> {
+	const [row] = await db.select().from(userPublickey).where(eq(userPublickey.userId, userId)).limit(1);
 
 	return row ? deserializeUserPublickey(row) : null;
 }
 
-export async function updateUserPublickeyInDatabase(db: MiDrizzleDatabase, userId: MiUser['id'], data: Pick<MiUserPublickey, 'keyId' | 'keyPem'>): Promise<void> {
-	await db
-		.update(userPublickey)
-		.set(data)
-		.where(eq(userPublickey.userId, userId));
+export async function updateUserPublickeyInDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+	data: Pick<MiUserPublickey, 'keyId' | 'keyPem'>,
+): Promise<void> {
+	await db.update(userPublickey).set(data).where(eq(userPublickey.userId, userId));
 }

@@ -5,7 +5,12 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { countDriveFilesByFolderIdFromDatabase, countDriveFilesGroupedByFolderIdsFromDatabase, driveFileExistsByMd5AndUserIdFromDatabase, sumDriveFileSizeByUserIdFromDatabase } from '@/core/DriveFileStore.js';
+import {
+	countDriveFilesByFolderIdFromDatabase,
+	countDriveFilesGroupedByFolderIdsFromDatabase,
+	driveFileExistsByMd5AndUserIdFromDatabase,
+	sumDriveFileSizeByUserIdFromDatabase,
+} from '@/core/DriveFileStore.js';
 import {
 	countChildDriveFoldersGroupedByParentIdsFromDatabase,
 	countDriveFoldersByParentIdFromDatabase,
@@ -204,10 +209,12 @@ async function resolveDriveFoldersForHonoApi(
 		folderById.set(folder.id, folder);
 	}
 
-	return await Promise.all(srcs.map(async src => {
-		if (typeof src === 'object') return src;
-		return folderById.get(src) ?? await fetchDriveFolderByIdOrFailFromDatabase(deps.db, src);
-	}));
+	return await Promise.all(
+		srcs.map(async (src) => {
+			if (typeof src === 'object') return src;
+			return folderById.get(src) ?? (await fetchDriveFolderByIdOrFailFromDatabase(deps.db, src));
+		}),
+	);
 }
 
 export async function packDriveFolderForHonoApi(
@@ -217,12 +224,13 @@ export async function packDriveFolderForHonoApi(
 		detail: boolean;
 	},
 ): Promise<HonoApiPackedDriveFolder> {
-	const opts = Object.assign({
-		detail: false,
-	}, options);
-	const folder = typeof src === 'object'
-		? src
-		: await fetchDriveFolderByIdOrFailFromDatabase(deps.db, src);
+	const opts = Object.assign(
+		{
+			detail: false,
+		},
+		options,
+	);
+	const folder = typeof src === 'object' ? src : await fetchDriveFolderByIdOrFailFromDatabase(deps.db, src);
 
 	const packed = packDriveFolderBaseForHonoApi(folder);
 
@@ -231,7 +239,9 @@ export async function packDriveFolderForHonoApi(
 	const [foldersCount, filesCount, parent] = await Promise.all([
 		countDriveFoldersByParentIdFromDatabase(deps.db, folder.id),
 		countDriveFilesByFolderIdFromDatabase(deps.db, folder.id),
-		folder.parentId == null ? Promise.resolve(undefined) : packDriveFolderForHonoApi(deps, folder.parentId, { detail: true }),
+		folder.parentId == null
+			? Promise.resolve(undefined)
+			: packDriveFolderForHonoApi(deps, folder.parentId, { detail: true }),
 	]);
 
 	return {
@@ -249,27 +259,32 @@ export async function packDriveFoldersManyForHonoApi(
 		detail: boolean;
 	},
 ): Promise<HonoApiPackedDriveFolder[]> {
-	const opts = Object.assign({
-		detail: false,
-	}, options);
+	const opts = Object.assign(
+		{
+			detail: false,
+		},
+		options,
+	);
 	const folders = await resolveDriveFoldersForHonoApi(deps, srcs);
 
 	if (!opts.detail) {
-		return folders.map(folder => packDriveFolderBaseForHonoApi(folder));
+		return folders.map((folder) => packDriveFolderBaseForHonoApi(folder));
 	}
 
-	const folderIds = [...new Set(folders.map(folder => folder.id))];
-	const parentIds = [...new Set(folders.map(folder => folder.parentId).filter((id): id is DriveFolderRow['id'] => id != null))];
+	const folderIds = [...new Set(folders.map((folder) => folder.id))];
+	const parentIds = [
+		...new Set(folders.map((folder) => folder.parentId).filter((id): id is DriveFolderRow['id'] => id != null)),
+	];
 	const [folderCounts, fileCounts, parents] = await Promise.all([
 		countChildDriveFoldersGroupedByParentIdsFromDatabase(deps.db, folderIds),
 		countDriveFilesGroupedByFolderIdsFromDatabase(deps.db, folderIds),
 		parentIds.length === 0 ? Promise.resolve([]) : packDriveFoldersManyForHonoApi(deps, parentIds, { detail: true }),
 	]);
-	const folderCountById = new Map(folderCounts.map(row => [row.parentId, row.count]));
-	const fileCountById = new Map(fileCounts.map(row => [row.folderId, row.count]));
-	const parentById = new Map(parents.map(parent => [parent.id, parent]));
+	const folderCountById = new Map(folderCounts.map((row) => [row.parentId, row.count]));
+	const fileCountById = new Map(fileCounts.map((row) => [row.folderId, row.count]));
+	const parentById = new Map(parents.map((parent) => [parent.id, parent]));
 
-	return folders.map(folder => {
+	return folders.map((folder) => {
 		const packed = packDriveFolderBaseForHonoApi(folder);
 		const parent = folder.parentId == null ? null : parentById.get(folder.parentId);
 
@@ -326,9 +341,12 @@ export async function handleHonoApiDriveFolders(
 	body: Record<string, unknown>,
 ): Promise<HonoApiPackedDriveFolder[]> {
 	const params = parseHonoApiParams(driveFoldersParamDef, body);
-	const pagination = resolveDriveFolderPagination({
-		gen: (time?: number) => genId(time),
-	}, params);
+	const pagination = resolveDriveFolderPagination(
+		{
+			gen: (time?: number) => genId(time),
+		},
+		params,
+	);
 	const folders = await listDriveFoldersByUserIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		parentId: params.folderId ?? null,
@@ -375,7 +393,7 @@ async function driveFolderWillNestRecursively(
 	targetFolderId: string,
 	parentId: string | null,
 ): Promise<boolean> {
-	for (let currentParentId = parentId; currentParentId != null;) {
+	for (let currentParentId = parentId; currentParentId != null; ) {
 		const parent = await fetchDriveFolderByIdOrFailFromDatabase(deps.db, currentParentId);
 
 		if (parent.id === targetFolderId) {

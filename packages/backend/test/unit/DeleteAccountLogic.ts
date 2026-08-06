@@ -12,7 +12,11 @@ import { loadConfig } from '@/config.js';
 import { deleteAccountWithSideEffects, type DeleteAccountDependencies } from '@/core/DeleteAccountLogic.js';
 import { listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
 import type { DbQueue, DeliverQueue } from '@/core/queues.js';
-import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import {
+	createUserWithProfileAndPublickeyInDatabase,
+	deleteUserByIdFromDatabase,
+	fetchUserByIdOrFailFromDatabase,
+} from '@/core/UserStore.js';
 import { following } from '@/db/schema/following.js';
 import { queueOutbox, type QueueOutboxRow } from '@/db/schema/queue-outbox.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -65,7 +69,11 @@ describe('DeleteAccountLogic', () => {
 		});
 	}
 
-	function createDependencies(addBulk: ReturnType<typeof vi.fn>, publishInternalEvent = vi.fn(), deliverAdd = vi.fn().mockResolvedValue(undefined)): DeleteAccountDependencies {
+	function createDependencies(
+		addBulk: ReturnType<typeof vi.fn>,
+		publishInternalEvent = vi.fn(),
+		deliverAdd = vi.fn().mockResolvedValue(undefined),
+	): DeleteAccountDependencies {
 		return {
 			config: runtime.config,
 			meta: { rootUserId: null },
@@ -83,15 +91,13 @@ describe('DeleteAccountLogic', () => {
 		const missingModerator = { id: genId() };
 
 		try {
-			await expect(deleteAccountWithSideEffects(
-				createDependencies(addBulk, publishInternalEvent),
-				target,
-				missingModerator,
-			)).rejects.toThrow();
+			await expect(
+				deleteAccountWithSideEffects(createDependencies(addBulk, publishInternalEvent), target, missingModerator),
+			).rejects.toThrow();
 
 			expect((await fetchUserByIdOrFailFromDatabase(runtime.db, target.id)).isDeleted).toBe(false);
 			const outboxRows = await runtime.db.select().from(queueOutbox);
-			expect(outboxRows.some(row => isDeleteAccountOutboxForUser(row, target.id))).toBe(false);
+			expect(outboxRows.some((row) => isDeleteAccountOutboxForUser(row, target.id))).toBe(false);
 			expect(addBulk).not.toHaveBeenCalled();
 			expect(publishInternalEvent).not.toHaveBeenCalled();
 		} finally {
@@ -117,11 +123,13 @@ describe('DeleteAccountLogic', () => {
 		try {
 			await deleteAccountWithSideEffects(createDependencies(dbAddBulk, vi.fn(), deliverAdd), target);
 
-			const outboxRows = (await runtime.db.select().from(queueOutbox))
-				.filter(row => isDeliverOutboxForUser(row, target.id));
+			const outboxRows = (await runtime.db.select().from(queueOutbox)).filter((row) =>
+				isDeliverOutboxForUser(row, target.id),
+			);
 			expect(outboxRows).toHaveLength(1);
-			const coordinatorRows = (await runtime.db.select().from(queueOutbox))
-				.filter(row => isDeleteAccountOutboxForUser(row, target.id));
+			const coordinatorRows = (await runtime.db.select().from(queueOutbox)).filter((row) =>
+				isDeleteAccountOutboxForUser(row, target.id),
+			);
 			expect(coordinatorRows).toHaveLength(1);
 			expect(coordinatorRows[0]?.queue).toBe(QUEUE.DB);
 			expect(coordinatorRows[0]?.kind).toBe('accountDeleteCoordinator');
@@ -138,8 +146,8 @@ describe('DeleteAccountLogic', () => {
 			expect(dbAddBulk).not.toHaveBeenCalled();
 		} finally {
 			const outboxIds = (await runtime.db.select().from(queueOutbox))
-				.filter(row => isDeleteAccountOutboxForUser(row, target.id) || isDeliverOutboxForUser(row, target.id))
-				.map(row => row.id);
+				.filter((row) => isDeleteAccountOutboxForUser(row, target.id) || isDeliverOutboxForUser(row, target.id))
+				.map((row) => row.id);
 			if (outboxIds.length > 0) await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, outboxIds));
 			await deleteUserByIdFromDatabase(runtime.db, target.id);
 			await deleteUserByIdFromDatabase(runtime.db, remote.id);
@@ -167,8 +175,9 @@ describe('DeleteAccountLogic', () => {
 
 			// 発行済みの行を残すとジョブ完了後にディスパッチャが同じ jobId を作り直し、削除が二重実行される
 			await vi.waitFor(async () => {
-				const remaining = (await runtime.db.select().from(queueOutbox))
-					.filter(row => isDeleteAccountOutboxForUser(row, target.id));
+				const remaining = (await runtime.db.select().from(queueOutbox)).filter((row) =>
+					isDeleteAccountOutboxForUser(row, target.id),
+				);
 				expect(remaining).toHaveLength(0);
 			});
 
@@ -187,8 +196,8 @@ describe('DeleteAccountLogic', () => {
 			expect(publishInternalEvent).toHaveBeenCalledWith('userChangeDeletedState', { id: target.id, isDeleted: true });
 		} finally {
 			const outboxIds = (await runtime.db.select().from(queueOutbox))
-				.filter(row => isDeleteAccountOutboxForUser(row, target.id))
-				.map(row => row.id);
+				.filter((row) => isDeleteAccountOutboxForUser(row, target.id))
+				.map((row) => row.id);
 			if (outboxIds.length > 0) await runtime.db.delete(queueOutbox).where(inArray(queueOutbox.id, outboxIds));
 			await deleteUserByIdFromDatabase(runtime.db, target.id);
 			await deleteUserByIdFromDatabase(runtime.db, moderator.id);

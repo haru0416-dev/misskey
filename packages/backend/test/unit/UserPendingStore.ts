@@ -9,7 +9,11 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
-import { createUserPendingInDatabase, deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
+import {
+	createUserPendingInDatabase,
+	deleteUserPendingFromDatabase,
+	fetchUserPendingByCodeFromDatabase,
+} from '@/core/UserPendingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 

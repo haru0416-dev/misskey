@@ -49,18 +49,19 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 	// メールアドレスのバリデーションを行う
 	// https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
 	function validateEmailFormat(email: string): boolean {
-		const regexp = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+		const regexp =
+			/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 		return regexp.test(email);
 	}
 
 	function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
 		if (host == null) return false;
-		return blockedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+		return blockedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 	}
 
 	function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
 		if (!silencedHosts || host == null) return false;
-		return silencedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+		return silencedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 	}
 
 	function isMediaSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
@@ -87,13 +88,13 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 
 		const regexpregexp = /^\/(.+)\/(.*)$/;
 
-		const matched = keyWords.some(filter => {
+		const matched = keyWords.some((filter) => {
 			// represents RegExp
 			const regexp = filter.match(regexpregexp);
 			// This should never happen due to input sanitisation.
 			if (!regexp) {
 				const words = filter.split(' ');
-				return words.every(keyword => text.includes(keyword));
+				return words.every((keyword) => text.includes(keyword));
 			}
 			try {
 				const [, pattern, flags] = regexp;
@@ -131,7 +132,11 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 	function isFederationAllowedHost(host: string): boolean {
 		if (isSelfHost(host)) return true;
 		if (meta.federation === 'none') return false;
-		if (meta.federation === 'specified' && !meta.federationHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`))) return false;
+		if (
+			meta.federation === 'specified' &&
+			!meta.federationHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`))
+		)
+			return false;
 		if (isBlockedHost(meta.blockedHosts, host)) return false;
 
 		return true;
@@ -142,18 +147,22 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 		return isFederationAllowedHost(host);
 	}
 
-	function isDeliverSuspendedSoftware(software: Pick<MiInstance, 'softwareName' | 'softwareVersion'>): SoftwareSuspension | undefined {
+	function isDeliverSuspendedSoftware(
+		software: Pick<MiInstance, 'softwareName' | 'softwareVersion'>,
+	): SoftwareSuspension | undefined {
 		if (software.softwareName == null) return undefined;
 		if (software.softwareVersion == null) {
 			// software version is null; suspend iff versionRange is *
-			return meta.deliverSuspendedSoftware.find(x =>
-				x.software === software.softwareName
-				&& x.versionRange.trim() === '*');
+			return meta.deliverSuspendedSoftware.find(
+				(x) => x.software === software.softwareName && x.versionRange.trim() === '*',
+			);
 		} else {
 			const softwareVersion = software.softwareVersion;
-			return meta.deliverSuspendedSoftware.find(x =>
-				x.software === software.softwareName
-				&& semver.satisfies(softwareVersion, x.versionRange, { includePrerelease: true }));
+			return meta.deliverSuspendedSoftware.find(
+				(x) =>
+					x.software === software.softwareName &&
+					semver.satisfies(softwareVersion, x.versionRange, { includePrerelease: true }),
+			);
 		}
 	}
 

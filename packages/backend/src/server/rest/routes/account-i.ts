@@ -4,21 +4,57 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import {
+	assertCredential,
+	assertProhibitMoved,
+	assertSecureCredential,
+	assertTokenPermission,
+	authenticateHonoApiToken,
+} from '../auth.js';
 import { handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken } from '../app.js';
 import { handleHonoApiIFavorites } from '../favorites.js';
-import { handleHonoApiIChangePassword, handleHonoApiIDeleteAccount, handleHonoApiIRegenerateToken, handleHonoApiIUpdateEmail } from '../account-security.js';
+import {
+	handleHonoApiIChangePassword,
+	handleHonoApiIDeleteAccount,
+	handleHonoApiIRegenerateToken,
+	handleHonoApiIUpdateEmail,
+} from '../account-security.js';
 import { handleHonoApiIUpdate } from '../account-update.js';
 import { handleHonoApiIMove } from '../account-move.js';
 import { handleHonoApiIPin, handleHonoApiIUnpin } from '../account-pin.js';
 import { handleHonoApiINotifications, handleHonoApiINotificationsGrouped } from '../notifications-list.js';
 import { handleHonoApiI, handleHonoApiISigninHistory } from '../i.js';
-import { handleHonoApiI2faDone, handleHonoApiI2faKeyDone, handleHonoApiI2faPasswordLess, handleHonoApiI2faRegister, handleHonoApiI2faRegisterKey, handleHonoApiI2faRemoveKey, handleHonoApiI2faUnregister, handleHonoApiI2faUpdateKey } from '../i-2fa.js';
+import {
+	handleHonoApiI2faDone,
+	handleHonoApiI2faKeyDone,
+	handleHonoApiI2faPasswordLess,
+	handleHonoApiI2faRegister,
+	handleHonoApiI2faRegisterKey,
+	handleHonoApiI2faRemoveKey,
+	handleHonoApiI2faUnregister,
+	handleHonoApiI2faUpdateKey,
+} from '../i-2fa.js';
 import { handleHonoApiIPageLikes, handleHonoApiIPages } from '../pages.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { getHonoApiRolePolicies } from '../role-policy.js';
-import { handleHonoApiRegistryGet, handleHonoApiRegistryGetAll, handleHonoApiRegistryGetDetail, handleHonoApiRegistryKeys, handleHonoApiRegistryKeysWithType, handleHonoApiRegistryRemove, handleHonoApiRegistryScopesWithDomain, handleHonoApiRegistrySet } from '../registry.js';
-import { handleHonoApiIWebhooksCreate, handleHonoApiIWebhooksDelete, handleHonoApiIWebhooksList, handleHonoApiIWebhooksShow, handleHonoApiIWebhooksTest, handleHonoApiIWebhooksUpdate } from '../webhooks.js';
+import {
+	handleHonoApiRegistryGet,
+	handleHonoApiRegistryGetAll,
+	handleHonoApiRegistryGetDetail,
+	handleHonoApiRegistryKeys,
+	handleHonoApiRegistryKeysWithType,
+	handleHonoApiRegistryRemove,
+	handleHonoApiRegistryScopesWithDomain,
+	handleHonoApiRegistrySet,
+} from '../registry.js';
+import {
+	handleHonoApiIWebhooksCreate,
+	handleHonoApiIWebhooksDelete,
+	handleHonoApiIWebhooksList,
+	handleHonoApiIWebhooksShow,
+	handleHonoApiIWebhooksTest,
+	handleHonoApiIWebhooksUpdate,
+} from '../webhooks.js';
 import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
@@ -40,10 +76,15 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(deps, 'i/update', {
-				duration: 60 * 60 * 1000,
-				max: 20,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/update',
+				{
+					duration: 60 * 60 * 1000,
+					max: 20,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiIUpdate(deps, auth.user, auth.token, body));
 		});
@@ -56,10 +97,15 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 			assertCredential(auth);
 			assertSecureCredential(auth);
 			assertProhibitMoved(auth.user);
-			await assertHonoApiRateLimitForUser(deps, 'i/move', {
-				duration: 24 * 60 * 60 * 1000,
-				max: 5,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/move',
+				{
+					duration: 24 * 60 * 60 * 1000,
+					max: 5,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiIMove(deps, auth.user, body));
 		});
@@ -94,10 +140,15 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'read:notifications');
-			await assertHonoApiRateLimitForUser(deps, 'i/notifications', {
-				duration: 30000,
-				max: 30,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/notifications',
+				{
+					duration: 30000,
+					max: 30,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiINotifications(deps, auth.user, body));
 		});
@@ -109,10 +160,15 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'read:notifications');
-			await assertHonoApiRateLimitForUser(deps, 'i/notifications-grouped', {
-				duration: 30000,
-				max: 30,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/notifications-grouped',
+				{
+					duration: 30000,
+					max: 30,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiINotificationsGrouped(deps, auth.user, body));
 		});
@@ -171,10 +227,15 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(deps, 'i/update-email', {
-				duration: 60 * 60 * 1000,
-				max: 3,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/update-email',
+				{
+					duration: 60 * 60 * 1000,
+					max: 3,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiIUpdateEmail(deps, auth.user, body));
 		});
@@ -492,10 +553,15 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 			assertCredential(auth);
 			assertSecureCredential(auth);
 			assertTokenPermission(auth, 'read:account');
-			await assertHonoApiRateLimitForUser(deps, 'i/webhooks/test', {
-				duration: 15 * 60 * 1000,
-				max: 60,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'i/webhooks/test',
+				{
+					duration: 15 * 60 * 1000,
+					max: 60,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiIWebhooksTest(deps, auth.user, body);
 			return emptyResponse(c);

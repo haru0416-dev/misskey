@@ -29,56 +29,56 @@ const {
 	enqueueDeliverMock: vi.fn(),
 }));
 
-vi.mock('@/core/DeliverQueue.js', async importOriginal => ({
-	...await importOriginal<typeof import('@/core/DeliverQueue.js')>(),
+vi.mock('@/core/DeliverQueue.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/DeliverQueue.js')>()),
 	enqueueDeliverJob: enqueueDeliverMock,
 }));
 
-vi.mock('@/core/FollowRequestStore.js', async importOriginal => ({
-	...await importOriginal<typeof import('@/core/FollowRequestStore.js')>(),
+vi.mock('@/core/FollowRequestStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/FollowRequestStore.js')>()),
 	fetchFollowRequestFromDatabase: fetchRequestMock,
 	followRequestExistsInDatabase: vi.fn().mockResolvedValue(false),
 	listAllFollowRequestsByFolloweeIdFromDatabase: listRequestsMock,
 }));
 
-vi.mock('@/core/FollowingStore.js', async importOriginal => ({
-	...await importOriginal<typeof import('@/core/FollowingStore.js')>(),
+vi.mock('@/core/FollowingStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/FollowingStore.js')>()),
 	createFollowingInDatabase: createFollowingMock,
 	listFolloweeIdsWithRepliesByFollowerIdFromDatabase: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('@/core/UserStore.js', async importOriginal => ({
-	...await importOriginal<typeof import('@/core/UserStore.js')>(),
+vi.mock('@/core/UserStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/UserStore.js')>()),
 	adjustUserFollowersCountInDatabase: vi.fn().mockResolvedValue(undefined),
 	adjustUserFollowingCountInDatabase: vi.fn().mockResolvedValue(undefined),
 	fetchUserByIdOrFailFromDatabase: fetchUserMock,
 	listUsersByIdsFromDatabase: listUsersMock,
 }));
 
-vi.mock('@/core/UserProfileStore.js', async importOriginal => ({
-	...await importOriginal<typeof import('@/core/UserProfileStore.js')>(),
+vi.mock('@/core/UserProfileStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/UserProfileStore.js')>()),
 	fetchUserProfileByUserIdOrFailFromDatabase: fetchProfileMock,
 }));
 
-vi.mock('@/core/MutingStore.js', async importOriginal => ({
-	...await importOriginal<typeof import('@/core/MutingStore.js')>(),
+vi.mock('@/core/MutingStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/MutingStore.js')>()),
 	mutingExistsInDatabase: vi.fn().mockResolvedValue(false),
 }));
 
-vi.mock('@/core/WebhookStore.js', async importOriginal => ({
-	...await importOriginal<typeof import('@/core/WebhookStore.js')>(),
+vi.mock('@/core/WebhookStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/WebhookStore.js')>()),
 	listWebhooksFromDatabase: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('@/server/rest/user.js', async importOriginal => ({
-	...await importOriginal<typeof import('@/server/rest/user.js')>(),
+vi.mock('@/server/rest/user.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/server/rest/user.js')>()),
 	packMeDetailedForHonoApi: packMeMock,
 	packUserDetailedNotMeForHonoApi: vi.fn(async (_deps, user: MiUser) => ({ id: user.id })),
 	packUserLiteForHonoApi: vi.fn(async (_deps, user: MiUser) => ({ id: user.id })),
 }));
 
-vi.mock('@/server/rest/notification.js', async importOriginal => ({
-	...await importOriginal<typeof import('@/server/rest/notification.js')>(),
+vi.mock('@/server/rest/notification.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/server/rest/notification.js')>()),
 	xaddHonoApiNotification: xaddNotificationMock,
 }));
 
@@ -103,7 +103,9 @@ describe('acceptAllFollowRequestsForHonoApi', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		listRequestsMock.mockResolvedValue(requests);
-		fetchRequestMock.mockImplementation(async (_db, followerId: string) => followerId === followers[2]!.id ? null : requests.find(request => request.followerId === followerId));
+		fetchRequestMock.mockImplementation(async (_db, followerId: string) =>
+			followerId === followers[2]!.id ? null : requests.find((request) => request.followerId === followerId),
+		);
 		listUsersMock.mockResolvedValue(followers);
 		fetchUserMock.mockResolvedValue(freshFollowee);
 		fetchProfileMock.mockResolvedValue({
@@ -120,7 +122,7 @@ describe('acceptAllFollowRequestsForHonoApi', () => {
 		let active = 0;
 		let maxActive = 0;
 		let releaseCreates!: () => void;
-		const createBarrier = new Promise<void>(resolve => {
+		const createBarrier = new Promise<void>((resolve) => {
 			releaseCreates = resolve;
 		});
 		createFollowingMock.mockImplementation(async (db, data) => {
@@ -166,9 +168,12 @@ describe('acceptAllFollowRequestsForHonoApi', () => {
 		fetchProfileMock.mockResolvedValue({ userId: followee.id, followedMessage: null });
 		createFollowingMock.mockImplementation(async (db, data) => data);
 		let releaseNotification!: () => void;
-		xaddNotificationMock.mockImplementation(() => new Promise<string>(resolve => {
-			releaseNotification = () => resolve('1-0');
-		}));
+		xaddNotificationMock.mockImplementation(
+			() =>
+				new Promise<string>((resolve) => {
+					releaseNotification = () => resolve('1-0');
+				}),
+		);
 		const deps = {
 			db: {},
 			redis: { set: vi.fn().mockResolvedValue('OK'), get: vi.fn().mockResolvedValue(null) },
@@ -202,9 +207,12 @@ describe('acceptAllFollowRequestsForHonoApi', () => {
 		listUsersMock.mockResolvedValue([remoteFollower]);
 		createFollowingMock.mockImplementation(async (db, data) => data);
 		let releaseDelivery!: () => void;
-		enqueueDeliverMock.mockImplementation(() => new Promise<void>(resolve => {
-			releaseDelivery = resolve;
-		}));
+		enqueueDeliverMock.mockImplementation(
+			() =>
+				new Promise<void>((resolve) => {
+					releaseDelivery = resolve;
+				}),
+		);
 		const deps = {
 			db: {},
 			redis: { set: vi.fn().mockResolvedValue('OK') },

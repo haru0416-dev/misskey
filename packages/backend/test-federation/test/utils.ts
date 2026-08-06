@@ -12,10 +12,7 @@ const __dirname = dirname(__filename);
 export const ADMIN_PARAMS = { username: 'admin', password: 'admin' };
 const ADMIN_CACHE = new Map<Host, SigninResponse>();
 
-await Promise.all([
-	fetchAdmin('a.test'),
-	fetchAdmin('b.test'),
-]);
+await Promise.all([fetchAdmin('a.test'), fetchAdmin('b.test')]);
 
 type SigninResponse = Omit<Misskey.entities.SigninFlowResponse & { finished: true }, 'finished'>;
 
@@ -26,10 +23,7 @@ export type LoginUser = SigninResponse & {
 };
 
 /** used for avoiding overload and some endpoints */
-export type Request = <
-	E extends keyof Misskey.Endpoints,
-	P extends Misskey.Endpoints[E]['req'],
->(
+export type Request = <E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']>(
 	endpoint: E,
 	params: P,
 	credential?: string | null,
@@ -50,7 +44,7 @@ export async function fetchActivityPubObject(uri: string): Promise<FedifyObject>
 }
 
 export async function sleep(ms = 250): Promise<void> {
-	return new Promise(resolve => setTimeout(resolve, ms));
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function waitFor(
@@ -67,21 +61,18 @@ export async function waitFor(
 	throw new Error(`Condition was not met within ${timeoutMs}ms`);
 }
 
-async function signin(
-	host: Host,
-	params: Misskey.entities.SigninFlowRequest,
-): Promise<SigninResponse> {
+async function signin(host: Host, params: Misskey.entities.SigninFlowRequest): Promise<SigninResponse> {
 	// wait for a second to prevent hit rate limit
 	await sleep(1000);
 
 	return await (new Misskey.api.APIClient({ origin: `https://${host}` }).request as Request)('signin-flow', params)
-		.then(res => {
+		.then((res) => {
 			strictEqual(res.finished, true);
 			if (params.username === ADMIN_PARAMS.username) ADMIN_CACHE.set(host, res);
 			return res;
 		})
 		.then(({ id, i }) => ({ id, i }))
-		.catch(async err => {
+		.catch(async (err) => {
 			if (err.code === 'TOO_MANY_AUTHENTICATION_FAILURES') {
 				await sleep(Math.random() * 2000);
 				return await signin(host, params);
@@ -92,38 +83,51 @@ async function signin(
 
 async function createAdmin(host: Host): Promise<Misskey.entities.SignupResponse | undefined> {
 	const client = new Misskey.api.APIClient({ origin: `https://${host}` });
-	return await client.request('admin/accounts/create', ADMIN_PARAMS).then(res => {
-		ADMIN_CACHE.set(host, {
-			id: res.id,
-			i: res.token,
+	return await client
+		.request('admin/accounts/create', ADMIN_PARAMS)
+		.then((res) => {
+			ADMIN_CACHE.set(host, {
+				id: res.id,
+				i: res.token,
+			});
+			return res as Misskey.entities.SignupResponse;
+		})
+		.then(async (res) => {
+			await client.request(
+				'admin/roles/update-default-policies',
+				{
+					policies: {
+						/** TODO: @see https://github.com/misskey-dev/misskey/issues/14169 */
+						rateLimitFactor: 0 as never,
+					},
+				},
+				res.token,
+			);
+			await client.request(
+				'admin/update-meta',
+				{
+					federation: 'all',
+				},
+				res.token,
+			);
+			return res;
+		})
+		.catch((err) => {
+			if (err.code === 'ACCESS_DENIED') return undefined;
+			throw err;
 		});
-		return res as Misskey.entities.SignupResponse;
-	}).then(async res => {
-		await client.request('admin/roles/update-default-policies', {
-			policies: {
-				/** TODO: @see https://github.com/misskey-dev/misskey/issues/14169 */
-				rateLimitFactor: 0 as never,
-			},
-		}, res.token);
-		await client.request('admin/update-meta', {
-			federation: 'all',
-		}, res.token);
-		return res;
-	}).catch(err => {
-		if (err.code === 'ACCESS_DENIED') return undefined;
-		throw err;
-	});
 }
 
 export async function fetchAdmin(host: Host): Promise<LoginUser> {
-	const admin = ADMIN_CACHE.get(host) ?? await signin(host, ADMIN_PARAMS)
-		.catch(async err => {
+	const admin =
+		ADMIN_CACHE.get(host) ??
+		(await signin(host, ADMIN_PARAMS).catch(async (err) => {
 			if (err.id === '6cc579cc-885d-43d8-95c2-b8c7fc963280') {
 				await createAdmin(host);
 				return await signin(host, ADMIN_PARAMS);
 			}
 			throw err;
-		});
+		}));
 
 	return {
 		...admin,
@@ -188,26 +192,20 @@ export async function resolveRemoteUser(
 	from: LoginUser,
 ): Promise<Misskey.entities.UserDetailedNotMe> {
 	const uri = `https://${host}/users/${id}`;
-	return await from.client.request('ap/show', { uri })
-		.then(res => {
-			strictEqual(res.type, 'User');
-			strictEqual(res.object.uri, uri);
-			return res.object;
-		});
+	return await from.client.request('ap/show', { uri }).then((res) => {
+		strictEqual(res.type, 'User');
+		strictEqual(res.object.uri, uri);
+		return res.object;
+	});
 }
 
-export async function resolveRemoteNote(
-	host: Host,
-	id: string,
-	from: LoginUser,
-): Promise<Misskey.entities.Note> {
+export async function resolveRemoteNote(host: Host, id: string, from: LoginUser): Promise<Misskey.entities.Note> {
 	const uri = `https://${host}/notes/${id}`;
-	return await from.client.request('ap/show', { uri })
-		.then(res => {
-			strictEqual(res.type, 'Note');
-			strictEqual(res.object.uri, uri);
-			return res.object;
-		});
+	return await from.client.request('ap/show', { uri }).then((res) => {
+		strictEqual(res.type, 'Note');
+		strictEqual(res.object.uri, uri);
+		return res.object;
+	});
 }
 
 export async function uploadFile(
@@ -225,8 +223,9 @@ export async function uploadFile(
 	body.append('file', blob);
 	body.append('name', filename);
 
-	return await fetch(`https://${host}/api/drive/files/create`, { method: 'POST', body })
-		.then(async res => await res.json());
+	return await fetch(`https://${host}/api/drive/files/create`, { method: 'POST', body }).then(
+		async (res) => await res.json(),
+	);
 }
 
 export async function addCustomEmoji(
@@ -267,11 +266,14 @@ export async function isFired<C extends keyof Misskey.Channels, T extends keyof 
 		const connection = stream.useChannel(channel, params);
 
 		const receivePromise = new Promise<boolean>((resolve) => {
-			connection.on(type as never, ((msg: any) => {
-				if (cond(msg)) {
-					resolve(true);
-				}
-			}) as any);
+			connection.on(
+				type as never,
+				((msg: any) => {
+					if (cond(msg)) {
+						resolve(true);
+					}
+				}) as any,
+			);
 		});
 
 		await connection.ready;
@@ -280,7 +282,7 @@ export async function isFired<C extends keyof Misskey.Channels, T extends keyof 
 		try {
 			return await Promise.race([
 				receivePromise,
-				new Promise<boolean>(resolve => {
+				new Promise<boolean>((resolve) => {
 					timeout = setTimeout(() => resolve(false), timeoutMs);
 				}),
 			]);
@@ -290,7 +292,7 @@ export async function isFired<C extends keyof Misskey.Channels, T extends keyof 
 	} finally {
 		stream.close();
 	}
-};
+}
 
 export async function isNoteUpdatedEventFired(
 	host: Host,
@@ -302,12 +304,12 @@ export async function isNoteUpdatedEventFired(
 	const stream = new Misskey.Stream(`wss://${host}`, { token: user.i }, { WebSocket });
 	try {
 		if (stream.state !== 'connected') {
-			await new Promise<void>(resolve => stream.once('_connected_', resolve));
+			await new Promise<void>((resolve) => stream.once('_connected_', resolve));
 		}
 		stream.send('s', { id: noteId });
 
 		const receivePromise = new Promise<boolean>((resolve) => {
-			stream.on('noteUpdated', msg => {
+			stream.on('noteUpdated', (msg) => {
 				if (cond(msg)) {
 					resolve(true);
 				}
@@ -320,7 +322,7 @@ export async function isNoteUpdatedEventFired(
 		try {
 			return await Promise.race([
 				receivePromise,
-				new Promise<boolean>(resolve => {
+				new Promise<boolean>((resolve) => {
 					timeout = setTimeout(() => resolve(false), 2000);
 				}),
 			]);
@@ -330,7 +332,7 @@ export async function isNoteUpdatedEventFired(
 	} finally {
 		stream.close();
 	}
-};
+}
 
 export async function assertNotificationReceived(
 	receiverHost: Host,
@@ -339,11 +341,21 @@ export async function assertNotificationReceived(
 	cond: (notification: Misskey.entities.Notification) => boolean,
 	expect: boolean,
 ) {
-	const streamingFired = await isFired(receiverHost, receiver, 'main', trigger, 'notification', cond, undefined, expect ? 1500 : 750);
+	const streamingFired = await isFired(
+		receiverHost,
+		receiver,
+		'main',
+		trigger,
+		'notification',
+		cond,
+		undefined,
+		expect ? 1500 : 750,
+	);
 	strictEqual(streamingFired, expect);
 
-	const endpointFired = await receiver.client.request('i/notifications', {})
+	const endpointFired = await receiver.client
+		.request('i/notifications', {})
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		.then(([notification]) => notification != null ? cond(notification) : false);
+		.then(([notification]) => (notification != null ? cond(notification) : false));
 	strictEqual(endpointFired, expect);
 }

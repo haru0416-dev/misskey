@@ -7,8 +7,16 @@ import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
 import { userListExistsByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
-import { filterNoteForStreamingHidingForHonoApi, populateMyReactionForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
-import { isNoteMutedOrBlockedForHonoStream, isNoteVisibleForMeForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
+import {
+	filterNoteForStreamingHidingForHonoApi,
+	populateMyReactionForHonoApi,
+	type HonoApiNoteDependencies,
+} from '../../rest/note.js';
+import {
+	isNoteMutedOrBlockedForHonoStream,
+	isNoteVisibleForMeForHonoStream,
+	type HonoStreamChannelDefinition,
+} from '../channel.js';
 
 type MembershipCacheEntry = {
 	// NOTE: 既存実装は withReplies を取得していなかったため、値は常に undefined
@@ -79,11 +87,15 @@ export const honoStreamChannelUserList: HonoStreamChannelDefinition<HonoApiNoteD
 
 			if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 				if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-					filtered.renote.myReaction = await populateMyReactionForHonoApi(deps, {
-						id: filtered.renote.id,
-						reactions: filtered.renote.reactions,
-						reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
-					}, user.id);
+					filtered.renote.myReaction = await populateMyReactionForHonoApi(
+						deps,
+						{
+							id: filtered.renote.id,
+							reactions: filtered.renote.reactions,
+							reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
+						},
+						user.id,
+					);
 				}
 			}
 

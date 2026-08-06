@@ -94,7 +94,6 @@ export const adminAnnouncementsUpdateParamDef = z.object({
 	isActive: z.boolean().optional(),
 });
 
-
 function noSuchAnnouncementError(id: string): HonoApiError {
 	return new HonoApiError({
 		status: 400,
@@ -154,25 +153,29 @@ export async function handleHonoApiAdminAnnouncementsCreate(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Announcement'>> {
 	const params = parseHonoApiParams(adminAnnouncementsCreateParamDef, body);
-	const { packed } = await createAnnouncementWithSideEffects({
-		db: deps.db,
-		genId,
-		packAnnouncement: announcement => Promise.resolve(packAnnouncementForHonoApi(deps.config, announcement)),
-		publishMainStream: (userId, type, value) => deps.publishMainStream?.(userId, type, value),
-		publishBroadcastStream: (type, value) => deps.publishBroadcastStream?.(type, value),
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, {
-		updatedAt: null,
-		title: params.title,
-		text: params.text,
-		imageUrl: params.imageUrl || null,
-		icon: params.icon,
-		display: params.display,
-		forExistingUsers: params.forExistingUsers,
-		silence: params.silence,
-		needConfirmationToRead: params.needConfirmationToRead,
-		userId: params.userId,
-	} as AnnouncementCreateValues, me);
+	const { packed } = await createAnnouncementWithSideEffects(
+		{
+			db: deps.db,
+			genId,
+			packAnnouncement: (announcement) => Promise.resolve(packAnnouncementForHonoApi(deps.config, announcement)),
+			publishMainStream: (userId, type, value) => deps.publishMainStream?.(userId, type, value),
+			publishBroadcastStream: (type, value) => deps.publishBroadcastStream?.(type, value),
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		{
+			updatedAt: null,
+			title: params.title,
+			text: params.text,
+			imageUrl: params.imageUrl || null,
+			icon: params.icon,
+			display: params.display,
+			forExistingUsers: params.forExistingUsers,
+			silence: params.silence,
+			needConfirmationToRead: params.needConfirmationToRead,
+			userId: params.userId,
+		} as AnnouncementCreateValues,
+		me,
+	);
 
 	return packed;
 }
@@ -187,10 +190,14 @@ export async function handleHonoApiAdminAnnouncementsDelete(
 
 	if (announcement == null) throw noSuchAnnouncementError('ecad8040-a276-4e85-bda9-015a708d291e');
 
-	await deleteAnnouncementWithModerationLog({
-		db: deps.db,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, announcement, me);
+	await deleteAnnouncementWithModerationLog(
+		{
+			db: deps.db,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		announcement,
+		me,
+	);
 }
 
 export async function handleHonoApiAdminAnnouncementsList(
@@ -198,19 +205,23 @@ export async function handleHonoApiAdminAnnouncementsList(
 	body: Record<string, unknown>,
 ): Promise<AdminAnnouncement[]> {
 	const params = parseHonoApiParams(adminAnnouncementsListParamDef, body);
-	const announcements = await listAnnouncementsForAdminFromDatabase(deps.db, omitUndefined({
-		limit: params.limit,
-		...resolveAnnouncementPagination({ gen: time => genId(time) }, params),
-		status: params.status,
-		userId: params.userId,
-	}));
-	const reads = await countAnnouncementReadsByAnnouncementIdsFromDatabase(deps.db, announcements.map(announcement => announcement.id));
+	const announcements = await listAnnouncementsForAdminFromDatabase(
+		deps.db,
+		omitUndefined({
+			limit: params.limit,
+			...resolveAnnouncementPagination({ gen: (time) => genId(time) }, params),
+			status: params.status,
+			userId: params.userId,
+		}),
+	);
+	const reads = await countAnnouncementReadsByAnnouncementIdsFromDatabase(
+		deps.db,
+		announcements.map((announcement) => announcement.id),
+	);
 
-	return announcements.map(announcement => packAdminAnnouncementForHonoApi(
-		deps.config,
-		announcement,
-		reads.get(announcement.id) ?? 0,
-	));
+	return announcements.map((announcement) =>
+		packAdminAnnouncementForHonoApi(deps.config, announcement, reads.get(announcement.id) ?? 0),
+	);
 }
 
 export async function handleHonoApiAdminAnnouncementsUpdate(
@@ -223,18 +234,23 @@ export async function handleHonoApiAdminAnnouncementsUpdate(
 
 	if (announcement == null) throw noSuchAnnouncementError('d3aae5a7-6372-4cb4-b61c-f511ffc2d7cc');
 
-	await updateAnnouncementWithModerationLog({
-		db: deps.db,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, announcement, {
-		title: params.title,
-		text: params.text,
-		imageUrl: params.imageUrl || null,
-		display: params.display,
-		icon: params.icon,
-		forExistingUsers: params.forExistingUsers,
-		silence: params.silence,
-		needConfirmationToRead: params.needConfirmationToRead,
-		isActive: params.isActive,
-	} as AnnouncementUpdateValues, me);
+	await updateAnnouncementWithModerationLog(
+		{
+			db: deps.db,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		announcement,
+		{
+			title: params.title,
+			text: params.text,
+			imageUrl: params.imageUrl || null,
+			display: params.display,
+			icon: params.icon,
+			forExistingUsers: params.forExistingUsers,
+			silence: params.silence,
+			needConfirmationToRead: params.needConfirmationToRead,
+			isActive: params.isActive,
+		} as AnnouncementUpdateValues,
+		me,
+	);
 }

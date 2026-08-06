@@ -35,19 +35,10 @@
 		"paths": {
 			"@/*": ["../src/*"]
 		},
-		"typeRoots": [
-			"../node_modules/@types",
-			"../src/@types"
-		],
-		"lib": [
-			"esnext"
-		],
+		"typeRoots": ["../node_modules/@types", "../src/@types"],
+		"lib": ["esnext"],
 		"types": ["node"]
 	},
 	"compileOnSave": false,
-	"include": [
-		"./**/*.ts",
-		"../src/**/*.test.ts",
-		"../src/@types/**/*.ts"
-	]
+	"include": ["./**/*.ts", "../src/**/*.test.ts", "../src/@types/**/*.ts"]
 }

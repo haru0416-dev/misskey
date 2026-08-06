@@ -8,10 +8,12 @@ import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { CommonProps } from '@/server/web/views/_.js';
 import { Layout } from '@/server/web/views/base.js';
 
-export function PagePage(props: CommonProps<{
-	page: Packed<'Page'>;
-	profile: MiUserProfile;
-}>) {
+export function PagePage(
+	props: CommonProps<{
+		page: Packed<'Page'>;
+		profile: MiUserProfile;
+	}>,
+) {
 	function ogBlock() {
 		return (
 			<>
@@ -21,7 +23,10 @@ export function PagePage(props: CommonProps<{
 				<meta property="og:url" content={`${props.config.instance.url}/pages/${props.page.id}`} />
 				{props.page.eyeCatchingImage != null ? (
 					<>
-						<meta property="og:image" content={props.page.eyeCatchingImage.thumbnailUrl ?? props.page.eyeCatchingImage.url} />
+						<meta
+							property="og:image"
+							content={props.page.eyeCatchingImage.thumbnailUrl ?? props.page.eyeCatchingImage.url}
+						/>
 						<meta property="twitter:card" content="summary_large_image" />
 					</>
 				) : props.page.user.avatarUrl ? (
@@ -58,7 +63,6 @@ export function PagePage(props: CommonProps<{
 			desc={props.page.summary ?? ''}
 			metaSlot={metaBlock()}
 			ogSlot={ogBlock()}
-		>
-		</Layout>
+		></Layout>
 	);
 }

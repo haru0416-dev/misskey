@@ -7,16 +7,19 @@ import type { Packed } from '@/misc/json-schema.js';
 import type { CommonProps } from '@/server/web/views/_.js';
 import { Layout } from '@/server/web/views/base.js';
 
-export function ChannelPage(props: CommonProps<{
-	channel: Packed<'Channel'>;
-}>) {
-
+export function ChannelPage(
+	props: CommonProps<{
+		channel: Packed<'Channel'>;
+	}>,
+) {
 	function ogBlock() {
 		return (
 			<>
 				<meta property="og:type" content="website" />
 				<meta property="og:title" content={props.channel.name} />
-				{props.channel.description != null ? <meta property="og:description" content={props.channel.description} /> : null}
+				{props.channel.description != null ? (
+					<meta property="og:description" content={props.channel.description} />
+				) : null}
 				<meta property="og:url" content={`${props.config.instance.url}/channels/${props.channel.id}`} />
 				{props.channel.bannerUrl ? (
 					<>
@@ -34,7 +37,6 @@ export function ChannelPage(props: CommonProps<{
 			title={`${props.channel.name} | ${props.instanceName}`}
 			{...(props.channel.description == null ? {} : { desc: props.channel.description })}
 			ogSlot={ogBlock()}
-		>
-		</Layout>
+		></Layout>
 	);
 }

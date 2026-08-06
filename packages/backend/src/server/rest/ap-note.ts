@@ -27,7 +27,12 @@ import {
 } from '@/core/activitypub/type.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 import { extractApHashtags } from '@/core/activitypub/models/tag.js';
-import { fetchPollByNoteIdFromDatabase, fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase, updatePollVotesInDatabase } from '@/core/PollStore.js';
+import {
+	fetchPollByNoteIdFromDatabase,
+	fetchPollByNoteIdOrFailFromDatabase,
+	incrementPollVoteInDatabase,
+	updatePollVotesInDatabase,
+} from '@/core/PollStore.js';
 import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
 import { fetchNoteByUriFromDatabase } from '@/core/NoteStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
@@ -58,36 +63,56 @@ import { deliverQuestionUpdateForHonoApi } from './notes-ap.js';
 import { createNoteForHonoApi, type CreateNoteData, type HonoApiNotesCreateDependencies } from './notes-create.js';
 import type { HonoApiNoteStreamPublisher } from './events.js';
 
-export type HonoApiApNoteDependencies = HonoApiApPersonDependencies & HonoApiApResolveDependencies & HonoApiNotesCreateDependencies & {
-	redis: Redis.Redis;
-	publishNoteStream?: HonoApiNoteStreamPublisher;
-};
+export type HonoApiApNoteDependencies = HonoApiApPersonDependencies &
+	HonoApiApResolveDependencies &
+	HonoApiNotesCreateDependencies & {
+		redis: Redis.Redis;
+		publishNoteStream?: HonoApiNoteStreamPublisher;
+	};
 
 function validateNoteForHonoApi(x: IObject, uri: string, actor?: MiRemoteUser): Error | null {
 	const expectHost = extractDbHost(uri);
 	const apType = (x as { type?: string }).type;
 
 	if (apType == null || !validPost.includes(apType)) {
-		return new IdentifiableError('d450b8a9-48e4-4dab-ae36-f4db763fda7c', `invalid Note: invalid object type ${apType ?? 'undefined'}`);
+		return new IdentifiableError(
+			'd450b8a9-48e4-4dab-ae36-f4db763fda7c',
+			`invalid Note: invalid object type ${apType ?? 'undefined'}`,
+		);
 	}
 
 	if (x.id && extractDbHost(x.id) !== expectHost) {
-		return new IdentifiableError('d450b8a9-48e4-4dab-ae36-f4db763fda7c', `invalid Note: id has different host. expected: ${expectHost}, actual: ${extractDbHost(x.id)}`);
+		return new IdentifiableError(
+			'd450b8a9-48e4-4dab-ae36-f4db763fda7c',
+			`invalid Note: id has different host. expected: ${expectHost}, actual: ${extractDbHost(x.id)}`,
+		);
 	}
 
 	const actualHost = x.attributedTo && extractDbHost(getOneApId(x.attributedTo as ApObject));
 	if (x.attributedTo && actualHost !== expectHost) {
-		return new IdentifiableError('d450b8a9-48e4-4dab-ae36-f4db763fda7c', `invalid Note: attributedTo has different host. expected: ${expectHost}, actual: ${actualHost}`);
+		return new IdentifiableError(
+			'd450b8a9-48e4-4dab-ae36-f4db763fda7c',
+			`invalid Note: attributedTo has different host. expected: ${expectHost}, actual: ${actualHost}`,
+		);
 	}
 
-	if ((x as { published?: string }).published && !isSafeUuidv7T(new Date((x as { published: string }).published).valueOf())) {
-		return new IdentifiableError('d450b8a9-48e4-4dab-ae36-f4db763fda7c', 'invalid Note: published timestamp is malformed');
+	if (
+		(x as { published?: string }).published &&
+		!isSafeUuidv7T(new Date((x as { published: string }).published).valueOf())
+	) {
+		return new IdentifiableError(
+			'd450b8a9-48e4-4dab-ae36-f4db763fda7c',
+			'invalid Note: published timestamp is malformed',
+		);
 	}
 
 	if (actor) {
 		const attribution = x.attributedTo ? getOneApId(x.attributedTo as ApObject) : actor.uri;
 		if (attribution !== actor.uri) {
-			return new IdentifiableError('d450b8a9-48e4-4dab-ae36-f4db763fda7c', `invalid Note: attribution does not match the actor that send it. attribution: ${attribution}, actor: ${actor.uri}`);
+			return new IdentifiableError(
+				'd450b8a9-48e4-4dab-ae36-f4db763fda7c',
+				`invalid Note: attribution does not match the actor that send it. attribution: ${attribution}, actor: ${actor.uri}`,
+			);
 		}
 	}
 
@@ -120,13 +145,14 @@ export async function parseAudienceForHonoApi(
 	const others = unique(concat([toGroups.other, ccGroups.other]));
 
 	const limit = promiseLimit<MiUser | null>(2);
-	const mentionedUsers = (await Promise.all(
-		others.map(id => limit(() => resolvePersonForHonoApi(deps, id, history).catch(() => null))),
-	)).filter((x): x is MiUser => x != null);
+	const mentionedUsers = (
+		await Promise.all(others.map((id) => limit(() => resolvePersonForHonoApi(deps, id, history).catch(() => null))))
+	).filter((x): x is MiUser => x != null);
 
 	if (toGroups.public.length > 0) return { visibility: 'public', visibleUsers: [] };
 	if (ccGroups.public.length > 0) return { visibility: 'home', visibleUsers: [] };
-	if (toGroups.followers.length > 0 || ccGroups.followers.length > 0) return { visibility: 'followers', visibleUsers: [] };
+	if (toGroups.followers.length > 0 || ccGroups.followers.length > 0)
+		return { visibility: 'followers', visibleUsers: [] };
 
 	return { visibility: 'specified', visibleUsers: mentionedUsers };
 }
@@ -136,15 +162,29 @@ function extractApMentionObjectsForHonoApi(tags: IObject | IObject[] | null | un
 	return toArray(tags).filter(isMention);
 }
 
-async function extractApMentionsForHonoApi(deps: HonoApiApNoteDependencies, tags: IObject | IObject[] | null | undefined, history: Set<string>): Promise<MiUser[]> {
-	const hrefs = unique(extractApMentionObjectsForHonoApi(tags).map(x => x.href));
+async function extractApMentionsForHonoApi(
+	deps: HonoApiApNoteDependencies,
+	tags: IObject | IObject[] | null | undefined,
+	history: Set<string>,
+): Promise<MiUser[]> {
+	const hrefs = unique(extractApMentionObjectsForHonoApi(tags).map((x) => x.href));
 	const limit = promiseLimit<MiUser | null>(2);
-	return (await Promise.all(
-		hrefs.map(href => href == null ? Promise.resolve(null) : limit(() => resolvePersonForHonoApi(deps, href, history).catch(() => null))),
-	)).filter((x): x is MiUser => x != null);
+	return (
+		await Promise.all(
+			hrefs.map((href) =>
+				href == null
+					? Promise.resolve(null)
+					: limit(() => resolvePersonForHonoApi(deps, href, history).catch(() => null)),
+			),
+		)
+	).filter((x): x is MiUser => x != null);
 }
 
-async function extractPollFromQuestionForHonoApi(deps: HonoApiApNoteDependencies, source: string | IObject, history: Set<string>): Promise<IPoll> {
+async function extractPollFromQuestionForHonoApi(
+	deps: HonoApiApNoteDependencies,
+	source: string | IObject,
+	history: Set<string>,
+): Promise<IPoll> {
 	const question = await resolveApObjectForHonoApi(deps, source, FetchAllowSoftFailMask.Strict, history);
 	if (!isQuestion(question)) throw new Error('invalid type');
 
@@ -153,12 +193,16 @@ async function extractPollFromQuestionForHonoApi(deps: HonoApiApNoteDependencies
 
 	const expiresAt = question.endTime ? new Date(question.endTime) : question.closed ? new Date(question.closed) : null;
 
-	const choices = question[multiple ? 'anyOf' : 'oneOf']
-		?.map((x: { name?: string }) => x.name)
-		.filter((x: string | undefined): x is string => x != null)
-		?? [];
+	const choices =
+		question[multiple ? 'anyOf' : 'oneOf']
+			?.map((x: { name?: string }) => x.name)
+			.filter((x: string | undefined): x is string => x != null) ?? [];
 
-	const votes = question[multiple ? 'anyOf' : 'oneOf']?.map((x: { replies?: { totalItems?: number }; _misskey_votes?: number }) => x.replies?.totalItems ?? x._misskey_votes ?? 0) ?? [];
+	const votes =
+		question[multiple ? 'anyOf' : 'oneOf']?.map(
+			(x: { replies?: { totalItems?: number }; _misskey_votes?: number }) =>
+				x.replies?.totalItems ?? x._misskey_votes ?? 0,
+		) ?? [];
 
 	return { choices, votes, multiple, expiresAt };
 }
@@ -203,8 +247,9 @@ export async function updateQuestionFromApForHonoApi(
 	// 選択肢テキストが重複していても正しい位置を更新できるよう、indexOf ではなく列挙位置を使う。
 	for (const [index, choice] of poll.choices.entries()) {
 		const oldCount = poll.votes[index];
-		const newCount = apChoices.find(ap => ap.name === choice)?.replies?.totalItems;
-		if (newCount == null || !(Number.isInteger(newCount) && newCount >= 0)) throw new Error('invalid newCount: ' + newCount);
+		const newCount = apChoices.find((ap) => ap.name === choice)?.replies?.totalItems;
+		if (newCount == null || !(Number.isInteger(newCount) && newCount >= 0))
+			throw new Error('invalid newCount: ' + newCount);
 
 		if (oldCount !== newCount) {
 			changed = true;
@@ -218,13 +263,18 @@ export async function updateQuestionFromApForHonoApi(
 }
 
 /** PollService.vote (AP由来の投票受信) 相当。配送は呼び出し元で deliverQuestionUpdateForHonoApi を使う。 */
-async function voteFromApForHonoApi(deps: HonoApiApNoteDependencies, actor: { id: MiUser['id'] }, note: MiNote, choice: number): Promise<void> {
+async function voteFromApForHonoApi(
+	deps: HonoApiApNoteDependencies,
+	actor: { id: MiUser['id'] },
+	note: MiNote,
+	choice: number,
+): Promise<void> {
 	const poll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id);
 	if (poll.choices[choice] == null) throw new Error('invalid choice param');
 
 	const exist = await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, actor.id);
 	if (poll.multiple) {
-		if (exist.some(x => x.choice === choice)) throw new Error('already voted');
+		if (exist.some((x) => x.choice === choice)) throw new Error('already voted');
 	} else if (exist.length !== 0) {
 		throw new Error('already voted');
 	}
@@ -272,16 +322,16 @@ export async function createNoteFromApForHonoApi(
 	if (note.attributedTo == null) throw new Error('invalid note.attributedTo: ' + note.attributedTo);
 	const uri = getOneApId(note.attributedTo as ApObject);
 
-	actor ??= await fetchPersonForHonoApi(deps, uri) as MiRemoteUser | undefined;
+	actor ??= (await fetchPersonForHonoApi(deps, uri)) as MiRemoteUser | undefined;
 	if (actor && actor.isSuspended) {
 		throw new IdentifiableError('85ab9bd7-3a41-4530-959d-f07073900109', 'actor has been suspended');
 	}
 
-	const apMentionRawCount = new Set(extractApMentionObjectsForHonoApi(note.tag).map(x => x.href)).size;
+	const apMentionRawCount = new Set(extractApMentionObjectsForHonoApi(note.tag).map((x) => x.href)).size;
 	const apMentions = await extractApMentionsForHonoApi(deps, note.tag, history);
 	const apHashtags = extractApHashtags(note.tag);
 
-	const cw = note.summary === '' ? null : note.summary ?? null;
+	const cw = note.summary === '' ? null : (note.summary ?? null);
 
 	let text: string | null = null;
 	if (note.source?.mediaType === 'text/x.misskeymarkdown' && typeof note.source.content === 'string') {
@@ -294,13 +344,19 @@ export async function createNoteFromApForHonoApi(
 
 	const poll = await extractPollFromQuestionForHonoApi(deps, note, history).catch(() => undefined);
 
-	actor ??= await resolvePersonForHonoApi(deps, uri, history) as MiRemoteUser;
+	actor ??= (await resolvePersonForHonoApi(deps, uri, history)) as MiRemoteUser;
 
 	if (actor.isSuspended) {
 		throw new IdentifiableError('85ab9bd7-3a41-4530-959d-f07073900109', 'actor has been suspended');
 	}
 
-	const noteAudience = await parseAudienceForHonoApi(deps, actor, note.to as ApObject | undefined, note.cc as ApObject | undefined, history);
+	const noteAudience = await parseAudienceForHonoApi(
+		deps,
+		actor,
+		note.to as ApObject | undefined,
+		note.cc as ApObject | undefined,
+		history,
+	);
 	let visibility = noteAudience.visibility;
 	const visibleUsers = noteAudience.visibleUsers;
 
@@ -316,34 +372,47 @@ export async function createNoteFromApForHonoApi(
 		const sensitive = (note as { sensitive?: boolean }).sensitive;
 		if (attachment.sensitive == null && sensitive !== undefined) attachment.sensitive = sensitive;
 	}
-	const resolvedFiles = await Promise.all(attachments.map(attach => resolveImageForHonoApi(deps, actor, attach)));
-	const files = resolvedFiles.filter(file => file != null);
+	const resolvedFiles = await Promise.all(attachments.map((attach) => resolveImageForHonoApi(deps, actor, attach)));
+	const files = resolvedFiles.filter((file) => file != null);
 
 	const reply = note.inReplyTo
-		? await resolveNoteForHonoApi(deps, note.inReplyTo as string | IObject, { sentFrom: new URL(actor.uri), resolver: history }).then(x => {
-			if (x == null) throw new Error('inReplyTo not found');
-			return x;
-		})
+		? await resolveNoteForHonoApi(deps, note.inReplyTo as string | IObject, {
+				sentFrom: new URL(actor.uri),
+				resolver: history,
+			}).then((x) => {
+				if (x == null) throw new Error('inReplyTo not found');
+				return x;
+			})
 		: null;
 
 	let quote: MiNote | undefined | null = null;
-	const quoteUri = (note as { _misskey_quote?: string; quoteUrl?: string })._misskey_quote ?? (note as { quoteUrl?: string }).quoteUrl;
+	const quoteUri =
+		(note as { _misskey_quote?: string; quoteUrl?: string })._misskey_quote ?? (note as { quoteUrl?: string }).quoteUrl;
 	if (quoteUri) {
-		const tryResolveNote = async (u: string): Promise<{ status: 'ok'; res: MiNote } | { status: 'permerror' | 'temperror' }> => {
+		const tryResolveNote = async (
+			u: string,
+		): Promise<{ status: 'ok'; res: MiNote } | { status: 'permerror' | 'temperror' }> => {
 			if (!/^https?:/.test(u)) return { status: 'permerror' };
 			try {
 				const res = await resolveNoteForHonoApi(deps, u);
 				if (res == null) return { status: 'permerror' };
 				return { status: 'ok', res };
 			} catch (e) {
-				return { status: (e instanceof StatusError && !e.isRetryable) ? 'permerror' : 'temperror' };
+				return { status: e instanceof StatusError && !e.isRetryable ? 'permerror' : 'temperror' };
 			}
 		};
 
-		const uris = unique([(note as { _misskey_quote?: string })._misskey_quote, (note as { quoteUrl?: string }).quoteUrl].filter((x): x is string => x != null));
+		const uris = unique(
+			[(note as { _misskey_quote?: string })._misskey_quote, (note as { quoteUrl?: string }).quoteUrl].filter(
+				(x): x is string => x != null,
+			),
+		);
 		const results = await Promise.all(uris.map(tryResolveNote));
-		quote = results.filter((x): x is { status: 'ok'; res: MiNote } => x.status === 'ok').map(x => x.res).at(0);
-		if (!quote && results.some(x => x.status === 'temperror')) {
+		quote = results
+			.filter((x): x is { status: 'ok'; res: MiNote } => x.status === 'ok')
+			.map((x) => x.res)
+			.at(0);
+		if (!quote && results.some((x) => x.status === 'temperror')) {
 			throw new Error('quote resolve failed');
 		}
 	}
@@ -351,7 +420,7 @@ export async function createNoteFromApForHonoApi(
 	if (reply && reply.hasPoll) {
 		const replyPoll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, reply.id);
 		if (note.name) {
-			const index = replyPoll.choices.findIndex(x => x === note.name);
+			const index = replyPoll.choices.findIndex((x) => x === note.name);
 			if (replyPoll.expiresAt && Date.now() > new Date(replyPoll.expiresAt).getTime()) {
 				return null;
 			} else if (index >= 0) {
@@ -363,7 +432,7 @@ export async function createNoteFromApForHonoApi(
 	}
 
 	const emojis = await extractEmojisForHonoApi(deps, note.tag ?? [], actor.host ?? '').catch(() => []);
-	const apEmojis = emojis.map(emoji => emoji.name);
+	const apEmojis = emojis.map((emoji) => emoji.name);
 
 	const data: CreateNoteData = omitUndefined({
 		createdAt: note.published ? new Date(note.published) : null,
@@ -392,7 +461,10 @@ export async function createNoteFromApForHonoApi(
 	} catch (err) {
 		if (err instanceof Error && err.name === 'duplicated') {
 			const duplicate = await getNoteFromApIdForHonoApi(deps, value);
-			if (!duplicate) throw new Error('The note creation failed with duplication error even when there is no duplication', { cause: err });
+			if (!duplicate)
+				throw new Error('The note creation failed with duplication error even when there is no duplication', {
+					cause: err,
+				});
 			return duplicate;
 		}
 		throw err;

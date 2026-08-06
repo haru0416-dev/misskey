@@ -10,10 +10,7 @@ import type { MiClip } from '@/models/Clip.js';
 import type { MiUser } from '@/models/User.js';
 
 function clipFavoriteCondition(userId: MiUser['id'], clipId: MiClip['id']) {
-	return and(
-		eq(clipFavorite.userId, userId),
-		eq(clipFavorite.clipId, clipId),
-	);
+	return and(eq(clipFavorite.userId, userId), eq(clipFavorite.clipId, clipId));
 }
 
 export async function clipFavoriteExistsInDatabase(
@@ -42,12 +39,9 @@ export async function listFavoritedClipIdsByUserIdAndClipIdsFromDatabase(
 	const rows = await db
 		.select({ clipId: clipFavorite.clipId })
 		.from(clipFavorite)
-		.where(and(
-			eq(clipFavorite.userId, userId),
-			inArray(clipFavorite.clipId, clipIds),
-		));
+		.where(and(eq(clipFavorite.userId, userId), inArray(clipFavorite.clipId, clipIds)));
 
-	return rows.map(row => row.clipId);
+	return rows.map((row) => row.clipId);
 }
 
 export async function fetchClipFavoriteFromDatabase(
@@ -55,41 +49,24 @@ export async function fetchClipFavoriteFromDatabase(
 	userId: MiUser['id'],
 	clipId: MiClip['id'],
 ): Promise<ClipFavoriteRow | null> {
-	const [row] = await db
-		.select()
-		.from(clipFavorite)
-		.where(clipFavoriteCondition(userId, clipId))
-		.limit(1);
+	const [row] = await db.select().from(clipFavorite).where(clipFavoriteCondition(userId, clipId)).limit(1);
 
 	return row ?? null;
 }
 
-export async function createClipFavoriteInDatabase(
-	db: MiDrizzleDatabase,
-	data: ClipFavoriteInsert,
-): Promise<void> {
-	await db
-		.insert(clipFavorite)
-		.values(data);
+export async function createClipFavoriteInDatabase(db: MiDrizzleDatabase, data: ClipFavoriteInsert): Promise<void> {
+	await db.insert(clipFavorite).values(data);
 }
 
 export async function deleteClipFavoriteByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: ClipFavoriteRow['id'],
 ): Promise<void> {
-	await db
-		.delete(clipFavorite)
-		.where(eq(clipFavorite.id, id));
+	await db.delete(clipFavorite).where(eq(clipFavorite.id, id));
 }
 
-export async function countClipFavoritesFromDatabase(
-	db: MiDrizzleDatabase,
-	clipId: MiClip['id'],
-): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(clipFavorite)
-		.where(eq(clipFavorite.clipId, clipId));
+export async function countClipFavoritesFromDatabase(db: MiDrizzleDatabase, clipId: MiClip['id']): Promise<number> {
+	const [row] = await db.select({ count: count() }).from(clipFavorite).where(eq(clipFavorite.clipId, clipId));
 
 	return row?.count ?? 0;
 }
@@ -111,7 +88,7 @@ export async function countClipFavoritesByClipIdsFromDatabase(
 		.where(inArray(clipFavorite.clipId, clipIds))
 		.groupBy(clipFavorite.clipId);
 
-	return new Map(rows.map(row => [row.clipId, row.count]));
+	return new Map(rows.map((row) => [row.clipId, row.count]));
 }
 
 export async function listFavoritedClipIdsByUserIdFromDatabase(
@@ -123,5 +100,5 @@ export async function listFavoritedClipIdsByUserIdFromDatabase(
 		.from(clipFavorite)
 		.where(eq(clipFavorite.userId, userId));
 
-	return rows.map(row => row.clipId);
+	return rows.map((row) => row.clipId);
 }

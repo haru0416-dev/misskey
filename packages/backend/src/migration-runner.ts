@@ -57,18 +57,19 @@ async function lastAppliedCreatedAt(pool: MigrationQueryable): Promise<number> {
 	return createdAt != null ? Number(createdAt) : 0;
 }
 
-export async function listPendingMigrations(pool: MigrationQueryable, migrationDir = defaultMigrationDirectory()): Promise<PendingMigration[]> {
-	const [entries, lastApplied] = await Promise.all([
-		readJournalEntries(migrationDir),
-		lastAppliedCreatedAt(pool),
-	]);
+export async function listPendingMigrations(
+	pool: MigrationQueryable,
+	migrationDir = defaultMigrationDirectory(),
+): Promise<PendingMigration[]> {
+	const [entries, lastApplied] = await Promise.all([readJournalEntries(migrationDir), lastAppliedCreatedAt(pool)]);
 
-	return entries
-		.filter(entry => entry.when > lastApplied)
-		.map(entry => ({ tag: entry.tag, when: entry.when }));
+	return entries.filter((entry) => entry.when > lastApplied).map((entry) => ({ tag: entry.tag, when: entry.when }));
 }
 
-export async function runMigrations(pool: MiDrizzlePool, migrationDir = defaultMigrationDirectory()): Promise<PendingMigration[]> {
+export async function runMigrations(
+	pool: MiDrizzlePool,
+	migrationDir = defaultMigrationDirectory(),
+): Promise<PendingMigration[]> {
 	const client = await pool.connect();
 	let locked = false;
 	let operationError: Error | undefined;
@@ -94,7 +95,8 @@ export async function runMigrations(pool: MiDrizzlePool, migrationDir = defaultM
 	} finally {
 		try {
 			if (locked) await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_ADVISORY_LOCK_ID]);
-			if (statementTimeout != null) await client.query("SELECT set_config('statement_timeout', $1, false)", [statementTimeout]);
+			if (statementTimeout != null)
+				await client.query("SELECT set_config('statement_timeout', $1, false)", [statementTimeout]);
 		} catch (error) {
 			cleanupError = error instanceof Error ? error : new Error(String(error));
 		} finally {

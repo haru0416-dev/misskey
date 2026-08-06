@@ -53,7 +53,13 @@ describe('hono-queue-post-scheduled-note', () => {
 			isActuallyScheduled: true,
 		});
 
-		await handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: draftId, scheduledAt: (await fetchNoteDraftByIdFromDatabase(runtime.db, draftId))!.scheduledAt!.getTime() }));
+		await handleHonoQueuePostScheduledNote(
+			runtime,
+			fakeJob({
+				noteDraftId: draftId,
+				scheduledAt: (await fetchNoteDraftByIdFromDatabase(runtime.db, draftId))!.scheduledAt!.getTime(),
+			}),
+		);
 
 		const draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
 		expect(draftAfter).toBeNull();
@@ -84,6 +90,8 @@ describe('hono-queue-post-scheduled-note', () => {
 	});
 
 	test('存在しないnoteDraftIdは何もしない', async () => {
-		await expect(handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: genId(), scheduledAt: Date.now() }))).resolves.toBeUndefined();
+		await expect(
+			handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: genId(), scheduledAt: Date.now() })),
+		).resolves.toBeUndefined();
 	});
 });

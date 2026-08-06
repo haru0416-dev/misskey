@@ -28,7 +28,9 @@ type CapturedRequest = {
 	body: string;
 };
 
-async function createTestUserWithKeypair(deps: InboxEndpointDependencies & { db: RuntimeDependencies['db'] }): Promise<MiUser> {
+async function createTestUserWithKeypair(
+	deps: InboxEndpointDependencies & { db: RuntimeDependencies['db'] },
+): Promise<MiUser> {
 	const id = genId();
 	const user = await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: { id, username: `honoinboxep${id}`, usernameLower: `honoinboxep${id}`.toLowerCase() },
@@ -49,15 +51,19 @@ async function createTestUserWithKeypair(deps: InboxEndpointDependencies & { db:
 function captureRequestServer(): Promise<{ server: Server; url: string; capture: () => Promise<CapturedRequest> }> {
 	return new Promise((resolve, reject) => {
 		let resolveCapture: (req: CapturedRequest) => void;
-		const capturePromise = new Promise<CapturedRequest>(r => { resolveCapture = r; });
+		const capturePromise = new Promise<CapturedRequest>((r) => {
+			resolveCapture = r;
+		});
 
 		const server = createServer((req: IncomingMessage, res: ServerResponse) => {
 			const chunks: Buffer[] = [];
-			req.on('data', chunk => chunks.push(chunk));
+			req.on('data', (chunk) => chunks.push(chunk));
 			req.on('end', () => {
 				resolveCapture({
 					method: req.method ?? 'POST',
-					headers: Object.fromEntries(Object.entries(req.headers).map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : (v ?? '')])),
+					headers: Object.fromEntries(
+						Object.entries(req.headers).map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : (v ?? '')]),
+					),
 					body: Buffer.concat(chunks).toString('utf-8'),
 				});
 				res.writeHead(202);
@@ -83,7 +89,7 @@ describe('hono-inbox-endpoint', () => {
 	});
 
 	afterEach(async () => {
-		await Promise.all(servers.splice(0).map(s => new Promise<void>(resolve => s.close(() => resolve()))));
+		await Promise.all(servers.splice(0).map((s) => new Promise<void>((resolve) => s.close(() => resolve()))));
 	});
 
 	afterAll(async () => {
@@ -95,16 +101,25 @@ describe('hono-inbox-endpoint', () => {
 		servers.push(server);
 		const host = new URL(url).host;
 
-		const deps: InboxEndpointDependencies = { config: runtime.config, meta: { federation: 'all' }, inboxQueue: runtime.inboxQueue };
+		const deps: InboxEndpointDependencies = {
+			config: runtime.config,
+			meta: { federation: 'all' },
+			inboxQueue: runtime.inboxQueue,
+		};
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 		const activityId = `https://${host}/activities/${genId()}`;
 
-		await signedPostForHonoApi({ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService }, user, url, {
-			id: activityId,
-			type: 'Follow',
-			actor: `https://${host}/users/${user.id}`,
-			object: `https://${host}/users/somebody`,
-		});
+		await signedPostForHonoApi(
+			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
+			user,
+			url,
+			{
+				id: activityId,
+				type: 'Follow',
+				actor: `https://${host}/users/${user.id}`,
+				object: `https://${host}/users/somebody`,
+			},
+		);
 
 		const captured = await capture();
 
@@ -124,15 +139,21 @@ describe('hono-inbox-endpoint', () => {
 		expect(response.status).toBe(202);
 
 		const after = await runtime.inboxQueue.getJobCounts();
-		expect((after['waiting'] ?? 0) + (after['active'] ?? 0) + (after['delayed'] ?? 0))
-			.toBeGreaterThan((before['waiting'] ?? 0) + (before['active'] ?? 0) + (before['delayed'] ?? 0) - 1);
-		const queued = (await runtime.inboxQueue.getJobs(['waiting', 'active', 'delayed', 'completed', 'failed']))
-			.find(job => job.data.activity.id === activityId);
+		expect((after['waiting'] ?? 0) + (after['active'] ?? 0) + (after['delayed'] ?? 0)).toBeGreaterThan(
+			(before['waiting'] ?? 0) + (before['active'] ?? 0) + (before['delayed'] ?? 0) - 1,
+		);
+		const queued = (await runtime.inboxQueue.getJobs(['waiting', 'active', 'delayed', 'completed', 'failed'])).find(
+			(job) => job.data.activity.id === activityId,
+		);
 		expect(queued?.opts.attempts).toBe(runtime.config.queues.inbox.maximumAttempts ?? 8);
 	});
 
 	test('federationがnoneの場合は403', async () => {
-		const deps: InboxEndpointDependencies = { config: runtime.config, meta: { federation: 'none' }, inboxQueue: runtime.inboxQueue };
+		const deps: InboxEndpointDependencies = {
+			config: runtime.config,
+			meta: { federation: 'none' },
+			inboxQueue: runtime.inboxQueue,
+		};
 		const request = new Request('http://example.com/inbox', { method: 'POST', body: '{}' });
 
 		const response = await handleInboxRequest(deps, request);
@@ -140,7 +161,11 @@ describe('hono-inbox-endpoint', () => {
 	});
 
 	test('Content-Lengthのない上限超過リクエストは413', async () => {
-		const deps: InboxEndpointDependencies = { config: runtime.config, meta: { federation: 'all' }, inboxQueue: runtime.inboxQueue };
+		const deps: InboxEndpointDependencies = {
+			config: runtime.config,
+			meta: { federation: 'all' },
+			inboxQueue: runtime.inboxQueue,
+		};
 		const request = new Request('http://example.com/inbox', {
 			method: 'POST',
 			body: new ReadableStream({
@@ -158,7 +183,11 @@ describe('hono-inbox-endpoint', () => {
 	});
 
 	test('署名ヘッダーがない場合は401', async () => {
-		const deps: InboxEndpointDependencies = { config: runtime.config, meta: { federation: 'all' }, inboxQueue: runtime.inboxQueue };
+		const deps: InboxEndpointDependencies = {
+			config: runtime.config,
+			meta: { federation: 'all' },
+			inboxQueue: runtime.inboxQueue,
+		};
 		const request = new Request('http://example.com/inbox', {
 			method: 'POST',
 			headers: { host: runtime.config.runtime.host },
@@ -173,15 +202,24 @@ describe('hono-inbox-endpoint', () => {
 		const { server, url, capture } = await captureRequestServer();
 		servers.push(server);
 
-		const deps: InboxEndpointDependencies = { config: runtime.config, meta: { federation: 'all' }, inboxQueue: runtime.inboxQueue };
+		const deps: InboxEndpointDependencies = {
+			config: runtime.config,
+			meta: { federation: 'all' },
+			inboxQueue: runtime.inboxQueue,
+		};
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 
-		await signedPostForHonoApi({ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService }, user, url, {
-			id: `https://example.com/activities/${genId()}`,
-			type: 'Follow',
-			actor: `https://example.com/users/${user.id}`,
-			object: 'https://example.com/users/somebody',
-		});
+		await signedPostForHonoApi(
+			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
+			user,
+			url,
+			{
+				id: `https://example.com/activities/${genId()}`,
+				type: 'Follow',
+				actor: `https://example.com/users/${user.id}`,
+				object: 'https://example.com/users/somebody',
+			},
+		);
 		const captured = await capture();
 
 		// config.runtime.host をフィクスチャのホストと変えることで不一致を再現する
@@ -200,15 +238,24 @@ describe('hono-inbox-endpoint', () => {
 		servers.push(server);
 		const host = new URL(url).host;
 
-		const deps: InboxEndpointDependencies = { config: runtime.config, meta: { federation: 'all' }, inboxQueue: runtime.inboxQueue };
+		const deps: InboxEndpointDependencies = {
+			config: runtime.config,
+			meta: { federation: 'all' },
+			inboxQueue: runtime.inboxQueue,
+		};
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 
-		await signedPostForHonoApi({ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService }, user, url, {
-			id: `https://${host}/activities/${genId()}`,
-			type: 'Follow',
-			// actor を欠落させる
-			object: `https://${host}/users/somebody`,
-		});
+		await signedPostForHonoApi(
+			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
+			user,
+			url,
+			{
+				id: `https://${host}/activities/${genId()}`,
+				type: 'Follow',
+				// actor を欠落させる
+				object: `https://${host}/users/somebody`,
+			},
+		);
 		const captured = await capture();
 
 		const depsWithFixtureHost: InboxEndpointDependencies = {

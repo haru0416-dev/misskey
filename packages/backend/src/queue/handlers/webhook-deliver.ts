@@ -20,7 +20,16 @@ export type HonoQueueWebhookDeliverDependencies = {
 
 async function deliverWebhookForHonoQueue(
 	deps: HonoQueueWebhookDeliverDependencies,
-	data: { webhookId: string; to: string; secret: string; userId?: string; eventId: string; createdAt: number; type: string; content: unknown },
+	data: {
+		webhookId: string;
+		to: string;
+		secret: string;
+		userId?: string;
+		eventId: string;
+		createdAt: number;
+		type: string;
+		content: unknown;
+	},
 	onResult: (status: number) => Promise<void>,
 ): Promise<string> {
 	try {
@@ -66,7 +75,7 @@ export async function handleHonoQueueUserWebhookDeliver(
 	deps: HonoQueueWebhookDeliverDependencies,
 	job: Bull.Job<UserWebhookDeliverJobData>,
 ): Promise<string> {
-	return await deliverWebhookForHonoQueue(deps, job.data, async status => {
+	return await deliverWebhookForHonoQueue(deps, job.data, async (status) => {
 		await updateWebhookInDatabase(deps.db, job.data.webhookId, {
 			latestSentAt: new Date(),
 			latestStatus: status,
@@ -78,7 +87,7 @@ export async function handleHonoQueueSystemWebhookDeliver(
 	deps: HonoQueueWebhookDeliverDependencies,
 	job: Bull.Job<SystemWebhookDeliverJobData>,
 ): Promise<string> {
-	return await deliverWebhookForHonoQueue(deps, job.data, async status => {
+	return await deliverWebhookForHonoQueue(deps, job.data, async (status) => {
 		await updateSystemWebhookInDatabase(deps.db, job.data.webhookId, {
 			latestSentAt: new Date(),
 			latestStatus: status,

@@ -98,14 +98,18 @@ describe('addNoteToAntennasForHonoApi', () => {
 			channel: null,
 		} as unknown as MiNote;
 
-		await addNoteToAntennasForHonoApi({
-			config: { runtime: { host: 'local.example' } } as Parameters<typeof addNoteToAntennasForHonoApi>[0]['config'],
-			db: {} as MiDrizzleDatabase,
-			redisForTimelines: {
-				pipeline: vi.fn(() => pipeline),
-			} as unknown as Parameters<typeof addNoteToAntennasForHonoApi>[0]['redisForTimelines'],
-			publishAntennaStream,
-		}, note, { id: authorId, username: 'author', host: null, isBot: false });
+		await addNoteToAntennasForHonoApi(
+			{
+				config: { runtime: { host: 'local.example' } } as Parameters<typeof addNoteToAntennasForHonoApi>[0]['config'],
+				db: {} as MiDrizzleDatabase,
+				redisForTimelines: {
+					pipeline: vi.fn(() => pipeline),
+				} as unknown as Parameters<typeof addNoteToAntennasForHonoApi>[0]['redisForTimelines'],
+				publishAntennaStream,
+			},
+			note,
+			{ id: authorId, username: 'author', host: null, isBot: false },
+		);
 
 		expect(listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabaseMock).toHaveBeenCalledOnce();
 		expect(listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabaseMock).toHaveBeenCalledWith(
@@ -140,13 +144,17 @@ describe('addNoteToAntennasForHonoApi', () => {
 			channel: null,
 		} as unknown as MiNote;
 
-		await addNoteToAntennasForHonoApi({
-			config: { runtime: { host: 'local.example' } } as Parameters<typeof addNoteToAntennasForHonoApi>[0]['config'],
-			db: {} as MiDrizzleDatabase,
-			redisForTimelines: {
-				pipeline: vi.fn(() => pipeline),
-			} as unknown as Parameters<typeof addNoteToAntennasForHonoApi>[0]['redisForTimelines'],
-		}, note, { id: authorId, username: 'bot', host: null, isBot: true });
+		await addNoteToAntennasForHonoApi(
+			{
+				config: { runtime: { host: 'local.example' } } as Parameters<typeof addNoteToAntennasForHonoApi>[0]['config'],
+				db: {} as MiDrizzleDatabase,
+				redisForTimelines: {
+					pipeline: vi.fn(() => pipeline),
+				} as unknown as Parameters<typeof addNoteToAntennasForHonoApi>[0]['redisForTimelines'],
+			},
+			note,
+			{ id: authorId, username: 'bot', host: null, isBot: true },
+		);
 
 		expect(listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabaseMock).not.toHaveBeenCalled();
 		expect(followingExistsInDatabaseMock).not.toHaveBeenCalled();

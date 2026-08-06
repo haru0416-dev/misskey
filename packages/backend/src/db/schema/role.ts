@@ -17,7 +17,10 @@ export const role = pgTable('role', {
 	color: varchar({ length: 256 }),
 	iconUrl: varchar({ length: 512 }),
 	target: roleTargetEnum().default('manual').notNull(),
-	condFormula: jsonb().$type<RoleCondFormulaValue>().default({} as RoleCondFormulaValue).notNull(),
+	condFormula: jsonb()
+		.$type<RoleCondFormulaValue>()
+		.default({} as RoleCondFormulaValue)
+		.notNull(),
 	isPublic: boolean().default(false).notNull(),
 	asBadge: boolean().default(false).notNull(),
 	isModerator: boolean().default(false).notNull(),
