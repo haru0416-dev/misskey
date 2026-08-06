@@ -25,6 +25,7 @@
 		"lint": "bun run --bun typecheck",
 		"test": "bun run --bun build:unit && NODE_ENV=test bun run compile-config && bun ./scripts/run_unit.js",
 		"test:e2e": "bun run --bun build:e2e && NODE_ENV=test bun run compile-config && bun ./scripts/run_e2e.js",
+		"test:e2e:bun": "bun run --bun build:e2e && NODE_ENV=test bun run compile-config && bun ./scripts/run_e2e_bun.js",
 		"test:fed": "NODE_ENV=test bun run compile-config && vitest --config vitest.config.fed.ts",
 		"test-and-coverage": "bun run --bun build:unit && NODE_ENV=test bun run compile-config && bun ./scripts/run_unit.js --coverage",
 		"test-and-coverage:e2e": "bun run --bun build:e2e && NODE_ENV=test bun run compile-config && bun ./scripts/run_e2e.js --coverage",

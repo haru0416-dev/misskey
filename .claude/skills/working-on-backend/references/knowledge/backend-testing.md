@@ -36,10 +36,22 @@ cp .github/misskey/test.yml .config/test.yml
 | --- | --- | --- |
 | Unit | `packages/backend/vitest.config.unit.ts` | `bun run --bun --filter backend test` |
 | E2E (HTTP / DB) | `packages/backend/vitest.config.e2e.ts` | `bun run --bun --filter backend test:e2e` |
+| E2E (本番と同じ bun ランタイム) | 同上 | `bun run --bun --filter backend test:e2e:bun` |
 | Federation | `packages/backend/vitest.config.fed.ts` | `bun run --bun --filter backend test:fed` |
 
 - 配置: `packages/backend/test/` 配下
 - カバレッジ: `bun run --bun --filter backend test-and-coverage`
+
+### `test:e2e` と `test:e2e:bun` の違い (★ どちらか一方では本番経路を検証できない)
+
+`test:e2e` は vitest (Node.js) と **同じプロセス内に** テスト対象サーバーを立てる。つまり本番が使う
+**bun ランタイム固有の実装は一切通らない** — 特に DB ドライバは `MK_DB_DRIVER` の既定が bun 上でのみ
+`Bun.sql` になるため、`test:e2e` で緑でも本番の DB 経路は未検証のまま残る (実例: Bun.sql は SQLSTATE を
+`code` でなく `errno` に入れるため一意制約違反が全て 500 になるバグが `test:e2e` を素通りした)。
+
+`test:e2e:bun` は `scripts/run_e2e_bun.js` がテスト対象サーバーだけを **bun の別プロセス** として起動し、
+vitest からは `MISSKEY_E2E_TARGET_MODE=external` で HTTP 越しに叩かせる。テスト本体は同じ
+`test/e2e/*.ts` なので件数も同じ。**backend の DB / HTTP / ストリーミングの低層を触ったら両方通すこと**。
 
 ### unit / e2e フルスイートの既知の落とし穴 (Bun ランタイムで vitest を起動すると壊れる)
 
