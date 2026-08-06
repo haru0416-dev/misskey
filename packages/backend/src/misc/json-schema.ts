@@ -201,8 +201,7 @@ export interface Schema extends OfSchema {
 }
 
 type RequiredPropertyNames<s extends Obj> = {
-	[K in keyof s]: // K is not optional
-	s[K]['optional'] extends false
+	[K in keyof s]: s[K]['optional'] extends false // K is not optional
 		? K
 		: // K has default value
 			s[K]['default'] extends null | string | number | boolean | Record<string, unknown>
