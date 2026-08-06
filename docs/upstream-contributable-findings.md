@@ -161,11 +161,83 @@ for (const request of requests) {
 
 ---
 
+以下 #5〜#8 は 2026-07-22 の 4 観点並列監査（並行/認可/SQL/ロジック）で追加検出し、
+生ソース照合で upstream 継承と確定したもの。fork 側では TS を触らずコードにマーカー
+（`// TODO(rust):`）を残し、Rust 再実装時に正す方針（severity 低〜中のため）。
+
+## 5. 並行削除でカウンタが二重減算（負値化し得る）【upstream 確定・fork でも未修正】
+
+「削除本体が冪等・affected 未検査」+「カウンタ減算が無条件」の組で、同じ資源への削除が
+2 本同時に来ると両方が減算する。fork は reaction 削除だけ affected/lock ガードを持ち、
+以下 2 経路は未ガード（同一著者内の非対称）。**2 箇所とも upstream に同型あり:**
+
+- **返信削除 → 親 `repliesCount`**: fork `server/rest/notes-delete.ts:74,113` /
+  upstream `core/NoteDeleteService.ts:67`（`decrement(..,'repliesCount',1)` 無条件）+ :113 delete 無ガード
+- **unfollow → `followingCount`/`followersCount`**: fork `server/rest/following.ts:621-623` と
+  `server/rest/account-blocking.ts:303-305` / upstream `core/UserFollowingService.ts:408-419`
+  （`decrement(..,'followingCount',1)` 無条件）
+
+減算 SQL は `col = col - 1` でクランプ無し → 二度押し / 再送 / block+unfollow 競合で恒久的に
+過少・負値化しうる。通常ユーザーは再カウント経路が無い。**影響度: 低〜中**（カウンタ drift、
+セキュリティ・喪失は無し）。直し: 削除の affected===1 を確認してから tx 内で減算。
+
+## 6. registry の同一キー同時 set で重複行 → ロストアップデート 【upstream 確定・upstream に TODO あり】
+
+fork `core/RegistryItemStore.ts:30-48` / upstream `RegistryApiService`。SELECT→無ければ INSERT /
+有れば UPDATE を**ロック・tx 無し**で行い、`registry_item` の `(userId,domain,scope,key)` に
+**unique 制約が無い**（fork schema は index のみ、PK は id）。同一キーへの `i/registry/set` が
+2 本同時に来ると両方 INSERT → 重複行が生じ、以後 `.limit(1)` の読取が非決定的にどちらかを返し、
+もう一方が影として残りロストアップデート化。**upstream の entity 定義に
+`// TODO: 同じdomain、同じscope、同じkeyのレコードは二つ以上存在しないように制約付けたい`
+と明記**されており、既知の未対応。**影響度: 低〜中**。直し: unique 制約 + onConflict upsert。
+
+## 7. `makeNotesHiddenBefore` / `makeNotesFollowersOnlyBefore` が `0` で全ノートを隠す 【upstream 確定】
+
+fork `misc/should-hide-note-by-time.ts:19` / upstream 同ファイル（**コード完全一致**）。
+`if (hiddenBefore <= 0)` が `0` を「相対秒数」分岐に振り分け、`elapsedSeconds >= Math.abs(0)`
+= `>= 0` で**常に true** → そのユーザーの全ノートが本人以外に hidden 化（`makeNotesFollowersOnlyBefore=0`
+なら全 public/home が followers 限定へ）。`i/update` の zod は下限なしで `0` を受理、
+`ap-person` はリモート actor 値を無検証取り込み。#2 の dateUTC epoch-0 と同じ「0 を
+falsy/sentinel 扱い」ファミリ。**影響度: 低〜中**（可視性。ちょうど 0 送信が必要、通常 UI は
+null か計算値を送る）。直し: 判定を `< 0` にして `0` を絶対時刻分岐（＝何も隠さない）へ落とす。
+
+## 8. admin 広告一覧 `publishing:false` のページネーションで予約広告が毎ページ重複 【upstream 確定】
+
+fork `core/AdStore.ts:136-140` / upstream `admin/ad/list.ts:57`（TypeORM の
+`.andWhere(..).orWhere(..)` が既存条件を括弧で包まず、fork の drizzle `or()` と同じ
+`(cursor AND expired) OR (startsAt>now)` を生成）。カーソルが OR の第1アームにしか掛からず、
+第2アーム `startsAt>now`（未開始の予約広告）がカーソル無視で毎ページ返る → 2 ページ目以降で
+重複しページ送りが進まない。1 ページ目（カーソル無し）は正しく、2 ページ目以降で顕在化。
+**影響度: 低**（admin 専用・表示の不整合のみ）。直し: `and(cursor, or(expired, notStarted))`。
+
+## 9. admin パスワードリセット/MFA解除の権限昇格 【upstream 継承・by-design / このフォークは真似ない】
+
+fork `server/rest/admin-user-maintenance.ts:59-98` / upstream `admin/reset-password.ts:19,78`・
+`admin/unset-mfa.ts:20`（gating・root-only ガードまで完全一致）。
+
+`admin/reset-password` は `requireModerator: true` + `kind: write:admin:reset-password`、ハンドラは
+**root のみ保護**で、対象が同格/上位の管理者かは見ない。`admin/unset-mfa` は **root 保護すら無い**。
+Misskey の admin 権限モデルは**フラット**（root だけ特別、admin 間の上下は非強制）。
+
+- **攻撃**: 「フル管理者未満だが `write:admin:reset-password` を持つ中間スタッフロール」を運用している
+  インスタンスで、その保持者が非 root の上位管理者の `userId` を渡す → 8 文字パスワードが払い出され
+  ログイン→完全乗っ取り。`unset-mfa` も同様に TOTP/パスキーを剥がせる
+- **影響度: 中**（高インパクトだが、前提として権限の階層化ロール構成が要る。単一管理者や全モデレーター
+  同格なら無害）。**upstream 継承（by-design）**
+- **このフォークの扱い（他の #1〜#8 と異なる）**: [[project_no_upstream_tracking_policy]] のとおり upstream
+  から切り離された独自路線なので、**セキュリティ上の弱点は継承しない**。Rust 実装では upstream を真似ず
+  hardening する（対象が root、または呼び出し元が管理者でないのに対象が管理者なら拒否）。TS 側にも
+  その趣旨のマーカーを配置済み。upstream にも逆貢献可能な hardening ではある
+
 ## 候補（upstream 未照合・出す前に要確認）
 
 - **`secure: true` と `kind` の同時宣言（~11 件）**: `secure` がトークン認証を拒否するので
   `kind` は死んでいる。upstream にも同様に散在するが、意図的な冗長の可能性もあり「バグ」と
   言い切れない。優先度低。
+- **miauth `gen-token` のセッション fixation**: 攻撃者が session を仕込んだ miauth リンクを被害者に
+  承認させるとトークンを奪える。ただし **MiAuth プロトコル仕様そのもの**（client が session を指定、
+  OAuth の state 相当）で、緩和は同意画面。upstream 同一実装。**by-design で actionable でない**ため
+  記録のみ（Rust でも MiAuth を保つ限り挙動は同じ）。
 
 ---
 
