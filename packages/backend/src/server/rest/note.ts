@@ -7,7 +7,6 @@ import { domainToASCII, URLSearchParams } from 'node:url';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
-import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { fetchEmojisByNamesAndHostsFromDatabaseCached } from '@/core/EmojiStore.js';
 import { followingExistsInDatabase, listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase, listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase } from '@/core/FollowingStore.js';
 import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase, listNotesByIdsFromDatabase, listUserTimelineNotesFromDatabase } from '@/core/NoteStore.js';
@@ -17,6 +16,7 @@ import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromD
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
+import { fanoutViewerRelationKinds, fetchViewerRelationSnapshotFromDatabase } from '@/core/ViewerRelationStore.js';
 import type { Config } from '@/config.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
@@ -1232,29 +1232,26 @@ export async function handleHonoApiUsersNotes(
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
-	if (me != null) {
-		const userIdsWhoBlockingMe = await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id);
-		if (userIdsWhoBlockingMe.includes(params.userId)) return [];
-	}
+	// ブロック判定・チャンネルミュート・fanoutのフィルタが同じ関係を見るので、まとめて1本で取る
+	// (フォロー関係はここでは要らない。相手をフォローしているかは followingExistsInDatabase で1件だけ見る)
+	const viewerRelation = me != null
+		? await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), fanoutViewerRelationKinds)
+		: undefined;
 
-	const getFromDb = async (dbUntilId: string | null, dbSinceId: string | null, limit: number) => {
-		const mutingChannelIds = me != null
-			? await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date())
-			: [];
+	if (viewerRelation != null && viewerRelation.blockerIds.includes(params.userId)) return [];
 
-		return await listUserTimelineNotesFromDatabase(deps.db, {
-			userId: params.userId,
-			limit,
-			sinceId: dbSinceId,
-			untilId: dbUntilId,
-			withChannelNotes: params.withChannelNotes,
-			withFiles: params.withFiles,
-			withRenotes: params.withRenotes,
-			me: me ?? null,
-			blockedHosts: deps.meta.blockedHosts,
-			mutingChannelIds,
-		});
-	};
+	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listUserTimelineNotesFromDatabase(deps.db, {
+		userId: params.userId,
+		limit,
+		sinceId: dbSinceId,
+		untilId: dbUntilId,
+		withChannelNotes: params.withChannelNotes,
+		withFiles: params.withFiles,
+		withRenotes: params.withRenotes,
+		me: me ?? null,
+		blockedHosts: deps.meta.blockedHosts,
+		mutingChannelIds: viewerRelation?.mutedChannelIds ?? [],
+	});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
 		const isSelf = me != null && me.id === params.userId;
@@ -1271,6 +1268,7 @@ export async function handleHonoApiUsersNotes(
 			limit: params.limit,
 			allowPartial: params.allowPartial,
 			me,
+			viewerRelation,
 			useDbFallback: true,
 			redisTimelines,
 			ignoreAuthorFromMute: true,
