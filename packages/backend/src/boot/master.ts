@@ -69,10 +69,16 @@ export async function masterMain(config: Config) {
 			// ワーカープロセス側でlistenすると、メインプロセスでポートへの着信を受け入れてワーカープロセスへの分配を行う動作をする。
 			// そのため、メインプロセスでも直接listenするとポートの競合が発生して起動に失敗してしまう。
 			// see: https://nodejs.org/api/cluster.html#cluster
+			//
+			// なお bun の node:cluster は上記のNodeの分配モデルではなく SO_REUSEPORT で実装されている
+			// (実測: workers=3 でワーカー3プロセスがそれぞれ :3000 をLISTENし、masterはLISTENしない)。
+			// つまり `Bun.serve({ reusePort: true })` へ自前で置き換えても得られるものは無い。
 		} else if (envOption.onlyQueue) {
 			const runtime = await jobQueue(config);
 			disposers.push(() => runtime.close());
 		} else {
+			// 既定 (onlyServer / onlyQueue のどちらでもない) ではHTTPを捌くのはこのメインプロセスだけで、
+			// forkしたワーカーはジョブキュー専用 (worker.ts を参照)。`workers` はキューのプロセス数を意味する。
 			const runtime = await server(config);
 			disposers.push(() => runtime.dispose());
 		}
