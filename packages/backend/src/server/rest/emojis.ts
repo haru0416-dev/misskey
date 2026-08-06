@@ -4,13 +4,12 @@
  */
 
 import { domainToASCII } from 'node:url';
-import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
-import { addAliasesToEmojisByIdsInDatabase, deleteEmojiByIdFromDatabase, deleteEmojisByIdsFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, invalidateEmojiCache, listEmojisByIdsFromDatabase, listEmojisByIdsOrFailFromDatabase, listLocalEmojisFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, removeAliasesFromEmojisByIdsInDatabase, updateEmojiInDatabase, updateEmojisByIdsReturningFromDatabase } from '@/core/EmojiStore.js';
+import { addAliasesToEmojisByIdsInDatabase, deleteEmojiByIdFromDatabase, deleteEmojisByIdsFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, invalidateEmojiCache, listEmojisByIdsFromDatabase, listEmojisByIdsOrFailFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, removeAliasesFromEmojisByIdsInDatabase, updateEmojiInDatabase, updateEmojisByIdsReturningFromDatabase } from '@/core/EmojiStore.js';
 import { logModerationEventInDatabase, logModerationEventsInDatabase } from '@/core/ModerationLogLogic.js';
 import { addDbJob, type DbQueue } from '@/core/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
@@ -30,7 +29,6 @@ import { parseHonoApiParams } from './validation.js';
 export type HonoApiEmojiDependencies = DriveFileUploadDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
-	redis: Redis.Redis;
 	dbQueue: DbQueue;
 	publishBroadcastStream?: HonoApiBroadcastStreamPublisher;
 };
@@ -319,16 +317,6 @@ function adminSameNameEmojiExistsError(): HonoApiError {
 	return adminEmojiClientError('Emoji that have same name already exists.', 'SAME_NAME_EMOJI_EXISTS', '7180fe9d-1ee3-bff9-647d-fe9896d2ffb8');
 }
 
-export async function refreshHonoApiLocalEmojisCache(deps: HonoApiEmojiDependencies): Promise<void> {
-	const emojis = await listLocalEmojisFromDatabase(deps.db);
-	await deps.redis.set(
-		'singlecache:localEmojis',
-		JSON.stringify(emojis),
-		'EX',
-		60 * 30,
-	);
-}
-
 async function publishHonoApiEmojiUpdated(
 	deps: HonoApiEmojiDependencies,
 	emojis: MiEmoji[],
@@ -345,7 +333,6 @@ async function finishHonoApiEmojiBulkUpdate(
 	ids: MiEmoji['id'][],
 ): Promise<void> {
 	invalidateEmojiCache();
-	await refreshHonoApiLocalEmojisCache(deps);
 	const emojis = await listEmojisByIdsOrFailFromDatabase(deps.db, ids);
 	await publishHonoApiEmojiUpdated(deps, emojis);
 }
@@ -427,8 +414,7 @@ export async function addCustomEmojiForHonoApi(
 	});
 
 	if (data.host == null) {
-		await refreshHonoApiLocalEmojisCache(deps);
-		await publishHonoApiEmojiAdded(deps, emoji);
+			await publishHonoApiEmojiAdded(deps, emoji);
 
 		if (moderator) {
 			await logModerationEventInDatabase(deps, moderator, 'addCustomEmoji', {
@@ -516,7 +502,6 @@ export async function handleHonoApiAdminEmojiAdd(
 		roleIdsThatCanBeUsedThisEmojiAsReaction: params.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [],
 	});
 
-	await refreshHonoApiLocalEmojisCache(deps);
 	await publishHonoApiEmojiAdded(deps, emoji);
 	await logModerationEventInDatabase(deps, me, 'addCustomEmoji', {
 		emojiId: emoji.id,
@@ -543,7 +528,6 @@ export async function handleHonoApiAdminEmojiDelete(
 	const params = parseHonoApiParams(adminEmojiDeleteParamDef, body);
 	const emoji = await fetchEmojiByIdOrFailFromDatabase(deps.db, params.id);
 	await deleteEmojiByIdFromDatabase(deps.db, emoji.id);
-	await refreshHonoApiLocalEmojisCache(deps);
 	await publishHonoApiEmojiDeleted(deps, [emoji]);
 	await logModerationEventInDatabase(deps, me, 'deleteCustomEmoji', {
 		emojiId: emoji.id,
@@ -568,7 +552,6 @@ export async function handleHonoApiAdminEmojiDeleteBulk(
 	});
 
 	invalidateEmojiCache();
-	await refreshHonoApiLocalEmojisCache(deps);
 	await publishHonoApiEmojiDeleted(deps, emojis);
 }
 
@@ -606,7 +589,6 @@ export async function handleHonoApiAdminEmojiCopy(
 		roleIdsThatCanBeUsedThisEmojiAsReaction: emoji.roleIdsThatCanBeUsedThisEmojiAsReaction,
 	});
 
-	await refreshHonoApiLocalEmojisCache(deps);
 	await publishHonoApiEmojiAdded(deps, addedEmoji);
 	await logModerationEventInDatabase(deps, me, 'addCustomEmoji', {
 		emojiId: addedEmoji.id,
@@ -665,7 +647,6 @@ export async function handleHonoApiAdminEmojiUpdate(
 		roleIdsThatCanBeUsedThisEmojiAsReaction: params.roleIdsThatCanBeUsedThisEmojiAsReaction ?? undefined,
 	}));
 
-	await refreshHonoApiLocalEmojisCache(deps);
 	const updated = await fetchEmojiByIdOrFailFromDatabase(deps.db, emoji.id);
 
 	if (doNameUpdate) {

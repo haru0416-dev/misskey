@@ -100,7 +100,7 @@ export async function listActiveInstanceHostsFromDatabase(db: MiDrizzleDatabase)
 	return rows.map(row => row.host);
 }
 
-type FederationInstancesSort =
+export type FederationInstancesSort =
 	| '+pubSub'
 	| '-pubSub'
 	| '+notes'
