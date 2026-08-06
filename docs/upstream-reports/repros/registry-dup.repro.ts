@@ -21,13 +21,21 @@ describe('REPRO upstream #6 registry duplicate rows on concurrent set', () => {
 	beforeAll(async () => {
 		const config = loadConfig();
 		db = new DataSource({
-			type: 'postgres', host: config.db.host, port: config.db.port,
-			username: config.db.user, password: config.db.pass, database: config.db.db,
-			synchronize: true, dropSchema: true, entities,
+			type: 'postgres',
+			host: config.db.host,
+			port: config.db.port,
+			username: config.db.user,
+			password: config.db.pass,
+			database: config.db.db,
+			synchronize: true,
+			dropSchema: true,
+			entities,
 		});
 		await db.initialize();
 	}, 1000 * 120);
-	afterAll(async () => { if (db?.isInitialized) await db.destroy(); });
+	afterAll(async () => {
+		if (db?.isInitialized) await db.destroy();
+	});
 
 	test('同一キーへの並行 set で行は 1 つに収束すること', async () => {
 		const users = db.getRepository(MiUser);
@@ -38,25 +46,49 @@ describe('REPRO upstream #6 registry duplicate rows on concurrent set', () => {
 		const scope = ['client', 'base'];
 		const key = 'theme';
 		// RegistryApiService.set の getOne クエリ相当
-		const findExisting = () => reg.createQueryBuilder('item')
-			.where('item.domain IS NULL')
-			.andWhere('item.userId = :userId', { userId: uid })
-			.andWhere('item.key = :key', { key })
-			.andWhere('item.scope = :scope', { scope })
-			.getOne();
+		const findExisting = () =>
+			reg
+				.createQueryBuilder('item')
+				.where('item.domain IS NULL')
+				.andWhere('item.userId = :userId', { userId: uid })
+				.andWhere('item.key = :key', { key })
+				.andWhere('item.scope = :scope', { scope })
+				.getOne();
 
 		// 並行 set 2 本が「両方とも existing=null を観測」してから各自 insert する並行スケジュール
 		const [e1, e2] = await Promise.all([findExisting(), findExisting()]);
 		await Promise.all([
-			e1 ? reg.update(e1.id, { updatedAt: new Date(), value: 'dark' })
-				: reg.insert({ id: genAidx(Date.now()), updatedAt: new Date(), userId: uid, domain: null, scope, key, value: 'dark' }),
-			e2 ? reg.update(e2.id, { updatedAt: new Date(), value: 'light' })
-				: reg.insert({ id: genAidx(Date.now() + 1), updatedAt: new Date(), userId: uid, domain: null, scope, key, value: 'light' }),
+			e1
+				? reg.update(e1.id, { updatedAt: new Date(), value: 'dark' })
+				: reg.insert({
+						id: genAidx(Date.now()),
+						updatedAt: new Date(),
+						userId: uid,
+						domain: null,
+						scope,
+						key,
+						value: 'dark',
+					}),
+			e2
+				? reg.update(e2.id, { updatedAt: new Date(), value: 'light' })
+				: reg.insert({
+						id: genAidx(Date.now() + 1),
+						updatedAt: new Date(),
+						userId: uid,
+						domain: null,
+						scope,
+						key,
+						value: 'light',
+					}),
 		]);
 
 		const rows = await reg.findBy({ userId: uid });
 		// eslint-disable-next-line no-console
-		console.log('[#6] rows for same key:', rows.length, rows.map((r) => r.value));
+		console.log(
+			'[#6] rows for same key:',
+			rows.length,
+			rows.map((r) => r.value),
+		);
 		expect(rows.length).toBe(1); // 正: 同一キーは 1 行のみ
 	});
 });

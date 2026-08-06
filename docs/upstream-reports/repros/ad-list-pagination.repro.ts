@@ -92,7 +92,14 @@ describe('REPRO upstream #8 admin/ad/list publishing:false pagination', () => {
 
 		const overlap = page2.filter((a) => page1.some((p) => p.id === a.id)).map((a) => a.memo);
 		// eslint-disable-next-line no-console
-		console.log('[#8] page1:', page1.map((a) => a.memo), '| page2:', page2.map((a) => a.memo), '| overlap:', overlap);
+		console.log(
+			'[#8] page1:',
+			page1.map((a) => a.memo),
+			'| page2:',
+			page2.map((a) => a.memo),
+			'| overlap:',
+			overlap,
+		);
 
 		// 正: 2 ページ目は 1 ページ目と重複しない
 		expect(overlap).toEqual([]);

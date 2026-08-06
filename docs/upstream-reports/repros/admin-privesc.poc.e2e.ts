@@ -12,7 +12,7 @@ describe('PoC #9 moderator -> admin privilege escalation', () => {
 	let root: any, admin: any, moderator: any;
 
 	beforeAll(async () => {
-		root = await signup({ username: 'root' });       // 最初の signup = インスタンス root/admin
+		root = await signup({ username: 'root' }); // 最初の signup = インスタンス root/admin
 		admin = await signup({ username: 'adminuser' });
 		moderator = await signup({ username: 'moduser' });
 
@@ -26,7 +26,10 @@ describe('PoC #9 moderator -> admin privilege escalation', () => {
 	test('モデレーターが非 root 管理者のパスワードをリセットできてしまう', async () => {
 		const res = await api('admin/reset-password', { userId: admin.id }, moderator);
 		// セキュアなら 403 で拒否されるべき。現状は 200 + 払い出しパスワードが返る (= 脆弱)。
-		expect({ status: res.status, issuedPassword: (res.body as any)?.password }).toStrictEqual({ status: 403, issuedPassword: undefined });
+		expect({ status: res.status, issuedPassword: (res.body as any)?.password }).toStrictEqual({
+			status: 403,
+			issuedPassword: undefined,
+		});
 	});
 
 	test('モデレーターが非 root 管理者の MFA を解除できてしまう', async () => {
