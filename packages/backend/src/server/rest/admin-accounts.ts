@@ -11,7 +11,6 @@ import type { DbQueue, DeliverQueue } from '@/core/queues.js';
 import { RootUserAlreadyAssignedError } from '@/core/SignupStore.js';
 import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
 import { updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js';
-import { RootUserAlreadyAssignedError } from '@/core/SignupStore.js';
 import { fetchUserProfileByEmailFromDatabase } from '@/core/UserProfileStore.js';
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
