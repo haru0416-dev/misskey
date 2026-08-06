@@ -3,18 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { randomUUID } from 'node:crypto';
-import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
-import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase, listBlockeeIdsByBlockerIdFromDatabase, listBlockerIdsByBlockeeIdFromDatabase, listBlockingsByBlockerIdWithPaginationFromDatabase, resolveBlockingPagination } from '@/core/BlockingStore.js';
+import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase, listBlockingsByBlockerIdWithPaginationFromDatabase, resolveBlockingPagination } from '@/core/BlockingStore.js';
 import { deleteFollowRequestByIdFromDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
 import { deleteFollowingAndUpdateUserCountsByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase } from '@/core/UserListMembershipStore.js';
-import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
 import type { IActivity, IBlock, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -24,19 +21,16 @@ import type { Packed, SchemaType } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiBlocking } from '@/models/Blocking.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { UserWebhookDeliverJobData } from '@/queue/types.js';
-import { queueRetentionOptions } from '@/queue/const.js';
 import { HonoApiError, clientError } from './error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './events.js';
 import { fetchOrRegisterFederatedInstance } from './federation.js';
-import { addActivityContext, genLocalUserUri, isLocalUser, isRemoteUser, refreshUserFollowingsCache, renderFollow, renderReject, renderUndo } from './following.js';
+import { addActivityContext, genLocalUserUri, isLocalUser, isRemoteUser, publishUnfollowToLocalFollower, renderFollow, renderReject, renderUndo } from './following.js';
 import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAccountBlockingDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
-	redis: Redis.Redis;
 	deliverQueue: DeliverQueue;
 	userWebhookDeliverQueue: UserWebhookDeliverQueue;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
@@ -93,61 +87,6 @@ async function getTargetUserOrThrow(
 	if (user == null) throw errorFactory();
 
 	return user;
-}
-
-export async function refreshUserBlockingCache(deps: HonoApiAccountBlockingDependencies, blockerId: MiUser['id']): Promise<void> {
-	const blockeeIds = await listBlockeeIdsByBlockerIdFromDatabase(deps.db, blockerId);
-	await deps.redis.set(`kvcache:userBlocking:${blockerId}`, JSON.stringify(blockeeIds), 'EX', 60 * 30);
-}
-
-export async function refreshUserBlockedCache(deps: HonoApiAccountBlockingDependencies, blockeeId: MiUser['id']): Promise<void> {
-	const blockerIds = await listBlockerIdsByBlockeeIdFromDatabase(deps.db, blockeeId);
-	await deps.redis.set(`kvcache:userBlocked:${blockeeId}`, JSON.stringify(blockerIds), 'EX', 60 * 30);
-}
-
-async function enqueueUnfollowWebhook(
-	deps: HonoApiAccountBlockingDependencies,
-	userId: MiUser['id'],
-	user: Packed<'UserDetailedNotMe'>,
-): Promise<void> {
-	const webhooks = await listWebhooksFromDatabase(deps.db, {
-		userId,
-		isActive: true,
-		on: ['unfollow'],
-	});
-
-	await Promise.all(webhooks.map(webhook => {
-		const data: UserWebhookDeliverJobData<'unfollow'> = {
-			type: 'unfollow',
-			content: { user },
-			webhookId: webhook.id,
-			userId: webhook.userId,
-			to: webhook.url,
-			secret: webhook.secret,
-			createdAt: Date.now(),
-			eventId: randomUUID(),
-		};
-
-		return deps.userWebhookDeliverQueue.add(webhook.id, data, {
-			attempts: 4,
-			backoff: {
-				type: 'custom',
-			},
-			...queueRetentionOptions(deps.config),
-		});
-	}));
-}
-
-export async function publishUnfollowToLocalFollower(
-	deps: HonoApiAccountBlockingDependencies,
-	follower: MiUser,
-	followee: MiUser,
-): Promise<void> {
-	if (!isLocalUser(follower)) return;
-
-	const packedFollowee = await packUserDetailedNotMeForHonoApi(deps, followee) as Packed<'UserDetailedNotMe'>;
-	deps.publishMainStream?.(follower.id, 'unfollow', packedFollowee);
-	await enqueueUnfollowWebhook(deps, follower.id, packedFollowee);
 }
 
 async function deliverFollowCancelActivity(
@@ -239,7 +178,6 @@ export async function unfollow(
 	const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(deps.db, following.id, followingFollower.id, followingFollowee.id);
 	if (!deleted) return;
 
-	await refreshUserFollowingsCache(deps, follower.id);
 	await decrementFollowing(deps, followingFollower, followingFollowee);
 
 	if (!silent) {
@@ -272,7 +210,6 @@ export async function remoteRejectForHonoApi(
 		if (followingFollower != null && followingFollowee != null) {
 			const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(deps.db, following.id, followingFollower.id, followingFollowee.id);
 			if (deleted) {
-				await refreshUserFollowingsCache(deps, follower.id);
 				await decrementFollowing(deps, followingFollower, followingFollowee);
 			}
 		}
@@ -353,10 +290,6 @@ export async function blockForHonoApi(
 	blocking.blocker = blocker;
 	blocking.blockee = blockee;
 
-	await Promise.all([
-		refreshUserBlockingCache(deps, blocker.id),
-		refreshUserBlockedCache(deps, blockee.id),
-	]);
 	deps.publishInternalEvent?.('blockingCreated', { blockerId: blocker.id, blockeeId: blockee.id });
 	await deliverBlockActivity(deps, blocking);
 
@@ -398,10 +331,6 @@ export async function unblockForHonoApi(
 	blocking.blockee = blockee;
 
 	await deleteBlockingByIdFromDatabase(deps.db, blocking.id);
-	await Promise.all([
-		refreshUserBlockingCache(deps, blocker.id),
-		refreshUserBlockedCache(deps, blockee.id),
-	]);
 	deps.publishInternalEvent?.('blockingDeleted', { blockerId: blocker.id, blockeeId: blockee.id });
 	await deliverUndoBlockActivity(deps, blocking as MiBlocking & { blocker: MiUser; blockee: MiUser });
 }

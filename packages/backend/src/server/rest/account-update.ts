@@ -12,6 +12,7 @@ import type { Config } from '@/config.js';
 import RE2 from '@/misc/re2.js';
 import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
+import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
 import { fetchDriveFileByIdAndUserIdFromDatabase, fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { listLocalEmojisFromDatabase } from '@/core/EmojiStore.js';
 import { recordHashtagUsagesInDatabase } from '@/core/HashtagStore.js';
@@ -44,7 +45,7 @@ import { HonoApiError } from './error.js';
 import { addActivityContext, deliverNoteActivityForHonoApi, renderEmoji, renderUpdateForHonoApi, type HonoApiNoteApDependencies } from './notes-ap.js';
 import { isKeyWordIncludedForHonoApi, updateHashtagsRankingsForHonoApi } from './notes-create.js';
 import { getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
-import { getIdenticonUrl, packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from './user.js';
+import { packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from './ap-person.js';
 
@@ -550,7 +551,7 @@ export async function handleHonoApiIUpdate(
 	}
 
 
-	let emojis: string[] = [];
+	const emojis: string[] = [];
 	let tags: string[] = [];
 
 	const newName = updates.name === undefined ? user.name : updates.name;
@@ -566,27 +567,27 @@ export async function handleHonoApiIUpdate(
 		if (hasProhibitedWords) throw iUpdateNameContainsProhibitedWordsError();
 
 		const tokens = mfm.parseSimple(newName);
-		emojis = emojis.concat(extractCustomEmojisFromMfm(tokens));
+		emojis.push(...extractCustomEmojisFromMfm(tokens));
 	}
 
 	if (newDescription != null) {
 		const tokens = mfm.parse(newDescription);
-		emojis = emojis.concat(extractCustomEmojisFromMfm(tokens));
+		emojis.push(...extractCustomEmojisFromMfm(tokens));
 		tags = extractHashtags(tokens).map(tag => normalizeForSearch(tag)).splice(0, 32);
 	}
 
 	for (const field of newFields) {
 		const nameTokens = mfm.parseSimple(field.name);
 		const valueTokens = mfm.parseSimple(field.value);
-		emojis = emojis.concat([
+		emojis.push(
 			...extractCustomEmojisFromMfm(nameTokens),
 			...extractCustomEmojisFromMfm(valueTokens),
-		]);
+		);
 	}
 
 	if (newFollowedMessage != null) {
 		const tokens = mfm.parse(newFollowedMessage);
-		emojis = emojis.concat(extractCustomEmojisFromMfm(tokens));
+		emojis.push(...extractCustomEmojisFromMfm(tokens));
 	}
 
 	updates.emojis = emojis;

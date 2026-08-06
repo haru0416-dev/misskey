@@ -8,7 +8,7 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta } from '@/models/_.js';
 import { appendQuery, query } from '@/misc/prelude/url.js';
 
-function getProxiedUrl(config: Config, url: string, mode?: 'static' | 'avatar'): string {
+export function getProxiedUrl(config: Config, url: string, mode?: 'static' | 'avatar'): string {
 	return appendQuery(
 		`${config.media.proxyUrl}/${mode ?? 'image'}.webp`,
 		query({

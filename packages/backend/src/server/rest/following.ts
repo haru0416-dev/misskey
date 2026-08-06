@@ -248,17 +248,6 @@ async function getTargetUserOrThrow(
 	return user;
 }
 
-export async function refreshUserFollowingsCache(deps: HonoApiFollowingDependencies, followerId: MiUser['id']): Promise<void> {
-	const followees = await listFolloweeIdsWithRepliesByFollowerIdFromDatabase(deps.db, followerId);
-	const value: Record<string, { withReplies: boolean }> = {};
-
-	for (const followee of followees) {
-		value[followee.followeeId] = { withReplies: followee.withReplies };
-	}
-
-	await deps.redis.set(`kvcache:userFollowings:${followerId}`, JSON.stringify(value), 'EX', 60 * 30);
-}
-
 async function isNotificationAllowed(
 	deps: HonoApiFollowingDependencies,
 	notifieeId: MiUser['id'],
@@ -335,8 +324,16 @@ async function createFollowingNotification(
 	}).catch(() => {}));
 }
 
+/** follow 系 webhook / mainStream 通知だけに必要な最小 deps (blocking 経路からも共有される)。 */
+export type FollowEventPublishDependencies = UserPackingDependencies & {
+	config: Config;
+	db: MiDrizzleDatabase;
+	userWebhookDeliverQueue: UserWebhookDeliverQueue;
+	publishMainStream?: HonoApiMainStreamPublisher;
+};
+
 async function enqueueUserWebhook(
-	deps: HonoApiFollowingDependencies,
+	deps: FollowEventPublishDependencies,
 	userId: MiUser['id'],
 	type: 'follow' | 'followed' | 'unfollow',
 	user: Packed<'UserDetailedNotMe'> | Packed<'UserLite'>,
@@ -400,8 +397,8 @@ async function publishFollowedToLocalFollowee(
 	}
 }
 
-async function publishUnfollowToLocalFollower(
-	deps: HonoApiFollowingDependencies,
+export async function publishUnfollowToLocalFollower(
+	deps: FollowEventPublishDependencies,
 	follower: MiUser,
 	followee: MiUser,
 ): Promise<void> {
@@ -526,7 +523,6 @@ async function deleteFollowingWithSideEffects(
 	const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(deps.db, followingId, follower.id, followee.id);
 	if (!deleted) return false;
 
-	await refreshUserFollowingsCache(deps, follower.id);
 	await decrementFollowing(deps, follower, followee);
 	await publishUnfollowToLocalFollower(deps, follower, followee);
 
@@ -566,8 +562,6 @@ export async function insertFollowingWithSideEffects(
 		followeeInbox: isRemoteUser(followee) ? followee.inbox : null,
 		followeeSharedInbox: isRemoteUser(followee) ? followee.sharedInbox : null,
 	});
-
-	await refreshUserFollowingsCache(deps, follower.id);
 
 	const requestExists = await followRequestExistsInDatabase(deps.db, follower.id, followee.id);
 	if (requestExists) {

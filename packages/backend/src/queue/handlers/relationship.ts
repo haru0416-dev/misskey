@@ -28,7 +28,6 @@ import {
 	insertFollowingWithSideEffects,
 	isLocalUser,
 	isRemoteUser,
-	refreshUserFollowingsCache,
 	renderAccept,
 	renderFollow,
 	renderReject,
@@ -147,7 +146,6 @@ export async function followWithSideEffectsForHonoApi(
 		await insertFollowingWithSideEffects(deps, follower, followee, omitUndefined({ withReplies, followeeProfile, silent }));
 	} catch (err) {
 		if (isDuplicateKeyValueError(err) && isRemoteUser(follower) && isLocalUser(followee)) {
-			await refreshUserFollowingsCache(deps, follower.id);
 			if (await followRequestExistsInDatabase(deps.db, follower.id, followee.id)) {
 				await deleteFollowRequestFromDatabase(deps.db, follower.id, followee.id);
 			}

@@ -13,6 +13,7 @@ import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiUser } from '@/models/User.js';
 import * as Acct from '@/misc/acct.js';
 import { genIdenticon } from '@/misc/gen-identicon.js';
+import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
 
 export type RootRouteStores = {
 	fetchEmojiByNameAndHost: (db: MiDrizzleDatabase, name: MiEmoji['name'], host: MiEmoji['host']) => Promise<MiEmoji | null>;
@@ -38,14 +39,6 @@ function pathAfter(requestUrl: string, prefix: string): string {
 
 function queryHas(requestUrl: string, key: string): boolean {
 	return new URL(requestUrl).searchParams.has(key);
-}
-
-function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
-	if ((user.host == null || user.host === config.runtime.host) && user.username.includes('.') && meta.iconUrl) {
-		return meta.iconUrl;
-	}
-
-	return `${config.instance.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.runtime.host}`;
 }
 
 function cacheHeaders(): Record<string, string> {

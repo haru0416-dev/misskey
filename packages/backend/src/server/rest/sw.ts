@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import {
@@ -11,7 +10,6 @@ import {
 	deleteSwSubscriptionByEndpointFromDatabase,
 	fetchSwSubscriptionFromDatabase,
 	isDuplicateKeyValueDatabaseError,
-	listSwSubscriptionsByUserIdFromDatabase,
 	updateSwSubscriptionByUserAndEndpointInDatabase,
 	updateSwSubscriptionInDatabase,
 } from '@/core/SwSubscriptionStore.js';
@@ -26,7 +24,6 @@ export type HonoApiSwDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
-	redis: Redis.Redis;
 };
 
 export const swRegisterParamDef = z.object({
@@ -84,19 +81,6 @@ function noSuchRegistrationError(): HonoApiError {
 	});
 }
 
-async function refreshSwSubscriptionsCache(
-	deps: HonoApiSwDependencies,
-	userId: MiLocalUser['id'],
-): Promise<void> {
-	const subscriptions = await listSwSubscriptionsByUserIdFromDatabase(deps.db, userId);
-	await deps.redis.set(
-		`kvcache:userSwSubscriptions:${userId}`,
-		JSON.stringify(subscriptions),
-		'EX',
-		60 * 60,
-	);
-}
-
 export async function handleHonoApiSwRegister(
 	deps: HonoApiSwDependencies,
 	me: MiLocalUser,
@@ -116,7 +100,6 @@ export async function handleHonoApiSwRegister(
 				publickey: params.publickey,
 				sendReadMessage: params.sendReadMessage,
 			});
-			await refreshSwSubscriptionsCache(deps, me.id);
 		}
 
 		return {
@@ -147,7 +130,6 @@ export async function handleHonoApiSwRegister(
 		});
 	}
 
-	await refreshSwSubscriptionsCache(deps, me.id);
 
 	return {
 		state: 'subscribed',
@@ -186,8 +168,7 @@ export async function handleHonoApiSwUnregister(
 	await deleteSwSubscriptionByEndpointFromDatabase(deps.db, me?.id ?? null, params.endpoint);
 
 	if (me != null) {
-		await refreshSwSubscriptionsCache(deps, me.id);
-	}
+		}
 }
 
 export async function handleHonoApiSwUpdateRegistration(
@@ -207,7 +188,6 @@ export async function handleHonoApiSwUpdateRegistration(
 	await updateSwSubscriptionInDatabase(deps.db, swSubscription.id, {
 		sendReadMessage,
 	});
-	await refreshSwSubscriptionsCache(deps, me.id);
 
 	return {
 		userId: swSubscription.userId,

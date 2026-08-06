@@ -21,7 +21,7 @@ import {
 	toPuny,
 	tryLockFetchInstanceMetadata,
 	unlockFetchInstanceMetadata,
-	updateFederatedInstanceAndCache,
+	updateFederatedInstance,
 } from '../../server/rest/federation.js';
 import type { HonoChartWriters } from '../../server/chart-runtime.js';
 
@@ -76,7 +76,7 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 			if (i == null) return;
 
 			if (i.isNotResponding) {
-				await updateFederatedInstanceAndCache(deps, i.id, {
+				await updateFederatedInstance(deps, i.id, {
 					isNotResponding: false,
 					notRespondingSince: null,
 				});
@@ -89,7 +89,7 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 					tryLock: h => tryLockFetchInstanceMetadata(deps, h),
 					unlock: h => unlockFetchInstanceMetadata(deps, h),
 					fetchOrRegisterInstance: h => fetchOrRegisterFederatedInstance(deps, h),
-					updateInstance: (id, updates) => updateFederatedInstanceAndCache(deps, id, updates).then(() => {}),
+					updateInstance: (id, updates) => updateFederatedInstance(deps, id, updates).then(() => {}),
 				}, i);
 			}
 
@@ -105,21 +105,21 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 
 		fetchOrRegisterFederatedInstance(deps, host).then(async i2 => {
 			if (!i2.isNotResponding) {
-				await updateFederatedInstanceAndCache(deps, i2.id, {
+				await updateFederatedInstance(deps, i2.id, {
 					isNotResponding: true,
 					notRespondingSince: new Date(),
 				});
 			} else if (i2.notRespondingSince) {
 				// 1週間以上不通ならサスペンド
 				if (i2.suspensionState === 'none' && i2.notRespondingSince.getTime() <= Date.now() - (1000 * 60 * 60 * 24 * 7)) {
-					await updateFederatedInstanceAndCache(deps, i2.id, {
+					await updateFederatedInstance(deps, i2.id, {
 						suspensionState: 'autoSuspendedForNotResponding',
 					});
 				}
 			} else {
 				// isNotRespondingがtrueでnotRespondingSinceがnullの場合はnotRespondingSinceをセット
 				// notRespondingSinceは新たな機能なので、それ以前のデータにはnotRespondingSinceがない場合がある
-				await updateFederatedInstanceAndCache(deps, i2.id, {
+				await updateFederatedInstance(deps, i2.id, {
 					notRespondingSince: new Date(),
 				});
 			}
@@ -134,7 +134,7 @@ export async function handleHonoQueueDeliver(deps: HonoQueueDeliverDependencies,
 			if (!res.isRetryable) {
 				// 相手が閉鎖していることを明示しているため、配送停止する
 				if (job.data.isSharedInbox && res.statusCode === 410) {
-					fetchOrRegisterFederatedInstance(deps, host).then(i2 => updateFederatedInstanceAndCache(deps, i2.id, {
+					fetchOrRegisterFederatedInstance(deps, host).then(i2 => updateFederatedInstance(deps, i2.id, {
 						suspensionState: 'goneSuspended',
 					}));
 					throw new Bull.UnrecoverableError(`${host} is gone`);
