@@ -12,7 +12,7 @@ export const systemWebhookEventTypes = [
 	'inactiveModeratorsWarning',
 	'inactiveModeratorsInvitationOnlyChanged',
 ] as const;
-export type SystemWebhookEventType = typeof systemWebhookEventTypes[number];
+export type SystemWebhookEventType = (typeof systemWebhookEventTypes)[number];
 
 export class MiSystemWebhook {
 	public id: string;

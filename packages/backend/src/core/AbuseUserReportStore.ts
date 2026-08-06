@@ -56,11 +56,7 @@ export async function fetchAbuseUserReportByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiAbuseUserReport['id'],
 ): Promise<MiAbuseUserReport | null> {
-	const [row] = await db
-		.select()
-		.from(abuseUserReport)
-		.where(eq(abuseUserReport.id, id))
-		.limit(1);
+	const [row] = await db.select().from(abuseUserReport).where(eq(abuseUserReport.id, id)).limit(1);
 
 	return row == null ? null : deserializeAbuseUserReport(row);
 }
@@ -86,10 +82,7 @@ export async function listAbuseUserReportsByIdsFromDatabase(
 		return [];
 	}
 
-	const rows = await db
-		.select()
-		.from(abuseUserReport)
-		.where(inArray(abuseUserReport.id, ids));
+	const rows = await db.select().from(abuseUserReport).where(inArray(abuseUserReport.id, ids));
 
 	return rows.map(deserializeAbuseUserReport);
 }
@@ -98,10 +91,7 @@ export async function createAbuseUserReportInDatabase(
 	db: MiDrizzleDatabase,
 	data: AbuseUserReportInsert,
 ): Promise<MiAbuseUserReport> {
-	const [row] = await db
-		.insert(abuseUserReport)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(abuseUserReport).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create abuse user report');
@@ -132,10 +122,7 @@ export async function markAbuseUserReportForwardedInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiAbuseUserReport['id'],
 ): Promise<void> {
-	await db
-		.update(abuseUserReport)
-		.set({ forwarded: true })
-		.where(eq(abuseUserReport.id, id));
+	await db.update(abuseUserReport).set({ forwarded: true }).where(eq(abuseUserReport.id, id));
 }
 
 export async function updateAbuseUserReportModerationNoteInDatabase(
@@ -143,10 +130,7 @@ export async function updateAbuseUserReportModerationNoteInDatabase(
 	id: MiAbuseUserReport['id'],
 	moderationNote: MiAbuseUserReport['moderationNote'] | undefined,
 ): Promise<void> {
-	await db
-		.update(abuseUserReport)
-		.set({ moderationNote })
-		.where(eq(abuseUserReport.id, id));
+	await db.update(abuseUserReport).set({ moderationNote }).where(eq(abuseUserReport.id, id));
 }
 
 export async function listAbuseUserReportsFromDatabase(
@@ -165,18 +149,30 @@ export async function listAbuseUserReportsFromDatabase(
 	applyAbuseUserReportPaginationCondition(conditions, options.sinceId, options.untilId);
 
 	switch (options.state) {
-		case 'resolved': conditions.push(eq(abuseUserReport.resolved, true)); break;
-		case 'unresolved': conditions.push(eq(abuseUserReport.resolved, false)); break;
+		case 'resolved':
+			conditions.push(eq(abuseUserReport.resolved, true));
+			break;
+		case 'unresolved':
+			conditions.push(eq(abuseUserReport.resolved, false));
+			break;
 	}
 
 	switch (options.reporterOrigin) {
-		case 'local': conditions.push(isNull(abuseUserReport.reporterHost)); break;
-		case 'remote': conditions.push(isNotNull(abuseUserReport.reporterHost)); break;
+		case 'local':
+			conditions.push(isNull(abuseUserReport.reporterHost));
+			break;
+		case 'remote':
+			conditions.push(isNotNull(abuseUserReport.reporterHost));
+			break;
 	}
 
 	switch (options.targetUserOrigin) {
-		case 'local': conditions.push(isNull(abuseUserReport.targetUserHost)); break;
-		case 'remote': conditions.push(isNotNull(abuseUserReport.targetUserHost)); break;
+		case 'local':
+			conditions.push(isNull(abuseUserReport.targetUserHost));
+			break;
+		case 'remote':
+			conditions.push(isNotNull(abuseUserReport.targetUserHost));
+			break;
 	}
 
 	const rows = await db

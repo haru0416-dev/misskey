@@ -38,7 +38,9 @@ function isBatchItemResult(v: unknown): v is BatchItemResult {
 	}
 	if (obj['success'] === false) {
 		const error = obj['error'];
-		return typeof error === 'object' && error !== null && typeof (error as Record<string, unknown>)['code'] === 'string';
+		return (
+			typeof error === 'object' && error !== null && typeof (error as Record<string, unknown>)['code'] === 'string'
+		);
 	}
 	return false;
 }
@@ -54,7 +56,9 @@ function isDetectImagesResponse(v: unknown): v is DetectImagesResponse {
 	}
 	if (obj['success'] === false) {
 		const error = obj['error'];
-		return typeof error === 'object' && error !== null && typeof (error as Record<string, unknown>)['code'] === 'string';
+		return (
+			typeof error === 'object' && error !== null && typeof (error as Record<string, unknown>)['code'] === 'string'
+		);
 	}
 	return false;
 }
@@ -62,11 +66,7 @@ function isDetectImagesResponse(v: unknown): v is DetectImagesResponse {
 // サイドカーの判定エンドポイント。baseUrl にパスプレフィックスがあっても連結できるよう先頭スラッシュは付けない。
 const DETECT_IMAGES_PATH = 'v1/detect-images';
 
-export function createAiService(
-	meta: MiMeta,
-	httpRequestService: HttpRequestService,
-	loggerService: LoggerService,
-) {
+export function createAiService(meta: MiMeta, httpRequestService: HttpRequestService, loggerService: LoggerService) {
 	const logger = loggerService.getLogger('ai');
 
 	/**
@@ -108,12 +108,17 @@ export function createAiService(
 		const results: (Prediction[] | null)[] = [];
 		for (let i = 0; i < sources.length; i += chunkSize) {
 			const chunk = sources.slice(i, i + chunkSize);
-			results.push(...await detectChunk(url, apiKey, timeout, chunk));
+			results.push(...(await detectChunk(url, apiKey, timeout, chunk)));
 		}
 		return results;
 	}
 
-	async function detectChunk(url: string, apiKey: string | null, timeout: number, chunk: Buffer[]): Promise<(Prediction[] | null)[]> {
+	async function detectChunk(
+		url: string,
+		apiKey: string | null,
+		timeout: number,
+		chunk: Buffer[],
+	): Promise<(Prediction[] | null)[]> {
 		try {
 			const form = new FormData();
 			for (const [i, source] of chunk.entries()) {
@@ -130,12 +135,16 @@ export function createAiService(
 
 			// 外部サービスとして通常の proxy / private address 制限を HttpRequestService.send 側で適用する。
 			// サイドカーへの private network 接続は allowedPrivateNetworks 等で明示的に許可する。
-			const res = await httpRequestService.send(url, {
-				method: 'POST',
-				headers,
-				body: form,
-				timeout,
-			}, { throwErrorWhenResponseNotOk: false });
+			const res = await httpRequestService.send(
+				url,
+				{
+					method: 'POST',
+					headers,
+					body: form,
+					timeout,
+				},
+				{ throwErrorWhenResponseNotOk: false },
+			);
 
 			if (!res.ok) {
 				logger.warn(`sensitive detection request failed: ${res.status} ${res.statusText}`);

@@ -7,18 +7,44 @@ import { usersReportAbuseParamDef } from '@/server/rest/admin-abuse-reports.js';
 import { usersClipsParamDef } from '@/server/rest/clips.js';
 import { userListParamDef } from '@/server/rest/favorites.js';
 import { usersFlashsParamDef } from '@/server/rest/flash.js';
-import { usersFollowersOrFollowingParamDef, usersFollowingParamDef, usersGetFollowingUsersByBirthdayDocsParamDef } from '@/server/rest/following.js';
+import {
+	usersFollowersOrFollowingParamDef,
+	usersFollowingParamDef,
+	usersGetFollowingUsersByBirthdayDocsParamDef,
+} from '@/server/rest/following.js';
 import { usersGalleryPostsParamDef } from '@/server/rest/gallery.js';
 import { usersFeaturedNotesParamDef, usersNotesParamDef } from '@/server/rest/note.js';
 import { usersPagesParamDef } from '@/server/rest/pages.js';
 import { usersReactionsParamDef } from '@/server/rest/user-reactions.js';
-import { usersGetFrequentlyRepliedUsersParamDef, usersParamDef, usersRecommendationParamDef, usersRelationParamDef, usersSearchByUsernameAndHostParamDef, usersSearchParamDef, usersShowParamDef, usersUpdateMemoParamDef } from '@/server/rest/user.js';
-import { createFromPublicParamDef, createParamDef, getMembershipsParamDef, pullParamDef, pushParamDef, updateMembershipParamDef } from '@/server/rest/users-lists.js';
-import { usersAchievementsParamDef, usersListsDeleteParamDef, usersListsListParamDef, usersListsShowParamDef, usersListsUpdateParamDef } from '@/server/rest/users.js';
+import {
+	usersGetFrequentlyRepliedUsersParamDef,
+	usersParamDef,
+	usersRecommendationParamDef,
+	usersRelationParamDef,
+	usersSearchByUsernameAndHostParamDef,
+	usersSearchParamDef,
+	usersShowParamDef,
+	usersUpdateMemoParamDef,
+} from '@/server/rest/user.js';
+import {
+	createFromPublicParamDef,
+	createParamDef,
+	getMembershipsParamDef,
+	pullParamDef,
+	pushParamDef,
+	updateMembershipParamDef,
+} from '@/server/rest/users-lists.js';
+import {
+	usersAchievementsParamDef,
+	usersListsDeleteParamDef,
+	usersListsListParamDef,
+	usersListsShowParamDef,
+	usersListsUpdateParamDef,
+} from '@/server/rest/users.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
-	'users': {
+	users: {
 		meta: {
 			tags: ['users'],
 
@@ -26,10 +52,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserDetailed',
 				},
 			},
@@ -57,10 +85,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Clip',
 				},
 			},
@@ -77,10 +107,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -95,10 +127,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Flash',
 				},
 			},
@@ -115,10 +149,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Following',
 				},
 			},
@@ -149,10 +185,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Following',
 				},
 			},
@@ -190,23 +228,28 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'misskey:id',
 						},
 						birthday: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						user: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'UserLite',
 						},
 					},
@@ -223,10 +266,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'GalleryPost',
 				},
 			},
@@ -243,19 +288,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						user: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'UserDetailed',
 						},
 						weight: {
 							type: 'number',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 					},
 				},
@@ -285,7 +334,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserList',
 			},
 
@@ -306,7 +356,8 @@ export const endpointMetas = {
 			kind: 'write:account',
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserList',
 			},
 
@@ -441,10 +492,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserList',
 				},
 			},
@@ -455,7 +508,7 @@ export const endpointMetas = {
 					id: 'a8af4a82-0980-4cc4-a6af-8b0ffd54465e',
 				},
 				remoteUser: {
-					message: 'Not allowed to load the remote user\'s list',
+					message: "Not allowed to load the remote user's list",
 					code: 'REMOTE_USER_NOT_ALLOWED',
 					id: '53858f1b-3315-4a01-81b7-db9b48d4b79a',
 				},
@@ -559,7 +612,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				allOf: [
 					{
 						type: 'object',
@@ -567,15 +621,18 @@ export const endpointMetas = {
 					},
 					{
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							likedCount: {
 								type: 'number',
-								optional: true, nullable: false,
+								optional: true,
+								nullable: false,
 							},
 							isLiked: {
 								type: 'boolean',
-								optional: true, nullable: false,
+								optional: true,
+								nullable: false,
 							},
 						},
 					},
@@ -624,7 +681,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserList',
 			},
 
@@ -670,10 +728,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -696,10 +756,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Page',
 				},
 			},
@@ -716,10 +778,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'NoteReactionWithNote',
 				},
 			},
@@ -731,7 +795,8 @@ export const endpointMetas = {
 					id: '673a7dd2-6924-1093-e0c0-e68456ceae5c',
 				},
 				isRemoteUser: {
-					message: 'Currently unavailable to display reactions of remote users. See https://github.com/misskey-dev/misskey/issues/12964',
+					message:
+						'Currently unavailable to display reactions of remote users. See https://github.com/misskey-dev/misskey/issues/12964',
 					code: 'IS_REMOTE_USER',
 					id: '6b95fa98-8cf9-2350-e284-f0ffdb54a805',
 				},
@@ -751,10 +816,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserDetailed',
 				},
 			},
@@ -771,47 +838,57 @@ export const endpointMetas = {
 			description: 'Show the different kinds of relations between the authenticated user and the specified user(s).',
 
 			res: {
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				oneOf: [
 					{
 						type: 'object',
 						properties: {
 							id: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								format: 'id',
 							},
 							isFollowing: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							hasPendingFollowRequestFromYou: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							hasPendingFollowRequestToYou: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							isFollowed: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							isBlocking: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							isBlocked: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							isMuted: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							isRenoteMuted: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 						},
 					},
@@ -819,44 +896,54 @@ export const endpointMetas = {
 						type: 'array',
 						items: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							properties: {
 								id: {
 									type: 'string',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 									format: 'id',
 								},
 								isFollowing: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								hasPendingFollowRequestFromYou: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								hasPendingFollowRequestToYou: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								isFollowed: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								isBlocking: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								isBlocked: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								isMuted: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								isRenoteMuted: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 							},
 						},
@@ -908,10 +995,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'User',
 				},
 			},
@@ -928,10 +1017,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'User',
 				},
 			},
@@ -947,7 +1038,8 @@ export const endpointMetas = {
 			description: 'Show the properties of a user.',
 
 			res: {
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				oneOf: [
 					{
 						type: 'object',

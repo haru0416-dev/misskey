@@ -34,7 +34,11 @@ async function createTestUser(deps: HonoStreamConnectionDependencies, prefix: st
 	});
 }
 
-async function createTestRemoteUser(deps: HonoStreamConnectionDependencies, prefix: string, host: string): Promise<MiUser> {
+async function createTestRemoteUser(
+	deps: HonoStreamConnectionDependencies,
+	prefix: string,
+	host: string,
+): Promise<MiUser> {
 	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase(), host },
@@ -48,7 +52,10 @@ function collectSentMessages(): { raw: string[]; send: (raw: string) => void } {
 }
 
 function channelMessages(raw: string[]): { id: string; type: string; body: unknown }[] {
-	return raw.map(r => JSON.parse(r)).filter(m => m.type === 'channel').map(m => m.body);
+	return raw
+		.map((r) => JSON.parse(r))
+		.filter((m) => m.type === 'channel')
+		.map((m) => m.body);
 }
 
 // notesStream ハンドラは内部で filterNoteForStreamingHidingForHonoApi 等の実DBクエリを await するため、
@@ -57,13 +64,13 @@ async function waitUntil(condition: () => boolean, timeoutMs = 2000, intervalMs 
 	const start = Date.now();
 	while (!condition()) {
 		if (Date.now() - start > timeoutMs) return;
-		await new Promise(resolve => setTimeout(resolve, intervalMs));
+		await new Promise((resolve) => setTimeout(resolve, intervalMs));
 	}
 }
 
 // 「受信されない」ことを検証するテスト用: 非同期処理が(誤って)完了していないか一定時間待ってから確認する。
 async function shortDelay(ms = 300): Promise<void> {
-	await new Promise(resolve => setTimeout(resolve, ms));
+	await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 describe('hono-stream-connection: note filtering channels', () => {
@@ -83,7 +90,14 @@ describe('hono-stream-connection: note filtering channels', () => {
 		const viewer = await createTestUser(deps, 'honostreamhashtagviewer');
 		const author = await createTestUser(deps, 'honostreamhashtagauthor');
 		const noteId = genId();
-		await createNoteInDatabase(deps.db, { id: noteId, text: '#foo hello', userId: author.id, userHost: null, visibility: 'public', tags: ['foo'] });
+		await createNoteInDatabase(deps.db, {
+			id: noteId,
+			text: '#foo hello',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+			tags: ['foo'],
+		});
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
@@ -104,7 +118,14 @@ describe('hono-stream-connection: note filtering channels', () => {
 		const viewer = await createTestUser(deps, 'honostreamhashtagviewer2');
 		const author = await createTestUser(deps, 'honostreamhashtagauthor2');
 		const noteId = genId();
-		await createNoteInDatabase(deps.db, { id: noteId, text: '#bar hello', userId: author.id, userHost: null, visibility: 'public', tags: ['bar'] });
+		await createNoteInDatabase(deps.db, {
+			id: noteId,
+			text: '#bar hello',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+			tags: ['bar'],
+		});
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
@@ -126,7 +147,14 @@ describe('hono-stream-connection: note filtering channels', () => {
 		const mkChannelId = genId();
 		await createChannelInDatabase(deps.db, { id: mkChannelId, name: 'test channel', userId: author.id });
 		const noteId = genId();
-		await createNoteInDatabase(deps.db, { id: noteId, text: 'in channel', userId: author.id, userHost: null, visibility: 'public', channelId: mkChannelId });
+		await createNoteInDatabase(deps.db, {
+			id: noteId,
+			text: 'in channel',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+			channelId: mkChannelId,
+		});
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
@@ -150,7 +178,14 @@ describe('hono-stream-connection: note filtering channels', () => {
 		await createChannelInDatabase(deps.db, { id: mkChannelId, name: 'test channel 2', userId: author.id });
 		await createChannelInDatabase(deps.db, { id: otherChannelId, name: 'test channel 3', userId: author.id });
 		const noteId = genId();
-		await createNoteInDatabase(deps.db, { id: noteId, text: 'in other channel', userId: author.id, userHost: null, visibility: 'public', channelId: otherChannelId });
+		await createNoteInDatabase(deps.db, {
+			id: noteId,
+			text: 'in other channel',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+			channelId: otherChannelId,
+		});
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
@@ -180,9 +215,21 @@ describe('hono-stream-connection: note filtering channels', () => {
 		});
 
 		const memberNoteId = genId();
-		await createNoteInDatabase(deps.db, { id: memberNoteId, text: 'from member', userId: member.id, userHost: null, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: memberNoteId,
+			text: 'from member',
+			userId: member.id,
+			userHost: null,
+			visibility: 'public',
+		});
 		const nonMemberNoteId = genId();
-		await createNoteInDatabase(deps.db, { id: nonMemberNoteId, text: 'from non-member', userId: nonMember.id, userHost: null, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: nonMemberNoteId,
+			text: 'from non-member',
+			userId: nonMember.id,
+			userHost: null,
+			visibility: 'public',
+		});
 
 		const connection = new HonoStreamConnection(deps, owner, null);
 		await connection.init();
@@ -191,7 +238,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', { listId }, 'userList', true);
-		expect(raw.some(r => JSON.parse(r).type === 'connected')).toBe(true);
+		expect(raw.some((r) => JSON.parse(r).type === 'connected')).toBe(true);
 
 		subscriber.emit('notesStream', await packNoteForHonoApi(deps, memberNoteId, owner));
 		subscriber.emit('notesStream', await packNoteForHonoApi(deps, nonMemberNoteId, owner));
@@ -207,9 +254,21 @@ describe('hono-stream-connection: note filtering channels', () => {
 		const remoteAuthor = await createTestRemoteUser(deps, 'honostreamltlremote', 'ltl-remote.example.com');
 
 		const localNoteId = genId();
-		await createNoteInDatabase(deps.db, { id: localNoteId, text: 'local public', userId: localAuthor.id, userHost: null, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: localNoteId,
+			text: 'local public',
+			userId: localAuthor.id,
+			userHost: null,
+			visibility: 'public',
+		});
 		const remoteNoteId = genId();
-		await createNoteInDatabase(deps.db, { id: remoteNoteId, text: 'remote public', userId: remoteAuthor.id, userHost: remoteAuthor.host, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: remoteNoteId,
+			text: 'remote public',
+			userId: remoteAuthor.id,
+			userHost: remoteAuthor.host,
+			visibility: 'public',
+		});
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
 		await connection.init();
@@ -232,9 +291,22 @@ describe('hono-stream-connection: note filtering channels', () => {
 		await createChannelInDatabase(deps.db, { id: mkChannelId, name: 'gtl test channel', userId: author.id });
 
 		const publicNoteId = genId();
-		await createNoteInDatabase(deps.db, { id: publicNoteId, text: 'public note', userId: author.id, userHost: null, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: publicNoteId,
+			text: 'public note',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+		});
 		const channelNoteId = genId();
-		await createNoteInDatabase(deps.db, { id: channelNoteId, text: 'channel note', userId: author.id, userHost: null, visibility: 'public', channelId: mkChannelId });
+		await createNoteInDatabase(deps.db, {
+			id: channelNoteId,
+			text: 'channel note',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+			channelId: mkChannelId,
+		});
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
 		await connection.init();
@@ -257,9 +329,21 @@ describe('hono-stream-connection: note filtering channels', () => {
 		await createFollowingInDatabase(deps.db, { id: genId(), followerId: viewer.id, followeeId: followee.id });
 
 		const followeeNoteId = genId();
-		await createNoteInDatabase(deps.db, { id: followeeNoteId, text: 'from followee', userId: followee.id, userHost: null, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: followeeNoteId,
+			text: 'from followee',
+			userId: followee.id,
+			userHost: null,
+			visibility: 'public',
+		});
 		const strangerNoteId = genId();
-		await createNoteInDatabase(deps.db, { id: strangerNoteId, text: 'from stranger', userId: stranger.id, userHost: null, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: strangerNoteId,
+			text: 'from stranger',
+			userId: stranger.id,
+			userHost: null,
+			visibility: 'public',
+		});
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
 		await connection.init();
@@ -281,9 +365,21 @@ describe('hono-stream-connection: note filtering channels', () => {
 		const remoteStranger = await createTestRemoteUser(deps, 'honostreamhybridremote', 'hybrid-remote.example.com');
 
 		const localNoteId = genId();
-		await createNoteInDatabase(deps.db, { id: localNoteId, text: 'local public unrelated', userId: localStranger.id, userHost: null, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: localNoteId,
+			text: 'local public unrelated',
+			userId: localStranger.id,
+			userHost: null,
+			visibility: 'public',
+		});
 		const remoteNoteId = genId();
-		await createNoteInDatabase(deps.db, { id: remoteNoteId, text: 'remote public unrelated', userId: remoteStranger.id, userHost: remoteStranger.host, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: remoteNoteId,
+			text: 'remote public unrelated',
+			userId: remoteStranger.id,
+			userHost: remoteStranger.host,
+			visibility: 'public',
+		});
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
 		await connection.init();
@@ -314,7 +410,13 @@ describe('hono-stream-connection: note filtering channels', () => {
 		});
 
 		const noteId = genId();
-		await createNoteInDatabase(deps.db, { id: noteId, text: 'role timeline note', userId: author.id, userHost: null, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: noteId,
+			text: 'role timeline note',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+		});
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
@@ -344,7 +446,13 @@ describe('hono-stream-connection: note filtering channels', () => {
 		});
 
 		const noteId = genId();
-		await createNoteInDatabase(deps.db, { id: noteId, text: 'role timeline note 2', userId: author.id, userHost: null, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: noteId,
+			text: 'role timeline note 2',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+		});
 		const packed = await packNoteForHonoApi(deps, noteId, viewer);
 
 		const connection = new HonoStreamConnection(deps, viewer, null);
@@ -374,7 +482,13 @@ describe('hono-stream-connection: note filtering channels', () => {
 		});
 
 		const noteId = genId();
-		await createNoteInDatabase(deps.db, { id: noteId, text: 'antenna matched note', userId: author.id, userHost: null, visibility: 'public' });
+		await createNoteInDatabase(deps.db, {
+			id: noteId,
+			text: 'antenna matched note',
+			userId: author.id,
+			userHost: null,
+			visibility: 'public',
+		});
 
 		const connection = new HonoStreamConnection(deps, owner, null);
 		await connection.init();
@@ -383,7 +497,7 @@ describe('hono-stream-connection: note filtering channels', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', { antennaId }, 'antenna', true);
-		expect(raw.some(r => JSON.parse(r).type === 'connected')).toBe(true);
+		expect(raw.some((r) => JSON.parse(r).type === 'connected')).toBe(true);
 
 		subscriber.emit(`antennaStream:${antennaId}`, { type: 'note', body: { id: noteId } });
 		await waitUntil(() => channelMessages(raw).length > 0);

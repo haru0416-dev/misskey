@@ -4,7 +4,13 @@
  */
 
 import { z } from 'zod';
-import { captchaErrorCodes, getCaptchaSetting, saveCaptchaSetting, supportedCaptchaProviders, type CaptchaError } from '@/core/CaptchaLogic.js';
+import {
+	captchaErrorCodes,
+	getCaptchaSetting,
+	saveCaptchaSetting,
+	supportedCaptchaProviders,
+	type CaptchaError,
+} from '@/core/CaptchaLogic.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -31,7 +37,6 @@ export const captchaSaveParamDef = z.object({
 	secret: z.string().nullable().optional(),
 	instanceUrl: z.string().nullable().optional(),
 });
-
 
 function captchaErrorToHonoApiError(error: CaptchaError): HonoApiError {
 	switch (error.code) {
@@ -97,20 +102,24 @@ export async function handleHonoApiAdminCaptchaSave(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(captchaSaveParamDef, body);
-	const result = await saveCaptchaSetting({
-		httpRequestService: deps.httpRequestService,
-		updateMeta: async data => {
-			const { before, after } = await updateMetaInDatabase(deps.db, data);
-			Object.assign(deps.meta, after);
-			deps.meta.rootUser = null;
-			deps.publishInternalEvent?.('metaUpdated', { ...(before === undefined ? {} : { before }), after });
+	const result = await saveCaptchaSetting(
+		{
+			httpRequestService: deps.httpRequestService,
+			updateMeta: async (data) => {
+				const { before, after } = await updateMetaInDatabase(deps.db, data);
+				Object.assign(deps.meta, after);
+				deps.meta.rootUser = null;
+				deps.publishInternalEvent?.('metaUpdated', { ...(before === undefined ? {} : { before }), after });
+			},
 		},
-	}, params.provider, omitUndefined({
-		sitekey: params.sitekey,
-		secret: params.secret,
-		instanceUrl: params.instanceUrl,
-		captchaResult: params.captchaResult,
-	}));
+		params.provider,
+		omitUndefined({
+			sitekey: params.sitekey,
+			secret: params.secret,
+			instanceUrl: params.instanceUrl,
+			captchaResult: params.captchaResult,
+		}),
+	);
 
 	if (!result.success) {
 		throw captchaErrorToHonoApiError(result.error);

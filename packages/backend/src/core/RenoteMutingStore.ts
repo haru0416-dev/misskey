@@ -12,10 +12,7 @@ import type { MiUser } from '@/models/User.js';
 export type RenoteMutingOrder = 'asc' | 'desc';
 
 function renoteMutingCondition(muterId: MiUser['id'], muteeId: MiUser['id']) {
-	return and(
-		eq(renoteMuting.muterId, muterId),
-		eq(renoteMuting.muteeId, muteeId),
-	);
+	return and(eq(renoteMuting.muterId, muterId), eq(renoteMuting.muteeId, muteeId));
 }
 
 function applyRenoteMutingPaginationCondition(
@@ -43,7 +40,7 @@ export async function listRenoteMuterIdsByMuteeIdFromDatabase(
 		.from(renoteMuting)
 		.where(eq(renoteMuting.muteeId, muteeId));
 
-	return rows.map(row => row.muterId);
+	return rows.map((row) => row.muterId);
 }
 
 export async function renoteMutingExistsInDatabase(
@@ -65,11 +62,7 @@ export async function fetchRenoteMutingFromDatabase(
 	muterId: MiUser['id'],
 	muteeId: MiUser['id'],
 ): Promise<RenoteMutingRow | null> {
-	const [row] = await db
-		.select()
-		.from(renoteMuting)
-		.where(renoteMutingCondition(muterId, muteeId))
-		.limit(1);
+	const [row] = await db.select().from(renoteMuting).where(renoteMutingCondition(muterId, muteeId)).limit(1);
 
 	return row ?? null;
 }
@@ -78,11 +71,7 @@ export async function fetchRenoteMutingByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: RenoteMutingRow['id'],
 ): Promise<RenoteMutingRow> {
-	const [row] = await db
-		.select()
-		.from(renoteMuting)
-		.where(eq(renoteMuting.id, id))
-		.limit(1);
+	const [row] = await db.select().from(renoteMuting).where(eq(renoteMuting.id, id)).limit(1);
 
 	if (row == null) {
 		throw new Error(`Renote muting ${id} not found`);
@@ -91,13 +80,8 @@ export async function fetchRenoteMutingByIdOrFailFromDatabase(
 	return row;
 }
 
-export async function createRenoteMutingInDatabase(
-	db: MiDrizzleDatabase,
-	data: RenoteMutingInsert,
-): Promise<void> {
-	await db
-		.insert(renoteMuting)
-		.values(data);
+export async function createRenoteMutingInDatabase(db: MiDrizzleDatabase, data: RenoteMutingInsert): Promise<void> {
+	await db.insert(renoteMuting).values(data);
 }
 
 export async function deleteRenoteMutingsByIdsFromDatabase(
@@ -108,23 +92,23 @@ export async function deleteRenoteMutingsByIdsFromDatabase(
 		return;
 	}
 
-	await db
-		.delete(renoteMuting)
-		.where(inArray(renoteMuting.id, ids));
+	await db.delete(renoteMuting).where(inArray(renoteMuting.id, ids));
 }
 
 export async function listRenoteMuteeIdsByMuterIdFromDatabase(
 	db: MiDrizzleDatabase,
 	muterId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const statement = preparedQueryFor(db, 'renoteMuting:muteeIdsByMuterId', () => db
-		.select({ muteeId: renoteMuting.muteeId })
-		.from(renoteMuting)
-		.where(eq(renoteMuting.muterId, sql.placeholder('muterId')))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'renoteMuting:muteeIdsByMuterId', () =>
+		db
+			.select({ muteeId: renoteMuting.muteeId })
+			.from(renoteMuting)
+			.where(eq(renoteMuting.muterId, sql.placeholder('muterId')))
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ muterId });
 
-	return rows.map(row => row.muteeId);
+	return rows.map((row) => row.muteeId);
 }
 
 export async function listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase(
@@ -137,12 +121,9 @@ export async function listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase(
 	const rows = await db
 		.select({ muteeId: renoteMuting.muteeId })
 		.from(renoteMuting)
-		.where(and(
-			eq(renoteMuting.muterId, muterId),
-			sql`${renoteMuting.muteeId} = ANY(${sql.param(muteeIds)})`,
-		));
+		.where(and(eq(renoteMuting.muterId, muterId), sql`${renoteMuting.muteeId} = ANY(${sql.param(muteeIds)})`));
 
-	return rows.map(row => row.muteeId);
+	return rows.map((row) => row.muteeId);
 }
 
 export async function listRenoteMutingsByMuterIdFromDatabase(
@@ -155,9 +136,7 @@ export async function listRenoteMutingsByMuterIdFromDatabase(
 		untilId?: string | null;
 	},
 ): Promise<RenoteMutingRow[]> {
-	const conditions: SQL[] = [
-		eq(renoteMuting.muterId, muterId),
-	];
+	const conditions: SQL[] = [eq(renoteMuting.muterId, muterId)];
 
 	applyRenoteMutingPaginationCondition(conditions, options.sinceId, options.untilId);
 

@@ -20,10 +20,7 @@ export type DeleteNoteReactionResult = {
 };
 
 function noteReactionByUserAndNoteCondition(userId: MiUser['id'], noteId: MiNote['id']) {
-	return and(
-		eq(noteReaction.userId, userId),
-		eq(noteReaction.noteId, noteId),
-	);
+	return and(eq(noteReaction.userId, userId), eq(noteReaction.noteId, noteId));
 }
 
 function applyNoteReactionPaginationCondition(
@@ -61,11 +58,7 @@ export async function fetchNoteReactionByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: NoteReactionRow['id'],
 ): Promise<NoteReactionRow | null> {
-	const [row] = await db
-		.select()
-		.from(noteReaction)
-		.where(eq(noteReaction.id, id))
-		.limit(1);
+	const [row] = await db.select().from(noteReaction).where(eq(noteReaction.id, id)).limit(1);
 
 	return row ?? null;
 }
@@ -88,11 +81,7 @@ export async function fetchNoteReactionByUserAndNoteFromDatabase(
 	userId: MiUser['id'],
 	noteId: MiNote['id'],
 ): Promise<NoteReactionRow | null> {
-	const [row] = await db
-		.select()
-		.from(noteReaction)
-		.where(noteReactionByUserAndNoteCondition(userId, noteId))
-		.limit(1);
+	const [row] = await db.select().from(noteReaction).where(noteReactionByUserAndNoteCondition(userId, noteId)).limit(1);
 
 	return row ?? null;
 }
@@ -106,14 +95,18 @@ export async function listNoteReactionsByUserAndNoteIdsFromDatabase(
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-	const statement = preparedQueryFor(db, 'noteReaction:byUserIdAndNoteIds', () => db
-		.select()
-		.from(noteReaction)
-		.where(and(
-			eq(noteReaction.userId, sql.placeholder('userId')),
-			sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
-		))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'noteReaction:byUserIdAndNoteIds', () =>
+		db
+			.select()
+			.from(noteReaction)
+			.where(
+				and(
+					eq(noteReaction.userId, sql.placeholder('userId')),
+					sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
+				),
+			)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 
 	return await statement.execute({ userId, noteIds });
 }
@@ -125,14 +118,18 @@ export async function listNoteReactionsByNoteIdsAndUserIdsFromDatabase(
 ): Promise<NoteReactionRow[]> {
 	if (noteIds.length === 0 || userIds.length === 0) return [];
 
-	const statement = preparedQueryFor(db, 'noteReaction:byNoteIdsAndUserIds', () => db
-		.select()
-		.from(noteReaction)
-		.where(and(
-			sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
-			sql`${noteReaction.userId} = ANY(${sql.placeholder('userIds')})`,
-		))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'noteReaction:byNoteIdsAndUserIds', () =>
+		db
+			.select()
+			.from(noteReaction)
+			.where(
+				and(
+					sql`${noteReaction.noteId} = ANY(${sql.placeholder('noteIds')})`,
+					sql`${noteReaction.userId} = ANY(${sql.placeholder('userIds')})`,
+				),
+			)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 
 	return await statement.execute({ noteIds, userIds });
 }
@@ -151,33 +148,21 @@ export async function fetchNoteReactionByUserAndNoteOrFailFromDatabase(
 	return row;
 }
 
-export async function createNoteReactionInDatabase(
-	db: MiDrizzleDatabase,
-	data: NoteReactionInsert,
-): Promise<void> {
-	await db
-		.insert(noteReaction)
-		.values(data);
+export async function createNoteReactionInDatabase(db: MiDrizzleDatabase, data: NoteReactionInsert): Promise<void> {
+	await db.insert(noteReaction).values(data);
 }
 
 export async function deleteNoteReactionByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: NoteReactionRow['id'],
 ): Promise<DeleteNoteReactionResult> {
-	const rows = await db
-		.delete(noteReaction)
-		.where(eq(noteReaction.id, id))
-		.returning({ id: noteReaction.id });
+	const rows = await db.delete(noteReaction).where(eq(noteReaction.id, id)).returning({ id: noteReaction.id });
 
 	return { affected: rows.length };
 }
 
-export async function countNoteReactionsFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(noteReaction);
+export async function countNoteReactionsFromDatabase(db: MiDrizzleDatabase): Promise<number> {
+	const [row] = await db.select({ count: count() }).from(noteReaction);
 
 	return row?.count ?? 0;
 }
@@ -193,9 +178,7 @@ export async function listNoteReactionsByNoteIdFromDatabase(
 		type?: string | null;
 	},
 ): Promise<NoteReactionRow[]> {
-	const conditions: SQL[] = [
-		eq(noteReaction.noteId, noteId),
-	];
+	const conditions: SQL[] = [eq(noteReaction.noteId, noteId)];
 
 	if (options.type != null) {
 		conditions.push(eq(noteReaction.reaction, options.type));
@@ -221,9 +204,7 @@ export async function listNoteReactionsByUserIdFromDatabase(
 		untilId?: string | null;
 	},
 ): Promise<NoteReactionRow[]> {
-	const conditions: SQL[] = [
-		eq(noteReaction.userId, userId),
-	];
+	const conditions: SQL[] = [eq(noteReaction.userId, userId)];
 
 	applyNoteReactionPaginationCondition(conditions, options.sinceId, options.untilId);
 

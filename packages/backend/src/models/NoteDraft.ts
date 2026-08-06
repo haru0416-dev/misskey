@@ -33,7 +33,7 @@ export class MiNoteDraft {
 
 	public localOnly: boolean;
 
-	public reactionAcceptance: typeof noteReactionAcceptances[number];
+	public reactionAcceptance: (typeof noteReactionAcceptances)[number];
 
 	/**
 	 * public ... 公開
@@ -41,7 +41,7 @@ export class MiNoteDraft {
 	 * followers ... フォロワーのみ
 	 * specified ... visibleUserIds で指定したユーザーのみ
 	 */
-	public visibility: typeof noteVisibilities[number];
+	public visibility: (typeof noteVisibilities)[number];
 
 	public fileIds: MiDriveFile['id'][];
 
@@ -55,7 +55,6 @@ export class MiNoteDraft {
 	// (deleting channel is not implemented so it's not happening now but may happen in the future)
 	public channel: MiChannel | null;
 
-
 	public hasPoll: boolean;
 
 	public pollChoices: string[];
@@ -65,7 +64,6 @@ export class MiNoteDraft {
 	public pollExpiresAt: Date | null;
 
 	public pollExpiredAfter: number | null;
-
 
 	// 予約日時
 	// これがあるだけでは実際に予約されているかどうかはわからない

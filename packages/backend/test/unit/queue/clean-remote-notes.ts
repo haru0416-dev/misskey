@@ -12,7 +12,10 @@ import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type 
 import { createUserInDatabase } from '@/core/UserStore.js';
 import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueCleanRemoteNotes, type HonoQueueCleanRemoteNotesDependencies } from '@/queue/handlers/clean-remote-notes.js';
+import {
+	handleHonoQueueCleanRemoteNotes,
+	type HonoQueueCleanRemoteNotesDependencies,
+} from '@/queue/handlers/clean-remote-notes.js';
 import type { Config } from '@/config.js';
 
 function fakeJob(): Bull.Job<Record<string, unknown>> {
@@ -61,7 +64,7 @@ describe('hono-queue-clean-remote-notes', () => {
 			host,
 		});
 
-		const noteId = genId(Date.now() - (1000 * 60 * 60 * 24 * 100));
+		const noteId = genId(Date.now() - 1000 * 60 * 60 * 24 * 100);
 		await createNoteInDatabase(db, {
 			id: noteId,
 			text: 'hono-queue-clean-remote-notes test',
@@ -75,7 +78,10 @@ describe('hono-queue-clean-remote-notes', () => {
 		// (NODE_ENV=testではバッチ間のsetTimeoutはスキップされるが、CTEクエリ自体の
 		// 累積コストは残るため、maxDurationによる打ち切りを安全弁として使う)。
 		const result = await handleHonoQueueCleanRemoteNotes(
-			{ ...deps, meta: { ...deps.meta, enableRemoteNotesCleaning: true, remoteNotesCleaningMaxProcessingDurationInMinutes: 0.1 } },
+			{
+				...deps,
+				meta: { ...deps.meta, enableRemoteNotesCleaning: true, remoteNotesCleaningMaxProcessingDurationInMinutes: 0.1 },
+			},
 			fakeJob(),
 		);
 

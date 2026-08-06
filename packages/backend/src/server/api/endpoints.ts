@@ -54,7 +54,6 @@ interface IEndpointMetaBase {
 	 * 省略した場合はリミテーションは無いものとして解釈されます。
 	 */
 	readonly limit?: {
-
 		/**
 		 * 複数のエンドポイントでリミットを共有したい場合に指定するキー
 		 */
@@ -109,22 +108,27 @@ interface IEndpointMetaBase {
 	readonly cacheSec?: number;
 }
 
-export type IEndpointMeta = (Omit<IEndpointMetaBase, 'requireCrential' | 'requireModerator' | 'requireAdmin'> & {
-	requireCredential?: false,
-	requireAdmin?: false,
-	requireModerator?: false,
-}) | (Omit<IEndpointMetaBase, 'secure'> & {
-	secure: true,
-}) | (Omit<IEndpointMetaBase, 'requireCredential' | 'kind'> & {
-	requireCredential: true,
-	kind: (typeof permissions)[number],
-}) | (Omit<IEndpointMetaBase, 'requireModerator' | 'kind'> & {
-	requireModerator: true,
-	kind: (typeof permissions)[number],
-}) | (Omit<IEndpointMetaBase, 'requireAdmin' | 'kind'> & {
-	requireAdmin: true,
-	kind: (typeof permissions)[number],
-});
+export type IEndpointMeta =
+	| (Omit<IEndpointMetaBase, 'requireCrential' | 'requireModerator' | 'requireAdmin'> & {
+			requireCredential?: false;
+			requireAdmin?: false;
+			requireModerator?: false;
+	  })
+	| (Omit<IEndpointMetaBase, 'secure'> & {
+			secure: true;
+	  })
+	| (Omit<IEndpointMetaBase, 'requireCredential' | 'kind'> & {
+			requireCredential: true;
+			kind: (typeof permissions)[number];
+	  })
+	| (Omit<IEndpointMetaBase, 'requireModerator' | 'kind'> & {
+			requireModerator: true;
+			kind: (typeof permissions)[number];
+	  })
+	| (Omit<IEndpointMetaBase, 'requireAdmin' | 'kind'> & {
+			requireAdmin: true;
+			kind: (typeof permissions)[number];
+	  });
 
 export interface IEndpoint {
 	name: string;

@@ -6,17 +6,38 @@
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import Chart, { type KVs } from '@/core/chart/core.js';
-import { name as activeUsersChartName, schema as activeUsersChartSchema } from '@/core/chart/charts/entities/active-users.js';
+import {
+	name as activeUsersChartName,
+	schema as activeUsersChartSchema,
+} from '@/core/chart/charts/entities/active-users.js';
 import { name as apRequestChartName, schema as apRequestChartSchema } from '@/core/chart/charts/entities/ap-request.js';
 import { name as driveChartName, schema as driveChartSchema } from '@/core/chart/charts/entities/drive.js';
-import { name as federationChartName, schema as federationChartSchema } from '@/core/chart/charts/entities/federation.js';
+import {
+	name as federationChartName,
+	schema as federationChartSchema,
+} from '@/core/chart/charts/entities/federation.js';
 import { name as instanceChartName, schema as instanceChartSchema } from '@/core/chart/charts/entities/instance.js';
 import { name as notesChartName, schema as notesChartSchema } from '@/core/chart/charts/entities/notes.js';
-import { name as perUserDriveChartName, schema as perUserDriveChartSchema } from '@/core/chart/charts/entities/per-user-drive.js';
-import { name as perUserFollowingChartName, schema as perUserFollowingChartSchema } from '@/core/chart/charts/entities/per-user-following.js';
-import { name as perUserNotesChartName, schema as perUserNotesChartSchema } from '@/core/chart/charts/entities/per-user-notes.js';
-import { name as perUserPvChartName, schema as perUserPvChartSchema } from '@/core/chart/charts/entities/per-user-pv.js';
-import { name as perUserReactionsChartName, schema as perUserReactionsChartSchema } from '@/core/chart/charts/entities/per-user-reactions.js';
+import {
+	name as perUserDriveChartName,
+	schema as perUserDriveChartSchema,
+} from '@/core/chart/charts/entities/per-user-drive.js';
+import {
+	name as perUserFollowingChartName,
+	schema as perUserFollowingChartSchema,
+} from '@/core/chart/charts/entities/per-user-following.js';
+import {
+	name as perUserNotesChartName,
+	schema as perUserNotesChartSchema,
+} from '@/core/chart/charts/entities/per-user-notes.js';
+import {
+	name as perUserPvChartName,
+	schema as perUserPvChartSchema,
+} from '@/core/chart/charts/entities/per-user-pv.js';
+import {
+	name as perUserReactionsChartName,
+	schema as perUserReactionsChartSchema,
+} from '@/core/chart/charts/entities/per-user-reactions.js';
 import { name as usersChartName, schema as usersChartSchema } from '@/core/chart/charts/entities/users.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { countNoteReactionsFromDatabase } from '@/core/NoteReactionStore.js';
@@ -33,12 +54,15 @@ export type HonoApiChartDependencies = {
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 };
 
-type HonoChartSchema = Record<string, {
-	uniqueIncrement?: boolean;
-	intersection?: string[] | ReadonlyArray<string>;
-	range?: 'big' | 'small' | 'medium';
-	accumulate?: boolean;
-}>;
+type HonoChartSchema = Record<
+	string,
+	{
+		uniqueIncrement?: boolean;
+		intersection?: string[] | ReadonlyArray<string>;
+		range?: 'big' | 'small' | 'medium';
+		accumulate?: boolean;
+	}
+>;
 
 // getChart()/getChartRaw() never touch tickMajor/tickMinor (those only run on the
 // write-side tick()/save() paths), so a read-only stub is a faithful, stateless port

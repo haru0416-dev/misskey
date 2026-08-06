@@ -13,11 +13,21 @@ import { maximum } from '@/misc/prelude/array.js';
 import { listFrequentlyRepliedUsersFromDatabase, listHydratedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listAvatarDecorationsFromDatabaseCached } from '@/core/AvatarDecorationStore.js';
 import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
-import { listUserNotePiningsByUserIdFromDatabase, listUserNotePiningsByUserIdsFromDatabase } from '@/core/UserNotePiningStore.js';
+import {
+	listUserNotePiningsByUserIdFromDatabase,
+	listUserNotePiningsByUserIdsFromDatabase,
+} from '@/core/UserNotePiningStore.js';
 import { listRoleAssignmentsByUserIdsFromDatabase } from '@/core/RoleAssignmentStore.js';
 import { listRolesFromDatabase } from '@/core/RoleStore.js';
-import { countUserSecurityKeysByUserIdFromDatabase, listUserIdsWithSecurityKeysFromDatabase, listUserSecurityKeySummariesByUserIdFromDatabase } from '@/core/UserSecurityKeyStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase, listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
+import {
+	countUserSecurityKeysByUserIdFromDatabase,
+	listUserIdsWithSecurityKeysFromDatabase,
+	listUserSecurityKeySummariesByUserIdFromDatabase,
+} from '@/core/UserSecurityKeyStore.js';
+import {
+	fetchUserProfileByUserIdOrFailFromDatabase,
+	listUserProfilesByUserIdsFromDatabase,
+} from '@/core/UserProfileStore.js';
 import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role-policies.js';
 import {
 	deserializeUser,
@@ -31,12 +41,33 @@ import {
 	listUsersByUsernamesAndHostsFromDatabase,
 	listUsersByUrisOrIdsFromDatabase,
 } from '@/core/UserStore.js';
-import { blockingExistsInDatabase, listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase, listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase } from '@/core/BlockingStore.js';
-import { followRequestExistsInDatabase, listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase, listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase } from '@/core/FollowRequestStore.js';
-import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase, followingExistsInDatabase, listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase, listFollowingsByFollowerIdAndFolloweeIdsFromDatabase } from '@/core/FollowingStore.js';
+import {
+	blockingExistsInDatabase,
+	listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase,
+	listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase,
+} from '@/core/BlockingStore.js';
+import {
+	followRequestExistsInDatabase,
+	listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
+	listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
+} from '@/core/FollowRequestStore.js';
+import {
+	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
+	followingExistsInDatabase,
+	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
+	listFollowingsByFollowerIdAndFolloweeIdsFromDatabase,
+} from '@/core/FollowingStore.js';
 import { listMuteeIdsByMuterIdAndMuteeIdsFromDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
-import { listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
-import { deleteUserMemoFromDatabase, fetchUserMemoTextFromDatabase, listUserMemoTextsByUserIdFromDatabase, upsertUserMemoInDatabase } from '@/core/UserMemoStore.js';
+import {
+	listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase,
+	renoteMutingExistsInDatabase,
+} from '@/core/RenoteMutingStore.js';
+import {
+	deleteUserMemoFromDatabase,
+	fetchUserMemoTextFromDatabase,
+	listUserMemoTextsByUserIdFromDatabase,
+	upsertUserMemoInDatabase,
+} from '@/core/UserMemoStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
@@ -53,7 +84,13 @@ import type { MiUserProfile } from '@/models/UserProfile.js';
 import { HonoApiError } from './error.js';
 import { packNoteManyForHonoApi, populateEmojis, populateEmojisMany, type HonoApiNoteDependencies } from './note.js';
 import type { HonoChartWriters } from '../chart-runtime.js';
-import { computeHonoApiUserRoles, getHonoApiRolePolicies, getHonoApiUserRoles, isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-policy.js';
+import {
+	computeHonoApiUserRoles,
+	getHonoApiRolePolicies,
+	getHonoApiUserRoles,
+	isHonoApiModerator,
+	type HonoApiRolePolicyDependencies,
+} from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type MeDetailedHonoApiResponse = Record<string, unknown>;
@@ -121,26 +158,31 @@ async function buildHonoApiAvatarDecorations(
 	deps: UserPackingDependencies,
 	users: MiUser[],
 ): Promise<Map<MiUser['id'], HonoApiAvatarDecorationLite[]>> {
-	const usersWithDecorations = users.filter(user => user.avatarDecorations.length > 0);
+	const usersWithDecorations = users.filter((user) => user.avatarDecorations.length > 0);
 	if (usersWithDecorations.length === 0) return new Map();
 
 	const decorations = await listAvatarDecorationsFromDatabaseCached(deps.db);
-	const decorationById = new Map(decorations.map(decoration => [decoration.id, decoration]));
+	const decorationById = new Map(decorations.map((decoration) => [decoration.id, decoration]));
 	const map = new Map<MiUser['id'], HonoApiAvatarDecorationLite[]>();
 
 	for (const user of usersWithDecorations) {
-		map.set(user.id, user.avatarDecorations.flatMap(userDecoration => {
-			const decoration = decorationById.get(userDecoration.id);
-			if (decoration == null) return [];
-			return [{
-				id: userDecoration.id,
-				...(userDecoration.angle ? { angle: userDecoration.angle } : {}),
-				...(userDecoration.flipH ? { flipH: true } : {}),
-				...(userDecoration.offsetX ? { offsetX: userDecoration.offsetX } : {}),
-				...(userDecoration.offsetY ? { offsetY: userDecoration.offsetY } : {}),
-				url: decoration.url,
-			}];
-		}));
+		map.set(
+			user.id,
+			user.avatarDecorations.flatMap((userDecoration) => {
+				const decoration = decorationById.get(userDecoration.id);
+				if (decoration == null) return [];
+				return [
+					{
+						id: userDecoration.id,
+						...(userDecoration.angle ? { angle: userDecoration.angle } : {}),
+						...(userDecoration.flipH ? { flipH: true } : {}),
+						...(userDecoration.offsetX ? { offsetX: userDecoration.offsetX } : {}),
+						...(userDecoration.offsetY ? { offsetY: userDecoration.offsetY } : {}),
+						url: decoration.url,
+					},
+				];
+			}),
+		);
 	}
 
 	return map;
@@ -158,29 +200,35 @@ export async function packUserLiteForHonoApi(
 }
 
 /** srcs (MiUser本体 or ID) を MiUser[] に解決する。バッチ取得で見つからなかったIDは1件ずつ fetchUserByIdOrFailFromDatabase にフォールバックする (見つからなければ throw)。 */
-async function resolveUsersFromSrcsForHonoApi(deps: UserPackingDependencies, srcs: (MiUser['id'] | MiUser)[]): Promise<MiUser[]> {
+async function resolveUsersFromSrcsForHonoApi(
+	deps: UserPackingDependencies,
+	srcs: (MiUser['id'] | MiUser)[],
+): Promise<MiUser[]> {
 	const explicitUsers = srcs.filter((src): src is MiUser => typeof src === 'object');
 	const ids = [...new Set(srcs.filter((src): src is string => typeof src === 'string'))];
 	const fetchedUsers = ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
-	const userById = new Map([...explicitUsers, ...fetchedUsers].map(user => [user.id, user]));
-	const missingIds = ids.filter(id => !userById.has(id));
+	const userById = new Map([...explicitUsers, ...fetchedUsers].map((user) => [user.id, user]));
+	const missingIds = ids.filter((id) => !userById.has(id));
 	if (missingIds.length > 0) {
-		for (const user of await Promise.all(missingIds.map(id => fetchUserByIdOrFailFromDatabase(deps.db, id)))) {
+		for (const user of await Promise.all(missingIds.map((id) => fetchUserByIdOrFailFromDatabase(deps.db, id)))) {
 			userById.set(user.id, user);
 		}
 	}
 
-	return srcs.map(src => typeof src === 'object' ? src : userById.get(src)!);
+	return srcs.map((src) => (typeof src === 'object' ? src : userById.get(src)!));
 }
 
 async function populateUserEmojisManyForHonoApi(
 	deps: UserPackingDependencies,
 	users: MiUser[],
 ): Promise<Map<MiUser['id'], Record<string, string>>> {
-	const resolved = await populateEmojisMany(deps, users.map(user => ({
-		emojiNames: user.emojis,
-		noteUserHost: user.host,
-	})));
+	const resolved = await populateEmojisMany(
+		deps,
+		users.map((user) => ({
+			emojiNames: user.emojis,
+			noteUserHost: user.host,
+		})),
+	);
 
 	return new Map(users.map((user, index) => [user.id, resolved[index]!]));
 }
@@ -193,13 +241,24 @@ export async function packUserLiteManyForHonoApi(
 	const avatarDecorations = await buildHonoApiAvatarDecorations(deps, users);
 	const emojisByUserId = await populateUserEmojisManyForHonoApi(deps, users);
 
-	return users.map(user => packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? [], emojisByUserId.get(user.id) ?? {}));
+	return users.map((user) =>
+		packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? [], emojisByUserId.get(user.id) ?? {}),
+	);
 }
 
 type UserRelationForPack = Awaited<ReturnType<typeof getUserRelationForHonoApi>>;
 
 type UserDetailedExtras = {
-	roles: { id: string; name: string; color: string | null; iconUrl: string | null; description: string; isModerator: boolean; isAdministrator: boolean; displayOrder: number }[];
+	roles: {
+		id: string;
+		name: string;
+		color: string | null;
+		iconUrl: string | null;
+		description: string;
+		isModerator: boolean;
+		isAdministrator: boolean;
+		displayOrder: number;
+	}[];
 	badgeRoles: { name: string; iconUrl: string | null; displayOrder: number }[] | undefined;
 	isSilenced: boolean;
 	canChat: boolean;
@@ -235,39 +294,50 @@ async function buildUserDetailedExtrasForHonoApi(
 	let iAmModerator = hint?.iAmModerator ?? false;
 	if (hint?.iAmModerator === undefined && me != null) {
 		const meUser = isMe ? user : await fetchUserByIdFromDatabase(deps.db, me.id);
-		iAmModerator = meUser != null && await isHonoApiModerator(deps, meUser);
+		iAmModerator = meUser != null && (await isHonoApiModerator(deps, meUser));
 	}
 
-	const userRoles = hint?.userRoles ?? await getHonoApiUserRoles(deps, user);
-	const policies = hint?.policies ?? await getHonoApiRolePolicies(deps, user, userRoles);
+	const userRoles = hint?.userRoles ?? (await getHonoApiUserRoles(deps, user));
+	const policies = hint?.policies ?? (await getHonoApiRolePolicies(deps, user, userRoles));
 
-	const pins = hint?.pins ?? await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' });
-	const pinnedNoteIds = pins.map(pin => pin.noteId);
+	const pins = hint?.pins ?? (await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' }));
+	const pinnedNoteIds = pins.map((pin) => pin.noteId);
 	let pinnedNotes: unknown[] = hint?.pinnedNotes ?? [];
 	if (hint?.pinnedNotes == null && pinnedNoteIds.length > 0 && deps.redis != null) {
 		const notes = await listHydratedNotesByIdsFromDatabase(deps.db, pinnedNoteIds);
-		const noteById = new Map(notes.map(note => [note.id, note]));
-		const orderedNotes = pinnedNoteIds.map(id => noteById.get(id)).filter(note => note != null);
-		pinnedNotes = await packNoteManyForHonoApi(deps as UserPackingDependencies & HonoApiNoteDependencies, orderedNotes, me, { detail: true });
+		const noteById = new Map(notes.map((note) => [note.id, note]));
+		const orderedNotes = pinnedNoteIds.map((id) => noteById.get(id)).filter((note) => note != null);
+		pinnedNotes = await packNoteManyForHonoApi(
+			deps as UserPackingDependencies & HonoApiNoteDependencies,
+			orderedNotes,
+			me,
+			{ detail: true },
+		);
 	}
 
-	const relation = hint?.relation !== undefined
-		? hint.relation
-		: (me != null && !isMe ? await getUserRelationForHonoApi(deps, me.id, user.id) : null);
+	const relation =
+		hint?.relation !== undefined
+			? hint.relation
+			: me != null && !isMe
+				? await getUserRelationForHonoApi(deps, me.id, user.id)
+				: null;
 
-	const twoFactor = (isMe || iAmModerator) ? {
-		twoFactorEnabled: profile.twoFactorEnabled,
-		usePasswordLessLogin: profile.usePasswordLessLogin,
-		securityKeys: profile.twoFactorEnabled
-			? (hint?.hasSecurityKey ?? (await countUserSecurityKeysByUserIdFromDatabase(deps.db, user.id)) >= 1)
-			: false,
-	} : null;
+	const twoFactor =
+		isMe || iAmModerator
+			? {
+					twoFactorEnabled: profile.twoFactorEnabled,
+					usePasswordLessLogin: profile.usePasswordLessLogin,
+					securityKeys: profile.twoFactorEnabled
+						? (hint?.hasSecurityKey ?? (await countUserSecurityKeysByUserIdFromDatabase(deps.db, user.id)) >= 1)
+						: false,
+				}
+			: null;
 
 	return {
 		roles: userRoles
-			.filter(role => role.isPublic)
+			.filter((role) => role.isPublic)
 			.sort((a, b) => b.displayOrder - a.displayOrder)
-			.map(role => ({
+			.map((role) => ({
 				id: role.id,
 				name: role.name,
 				color: role.color,
@@ -277,12 +347,13 @@ async function buildUserDetailedExtrasForHonoApi(
 				isAdministrator: role.isAdministrator,
 				displayOrder: role.displayOrder,
 			})),
-		badgeRoles: (deps.meta.showRoleBadgesOfRemoteUsers || user.host == null)
-			? userRoles
-				.filter(role => role.asBadge && (role.isPublic || iAmModerator))
-				.sort((a, b) => b.displayOrder - a.displayOrder)
-				.map(role => ({ name: role.name, iconUrl: role.iconUrl, displayOrder: role.displayOrder }))
-			: undefined,
+		badgeRoles:
+			deps.meta.showRoleBadgesOfRemoteUsers || user.host == null
+				? userRoles
+						.filter((role) => role.asBadge && (role.isPublic || iAmModerator))
+						.sort((a, b) => b.displayOrder - a.displayOrder)
+						.map((role) => ({ name: role.name, iconUrl: role.iconUrl, displayOrder: role.displayOrder }))
+				: undefined,
 		isSilenced: !policies.canPublicNote,
 		canChat: policies.chatAvailability === 'available',
 		pinnedNoteIds,
@@ -312,16 +383,21 @@ export async function packUserDetailedNotMeManyForHonoApi(
 	me?: { id: MiUser['id'] } | null,
 ): Promise<UserDetailedNotMeHonoApiResponse[]> {
 	const users = await resolveUsersFromSrcsForHonoApi(deps, srcs);
-	const userIds = [...new Set(users.map(user => user.id))];
+	const userIds = [...new Set(users.map((user) => user.id))];
 	const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, userIds);
-	const profileByUserId = new Map(profiles.map(profile => [profile.userId, profile]));
+	const profileByUserId = new Map(profiles.map((profile) => [profile.userId, profile]));
 	const memoByTargetUserId = me ? await listUserMemoTextsByUserIdFromDatabase(deps.db, me.id) : null;
 
 	const meUser = me != null ? await fetchUserByIdFromDatabase(deps.db, me.id) : null;
-	const iAmModerator = meUser != null && await isHonoApiModerator(deps, meUser);
-	const relationByUserId = me != null
-		? await getUserRelationsForHonoApi(deps, me.id, users.filter(user => user.id !== me.id).map(user => user.id))
-		: null;
+	const iAmModerator = meUser != null && (await isHonoApiModerator(deps, meUser));
+	const relationByUserId =
+		me != null
+			? await getUserRelationsForHonoApi(
+					deps,
+					me.id,
+					users.filter((user) => user.id !== me.id).map((user) => user.id),
+				)
+			: null;
 
 	// ユーザー毎に発行していた roles(2クエリ)+pins(1クエリ) を一覧単位の3クエリに集約する
 	// (負荷計測で role_assignment/role 各68k回・pining 54k回/3分の主因だった)。
@@ -332,9 +408,12 @@ export async function packUserDetailedNotMeManyForHonoApi(
 	]);
 	const [securityKeyUserIds, alsoKnownAsByUserId, emojisByUserId] = await Promise.all([
 		me != null
-			? listUserIdsWithSecurityKeysFromDatabase(deps.db, users
-				.filter(user => (iAmModerator || user.id === me.id) && profileByUserId.get(user.id)?.twoFactorEnabled)
-				.map(user => user.id))
+			? listUserIdsWithSecurityKeysFromDatabase(
+					deps.db,
+					users
+						.filter((user) => (iAmModerator || user.id === me.id) && profileByUserId.get(user.id)?.twoFactorEnabled)
+						.map((user) => user.id),
+				)
 			: Promise.resolve([]),
 		resolveAlsoKnownAsManyForHonoApi(deps, users),
 		populateUserEmojisManyForHonoApi(deps, users),
@@ -343,77 +422,106 @@ export async function packUserDetailedNotMeManyForHonoApi(
 	const assignmentsByUserId = new Map<string, typeof allAssignments>();
 	for (const assignment of allAssignments) {
 		let list = assignmentsByUserId.get(assignment.userId);
-		if (!list) { list = []; assignmentsByUserId.set(assignment.userId, list); }
+		if (!list) {
+			list = [];
+			assignmentsByUserId.set(assignment.userId, list);
+		}
 		list.push(assignment);
 	}
 	const pinsByUserId = new Map<string, typeof allPins>();
 	for (const pin of allPins) {
 		let list = pinsByUserId.get(pin.userId);
-		if (!list) { list = []; pinsByUserId.set(pin.userId, list); }
+		if (!list) {
+			list = [];
+			pinsByUserId.set(pin.userId, list);
+		}
 		list.push(pin);
 	}
-	const allPinnedNoteIds = [...new Set(allPins.map(pin => pin.noteId))];
+	const allPinnedNoteIds = [...new Set(allPins.map((pin) => pin.noteId))];
 	const packedPinnedNoteById = new Map<string, Packed<'Note'>>();
 	if (allPinnedNoteIds.length > 0 && deps.redis != null) {
 		const notes = await listHydratedNotesByIdsFromDatabase(deps.db, allPinnedNoteIds);
-		const noteById = new Map(notes.map(note => [note.id, note]));
-		const orderedNotes = allPinnedNoteIds.map(id => noteById.get(id)).filter(note => note != null);
-		const packedPinnedNotes = await packNoteManyForHonoApi(deps as UserPackingDependencies & HonoApiNoteDependencies, orderedNotes, me, { detail: true });
+		const noteById = new Map(notes.map((note) => [note.id, note]));
+		const orderedNotes = allPinnedNoteIds.map((id) => noteById.get(id)).filter((note) => note != null);
+		const packedPinnedNotes = await packNoteManyForHonoApi(
+			deps as UserPackingDependencies & HonoApiNoteDependencies,
+			orderedNotes,
+			me,
+			{ detail: true },
+		);
 		for (const note of packedPinnedNotes) {
 			packedPinnedNoteById.set(note.id, note);
 		}
 	}
 
-	return await Promise.all(users.map(async user => {
-		const profile = profileByUserId.get(user.id) ?? await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-		const pins = pinsByUserId.get(user.id) ?? [];
-		const hasSecurityKey = me != null && (iAmModerator || user.id === me.id) && profile.twoFactorEnabled
-			? securityKeyUserIdSet.has(user.id)
-			: undefined;
-		const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, me, omitUndefined({
-			iAmModerator,
-			relation: relationByUserId?.get(user.id) ?? null,
-			userRoles: computeHonoApiUserRoles(deps, user, allRoles, assignmentsByUserId.get(user.id) ?? []),
-			pins,
-			pinnedNotes: pins.map(pin => packedPinnedNoteById.get(pin.noteId)).filter(note => note != null),
-			hasSecurityKey,
-		}));
-		return packUserDetailedNotMeCoreForHonoApi(
-			deps,
-			user,
-			profile,
-			memoByTargetUserId ? (memoByTargetUserId.get(user.id) ?? null) : null,
-			extras,
-			omitUndefined({
-				alsoKnownAs: alsoKnownAsByUserId.get(user.id),
-				emojis: emojisByUserId.get(user.id),
-			}),
-		);
-	}));
+	return await Promise.all(
+		users.map(async (user) => {
+			const profile =
+				profileByUserId.get(user.id) ?? (await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id));
+			const pins = pinsByUserId.get(user.id) ?? [];
+			const hasSecurityKey =
+				me != null && (iAmModerator || user.id === me.id) && profile.twoFactorEnabled
+					? securityKeyUserIdSet.has(user.id)
+					: undefined;
+			const extras = await buildUserDetailedExtrasForHonoApi(
+				deps,
+				user,
+				profile,
+				me,
+				omitUndefined({
+					iAmModerator,
+					relation: relationByUserId?.get(user.id) ?? null,
+					userRoles: computeHonoApiUserRoles(deps, user, allRoles, assignmentsByUserId.get(user.id) ?? []),
+					pins,
+					pinnedNotes: pins.map((pin) => packedPinnedNoteById.get(pin.noteId)).filter((note) => note != null),
+					hasSecurityKey,
+				}),
+			);
+			return packUserDetailedNotMeCoreForHonoApi(
+				deps,
+				user,
+				profile,
+				memoByTargetUserId ? (memoByTargetUserId.get(user.id) ?? null) : null,
+				extras,
+				omitUndefined({
+					alsoKnownAs: alsoKnownAsByUserId.get(user.id),
+					emojis: emojisByUserId.get(user.id),
+				}),
+			);
+		}),
+	);
 }
 
-export async function resolveAlsoKnownAsForHonoApi(deps: UserPackingDependencies, alsoKnownAs: string[] | null): Promise<string[] | null> {
+export async function resolveAlsoKnownAsForHonoApi(
+	deps: UserPackingDependencies,
+	alsoKnownAs: string[] | null,
+): Promise<string[] | null> {
 	if (alsoKnownAs == null || alsoKnownAs.length === 0) return null;
 
 	const localPrefix = `${deps.config.instance.url}/users/`;
-	const remoteUris = alsoKnownAs.filter(uri => !uri.startsWith(localPrefix));
-	const remoteUsers = remoteUris.length > 0 ? await listUsersByUrisOrIdsFromDatabase(deps.db, { uris: remoteUris, ids: [] }) : [];
-	const remoteIdByUri = new Map(remoteUsers.map(u => [u.uri, u.id]));
+	const remoteUris = alsoKnownAs.filter((uri) => !uri.startsWith(localPrefix));
+	const remoteUsers =
+		remoteUris.length > 0 ? await listUsersByUrisOrIdsFromDatabase(deps.db, { uris: remoteUris, ids: [] }) : [];
+	const remoteIdByUri = new Map(remoteUsers.map((u) => [u.uri, u.id]));
 
 	return alsoKnownAs
-		.map(uri => uri.startsWith(localPrefix) ? uri.slice(localPrefix.length) : (remoteIdByUri.get(uri) ?? null))
+		.map((uri) => (uri.startsWith(localPrefix) ? uri.slice(localPrefix.length) : (remoteIdByUri.get(uri) ?? null)))
 		.filter((id): id is string => id != null);
 }
 
-async function resolveAlsoKnownAsManyForHonoApi(deps: UserPackingDependencies, users: MiUser[]): Promise<Map<MiUser['id'], string[] | null>> {
+async function resolveAlsoKnownAsManyForHonoApi(
+	deps: UserPackingDependencies,
+	users: MiUser[],
+): Promise<Map<MiUser['id'], string[] | null>> {
 	const localPrefix = `${deps.config.instance.url}/users/`;
-	const remoteUris = [...new Set(users
-		.flatMap(user => user.alsoKnownAs ?? [])
-		.filter(uri => !uri.startsWith(localPrefix)))];
-	const remoteUsers = remoteUris.length > 0 ? await listUsersByUrisOrIdsFromDatabase(deps.db, { uris: remoteUris, ids: [] }) : [];
-	const remoteIdByUri = new Map(remoteUsers
-		.filter((user): user is MiUser & { uri: string } => user.uri != null)
-		.map(user => [user.uri, user.id]));
+	const remoteUris = [
+		...new Set(users.flatMap((user) => user.alsoKnownAs ?? []).filter((uri) => !uri.startsWith(localPrefix))),
+	];
+	const remoteUsers =
+		remoteUris.length > 0 ? await listUsersByUrisOrIdsFromDatabase(deps.db, { uris: remoteUris, ids: [] }) : [];
+	const remoteIdByUri = new Map(
+		remoteUsers.filter((user): user is MiUser & { uri: string } => user.uri != null).map((user) => [user.uri, user.id]),
+	);
 
 	const resolvedByUserId = new Map<MiUser['id'], string[] | null>();
 	for (const user of users) {
@@ -422,9 +530,12 @@ async function resolveAlsoKnownAsManyForHonoApi(deps: UserPackingDependencies, u
 			continue;
 		}
 
-		resolvedByUserId.set(user.id, user.alsoKnownAs
-			.map(uri => uri.startsWith(localPrefix) ? uri.slice(localPrefix.length) : (remoteIdByUri.get(uri) ?? null))
-			.filter((id): id is string => id != null));
+		resolvedByUserId.set(
+			user.id,
+			user.alsoKnownAs
+				.map((uri) => (uri.startsWith(localPrefix) ? uri.slice(localPrefix.length) : (remoteIdByUri.get(uri) ?? null)))
+				.filter((id): id is string => id != null),
+		);
 	}
 
 	return resolvedByUserId;
@@ -441,10 +552,9 @@ async function packUserDetailedNotMeCoreForHonoApi(
 		emojis?: Record<string, string>;
 	},
 ): Promise<UserDetailedNotMeHonoApiResponse> {
-	const alsoKnownAs = hint?.alsoKnownAs !== undefined
-		? hint.alsoKnownAs
-		: await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
-	const emojis = hint?.emojis ?? await populateEmojis(deps, user.emojis, user.host);
+	const alsoKnownAs =
+		hint?.alsoKnownAs !== undefined ? hint.alsoKnownAs : await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
+	const emojis = hint?.emojis ?? (await populateEmojis(deps, user.emojis, user.host));
 
 	return {
 		id: user.id,
@@ -497,19 +607,21 @@ async function packUserDetailedNotMeCoreForHonoApi(
 		memo,
 		moderationNote: extras.moderationNote,
 		...(extras.twoFactor ?? {}),
-		...(extras.relation ? {
-			isFollowing: extras.relation.isFollowing,
-			isFollowed: extras.relation.isFollowed,
-			hasPendingFollowRequestFromYou: extras.relation.hasPendingFollowRequestFromYou,
-			hasPendingFollowRequestToYou: extras.relation.hasPendingFollowRequestToYou,
-			isBlocking: extras.relation.isBlocking,
-			isBlocked: extras.relation.isBlocked,
-			isMuted: extras.relation.isMuted,
-			isRenoteMuted: extras.relation.isRenoteMuted,
-			notify: extras.relation.following?.notify ?? 'none',
-			withReplies: extras.relation.following?.withReplies ?? false,
-			followedMessage: extras.relation.isFollowing ? profile.followedMessage : undefined,
-		} : {}),
+		...(extras.relation
+			? {
+					isFollowing: extras.relation.isFollowing,
+					isFollowed: extras.relation.isFollowed,
+					hasPendingFollowRequestFromYou: extras.relation.hasPendingFollowRequestFromYou,
+					hasPendingFollowRequestToYou: extras.relation.hasPendingFollowRequestToYou,
+					isBlocking: extras.relation.isBlocking,
+					isBlocked: extras.relation.isBlocked,
+					isMuted: extras.relation.isMuted,
+					isRenoteMuted: extras.relation.isRenoteMuted,
+					notify: extras.relation.following?.notify ?? 'none',
+					withReplies: extras.relation.following?.withReplies ?? false,
+					followedMessage: extras.relation.isFollowing ? profile.followedMessage : undefined,
+				}
+			: {}),
 	};
 }
 
@@ -519,11 +631,7 @@ function getOnlineStatus(user: MiUser): 'unknown' | 'online' | 'active' | 'offli
 
 	const elapsed = Date.now() - user.lastActiveDate.getTime();
 
-	return (
-		elapsed < 1000 * 60 * 10 ? 'online' :
-		elapsed < 1000 * 60 * 60 * 24 * 3 ? 'active' :
-		'offline'
-	);
+	return elapsed < 1000 * 60 * 10 ? 'online' : elapsed < 1000 * 60 * 60 * 24 * 3 ? 'active' : 'offline';
 }
 
 function backupCodesStock(profile: MiUserProfile): 'none' | 'partial' | 'full' {
@@ -537,20 +645,26 @@ export async function packMeDetailedForHonoApi(
 	user: MiUser,
 	options: PackMeDetailedOptions,
 ): Promise<MeDetailedHonoApiResponse> {
-	const profile = options.profile ?? await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+	const profile = options.profile ?? (await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id));
 	const userRoles = await getHonoApiUserRoles(deps, user);
 	const policies = await getHonoApiRolePolicies(deps, user, userRoles);
 	const isRoot = deps.meta.rootUserId === user.id;
-	const isAdmin = isRoot || userRoles.some(role => role.isAdministrator);
-	const isModerator = isRoot || userRoles.some(role => role.isModerator || role.isAdministrator);
+	const isAdmin = isRoot || userRoles.some((role) => role.isAdministrator);
+	const isModerator = isRoot || userRoles.some((role) => role.isModerator || role.isAdministrator);
 	const alsoKnownAs = await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
 	const memo = await fetchUserMemoTextFromDatabase(deps.db, user.id, user.id);
-	const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, { id: user.id }, {
-		iAmModerator: isModerator,
-		relation: null,
-		userRoles,
-		policies,
-	});
+	const extras = await buildUserDetailedExtrasForHonoApi(
+		deps,
+		user,
+		profile,
+		{ id: user.id },
+		{
+			iAmModerator: isModerator,
+			relation: null,
+			userRoles,
+			policies,
+		},
+	);
 
 	return {
 		id: user.id,
@@ -642,13 +756,15 @@ export async function packMeDetailedForHonoApi(
 		achievements: profile.achievements,
 		loggedInDays: profile.loggedInDates.length,
 		policies,
-		...(options.includeSecrets ? {
-			email: profile.email,
-			emailVerified: profile.emailVerified,
-			securityKeysList: profile.twoFactorEnabled
-				? await listUserSecurityKeySummariesByUserIdFromDatabase(deps.db, user.id)
-				: [],
-		} : {}),
+		...(options.includeSecrets
+			? {
+					email: profile.email,
+					emailVerified: profile.emailVerified,
+					securityKeysList: profile.twoFactorEnabled
+						? await listUserSecurityKeySummariesByUserIdFromDatabase(deps.db, user.id)
+						: [],
+				}
+			: {}),
 	};
 }
 
@@ -674,7 +790,7 @@ export async function packUserDetailedManyForHonoApi(
 	}
 
 	const users = await resolveUsersFromSrcsForHonoApi(deps, srcs);
-	const meIndex = users.findIndex(user => user.id === me.id);
+	const meIndex = users.findIndex((user) => user.id === me.id);
 	const others = meIndex === -1 ? users : users.filter((_, index) => index !== meIndex);
 	const packedOthers = await packUserDetailedNotMeManyForHonoApi(deps, others, me);
 
@@ -698,26 +814,38 @@ export async function handleHonoApiPinnedUsers(
 ): Promise<(MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]> {
 	parseHonoApiParams(pinnedUsersParamDef, body);
 
-	const accounts = deps.meta.pinnedUsers.map(acct => Acct.parse(acct));
+	const accounts = deps.meta.pinnedUsers.map((acct) => Acct.parse(acct));
 	const users = await listUsersByUsernamesAndHostsFromDatabase(deps.db, accounts);
-	const userByAccount = new Map(users.map(user => [`${user.username.toLowerCase()}@${user.host ?? ''}`, user]));
+	const userByAccount = new Map(users.map((user) => [`${user.username.toLowerCase()}@${user.host ?? ''}`, user]));
 	const orderedUsers = accounts
-		.map(account => userByAccount.get(`${account.username.toLowerCase()}@${account.host ?? ''}`))
-		.filter(user => user != null);
+		.map((account) => userByAccount.get(`${account.username.toLowerCase()}@${account.host ?? ''}`))
+		.filter((user) => user != null);
 
 	return await packUserDetailedManyForHonoApi(deps, orderedUsers, me);
 }
 
-export type HonoApiUsersShowDependencies = UserPackingDependencies & HonoApiRolePolicyDependencies & {
-	chartWriters: HonoChartWriters;
-};
+export type HonoApiUsersShowDependencies = UserPackingDependencies &
+	HonoApiRolePolicyDependencies & {
+		chartWriters: HonoChartWriters;
+	};
 
 function usersShowFailedToResolveRemoteUserError(): HonoApiError {
-	return new HonoApiError({ status: 500, message: 'Failed to resolve remote user.', code: 'FAILED_TO_RESOLVE_REMOTE_USER', id: 'ef7b9be4-9cba-4e6f-ab41-90ed171c7d3c', kind: 'server' });
+	return new HonoApiError({
+		status: 500,
+		message: 'Failed to resolve remote user.',
+		code: 'FAILED_TO_RESOLVE_REMOTE_USER',
+		id: 'ef7b9be4-9cba-4e6f-ab41-90ed171c7d3c',
+		kind: 'server',
+	});
 }
 
 function usersShowNoSuchUserError(): HonoApiError {
-	return new HonoApiError({ status: 404, message: 'No such user.', code: 'NO_SUCH_USER', id: '4362f8dc-731f-4ad8-a694-be5a88922a24' });
+	return new HonoApiError({
+		status: 404,
+		message: 'No such user.',
+		code: 'NO_SUCH_USER',
+		id: '4362f8dc-731f-4ad8-a694-be5a88922a24',
+	});
 }
 
 /**
@@ -743,7 +871,10 @@ export async function handleHonoApiUsersShow(
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 	ip: string | null,
-): Promise<(MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse) | (MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]> {
+): Promise<
+	| (MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)
+	| (MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]
+> {
 	const params = parseHonoApiParams(usersShowParamDef, body);
 
 	const isModerator = await isHonoApiModerator(deps, me ?? null);
@@ -756,7 +887,7 @@ export async function handleHonoApiUsersShow(
 		if (params.userIds.length === 0) return [];
 
 		const users = await listUsersByIdsFromDatabase(deps.db, params.userIds, { includeSuspended: isModerator });
-		const userById = new Map(users.map(user => [user.id, user]));
+		const userById = new Map(users.map((user) => [user.id, user]));
 
 		const ordered: MiUser[] = [];
 		for (const id of params.userIds) {
@@ -764,8 +895,10 @@ export async function handleHonoApiUsersShow(
 			if (user != null) ordered.push(user);
 		}
 
-		const packedMap = new Map((await packUserDetailedManyForHonoApi(deps, ordered, me)).map((packed, i) => [ordered[i]!.id, packed]));
-		return ordered.map(u => packedMap.get(u.id)!);
+		const packedMap = new Map(
+			(await packUserDetailedManyForHonoApi(deps, ordered, me)).map((packed, i) => [ordered[i]!.id, packed]),
+		);
+		return ordered.map((u) => packedMap.get(u.id)!);
 	}
 
 	let user: MiUser | null;
@@ -814,7 +947,11 @@ export type HonoApiUsersRelationDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-async function getUserRelationForHonoApi(deps: HonoApiUsersRelationDependencies, me: MiUser['id'], target: MiUser['id']) {
+async function getUserRelationForHonoApi(
+	deps: HonoApiUsersRelationDependencies,
+	me: MiUser['id'],
+	target: MiUser['id'],
+) {
 	const [
 		following,
 		isFollowed,
@@ -849,30 +986,27 @@ async function getUserRelationForHonoApi(deps: HonoApiUsersRelationDependencies,
 	};
 }
 
-async function getUserRelationsForHonoApi(deps: HonoApiUsersRelationDependencies, me: MiUser['id'], targets: MiUser['id'][]) {
+async function getUserRelationsForHonoApi(
+	deps: HonoApiUsersRelationDependencies,
+	me: MiUser['id'],
+	targets: MiUser['id'][],
+) {
 	const targetIds = [...new Set(targets)];
 	if (targetIds.length === 0) return new Map();
 
-	const [
-		followers,
-		followees,
-		followersRequests,
-		followeesRequests,
-		blockers,
-		blockees,
-		muters,
-		renoteMuters,
-	] = await Promise.all([
-		listFollowingsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, me, targetIds)
-			.then(f => new Map(f.map(it => [it.followeeId, it]))),
-		listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(deps.db, me, targetIds),
-		listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, me, targetIds),
-		listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(deps.db, me, targetIds),
-		listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(deps.db, me, targetIds),
-		listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(deps.db, me, targetIds),
-		listMuteeIdsByMuterIdAndMuteeIdsFromDatabase(deps.db, me, targetIds),
-		listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase(deps.db, me, targetIds),
-	]);
+	const [followers, followees, followersRequests, followeesRequests, blockers, blockees, muters, renoteMuters] =
+		await Promise.all([
+			listFollowingsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, me, targetIds).then(
+				(f) => new Map(f.map((it) => [it.followeeId, it])),
+			),
+			listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(deps.db, me, targetIds),
+			listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, me, targetIds),
+			listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(deps.db, me, targetIds),
+			listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(deps.db, me, targetIds),
+			listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(deps.db, me, targetIds),
+			listMuteeIdsByMuterIdAndMuteeIdsFromDatabase(deps.db, me, targetIds),
+			listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase(deps.db, me, targetIds),
+		]);
 	const followeeSet = new Set(followees);
 	const followersRequestSet = new Set(followersRequests);
 	const followeesRequestSet = new Set(followeesRequests);
@@ -882,7 +1016,7 @@ async function getUserRelationsForHonoApi(deps: HonoApiUsersRelationDependencies
 	const renoteMuterSet = new Set(renoteMuters);
 
 	return new Map(
-		targetIds.map(target => {
+		targetIds.map((target) => {
 			const following = followers.get(target) ?? null;
 
 			return [
@@ -912,15 +1046,18 @@ export async function handleHonoApiUsersRelation(
 	const params = parseHonoApiParams(usersRelationParamDef, body);
 
 	return Array.isArray(params.userId)
-		? await getUserRelationsForHonoApi(deps, me.id, params.userId).then(it => [...it.values()])
-		: await getUserRelationForHonoApi(deps, me.id, params.userId).then(it => [it]);
+		? await getUserRelationsForHonoApi(deps, me.id, params.userId).then((it) => [...it.values()])
+		: await getUserRelationForHonoApi(deps, me.id, params.userId).then((it) => [it]);
 }
 
 function limitOffsetSqlForHonoApi(options: { limit?: number; offset?: number }): SQL {
-	return sql.join([
-		options.limit == null ? sql`` : sql`LIMIT ${options.limit}`,
-		options.offset == null ? sql`` : sql`OFFSET ${options.offset}`,
-	], sql` `);
+	return sql.join(
+		[
+			options.limit == null ? sql`` : sql`LIMIT ${options.limit}`,
+			options.offset == null ? sql`` : sql`OFFSET ${options.offset}`,
+		],
+		sql` `,
+	);
 }
 
 async function searchUsersForHonoApi(
@@ -929,7 +1066,7 @@ async function searchUsersForHonoApi(
 	meId: MiUser['id'] | null,
 	options: { limit?: number; offset?: number; origin?: 'local' | 'remote' | 'combined' } = {},
 ): Promise<MiUser[]> {
-	const activeThreshold = new Date(Date.now() - (1000 * 60 * 60 * 24 * 30));
+	const activeThreshold = new Date(Date.now() - 1000 * 60 * 60 * 24 * 30);
 	const isUsername = query.startsWith('@') && !query.includes(' ') && !query.includes('@', 1);
 	const isLocalUsername = /^\w{1,20}$/.test(query);
 
@@ -962,12 +1099,10 @@ async function searchUsersForHonoApi(
 		ORDER BY "user"."updatedAt" DESC NULLS LAST
 		${limitOffsetSqlForHonoApi(options)}
 	`);
-	let users = nameResult.rows.map(row => deserializeUser(row));
+	let users = nameResult.rows.map((row) => deserializeUser(row));
 
 	if (users.length < (options.limit ?? 30)) {
-		const profileConditions: SQL[] = [
-			sql`"prof"."description" ILIKE ${'%' + sqlLikeEscape(query) + '%'}`,
-		];
+		const profileConditions: SQL[] = [sql`"prof"."description" ILIKE ${'%' + sqlLikeEscape(query) + '%'}`];
 
 		if (meId != null) {
 			profileConditions.push(sql`"prof"."userId" NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${meId})`);
@@ -995,7 +1130,7 @@ async function searchUsersForHonoApi(
 			${limitOffsetSqlForHonoApi(options)}
 		`);
 
-		users = users.concat(profileResult.rows.map(row => deserializeUser(row)));
+		users = users.concat(profileResult.rows.map((row) => deserializeUser(row)));
 	}
 
 	return users;
@@ -1071,26 +1206,14 @@ function buildSearchUserQueriesForHonoApi(
 	const baseConditions = buildBaseUserSearchConditionsForHonoApi(config, params);
 
 	return [
-		[
-			...baseConditions,
-			sql`"user"."id" IN (${followingUserQuery})`,
-			sql`"user"."updatedAt" > ${activeThreshold}`,
-		],
+		[...baseConditions, sql`"user"."id" IN (${followingUserQuery})`, sql`"user"."updatedAt" > ${activeThreshold}`],
 		[
 			...baseConditions,
 			sql`"user"."id" IN (${followingUserQuery})`,
 			sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" <= ${activeThreshold})`,
 		],
-		[
-			...baseConditions,
-			sql`"user"."id" NOT IN (${followingUserQuery})`,
-			sql`"user"."updatedAt" > ${activeThreshold}`,
-		],
-		[
-			...baseConditions,
-			sql`"user"."id" NOT IN (${followingUserQuery})`,
-			sql`"user"."updatedAt" <= ${activeThreshold}`,
-		],
+		[...baseConditions, sql`"user"."id" NOT IN (${followingUserQuery})`, sql`"user"."updatedAt" > ${activeThreshold}`],
+		[...baseConditions, sql`"user"."id" NOT IN (${followingUserQuery})`, sql`"user"."updatedAt" <= ${activeThreshold}`],
 	];
 }
 
@@ -1102,14 +1225,8 @@ function buildSearchUserNoLoginQueriesForHonoApi(
 	const baseConditions = buildBaseUserSearchConditionsForHonoApi(config, params);
 
 	return [
-		[
-			...baseConditions,
-			sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})`,
-		],
-		[
-			...baseConditions,
-			sql`"user"."updatedAt" <= ${activeThreshold}`,
-		],
+		[...baseConditions, sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})`],
+		[...baseConditions, sql`"user"."updatedAt" <= ${activeThreshold}`],
 	];
 }
 
@@ -1128,7 +1245,7 @@ async function selectSearchUserIdsForHonoApi(
 		LIMIT ${limit}
 	`);
 
-	return result.rows.map(row => row.id);
+	return result.rows.map((row) => row.id);
 }
 
 /**
@@ -1239,16 +1356,22 @@ export async function handleHonoApiUsersGetFrequentlyRepliedUsers(
 	const repliedUsers = await listFrequentlyRepliedUsersFromDatabase(deps.db, user.id, params.limit);
 	if (repliedUsers.length === 0) return [];
 
-	const peak = maximum(repliedUsers.map(row => row.count));
-	const topRepliedUserIds = repliedUsers.map(row => row.userId);
-	const repliedUserCounts = new Map(repliedUsers.map(row => [row.userId, row.count]));
+	const peak = maximum(repliedUsers.map((row) => row.count));
+	const topRepliedUserIds = repliedUsers.map((row) => row.userId);
+	const repliedUserCounts = new Map(repliedUsers.map((row) => [row.userId, row.count]));
 
-	const userMap = new Map((await packUserDetailedManyForHonoApi(deps, topRepliedUserIds, me)).map(u => [(u as { id: string }).id, u]));
+	const userMap = new Map(
+		(await packUserDetailedManyForHonoApi(deps, topRepliedUserIds, me)).map((u) => [(u as { id: string }).id, u]),
+	);
 
-	return await Promise.all(topRepliedUserIds.map(async userId => ({
-		user: userMap.get(userId) ?? await packUserDetailedForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, userId), me),
-		weight: repliedUserCounts.get(userId)! / peak,
-	})));
+	return await Promise.all(
+		topRepliedUserIds.map(async (userId) => ({
+			user:
+				userMap.get(userId) ??
+				(await packUserDetailedForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, userId), me)),
+			weight: repliedUserCounts.get(userId)! / peak,
+		})),
+	);
 }
 
 export const usersParamDef = z.object({
@@ -1276,15 +1399,18 @@ export async function handleHonoApiUsers(
 ): Promise<unknown[]> {
 	const params = parseHonoApiParams(usersParamDef, body);
 
-	const users = await listExplorableUsersFromDatabase(deps.db, omitUndefined({
-		limit: params.limit,
-		offset: params.offset,
-		sort: params.sort,
-		state: params.state,
-		origin: params.origin,
-		hostname: params.hostname,
-		meId: me?.id,
-	}));
+	const users = await listExplorableUsersFromDatabase(
+		deps.db,
+		omitUndefined({
+			limit: params.limit,
+			offset: params.offset,
+			sort: params.sort,
+			state: params.state,
+			origin: params.origin,
+			hostname: params.hostname,
+			meId: me?.id,
+		}),
+	);
 
 	return await packUserDetailedManyForHonoApi(deps, users, me);
 }

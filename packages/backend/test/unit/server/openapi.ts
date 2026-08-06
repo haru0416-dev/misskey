@@ -57,7 +57,11 @@ function responsesFor(endpointName: string, method: 'get' | 'post' = 'post'): Re
 	return operationFor(endpointName, method).responses;
 }
 
-function examplesFor(endpointName: string, status: number, method: 'get' | 'post' = 'post'): Record<string, { value: ErrorBody }> {
+function examplesFor(
+	endpointName: string,
+	status: number,
+	method: 'get' | 'post' = 'post',
+): Record<string, { value: ErrorBody }> {
 	return responsesFor(endpointName, method)[String(status)]?.content?.['application/json']?.examples ?? {};
 }
 
@@ -85,8 +89,12 @@ describe('OpenAPI errors', () => {
 			kind: 'client',
 		});
 		expect(responsesFor('ping')['401']).toBeUndefined();
-		expect(examplesFor('drive/files/create', 413)['maxFileSizeExceeded']?.value.error.code).toBe('MAX_FILE_SIZE_EXCEEDED');
-		expect(examplesFor('i/update', 422)['nameContainsProhibitedWords']?.value.error.code).toBe('YOUR_NAME_CONTAINS_PROHIBITED_WORDS');
+		expect(examplesFor('drive/files/create', 413)['maxFileSizeExceeded']?.value.error.code).toBe(
+			'MAX_FILE_SIZE_EXCEEDED',
+		);
+		expect(examplesFor('i/update', 422)['nameContainsProhibitedWords']?.value.error.code).toBe(
+			'YOUR_NAME_CONTAINS_PROHIBITED_WORDS',
+		);
 		expect(examplesFor('users/show', 404)['noSuchUser']?.value.error.code).toBe('NO_SUCH_USER');
 		expect(examplesFor('users/show', 500)['failedToResolveRemoteUser']?.value.error.kind).toBe('server');
 		expect(examplesFor('fetch-rss', 429)['RATE_LIMIT_EXCEEDED']?.value.error.code).toBe('RATE_LIMIT_EXCEEDED');
@@ -111,16 +119,20 @@ describe('OpenAPI errors', () => {
 
 	test('separates GET and POST request/authentication contracts', () => {
 		expect(operationFor('fetch-rss', 'get')).not.toHaveProperty('requestBody');
-		expect(operationFor('fetch-rss', 'get').parameters).toEqual([{
-			name: 'url',
-			in: 'query',
-			required: true,
-			schema: { type: 'string' },
-		}]);
-		expect(operationFor('charts/active-users', 'get').parameters).toEqual(expect.arrayContaining([
-			expect.objectContaining({ name: 'span', in: 'query', required: true }),
-			expect.objectContaining({ name: 'limit', in: 'query', required: false }),
-		]));
+		expect(operationFor('fetch-rss', 'get').parameters).toEqual([
+			{
+				name: 'url',
+				in: 'query',
+				required: true,
+				schema: { type: 'string' },
+			},
+		]);
+		expect(operationFor('charts/active-users', 'get').parameters).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ name: 'span', in: 'query', required: true }),
+				expect.objectContaining({ name: 'limit', in: 'query', required: false }),
+			]),
+		);
 		expect(operationFor('users/show').security).toEqual([{}, { bearerAuth: [] }]);
 		expect(operationFor('i').security).toEqual([{ bearerAuth: [] }]);
 		expect(operationFor('ping')).not.toHaveProperty('security');

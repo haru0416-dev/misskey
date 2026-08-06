@@ -62,10 +62,11 @@ describe('createOAuthApp', () => {
 	test('returns token CORS preflight from runtime', async () => {
 		const app = createOAuthApp({
 			runtime: createRuntime({
-				tokenOptions: () => new Response(null, {
-					status: 204,
-					headers: { 'Access-Control-Allow-Origin': '*' },
-				}),
+				tokenOptions: () =>
+					new Response(null, {
+						status: 204,
+						headers: { 'Access-Control-Allow-Origin': '*' },
+					}),
 			}),
 		});
 
@@ -97,10 +98,12 @@ describe('createOAuthApp', () => {
 		});
 
 		expect(res.status).toBe(200);
-		expect(seen).toEqual([{
-			grant_type: 'authorization_code',
-			code: 'code',
-			client_id: 'http://client.example/',
-		}]);
+		expect(seen).toEqual([
+			{
+				grant_type: 'authorization_code',
+				code: 'code',
+				client_id: 'http://client.example/',
+			},
+		]);
 	});
 });

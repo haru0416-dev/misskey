@@ -5,8 +5,14 @@
 
 import { z } from 'zod';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
-import { deleteFollowRequestsByFolloweeIdFromDatabase, deleteFollowRequestsByFollowerIdFromDatabase } from '@/core/FollowRequestStore.js';
-import { listFollowingsForUnfollowByFollowerIdFromDatabase, listSharedInboxesFromFollowingsInDatabase } from '@/core/FollowingStore.js';
+import {
+	deleteFollowRequestsByFolloweeIdFromDatabase,
+	deleteFollowRequestsByFollowerIdFromDatabase,
+} from '@/core/FollowRequestStore.js';
+import {
+	listFollowingsForUnfollowByFollowerIdFromDatabase,
+	listSharedInboxesFromFollowingsInDatabase,
+} from '@/core/FollowingStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import type { DeliverQueue, RelationshipQueue } from '@/core/queues.js';
 import { updateUserSuspendedStateInDatabase, fetchUserByIdFromDatabase } from '@/core/UserStore.js';
@@ -27,13 +33,15 @@ export type HonoApiAdminUserSuspensionDependencies = {
 	meta: MiMeta;
 	deliverQueue: DeliverQueue;
 	relationshipQueue: RelationshipQueue;
-	publishInternalEvent?: <K extends 'userChangeSuspendedState'>(type: K, value: { id: MiUser['id']; isSuspended: MiUser['isSuspended'] }) => void;
+	publishInternalEvent?: <K extends 'userChangeSuspendedState'>(
+		type: K,
+		value: { id: MiUser['id']; isSuspended: MiUser['isSuspended'] },
+	) => void;
 };
 
 export const adminUserSuspensionParamDef = z.object({
 	userId: misskeyId(),
 });
-
 
 function renderDelete(config: Config, object: IObject | string, user: { id: MiUser['id']; host: null }): IDelete {
 	return {
@@ -44,33 +52,14 @@ function renderDelete(config: Config, object: IObject | string, user: { id: MiUs
 	};
 }
 
-async function enqueueSharedInboxDelete(
-	deps: HonoApiAdminUserSuspensionDependencies,
-	user: MiUser,
-): Promise<void> {
+async function enqueueSharedInboxDelete(deps: HonoApiAdminUserSuspensionDependencies, user: MiUser): Promise<void> {
 	if (user.host !== null) return;
 
 	const localUser = user as MiUser & { host: null };
-	const content = addActivityContext(deps.config, renderDelete(deps.config, genLocalUserUri(deps.config, localUser.id), localUser));
-	const inboxes = await listSharedInboxesFromFollowingsInDatabase(deps.db);
-
-	for (const inbox of inboxes) {
-		enqueueDeliverJob(deps.deliverQueue, deps.config, localUser, content as IActivity, inbox, true);
-	}
-}
-
-async function enqueueSharedInboxUndoDelete(
-	deps: HonoApiAdminUserSuspensionDependencies,
-	user: MiUser,
-): Promise<void> {
-	if (user.host !== null) return;
-
-	const localUser = user as MiUser & { host: null };
-	const content = addActivityContext(deps.config, renderUndo(
+	const content = addActivityContext(
 		deps.config,
 		renderDelete(deps.config, genLocalUserUri(deps.config, localUser.id), localUser),
-		localUser,
-	));
+	);
 	const inboxes = await listSharedInboxesFromFollowingsInDatabase(deps.db);
 
 	for (const inbox of inboxes) {
@@ -78,12 +67,28 @@ async function enqueueSharedInboxUndoDelete(
 	}
 }
 
-async function enqueueUnfollowAllJobs(
-	deps: HonoApiAdminUserSuspensionDependencies,
-	follower: MiUser,
-): Promise<void> {
+async function enqueueSharedInboxUndoDelete(deps: HonoApiAdminUserSuspensionDependencies, user: MiUser): Promise<void> {
+	if (user.host !== null) return;
+
+	const localUser = user as MiUser & { host: null };
+	const content = addActivityContext(
+		deps.config,
+		renderUndo(
+			deps.config,
+			renderDelete(deps.config, genLocalUserUri(deps.config, localUser.id), localUser),
+			localUser,
+		),
+	);
+	const inboxes = await listSharedInboxesFromFollowingsInDatabase(deps.db);
+
+	for (const inbox of inboxes) {
+		enqueueDeliverJob(deps.deliverQueue, deps.config, localUser, content as IActivity, inbox, true);
+	}
+}
+
+async function enqueueUnfollowAllJobs(deps: HonoApiAdminUserSuspensionDependencies, follower: MiUser): Promise<void> {
 	const followings = await listFollowingsForUnfollowByFollowerIdFromDatabase(deps.db, follower.id);
-	const jobs = followings.map(following => ({
+	const jobs = followings.map((following) => ({
 		name: 'unfollow',
 		data: {
 			from: { id: following.followerId },
@@ -98,10 +103,7 @@ async function enqueueUnfollowAllJobs(
 	}
 }
 
-async function postSuspend(
-	deps: HonoApiAdminUserSuspensionDependencies,
-	user: MiUser,
-): Promise<void> {
+async function postSuspend(deps: HonoApiAdminUserSuspensionDependencies, user: MiUser): Promise<void> {
 	deps.publishInternalEvent?.('userChangeSuspendedState', { id: user.id, isSuspended: true });
 
 	void deleteFollowRequestsByFolloweeIdFromDatabase(deps.db, user.id);
@@ -110,10 +112,7 @@ async function postSuspend(
 	await enqueueSharedInboxDelete(deps, user);
 }
 
-async function postUnsuspend(
-	deps: HonoApiAdminUserSuspensionDependencies,
-	user: MiUser,
-): Promise<void> {
+async function postUnsuspend(deps: HonoApiAdminUserSuspensionDependencies, user: MiUser): Promise<void> {
 	deps.publishInternalEvent?.('userChangeSuspendedState', { id: user.id, isSuspended: false });
 
 	await enqueueSharedInboxUndoDelete(deps, user);

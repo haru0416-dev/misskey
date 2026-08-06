@@ -37,7 +37,7 @@ export class MiNote {
 
 	public localOnly: boolean;
 
-	public reactionAcceptance: typeof noteReactionAcceptances[number] | null;
+	public reactionAcceptance: (typeof noteReactionAcceptances)[number] | null;
 
 	public renoteCount: number;
 
@@ -57,7 +57,7 @@ export class MiNote {
 	 * followers ... フォロワーのみ
 	 * specified ... visibleUserIds で指定したユーザーのみ
 	 */
-	public visibility: typeof noteVisibilities[number];
+	public visibility: (typeof noteVisibilities)[number];
 
 	public uri: string | null;
 

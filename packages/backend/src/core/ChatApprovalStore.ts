@@ -16,23 +16,16 @@ export async function listChatApprovalsBetweenUsers(
 	return db
 		.select()
 		.from(chatApproval)
-		.where(or(
-			and(
-				eq(chatApproval.userId, fromUserId),
-				eq(chatApproval.otherId, toUserId),
+		.where(
+			or(
+				and(eq(chatApproval.userId, fromUserId), eq(chatApproval.otherId, toUserId)),
+				and(eq(chatApproval.userId, toUserId), eq(chatApproval.otherId, fromUserId)),
 			),
-			and(
-				eq(chatApproval.userId, toUserId),
-				eq(chatApproval.otherId, fromUserId),
-			),
-		))
+		)
 		.limit(2);
 }
 
-export async function createChatApprovalInDatabase(
-	db: MiDrizzleDatabase,
-	data: ChatApprovalInsert,
-): Promise<void> {
+export async function createChatApprovalInDatabase(db: MiDrizzleDatabase, data: ChatApprovalInsert): Promise<void> {
 	await db
 		.insert(chatApproval)
 		.values(data)

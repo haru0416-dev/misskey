@@ -92,11 +92,14 @@ function blockedHostCondition(alias: string, blockedHosts: string[]): SQL {
 		return sql`TRUE`;
 	}
 
-	const patterns = blockedHosts.flatMap(host => [host, `%.${host}`]);
+	const patterns = blockedHosts.flatMap((host) => [host, `%.${host}`]);
 	return sql`(
 		${noteColumn(alias, 'userId')} IS NULL
 		OR ${noteColumn(alias, 'userHost')} IS NULL
-		OR ${noteColumn(alias, 'userHost')} NOT ILIKE ALL(ARRAY[${sql.join(patterns.map(pattern => sql`${pattern}`), sql`, `)}])
+		OR ${noteColumn(alias, 'userHost')} NOT ILIKE ALL(ARRAY[${sql.join(
+			patterns.map((pattern) => sql`${pattern}`),
+			sql`, `,
+		)}])
 	)`;
 }
 
@@ -110,11 +113,14 @@ function blockedRelatedHostCondition(idColumn: keyof NoteRow, hostColumn: keyof 
 		return sql`TRUE`;
 	}
 
-	const patterns = blockedHosts.flatMap(host => [host, `%.${host}`]);
+	const patterns = blockedHosts.flatMap((host) => [host, `%.${host}`]);
 	return sql`(
 		${noteColumn('note', idColumn)} IS NULL
 		OR ${noteColumn('note', hostColumn)} IS NULL
-		OR ${noteColumn('note', hostColumn)} NOT ILIKE ALL(ARRAY[${sql.join(patterns.map(pattern => sql`${pattern}`), sql`, `)}])
+		OR ${noteColumn('note', hostColumn)} NOT ILIKE ALL(ARRAY[${sql.join(
+			patterns.map((pattern) => sql`${pattern}`),
+			sql`, `,
+		)}])
 	)`;
 }
 
@@ -179,13 +185,8 @@ function mutedUserRenotesCondition(me: { id: MiUser['id'] }): SQL {
 	)`;
 }
 
-function baseNoteFilteringCondition(
-	me: { id: MiUser['id'] } | null,
-	blockedHosts: string[],
-): SQL {
-	const conditions: SQL[] = [
-		noteHostAndSuspensionFilteringCondition(blockedHosts),
-	];
+function baseNoteFilteringCondition(me: { id: MiUser['id'] } | null, blockedHosts: string[]): SQL {
+	const conditions: SQL[] = [noteHostAndSuspensionFilteringCondition(blockedHosts)];
 
 	if (me != null) {
 		conditions.push(
@@ -196,16 +197,22 @@ function baseNoteFilteringCondition(
 		);
 	}
 
-	return sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `);
+	return sql.join(
+		conditions.map((condition) => sql`(${condition})`),
+		sql` AND `,
+	);
 }
 
 function noteHostAndSuspensionFilteringCondition(blockedHosts: string[]): SQL {
-	return sql.join([
-		blockedHostCondition('note', blockedHosts),
-		blockedRelatedHostCondition('replyUserId', 'replyUserHost', blockedHosts),
-		blockedRelatedHostCondition('renoteUserId', 'renoteUserHost', blockedHosts),
-		suspendedUserCondition(),
-	].map(condition => sql`(${condition})`), sql` AND `);
+	return sql.join(
+		[
+			blockedHostCondition('note', blockedHosts),
+			blockedRelatedHostCondition('replyUserId', 'replyUserHost', blockedHosts),
+			blockedRelatedHostCondition('renoteUserId', 'renoteUserHost', blockedHosts),
+			suspendedUserCondition(),
+		].map((condition) => sql`(${condition})`),
+		sql` AND `,
+	);
 }
 
 function blockedHostConditionExcludeAuthor(blockedHosts: string[]): SQL {
@@ -213,8 +220,12 @@ function blockedHostConditionExcludeAuthor(blockedHosts: string[]): SQL {
 		return sql`TRUE`;
 	}
 
-	const patterns = blockedHosts.flatMap(host => [host, `%.${host}`]);
-	const nonBlockedHost = (column: SQL): SQL => sql`${column} NOT ILIKE ALL(ARRAY[${sql.join(patterns.map(pattern => sql`${pattern}`), sql`, `)}])`;
+	const patterns = blockedHosts.flatMap((host) => [host, `%.${host}`]);
+	const nonBlockedHost = (column: SQL): SQL =>
+		sql`${column} NOT ILIKE ALL(ARRAY[${sql.join(
+			patterns.map((pattern) => sql`${pattern}`),
+			sql`, `,
+		)}])`;
 	const instanceSuspension = (idColumn: keyof NoteRow, hostColumn: keyof NoteRow): SQL => sql`(
 		${noteColumn('note', idColumn)} IS NULL
 		OR "note"."userId" = ${noteColumn('note', idColumn)}
@@ -279,10 +290,7 @@ function userTimelineFilteringCondition(
 	blockedHosts: string[],
 	authorId: MiUser['id'],
 ): SQL {
-	const conditions: SQL[] = [
-		blockedHostConditionExcludeAuthor(blockedHosts),
-		suspendedUserConditionExcludeAuthor(),
-	];
+	const conditions: SQL[] = [blockedHostConditionExcludeAuthor(blockedHosts), suspendedUserConditionExcludeAuthor()];
 
 	if (me != null) {
 		conditions.push(
@@ -293,13 +301,13 @@ function userTimelineFilteringCondition(
 		);
 	}
 
-	return sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `);
+	return sql.join(
+		conditions.map((condition) => sql`(${condition})`),
+		sql` AND `,
+	);
 }
 
-function clipNoteFilteringCondition(
-	me: { id: MiUser['id'] } | null,
-	blockedHosts: string[],
-): SQL {
+function clipNoteFilteringCondition(me: { id: MiUser['id'] } | null, blockedHosts: string[]): SQL {
 	const conditions: SQL[] = [
 		blockedHostCondition('note', blockedHosts),
 		blockedRelatedHostCondition('replyUserId', 'replyUserHost', blockedHosts),
@@ -315,7 +323,10 @@ function clipNoteFilteringCondition(
 		);
 	}
 
-	return sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `);
+	return sql.join(
+		conditions.map((condition) => sql`(${condition})`),
+		sql` AND `,
+	);
 }
 
 function mutedNoteThreadCondition(me: { id: MiUser['id'] }): SQL {
@@ -330,10 +341,7 @@ function mutedNoteThreadCondition(me: { id: MiUser['id'] }): SQL {
 	`;
 }
 
-function notePaginationCondition(options: {
-	sinceId?: MiNote['id'] | null;
-	untilId?: MiNote['id'] | null;
-}): SQL {
+function notePaginationCondition(options: { sinceId?: MiNote['id'] | null; untilId?: MiNote['id'] | null }): SQL {
 	if (options.sinceId && options.untilId) {
 		return sql`"note"."id" > ${options.sinceId} AND "note"."id" < ${options.untilId}`;
 	}
@@ -349,20 +357,12 @@ function notePaginationCondition(options: {
 	return sql`TRUE`;
 }
 
-function notePaginationOrder(options: {
-	sinceId?: MiNote['id'] | null;
-	untilId?: MiNote['id'] | null;
-}): SQL {
+function notePaginationOrder(options: { sinceId?: MiNote['id'] | null; untilId?: MiNote['id'] | null }): SQL {
 	return options.sinceId && !options.untilId ? sql.raw('ASC') : sql.raw('DESC');
 }
 
-export async function createNoteInDatabase(
-	db: MiDrizzleDatabase,
-	values: NoteInsert,
-): Promise<void> {
-	await db
-		.insert(note)
-		.values(values);
+export async function createNoteInDatabase(db: MiDrizzleDatabase, values: NoteInsert): Promise<void> {
+	await db.insert(note).values(values);
 }
 
 export async function createNoteWithPollInDatabase(
@@ -370,27 +370,22 @@ export async function createNoteWithPollInDatabase(
 	noteValues: NoteInsert,
 	pollValues: PollInsert,
 ): Promise<void> {
-	await db.transaction(async tx => {
-		await tx
-			.insert(note)
-			.values(noteValues);
+	await db.transaction(async (tx) => {
+		await tx.insert(note).values(noteValues);
 
-		await tx
-			.insert(poll)
-			.values(pollValues);
+		await tx.insert(poll).values(pollValues);
 	});
 }
 
-export async function fetchNoteByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiNote['id'],
-): Promise<MiNote | null> {
-	const statement = preparedQueryFor(db, 'note:byId', () => db
-		.select()
-		.from(note)
-		.where(eq(note.id, sql.placeholder('id')))
-		.limit(1)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+export async function fetchNoteByIdFromDatabase(db: MiDrizzleDatabase, id: MiNote['id']): Promise<MiNote | null> {
+	const statement = preparedQueryFor(db, 'note:byId', () =>
+		db
+			.select()
+			.from(note)
+			.where(eq(note.id, sql.placeholder('id')))
+			.limit(1)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const [row] = await statement.execute({ id });
 
 	return row ? deserializeNote(row) : null;
@@ -404,10 +399,7 @@ export async function fetchNoteByIdAndUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(note)
-		.where(and(
-			eq(note.id, id),
-			eq(note.userId, userId),
-		))
+		.where(and(eq(note.id, id), eq(note.userId, userId)))
 		.limit(1);
 
 	return row ? deserializeNote(row) : null;
@@ -426,10 +418,7 @@ export async function adjustNoteClippedCountInDatabase(
 		.where(eq(note.id, id));
 }
 
-export async function fetchNoteByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiNote['id'],
-): Promise<MiNote> {
+export async function fetchNoteByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiNote['id']): Promise<MiNote> {
 	const found = await fetchNoteByIdFromDatabase(db, id);
 
 	if (found == null) {
@@ -439,22 +428,21 @@ export async function fetchNoteByIdOrFailFromDatabase(
 	return found;
 }
 
-export async function listNotesByIdsFromDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiNote['id'][],
-): Promise<MiNote[]> {
+export async function listNotesByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiNote['id'][]): Promise<MiNote[]> {
 	if (ids.length === 0) return [];
 
 	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
 	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
-	const statement = preparedQueryFor(db, 'note:byIds', () => db
-		.select()
-		.from(note)
-		.where(sql`${note.id} = ANY(${sql.placeholder('ids')})`)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'note:byIds', () =>
+		db
+			.select()
+			.from(note)
+			.where(sql`${note.id} = ANY(${sql.placeholder('ids')})`)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ ids });
 
-	return rows.map(row => deserializeNote(row));
+	return rows.map((row) => deserializeNote(row));
 }
 
 export async function listNotesByUserIdAndRenoteIdFromDatabase(
@@ -465,22 +453,13 @@ export async function listNotesByUserIdAndRenoteIdFromDatabase(
 	const rows = await db
 		.select()
 		.from(note)
-		.where(and(
-			eq(note.userId, userId),
-			eq(note.renoteId, renoteId),
-		));
+		.where(and(eq(note.userId, userId), eq(note.renoteId, renoteId)));
 
-	return rows.map(row => deserializeNote(row));
+	return rows.map((row) => deserializeNote(row));
 }
 
-export async function countNotesByUserIdFromDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(note)
-		.where(eq(note.userId, userId));
+export async function countNotesByUserIdFromDatabase(db: MiDrizzleDatabase, userId: MiUser['id']): Promise<number> {
+	const [row] = await db.select({ value: count() }).from(note).where(eq(note.userId, userId));
 
 	return row?.value ?? 0;
 }
@@ -497,13 +476,8 @@ export async function countNotesByUserHostFromDatabase(
 	return row?.value ?? 0;
 }
 
-export async function countNotesByUserHostNotNullFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(note)
-		.where(isNotNull(note.userHost));
+export async function countNotesByUserHostNotNullFromDatabase(db: MiDrizzleDatabase): Promise<number> {
+	const [row] = await db.select({ value: count() }).from(note).where(isNotNull(note.userHost));
 
 	return row?.value ?? 0;
 }
@@ -516,10 +490,7 @@ export async function countNotesByUserIdAndChannelIdFromDatabase(
 	const [row] = await db
 		.select({ value: count() })
 		.from(note)
-		.where(and(
-			eq(note.userId, userId),
-			eq(note.channelId, channelId),
-		));
+		.where(and(eq(note.userId, userId), eq(note.channelId, channelId)));
 
 	return row?.value ?? 0;
 }
@@ -545,18 +516,13 @@ export async function listNotesByUserIdWithPaginationFromDatabase(
 		.orderBy(asc(note.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeNote(row));
+	return rows.map((row) => deserializeNote(row));
 }
 
-export async function deleteNotesByIdsFromDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiNote['id'][],
-): Promise<void> {
+export async function deleteNotesByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiNote['id'][]): Promise<void> {
 	if (ids.length === 0) return;
 
-	await db
-		.delete(note)
-		.where(inArray(note.id, ids));
+	await db.delete(note).where(inArray(note.id, ids));
 }
 
 export async function deleteNoteAndDecrementParentRepliesCountInDatabase(
@@ -564,13 +530,10 @@ export async function deleteNoteAndDecrementParentRepliesCountInDatabase(
 	id: MiNote['id'],
 	userId: MiUser['id'],
 ): Promise<void> {
-	await db.transaction(async tx => {
+	await db.transaction(async (tx) => {
 		const [deleted] = await tx
 			.delete(note)
-			.where(and(
-				eq(note.id, id),
-				eq(note.userId, userId),
-			))
+			.where(and(eq(note.id, id), eq(note.userId, userId)))
 			.returning({ replyId: note.replyId });
 
 		if (deleted?.replyId == null) return;
@@ -634,17 +597,9 @@ export async function decrementNoteReactionInDatabase(
 		.where(eq(note.id, id));
 }
 
-export async function rebuildNoteReactionsInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiNote['id'],
-): Promise<void> {
-	await db.transaction(async transaction => {
-		const [target] = await transaction
-			.select({ id: note.id })
-			.from(note)
-			.where(eq(note.id, id))
-			.for('update')
-			.limit(1);
+export async function rebuildNoteReactionsInDatabase(db: MiDrizzleDatabase, id: MiNote['id']): Promise<void> {
+	await db.transaction(async (transaction) => {
+		const [target] = await transaction.select({ id: note.id }).from(note).where(eq(note.id, id)).for('update').limit(1);
 		if (target == null) return;
 
 		const counts = await transaction
@@ -662,8 +617,8 @@ export async function rebuildNoteReactionsInDatabase(
 		await transaction
 			.update(note)
 			.set({
-				reactions: Object.fromEntries(counts.map(row => [row.reaction, row.count])),
-				reactionAndUserPairCache: recentPairs.toReversed().map(row => `${row.userId}/${row.reaction}`),
+				reactions: Object.fromEntries(counts.map((row) => [row.reaction, row.count])),
+				reactionAndUserPairCache: recentPairs.toReversed().map((row) => `${row.userId}/${row.reaction}`),
 			})
 			.where(eq(note.id, id));
 	});
@@ -677,15 +632,9 @@ export async function listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase(
 		.select({ user: userTable })
 		.from(note)
 		.innerJoin(userTable, eq(userTable.id, note.userId))
-		.where(and(
-			or(
-				eq(note.renoteId, noteId),
-				eq(note.replyId, noteId),
-			),
-			isNotNull(note.userHost),
-		));
+		.where(and(or(eq(note.renoteId, noteId), eq(note.replyId, noteId)), isNotNull(note.userHost)));
 
-	return rows.map(row => deserializeUser(row.user) as MiRemoteUser);
+	return rows.map((row) => deserializeUser(row.user) as MiRemoteUser);
 }
 
 export async function fetchNoteByUriAndUserIdFromDatabase(
@@ -696,10 +645,7 @@ export async function fetchNoteByUriAndUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(note)
-		.where(and(
-			eq(note.uri, uri),
-			eq(note.userId, userId),
-		))
+		.where(and(eq(note.uri, uri), eq(note.userId, userId)))
 		.limit(1);
 
 	return row ? deserializeNote(row) : null;
@@ -709,11 +655,7 @@ export async function fetchNoteByUriFromDatabase(
 	db: MiDrizzleDatabase,
 	uri: NonNullable<MiNote['uri']>,
 ): Promise<MiNote | null> {
-	const [row] = await db
-		.select()
-		.from(note)
-		.where(eq(note.uri, uri))
-		.limit(1);
+	const [row] = await db.select().from(note).where(eq(note.uri, uri)).limit(1);
 
 	return row ? deserializeNote(row) : null;
 }
@@ -726,15 +668,11 @@ export async function listPublicFeedNotesByUserIdFromDatabase(
 	const rows = await db
 		.select()
 		.from(note)
-		.where(and(
-			eq(note.userId, userId),
-			isNull(note.renoteId),
-			inArray(note.visibility, ['public', 'home']),
-		))
+		.where(and(eq(note.userId, userId), isNull(note.renoteId), inArray(note.visibility, ['public', 'home'])))
 		.orderBy(desc(note.id))
 		.limit(limit);
 
-	return rows.map(row => deserializeNote(row));
+	return rows.map((row) => deserializeNote(row));
 }
 
 export async function listActivityPubOutboxNotesByUserIdFromDatabase(
@@ -768,7 +706,7 @@ export async function listActivityPubOutboxNotesByUserIdFromDatabase(
 		.orderBy(options.sinceId && !options.untilId ? asc(note.id) : desc(note.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeNote(row));
+	return rows.map((row) => deserializeNote(row));
 }
 
 export async function listChildNotesFromDatabase(
@@ -803,7 +741,7 @@ export async function listChildNotesFromDatabase(
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listMentionNotesFromDatabase(
@@ -847,12 +785,15 @@ export async function listMentionNotesFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY CONCAT("note"."id") ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listReplyNotesFromDatabase(
@@ -881,7 +822,7 @@ export async function listReplyNotesFromDatabase(
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listRenoteNotesFromDatabase(
@@ -910,7 +851,7 @@ export async function listRenoteNotesFromDatabase(
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listPublicNotesFromDatabase(
@@ -959,7 +900,7 @@ export async function listPublicNotesFromDatabase(
 		.orderBy(options.sinceId && !options.untilId ? asc(note.id) : desc(note.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeNote(row));
+	return rows.map((row) => deserializeNote(row));
 }
 
 export async function listNotesByAttachedFileIdFromDatabase(
@@ -974,14 +915,11 @@ export async function listNotesByAttachedFileIdFromDatabase(
 	const rows = await db
 		.select()
 		.from(note)
-		.where(and(
-			notePaginationCondition(options),
-			sql`ARRAY[${fileId}]::varchar[] <@ ${note.fileIds}`,
-		))
+		.where(and(notePaginationCondition(options), sql`ARRAY[${fileId}]::varchar[] <@ ${note.fileIds}`))
 		.orderBy(options.sinceId && !options.untilId ? asc(note.id) : desc(note.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeNote(row));
+	return rows.map((row) => deserializeNote(row));
 }
 
 export async function listFeaturedNotesByIdsFromDatabase(
@@ -998,11 +936,14 @@ export async function listFeaturedNotesByIdsFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE "note"."id" IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})
+		WHERE "note"."id" IN (${sql.join(
+			ids.map((id) => sql`${id}`),
+			sql`, `,
+		)})
 			AND ${baseNoteFilteringCondition(null, blockedHosts)}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listVisibleNotesByIdsFromDatabase(
@@ -1022,12 +963,15 @@ export async function listVisibleNotesByIdsFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE "note"."id" IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})
+		WHERE "note"."id" IN (${sql.join(
+			ids.map((id) => sql`${id}`),
+			sql`, `,
+		)})
 			AND ${noteVisibilityCondition(options.me)}
 			AND ${noteHostAndSuspensionFilteringCondition(options.blockedHosts)}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listVisibleNotesWithUsersByIdsFromDatabase(
@@ -1044,12 +988,9 @@ export async function listVisibleNotesWithUsersByIdsFromDatabase(
 		})
 		.from(note)
 		.innerJoin(userTable, eq(userTable.id, note.userId))
-		.where(and(
-			inArray(note.id, ids),
-			noteVisibilityCondition(me),
-		));
+		.where(and(inArray(note.id, ids), noteVisibilityCondition(me)));
 
-	return rows.map(row => ({
+	return rows.map((row) => ({
 		...deserializeNote(row.note),
 		user: deserializeUser(row.user),
 	}));
@@ -1085,7 +1026,7 @@ export async function listHydratedNotesByIdsFromDatabase(
 		.leftJoin(channelTable, eq(channelTable.id, note.channelId))
 		.where(inArray(note.id, ids));
 
-	return rows.map(row => {
+	return rows.map((row) => {
 		const hydrated = deserializeNote(row.note);
 		hydrated.user = deserializeUser(row.user);
 		hydrated.reply = row.reply == null ? null : deserializeNote(row.reply);
@@ -1159,9 +1100,9 @@ export async function searchNotesByTextFromDatabase(
 	}
 
 	if (options.withFiles != null) {
-		conditions.push(options.withFiles
-			? sql`cardinality("note"."fileIds") > 0`
-			: sql`cardinality("note"."fileIds") = 0`);
+		conditions.push(
+			options.withFiles ? sql`cardinality("note"."fileIds") > 0` : sql`cardinality("note"."fileIds") = 0`,
+		);
 	}
 
 	if (options.withSensitiveFiles != null) {
@@ -1175,9 +1116,7 @@ export async function searchNotesByTextFromDatabase(
 	}
 
 	if (options.withReplies != null) {
-		conditions.push(options.withReplies
-			? sql`"note"."replyId" IS NOT NULL`
-			: sql`"note"."replyId" IS NULL`);
+		conditions.push(options.withReplies ? sql`"note"."replyId" IS NOT NULL` : sql`"note"."replyId" IS NULL`);
 	}
 
 	const isQuote = quoteCondition('note');
@@ -1186,9 +1125,7 @@ export async function searchNotesByTextFromDatabase(
 	}
 
 	if (options.withCw != null) {
-		conditions.push(options.withCw
-			? sql`"note"."cw" IS NOT NULL`
-			: sql`"note"."cw" IS NULL`);
+		conditions.push(options.withCw ? sql`"note"."cw" IS NOT NULL` : sql`"note"."cw" IS NULL`);
 	}
 
 	if (options.visibility != null) {
@@ -1202,12 +1139,15 @@ export async function searchNotesByTextFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY "note"."id" ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listFilteredTimelineNotesByIdsFromDatabase(
@@ -1223,7 +1163,10 @@ export async function listFilteredTimelineNotesByIdsFromDatabase(
 	if (options.ids.length === 0) return [];
 
 	const conditions: SQL[] = [
-		sql`"note"."id" IN (${sql.join(options.ids.map(id => sql`${id}`), sql`, `)})`,
+		sql`"note"."id" IN (${sql.join(
+			options.ids.map((id) => sql`${id}`),
+			sql`, `,
+		)})`,
 		noteVisibilityCondition(options.me),
 		baseNoteFilteringCondition(options.me, options.blockedHosts),
 	];
@@ -1233,7 +1176,10 @@ export async function listFilteredTimelineNotesByIdsFromDatabase(
 	}
 
 	if (options.mutingChannelIds && options.mutingChannelIds.length > 0) {
-		const channelIds = sql.join(options.mutingChannelIds.map(id => sql`${id}`), sql`, `);
+		const channelIds = sql.join(
+			options.mutingChannelIds.map((id) => sql`${id}`),
+			sql`, `,
+		);
 		conditions.push(sql`("note"."channelId" IS NULL OR "note"."channelId" NOT IN (${channelIds}))`);
 		conditions.push(sql`("note"."renoteChannelId" IS NULL OR "note"."renoteChannelId" NOT IN (${channelIds}))`);
 	}
@@ -1245,10 +1191,13 @@ export async function listFilteredTimelineNotesByIdsFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listNotesByTagSearchFromDatabase(
@@ -1266,8 +1215,8 @@ export async function listNotesByTagSearchFromDatabase(
 		blockedHosts: string[];
 	},
 ): Promise<MiNote[]> {
-	const tagConditions = options.tagQuery.map(tags => {
-		const andConditions = tags.map(tag => sql`ARRAY[${tag}]::varchar[] <@ "note"."tags"`);
+	const tagConditions = options.tagQuery.map((tags) => {
+		const andConditions = tags.map((tag) => sql`ARRAY[${tag}]::varchar[] <@ "note"."tags"`);
 		return sql`(${sql.join(andConditions, sql` AND `)})`;
 	});
 	const conditions: SQL[] = [
@@ -1300,12 +1249,15 @@ export async function listNotesByTagSearchFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY "note"."id" ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listClipNotesFromDatabase(
@@ -1339,12 +1291,15 @@ export async function listClipNotesFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY "note"."id" ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listGlobalTimelineNotesFromDatabase(
@@ -1385,12 +1340,15 @@ export async function listGlobalTimelineNotesFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY "note"."id" ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listLocalTimelineNotesFromDatabase(
@@ -1423,7 +1381,10 @@ export async function listLocalTimelineNotesFromDatabase(
 	if (options.mutedChannelIds && options.mutedChannelIds.length > 0) {
 		conditions.push(sql`(
 			"note"."renoteChannelId" IS NULL
-			OR "note"."renoteChannelId" NOT IN (${sql.join(options.mutedChannelIds.map(id => sql`${id}`), sql`, `)})
+			OR "note"."renoteChannelId" NOT IN (${sql.join(
+				options.mutedChannelIds.map((id) => sql`${id}`),
+				sql`, `,
+			)})
 		)`);
 	}
 
@@ -1452,12 +1413,15 @@ export async function listLocalTimelineNotesFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY "note"."id" ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listChannelTimelineNotesFromDatabase(
@@ -1479,7 +1443,10 @@ export async function listChannelTimelineNotesFromDatabase(
 	];
 
 	if (options.mutedChannelIds && options.mutedChannelIds.length > 0) {
-		const channelIds = sql.join(options.mutedChannelIds.map(id => sql`${id}`), sql`, `);
+		const channelIds = sql.join(
+			options.mutedChannelIds.map((id) => sql`${id}`),
+			sql`, `,
+		);
 		conditions.push(sql`"note"."channelId" NOT IN (${channelIds})`);
 		conditions.push(sql`(
 			"note"."renoteChannelId" IS NULL
@@ -1494,12 +1461,15 @@ export async function listChannelTimelineNotesFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY "note"."id" ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listUserTimelineNotesFromDatabase(
@@ -1529,7 +1499,10 @@ export async function listUserTimelineNotesFromDatabase(
 		if (options.mutingChannelIds.length > 0) {
 			conditions.push(sql`(
 				"note"."channelId" IS NULL
-				OR "note"."channelId" NOT IN (${sql.join(options.mutingChannelIds.map(id => sql`${id}`), sql`, `)})
+				OR "note"."channelId" NOT IN (${sql.join(
+					options.mutingChannelIds.map((id) => sql`${id}`),
+					sql`, `,
+				)})
 			)`);
 		}
 
@@ -1546,7 +1519,10 @@ export async function listUserTimelineNotesFromDatabase(
 	if (options.mutingChannelIds.length > 0) {
 		conditions.push(sql`(
 			"note"."renoteChannelId" IS NULL
-			OR "note"."renoteChannelId" NOT IN (${sql.join(options.mutingChannelIds.map(id => sql`${id}`), sql`, `)})
+			OR "note"."renoteChannelId" NOT IN (${sql.join(
+				options.mutingChannelIds.map((id) => sql`${id}`),
+				sql`, `,
+			)})
 		)`);
 	}
 
@@ -1579,12 +1555,15 @@ export async function listUserTimelineNotesFromDatabase(
 		LEFT JOIN "channel" AS "renoteChannel" ON "renoteChannel"."id" = "note"."renoteChannelId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY "note"."id" ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listHomeTimelineNotesFromDatabase(
@@ -1629,7 +1608,10 @@ export async function listHomeTimelineNotesFromDatabase(
 				"note"."userId" = ANY(${sql.param(meOrFolloweeIds)})
 				AND "note"."channelId" IS NULL
 			)
-			OR "note"."channelId" IN (${sql.join(options.followingChannelIds.map(id => sql`${id}`), sql`, `)})
+			OR "note"."channelId" IN (${sql.join(
+				options.followingChannelIds.map((id) => sql`${id}`),
+				sql`, `,
+			)})
 		)`);
 	} else if (options.followeeIds.length > 0) {
 		conditions.push(sql`
@@ -1640,12 +1622,18 @@ export async function listHomeTimelineNotesFromDatabase(
 		if (options.mutingChannelIds.length > 0) {
 			conditions.push(sql`(
 				"note"."renoteChannelId" IS NULL
-				OR "note"."renoteChannelId" NOT IN (${sql.join(options.mutingChannelIds.map(id => sql`${id}`), sql`, `)})
+				OR "note"."renoteChannelId" NOT IN (${sql.join(
+					options.mutingChannelIds.map((id) => sql`${id}`),
+					sql`, `,
+				)})
 			)`);
 		}
 	} else if (options.followingChannelIds.length > 0) {
 		conditions.push(sql`(
-			"note"."channelId" IN (${sql.join(options.followingChannelIds.map(id => sql`${id}`), sql`, `)})
+			"note"."channelId" IN (${sql.join(
+				options.followingChannelIds.map((id) => sql`${id}`),
+				sql`, `,
+			)})
 			OR "note"."userId" = ${options.me.id}
 		)`);
 	} else {
@@ -1691,12 +1679,15 @@ export async function listHomeTimelineNotesFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY "note"."id" ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listHybridTimelineNotesFromDatabase(
@@ -1744,7 +1735,10 @@ export async function listHybridTimelineNotesFromDatabase(
 
 	if (options.followingChannelIds.length > 0) {
 		conditions.push(sql`(
-			"note"."channelId" IN (${sql.join(options.followingChannelIds.map(id => sql`${id}`), sql`, `)})
+			"note"."channelId" IN (${sql.join(
+				options.followingChannelIds.map((id) => sql`${id}`),
+				sql`, `,
+			)})
 			OR "note"."channelId" IS NULL
 		)`);
 	} else {
@@ -1754,7 +1748,10 @@ export async function listHybridTimelineNotesFromDatabase(
 	if (options.mutingChannelIds.length > 0) {
 		conditions.push(sql`(
 			"note"."renoteChannelId" IS NULL
-			OR "note"."renoteChannelId" NOT IN (${sql.join(options.mutingChannelIds.map(id => sql`${id}`), sql`, `)})
+			OR "note"."renoteChannelId" NOT IN (${sql.join(
+				options.mutingChannelIds.map((id) => sql`${id}`),
+				sql`, `,
+			)})
 		)`);
 	}
 
@@ -1804,12 +1801,15 @@ export async function listHybridTimelineNotesFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY "note"."id" ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function listUserListTimelineNotesFromDatabase(
@@ -1856,7 +1856,10 @@ export async function listUserListTimelineNotesFromDatabase(
 	if (options.mutedChannelIds.length > 0) {
 		conditions.push(sql`(
 			"note"."renoteChannelId" IS NULL
-			OR "note"."renoteChannelId" NOT IN (${sql.join(options.mutedChannelIds.map(id => sql`${id}`), sql`, `)})
+			OR "note"."renoteChannelId" NOT IN (${sql.join(
+				options.mutedChannelIds.map((id) => sql`${id}`),
+				sql`, `,
+			)})
 		)`);
 	}
 
@@ -1897,12 +1900,15 @@ export async function listUserListTimelineNotesFromDatabase(
 		LEFT JOIN "note" AS "renote" ON "renote"."id" = "note"."renoteId"
 		LEFT JOIN "user" AS "replyUser" ON "replyUser"."id" = "note"."replyUserId"
 		LEFT JOIN "user" AS "renoteUser" ON "renoteUser"."id" = "note"."renoteUserId"
-		WHERE ${sql.join(conditions.map(condition => sql`(${condition})`), sql` AND `)}
+		WHERE ${sql.join(
+			conditions.map((condition) => sql`(${condition})`),
+			sql` AND `,
+		)}
 		ORDER BY "note"."id" ${notePaginationOrder(options)}
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => deserializeNote(row));
+	return result.rows.map((row) => deserializeNote(row));
 }
 
 export async function adjustNotesPageCountInDatabase(
@@ -1915,7 +1921,10 @@ export async function adjustNotesPageCountInDatabase(
 	await db.execute(sql`
 		UPDATE "note"
 		SET "pageCount" = "pageCount" + ${delta}
-		WHERE "id" IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})
+		WHERE "id" IN (${sql.join(
+			ids.map((id) => sql`${id}`),
+			sql`, `,
+		)})
 	`);
 }
 
@@ -1944,7 +1953,7 @@ export async function listFrequentlyRepliedUsersFromDatabase(
 		LIMIT ${limit}
 	`);
 
-	return result.rows.map(row => ({
+	return result.rows.map((row) => ({
 		userId: row.userId,
 		count: Number(row.count),
 	}));

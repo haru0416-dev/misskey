@@ -8,17 +8,12 @@ import { systemWebhook, deserializeSystemWebhook, type SystemWebhookInsert } fro
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
 
-type SystemWebhookUpdate = Partial<Pick<
-	SystemWebhookInsert,
-	| 'isActive'
-	| 'updatedAt'
-	| 'latestSentAt'
-	| 'latestStatus'
-	| 'name'
-	| 'on'
-	| 'url'
-	| 'secret'
->>;
+type SystemWebhookUpdate = Partial<
+	Pick<
+		SystemWebhookInsert,
+		'isActive' | 'updatedAt' | 'latestSentAt' | 'latestStatus' | 'name' | 'on' | 'url' | 'secret'
+	>
+>;
 
 function systemWebhookFilterCondition(options: {
 	ids?: MiSystemWebhook['id'][];
@@ -36,7 +31,12 @@ function systemWebhookFilterCondition(options: {
 	}
 
 	if (options.on != null && options.on.length > 0) {
-		conditions.push(sql`ARRAY[${sql.join(options.on.map(type => sql`${type}`), sql`, `)}]::varchar[] <@ ${systemWebhook.on}`);
+		conditions.push(
+			sql`ARRAY[${sql.join(
+				options.on.map((type) => sql`${type}`),
+				sql`, `,
+			)}]::varchar[] <@ ${systemWebhook.on}`,
+		);
 	}
 
 	return conditions.length > 0 ? and(...conditions) : undefined;
@@ -46,11 +46,7 @@ export async function fetchSystemWebhookByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiSystemWebhook['id'],
 ): Promise<MiSystemWebhook | null> {
-	const [row] = await db
-		.select()
-		.from(systemWebhook)
-		.where(eq(systemWebhook.id, id))
-		.limit(1);
+	const [row] = await db.select().from(systemWebhook).where(eq(systemWebhook.id, id)).limit(1);
 
 	return row == null ? null : deserializeSystemWebhook(row);
 }
@@ -75,22 +71,16 @@ export async function listSystemWebhooksFromDatabase(
 		on?: SystemWebhookEventType[];
 	} = {},
 ): Promise<MiSystemWebhook[]> {
-	const rows = await db
-		.select()
-		.from(systemWebhook)
-		.where(systemWebhookFilterCondition(options));
+	const rows = await db.select().from(systemWebhook).where(systemWebhookFilterCondition(options));
 
-	return rows.map(row => deserializeSystemWebhook(row));
+	return rows.map((row) => deserializeSystemWebhook(row));
 }
 
 export async function createSystemWebhookInDatabase(
 	db: MiDrizzleDatabase,
 	data: SystemWebhookInsert,
 ): Promise<MiSystemWebhook> {
-	const [row] = await db
-		.insert(systemWebhook)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(systemWebhook).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create system webhook');
@@ -104,20 +94,11 @@ export async function updateSystemWebhookInDatabase(
 	id: MiSystemWebhook['id'],
 	data: SystemWebhookUpdate,
 ): Promise<MiSystemWebhook | null> {
-	const [row] = await db
-		.update(systemWebhook)
-		.set(data)
-		.where(eq(systemWebhook.id, id))
-		.returning();
+	const [row] = await db.update(systemWebhook).set(data).where(eq(systemWebhook.id, id)).returning();
 
 	return row == null ? null : deserializeSystemWebhook(row);
 }
 
-export async function deleteSystemWebhookFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiSystemWebhook['id'],
-): Promise<void> {
-	await db
-		.delete(systemWebhook)
-		.where(eq(systemWebhook.id, id));
+export async function deleteSystemWebhookFromDatabase(db: MiDrizzleDatabase, id: MiSystemWebhook['id']): Promise<void> {
+	await db.delete(systemWebhook).where(eq(systemWebhook.id, id));
 }

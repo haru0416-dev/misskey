@@ -9,7 +9,11 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig, type Config } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
-import { createAntennaInDatabase, deleteAntennaFromDatabase, fetchAntennaByIdOrFailFromDatabase } from '@/core/AntennaStore.js';
+import {
+	createAntennaInDatabase,
+	deleteAntennaFromDatabase,
+	fetchAntennaByIdOrFailFromDatabase,
+} from '@/core/AntennaStore.js';
 import { createUserInDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { onMoveAccountForHonoApi } from '@/server/rest/antennas.js';

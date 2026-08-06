@@ -6,7 +6,7 @@
 import { noteVisibilities } from '@/types.js';
 import { MiNote } from './Note.js';
 import type { MiUser } from './User.js';
-import type { MiChannel } from "@/models/Channel.js";
+import type { MiChannel } from '@/models/Channel.js';
 
 export class MiPoll {
 	public noteId: MiNote['id'];
@@ -21,7 +21,7 @@ export class MiPoll {
 
 	public votes: number[];
 
-	public noteVisibility: typeof noteVisibilities[number];
+	public noteVisibility: (typeof noteVisibilities)[number];
 
 	public userId: MiUser['id'];
 

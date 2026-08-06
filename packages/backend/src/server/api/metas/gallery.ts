@@ -3,7 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { galleryFeaturedParamDef, galleryPopularParamDef, galleryPostsCreateParamDef, galleryPostsParamDef, galleryPostsPostIdParamDef, galleryPostsUpdateParamDef } from '@/server/rest/gallery.js';
+import {
+	galleryFeaturedParamDef,
+	galleryPopularParamDef,
+	galleryPostsCreateParamDef,
+	galleryPostsParamDef,
+	galleryPostsPostIdParamDef,
+	galleryPostsUpdateParamDef,
+} from '@/server/rest/gallery.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -15,10 +22,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'GalleryPost',
 				},
 			},
@@ -33,10 +42,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'GalleryPost',
 				},
 			},
@@ -49,10 +60,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'GalleryPost',
 				},
 			},
@@ -76,13 +89,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'GalleryPost',
 			},
 
-			errors: {
-
-			},
+			errors: {},
 		} as const,
 		paramDef: galleryPostsCreateParamDef,
 	},
@@ -158,7 +170,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'GalleryPost',
 			},
 		} as const,
@@ -207,13 +220,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'GalleryPost',
 			},
 
-			errors: {
-
-			},
+			errors: {},
 		} as const,
 		paramDef: galleryPostsUpdateParamDef,
 	},

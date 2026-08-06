@@ -8,10 +8,12 @@ import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { CommonProps } from '@/server/web/views/_.js';
 import { Layout } from '@/server/web/views/base.js';
 
-export function FlashPage(props: CommonProps<{
-	flash: Packed<'Flash'>;
-	profile: MiUserProfile;
-}>) {
+export function FlashPage(
+	props: CommonProps<{
+		flash: Packed<'Flash'>;
+		profile: MiUserProfile;
+	}>,
+) {
 	function ogBlock() {
 		return (
 			<>
@@ -53,7 +55,6 @@ export function FlashPage(props: CommonProps<{
 			desc={props.flash.summary}
 			metaSlot={metaBlock()}
 			ogSlot={ogBlock()}
-		>
-		</Layout>
+		></Layout>
 	);
 }

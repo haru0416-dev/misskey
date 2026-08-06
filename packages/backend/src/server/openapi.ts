@@ -27,7 +27,9 @@ export function createOpenApiApp(deps: OpenApiDependencies): Hono {
 	});
 
 	app.get('/api.json', async () => {
-		openApiJsonPromise ??= import('./api/openapi/gen-spec.js').then(({ genOpenapiSpec }) => JSON.stringify(genOpenapiSpec(deps.config)));
+		openApiJsonPromise ??= import('./api/openapi/gen-spec.js').then(({ genOpenapiSpec }) =>
+			JSON.stringify(genOpenapiSpec(deps.config)),
+		);
 		return new Response(await openApiJsonPromise, {
 			status: 200,
 			headers: {

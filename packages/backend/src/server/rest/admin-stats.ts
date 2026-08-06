@@ -17,10 +17,13 @@ type IndexStatsResponse = {
 	indexname: string;
 }[];
 
-type TableStatsResponse = Record<string, {
-	count: number;
-	size: number;
-}>;
+type TableStatsResponse = Record<
+	string,
+	{
+		count: number;
+		size: number;
+	}
+>;
 
 export const adminStatsParamDef = z.object({});
 
@@ -35,7 +38,7 @@ export async function handleHonoApiAdminGetIndexStats(
 		indexname: string;
 	}>(sql`SELECT * FROM pg_indexes;`);
 
-	return result.rows.map(row => ({
+	return result.rows.map((row) => ({
 		tablename: row.tablename,
 		indexname: row.indexname,
 	}));

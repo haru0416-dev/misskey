@@ -37,21 +37,24 @@ describe('Account Move', () => {
 	let db: MiDrizzleDatabase;
 	let pool: MiDrizzlePool | undefined;
 
-	beforeAll(async () => {
-		jq = await jobQueue();
+	beforeAll(
+		async () => {
+			jq = await jobQueue();
 
-		const config = loadConfig();
-		url = new URL(config.instance.url);
-		pool = createDrizzlePool(config);
-		db = createDrizzleDatabase(pool, config);
-		root = await signup({ username: 'root' });
-		alice = await signup({ username: 'alice' });
-		bob = await signup({ username: 'bob' });
-		carol = await signup({ username: 'carol' });
-		dave = await signup({ username: 'dave' });
-		eve = await signup({ username: 'eve' });
-		frank = await signup({ username: 'frank' });
-	}, 1000 * 60 * 2);
+			const config = loadConfig();
+			url = new URL(config.instance.url);
+			pool = createDrizzlePool(config);
+			db = createDrizzleDatabase(pool, config);
+			root = await signup({ username: 'root' });
+			alice = await signup({ username: 'alice' });
+			bob = await signup({ username: 'bob' });
+			carol = await signup({ username: 'carol' });
+			dave = await signup({ username: 'dave' });
+			eve = await signup({ username: 'eve' });
+			frank = await signup({ username: 'frank' });
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await pool?.end();
@@ -64,9 +67,13 @@ describe('Account Move', () => {
 		}, 1000 * 10);
 
 		test('Able to create an alias', async () => {
-			const res = await api('i/update', {
-				alsoKnownAs: [`@alice@${url.hostname}`],
-			}, bob);
+			const res = await api(
+				'i/update',
+				{
+					alsoKnownAs: [`@alice@${url.hostname}`],
+				},
+				bob,
+			);
 
 			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.alsoKnownAs?.length, 1);
@@ -76,9 +83,13 @@ describe('Account Move', () => {
 		});
 
 		test('Able to create a local alias without hostname', async () => {
-			await api('i/update', {
-				alsoKnownAs: ['@alice'],
-			}, bob);
+			await api(
+				'i/update',
+				{
+					alsoKnownAs: ['@alice'],
+				},
+				bob,
+			);
 
 			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.alsoKnownAs?.length, 1);
@@ -86,9 +97,13 @@ describe('Account Move', () => {
 		});
 
 		test('Able to create a local alias without @', async () => {
-			await api('i/update', {
-				alsoKnownAs: ['alice'],
-			}, bob);
+			await api(
+				'i/update',
+				{
+					alsoKnownAs: ['alice'],
+				},
+				bob,
+			);
 
 			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.alsoKnownAs?.length, 1);
@@ -96,9 +111,13 @@ describe('Account Move', () => {
 		});
 
 		test('Able to set remote user (but may fail)', async () => {
-			const res = await api('i/update', {
-				alsoKnownAs: ['@syuilo@example.com'],
-			}, bob);
+			const res = await api(
+				'i/update',
+				{
+					alsoKnownAs: ['@syuilo@example.com'],
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_USER');
@@ -106,9 +125,13 @@ describe('Account Move', () => {
 		});
 
 		test('Unable to add duplicated aliases to alsoKnownAs', async () => {
-			const res = await api('i/update', {
-				alsoKnownAs: [`@alice@${url.hostname}`, `@alice@${url.hostname}`],
-			}, bob);
+			const res = await api(
+				'i/update',
+				{
+					alsoKnownAs: [`@alice@${url.hostname}`, `@alice@${url.hostname}`],
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body).error.code, 'INVALID_PARAM');
@@ -116,9 +139,13 @@ describe('Account Move', () => {
 		});
 
 		test('Unable to add itself', async () => {
-			const res = await api('i/update', {
-				alsoKnownAs: [`@bob@${url.hostname}`],
-			}, bob);
+			const res = await api(
+				'i/update',
+				{
+					alsoKnownAs: [`@bob@${url.hostname}`],
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body).error.code, 'FORBIDDEN_TO_SET_YOURSELF');
@@ -126,17 +153,25 @@ describe('Account Move', () => {
 		});
 
 		test('Unable to add a nonexisting local account to alsoKnownAs', async () => {
-			const res1 = await api('i/update', {
-				alsoKnownAs: [`@nonexist@${url.hostname}`],
-			}, bob);
+			const res1 = await api(
+				'i/update',
+				{
+					alsoKnownAs: [`@nonexist@${url.hostname}`],
+				},
+				bob,
+			);
 
 			assert.strictEqual(res1.status, 400);
 			assert.strictEqual(castAsError(res1.body).error.code, 'NO_SUCH_USER');
 			assert.strictEqual(castAsError(res1.body).error.id, 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
 
-			const res2 = await api('i/update', {
-				alsoKnownAs: ['@alice', 'nonexist'],
-			}, bob);
+			const res2 = await api(
+				'i/update',
+				{
+					alsoKnownAs: ['@alice', 'nonexist'],
+				},
+				bob,
+			);
 
 			assert.strictEqual(res2.status, 400);
 			assert.strictEqual(castAsError(res2.body).error.code, 'NO_SUCH_USER');
@@ -144,9 +179,13 @@ describe('Account Move', () => {
 		});
 
 		test('Able to add two existing local account to alsoKnownAs', async () => {
-			await api('i/update', {
-				alsoKnownAs: [`@alice@${url.hostname}`, `@carol@${url.hostname}`],
-			}, bob);
+			await api(
+				'i/update',
+				{
+					alsoKnownAs: [`@alice@${url.hostname}`, `@carol@${url.hostname}`],
+				},
+				bob,
+			);
 
 			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.alsoKnownAs?.length, 2);
@@ -155,12 +194,20 @@ describe('Account Move', () => {
 		});
 
 		test('Able to properly overwrite alsoKnownAs', async () => {
-			await api('i/update', {
-				alsoKnownAs: [`@alice@${url.hostname}`],
-			}, bob);
-			await api('i/update', {
-				alsoKnownAs: [`@carol@${url.hostname}`, `@dave@${url.hostname}`],
-			}, bob);
+			await api(
+				'i/update',
+				{
+					alsoKnownAs: [`@alice@${url.hostname}`],
+				},
+				bob,
+			);
+			await api(
+				'i/update',
+				{
+					alsoKnownAs: [`@carol@${url.hostname}`, `@dave@${url.hostname}`],
+				},
+				bob,
+			);
 
 			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
 			assert.strictEqual(newBob.alsoKnownAs?.length, 2);
@@ -173,80 +220,152 @@ describe('Account Move', () => {
 		let antennaId = '';
 
 		beforeAll(async () => {
-			await api('i/update', {
-				alsoKnownAs: [`@alice@${url.hostname}`],
-			}, root);
-			const listRoot = await api('users/lists/create', {
-				name: secureRndstr(8),
-			}, root);
-			await api('users/lists/push', {
-				listId: listRoot.body.id,
-				userId: alice.id,
-			}, root);
+			await api(
+				'i/update',
+				{
+					alsoKnownAs: [`@alice@${url.hostname}`],
+				},
+				root,
+			);
+			const listRoot = await api(
+				'users/lists/create',
+				{
+					name: secureRndstr(8),
+				},
+				root,
+			);
+			await api(
+				'users/lists/push',
+				{
+					listId: listRoot.body.id,
+					userId: alice.id,
+				},
+				root,
+			);
 
-			await api('following/create', {
-				userId: root.id,
-			}, alice);
-			await api('following/create', {
-				userId: eve.id,
-			}, alice);
-			const antenna = await api('antennas/create', {
-				name: secureRndstr(8),
-				src: 'home',
-				keywords: [[secureRndstr(8)]],
-				excludeKeywords: [],
-				users: [],
-				caseSensitive: false,
-				localOnly: false,
-				withReplies: false,
-				withFile: false,
-			}, alice);
+			await api(
+				'following/create',
+				{
+					userId: root.id,
+				},
+				alice,
+			);
+			await api(
+				'following/create',
+				{
+					userId: eve.id,
+				},
+				alice,
+			);
+			const antenna = await api(
+				'antennas/create',
+				{
+					name: secureRndstr(8),
+					src: 'home',
+					keywords: [[secureRndstr(8)]],
+					excludeKeywords: [],
+					users: [],
+					caseSensitive: false,
+					localOnly: false,
+					withReplies: false,
+					withFile: false,
+				},
+				alice,
+			);
 			antennaId = antenna.body.id;
 
-			await api('i/update', {
-				alsoKnownAs: [`@alice@${url.hostname}`],
-			}, bob);
+			await api(
+				'i/update',
+				{
+					alsoKnownAs: [`@alice@${url.hostname}`],
+				},
+				bob,
+			);
 
-			await api('following/create', {
-				userId: alice.id,
-			}, carol);
+			await api(
+				'following/create',
+				{
+					userId: alice.id,
+				},
+				carol,
+			);
 
-			await api('mute/create', {
-				userId: alice.id,
-			}, dave);
-			await api('blocking/create', {
-				userId: alice.id,
-			}, dave);
-			await api('following/create', {
-				userId: eve.id,
-			}, dave);
+			await api(
+				'mute/create',
+				{
+					userId: alice.id,
+				},
+				dave,
+			);
+			await api(
+				'blocking/create',
+				{
+					userId: alice.id,
+				},
+				dave,
+			);
+			await api(
+				'following/create',
+				{
+					userId: eve.id,
+				},
+				dave,
+			);
 
-			await api('following/create', {
-				userId: dave.id,
-			}, eve);
-			const listEve = await api('users/lists/create', {
-				name: secureRndstr(8),
-			}, eve);
-			await api('users/lists/push', {
-				listId: listEve.body.id,
-				userId: bob.id,
-			}, eve);
+			await api(
+				'following/create',
+				{
+					userId: dave.id,
+				},
+				eve,
+			);
+			const listEve = await api(
+				'users/lists/create',
+				{
+					name: secureRndstr(8),
+				},
+				eve,
+			);
+			await api(
+				'users/lists/push',
+				{
+					listId: listEve.body.id,
+					userId: bob.id,
+				},
+				eve,
+			);
 
-			await api('i/update', {
-				isLocked: true,
-			}, frank);
-			await api('following/create', {
-				userId: frank.id,
-			}, alice);
-			await api('following/requests/accept', {
-				userId: alice.id,
-			}, frank);
+			await api(
+				'i/update',
+				{
+					isLocked: true,
+				},
+				frank,
+			);
+			await api(
+				'following/create',
+				{
+					userId: frank.id,
+				},
+				alice,
+			);
+			await api(
+				'following/requests/accept',
+				{
+					userId: alice.id,
+				},
+				frank,
+			);
 		}, 1000 * 10);
 
 		test('Prohibit the root account from moving', async () => {
-			const res = await api('i/move', {
-				moveToAccount: `@bob@${url.hostname}`,
-			}, root);
+			const res = await api(
+				'i/move',
+				{
+					moveToAccount: `@bob@${url.hostname}`,
+				},
+				root,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body).error.code, 'NOT_ROOT_FORBIDDEN');
@@ -254,9 +373,13 @@ describe('Account Move', () => {
 		});
 
 		test('Unable to move to a nonexisting local account', async () => {
-			const res = await api('i/move', {
-				moveToAccount: `@nonexist@${url.hostname}`,
-			}, alice);
+			const res = await api(
+				'i/move',
+				{
+					moveToAccount: `@nonexist@${url.hostname}`,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_USER');
@@ -264,9 +387,13 @@ describe('Account Move', () => {
 		});
 
 		test('Unable to move if alsoKnownAs is invalid', async () => {
-			const res = await api('i/move', {
-				moveToAccount: `@carol@${url.hostname}`,
-			}, alice);
+			const res = await api(
+				'i/move',
+				{
+					moveToAccount: `@carol@${url.hostname}`,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body).error.code, 'DESTINATION_ACCOUNT_FORBIDS');
@@ -274,24 +401,36 @@ describe('Account Move', () => {
 		});
 
 		test('Relationships have been properly migrated', async () => {
-			const move = await api('i/move', {
-				moveToAccount: `@bob@${url.hostname}`,
-			}, alice);
+			const move = await api(
+				'i/move',
+				{
+					moveToAccount: `@bob@${url.hostname}`,
+				},
+				alice,
+			);
 
 			assert.strictEqual(move.status, 200);
 
 			await vi.waitFor(async () => {
-				const aliceFollowings = await api('users/following', {
-					userId: alice.id,
-				}, alice);
+				const aliceFollowings = await api(
+					'users/following',
+					{
+						userId: alice.id,
+					},
+					alice,
+				);
 				assert.strictEqual(aliceFollowings.status, 200);
 				assert.strictEqual(aliceFollowings.body.length, 3);
 			}, waitForMoveJobOptions);
 
 			await vi.waitFor(async () => {
-				const carolFollowings = await api('users/following', {
-					userId: carol.id,
-				}, carol);
+				const carolFollowings = await api(
+					'users/following',
+					{
+						userId: carol.id,
+					},
+					carol,
+				);
 				assert.strictEqual(carolFollowings.status, 200);
 				assert.strictEqual(carolFollowings.body.length, 2);
 				assert.strictEqual(carolFollowings.body[0]?.followeeId, bob.id);
@@ -339,9 +478,13 @@ describe('Account Move', () => {
 				},
 				user: bob,
 			});
-			const followers = await api('users/followers', {
-				userId: frank.id,
-			}, frank);
+			const followers = await api(
+				'users/followers',
+				{
+					userId: frank.id,
+				},
+				frank,
+			);
 
 			assert.strictEqual(followers.status, 200);
 			assert.strictEqual(followers.body.length, 2);
@@ -350,9 +493,13 @@ describe('Account Move', () => {
 
 		test('Unfollowed after 10 sec (24 hours in production).', async () => {
 			await vi.waitFor(async () => {
-				const following = await api('users/following', {
-					userId: alice.id,
-				}, alice);
+				const following = await api(
+					'users/following',
+					{
+						userId: alice.id,
+					},
+					alice,
+				);
 
 				assert.strictEqual(following.status, 200);
 				assert.strictEqual(following.body.length, 0);
@@ -360,9 +507,13 @@ describe('Account Move', () => {
 		});
 
 		test('Unable to move if the destination account has already moved.', async () => {
-			const res = await api('i/move', {
-				moveToAccount: `@alice@${url.hostname}`,
-			}, bob);
+			const res = await api(
+				'i/move',
+				{
+					moveToAccount: `@alice@${url.hostname}`,
+				},
+				bob,
+			);
 
 			assert.strictEqual(res.status, 400);
 			assert.strictEqual(castAsError(res.body).error.code, 'DESTINATION_ACCOUNT_FORBIDS');
@@ -370,9 +521,13 @@ describe('Account Move', () => {
 		});
 
 		test('Follow and follower counts are properly adjusted', async () => {
-			await api('following/create', {
-				userId: alice.id,
-			}, eve);
+			await api(
+				'following/create',
+				{
+					userId: alice.id,
+				},
+				eve,
+			);
 			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
 			const newCarol = await fetchUserByIdOrFailFromDatabase(db, carol.id);
 			let newEve = await fetchUserByIdOrFailFromDatabase(db, eve.id);
@@ -383,9 +538,13 @@ describe('Account Move', () => {
 			assert.strictEqual(newEve.followingCount, 1);
 			assert.strictEqual(newEve.followersCount, 1);
 
-			await api('following/delete', {
-				userId: alice.id,
-			}, eve);
+			await api(
+				'following/delete',
+				{
+					userId: alice.id,
+				},
+				eve,
+			);
 			newEve = await fetchUserByIdOrFailFromDatabase(db, eve.id);
 			assert.strictEqual(newEve.followingCount, 1);
 			assert.strictEqual(newEve.followersCount, 1);
@@ -443,18 +602,22 @@ describe('Account Move', () => {
 		});
 
 		test('Prohibit access after moving: /antennas/update', async () => {
-			const res = await api('antennas/update', {
-				antennaId,
-				name: secureRndstr(8),
-				src: 'users',
-				keywords: [[secureRndstr(8)]],
-				excludeKeywords: [],
-				users: [eve.id],
-				caseSensitive: false,
-				localOnly: false,
-				withReplies: false,
-				withFile: false,
-			}, alice);
+			const res = await api(
+				'antennas/update',
+				{
+					antennaId,
+					name: secureRndstr(8),
+					src: 'users',
+					keywords: [[secureRndstr(8)]],
+					excludeKeywords: [],
+					users: [eve.id],
+					caseSensitive: false,
+					localOnly: false,
+					withReplies: false,
+					withFile: false,
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 403);
 			assert.ok(res.body);
@@ -473,9 +636,13 @@ describe('Account Move', () => {
 		});
 
 		test('Prohibit updating alsoKnownAs after moving', async () => {
-			const res = await api('i/update', {
-				alsoKnownAs: [`@eve@${url.hostname}`],
-			}, alice);
+			const res = await api(
+				'i/update',
+				{
+					alsoKnownAs: [`@eve@${url.hostname}`],
+				},
+				alice,
+			);
 
 			assert.strictEqual(res.status, 403);
 			assert.strictEqual(castAsError(res.body).error.code, 'YOUR_ACCOUNT_MOVED');

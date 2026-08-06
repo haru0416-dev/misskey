@@ -56,11 +56,11 @@ describe('hono-stream-connection: chat channels', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', { otherId: other.id }, 'chatUser', true);
-		expect(raw.some(r => JSON.parse(r).type === 'connected')).toBe(true);
+		expect(raw.some((r) => JSON.parse(r).type === 'connected')).toBe(true);
 
 		subscriber.emit(`chatUserStream:${me.id}-${other.id}`, { type: 'message', body: { text: 'hi' } });
 
-		const channelMessages = raw.map(r => JSON.parse(r)).filter(m => m.type === 'channel');
+		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
 		expect(channelMessages.length).toBe(1);
 		expect(channelMessages[0].body.body).toEqual({ text: 'hi' });
 	});
@@ -88,11 +88,11 @@ describe('hono-stream-connection: chat channels', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', { roomId: room.id }, 'chatRoom', true);
-		expect(raw.some(r => JSON.parse(r).type === 'connected')).toBe(true);
+		expect(raw.some((r) => JSON.parse(r).type === 'connected')).toBe(true);
 
 		subscriber.emit(`chatRoomStream:${room.id}`, { type: 'message', body: { text: 'hello room' } });
 
-		const channelMessages = raw.map(r => JSON.parse(r)).filter(m => m.type === 'channel');
+		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
 		expect(channelMessages.length).toBe(1);
 		expect(channelMessages[0].body.body).toEqual({ text: 'hello room' });
 	});

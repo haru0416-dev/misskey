@@ -36,8 +36,7 @@ function stringifyParameter(param: unknown): unknown {
 }
 
 class MyDrizzleLogger implements DrizzleLogger {
-	constructor(private props: LoggerProps) {
-	}
+	constructor(private props: LoggerProps) {}
 
 	private transformQueryLog(sql: string): string {
 		return truncateSql(sql, this.props.maximumQueryLength);
@@ -77,9 +76,9 @@ export function createDrizzlePool(config: Config): MiDrizzlePool {
 export function createDrizzleDatabase(pool: MiDrizzlePool, config: Config): MiDrizzleDatabase {
 	const logger = config.observability.logging.sql.enabled
 		? new MyDrizzleLogger({
-			maximumQueryLength: config.observability.logging.sql.maximumQueryLength,
-			logParameters: config.observability.logging.sql.logParameters,
-		})
+				maximumQueryLength: config.observability.logging.sql.maximumQueryLength,
+				logParameters: config.observability.logging.sql.logParameters,
+			})
 		: undefined;
 	return drizzle({
 		client: pool,

@@ -299,6 +299,6 @@ export class MiMeta {
 }
 
 export type SoftwareSuspension = {
-	software: string,
-	versionRange: string,
+	software: string;
+	versionRange: string;
 };

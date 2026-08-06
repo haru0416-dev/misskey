@@ -16,7 +16,7 @@ import { generateNativeUserToken } from '@/misc/token.js';
 
 export const SYSTEM_ACCOUNT_TYPES = ['actor', 'relay', 'proxy'] as const;
 
-export type SystemAccountType = typeof SYSTEM_ACCOUNT_TYPES[number];
+export type SystemAccountType = (typeof SYSTEM_ACCOUNT_TYPES)[number];
 
 export async function fetchOrCreateSystemAccount(
 	db: MiDrizzleDatabase,

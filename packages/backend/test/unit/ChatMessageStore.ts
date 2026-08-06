@@ -8,7 +8,11 @@ process.env['NODE_ENV'] = 'test';
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createChatMessageInDatabase, listRoomChatHistoryFromDatabase, listUserChatHistoryFromDatabase } from '@/core/ChatMessageStore.js';
+import {
+	createChatMessageInDatabase,
+	listRoomChatHistoryFromDatabase,
+	listUserChatHistoryFromDatabase,
+} from '@/core/ChatMessageStore.js';
 import { createChatRoomInDatabase, createChatRoomMembershipInDatabase } from '@/core/ChatRoomStore.js';
 import { createMutingInDatabase } from '@/core/MutingStore.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
@@ -92,9 +96,9 @@ describe('ChatMessageStore history', () => {
 		const limited = await listUserChatHistoryFromDatabase(runtime.db, viewer.id, 2);
 		const all = await listUserChatHistoryFromDatabase(runtime.db, viewer.id, 10);
 
-		expect(limited.map(message => message.id)).toEqual([aliceLatest.id, carolLatest.id]);
-		expect(all.map(message => message.id)).toEqual([aliceLatest.id, carolLatest.id, bobLatest.id]);
-		expect(all.some(message => message.id === aliceOld.id)).toBe(false);
+		expect(limited.map((message) => message.id)).toEqual([aliceLatest.id, carolLatest.id]);
+		expect(all.map((message) => message.id)).toEqual([aliceLatest.id, carolLatest.id, bobLatest.id]);
+		expect(all.some((message) => message.id === aliceOld.id)).toBe(false);
 	});
 
 	test('returns the latest message for owned and joined rooms in global newest order', async () => {
@@ -105,10 +109,23 @@ describe('ChatMessageStore history', () => {
 		]);
 		const ownedRoom = await createChatRoomInDatabase(runtime.db, { id: genId(), ownerId: viewer.id, name: 'owned' });
 		const memberRoom = await createChatRoomInDatabase(runtime.db, { id: genId(), ownerId: owner.id, name: 'member' });
-		const ownedAndJoinedRoom = await createChatRoomInDatabase(runtime.db, { id: genId(), ownerId: viewer.id, name: 'owned and joined' });
-		const inaccessibleRoom = await createChatRoomInDatabase(runtime.db, { id: genId(), ownerId: owner.id, name: 'inaccessible' });
+		const ownedAndJoinedRoom = await createChatRoomInDatabase(runtime.db, {
+			id: genId(),
+			ownerId: viewer.id,
+			name: 'owned and joined',
+		});
+		const inaccessibleRoom = await createChatRoomInDatabase(runtime.db, {
+			id: genId(),
+			ownerId: owner.id,
+			name: 'inaccessible',
+		});
 		await Promise.all([
-			createChatRoomMembershipInDatabase(runtime.db, { id: genId(), userId: viewer.id, roomId: memberRoom.id, isMuted: true }),
+			createChatRoomMembershipInDatabase(runtime.db, {
+				id: genId(),
+				userId: viewer.id,
+				roomId: memberRoom.id,
+				isMuted: true,
+			}),
 			createChatRoomMembershipInDatabase(runtime.db, { id: genId(), userId: viewer.id, roomId: ownedAndJoinedRoom.id }),
 		]);
 
@@ -147,9 +164,9 @@ describe('ChatMessageStore history', () => {
 		const limited = await listRoomChatHistoryFromDatabase(runtime.db, viewer.id, 2);
 		const all = await listRoomChatHistoryFromDatabase(runtime.db, viewer.id, 10);
 
-		expect(limited.map(message => message.id)).toEqual([ownedLatest.id, ownedAndJoinedLatest.id]);
-		expect(all.map(message => message.id)).toEqual([ownedLatest.id, ownedAndJoinedLatest.id, memberLatest.id]);
-		expect(all.some(message => message.id === inaccessibleLatest.id)).toBe(false);
+		expect(limited.map((message) => message.id)).toEqual([ownedLatest.id, ownedAndJoinedLatest.id]);
+		expect(all.map((message) => message.id)).toEqual([ownedLatest.id, ownedAndJoinedLatest.id, memberLatest.id]);
+		expect(all.some((message) => message.id === inaccessibleLatest.id)).toBe(false);
 	});
 
 	test('returns empty histories when there are no conversations or eligible rooms', async () => {

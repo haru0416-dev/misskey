@@ -14,10 +14,13 @@ describe('Drive', () => {
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'alice' });
-		bob = await signup({ username: 'bob' });
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			alice = await signup({ username: 'alice' });
+			bob = await signup({ username: 'bob' });
+		},
+		1000 * 60 * 2,
+	);
 
 	test('ファイルURLからアップロードできる', async () => {
 		// utils.js uploadUrl の処理だがAPIレスポンスも見るためここで同様の処理を書いている
@@ -31,13 +34,18 @@ describe('Drive', () => {
 			'main',
 			(msg) => msg.type === 'urlUploadFinished' && msg.body['marker'] === marker,
 			(msg) => parseUploadedDriveFile(msg.body['file']),
-			10 * 1000);
+			10 * 1000,
+		);
 
-		const res = await api('drive/files/upload-from-url', {
-			url,
-			marker,
-			force: true,
-		}, alice);
+		const res = await api(
+			'drive/files/upload-from-url',
+			{
+				url,
+				marker,
+				force: true,
+			},
+			alice,
+		);
 
 		const file = await catcher;
 
@@ -56,7 +64,9 @@ describe('Drive', () => {
 	});
 
 	test('添付ノート一覧を取得できる', async () => {
-		const ids = (await Promise.all([uploadFile(alice), uploadFile(alice), uploadFile(alice)])).map(elm => elm.body!.id);
+		const ids = (await Promise.all([uploadFile(alice), uploadFile(alice), uploadFile(alice)])).map(
+			(elm) => elm.body!.id,
+		);
 		const [fileId0, fileId1, fileId2] = ids;
 		assert.ok(fileId0 && fileId1 && fileId2);
 

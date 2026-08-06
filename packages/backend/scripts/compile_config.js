@@ -51,12 +51,12 @@ async function compileConfig(ymlPath) {
 			config,
 		});
 
-	if (!fs.existsSync(dirname(OUTPUT_PATH))) {
-		fs.mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
-	}
-	const temporaryOutputPath = `${OUTPUT_PATH}.${process.pid}.tmp`;
+		if (!fs.existsSync(dirname(OUTPUT_PATH))) {
+			fs.mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
+		}
+		const temporaryOutputPath = `${OUTPUT_PATH}.${process.pid}.tmp`;
 		fs.writeFileSync(temporaryOutputPath, JSON.stringify(envelope), { encoding: 'utf-8', mode: 0o600 });
-	fs.renameSync(temporaryOutputPath, OUTPUT_PATH);
+		fs.renameSync(temporaryOutputPath, OUTPUT_PATH);
 	} catch (error) {
 		fs.rmSync(OUTPUT_PATH, { force: true });
 		throw error;

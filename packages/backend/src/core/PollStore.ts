@@ -17,24 +17,15 @@ function deserializePoll(row: PollRow): MiPoll {
 	return row as MiPoll;
 }
 
-export async function createPollInDatabase(
-	db: MiDrizzleDatabase,
-	values: PollInsert,
-): Promise<void> {
-	await db
-		.insert(poll)
-		.values(values);
+export async function createPollInDatabase(db: MiDrizzleDatabase, values: PollInsert): Promise<void> {
+	await db.insert(poll).values(values);
 }
 
 export async function fetchPollByNoteIdFromDatabase(
 	db: MiDrizzleDatabase,
 	noteId: MiNote['id'],
 ): Promise<MiPoll | null> {
-	const [row] = await db
-		.select()
-		.from(poll)
-		.where(eq(poll.noteId, noteId))
-		.limit(1);
+	const [row] = await db.select().from(poll).where(eq(poll.noteId, noteId)).limit(1);
 
 	return row == null ? null : deserializePoll(row);
 }
@@ -45,12 +36,9 @@ export async function listPollsByNoteIdsFromDatabase(
 ): Promise<MiPoll[]> {
 	if (noteIds.length === 0) return [];
 
-	const rows = await db
-		.select()
-		.from(poll)
-		.where(inArray(poll.noteId, noteIds));
+	const rows = await db.select().from(poll).where(inArray(poll.noteId, noteIds));
 
-	return rows.map(row => deserializePoll(row));
+	return rows.map((row) => deserializePoll(row));
 }
 
 export async function fetchPollByNoteIdOrFailFromDatabase(
@@ -74,10 +62,7 @@ export async function updatePollVotesInDatabase(
 	noteId: MiNote['id'],
 	votes: number[],
 ): Promise<void> {
-	await db
-		.update(poll)
-		.set({ votes })
-		.where(eq(poll.noteId, noteId));
+	await db.update(poll).set({ votes }).where(eq(poll.noteId, noteId));
 }
 
 /**
@@ -112,10 +97,7 @@ export async function listUnvotedPublicPollNoteIdsFromDatabase(
 		isNull(poll.userHost),
 		ne(poll.userId, options.meId),
 		eq(poll.noteVisibility, 'public'),
-		or(
-			isNull(poll.expiresAt),
-			gt(poll.expiresAt, new Date()),
-		)!,
+		or(isNull(poll.expiresAt), gt(poll.expiresAt, new Date()))!,
 		sql`${poll.noteId} NOT IN (SELECT "noteId" FROM "poll_vote" WHERE "userId" = ${options.meId})`,
 		sql`${poll.userId} NOT IN (SELECT "muteeId" FROM "muting" WHERE "muterId" = ${options.meId})`,
 	];
@@ -132,5 +114,5 @@ export async function listUnvotedPublicPollNoteIdsFromDatabase(
 		.limit(options.limit)
 		.offset(options.offset);
 
-	return rows.map(row => row.noteId);
+	return rows.map((row) => row.noteId);
 }

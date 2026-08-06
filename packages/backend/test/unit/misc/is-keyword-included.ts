@@ -8,7 +8,9 @@ import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 
 describe('isKeywordIncluded', () => {
 	test('treats list entries as OR and space-separated words as AND', () => {
-		expect(isKeywordIncluded('https://example.com/articles/1', ['example.com missing', 'example.com articles'])).toBe(true);
+		expect(isKeywordIncluded('https://example.com/articles/1', ['example.com missing', 'example.com articles'])).toBe(
+			true,
+		);
 		expect(isKeywordIncluded('https://example.com/articles/1', ['example.com missing'])).toBe(false);
 	});
 

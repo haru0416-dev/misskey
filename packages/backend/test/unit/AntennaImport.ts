@@ -35,11 +35,13 @@ describe('AntennaImport', () => {
 	});
 
 	test('converts an exported list to a users antenna', () => {
-		const result = exportedAntennasSchema.parse([{
-			...exportedAntenna,
-			src: 'list',
-			userListAccts: ['alice@example.com', ''],
-		}]);
+		const result = exportedAntennasSchema.parse([
+			{
+				...exportedAntenna,
+				src: 'list',
+				userListAccts: ['alice@example.com', ''],
+			},
+		]);
 		const values = importedAntennaToCreateValues(result[0]!, new Date(0));
 
 		expect(values.src).toBe('users');
@@ -47,22 +49,29 @@ describe('AntennaImport', () => {
 	});
 
 	test('rejects the entire file when an entry is invalid', () => {
-		expect(exportedAntennasSchema.safeParse([
-			exportedAntenna,
-			{ ...exportedAntenna, src: 'invalid' },
-		]).success).toBe(false);
+		expect(exportedAntennasSchema.safeParse([exportedAntenna, { ...exportedAntenna, src: 'invalid' }]).success).toBe(
+			false,
+		);
 	});
 
 	test('accepts exclude-only antennas and rejects empty conditions', () => {
-		expect(exportedAntennasSchema.safeParse([{
-			...exportedAntenna,
-			keywords: [[]],
-			excludeKeywords: [['spam']],
-		}]).success).toBe(true);
-		expect(exportedAntennasSchema.safeParse([{
-			...exportedAntenna,
-			keywords: [['']],
-			excludeKeywords: [[]],
-		}]).success).toBe(false);
+		expect(
+			exportedAntennasSchema.safeParse([
+				{
+					...exportedAntenna,
+					keywords: [[]],
+					excludeKeywords: [['spam']],
+				},
+			]).success,
+		).toBe(true);
+		expect(
+			exportedAntennasSchema.safeParse([
+				{
+					...exportedAntenna,
+					keywords: [['']],
+					excludeKeywords: [[]],
+				},
+			]).success,
+		).toBe(false);
 	});
 });

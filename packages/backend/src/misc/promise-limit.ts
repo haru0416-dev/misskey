@@ -17,15 +17,16 @@ export function promiseLimit<T>(concurrency: number): (fn: () => PromiseLike<T> 
 		queue.shift()?.();
 	}
 
-	return fn => new Promise<T>((resolve, reject) => {
-		function run(): void {
-			active++;
-			Promise.resolve().then(fn).then(resolve, reject).finally(next);
-		}
-		if (active < concurrency) {
-			run();
-		} else {
-			queue.push(run);
-		}
-	});
+	return (fn) =>
+		new Promise<T>((resolve, reject) => {
+			function run(): void {
+				active++;
+				Promise.resolve().then(fn).then(resolve, reject).finally(next);
+			}
+			if (active < concurrency) {
+				run();
+			} else {
+				queue.push(run);
+			}
+		});
 }

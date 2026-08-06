@@ -59,13 +59,16 @@ function emptyResponse(status: number, headers = corsHeaders()): Response {
 	});
 }
 
-function XRD(...x: { element: string, value?: string, attributes?: Record<string, string> }[]): string {
-	return `<?xml version="1.0" encoding="UTF-8"?><XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">${x.map(({ element, value, attributes }) =>
-		`<${
-			Object.entries(typeof attributes === 'object' && attributes || {}).reduce((a, [k, v]) => `${a} ${k}="${escapeAttribute(v)}"`, element)
-		}${
-			typeof value === 'string' ? `>${escapeValue(value)}</${element}` : '/'
-		}>`).reduce((a, c) => a + c, '')}</XRD>`;
+function XRD(...x: { element: string; value?: string; attributes?: Record<string, string> }[]): string {
+	return `<?xml version="1.0" encoding="UTF-8"?><XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">${x
+		.map(
+			({ element, value, attributes }) =>
+				`<${Object.entries((typeof attributes === 'object' && attributes) || {}).reduce(
+					(a, [k, v]) => `${a} ${k}="${escapeAttribute(v)}"`,
+					element,
+				)}${typeof value === 'string' ? `>${escapeValue(value)}</${element}` : '/'}>`,
+		)
+		.reduce((a, c) => a + c, '')}</XRD>`;
 }
 
 function wantsXrd(accept: string | undefined): boolean {
@@ -74,11 +77,16 @@ function wantsXrd(accept: string | undefined): boolean {
 	let xrdQ = -1;
 	let jrdQ = -1;
 	for (const raw of accept.split(',')) {
-		const [type, ...params] = raw.trim().toLowerCase().split(';').map(x => x.trim());
-		const q = Number(params.find(param => param.startsWith('q='))?.slice(2) ?? '1');
+		const [type, ...params] = raw
+			.trim()
+			.toLowerCase()
+			.split(';')
+			.map((x) => x.trim());
+		const q = Number(params.find((param) => param.startsWith('q='))?.slice(2) ?? '1');
 		if (!Number.isFinite(q) || q <= 0) continue;
 		if (type === xrd || type === 'application/xml' || type === 'text/xml') xrdQ = Math.max(xrdQ, q);
-		if (type === jrd || type === 'application/json' || type === '*/*' || type === 'application/*') jrdQ = Math.max(jrdQ, q);
+		if (type === jrd || type === 'application/json' || type === '*/*' || type === 'application/*')
+			jrdQ = Math.max(jrdQ, q);
 	}
 
 	return xrdQ > jrdQ;
@@ -112,9 +120,11 @@ async function resolveWebFingerUser(deps: WellKnownDependencies, resource: strin
 	}
 
 	const acct = Acct.parse(
-		normalized.startsWith(`${deps.config.instance.url.toLowerCase()}/@`) ? normalized.split('/').pop()! :
-		normalized.startsWith('acct:') ? normalized.slice('acct:'.length) :
-		normalized,
+		normalized.startsWith(`${deps.config.instance.url.toLowerCase()}/@`)
+			? normalized.split('/').pop()!
+			: normalized.startsWith('acct:')
+				? normalized.slice('acct:'.length)
+				: normalized,
 	);
 	if (acct.host && acct.host !== deps.config.runtime.host.toLowerCase()) return 422;
 
@@ -140,18 +150,25 @@ function webFingerResponse(deps: WellKnownDependencies, user: MiUser, accept: st
 		href: `${deps.config.instance.url}/@${user.username}`,
 	};
 	if (wantsXrd(accept)) {
-		return textResponse(XRD(
-			{ element: 'Subject', value: subject },
-			{ element: 'Link', attributes: self },
-			{ element: 'Link', attributes: profilePage },
-		), xrd, headers);
+		return textResponse(
+			XRD(
+				{ element: 'Subject', value: subject },
+				{ element: 'Link', attributes: self },
+				{ element: 'Link', attributes: profilePage },
+			),
+			xrd,
+			headers,
+		);
 	}
 
 	headers.set('Content-Type', jrd);
-	return jsonResponse({
-		subject,
-		links: [self, profilePage],
-	}, headers);
+	return jsonResponse(
+		{
+			subject,
+			links: [self, profilePage],
+		},
+		headers,
+	);
 }
 
 export function createWellKnownApp(deps: WellKnownDependencies): Hono {
@@ -162,22 +179,30 @@ export function createWellKnownApp(deps: WellKnownDependencies): Hono {
 	app.get('/.well-known/host-meta', () => {
 		if (deps.meta.federation === 'none') return emptyResponse(403);
 
-		return textResponse(XRD({ element: 'Link', attributes: {
-			rel: 'lrdd',
-			type: xrd,
-			template: `${deps.config.instance.url}${webFingerPath}?resource={uri}`,
-		} }), xrd);
+		return textResponse(
+			XRD({
+				element: 'Link',
+				attributes: {
+					rel: 'lrdd',
+					type: xrd,
+					template: `${deps.config.instance.url}${webFingerPath}?resource={uri}`,
+				},
+			}),
+			xrd,
+		);
 	});
 
 	app.get('/.well-known/host-meta.json', () => {
 		if (deps.meta.federation === 'none') return emptyResponse(403);
 
 		return jsonResponse({
-			links: [{
-				rel: 'lrdd',
-				type: jrd,
-				template: `${deps.config.instance.url}${webFingerPath}?resource={uri}`,
-			}],
+			links: [
+				{
+					rel: 'lrdd',
+					type: jrd,
+					template: `${deps.config.instance.url}${webFingerPath}?resource={uri}`,
+				},
+			],
 		});
 	});
 

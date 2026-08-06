@@ -21,11 +21,7 @@ function deserializeClip(row: ClipRow): MiClip {
 	} as MiClip;
 }
 
-function applyClipPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
+function applyClipPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
 	if (sinceId && untilId) {
 		conditions.push(gt(clip.id, sinceId));
 		conditions.push(lt(clip.id, untilId));
@@ -52,26 +48,14 @@ export function resolveClipPagination(
 	return resolveDateIdPagination(idService, options);
 }
 
-export async function countClipsByUserIdFromDatabase(
-	db: MiDrizzleDatabase,
-	userId: MiUser['id'],
-): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(clip)
-		.where(eq(clip.userId, userId));
+export async function countClipsByUserIdFromDatabase(db: MiDrizzleDatabase, userId: MiUser['id']): Promise<number> {
+	const [row] = await db.select({ count: count() }).from(clip).where(eq(clip.userId, userId));
 
 	return row?.count ?? 0;
 }
 
-export async function createClipInDatabase(
-	db: MiDrizzleDatabase,
-	data: ClipInsert,
-): Promise<MiClip> {
-	const [row] = await db
-		.insert(clip)
-		.values(data)
-		.returning();
+export async function createClipInDatabase(db: MiDrizzleDatabase, data: ClipInsert): Promise<MiClip> {
+	const [row] = await db.insert(clip).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create clip');
@@ -85,9 +69,9 @@ export async function createClipWithinLimitInDatabase(
 	data: ClipInsert,
 	limit: number,
 ): Promise<MiClip | null> {
-	return await db.transaction(async tx => {
+	return await db.transaction(async (tx) => {
 		await acquireAdvisoryTransactionLockInDatabase(tx, 'clip-limit', data.userId);
-		if (await countClipsByUserIdFromDatabase(tx, data.userId) >= limit) return null;
+		if ((await countClipsByUserIdFromDatabase(tx, data.userId)) >= limit) return null;
 
 		const [row] = await tx.insert(clip).values(data).returning();
 		if (row == null) throw new Error('Failed to create clip');
@@ -95,23 +79,13 @@ export async function createClipWithinLimitInDatabase(
 	});
 }
 
-export async function fetchClipByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiClip['id'],
-): Promise<MiClip | null> {
-	const [row] = await db
-		.select()
-		.from(clip)
-		.where(eq(clip.id, id))
-		.limit(1);
+export async function fetchClipByIdFromDatabase(db: MiDrizzleDatabase, id: MiClip['id']): Promise<MiClip | null> {
+	const [row] = await db.select().from(clip).where(eq(clip.id, id)).limit(1);
 
 	return row == null ? null : deserializeClip(row);
 }
 
-export async function fetchClipByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiClip['id'],
-): Promise<MiClip> {
+export async function fetchClipByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiClip['id']): Promise<MiClip> {
 	const row = await fetchClipByIdFromDatabase(db, id);
 
 	if (row == null) {
@@ -129,10 +103,7 @@ export async function fetchClipByIdAndUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(clip)
-		.where(and(
-			eq(clip.id, id),
-			eq(clip.userId, userId),
-		))
+		.where(and(eq(clip.id, id), eq(clip.userId, userId)))
 		.limit(1);
 
 	return row == null ? null : deserializeClip(row);
@@ -143,19 +114,11 @@ export async function updateClipInDatabase(
 	id: MiClip['id'],
 	values: Partial<ClipInsert>,
 ): Promise<void> {
-	await db
-		.update(clip)
-		.set(values)
-		.where(eq(clip.id, id));
+	await db.update(clip).set(values).where(eq(clip.id, id));
 }
 
-export async function deleteClipInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiClip['id'],
-): Promise<void> {
-	await db
-		.delete(clip)
-		.where(eq(clip.id, id));
+export async function deleteClipInDatabase(db: MiDrizzleDatabase, id: MiClip['id']): Promise<void> {
+	await db.delete(clip).where(eq(clip.id, id));
 }
 
 export async function listClipsByIdsFromDatabase(

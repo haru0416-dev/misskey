@@ -7,7 +7,11 @@ import type * as Redis from 'ioredis';
 import { listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
 import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
 import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
-import { fanoutViewerRelationKinds, fetchViewerRelationSnapshotFromDatabase, viewerRelationSnapshotCovers } from '@/core/ViewerRelationStore.js';
+import {
+	fanoutViewerRelationKinds,
+	fetchViewerRelationSnapshotFromDatabase,
+	viewerRelationSnapshotCovers,
+} from '@/core/ViewerRelationStore.js';
 import { isChannelRelated } from '@/misc/is-channel-related.js';
 import { isInstanceMuted } from '@/misc/is-instance-muted.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
@@ -58,11 +62,11 @@ async function listFanoutTimelineNotesByIds(
 		// note.channel を読まない呼び出し元にクエリ1本を課金せずに済む
 		listChannelsByIdsFromDatabase(db, [...channelIds]),
 	]);
-	const relationById = new Map(relations.map(note => [note.id, note]));
-	const userById = new Map(users.map(user => [user.id, user]));
-	const channelById = new Map(channels.map(channel => [channel.id, channel]));
+	const relationById = new Map(relations.map((note) => [note.id, note]));
+	const userById = new Map(users.map((user) => [user.id, user]));
+	const channelById = new Map(channels.map((channel) => [channel.id, channel]));
 
-	return notes.flatMap(note => {
+	return notes.flatMap((note) => {
 		const user = userById.get(note.userId);
 		if (user == null) return [];
 
@@ -73,7 +77,8 @@ async function listFanoutTimelineNotesByIds(
 		if (note.reply != null) note.reply.user = userById.get(note.reply.userId) ?? null;
 		if (note.renote != null) {
 			note.renote.user = userById.get(note.renote.userId) ?? null;
-			if (hydrateChannels) note.renote.channel = note.renote.channelId == null ? null : (channelById.get(note.renote.channelId) ?? null);
+			if (hydrateChannels)
+				note.renote.channel = note.renote.channelId == null ? null : (channelById.get(note.renote.channelId) ?? null);
 		}
 		return [note];
 	});
@@ -114,24 +119,29 @@ export type FanoutTimelineReadOptions = {
 
 function isBlockedHost(blockedHosts: string[], host: string | null): boolean {
 	if (host == null) return false;
-	return blockedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+	return blockedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
-async function getMultiFromRedis(redisForTimelines: Redis.Redis, names: string[], untilId?: string | null, sinceId?: string | null): Promise<string[][]> {
+async function getMultiFromRedis(
+	redisForTimelines: Redis.Redis,
+	names: string[],
+	untilId?: string | null,
+	sinceId?: string | null,
+): Promise<string[][]> {
 	const pipeline = redisForTimelines.pipeline();
 	for (const name of names) {
 		pipeline.lrange('list:' + name, 0, -1);
 	}
 	const res = await pipeline.exec();
 	if (res == null) return [];
-	const tls = res.map(r => r[1] as string[]);
-	return tls.map(ids =>
-		(untilId && sinceId)
-			? ids.filter(id => id < untilId && id > sinceId)
+	const tls = res.map((r) => r[1] as string[]);
+	return tls.map((ids) =>
+		untilId && sinceId
+			? ids.filter((id) => id < untilId && id > sinceId)
 			: untilId
-				? ids.filter(id => id < untilId)
+				? ids.filter((id) => id < untilId)
 				: sinceId
-					? ids.filter(id => id > sinceId)
+					? ids.filter((id) => id > sinceId)
 					: ids,
 	);
 }
@@ -142,11 +152,16 @@ async function getMultiFromRedis(redisForTimelines: Redis.Redis, names: string[]
  * ホスト/凍結ユーザー) を適用する。原典が Redis キャッシュ経由で読んでいたミュート等の関連セットは
  * 直接DB読みに置き換えている (このコードベースの確立パターン)。
  */
-export async function getFanoutTimelineNotesForHonoApi(deps: FanoutTimelineReadDependencies, ps: FanoutTimelineReadOptions): Promise<MiNote[]> {
+export async function getFanoutTimelineNotesForHonoApi(
+	deps: FanoutTimelineReadDependencies,
+	ps: FanoutTimelineReadOptions,
+): Promise<MiNote[]> {
 	const dbFallback = ps.useDbFallback ? ps.dbFallback : () => Promise.resolve([]);
 
 	const ascending = ps.sinceId && !ps.untilId;
-	const idCompare: (a: string, b: string) => number = ascending ? (a, b) => a < b ? -1 : 1 : (a, b) => a > b ? -1 : 1;
+	const idCompare: (a: string, b: string) => number = ascending
+		? (a, b) => (a < b ? -1 : 1)
+		: (a, b) => (a > b ? -1 : 1);
 
 	const redisResult = await getMultiFromRedis(deps.redisForTimelines, ps.redisTimelines, ps.untilId, ps.sinceId);
 
@@ -154,7 +169,8 @@ export async function getFanoutTimelineNotesForHonoApi(deps: FanoutTimelineReadD
 
 	let noteIds = redisResultIds.slice(0, ps.limit);
 	const oldestNoteId = ascending ? redisResultIds[0] : redisResultIds[redisResultIds.length - 1];
-	const shouldFallbackToDb = noteIds.length === 0 || (ps.sinceId != null && oldestNoteId != null && ps.sinceId < oldestNoteId);
+	const shouldFallbackToDb =
+		noteIds.length === 0 || (ps.sinceId != null && oldestNoteId != null && ps.sinceId < oldestNoteId);
 
 	if (!shouldFallbackToDb) {
 		let filter = ps.noteFilter ?? ((_note: MiNote) => true);
@@ -199,7 +215,8 @@ export async function getFanoutTimelineNotesForHonoApi(deps: FanoutTimelineReadD
 				if (isUserRelated(note, userIdsWhoMeMuting, ps.ignoreAuthorFromMute)) return false;
 				if (isUserRelated(note.renote, userIdsWhoBlockingMe, ps.ignoreAuthorFromBlock)) return false;
 				if (isUserRelated(note.renote, userIdsWhoMeMuting, ps.ignoreAuthorFromMute)) return false;
-				if (!ps.ignoreAuthorFromMute && isRenote(note) && !isQuote(note) && userIdsWhoMeMutingRenotes.has(note.userId)) return false;
+				if (!ps.ignoreAuthorFromMute && isRenote(note) && !isQuote(note) && userIdsWhoMeMutingRenotes.has(note.userId))
+					return false;
 				if (isInstanceMuted(note, userMutedInstances)) return false;
 				if (isChannelRelated(note, userMutedChannels, ps.ignoreAuthorChannelFromMute)) return false;
 
@@ -213,7 +230,8 @@ export async function getFanoutTimelineNotesForHonoApi(deps: FanoutTimelineReadD
 				if (!ps.ignoreAuthorFromInstanceBlock) {
 					if (isBlockedHost(deps.meta.blockedHosts, note.userHost)) return false;
 				}
-				if (note.userId !== note.renoteUserId && isBlockedHost(deps.meta.blockedHosts, note.renoteUserHost)) return false;
+				if (note.userId !== note.renoteUserId && isBlockedHost(deps.meta.blockedHosts, note.renoteUserHost))
+					return false;
 				if (note.userId !== note.replyUserId && isBlockedHost(deps.meta.blockedHosts, note.replyUserHost)) return false;
 
 				return parentFilter(note);
@@ -237,7 +255,7 @@ export async function getFanoutTimelineNotesForHonoApi(deps: FanoutTimelineReadD
 		let readFromRedis = 0;
 		let lastSuccessfulRate = 1;
 
-		while ((redisResultIds.length - readFromRedis) !== 0) {
+		while (redisResultIds.length - readFromRedis !== 0) {
 			const remainingToRead = ps.limit - redisTimeline.length;
 
 			const countToGet = Math.ceil(remainingToRead * Math.min(1.1 / lastSuccessfulRate, 3));

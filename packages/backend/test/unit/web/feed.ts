@@ -39,7 +39,11 @@ describe('createFeedApp', () => {
 	test.each([
 		{ path: '/@alice.atom', contentType: 'application/atom+xml; charset=utf-8', body: '<feed' },
 		{ path: '/@alice.rss', contentType: 'application/rss+xml; charset=utf-8', body: '<rss' },
-		{ path: '/@alice.json', contentType: 'application/json; charset=utf-8', body: '"version": "https://jsonfeed.org/version/1"' },
+		{
+			path: '/@alice.json',
+			contentType: 'application/json; charset=utf-8',
+			body: '"version": "https://jsonfeed.org/version/1"',
+		},
 	])('GET $path returns a feed', async ({ path, contentType, body }) => {
 		const res = await createMountedApp().request(`http://example.test${path}`);
 

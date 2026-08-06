@@ -12,10 +12,7 @@ import type { MiUser } from '@/models/User.js';
 export type GalleryLikeOrder = 'asc' | 'desc';
 
 function galleryLikeCondition(userId: MiUser['id'], postId: MiGalleryPost['id']) {
-	return and(
-		eq(galleryLike.userId, userId),
-		eq(galleryLike.postId, postId),
-	);
+	return and(eq(galleryLike.userId, userId), eq(galleryLike.postId, postId));
 }
 
 function applyGalleryLikePaginationCondition(
@@ -52,11 +49,7 @@ export async function fetchGalleryLikeFromDatabase(
 	userId: MiUser['id'],
 	postId: MiGalleryPost['id'],
 ): Promise<GalleryLikeRow | null> {
-	const [row] = await db
-		.select()
-		.from(galleryLike)
-		.where(galleryLikeCondition(userId, postId))
-		.limit(1);
+	const [row] = await db.select().from(galleryLike).where(galleryLikeCondition(userId, postId)).limit(1);
 
 	return row ?? null;
 }
@@ -65,11 +58,7 @@ export async function fetchGalleryLikeByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: GalleryLikeRow['id'],
 ): Promise<GalleryLikeRow> {
-	const [row] = await db
-		.select()
-		.from(galleryLike)
-		.where(eq(galleryLike.id, id))
-		.limit(1);
+	const [row] = await db.select().from(galleryLike).where(eq(galleryLike.id, id)).limit(1);
 
 	if (row == null) {
 		throw new Error(`Gallery like ${id} not found`);
@@ -78,22 +67,15 @@ export async function fetchGalleryLikeByIdOrFailFromDatabase(
 	return row;
 }
 
-export async function createGalleryLikeInDatabase(
-	db: MiDrizzleDatabase,
-	data: GalleryLikeInsert,
-): Promise<void> {
-	await db
-		.insert(galleryLike)
-		.values(data);
+export async function createGalleryLikeInDatabase(db: MiDrizzleDatabase, data: GalleryLikeInsert): Promise<void> {
+	await db.insert(galleryLike).values(data);
 }
 
 export async function deleteGalleryLikeByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: GalleryLikeRow['id'],
 ): Promise<void> {
-	await db
-		.delete(galleryLike)
-		.where(eq(galleryLike.id, id));
+	await db.delete(galleryLike).where(eq(galleryLike.id, id));
 }
 
 export async function listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase(
@@ -106,12 +88,9 @@ export async function listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase(
 	const rows = await db
 		.select({ postId: galleryLike.postId })
 		.from(galleryLike)
-		.where(and(
-			eq(galleryLike.userId, userId),
-			inArray(galleryLike.postId, postIds),
-		));
+		.where(and(eq(galleryLike.userId, userId), inArray(galleryLike.postId, postIds)));
 
-	return rows.map(row => row.postId);
+	return rows.map((row) => row.postId);
 }
 
 export async function listGalleryLikesByUserIdFromDatabase(
@@ -124,9 +103,7 @@ export async function listGalleryLikesByUserIdFromDatabase(
 		untilId?: string | null;
 	},
 ): Promise<GalleryLikeRow[]> {
-	const conditions: SQL[] = [
-		eq(galleryLike.userId, userId),
-	];
+	const conditions: SQL[] = [eq(galleryLike.userId, userId)];
 
 	applyGalleryLikePaginationCondition(conditions, options.sinceId, options.untilId);
 

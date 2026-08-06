@@ -36,7 +36,13 @@ export type HonoApiSigninDependencies = HonoApiNotificationDependencies & {
 	redis: Redis.Redis;
 	httpRequestService: HttpRequestService;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
-	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication'>;
+	webAuthnService: Pick<
+		WebAuthnService,
+		| 'initiateAuthentication'
+		| 'verifyAuthentication'
+		| 'initiateSignInWithPasskeyAuthentication'
+		| 'verifySignInWithPasskeyAuthentication'
+	>;
 	emailService: Pick<EmailService, 'sendEmail'>;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 };
@@ -117,12 +123,16 @@ function headersObject(headers: Headers): Record<string, string> {
 }
 
 async function isSigninRateLimited(deps: HonoApiSigninDependencies, ip: string): Promise<boolean> {
-	return await isHonoApiRateLimited(deps, {
-		key: 'signin',
-		duration: 60 * 60 * 1000,
-		max: 10,
-		minInterval: 1000,
-	}, getIpHash(ip));
+	return await isHonoApiRateLimited(
+		deps,
+		{
+			key: 'signin',
+			duration: 60 * 60 * 1000,
+			max: 10,
+			minInterval: 1000,
+		},
+		getIpHash(ip),
+	);
 }
 
 async function getCaptchaResponse(
@@ -140,29 +150,41 @@ async function getCaptchaResponse(
 		response,
 	});
 
-	const res = await deps.httpRequestService.send(url, {
-		method: 'POST',
-		body: params.toString(),
-		headers: {
-			'Content-Type': 'application/x-www-form-urlencoded',
+	const res = await deps.httpRequestService.send(
+		url,
+		{
+			method: 'POST',
+			body: params.toString(),
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+			},
 		},
-	}, { throwErrorWhenResponseNotOk: false });
+		{ throwErrorWhenResponseNotOk: false },
+	);
 
 	if (!res.ok) {
 		throw new Error(`captcha request failed: ${res.status}`);
 	}
 
-	return await res.json() as CaptchaResponse;
+	return (await res.json()) as CaptchaResponse;
 }
 
-async function verifyRecaptcha(deps: HonoApiSigninDependencies, secret: string, response: string | null | undefined): Promise<void> {
+async function verifyRecaptcha(
+	deps: HonoApiSigninDependencies,
+	secret: string,
+	response: string | null | undefined,
+): Promise<void> {
 	const result = await getCaptchaResponse(deps, 'https://www.recaptcha.net/recaptcha/api/siteverify', secret, response);
 	if (result.success !== true) {
 		throw new Error(`recaptcha failed: ${result['error-codes']?.join(', ') ?? ''}`);
 	}
 }
 
-async function verifyHcaptcha(deps: HonoApiSigninDependencies, secret: string, response: string | null | undefined): Promise<void> {
+async function verifyHcaptcha(
+	deps: HonoApiSigninDependencies,
+	secret: string,
+	response: string | null | undefined,
+): Promise<void> {
 	const result = await getCaptchaResponse(deps, 'https://hcaptcha.com/siteverify', secret, response);
 	if (result.success !== true) {
 		throw new Error(`hcaptcha failed: ${result['error-codes']?.join(', ') ?? ''}`);
@@ -181,30 +203,43 @@ async function verifyMcaptcha(
 	}
 
 	const endpointUrl = new URL('/api/v1/pow/siteverify', instanceHost);
-	const result = await deps.httpRequestService.send(endpointUrl.toString(), {
-		method: 'POST',
-		body: JSON.stringify({
-			key: siteKey,
-			secret,
-			token: response,
-		}),
-		headers: {
-			'Content-Type': 'application/json',
+	const result = await deps.httpRequestService.send(
+		endpointUrl.toString(),
+		{
+			method: 'POST',
+			body: JSON.stringify({
+				key: siteKey,
+				secret,
+				token: response,
+			}),
+			headers: {
+				'Content-Type': 'application/json',
+			},
 		},
-	}, { throwErrorWhenResponseNotOk: false });
+		{ throwErrorWhenResponseNotOk: false },
+	);
 
 	if (result.status !== 200) {
 		throw new Error('mcaptcha did not return 200 OK');
 	}
 
-	const resp = await result.json() as { valid: boolean };
+	const resp = (await result.json()) as { valid: boolean };
 	if (!resp.valid) {
 		throw new Error('mcaptcha failed');
 	}
 }
 
-async function verifyTurnstile(deps: HonoApiSigninDependencies, secret: string, response: string | null | undefined): Promise<void> {
-	const result = await getCaptchaResponse(deps, 'https://challenges.cloudflare.com/turnstile/v0/siteverify', secret, response);
+async function verifyTurnstile(
+	deps: HonoApiSigninDependencies,
+	secret: string,
+	response: string | null | undefined,
+): Promise<void> {
+	const result = await getCaptchaResponse(
+		deps,
+		'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+		secret,
+		response,
+	);
 	if (result.success !== true) {
 		throw new Error(`turnstile failed: ${result['error-codes']?.join(', ') ?? ''}`);
 	}
@@ -223,12 +258,27 @@ async function verifyEnabledCaptchas(deps: HonoApiSigninDependencies, body: Reco
 		await verifyHcaptcha(deps, deps.meta.hcaptchaSecretKey, body['hcaptcha-response'] as string | null | undefined);
 	}
 
-	if (deps.meta.enableMcaptcha && deps.meta.mcaptchaSecretKey && deps.meta.mcaptchaSitekey && deps.meta.mcaptchaInstanceUrl) {
-		await verifyMcaptcha(deps, deps.meta.mcaptchaSecretKey, deps.meta.mcaptchaSitekey, deps.meta.mcaptchaInstanceUrl, body['m-captcha-response'] as string | null | undefined);
+	if (
+		deps.meta.enableMcaptcha &&
+		deps.meta.mcaptchaSecretKey &&
+		deps.meta.mcaptchaSitekey &&
+		deps.meta.mcaptchaInstanceUrl
+	) {
+		await verifyMcaptcha(
+			deps,
+			deps.meta.mcaptchaSecretKey,
+			deps.meta.mcaptchaSitekey,
+			deps.meta.mcaptchaInstanceUrl,
+			body['m-captcha-response'] as string | null | undefined,
+		);
 	}
 
 	if (deps.meta.enableRecaptcha && deps.meta.recaptchaSecretKey) {
-		await verifyRecaptcha(deps, deps.meta.recaptchaSecretKey, body['g-recaptcha-response'] as string | null | undefined);
+		await verifyRecaptcha(
+			deps,
+			deps.meta.recaptchaSecretKey,
+			body['g-recaptcha-response'] as string | null | undefined,
+		);
 	}
 
 	if (deps.meta.enableTurnstile && deps.meta.turnstileSecretKey) {
@@ -269,30 +319,35 @@ export function completeHonoApiSignin(
 	request: HonoApiSigninRequest,
 	user: MiLocalUser,
 ): HonoApiSigninFlowResult {
-	trackPromise((async () => {
-		try {
-			createLoginNotification(deps, user.id);
+	trackPromise(
+		(async () => {
+			try {
+				createLoginNotification(deps, user.id);
 
-			const record = await createSigninInDatabase(deps.db, {
-				id: genId(),
-				userId: user.id,
-				ip: request.ip,
-				headers: headersObject(request.headers),
-				success: true,
-			});
+				const record = await createSigninInDatabase(deps.db, {
+					id: genId(),
+					userId: user.id,
+					ip: request.ip,
+					headers: headersObject(request.headers),
+					success: true,
+				});
 
-			deps.publishMainStream?.(user.id, 'signin', packSignin(deps.config, record));
+				deps.publishMainStream?.(user.id, 'signin', packSignin(deps.config, record));
 
-			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-			if (profile.email && profile.emailVerified) {
-				await deps.emailService.sendEmail(profile.email, 'New login / ログインがありました',
-					'There is a new login. If you do not recognize this login, update the security status of your account, including changing your password. / 新しいログインがありました。このログインに心当たりがない場合は、パスワードを変更するなど、アカウントのセキュリティ状態を更新してください。',
-					'There is a new login. If you do not recognize this login, update the security status of your account, including changing your password. / 新しいログインがありました。このログインに心当たりがない場合は、パスワードを変更するなど、アカウントのセキュリティ状態を更新してください。');
+				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
+				if (profile.email && profile.emailVerified) {
+					await deps.emailService.sendEmail(
+						profile.email,
+						'New login / ログインがありました',
+						'There is a new login. If you do not recognize this login, update the security status of your account, including changing your password. / 新しいログインがありました。このログインに心当たりがない場合は、パスワードを変更するなど、アカウントのセキュリティ状態を更新してください。',
+						'There is a new login. If you do not recognize this login, update the security status of your account, including changing your password. / 新しいログインがありました。このログインに心当たりがない場合は、パスワードを変更するなど、アカウントのセキュリティ状態を更新してください。',
+					);
+				}
+			} catch (err) {
+				deps.logger.error(err instanceof Error ? err : new Error(String(err)));
 			}
-		} catch (err) {
-			deps.logger.error(err instanceof Error ? err : new Error(String(err)));
-		}
-	})());
+		})(),
+	);
 
 	return {
 		status: 200,
@@ -347,7 +402,9 @@ export async function handleHonoApiSigninFlow(
 	}
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-	const securityKeysAvailable = await countUserSecurityKeysByUserIdFromDatabase(deps.db, user.id).then(result => result >= 1);
+	const securityKeysAvailable = await countUserSecurityKeysByUserIdFromDatabase(deps.db, user.id).then(
+		(result) => result >= 1,
+	);
 
 	if (password == null) {
 		if (profile.twoFactorEnabled) {
@@ -406,7 +463,10 @@ export async function handleHonoApiSigninFlow(
 			return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 		}
 
-		const authorized = await deps.webAuthnService.verifyAuthentication(user.id, body.credential as AuthenticationResponseJSON);
+		const authorized = await deps.webAuthnService.verifyAuthentication(
+			user.id,
+			body.credential as AuthenticationResponseJSON,
+		);
 
 		if (authorized) {
 			return completeHonoApiSignin(deps, request, user);

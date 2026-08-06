@@ -19,7 +19,8 @@ export function createMfmService(config: Config) {
 		// some AP servers like Pixelfed use br tags as well as newlines
 		html = html.replace(/<br\s?\/?>\r?\n/gi, '\n');
 
-		const normalizedHashtagNames = hashtagNames == null ? undefined : new Set<string>(hashtagNames.map(x => normalizeForSearch(x)));
+		const normalizedHashtagNames =
+			hashtagNames == null ? undefined : new Set<string>(hashtagNames.map((x) => normalizeForSearch(x)));
 
 		const doc = htmlParser.parse(`<div>${html}</div>`);
 
@@ -37,7 +38,7 @@ export function createMfmService(config: Config) {
 			if (node.tagName === 'BR') return '\n';
 
 			if (node.childNodes != null) {
-				return node.childNodes.map(n => getText(n)).join('');
+				return node.childNodes.map((n) => getText(n)).join('');
 			}
 
 			return '';
@@ -78,7 +79,7 @@ export function createMfmService(config: Config) {
 						const part = txt.split('@');
 
 						if (part.length === 2 && href) {
-							const acct = `${txt}@${(new URL(href)).hostname}`;
+							const acct = `${txt}@${new URL(href).hostname}`;
 							text += acct;
 						} else if (part.length === 3) {
 							text += txt;
@@ -91,7 +92,8 @@ export function createMfmService(config: Config) {
 							if (!href) {
 								return txt;
 							}
-							if (!txt || txt === href) {	// #6383: Missing text node
+							if (!txt || txt === href) {
+								// #6383: Missing text node
 								if (href.match(urlRegexFull)) {
 									return href;
 								} else {
@@ -99,7 +101,7 @@ export function createMfmService(config: Config) {
 								}
 							}
 							if (href.match(urlRegex) && !href.match(urlRegexFull)) {
-								return `[${txt}](<${href}>)`;	// #6846
+								return `[${txt}](<${href}>)`; // #6846
 							} else {
 								return `[${txt}](${href})`;
 							}
@@ -151,7 +153,7 @@ export function createMfmService(config: Config) {
 				case 'RUBY': {
 					let ruby: [string, string][] = [];
 					for (const child of node.childNodes) {
-						if ((child instanceof htmlParser.TextNode) && !/\s|\[|\]/.test(child.textContent)) {
+						if (child instanceof htmlParser.TextNode && !/\s|\[|\]/.test(child.textContent)) {
 							ruby.push([child.textContent, '']);
 							continue;
 						}
@@ -187,11 +189,20 @@ export function createMfmService(config: Config) {
 
 				// block code (<pre><code>)
 				case 'PRE': {
-					if (node.childNodes.length === 1 && (node.childNodes[0] instanceof htmlParser.HTMLElement) && node.childNodes[0].tagName === 'CODE') {
+					if (
+						node.childNodes.length === 1 &&
+						node.childNodes[0] instanceof htmlParser.HTMLElement &&
+						node.childNodes[0].tagName === 'CODE'
+					) {
 						text += '\n```\n';
 						text += getText(node.childNodes[0]);
 						text += '\n```\n';
-					} else if (node.childNodes.length === 1 && (node.childNodes[0] instanceof htmlParser.TextNode) && node.childNodes[0].textContent.startsWith('<code>') && node.childNodes[0].textContent.endsWith('</code>')) {
+					} else if (
+						node.childNodes.length === 1 &&
+						node.childNodes[0] instanceof htmlParser.TextNode &&
+						node.childNodes[0].textContent.startsWith('<code>') &&
+						node.childNodes[0].textContent.endsWith('</code>')
+					) {
 						text += '\n```\n';
 						text += node.childNodes[0].textContent.slice(6, -7);
 						text += '\n```\n';
@@ -242,8 +253,8 @@ export function createMfmService(config: Config) {
 					break;
 				}
 
-				default:	// includes inline elements
-				{
+				default: {
+					// includes inline elements
 					analyzeChildren(node.childNodes);
 					break;
 				}
@@ -251,7 +262,11 @@ export function createMfmService(config: Config) {
 		}
 	}
 
-	function toHtml(nodes: mfm.MfmNode[] | null, mentionedRemoteUsers: IMentionedRemoteUsers = [], extraHtml: string | null = null) {
+	function toHtml(
+		nodes: mfm.MfmNode[] | null,
+		mentionedRemoteUsers: IMentionedRemoteUsers = [],
+		extraHtml: string | null = null,
+	) {
 		return mfmToHtml(config, nodes, mentionedRemoteUsers, extraHtml);
 	}
 

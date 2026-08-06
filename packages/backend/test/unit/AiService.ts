@@ -67,16 +67,15 @@ describe('AiService', () => {
 	});
 
 	test('正常: 送信順を保った予測値配列を返す', async () => {
-		sendMock.mockResolvedValue(okResponse([
-			{ success: true, predictions: neutral() },
-			{ success: true, predictions: [{ className: 'Porn', probability: 0.8 }] },
-		]));
+		sendMock.mockResolvedValue(
+			okResponse([
+				{ success: true, predictions: neutral() },
+				{ success: true, predictions: [{ className: 'Porn', probability: 0.8 }] },
+			]),
+		);
 		const svc = makeService();
 		const res = await svc.detectSensitiveMany([buf('a'), buf('b')]);
-		expect(res).toEqual([
-			[{ className: 'Neutral', probability: 0.99 }],
-			[{ className: 'Porn', probability: 0.8 }],
-		]);
+		expect(res).toEqual([[{ className: 'Neutral', probability: 0.99 }], [{ className: 'Porn', probability: 0.8 }]]);
 		expect(sendMock).toHaveBeenCalledTimes(1);
 		expect(getSendCall(0)[0]).toBe('http://localhost:3009/v1/detect-images');
 	});
@@ -100,10 +99,12 @@ describe('AiService', () => {
 	});
 
 	test('部分失敗: 失敗パーツのみ null になる', async () => {
-		sendMock.mockResolvedValue(okResponse([
-			{ success: true, predictions: neutral() },
-			{ success: false, error: { code: 'IMAGE_DECODE_FAILED', message: 'x' } },
-		]));
+		sendMock.mockResolvedValue(
+			okResponse([
+				{ success: true, predictions: neutral() },
+				{ success: false, error: { code: 'IMAGE_DECODE_FAILED', message: 'x' } },
+			]),
+		);
 		const svc = makeService();
 		const res = await svc.detectSensitiveMany([buf('a'), buf('b')]);
 		expect(res[0]).toEqual(neutral());
@@ -132,18 +133,20 @@ describe('AiService', () => {
 	});
 
 	test('チャンク分割: maxImagesPerRequest ごとに順次送信する', async () => {
-		sendMock.mockResolvedValue(okResponse([
-			{ success: true, predictions: neutral() },
-			{ success: true, predictions: neutral() },
-			{ success: true, predictions: neutral() },
-			{ success: true, predictions: neutral() },
-		]));
+		sendMock.mockResolvedValue(
+			okResponse([
+				{ success: true, predictions: neutral() },
+				{ success: true, predictions: neutral() },
+				{ success: true, predictions: neutral() },
+				{ success: true, predictions: neutral() },
+			]),
+		);
 		const svc = makeService({ sensitiveMediaDetectionMaxImagesPerRequest: 2 });
 		const res = await svc.detectSensitiveMany([buf('a'), buf('b'), buf('c'), buf('d'), buf('e')]);
 		// 5 枚を 2 枚ずつ → 3 リクエスト、結果は順序を保って 5 件。
 		expect(sendMock).toHaveBeenCalledTimes(3);
 		expect(res).toHaveLength(5);
-		expect(res.every(x => x != null)).toBe(true);
+		expect(res.every((x) => x != null)).toBe(true);
 	});
 
 	test('APIキー設定時のみ Authorization: Bearer を付与する', async () => {

@@ -2,12 +2,18 @@ import { describe, test, beforeAll } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Person } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
-import { createAccount, deepStrictEqualWithExcludedFields, fetchActivityPubObject, fetchAdmin, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep } from './utils.js';
+import {
+	createAccount,
+	deepStrictEqualWithExcludedFields,
+	fetchActivityPubObject,
+	fetchAdmin,
+	type LoginUser,
+	resolveRemoteNote,
+	resolveRemoteUser,
+	sleep,
+} from './utils.js';
 
-const [aAdmin, bAdmin] = await Promise.all([
-	fetchAdmin('a.test'),
-	fetchAdmin('b.test'),
-]);
+const [aAdmin, bAdmin] = await Promise.all([fetchAdmin('a.test'), fetchAdmin('b.test')]);
 
 function getAt<T>(values: readonly T[], index: number): T {
 	const value = values[index];
@@ -24,13 +30,7 @@ describe('User', () => {
 
 			beforeAll(async () => {
 				alice = await createAccount('a.test');
-				[
-					aliceWatcher,
-					aliceWatcherInB,
-				] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[aliceWatcher, aliceWatcherInB] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 			});
 
 			test('Check consistency', async () => {
@@ -81,10 +81,7 @@ describe('User', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),
@@ -148,10 +145,7 @@ describe('User', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),
@@ -180,10 +174,7 @@ describe('User', () => {
 			let aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 				aliceInB = await resolveRemoteUser('a.test', alice.id, bob);
 
 				await bob.client.request('following/create', { userId: aliceInB.id });
@@ -235,10 +226,7 @@ describe('User', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -256,13 +244,13 @@ describe('User', () => {
 			test('Check consistency with `users/following` and `users/followers` endpoints', async () => {
 				await Promise.all([
 					strictEqual(
-						(await alice.client.request('users/following', { userId: alice.id }))
-							.some(v => v.followeeId === bobInA.id),
+						(await alice.client.request('users/following', { userId: alice.id })).some(
+							(v) => v.followeeId === bobInA.id,
+						),
 						true,
 					),
 					strictEqual(
-						(await bob.client.request('users/followers', { userId: bob.id }))
-							.some(v => v.followerId === aliceInB.id),
+						(await bob.client.request('users/followers', { userId: bob.id })).some((v) => v.followerId === aliceInB.id),
 						true,
 					),
 				]);
@@ -279,13 +267,13 @@ describe('User', () => {
 			test('Check consistency with `users/following` and `users/followers` endpoints', async () => {
 				await Promise.all([
 					strictEqual(
-						(await alice.client.request('users/following', { userId: alice.id }))
-							.some(v => v.followeeId === bobInA.id),
+						(await alice.client.request('users/following', { userId: alice.id })).some(
+							(v) => v.followeeId === bobInA.id,
+						),
 						false,
 					),
 					strictEqual(
-						(await bob.client.request('users/followers', { userId: bob.id }))
-							.some(v => v.followerId === aliceInB.id),
+						(await bob.client.request('users/followers', { userId: bob.id })).some((v) => v.followerId === aliceInB.id),
 						false,
 					),
 				]);
@@ -298,10 +286,7 @@ describe('User', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -358,7 +343,7 @@ describe('User', () => {
 				);
 			});
 
-			test('Bob doesn\'t follow Alice', async () => {
+			test("Bob doesn't follow Alice", async () => {
 				const following = await bob.client.request('users/following', { userId: bob.id });
 				strictEqual(following.length, 0);
 			});
@@ -388,10 +373,7 @@ describe('User', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),
@@ -427,10 +409,7 @@ describe('User', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),
@@ -486,10 +465,7 @@ describe('User', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),

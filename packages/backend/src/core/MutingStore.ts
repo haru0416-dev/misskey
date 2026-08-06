@@ -22,11 +22,7 @@ function deserializeMuting(row: MutingRow): MiMuting {
 	} as MiMuting;
 }
 
-function applyMutingPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
+function applyMutingPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
 	if (sinceId && untilId) {
 		conditions.push(gt(muting.id, sinceId));
 		conditions.push(lt(muting.id, untilId));
@@ -53,14 +49,8 @@ export function resolveMutingPagination(
 	return resolveDateIdPagination(idService, options);
 }
 
-export async function countMutingsByMuterIdFromDatabase(
-	db: MiDrizzleDatabase,
-	muterId: MiUser['id'],
-): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(muting)
-		.where(eq(muting.muterId, muterId));
+export async function countMutingsByMuterIdFromDatabase(db: MiDrizzleDatabase, muterId: MiUser['id']): Promise<number> {
+	const [row] = await db.select({ value: count() }).from(muting).where(eq(muting.muterId, muterId));
 
 	return row?.value ?? 0;
 }
@@ -73,10 +63,7 @@ export async function mutingExistsInDatabase(
 	const [row] = await db
 		.select({ id: muting.id })
 		.from(muting)
-		.where(and(
-			eq(muting.muterId, muterId),
-			eq(muting.muteeId, muteeId),
-		))
+		.where(and(eq(muting.muterId, muterId), eq(muting.muteeId, muteeId)))
 		.limit(1);
 
 	return row != null;
@@ -92,23 +79,13 @@ export async function listMuterIdsByMuteeIdAndMuterIdsFromDatabase(
 	const rows = await db
 		.select({ muterId: muting.muterId })
 		.from(muting)
-		.where(and(
-			eq(muting.muteeId, muteeId),
-			sql`${muting.muterId} = ANY(${sql.param(muterIds)})`,
-		));
+		.where(and(eq(muting.muteeId, muteeId), sql`${muting.muterId} = ANY(${sql.param(muterIds)})`));
 
-	return rows.map(row => row.muterId);
+	return rows.map((row) => row.muterId);
 }
 
-export async function fetchMutingByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiMuting['id'],
-): Promise<MiMuting> {
-	const [row] = await db
-		.select()
-		.from(muting)
-		.where(eq(muting.id, id))
-		.limit(1);
+export async function fetchMutingByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiMuting['id']): Promise<MiMuting> {
+	const [row] = await db.select().from(muting).where(eq(muting.id, id)).limit(1);
 
 	if (row == null) {
 		throw new EntityNotFoundError('MiMuting', { id });
@@ -125,10 +102,7 @@ export async function fetchMutingByMuterIdAndMuteeIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(muting)
-		.where(and(
-			eq(muting.muterId, muterId),
-			eq(muting.muteeId, muteeId),
-		))
+		.where(and(eq(muting.muterId, muterId), eq(muting.muteeId, muteeId)))
 		.limit(1);
 
 	return row ? deserializeMuting(row) : null;
@@ -142,10 +116,7 @@ export async function listPermanentMutingsByMuterIdFromDatabase(
 		sinceId?: MiMuting['id'] | null;
 	},
 ): Promise<MiMuting[]> {
-	const conditions = [
-		eq(muting.muterId, muterId),
-		isNull(muting.expiresAt),
-	];
+	const conditions = [eq(muting.muterId, muterId), isNull(muting.expiresAt)];
 
 	if (options.sinceId) {
 		conditions.push(gt(muting.id, options.sinceId));
@@ -158,7 +129,7 @@ export async function listPermanentMutingsByMuterIdFromDatabase(
 		.orderBy(asc(muting.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeMuting(row));
+	return rows.map((row) => deserializeMuting(row));
 }
 
 export async function listMutingsByMuterIdWithPaginationFromDatabase(
@@ -182,21 +153,23 @@ export async function listMutingsByMuterIdWithPaginationFromDatabase(
 		.orderBy(options.order === 'asc' ? asc(muting.id) : desc(muting.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeMuting(row));
+	return rows.map((row) => deserializeMuting(row));
 }
 
 export async function listMuteeIdsByMuterIdFromDatabase(
 	db: MiDrizzleDatabase,
 	muterId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const statement = preparedQueryFor(db, 'muting:muteeIdsByMuterId', () => db
-		.select({ muteeId: muting.muteeId })
-		.from(muting)
-		.where(eq(muting.muterId, sql.placeholder('muterId')))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'muting:muteeIdsByMuterId', () =>
+		db
+			.select({ muteeId: muting.muteeId })
+			.from(muting)
+			.where(eq(muting.muterId, sql.placeholder('muterId')))
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ muterId });
 
-	return rows.map(row => row.muteeId);
+	return rows.map((row) => row.muteeId);
 }
 
 export async function listMuteeIdsByMuterIdAndMuteeIdsFromDatabase(
@@ -209,12 +182,9 @@ export async function listMuteeIdsByMuterIdAndMuteeIdsFromDatabase(
 	const rows = await db
 		.select({ muteeId: muting.muteeId })
 		.from(muting)
-		.where(and(
-			eq(muting.muterId, muterId),
-			sql`${muting.muteeId} = ANY(${sql.param(muteeIds)})`,
-		));
+		.where(and(eq(muting.muterId, muterId), sql`${muting.muteeId} = ANY(${sql.param(muteeIds)})`));
 
-	return rows.map(row => row.muteeId);
+	return rows.map((row) => row.muteeId);
 }
 
 export async function listActiveMutingsByMuteeIdFromDatabase(
@@ -225,30 +195,18 @@ export async function listActiveMutingsByMuteeIdFromDatabase(
 	const rows = await db
 		.select()
 		.from(muting)
-		.where(and(
-			eq(muting.muteeId, muteeId),
-			or(
-				isNull(muting.expiresAt),
-				gt(muting.expiresAt, now),
-			),
-		));
+		.where(and(eq(muting.muteeId, muteeId), or(isNull(muting.expiresAt), gt(muting.expiresAt, now))));
 
-	return rows.map(row => deserializeMuting(row));
+	return rows.map((row) => deserializeMuting(row));
 }
 
-export async function listExpiredMutingsFromDatabase(
-	db: MiDrizzleDatabase,
-	now: Date,
-): Promise<MiMuting[]> {
+export async function listExpiredMutingsFromDatabase(db: MiDrizzleDatabase, now: Date): Promise<MiMuting[]> {
 	const rows = await db
 		.select()
 		.from(muting)
-		.where(and(
-			isNotNull(muting.expiresAt),
-			lt(muting.expiresAt, now),
-		));
+		.where(and(isNotNull(muting.expiresAt), lt(muting.expiresAt, now)));
 
-	return rows.map(row => deserializeMuting(row));
+	return rows.map((row) => deserializeMuting(row));
 }
 
 export async function listPermanentMuterIdsByMuteeIdFromDatabase(
@@ -258,41 +216,23 @@ export async function listPermanentMuterIdsByMuteeIdFromDatabase(
 	const rows = await db
 		.select({ muterId: muting.muterId })
 		.from(muting)
-		.where(and(
-			eq(muting.muteeId, muteeId),
-			isNull(muting.expiresAt),
-		));
+		.where(and(eq(muting.muteeId, muteeId), isNull(muting.expiresAt)));
 
-	return rows.map(row => row.muterId);
+	return rows.map((row) => row.muterId);
 }
 
-export async function createMutingInDatabase(
-	db: MiDrizzleDatabase,
-	values: MutingInsert,
-): Promise<void> {
-	await db
-		.insert(muting)
-		.values(values);
+export async function createMutingInDatabase(db: MiDrizzleDatabase, values: MutingInsert): Promise<void> {
+	await db.insert(muting).values(values);
 }
 
-export async function createMutingsInDatabase(
-	db: MiDrizzleDatabase,
-	values: MutingInsert[],
-): Promise<void> {
+export async function createMutingsInDatabase(db: MiDrizzleDatabase, values: MutingInsert[]): Promise<void> {
 	if (values.length === 0) return;
 
-	await db
-		.insert(muting)
-		.values(values);
+	await db.insert(muting).values(values);
 }
 
-export async function deleteMutingsByIdsFromDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiMuting['id'][],
-): Promise<void> {
+export async function deleteMutingsByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiMuting['id'][]): Promise<void> {
 	if (ids.length === 0) return;
 
-	await db
-		.delete(muting)
-		.where(inArray(muting.id, ids));
+	await db.delete(muting).where(inArray(muting.id, ids));
 }

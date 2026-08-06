@@ -11,17 +11,20 @@ import type { IObject } from './type.js';
 
 export function createApMfmService(mfmService: MfmService) {
 	function htmlToMfm(html: string, tag?: IObject | IObject[]): string {
-		const hashtagNames = extractApHashtagObjects(tag).map(x => x.name);
+		const hashtagNames = extractApHashtagObjects(tag).map((x) => x.name);
 		return mfmService.fromHtml(html, hashtagNames);
 	}
 
 	function getNoteHtml(note: Pick<MiNote, 'text' | 'mentionedRemoteUsers'>, extraHtml: string | null = null) {
 		let noMisskeyContent = false;
-		const srcMfm = (note.text ?? '');
+		const srcMfm = note.text ?? '';
 
 		const parsed = mfm.parse(srcMfm);
 
-		if (extraHtml == null && parsed.every(n => ['text', 'unicodeEmoji', 'emojiCode', 'mention', 'hashtag', 'url'].includes(n.type))) {
+		if (
+			extraHtml == null &&
+			parsed.every((n) => ['text', 'unicodeEmoji', 'emojiCode', 'mention', 'hashtag', 'url'].includes(n.type))
+		) {
 			noMisskeyContent = true;
 		}
 

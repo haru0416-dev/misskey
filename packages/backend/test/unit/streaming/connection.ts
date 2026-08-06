@@ -16,7 +16,11 @@ import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-d
 import { createChatRoomInDatabase } from '@/core/ChatRoomStore.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { HonoStreamConnection, refreshHonoStreamConnections, type HonoStreamConnectionDependencies } from '@/server/streaming/connection.js';
+import {
+	HonoStreamConnection,
+	refreshHonoStreamConnections,
+	type HonoStreamConnectionDependencies,
+} from '@/server/streaming/connection.js';
 import type { MiUser } from '@/models/User.js';
 
 async function createTestUser(deps: HonoStreamConnectionDependencies, prefix: string): Promise<MiUser> {
@@ -67,11 +71,11 @@ describe('hono-stream-connection', () => {
 		connection.listen(subscriber, send);
 
 		await connection.connectChannel('conn1', {}, 'admin', true);
-		expect(raw.some(r => JSON.parse(r).type === 'connected')).toBe(true);
+		expect(raw.some((r) => JSON.parse(r).type === 'connected')).toBe(true);
 
 		subscriber.emit(`adminStream:${user.id}`, { type: 'test', body: { hello: 'world' } });
 
-		const channelMessages = raw.map(r => JSON.parse(r)).filter(m => m.type === 'channel');
+		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
 		expect(channelMessages.length).toBe(1);
 		expect(channelMessages[0].body.id).toBe('conn1');
 		expect(channelMessages[0].body.type).toBe('test');
@@ -92,7 +96,7 @@ describe('hono-stream-connection', () => {
 
 		subscriber.emit(`driveStream:${user.id}`, { type: 'test', body: {} });
 
-		const channelMessages = raw.map(r => JSON.parse(r)).filter(m => m.type === 'channel');
+		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
 		expect(channelMessages.length).toBe(0);
 	});
 
@@ -143,7 +147,7 @@ describe('hono-stream-connection', () => {
 			body: { id: 'note2', userId: author.id, visibility: 'public', body: { text: 'hello' } },
 		});
 
-		const noteUpdated = raw.map(r => JSON.parse(r)).filter(m => m.type === 'noteUpdated');
+		const noteUpdated = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'noteUpdated');
 		expect(noteUpdated.length).toBe(1);
 		expect(noteUpdated[0].body.id).toBe('note2');
 	});
@@ -203,9 +207,15 @@ describe('hono-stream-connection', () => {
 			userMutedInstances: Set<string>;
 		};
 
-		subscriber.emit('internal', { type: 'follow', body: { followerId: user.id, followeeId: other.id, withReplies: true } });
+		subscriber.emit('internal', {
+			type: 'follow',
+			body: { followerId: user.id, followeeId: other.id, withReplies: true },
+		});
 		expect(state.following[other.id]).toEqual({ withReplies: true });
-		subscriber.emit('internal', { type: 'followingUpdated', body: { followerId: user.id, followeeId: other.id, withReplies: false } });
+		subscriber.emit('internal', {
+			type: 'followingUpdated',
+			body: { followerId: user.id, followeeId: other.id, withReplies: false },
+		});
 		expect(state.following[other.id]).toEqual({ withReplies: false });
 		subscriber.emit('internal', { type: 'followingsUpdated', body: { followerId: user.id, withReplies: true } });
 		expect(state.following[other.id]).toEqual({ withReplies: true });
@@ -215,7 +225,10 @@ describe('hono-stream-connection', () => {
 		subscriber.emit('internal', { type: 'mute', body: { muterId: user.id, muteeId: other.id } });
 		subscriber.emit('internal', { type: 'renoteMute', body: { muterId: user.id, muteeId: other.id } });
 		subscriber.emit('internal', { type: 'blockingCreated', body: { blockerId: other.id, blockeeId: user.id } });
-		subscriber.emit('internal', { type: 'updateUserProfile', body: { userId: user.id, mutedInstances: ['example.com'] } });
+		subscriber.emit('internal', {
+			type: 'updateUserProfile',
+			body: { userId: user.id, mutedInstances: ['example.com'] },
+		});
 
 		expect(state.followingChannels).toContain('channel1');
 		expect(state.mutingChannels).toContain('channel2');
@@ -246,7 +259,10 @@ describe('hono-stream-connection', () => {
 		const subscriber = new EventEmitter();
 
 		const initializing = connection.init(subscriber);
-		subscriber.emit('internal', { type: 'follow', body: { followerId: user.id, followeeId: other.id, withReplies: true } });
+		subscriber.emit('internal', {
+			type: 'follow',
+			body: { followerId: user.id, followeeId: other.id, withReplies: true },
+		});
 		await initializing;
 
 		const state = connection as unknown as {
@@ -270,7 +286,7 @@ describe('hono-stream-connection', () => {
 
 		subscriber.emit(`adminStream:${user.id}`, { type: 'test', body: {} });
 
-		const channelMessages = raw.map(r => JSON.parse(r)).filter(m => m.type === 'channel');
+		const channelMessages = raw.map((r) => JSON.parse(r)).filter((m) => m.type === 'channel');
 		expect(channelMessages.length).toBe(0);
 	});
 

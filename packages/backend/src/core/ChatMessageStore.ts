@@ -69,11 +69,7 @@ export async function fetchChatMessageByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiChatMessage['id'],
 ): Promise<MiChatMessage | null> {
-	const [row] = await db
-		.select()
-		.from(chatMessage)
-		.where(eq(chatMessage.id, id))
-		.limit(1);
+	const [row] = await db.select().from(chatMessage).where(eq(chatMessage.id, id)).limit(1);
 
 	return row == null ? null : deserializeChatMessage(row);
 }
@@ -98,10 +94,7 @@ export async function fetchChatMessageByIdAndFromUserIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(chatMessage)
-		.where(and(
-			eq(chatMessage.id, id),
-			eq(chatMessage.fromUserId, fromUserId),
-		))
+		.where(and(eq(chatMessage.id, id), eq(chatMessage.fromUserId, fromUserId)))
 		.limit(1);
 
 	return row == null ? null : deserializeChatMessage(row);
@@ -111,10 +104,7 @@ export async function createChatMessageInDatabase(
 	db: MiDrizzleDatabase,
 	data: ChatMessageInsert,
 ): Promise<MiChatMessage> {
-	const [row] = await db
-		.insert(chatMessage)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(chatMessage).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create chat message');
@@ -123,13 +113,8 @@ export async function createChatMessageInDatabase(
 	return deserializeChatMessage(row);
 }
 
-export async function deleteChatMessageByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiChatMessage['id'],
-): Promise<void> {
-	await db
-		.delete(chatMessage)
-		.where(eq(chatMessage.id, id));
+export async function deleteChatMessageByIdFromDatabase(db: MiDrizzleDatabase, id: MiChatMessage['id']): Promise<void> {
+	await db.delete(chatMessage).where(eq(chatMessage.id, id));
 }
 
 export async function listChatMessagesBetweenUsersFromDatabase(
@@ -301,18 +286,20 @@ export async function searchChatMessagesFromDatabase(
 	} else if (options.roomId) {
 		conditions.push(eq(chatMessage.toRoomId, options.roomId));
 	} else {
-		conditions.push(or(
-			eq(chatMessage.fromUserId, meId),
-			eq(chatMessage.toUserId, meId),
-			inArray(
-				chatMessage.toRoomId,
-				db.select({ roomId: chatRoomMembership.roomId }).from(chatRoomMembership).where(eq(chatRoomMembership.userId, meId)),
-			),
-			inArray(
-				chatMessage.toRoomId,
-				db.select({ id: chatRoom.id }).from(chatRoom).where(eq(chatRoom.ownerId, meId)),
-			),
-		)!);
+		conditions.push(
+			or(
+				eq(chatMessage.fromUserId, meId),
+				eq(chatMessage.toUserId, meId),
+				inArray(
+					chatMessage.toRoomId,
+					db
+						.select({ roomId: chatRoomMembership.roomId })
+						.from(chatRoomMembership)
+						.where(eq(chatRoomMembership.userId, meId)),
+				),
+				inArray(chatMessage.toRoomId, db.select({ id: chatRoom.id }).from(chatRoom).where(eq(chatRoom.ownerId, meId))),
+			)!,
+		);
 	}
 
 	conditions.push(sql`LOWER(${chatMessage.text}) LIKE ${`%${sqlLikeEscape(query.toLowerCase())}%`}`);

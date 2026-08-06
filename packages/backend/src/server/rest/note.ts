@@ -8,11 +8,30 @@ import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
 import { fetchEmojisByNamesAndHostsFromDatabaseCached } from '@/core/EmojiStore.js';
-import { followingExistsInDatabase, listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase, listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase } from '@/core/FollowingStore.js';
-import { fetchNoteByIdFromDatabase, fetchNoteByIdOrFailFromDatabase, listFeaturedNotesByIdsFromDatabase, listNotesByIdsFromDatabase, listUserTimelineNotesFromDatabase } from '@/core/NoteStore.js';
-import { fetchNoteReactionByUserAndNoteFromDatabase, listNoteReactionsByNoteIdsAndUserIdsFromDatabase, listNoteReactionsByUserAndNoteIdsFromDatabase } from '@/core/NoteReactionStore.js';
+import {
+	followingExistsInDatabase,
+	listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
+	listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase,
+} from '@/core/FollowingStore.js';
+import {
+	fetchNoteByIdFromDatabase,
+	fetchNoteByIdOrFailFromDatabase,
+	listFeaturedNotesByIdsFromDatabase,
+	listNotesByIdsFromDatabase,
+	listUserTimelineNotesFromDatabase,
+} from '@/core/NoteStore.js';
+import {
+	fetchNoteReactionByUserAndNoteFromDatabase,
+	listNoteReactionsByNoteIdsAndUserIdsFromDatabase,
+	listNoteReactionsByUserAndNoteIdsFromDatabase,
+} from '@/core/NoteReactionStore.js';
 import { fetchPollByNoteIdOrFailFromDatabase, listPollsByNoteIdsFromDatabase } from '@/core/PollStore.js';
-import { fetchPollVoteByNoteAndUserFromDatabase, listPollVotesByNoteAndUserFromDatabase, listPollVotesByNoteIdsAndUserFromDatabase, listPollVotesByNoteIdsAndUserIdsFromDatabase } from '@/core/PollVoteStore.js';
+import {
+	fetchPollVoteByNoteAndUserFromDatabase,
+	listPollVotesByNoteAndUserFromDatabase,
+	listPollVotesByNoteIdsAndUserFromDatabase,
+	listPollVotesByNoteIdsAndUserIdsFromDatabase,
+} from '@/core/PollVoteStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
@@ -39,11 +58,12 @@ import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDep
 import { getFanoutTimelineNotesForHonoApi } from './fanout-timeline.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiNoteDependencies = HonoApiDriveFileDependencies & UserPackingDependencies & {
-	redis: Redis.Redis;
-	/** fanout タイムライン (Redis) 読み取りに必要。省略時は常にDBから読む。 */
-	redisForTimelines?: Redis.Redis;
-};
+export type HonoApiNoteDependencies = HonoApiDriveFileDependencies &
+	UserPackingDependencies & {
+		redis: Redis.Redis;
+		/** fanout タイムライン (Redis) 読み取りに必要。省略時は常にDBから読む。 */
+		redisForTimelines?: Redis.Redis;
+	};
 
 export type HonoApiEmojiPopulateDependencies = {
 	config: Config;
@@ -89,8 +109,8 @@ function normalizeReactionKeys(reactions: MiNote['reactions']): MiNote['reaction
 
 function collectReactionEmojiNames(reactions: MiNote['reactions']): string[] {
 	return Object.keys(reactions)
-		.filter(reaction => reaction.startsWith(':') && reaction.includes('@') && !reaction.includes('@.'))
-		.map(reaction => decodeReaction(reaction).reaction.replaceAll(':', ''));
+		.filter((reaction) => reaction.startsWith(':') && reaction.includes('@') && !reaction.includes('@.'))
+		.map((reaction) => decodeReaction(reaction).reaction.replaceAll(':', ''));
 }
 
 function mergeReactions(src: MiNote['reactions'], delta: Record<string, number>): MiNote['reactions'] {
@@ -120,7 +140,7 @@ async function getBufferedReactions(
 		deltas[name] = Number.parseInt(count, 10);
 	}
 
-	const pairs = resultPairs.map(x => x.split('/') as [MiUser['id'], string]);
+	const pairs = resultPairs.map((x) => x.split('/') as [MiUser['id'], string]);
 
 	return { deltas, pairs };
 }
@@ -130,7 +150,7 @@ async function getBufferedReactionsMany(
 	noteIds: MiNote['id'][],
 ): Promise<Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>> {
 	const result = new Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>(
-		noteIds.map(id => [id, { deltas: {}, pairs: [] }]),
+		noteIds.map((id) => [id, { deltas: {}, pairs: [] }]),
 	);
 	if (!deps.meta.enableReactionsBuffering || noteIds.length === 0) return result;
 
@@ -152,7 +172,7 @@ async function getBufferedReactionsMany(
 
 		result.set(noteIds[i]!, {
 			deltas,
-			pairs: resultPairs.map(x => x.split('/') as [MiUser['id'], string]),
+			pairs: resultPairs.map((x) => x.split('/') as [MiUser['id'], string]),
 		});
 	}
 
@@ -176,14 +196,16 @@ function isSelfHost(config: Config, host: string | null): boolean {
 const parseEmojiStrRegexp = /^([-\w]+)(?:@([\w.-]+))?$/;
 
 function normalizeEmojiHost(config: Config, src: string | undefined, noteUserHost: string | null): string | null {
-	const host = src === '.' ? null
-		: src === undefined ? noteUserHost
-			: isSelfHost(config, src) ? null
-				: (src || noteUserHost);
+	const host =
+		src === '.' ? null : src === undefined ? noteUserHost : isSelfHost(config, src) ? null : src || noteUserHost;
 	return toPunyNullable(host);
 }
 
-function parseEmojiStr(config: Config, emojiName: string, noteUserHost: string | null): { name: string | null; host: string | null } {
+function parseEmojiStr(
+	config: Config,
+	emojiName: string,
+	noteUserHost: string | null,
+): { name: string | null; host: string | null } {
 	const match = emojiName.match(parseEmojiStrRegexp);
 	if (!match) return { name: null, host: null };
 
@@ -217,9 +239,9 @@ export async function populateEmojisMany(
 
 	const emojis = await fetchEmojisByNamesAndHostsFromDatabaseCached(
 		deps.db,
-		refs.map(ref => ({ name: ref.name, host: ref.host })),
+		refs.map((ref) => ({ name: ref.name, host: ref.host })),
 	);
-	const results = requests.map(() => ({} as Record<string, string>));
+	const results = requests.map(() => ({}) as Record<string, string>);
 	for (let i = 0; i < refs.length; i++) {
 		const emoji = emojis[i];
 		if (emoji == null) continue;
@@ -246,8 +268,12 @@ async function populatePoll(
 		poll: MiPoll;
 		votes?: MiPollVote[];
 	},
-): Promise<{ multiple: boolean; expiresAt: string | null; choices: { text: string; votes: number; isVoted: boolean }[] }> {
-	const poll = hint?.poll ?? await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id);
+): Promise<{
+	multiple: boolean;
+	expiresAt: string | null;
+	choices: { text: string; votes: number; isVoted: boolean }[];
+}> {
+	const poll = hint?.poll ?? (await fetchPollByNoteIdOrFailFromDatabase(deps.db, note.id));
 	// 選択肢テキストが重複していても正しい票数を引けるよう、indexOf ではなく列挙位置を使う。
 	const choices = poll.choices.map((c, index) => ({
 		text: c,
@@ -256,9 +282,13 @@ async function populatePoll(
 	}));
 
 	if (meId) {
-		const votes = hint?.votes ?? (poll.multiple
-			? await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, meId)
-			: [await fetchPollVoteByNoteAndUserFromDatabase(deps.db, note.id, meId)].filter((vote): vote is MiPollVote => vote != null));
+		const votes =
+			hint?.votes ??
+			(poll.multiple
+				? await listPollVotesByNoteAndUserFromDatabase(deps.db, note.id, meId)
+				: [await fetchPollVoteByNoteAndUserFromDatabase(deps.db, note.id, meId)].filter(
+						(vote): vote is MiPollVote => vote != null,
+					));
 		for (const vote of votes) {
 			choices[vote.choice]!.isVoted = true;
 		}
@@ -273,14 +303,18 @@ async function populatePoll(
 
 export async function populateMyReactionForHonoApi(
 	deps: HonoApiNoteDependencies,
-	note: { id: MiNote['id']; reactions: MiNote['reactions']; reactionAndUserPairCache: MiNote['reactionAndUserPairCache'] },
+	note: {
+		id: MiNote['id'];
+		reactions: MiNote['reactions'];
+		reactionAndUserPairCache: MiNote['reactionAndUserPairCache'];
+	},
 	meId: MiUser['id'],
 ): Promise<string | undefined> {
 	const reactionsCount = Object.values(note.reactions).reduce((a, b) => a + b, 0);
 	if (reactionsCount === 0) return undefined;
 
 	if (note.reactionAndUserPairCache && reactionsCount <= note.reactionAndUserPairCache.length) {
-		const pair = note.reactionAndUserPairCache.find(p => p.startsWith(meId));
+		const pair = note.reactionAndUserPairCache.find((p) => p.startsWith(meId));
 		if (pair) return normalizeReactionKey(pair.split('/')[1]!);
 		return undefined;
 	}
@@ -295,7 +329,8 @@ export async function populateMyReactionForHonoApi(
 
 function treatVisibility(packedNote: Packed<'Note'>): Packed<'Note'>['visibility'] {
 	if (packedNote.visibility === 'public' || packedNote.visibility === 'home') {
-		const followersOnlyBefore = (packedNote.user as { makeNotesFollowersOnlyBefore?: number | null }).makeNotesFollowersOnlyBefore;
+		const followersOnlyBefore = (packedNote.user as { makeNotesFollowersOnlyBefore?: number | null })
+			.makeNotesFollowersOnlyBefore;
 		if (shouldHideNoteByTime(followersOnlyBefore, packedNote.createdAt)) {
 			packedNote.visibility = 'followers';
 		}
@@ -330,7 +365,9 @@ export async function shouldHideNoteForHonoApi(
 
 		// followeeIds が全フォロー先、または coverage に含まれる対象者の照会結果なら再利用する。
 		const canUseHint = followeeIds != null && (followeeIdCoverage == null || followeeIdCoverage.has(packedNote.userId));
-		const isFollowing = canUseHint ? followeeIds.has(packedNote.userId) : await followingExistsInDatabase(deps.db, meId, packedNote.userId);
+		const isFollowing = canUseHint
+			? followeeIds.has(packedNote.userId)
+			: await followingExistsInDatabase(deps.db, meId, packedNote.userId);
 		if (!isFollowing) return true;
 	}
 
@@ -365,13 +402,13 @@ export async function filterNoteForStreamingHidingForHonoApi(
 	meId: MiUser['id'] | null,
 ): Promise<Packed<'Note'> | null> {
 	const renoteChain = collectRenoteChainForHonoApi(note);
-	const shouldHide = await Promise.all(renoteChain.map(n => shouldHideNoteForHonoApi(deps, n, meId)));
+	const shouldHide = await Promise.all(renoteChain.map((n) => shouldHideNoteForHonoApi(deps, n, meId)));
 
-	if (!shouldHide.some(h => h)) {
+	if (!shouldHide.some((h) => h)) {
 		return note;
 	}
 
-	if (renoteChain.some(n => isRenotePacked(n) && !isQuotePacked(n))) {
+	if (renoteChain.some((n) => isRenotePacked(n) && !isQuotePacked(n))) {
 		// 純粋リノートの場合は配信をスキップする
 		return null;
 	}
@@ -415,9 +452,7 @@ export async function isVisibleForMeForHonoApi(
 			hint?.followeeIdCoverage.has(note.userId)
 				? hint.followeeIds.has(note.userId)
 				: followingExistsInDatabase(deps.db, meId, note.userId),
-			hint != null
-				? hint.meHost
-				: fetchUserByIdOrFailFromDatabase(deps.db, meId).then(user => user.host),
+			hint != null ? hint.meHost : fetchUserByIdOrFailFromDatabase(deps.db, meId).then((user) => user.host),
 		]);
 		return isFollowing || (note.userHost != null && meHost != null);
 	}
@@ -430,32 +465,35 @@ export async function filterVisibleNotesForHonoApi(
 	notes: MiNote[],
 	meId: MiUser['id'] | null,
 ): Promise<MiNote[]> {
-	const followeeIdCoverage = new Set(notes
-		.filter(note => note.visibility === 'followers'
-			&& meId != null
-			&& note.userId !== meId
-			&& note.reply?.userId !== meId
-			&& !note.mentions?.includes(meId))
-		.map(note => note.userId));
+	const followeeIdCoverage = new Set(
+		notes
+			.filter(
+				(note) =>
+					note.visibility === 'followers' &&
+					meId != null &&
+					note.userId !== meId &&
+					note.reply?.userId !== meId &&
+					!note.mentions?.includes(meId),
+			)
+			.map((note) => note.userId),
+	);
 
 	if (meId == null || followeeIdCoverage.size === 0) {
-		const visibility = await Promise.all(notes.map(note => isVisibleForMeForHonoApi(deps, note, meId)));
+		const visibility = await Promise.all(notes.map((note) => isVisibleForMeForHonoApi(deps, note, meId)));
 		return notes.filter((_, index) => visibility[index]);
 	}
 
-	const needsMeHost = notes.some(note => followeeIdCoverage.has(note.userId) && note.userHost != null);
+	const needsMeHost = notes.some((note) => followeeIdCoverage.has(note.userId) && note.userHost != null);
 	const [followeeIds, meHost] = await Promise.all([
 		listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, meId, [...followeeIdCoverage]),
-		needsMeHost
-			? fetchUserByIdOrFailFromDatabase(deps.db, meId).then(user => user.host)
-			: Promise.resolve(null),
+		needsMeHost ? fetchUserByIdOrFailFromDatabase(deps.db, meId).then((user) => user.host) : Promise.resolve(null),
 	]);
 	const hint = {
 		followeeIds: new Set(followeeIds),
 		followeeIdCoverage,
 		meHost,
 	};
-	const visibility = await Promise.all(notes.map(note => isVisibleForMeForHonoApi(deps, note, meId, hint)));
+	const visibility = await Promise.all(notes.map((note) => isVisibleForMeForHonoApi(deps, note, meId, hint)));
 	return notes.filter((_, index) => visibility[index]);
 }
 
@@ -496,11 +534,14 @@ export async function packNoteForHonoApi(
 		hint?: PackNoteBatchHint;
 	},
 ): Promise<Packed<'Note'>> {
-	const opts = Object.assign({
-		detail: true,
-		skipHide: false,
-		withReactionAndUserPairCache: false,
-	}, options);
+	const opts = Object.assign(
+		{
+			detail: true,
+			skipHide: false,
+			withReactionAndUserPairCache: false,
+		},
+		options,
+	);
 
 	const meId = me ? me.id : null;
 	const note = typeof src === 'object' ? src : await fetchNoteByIdOrFailFromDatabase(deps.db, src);
@@ -509,9 +550,11 @@ export async function packNoteForHonoApi(
 	// hint は事前一括取得の対象だったノートに対してのみ信頼できる
 	const hint = opts.hint != null && opts.hint.noteIds.has(note.id) ? opts.hint : undefined;
 
-	const bufferedReactions = hint?.bufferedReactions.get(note.id) ?? await getBufferedReactions(deps, note.id);
+	const bufferedReactions = hint?.bufferedReactions.get(note.id) ?? (await getBufferedReactions(deps, note.id));
 	const reactions = normalizeReactionKeys(mergeReactions(note.reactions, bufferedReactions.deltas));
-	const reactionAndUserPairCache = note.reactionAndUserPairCache.concat(bufferedReactions.pairs.map(x => x.join('/')));
+	const reactionAndUserPairCache = note.reactionAndUserPairCache.concat(
+		bufferedReactions.pairs.map((x) => x.join('/')),
+	);
 
 	let text = note.text;
 	if (note.name && (note.url ?? note.uri)) {
@@ -523,39 +566,74 @@ export async function packNoteForHonoApi(
 	const [user, files, reactionEmojis, emojis, channel, reply, renote, poll, myReaction] = await Promise.all([
 		hint?.packedUsers.get(note.userId) ?? packUserLiteForHonoApi(deps, note.user ?? note.userId),
 		hint != null
-			? note.fileIds.map(id => hint.packedFiles.get(id)).filter((f): f is Packed<'DriveFile'> => f != null)
+			? note.fileIds.map((id) => hint.packedFiles.get(id)).filter((f): f is Packed<'DriveFile'> => f != null)
 			: packDriveFileManyByIdsForHonoApi(deps, note.fileIds),
 		hint?.reactionEmojis.get(note.id) ?? populateEmojis(deps, reactionEmojiNames, host),
 		hint?.emojis.has(note.id)
 			? hint.emojis.get(note.id)
-			: (host != null ? populateEmojis(deps, note.emojis, host) : Promise.resolve(undefined)),
+			: host != null
+				? populateEmojis(deps, note.emojis, host)
+				: Promise.resolve(undefined),
 		note.channelId
-			? (hint != null ? (hint.channels.get(note.channelId) ?? null) : fetchChannelByIdFromDatabase(deps.db, note.channelId))
+			? hint != null
+				? (hint.channels.get(note.channelId) ?? null)
+				: fetchChannelByIdFromDatabase(deps.db, note.channelId)
 			: Promise.resolve(null),
-		(opts.detail && note.replyId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.reply ?? note.replyId, me, omitUndefined({
-			detail: false,
-			skipHide: opts.skipHide,
-			withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
-			hint: opts.hint,
-		}))) : Promise.resolve(undefined),
-		(opts.detail && note.renoteId) ? nullIfEntityNotFound(packNoteForHonoApi(deps, note.renote ?? note.renoteId, me, omitUndefined({
-			detail: true,
-			skipHide: opts.skipHide,
-			withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
-			hint: opts.hint,
-		}))) : Promise.resolve(undefined),
-		(opts.detail && note.hasPoll) ? populatePoll(deps, note, meId, hint?.polls.has(note.id) ? {
-			poll: hint.polls.get(note.id)!,
-			...(hint.pollVoteNoteIds.has(note.id) ? { votes: hint.pollVotes.get(note.id) ?? [] } : {}),
-		} : undefined) : Promise.resolve(undefined),
-		(opts.detail && meId && Object.keys(reactions).length > 0)
-			? (hint?.myReactions.has(note.id)
+		opts.detail && note.replyId
+			? nullIfEntityNotFound(
+					packNoteForHonoApi(
+						deps,
+						note.reply ?? note.replyId,
+						me,
+						omitUndefined({
+							detail: false,
+							skipHide: opts.skipHide,
+							withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
+							hint: opts.hint,
+						}),
+					),
+				)
+			: Promise.resolve(undefined),
+		opts.detail && note.renoteId
+			? nullIfEntityNotFound(
+					packNoteForHonoApi(
+						deps,
+						note.renote ?? note.renoteId,
+						me,
+						omitUndefined({
+							detail: true,
+							skipHide: opts.skipHide,
+							withReactionAndUserPairCache: opts.withReactionAndUserPairCache,
+							hint: opts.hint,
+						}),
+					),
+				)
+			: Promise.resolve(undefined),
+		opts.detail && note.hasPoll
+			? populatePoll(
+					deps,
+					note,
+					meId,
+					hint?.polls.has(note.id)
+						? {
+								poll: hint.polls.get(note.id)!,
+								...(hint.pollVoteNoteIds.has(note.id) ? { votes: hint.pollVotes.get(note.id) ?? [] } : {}),
+							}
+						: undefined,
+				)
+			: Promise.resolve(undefined),
+		opts.detail && meId && Object.keys(reactions).length > 0
+			? hint?.myReactions.has(note.id)
 				? hint.myReactions.get(note.id)
-				: populateMyReactionForHonoApi(deps, {
-					id: note.id,
-					reactions,
-					reactionAndUserPairCache,
-				}, meId))
+				: populateMyReactionForHonoApi(
+						deps,
+						{
+							id: note.id,
+							reactions,
+							reactionAndUserPairCache,
+						},
+						meId,
+					)
 			: Promise.resolve(undefined),
 	]);
 
@@ -583,30 +661,37 @@ export async function packNoteForHonoApi(
 		replyId: note.replyId,
 		renoteId: note.renoteId,
 		channelId: note.channelId ?? undefined,
-		channel: channel ? {
-			id: channel.id,
-			name: channel.name,
-			color: channel.color,
-			isSensitive: channel.isSensitive,
-			allowRenoteToExternal: channel.allowRenoteToExternal,
-			userId: channel.userId,
-		} : undefined,
+		channel: channel
+			? {
+					id: channel.id,
+					name: channel.name,
+					color: channel.color,
+					isSensitive: channel.isSensitive,
+					allowRenoteToExternal: channel.allowRenoteToExternal,
+					userId: channel.userId,
+				}
+			: undefined,
 		mentions: note.mentions.length > 0 ? note.mentions : undefined,
 		hasPoll: note.hasPoll || undefined,
 		uri: note.uri ?? undefined,
 		url: note.url ?? undefined,
-		...(opts.detail ? {
-			clippedCount: note.clippedCount,
-			reply: note.replyId ? reply : undefined,
-			renote: note.renoteId ? renote : undefined,
-			poll: note.hasPoll ? poll : undefined,
-			...(meId && Object.keys(reactions).length > 0 ? { myReaction } : {}),
-		} : {}),
+		...(opts.detail
+			? {
+					clippedCount: note.clippedCount,
+					reply: note.replyId ? reply : undefined,
+					renote: note.renoteId ? renote : undefined,
+					poll: note.hasPoll ? poll : undefined,
+					...(meId && Object.keys(reactions).length > 0 ? { myReaction } : {}),
+				}
+			: {}),
 	} satisfies Packed<'Note'>;
 
 	treatVisibility(packed);
 
-	if (!opts.skipHide && await shouldHideNoteForHonoApi(deps, packed, meId, opts.hint?.followeeIds, opts.hint?.followeeIdCoverage)) {
+	if (
+		!opts.skipHide &&
+		(await shouldHideNoteForHonoApi(deps, packed, meId, opts.hint?.followeeIds, opts.hint?.followeeIdCoverage))
+	) {
 		hideNoteForHonoApi(packed);
 	}
 
@@ -638,14 +723,16 @@ function collectPackNoteTargets(notes: MiNote[], detail: boolean): PackNoteTarge
 	}
 	const targets = [...targetById.values()];
 	const pollTargetIds = targets
-		.filter(target => detailTargetIds.has(target.id) && target.hasPoll)
-		.map(target => target.id);
+		.filter((target) => detailTargetIds.has(target.id) && target.hasPoll)
+		.map((target) => target.id);
 
 	return { targetById, targets, detailTargetIds, pollTargetIds };
 }
 
-type PackNoteStaticHint = Pick<PackNoteBatchHint,
-	'noteIds' | 'bufferedReactions' | 'polls' | 'reactionEmojis' | 'emojis' | 'packedUsers' | 'packedFiles' | 'channels'>;
+type PackNoteStaticHint = Pick<
+	PackNoteBatchHint,
+	'noteIds' | 'bufferedReactions' | 'polls' | 'reactionEmojis' | 'emojis' | 'packedUsers' | 'packedFiles' | 'channels'
+>;
 
 async function buildPackNoteStaticHint(
 	deps: HonoApiNoteDependencies,
@@ -653,7 +740,10 @@ async function buildPackNoteStaticHint(
 ): Promise<PackNoteStaticHint> {
 	const { targetById, targets, pollTargetIds } = targetInfo;
 	const [bufferedReactions, polls] = await Promise.all([
-		getBufferedReactionsMany(deps, targets.map(target => target.id)),
+		getBufferedReactionsMany(
+			deps,
+			targets.map((target) => target.id),
+		),
 		listPollsByNoteIdsFromDatabase(deps.db, pollTargetIds),
 	]);
 
@@ -684,12 +774,17 @@ async function buildPackNoteStaticHint(
 	return {
 		noteIds: new Set(targetById.keys()),
 		bufferedReactions,
-		polls: new Map(polls.map(poll => [poll.noteId, poll])),
+		polls: new Map(polls.map((poll) => [poll.noteId, poll])),
 		reactionEmojis: new Map(targets.map((target, index) => [target.id, populatedEmojiArray[index * 2]!])),
-		emojis: new Map(targets.map((target, index) => [target.id, target.userHost != null ? populatedEmojiArray[index * 2 + 1]! : undefined])),
-		packedUsers: new Map(packedUserArray.map(user => [user.id, user])),
-		packedFiles: new Map(packedFileArray.map(file => [file.id, file])),
-		channels: new Map(channelArray.map(channel => [channel.id, channel])),
+		emojis: new Map(
+			targets.map((target, index) => [
+				target.id,
+				target.userHost != null ? populatedEmojiArray[index * 2 + 1]! : undefined,
+			]),
+		),
+		packedUsers: new Map(packedUserArray.map((user) => [user.id, user])),
+		packedFiles: new Map(packedFileArray.map((file) => [file.id, file])),
+		channels: new Map(channelArray.map((channel) => [channel.id, channel])),
 	};
 }
 
@@ -725,20 +820,24 @@ export async function createPackNoteHintsForUsersForHonoApi(
 	const detail = options?.detail ?? true;
 	const targetInfo = collectPackNoteTargets(notes, detail);
 	const { targets, detailTargetIds, pollTargetIds } = targetInfo;
-	const staticHint = options?.staticHint ?? await createPackNoteStaticHintForHonoApi(deps, notes, { detail });
+	const staticHint = options?.staticHint ?? (await createPackNoteStaticHintForHonoApi(deps, notes, { detail }));
 	const reactionLookupNoteIds: MiNote['id'][] = [];
 	for (const target of targets) {
 		if (!detailTargetIds.has(target.id)) continue;
 		const buffered = staticHint.bufferedReactions.get(target.id)!;
 		const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
 		const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
-		const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map(pair => pair.join('/')));
-		if (reactionsCount > 0 && reactionsCount > pairCache.length && parseId(target.id).date.getTime() + 2000 <= Date.now()) {
+		const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map((pair) => pair.join('/')));
+		if (
+			reactionsCount > 0 &&
+			reactionsCount > pairCache.length &&
+			parseId(target.id).date.getTime() + 2000 <= Date.now()
+		) {
 			reactionLookupNoteIds.push(target.id);
 		}
 	}
 	const followeeIdCoverage = !options?.skipHide
-		? new Set(targets.filter(target => target.visibility === 'followers').map(target => target.userId))
+		? new Set(targets.filter((target) => target.visibility === 'followers').map((target) => target.userId))
 		: undefined;
 
 	const [reactionRows, pollVoteRows, followingRows] = await Promise.all([
@@ -769,42 +868,47 @@ export async function createPackNoteHintsForUsersForHonoApi(
 		followeeIdsByFollowerId.set(row.followerId, followeeIds);
 	}
 
-	return new Map(uniqueUserIds.map(userId => {
-		const myReactions = new Map<MiNote['id'], string | undefined>();
-		for (const target of targets) {
-			if (!detailTargetIds.has(target.id)) continue;
-			const buffered = staticHint.bufferedReactions.get(target.id)!;
-			const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
-			const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
-			if (reactionsCount === 0) {
-				myReactions.set(target.id, undefined);
-				continue;
+	return new Map(
+		uniqueUserIds.map((userId) => {
+			const myReactions = new Map<MiNote['id'], string | undefined>();
+			for (const target of targets) {
+				if (!detailTargetIds.has(target.id)) continue;
+				const buffered = staticHint.bufferedReactions.get(target.id)!;
+				const reactions = normalizeReactionKeys(mergeReactions(target.reactions, buffered.deltas));
+				const reactionsCount = Object.values(reactions).reduce((a, b) => a + b, 0);
+				if (reactionsCount === 0) {
+					myReactions.set(target.id, undefined);
+					continue;
+				}
+				const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map((pair) => pair.join('/')));
+				if (reactionsCount <= pairCache.length) {
+					const pair = pairCache.find((pair) => pair.startsWith(userId));
+					myReactions.set(target.id, pair ? normalizeReactionKey(pair.split('/')[1]!) : undefined);
+					continue;
+				}
+				if (parseId(target.id).date.getTime() + 2000 > Date.now()) {
+					myReactions.set(target.id, undefined);
+					continue;
+				}
+				const reaction = reactionByUserId.get(userId)?.get(target.id);
+				myReactions.set(target.id, reaction != null ? normalizeReactionKey(reaction) : undefined);
 			}
-			const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map(pair => pair.join('/')));
-			if (reactionsCount <= pairCache.length) {
-				const pair = pairCache.find(pair => pair.startsWith(userId));
-				myReactions.set(target.id, pair ? normalizeReactionKey(pair.split('/')[1]!) : undefined);
-				continue;
-			}
-			if (parseId(target.id).date.getTime() + 2000 > Date.now()) {
-				myReactions.set(target.id, undefined);
-				continue;
-			}
-			const reaction = reactionByUserId.get(userId)?.get(target.id);
-			myReactions.set(target.id, reaction != null ? normalizeReactionKey(reaction) : undefined);
-		}
 
-		return [userId, {
-			...staticHint,
-			myReactions,
-			pollVotes: pollVotesByUserId.get(userId) ?? new Map(),
-			pollVoteNoteIds: new Set(pollTargetIds),
-			...omitUndefined({
-				followeeIds: followeeIdCoverage != null ? (followeeIdsByFollowerId.get(userId) ?? new Set()) : undefined,
-				followeeIdCoverage,
-			}),
-		}];
-	}));
+			return [
+				userId,
+				{
+					...staticHint,
+					myReactions,
+					pollVotes: pollVotesByUserId.get(userId) ?? new Map(),
+					pollVoteNoteIds: new Set(pollTargetIds),
+					...omitUndefined({
+						followeeIds: followeeIdCoverage != null ? (followeeIdsByFollowerId.get(userId) ?? new Set()) : undefined,
+						followeeIdCoverage,
+					}),
+				},
+			];
+		}),
+	);
 }
 
 export async function packNoteManyForHonoApi(
@@ -829,7 +933,7 @@ export async function packNoteManyForHonoApi(
 		}
 		if (relationIds.size > 0) {
 			const relations = await listNotesByIdsFromDatabase(deps.db, [...relationIds]);
-			const relationById = new Map(relations.map(note => [note.id, note]));
+			const relationById = new Map(relations.map((note) => [note.id, note]));
 			for (const note of notes) {
 				if (note.replyId != null && note.reply == null) note.reply = relationById.get(note.replyId) ?? null;
 				if (note.renoteId != null && note.renote == null) note.renote = relationById.get(note.renoteId) ?? null;
@@ -838,15 +942,18 @@ export async function packNoteManyForHonoApi(
 	}
 	const targetInfo = collectPackNoteTargets(notes, detail);
 	const { targets, detailTargetIds, pollTargetIds } = targetInfo;
-	const followeeIdCoverage = options?.followeeIds == null && meId != null && !options?.skipHide
-		? new Set(targets.filter(target => target.visibility === 'followers' && target.userId !== meId).map(target => target.userId))
-		: undefined;
+	const followeeIdCoverage =
+		options?.followeeIds == null && meId != null && !options?.skipHide
+			? new Set(
+					targets
+						.filter((target) => target.visibility === 'followers' && target.userId !== meId)
+						.map((target) => target.userId),
+				)
+			: undefined;
 
 	const [staticHint, pollVotes, packedFolloweeIds] = await Promise.all([
 		buildPackNoteStaticHint(deps, targetInfo),
-		meId != null
-			? listPollVotesByNoteIdsAndUserFromDatabase(deps.db, pollTargetIds, meId)
-			: Promise.resolve([]),
+		meId != null ? listPollVotesByNoteIdsAndUserFromDatabase(deps.db, pollTargetIds, meId) : Promise.resolve([]),
 		followeeIdCoverage != null && meId != null
 			? listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(deps.db, meId, [...followeeIdCoverage])
 			: Promise.resolve([]),
@@ -866,9 +973,9 @@ export async function packNoteManyForHonoApi(
 				myReactions.set(target.id, undefined);
 				continue;
 			}
-			const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map(x => x.join('/')));
+			const pairCache = (target.reactionAndUserPairCache ?? []).concat(buffered.pairs.map((x) => x.join('/')));
 			if (reactionsCount <= pairCache.length) {
-				const pair = pairCache.find(pair => pair.startsWith(meId));
+				const pair = pairCache.find((pair) => pair.startsWith(meId));
 				myReactions.set(target.id, pair ? normalizeReactionKey(pair.split('/')[1]!) : undefined);
 				continue;
 			}
@@ -880,7 +987,7 @@ export async function packNoteManyForHonoApi(
 		}
 		if (idsNeedingDbLookup.length > 0) {
 			const rows = await listNoteReactionsByUserAndNoteIdsFromDatabase(deps.db, meId, idsNeedingDbLookup);
-			const reactionByNoteId = new Map(rows.map(row => [row.noteId, row.reaction]));
+			const reactionByNoteId = new Map(rows.map((row) => [row.noteId, row.reaction]));
 			for (const id of idsNeedingDbLookup) {
 				const reaction = reactionByNoteId.get(id);
 				myReactions.set(id, reaction != null ? normalizeReactionKey(reaction) : undefined);
@@ -891,7 +998,7 @@ export async function packNoteManyForHonoApi(
 	const hint: PackNoteBatchHint = {
 		...staticHint,
 		myReactions,
-		pollVotes: Map.groupBy(pollVotes, vote => vote.noteId),
+		pollVotes: Map.groupBy(pollVotes, (vote) => vote.noteId),
 		pollVoteNoteIds: meId != null ? new Set(pollTargetIds) : new Set(),
 		...omitUndefined({
 			followeeIds: options?.followeeIds ?? (followeeIdCoverage != null ? new Set(packedFolloweeIds) : undefined),
@@ -899,23 +1006,29 @@ export async function packNoteManyForHonoApi(
 		}),
 	};
 
-	return await Promise.all(notes.map(note => packNoteForHonoApi(deps, note, me, { ...options, hint })));
+	return await Promise.all(notes.map((note) => packNoteForHonoApi(deps, note, me, { ...options, hint })));
 }
 
 export async function fetchNoteDiffsForHonoApi(
 	deps: HonoApiNoteDependencies,
 	notes: MiNote[],
 ): Promise<{ id: string; reactions: MiNote['reactions']; reactionEmojis: Record<string, string> }[]> {
-	const bufferedReactionsByNoteId = await getBufferedReactionsMany(deps, notes.map(note => note.id));
-	const diffs = notes.map(note => {
+	const bufferedReactionsByNoteId = await getBufferedReactionsMany(
+		deps,
+		notes.map((note) => note.id),
+	);
+	const diffs = notes.map((note) => {
 		const bufferedReactions = bufferedReactionsByNoteId.get(note.id)!;
 		const reactions = normalizeReactionKeys(mergeReactions(note.reactions, bufferedReactions.deltas));
 		return { note, reactions, reactionEmojiNames: collectReactionEmojiNames(reactions) };
 	});
-	const reactionEmojis = await populateEmojisMany(deps, diffs.map(diff => ({
-		emojiNames: diff.reactionEmojiNames,
-		noteUserHost: diff.note.userHost,
-	})));
+	const reactionEmojis = await populateEmojisMany(
+		deps,
+		diffs.map((diff) => ({
+			emojiNames: diff.reactionEmojiNames,
+			noteUserHost: diff.note.userHost,
+		})),
+	);
 
 	return diffs.map((diff, index) => ({
 		id: diff.note.id,
@@ -944,8 +1057,9 @@ async function getFeaturedRankingOfForHonoApi(
 	const redisPipeline = redis.pipeline();
 	redisPipeline.zrange(`${name}:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
 	redisPipeline.zrange(`${name}:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
-	const [currentRankingResult, previousRankingResult] = await redisPipeline.exec()
-		.then(result => result ? result.map(r => (r[1] ?? []) as string[]) : [[], []]);
+	const [currentRankingResult, previousRankingResult] = await redisPipeline
+		.exec()
+		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : [[], []]));
 
 	const ranking = new Map<string, number>();
 	for (let i = 0; i < currentRankingResult!.length; i += 2) {
@@ -999,17 +1113,24 @@ export async function handleHonoApiUsersFeaturedNotes(
 ): Promise<Packed<'Note'>[]> {
 	const params = parseHonoApiParams(usersFeaturedNotesParamDef, body);
 
-	const userIdsWhoBlockingMe = me ? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id)) : new Set<string>();
+	const userIdsWhoBlockingMe = me
+		? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id))
+		: new Set<string>();
 
 	if (userIdsWhoBlockingMe.has(params.userId)) {
 		return [];
 	}
 
-	let noteIds = await getFeaturedRankingOfForHonoApi(deps.redis, `featuredPerUserNotesRanking:${params.userId}`, PER_USER_NOTES_RANKING_WINDOW, 50);
+	let noteIds = await getFeaturedRankingOfForHonoApi(
+		deps.redis,
+		`featuredPerUserNotesRanking:${params.userId}`,
+		PER_USER_NOTES_RANKING_WINDOW,
+		50,
+	);
 
-	noteIds.sort((a, b) => a > b ? -1 : 1);
+	noteIds.sort((a, b) => (a > b ? -1 : 1));
 	if (params.untilId) {
-		noteIds = noteIds.filter(id => id < params.untilId!);
+		noteIds = noteIds.filter((id) => id < params.untilId!);
 	}
 	noteIds = noteIds.slice(0, params.limit);
 
@@ -1019,14 +1140,14 @@ export async function handleHonoApiUsersFeaturedNotes(
 
 	const userIdsWhoMeMuting = me ? new Set(await listMuteeIdsByMuterIdFromDatabase(deps.db, me.id)) : new Set<string>();
 
-	const notes = (await listFeaturedNotesByIdsFromDatabase(deps.db, noteIds, deps.meta.blockedHosts)).filter(note => {
+	const notes = (await listFeaturedNotesByIdsFromDatabase(deps.db, noteIds, deps.meta.blockedHosts)).filter((note) => {
 		if (me && isUserRelated(note, userIdsWhoBlockingMe, false)) return false;
 		if (me && isUserRelated(note, userIdsWhoMeMuting, true)) return false;
 
 		return true;
 	});
 
-	notes.sort((a, b) => a.id > b.id ? -1 : 1);
+	notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 
 	return await packNoteManyForHonoApi(deps, notes, me);
 }
@@ -1068,22 +1189,29 @@ type NotesTranslateParams = {
 	targetLang: string;
 };
 
-export type HonoApiNotesTranslateDependencies = HonoApiNoteDependencies & HonoApiRolePolicyDependencies & {
-	httpRequestService: Pick<HttpRequestService, 'send'>;
-};
+export type HonoApiNotesTranslateDependencies = HonoApiNoteDependencies &
+	HonoApiRolePolicyDependencies & {
+		httpRequestService: Pick<HttpRequestService, 'send'>;
+	};
 
 const deeplTranslationResponse = z.object({
-	translations: z.array(z.object({
-		detected_source_language: z.string(),
-		text: z.string(),
-	})).min(1),
+	translations: z
+		.array(
+			z.object({
+				detected_source_language: z.string(),
+				text: z.string(),
+			}),
+		)
+		.min(1),
 });
 
 const libreTranslateResponse = z.object({
 	translatedText: z.string(),
-	detectedLanguage: z.object({
-		language: z.string(),
-	}).optional(),
+	detectedLanguage: z
+		.object({
+			language: z.string(),
+		})
+		.optional(),
 });
 
 export async function translateTextForHonoApi(
@@ -1134,11 +1262,13 @@ export async function translateTextForHonoApi(
 	const searchParams = new URLSearchParams();
 	searchParams.append('text', text);
 	searchParams.append('target_lang', targetLang);
-	const endpoint = deps.meta.deeplIsPro ? 'https://api.deepl.com/v2/translate' : 'https://api-free.deepl.com/v2/translate';
+	const endpoint = deps.meta.deeplIsPro
+		? 'https://api.deepl.com/v2/translate'
+		: 'https://api-free.deepl.com/v2/translate';
 	const res = await deps.httpRequestService.send(endpoint, {
 		method: 'POST',
 		headers: {
-			'Authorization': `DeepL-Auth-Key ${deps.meta.deeplAuthKey}`,
+			Authorization: `DeepL-Auth-Key ${deps.meta.deeplAuthKey}`,
 			'Content-Type': 'application/x-www-form-urlencoded',
 			Accept: 'application/json, */*',
 		},
@@ -1234,62 +1364,73 @@ export async function handleHonoApiUsersNotes(
 
 	// ブロック判定・チャンネルミュート・fanoutのフィルタが同じ関係を見るので、まとめて1本で取る
 	// (フォロー関係はここでは要らない。相手をフォローしているかは followingExistsInDatabase で1件だけ見る)
-	const viewerRelation = me != null
-		? await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), fanoutViewerRelationKinds)
-		: undefined;
+	const viewerRelation =
+		me != null
+			? await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), fanoutViewerRelationKinds)
+			: undefined;
 
 	if (viewerRelation != null && viewerRelation.blockerIds.includes(params.userId)) return [];
 
-	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listUserTimelineNotesFromDatabase(deps.db, {
-		userId: params.userId,
-		limit,
-		sinceId: dbSinceId,
-		untilId: dbUntilId,
-		withChannelNotes: params.withChannelNotes,
-		withFiles: params.withFiles,
-		withRenotes: params.withRenotes,
-		me: me ?? null,
-		blockedHosts: deps.meta.blockedHosts,
-		mutingChannelIds: viewerRelation?.mutedChannelIds ?? [],
-	});
+	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) =>
+		listUserTimelineNotesFromDatabase(deps.db, {
+			userId: params.userId,
+			limit,
+			sinceId: dbSinceId,
+			untilId: dbUntilId,
+			withChannelNotes: params.withChannelNotes,
+			withFiles: params.withFiles,
+			withRenotes: params.withRenotes,
+			me: me ?? null,
+			blockedHosts: deps.meta.blockedHosts,
+			mutingChannelIds: viewerRelation?.mutedChannelIds ?? [],
+		});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
 		const isSelf = me != null && me.id === params.userId;
 
-		const redisTimelines = [params.withFiles ? `userTimelineWithFiles:${params.userId}` : `userTimeline:${params.userId}`];
+		const redisTimelines = [
+			params.withFiles ? `userTimelineWithFiles:${params.userId}` : `userTimeline:${params.userId}`,
+		];
 		if (params.withReplies) redisTimelines.push(`userTimelineWithReplies:${params.userId}`);
 		if (params.withChannelNotes) redisTimelines.push(`userTimelineWithChannel:${params.userId}`);
 
-		const isFollowing = me != null && await followingExistsInDatabase(deps.db, me.id, params.userId);
+		const isFollowing = me != null && (await followingExistsInDatabase(deps.db, me.id, params.userId));
 
-		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
-			untilId,
-			sinceId,
-			limit: params.limit,
-			allowPartial: params.allowPartial,
-			me,
-			viewerRelation,
-			useDbFallback: true,
-			redisTimelines,
-			ignoreAuthorFromMute: true,
-			ignoreAuthorFromInstanceBlock: true,
-			ignoreAuthorFromUserSuspension: true,
-			excludeReplies: params.withChannelNotes && !params.withReplies,
-			excludeNoFiles: params.withChannelNotes && params.withFiles,
-			excludePureRenotes: !params.withRenotes,
-			// noteFilter が note.channel.isSensitive を読むため必須 (他の呼び出し元は読まないので付けない)。
-			// 自分自身の一覧ではセンシティブ判定自体が無効なので、その分のチャンネル取得も要らない
-			hydrateChannels: !isSelf,
-			noteFilter: note => {
-				// リノート経由でも本文が露出するので、リノート先のチャンネルも同じ基準で弾く
-				if (!isSelf && (note.channel?.isSensitive || note.renote?.channel?.isSensitive)) return false;
-				if (note.visibility === 'specified' && (!me || (me.id !== note.userId && !note.visibleUserIds.includes(me.id)))) return false;
-				if (note.visibility === 'followers' && !isFollowing && !isSelf) return false;
+		const notes = await getFanoutTimelineNotesForHonoApi(
+			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
+			{
+				untilId,
+				sinceId,
+				limit: params.limit,
+				allowPartial: params.allowPartial,
+				me,
+				viewerRelation,
+				useDbFallback: true,
+				redisTimelines,
+				ignoreAuthorFromMute: true,
+				ignoreAuthorFromInstanceBlock: true,
+				ignoreAuthorFromUserSuspension: true,
+				excludeReplies: params.withChannelNotes && !params.withReplies,
+				excludeNoFiles: params.withChannelNotes && params.withFiles,
+				excludePureRenotes: !params.withRenotes,
+				// noteFilter が note.channel.isSensitive を読むため必須 (他の呼び出し元は読まないので付けない)。
+				// 自分自身の一覧ではセンシティブ判定自体が無効なので、その分のチャンネル取得も要らない
+				hydrateChannels: !isSelf,
+				noteFilter: (note) => {
+					// リノート経由でも本文が露出するので、リノート先のチャンネルも同じ基準で弾く
+					if (!isSelf && (note.channel?.isSensitive || note.renote?.channel?.isSensitive)) return false;
+					if (
+						note.visibility === 'specified' &&
+						(!me || (me.id !== note.userId && !note.visibleUserIds.includes(me.id)))
+					)
+						return false;
+					if (note.visibility === 'followers' && !isFollowing && !isSelf) return false;
 
-				return true;
+					return true;
+				},
+				dbFallback: getFromDb,
 			},
-			dbFallback: getFromDb,
-		});
+		);
 
 		return await packNoteManyForHonoApi(deps, notes, me);
 	}

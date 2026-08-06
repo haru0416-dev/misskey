@@ -8,16 +8,20 @@ import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { CommonProps } from '@/server/web/views/_.js';
 import { Layout } from '@/server/web/views/base.js';
 
-export function UserPage(props: CommonProps<{
-	user: Packed<'UserDetailed'>;
-	profile: MiUserProfile;
-	sub?: string;
-}>) {
-	const title = props.user.name ? `${props.user.name} (@${props.user.username}${props.user.host ? `@${props.user.host}` : ''})` : `@${props.user.username}${props.user.host ? `@${props.user.host}` : ''}`;
+export function UserPage(
+	props: CommonProps<{
+		user: Packed<'UserDetailed'>;
+		profile: MiUserProfile;
+		sub?: string;
+	}>,
+) {
+	const title = props.user.name
+		? `${props.user.name} (@${props.user.username}${props.user.host ? `@${props.user.host}` : ''})`
+		: `@${props.user.username}${props.user.host ? `@${props.user.host}` : ''}`;
 	const me = props.profile.fields
 		? props.profile.fields
-			.filter(field => field.value != null && field.value.match(/^https?:/))
-			.map(field => field.value)
+				.filter((field) => field.value != null && field.value.match(/^https?:/))
+				.map((field) => field.value)
 		: [];
 
 	function ogBlock() {
@@ -48,8 +52,16 @@ export function UserPage(props: CommonProps<{
 
 				{props.sub == null && props.federationEnabled ? (
 					<>
-						{props.user.host == null ? <link rel="alternate" type="application/activity+json" href={`${props.config.instance.url}/users/${props.user.id}`} /> : null}
-						{props.user.uri != null ? <link rel="alternate" type="application/activity+json" href={props.user.uri} /> : null}
+						{props.user.host == null ? (
+							<link
+								rel="alternate"
+								type="application/activity+json"
+								href={`${props.config.instance.url}/users/${props.user.id}`}
+							/>
+						) : null}
+						{props.user.uri != null ? (
+							<link rel="alternate" type="application/activity+json" href={props.user.uri} />
+						) : null}
 						{props.profile.url != null ? <link rel="alternate" type="text/html" href={props.profile.url} /> : null}
 					</>
 				) : null}
@@ -68,7 +80,6 @@ export function UserPage(props: CommonProps<{
 			desc={props.user.description ?? ''}
 			metaSlot={metaBlock()}
 			ogSlot={ogBlock()}
-		>
-		</Layout>
+		></Layout>
 	);
 }

@@ -3,7 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { adminAbuseReportNotificationRecipientCreateParamDef, adminAbuseReportNotificationRecipientDeleteParamDef, adminAbuseReportNotificationRecipientListParamDef, adminAbuseReportNotificationRecipientShowParamDef, adminAbuseReportNotificationRecipientUpdateParamDef } from '@/server/rest/admin-abuse-report-notification-recipient.js';
+import {
+	adminAbuseReportNotificationRecipientCreateParamDef,
+	adminAbuseReportNotificationRecipientDeleteParamDef,
+	adminAbuseReportNotificationRecipientListParamDef,
+	adminAbuseReportNotificationRecipientShowParamDef,
+	adminAbuseReportNotificationRecipientUpdateParamDef,
+} from '@/server/rest/admin-abuse-report-notification-recipient.js';
 
 export const endpointMetas = {
 	'admin/abuse-report/notification-recipient/create': {

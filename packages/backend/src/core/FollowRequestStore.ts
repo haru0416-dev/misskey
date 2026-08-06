@@ -14,10 +14,7 @@ import type { MiUser } from '@/models/User.js';
 export type FollowRequestOrder = 'asc' | 'desc';
 
 function followRequestCondition(followerId: MiUser['id'] | Placeholder, followeeId: MiUser['id'] | Placeholder) {
-	return and(
-		eq(followRequest.followerId, followerId),
-		eq(followRequest.followeeId, followeeId),
-	);
+	return and(eq(followRequest.followerId, followerId), eq(followRequest.followeeId, followeeId));
 }
 
 function applyFollowRequestPaginationCondition(
@@ -39,11 +36,7 @@ export async function fetchFollowRequestByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: FollowRequestRow['id'],
 ): Promise<FollowRequestRow | null> {
-	const [row] = await db
-		.select()
-		.from(followRequest)
-		.where(eq(followRequest.id, id))
-		.limit(1);
+	const [row] = await db.select().from(followRequest).where(eq(followRequest.id, id)).limit(1);
 
 	return row ?? null;
 }
@@ -66,11 +59,7 @@ export async function fetchFollowRequestFromDatabase(
 	followerId: MiUser['id'],
 	followeeId: MiUser['id'],
 ): Promise<FollowRequestRow | null> {
-	const [row] = await db
-		.select()
-		.from(followRequest)
-		.where(followRequestCondition(followerId, followeeId))
-		.limit(1);
+	const [row] = await db.select().from(followRequest).where(followRequestCondition(followerId, followeeId)).limit(1);
 
 	return row ?? null;
 }
@@ -80,12 +69,14 @@ export async function followRequestExistsInDatabase(
 	followerId: MiUser['id'],
 	followeeId: MiUser['id'],
 ): Promise<boolean> {
-	const statement = preparedQueryFor(db, 'followRequest:exists', () => db
-		.select({ id: followRequest.id })
-		.from(followRequest)
-		.where(followRequestCondition(sql.placeholder('followerId'), sql.placeholder('followeeId')))
-		.limit(1)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'followRequest:exists', () =>
+		db
+			.select({ id: followRequest.id })
+			.from(followRequest)
+			.where(followRequestCondition(sql.placeholder('followerId'), sql.placeholder('followeeId')))
+			.limit(1)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const [row] = await statement.execute({ followerId, followeeId });
 
 	return row != null;
@@ -108,10 +99,7 @@ export async function createFollowRequestInDatabase(
 	db: MiDrizzleDatabase,
 	data: FollowRequestInsert,
 ): Promise<FollowRequestRow> {
-	const [row] = await db
-		.insert(followRequest)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(followRequest).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create follow request');
@@ -125,36 +113,28 @@ export async function deleteFollowRequestFromDatabase(
 	followerId: MiUser['id'],
 	followeeId: MiUser['id'],
 ): Promise<void> {
-	await db
-		.delete(followRequest)
-		.where(followRequestCondition(followerId, followeeId));
+	await db.delete(followRequest).where(followRequestCondition(followerId, followeeId));
 }
 
 export async function deleteFollowRequestsByFolloweeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
 ): Promise<void> {
-	await db
-		.delete(followRequest)
-		.where(eq(followRequest.followeeId, followeeId));
+	await db.delete(followRequest).where(eq(followRequest.followeeId, followeeId));
 }
 
 export async function deleteFollowRequestsByFollowerIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followerId: MiUser['id'],
 ): Promise<void> {
-	await db
-		.delete(followRequest)
-		.where(eq(followRequest.followerId, followerId));
+	await db.delete(followRequest).where(eq(followRequest.followerId, followerId));
 }
 
 export async function deleteFollowRequestByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: FollowRequestRow['id'],
 ): Promise<void> {
-	await db
-		.delete(followRequest)
-		.where(eq(followRequest.id, id));
+	await db.delete(followRequest).where(eq(followRequest.id, id));
 }
 
 /**
@@ -165,10 +145,7 @@ export async function listAllFollowRequestsByFolloweeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	followeeId: MiUser['id'],
 ): Promise<FollowRequestRow[]> {
-	return await db
-		.select()
-		.from(followRequest)
-		.where(eq(followRequest.followeeId, followeeId));
+	return await db.select().from(followRequest).where(eq(followRequest.followeeId, followeeId));
 }
 
 /**
@@ -181,10 +158,7 @@ export async function listFollowRequestsByFollowerIdsFromDatabase(
 ): Promise<FollowRequestRow[]> {
 	if (followerIds.length === 0) return [];
 
-	return await db
-		.select()
-		.from(followRequest)
-		.where(inArray(followRequest.followerId, followerIds));
+	return await db.select().from(followRequest).where(inArray(followRequest.followerId, followerIds));
 }
 
 export async function listFollowRequestFolloweeIdsByFollowerIdFromDatabase(
@@ -196,7 +170,7 @@ export async function listFollowRequestFolloweeIdsByFollowerIdFromDatabase(
 		.from(followRequest)
 		.where(eq(followRequest.followerId, followerId));
 
-	return rows.map(row => row.followeeId);
+	return rows.map((row) => row.followeeId);
 }
 
 export async function listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase(
@@ -209,12 +183,11 @@ export async function listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFrom
 	const rows = await db
 		.select({ followeeId: followRequest.followeeId })
 		.from(followRequest)
-		.where(and(
-			eq(followRequest.followerId, followerId),
-			sql`${followRequest.followeeId} = ANY(${sql.param(followeeIds)})`,
-		));
+		.where(
+			and(eq(followRequest.followerId, followerId), sql`${followRequest.followeeId} = ANY(${sql.param(followeeIds)})`),
+		);
 
-	return rows.map(row => row.followeeId);
+	return rows.map((row) => row.followeeId);
 }
 
 export async function listFollowRequestFollowerIdsByFolloweeIdFromDatabase(
@@ -226,7 +199,7 @@ export async function listFollowRequestFollowerIdsByFolloweeIdFromDatabase(
 		.from(followRequest)
 		.where(eq(followRequest.followeeId, followeeId));
 
-	return rows.map(row => row.followerId);
+	return rows.map((row) => row.followerId);
 }
 
 export async function listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase(
@@ -239,12 +212,11 @@ export async function listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFrom
 	const rows = await db
 		.select({ followerId: followRequest.followerId })
 		.from(followRequest)
-		.where(and(
-			eq(followRequest.followeeId, followeeId),
-			sql`${followRequest.followerId} = ANY(${sql.param(followerIds)})`,
-		));
+		.where(
+			and(eq(followRequest.followeeId, followeeId), sql`${followRequest.followerId} = ANY(${sql.param(followerIds)})`),
+		);
 
-	return rows.map(row => row.followerId);
+	return rows.map((row) => row.followerId);
 }
 
 export async function listFollowRequestsByFollowerIdFromDatabase(
@@ -257,9 +229,7 @@ export async function listFollowRequestsByFollowerIdFromDatabase(
 		untilId?: string | null;
 	},
 ): Promise<FollowRequestRow[]> {
-	const conditions: SQL[] = [
-		eq(followRequest.followerId, followerId),
-	];
+	const conditions: SQL[] = [eq(followRequest.followerId, followerId)];
 
 	applyFollowRequestPaginationCondition(conditions, options.sinceId, options.untilId);
 
@@ -281,9 +251,7 @@ export async function listFollowRequestsByFolloweeIdFromDatabase(
 		untilId?: string | null;
 	},
 ): Promise<FollowRequestRow[]> {
-	const conditions: SQL[] = [
-		eq(followRequest.followeeId, followeeId),
-	];
+	const conditions: SQL[] = [eq(followRequest.followeeId, followeeId)];
 
 	applyFollowRequestPaginationCondition(conditions, options.sinceId, options.untilId);
 

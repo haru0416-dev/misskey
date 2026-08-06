@@ -121,6 +121,8 @@ describe('hono-queue-db (importMuting)', () => {
 
 	test('存在しないfileIdは何もしない', async () => {
 		const muter = await createTestUser('honoqueueimpmutenofile');
-		await expect(handleHonoQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId: genId() }))).resolves.toBeUndefined();
+		await expect(
+			handleHonoQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId: genId() })),
+		).resolves.toBeUndefined();
 	});
 });

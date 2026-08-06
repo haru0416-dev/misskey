@@ -6,12 +6,36 @@
 import type { Hono } from 'hono';
 import { assertCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleHonoApiHashtagsList, handleHonoApiHashtagsSearch, handleHonoApiHashtagsShow, handleHonoApiHashtagsTrend, handleHonoApiHashtagsUsers } from '../hashtags.js';
-import { handleHonoApiInviteCreate, handleHonoApiInviteDelete, handleHonoApiInviteLimit, handleHonoApiInviteList } from '../invite.js';
-import { handleHonoApiNotificationsCreate, handleHonoApiNotificationsDelete, handleHonoApiNotificationsFlush, handleHonoApiNotificationsMarkAllAsRead, handleHonoApiNotificationsTestNotification } from '../notification.js';
+import {
+	handleHonoApiHashtagsList,
+	handleHonoApiHashtagsSearch,
+	handleHonoApiHashtagsShow,
+	handleHonoApiHashtagsTrend,
+	handleHonoApiHashtagsUsers,
+} from '../hashtags.js';
+import {
+	handleHonoApiInviteCreate,
+	handleHonoApiInviteDelete,
+	handleHonoApiInviteLimit,
+	handleHonoApiInviteList,
+} from '../invite.js';
+import {
+	handleHonoApiNotificationsCreate,
+	handleHonoApiNotificationsDelete,
+	handleHonoApiNotificationsFlush,
+	handleHonoApiNotificationsMarkAllAsRead,
+	handleHonoApiNotificationsTestNotification,
+} from '../notification.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { getHonoApiRolePolicies } from '../role-policy.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	runApiEndpoint,
+	authenticateOptionalRequest,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -127,10 +151,15 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:notifications');
-			await assertHonoApiRateLimitForUser(deps, 'notifications/create', {
-				duration: 1000 * 60,
-				max: 10,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'notifications/create',
+				{
+					duration: 1000 * 60,
+					max: 10,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiNotificationsCreate(deps, auth.user, auth.token, body);
 			return emptyResponse(c);
@@ -179,10 +208,15 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:notifications');
-			await assertHonoApiRateLimitForUser(deps, 'notifications/test-notification', {
-				duration: 1000 * 60,
-				max: 10,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'notifications/test-notification',
+				{
+					duration: 1000 * 60,
+					max: 10,
+				},
+				auth.user,
+			);
 
 			handleHonoApiNotificationsTestNotification(deps, auth.user);
 			return emptyResponse(c);

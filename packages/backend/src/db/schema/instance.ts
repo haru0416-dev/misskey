@@ -13,35 +13,39 @@ export const instanceSuspensionStateEnum = pgEnum('instance_suspensionstate_enum
 	'autoSuspendedForNotResponding',
 ]);
 
-export const instance = pgTable('instance', {
-	id: varchar({ length: 32 }).primaryKey().notNull(),
-	firstRetrievedAt: timestamp({ withTimezone: true }).notNull(),
-	host: varchar({ length: 128 }).notNull(),
-	usersCount: integer().default(0).notNull(),
-	notesCount: integer().default(0).notNull(),
-	followingCount: integer().default(0).notNull(),
-	followersCount: integer().default(0).notNull(),
-	latestRequestReceivedAt: timestamp({ withTimezone: true }),
-	isNotResponding: boolean().default(false).notNull(),
-	notRespondingSince: timestamp({ withTimezone: true }),
-	suspensionState: instanceSuspensionStateEnum().$type<MiInstance['suspensionState']>().default('none').notNull(),
-	softwareName: varchar({ length: 64 }),
-	softwareVersion: varchar({ length: 64 }),
-	openRegistrations: boolean(),
-	name: varchar({ length: 256 }),
-	description: varchar({ length: 4096 }),
-	maintainerName: varchar({ length: 128 }),
-	maintainerEmail: varchar({ length: 256 }),
-	iconUrl: varchar({ length: 256 }),
-	faviconUrl: varchar({ length: 256 }),
-	themeColor: varchar({ length: 64 }),
-	infoUpdatedAt: timestamp({ withTimezone: true }),
-	moderationNote: varchar({ length: 16384 }).default('').notNull(),
-}, table => [
-	index('IDX_INSTANCE_FIRST_RETRIEVED_AT').on(table.firstRetrievedAt),
-	uniqueIndex('IDX_INSTANCE_HOST_UNIQUE').on(table.host),
-	index('IDX_INSTANCE_SUSPENSION_STATE').on(table.suspensionState),
-]);
+export const instance = pgTable(
+	'instance',
+	{
+		id: varchar({ length: 32 }).primaryKey().notNull(),
+		firstRetrievedAt: timestamp({ withTimezone: true }).notNull(),
+		host: varchar({ length: 128 }).notNull(),
+		usersCount: integer().default(0).notNull(),
+		notesCount: integer().default(0).notNull(),
+		followingCount: integer().default(0).notNull(),
+		followersCount: integer().default(0).notNull(),
+		latestRequestReceivedAt: timestamp({ withTimezone: true }),
+		isNotResponding: boolean().default(false).notNull(),
+		notRespondingSince: timestamp({ withTimezone: true }),
+		suspensionState: instanceSuspensionStateEnum().$type<MiInstance['suspensionState']>().default('none').notNull(),
+		softwareName: varchar({ length: 64 }),
+		softwareVersion: varchar({ length: 64 }),
+		openRegistrations: boolean(),
+		name: varchar({ length: 256 }),
+		description: varchar({ length: 4096 }),
+		maintainerName: varchar({ length: 128 }),
+		maintainerEmail: varchar({ length: 256 }),
+		iconUrl: varchar({ length: 256 }),
+		faviconUrl: varchar({ length: 256 }),
+		themeColor: varchar({ length: 64 }),
+		infoUpdatedAt: timestamp({ withTimezone: true }),
+		moderationNote: varchar({ length: 16384 }).default('').notNull(),
+	},
+	(table) => [
+		index('IDX_INSTANCE_FIRST_RETRIEVED_AT').on(table.firstRetrievedAt),
+		uniqueIndex('IDX_INSTANCE_HOST_UNIQUE').on(table.host),
+		index('IDX_INSTANCE_SUSPENSION_STATE').on(table.suspensionState),
+	],
+);
 
 export type InstanceRow = typeof instance.$inferSelect;
 export type InstanceInsert = typeof instance.$inferInsert;

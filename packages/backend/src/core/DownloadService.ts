@@ -21,7 +21,10 @@ export function createDownloadService(
 ) {
 	const logger = loggerService.getLogger('download');
 
-	async function downloadUrl(url: string, path: string): Promise<{
+	async function downloadUrl(
+		url: string,
+		path: string,
+	): Promise<{
 		filename: string;
 	}> {
 		logger.info(`Downloading ${chalk.cyan(url)} to ${chalk.cyanBright(path)} ...`);
@@ -39,14 +42,20 @@ export function createDownloadService(
 		const responseTimer = setTimeout(() => controller.abort(), responseTimeout);
 
 		try {
-			const res = await httpRequestService.fetchFollowingRedirects(url, {
-				method: 'GET',
-				headers: {
-					'User-Agent': config.runtime.userAgent,
-				},
-				body: undefined,
-				signal: controller.signal,
-			}, false).finally(() => clearTimeout(responseTimer));
+			const res = await httpRequestService
+				.fetchFollowingRedirects(
+					url,
+					{
+						method: 'GET',
+						headers: {
+							'User-Agent': config.runtime.userAgent,
+						},
+						body: undefined,
+						signal: controller.signal,
+					},
+					false,
+				)
+				.finally(() => clearTimeout(responseTimer));
 
 			if (!res.ok) {
 				await res.body?.cancel().catch(() => {});
@@ -88,9 +97,10 @@ export function createDownloadService(
 				},
 			});
 
-			const body = res.body != null
-				? stream.Readable.fromWeb(res.body as import('node:stream/web').ReadableStream)
-				: stream.Readable.from([]);
+			const body =
+				res.body != null
+					? stream.Readable.fromWeb(res.body as import('node:stream/web').ReadableStream)
+					: stream.Readable.from([]);
 			await pipeline(body, limitSize, fs.createWriteStream(path));
 		} finally {
 			clearTimeout(operationTimer);

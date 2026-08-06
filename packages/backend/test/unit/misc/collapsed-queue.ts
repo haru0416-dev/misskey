@@ -11,9 +11,14 @@ describe('CollapsedQueue', () => {
 		vi.useFakeTimers();
 		const error = new Error('failed');
 		const onError = vi.fn();
-		const queue = new CollapsedQueue(100, (_, value: number) => value, async () => {
-			throw error;
-		}, onError);
+		const queue = new CollapsedQueue(
+			100,
+			(_, value: number) => value,
+			async () => {
+				throw error;
+			},
+			onError,
+		);
 
 		queue.enqueue('key', 1);
 		await vi.advanceTimersByTimeAsync(100);
@@ -25,9 +30,14 @@ describe('CollapsedQueue', () => {
 	test('reports failures while flushing queued jobs', async () => {
 		const error = new Error('failed');
 		const onError = vi.fn();
-		const queue = new CollapsedQueue(100, (_, value: number) => value, async () => {
-			throw error;
-		}, onError);
+		const queue = new CollapsedQueue(
+			100,
+			(_, value: number) => value,
+			async () => {
+				throw error;
+			},
+			onError,
+		);
 
 		queue.enqueue('key', 1);
 		await queue.performAllNow();

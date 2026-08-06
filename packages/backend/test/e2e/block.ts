@@ -16,16 +16,23 @@ describe('Block', () => {
 	let bob: misskey.entities.SignupResponse;
 	let carol: misskey.entities.SignupResponse;
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'alice' });
-		bob = await signup({ username: 'bob' });
-		carol = await signup({ username: 'carol' });
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			alice = await signup({ username: 'alice' });
+			bob = await signup({ username: 'bob' });
+			carol = await signup({ username: 'carol' });
+		},
+		1000 * 60 * 2,
+	);
 
 	test('Block作成', async () => {
-		const res = await api('blocking/create', {
-			userId: bob.id,
-		}, alice);
+		const res = await api(
+			'blocking/create',
+			{
+				userId: bob.id,
+			},
+			alice,
+		);
 
 		assert.strictEqual(res.status, 200);
 	});
@@ -80,8 +87,17 @@ describe('Block', () => {
 
 		assert.strictEqual(res.status, 200);
 		assert.strictEqual(Array.isArray(res.body), true);
-		assert.strictEqual(body.some(note => note.id === aliceNote.id), false);
-		assert.strictEqual(body.some(note => note.id === bobNote.id), true);
-		assert.strictEqual(body.some(note => note.id === carolNote.id), true);
+		assert.strictEqual(
+			body.some((note) => note.id === aliceNote.id),
+			false,
+		);
+		assert.strictEqual(
+			body.some((note) => note.id === bobNote.id),
+			true,
+		);
+		assert.strictEqual(
+			body.some((note) => note.id === carolNote.id),
+			true,
+		);
 	});
 });

@@ -29,7 +29,7 @@ const emojiSortColumns = {
 
 function resolveEmojiOrderBy(sortKeys?: readonly string[]) {
 	if (sortKeys && sortKeys.length > 0) {
-		return sortKeys.map(sortKey => {
+		return sortKeys.map((sortKey) => {
 			const key = sortKey.replace(/^[+-]/, '') as keyof typeof emojiSortColumns;
 			const column = emojiSortColumns[key];
 			return sortKey.startsWith('-') ? desc(column) : asc(column);
@@ -39,31 +39,27 @@ function resolveEmojiOrderBy(sortKeys?: readonly string[]) {
 }
 
 function multipleWordsToPatterns(words: string): string[] {
-	return words.split(/\s/).filter(x => x.length > 0).map(x => `%${sqlLikeEscape(x)}%`);
+	return words
+		.split(/\s/)
+		.filter((x) => x.length > 0)
+		.map((x) => `%${sqlLikeEscape(x)}%`);
 }
 
 function likeAnyWords(column: AnyPgColumn, words: string): SQL {
 	const patterns = multipleWordsToPatterns(words);
-	return sql`${column} ~~ ANY(ARRAY[${sql.join(patterns.map(p => sql`${p}`), sql`, `)}])`;
+	return sql`${column} ~~ ANY(ARRAY[${sql.join(
+		patterns.map((p) => sql`${p}`),
+		sql`, `,
+	)}])`;
 }
 
-export async function fetchEmojiByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiEmoji['id'],
-): Promise<MiEmoji | null> {
-	const [row] = await db
-		.select()
-		.from(emoji)
-		.where(eq(emoji.id, id))
-		.limit(1);
+export async function fetchEmojiByIdFromDatabase(db: MiDrizzleDatabase, id: MiEmoji['id']): Promise<MiEmoji | null> {
+	const [row] = await db.select().from(emoji).where(eq(emoji.id, id)).limit(1);
 
 	return row ?? null;
 }
 
-export async function fetchEmojiByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiEmoji['id'],
-): Promise<MiEmoji> {
+export async function fetchEmojiByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiEmoji['id']): Promise<MiEmoji> {
 	const row = await fetchEmojiByIdFromDatabase(db, id);
 
 	if (row == null) {
@@ -78,9 +74,9 @@ export async function listEmojisByIdsOrFailFromDatabase(
 	ids: MiEmoji['id'][],
 ): Promise<MiEmoji[]> {
 	const emojis = await listEmojisByIdsFromDatabase(db, ids);
-	const emojiById = new Map(emojis.map(row => [row.id, row]));
+	const emojiById = new Map(emojis.map((row) => [row.id, row]));
 
-	return ids.map(id => {
+	return ids.map((id) => {
 		const row = emojiById.get(id);
 		if (row == null) {
 			throw new EntityNotFoundError(MiEmoji, { id });
@@ -97,10 +93,7 @@ export async function fetchEmojiByNameAndHostFromDatabase(
 	const [row] = await db
 		.select()
 		.from(emoji)
-		.where(and(
-			eq(emoji.name, name),
-			host == null ? isNull(emoji.host) : eq(emoji.host, host),
-		))
+		.where(and(eq(emoji.name, name), host == null ? isNull(emoji.host) : eq(emoji.host, host)))
 		.limit(1);
 
 	return row ?? null;
@@ -188,11 +181,14 @@ export async function fetchEmojisByNamesAndHostsFromDatabaseCached(
 		const rows = await db
 			.select()
 			.from(emoji)
-			.where(or(...[...namesByHost.entries()].map(([host, names]) => and(
-				host == null ? isNull(emoji.host) : eq(emoji.host, host),
-				inArray(emoji.name, [...names]),
-			))));
-		const rowByKey = new Map(rows.map(row => [emojiCacheKey(row.name, row.host), row]));
+			.where(
+				or(
+					...[...namesByHost.entries()].map(([host, names]) =>
+						and(host == null ? isNull(emoji.host) : eq(emoji.host, host), inArray(emoji.name, [...names])),
+					),
+				),
+			);
+		const rowByKey = new Map(rows.map((row) => [emojiCacheKey(row.name, row.host), row]));
 
 		if (emojiByNameAndHostCache.size + missingByKey.size > EMOJI_CACHE_MAX_ENTRIES) {
 			emojiByNameAndHostCache.clear();
@@ -206,19 +202,13 @@ export async function fetchEmojisByNamesAndHostsFromDatabaseCached(
 		}
 	}
 
-	return queries.map(query => resultByKey.get(emojiCacheKey(query.name, query.host)) ?? null);
+	return queries.map((query) => resultByKey.get(emojiCacheKey(query.name, query.host)) ?? null);
 }
 
-export async function listEmojisByIdsFromDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiEmoji['id'][],
-): Promise<MiEmoji[]> {
+export async function listEmojisByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiEmoji['id'][]): Promise<MiEmoji[]> {
 	if (ids.length === 0) return [];
 
-	return await db
-		.select()
-		.from(emoji)
-		.where(inArray(emoji.id, ids));
+	return await db.select().from(emoji).where(inArray(emoji.id, ids));
 }
 
 export async function listEmojisByHostAndNamesFromDatabase(
@@ -231,49 +221,29 @@ export async function listEmojisByHostAndNamesFromDatabase(
 	return await db
 		.select()
 		.from(emoji)
-		.where(and(
-			eq(emoji.host, host),
-			inArray(emoji.name, names),
-		));
+		.where(and(eq(emoji.host, host), inArray(emoji.name, names)));
 }
 
 /**
  * CustomEmojiService の localEmojisCache (Redis) 向け。ローカル絵文字を全件取得する。
  * キャッシュのfetcherとして使われるホットパスなので、フィルタ条件を変えないこと。
  */
-export async function listLocalEmojisFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiEmoji[]> {
-	return await db
-		.select()
-		.from(emoji)
-		.where(isNull(emoji.host));
+export async function listLocalEmojisFromDatabase(db: MiDrizzleDatabase): Promise<MiEmoji[]> {
+	return await db.select().from(emoji).where(isNull(emoji.host));
 }
 
 /**
  * emojis エンドポイント向け。ローカル絵文字を category, name の昇順で取得する。
  */
-export async function listLocalEmojisOrderedByCategoryAndNameFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiEmoji[]> {
-	return await db
-		.select()
-		.from(emoji)
-		.where(isNull(emoji.host))
-		.orderBy(asc(emoji.category), asc(emoji.name));
+export async function listLocalEmojisOrderedByCategoryAndNameFromDatabase(db: MiDrizzleDatabase): Promise<MiEmoji[]> {
+	return await db.select().from(emoji).where(isNull(emoji.host)).orderBy(asc(emoji.category), asc(emoji.name));
 }
 
 /**
  * ExportCustomEmojisProcessorService 向け。ローカル絵文字を id の昇順で取得する。
  */
-export async function listLocalEmojisOrderedByIdFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiEmoji[]> {
-	return await db
-		.select()
-		.from(emoji)
-		.where(isNull(emoji.host))
-		.orderBy(asc(emoji.id));
+export async function listLocalEmojisOrderedByIdFromDatabase(db: MiDrizzleDatabase): Promise<MiEmoji[]> {
+	return await db.select().from(emoji).where(isNull(emoji.host)).orderBy(asc(emoji.id));
 }
 
 export async function emojiExistsWithLocalNameInDatabase(
@@ -283,10 +253,7 @@ export async function emojiExistsWithLocalNameInDatabase(
 	const [row] = await db
 		.select({ id: emoji.id })
 		.from(emoji)
-		.where(and(
-			eq(emoji.name, name),
-			isNull(emoji.host),
-		))
+		.where(and(eq(emoji.name, name), isNull(emoji.host)))
 		.limit(1);
 
 	return row != null;
@@ -309,20 +276,11 @@ export async function listEmojiThumbnailsByNamesAndHostsFromDatabase(
 			publicUrl: emoji.publicUrl,
 		})
 		.from(emoji)
-		.where(or(...queries.map(q => and(
-			eq(emoji.host, q.host),
-			inArray(emoji.name, q.names),
-		))));
+		.where(or(...queries.map((q) => and(eq(emoji.host, q.host), inArray(emoji.name, q.names)))));
 }
 
-export async function insertEmojiInDatabase(
-	db: MiDrizzleDatabase,
-	data: EmojiInsert,
-): Promise<MiEmoji> {
-	const [row] = await db
-		.insert(emoji)
-		.values(data)
-		.returning();
+export async function insertEmojiInDatabase(db: MiDrizzleDatabase, data: EmojiInsert): Promise<MiEmoji> {
+	const [row] = await db.insert(emoji).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create emoji');
@@ -337,10 +295,7 @@ export async function updateEmojiInDatabase(
 	id: MiEmoji['id'],
 	values: Partial<EmojiInsert>,
 ): Promise<void> {
-	await db
-		.update(emoji)
-		.set(values)
-		.where(eq(emoji.id, id));
+	await db.update(emoji).set(values).where(eq(emoji.id, id));
 
 	invalidateEmojiCache();
 }
@@ -361,11 +316,7 @@ export async function updateEmojisByIdsReturningFromDatabase(
 ): Promise<MiEmoji[]> {
 	if (ids.length === 0) return [];
 
-	const rows = await db
-		.update(emoji)
-		.set(values)
-		.where(inArray(emoji.id, ids))
-		.returning();
+	const rows = await db.update(emoji).set(values).where(inArray(emoji.id, ids)).returning();
 
 	return rows;
 }
@@ -437,37 +388,23 @@ export async function updateEmojiByHostAndNameInDatabase(
 	const [row] = await db
 		.update(emoji)
 		.set(values)
-		.where(and(
-			eq(emoji.host, host),
-			eq(emoji.name, name),
-		))
+		.where(and(eq(emoji.host, host), eq(emoji.name, name)))
 		.returning();
 
 	invalidateEmojiCache();
 	return row ?? null;
 }
 
-export async function deleteEmojiByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiEmoji['id'],
-): Promise<void> {
-	await db
-		.delete(emoji)
-		.where(eq(emoji.id, id));
+export async function deleteEmojiByIdFromDatabase(db: MiDrizzleDatabase, id: MiEmoji['id']): Promise<void> {
+	await db.delete(emoji).where(eq(emoji.id, id));
 
 	invalidateEmojiCache();
 }
 
-export async function deleteEmojisByIdsFromDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiEmoji['id'][],
-): Promise<MiEmoji[]> {
+export async function deleteEmojisByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiEmoji['id'][]): Promise<MiEmoji[]> {
 	if (ids.length === 0) return [];
 
-	const rows = await db
-		.delete(emoji)
-		.where(inArray(emoji.id, ids))
-		.returning();
+	const rows = await db.delete(emoji).where(inArray(emoji.id, ids)).returning();
 
 	return rows;
 }
@@ -480,12 +417,7 @@ export async function deleteEmojiByNameAndHostFromDatabase(
 	name: MiEmoji['name'],
 	host: MiEmoji['host'],
 ): Promise<void> {
-	await db
-		.delete(emoji)
-		.where(and(
-			eq(emoji.name, name),
-			host == null ? isNull(emoji.host) : eq(emoji.host, host),
-		));
+	await db.delete(emoji).where(and(eq(emoji.name, name), host == null ? isNull(emoji.host) : eq(emoji.host, host)));
 
 	invalidateEmojiCache();
 }
@@ -535,9 +467,7 @@ export async function listRemoteEmojisPageFromDatabase(
 		limit: number;
 	},
 ): Promise<MiEmoji[]> {
-	const conditions: SQL[] = [
-		options.host == null ? isNotNull(emoji.host) : eq(emoji.host, options.host),
-	];
+	const conditions: SQL[] = [options.host == null ? isNotNull(emoji.host) : eq(emoji.host, options.host)];
 
 	if (options.sinceId) conditions.push(gt(emoji.id, options.sinceId));
 	if (options.untilId) conditions.push(lt(emoji.id, options.untilId));
@@ -626,7 +556,12 @@ export async function fetchEmojisFromDatabase(
 		}
 		if (q.aliases) {
 			const patterns = multipleWordsToPatterns(q.aliases);
-			conditions.push(sql`EXISTS (SELECT 1 FROM unnest(${emoji.aliases}) AS alias WHERE alias ~~ ANY(ARRAY[${sql.join(patterns.map(p => sql`${p}`), sql`, `)}]))`);
+			conditions.push(
+				sql`EXISTS (SELECT 1 FROM unnest(${emoji.aliases}) AS alias WHERE alias ~~ ANY(ARRAY[${sql.join(
+					patterns.map((p) => sql`${p}`),
+					sql`, `,
+				)}]))`,
+			);
 		}
 		if (q.category) {
 			conditions.push(likeAnyWords(emoji.category, q.category));
@@ -641,7 +576,12 @@ export async function fetchEmojisFromDatabase(
 			conditions.push(eq(emoji.localOnly, q.localOnly));
 		}
 		if (q.roleIds && q.roleIds.length > 0) {
-			conditions.push(sql`${emoji.roleIdsThatCanBeUsedThisEmojiAsReaction} && ARRAY[${sql.join(q.roleIds.map(r => sql`${r}`), sql`, `)}]::varchar[]`);
+			conditions.push(
+				sql`${emoji.roleIdsThatCanBeUsedThisEmojiAsReaction} && ARRAY[${sql.join(
+					q.roleIds.map((r) => sql`${r}`),
+					sql`, `,
+				)}]::varchar[]`,
+			);
 		}
 	}
 

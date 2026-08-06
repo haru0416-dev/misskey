@@ -25,25 +25,25 @@ export type FileResolveResult =
 	| { kind: 'not-found' }
 	| { kind: 'unavailable' }
 	| {
-		kind: 'stored';
-		fileRole: 'thumbnail' | 'webpublic' | 'original';
-		file: MiDriveFile;
-		filename: string;
-		mime: string;
-		ext: string | null;
-		path: string;
-	}
+			kind: 'stored';
+			fileRole: 'thumbnail' | 'webpublic' | 'original';
+			file: MiDriveFile;
+			filename: string;
+			mime: string;
+			ext: string | null;
+			path: string;
+	  }
 	| {
-		kind: 'remote';
-		fileRole: 'thumbnail' | 'webpublic' | 'original';
-		file: MiDriveFile;
-		filename: string;
-		url: string;
-		mime: string;
-		ext: string | null;
-		path: string;
-		cleanup: () => void;
-	};
+			kind: 'remote';
+			fileRole: 'thumbnail' | 'webpublic' | 'original';
+			file: MiDriveFile;
+			filename: string;
+			url: string;
+			mime: string;
+			ext: string | null;
+			path: string;
+			cleanup: () => void;
+	  };
 
 export class FileServerFileResolver {
 	constructor(
@@ -62,8 +62,10 @@ export class FileServerFileResolver {
 
 			return {
 				kind: 'downloaded',
-				mime, ext,
-				path, cleanup,
+				mime,
+				ext,
+				path,
+				cleanup,
 				filename,
 			};
 		} catch (e) {
@@ -84,7 +86,7 @@ export class FileServerFileResolver {
 			if (!(file.isLink && file.uri)) return { kind: 'unavailable' };
 			const result = await this.downloadAndDetectTypeFromUrl(file.uri);
 			const { kind: _kind, ...downloaded } = result;
-			file.size = (await fs.promises.stat(downloaded.path)).size;	// DB file.sizeは正確とは限らないので
+			file.size = (await fs.promises.stat(downloaded.path)).size; // DB file.sizeは正確とは限らないので
 			return {
 				kind: 'remote',
 				...downloaded,
@@ -104,7 +106,8 @@ export class FileServerFileResolver {
 				fileRole: isThumbnail ? 'thumbnail' : 'webpublic',
 				file,
 				filename: file.name,
-				mime, ext,
+				mime,
+				ext,
 				path,
 			};
 		}

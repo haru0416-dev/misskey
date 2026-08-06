@@ -4,7 +4,16 @@
  */
 
 import { flashParamDef } from '@/server/rest/favorites.js';
-import { flashCreateParamDef, flashDeleteParamDef, flashFeaturedParamDef, flashMyLikesParamDef, flashMyParamDef, flashSearchParamDef, flashShowParamDef, flashUpdateParamDef } from '@/server/rest/flash.js';
+import {
+	flashCreateParamDef,
+	flashDeleteParamDef,
+	flashFeaturedParamDef,
+	flashMyLikesParamDef,
+	flashMyParamDef,
+	flashSearchParamDef,
+	flashShowParamDef,
+	flashUpdateParamDef,
+} from '@/server/rest/flash.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -23,12 +32,12 @@ export const endpointMetas = {
 				max: 10,
 			},
 
-			errors: {
-			},
+			errors: {},
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Flash',
 			},
 		} as const,
@@ -66,10 +75,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Flash',
 				},
 			},
@@ -118,10 +129,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Flash',
 				},
 			},
@@ -138,18 +151,21 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						flash: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'Flash',
 						},
 					},
@@ -166,7 +182,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Flash',
 			},
 
@@ -245,10 +262,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Flash',
 				},
 			},

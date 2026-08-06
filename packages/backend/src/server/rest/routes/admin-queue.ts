@@ -8,9 +8,35 @@ import { assertCredential, assertTokenPermission, authenticateHonoApiToken } fro
 import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from '../admin-stats.js';
 import { rolePermissionDeniedError } from '../error.js';
 import { handleHonoApiAdminCaptchaCurrent, handleHonoApiAdminCaptchaSave } from '../captcha.js';
-import { handleHonoApiAdminQueueAbandonOutboxDeadLetter, handleHonoApiAdminQueueClear, handleHonoApiAdminQueueDeliverDelayed, handleHonoApiAdminQueueInboxDelayed, handleHonoApiAdminQueueJobs, handleHonoApiAdminQueueOutboxDeadLetters, handleHonoApiAdminQueuePause, handleHonoApiAdminQueuePromoteJobs, handleHonoApiAdminQueueQueueStats, handleHonoApiAdminQueueQueues, handleHonoApiAdminQueueRemoveJob, handleHonoApiAdminQueueResume, handleHonoApiAdminQueueRetryJob, handleHonoApiAdminQueueRetryOutboxDeadLetter, handleHonoApiAdminQueueShowJob, handleHonoApiAdminQueueShowJobLogs, handleHonoApiAdminQueueStats } from '../admin-queue.js';
+import {
+	handleHonoApiAdminQueueAbandonOutboxDeadLetter,
+	handleHonoApiAdminQueueClear,
+	handleHonoApiAdminQueueDeliverDelayed,
+	handleHonoApiAdminQueueInboxDelayed,
+	handleHonoApiAdminQueueJobs,
+	handleHonoApiAdminQueueOutboxDeadLetters,
+	handleHonoApiAdminQueuePause,
+	handleHonoApiAdminQueuePromoteJobs,
+	handleHonoApiAdminQueueQueueStats,
+	handleHonoApiAdminQueueQueues,
+	handleHonoApiAdminQueueRemoveJob,
+	handleHonoApiAdminQueueResume,
+	handleHonoApiAdminQueueRetryJob,
+	handleHonoApiAdminQueueRetryOutboxDeadLetter,
+	handleHonoApiAdminQueueShowJob,
+	handleHonoApiAdminQueueShowJobLogs,
+	handleHonoApiAdminQueueStats,
+} from '../admin-queue.js';
 import { isHonoApiAdministrator } from '../role-policy.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint, assertHonoApiModerator, assertHonoApiAdmin } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	runApiEndpoint,
+	assertHonoApiModerator,
+	assertHonoApiAdmin,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -231,7 +257,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
-			if (!await isHonoApiAdministrator(deps, auth.user)) {
+			if (!(await isHonoApiAdministrator(deps, auth.user))) {
 				throw rolePermissionDeniedError();
 			}
 			assertTokenPermission(auth, 'read:admin:index-stats');
@@ -245,7 +271,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
-			if (!await isHonoApiAdministrator(deps, auth.user)) {
+			if (!(await isHonoApiAdministrator(deps, auth.user))) {
 				throw rolePermissionDeniedError();
 			}
 			assertTokenPermission(auth, 'read:admin:table-stats');

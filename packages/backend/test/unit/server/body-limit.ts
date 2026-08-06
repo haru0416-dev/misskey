@@ -108,19 +108,23 @@ describe('readRequestBodyWithLimit', () => {
 	});
 
 	test('uses the streamed path when Transfer-Encoding is present', async () => {
-		const response = await createApp(4).request(streamedRequest(['ab', 'cd'], {
-			'Content-Length': '100',
-			'Transfer-Encoding': 'chunked',
-		}));
+		const response = await createApp(4).request(
+			streamedRequest(['ab', 'cd'], {
+				'Content-Length': '100',
+				'Transfer-Encoding': 'chunked',
+			}),
+		);
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe('abcd');
 	});
 
 	test('uses the streamed path for malformed Content-Length', async () => {
-		const response = await createApp(4).request(streamedRequest(['ab', 'cd'], {
-			'Content-Length': '4.0',
-		}));
+		const response = await createApp(4).request(
+			streamedRequest(['ab', 'cd'], {
+				'Content-Length': '4.0',
+			}),
+		);
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe('abcd');

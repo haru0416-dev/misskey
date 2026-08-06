@@ -13,7 +13,7 @@ export function isKeywordIncluded(text: string, keywords: string[]): boolean {
 	return keywords.some((filter) => {
 		const regexp = filter.match(regexpPattern);
 		if (regexp == null) {
-			return filter.split(' ').every(keyword => text.includes(keyword));
+			return filter.split(' ').every((keyword) => text.includes(keyword));
 		}
 
 		try {

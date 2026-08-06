@@ -21,7 +21,7 @@ export function mfmToHtml(
 
 	function toHtml(children?: mfm.MfmNode[]): string {
 		if (children == null) return '';
-		return children.map(x => handlers[x.type](x)).join('');
+		return children.map((x) => handlers[x.type](x)).join('');
 	}
 
 	function fnDefault(node: mfm.MfmFn) {
@@ -125,9 +125,15 @@ export function mfmToHtml(
 
 		mention: (node) => {
 			const { username, host, acct } = node.props;
-			const remoteUserInfo = mentionedRemoteUsers.find(remoteUser => remoteUser.username.toLowerCase() === username.toLowerCase() && remoteUser.host?.toLowerCase() === host?.toLowerCase());
+			const remoteUserInfo = mentionedRemoteUsers.find(
+				(remoteUser) =>
+					remoteUser.username.toLowerCase() === username.toLowerCase() &&
+					remoteUser.host?.toLowerCase() === host?.toLowerCase(),
+			);
 			const href = remoteUserInfo
-				? (remoteUserInfo.url ? remoteUserInfo.url : remoteUserInfo.uri)
+				? remoteUserInfo.url
+					? remoteUserInfo.url
+					: remoteUserInfo.uri
 				: `${config.instance.url}/${acct.endsWith(`@${config.instance.url}`) ? acct.substring(0, acct.length - config.instance.url.length - 1) : acct}`;
 			try {
 				const url = new URL(href);
@@ -147,7 +153,7 @@ export function mfmToHtml(
 			}
 
 			let html = '';
-			const lines = node.props.text.split(/\r\n|\r|\n/).map(x => escapeHtml(x));
+			const lines = node.props.text.split(/\r\n|\r|\n/).map((x) => escapeHtml(x));
 
 			for (const x of intersperse<string>('br', lines)) {
 				html += x === 'br' ? '<br />' : x;
@@ -172,7 +178,9 @@ export function mfmToHtml(
 		plain: (node) => {
 			return `<span>${toHtml(node.children)}</span>`;
 		},
-	} satisfies { [K in mfm.MfmNode['type']]: (node: mfm.NodeType<K>) => string } as { [K in mfm.MfmNode['type']]: (node: mfm.MfmNode) => string };
+	} satisfies { [K in mfm.MfmNode['type']]: (node: mfm.NodeType<K>) => string } as {
+		[K in mfm.MfmNode['type']]: (node: mfm.MfmNode) => string;
+	};
 
 	return `${toHtml(nodes)}${extraHtml ?? ''}`;
 }

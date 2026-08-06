@@ -5,12 +5,52 @@
 
 import type { Hono } from 'hono';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
-import { handleHonoApiGalleryFeatured, handleHonoApiGalleryPopular, handleHonoApiGalleryPosts, handleHonoApiGalleryPostsCreate, handleHonoApiGalleryPostsDelete, handleHonoApiGalleryPostsLike, handleHonoApiGalleryPostsShow, handleHonoApiGalleryPostsUnlike, handleHonoApiGalleryPostsUpdate, handleHonoApiIGalleryLikes, handleHonoApiIGalleryPosts } from '../gallery.js';
+import {
+	handleHonoApiGalleryFeatured,
+	handleHonoApiGalleryPopular,
+	handleHonoApiGalleryPosts,
+	handleHonoApiGalleryPostsCreate,
+	handleHonoApiGalleryPostsDelete,
+	handleHonoApiGalleryPostsLike,
+	handleHonoApiGalleryPostsShow,
+	handleHonoApiGalleryPostsUnlike,
+	handleHonoApiGalleryPostsUpdate,
+	handleHonoApiIGalleryLikes,
+	handleHonoApiIGalleryPosts,
+} from '../gallery.js';
 import { handleHonoApiFlashLike, handleHonoApiFlashUnlike } from '../favorites.js';
-import { handleHonoApiFlashCreate, handleHonoApiFlashDelete, handleHonoApiFlashFeatured, handleHonoApiFlashMy, handleHonoApiFlashMyLikes, handleHonoApiFlashSearch, handleHonoApiFlashShow, handleHonoApiFlashUpdate } from '../flash.js';
-import { handleHonoApiFollowingCreate, handleHonoApiFollowingDelete, handleHonoApiFollowingInvalidate, handleHonoApiFollowingList, handleHonoApiFollowingRequestsAccept, handleHonoApiFollowingRequestsCancel, handleHonoApiFollowingRequestsList, handleHonoApiFollowingRequestsReject, handleHonoApiFollowingRequestsSent, handleHonoApiFollowingUpdate, handleHonoApiFollowingUpdateAll } from '../following.js';
+import {
+	handleHonoApiFlashCreate,
+	handleHonoApiFlashDelete,
+	handleHonoApiFlashFeatured,
+	handleHonoApiFlashMy,
+	handleHonoApiFlashMyLikes,
+	handleHonoApiFlashSearch,
+	handleHonoApiFlashShow,
+	handleHonoApiFlashUpdate,
+} from '../flash.js';
+import {
+	handleHonoApiFollowingCreate,
+	handleHonoApiFollowingDelete,
+	handleHonoApiFollowingInvalidate,
+	handleHonoApiFollowingList,
+	handleHonoApiFollowingRequestsAccept,
+	handleHonoApiFollowingRequestsCancel,
+	handleHonoApiFollowingRequestsList,
+	handleHonoApiFollowingRequestsReject,
+	handleHonoApiFollowingRequestsSent,
+	handleHonoApiFollowingUpdate,
+	handleHonoApiFollowingUpdateAll,
+} from '../following.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	runApiEndpoint,
+	authenticateOptionalRequest,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -21,10 +61,15 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimitForUser(deps, 'following/create', {
-				duration: 60 * 60 * 1000,
-				max: 100,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'following/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 100,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiFollowingCreate(deps, auth.user, body));
 		});
@@ -47,10 +92,15 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimitForUser(deps, 'following/delete', {
-				duration: 60 * 60 * 1000,
-				max: 100,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'following/delete',
+				{
+					duration: 60 * 60 * 1000,
+					max: 100,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiFollowingDelete(deps, auth.user, body));
 		});
@@ -62,10 +112,15 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimitForUser(deps, 'following/update', {
-				duration: 60 * 60 * 1000,
-				max: 100,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'following/update',
+				{
+					duration: 60 * 60 * 1000,
+					max: 100,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiFollowingUpdate(deps, auth.user, body));
 		});
@@ -77,10 +132,15 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimitForUser(deps, 'following/invalidate', {
-				duration: 60 * 60 * 1000,
-				max: 100,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'following/invalidate',
+				{
+					duration: 60 * 60 * 1000,
+					max: 100,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiFollowingInvalidate(deps, auth.user, body));
 		});
@@ -186,10 +246,15 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:gallery');
-			await assertHonoApiRateLimitForUser(deps, 'gallery/posts/create', {
-				duration: 60 * 60 * 1000,
-				max: 20,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'gallery/posts/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 20,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiGalleryPostsCreate(deps, auth.user, body));
 		});
@@ -202,10 +267,15 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:gallery');
-			await assertHonoApiRateLimitForUser(deps, 'gallery/posts/update', {
-				duration: 60 * 60 * 1000,
-				max: 300,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'gallery/posts/update',
+				{
+					duration: 60 * 60 * 1000,
+					max: 300,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiGalleryPostsUpdate(deps, auth.user, body));
 		});
@@ -304,10 +374,15 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:flash');
-			await assertHonoApiRateLimitForUser(deps, 'flash/update', {
-				duration: 60 * 60 * 1000,
-				max: 300,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'flash/update',
+				{
+					duration: 60 * 60 * 1000,
+					max: 300,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiFlashUpdate(deps, auth.user, body);
 			return emptyResponse(c);
@@ -321,10 +396,15 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:flash');
-			await assertHonoApiRateLimitForUser(deps, 'flash/create', {
-				duration: 60 * 60 * 1000,
-				max: 10,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'flash/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 10,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiFlashCreate(deps, auth.user, body));
 		});
@@ -397,10 +477,15 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimitForUser(deps, 'following/update-all', {
-				duration: 60 * 60 * 1000,
-				max: 10,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'following/update-all',
+				{
+					duration: 60 * 60 * 1000,
+					max: 10,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiFollowingUpdateAll(deps, auth.user, body);
 			return emptyResponse(c);

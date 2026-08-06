@@ -4,20 +4,50 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import {
+	assertCredential,
+	assertProhibitMoved,
+	assertSecureCredential,
+	assertTokenPermission,
+	authenticateHonoApiToken,
+} from '../auth.js';
 import { handleHonoApiGetAvatarDecorations } from '../avatar-decorations.js';
 import { handleHonoApiGetOnlineUsersCount } from '../availability.js';
 import { handleHonoApiPagesLike, handleHonoApiPagesUnlike } from '../favorites.js';
 import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from '../meta.js';
-import { handleHonoApiPagesCreate, handleHonoApiPagesDelete, handleHonoApiPagesFeatured, handleHonoApiPagesShow, handleHonoApiPagesUpdate } from '../pages.js';
+import {
+	handleHonoApiPagesCreate,
+	handleHonoApiPagesDelete,
+	handleHonoApiPagesFeatured,
+	handleHonoApiPagesShow,
+	handleHonoApiPagesUpdate,
+} from '../pages.js';
 import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from '../password-reset.js';
 import { handleHonoApiPromoRead } from '../promo.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { handleHonoApiResetDb } from '../reset-db.js';
 import { handleHonoApiRetention } from '../retention.js';
-import { handleHonoApiRolesList, handleHonoApiRolesNotes, handleHonoApiRolesShow, handleHonoApiRolesUsers } from '../roles.js';
-import { handleHonoApiSwRegister, handleHonoApiSwShowRegistration, handleHonoApiSwUnregister, handleHonoApiSwUpdateRegistration } from '../sw.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, getRequestIp, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
+import {
+	handleHonoApiRolesList,
+	handleHonoApiRolesNotes,
+	handleHonoApiRolesShow,
+	handleHonoApiRolesUsers,
+} from '../roles.js';
+import {
+	handleHonoApiSwRegister,
+	handleHonoApiSwShowRegistration,
+	handleHonoApiSwUnregister,
+	handleHonoApiSwUpdateRegistration,
+} from '../sw.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	getRequestIp,
+	runApiEndpoint,
+	authenticateOptionalRequest,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -35,10 +65,15 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:pages');
-			await assertHonoApiRateLimitForUser(deps, 'pages/create', {
-				duration: 60 * 60 * 1000,
-				max: 10,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'pages/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 10,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiPagesCreate(deps, auth.user, body));
 		});
@@ -51,10 +86,15 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:pages');
-			await assertHonoApiRateLimitForUser(deps, 'pages/update', {
-				duration: 60 * 60 * 1000,
-				max: 300,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'pages/update',
+				{
+					duration: 60 * 60 * 1000,
+					max: 300,
+				},
+				auth.user,
+			);
 
 			await handleHonoApiPagesUpdate(deps, auth.user, body);
 			return emptyResponse(c);

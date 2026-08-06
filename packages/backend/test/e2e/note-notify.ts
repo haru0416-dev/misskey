@@ -14,11 +14,14 @@ describe('following/list', () => {
 	let bob: misskey.entities.SignupResponse;
 	let carol: misskey.entities.SignupResponse;
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'alice' });
-		bob = await signup({ username: 'bob' });
-		carol = await signup({ username: 'carol' });
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			alice = await signup({ username: 'alice' });
+			bob = await signup({ username: 'bob' });
+			carol = await signup({ username: 'carol' });
+		},
+		1000 * 60 * 2,
+	);
 
 	test('通知設定なしのフォローのみの場合、空配列が返る', async () => {
 		// alice が bob を普通にフォロー（通知設定なし）
@@ -105,17 +108,22 @@ describe('following/list', () => {
 		await api('following/update', { userId: bob.id, notify: 'normal' }, alice);
 
 		await api('notifications/mark-all-as-read', {}, alice);
-		const textOnlyRes = await api('notes/create', {
-			text: 'ファイルなしの投稿',
-		}, bob);
+		const textOnlyRes = await api(
+			'notes/create',
+			{
+				text: 'ファイルなしの投稿',
+			},
+			bob,
+		);
 		assert.strictEqual(textOnlyRes.status, 200);
 		// redisに追加されるのを待つ
 		await setTimeout(100);
 
 		const beforeRes = await api('i/notifications', {}, alice);
 		assert.strictEqual(beforeRes.status, 200);
-		const noteNotif = beforeRes.body.filter((n: { type: string; note?: { id: string } }) =>
-			n.type === 'note' && n.note?.id === textOnlyRes.body.createdNote.id,
+		const noteNotif = beforeRes.body.filter(
+			(n: { type: string; note?: { id: string } }) =>
+				n.type === 'note' && n.note?.id === textOnlyRes.body.createdNote.id,
 		);
 
 		assert.strictEqual(noteNotif.length, 1, '投稿の通知が届かなかった');

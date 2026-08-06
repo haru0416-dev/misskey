@@ -10,7 +10,12 @@ import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { type DbQueue, type DeliverQueue } from '@/core/queues.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserDeletedStateInDatabase } from '@/core/UserStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
-import { enqueueAccountDeleteCoordinatorInOutbox, enqueueDbJobInOutbox, enqueueDeliverJobsInOutbox, publishDbOutboxRowEagerly } from '@/core/QueueOutboxStore.js';
+import {
+	enqueueAccountDeleteCoordinatorInOutbox,
+	enqueueDbJobInOutbox,
+	enqueueDeliverJobsInOutbox,
+	publishDbOutboxRowEagerly,
+} from '@/core/QueueOutboxStore.js';
 import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -23,7 +28,10 @@ export type DeleteAccountDependencies = {
 	db: MiDrizzleDatabase;
 	dbQueue: DbQueue;
 	deliverQueue: DeliverQueue;
-	publishInternalEvent?: <K extends 'userChangeDeletedState'>(type: K, value: { id: MiUser['id']; isDeleted: true }) => void;
+	publishInternalEvent?: <K extends 'userChangeDeletedState'>(
+		type: K,
+		value: { id: MiUser['id']; isDeleted: true },
+	) => void;
 };
 
 type DeleteAccountTarget = {
@@ -44,7 +52,11 @@ function renderDelete(config: Config, object: IObject | string, user: { id: MiUs
 	};
 }
 
-function addActivityContext<T extends IObject>(config: Config, activity: T, id?: string): T & { '@context': typeof CONTEXT; id: string } {
+function addActivityContext<T extends IObject>(
+	config: Config,
+	activity: T,
+	id?: string,
+): T & { '@context': typeof CONTEXT; id: string } {
 	if (activity.id == null) {
 		activity.id = id ?? `${config.instance.url}/${randomUUID()}`;
 	}
@@ -58,10 +70,15 @@ async function enqueueDeleteAccountJob(
 	user: DeleteAccountTarget,
 	soft: boolean,
 ): Promise<string> {
-	return await enqueueDbJobInOutbox(db, 'deleteAccount', {
-		user: { id: user.id },
-		soft,
-	}, queueRetentionOptions(config));
+	return await enqueueDbJobInOutbox(
+		db,
+		'deleteAccount',
+		{
+			user: { id: user.id },
+			soft,
+		},
+		queueRetentionOptions(config),
+	);
 }
 
 export async function deleteAccountWithSideEffects(
@@ -85,13 +102,13 @@ export async function deleteAccountWithSideEffects(
 			renderDelete(deps.config, genLocalUserUri(deps.config, localUser.id), localUser),
 		);
 		const inboxes = await listSharedInboxesFromFollowingsInDatabase(deps.db);
-		deliveryJobs = inboxes.flatMap(inbox => {
+		deliveryJobs = inboxes.flatMap((inbox) => {
 			const job = createDeliverJob(deps.config, localUser, content as IActivity, inbox, true);
 			return job == null ? [] : [job];
 		});
 	}
 
-	const outbox = await deps.db.transaction(async transaction => {
+	const outbox = await deps.db.transaction(async (transaction) => {
 		const tx = transaction as MiDrizzleDatabase;
 		let dbJobId: string;
 		if (user.host !== null) {

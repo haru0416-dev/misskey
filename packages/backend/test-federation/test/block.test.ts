@@ -1,7 +1,15 @@
 import { describe, test, beforeAll } from 'vitest';
 import { deepStrictEqual, rejects, strictEqual } from 'node:assert';
 import * as Misskey from 'misskey-js';
-import { assertNotificationReceived, createAccount, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep, waitFor } from './utils.js';
+import {
+	assertNotificationReceived,
+	createAccount,
+	type LoginUser,
+	resolveRemoteNote,
+	resolveRemoteUser,
+	sleep,
+	waitFor,
+} from './utils.js';
 
 describe('Block', () => {
 	describe('Check follow', () => {
@@ -9,10 +17,7 @@ describe('Block', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -69,10 +74,7 @@ describe('Block', () => {
 		});
 
 		test('Remove follower when block them', async () => {
-			const [blocker, follower] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			const [blocker, follower] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 			const [followerInA, blockerInB] = await Promise.all([
 				resolveRemoteUser('b.test', follower.id, blocker),
 				resolveRemoteUser('a.test', blocker.id, follower),
@@ -104,10 +106,7 @@ describe('Block', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -147,10 +146,7 @@ describe('Block', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -212,10 +208,7 @@ describe('Block', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -230,9 +223,11 @@ describe('Block', () => {
 
 			const text = `@${alice.username}@a.test plz unblock me!`;
 			await assertNotificationReceived(
-				'a.test', alice,
+				'a.test',
+				alice,
 				async () => await bob.client.request('notes/create', { text }),
-				notification => notification.type === 'mention' && notification.userId === bobInA.id && notification.note.text === text,
+				(notification) =>
+					notification.type === 'mention' && notification.userId === bobInA.id && notification.note.text === text,
 				true,
 			);
 		});

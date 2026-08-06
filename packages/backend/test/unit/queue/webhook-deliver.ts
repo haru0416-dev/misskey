@@ -16,7 +16,10 @@ import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '
 import { createUserInDatabase } from '@/core/UserStore.js';
 import { createSystemWebhookInDatabase, fetchSystemWebhookByIdOrFailFromDatabase } from '@/core/SystemWebhookStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueSystemWebhookDeliver, handleHonoQueueUserWebhookDeliver } from '@/queue/handlers/webhook-deliver.js';
+import {
+	handleHonoQueueSystemWebhookDeliver,
+	handleHonoQueueUserWebhookDeliver,
+} from '@/queue/handlers/webhook-deliver.js';
 import type { SystemWebhookDeliverJobData, UserWebhookDeliverJobData } from '@/queue/types.js';
 
 function fakeJob<T>(data: T): Bull.Job<T> {
@@ -42,7 +45,9 @@ describe('hono-queue-webhook-deliver', () => {
 		let received: { headers: Record<string, string | string[] | undefined>; body: string } | undefined;
 		const server: Server = createServer((req, res) => {
 			let body = '';
-			req.on('data', chunk => { body += chunk; });
+			req.on('data', (chunk) => {
+				body += chunk;
+			});
 			req.on('end', () => {
 				received = { headers: req.headers, body };
 				res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -109,7 +114,9 @@ describe('hono-queue-webhook-deliver', () => {
 		let received: { headers: Record<string, string | string[] | undefined>; body: string } | undefined;
 		const server: Server = createServer((req, res) => {
 			let body = '';
-			req.on('data', chunk => { body += chunk; });
+			req.on('data', (chunk) => {
+				body += chunk;
+			});
 			req.on('end', () => {
 				received = { headers: req.headers, body };
 				res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -206,8 +213,9 @@ describe('hono-queue-webhook-deliver', () => {
 				eventId: genId(),
 			};
 
-			await expect(handleHonoQueueUserWebhookDeliver({ config, db, httpRequestService }, fakeJob(data)))
-				.rejects.toThrow(Bull.UnrecoverableError);
+			await expect(
+				handleHonoQueueUserWebhookDeliver({ config, db, httpRequestService }, fakeJob(data)),
+			).rejects.toThrow(Bull.UnrecoverableError);
 
 			const updated = await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, userId);
 			expect(updated!.latestStatus).toBe(400);

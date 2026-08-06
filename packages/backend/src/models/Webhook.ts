@@ -5,8 +5,17 @@
 
 import { MiUser } from './User.js';
 
-export const webhookEventTypes = ['mention', 'unfollow', 'follow', 'followed', 'note', 'reply', 'renote', 'reaction'] as const;
-export type WebhookEventTypes = typeof webhookEventTypes[number];
+export const webhookEventTypes = [
+	'mention',
+	'unfollow',
+	'follow',
+	'followed',
+	'note',
+	'reply',
+	'renote',
+	'reaction',
+] as const;
+export type WebhookEventTypes = (typeof webhookEventTypes)[number];
 
 export class MiWebhook {
 	public id: string;

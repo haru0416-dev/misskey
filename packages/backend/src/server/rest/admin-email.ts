@@ -17,7 +17,6 @@ export const adminSendEmailParamDef = z.object({
 	text: z.string(),
 });
 
-
 export async function handleHonoApiAdminSendEmail(
 	deps: HonoApiAdminEmailDependencies,
 	body: Record<string, unknown>,

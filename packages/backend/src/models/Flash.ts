@@ -6,7 +6,7 @@
 import { MiUser } from './User.js';
 
 export const flashVisibility = ['public', 'private'] as const;
-export type FlashVisibility = typeof flashVisibility[number];
+export type FlashVisibility = (typeof flashVisibility)[number];
 
 export class MiFlash {
 	public id: string;

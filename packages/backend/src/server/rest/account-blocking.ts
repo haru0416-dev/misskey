@@ -5,10 +5,22 @@
 
 import { z } from 'zod';
 import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
-import { createBlockingInDatabase, deleteBlockingByIdFromDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase, listBlockingsByBlockerIdWithPaginationFromDatabase, resolveBlockingPagination } from '@/core/BlockingStore.js';
+import {
+	createBlockingInDatabase,
+	deleteBlockingByIdFromDatabase,
+	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
+	listBlockingsByBlockerIdWithPaginationFromDatabase,
+	resolveBlockingPagination,
+} from '@/core/BlockingStore.js';
 import { deleteFollowRequestByIdFromDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
-import { deleteFollowingAndUpdateUserCountsByIdInDatabase, fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
-import { adjustInstanceFollowersCountFromDatabase, adjustInstanceFollowingCountFromDatabase } from '@/core/InstanceStore.js';
+import {
+	deleteFollowingAndUpdateUserCountsByIdInDatabase,
+	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
+} from '@/core/FollowingStore.js';
+import {
+	adjustInstanceFollowersCountFromDatabase,
+	adjustInstanceFollowingCountFromDatabase,
+} from '@/core/InstanceStore.js';
 import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
 import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase } from '@/core/UserListMembershipStore.js';
@@ -24,8 +36,23 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError, clientError } from './error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from './events.js';
 import { fetchOrRegisterFederatedInstance } from './federation.js';
-import { addActivityContext, genLocalUserUri, isLocalUser, isRemoteUser, publishUnfollowToLocalFollower, renderFollow, renderReject, renderUndo } from './following.js';
-import { packMeDetailedForHonoApi, packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
+import {
+	addActivityContext,
+	genLocalUserUri,
+	isLocalUser,
+	isRemoteUser,
+	publishUnfollowToLocalFollower,
+	renderFollow,
+	renderReject,
+	renderUndo,
+} from './following.js';
+import {
+	packMeDetailedForHonoApi,
+	packUserDetailedNotMeForHonoApi,
+	packUserDetailedNotMeManyForHonoApi,
+	type UserDetailedNotMeHonoApiResponse,
+	type UserPackingDependencies,
+} from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAccountBlockingDependencies = UserPackingDependencies & {
@@ -48,7 +75,6 @@ export const blockingListParamDef = z.object({
 	sinceDate: z.number().int().optional(),
 	untilDate: z.number().int().optional(),
 });
-
 
 type HonoApiBlockingResponse = {
 	id: string;
@@ -96,21 +122,19 @@ async function deliverFollowCancelActivity(
 	requestId?: string | null,
 ): Promise<void> {
 	if (isLocalUser(follower) && isRemoteUser(followee)) {
-		const content = addActivityContext(deps.config, renderUndo(
+		const content = addActivityContext(
 			deps.config,
-			renderFollow(deps.config, follower, followee, requestId),
-			follower,
-		));
+			renderUndo(deps.config, renderFollow(deps.config, follower, followee, requestId), follower),
+		);
 		enqueueDeliverJob(deps.deliverQueue, deps.config, follower, content as IActivity, followee.inbox, false);
 		return;
 	}
 
 	if (isRemoteUser(follower) && isLocalUser(followee)) {
-		const content = addActivityContext(deps.config, renderReject(
+		const content = addActivityContext(
 			deps.config,
-			renderFollow(deps.config, follower, followee, requestId),
-			followee,
-		));
+			renderReject(deps.config, renderFollow(deps.config, follower, followee, requestId), followee),
+		);
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 	}
 }
@@ -127,9 +151,13 @@ export async function cancelFollowRequest(
 	await deleteFollowRequestByIdFromDatabase(deps.db, request.id);
 
 	if (isLocalUser(followee)) {
-		deps.publishMainStream?.(followee.id, 'meUpdated', await packMeDetailedForHonoApi(deps, followee, {
-			includeSecrets: false,
-		}));
+		deps.publishMainStream?.(
+			followee.id,
+			'meUpdated',
+			await packMeDetailedForHonoApi(deps, followee, {
+				includeSecrets: false,
+			}),
+		);
 	}
 
 	if (!silent) {
@@ -175,7 +203,12 @@ export async function unfollow(
 	]);
 	if (followingFollower == null || followingFollowee == null) return;
 
-	const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(deps.db, following.id, followingFollower.id, followingFollowee.id);
+	const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(
+		deps.db,
+		following.id,
+		followingFollower.id,
+		followingFollowee.id,
+	);
 	if (!deleted) return;
 
 	await decrementFollowing(deps, followingFollower, followingFollowee);
@@ -208,7 +241,12 @@ export async function remoteRejectForHonoApi(
 			fetchUserByIdFromDatabase(deps.db, following.followeeId),
 		]);
 		if (followingFollower != null && followingFollowee != null) {
-			const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(deps.db, following.id, followingFollower.id, followingFollowee.id);
+			const deleted = await deleteFollowingAndUpdateUserCountsByIdInDatabase(
+				deps.db,
+				following.id,
+				followingFollower.id,
+				followingFollowee.id,
+			);
 			if (deleted) {
 				await decrementFollowing(deps, followingFollower, followingFollowee);
 			}
@@ -232,11 +270,13 @@ async function packHonoApiBlocking(
 	me: { id: MiUser['id'] },
 	packedBlockee?: UserDetailedNotMeHonoApiResponse,
 ): Promise<HonoApiBlockingResponse> {
-	const blockee = packedBlockee ?? await packUserDetailedNotMeForHonoApi(
-		deps,
-		blocking.blockee ?? await fetchUserByIdOrFailFromDatabase(deps.db, blocking.blockeeId),
-		me,
-	);
+	const blockee =
+		packedBlockee ??
+		(await packUserDetailedNotMeForHonoApi(
+			deps,
+			blocking.blockee ?? (await fetchUserByIdOrFailFromDatabase(deps.db, blocking.blockeeId)),
+			me,
+		));
 
 	return {
 		id: blocking.id,
@@ -253,7 +293,14 @@ export async function deliverBlockActivity(
 	if (!isLocalUser(blocking.blocker) || !isRemoteUser(blocking.blockee)) return;
 
 	const content = addActivityContext(deps.config, renderBlock(deps.config, blocking));
-	enqueueDeliverJob(deps.deliverQueue, deps.config, blocking.blocker, content as IActivity, blocking.blockee.inbox, false);
+	enqueueDeliverJob(
+		deps.deliverQueue,
+		deps.config,
+		blocking.blocker,
+		content as IActivity,
+		blocking.blockee.inbox,
+		false,
+	);
 }
 
 export async function deliverUndoBlockActivity(
@@ -264,7 +311,14 @@ export async function deliverUndoBlockActivity(
 
 	const block = renderBlock(deps.config, blocking);
 	const content = addActivityContext(deps.config, renderUndo(deps.config, block, blocking.blocker));
-	enqueueDeliverJob(deps.deliverQueue, deps.config, blocking.blocker, content as IActivity, blocking.blockee.inbox, false);
+	enqueueDeliverJob(
+		deps.deliverQueue,
+		deps.config,
+		blocking.blocker,
+		content as IActivity,
+		blocking.blockee.inbox,
+		false,
+	);
 }
 
 /** UserBlockingService.block 相当。ガード (自分自身・二重ブロック) は呼び出し側の責務。 */
@@ -282,11 +336,11 @@ export async function blockForHonoApi(
 		removeFromList(deps, blockee, blocker),
 	]);
 
-	const blocking = await createBlockingInDatabase(deps.db, {
+	const blocking = (await createBlockingInDatabase(deps.db, {
 		id: genId(),
 		blockerId: blocker.id,
 		blockeeId: blockee.id,
-	}) as MiBlocking & { blocker: MiUser; blockee: MiUser };
+	})) as MiBlocking & { blocker: MiUser; blockee: MiUser };
 	blocking.blocker = blocker;
 	blocking.blockee = blockee;
 
@@ -309,8 +363,12 @@ export async function handleHonoApiBlockingCreate(
 	}
 
 	const blockee = await getTargetUserOrThrow(deps, params.userId, blockingCreateNoSuchUserError);
-	if (await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id) != null) {
-		throw clientError('You are already blocking that user.', 'ALREADY_BLOCKING', '787fed64-acb9-464a-82eb-afbd745b9614');
+	if ((await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id)) != null) {
+		throw clientError(
+			'You are already blocking that user.',
+			'ALREADY_BLOCKING',
+			'787fed64-acb9-464a-82eb-afbd745b9614',
+		);
 	}
 
 	const blocking = await blockForHonoApi(deps, blocker, blockee);
@@ -365,12 +423,23 @@ export async function handleHonoApiBlockingList(
 ): Promise<Packed<'Blocking'>[]> {
 	const params = parseHonoApiParams(blockingListParamDef, body);
 	const blockings = await listBlockingsByBlockerIdWithPaginationFromDatabase(deps.db, me.id, {
-		...resolveBlockingPagination({
-			gen: time => genId(time),
-		}, params),
+		...resolveBlockingPagination(
+			{
+				gen: (time) => genId(time),
+			},
+			params,
+		),
 		limit: params.limit,
 	});
 
-	const blockees = await packUserDetailedNotMeManyForHonoApi(deps, blockings.map(blocking => blocking.blockee ?? blocking.blockeeId), me);
-	return await Promise.all(blockings.map((blocking, index) => packHonoApiBlocking(deps, blocking, me, blockees[index]) as Promise<Packed<'Blocking'>>));
+	const blockees = await packUserDetailedNotMeManyForHonoApi(
+		deps,
+		blockings.map((blocking) => blocking.blockee ?? blocking.blockeeId),
+		me,
+	);
+	return await Promise.all(
+		blockings.map(
+			(blocking, index) => packHonoApiBlocking(deps, blocking, me, blockees[index]) as Promise<Packed<'Blocking'>>,
+		),
+	);
 }

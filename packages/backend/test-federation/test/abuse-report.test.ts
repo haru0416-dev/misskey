@@ -9,15 +9,9 @@ describe('Abuse report', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
-			[aModerator, bModerator] = await Promise.all([
-				createModerator('a.test'),
-				createModerator('b.test'),
-			]);
+			[aModerator, bModerator] = await Promise.all([createModerator('a.test'), createModerator('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -25,17 +19,17 @@ describe('Abuse report', () => {
 			]);
 		});
 
-			test('Alice reports Bob, moderator in A forwards it, and B moderator receives it', async () => {
+		test('Alice reports Bob, moderator in A forwards it, and B moderator receives it', async () => {
 			const comment = crypto.randomUUID();
 			await alice.client.request('users/report-abuse', { userId: bobInA.id, comment });
 			const reports = await aModerator.client.request('admin/abuse-user-reports', {});
-			const report = reports.find(report => report.comment === comment);
+			const report = reports.find((report) => report.comment === comment);
 			if (report == null) throw new Error('Forwarded abuse report was not found in a.test');
 			await aModerator.client.request('admin/forward-abuse-user-report', { reportId: report.id });
 			await sleep();
 
 			const reportsInB = await bModerator.client.request('admin/abuse-user-reports', {});
-			const reportInB = reportsInB.find(report => report.comment.includes(comment));
+			const reportInB = reportsInB.find((report) => report.comment.includes(comment));
 			if (reportInB == null) throw new Error('Forwarded abuse report was not found in b.test');
 			// NOTE: reporter is not Alice, and is not moderator in A
 			strictEqual(reportInB.reporter.url, 'https://a.test/@system.actor');

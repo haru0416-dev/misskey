@@ -28,7 +28,7 @@ function cpuTicks() {
 /** os-utils の cpuUsage() 相当。CPU_SAMPLE_MS 間隔でtickを2回サンプリングし、idle以外の割合を返す。 */
 function cpuUsage(): Promise<number> {
 	const start = cpuTicks();
-	return new Promise(resolve => {
+	return new Promise((resolve) => {
 		setTimeout(() => {
 			const end = cpuTicks();
 			const idleDelta = end.idle - start.idle;

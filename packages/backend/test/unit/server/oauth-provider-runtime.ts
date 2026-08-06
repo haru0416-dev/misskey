@@ -9,7 +9,11 @@ import * as htmlParser from 'node-html-parser';
 import { describe, expect, test } from 'vitest';
 import { createS256CodeChallenge } from '@/misc/pkce.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
-import { createMemoryOAuthEphemeralStore, createOAuthProviderRuntime, parseUrlEncodedParameters } from '@/server/oauth/OAuthProviderRuntime.js';
+import {
+	createMemoryOAuthEphemeralStore,
+	createOAuthProviderRuntime,
+	parseUrlEncodedParameters,
+} from '@/server/oauth/OAuthProviderRuntime.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -64,32 +68,41 @@ describe('createOAuthProviderRuntime', () => {
 			config,
 			db: {} as MiDrizzleDatabase,
 			httpRequestService: {
-				send: async (url) => responseWithUrl(`
+				send: async (url) =>
+					responseWithUrl(
+						`
 					<!doctype html>
 					<link rel="redirect_uri" href="/callback">
 					<div class="h-app"><a href="/" class="u-url p-name">Client App</a></div>
-				`, url),
+				`,
+						url,
+					),
 			},
 			getCommonData: async () => commonData,
 			logger: {
 				info: () => {},
 				error: () => {},
 			} as any,
-			fetchLocalUserByNativeToken: async (token) => token === 'login-token' ? { id: 'user-id' } as MiLocalUser : null,
+			fetchLocalUserByNativeToken: async (token) =>
+				token === 'login-token' ? ({ id: 'user-id' } as MiLocalUser) : null,
 			createAccessToken: async (_db, values) => {
 				createdTokens.push(values);
 			},
 		});
 
-		const authorize = await runtime.authorize(parseUrlEncodedParameters(new URLSearchParams({
-			response_type: 'code',
-			client_id: clientId,
-			redirect_uri: redirectUri,
-			scope: 'write:notes',
-			state: 'state',
-			code_challenge,
-			code_challenge_method: 'S256',
-		}).toString()));
+		const authorize = await runtime.authorize(
+			parseUrlEncodedParameters(
+				new URLSearchParams({
+					response_type: 'code',
+					client_id: clientId,
+					redirect_uri: redirectUri,
+					scope: 'write:notes',
+					state: 'state',
+					code_challenge,
+					code_challenge_method: 'S256',
+				}).toString(),
+			),
+		);
 
 		expect(authorize.status).toBe(200);
 		const doc = htmlParser.parse(await authorize.text());
@@ -120,17 +133,19 @@ describe('createOAuthProviderRuntime', () => {
 
 		expect(token.status).toBe(200);
 		expect(token.headers.get('access-control-allow-origin')).toBe('*');
-		const tokenBody = await token.json() as { access_token: string; token_type: string; scope: string; };
+		const tokenBody = (await token.json()) as { access_token: string; token_type: string; scope: string };
 		expect(tokenBody.token_type).toBe('Bearer');
 		expect(tokenBody.scope).toBe('write:notes');
 		expect(typeof tokenBody.access_token).toBe('string');
-		expect(createdTokens).toMatchObject([{
-			userId: 'user-id',
-			token: tokenBody.access_token,
-			hash: tokenBody.access_token,
-			name: clientId,
-			permission: ['write:notes'],
-		}]);
+		expect(createdTokens).toMatchObject([
+			{
+				userId: 'user-id',
+				token: tokenBody.access_token,
+				hash: tokenBody.access_token,
+				name: clientId,
+				permission: ['write:notes'],
+			},
+		]);
 
 		runtime.dispose();
 	});
@@ -166,18 +181,22 @@ describe('createOAuthProviderRuntime', () => {
 		const deletedTokens: string[] = [];
 		let deletionFailuresRemaining = 3;
 		let releaseTokenCreation!: () => void;
-		const tokenCreationBlocked = new Promise<void>(resolve => {
+		const tokenCreationBlocked = new Promise<void>((resolve) => {
 			releaseTokenCreation = resolve;
 		});
 		let tokenCreationStarted!: () => void;
-		const tokenCreationStart = new Promise<void>(resolve => {
+		const tokenCreationStart = new Promise<void>((resolve) => {
 			tokenCreationStarted = resolve;
 		});
 		const dependencies = {
 			config,
 			db: {} as MiDrizzleDatabase,
 			httpRequestService: {
-				send: async (url: string) => responseWithUrl('<link rel="redirect_uri" href="/callback"><div class="h-app"><a href="/" class="u-url p-name">Client App</a></div>', url),
+				send: async (url: string) =>
+					responseWithUrl(
+						'<link rel="redirect_uri" href="/callback"><div class="h-app"><a href="/" class="u-url p-name">Client App</a></div>',
+						url,
+					),
 			},
 			getCommonData: async () => commonData,
 			logger: { info: () => {}, error: () => {} } as any,

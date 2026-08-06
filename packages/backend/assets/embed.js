@@ -16,12 +16,15 @@
 			const id = el.dataset.misskeyEmbedId;
 
 			if (event.data.type === 'misskey:embed:ready') {
-				el.contentWindow?.postMessage({
-					type: 'misskey:embedParent:registerIframeId',
-					payload: {
-						iframeId: id,
-					}
-				}, '*');
+				el.contentWindow?.postMessage(
+					{
+						type: 'misskey:embedParent:registerIframeId',
+						payload: {
+							iframeId: id,
+						},
+					},
+					'*',
+				);
 			}
 			if (event.data.type === 'misskey:embed:changeHeight' && event.data.iframeId === id) {
 				el.style.height = event.data.payload.height + 'px';

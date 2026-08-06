@@ -13,7 +13,11 @@ import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
-import { packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
+import {
+	packUserDetailedNotMeManyForHonoApi,
+	type UserDetailedNotMeHonoApiResponse,
+	type UserPackingDependencies,
+} from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiModerationLogDependencies = UserPackingDependencies & {
@@ -41,12 +45,14 @@ export const adminShowModerationLogsParamDef = z.object({
 	search: z.string().nullable().optional(),
 });
 
-
 async function packModerationLogsForHonoApi(
 	deps: HonoApiModerationLogDependencies,
 	logs: MiModerationLog[],
 ): Promise<HonoApiModerationLogResponse[]> {
-	const users = await packUserDetailedNotMeManyForHonoApi(deps, logs.map(log => log.user ?? log.userId));
+	const users = await packUserDetailedNotMeManyForHonoApi(
+		deps,
+		logs.map((log) => log.user ?? log.userId),
+	);
 
 	return logs.map((log, index) => {
 		const user = users[index];
@@ -67,16 +73,19 @@ export async function handleHonoApiAdminShowModerationLogs(
 	body: Record<string, unknown>,
 ): Promise<HonoApiModerationLogResponse[]> {
 	const params = parseHonoApiParams(adminShowModerationLogsParamDef, body);
-	const pagination = resolveDateIdPagination({ gen: time => genId(time) }, params);
-	const logs = await listModerationLogsFromDatabase(deps.db, omitUndefined({
-		limit: params.limit,
-		order: pagination.order,
-		sinceId: pagination.sinceId,
-		untilId: pagination.untilId,
-		type: params.type,
-		userId: params.userId,
-		search: params.search,
-	}));
+	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
+	const logs = await listModerationLogsFromDatabase(
+		deps.db,
+		omitUndefined({
+			limit: params.limit,
+			order: pagination.order,
+			sinceId: pagination.sinceId,
+			untilId: pagination.untilId,
+			type: params.type,
+			userId: params.userId,
+			search: params.search,
+		}),
+	);
 
 	return await packModerationLogsForHonoApi(deps, logs);
 }

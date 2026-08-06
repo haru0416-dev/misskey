@@ -13,7 +13,7 @@ import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import type { SYSTEM_ACCOUNT_TYPES } from '@/core/system-account-runtime.js';
 
-export type SystemAccountType = typeof SYSTEM_ACCOUNT_TYPES[number];
+export type SystemAccountType = (typeof SYSTEM_ACCOUNT_TYPES)[number];
 
 export type SystemAccountLogicDependencies = {
 	db: MiDrizzleDatabase;

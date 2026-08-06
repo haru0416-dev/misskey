@@ -7,10 +7,13 @@ import type { Packed } from '@/misc/json-schema.js';
 import type { CommonProps } from '@/server/web/views/_.js';
 import { Layout } from '@/server/web/views/base.js';
 
-export function AnnouncementPage(props: CommonProps<{
-	announcement: Packed<'Announcement'>;
-}>) {
-	const description = props.announcement.text.length > 100 ? props.announcement.text.slice(0, 100) + '…' : props.announcement.text;
+export function AnnouncementPage(
+	props: CommonProps<{
+		announcement: Packed<'Announcement'>;
+	}>,
+) {
+	const description =
+		props.announcement.text.length > 100 ? props.announcement.text.slice(0, 100) + '…' : props.announcement.text;
 
 	function ogBlock() {
 		return (
@@ -35,7 +38,6 @@ export function AnnouncementPage(props: CommonProps<{
 			title={`${props.announcement.title} | ${props.instanceName}`}
 			desc={description}
 			ogSlot={ogBlock()}
-		>
-		</Layout>
+		></Layout>
 	);
 }

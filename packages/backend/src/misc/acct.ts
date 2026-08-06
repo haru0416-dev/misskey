@@ -14,7 +14,10 @@ export function parse(acct: string): Acct {
 	const nextSeparator = separator === -1 ? -1 : acct.indexOf('@', separator + 1);
 	return separator === -1
 		? { username: acct, host: null }
-		: { username: acct.slice(0, separator), host: acct.slice(separator + 1, nextSeparator === -1 ? undefined : nextSeparator) };
+		: {
+				username: acct.slice(0, separator),
+				host: acct.slice(separator + 1, nextSeparator === -1 ? undefined : nextSeparator),
+			};
 }
 
 export function toString(acct: Acct): string {

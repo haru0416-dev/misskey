@@ -41,7 +41,10 @@ function shouldLog(level: Level): boolean {
  * 呼び出し側でメッセージ文字列の構築自体を省略したい場合 (高頻度呼び出し箇所) にこれで事前判定できる。
  */
 export function isDebugLoggingEnabled(): boolean {
-	return (process.env['NODE_ENV'] !== 'production' || loggingConfig.level === 'debug' || envOption.verbose) && !envOption.quiet;
+	return (
+		(process.env['NODE_ENV'] !== 'production' || loggingConfig.level === 'debug' || envOption.verbose) &&
+		!envOption.quiet
+	);
 }
 
 // eslint-disable-next-line import/no-default-export
@@ -64,7 +67,13 @@ export default class Logger {
 	}
 
 	@bindThis
-	private log(level: Level, message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false, subContexts: Context[] = []): void {
+	private log(
+		level: Level,
+		message: string,
+		data?: Record<string, unknown> | Error | unknown[] | null,
+		important = false,
+		subContexts: Context[] = [],
+	): void {
 		// NODE_ENV=test は暗黙に quiet になるが、MK_VERBOSE を明示した時だけはそれより優先させる
 		// (e2e で発生したサーバー側例外を追うにはログを出せる手段が要る)。
 		if ((envOption.quiet && !envOption.verbose) || !shouldLog(level)) return;
@@ -76,33 +85,51 @@ export default class Logger {
 
 		const time = formatTime(new Date());
 		const worker = cluster.isPrimary ? '*' : cluster.worker!.id;
-		const contextNames = [this.context].concat(subContexts).map(context => context.name);
+		const contextNames = [this.context].concat(subContexts).map((context) => context.name);
 		if (loggingConfig.format === 'json') {
-			console.log(JSON.stringify({
-				time: new Date().toISOString(),
-				level,
-				worker,
-				contexts: contextNames,
-				message,
-				...(data == null ? {} : { data }),
-			}));
+			console.log(
+				JSON.stringify({
+					time: new Date().toISOString(),
+					level,
+					worker,
+					contexts: contextNames,
+					message,
+					...(data == null ? {} : { data }),
+				}),
+			);
 			return;
 		}
 		const l =
-			level === 'error' ? important ? chalk.bgRed.white('ERR ') : chalk.red('ERR ') :
-			level === 'warning' ? chalk.yellow('WARN') :
-			level === 'success' ? important ? chalk.bgGreen.white('DONE') : chalk.green('DONE') :
-			level === 'debug' ? chalk.gray('VERB') :
-			level === 'info' ? chalk.blue('INFO') :
-			null;
-		const contexts = [this.context].concat(subContexts).map(d => d.color ? chalk.rgb(...convertColor.keyword.rgb(d.color))(d.name) : chalk.white(d.name));
+			level === 'error'
+				? important
+					? chalk.bgRed.white('ERR ')
+					: chalk.red('ERR ')
+				: level === 'warning'
+					? chalk.yellow('WARN')
+					: level === 'success'
+						? important
+							? chalk.bgGreen.white('DONE')
+							: chalk.green('DONE')
+						: level === 'debug'
+							? chalk.gray('VERB')
+							: level === 'info'
+								? chalk.blue('INFO')
+								: null;
+		const contexts = [this.context]
+			.concat(subContexts)
+			.map((d) => (d.color ? chalk.rgb(...convertColor.keyword.rgb(d.color))(d.name) : chalk.white(d.name)));
 		const m =
-			level === 'error' ? chalk.red(message) :
-			level === 'warning' ? chalk.yellow(message) :
-			level === 'success' ? chalk.green(message) :
-			level === 'debug' ? chalk.gray(message) :
-			level === 'info' ? message :
-			null;
+			level === 'error'
+				? chalk.red(message)
+				: level === 'warning'
+					? chalk.yellow(message)
+					: level === 'success'
+						? chalk.green(message)
+						: level === 'debug'
+							? chalk.gray(message)
+							: level === 'info'
+								? message
+								: null;
 
 		let log = `${l} ${worker}\t[${contexts.join(' ')}]\t${m}`;
 		if (envOption.withLogTime || loggingConfig.includeTimestamp) log = chalk.gray(time) + ' ' + log;
@@ -115,9 +142,11 @@ export default class Logger {
 	}
 
 	@bindThis
-	public error(x: string | Error, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // 実行を継続できない状況で使う
+	public error(x: string | Error, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
+		// 実行を継続できない状況で使う
 		if (x instanceof Error) {
-			const record: Record<string, unknown> & { e?: Error } = (data instanceof Error || Array.isArray(data)) ? { data } : data ?? {};
+			const record: Record<string, unknown> & { e?: Error } =
+				data instanceof Error || Array.isArray(data) ? { data } : (data ?? {});
 			record.e = x;
 			this.log('error', x.toString(), record, important);
 		} else {
@@ -126,24 +155,28 @@ export default class Logger {
 	}
 
 	@bindThis
-	public warn(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // 実行を継続できるが改善すべき状況で使う
+	public warn(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
+		// 実行を継続できるが改善すべき状況で使う
 		this.log('warning', message, data, important);
 	}
 
 	@bindThis
-	public succ(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // 何かに成功した状況で使う
+	public succ(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
+		// 何かに成功した状況で使う
 		this.log('success', message, data, important);
 	}
 
 	@bindThis
-	public debug(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // デバッグ用に使う(開発者に必要だが利用者に不要な情報)
+	public debug(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
+		// デバッグ用に使う(開発者に必要だが利用者に不要な情報)
 		if (isDebugLoggingEnabled()) {
 			this.log('debug', message, data, important);
 		}
 	}
 
 	@bindThis
-	public info(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void { // それ以外
+	public info(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
+		// それ以外
 		this.log('info', message, data, important);
 	}
 }

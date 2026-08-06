@@ -67,7 +67,12 @@ type RequestMethod = 'get' | 'post';
 type RequestBodyKind = 'none' | 'json' | 'multipart';
 
 function authenticationMode(endpoint: IEndpoint): AuthenticationMode {
-	if (endpoint.meta.requireCredential === true || endpoint.meta.requireAdmin === true || endpoint.meta.requireModerator === true) return 'required';
+	if (
+		endpoint.meta.requireCredential === true ||
+		endpoint.meta.requireAdmin === true ||
+		endpoint.meta.requireModerator === true
+	)
+		return 'required';
 	if (unauthenticatedEndpoints.has(endpoint.name)) return 'none';
 	return 'optional';
 }
@@ -92,28 +97,50 @@ function acceptsEmptyObject(params: IEndpoint['params'], schema: OpenApiSchemaOb
 	return (schema.required?.length ?? 0) === 0;
 }
 
-function buildErrorResponses(endpoint: IEndpoint, method: RequestMethod, hasInputParams: boolean): Record<string, Record<string, unknown>> {
+function buildErrorResponses(
+	endpoint: IEndpoint,
+	method: RequestMethod,
+	hasInputParams: boolean,
+): Record<string, Record<string, unknown>> {
 	const examplesByStatus = new Map<string, Record<string, ErrorExample>>();
 	const authMode = authenticationMode(endpoint);
 	const bodyKind = requestBodyKind(endpoint, method);
 	for (const [status, examples] of Object.entries(basicErrors)) {
 		if (status === '429' && endpoint.meta.limit == null) continue;
-		const selected = Object.fromEntries(Object.entries(examples).filter(([, example]) => {
-			switch (example.value.error.code) {
-				case 'INVALID_PARAM': return example.value.error.id === '3d81ceae-475f-4600-b2a8-2bc116157532'
-					? hasInputParams
-					: bodyKind === 'json';
-				case 'ACCESS_DENIED': return endpoint.meta.secure === true;
-				case 'CREDENTIAL_REQUIRED': return authMode === 'required';
-				case 'AUTHENTICATION_FAILED': return authMode !== 'none';
-				case 'PERMISSION_DENIED': return authMode !== 'none' && endpoint.meta.kind != null && endpoint.meta.secure !== true;
-				case 'ROLE_PERMISSION_DENIED': return endpoint.meta.requireAdmin === true || endpoint.meta.requireModerator === true || endpoint.meta.requiredRolePolicy != null || endpoint.meta.kind === 'read:chat' || endpoint.meta.kind === 'write:chat';
-				case 'YOUR_ACCOUNT_SUSPENDED': return authMode !== 'none';
-				case 'YOUR_ACCOUNT_MOVED': return endpoint.meta.prohibitMoved === true;
-				case 'PAYLOAD_TOO_LARGE': return bodyKind !== 'none';
-				default: return true;
-			}
-		}));
+		const selected = Object.fromEntries(
+			Object.entries(examples).filter(([, example]) => {
+				switch (example.value.error.code) {
+					case 'INVALID_PARAM':
+						return example.value.error.id === '3d81ceae-475f-4600-b2a8-2bc116157532'
+							? hasInputParams
+							: bodyKind === 'json';
+					case 'ACCESS_DENIED':
+						return endpoint.meta.secure === true;
+					case 'CREDENTIAL_REQUIRED':
+						return authMode === 'required';
+					case 'AUTHENTICATION_FAILED':
+						return authMode !== 'none';
+					case 'PERMISSION_DENIED':
+						return authMode !== 'none' && endpoint.meta.kind != null && endpoint.meta.secure !== true;
+					case 'ROLE_PERMISSION_DENIED':
+						return (
+							endpoint.meta.requireAdmin === true ||
+							endpoint.meta.requireModerator === true ||
+							endpoint.meta.requiredRolePolicy != null ||
+							endpoint.meta.kind === 'read:chat' ||
+							endpoint.meta.kind === 'write:chat'
+						);
+					case 'YOUR_ACCOUNT_SUSPENDED':
+						return authMode !== 'none';
+					case 'YOUR_ACCOUNT_MOVED':
+						return endpoint.meta.prohibitMoved === true;
+					case 'PAYLOAD_TOO_LARGE':
+						return bodyKind !== 'none';
+					default:
+						return true;
+				}
+			}),
+		);
 		if (Object.keys(selected).length > 0) examplesByStatus.set(status, selected);
 	}
 
@@ -134,15 +161,20 @@ function buildErrorResponses(endpoint: IEndpoint, method: RequestMethod, hasInpu
 		examplesByStatus.set(status, examples);
 	}
 
-	return Object.fromEntries([...examplesByStatus.entries()].map(([status, examples]) => [status, {
-		description: errorResponseDescriptions[status] ?? `HTTP ${status} error`,
-		content: {
-			'application/json': {
-				schema: { $ref: '#/components/schemas/Error' },
-				examples,
+	return Object.fromEntries(
+		[...examplesByStatus.entries()].map(([status, examples]) => [
+			status,
+			{
+				description: errorResponseDescriptions[status] ?? `HTTP ${status} error`,
+				content: {
+					'application/json': {
+						schema: { $ref: '#/components/schemas/Error' },
+						examples,
+					},
+				},
 			},
-		},
-	}]));
+		]),
+	);
 }
 
 /**
@@ -171,9 +203,11 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 			url: 'https://github.com/haru0416-dev/misskey',
 		},
 
-		servers: [{
-			url: config.runtime.apiUrl,
-		}],
+		servers: [
+			{
+				url: config.runtime.apiUrl,
+			},
+		],
 
 		paths: {} as Record<string, { get?: Record<string, unknown>; post: Record<string, unknown> }>,
 
@@ -203,7 +237,8 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		let desc = (endpoint.meta.description ? endpoint.meta.description : 'No description provided.') + '\n\n';
 
 		if (endpoint.meta.secure) {
-			desc += '**Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.\n';
+			desc +=
+				'**Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.\n';
 		}
 
 		desc += `**Credential required**: *${endpoint.meta.requireCredential ? 'Yes' : 'No'}*`;
@@ -213,9 +248,10 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		}
 
 		const requestType = endpoint.meta.requireFile ? 'multipart/form-data' : 'application/json';
-		const schema = params instanceof z.ZodType
-			? { ...convertZodParamsToOpenApiSchema(params) }
-			: { ...convertSchemaToOpenApiSchema(params, 'param', false) };
+		const schema =
+			params instanceof z.ZodType
+				? { ...convertZodParamsToOpenApiSchema(params) }
+				: { ...convertSchemaToOpenApiSchema(params, 'param', false) };
 
 		if (endpoint.meta.requireFile) {
 			schema.properties = {
@@ -226,7 +262,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 					description: 'The file contents.',
 				},
 			};
-			schema.required = [...schema.required ?? [], 'file'];
+			schema.required = [...(schema.required ?? []), 'file'];
 		}
 
 		if (schema.required && schema.required.length <= 0) {
@@ -234,17 +270,15 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 			delete schema.required;
 		}
 
-		const hasBody = (schema.type === 'object' && schema.properties && Object.keys(schema.properties).length >= 1)
-			|| ['allOf', 'oneOf', 'anyOf'].some(o => (Array.isArray(schema[o]) && schema[o].length > 0));
+		const hasBody =
+			(schema.type === 'object' && schema.properties && Object.keys(schema.properties).length >= 1) ||
+			['allOf', 'oneOf', 'anyOf'].some((o) => Array.isArray(schema[o]) && schema[o].length > 0);
 		const queryParameters = buildQueryParameters(schema);
 		const requestBodyRequired = endpoint.meta.requireFile === true || !acceptsEmptyObject(params, schema);
 
 		const authMode = authenticationMode(originalEndpoint);
-		const security = authMode === 'required'
-			? [{ bearerAuth: [] }]
-			: authMode === 'optional'
-				? [{}, { bearerAuth: [] }]
-				: undefined;
+		const security =
+			authMode === 'required' ? [{ bearerAuth: [] }] : authMode === 'optional' ? [{}, { bearerAuth: [] }] : undefined;
 		const baseInfo = {
 			// misskey-js generator treats `___` as the encoded endpoint path separator.
 			operationId: endpoint.name.replaceAll('/', '___'),
@@ -254,59 +288,69 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 				description: 'Source code',
 				url: `https://github.com/haru0416-dev/misskey/blob/develop/packages/backend/src/server/api/endpoints/${endpoint.name}.ts`,
 			},
-			...(endpoint.meta.tags ? {
-				tags: [endpoint.meta.tags[0]],
-			} : {}),
+			...(endpoint.meta.tags
+				? {
+						tags: [endpoint.meta.tags[0]],
+					}
+				: {}),
 			...(security === undefined ? {} : { security }),
 		};
 		const successResponses = {
-				...(endpoint.meta.res ? {
-					'200': {
-						description: 'OK (with results)',
-						content: {
-							'application/json': {
-								schema: resSchema,
+			...(endpoint.meta.res
+				? {
+						'200': {
+							description: 'OK (with results)',
+							content: {
+								'application/json': {
+									schema: resSchema,
+								},
 							},
 						},
-					},
-				} : {
-					'204': {
-						description: 'OK (without any results)',
-					},
-				}),
-				...(endpoint.meta.res?.optional === true ? {
-					'204': {
-						description: 'OK (without any results)',
-					},
-				} : {}),
+					}
+				: {
+						'204': {
+							description: 'OK (without any results)',
+						},
+					}),
+			...(endpoint.meta.res?.optional === true
+				? {
+						'204': {
+							description: 'OK (without any results)',
+						},
+					}
+				: {}),
 		};
 		const hasInputParams = hasBody;
 
 		spec.paths['/' + endpoint.name] = {
-			...(endpoint.meta.allowGet ? {
-				get: {
-					...baseInfo,
-					operationId: 'get___' + baseInfo.operationId,
-					...(queryParameters.length === 0 ? {} : { parameters: queryParameters }),
-					responses: {
-						...successResponses,
-						...buildErrorResponses(originalEndpoint, 'get', hasInputParams),
-					},
-				},
-			} : {}),
+			...(endpoint.meta.allowGet
+				? {
+						get: {
+							...baseInfo,
+							operationId: 'get___' + baseInfo.operationId,
+							...(queryParameters.length === 0 ? {} : { parameters: queryParameters }),
+							responses: {
+								...successResponses,
+								...buildErrorResponses(originalEndpoint, 'get', hasInputParams),
+							},
+						},
+					}
+				: {}),
 			post: {
 				...baseInfo,
 				operationId: 'post___' + baseInfo.operationId,
-				...(hasBody ? {
-					requestBody: {
-						required: requestBodyRequired,
-						content: {
-							[requestType]: {
-								schema,
+				...(hasBody
+					? {
+							requestBody: {
+								required: requestBodyRequired,
+								content: {
+									[requestType]: {
+										schema,
+									},
+								},
 							},
-						},
-					},
-				} : {}),
+						}
+					: {}),
 				responses: {
 					...successResponses,
 					...buildErrorResponses(originalEndpoint, 'post', hasInputParams),

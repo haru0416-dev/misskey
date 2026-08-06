@@ -29,7 +29,8 @@ export type HonoApiUserReactionsDependencies = HonoApiNoteDependencies & HonoApi
 function usersReactionsIsRemoteUserError(): HonoApiError {
 	return new HonoApiError({
 		status: 400,
-		message: 'Currently unavailable to display reactions of remote users. See https://github.com/misskey-dev/misskey/issues/12964',
+		message:
+			'Currently unavailable to display reactions of remote users. See https://github.com/misskey-dev/misskey/issues/12964',
 		code: 'IS_REMOTE_USER',
 		id: '6b95fa98-8cf9-2350-e284-f0ffdb54a805',
 	});
@@ -74,7 +75,7 @@ async function packNoteReactionWithNoteForHonoApi(
 		createdAt: parseId(reaction.id).date.toISOString(),
 		user: packedUser,
 		type: decodeReactionForHonoApi(reaction.reaction).reaction,
-		note: packedNote ?? await packNoteForHonoApi(deps, reaction.note, me),
+		note: packedNote ?? (await packNoteForHonoApi(deps, reaction.note, me)),
 	};
 }
 
@@ -85,7 +86,9 @@ export async function handleHonoApiUsersReactions(
 ): Promise<Record<string, unknown>[]> {
 	const params = parseHonoApiParams(usersReactionsParamDef, body);
 
-	const userIdsWhoBlockingMe = me ? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id)) : new Set<string>();
+	const userIdsWhoBlockingMe = me
+		? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id))
+		: new Set<string>();
 	const iAmModerator = me ? await isHonoApiModerator(deps, me) : false;
 
 	if (!iAmModerator) {
@@ -129,12 +132,12 @@ export async function handleHonoApiUsersReactions(
 			untilId = page[page.length - 1]!.id;
 		}
 
-		const noteIds = page.map(reaction => reaction.noteId);
+		const noteIds = page.map((reaction) => reaction.noteId);
 		const notes = await listVisibleNotesByIdsFromDatabase(deps.db, noteIds, {
 			me: me ?? null,
 			blockedHosts: deps.meta.blockedHosts,
 		});
-		const noteMap = new Map(notes.map(note => [note.id, note]));
+		const noteMap = new Map(notes.map((note) => [note.id, note]));
 
 		for (const reaction of page) {
 			if (collected.length >= params.limit) break;
@@ -154,12 +157,18 @@ export async function handleHonoApiUsersReactions(
 		if (page.length < params.limit) break;
 	}
 
-	const userIds = [...new Set(collected.map(r => r.userId))];
+	const userIds = [...new Set(collected.map((r) => r.userId))];
 	const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
-	const userMap = new Map(packedUsers.map(u => [u.id, u]));
-	const packedNotes = await packNoteManyForHonoApi(deps, collected.map(reaction => reaction.note), me);
+	const userMap = new Map(packedUsers.map((u) => [u.id, u]));
+	const packedNotes = await packNoteManyForHonoApi(
+		deps,
+		collected.map((reaction) => reaction.note),
+		me,
+	);
 
-	return await Promise.all(collected.map((reaction, index) =>
-		packNoteReactionWithNoteForHonoApi(deps, reaction, me, userMap.get(reaction.userId), packedNotes[index]),
-	));
+	return await Promise.all(
+		collected.map((reaction, index) =>
+			packNoteReactionWithNoteForHonoApi(deps, reaction, me, userMap.get(reaction.userId), packedNotes[index]),
+		),
+	);
 }

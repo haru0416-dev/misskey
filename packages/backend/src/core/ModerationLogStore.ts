@@ -34,13 +34,8 @@ function applyModerationLogPaginationCondition(
 	}
 }
 
-export async function createModerationLogInDatabase(
-	db: MiDrizzleDatabase,
-	data: ModerationLogInsert,
-): Promise<void> {
-	await db
-		.insert(moderationLog)
-		.values(data);
+export async function createModerationLogInDatabase(db: MiDrizzleDatabase, data: ModerationLogInsert): Promise<void> {
+	await db.insert(moderationLog).values(data);
 }
 
 export async function createModerationLogsInDatabase(
@@ -54,9 +49,7 @@ export async function createModerationLogsInDatabase(
 		const batch = data.slice(offset, offset + batchSize);
 		if (batch.length === 0) return;
 
-		await db
-			.insert(moderationLog)
-			.values(batch);
+		await db.insert(moderationLog).values(batch);
 		await insertBatch(offset + batchSize);
 	};
 
@@ -67,11 +60,7 @@ export async function fetchModerationLogByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiModerationLog['id'],
 ): Promise<MiModerationLog> {
-	const [row] = await db
-		.select()
-		.from(moderationLog)
-		.where(eq(moderationLog.id, id))
-		.limit(1);
+	const [row] = await db.select().from(moderationLog).where(eq(moderationLog.id, id)).limit(1);
 
 	if (row == null) {
 		throw new Error(`Moderation log ${id} not found`);

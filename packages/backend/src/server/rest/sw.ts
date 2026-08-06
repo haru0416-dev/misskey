@@ -90,9 +90,10 @@ export async function handleHonoApiSwRegister(
 	const exist = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (exist != null) {
-		const isSameSubscription = exist.auth === params.auth
-			&& exist.publickey === params.publickey
-			&& exist.sendReadMessage === params.sendReadMessage;
+		const isSameSubscription =
+			exist.auth === params.auth &&
+			exist.publickey === params.publickey &&
+			exist.sendReadMessage === params.sendReadMessage;
 
 		if (!isSameSubscription) {
 			await updateSwSubscriptionInDatabase(deps.db, exist.id, {
@@ -129,7 +130,6 @@ export async function handleHonoApiSwRegister(
 			sendReadMessage: params.sendReadMessage,
 		});
 	}
-
 
 	return {
 		state: 'subscribed',
@@ -168,7 +168,7 @@ export async function handleHonoApiSwUnregister(
 	await deleteSwSubscriptionByEndpointFromDatabase(deps.db, me?.id ?? null, params.endpoint);
 
 	if (me != null) {
-		}
+	}
 }
 
 export async function handleHonoApiSwUpdateRegistration(

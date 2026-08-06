@@ -3,7 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { clipIdParamDef, clipNotesParamDef, clipsCreateParamDef, clipsListParamDef, clipsNoteParamDef, clipsUpdateParamDef, emptyParamDef } from '@/server/rest/clips.js';
+import {
+	clipIdParamDef,
+	clipNotesParamDef,
+	clipsCreateParamDef,
+	clipsListParamDef,
+	clipsNoteParamDef,
+	clipsUpdateParamDef,
+	emptyParamDef,
+} from '@/server/rest/clips.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -62,7 +70,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Clip',
 			},
 
@@ -130,10 +139,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Clip',
 				},
 			},
@@ -150,10 +161,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Clip',
 				},
 			},
@@ -178,10 +191,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -232,7 +247,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Clip',
 			},
 		} as const,
@@ -284,7 +300,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Clip',
 			},
 		} as const,

@@ -32,7 +32,7 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 		pool = createDrizzlePool(config);
 		db = createDrizzleDatabase(pool, config);
 		meta = {
-			...await fetchMetaFromDatabase(db),
+			...(await fetchMetaFromDatabase(db)),
 			useObjectStorage: true,
 			objectStorageBucket: 'drive-quota-test',
 			objectStorageBaseUrl: 'https://storage.example.test',
@@ -63,11 +63,11 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 	test('concurrent uploads persist only within quota and clean the rejected object', async () => {
 		const fileSize = 700 * 1024;
 		const paths = [path.join(tempDir, 'first.bin'), path.join(tempDir, 'second.bin')];
-		await Promise.all(paths.map(filePath => fs.writeFile(filePath, Buffer.alloc(1))));
+		await Promise.all(paths.map((filePath) => fs.writeFile(filePath, Buffer.alloc(1))));
 
 		let uploadedCount = 0;
 		let releaseUploads: (() => void) | undefined;
-		const uploadsReady = new Promise<void>(resolve => {
+		const uploadsReady = new Promise<void>((resolve) => {
 			releaseUploads = resolve;
 		});
 		const storedKeys = new Set<string>();
@@ -77,7 +77,11 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 			uploadedCount++;
 			if (uploadedCount === paths.length) releaseUploads?.();
 			await uploadsReady;
-			return { Bucket: input.Bucket as string, Key: input.Key as string, Location: `https://storage.example.test/${input.Key as string}` };
+			return {
+				Bucket: input.Bucket as string,
+				Key: input.Key as string,
+				Location: `https://storage.example.test/${input.Key as string}`,
+			};
 		});
 		const deleteObject = vi.fn(async (_meta, input) => {
 			const key = input.Key as string;
@@ -115,16 +119,23 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 		} as unknown as HonoApiDriveFileUploadDependencies;
 
-		const results = await Promise.allSettled(paths.map(filePath => addDriveFileForHonoApi(deps, {
-			user,
-			path: filePath,
-			force: true,
-		})));
+		const results = await Promise.allSettled(
+			paths.map((filePath) =>
+				addDriveFileForHonoApi(deps, {
+					user,
+					path: filePath,
+					force: true,
+				}),
+			),
+		);
 		const failures = results
 			.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-			.map(result => String(result.reason));
+			.map((result) => String(result.reason));
 
-		expect(results.filter(result => result.status === 'fulfilled'), failures.join('\n')).toHaveLength(1);
+		expect(
+			results.filter((result) => result.status === 'fulfilled'),
+			failures.join('\n'),
+		).toHaveLength(1);
 		const rejected = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
 		expect(rejected).toHaveLength(1);
 		expect(rejected[0]?.reason).toMatchObject({ id: 'c6244ed2-a39a-4e1c-bf93-f0fbd7764fa6' });
@@ -182,7 +193,9 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 		} as unknown as HonoApiDriveFileUploadDependencies;
 
-		await expect(addDriveFileForHonoApi(deps, { user, path: filePath, force: true })).rejects.toThrow('object storage is down');
+		await expect(addDriveFileForHonoApi(deps, { user, path: filePath, force: true })).rejects.toThrow(
+			'object storage is down',
+		);
 
 		const after = await listAllDriveFilesByUserIdFromDatabase(db, user.id);
 		expect(after).toHaveLength(before.length);

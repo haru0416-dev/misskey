@@ -35,7 +35,12 @@ const followedId = '019f587c6bc4785ead8d511d603959f1';
 const strangerId = '019f587c6bc4785ead8d511d603959f2';
 const remoteId = '019f587c6bc4785ead8d511d603959f3';
 
-function createNote(id: string, userId: string, visibility: MiNote['visibility'], options: Partial<MiNote> = {}): MiNote {
+function createNote(
+	id: string,
+	userId: string,
+	visibility: MiNote['visibility'],
+	options: Partial<MiNote> = {},
+): MiNote {
 	return {
 		id,
 		userId,

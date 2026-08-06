@@ -33,21 +33,19 @@ export class RootUserAlreadyAssignedError extends Error {}
 export class DuplicatedUsernameError extends Error {}
 export class UsedUsernameError extends Error {}
 
-export async function createSignupAccountInDatabase(db: MiDrizzleDatabase, data: SignupAccountInsert): Promise<{ account: MiUser; rootClaimed: boolean }> {
+export async function createSignupAccountInDatabase(
+	db: MiDrizzleDatabase,
+	data: SignupAccountInsert,
+): Promise<{ account: MiUser; rootClaimed: boolean }> {
 	const result = await db.transaction(async (tx) => {
 		// Serialize the global used_username reservation, including test-only remote signups.
 		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`signup:${data.usernameLower}`}))`);
-		const hostCondition = data.host == null
-			? isNull(userTable.host)
-			: eq(userTable.host, data.host);
+		const hostCondition = data.host == null ? isNull(userTable.host) : eq(userTable.host, data.host);
 
 		const [existing] = await tx
 			.select({ id: userTable.id })
 			.from(userTable)
-			.where(and(
-				eq(userTable.usernameLower, data.usernameLower),
-				hostCondition,
-			))
+			.where(and(eq(userTable.usernameLower, data.usernameLower), hostCondition))
 			.limit(1);
 
 		if (existing) {

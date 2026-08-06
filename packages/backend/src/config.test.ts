@@ -44,32 +44,40 @@ describe('configVersion 2 schema', () => {
 	});
 
 	test('rejects old and unknown configuration keys', () => {
-		expect(() => sourceConfigV2Schema.parse({
-			...createSourceConfig(),
-			url: 'https://legacy.example',
-		})).toThrow();
-		expect(() => sourceConfigV2Schema.parse({
-			...createSourceConfig(),
-			configVersion: 1,
-		})).toThrow();
+		expect(() =>
+			sourceConfigV2Schema.parse({
+				...createSourceConfig(),
+				url: 'https://legacy.example',
+			}),
+		).toThrow();
+		expect(() =>
+			sourceConfigV2Schema.parse({
+				...createSourceConfig(),
+				configVersion: 1,
+			}),
+		).toThrow();
 	});
 
 	test('rejects invalid network ranges and Meilisearch paths', () => {
-		expect(() => sourceConfigV2Schema.parse({
-			...createSourceConfig(),
-			server: { reverseProxy: { trustedNetworks: ['not-a-network'] } },
-		})).toThrow();
-		expect(() => sourceConfigV2Schema.parse({
-			...createSourceConfig(),
-			search: {
-				provider: 'meilisearch',
-				meilisearch: {
-					endpoint: 'https://search.example.test/prefix',
-					apiKey: { plainText: 'search-secret' },
-					index: 'misskey',
+		expect(() =>
+			sourceConfigV2Schema.parse({
+				...createSourceConfig(),
+				server: { reverseProxy: { trustedNetworks: ['not-a-network'] } },
+			}),
+		).toThrow();
+		expect(() =>
+			sourceConfigV2Schema.parse({
+				...createSourceConfig(),
+				search: {
+					provider: 'meilisearch',
+					meilisearch: {
+						endpoint: 'https://search.example.test/prefix',
+						apiKey: { plainText: 'search-secret' },
+						index: 'misskey',
+					},
 				},
-			},
-		})).toThrow();
+			}),
+		).toThrow();
 	});
 
 	test('requires referenced environment secrets', () => {

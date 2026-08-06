@@ -42,11 +42,12 @@ import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDep
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 
-export type HonoApiUsersListsDependencies = UserPackingDependencies & HonoApiRolePolicyDependencies & {
-	relationshipQueue: RelationshipQueue;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
-	publishUserListStream?: HonoApiUserListStreamPublisher;
-};
+export type HonoApiUsersListsDependencies = UserPackingDependencies &
+	HonoApiRolePolicyDependencies & {
+		relationshipQueue: RelationshipQueue;
+		publishInternalEvent?: HonoApiInternalEventPublisher;
+		publishUserListStream?: HonoApiUserListStreamPublisher;
+	};
 
 class TooManyUsersError extends Error {}
 
@@ -69,23 +70,28 @@ async function packUserListMembershipsManyForHonoApi(
 	deps: HonoApiUsersListsDependencies,
 	memberships: UserListMembershipRow[],
 ): Promise<{ id: string; createdAt: string; userId: string; user: Packed<'UserLite'>; withReplies: boolean }[]> {
-	const packedUsers = await packUserLiteManyForHonoApi(deps, memberships.map(({ userId }) => userId));
-	const userMap = new Map(packedUsers.map(u => [u.id, u]));
+	const packedUsers = await packUserLiteManyForHonoApi(
+		deps,
+		memberships.map(({ userId }) => userId),
+	);
+	const userMap = new Map(packedUsers.map((u) => [u.id, u]));
 
-	return await Promise.all(memberships.map(async membership => ({
-		id: membership.id,
-		createdAt: parseId(membership.id).date.toISOString(),
-		userId: membership.userId,
-		user: userMap.get(membership.userId) ?? await packUserLiteForHonoApi(deps, membership.userId),
-		withReplies: membership.withReplies,
-	})));
+	return await Promise.all(
+		memberships.map(async (membership) => ({
+			id: membership.id,
+			createdAt: parseId(membership.id).date.toISOString(),
+			userId: membership.userId,
+			user: userMap.get(membership.userId) ?? (await packUserLiteForHonoApi(deps, membership.userId)),
+			withReplies: membership.withReplies,
+		})),
+	);
 }
 
 function createFollowJobForHonoApi(
 	deps: HonoApiUsersListsDependencies,
 	followings: { from: { id: MiUser['id'] }; to: { id: MiUser['id'] } }[],
 ): Promise<unknown> {
-	const jobs = followings.map(rel => ({
+	const jobs = followings.map((rel) => ({
 		name: 'follow',
 		data: {
 			from: { id: rel.from.id },
@@ -104,13 +110,17 @@ export async function addUserListMemberForHonoApi(
 	options: { withReplies?: boolean } = {},
 ): Promise<void> {
 	const policies = await getHonoApiRolePolicies(deps, me);
-	const created = await createUserListMembershipWithinLimitInDatabase(deps.db, {
-		id: genId(),
-		userId: target.id,
-		userListId: list.id,
-		userListUserId: list.userId,
-		withReplies: options.withReplies ?? false,
-	}, policies.userEachUserListsLimit);
+	const created = await createUserListMembershipWithinLimitInDatabase(
+		deps.db,
+		{
+			id: genId(),
+			userId: target.id,
+			userListId: list.id,
+			userListUserId: list.userId,
+			withReplies: options.withReplies ?? false,
+		},
+		policies.userEachUserListsLimit,
+	);
 	if (!created) throw new TooManyUsersError();
 
 	deps.publishInternalEvent?.('userListMemberAdded', { userListId: list.id, memberId: target.id });
@@ -155,7 +165,11 @@ function noSuchUserError(id: string): HonoApiError {
 	return new HonoApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id });
 }
 
-async function getUserForHonoApi(deps: HonoApiUsersListsDependencies, userId: string, noSuchUserErrorId: string): Promise<MiUser> {
+async function getUserForHonoApi(
+	deps: HonoApiUsersListsDependencies,
+	userId: string,
+	noSuchUserErrorId: string,
+): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
 	if (user == null) throw noSuchUserError(noSuchUserErrorId);
 	return user;
@@ -177,12 +191,22 @@ export async function handleHonoApiUsersListsCreate(
 	const params = parseHonoApiParams(createParamDef, body);
 
 	const policies = await getHonoApiRolePolicies(deps, me);
-	const userList = await createUserListWithinLimitInDatabase(deps.db, {
-		id: genId(),
-		userId: me.id,
-		name: params.name,
-	}, policies.userListLimit);
-	if (!userList) throw new HonoApiError({ status: 400, message: 'You cannot create user list any more.', code: 'TOO_MANY_USERLISTS', id: '0cf21a28-7715-4f39-a20d-777bfdb8d138' });
+	const userList = await createUserListWithinLimitInDatabase(
+		deps.db,
+		{
+			id: genId(),
+			userId: me.id,
+			name: params.name,
+		},
+		policies.userListLimit,
+	);
+	if (!userList)
+		throw new HonoApiError({
+			status: 400,
+			message: 'You cannot create user list any more.',
+			code: 'TOO_MANY_USERLISTS',
+			id: '0cf21a28-7715-4f39-a20d-777bfdb8d138',
+		});
 
 	return await packUserListByRowForHonoApi(deps, userList);
 }
@@ -203,58 +227,101 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 	body: Record<string, unknown>,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
 	const params = parseHonoApiParams(createFromPublicParamDef, body);
-	const copied = await deps.db.transaction(async transaction => {
+	const copied = await deps.db.transaction(async (transaction) => {
 		const db = transaction as typeof deps.db;
 		const ownerExists = await lockUserListOwnerForCreationInDatabase(db, me.id);
 		const sourceList = await fetchPublicUserListByIdForShareFromDatabase(db, params.listId);
 		if (sourceList == null) throw noSuchListError('9292f798-6175-4f7d-93f4-b6742279667d');
 
 		const policies = await getHonoApiRolePolicies({ ...deps, db }, me);
-		if (!ownerExists || await countUserListsByUserIdFromDatabase(db, me.id) >= policies.userListLimit) {
-			throw new HonoApiError({ status: 400, message: 'You cannot create user list any more.', code: 'TOO_MANY_USERLISTS', id: 'e9c105b2-c595-47de-97fb-7f7c2c33e92f' });
+		if (!ownerExists || (await countUserListsByUserIdFromDatabase(db, me.id)) >= policies.userListLimit) {
+			throw new HonoApiError({
+				status: 400,
+				message: 'You cannot create user list any more.',
+				code: 'TOO_MANY_USERLISTS',
+				id: 'e9c105b2-c595-47de-97fb-7f7c2c33e92f',
+			});
 		}
 
 		const userIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(db, sourceList.id);
 		if (userIds.length > policies.userEachUserListsLimit) {
-			throw new HonoApiError({ status: 400, message: 'You can not push users any more.', code: 'TOO_MANY_USERS', id: '1845ea77-38d1-426e-8e4e-8b83b24f5bd7' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'You can not push users any more.',
+				code: 'TOO_MANY_USERS',
+				id: '1845ea77-38d1-426e-8e4e-8b83b24f5bd7',
+			});
 		}
 
-		const userIdBatches = Array.from({ length: Math.ceil(userIds.length / 10_000) }, (_, index) => userIds.slice(index * 10_000, (index + 1) * 10_000));
+		const userIdBatches = Array.from({ length: Math.ceil(userIds.length / 10_000) }, (_, index) =>
+			userIds.slice(index * 10_000, (index + 1) * 10_000),
+		);
 		const [fetchedUserBatches, blockerIds] = await Promise.all([
-			Promise.all(userIdBatches.map(ids => listUsersByIdsForKeyShareFromDatabase(db, ids))),
-			listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(db, me.id, userIds.filter(userId => userId !== me.id)),
+			Promise.all(userIdBatches.map((ids) => listUsersByIdsForKeyShareFromDatabase(db, ids))),
+			listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase(
+				db,
+				me.id,
+				userIds.filter((userId) => userId !== me.id),
+			),
 		]);
-		const userById = new Map(fetchedUserBatches.flat().map(user => [user.id, user]));
-		const users = userIds.map(userId => {
+		const userById = new Map(fetchedUserBatches.flat().map((user) => [user.id, user]));
+		const users = userIds.map((userId) => {
 			const user = userById.get(userId);
 			if (user == null) throw noSuchUserError('13c457db-a8cb-4d88-b70a-211ceeeabb5f');
 			return user;
 		});
 		if (blockerIds.length > 0) {
-			throw new HonoApiError({ status: 400, message: 'You cannot push this user because you have been blocked by this user.', code: 'YOU_HAVE_BEEN_BLOCKED', id: 'a2497f2a-2389-439c-8626-5298540530f4' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'You cannot push this user because you have been blocked by this user.',
+				code: 'YOU_HAVE_BEEN_BLOCKED',
+				id: 'a2497f2a-2389-439c-8626-5298540530f4',
+			});
 		}
 
-		const packedUsers = deps.publishUserListStream == null
-			? []
-			: (await Promise.all(Array.from({ length: Math.ceil(userIds.length / 50) }, (_, index) => (
-				packUserLiteManyForHonoApi({ ...deps, db }, userIds.slice(index * 50, (index + 1) * 50))
-			)))).flat();
-		const result = await createUserListWithMembershipsWithinLimitsInDatabase(db, {
-			id: genId(),
-			userId: me.id,
-			name: params.name,
-		}, users.map(user => ({ id: genId(), userId: user.id })), {
-			lists: policies.userListLimit,
-			members: policies.userEachUserListsLimit,
-		});
-		if (result.status === 'tooManyLists') throw new HonoApiError({ status: 400, message: 'You cannot create user list any more.', code: 'TOO_MANY_USERLISTS', id: 'e9c105b2-c595-47de-97fb-7f7c2c33e92f' });
-		if (result.status === 'tooManyMembers') throw new HonoApiError({ status: 400, message: 'You can not push users any more.', code: 'TOO_MANY_USERS', id: '1845ea77-38d1-426e-8e4e-8b83b24f5bd7' });
+		const packedUsers =
+			deps.publishUserListStream == null
+				? []
+				: (
+						await Promise.all(
+							Array.from({ length: Math.ceil(userIds.length / 50) }, (_, index) =>
+								packUserLiteManyForHonoApi({ ...deps, db }, userIds.slice(index * 50, (index + 1) * 50)),
+							),
+						)
+					).flat();
+		const result = await createUserListWithMembershipsWithinLimitsInDatabase(
+			db,
+			{
+				id: genId(),
+				userId: me.id,
+				name: params.name,
+			},
+			users.map((user) => ({ id: genId(), userId: user.id })),
+			{
+				lists: policies.userListLimit,
+				members: policies.userEachUserListsLimit,
+			},
+		);
+		if (result.status === 'tooManyLists')
+			throw new HonoApiError({
+				status: 400,
+				message: 'You cannot create user list any more.',
+				code: 'TOO_MANY_USERLISTS',
+				id: 'e9c105b2-c595-47de-97fb-7f7c2c33e92f',
+			});
+		if (result.status === 'tooManyMembers')
+			throw new HonoApiError({
+				status: 400,
+				message: 'You can not push users any more.',
+				code: 'TOO_MANY_USERS',
+				id: '1845ea77-38d1-426e-8e4e-8b83b24f5bd7',
+			});
 		return { userList: result.userList, userIds, users, packedUsers };
 	});
 	const { userList, userIds, users, packedUsers } = copied;
-	const remoteUsers = users.filter(user => user.host != null);
+	const remoteUsers = users.filter((user) => user.host != null);
 
-	const packedUserById = new Map(packedUsers.map(user => [user.id, user]));
+	const packedUserById = new Map(packedUsers.map((user) => [user.id, user]));
 	for (const user of users) {
 		deps.publishInternalEvent?.('userListMemberAdded', { userListId: userList.id, memberId: user.id });
 		const packedUser = packedUserById.get(user.id);
@@ -262,7 +329,10 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 	}
 	if (remoteUsers.length > 0) {
 		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
-		await createFollowJobForHonoApi(deps, remoteUsers.map(user => ({ from: { id: proxy.id }, to: { id: user.id } })));
+		await createFollowJobForHonoApi(
+			deps,
+			remoteUsers.map((user) => ({ from: { id: proxy.id }, to: { id: user.id } })),
+		);
 	}
 
 	return {
@@ -324,20 +394,35 @@ export async function handleHonoApiUsersListsPush(
 	if (user.id !== me.id) {
 		const blockExist = await blockingExistsInDatabase(deps.db, user.id, me.id);
 		if (blockExist) {
-			throw new HonoApiError({ status: 400, message: 'You cannot push this user because you have been blocked by this user.', code: 'YOU_HAVE_BEEN_BLOCKED', id: '990232c5-3f9d-4d83-9f3f-ef27b6332a4b' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'You cannot push this user because you have been blocked by this user.',
+				code: 'YOU_HAVE_BEEN_BLOCKED',
+				id: '990232c5-3f9d-4d83-9f3f-ef27b6332a4b',
+			});
 		}
 	}
 
 	const exists = await userListMembershipExistsInDatabase(deps.db, user.id, userList.id);
 	if (exists) {
-		throw new HonoApiError({ status: 400, message: 'That user has already been added to that list.', code: 'ALREADY_ADDED', id: '1de7c884-1595-49e9-857e-61f12f4d4fc5' });
+		throw new HonoApiError({
+			status: 400,
+			message: 'That user has already been added to that list.',
+			code: 'ALREADY_ADDED',
+			id: '1de7c884-1595-49e9-857e-61f12f4d4fc5',
+		});
 	}
 
 	try {
 		await addUserListMemberForHonoApi(deps, user, userList, me);
 	} catch (err) {
 		if (err instanceof TooManyUsersError) {
-			throw new HonoApiError({ status: 400, message: 'You can not push users any more.', code: 'TOO_MANY_USERS', id: '2dd9752e-a338-413d-8eec-41814430989b' });
+			throw new HonoApiError({
+				status: 400,
+				message: 'You can not push users any more.',
+				code: 'TOO_MANY_USERS',
+				id: '2dd9752e-a338-413d-8eec-41814430989b',
+			});
 		}
 		throw err;
 	}
@@ -370,9 +455,10 @@ export async function handleHonoApiUsersListsGetMemberships(
 ): Promise<{ id: string; createdAt: string; userId: string; user: Packed<'UserLite'>; withReplies: boolean }[]> {
 	const params = parseHonoApiParams(getMembershipsParamDef, body);
 
-	const userList = !params.forPublic && me != null
-		? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
-		: await fetchPublicUserListByIdFromDatabase(deps.db, params.listId);
+	const userList =
+		!params.forPublic && me != null
+			? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
+			: await fetchPublicUserListByIdFromDatabase(deps.db, params.listId);
 
 	if (userList == null) throw noSuchListError('7bc05c21-1d7a-41ae-88f1-66820f4dc686');
 
@@ -411,7 +497,12 @@ export async function handleHonoApiUsersListsUpdateMembership(
 
 	const user = await getUserForHonoApi(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
 
-	await updateUserListMembershipForHonoApi(deps, user, userList, omitUndefined({
-		withReplies: params.withReplies,
-	}));
+	await updateUserListMembershipForHonoApi(
+		deps,
+		user,
+		userList,
+		omitUndefined({
+			withReplies: params.withReplies,
+		}),
+	);
 }

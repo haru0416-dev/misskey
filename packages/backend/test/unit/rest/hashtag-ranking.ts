@@ -79,7 +79,7 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 
 		await updateHashtagsRankingForHonoApi(deps, tag, genId());
 		for (let i = 0; i < 20; i++) {
-			if (await pollFeaturedScore(tag) === 2) break;
+			if ((await pollFeaturedScore(tag)) === 2) break;
 			await sleep(100);
 		}
 		expect(await pollFeaturedScore(tag)).toBe(2);
@@ -110,7 +110,9 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 		await updateHashtagsRankingForHonoApi({ meta: { hiddenTags: [tag], sensitiveWords: [] }, redis }, tag, userId);
 
 		await sleep(300);
-		expect(await redis.zscore(`featuredHashtagsRanking:${getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`, tag)).toBeNull();
+		expect(
+			await redis.zscore(`featuredHashtagsRanking:${getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`, tag),
+		).toBeNull();
 		expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(0);
 	});
 
@@ -121,7 +123,9 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 		await updateHashtagsRankingForHonoApi({ meta: { hiddenTags: [], sensitiveWords: [tag] }, redis }, tag, userId);
 
 		await sleep(300);
-		expect(await redis.zscore(`featuredHashtagsRanking:${getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`, tag)).toBeNull();
+		expect(
+			await redis.zscore(`featuredHashtagsRanking:${getCurrentFeaturedWindow(HASHTAG_RANKING_WINDOW)}`, tag),
+		).toBeNull();
 		expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(0);
 	});
 });

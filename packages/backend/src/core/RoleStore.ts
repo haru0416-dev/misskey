@@ -17,74 +17,43 @@ function deserializeRole(row: RoleRow): MiRole {
 	return row as MiRole;
 }
 
-export async function listRolesFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiRole[]> {
-	const statement = preparedQueryFor(db, 'role:all', () => db
-		.select()
-		.from(role)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+export async function listRolesFromDatabase(db: MiDrizzleDatabase): Promise<MiRole[]> {
+	const statement = preparedQueryFor(db, 'role:all', () => db.select().from(role).prepare(UNNAMED_PREPARED_STATEMENT));
 	const rows = await statement.execute();
 
-	return rows.map(row => deserializeRole(row));
+	return rows.map((row) => deserializeRole(row));
 }
 
-export async function listRolesOrderByLastUsedAtDescFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiRole[]> {
-	const rows = await db
-		.select()
-		.from(role)
-		.orderBy(desc(role.lastUsedAt));
+export async function listRolesOrderByLastUsedAtDescFromDatabase(db: MiDrizzleDatabase): Promise<MiRole[]> {
+	const rows = await db.select().from(role).orderBy(desc(role.lastUsedAt));
 
-	return rows.map(row => deserializeRole(row));
+	return rows.map((row) => deserializeRole(row));
 }
 
-export async function listRolesByIdsFromDatabase(
-	db: MiDrizzleDatabase,
-	ids: MiRole['id'][],
-): Promise<MiRole[]> {
+export async function listRolesByIdsFromDatabase(db: MiDrizzleDatabase, ids: MiRole['id'][]): Promise<MiRole[]> {
 	if (ids.length === 0) return [];
 
+	const rows = await db.select().from(role).where(inArray(role.id, ids));
+
+	return rows.map((row) => deserializeRole(row));
+}
+
+export async function listPublicExplorableRolesFromDatabase(db: MiDrizzleDatabase): Promise<MiRole[]> {
 	const rows = await db
 		.select()
 		.from(role)
-		.where(inArray(role.id, ids));
+		.where(and(eq(role.isPublic, true), eq(role.isExplorable, true)));
 
-	return rows.map(row => deserializeRole(row));
+	return rows.map((row) => deserializeRole(row));
 }
 
-export async function listPublicExplorableRolesFromDatabase(
-	db: MiDrizzleDatabase,
-): Promise<MiRole[]> {
-	const rows = await db
-		.select()
-		.from(role)
-		.where(and(
-			eq(role.isPublic, true),
-			eq(role.isExplorable, true),
-		));
-
-	return rows.map(row => deserializeRole(row));
-}
-
-export async function fetchRoleByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiRole['id'],
-): Promise<MiRole | null> {
-	const [row] = await db
-		.select()
-		.from(role)
-		.where(eq(role.id, id))
-		.limit(1);
+export async function fetchRoleByIdFromDatabase(db: MiDrizzleDatabase, id: MiRole['id']): Promise<MiRole | null> {
+	const [row] = await db.select().from(role).where(eq(role.id, id)).limit(1);
 
 	return row == null ? null : deserializeRole(row);
 }
 
-export async function fetchRoleByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiRole['id'],
-): Promise<MiRole> {
+export async function fetchRoleByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiRole['id']): Promise<MiRole> {
 	const row = await fetchRoleByIdFromDatabase(db, id);
 
 	if (row == null) {
@@ -94,17 +63,11 @@ export async function fetchRoleByIdOrFailFromDatabase(
 	return row;
 }
 
-export async function fetchPublicRoleByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiRole['id'],
-): Promise<MiRole | null> {
+export async function fetchPublicRoleByIdFromDatabase(db: MiDrizzleDatabase, id: MiRole['id']): Promise<MiRole | null> {
 	const [row] = await db
 		.select()
 		.from(role)
-		.where(and(
-			eq(role.id, id),
-			eq(role.isPublic, true),
-		))
+		.where(and(eq(role.id, id), eq(role.isPublic, true)))
 		.limit(1);
 
 	return row == null ? null : deserializeRole(row);
@@ -117,11 +80,7 @@ export async function fetchPublicExplorableRoleByIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(role)
-		.where(and(
-			eq(role.id, id),
-			eq(role.isPublic, true),
-			eq(role.isExplorable, true),
-		))
+		.where(and(eq(role.id, id), eq(role.isPublic, true), eq(role.isExplorable, true)))
 		.limit(1);
 
 	return row == null ? null : deserializeRole(row);
@@ -143,14 +102,8 @@ export async function listRoleSummariesByIdsFromDatabase(
 		.where(inArray(role.id, ids));
 }
 
-export async function createRoleInDatabase(
-	db: MiDrizzleDatabase,
-	values: RoleInsert,
-): Promise<MiRole> {
-	const [row] = await db
-		.insert(role)
-		.values(values)
-		.returning();
+export async function createRoleInDatabase(db: MiDrizzleDatabase, values: RoleInsert): Promise<MiRole> {
+	const [row] = await db.insert(role).values(values).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create role');
@@ -159,22 +112,10 @@ export async function createRoleInDatabase(
 	return deserializeRole(row);
 }
 
-export async function updateRoleInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiRole['id'],
-	values: RoleUpdate,
-): Promise<void> {
-	await db
-		.update(role)
-		.set(values)
-		.where(eq(role.id, id));
+export async function updateRoleInDatabase(db: MiDrizzleDatabase, id: MiRole['id'], values: RoleUpdate): Promise<void> {
+	await db.update(role).set(values).where(eq(role.id, id));
 }
 
-export async function deleteRoleInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiRole['id'],
-): Promise<void> {
-	await db
-		.delete(role)
-		.where(eq(role.id, id));
+export async function deleteRoleInDatabase(db: MiDrizzleDatabase, id: MiRole['id']): Promise<void> {
+	await db.delete(role).where(eq(role.id, id));
 }

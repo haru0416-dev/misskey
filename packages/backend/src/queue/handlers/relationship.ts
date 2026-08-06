@@ -35,14 +35,13 @@ import {
 } from '../../server/rest/following.js';
 import { validateAlsoKnownAsForHonoApi, type HonoApiApPersonDependencies } from '../../server/rest/ap-person.js';
 
-export type HonoQueueRelationshipDependencies =
-	& HonoApiAccountBlockingDependencies
-	& HonoApiFollowingDependencies
-	& HonoApiApPersonDependencies;
+export type HonoQueueRelationshipDependencies = HonoApiAccountBlockingDependencies &
+	HonoApiFollowingDependencies &
+	HonoApiApPersonDependencies;
 
 function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) return false;
-	return silencedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+	return silencedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
 async function deliverAcceptFollowActivity(
@@ -53,7 +52,10 @@ async function deliverAcceptFollowActivity(
 ): Promise<void> {
 	if (!isRemoteUser(follower) || !isLocalUser(followee)) return;
 
-	const content = addActivityContext(deps.config, renderAccept(deps.config, renderFollow(deps.config, follower, followee, requestId), followee));
+	const content = addActivityContext(
+		deps.config,
+		renderAccept(deps.config, renderFollow(deps.config, follower, followee, requestId), followee),
+	);
 	enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 }
 
@@ -77,7 +79,10 @@ export async function followWithSideEffectsForHonoApi(
 
 	if (isRemoteUser(follower) && isLocalUser(followee) && blocked) {
 		// リモートフォローを受けてブロックしていた場合は、エラーにするのではなくRejectを送り返しておしまい。
-		const content = addActivityContext(deps.config, renderReject(deps.config, renderFollow(deps.config, follower, followee, requestId), followee));
+		const content = addActivityContext(
+			deps.config,
+			renderReject(deps.config, renderFollow(deps.config, follower, followee, requestId), followee),
+		);
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 		return 'rejected: blocked';
 	} else if (isRemoteUser(follower) && isLocalUser(followee) && blocking) {
@@ -111,7 +116,9 @@ export async function followWithSideEffectsForHonoApi(
 	if (
 		followee.isLocked ||
 		(followeeProfile.carefulBot && follower.isBot) ||
-		(isLocalUser(follower) && isRemoteUser(followee) && process.env['FORCE_FOLLOW_REMOTE_USER_FOR_TESTING'] !== 'true') ||
+		(isLocalUser(follower) &&
+			isRemoteUser(followee) &&
+			process.env['FORCE_FOLLOW_REMOTE_USER_FOR_TESTING'] !== 'true') ||
 		(isLocalUser(followee) && isRemoteUser(follower) && isSilencedHost(deps.meta.silencedHosts, follower.host))
 	) {
 		let autoAccept = false;
@@ -143,7 +150,12 @@ export async function followWithSideEffectsForHonoApi(
 	}
 
 	try {
-		await insertFollowingWithSideEffects(deps, follower, followee, omitUndefined({ withReplies, followeeProfile, silent }));
+		await insertFollowingWithSideEffects(
+			deps,
+			follower,
+			followee,
+			omitUndefined({ withReplies, followeeProfile, silent }),
+		);
 	} catch (err) {
 		if (isDuplicateKeyValueError(err) && isRemoteUser(follower) && isLocalUser(followee)) {
 			if (await followRequestExistsInDatabase(deps.db, follower.id, followee.id)) {
@@ -166,16 +178,21 @@ export async function handleHonoQueueRelationshipFollow(
 	deps: HonoQueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
 ): Promise<string> {
-	const [follower, followee] = await Promise.all([
+	const [follower, followee] = (await Promise.all([
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
-	]) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
+	])) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
 
-	return followWithSideEffectsForHonoApi(deps, follower, followee, omitUndefined({
-		requestId: job.data.requestId,
-		silent: job.data.silent,
-		withReplies: job.data.withReplies,
-	}));
+	return followWithSideEffectsForHonoApi(
+		deps,
+		follower,
+		followee,
+		omitUndefined({
+			requestId: job.data.requestId,
+			silent: job.data.silent,
+			withReplies: job.data.withReplies,
+		}),
+	);
 }
 
 /** UserFollowingService.unfollow 相当 (RelationshipProcessorService.processUnfollow から呼ばれる)。 */

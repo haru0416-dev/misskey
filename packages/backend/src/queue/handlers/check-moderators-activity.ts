@@ -95,16 +95,22 @@ async function fetchModeratorsForCheck(deps: HonoQueueCheckModeratorsActivityDep
 	return getModeratorsForHonoApi(deps, { includeAdmins: true, includeRoot: true, excludeExpire: true });
 }
 
-async function evaluateModeratorsInactiveDays(deps: HonoQueueCheckModeratorsActivityDependencies): Promise<ModeratorInactivityEvaluationResult> {
+async function evaluateModeratorsInactiveDays(
+	deps: HonoQueueCheckModeratorsActivityDependencies,
+): Promise<ModeratorInactivityEvaluationResult> {
 	const today = new Date();
 	const inactivePeriod = new Date(today);
 	inactivePeriod.setDate(today.getDate() - MODERATOR_INACTIVITY_LIMIT_DAYS);
 
-	const moderators = (await fetchModeratorsForCheck(deps)).filter(moderator => moderator.lastActiveDate != null);
-	const inactiveModerators = moderators.filter(moderator => moderator.lastActiveDate!.getTime() < inactivePeriod.getTime());
+	const moderators = (await fetchModeratorsForCheck(deps)).filter((moderator) => moderator.lastActiveDate != null);
+	const inactiveModerators = moderators.filter(
+		(moderator) => moderator.lastActiveDate!.getTime() < inactivePeriod.getTime(),
+	);
 
 	// 残りの猶予を示したいので、最終アクティブ日時が一番若いモデレータの日数を基準に猶予を計算する
-	const newestLastActiveDate = new Date(Math.max(...moderators.map(moderator => moderator.lastActiveDate!.getTime())));
+	const newestLastActiveDate = new Date(
+		Math.max(...moderators.map((moderator) => moderator.lastActiveDate!.getTime())),
+	);
 	const remainingTime = newestLastActiveDate.getTime() - inactivePeriod.getTime();
 
 	return {
@@ -130,13 +136,22 @@ async function enqueueCheckModeratorsActivitySystemWebhook<T extends SystemWebho
 	content: SystemWebhookPayload<T>,
 ): Promise<void> {
 	const webhooks = await listSystemWebhooksFromDatabase(deps.db, { isActive: true, on: [type] });
-	await Promise.all(webhooks.map(webhook => enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, deps.config, webhook, type, content)));
+	await Promise.all(
+		webhooks.map((webhook) =>
+			enqueueSystemWebhookDeliverJob(deps.systemWebhookDeliverQueue, deps.config, webhook, type, content),
+		),
+	);
 }
 
-async function notifyInactiveModeratorsWarning(deps: HonoQueueCheckModeratorsActivityDependencies, remainingTime: ModeratorInactivityRemainingTime): Promise<void> {
+async function notifyInactiveModeratorsWarning(
+	deps: HonoQueueCheckModeratorsActivityDependencies,
+	remainingTime: ModeratorInactivityRemainingTime,
+): Promise<void> {
 	const moderators = await fetchModeratorsForCheck(deps);
-	const moderatorProfiles = await listUserProfilesByUserIdsFromDatabase(deps.db, moderators.map(moderator => moderator.id))
-		.then(profiles => new Map(profiles.map(profile => [profile.userId, profile])));
+	const moderatorProfiles = await listUserProfilesByUserIdsFromDatabase(
+		deps.db,
+		moderators.map((moderator) => moderator.id),
+	).then((profiles) => new Map(profiles.map((profile) => [profile.userId, profile])));
 
 	const mail = generateModeratorInactivityMail(remainingTime);
 	for (const moderator of moderators) {
@@ -151,28 +166,33 @@ async function notifyInactiveModeratorsWarning(deps: HonoQueueCheckModeratorsAct
 
 async function notifyChangeToInvitationOnly(deps: HonoQueueCheckModeratorsActivityDependencies): Promise<void> {
 	const moderators = await fetchModeratorsForCheck(deps);
-	const moderatorProfiles = await listUserProfilesByUserIdsFromDatabase(deps.db, moderators.map(moderator => moderator.id))
-		.then(profiles => new Map(profiles.map(profile => [profile.userId, profile])));
+	const moderatorProfiles = await listUserProfilesByUserIdsFromDatabase(
+		deps.db,
+		moderators.map((moderator) => moderator.id),
+	).then((profiles) => new Map(profiles.map((profile) => [profile.userId, profile])));
 
 	const mail = generateInvitationOnlyChangedMail();
 	for (const moderator of moderators) {
-		await createAnnouncementWithSideEffects({
-			db: deps.db,
-			genId,
-			packAnnouncement: announcement => Promise.resolve(packAnnouncementForHonoApi(deps.config, announcement)),
-			publishMainStream: (userId, type, value) => deps.publishMainStream?.(userId, type, value),
-		}, {
-			updatedAt: null,
-			title: mail.subject,
-			text: mail.text,
-			imageUrl: null,
-			icon: 'info',
-			display: 'normal',
-			forExistingUsers: true,
-			silence: false,
-			needConfirmationToRead: true,
-			userId: moderator.id,
-		} as AnnouncementCreateValues);
+		await createAnnouncementWithSideEffects(
+			{
+				db: deps.db,
+				genId,
+				packAnnouncement: (announcement) => Promise.resolve(packAnnouncementForHonoApi(deps.config, announcement)),
+				publishMainStream: (userId, type, value) => deps.publishMainStream?.(userId, type, value),
+			},
+			{
+				updatedAt: null,
+				title: mail.subject,
+				text: mail.text,
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				forExistingUsers: true,
+				silence: false,
+				needConfirmationToRead: true,
+				userId: moderator.id,
+			} as AnnouncementCreateValues,
+		);
 
 		const profile = moderatorProfiles.get(moderator.id);
 		if (profile && profile.email && profile.emailVerified) {
@@ -183,7 +203,9 @@ async function notifyChangeToInvitationOnly(deps: HonoQueueCheckModeratorsActivi
 	await enqueueCheckModeratorsActivitySystemWebhook(deps, 'inactiveModeratorsInvitationOnlyChanged', {});
 }
 
-export async function handleHonoQueueCheckModeratorsActivity(deps: HonoQueueCheckModeratorsActivityDependencies): Promise<void> {
+export async function handleHonoQueueCheckModeratorsActivity(
+	deps: HonoQueueCheckModeratorsActivityDependencies,
+): Promise<void> {
 	if (deps.meta.disableRegistration) return;
 
 	const evaluateResult = await evaluateModeratorsInactiveDays(deps);

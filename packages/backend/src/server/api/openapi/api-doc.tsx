@@ -12,9 +12,7 @@ export function ApiDocPage() {
 					<meta charset="UTF-8" />
 					<title>Erebia API</title>
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
-					<style>
-						{`body { margin: 0; padding: 0; }`}
-					</style>
+					<style>{`body { margin: 0; padding: 0; }`}</style>
 				</head>
 				<body>
 					<script id="api-reference" data-url="/api.json"></script>

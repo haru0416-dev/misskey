@@ -92,12 +92,12 @@ export async function masterMain(config: Config) {
 			const dependencies = await createRuntimeDependencies(config);
 			let serverRuntime: Awaited<ReturnType<typeof server>> | undefined;
 			try {
-				const startedServerRuntime = serverRuntime = await server(config, dependencies);
+				const startedServerRuntime = (serverRuntime = await server(config, dependencies));
 				const queueRuntime = await jobQueue(config, dependencies);
-					disposers.push(async () => {
-						await Promise.allSettled([queueRuntime.close(), startedServerRuntime.dispose()]);
-						await dependencies.dispose();
-					});
+				disposers.push(async () => {
+					await Promise.allSettled([queueRuntime.close(), startedServerRuntime.dispose()]);
+					await dependencies.dispose();
+				});
 			} catch (error) {
 				try {
 					await serverRuntime?.dispose();
@@ -118,19 +118,30 @@ export async function masterMain(config: Config) {
 		bootLogger.succ('Queue started', null, true);
 	} else {
 		const listen = config.server.listen;
-		bootLogger.succ('unixSocket' in listen
-			? `Now listening on socket ${listen.unixSocket.path} on ${config.instance.url}`
-			: `Now listening on ${listen.tcp.address}:${listen.tcp.port} on ${config.instance.url}`, null, true);
+		bootLogger.succ(
+			'unixSocket' in listen
+				? `Now listening on socket ${listen.unixSocket.path} on ${config.instance.url}`
+				: `Now listening on ${listen.tcp.address}:${listen.tcp.port} on ${config.instance.url}`,
+			null,
+			true,
+		);
 	}
 
 	return async () => {
 		if (!envOption.disableClustering) {
-			await Promise.all(Object.values(cluster.workers ?? {}).filter(worker => worker != null).map(worker => new Promise<void>(resolve => {
-				worker!.once('exit', () => resolve());
-				worker!.process.kill('SIGTERM');
-			})));
+			await Promise.all(
+				Object.values(cluster.workers ?? {})
+					.filter((worker) => worker != null)
+					.map(
+						(worker) =>
+							new Promise<void>((resolve) => {
+								worker!.once('exit', () => resolve());
+								worker!.process.kill('SIGTERM');
+							}),
+					),
+			);
 		}
-		await Promise.allSettled(disposers.map(dispose => dispose()));
+		await Promise.allSettled(disposers.map((dispose) => dispose()));
 	};
 }
 
@@ -159,9 +170,9 @@ async function spawnWorkers(limit = 1) {
 }
 
 function spawnWorker(): Promise<void> {
-	return new Promise(res => {
+	return new Promise((res) => {
 		const worker = cluster.fork();
-		worker.on('message', message => {
+		worker.on('message', (message) => {
 			if (message === 'listenFailed') {
 				bootLogger.error('The server Listen failed due to the previous error.');
 				process.exit(1);

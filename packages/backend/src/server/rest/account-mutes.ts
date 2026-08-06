@@ -4,8 +4,21 @@
  */
 
 import { z } from 'zod';
-import { createMutingInDatabase, deleteMutingsByIdsFromDatabase, fetchMutingByMuterIdAndMuteeIdFromDatabase, listMutingsByMuterIdWithPaginationFromDatabase, mutingExistsInDatabase, resolveMutingPagination } from '@/core/MutingStore.js';
-import { createRenoteMutingInDatabase, deleteRenoteMutingsByIdsFromDatabase, fetchRenoteMutingFromDatabase, listRenoteMutingsByMuterIdFromDatabase, renoteMutingExistsInDatabase } from '@/core/RenoteMutingStore.js';
+import {
+	createMutingInDatabase,
+	deleteMutingsByIdsFromDatabase,
+	fetchMutingByMuterIdAndMuteeIdFromDatabase,
+	listMutingsByMuterIdWithPaginationFromDatabase,
+	mutingExistsInDatabase,
+	resolveMutingPagination,
+} from '@/core/MutingStore.js';
+import {
+	createRenoteMutingInDatabase,
+	deleteRenoteMutingsByIdsFromDatabase,
+	fetchRenoteMutingFromDatabase,
+	listRenoteMutingsByMuterIdFromDatabase,
+	renoteMutingExistsInDatabase,
+} from '@/core/RenoteMutingStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -19,7 +32,12 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { RenoteMutingRow } from '@/db/schema/renote-muting.js';
 import { HonoApiError, clientError } from './error.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
-import { packUserDetailedNotMeForHonoApi, packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse, type UserPackingDependencies } from './user.js';
+import {
+	packUserDetailedNotMeForHonoApi,
+	packUserDetailedNotMeManyForHonoApi,
+	type UserDetailedNotMeHonoApiResponse,
+	type UserPackingDependencies,
+} from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAccountMuteDependencies = UserPackingDependencies & {
@@ -44,7 +62,6 @@ export const muteListParamDef = z.object({
 	sinceDate: z.number().int().optional(),
 	untilDate: z.number().int().optional(),
 });
-
 
 type HonoApiMutingResponse = {
 	id: string;
@@ -94,11 +111,13 @@ async function packHonoApiMuting(
 	me: { id: MiUser['id'] },
 	packedMutee?: UserDetailedNotMeHonoApiResponse,
 ): Promise<HonoApiMutingResponse> {
-	const mutee = packedMutee ?? await packUserDetailedNotMeForHonoApi(
-		deps,
-		muting.mutee ?? await getTargetUserOrThrow(deps, muting.muteeId, muteCreateNoSuchUserError),
-		me,
-	);
+	const mutee =
+		packedMutee ??
+		(await packUserDetailedNotMeForHonoApi(
+			deps,
+			muting.mutee ?? (await getTargetUserOrThrow(deps, muting.muteeId, muteCreateNoSuchUserError)),
+			me,
+		));
 
 	return {
 		id: muting.id,
@@ -115,11 +134,13 @@ async function packHonoApiRenoteMuting(
 	me: { id: MiUser['id'] },
 	packedMutee?: UserDetailedNotMeHonoApiResponse,
 ): Promise<HonoApiRenoteMutingResponse> {
-	const mutee = packedMutee ?? await packUserDetailedNotMeForHonoApi(
-		deps,
-		await getTargetUserOrThrow(deps, muting.muteeId, renoteMuteCreateNoSuchUserError),
-		me,
-	);
+	const mutee =
+		packedMutee ??
+		(await packUserDetailedNotMeForHonoApi(
+			deps,
+			await getTargetUserOrThrow(deps, muting.muteeId, renoteMuteCreateNoSuchUserError),
+			me,
+		));
 
 	return {
 		id: muting.id,
@@ -187,14 +208,23 @@ export async function handleHonoApiMuteList(
 ): Promise<Packed<'Muting'>[]> {
 	const params = parseHonoApiParams(muteListParamDef, body);
 	const mutings = await listMutingsByMuterIdWithPaginationFromDatabase(deps.db, me.id, {
-		...resolveMutingPagination({
-			gen: time => genId(time),
-		}, params),
+		...resolveMutingPagination(
+			{
+				gen: (time) => genId(time),
+			},
+			params,
+		),
 		limit: params.limit,
 	});
 
-	const mutees = await packUserDetailedNotMeManyForHonoApi(deps, mutings.map(muting => muting.mutee ?? muting.muteeId), me);
-	return await Promise.all(mutings.map((muting, index) => packHonoApiMuting(deps, muting, me, mutees[index]) as Promise<Packed<'Muting'>>));
+	const mutees = await packUserDetailedNotMeManyForHonoApi(
+		deps,
+		mutings.map((muting) => muting.mutee ?? muting.muteeId),
+		me,
+	);
+	return await Promise.all(
+		mutings.map((muting, index) => packHonoApiMuting(deps, muting, me, mutees[index]) as Promise<Packed<'Muting'>>),
+	);
 }
 
 export async function handleHonoApiRenoteMuteCreate(
@@ -251,9 +281,17 @@ export async function handleHonoApiRenoteMuteList(
 	const params = parseHonoApiParams(muteListParamDef, body);
 	const mutings = await listRenoteMutingsByMuterIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
-		...resolveDateIdPagination({ gen: time => genId(time) }, params),
+		...resolveDateIdPagination({ gen: (time) => genId(time) }, params),
 	});
 
-	const mutees = await packUserDetailedNotMeManyForHonoApi(deps, mutings.map(muting => muting.muteeId), me);
-	return await Promise.all(mutings.map((muting, index) => packHonoApiRenoteMuting(deps, muting, me, mutees[index]) as Promise<Packed<'RenoteMuting'>>));
+	const mutees = await packUserDetailedNotMeManyForHonoApi(
+		deps,
+		mutings.map((muting) => muting.muteeId),
+		me,
+	);
+	return await Promise.all(
+		mutings.map(
+			(muting, index) => packHonoApiRenoteMuting(deps, muting, me, mutees[index]) as Promise<Packed<'RenoteMuting'>>,
+		),
+	);
 }

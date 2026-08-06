@@ -17,10 +17,7 @@ import {
 	listActiveRoleAssignmentsByRoleIdFromDatabase,
 	resolveRoleAssignmentPagination,
 } from '@/core/RoleAssignmentStore.js';
-import {
-	fetchRoleByIdFromDatabase,
-	listRolesOrderByLastUsedAtDescFromDatabase,
-} from '@/core/RoleStore.js';
+import { fetchRoleByIdFromDatabase, listRolesOrderByLastUsedAtDescFromDatabase } from '@/core/RoleStore.js';
 import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
@@ -53,11 +50,14 @@ export type HonoApiAdminRoleDependencies = {
 
 // policies は jsonb へそのまま保存され、ロール適用のたびに読まれる。
 // ここで形を保証しないと、壊れた値がそのロールを持つ全ユーザーの全APIを500にする。
-const rolePoliciesRecord = z.record(z.string(), z.object({
-	useDefault: z.boolean(),
-	priority: z.number().int(),
-	value: z.unknown(),
-}));
+const rolePoliciesRecord = z.record(
+	z.string(),
+	z.object({
+		useDefault: z.boolean(),
+		priority: z.number().int(),
+		value: z.unknown(),
+	}),
+);
 
 export const adminRolesAssignParamDef = z.object({
 	roleId: misskeyId(),
@@ -130,7 +130,6 @@ export const adminRolesUsersParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
 });
 
-
 type AdminRoleUser = {
 	id: string;
 	createdAt: string;
@@ -194,17 +193,21 @@ export async function handleHonoApiAdminRolesAssign(
 		return;
 	}
 
-	await assignRoleWithSideEffects({
-		db: deps.db,
-		genId,
-		publishInternalEvent: deps.publishInternalEvent,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-		notifyRoleAssigned: (userId, _roleId, assignedRole) => createRoleAssignedNotification(deps, userId, assignedRole),
-	}, {
-		userId: user.id,
-		roleId: role.id,
-		expiresAt: params.expiresAt ? new Date(params.expiresAt) : null,
-	}, me);
+	await assignRoleWithSideEffects(
+		{
+			db: deps.db,
+			genId,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+			notifyRoleAssigned: (userId, _roleId, assignedRole) => createRoleAssignedNotification(deps, userId, assignedRole),
+		},
+		{
+			userId: user.id,
+			roleId: role.id,
+			expiresAt: params.expiresAt ? new Date(params.expiresAt) : null,
+		},
+		me,
+	);
 }
 
 export async function handleHonoApiAdminRolesCreate(
@@ -213,28 +216,32 @@ export async function handleHonoApiAdminRolesCreate(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Role'>> {
 	const params = parseHonoApiParams(adminRolesCreateParamDef, body);
-	const created = await createRoleWithSideEffects({
-		db: deps.db,
-		genId,
-		publishInternalEvent: deps.publishInternalEvent,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, {
-		name: params.name,
-		description: params.description,
-		color: params.color,
-		iconUrl: params.iconUrl,
-		target: params.target,
-		condFormula: params.condFormula,
-		isPublic: params.isPublic,
-		isModerator: params.isModerator,
-		isAdministrator: params.isAdministrator,
-		isExplorable: params.isExplorable,
-		asBadge: params.asBadge,
-		preserveAssignmentOnMoveAccount: params.preserveAssignmentOnMoveAccount,
-		canEditMembersByModerator: params.canEditMembersByModerator,
-		displayOrder: params.displayOrder,
-		policies: params.policies,
-	} as RoleCreateOptions, me);
+	const created = await createRoleWithSideEffects(
+		{
+			db: deps.db,
+			genId,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		{
+			name: params.name,
+			description: params.description,
+			color: params.color,
+			iconUrl: params.iconUrl,
+			target: params.target,
+			condFormula: params.condFormula,
+			isPublic: params.isPublic,
+			isModerator: params.isModerator,
+			isAdministrator: params.isAdministrator,
+			isExplorable: params.isExplorable,
+			asBadge: params.asBadge,
+			preserveAssignmentOnMoveAccount: params.preserveAssignmentOnMoveAccount,
+			canEditMembersByModerator: params.canEditMembersByModerator,
+			displayOrder: params.displayOrder,
+			policies: params.policies,
+		} as RoleCreateOptions,
+		me,
+	);
 
 	return await packHonoApiRole(deps, created);
 }
@@ -257,11 +264,15 @@ export async function handleHonoApiAdminRolesDelete(
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError('de0d6ecd-8e0a-4253-88ff-74bc89ae3d45');
 
-	await deleteRoleWithSideEffects({
-		db: deps.db,
-		publishInternalEvent: deps.publishInternalEvent,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, role, me);
+	await deleteRoleWithSideEffects(
+		{
+			db: deps.db,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		role,
+		me,
+	);
 }
 
 export async function handleHonoApiAdminRolesShow(
@@ -292,14 +303,18 @@ export async function handleHonoApiAdminRolesUnassign(
 	if (user == null) throw noSuchUserError('2b730f78-1179-461b-88ad-d24c9af1a5ce');
 
 	try {
-		await unassignRoleWithSideEffects({
-			db: deps.db,
-			publishInternalEvent: deps.publishInternalEvent,
-			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-		}, {
-			userId: user.id,
-			roleId: role.id,
-		}, me);
+		await unassignRoleWithSideEffects(
+			{
+				db: deps.db,
+				publishInternalEvent: deps.publishInternalEvent,
+				logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+			},
+			{
+				userId: user.id,
+				roleId: role.id,
+			},
+			me,
+		);
 	} catch (err) {
 		if (err instanceof RoleNotAssignedError) throw notAssignedError();
 		throw err;
@@ -315,27 +330,32 @@ export async function handleHonoApiAdminRolesUpdate(
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError('cd23ef55-09ad-428a-ac61-95a45e124b32');
 
-	await updateRoleWithSideEffects({
-		db: deps.db,
-		publishInternalEvent: deps.publishInternalEvent,
-		logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
-	}, role, {
-		name: params.name,
-		description: params.description,
-		color: params.color,
-		iconUrl: params.iconUrl,
-		target: params.target,
-		condFormula: params.condFormula,
-		isPublic: params.isPublic,
-		isModerator: params.isModerator,
-		isAdministrator: params.isAdministrator,
-		isExplorable: params.isExplorable,
-		asBadge: params.asBadge,
-		preserveAssignmentOnMoveAccount: params.preserveAssignmentOnMoveAccount,
-		canEditMembersByModerator: params.canEditMembersByModerator,
-		displayOrder: params.displayOrder,
-		policies: params.policies,
-	} as RoleUpdateOptions, me);
+	await updateRoleWithSideEffects(
+		{
+			db: deps.db,
+			publishInternalEvent: deps.publishInternalEvent,
+			logModeration: (moderator, type, info) => logModerationEventInDatabase(deps, moderator, type, info),
+		},
+		role,
+		{
+			name: params.name,
+			description: params.description,
+			color: params.color,
+			iconUrl: params.iconUrl,
+			target: params.target,
+			condFormula: params.condFormula,
+			isPublic: params.isPublic,
+			isModerator: params.isModerator,
+			isAdministrator: params.isAdministrator,
+			isExplorable: params.isExplorable,
+			asBadge: params.asBadge,
+			preserveAssignmentOnMoveAccount: params.preserveAssignmentOnMoveAccount,
+			canEditMembersByModerator: params.canEditMembersByModerator,
+			displayOrder: params.displayOrder,
+			policies: params.policies,
+		} as RoleUpdateOptions,
+		me,
+	);
 }
 
 export async function handleHonoApiAdminRolesUpdateDefaultPolicies(
@@ -351,7 +371,10 @@ export async function handleHonoApiAdminRolesUpdateDefaultPolicies(
 
 	Object.assign(deps.meta, after);
 	deps.meta.rootUser = null;
-	deps.publishInternalEvent?.('metaUpdated', { ...(updateBefore === undefined ? {} : { before: updateBefore }), after });
+	deps.publishInternalEvent?.('metaUpdated', {
+		...(updateBefore === undefined ? {} : { before: updateBefore }),
+		after,
+	});
 	deps.publishInternalEvent?.('policiesUpdated', after.policies);
 	await logModerationEventInDatabase(deps, me, 'updateServerSettings', {
 		before: before.policies,
@@ -370,15 +393,22 @@ export async function handleHonoApiAdminRolesUsers(
 
 	const assigns = await listActiveRoleAssignmentsByRoleIdFromDatabase(deps.db, role.id, {
 		limit: params.limit,
-		...resolveRoleAssignmentPagination({
-			gen: (time?: number) => genId(time),
-		}, params),
+		...resolveRoleAssignmentPagination(
+			{
+				gen: (time?: number) => genId(time),
+			},
+			params,
+		),
 	});
 
-	const packedUsers = await packUserDetailedNotMeManyForHonoApi(deps, assigns.map(assign => assign.userId), me);
-	const userById = new Map(packedUsers.map(user => [user.id, user]));
+	const packedUsers = await packUserDetailedNotMeManyForHonoApi(
+		deps,
+		assigns.map((assign) => assign.userId),
+		me,
+	);
+	const userById = new Map(packedUsers.map((user) => [user.id, user]));
 
-	return assigns.map(assign => ({
+	return assigns.map((assign) => ({
 		id: assign.id,
 		createdAt: parseId(assign.id).date.toISOString(),
 		user: userById.get(assign.userId)!,

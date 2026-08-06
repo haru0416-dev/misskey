@@ -61,34 +61,34 @@ async function fetchNodeinfo(
 	deps.logger.info(`Fetching nodeinfo of ${instance.host} ...`);
 
 	try {
-		const wellknown = await deps.httpRequestService.getJson('https://' + instance.host + '/.well-known/nodeinfo')
-			.catch(err => {
+		const wellknown = (await deps.httpRequestService
+			.getJson('https://' + instance.host + '/.well-known/nodeinfo')
+			.catch((err) => {
 				if (err.statusCode === 404) {
 					throw new Error('No nodeinfo provided');
 				} else {
 					throw err.statusCode ?? err.message;
 				}
-			}) as Record<string, unknown>;
+			})) as Record<string, unknown>;
 
 		if (wellknown['links'] == null || !Array.isArray(wellknown['links'])) {
 			throw new Error('No wellknown links');
 		}
 
-		const links = wellknown['links'] as ({ rel: string; href: string; })[];
+		const links = wellknown['links'] as { rel: string; href: string }[];
 
-		const link1_0 = links.find(link => link.rel === 'http://nodeinfo.diaspora.software/ns/schema/1.0');
-		const link2_0 = links.find(link => link.rel === 'http://nodeinfo.diaspora.software/ns/schema/2.0');
-		const link2_1 = links.find(link => link.rel === 'http://nodeinfo.diaspora.software/ns/schema/2.1');
+		const link1_0 = links.find((link) => link.rel === 'http://nodeinfo.diaspora.software/ns/schema/1.0');
+		const link2_0 = links.find((link) => link.rel === 'http://nodeinfo.diaspora.software/ns/schema/2.0');
+		const link2_1 = links.find((link) => link.rel === 'http://nodeinfo.diaspora.software/ns/schema/2.1');
 		const link = link2_1 ?? link2_0 ?? link1_0;
 
 		if (link == null) {
 			throw new Error('No nodeinfo link provided');
 		}
 
-		const info = await deps.httpRequestService.getJson(link.href)
-			.catch(err => {
-				throw err.statusCode ?? err.message;
-			});
+		const info = await deps.httpRequestService.getJson(link.href).catch((err) => {
+			throw err.statusCode ?? err.message;
+		});
 
 		logSuccess(deps, `Successfuly fetched nodeinfo of ${instance.host}`);
 
@@ -119,7 +119,7 @@ async function fetchManifest(
 	const url = 'https://' + instance.host;
 	const manifestUrl = url + '/manifest.json';
 
-	return await deps.httpRequestService.getJson(manifestUrl) as WebAppManifest;
+	return (await deps.httpRequestService.getJson(manifestUrl)) as WebAppManifest;
 }
 
 async function fetchFaviconUrl(
@@ -131,17 +131,23 @@ async function fetchFaviconUrl(
 
 	if (doc) {
 		// https://github.com/misskey-dev/misskey/pull/8220#issuecomment-1025104043
-		const href = Array.from(doc.getElementsByTagName('link')).reverse().find(link => link.attributes['rel'] === 'icon')?.attributes['href'];
+		const href = Array.from(doc.getElementsByTagName('link'))
+			.reverse()
+			.find((link) => link.attributes['rel'] === 'icon')?.attributes['href'];
 
 		if (href) {
-			return (new URL(href, url)).href;
+			return new URL(href, url).href;
 		}
 	}
 
 	const faviconUrl = url + '/favicon.ico';
-	const favicon = await deps.httpRequestService.send(faviconUrl, {
-		method: 'HEAD',
-	}, { throwErrorWhenResponseNotOk: false });
+	const favicon = await deps.httpRequestService.send(
+		faviconUrl,
+		{
+			method: 'HEAD',
+		},
+		{ throwErrorWhenResponseNotOk: false },
+	);
 
 	if (favicon.ok) {
 		return faviconUrl;
@@ -158,7 +164,7 @@ async function fetchIconUrl(
 	const manifestIcon = manifest?.icons?.[0];
 	if (manifestIcon?.src) {
 		const url = 'https://' + instance.host;
-		return (new URL(manifestIcon.src, url)).href;
+		return new URL(manifestIcon.src, url).href;
 	}
 
 	if (doc) {
@@ -167,16 +173,16 @@ async function fetchIconUrl(
 		// https://github.com/misskey-dev/misskey/pull/8220#issuecomment-1025104043
 		const links = Array.from(doc.getElementsByTagName('link')).reverse();
 		// https://github.com/misskey-dev/misskey/pull/8220/files/0ec4eba22a914e31b86874f12448f88b3e58dd5a#r796487559
-		const href =
-			[
-				links.find(link => link.attributes['rel']?.split(/\s+/).includes('apple-touch-icon-precomposed'))?.attributes['href'],
-				links.find(link => link.attributes['rel']?.split(/\s+/).includes('apple-touch-icon'))?.attributes['href'],
-				links.find(link => link.attributes['rel']?.split(/\s+/).includes('icon'))?.attributes['href'],
-			]
-				.find(href => href);
+		const href = [
+			links.find((link) => link.attributes['rel']?.split(/\s+/).includes('apple-touch-icon-precomposed'))?.attributes[
+				'href'
+			],
+			links.find((link) => link.attributes['rel']?.split(/\s+/).includes('apple-touch-icon'))?.attributes['href'],
+			links.find((link) => link.attributes['rel']?.split(/\s+/).includes('icon'))?.attributes['href'],
+		].find((href) => href);
 
 		if (href) {
-			return (new URL(href, url)).href;
+			return new URL(href, url).href;
 		}
 	}
 
@@ -188,7 +194,10 @@ async function getThemeColor(
 	doc: htmlParser.HTMLElement | null,
 	manifest: WebAppManifest | null,
 ): Promise<string | null> {
-	const themeColor = info?.metadata?.themeColor ?? doc?.querySelector('meta[name="theme-color"]')?.getAttribute('content') ?? manifest?.theme_color;
+	const themeColor =
+		info?.metadata?.themeColor ??
+		doc?.querySelector('meta[name="theme-color"]')?.getAttribute('content') ??
+		manifest?.theme_color;
 
 	if (typeof themeColor === 'string') {
 		return parseCssColorToHex(themeColor);
@@ -203,12 +212,12 @@ function parseCssColorToHex(input: string): string | null {
 
 	const hex = str.match(/^#([0-9a-f]{3}|[0-9a-f]{6})(?:[0-9a-f]{2})?$/)?.[1];
 	if (hex) {
-		return '#' + (hex.length === 3 ? [...hex].map(c => c + c).join('') : hex);
+		return '#' + (hex.length === 3 ? [...hex].map((c) => c + c).join('') : hex);
 	}
 
 	const rgb = str.match(/^rgba?\(\s*(\d{1,3})[,\s]+(\d{1,3})[,\s]+(\d{1,3})(?:[,\s/]+[\d.%]+)?\s*\)$/);
 	if (rgb) {
-		const channels = rgb.slice(1, 4).map(v => Math.min(255, Number(v))) as [number, number, number];
+		const channels = rgb.slice(1, 4).map((v) => Math.min(255, Number(v))) as [number, number, number];
 		return '#' + convert.rgb.hex(channels).toLowerCase();
 	}
 
@@ -288,7 +297,7 @@ export async function tryLockFetchInstanceMetadata(
 	deps: Pick<FetchInstanceMetadataDependencies, 'tryLock'>,
 	host: string,
 ): Promise<boolean> {
-	return await deps.tryLock(host) !== '1';
+	return (await deps.tryLock(host)) !== '1';
 }
 
 export async function fetchInstanceMetadataWithSideEffects(
@@ -311,7 +320,7 @@ export async function fetchInstanceMetadataWithSideEffects(
 		if (!force) {
 			const existing = await deps.fetchOrRegisterInstance(host);
 			const now = Date.now();
-			if (existing && existing.infoUpdatedAt && (now - existing.infoUpdatedAt.getTime() < 1000 * 60 * 60 * 24)) {
+			if (existing && existing.infoUpdatedAt && now - existing.infoUpdatedAt.getTime() < 1000 * 60 * 60 * 24) {
 				return;
 			}
 		}
@@ -342,13 +351,17 @@ export async function fetchInstanceMetadataWithSideEffects(
 			updates.softwareName = typeof info.software?.name === 'string' ? info.software.name.toLowerCase() : '?';
 			updates.softwareVersion = info.software?.version as MiInstance['softwareVersion'];
 			updates.openRegistrations = info.openRegistrations as MiInstance['openRegistrations'];
-			updates.maintainerName = (info.metadata ? info.metadata.maintainer ? (info.metadata.maintainer.name ?? null) : null : null) as MiInstance['maintainerName'];
-			updates.maintainerEmail = (info.metadata ? info.metadata.maintainer ? (info.metadata.maintainer.email ?? null) : null : null) as MiInstance['maintainerEmail'];
+			updates.maintainerName = (
+				info.metadata ? (info.metadata.maintainer ? (info.metadata.maintainer.name ?? null) : null) : null
+			) as MiInstance['maintainerName'];
+			updates.maintainerEmail = (
+				info.metadata ? (info.metadata.maintainer ? (info.metadata.maintainer.email ?? null) : null) : null
+			) as MiInstance['maintainerEmail'];
 		}
 
 		if (name) updates.name = name;
 		if (description) updates.description = description;
-		if (icon ?? favicon) updates.iconUrl = (icon && !icon.includes('data:image/png;base64')) ? icon : favicon;
+		if (icon ?? favicon) updates.iconUrl = icon && !icon.includes('data:image/png;base64') ? icon : favicon;
 		if (favicon) updates.faviconUrl = favicon;
 		if (themeColor) updates.themeColor = themeColor;
 

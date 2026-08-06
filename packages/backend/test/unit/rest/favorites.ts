@@ -47,10 +47,7 @@ vi.mock('@/core/UserListStore.js', () => ({
 	userListExistsByIdAndPublicFromDatabase: userListExistsMock,
 }));
 
-import {
-	handleHonoApiClipsFavorite,
-	handleHonoApiUsersListsFavorite,
-} from '@/server/rest/favorites.js';
+import { handleHonoApiClipsFavorite, handleHonoApiUsersListsFavorite } from '@/server/rest/favorites.js';
 
 describe('favorites REST handlers', () => {
 	const userId = genId();
@@ -72,9 +69,11 @@ describe('favorites REST handlers', () => {
 	test('converts a duplicate user-list favorite insertion to ALREADY_FAVORITED', async () => {
 		createUserListFavoriteMock.mockRejectedValue({ cause: { code: '23505' } });
 
-		await expect(handleHonoApiUsersListsFavorite(deps, me, {
-			listId: resourceId,
-		})).rejects.toMatchObject({
+		await expect(
+			handleHonoApiUsersListsFavorite(deps, me, {
+				listId: resourceId,
+			}),
+		).rejects.toMatchObject({
 			status: 400,
 			code: 'ALREADY_FAVORITED',
 			id: '6425bba0-985b-461e-af1b-518070e72081',
@@ -84,9 +83,11 @@ describe('favorites REST handlers', () => {
 	test('converts a duplicate clip favorite insertion to ALREADY_FAVORITED', async () => {
 		createClipFavoriteMock.mockRejectedValue({ driverError: { code: '23505' } });
 
-		await expect(handleHonoApiClipsFavorite(deps, me, {
-			clipId: resourceId,
-		})).rejects.toMatchObject({
+		await expect(
+			handleHonoApiClipsFavorite(deps, me, {
+				clipId: resourceId,
+			}),
+		).rejects.toMatchObject({
 			status: 400,
 			code: 'ALREADY_FAVORITED',
 			id: '92658936-c625-4273-8326-2d790129256e',

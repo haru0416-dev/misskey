@@ -11,13 +11,16 @@ describe('misc:id-pagination', () => {
 		[{}, { sinceId: null, untilId: null, order: 'desc' }],
 		[{ sinceId: 'since' }, { sinceId: 'since', untilId: null, order: 'asc' }],
 		[{ untilId: 'until' }, { sinceId: null, untilId: 'until', order: 'desc' }],
-		[{ sinceId: 'since', untilId: 'until' }, { sinceId: 'since', untilId: 'until', order: 'desc' }],
+		[
+			{ sinceId: 'since', untilId: 'until' },
+			{ sinceId: 'since', untilId: 'until', order: 'desc' },
+		],
 	])('resolves cursor bounds %#', (options, expected) => {
 		expect(resolveIdPagination(options)).toEqual(expected);
 	});
 
 	test('converts date bounds to IDs', () => {
-		const idGenerator = { gen: vi.fn(time => `id-${time}`) };
+		const idGenerator = { gen: vi.fn((time) => `id-${time}`) };
 
 		expect(resolveDateIdPagination(idGenerator, { sinceDate: 1, untilDate: 2 })).toEqual({
 			sinceId: 'id-1',
@@ -28,7 +31,7 @@ describe('misc:id-pagination', () => {
 	});
 
 	test('gives explicit IDs precedence over date bounds', () => {
-		const idGenerator = { gen: vi.fn(time => `id-${time}`) };
+		const idGenerator = { gen: vi.fn((time) => `id-${time}`) };
 
 		expect(resolveDateIdPagination(idGenerator, { sinceId: 'since', untilDate: 2 })).toEqual({
 			sinceId: 'since',

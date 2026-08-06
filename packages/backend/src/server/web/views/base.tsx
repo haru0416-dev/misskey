@@ -8,22 +8,26 @@ import { Splash } from '@/server/web/views/_splash.js';
 import type { CommonProps } from '@/server/web/views/_.js';
 import type { PropsWithChildren, Children } from '@kitajs/html';
 
-export function Layout(props: PropsWithChildren<CommonProps<{
-	title?: string;
-	noindex?: boolean;
-	desc?: string;
-	img?: string;
-	serverErrorImageUrl?: string;
-	infoImageUrl?: string;
-	notFoundImageUrl?: string;
-	metaJson?: string;
-	clientCtxJson?: string;
+export function Layout(
+	props: PropsWithChildren<
+		CommonProps<{
+			title?: string;
+			noindex?: boolean;
+			desc?: string;
+			img?: string;
+			serverErrorImageUrl?: string;
+			infoImageUrl?: string;
+			notFoundImageUrl?: string;
+			metaJson?: string;
+			clientCtxJson?: string;
 
-	titleSlot?: Children;
-	descSlot?: Children;
-	metaSlot?: Children;
-	ogSlot?: Children;
-}>>) {
+			titleSlot?: Children;
+			descSlot?: Children;
+			metaSlot?: Children;
+			ogSlot?: Children;
+		}>
+	>,
+) {
 	const now = Date.now();
 
 	// 変数名をsafeで始めることでエラーをスキップ
@@ -43,13 +47,23 @@ export function Layout(props: PropsWithChildren<CommonProps<{
 					<meta name="theme-color-orig" content={props.themeColor ?? '#5c62d8'} />
 					<meta property="og:site_name" content={props.instanceName || 'Erebia'} />
 					<meta property="instance_url" content={props.instanceUrl} />
-					<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+					<meta
+						name="viewport"
+						content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+					/>
 					<meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no" />
 					<link rel="icon" href={props.icon || '/client-assets/erebia-icon.svg'} />
 					<link rel="apple-touch-icon" href={props.appleTouchIcon || '/client-assets/erebia-icon.png'} />
 					<link rel="manifest" href="/manifest.json" />
-					<link rel="search" type="application/opensearchdescription+xml" title={props.title || 'Erebia'} href={`${props.config.instance.url}/opensearch.xml`} />
-					{props.serverErrorImageUrl != null ? <link rel="prefetch" as="image" href={props.serverErrorImageUrl} /> : null}
+					<link
+						rel="search"
+						type="application/opensearchdescription+xml"
+						title={props.title || 'Erebia'}
+						href={`${props.config.instance.url}/opensearch.xml`}
+					/>
+					{props.serverErrorImageUrl != null ? (
+						<link rel="prefetch" as="image" href={props.serverErrorImageUrl} />
+					) : null}
 					{props.infoImageUrl != null ? <link rel="prefetch" as="image" href={props.infoImageUrl} /> : null}
 					{props.notFoundImageUrl != null ? <link rel="prefetch" as="image" href={props.notFoundImageUrl} /> : null}
 
@@ -63,7 +77,8 @@ export function Layout(props: PropsWithChildren<CommonProps<{
 
 					{props.noindex ? <meta name="robots" content="noindex" /> : null}
 
-					{props.descSlot ?? (props.desc != null ? <meta name="description" content={props.desc || defaultDescription} /> : null)}
+					{props.descSlot ??
+						(props.desc != null ? <meta name="description" content={props.desc || defaultDescription} /> : null)}
 
 					{props.metaSlot}
 
@@ -76,24 +91,41 @@ export function Layout(props: PropsWithChildren<CommonProps<{
 						</>
 					)}
 
-					{props.frontendBootloaderCss != null ? <style safe>{props.frontendBootloaderCss}</style> : <link rel="stylesheet" href="/vite/loader/style.css" />}
+					{props.frontendBootloaderCss != null ? (
+						<style safe>{props.frontendBootloaderCss}</style>
+					) : (
+						<link rel="stylesheet" href="/vite/loader/style.css" />
+					)}
 
 					<script>
-						const VERSION = '{props.version}';
-						const CLIENT_ENTRY = {JSON.stringify(props.frontendViteFiles?.entryJs ?? null)};
-						const CLIENT_PRELOADS = {JSON.stringify(props.frontendViteFiles?.modulePreloads ?? [])};
-						const LANGS = {JSON.stringify(props.langs)};
+						const VERSION = '{props.version}'; const CLIENT_ENTRY ={' '}
+						{JSON.stringify(props.frontendViteFiles?.entryJs ?? null)}; const CLIENT_PRELOADS ={' '}
+						{JSON.stringify(props.frontendViteFiles?.modulePreloads ?? [])}; const LANGS = {JSON.stringify(props.langs)}
+						;
 					</script>
 
-					{safeMetaJson != null ? <script type="application/json" id="misskey_meta" data-generated-at={now}>{safeMetaJson}</script> : null}
-					{safeClientCtxJson != null ? <script type="application/json" id="misskey_clientCtx" data-generated-at={now}>{safeClientCtxJson}</script> : null}
+					{safeMetaJson != null ? (
+						<script type="application/json" id="misskey_meta" data-generated-at={now}>
+							{safeMetaJson}
+						</script>
+					) : null}
+					{safeClientCtxJson != null ? (
+						<script type="application/json" id="misskey_clientCtx" data-generated-at={now}>
+							{safeClientCtxJson}
+						</script>
+					) : null}
 
-					{props.frontendBootloaderJs != null ? <script>{props.frontendBootloaderJs}</script> : <script src="/vite/loader/boot.js"></script>}
+					{props.frontendBootloaderJs != null ? (
+						<script>{props.frontendBootloaderJs}</script>
+					) : (
+						<script src="/vite/loader/boot.js"></script>
+					)}
 				</head>
 				<body>
 					<noscript>
 						<p>
-							JavaScriptを有効にしてください<br />
+							JavaScriptを有効にしてください
+							<br />
 							Please turn on your JavaScript
 						</p>
 					</noscript>

@@ -17,10 +17,7 @@ function deserializeSwSubscription(row: SwSubscriptionRow): MiSwSubscription {
 }
 
 function swSubscriptionByUserAndEndpointCondition(userId: MiUser['id'], endpoint: string) {
-	return and(
-		eq(swSubscription.userId, userId),
-		eq(swSubscription.endpoint, endpoint),
-	);
+	return and(eq(swSubscription.userId, userId), eq(swSubscription.endpoint, endpoint));
 }
 
 export async function fetchSwSubscriptionFromDatabase(
@@ -41,21 +38,13 @@ export async function listSwSubscriptionsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiSwSubscription[]> {
-	const rows = await db
-		.select()
-		.from(swSubscription)
-		.where(eq(swSubscription.userId, userId));
+	const rows = await db.select().from(swSubscription).where(eq(swSubscription.userId, userId));
 
 	return rows.map(deserializeSwSubscription);
 }
 
-export async function createSwSubscriptionInDatabase(
-	db: MiDrizzleDatabase,
-	data: SwSubscriptionInsert,
-): Promise<void> {
-	await db
-		.insert(swSubscription)
-		.values(data);
+export async function createSwSubscriptionInDatabase(db: MiDrizzleDatabase, data: SwSubscriptionInsert): Promise<void> {
+	await db.insert(swSubscription).values(data);
 }
 
 export async function updateSwSubscriptionInDatabase(
@@ -63,10 +52,7 @@ export async function updateSwSubscriptionInDatabase(
 	id: MiSwSubscription['id'],
 	data: Partial<SwSubscriptionUpdate>,
 ): Promise<void> {
-	await db
-		.update(swSubscription)
-		.set(data)
-		.where(eq(swSubscription.id, id));
+	await db.update(swSubscription).set(data).where(eq(swSubscription.id, id));
 }
 
 export async function updateSwSubscriptionByUserAndEndpointInDatabase(
@@ -75,10 +61,7 @@ export async function updateSwSubscriptionByUserAndEndpointInDatabase(
 	endpoint: string,
 	data: Partial<SwSubscriptionUpdate>,
 ): Promise<void> {
-	await db
-		.update(swSubscription)
-		.set(data)
-		.where(swSubscriptionByUserAndEndpointCondition(userId, endpoint));
+	await db.update(swSubscription).set(data).where(swSubscriptionByUserAndEndpointCondition(userId, endpoint));
 }
 
 export async function deleteSwSubscriptionByEndpointFromDatabase(
@@ -88,9 +71,11 @@ export async function deleteSwSubscriptionByEndpointFromDatabase(
 ): Promise<void> {
 	await db
 		.delete(swSubscription)
-		.where(userId == null
-			? eq(swSubscription.endpoint, endpoint)
-			: swSubscriptionByUserAndEndpointCondition(userId, endpoint));
+		.where(
+			userId == null
+				? eq(swSubscription.endpoint, endpoint)
+				: swSubscriptionByUserAndEndpointCondition(userId, endpoint),
+		);
 }
 
 export async function deleteSwSubscriptionForPushEndpointFromDatabase(
@@ -99,10 +84,12 @@ export async function deleteSwSubscriptionForPushEndpointFromDatabase(
 ): Promise<void> {
 	await db
 		.delete(swSubscription)
-		.where(and(
-			eq(swSubscription.userId, params.userId),
-			eq(swSubscription.endpoint, params.endpoint),
-			eq(swSubscription.auth, params.auth),
-			eq(swSubscription.publickey, params.publickey),
-		));
+		.where(
+			and(
+				eq(swSubscription.userId, params.userId),
+				eq(swSubscription.endpoint, params.endpoint),
+				eq(swSubscription.auth, params.auth),
+				eq(swSubscription.publickey, params.publickey),
+			),
+		);
 }

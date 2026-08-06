@@ -33,8 +33,8 @@ declare module '@peertube/http-signature' {
 	}
 
 	type RequestSignerConstructorOptions =
-		IRequestSignerConstructorOptionsFromProperties |
-		IRequestSignerConstructorOptionsFromFunction;
+		| IRequestSignerConstructorOptionsFromProperties
+		| IRequestSignerConstructorOptionsFromFunction;
 
 	interface IRequestSignerConstructorOptionsFromProperties {
 		keyId: string;

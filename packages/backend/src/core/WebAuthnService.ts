@@ -6,7 +6,8 @@
 import * as Redis from 'ioredis';
 import {
 	generateAuthenticationOptions,
-	generateRegistrationOptions, verifyAuthenticationResponse,
+	generateRegistrationOptions,
+	verifyAuthenticationResponse,
 	verifyRegistrationResponse,
 } from '@simplewebauthn/server';
 import { AttestationFormat, isoCBOR, isoUint8Array } from '@simplewebauthn/server/helpers';
@@ -32,13 +33,8 @@ import type {
 	RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 
-export function createWebAuthnService(
-	config: Config,
-	meta: MiMeta,
-	redisClient: Redis.Redis,
-	db: MiDrizzleDatabase,
-) {
-	function getRelyingParty(): { origin: string; rpId: string; rpName: string; rpIcon?: string; } {
+export function createWebAuthnService(config: Config, meta: MiMeta, redisClient: Redis.Redis, db: MiDrizzleDatabase) {
+	function getRelyingParty(): { origin: string; rpId: string; rpName: string; rpIcon?: string } {
 		return {
 			origin: config.instance.url,
 			rpId: config.runtime.hostname,
@@ -47,7 +43,11 @@ export function createWebAuthnService(
 		};
 	}
 
-	async function initiateRegistration(userId: MiUser['id'], userName: string, userDisplayName?: string): Promise<PublicKeyCredentialCreationOptionsJSON> {
+	async function initiateRegistration(
+		userId: MiUser['id'],
+		userName: string,
+		userDisplayName?: string,
+	): Promise<PublicKeyCredentialCreationOptionsJSON> {
 		const relyingParty = getRelyingParty();
 		const keys = await listUserSecurityKeysByUserIdFromDatabase(db, userId);
 
@@ -57,10 +57,13 @@ export function createWebAuthnService(
 			userID: isoUint8Array.fromUTF8String(userId),
 			userName: userName,
 			...(userDisplayName === undefined ? {} : { userDisplayName }),
-			excludeCredentials: keys.map(key => (<{ id: string; transports?: AuthenticatorTransportFuture[]; }>{
-				id: key.id,
-				...(key.transports == null ? {} : { transports: key.transports }),
-			})),
+			excludeCredentials: keys.map(
+				(key) =>
+					<{ id: string; transports?: AuthenticatorTransportFuture[] }>{
+						id: key.id,
+						...(key.transports == null ? {} : { transports: key.transports }),
+					},
+			),
 			authenticatorSelection: {
 				residentKey: 'required',
 				userVerification: 'preferred',
@@ -72,7 +75,10 @@ export function createWebAuthnService(
 		return registrationOptions;
 	}
 
-	async function verifyRegistration(userId: MiUser['id'], response: RegistrationResponseJSON): Promise<{
+	async function verifyRegistration(
+		userId: MiUser['id'],
+		response: RegistrationResponseJSON,
+	): Promise<{
 		credentialID: string;
 		credentialPublicKey: Uint8Array;
 		attestationObject: Uint8Array;
@@ -138,10 +144,13 @@ export function createWebAuthnService(
 
 		const authenticationOptions = await generateAuthenticationOptions({
 			rpID: relyingParty.rpId,
-			allowCredentials: keys.map(key => (<{ id: string; transports?: AuthenticatorTransportFuture[]; }>{
-				id: key.id,
-				transports: key.transports ?? undefined,
-			})),
+			allowCredentials: keys.map(
+				(key) =>
+					<{ id: string; transports?: AuthenticatorTransportFuture[] }>{
+						id: key.id,
+						transports: key.transports ?? undefined,
+					},
+			),
 			userVerification: 'preferred',
 		});
 
@@ -154,7 +163,9 @@ export function createWebAuthnService(
 	 * Initiate Passkey Auth (Without specifying user)
 	 * @returns authenticationOptions
 	 */
-	async function initiateSignInWithPasskeyAuthentication(context: string): Promise<PublicKeyCredentialRequestOptionsJSON> {
+	async function initiateSignInWithPasskeyAuthentication(
+		context: string,
+	): Promise<PublicKeyCredentialRequestOptionsJSON> {
 		const relyingParty = getRelyingParty();
 
 		const authenticationOptions = await generateAuthenticationOptions({
@@ -172,7 +183,10 @@ export function createWebAuthnService(
 	 * @throws IdentifiableError
 	 * @returns If the challenge is successful, return the user ID. Otherwise, return null.
 	 */
-	async function verifySignInWithPasskeyAuthentication(context: string, response: AuthenticationResponseJSON): Promise<MiUser['id'] | null> {
+	async function verifySignInWithPasskeyAuthentication(
+		context: string,
+		response: AuthenticationResponseJSON,
+	): Promise<MiUser['id'] | null> {
 		const challenge = await redisClient.getdel(`webauthn:challenge:${context}`);
 
 		if (!challenge) {
@@ -238,7 +252,8 @@ export function createWebAuthnService(
 		// マイグレーション
 		if (key.counter === 0 && key.publicKey.length === 87) {
 			const cert = new Uint8Array(Buffer.from(key.publicKey, 'base64url'));
-			if (cert[0] === 0x04) { // 前の実装ではいつも 0x04 で始まっていた
+			if (cert[0] === 0x04) {
+				// 前の実装ではいつも 0x04 で始まっていた
 				const halfLength = (cert.length - 1) / 2;
 
 				const cborMap = new Map<number, number | Uint8Array>();

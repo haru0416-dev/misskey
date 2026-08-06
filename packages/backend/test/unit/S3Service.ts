@@ -23,20 +23,21 @@ import { MiMeta } from '@/models/_.js';
 describe('S3Service', () => {
 	let s3Service: S3Service;
 	const s3Mock = mockClient(S3Client);
-	const meta = (overrides: Partial<MiMeta> = {}) => ({
-		objectStorageEndpoint: null,
-		objectStorageUseSSL: true,
-		objectStorageUseProxy: true,
-		objectStorageAccessKey: null,
-		objectStorageSecretKey: null,
-		objectStorageRegion: null,
-		objectStorageS3ForcePathStyle: false,
-		...overrides,
-	}) as MiMeta;
+	const meta = (overrides: Partial<MiMeta> = {}) =>
+		({
+			objectStorageEndpoint: null,
+			objectStorageUseSSL: true,
+			objectStorageUseProxy: true,
+			objectStorageAccessKey: null,
+			objectStorageSecretKey: null,
+			objectStorageRegion: null,
+			objectStorageS3ForcePathStyle: false,
+			...overrides,
+		}) as MiMeta;
 
 	beforeAll(() => {
 		const httpRequestService = {
-			getAgentByUrl: (url: URL) => url.protocol === 'https:' ? new https.Agent() : new http.Agent(),
+			getAgentByUrl: (url: URL) => (url.protocol === 'https:' ? new https.Agent() : new http.Agent()),
 		} as HttpRequestService;
 		s3Service = createS3Service(httpRequestService);
 	});
@@ -71,21 +72,25 @@ describe('S3Service', () => {
 		test('upload a file error', async () => {
 			s3Mock.on(PutObjectCommand).rejects({ name: 'Fake Error' });
 
-			await expect(s3Service.upload(meta({ objectStorageRegion: 'us-east-1' }), {
-				Bucket: 'fake',
-				Key: 'fake',
-				Body: 'x',
-			})).rejects.toThrow(Error);
+			await expect(
+				s3Service.upload(meta({ objectStorageRegion: 'us-east-1' }), {
+					Bucket: 'fake',
+					Key: 'fake',
+					Body: 'x',
+				}),
+			).rejects.toThrow(Error);
 		});
 
 		test('upload a large file error', async () => {
 			s3Mock.on(UploadPartCommand).rejects();
 
-			await expect(s3Service.upload(meta(), {
-				Bucket: 'fake',
-				Key: 'fake',
-				Body: 'x'.repeat(8 * 1024 * 1024 + 1), // デフォルトpartSizeにしている 8 * 1024 * 1024 を越えるサイズ
-			})).rejects.toThrow(Error);
+			await expect(
+				s3Service.upload(meta(), {
+					Bucket: 'fake',
+					Key: 'fake',
+					Body: 'x'.repeat(8 * 1024 * 1024 + 1), // デフォルトpartSizeにしている 8 * 1024 * 1024 を越えるサイズ
+				}),
+			).rejects.toThrow(Error);
 		});
 	});
 });

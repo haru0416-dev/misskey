@@ -50,8 +50,10 @@ export async function handleHonoApiAdminServerInfo(
 	const fsStats = await si.fsSize();
 	const netInterface = await si.networkInterfaceDefault();
 	const redisServerInfo = await deps.redis.info('Server');
-	const redisVersion = (redisServerInfo.match(new RegExp('^valkey_version:(.*)', 'm'))?.[1]
-		?? redisServerInfo.match(new RegExp('^redis_version:(.*)', 'm'))?.[1])?.trim();
+	const redisVersion = (
+		redisServerInfo.match(new RegExp('^valkey_version:(.*)', 'm'))?.[1] ??
+		redisServerInfo.match(new RegExp('^redis_version:(.*)', 'm'))?.[1]
+	)?.trim();
 	if (redisVersion == null) throw new Error('Redis server version is missing');
 	const psqlResult = await deps.db.execute<{ server_version: string }>(sql`SHOW server_version`);
 	const psqlVersion = psqlResult.rows[0]?.server_version;

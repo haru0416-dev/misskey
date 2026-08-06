@@ -69,7 +69,6 @@ export const adminAdUpdateParamDef = z.object({
 	isSensitive: z.boolean().optional(),
 });
 
-
 function noSuchAdError(id: string): HonoApiError {
 	return new HonoApiError({
 		status: 400,
@@ -146,7 +145,7 @@ export async function handleHonoApiAdminAdList(
 	body: Record<string, unknown>,
 ): Promise<Packed<'Ad'>[]> {
 	const params = parseHonoApiParams(adminAdListParamDef, body);
-	const { sinceId, untilId } = resolveDateIdPagination({ gen: time => genId(time) }, params);
+	const { sinceId, untilId } = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const ads = await listAdsFromDatabase(deps.db, {
 		limit: params.limit,
 		sinceId,
@@ -167,18 +166,22 @@ export async function handleHonoApiAdminAdUpdate(
 
 	if (ad == null) throw noSuchAdError('b7aa1727-1354-47bc-a182-3a9c3973d300');
 
-	const updatedAd = await updateAdInDatabase(deps.db, ad.id, omitUndefined({
-		url: params.url,
-		place: params.place,
-		priority: params.priority,
-		ratio: params.ratio,
-		memo: params.memo,
-		imageUrl: params.imageUrl,
-		expiresAt: params.expiresAt ? new Date(params.expiresAt) : undefined,
-		startsAt: params.startsAt ? new Date(params.startsAt) : undefined,
-		dayOfWeek: params.dayOfWeek,
-		isSensitive: params.isSensitive,
-	}));
+	const updatedAd = await updateAdInDatabase(
+		deps.db,
+		ad.id,
+		omitUndefined({
+			url: params.url,
+			place: params.place,
+			priority: params.priority,
+			ratio: params.ratio,
+			memo: params.memo,
+			imageUrl: params.imageUrl,
+			expiresAt: params.expiresAt ? new Date(params.expiresAt) : undefined,
+			startsAt: params.startsAt ? new Date(params.startsAt) : undefined,
+			dayOfWeek: params.dayOfWeek,
+			isSensitive: params.isSensitive,
+		}),
+	);
 
 	if (updatedAd == null) throw noSuchAdError('b7aa1727-1354-47bc-a182-3a9c3973d300');
 

@@ -9,14 +9,7 @@
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { entities } from 'misskey-js';
-import {
-	beforeEach,
-	beforeAll,
-	afterAll,
-	describe,
-	expect,
-	test,
-} from 'vitest';
+import { beforeEach, beforeAll, afterAll, describe, expect, test } from 'vitest';
 import {
 	api,
 	captureWebhook,
@@ -41,7 +34,10 @@ describe('[シナリオ] ユーザ通報', () => {
 	let alice: entities.SignupResponse;
 	let bob: entities.SignupResponse;
 
-	async function createSystemWebhook(args?: Partial<entities.AdminSystemWebhookCreateRequest>, credential?: UserToken): Promise<entities.AdminSystemWebhookCreateResponse> {
+	async function createSystemWebhook(
+		args?: Partial<entities.AdminSystemWebhookCreateRequest>,
+		credential?: UserToken,
+	): Promise<entities.AdminSystemWebhookCreateResponse> {
 		const res = await api(
 			'admin/system-webhook/create',
 			{
@@ -57,7 +53,10 @@ describe('[シナリオ] ユーザ通報', () => {
 		return res.body;
 	}
 
-	async function createAbuseReportNotificationRecipient(args?: Partial<entities.AdminAbuseReportNotificationRecipientCreateRequest>, credential?: UserToken): Promise<entities.AdminAbuseReportNotificationRecipientCreateResponse> {
+	async function createAbuseReportNotificationRecipient(
+		args?: Partial<entities.AdminAbuseReportNotificationRecipientCreateRequest>,
+		credential?: UserToken,
+	): Promise<entities.AdminAbuseReportNotificationRecipientCreateResponse> {
 		const res = await api(
 			'admin/abuse-report/notification-recipient/create',
 			{
@@ -71,7 +70,10 @@ describe('[シナリオ] ユーザ通報', () => {
 		return res.body;
 	}
 
-	async function createAbuseReport(args?: Partial<entities.UsersReportAbuseRequest>, credential?: UserToken): Promise<entities.EmptyResponse> {
+	async function createAbuseReport(
+		args?: Partial<entities.UsersReportAbuseRequest>,
+		credential?: UserToken,
+	): Promise<entities.EmptyResponse> {
 		const res = await api(
 			'users/report-abuse',
 			{
@@ -84,7 +86,10 @@ describe('[シナリオ] ユーザ通報', () => {
 		return res.body;
 	}
 
-	async function resolveAbuseReport(args?: Partial<entities.AdminResolveAbuseUserReportRequest>, credential?: UserToken): Promise<entities.EmptyResponse> {
+	async function resolveAbuseReport(
+		args?: Partial<entities.AdminResolveAbuseUserReportRequest>,
+		credential?: UserToken,
+	): Promise<entities.EmptyResponse> {
 		const res = await api(
 			'admin/resolve-abuse-user-report',
 			{
@@ -98,14 +103,17 @@ describe('[シナリオ] ユーザ通報', () => {
 
 	// -------------------------------------------------------------------------------------------
 
-	beforeAll(async () => {
-		queue = await startJobQueue();
-		admin = await signup({ username: 'admin' });
-		alice = await signup({ username: 'alice' });
-		bob = await signup({ username: 'bob' });
+	beforeAll(
+		async () => {
+			queue = await startJobQueue();
+			admin = await signup({ username: 'admin' });
+			alice = await signup({ username: 'alice' });
+			bob = await signup({ username: 'bob' });
 
-		await role(admin, { isAdministrator: true });
-	}, 1000 * 60 * 2);
+			await role(admin, { isAdministrator: true });
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await queue.close();
@@ -173,9 +181,12 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
-				await resolveAbuseReport({
-					reportId: webhookBody1.body.id,
-				}, admin);
+				await resolveAbuseReport(
+					{
+						reportId: webhookBody1.body.id,
+					},
+					admin,
+				);
 			});
 
 			console.log(JSON.stringify(webhookBody2, null, 2));
@@ -202,7 +213,7 @@ describe('[シナリオ] ユーザ通報', () => {
 			};
 			const webhookBody = await captureWebhook(async () => {
 				await createAbuseReport(abuse, bob);
-			}).catch(e => e.message);
+			}).catch((e) => e.message);
 
 			expect(webhookBody).toBe('timeout');
 		});
@@ -221,7 +232,7 @@ describe('[シナリオ] ユーザ通報', () => {
 			};
 			const webhookBody1 = await captureWebhook(async () => {
 				await createAbuseReport(abuse, bob);
-			}).catch(e => e.message);
+			}).catch((e) => e.message);
 
 			expect(webhookBody1).toBe('timeout');
 
@@ -229,9 +240,12 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
-				await resolveAbuseReport({
-					reportId: abuseReportId,
-				}, admin);
+				await resolveAbuseReport(
+					{
+						reportId: abuseReportId,
+					},
+					admin,
+				);
 			});
 
 			console.log(JSON.stringify(webhookBody2, null, 2));
@@ -271,10 +285,13 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
-				await resolveAbuseReport({
-					reportId: webhookBody1.body.id,
-				}, admin);
-			}).catch(e => e.message);
+				await resolveAbuseReport(
+					{
+						reportId: webhookBody1.body.id,
+					},
+					admin,
+				);
+			}).catch((e) => e.message);
 
 			expect(webhookBody2).toBe('timeout');
 		});
@@ -293,7 +310,7 @@ describe('[シナリオ] ユーザ通報', () => {
 			};
 			const webhookBody1 = await captureWebhook(async () => {
 				await createAbuseReport(abuse, bob);
-			}).catch(e => e.message);
+			}).catch((e) => e.message);
 
 			expect(webhookBody1).toBe('timeout');
 
@@ -301,10 +318,13 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
-				await resolveAbuseReport({
-					reportId: abuseReportId,
-				}, admin);
-			}).catch(e => e.message);
+				await resolveAbuseReport(
+					{
+						reportId: abuseReportId,
+					},
+					admin,
+				);
+			}).catch((e) => e.message);
 
 			expect(webhookBody2).toBe('timeout');
 		});
@@ -323,7 +343,7 @@ describe('[シナリオ] ユーザ通報', () => {
 			};
 			const webhookBody1 = await captureWebhook(async () => {
 				await createAbuseReport(abuse, bob);
-			}).catch(e => e.message);
+			}).catch((e) => e.message);
 
 			expect(webhookBody1).toBe('timeout');
 
@@ -331,10 +351,13 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
-				await resolveAbuseReport({
-					reportId: abuseReportId,
-				}, admin);
-			}).catch(e => e.message);
+				await resolveAbuseReport(
+					{
+						reportId: abuseReportId,
+					},
+					admin,
+				);
+			}).catch((e) => e.message);
 
 			expect(webhookBody2).toBe('timeout');
 		});
@@ -353,7 +376,7 @@ describe('[シナリオ] ユーザ通報', () => {
 			};
 			const webhookBody1 = await captureWebhook(async () => {
 				await createAbuseReport(abuse, bob);
-			}).catch(e => e.message);
+			}).catch((e) => e.message);
 
 			expect(webhookBody1).toBe('timeout');
 
@@ -361,10 +384,13 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
-				await resolveAbuseReport({
-					reportId: abuseReportId,
-				}, admin);
-			}).catch(e => e.message);
+				await resolveAbuseReport(
+					{
+						reportId: abuseReportId,
+					},
+					admin,
+				);
+			}).catch((e) => e.message);
 
 			expect(webhookBody2).toBe('timeout');
 		});

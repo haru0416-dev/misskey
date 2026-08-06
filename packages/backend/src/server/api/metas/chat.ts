@@ -3,7 +3,32 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { chatHistoryParamDef, chatMessagesCreateToRoomParamDef, chatMessagesCreateToUserParamDef, chatMessagesDeleteParamDef, chatMessagesReactParamDef, chatMessagesRoomTimelineParamDef, chatMessagesSearchParamDef, chatMessagesShowParamDef, chatMessagesUnreactParamDef, chatMessagesUserTimelineParamDef, chatRoomsCreateParamDef, chatRoomsDeleteParamDef, chatRoomsInvitationsCreateParamDef, chatRoomsInvitationsIgnoreParamDef, chatRoomsInvitationsInboxParamDef, chatRoomsInvitationsOutboxParamDef, chatRoomsJoinParamDef, chatRoomsJoiningParamDef, chatRoomsLeaveParamDef, chatRoomsMembersParamDef, chatRoomsMuteParamDef, chatRoomsOwnedParamDef, chatRoomsShowParamDef, chatRoomsUpdateParamDef } from '@/server/rest/chat.js';
+import {
+	chatHistoryParamDef,
+	chatMessagesCreateToRoomParamDef,
+	chatMessagesCreateToUserParamDef,
+	chatMessagesDeleteParamDef,
+	chatMessagesReactParamDef,
+	chatMessagesRoomTimelineParamDef,
+	chatMessagesSearchParamDef,
+	chatMessagesShowParamDef,
+	chatMessagesUnreactParamDef,
+	chatMessagesUserTimelineParamDef,
+	chatRoomsCreateParamDef,
+	chatRoomsDeleteParamDef,
+	chatRoomsInvitationsCreateParamDef,
+	chatRoomsInvitationsIgnoreParamDef,
+	chatRoomsInvitationsInboxParamDef,
+	chatRoomsInvitationsOutboxParamDef,
+	chatRoomsJoinParamDef,
+	chatRoomsJoiningParamDef,
+	chatRoomsLeaveParamDef,
+	chatRoomsMembersParamDef,
+	chatRoomsMuteParamDef,
+	chatRoomsOwnedParamDef,
+	chatRoomsShowParamDef,
+	chatRoomsUpdateParamDef,
+} from '@/server/rest/chat.js';
 import { z } from 'zod';
 import { HOUR, DAY } from '@/const.js';
 
@@ -25,7 +50,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatMessageLiteFor1on1',
 			},
 
@@ -86,7 +112,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatMessageLiteForRoom',
 			},
 
@@ -140,7 +167,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatMessage',
 			},
 
@@ -206,10 +234,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatMessageLiteFor1on1',
 				},
 			},
@@ -234,10 +264,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatMessageLiteForRoom',
 				},
 			},
@@ -262,10 +294,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatMessage',
 				},
 			},
@@ -297,12 +331,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatRoom',
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: chatRoomsCreateParamDef,
 	},
@@ -394,7 +428,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatRoom',
 			},
 
@@ -418,16 +453,17 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatRoom',
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: chatRoomsOwnedParamDef,
 	},
@@ -441,16 +477,17 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatRoomMembership',
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: chatRoomsJoiningParamDef,
 	},
@@ -464,7 +501,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatRoom',
 			},
 
@@ -488,10 +526,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatRoomMembership',
 				},
 			},
@@ -523,7 +563,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatRoomInvitation',
 			},
 
@@ -577,16 +618,17 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatRoomInvitation',
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: chatRoomsInvitationsInboxParamDef,
 	},
@@ -600,10 +642,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatRoomInvitation',
 				},
 			},
@@ -628,16 +672,17 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatMessage',
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: chatHistoryParamDef,
 	},
@@ -649,8 +694,7 @@ export const endpointMetas = {
 
 			kind: 'write:chat',
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: z.object({}),
 	},

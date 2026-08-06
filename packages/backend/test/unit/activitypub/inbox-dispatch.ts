@@ -27,7 +27,11 @@ function asRemote(user: MiUser): MiRemoteUser {
 	return user as MiRemoteUser;
 }
 
-async function createTestLocalUser(deps: HonoApiInboxDependencies, prefix: string, options: { isLocked?: boolean } = {}): Promise<MiUser> {
+async function createTestLocalUser(
+	deps: HonoApiInboxDependencies,
+	prefix: string,
+	options: { isLocked?: boolean } = {},
+): Promise<MiUser> {
 	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: {

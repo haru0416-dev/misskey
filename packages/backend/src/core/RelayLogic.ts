@@ -50,7 +50,10 @@ export function renderFollowRelay(config: Pick<Config, 'instance'>, relay: MiRel
 }
 
 export function renderUndo(config: RelayActivityConfig, object: string | IObject, user: { id: MiUser['id'] }): IUndo {
-	const id = typeof object !== 'string' && typeof object.id === 'string' && isUriLocal(config, object.id) ? `${object.id}/undo` : undefined;
+	const id =
+		typeof object !== 'string' && typeof object.id === 'string' && isUriLocal(config, object.id)
+			? `${object.id}/undo`
+			: undefined;
 
 	return {
 		type: 'Undo',
@@ -61,7 +64,10 @@ export function renderUndo(config: RelayActivityConfig, object: string | IObject
 	};
 }
 
-export function addContext<T extends IObject>(config: Pick<Config, 'instance'>, x: T): T & { '@context': any; id: string; } {
+export function addContext<T extends IObject>(
+	config: Pick<Config, 'instance'>,
+	x: T,
+): T & { '@context': any; id: string } {
 	if (typeof x === 'object' && x.id == null) {
 		x.id = `${config.instance.url}/${randomUUID()}`;
 	}

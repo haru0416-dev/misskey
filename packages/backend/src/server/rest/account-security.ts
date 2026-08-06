@@ -44,7 +44,12 @@ function incorrectPasswordError(id: string): HonoApiError {
 }
 
 function twoFactorAuthenticationFailedError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Two-factor authentication failed.', code: 'TWO_FACTOR_AUTHENTICATION_FAILED', id });
+	return new HonoApiError({
+		status: 400,
+		message: 'Two-factor authentication failed.',
+		code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+		id,
+	});
 }
 
 async function assertHonoApiTwoFactorIfEnabled(
@@ -166,13 +171,28 @@ export async function handleHonoApiIDeleteAccount(
 }
 
 function iUpdateEmailIncorrectPasswordError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Incorrect password.', code: 'INCORRECT_PASSWORD', id: 'e54c1d7e-e7d6-4103-86b6-0a95069b4ad3' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Incorrect password.',
+		code: 'INCORRECT_PASSWORD',
+		id: 'e54c1d7e-e7d6-4103-86b6-0a95069b4ad3',
+	});
 }
 function iUpdateEmailUnavailableError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Unavailable email address.', code: 'UNAVAILABLE', id: 'a2defefb-f220-8849-0af6-17f816099323' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Unavailable email address.',
+		code: 'UNAVAILABLE',
+		id: 'a2defefb-f220-8849-0af6-17f816099323',
+	});
 }
 function iUpdateEmailRequiredError(): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Email address is required.', code: 'EMAIL_REQUIRED', id: '324c7a88-59f2-492f-903f-89134f93e47e' });
+	return new HonoApiError({
+		status: 400,
+		message: 'Email address is required.',
+		code: 'EMAIL_REQUIRED',
+		id: '324c7a88-59f2-492f-903f-89134f93e47e',
+	});
 }
 
 export const updateEmailParamDef = z.object({
@@ -207,11 +227,15 @@ export async function handleHonoApiIUpdateEmail(
 		throw iUpdateEmailRequiredError();
 	}
 
-	await updateUserProfileInDatabase(deps.db, me.id, omitUndefined({
-		email: params.email,
-		emailVerified: false,
-		emailVerifyCode: null,
-	}));
+	await updateUserProfileInDatabase(
+		deps.db,
+		me.id,
+		omitUndefined({
+			email: params.email,
+			emailVerified: false,
+			emailVerifyCode: null,
+		}),
+	);
 
 	const iObj = await packMeDetailedForHonoApi(deps, me, { includeSecrets: true });
 

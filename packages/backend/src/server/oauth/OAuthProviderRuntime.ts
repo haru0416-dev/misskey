@@ -132,14 +132,14 @@ interface AuthorizationCodeGrant {
 }
 
 type AuthorizationCodeGrantState =
-	| { status: 'pending'; grant: AuthorizationCodeGrant; }
-	| { status: 'exchanging'; grant: AuthorizationCodeGrant; }
-	| { status: 'issued'; grant: AuthorizationCodeGrant; accessToken: string; }
-	| { status: 'revoked'; grant: AuthorizationCodeGrant; accessToken?: string; };
+	| { status: 'pending'; grant: AuthorizationCodeGrant }
+	| { status: 'exchanging'; grant: AuthorizationCodeGrant }
+	| { status: 'issued'; grant: AuthorizationCodeGrant; accessToken: string }
+	| { status: 'revoked'; grant: AuthorizationCodeGrant; accessToken?: string };
 
 type AuthorizationCodeGrantClaim =
-	| { status: 'claimed'; grant: AuthorizationCodeGrant; }
-	| { status: 'reused'; grant: AuthorizationCodeGrant; accessToken?: string; };
+	| { status: 'claimed'; grant: AuthorizationCodeGrant }
+	| { status: 'reused'; grant: AuthorizationCodeGrant; accessToken?: string };
 
 export interface OAuthEphemeralStore {
 	setAuthorizationTransaction(id: string, value: AuthorizationTransaction): Promise<void>;
@@ -185,7 +185,11 @@ export type OAuthProviderRuntime = {
 	dispose: () => void;
 };
 
-function parseMicroformats(doc: htmlParser.HTMLElement, baseUrl: string, id: string): { name: string | null; logo: string | null; } {
+function parseMicroformats(
+	doc: htmlParser.HTMLElement,
+	baseUrl: string,
+	id: string,
+): { name: string | null; logo: string | null } {
 	let name: string | null = null;
 	let logo: string | null = null;
 
@@ -211,7 +215,11 @@ function parseMicroformats(doc: htmlParser.HTMLElement, baseUrl: string, id: str
 	return { name, logo };
 }
 
-async function discoverClientInformation(logger: Logger, httpRequestService: OAuthProviderRuntimeDependencies['httpRequestService'], id: string): Promise<ClientInformation> {
+async function discoverClientInformation(
+	logger: Logger,
+	httpRequestService: OAuthProviderRuntimeDependencies['httpRequestService'],
+	id: string,
+): Promise<ClientInformation> {
 	try {
 		const res = await httpRequestService.send(id);
 
@@ -227,7 +235,7 @@ async function discoverClientInformation(logger: Logger, httpRequestService: OAu
 		const contentType = res.headers.get('content-type');
 		const mediaType = contentType?.split(';', 1)[0]?.trim() ?? null;
 		if (mediaType === 'application/json') {
-			const json = await res.json() as {
+			const json = (await res.json()) as {
 				client_id: string;
 				client_name?: string;
 				client_uri: string;
@@ -258,9 +266,11 @@ async function discoverClientInformation(logger: Logger, httpRequestService: OAu
 			const text = await res.text();
 			const doc = htmlParser.parse(`<div>${text}</div>`);
 
-			redirectUris.push(...[...doc.querySelectorAll('link[rel=redirect_uri][href]')]
-				.map(el => el.attributes['href'])
-				.filter((href): href is string => href != null));
+			redirectUris.push(
+				...[...doc.querySelectorAll('link[rel=redirect_uri][href]')]
+					.map((el) => el.attributes['href'])
+					.filter((href): href is string => href != null),
+			);
 
 			if (text) {
 				const microformats = parseMicroformats(doc, res.url, id);
@@ -275,7 +285,7 @@ async function discoverClientInformation(logger: Logger, httpRequestService: OAu
 
 		return {
 			id,
-			redirectUris: redirectUris.map(uri => new URL(uri, res.url).toString()),
+			redirectUris: redirectUris.map((uri) => new URL(uri, res.url).toString()),
 			name: typeof name === 'string' ? name : id,
 			logo,
 		};
@@ -303,7 +313,7 @@ export function firstValue(value: unknown | unknown[] | undefined): string | und
 
 function normalizeScope(scope: string | string[] | undefined): string[] {
 	const raw = Array.isArray(scope) ? scope : scope != null ? [scope] : [];
-	return raw.flatMap(value => value.split(/\s+/)).filter(Boolean);
+	return raw.flatMap((value) => value.split(/\s+/)).filter(Boolean);
 }
 
 export function parseUrlEncodedParameters(rawBody: string): OAuthRequestParameters {
@@ -335,10 +345,11 @@ export function toRequestParameters(body: unknown): OAuthRequestParameters {
 		return {};
 	}
 
-	return Object.fromEntries(Object.entries(body).filter(([_, value]) => (
-		typeof value === 'string' ||
-		(Array.isArray(value) && value.every(v => typeof v === 'string'))
-	)));
+	return Object.fromEntries(
+		Object.entries(body).filter(
+			([_, value]) => typeof value === 'string' || (Array.isArray(value) && value.every((v) => typeof v === 'string')),
+		),
+	);
 }
 
 function noStoreHeaders(extra?: HeaderSource): Headers {
@@ -403,10 +414,14 @@ function normalizeOAuthProviderError(error: unknown): OAuthProviderError {
 }
 
 function oauthProviderErrorResponse(error: OAuthProviderError, headers = noStoreHeaders()): Response {
-	return jsonResponse({
-		error: error.error,
-		...(error.expose && error.error_description ? { error_description: error.error_description } : {}),
-	}, error.statusCode ?? error.status ?? 400, headers);
+	return jsonResponse(
+		{
+			error: error.error,
+			...(error.expose && error.error_description ? { error_description: error.error_description } : {}),
+		},
+		error.statusCode ?? error.status ?? 400,
+		headers,
+	);
 }
 
 function appendIssuer(payload: Record<string, string>, issuerUrl: string): Record<string, string> {
@@ -547,7 +562,7 @@ function createRedisOAuthEphemeralStore(redis: Redis.Redis): OAuthEphemeralStore
 	};
 	return {
 		setAuthorizationTransaction: (id, value) => set(`oauth:authorization:${id}`, value),
-		consumeAuthorizationTransaction: id => consume(`oauth:authorization:${id}`),
+		consumeAuthorizationTransaction: (id) => consume(`oauth:authorization:${id}`),
 		setGrantCode: (code, value) => set(`oauth:grant:v2:${code}`, { status: 'pending', grant: value }),
 		async claimGrantCode(code) {
 			const raw = await redis.eval(claimRedisGrantCodeScript, 2, `oauth:grant:v2:${code}`, `oauth:grant:${code}`);
@@ -567,8 +582,11 @@ function createRedisOAuthEphemeralStore(redis: Redis.Redis): OAuthEphemeralStore
 }
 
 export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencies): OAuthProviderRuntime {
-	const ephemeralStore = deps.ephemeralStore ?? (deps.redis ? createRedisOAuthEphemeralStore(deps.redis) : createMemoryOAuthEphemeralStore());
-	const fetchLocalUserByNativeToken = deps.fetchLocalUserByNativeToken ?? ((token: string) => fetchLocalUserByNativeTokenFromDatabase(deps.db, token));
+	const ephemeralStore =
+		deps.ephemeralStore ??
+		(deps.redis ? createRedisOAuthEphemeralStore(deps.redis) : createMemoryOAuthEphemeralStore());
+	const fetchLocalUserByNativeToken =
+		deps.fetchLocalUserByNativeToken ?? ((token: string) => fetchLocalUserByNativeTokenFromDatabase(deps.db, token));
 	const createAccessToken = deps.createAccessToken ?? createAccessTokenInDatabase;
 	const deleteAccessTokenByToken = deps.deleteAccessTokenByToken ?? deleteAccessTokenByTokenFromDatabase;
 
@@ -582,7 +600,10 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				lastError = error;
 			}
 		}
-		deps.logger.error('Failed to revoke an access token after repeated authorization code use.', lastError instanceof Error ? lastError : null);
+		deps.logger.error(
+			'Failed to revoke an access token after repeated authorization code use.',
+			lastError instanceof Error ? lastError : null,
+		);
 		throw new OAuthProviderError('temporarily_unavailable', 'access token revocation is temporarily unavailable');
 	}
 
@@ -595,7 +616,9 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 		const codeChallengeMethod = firstValue(params.code_challenge_method);
 		const requestedScope = normalizeScope(params.scope);
 
-		deps.logger.info(`Validating authorization parameters, with client_id: ${clientId}, redirect_uri: ${redirectUriValue}, scope: ${requestedScope.join(' ')}`);
+		deps.logger.info(
+			`Validating authorization parameters, with client_id: ${clientId}, redirect_uri: ${redirectUriValue}, scope: ${requestedScope.join(' ')}`,
+		);
 
 		if (responseType !== 'code') {
 			throw createUnsupportedResponseTypeError();
@@ -632,7 +655,7 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 	}
 
 	function finalizeAuthorizationRequest(seed: AuthorizationRequestSeed): AuthorizationRequest {
-		const scopes = [...new Set(seed.requestedScope)].filter(scope => (<readonly string[]>kinds).includes(scope));
+		const scopes = [...new Set(seed.requestedScope)].filter((scope) => (<readonly string[]>kinds).includes(scope));
 		if (!seed.requestedScope.length || !scopes.length) {
 			throw new InvalidScopeError('`scope` parameter has no known scope', seed.requestedScope.join(' '));
 		}
@@ -682,20 +705,30 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 
 			deps.logger.info(`Rendering authorization page for "${clientInfo.name}"`);
 
-			return htmlResponse(String(await OAuthPage({
-				...await deps.getCommonData(),
-				transactionId,
-				clientName: clientInfo.name,
-				...(clientInfo.logo == null ? {} : { clientLogo: clientInfo.logo }),
-				scope: authorizationRequest.scopes,
-			})));
+			return htmlResponse(
+				String(
+					await OAuthPage({
+						...(await deps.getCommonData()),
+						transactionId,
+						clientName: clientInfo.name,
+						...(clientInfo.logo == null ? {} : { clientLogo: clientInfo.logo }),
+						scope: authorizationRequest.scopes,
+					}),
+				),
+			);
 		} catch (error) {
 			const providerError = normalizeOAuthProviderError(error);
 			if (validatedRedirectUri && providerError.allow_redirect && providerError.error !== 'unsupported_response_type') {
-				return redirectWithQuery(validatedRedirectUri, appendIssuer({
-					error: providerError.error,
-					...(state ? { state } : {}),
-				}, deps.config.instance.url));
+				return redirectWithQuery(
+					validatedRedirectUri,
+					appendIssuer(
+						{
+							error: providerError.error,
+							...(state ? { state } : {}),
+						},
+						deps.config.instance.url,
+					),
+				);
 			}
 
 			return oauthProviderErrorResponse(providerError);
@@ -716,10 +749,16 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 			const cancel = !!firstValue(params.cancel);
 			deps.logger.info(`Received the decision. Cancel: ${cancel}`);
 			if (cancel) {
-				return redirectWithQuery(transaction.request.redirectUri, appendIssuer({
-					error: 'access_denied',
-					...(transaction.request.state ? { state: transaction.request.state } : {}),
-				}, deps.config.instance.url));
+				return redirectWithQuery(
+					transaction.request.redirectUri,
+					appendIssuer(
+						{
+							error: 'access_denied',
+							...(transaction.request.state ? { state: transaction.request.state } : {}),
+						},
+						deps.config.instance.url,
+					),
+				);
 			}
 
 			const loginToken = firstValue(params.login_token);
@@ -730,7 +769,9 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 			deps.logger.info(`Checking the user before sending authorization code to ${transaction.client.id}`);
 			const user = await findUserByLoginToken(loginToken);
 
-			deps.logger.info(`Sending authorization code on behalf of user ${user.id} to ${transaction.client.id} through ${transaction.request.redirectUri}, with scope: [${transaction.request.scopes}]`);
+			deps.logger.info(
+				`Sending authorization code on behalf of user ${user.id} to ${transaction.client.id} through ${transaction.request.redirectUri}, with scope: [${transaction.request.scopes}]`,
+			);
 
 			const code = secureRndstr(128);
 			await ephemeralStore.setGrantCode(code, {
@@ -741,10 +782,16 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				scopes: transaction.request.scopes,
 			});
 
-			return redirectWithQuery(transaction.request.redirectUri, appendIssuer({
-				code,
-				...(transaction.request.state ? { state: transaction.request.state } : {}),
-			}, deps.config.instance.url));
+			return redirectWithQuery(
+				transaction.request.redirectUri,
+				appendIssuer(
+					{
+						code,
+						...(transaction.request.state ? { state: transaction.request.state } : {}),
+					},
+					deps.config.instance.url,
+				),
+			);
 		} catch (error) {
 			return oauthProviderErrorResponse(normalizeOAuthProviderError(error));
 		}
@@ -775,7 +822,9 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				throw new InvalidGrantError('grant request is invalid');
 			}
 			if (claim.status === 'reused') {
-				deps.logger.info(`Detected multiple code use from ${claim.grant.clientId} for user ${claim.grant.userId}. Revoking the code.`);
+				deps.logger.info(
+					`Detected multiple code use from ${claim.grant.clientId} for user ${claim.grant.userId}. Revoking the code.`,
+				);
 				if (claim.accessToken) await revokeAccessToken(claim.accessToken);
 				throw new InvalidGrantError('grant request is invalid');
 			}
@@ -807,35 +856,45 @@ export function createOAuthProviderRuntime(deps: OAuthProviderRuntimeDependencie
 				permission: granted.scopes,
 			});
 
-			if (await ephemeralStore.finalizeGrantCode(code, accessToken) === 'revoked') {
+			if ((await ephemeralStore.finalizeGrantCode(code, accessToken)) === 'revoked') {
 				deps.logger.info('Canceling the token as the authorization code was revoked in parallel during the exchange.');
 				await revokeAccessToken(accessToken);
 				throw new InvalidGrantError('grant request is invalid');
 			}
 
-			deps.logger.info(`Generated access token for ${granted.clientId} for user ${granted.userId}, with scope: [${granted.scopes}]`);
+			deps.logger.info(
+				`Generated access token for ${granted.clientId} for user ${granted.userId}, with scope: [${granted.scopes}]`,
+			);
 
-			return jsonResponse({
-				access_token: accessToken,
-				token_type: 'Bearer',
-				scope: granted.scopes.join(' '),
-			}, 200, tokenCorsHeaders());
+			return jsonResponse(
+				{
+					access_token: accessToken,
+					token_type: 'Bearer',
+					scope: granted.scopes.join(' '),
+				},
+				200,
+				tokenCorsHeaders(),
+			);
 		} catch (error) {
 			return oauthProviderErrorResponse(normalizeOAuthProviderError(error), tokenCorsHeaders());
 		}
 	}
 
 	function unknownEndpoint(): Response {
-		return jsonResponse({
-			error: {
-				message: 'Unknown OAuth endpoint.',
-				code: 'UNKNOWN_OAUTH_ENDPOINT',
-				id: 'aa49e620-26cb-4e28-aad6-8cbcb58db147',
-				kind: 'client',
+		return jsonResponse(
+			{
+				error: {
+					message: 'Unknown OAuth endpoint.',
+					code: 'UNKNOWN_OAUTH_ENDPOINT',
+					id: 'aa49e620-26cb-4e28-aad6-8cbcb58db147',
+					kind: 'client',
+				},
 			},
-		}, 404, new Headers({
-			'Content-Type': 'application/json; charset=utf-8',
-		}));
+			404,
+			new Headers({
+				'Content-Type': 'application/json; charset=utf-8',
+			}),
+		);
 	}
 
 	function tokenOptions(): Response {

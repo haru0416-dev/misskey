@@ -21,11 +21,7 @@ function deserializeFlash(row: FlashRow): MiFlash {
 	} as MiFlash;
 }
 
-function applyFlashPaginationCondition(
-	conditions: SQL[],
-	sinceId?: string | null,
-	untilId?: string | null,
-): void {
+function applyFlashPaginationCondition(conditions: SQL[], sinceId?: string | null, untilId?: string | null): void {
 	if (sinceId && untilId) {
 		conditions.push(gt(flash.id, sinceId));
 		conditions.push(lt(flash.id, untilId));
@@ -36,20 +32,14 @@ function applyFlashPaginationCondition(
 	}
 }
 
-function applyFlashSearchCondition(
-	conditions: SQL[],
-	searchQuery?: string | null,
-): void {
+function applyFlashSearchCondition(conditions: SQL[], searchQuery?: string | null): void {
 	if (searchQuery == null) {
 		return;
 	}
 
 	for (const word of searchQuery.trim().split(' ')) {
 		const escaped = `%${sqlLikeEscape(word)}%`;
-		const condition = or(
-			sql`${flash.title} ILIKE ${escaped}`,
-			sql`${flash.summary} ILIKE ${escaped}`,
-		);
+		const condition = or(sql`${flash.title} ILIKE ${escaped}`, sql`${flash.summary} ILIKE ${escaped}`);
 		if (condition != null) {
 			conditions.push(condition);
 		}
@@ -72,23 +62,13 @@ export function resolveFlashPagination(
 	return resolveDateIdPagination(idService, options);
 }
 
-export async function fetchFlashByIdFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiFlash['id'],
-): Promise<MiFlash | null> {
-	const [row] = await db
-		.select()
-		.from(flash)
-		.where(eq(flash.id, id))
-		.limit(1);
+export async function fetchFlashByIdFromDatabase(db: MiDrizzleDatabase, id: MiFlash['id']): Promise<MiFlash | null> {
+	const [row] = await db.select().from(flash).where(eq(flash.id, id)).limit(1);
 
 	return row == null ? null : deserializeFlash(row);
 }
 
-export async function fetchFlashByIdOrFailFromDatabase(
-	db: MiDrizzleDatabase,
-	id: MiFlash['id'],
-): Promise<MiFlash> {
+export async function fetchFlashByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiFlash['id']): Promise<MiFlash> {
 	const row = await fetchFlashByIdFromDatabase(db, id);
 
 	if (row == null) {
@@ -98,14 +78,8 @@ export async function fetchFlashByIdOrFailFromDatabase(
 	return row;
 }
 
-export async function createFlashInDatabase(
-	db: MiDrizzleDatabase,
-	data: FlashInsert,
-): Promise<MiFlash> {
-	const [row] = await db
-		.insert(flash)
-		.values(data)
-		.returning();
+export async function createFlashInDatabase(db: MiDrizzleDatabase, data: FlashInsert): Promise<MiFlash> {
+	const [row] = await db.insert(flash).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create flash');
@@ -119,35 +93,21 @@ export async function updateFlashInDatabase(
 	id: MiFlash['id'],
 	values: Partial<FlashInsert>,
 ): Promise<void> {
-	await db
-		.update(flash)
-		.set(values)
-		.where(eq(flash.id, id));
+	await db.update(flash).set(values).where(eq(flash.id, id));
 }
 
-export async function deleteFlashInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiFlash['id'],
-): Promise<void> {
-	await db
-		.delete(flash)
-		.where(eq(flash.id, id));
+export async function deleteFlashInDatabase(db: MiDrizzleDatabase, id: MiFlash['id']): Promise<void> {
+	await db.delete(flash).where(eq(flash.id, id));
 }
 
-export async function incrementFlashLikedCountInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiFlash['id'],
-): Promise<void> {
+export async function incrementFlashLikedCountInDatabase(db: MiDrizzleDatabase, id: MiFlash['id']): Promise<void> {
 	await db
 		.update(flash)
 		.set({ likedCount: sql`${flash.likedCount} + 1` })
 		.where(eq(flash.id, id));
 }
 
-export async function decrementFlashLikedCountInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiFlash['id'],
-): Promise<void> {
+export async function decrementFlashLikedCountInDatabase(db: MiDrizzleDatabase, id: MiFlash['id']): Promise<void> {
 	await db
 		.update(flash)
 		.set({ likedCount: sql`${flash.likedCount} - 1` })
@@ -203,10 +163,7 @@ export async function listFeaturedFlashesFromDatabase(
 	let query = db
 		.select()
 		.from(flash)
-		.where(and(
-			gt(flash.likedCount, 0),
-			eq(flash.visibility, 'public'),
-		))
+		.where(and(gt(flash.likedCount, 0), eq(flash.visibility, 'public')))
 		.orderBy(desc(flash.likedCount), desc(flash.updatedAt), desc(flash.id))
 		.limit(options.limit)
 		.$dynamic();

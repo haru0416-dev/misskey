@@ -14,7 +14,10 @@ type TelemetryProvider = { shutdown: () => Promise<void> };
 let providers: TelemetryProvider[] = [];
 let shutdownPromise: Promise<void> | undefined;
 let recordExceptionImpl: (error: unknown) => void = () => {};
-let traceHttpRequestImpl = (_request: Request, handler: () => Response | Promise<Response>): Response | Promise<Response> => handler();
+let traceHttpRequestImpl = (
+	_request: Request,
+	handler: () => Response | Promise<Response>,
+): Response | Promise<Response> => handler();
 
 export function shouldPropagateTraceContext(target: string | URL, configuredTargets: readonly string[]): boolean {
 	let targetUrl: URL;
@@ -24,7 +27,7 @@ export function shouldPropagateTraceContext(target: string | URL, configuredTarg
 		return false;
 	}
 
-	return configuredTargets.some(configuredTarget => {
+	return configuredTargets.some((configuredTarget) => {
 		const allowedUrl = new URL(configuredTarget);
 		if (targetUrl.origin !== allowedUrl.origin) return false;
 		if (allowedUrl.pathname === '/' && allowedUrl.search === '') return true;
@@ -32,7 +35,12 @@ export function shouldPropagateTraceContext(target: string | URL, configuredTarg
 	});
 }
 
-export function getClientRequestTarget(request: { host: string; path: string; port?: string | number; protocol: string }): URL {
+export function getClientRequestTarget(request: {
+	host: string;
+	path: string;
+	port?: string | number;
+	protocol: string;
+}): URL {
 	const authority = request.port == null || request.port === '' ? request.host : `${request.host}:${request.port}`;
 	return new URL(request.path, `${request.protocol}//${authority}`);
 }
@@ -43,15 +51,17 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 
 	const candidates: TelemetryProvider[] = [];
 	try {
-		const [api, autoInstrumentations, exporter, resources, sdkNode, traceBase, semanticConventions] = await Promise.all([
-			import('@opentelemetry/api'),
-			import('@opentelemetry/auto-instrumentations-node'),
-			import('@opentelemetry/exporter-trace-otlp-http'),
-			import('@opentelemetry/resources'),
-			import('@opentelemetry/sdk-node'),
-			import('@opentelemetry/sdk-trace-base'),
-			import('@opentelemetry/semantic-conventions'),
-		]);
+		const [api, autoInstrumentations, exporter, resources, sdkNode, traceBase, semanticConventions] = await Promise.all(
+			[
+				import('@opentelemetry/api'),
+				import('@opentelemetry/auto-instrumentations-node'),
+				import('@opentelemetry/exporter-trace-otlp-http'),
+				import('@opentelemetry/resources'),
+				import('@opentelemetry/sdk-node'),
+				import('@opentelemetry/sdk-trace-base'),
+				import('@opentelemetry/semantic-conventions'),
+			],
+		);
 		const resource = resources.resourceFromAttributes({
 			[semanticConventions.ATTR_SERVICE_NAME]: telemetry.serviceName ?? 'erebia-backend',
 			[semanticConventions.ATTR_SERVICE_VERSION]: config.runtime.version,
@@ -62,10 +72,7 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			...(telemetry.headers === undefined ? {} : { headers: telemetry.headers }),
 		};
 		const standardPropagator = new sdkNode.core.CompositePropagator({
-			propagators: [
-				new sdkNode.core.W3CTraceContextPropagator(),
-				new sdkNode.core.W3CBaggagePropagator(),
-			],
+			propagators: [new sdkNode.core.W3CTraceContextPropagator(), new sdkNode.core.W3CBaggagePropagator()],
 		});
 		const extractionOnlyPropagator: TextMapPropagator = {
 			inject: () => {},
@@ -77,7 +84,8 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			if (
 				shouldPropagateTraceContext(target, propagationTargets) &&
 				!shouldPropagateTraceContext(target, [telemetry.endpoint])
-			) standardPropagator.inject(context, carrier, setter);
+			)
+				standardPropagator.inject(context, carrier, setter);
 		};
 		const instrumentationConfig: InstrumentationConfigMap = {
 			'@opentelemetry/instrumentation-dns': { enabled: false },
@@ -94,9 +102,14 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			},
 			'@opentelemetry/instrumentation-undici': {
 				requestHook: (span, request) => {
-					injectIfAllowed(new URL(request.path, request.origin), api.trace.setSpan(api.context.active(), span), request, {
-						set: (carrier, key, value) => carrier.addHeader(key, value),
-					});
+					injectIfAllowed(
+						new URL(request.path, request.origin),
+						api.trace.setSpan(api.context.active(), span),
+						request,
+						{
+							set: (carrier, key, value) => carrier.addHeader(key, value),
+						},
+					);
 				},
 			},
 		};
@@ -129,27 +142,33 @@ export async function initializeTelemetry(config: Config): Promise<void> {
 			span.setStatus({ code: api.SpanStatusCode.ERROR });
 			span.end();
 		};
-		traceHttpRequestImpl = (request, handler) => tracer.startActiveSpan(`HTTP ${request.method}`, {
-			kind: api.SpanKind.SERVER,
-			attributes: {
-				'http.request.method': request.method,
-				'server.address': config.runtime.hostname,
-			},
-		}, api.propagation.extract(api.context.active(), request.headers, headerGetter), async span => {
-			try {
-				const response = await handler();
-				span.setAttribute('http.response.status_code', response.status);
-				if (response.status >= 500) span.setStatus({ code: api.SpanStatusCode.ERROR });
-				return response;
-			} catch (error) {
-				span.recordException(error instanceof Error ? error : String(error));
-				span.setStatus({ code: api.SpanStatusCode.ERROR });
-				recordExceptionImpl(error);
-				throw error;
-			} finally {
-				span.end();
-			}
-		});
+		traceHttpRequestImpl = (request, handler) =>
+			tracer.startActiveSpan(
+				`HTTP ${request.method}`,
+				{
+					kind: api.SpanKind.SERVER,
+					attributes: {
+						'http.request.method': request.method,
+						'server.address': config.runtime.hostname,
+					},
+				},
+				api.propagation.extract(api.context.active(), request.headers, headerGetter),
+				async (span) => {
+					try {
+						const response = await handler();
+						span.setAttribute('http.response.status_code', response.status);
+						if (response.status >= 500) span.setStatus({ code: api.SpanStatusCode.ERROR });
+						return response;
+					} catch (error) {
+						span.recordException(error instanceof Error ? error : String(error));
+						span.setStatus({ code: api.SpanStatusCode.ERROR });
+						recordExceptionImpl(error);
+						throw error;
+					} finally {
+						span.end();
+					}
+				},
+			);
 	} catch (error) {
 		console.error('Failed to initialize OpenTelemetry; Erebia will continue without telemetry.', error);
 		if (candidates.length > 0) await shutdownWithTimeout(candidates);
@@ -172,7 +191,10 @@ export function recordException(error: unknown): void {
 	}
 }
 
-export function traceHttpRequest(request: Request, handler: () => Response | Promise<Response>): Response | Promise<Response> {
+export function traceHttpRequest(
+	request: Request,
+	handler: () => Response | Promise<Response>,
+): Response | Promise<Response> {
 	return traceHttpRequestImpl(request, handler);
 }
 
@@ -192,14 +214,15 @@ export async function shutdownTelemetry(): Promise<void> {
 async function shutdownWithTimeout(activeProviders: TelemetryProvider[]): Promise<void> {
 	let timeout: ReturnType<typeof setTimeout> | undefined;
 	try {
-		const shutdownAll = Promise.allSettled(activeProviders.map(provider => provider.shutdown())).then(results => {
+		const shutdownAll = Promise.allSettled(activeProviders.map((provider) => provider.shutdown())).then((results) => {
 			for (const result of results) {
-				if (result.status === 'rejected') console.error('Failed to shut down an OpenTelemetry provider cleanly.', result.reason);
+				if (result.status === 'rejected')
+					console.error('Failed to shut down an OpenTelemetry provider cleanly.', result.reason);
 			}
 		});
 		await Promise.race([
 			shutdownAll,
-			new Promise<void>(resolve => {
+			new Promise<void>((resolve) => {
 				timeout = setTimeout(() => {
 					console.error(`OpenTelemetry shutdown exceeded ${SHUTDOWN_TIMEOUT_MS}ms; continuing process shutdown.`);
 					resolve();

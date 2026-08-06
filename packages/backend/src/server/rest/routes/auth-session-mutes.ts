@@ -4,12 +4,41 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
-import { handleHonoApiAuthAccept, handleHonoApiAuthSessionGenerate, handleHonoApiAuthSessionShow, handleHonoApiAuthSessionUserkey } from '../auth-session.js';
-import { handleHonoApiBlockingCreate, handleHonoApiBlockingDelete, handleHonoApiBlockingList } from '../account-blocking.js';
-import { handleHonoApiMuteCreate, handleHonoApiMuteDelete, handleHonoApiMuteList, handleHonoApiRenoteMuteCreate, handleHonoApiRenoteMuteDelete, handleHonoApiRenoteMuteList } from '../account-mutes.js';
+import {
+	assertCredential,
+	assertProhibitMoved,
+	assertSecureCredential,
+	assertTokenPermission,
+	authenticateHonoApiToken,
+} from '../auth.js';
+import {
+	handleHonoApiAuthAccept,
+	handleHonoApiAuthSessionGenerate,
+	handleHonoApiAuthSessionShow,
+	handleHonoApiAuthSessionUserkey,
+} from '../auth-session.js';
+import {
+	handleHonoApiBlockingCreate,
+	handleHonoApiBlockingDelete,
+	handleHonoApiBlockingList,
+} from '../account-blocking.js';
+import {
+	handleHonoApiMuteCreate,
+	handleHonoApiMuteDelete,
+	handleHonoApiMuteList,
+	handleHonoApiRenoteMuteCreate,
+	handleHonoApiRenoteMuteDelete,
+	handleHonoApiRenoteMuteList,
+} from '../account-mutes.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint, authenticateOptionalRequest } from '../shell-helpers.js';
+import {
+	jsonResponse,
+	emptyResponse,
+	jsonBody,
+	tokenFromRequest,
+	runApiEndpoint,
+	authenticateOptionalRequest,
+} from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -58,10 +87,15 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:blocks');
-			await assertHonoApiRateLimitForUser(deps, 'blocking/create', {
-				duration: 60 * 60 * 1000,
-				max: 20,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'blocking/create',
+				{
+					duration: 60 * 60 * 1000,
+					max: 20,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiBlockingCreate(deps, auth.user, body));
 		});
@@ -73,10 +107,15 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'write:blocks');
-			await assertHonoApiRateLimitForUser(deps, 'blocking/delete', {
-				duration: 60 * 60 * 1000,
-				max: 100,
-			}, auth.user);
+			await assertHonoApiRateLimitForUser(
+				deps,
+				'blocking/delete',
+				{
+					duration: 60 * 60 * 1000,
+					max: 100,
+				},
+				auth.user,
+			);
 
 			return jsonResponse(c, await handleHonoApiBlockingDelete(deps, auth.user, body));
 		});

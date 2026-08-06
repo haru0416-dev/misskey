@@ -135,7 +135,10 @@ class HttpRequestServiceAgent extends http.Agent {
 	}
 
 	@bindThis
-	public override createConnection(options: http.ClientRequestArgs, callback?: (err: Error | null, stream: stream.Duplex) => void): stream.Duplex {
+	public override createConnection(
+		options: http.ClientRequestArgs,
+		callback?: (err: Error | null, stream: stream.Duplex) => void,
+	): stream.Duplex {
 		const socket = super.createConnection(options, callback);
 
 		if (socket == null) {
@@ -166,7 +169,10 @@ class HttpsRequestServiceAgent extends https.Agent {
 	}
 
 	@bindThis
-	public override createConnection(options: http.ClientRequestArgs, callback?: (err: Error | null, stream: stream.Duplex) => void): stream.Duplex {
+	public override createConnection(
+		options: http.ClientRequestArgs,
+		callback?: (err: Error | null, stream: stream.Duplex) => void,
+	): stream.Duplex {
 		const socket = super.createConnection(options, callback);
 
 		if (socket == null) {
@@ -193,7 +199,7 @@ export function createHttpRequestService(config: Config) {
 	const dnsCache = new CacheableLookup({
 		maxTtl: config.outboundNetwork.dnsCache.successTtlSeconds,
 		errorTtl: config.outboundNetwork.dnsCache.failureTtlSeconds,
-		lookup: false,	// nativeのdns.lookupにfallbackしない
+		lookup: false, // nativeのdns.lookupにfallbackしない
 	});
 
 	const agentOption = {
@@ -204,7 +210,8 @@ export function createHttpRequestService(config: Config) {
 		timeout: config.outboundNetwork.http.connectionTimeoutMs,
 		lookup: dnsCache.lookup as unknown as net.LookupFunction,
 		localAddress: config.outboundNetwork.bindAddress,
-		family: config.outboundNetwork.addressFamily === 'ipv4' ? 4 : config.outboundNetwork.addressFamily === 'ipv6' ? 6 : 0,
+		family:
+			config.outboundNetwork.addressFamily === 'ipv4' ? 4 : config.outboundNetwork.addressFamily === 'ipv6' ? 6 : 0,
 	};
 
 	const httpNative: http.Agent = new http.Agent(agentOption);
@@ -217,26 +224,26 @@ export function createHttpRequestService(config: Config) {
 
 	const httpAgent: http.Agent = config.outboundNetwork.proxy.url
 		? new HttpProxyAgent({
-			keepAlive: true,
-			keepAliveMsecs: config.outboundNetwork.http.keepAliveDurationMs,
-			maxSockets: config.outboundNetwork.http.maximumSockets,
-			maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
-			scheduling: 'lifo',
-			proxy: config.outboundNetwork.proxy.url,
-			localAddress: config.outboundNetwork.bindAddress,
-		})
+				keepAlive: true,
+				keepAliveMsecs: config.outboundNetwork.http.keepAliveDurationMs,
+				maxSockets: config.outboundNetwork.http.maximumSockets,
+				maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
+				scheduling: 'lifo',
+				proxy: config.outboundNetwork.proxy.url,
+				localAddress: config.outboundNetwork.bindAddress,
+			})
 		: httpNonProxyAgent;
 
 	const httpsAgent: https.Agent = config.outboundNetwork.proxy.url
 		? new HttpsProxyAgent({
-			keepAlive: true,
-			keepAliveMsecs: config.outboundNetwork.http.keepAliveDurationMs,
-			maxSockets: config.outboundNetwork.http.maximumSockets,
-			maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
-			scheduling: 'lifo',
-			proxy: config.outboundNetwork.proxy.url,
-			localAddress: config.outboundNetwork.bindAddress,
-		})
+				keepAlive: true,
+				keepAliveMsecs: config.outboundNetwork.http.keepAliveDurationMs,
+				maxSockets: config.outboundNetwork.http.maximumSockets,
+				maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
+				scheduling: 'lifo',
+				proxy: config.outboundNetwork.proxy.url,
+				localAddress: config.outboundNetwork.bindAddress,
+			})
 		: httpsNonProxyAgent;
 
 	function getAgentByUrl(url: URL, bypassProxy = false, isLocalAddressAllowed = false): http.Agent | https.Agent {
@@ -246,7 +253,7 @@ export function createHttpRequestService(config: Config) {
 			}
 			return url.protocol === 'http:' ? httpNonProxyAgent : httpsNonProxyAgent;
 		} else {
-			if (isLocalAddressAllowed && (!config.outboundNetwork.proxy.url)) {
+			if (isLocalAddressAllowed && !config.outboundNetwork.proxy.url) {
 				return url.protocol === 'http:' ? httpNative : httpsNative;
 			}
 			return url.protocol === 'http:' ? httpAgent : httpsAgent;
@@ -255,9 +262,7 @@ export function createHttpRequestService(config: Config) {
 
 	function getAgentForHttp(url: URL, isLocalAddressAllowed = false): http.Agent {
 		if ((config.outboundNetwork.proxy.bypassHosts ?? []).includes(url.hostname)) {
-			return isLocalAddressAllowed
-				? httpNative
-				: httpNonProxyAgent;
+			return isLocalAddressAllowed ? httpNative : httpNonProxyAgent;
 		} else {
 			return httpAgent;
 		}
@@ -265,9 +270,7 @@ export function createHttpRequestService(config: Config) {
 
 	function getAgentForHttps(url: URL, isLocalAddressAllowed = false): https.Agent {
 		if ((config.outboundNetwork.proxy.bypassHosts ?? []).includes(url.hostname)) {
-			return isLocalAddressAllowed
-				? httpsNative
-				: httpsNonProxyAgent;
+			return isLocalAddressAllowed ? httpsNative : httpsNonProxyAgent;
 		} else {
 			return httpsAgent;
 		}
@@ -296,60 +299,87 @@ export function createHttpRequestService(config: Config) {
 				dnsCache.lookup(host, { all: true }, (err, result) => {
 					if (err) return reject(err);
 					const entries = Array.isArray(result) ? result : [result];
-					resolve(entries.map(e => (typeof e === 'string' ? e : e.address)));
+					resolve(entries.map((e) => (typeof e === 'string' ? e : e.address)));
 				});
 			});
 		}
 
 		for (const address of addresses) {
-			if (ipaddr.isValid(address) && isPrivateIp(address, config.outboundNetwork.privateNetworkAccess.allowedNetworks)) {
+			if (
+				ipaddr.isValid(address) &&
+				isPrivateIp(address, config.outboundNetwork.privateNetworkAccess.allowedNetworks)
+			) {
 				throw new StatusError(`Blocked address: ${address}`, 403, 'Blocked');
 			}
 		}
 	}
 
-	async function getActivityJson(url: string, isLocalAddressAllowed = false, allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict): Promise<IObject> {
-		const res = await send(url, {
-			method: 'GET',
-			headers: {
-				Accept: 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+	async function getActivityJson(
+		url: string,
+		isLocalAddressAllowed = false,
+		allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict,
+	): Promise<IObject> {
+		const res = await send(
+			url,
+			{
+				method: 'GET',
+				headers: {
+					Accept: 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+				},
+				timeout: 5000,
+				size: 1024 * 256,
+				isLocalAddressAllowed: isLocalAddressAllowed,
 			},
-			timeout: 5000,
-			size: 1024 * 256,
-			isLocalAddressAllowed: isLocalAddressAllowed,
-		}, {
-			throwErrorWhenResponseNotOk: true,
-			validators: [validateContentTypeSetAsActivityPub],
-		});
+			{
+				throwErrorWhenResponseNotOk: true,
+				validators: [validateContentTypeSetAsActivityPub],
+			},
+		);
 
 		const finalUrl = res.url; // redirects may have been involved
-		const activity = await res.json() as IObject;
+		const activity = (await res.json()) as IObject;
 
 		assertActivityMatchesUrl(url, activity, finalUrl, allowSoftfail);
 
 		return activity;
 	}
 
-	async function getJson<T = unknown>(url: string, accept = 'application/json, */*', headers?: Record<string, string>, isLocalAddressAllowed = false): Promise<T> {
+	async function getJson<T = unknown>(
+		url: string,
+		accept = 'application/json, */*',
+		headers?: Record<string, string>,
+		isLocalAddressAllowed = false,
+	): Promise<T> {
 		const res = await send(url, {
 			method: 'GET',
-			headers: Object.assign({
-				Accept: accept,
-			}, headers ?? {}),
+			headers: Object.assign(
+				{
+					Accept: accept,
+				},
+				headers ?? {},
+			),
 			timeout: 5000,
 			size: 1024 * 256,
 			isLocalAddressAllowed: isLocalAddressAllowed,
 		});
 
-		return await res.json() as T;
+		return (await res.json()) as T;
 	}
 
-	async function getHtml(url: string, accept = 'text/html, */*', headers?: Record<string, string>, isLocalAddressAllowed = false): Promise<string> {
+	async function getHtml(
+		url: string,
+		accept = 'text/html, */*',
+		headers?: Record<string, string>,
+		isLocalAddressAllowed = false,
+	): Promise<string> {
 		const res = await send(url, {
 			method: 'GET',
-			headers: Object.assign({
-				Accept: accept,
-			}, headers ?? {}),
+			headers: Object.assign(
+				{
+					Accept: accept,
+				},
+				headers ?? {},
+			),
 			timeout: 5000,
 			isLocalAddressAllowed: isLocalAddressAllowed,
 		});
@@ -380,8 +410,8 @@ export function createHttpRequestService(config: Config) {
 
 			// proxy 経由の宛先解決は proxy 側が行うため、bypass 対象や proxyBypassHosts は素通しにする。
 			const proxyUrl = config.outboundNetwork.proxy.url;
-			const useProxy = proxyUrl != null
-				&& !(config.outboundNetwork.proxy.bypassHosts ?? []).includes(currentUrl.hostname);
+			const useProxy =
+				proxyUrl != null && !(config.outboundNetwork.proxy.bypassHosts ?? []).includes(currentUrl.hostname);
 
 			const init: RequestInit & { proxy?: string } = {
 				method,
@@ -428,12 +458,12 @@ export function createHttpRequestService(config: Config) {
 	async function send(
 		url: string,
 		args: {
-			method?: string,
-			body?: RequestInit['body'],
-			headers?: Record<string, string>,
-			timeout?: number,
-			size?: number,
-			isLocalAddressAllowed?: boolean,
+			method?: string;
+			body?: RequestInit['body'];
+			headers?: Record<string, string>;
+			timeout?: number;
+			size?: number;
+			isLocalAddressAllowed?: boolean;
 		} = {},
 		extra: HttpRequestSendOptions = {
 			throwErrorWhenResponseNotOk: true,
@@ -449,15 +479,19 @@ export function createHttpRequestService(config: Config) {
 		let res: Response;
 		let body: Uint8Array;
 		try {
-			res = await fetchFollowingRedirects(url, {
-				method: args.method ?? 'GET',
-				headers: {
-					'User-Agent': config.runtime.userAgent,
-					...(args.headers ?? {}),
+			res = await fetchFollowingRedirects(
+				url,
+				{
+					method: args.method ?? 'GET',
+					headers: {
+						'User-Agent': config.runtime.userAgent,
+						...(args.headers ?? {}),
+					},
+					body: args.body,
+					signal: controller.signal,
 				},
-				body: args.body,
-				signal: controller.signal,
-			}, isLocalAddressAllowed);
+				isLocalAddressAllowed,
+			);
 			body = await readBodyWithLimit(res, args.size ?? config.outboundNetwork.http.maximumResponseSizeBytes);
 		} finally {
 			clearTimeout(timer);
@@ -470,7 +504,7 @@ export function createHttpRequestService(config: Config) {
 		}
 
 		if (res.ok) {
-			for (const validator of (extra.validators ?? [])) {
+			for (const validator of extra.validators ?? []) {
 				validator(wrapped);
 			}
 		}

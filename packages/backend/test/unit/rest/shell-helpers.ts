@@ -8,11 +8,19 @@ import { Hono } from 'hono';
 import type { Config } from '@/config.js';
 import { getRequestIp, jsonBody, runApiEndpoint } from '@/server/rest/shell-helpers.js';
 
-async function resolveRequestIp(trustedNetworks: string[], forwardedFor: string, remoteAddress: string): Promise<string> {
+async function resolveRequestIp(
+	trustedNetworks: string[],
+	forwardedFor: string,
+	remoteAddress: string,
+): Promise<string> {
 	const app = new Hono();
-	app.get('/', c => c.text(getRequestIp(c, {
-		server: { reverseProxy: { trustedNetworks } },
-	} as Config)));
+	app.get('/', (c) =>
+		c.text(
+			getRequestIp(c, {
+				server: { reverseProxy: { trustedNetworks } },
+			} as Config),
+		),
+	);
 	const response = await app.request('/', {
 		headers: {
 			'x-forwarded-for': forwardedFor,
@@ -28,7 +36,9 @@ describe('getRequestIp', () => {
 	});
 
 	test('returns the first untrusted address when traversing trusted proxies', async () => {
-		expect(await resolveRequestIp(['10.0.0.0/8'], '192.0.2.1, 203.0.113.10, 10.0.0.2', '10.0.0.3')).toBe('203.0.113.10');
+		expect(await resolveRequestIp(['10.0.0.0/8'], '192.0.2.1, 203.0.113.10, 10.0.0.2', '10.0.0.3')).toBe(
+			'203.0.113.10',
+		);
 	});
 
 	test('ignores forwarded headers when no trusted proxy network is configured', async () => {
@@ -39,7 +49,7 @@ describe('getRequestIp', () => {
 describe('runApiEndpoint', () => {
 	test('treats an empty JSON request body as an empty object', async () => {
 		const app = new Hono();
-		app.post('/', c => runApiEndpoint(c, async () => c.json(await jsonBody(c))));
+		app.post('/', (c) => runApiEndpoint(c, async () => c.json(await jsonBody(c))));
 
 		const response = await app.request('/', { method: 'POST' });
 		expect(response.status).toBe(200);
@@ -48,7 +58,7 @@ describe('runApiEndpoint', () => {
 
 	test('returns the JSON error contract for non-Error throws', async () => {
 		const app = new Hono();
-		app.get('/', c => runApiEndpoint(c, () => Promise.reject('unexpected')));
+		app.get('/', (c) => runApiEndpoint(c, () => Promise.reject('unexpected')));
 
 		const response = await app.request('/');
 		expect(response.status).toBe(500);

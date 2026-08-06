@@ -70,7 +70,7 @@ export type DbExportFollowingData = {
 };
 
 export type DBExportAntennasData = {
-	user: ThinUser
+	user: ThinUser;
 };
 
 export type DbUserDeleteJobData = {

@@ -23,10 +23,7 @@ function deserializeRoleAssignment(row: RoleAssignmentRow): MiRoleAssignment {
 }
 
 function activeRoleAssignmentCondition(now = new Date()): SQL {
-	return or(
-		isNull(roleAssignment.expiresAt),
-		gt(roleAssignment.expiresAt, now),
-	)!;
+	return or(isNull(roleAssignment.expiresAt), gt(roleAssignment.expiresAt, now))!;
 }
 
 function applyRoleAssignmentPaginationCondition(
@@ -64,11 +61,7 @@ export async function fetchRoleAssignmentByIdOrFailFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiRoleAssignment['id'],
 ): Promise<MiRoleAssignment> {
-	const [row] = await db
-		.select()
-		.from(roleAssignment)
-		.where(eq(roleAssignment.id, id))
-		.limit(1);
+	const [row] = await db.select().from(roleAssignment).where(eq(roleAssignment.id, id)).limit(1);
 
 	if (row == null) {
 		throw new Error(`Role assignment ${id} not found`);
@@ -85,10 +78,7 @@ export async function fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(
 	const [row] = await db
 		.select()
 		.from(roleAssignment)
-		.where(and(
-			eq(roleAssignment.userId, userId),
-			eq(roleAssignment.roleId, roleId),
-		))
+		.where(and(eq(roleAssignment.userId, userId), eq(roleAssignment.roleId, roleId)))
 		.limit(1);
 
 	return row == null ? null : deserializeRoleAssignment(row);
@@ -98,14 +88,16 @@ export async function listRoleAssignmentsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiRoleAssignment[]> {
-	const statement = preparedQueryFor(db, 'roleAssignment:byUserId', () => db
-		.select()
-		.from(roleAssignment)
-		.where(eq(roleAssignment.userId, sql.placeholder('userId')))
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'roleAssignment:byUserId', () =>
+		db
+			.select()
+			.from(roleAssignment)
+			.where(eq(roleAssignment.userId, sql.placeholder('userId')))
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ userId });
 
-	return rows.map(row => deserializeRoleAssignment(row));
+	return rows.map((row) => deserializeRoleAssignment(row));
 }
 
 /** ユーザー一覧のpack用: 複数ユーザーのロールアサインを1クエリで取得する。 */
@@ -115,14 +107,16 @@ export async function listRoleAssignmentsByUserIdsFromDatabase(
 ): Promise<MiRoleAssignment[]> {
 	if (userIds.length === 0) return [];
 
-	const statement = preparedQueryFor(db, 'roleAssignment:byUserIds', () => db
-		.select()
-		.from(roleAssignment)
-		.where(sql`${roleAssignment.userId} = ANY(${sql.placeholder('userIds')})`)
-		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const statement = preparedQueryFor(db, 'roleAssignment:byUserIds', () =>
+		db
+			.select()
+			.from(roleAssignment)
+			.where(sql`${roleAssignment.userId} = ANY(${sql.placeholder('userIds')})`)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
 	const rows = await statement.execute({ userIds });
 
-	return rows.map(row => deserializeRoleAssignment(row));
+	return rows.map((row) => deserializeRoleAssignment(row));
 }
 
 export async function listRoleAssignmentsByRoleIdsFromDatabase(
@@ -133,12 +127,9 @@ export async function listRoleAssignmentsByRoleIdsFromDatabase(
 		return [];
 	}
 
-	const rows = await db
-		.select()
-		.from(roleAssignment)
-		.where(inArray(roleAssignment.roleId, roleIds));
+	const rows = await db.select().from(roleAssignment).where(inArray(roleAssignment.roleId, roleIds));
 
-	return rows.map(row => deserializeRoleAssignment(row));
+	return rows.map((row) => deserializeRoleAssignment(row));
 }
 
 export async function countActiveRoleAssignmentsByRoleIdFromDatabase(
@@ -148,10 +139,7 @@ export async function countActiveRoleAssignmentsByRoleIdFromDatabase(
 	const [row] = await db
 		.select({ count: count() })
 		.from(roleAssignment)
-		.where(and(
-			eq(roleAssignment.roleId, roleId),
-			activeRoleAssignmentCondition(),
-		));
+		.where(and(eq(roleAssignment.roleId, roleId), activeRoleAssignmentCondition()));
 
 	return row?.count ?? 0;
 }
@@ -170,13 +158,10 @@ export async function countActiveRoleAssignmentsByRoleIdsFromDatabase(
 			count: count(),
 		})
 		.from(roleAssignment)
-		.where(and(
-			inArray(roleAssignment.roleId, roleIds),
-			activeRoleAssignmentCondition(),
-		))
+		.where(and(inArray(roleAssignment.roleId, roleIds), activeRoleAssignmentCondition()))
 		.groupBy(roleAssignment.roleId);
 
-	return new Map(rows.map(row => [row.roleId, row.count]));
+	return new Map(rows.map((row) => [row.roleId, row.count]));
 }
 
 export async function listActiveRoleAssignmentsByRoleIdFromDatabase(
@@ -189,10 +174,7 @@ export async function listActiveRoleAssignmentsByRoleIdFromDatabase(
 		untilId?: string | null;
 	},
 ): Promise<MiRoleAssignment[]> {
-	const conditions: SQL[] = [
-		eq(roleAssignment.roleId, roleId),
-		activeRoleAssignmentCondition(),
-	];
+	const conditions: SQL[] = [eq(roleAssignment.roleId, roleId), activeRoleAssignmentCondition()];
 	applyRoleAssignmentPaginationCondition(conditions, options.sinceId, options.untilId);
 
 	const rows = await db
@@ -202,17 +184,14 @@ export async function listActiveRoleAssignmentsByRoleIdFromDatabase(
 		.orderBy(options.order === 'asc' ? asc(roleAssignment.id) : desc(roleAssignment.id))
 		.limit(options.limit);
 
-	return rows.map(row => deserializeRoleAssignment(row));
+	return rows.map((row) => deserializeRoleAssignment(row));
 }
 
 export async function createRoleAssignmentInDatabase(
 	db: MiDrizzleDatabase,
 	data: RoleAssignmentInsert,
 ): Promise<MiRoleAssignment> {
-	const [row] = await db
-		.insert(roleAssignment)
-		.values(data)
-		.returning();
+	const [row] = await db.insert(roleAssignment).values(data).returning();
 
 	if (row == null) {
 		throw new Error('Failed to create role assignment');
@@ -225,9 +204,7 @@ export async function deleteRoleAssignmentByIdFromDatabase(
 	db: MiDrizzleDatabase,
 	id: MiRoleAssignment['id'],
 ): Promise<void> {
-	await db
-		.delete(roleAssignment)
-		.where(eq(roleAssignment.id, id));
+	await db.delete(roleAssignment).where(eq(roleAssignment.id, id));
 }
 
 export async function deleteRoleAssignmentByUserIdAndRoleIdFromDatabase(
@@ -235,24 +212,11 @@ export async function deleteRoleAssignmentByUserIdAndRoleIdFromDatabase(
 	userId: MiUser['id'],
 	roleId: MiRole['id'],
 ): Promise<void> {
-	await db
-		.delete(roleAssignment)
-		.where(and(
-			eq(roleAssignment.userId, userId),
-			eq(roleAssignment.roleId, roleId),
-		));
+	await db.delete(roleAssignment).where(and(eq(roleAssignment.userId, userId), eq(roleAssignment.roleId, roleId)));
 }
 
-export async function deleteExpiredRoleAssignmentsFromDatabase(
-	db: MiDrizzleDatabase,
-	now: Date,
-): Promise<void> {
-	await db
-		.delete(roleAssignment)
-		.where(and(
-			isNotNull(roleAssignment.expiresAt),
-			lt(roleAssignment.expiresAt, now),
-		));
+export async function deleteExpiredRoleAssignmentsFromDatabase(db: MiDrizzleDatabase, now: Date): Promise<void> {
+	await db.delete(roleAssignment).where(and(isNotNull(roleAssignment.expiresAt), lt(roleAssignment.expiresAt, now)));
 }
 
 export async function deleteAllRoleAssignmentsFromDatabase(db: MiDrizzleDatabase): Promise<void> {

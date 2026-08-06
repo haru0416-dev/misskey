@@ -30,7 +30,6 @@ export const iSigninHistoryParamDef = z.object({
 	untilDate: z.number().int().optional(),
 });
 
-
 export function packHonoApiSignin(
 	deps: HonoApiIDependencies,
 	src: MiSignin,
@@ -115,5 +114,5 @@ export async function handleHonoApiISigninHistory(
 		untilId,
 	});
 
-	return history.map(record => packHonoApiSignin(deps, record));
+	return history.map((record) => packHonoApiSignin(deps, record));
 }

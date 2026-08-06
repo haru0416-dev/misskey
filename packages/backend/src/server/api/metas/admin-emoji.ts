@@ -3,7 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { adminEmojiAddParamDef, adminEmojiAliasesBulkParamDef, adminEmojiCopyParamDef, adminEmojiDeleteBulkParamDef, adminEmojiDeleteParamDef, adminEmojiImportZipParamDef, adminEmojiListParamDef, adminEmojiListRemoteParamDef, adminEmojiSetCategoryBulkParamDef, adminEmojiSetLicenseBulkParamDef, adminEmojiUpdateDocsParamDef } from '@/server/rest/emojis.js';
+import {
+	adminEmojiAddParamDef,
+	adminEmojiAliasesBulkParamDef,
+	adminEmojiCopyParamDef,
+	adminEmojiDeleteBulkParamDef,
+	adminEmojiDeleteParamDef,
+	adminEmojiImportZipParamDef,
+	adminEmojiListParamDef,
+	adminEmojiListRemoteParamDef,
+	adminEmojiSetCategoryBulkParamDef,
+	adminEmojiSetLicenseBulkParamDef,
+	adminEmojiUpdateDocsParamDef,
+} from '@/server/rest/emojis.js';
 
 export const endpointMetas = {
 	'admin/emoji/add': {
@@ -80,11 +92,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					id: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'id',
 					},
 				},
@@ -138,7 +152,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
 					ref: 'EmojiDetailed',
@@ -157,7 +172,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
 					ref: 'EmojiDetailed',

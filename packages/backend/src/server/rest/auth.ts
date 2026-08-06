@@ -3,7 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchAccessTokenByHashOrTokenFromDatabase, updateAccessTokenLastUsedAtInDatabase } from '@/core/AccessTokenStore.js';
+import {
+	fetchAccessTokenByHashOrTokenFromDatabase,
+	updateAccessTokenLastUsedAtInDatabase,
+} from '@/core/AccessTokenStore.js';
 import { fetchAppByIdOrFailFromDatabase } from '@/core/AppStore.js';
 import { fetchLocalUserByIdFromDatabase, fetchLocalUserByNativeTokenFromDatabase } from '@/core/UserStore.js';
 import { deserializeAccessToken } from '@/db/schema/access-token.js';
@@ -11,7 +14,14 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { isNativeUserToken } from '@/misc/token.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { accessDeniedError, accountMovedError, authenticationFailedError, credentialRequiredError, permissionDeniedError, userSuspendedError } from './error.js';
+import {
+	accessDeniedError,
+	accountMovedError,
+	authenticationFailedError,
+	credentialRequiredError,
+	permissionDeniedError,
+	userSuspendedError,
+} from './error.js';
 
 export type HonoApiAuthDependencies = {
 	db: MiDrizzleDatabase;

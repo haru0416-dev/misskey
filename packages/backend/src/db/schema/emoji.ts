@@ -8,31 +8,35 @@ import { boolean, index, pgTable, timestamp, uniqueIndex, varchar } from 'drizzl
 
 const emptyVarcharArray = sql`'{}'::character varying[]`;
 
-export const emoji = pgTable('emoji', {
-	id: varchar({ length: 32 }).primaryKey().notNull(),
-	updatedAt: timestamp({ withTimezone: true }),
-	name: varchar({ length: 128 }).notNull(),
-	host: varchar({ length: 128 }),
-	category: varchar({ length: 128 }),
-	originalUrl: varchar({ length: 512 }).notNull(),
-	publicUrl: varchar({ length: 512 }).default('').notNull(),
-	uri: varchar({ length: 512 }),
-	// publicUrlの方のtypeが入る
-	type: varchar({ length: 64 }),
-	aliases: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
-	license: varchar({ length: 1024 }),
-	localOnly: boolean().default(false).notNull(),
-	isSensitive: boolean().default(false).notNull(),
-	// TODO: 定期ジョブで存在しなくなったロールIDを除去するようにする
-	roleIdsThatCanBeUsedThisEmojiAsReaction: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
-}, table => [
-	index('IDX_EMOJI_NAME').on(table.name),
-	index('IDX_EMOJI_HOST').on(table.host),
-	index('IDX_EMOJI_CATEGORY').on(table.category),
-	uniqueIndex('IDX_EMOJI_NAME_HOST_UNIQUE').on(table.name, table.host),
-	// GIN for roleIdsThatCanBeUsedThisEmojiAsReaction in production
-	index('IDX_EMOJI_ROLE_IDS').using('gin', table.roleIdsThatCanBeUsedThisEmojiAsReaction),
-]);
+export const emoji = pgTable(
+	'emoji',
+	{
+		id: varchar({ length: 32 }).primaryKey().notNull(),
+		updatedAt: timestamp({ withTimezone: true }),
+		name: varchar({ length: 128 }).notNull(),
+		host: varchar({ length: 128 }),
+		category: varchar({ length: 128 }),
+		originalUrl: varchar({ length: 512 }).notNull(),
+		publicUrl: varchar({ length: 512 }).default('').notNull(),
+		uri: varchar({ length: 512 }),
+		// publicUrlの方のtypeが入る
+		type: varchar({ length: 64 }),
+		aliases: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
+		license: varchar({ length: 1024 }),
+		localOnly: boolean().default(false).notNull(),
+		isSensitive: boolean().default(false).notNull(),
+		// TODO: 定期ジョブで存在しなくなったロールIDを除去するようにする
+		roleIdsThatCanBeUsedThisEmojiAsReaction: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
+	},
+	(table) => [
+		index('IDX_EMOJI_NAME').on(table.name),
+		index('IDX_EMOJI_HOST').on(table.host),
+		index('IDX_EMOJI_CATEGORY').on(table.category),
+		uniqueIndex('IDX_EMOJI_NAME_HOST_UNIQUE').on(table.name, table.host),
+		// GIN for roleIdsThatCanBeUsedThisEmojiAsReaction in production
+		index('IDX_EMOJI_ROLE_IDS').using('gin', table.roleIdsThatCanBeUsedThisEmojiAsReaction),
+	],
+);
 
 export type EmojiRow = typeof emoji.$inferSelect;
 export type EmojiInsert = typeof emoji.$inferInsert;

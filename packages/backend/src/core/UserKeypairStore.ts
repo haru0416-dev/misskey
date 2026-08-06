@@ -16,12 +16,11 @@ function deserializeUserKeypair(row: UserKeypairRow): MiUserKeypair {
 	} as MiUserKeypair;
 }
 
-export async function fetchUserKeypairFromDatabase(db: MiDrizzleDatabase, userId: MiUser['id']): Promise<MiUserKeypair> {
-	const [row] = await db
-		.select()
-		.from(userKeypair)
-		.where(eq(userKeypair.userId, userId))
-		.limit(1);
+export async function fetchUserKeypairFromDatabase(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+): Promise<MiUserKeypair> {
+	const [row] = await db.select().from(userKeypair).where(eq(userKeypair.userId, userId)).limit(1);
 
 	if (!row) {
 		throw new Error(`User keypair not found: ${userId}`);
@@ -35,7 +34,10 @@ export async function fetchUserKeypairFromDatabase(db: MiDrizzleDatabase, userId
 const MAX_USER_KEYPAIR_CACHE_SIZE = 5000;
 const userKeypairCache = new Map<MiUser['id'], MiUserKeypair>();
 
-export async function fetchUserKeypairFromDatabaseCached(db: MiDrizzleDatabase, userId: MiUser['id']): Promise<MiUserKeypair> {
+export async function fetchUserKeypairFromDatabaseCached(
+	db: MiDrizzleDatabase,
+	userId: MiUser['id'],
+): Promise<MiUserKeypair> {
 	const cached = userKeypairCache.get(userId);
 	if (cached) return cached;
 

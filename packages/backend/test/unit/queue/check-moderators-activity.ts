@@ -24,7 +24,11 @@ import {
 } from '@/queue/handlers/check-moderators-activity.js';
 import type { MiUser } from '@/models/User.js';
 
-async function createModeratorTestUser(runtime: RuntimeDependencies, prefix: string, lastActiveDate: Date): Promise<MiUser> {
+async function createModeratorTestUser(
+	runtime: RuntimeDependencies,
+	prefix: string,
+	lastActiveDate: Date,
+): Promise<MiUser> {
 	const id = genId();
 	const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },

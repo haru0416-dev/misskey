@@ -39,16 +39,13 @@ export function createUrlPreviewService(
 	function wrap(url?: string | null): string | null {
 		return url != null
 			? `${config.media.proxyUrl}/preview.webp?${query({
-				url,
-				preview: '1',
-			})}`
+					url,
+					preview: '1',
+				})}`
 			: null;
 	}
 
-	async function handle(
-		request: UrlPreviewRequest,
-		reply: UrlPreviewReply,
-	): Promise<object | undefined> {
+	async function handle(request: UrlPreviewRequest, reply: UrlPreviewReply): Promise<object | undefined> {
 		const url = request.query.url;
 		if (typeof url !== 'string') {
 			reply.code(400);
@@ -78,21 +75,29 @@ export function createUrlPreviewService(
 			};
 		}
 
-		logger.info(meta.urlPreviewSummaryProxyUrl
-			? `(Proxy) Getting preview of ${url}@${normalizedLang} ...`
-			: `Getting preview of ${url}@${normalizedLang} ...`);
+		logger.info(
+			meta.urlPreviewSummaryProxyUrl
+				? `(Proxy) Getting preview of ${url}@${normalizedLang} ...`
+				: `Getting preview of ${url}@${normalizedLang} ...`,
+		);
 
 		try {
-			const summary = deepClone(await summaryCache.fetchMaybe(JSON.stringify([url, normalizedLang]), async () => {
-				const result = meta.urlPreviewSummaryProxyUrl
-					? await fetchSummaryFromProxy(url, meta, normalizedLang)
-					: await fetchSummary(url, meta, normalizedLang);
+			const summary = deepClone(
+				await summaryCache.fetchMaybe(JSON.stringify([url, normalizedLang]), async () => {
+					const result = meta.urlPreviewSummaryProxyUrl
+						? await fetchSummaryFromProxy(url, meta, normalizedLang)
+						: await fetchSummary(url, meta, normalizedLang);
 
-				if (!(result.url.startsWith('http://') || result.url.startsWith('https://'))) return undefined;
-				if (result.player.url && !(result.player.url.startsWith('http://') || result.player.url.startsWith('https://'))) return undefined;
+					if (!(result.url.startsWith('http://') || result.url.startsWith('https://'))) return undefined;
+					if (
+						result.player.url &&
+						!(result.player.url.startsWith('http://') || result.player.url.startsWith('https://'))
+					)
+						return undefined;
 
-				return result;
-			}));
+					return result;
+				}),
+			);
 
 			if (summary == null) throw new Error('Invalid summary');
 

@@ -9,7 +9,25 @@ import { omitUndefined } from '@/misc/clone.js';
 import { FILE_TYPE_IMAGE } from '@/const.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
-import { addAliasesToEmojisByIdsInDatabase, deleteEmojiByIdFromDatabase, deleteEmojisByIdsFromDatabase, emojiExistsWithLocalNameInDatabase, fetchEmojiByIdFromDatabase, fetchEmojiByIdOrFailFromDatabase, fetchEmojiByNameAndHostFromDatabase, fetchEmojisFromDatabase, insertEmojiInDatabase, invalidateEmojiCache, listEmojisByIdsOrFailFromDatabase, listLocalEmojisOrderedByCategoryAndNameFromDatabase, listLocalEmojisPageFromDatabase, listRemoteEmojisPageFromDatabase, removeAliasesFromEmojisByIdsInDatabase, updateEmojiInDatabase, updateEmojisByIdsReturningFromDatabase } from '@/core/EmojiStore.js';
+import {
+	addAliasesToEmojisByIdsInDatabase,
+	deleteEmojiByIdFromDatabase,
+	deleteEmojisByIdsFromDatabase,
+	emojiExistsWithLocalNameInDatabase,
+	fetchEmojiByIdFromDatabase,
+	fetchEmojiByIdOrFailFromDatabase,
+	fetchEmojiByNameAndHostFromDatabase,
+	fetchEmojisFromDatabase,
+	insertEmojiInDatabase,
+	invalidateEmojiCache,
+	listEmojisByIdsOrFailFromDatabase,
+	listLocalEmojisOrderedByCategoryAndNameFromDatabase,
+	listLocalEmojisPageFromDatabase,
+	listRemoteEmojisPageFromDatabase,
+	removeAliasesFromEmojisByIdsInDatabase,
+	updateEmojiInDatabase,
+	updateEmojisByIdsReturningFromDatabase,
+} from '@/core/EmojiStore.js';
 import { logModerationEventInDatabase, logModerationEventsInDatabase } from '@/core/ModerationLogLogic.js';
 import { addDbJob, type DbQueue } from '@/core/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
@@ -76,27 +94,32 @@ export const adminEmojiAddParamDef = z.object({
  * この挙動を再現するため、id/name はここでは型を固定せず (z.unknown())、superRefine内で
  * それぞれ個別に misskeyId/name パターンとして安全にパースできるかどうかだけを判定する。
  */
-export const adminEmojiUpdateParamDef = z.object({
-	id: z.unknown().optional(),
-	name: z.unknown().optional(),
-	fileId: misskeyId().optional(),
-	/** Use `null` to reset the category. */
-	category: z.string().nullable().optional(),
-	aliases: z.array(z.string()).optional(),
-	license: z.string().nullable().optional(),
-	isSensitive: z.boolean().optional(),
-	localOnly: z.boolean().optional(),
-	roleIdsThatCanBeUsedThisEmojiAsReaction: z.array(z.string()).optional(),
-}).superRefine((data, ctx) => {
-	const idValid = misskeyId().safeParse(data.id).success;
-	const nameValid = z.string().regex(/^[a-zA-Z0-9_]+$/).safeParse(data.name).success;
-	if (!idValid && !nameValid) {
-		ctx.addIssue({
-			code: 'custom',
-			message: 'must match a schema in anyOf',
-		});
-	}
-});
+export const adminEmojiUpdateParamDef = z
+	.object({
+		id: z.unknown().optional(),
+		name: z.unknown().optional(),
+		fileId: misskeyId().optional(),
+		/** Use `null` to reset the category. */
+		category: z.string().nullable().optional(),
+		aliases: z.array(z.string()).optional(),
+		license: z.string().nullable().optional(),
+		isSensitive: z.boolean().optional(),
+		localOnly: z.boolean().optional(),
+		roleIdsThatCanBeUsedThisEmojiAsReaction: z.array(z.string()).optional(),
+	})
+	.superRefine((data, ctx) => {
+		const idValid = misskeyId().safeParse(data.id).success;
+		const nameValid = z
+			.string()
+			.regex(/^[a-zA-Z0-9_]+$/)
+			.safeParse(data.name).success;
+		if (!idValid && !nameValid) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'must match a schema in anyOf',
+			});
+		}
+	});
 
 // OpenAPI/misskey-js コード生成専用。上の superRefine (id/name の anyOf 判定) は
 // JSON Schema 化できないため、docs 用には元 ajv 版と同じ allOf+anyOf 構造を union+intersection で表現する。
@@ -110,10 +133,7 @@ const adminEmojiUpdateCommonFieldsDocsSchema = z.object({
 	roleIdsThatCanBeUsedThisEmojiAsReaction: z.array(z.string()).optional(),
 });
 export const adminEmojiUpdateDocsParamDef = z.intersection(
-	z.union([
-		z.object({ id: misskeyId() }),
-		z.object({ name: z.string().regex(/^[a-zA-Z0-9_]+$/) }),
-	]),
+	z.union([z.object({ id: misskeyId() }), z.object({ name: z.string().regex(/^[a-zA-Z0-9_]+$/) })]),
 	adminEmojiUpdateCommonFieldsDocsSchema,
 );
 
@@ -175,7 +195,10 @@ function packHonoEmojiSimple(emoji: MiEmoji): Packed<'EmojiSimple'> {
 		url: emoji.publicUrl || emoji.originalUrl,
 		localOnly: emoji.localOnly ? true : undefined,
 		isSensitive: emoji.isSensitive ? true : undefined,
-		roleIdsThatCanBeUsedThisEmojiAsReaction: emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length > 0 ? emoji.roleIdsThatCanBeUsedThisEmojiAsReaction : undefined,
+		roleIdsThatCanBeUsedThisEmojiAsReaction:
+			emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length > 0
+				? emoji.roleIdsThatCanBeUsedThisEmojiAsReaction
+				: undefined,
 	};
 }
 
@@ -299,7 +322,11 @@ function adminUpdateNoSuchFileError(): HonoApiError {
 }
 
 function adminUnsupportedFileTypeError(): HonoApiError {
-	return adminEmojiClientError('Unsupported file type.', 'UNSUPPORTED_FILE_TYPE', 'f7599d96-8750-af68-1633-9575d625c1a7');
+	return adminEmojiClientError(
+		'Unsupported file type.',
+		'UNSUPPORTED_FILE_TYPE',
+		'f7599d96-8750-af68-1633-9575d625c1a7',
+	);
 }
 
 function adminDuplicateEmojiNameError(): HonoApiError {
@@ -321,13 +348,14 @@ function adminCopyInternalError(): HonoApiError {
 }
 
 function adminSameNameEmojiExistsError(): HonoApiError {
-	return adminEmojiClientError('Emoji that have same name already exists.', 'SAME_NAME_EMOJI_EXISTS', '7180fe9d-1ee3-bff9-647d-fe9896d2ffb8');
+	return adminEmojiClientError(
+		'Emoji that have same name already exists.',
+		'SAME_NAME_EMOJI_EXISTS',
+		'7180fe9d-1ee3-bff9-647d-fe9896d2ffb8',
+	);
 }
 
-async function publishHonoApiEmojiUpdated(
-	deps: HonoApiEmojiDependencies,
-	emojis: MiEmoji[],
-): Promise<void> {
+async function publishHonoApiEmojiUpdated(deps: HonoApiEmojiDependencies, emojis: MiEmoji[]): Promise<void> {
 	if (deps.publishBroadcastStream == null) return;
 
 	deps.publishBroadcastStream('emojiUpdated', {
@@ -335,18 +363,15 @@ async function publishHonoApiEmojiUpdated(
 	});
 }
 
-async function finishHonoApiEmojiBulkUpdate(
-	deps: HonoApiEmojiDependencies,
-	ids: MiEmoji['id'][],
-): Promise<void> {
+async function finishHonoApiEmojiBulkUpdate(deps: HonoApiEmojiDependencies, ids: MiEmoji['id'][]): Promise<void> {
 	invalidateEmojiCache();
 	const emojis = await listEmojisByIdsOrFailFromDatabase(deps.db, ids);
 	await publishHonoApiEmojiUpdated(deps, emojis);
 }
 
 function orderEmojisByRequestedIds(ids: MiEmoji['id'][], emojis: MiEmoji[]): MiEmoji[] {
-	const emojiById = new Map(emojis.map(emoji => [emoji.id, emoji]));
-	return ids.map(id => {
+	const emojiById = new Map(emojis.map((emoji) => [emoji.id, emoji]));
+	return ids.map((id) => {
 		const emoji = emojiById.get(id);
 		if (emoji == null) throw adminBulkNoSuchEmojiError();
 		return emoji;
@@ -358,17 +383,14 @@ async function updateEmojisAtomically(
 	ids: MiEmoji['id'][],
 	update: (db: MiDrizzleDatabase) => Promise<MiEmoji[]>,
 ): Promise<void> {
-	await deps.db.transaction(async transaction => {
+	await deps.db.transaction(async (transaction) => {
 		const updated = await update(transaction as typeof deps.db);
 		orderEmojisByRequestedIds(ids, updated);
 	});
 	await finishHonoApiEmojiBulkUpdate(deps, ids);
 }
 
-async function publishHonoApiEmojiDeleted(
-	deps: HonoApiEmojiDependencies,
-	emojis: MiEmoji[],
-): Promise<void> {
+async function publishHonoApiEmojiDeleted(deps: HonoApiEmojiDependencies, emojis: MiEmoji[]): Promise<void> {
 	if (deps.publishBroadcastStream == null) return;
 
 	deps.publishBroadcastStream('emojiDeleted', {
@@ -376,10 +398,7 @@ async function publishHonoApiEmojiDeleted(
 	});
 }
 
-export async function publishHonoApiEmojiAdded(
-	deps: HonoApiEmojiDependencies,
-	emoji: MiEmoji,
-): Promise<void> {
+export async function publishHonoApiEmojiAdded(deps: HonoApiEmojiDependencies, emoji: MiEmoji): Promise<void> {
 	if (deps.publishBroadcastStream == null) return;
 
 	deps.publishBroadcastStream('emojiAdded', {
@@ -421,7 +440,7 @@ export async function addCustomEmojiForHonoApi(
 	});
 
 	if (data.host == null) {
-			await publishHonoApiEmojiAdded(deps, emoji);
+		await publishHonoApiEmojiAdded(deps, emoji);
 
 		if (moderator) {
 			await logModerationEventInDatabase(deps, moderator, 'addCustomEmoji', {
@@ -467,12 +486,14 @@ export async function handleHonoApiAdminEmojiList(
 		const queryArray = params.query.match(/\:([a-z0-9_]*)\:/g);
 
 		if (queryArray) {
-			emojis = emojis.filter(emoji => queryArray.includes(`:${emoji.name}:`));
+			emojis = emojis.filter((emoji) => queryArray.includes(`:${emoji.name}:`));
 		} else {
-			emojis = emojis.filter(emoji =>
-				emoji.name.includes(params.query!) ||
-				emoji.aliases.some(alias => alias.includes(params.query!)) ||
-				emoji.category?.includes(params.query!));
+			emojis = emojis.filter(
+				(emoji) =>
+					emoji.name.includes(params.query!) ||
+					emoji.aliases.some((alias) => alias.includes(params.query!)) ||
+					emoji.category?.includes(params.query!),
+			);
 		}
 		emojis.splice(params.limit + 1);
 	} else {
@@ -524,7 +545,9 @@ export async function handleHonoApiAdminEmojiAddAliasesBulk(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiAliasesBulkParamDef, body);
 	const updatedAt = new Date();
-	await updateEmojisAtomically(deps, params.ids, db => addAliasesToEmojisByIdsInDatabase(db, params.ids, params.aliases, updatedAt));
+	await updateEmojisAtomically(deps, params.ids, (db) =>
+		addAliasesToEmojisByIdsInDatabase(db, params.ids, params.aliases, updatedAt),
+	);
 }
 
 export async function handleHonoApiAdminEmojiDelete(
@@ -549,13 +572,18 @@ export async function handleHonoApiAdminEmojiDeleteBulk(
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiDeleteBulkParamDef, body);
-	const emojis = await deps.db.transaction(async transaction => {
+	const emojis = await deps.db.transaction(async (transaction) => {
 		const db = transaction as typeof deps.db;
 		const deleted = await deleteEmojisByIdsFromDatabase(db, params.ids);
-		await logModerationEventsInDatabase({ db }, me, 'deleteCustomEmoji', deleted.map(emoji => ({
+		await logModerationEventsInDatabase(
+			{ db },
+			me,
+			'deleteCustomEmoji',
+			deleted.map((emoji) => ({
 				emojiId: emoji.id,
 				emoji,
-			})));
+			})),
+		);
 		return deleted;
 	});
 
@@ -572,10 +600,9 @@ export async function handleHonoApiAdminEmojiCopy(
 	const emoji = await fetchEmojiByIdFromDatabase(deps.db, params.emojiId);
 	if (emoji == null) throw adminCopyNoSuchEmojiError();
 
-	const driveFile = await uploadSystemDriveFileFromUrl(deps, emoji.originalUrl)
-		.catch(() => {
-			throw adminCopyInternalError();
-		});
+	const driveFile = await uploadSystemDriveFileFromUrl(deps, emoji.originalUrl).catch(() => {
+		throw adminCopyInternalError();
+	});
 
 	if (await emojiExistsWithLocalNameInDatabase(deps.db, emoji.name)) {
 		throw adminDuplicateEmojiNameError();
@@ -631,29 +658,34 @@ export async function handleHonoApiAdminEmojiUpdate(
 		if (driveFile == null) throw adminUpdateNoSuchFileError();
 	}
 
-	const emoji = params.id != null
-		? await fetchEmojiByIdFromDatabase(deps.db, params.id)
-		: await fetchEmojiByNameAndHostFromDatabase(deps.db, params.name!, null);
+	const emoji =
+		params.id != null
+			? await fetchEmojiByIdFromDatabase(deps.db, params.id)
+			: await fetchEmojiByNameAndHostFromDatabase(deps.db, params.name!, null);
 	if (emoji == null) throw adminNoSuchEmojiError();
 
 	const doNameUpdate = params.id != null && params.name != null && params.name !== emoji.name;
-	if (doNameUpdate && await emojiExistsWithLocalNameInDatabase(deps.db, params.name!)) {
+	if (doNameUpdate && (await emojiExistsWithLocalNameInDatabase(deps.db, params.name!))) {
 		throw adminSameNameEmojiExistsError();
 	}
 
-	await updateEmojiInDatabase(deps.db, emoji.id, omitUndefined({
-		updatedAt: new Date(),
-		name: params.name,
-		category: params.category,
-		aliases: params.aliases,
-		license: params.license,
-		isSensitive: params.isSensitive,
-		localOnly: params.localOnly,
-		originalUrl: driveFile != null ? driveFile.url : undefined,
-		publicUrl: driveFile != null ? (driveFile.webpublicUrl ?? driveFile.url) : undefined,
-		type: driveFile != null ? (driveFile.webpublicType ?? driveFile.type) : undefined,
-		roleIdsThatCanBeUsedThisEmojiAsReaction: params.roleIdsThatCanBeUsedThisEmojiAsReaction ?? undefined,
-	}));
+	await updateEmojiInDatabase(
+		deps.db,
+		emoji.id,
+		omitUndefined({
+			updatedAt: new Date(),
+			name: params.name,
+			category: params.category,
+			aliases: params.aliases,
+			license: params.license,
+			isSensitive: params.isSensitive,
+			localOnly: params.localOnly,
+			originalUrl: driveFile != null ? driveFile.url : undefined,
+			publicUrl: driveFile != null ? (driveFile.webpublicUrl ?? driveFile.url) : undefined,
+			type: driveFile != null ? (driveFile.webpublicType ?? driveFile.type) : undefined,
+			roleIdsThatCanBeUsedThisEmojiAsReaction: params.roleIdsThatCanBeUsedThisEmojiAsReaction ?? undefined,
+		}),
+	);
 
 	const updated = await fetchEmojiByIdOrFailFromDatabase(deps.db, emoji.id);
 
@@ -677,10 +709,12 @@ export async function handleHonoApiAdminEmojiSetAliasesBulk(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiAliasesBulkParamDef, body);
 	const updatedAt = new Date();
-	await updateEmojisAtomically(deps, params.ids, db => updateEmojisByIdsReturningFromDatabase(db, params.ids, {
-		updatedAt,
-		aliases: params.aliases,
-	}));
+	await updateEmojisAtomically(deps, params.ids, (db) =>
+		updateEmojisByIdsReturningFromDatabase(db, params.ids, {
+			updatedAt,
+			aliases: params.aliases,
+		}),
+	);
 }
 
 export async function handleHonoApiAdminEmojiRemoveAliasesBulk(
@@ -689,7 +723,9 @@ export async function handleHonoApiAdminEmojiRemoveAliasesBulk(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiAliasesBulkParamDef, body);
 	const updatedAt = new Date();
-	await updateEmojisAtomically(deps, params.ids, db => removeAliasesFromEmojisByIdsInDatabase(db, params.ids, params.aliases, updatedAt));
+	await updateEmojisAtomically(deps, params.ids, (db) =>
+		removeAliasesFromEmojisByIdsInDatabase(db, params.ids, params.aliases, updatedAt),
+	);
 }
 
 export async function handleHonoApiAdminEmojiSetCategoryBulk(
@@ -698,10 +734,12 @@ export async function handleHonoApiAdminEmojiSetCategoryBulk(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiSetCategoryBulkParamDef, body);
 	const updatedAt = new Date();
-	await updateEmojisAtomically(deps, params.ids, db => updateEmojisByIdsReturningFromDatabase(db, params.ids, {
-		updatedAt,
-		category: params.category ?? null,
-	}));
+	await updateEmojisAtomically(deps, params.ids, (db) =>
+		updateEmojisByIdsReturningFromDatabase(db, params.ids, {
+			updatedAt,
+			category: params.category ?? null,
+		}),
+	);
 }
 
 export async function handleHonoApiAdminEmojiSetLicenseBulk(
@@ -710,10 +748,12 @@ export async function handleHonoApiAdminEmojiSetLicenseBulk(
 ): Promise<void> {
 	const params = parseHonoApiParams(adminEmojiSetLicenseBulkParamDef, body);
 	const updatedAt = new Date();
-	await updateEmojisAtomically(deps, params.ids, db => updateEmojisByIdsReturningFromDatabase(db, params.ids, {
-		updatedAt,
-		license: params.license ?? null,
-	}));
+	await updateEmojisAtomically(deps, params.ids, (db) =>
+		updateEmojisByIdsReturningFromDatabase(db, params.ids, {
+			updatedAt,
+			license: params.license ?? null,
+		}),
+	);
 }
 
 export async function handleHonoApiAdminEmojiListRemote(
@@ -735,38 +775,53 @@ export async function handleHonoApiAdminEmojiListRemote(
 
 const fetchEmojisHostTypes = ['local', 'remote', 'all'] as const;
 const fetchEmojisSortKeys = [
-	'+id', '-id',
-	'+updatedAt', '-updatedAt',
-	'+name', '-name',
-	'+host', '-host',
-	'+uri', '-uri',
-	'+publicUrl', '-publicUrl',
-	'+type', '-type',
-	'+aliases', '-aliases',
-	'+category', '-category',
-	'+license', '-license',
-	'+isSensitive', '-isSensitive',
-	'+localOnly', '-localOnly',
-	'+roleIdsThatCanBeUsedThisEmojiAsReaction', '-roleIdsThatCanBeUsedThisEmojiAsReaction',
+	'+id',
+	'-id',
+	'+updatedAt',
+	'-updatedAt',
+	'+name',
+	'-name',
+	'+host',
+	'-host',
+	'+uri',
+	'-uri',
+	'+publicUrl',
+	'-publicUrl',
+	'+type',
+	'-type',
+	'+aliases',
+	'-aliases',
+	'+category',
+	'-category',
+	'+license',
+	'-license',
+	'+isSensitive',
+	'-isSensitive',
+	'+localOnly',
+	'-localOnly',
+	'+roleIdsThatCanBeUsedThisEmojiAsReaction',
+	'-roleIdsThatCanBeUsedThisEmojiAsReaction',
 ] as const;
 
-export const v2AdminEmojiListQueryParamDef = z.object({
-	updatedAtFrom: z.string().optional(),
-	updatedAtTo: z.string().optional(),
-	name: z.string().optional(),
-	host: z.string().optional(),
-	uri: z.string().optional(),
-	publicUrl: z.string().optional(),
-	originalUrl: z.string().optional(),
-	type: z.string().optional(),
-	aliases: z.string().optional(),
-	category: z.string().optional(),
-	license: z.string().optional(),
-	isSensitive: z.boolean().optional(),
-	localOnly: z.boolean().optional(),
-	hostType: z.enum(fetchEmojisHostTypes).default('all'),
-	roleIds: z.array(misskeyId()).optional(),
-}).nullable();
+export const v2AdminEmojiListQueryParamDef = z
+	.object({
+		updatedAtFrom: z.string().optional(),
+		updatedAtTo: z.string().optional(),
+		name: z.string().optional(),
+		host: z.string().optional(),
+		uri: z.string().optional(),
+		publicUrl: z.string().optional(),
+		originalUrl: z.string().optional(),
+		type: z.string().optional(),
+		aliases: z.string().optional(),
+		category: z.string().optional(),
+		license: z.string().optional(),
+		isSensitive: z.boolean().optional(),
+		localOnly: z.boolean().optional(),
+		hostType: z.enum(fetchEmojisHostTypes).default('all'),
+		roleIds: z.array(misskeyId()).optional(),
+	})
+	.nullable();
 
 export const v2AdminEmojiListParamDef = z.object({
 	query: v2AdminEmojiListQueryParamDef.optional(),
@@ -779,7 +834,6 @@ export const v2AdminEmojiListParamDef = z.object({
 	sortKeys: z.array(z.enum(fetchEmojisSortKeys)).default(['-id']),
 });
 
-
 async function packHonoEmojiDetailedAdmin(
 	deps: HonoApiEmojiDependencies,
 	emoji: MiEmoji,
@@ -789,8 +843,8 @@ async function packHonoEmojiDetailedAdmin(
 	if (emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length > 0) {
 		roles.push(
 			...emoji.roleIdsThatCanBeUsedThisEmojiAsReaction
-				.filter(id => hintRoles.has(id))
-				.map(id => hintRoles.get(id)!),
+				.filter((id) => hintRoles.has(id))
+				.map((id) => hintRoles.get(id)!),
 		);
 		roles.sort((a, b) => {
 			if (a.displayOrder !== b.displayOrder) return b.displayOrder - a.displayOrder;
@@ -812,7 +866,7 @@ async function packHonoEmojiDetailedAdmin(
 		license: emoji.license,
 		localOnly: emoji.localOnly,
 		isSensitive: emoji.isSensitive,
-		roleIdsThatCanBeUsedThisEmojiAsReaction: roles.map(it => ({ id: it.id, name: it.name })),
+		roleIdsThatCanBeUsedThisEmojiAsReaction: roles.map((it) => ({ id: it.id, name: it.name })),
 	};
 }
 
@@ -820,11 +874,11 @@ async function packHonoEmojiDetailedAdminMany(
 	deps: HonoApiEmojiDependencies,
 	emojis: MiEmoji[],
 ): Promise<Packed<'EmojiDetailedAdmin'>[]> {
-	const roleIds = [...new Set(emojis.flatMap(emoji => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction))];
+	const roleIds = [...new Set(emojis.flatMap((emoji) => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction))];
 	const roles = roleIds.length > 0 ? await listRoleSummariesByIdsFromDatabase(deps.db, roleIds) : [];
-	const hintRoles = new Map(roles.map(role => [role.id, role]));
+	const hintRoles = new Map(roles.map((role) => [role.id, role]));
 
-	return Promise.all(emojis.map(emoji => packHonoEmojiDetailedAdmin(deps, emoji, hintRoles)));
+	return Promise.all(emojis.map((emoji) => packHonoEmojiDetailedAdmin(deps, emoji, hintRoles)));
 }
 
 export async function handleHonoApiV2AdminEmojiList(
@@ -838,34 +892,38 @@ export async function handleHonoApiV2AdminEmojiList(
 
 	const q = params.query;
 	const limit = params.limit;
-	const result = await fetchEmojisFromDatabase(deps.db, omitUndefined({
-		query: omitUndefined({
-			updatedAtFrom: q?.updatedAtFrom,
-			updatedAtTo: q?.updatedAtTo,
-			name: q?.name,
-			host: q?.host,
-			uri: q?.uri,
-			publicUrl: q?.publicUrl,
-			type: q?.type,
-			aliases: q?.aliases,
-			category: q?.category,
-			license: q?.license,
-			isSensitive: q?.isSensitive,
-			localOnly: q?.localOnly,
-			hostType: q?.hostType,
-			roleIds: q?.roleIds,
+	const result = await fetchEmojisFromDatabase(
+		deps.db,
+		omitUndefined({
+			query: omitUndefined({
+				updatedAtFrom: q?.updatedAtFrom,
+				updatedAtTo: q?.updatedAtTo,
+				name: q?.name,
+				host: q?.host,
+				uri: q?.uri,
+				publicUrl: q?.publicUrl,
+				type: q?.type,
+				aliases: q?.aliases,
+				category: q?.category,
+				license: q?.license,
+				isSensitive: q?.isSensitive,
+				localOnly: q?.localOnly,
+				hostType: q?.hostType,
+				roleIds: q?.roleIds,
+			}),
+			sinceId,
+			untilId,
 		}),
-		sinceId,
-		untilId,
-	}), omitUndefined({
-		limit,
-		page: params.page,
-		sortKeys: params.sortKeys,
-	}));
+		omitUndefined({
+			limit,
+			page: params.page,
+			sortKeys: params.sortKeys,
+		}),
+	);
 
 	return {
 		emojis: await packHonoEmojiDetailedAdminMany(deps, result.emojis),
-		count: (result.allCount > limit ? result.emojis.length : result.allCount),
+		count: result.allCount > limit ? result.emojis.length : result.allCount,
 		allCount: result.allCount,
 		allPages: Math.ceil(result.allCount / limit),
 	};

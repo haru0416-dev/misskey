@@ -19,7 +19,10 @@ let controllerOperation = Promise.resolve();
 
 async function runControllerOperation<T>(operation: () => Promise<T>): Promise<T> {
 	const result = controllerOperation.then(operation, operation);
-	controllerOperation = result.then(() => undefined, () => undefined);
+	controllerOperation = result.then(
+		() => undefined,
+		() => undefined,
+	);
 	return result;
 }
 
@@ -65,13 +68,16 @@ async function stopApplication() {
  * 別プロセスに切り離してしまったが故に出来なくなった環境変数の書き換え等を実現するためのエンドポイントを作る
  * @param port
  */
-async function startControllerEndpoints(port = ('tcp' in config.server.listen ? config.server.listen.tcp.port : 3000) + 1000) {
+async function startControllerEndpoints(
+	port = ('tcp' in config.server.listen ? config.server.listen.tcp.port : 3000) + 1000,
+) {
 	const controller = new Hono();
 
 	controller.post('/env', async (c) => {
 		return runControllerOperation(async () => {
-			const body = await c.req.json<{ key?: string, value?: string }>()
-				.catch((): { key?: string, value?: string } => ({}));
+			const body = await c.req
+				.json<{ key?: string; value?: string }>()
+				.catch((): { key?: string; value?: string } => ({}));
 			console.log(body);
 			const key = body.key;
 			if (!key) {
@@ -128,7 +134,7 @@ async function stopControllerEndpoints() {
 	if (!controllerServer) return;
 
 	await new Promise<void>((resolve, reject) => {
-		controllerServer!.close(err => err ? reject(err) : resolve());
+		controllerServer!.close((err) => (err ? reject(err) : resolve()));
 	});
 	controllerServer = undefined;
 }
