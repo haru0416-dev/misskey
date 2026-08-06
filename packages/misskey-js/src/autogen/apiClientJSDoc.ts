@@ -680,6 +680,21 @@ declare module '../api.js' {
          *
          * **Credential required**: *Yes* / **Permission**: *write:admin:queue*
          */
+        request<
+            E extends 'admin/queue/abandon-outbox-dead-letter',
+            P extends Endpoints[E]['req'] = Endpoints[E]['req'],
+        >(
+            endpoint: E,
+            ...args: Endpoints[E] extends { reqOptional: true }
+                ? [params?: P, credential?: string | null]
+                : [params: P, credential?: string | null]
+        ): Promise<SwitchCaseResponseType<E, P>>;
+
+        /**
+         * No description provided.
+         *
+         * **Credential required**: *Yes* / **Permission**: *write:admin:queue*
+         */
         request<E extends 'admin/queue/clear', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
             endpoint: E,
             ...args: Endpoints[E] extends { reqOptional: true }
@@ -717,6 +732,18 @@ declare module '../api.js' {
          * **Credential required**: *Yes* / **Permission**: *read:admin:queue*
          */
         request<E extends 'admin/queue/jobs', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
+            endpoint: E,
+            ...args: Endpoints[E] extends { reqOptional: true }
+                ? [params?: P, credential?: string | null]
+                : [params: P, credential?: string | null]
+        ): Promise<SwitchCaseResponseType<E, P>>;
+
+        /**
+         * No description provided.
+         *
+         * **Credential required**: *Yes* / **Permission**: *read:admin:queue*
+         */
+        request<E extends 'admin/queue/outbox-dead-letters', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
             endpoint: E,
             ...args: Endpoints[E] extends { reqOptional: true }
                 ? [params?: P, credential?: string | null]
@@ -801,6 +828,18 @@ declare module '../api.js' {
          * **Credential required**: *Yes* / **Permission**: *write:admin:queue*
          */
         request<E extends 'admin/queue/retry-job', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
+            endpoint: E,
+            ...args: Endpoints[E] extends { reqOptional: true }
+                ? [params?: P, credential?: string | null]
+                : [params: P, credential?: string | null]
+        ): Promise<SwitchCaseResponseType<E, P>>;
+
+        /**
+         * No description provided.
+         *
+         * **Credential required**: *Yes* / **Permission**: *write:admin:queue*
+         */
+        request<E extends 'admin/queue/retry-outbox-dead-letter', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
             endpoint: E,
             ...args: Endpoints[E] extends { reqOptional: true }
                 ? [params?: P, credential?: string | null]

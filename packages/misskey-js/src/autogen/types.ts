@@ -9800,8 +9800,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10090,7 +10090,7 @@ export interface operations {
         };
     };
     'admin___queue___outbox-dead-letters': {
-        requestBody: {
+        requestBody?: {
             content: {
                 'application/json': {
                     limit?: number;
@@ -10154,8 +10154,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10795,8 +10795,8 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
-            /** @description I'm Ai */
-            418: {
+            /** @description Payload too large */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
