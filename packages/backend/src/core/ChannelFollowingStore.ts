@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, sql, type Placeholder, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { channelFollowing, type ChannelFollowingInsert, type ChannelFollowingRow } from '@/db/schema/channel-following.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiChannel } from '@/models/Channel.js';
@@ -11,7 +12,7 @@ import type { MiUser } from '@/models/User.js';
 
 export type ChannelFollowingOrder = 'asc' | 'desc';
 
-function channelFollowingCondition(userId: MiUser['id'], channelId: MiChannel['id']) {
+function channelFollowingCondition(userId: MiUser['id'] | Placeholder, channelId: MiChannel['id'] | Placeholder) {
 	return and(
 		eq(channelFollowing.followerId, userId),
 		eq(channelFollowing.followeeId, channelId),
@@ -38,11 +39,13 @@ export async function channelFollowingExistsInDatabase(
 	userId: MiUser['id'],
 	channelId: MiChannel['id'],
 ): Promise<boolean> {
-	const [row] = await db
+	const statement = preparedQueryFor(db, 'channelFollowing:exists', () => db
 		.select({ id: channelFollowing.id })
 		.from(channelFollowing)
-		.where(channelFollowingCondition(userId, channelId))
-		.limit(1);
+		.where(channelFollowingCondition(sql.placeholder('userId'), sql.placeholder('channelId')))
+		.limit(1)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const [row] = await statement.execute({ userId, channelId });
 
 	return row != null;
 }
@@ -70,10 +73,12 @@ export async function listFollowedChannelIdsByUserIdFromDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],
 ): Promise<MiChannel['id'][]> {
-	const rows = await db
+	const statement = preparedQueryFor(db, 'channelFollowing:followedChannelIdsByUserId', () => db
 		.select({ followeeId: channelFollowing.followeeId })
 		.from(channelFollowing)
-		.where(eq(channelFollowing.followerId, userId));
+		.where(eq(channelFollowing.followerId, sql.placeholder('userId')))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ userId });
 
 	return rows.map(row => row.followeeId);
 }

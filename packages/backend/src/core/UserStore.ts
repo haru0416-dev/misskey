@@ -4,6 +4,7 @@
  */
 
 import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { user as userTable, type UserInsert, type UserRow } from '@/db/schema/user.js';
 import { userProfile, type UserProfileInsert } from '@/db/schema/user-profile.js';
 import { userPublickey, type UserPublickeyInsert } from '@/db/schema/user-publickey.js';
@@ -200,11 +201,14 @@ export async function fetchLocalUserByNativeTokenFromDatabase(
 	db: MiDrizzleDatabase,
 	token: NonNullable<MiLocalUser['token']>,
 ): Promise<MiLocalUser | null> {
-	const [row] = await db
+	// 認証で全リクエストが通る。user は42列あり毎回の組み立てが 167µs かかっていた
+	const statement = preparedQueryFor(db, 'user:byNativeToken', () => db
 		.select()
 		.from(userTable)
-		.where(eq(userTable.token, token))
-		.limit(1);
+		.where(eq(userTable.token, sql.placeholder('token')))
+		.limit(1)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const [row] = await statement.execute({ token });
 
 	return row ? deserializeUser(row) as MiLocalUser : null;
 }
@@ -216,11 +220,13 @@ export async function fetchRemoteUserByIdFromDatabase(db: MiDrizzleDatabase, id:
 }
 
 export async function fetchUserByIdFromDatabase(db: MiDrizzleDatabase, id: MiUser['id']): Promise<MiUser | null> {
-	const [row] = await db
+	const statement = preparedQueryFor(db, 'user:byId', () => db
 		.select()
 		.from(userTable)
-		.where(eq(userTable.id, id))
-		.limit(1);
+		.where(eq(userTable.id, sql.placeholder('id')))
+		.limit(1)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const [row] = await statement.execute({ id });
 
 	return row ? deserializeUser(row) : null;
 }
@@ -286,18 +292,24 @@ export async function listUsersByIdsFromDatabase(
 ): Promise<MiUser[]> {
 	if (ids.length === 0) return [];
 
-	const conditions: SQL[] = [
-		inArray(userTable.id, ids),
-	];
+	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
+	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
+	const statement = preparedQueryFor(db, `user:byIds:${options.includeSuspended}`, () => {
+		const conditions: SQL[] = [
+			sql`${userTable.id} = ANY(${sql.placeholder('ids')})`,
+		];
 
-	if (!options.includeSuspended) {
-		conditions.push(eq(userTable.isSuspended, false));
-	}
+		if (!options.includeSuspended) {
+			conditions.push(eq(userTable.isSuspended, false));
+		}
 
-	const rows = await db
-		.select()
-		.from(userTable)
-		.where(and(...conditions));
+		return db
+			.select()
+			.from(userTable)
+			.where(and(...conditions))
+			.prepare(UNNAMED_PREPARED_STATEMENT);
+	});
+	const rows = await statement.execute({ ids });
 
 	return rows.map(row => deserializeUser(row));
 }

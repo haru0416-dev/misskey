@@ -10,19 +10,22 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createFollowingInDatabase } from '@/core/FollowingStore.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
+import { countPoolQueries, type QueryCounter } from '../../query-counter.js';
 import { createApObjectRoutesApp, type ApObjectRoutesDependencies } from '@/server/activitypub/object-routes.js';
 
 describe('ActivityPub object routes', () => {
 	let runtime: RuntimeDependencies;
+	let queries: QueryCounter;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
+		queries = countPoolQueries(runtime.drizzlePool);
 	});
 
 	afterAll(async () => {
+		queries.restore();
 		await runtime.dispose();
 	});
 
@@ -64,22 +67,9 @@ describe('ActivityPub object routes', () => {
 			}));
 		}
 
-		let selectCount = 0;
-		const db = new Proxy(runtime.db, {
-			get(target, property, receiver) {
-				if (property === 'select') {
-					return (...args: Parameters<MiDrizzleDatabase['select']>) => {
-						selectCount++;
-						return target.select(...args);
-					};
-				}
-				const value = Reflect.get(target, property, receiver);
-				return typeof value === 'function' ? value.bind(target) : value;
-			},
-		}) as MiDrizzleDatabase;
 		const deps: ApObjectRoutesDependencies = {
 			config: runtime.config,
-			db,
+			db: runtime.db,
 			meta: { ...runtime.meta, federation: 'all' },
 			redis: runtime.redis,
 			redisForTimelines: runtime.redisForTimelines,
@@ -91,7 +81,7 @@ describe('ActivityPub object routes', () => {
 		const targetUri = (index: number) => targets[index]!.uri ?? `${runtime.config.instance.url}/users/${targets[index]!.id}`;
 
 		for (const [kind, relations] of [['following', followings], ['followers', followers]] as const) {
-			selectCount = 0;
+			queries.reset();
 			const response = await app.request(`/users/${owner.id}/${kind}?page=true`, {
 				headers: { accept: 'application/activity+json' },
 			});
@@ -99,12 +89,12 @@ describe('ActivityPub object routes', () => {
 			const expectedTargets = targets.map((_, index) => targetUri(index)).slice(1).reverse();
 
 			expect(response.status).toBe(200);
-			expect(selectCount).toBe(4);
+			expect(queries.count()).toBe(4);
 			expect(body.totalItems).toBe(11);
 			expect(body.orderedItems).toEqual(expectedTargets);
 			expect(body.next).toBe(`${runtime.config.instance.url}/users/${owner.id}/${kind}?page=true&cursor=${relations[1]!.id}`);
 
-			selectCount = 0;
+			queries.reset();
 			const nextUrl = new URL(body.next);
 			const nextResponse = await app.request(nextUrl.pathname + nextUrl.search, {
 				headers: { accept: 'application/activity+json' },
@@ -112,7 +102,7 @@ describe('ActivityPub object routes', () => {
 			const nextBody = await nextResponse.json() as { orderedItems: string[]; next?: string };
 
 			expect(nextResponse.status).toBe(200);
-			expect(selectCount).toBe(4);
+			expect(queries.count()).toBe(4);
 			expect(nextBody.orderedItems).toEqual([targetUri(0)]);
 			expect(nextBody.next).toBeUndefined();
 		}

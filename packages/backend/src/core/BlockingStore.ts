@@ -4,6 +4,7 @@
  */
 
 import { and, asc, count, desc, eq, gt, lt, sql, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { blocking, type BlockingInsert, type BlockingRow } from '@/db/schema/blocking.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -192,10 +193,12 @@ export async function listBlockeeIdsByBlockerIdFromDatabase(
 	db: MiDrizzleDatabase,
 	blockerId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const rows = await db
+	const statement = preparedQueryFor(db, 'blocking:blockeeIdsByBlockerId', () => db
 		.select({ blockeeId: blocking.blockeeId })
 		.from(blocking)
-		.where(eq(blocking.blockerId, blockerId));
+		.where(eq(blocking.blockerId, sql.placeholder('blockerId')))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ blockerId });
 
 	return rows.map(row => row.blockeeId);
 }
@@ -222,10 +225,12 @@ export async function listBlockerIdsByBlockeeIdFromDatabase(
 	db: MiDrizzleDatabase,
 	blockeeId: MiUser['id'],
 ): Promise<MiUser['id'][]> {
-	const rows = await db
+	const statement = preparedQueryFor(db, 'blocking:blockerIdsByBlockeeId', () => db
 		.select({ blockerId: blocking.blockerId })
 		.from(blocking)
-		.where(eq(blocking.blockeeId, blockeeId));
+		.where(eq(blocking.blockeeId, sql.placeholder('blockeeId')))
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const rows = await statement.execute({ blockeeId });
 
 	return rows.map(row => row.blockerId);
 }

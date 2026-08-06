@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, desc, eq, gt, inArray, lt, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, sql, type Placeholder, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { followRequest, type FollowRequestInsert, type FollowRequestRow } from '@/db/schema/follow-request.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -12,7 +13,7 @@ import type { MiUser } from '@/models/User.js';
 
 export type FollowRequestOrder = 'asc' | 'desc';
 
-function followRequestCondition(followerId: MiUser['id'], followeeId: MiUser['id']) {
+function followRequestCondition(followerId: MiUser['id'] | Placeholder, followeeId: MiUser['id'] | Placeholder) {
 	return and(
 		eq(followRequest.followerId, followerId),
 		eq(followRequest.followeeId, followeeId),
@@ -79,11 +80,13 @@ export async function followRequestExistsInDatabase(
 	followerId: MiUser['id'],
 	followeeId: MiUser['id'],
 ): Promise<boolean> {
-	const [row] = await db
+	const statement = preparedQueryFor(db, 'followRequest:exists', () => db
 		.select({ id: followRequest.id })
 		.from(followRequest)
-		.where(followRequestCondition(followerId, followeeId))
-		.limit(1);
+		.where(followRequestCondition(sql.placeholder('followerId'), sql.placeholder('followeeId')))
+		.limit(1)
+		.prepare(UNNAMED_PREPARED_STATEMENT));
+	const [row] = await statement.execute({ followerId, followeeId });
 
 	return row != null;
 }
