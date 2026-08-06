@@ -11,13 +11,10 @@ import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import bcrypt from 'bcryptjs';
 import * as Bull from 'bullmq';
-import { inArray } from 'drizzle-orm';
 import { describe, beforeAll, afterAll, test, expect } from 'vitest';
-import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { toXListId } from '@/server/rest/notification.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
-import { dispatchQueueOutbox, fetchQueueOutboxByIdFromDatabase } from '@/core/QueueOutboxStore.js';
 import type { DbQueue } from '@/core/queues.js';
 import type {
 	DbJobData,
@@ -76,7 +73,9 @@ import {
 	createWebhookInDatabase,
 	DEFAULT_POLICIES,
 	deleteBlockingByIdFromDatabase,
+	deleteQueueOutboxesByIds,
 	deleteUserListByIdInDatabase,
+	dispatchQueueOutbox,
 	fetchAbuseUserReportByIdOrFailFromDatabase,
 	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
 	fetchDriveFileByIdFromDatabase,
@@ -95,6 +94,7 @@ import {
 	fetchNoteByIdFromDatabase,
 	fetchNoteDraftByIdFromDatabase,
 	fetchPollByNoteIdOrFailFromDatabase,
+	fetchQueueOutboxByIdFromDatabase,
 	fetchRelayByInboxFromDatabase,
 	fetchRenoteMutingFromDatabase,
 	fetchRoleAssignmentByUserIdAndRoleIdFromDatabase,
@@ -109,6 +109,7 @@ import {
 	genId,
 	insertEmojiInDatabase,
 	insertHashtags,
+	insertQueueOutboxes,
 	insertUserIps,
 	isPromoNoteExists,
 	isPromoReadExists,
@@ -116,8 +117,8 @@ import {
 	listPollVotesByNoteAndUserFromDatabase,
 	listUserNotePiningsByUserIdFromDatabase,
 	openTestDatabase,
-	RootUserAlreadyAssignedError,
 	pageLikeExistsInDatabase,
+	RootUserAlreadyAssignedError,
 	type TestDatabase,
 	updateChannelInDatabase,
 	updateDriveFileInDatabase,
@@ -13382,7 +13383,7 @@ describe('Endpoints', () => {
 			);
 
 			try {
-				await db.insert(queueOutbox).values([
+				await insertQueueOutboxes(db, [
 					{
 						id: deliverOutboxId,
 						queue: 'deliver',
@@ -13528,7 +13529,7 @@ describe('Endpoints', () => {
 					.getJob(`outbox-${deliverOutboxId}`)
 					.then((job) => job?.remove())
 					.catch(() => undefined);
-				await db.delete(queueOutbox).where(inArray(queueOutbox.id, [deliverOutboxId, dbOutboxId]));
+				await deleteQueueOutboxesByIds(db, [deliverOutboxId, dbOutboxId]);
 			}
 		});
 	});

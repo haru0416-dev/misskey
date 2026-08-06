@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
 import * as AbuseUserReportStore from '@/core/AbuseUserReportStore.js';
 import * as AnnouncementReadStore from '@/core/AnnouncementReadStore.js';
@@ -39,6 +39,7 @@ import * as PollStore from '@/core/PollStore.js';
 import * as PollVoteStore from '@/core/PollVoteStore.js';
 import * as PromoNoteStore from '@/core/PromoNoteStore.js';
 import * as PromoReadStore from '@/core/PromoReadStore.js';
+import * as QueueOutboxStore from '@/core/QueueOutboxStore.js';
 import * as RegistrationTicketStore from '@/core/RegistrationTicketStore.js';
 import * as RelayStore from '@/core/RelayStore.js';
 import * as RenoteMutingStore from '@/core/RenoteMutingStore.js';
@@ -58,6 +59,7 @@ import * as UserSecurityKeyStore from '@/core/UserSecurityKeyStore.js';
 import * as UserStore from '@/core/UserStore.js';
 import * as WebhookStore from '@/core/WebhookStore.js';
 import { hashtag, type HashtagInsert } from '@/db/schema/hashtag.js';
+import { queueOutbox, type QueueOutboxInsert } from '@/db/schema/queue-outbox.js';
 import { userIp, type UserIpInsert } from '@/db/schema/user-ip.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase } from '@/drizzle.js';
 import { resetDatabase, runMigrations } from '@/migration-runner.js';
@@ -117,6 +119,14 @@ export async function insertUserIps(database: TestDatabase, values: UserIpInsert
 		ip: userIp.ip,
 		createdAt: userIp.createdAt,
 	});
+}
+
+export async function insertQueueOutboxes(database: TestDatabase, values: QueueOutboxInsert[]): Promise<void> {
+	await database[testDatabase].insert(queueOutbox).values(values);
+}
+
+export async function deleteQueueOutboxesByIds(database: TestDatabase, ids: string[]): Promise<void> {
+	await database[testDatabase].delete(queueOutbox).where(inArray(queueOutbox.id, ids));
 }
 
 export function createLocalSignupAccount(
@@ -282,4 +292,8 @@ export const createUserPendingInDatabase = bindDatabaseOperation(UserPendingStor
 export const createWebhookInDatabase = bindDatabaseOperation(WebhookStore.createWebhookInDatabase);
 export const fetchWebhookByIdAndUserIdFromDatabase = bindDatabaseOperation(
 	WebhookStore.fetchWebhookByIdAndUserIdFromDatabase,
+);
+export const dispatchQueueOutbox = bindDatabaseOperation(QueueOutboxStore.dispatchQueueOutbox);
+export const fetchQueueOutboxByIdFromDatabase = bindDatabaseOperation(
+	QueueOutboxStore.fetchQueueOutboxByIdFromDatabase,
 );
