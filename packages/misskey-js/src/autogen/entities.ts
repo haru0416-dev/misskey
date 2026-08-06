@@ -197,6 +197,9 @@ export type AdminMetaResponse = operations['admin___meta']['responses']['200']['
 export type AdminPromoCreateRequest = NonNullable<
     operations['admin___promo___create']['requestBody']
 >['content']['application/json'];
+export type AdminQueueAbandonOutboxDeadLetterRequest = NonNullable<
+    operations['admin___queue___abandon-outbox-dead-letter']['requestBody']
+>['content']['application/json'];
 export type AdminQueueClearRequest = NonNullable<
     operations['admin___queue___clear']['requestBody']
 >['content']['application/json'];
@@ -209,6 +212,11 @@ export type AdminQueueJobsRequest = NonNullable<
 >['content']['application/json'];
 export type AdminQueueJobsResponse =
     operations['admin___queue___jobs']['responses']['200']['content']['application/json'];
+export type AdminQueueOutboxDeadLettersRequest = NonNullable<
+    operations['admin___queue___outbox-dead-letters']['requestBody']
+>['content']['application/json'];
+export type AdminQueueOutboxDeadLettersResponse =
+    operations['admin___queue___outbox-dead-letters']['responses']['200']['content']['application/json'];
 export type AdminQueuePauseRequest = NonNullable<
     operations['admin___queue___pause']['requestBody']
 >['content']['application/json'];
@@ -230,6 +238,9 @@ export type AdminQueueResumeRequest = NonNullable<
 >['content']['application/json'];
 export type AdminQueueRetryJobRequest = NonNullable<
     operations['admin___queue___retry-job']['requestBody']
+>['content']['application/json'];
+export type AdminQueueRetryOutboxDeadLetterRequest = NonNullable<
+    operations['admin___queue___retry-outbox-dead-letter']['requestBody']
 >['content']['application/json'];
 export type AdminQueueShowJobRequest = NonNullable<
     operations['admin___queue___show-job']['requestBody']

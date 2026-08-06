@@ -761,6 +761,7 @@ export type Endpoints = {
     'admin/queue/outbox-dead-letters': {
         req: AdminQueueOutboxDeadLettersRequest;
         res: AdminQueueOutboxDeadLettersResponse;
+        reqOptional: true;
     };
     'admin/queue/pause': { req: AdminQueuePauseRequest; res: EmptyResponse };
     'admin/queue/promote-jobs': { req: AdminQueuePromoteJobsRequest; res: EmptyResponse };
