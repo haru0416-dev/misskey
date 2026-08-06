@@ -6,11 +6,9 @@
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
 import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listClipNoteClipIdsByNoteIdFromDatabase } from '@/core/ClipNoteStore.js';
 import { listClipsByIdsFromDatabase } from '@/core/ClipStore.js';
-import { listFolloweeIdsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { createNoteFavoriteInDatabase, deleteNoteFavoriteByIdFromDatabase, fetchNoteFavoriteFromDatabase, noteFavoriteExistsInDatabase } from '@/core/NoteFavoriteStore.js';
 import {
@@ -35,6 +33,7 @@ import { createNoteThreadMutingInDatabase, deleteNoteThreadMutingFromDatabase, n
 import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/PollStore.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
+import { fanoutViewerRelationKinds, fetchViewerRelationSnapshotFromDatabase, homeTimelineViewerRelationKinds } from '@/core/ViewerRelationStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
@@ -581,24 +580,20 @@ export async function handleHonoApiNotesLocalTimeline(
 
 	if (params.withReplies && params.withFiles) throw notesLocalTimelineBothWithRepliesAndWithFilesError();
 
-	const getFromDb = async (dbUntilId: string | null, dbSinceId: string | null, limit: number) => {
-		let mutedChannelIds: string[] = [];
-		if (me) {
-			mutedChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
-		}
+	// ローカルタイムラインはフォロー関係を見ないので、fanout のフィルタが読む種別だけで足りる
+	const viewerRelation = me ? await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), fanoutViewerRelationKinds) : undefined;
 
-		return await listLocalTimelineNotesFromDatabase(deps.db, {
-			limit,
-			sinceId: dbSinceId,
-			untilId: dbUntilId,
-			withFiles: params.withFiles,
-			withRenotes: params.withRenotes,
-			withReplies: params.withReplies,
-			me,
-			blockedHosts: deps.meta.blockedHosts,
-			mutedChannelIds,
-		});
-	};
+	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listLocalTimelineNotesFromDatabase(deps.db, {
+		limit,
+		sinceId: dbSinceId,
+		untilId: dbUntilId,
+		withFiles: params.withFiles,
+		withRenotes: params.withRenotes,
+		withReplies: params.withReplies,
+		me,
+		blockedHosts: deps.meta.blockedHosts,
+		mutedChannelIds: viewerRelation?.mutedChannelIds ?? [],
+	});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
 		const notes = await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
@@ -607,6 +602,7 @@ export async function handleHonoApiNotesLocalTimeline(
 			limit: params.limit,
 			allowPartial: params.allowPartial,
 			me,
+			viewerRelation,
 			useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
 			redisTimelines:
 				params.withFiles ? ['localTimelineWithFiles']
@@ -677,12 +673,13 @@ export async function handleHonoApiNotesHybridTimeline(
 
 	if (params.withReplies && params.withFiles) throw notesHybridTimelineBothWithRepliesAndWithFilesError();
 
-	const followeeIds = await listFolloweeIdsByFollowerIdFromDatabase(deps.db, me.id);
+	// 閲覧者コンテキストは fanout 側のフィルタでも同じものが要るので、ここで1本にまとめて取って渡す
+	const viewerRelation = await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), homeTimelineViewerRelationKinds);
+	const followeeIds = viewerRelation.followeeIds;
 	const followeeIdSet = new Set(followeeIds);
-	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIds = viewerRelation.mutedChannelIds;
 	const mutingChannelIdSet = new Set(mutingChannelIds);
-	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
-		.filter(id => !mutingChannelIdSet.has(id));
+	const followingChannelIds = viewerRelation.followingChannelIds.filter(id => !mutingChannelIdSet.has(id));
 
 	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHybridTimelineNotesFromDatabase(deps.db, {
 		me,
@@ -717,6 +714,7 @@ export async function handleHonoApiNotesHybridTimeline(
 			limit: params.limit,
 			allowPartial: params.allowPartial,
 			me,
+			viewerRelation,
 			useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
 			redisTimelines: timelineConfig,
 			alwaysIncludeMyNotes: true,
@@ -1137,12 +1135,13 @@ export async function handleHonoApiNotesTimeline(
 	const params = parseHonoApiParams(notesTimelineParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
-	const followeeIds = await listFolloweeIdsByFollowerIdFromDatabase(deps.db, me.id);
+	// 閲覧者コンテキストは fanout 側のフィルタでも同じものが要るので、ここで1本にまとめて取って渡す
+	const viewerRelation = await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), homeTimelineViewerRelationKinds);
+	const followeeIds = viewerRelation.followeeIds;
 	const followeeIdSet = new Set(followeeIds);
-	const mutingChannelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
+	const mutingChannelIds = viewerRelation.mutedChannelIds;
 	const mutingChannelIdSet = new Set(mutingChannelIds);
-	const followingChannelIds = (await listFollowedChannelIdsByUserIdFromDatabase(deps.db, me.id))
-		.filter(id => !mutingChannelIdSet.has(id));
+	const followingChannelIds = viewerRelation.followingChannelIds.filter(id => !mutingChannelIdSet.has(id));
 
 	const getFromDb = (dbUntilId: string | null, dbSinceId: string | null, limit: number) => listHomeTimelineNotesFromDatabase(deps.db, {
 		me,
@@ -1167,6 +1166,7 @@ export async function handleHonoApiNotesTimeline(
 			limit: params.limit,
 			allowPartial: params.allowPartial,
 			me,
+			viewerRelation,
 			useDbFallback: deps.meta.enableFanoutTimelineDbFallback,
 			redisTimelines: params.withFiles ? [`homeTimelineWithFiles:${me.id}`] : [`homeTimeline:${me.id}`],
 			alwaysIncludeMyNotes: true,
