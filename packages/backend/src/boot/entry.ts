@@ -56,7 +56,10 @@ process.on('uncaughtException', err => {
 	try {
 		logger.error(err);
 		console.trace(err);
-	} catch { }
+	} catch {
+		// logger 自体が壊れていても最後の手段として素の stderr には必ず残す
+		console.error(err);
+	}
 	void shutdownTelemetry().finally(() => process.exit(1));
 });
 

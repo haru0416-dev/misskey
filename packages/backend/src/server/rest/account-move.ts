@@ -25,6 +25,7 @@ import type { RelationshipJobData, ThinUser } from '@/queue/types.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { genId } from '@/misc/id/gen-id.js';
 import * as Acct from '@/misc/acct.js';
+import Logger from '@/logger.js';
 import type { Config } from '@/config.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';
@@ -37,6 +38,8 @@ import { packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPack
 import { genLocalUserUri, type HonoApiFollowingDependencies } from './following.js';
 import { parseHonoApiParams } from './validation.js';
 import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from './ap-person.js';
+
+const accountMoveLogger = new Logger('account-move', 'yellow');
 
 export type HonoApiAccountMoveDependencies =
 	HonoApiRolePolicyDependencies &
@@ -293,16 +296,20 @@ async function moveFromLocalForHonoApi(deps: HonoApiAccountMoveDependencies, src
 /** AccountMoveService#postMoveProcess 相当。ローカルからの引っ越し (i/move) と、リモートアクターの
  * movedToUri 検知 (updatePersonForHonoApi 経由) の両方から呼ばれる共通の移行カスケード。 */
 export async function postMoveProcessForHonoApi(deps: HonoApiAccountMoveDependencies, src: MiUser, dst: MiUser): Promise<void> {
-	try {
-		await Promise.all([
-			copyBlockingForHonoApi(deps, src, dst),
-			copyMutingsForHonoApi(deps, src, dst),
-			copyRolesForHonoApi(deps, src, dst),
-			updateListsForHonoApi(deps, src, dst),
-			onMoveAccountForHonoApi(deps, src, dst),
-		]);
-	} catch {
-		// skip if any error happens
+	// 個々のカスケードは独立しているので、1つ失敗しても残りは完走させる (Promise.all だと先頭の失敗で
+	// 残りの結果が捨てられ、その rejection が unhandledRejection にしか残らない)。
+	const cascades = [
+		['copyBlocking', copyBlockingForHonoApi(deps, src, dst)],
+		['copyMutings', copyMutingsForHonoApi(deps, src, dst)],
+		['copyRoles', copyRolesForHonoApi(deps, src, dst)],
+		['updateLists', updateListsForHonoApi(deps, src, dst)],
+		['onMoveAccount', onMoveAccountForHonoApi(deps, src, dst)],
+	] as const;
+	const results = await Promise.allSettled(cascades.map(([, promise]) => promise));
+	for (const [index, result] of results.entries()) {
+		if (result.status === 'rejected') {
+			accountMoveLogger.error(`postMoveProcess: ${cascades[index]![0]} failed for ${src.id} -> ${dst.id}`, { error: result.reason });
+		}
 	}
 
 	const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
@@ -311,8 +318,8 @@ export async function postMoveProcessForHonoApi(deps: HonoApiAccountMoveDependen
 
 	try {
 		await adjustFollowingCountsForHonoApi(deps, followJobs.map(job => job.from.id), src);
-	} catch {
-		// skip if any error happens
+	} catch (error) {
+		accountMoveLogger.error(`postMoveProcess: adjustFollowingCounts failed for ${src.id} -> ${dst.id}`, { error });
 	}
 
 	await enqueueRelationshipJobForHonoApi(deps, 'follow', followJobs);
