@@ -4,14 +4,10 @@
  */
 
 import type * as Redis from 'ioredis';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
 import { listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
 import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/RenoteMutingStore.js';
 import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
+import { fanoutViewerRelationKinds, fetchViewerRelationSnapshotFromDatabase, viewerRelationSnapshotCovers } from '@/core/ViewerRelationStore.js';
 import { isChannelRelated } from '@/misc/is-channel-related.js';
 import { isInstanceMuted } from '@/misc/is-instance-muted.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
@@ -22,6 +18,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
+import type { ViewerRelationSnapshot } from '@/core/ViewerRelationStore.js';
 
 export type FanoutTimelineReadDependencies = {
 	db: MiDrizzleDatabase;
@@ -88,6 +85,11 @@ export type FanoutTimelineReadOptions = {
 	limit: number;
 	allowPartial: boolean;
 	me?: { id: MiUser['id'] } | undefined | null;
+	/**
+	 * 呼び出し元が既に閲覧者コンテキストを取っているなら渡す。無ければここで1本引く。
+	 * タイムライン系のハンドラは followee 一覧などを先に読んでいるので、渡さないと同じ行を2度引くことになる。
+	 */
+	viewerRelation?: ViewerRelationSnapshot | undefined;
 	useDbFallback: boolean;
 	redisTimelines: string[];
 	noteFilter?: NoteFilter;
@@ -180,19 +182,16 @@ export async function getFanoutTimelineNotesForHonoApi(deps: FanoutTimelineReadD
 
 		if (ps.me) {
 			const me = ps.me;
-			const [
-				userIdsWhoMeMuting,
-				userIdsWhoMeMutingRenotes,
-				userIdsWhoBlockingMe,
-				userMutedInstances,
-				userMutedChannels,
-			] = await Promise.all([
-				listMuteeIdsByMuterIdFromDatabase(deps.db, me.id).then(ids => new Set(ids)),
-				listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, me.id).then(ids => new Set(ids)),
-				listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id).then(ids => new Set(ids)),
-				fetchUserProfileByUserIdFromDatabase(deps.db, me.id).then(p => new Set(p?.mutedInstances ?? [])),
-				listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date()).then(ids => new Set(ids)),
-			]);
+			// 渡された snapshot がここで読む種別を全部含んでいるときだけ使う。足りないまま使うと、
+			// 引いていない項目が空配列と区別できず、ミュート・ブロックの除外が黙って素通りする
+			const relation = viewerRelationSnapshotCovers(ps.viewerRelation, fanoutViewerRelationKinds)
+				? ps.viewerRelation
+				: await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), fanoutViewerRelationKinds);
+			const userIdsWhoMeMuting = new Set(relation.muteeIds);
+			const userIdsWhoMeMutingRenotes = new Set(relation.renoteMuteeIds);
+			const userIdsWhoBlockingMe = new Set(relation.blockerIds);
+			const userMutedInstances = new Set(relation.mutedInstances);
+			const userMutedChannels = new Set(relation.mutedChannelIds);
 
 			const parentFilter = filter;
 			filter = (note) => {
