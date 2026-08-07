@@ -20,6 +20,7 @@ import {
 	sum,
 	type SQL,
 } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { driveFile, type DriveFileInsert, type DriveFileRow } from '@/db/schema/drive-file.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
@@ -147,7 +148,16 @@ export async function listDriveFilesByIdsFromDatabase(
 ): Promise<MiDriveFile[]> {
 	if (ids.length === 0) return [];
 
-	const rows = await db.select().from(driveFile).where(inArray(driveFile.id, ids));
+	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
+	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
+	const statement = preparedQueryFor(db, 'driveFile:byIds', () =>
+		db
+			.select()
+			.from(driveFile)
+			.where(sql`${driveFile.id} = ANY(${sql.placeholder('ids')})`)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
+	const rows = await statement.execute({ ids });
 
 	return rows.map((row) => deserializeDriveFile(row));
 }
