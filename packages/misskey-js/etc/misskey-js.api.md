@@ -841,49 +841,15 @@ export type Channels = {
         params: {
             otherId: string;
         };
-        events: {
-            message: (payload: ChatMessageLite) => void;
-            deleted: (payload: ChatMessageLite['id']) => void;
-            react: (payload: {
-                reaction: string;
-                user?: UserLite;
-                messageId: ChatMessageLite['id'];
-            }) => void;
-            unreact: (payload: {
-                reaction: string;
-                user?: UserLite;
-                messageId: ChatMessageLite['id'];
-            }) => void;
-        };
-        receives: {
-            read: {
-                id: ChatMessageLite['id'];
-            };
-        };
+        events: ChatEvents;
+        receives: ChatReceives;
     };
     chatRoom: {
         params: {
             roomId: string;
         };
-        events: {
-            message: (payload: ChatMessageLite) => void;
-            deleted: (payload: ChatMessageLite['id']) => void;
-            react: (payload: {
-                reaction: string;
-                user?: UserLite;
-                messageId: ChatMessageLite['id'];
-            }) => void;
-            unreact: (payload: {
-                reaction: string;
-                user?: UserLite;
-                messageId: ChatMessageLite['id'];
-            }) => void;
-        };
-        receives: {
-            read: {
-                id: ChatMessageLite['id'];
-            };
-        };
+        events: ChatEvents;
+        receives: ChatReceives;
     };
 };
 
@@ -3840,6 +3806,8 @@ type VerifyEmailRequest = NonNullable<operations['verify-email']['requestBody']>
 // src/entities.ts:59:2 - (ae-forgotten-export) The symbol "ModerationLogPayloads" needs to be exported by the entry point index.d.ts
 // src/streaming.ts:54:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocketOptions" needs to be exported by the entry point index.d.ts
 // src/streaming.ts:55:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
+// src/streaming.types.ts:222:3 - (ae-forgotten-export) The symbol "ChatEvents" needs to be exported by the entry point index.d.ts
+// src/streaming.types.ts:223:3 - (ae-forgotten-export) The symbol "ChatReceives" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 
