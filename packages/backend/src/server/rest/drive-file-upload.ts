@@ -124,10 +124,16 @@ export async function readHonoApiMultipartRequest(
 	if (fileValue.size > config.limits.maximumFileSizeBytes) return { status: 'too-large' };
 
 	const [path] = await createTemp();
-	await streamPromises.pipeline(
-		Readable.fromWeb(fileValue.stream() as import('node:stream/web').ReadableStream),
-		fs.createWriteStream(path),
-	);
+	try {
+		await streamPromises.pipeline(
+			Readable.fromWeb(fileValue.stream() as import('node:stream/web').ReadableStream),
+			fs.createWriteStream(path),
+		);
+	} catch (err) {
+		// 書き出しに失敗するとこの関数は cleanup を返せないまま throw するので、ここで始末する
+		fs.unlink(path, () => {});
+		throw err;
+	}
 
 	return {
 		status: 'ok',

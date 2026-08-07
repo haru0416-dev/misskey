@@ -69,7 +69,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
-			assertTokenPermission(auth, 'read:admin:emoji');
+			assertTokenPermission(auth, 'read:admin:queue');
 			await assertHonoApiModerator(deps, auth);
 
 			return jsonResponse(c, await handleHonoApiAdminQueueStats(deps, body));

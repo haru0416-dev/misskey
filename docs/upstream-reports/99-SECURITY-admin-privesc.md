@@ -84,4 +84,9 @@ api('admin/unset-mfa',      { userId: admin.id }, mod)    // → 成功（脆弱
 ## 備考
 
 このフォーク (Erebia) は upstream から切り離されているため、独自に hardening 済み（弱点を継承しない方針）。
-upstream には本 Advisory の内容で非公開報告するのが妥当。
+
+**2026-08-07 追記: 報告は不要になった。** upstream が 2026-07-24 に同じ穴を独自に塞いだ
+(`1a59ec20e3` "Merge commit from fork" = 非公開フォークからのセキュリティ修正)。修正内容は
+「対象が administrator (root を含む) なら、呼び出し元本人でない限り `ACCESS_DENIED`」で、
+本ドキュメントの Proposed fix より広く、管理者どうしの横取りも塞いでいる。
+Erebia 側もこの upstream 版に合わせた (`assertCanTakeOverUser`)。

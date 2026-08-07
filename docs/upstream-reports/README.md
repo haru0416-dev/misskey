@@ -20,7 +20,7 @@ upstream Misskey が気づかずに継承しているバグを複数見つけた
 | [03](./03-ad-list-pagination.md) | admin 広告一覧 `publishing:false` のページネーション破綻 | 未報告バグ | ✅ page1==page2 | ✅検証済 patch | 公開 issue + PR |
 | [04](./04-registry-dup.md) | registry 同一キー並行 set で重複行 | 既知(TODO)・未対応 | ✅ 2 行 | 提案(migration要) | 公開 issue + PR |
 | [05](./05-drive-capacity-toctou.md) | ドライブ容量チェックの TOCTOU で容量超過 | 未報告バグ | ✅ usage 120>100 | 提案(直列化要) | 公開 issue + PR |
-| [99](./99-SECURITY-admin-privesc.md) | admin reset-password/unset-mfa の権限昇格 | root保護=意図的/admin間=未認識 | (e2e) | 提案 | **非公開 Security Advisory** |
+| [99](./99-SECURITY-admin-privesc.md) | admin reset-password/unset-mfa の権限昇格 | root保護=意図的/admin間=未認識 | (e2e) | 提案 | ~~非公開 Security Advisory~~ **報告不要 (upstream が `1a59ec20e3` で独自修正済)** |
 
 - `submissions/` — **そのまま貼れる提出文面**。
   - **日本語版（推奨・主）**: `issues-ja.md` / `pull-requests-ja.md` / `security-advisory-ja.md`

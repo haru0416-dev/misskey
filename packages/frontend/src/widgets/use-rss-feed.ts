@@ -7,11 +7,26 @@ import { computed, ref, watch } from 'vue';
 import type * as Misskey from 'misskey-js';
 import { url as base } from '@shared/utility/config.js';
 import { useInterval } from '@shared/utility/use-interval.js';
+import { tryParseUrl } from '@shared/utility/url.js';
 
 type RssWidgetProps = {
 	url: string;
 	refreshIntervalSec: number;
 };
+
+/**
+ * フィードの項目は `<a :href="item.link">` として出るので、`javascript:` などのスキームを
+ * そのまま通すと悪意あるフィードを購読しただけでスクリプトを踏まされる。表示前に落とす。
+ */
+export function filterSafeRssItems(
+	items: Misskey.entities.FetchRssResponse['items'],
+): Misskey.entities.FetchRssResponse['items'] {
+	return items.filter((item) => {
+		if (!item.link) return false;
+		const itemUrl = tryParseUrl(item.link, base);
+		return itemUrl != null && (itemUrl.protocol === 'http:' || itemUrl.protocol === 'https:');
+	});
+}
 
 export function useRssFeed(widgetProps: RssWidgetProps, onFetched?: () => void) {
 	const rawItems = ref<Misskey.entities.FetchRssResponse['items']>([]);
@@ -33,7 +48,7 @@ export function useRssFeed(widgetProps: RssWidgetProps, onFetched?: () => void) 
 				return res.json();
 			})
 			.then((feed: Misskey.entities.FetchRssResponse) => {
-				rawItems.value = feed.items;
+				rawItems.value = filterSafeRssItems(feed.items);
 				fetching.value = false;
 				onFetched?.();
 			})

@@ -65,6 +65,25 @@ describe('useRssFeed', () => {
 		expect(onFetched).toHaveBeenCalledOnce();
 	});
 
+	test('drops items whose link is not http(s)', async () => {
+		const items = [
+			{ title: 'safe', link: 'https://example.com/entry' },
+			{ title: 'relative', link: '/relative' },
+			{ title: 'script', link: 'javascript:alert(1)' },
+			{ title: 'broken', link: 'https://[invalid' },
+			{ title: 'no link' },
+		];
+		fetchMock.mockOnceIf(
+			(req) => new URL(req.url).pathname === '/api/fetch-rss',
+			() => ({ status: 200, body: JSON.stringify({ items }) }),
+		);
+
+		const { feed } = renderFeed('https://example.com/rss');
+		await flush();
+
+		expect(feed().rawItems.value.map((item) => item.title)).toEqual(['safe', 'relative']);
+	});
+
 	test('stops fetching but keeps the previous items when the response fails', async () => {
 		fetchMock.mockOnceIf(
 			(req) => new URL(req.url).pathname === '/api/fetch-rss',

@@ -252,6 +252,15 @@ function channelFollowNoSuchChannelError(): HonoApiError {
 	});
 }
 
+function channelFollowAlreadyFollowingError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'You are already following that channel.',
+		code: 'ALREADY_FOLLOWING',
+		id: '7db31665-651e-40c1-8e6e-28e9ad829a2d',
+	});
+}
+
 function channelUnfollowNoSuchChannelError(): HonoApiError {
 	return new HonoApiError({
 		status: 400,
@@ -600,11 +609,18 @@ export async function handleHonoApiChannelsFollow(
 		throw channelFollowNoSuchChannelError();
 	}
 
-	await createChannelFollowingInDatabase(deps.db, {
-		id: genId(),
-		followerId: me.id,
-		followeeId: targetChannel.id,
-	});
+	try {
+		await createChannelFollowingInDatabase(deps.db, {
+			id: genId(),
+			followerId: me.id,
+			followeeId: targetChannel.id,
+		});
+	} catch (err) {
+		// (followerId, followeeId) は unique なので、二重フォローは 500 ではなく明示的なエラーにする
+		if (isDuplicateKeyValueDatabaseError(err)) throw channelFollowAlreadyFollowingError();
+		throw err;
+	}
+
 	deps.publishInternalEvent?.('followChannel', {
 		userId: me.id,
 		channelId: targetChannel.id,

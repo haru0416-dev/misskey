@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		@pointerup.passive="onPointerup"
 		@pointercancel.passive="cancelPointerGesture"
 		@touchstart.passive="doubleTapDetector.onTouchstart"
-		@touchmove.passive="doubleTapDetector.onTouchmove"
+		@touchmove="onTouchmove"
 		@touchcancel.passive="cancelPointerGesture"
 		@contextmenu="cancelPointerGesture"
 		@wheel="onWheel"
@@ -45,9 +45,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template v-else>
 					<img v-if="(!originalContentLoaded || !thumbnailContentLoaded) && content.thumbnailUrl != null" :class="[$style.content, $style.thumbnail]" :src="content.thumbnailUrl" alt="" draggable="false" @load="onThumbnailLoaded" @error="onThumbnailSettled">
 					<template v-if="activated">
-						<img v-if="content.type === 'image'" :class="$style.content" :src="content.url" :alt="content.file?.comment ?? ''" draggable="false" @load="onOriginalLoaded">
-						<video v-else ref="videoEl" data-gallery-click-action="video" :class="$style.content" :src="content.url" :aria-label="content.file?.comment ?? content.filename ?? i18n.ts.video" draggable="false" :controls="prefer.useNativeUiForVideoAudioPlayer" playsinline @loadedmetadata="onOriginalLoaded" @click.stop="onVideoClick"></video>
-						<div v-if="content.type === 'video' && !prefer.useNativeUiForVideoAudioPlayer && !isVideoPlaying" data-gallery-click-action="video" :class="$style.playIconWrapper"><div :class="$style.playIcon"><i class="ti ti-player-play"></i></div></div>
+						<img v-if="content.type === 'image'" :class="[$style.content, { [$style.pixelatedZoom]: pixelatedZoom }]" :src="content.url" :alt="content.file?.comment ?? ''" draggable="false" @load="onOriginalLoaded">
+						<video v-else ref="videoEl" data-gallery-click-action="video" :class="[$style.video, { [$style.videoSized]: videoAspectRatio != null }]" :src="content.url" :aria-label="content.file?.comment ?? content.filename ?? i18n.ts.video" draggable="false" :controls="prefer.useNativeUiForVideoAudioPlayer" playsinline @loadedmetadata="onVideoLoadedMetadata" @click.stop="onVideoClick"></video>
+						<div v-if="content.type === 'video' && !prefer.useNativeUiForVideoAudioPlayer && !isVideoPlaying" :class="$style.playIconWrapper"><div :class="$style.playIcon"><i class="ti ti-player-play"></i></div></div>
 					</template>
 					<div v-if="activated && (!originalContentLoaded || (content.type === 'video' && isVideoPlaying && !isVideoActuallyPlaying))" :class="$style.loading"><MkLoading/></div>
 				</template>
@@ -107,6 +107,61 @@ export function normalizeGestureTransform(transform: { x: number; y: number; sca
 	if (!Number.isFinite(transform.scale) || transform.scale <= 1) return { x: 0, y: 0, scale: 1 };
 	return transform;
 }
+
+/** 縦・横どちらのスワイプかを確定させるのに必要な、開始点からの移動量 (px) */
+const AXIS_SWIPE_HYSTERESIS = 10;
+/** フリックでスワイプが成立する速度 (px/ms) */
+const MIN_VELOCITY_TO_SWIPE = 0.5;
+/** 縦スワイプで閉じるのに必要な移動量の、ビューポート高の 1/3 に対する比 */
+const MIN_RATIO_TO_CLOSE = 0.4;
+/** 横スワイプで前後のコンテンツに移動するのに必要な移動量 (px) */
+const HORIZONTAL_SWIPE_DISTANCE_THRESHOLD = 150;
+/** 速度を平均する時間窓 (ms) */
+const VELOCITY_WINDOW = 100;
+
+export type PointerSample = { time: number; x: number; y: number };
+
+/**
+ * 1回目の pointermove だけで軸を決めると、縦に払ったつもりでも最初のわずかな横ぶれで横スワイプに
+ * 固定され、そのジェスチャーでは二度と閉じられなくなる。開始点からの累積量で毎回評価し直し、
+ * 意図が読み取れる程度に動いてから確定させる。完全に同値の場合はどちらにもロックしない。
+ */
+export function resolveSwipeAxis(totalX: number, totalY: number): 'vertical' | 'horizontal' | null {
+	if (Math.abs(totalX) === Math.abs(totalY)) return null;
+	const isVertical = Math.abs(totalY) > Math.abs(totalX);
+	const dominantDelta = isVertical ? totalY : totalX;
+	if (Math.abs(dominantDelta) < AXIS_SWIPE_HYSTERESIS) return null;
+	return isVertical ? 'vertical' : 'horizontal';
+}
+
+/**
+ * 単発の pointermove の増分から速度を求めると、表示のリフレッシュレートを超える頻度で pointermove を
+ * 発火する環境では値が暴れるため、直近 VELOCITY_WINDOW ms の平均を取る。
+ * 指を止めたまま離した場合、pointermove が発火しなくなる環境 (iOS・マウス) では直前のフリックの速度が
+ * 残り続けてしまうので、最後のサンプルが古ければ速度なしとして扱う。
+ */
+export function averagePointerVelocity(samples: PointerSample[], now: number): { x: number; y: number } {
+	const latest = samples.at(-1);
+	const oldest = samples.at(0);
+	if (latest == null || oldest == null || latest === oldest) return { x: 0, y: 0 };
+	if (now - latest.time > VELOCITY_WINDOW) return { x: 0, y: 0 };
+	const duration = latest.time - oldest.time;
+	if (duration <= 0) return { x: 0, y: 0 };
+	return { x: (latest.x - oldest.x) / duration, y: (latest.y - oldest.y) / duration };
+}
+
+/** 十分な距離まで動かされた、またはその向きへ強く弾かれたなら閉じる */
+export function shouldCloseByVerticalSwipe(totalY: number, velocityY: number, viewportHeight: number): boolean {
+	if (Math.abs(totalY) > (viewportHeight / 3) * MIN_RATIO_TO_CLOSE) return true;
+	return Math.sign(totalY) === Math.sign(velocityY) && Math.abs(velocityY) > MIN_VELOCITY_TO_SWIPE;
+}
+
+/** 左へなら次、右へなら前のコンテンツ。どちらの条件も満たさないなら元の位置へ戻す */
+export function resolveHorizontalSwipeIntent(totalX: number, velocityX: number): 'next' | 'prev' | null {
+	if (totalX < -HORIZONTAL_SWIPE_DISTANCE_THRESHOLD || (totalX < 0 && velocityX < -MIN_VELOCITY_TO_SWIPE)) return 'next';
+	if (totalX > HORIZONTAL_SWIPE_DISTANCE_THRESHOLD || (totalX > 0 && velocityX > MIN_VELOCITY_TO_SWIPE)) return 'prev';
+	return null;
+}
 </script>
 
 <script lang="ts" setup>
@@ -127,6 +182,11 @@ import { getFileMenu } from '@/features/media-viewer/get-file-menu.js';
 
 const props = withDefaults(defineProps<{ content: LightboxContent; activated: boolean; initiallyOpened?: boolean }>(), { initiallyOpened: false });
 const emit = defineEmits<{ (ev: 'close'): void; (ev: 'horizontalSwipe', offset: number): void; (ev: 'next'): void; (ev: 'prev'): void; (ev: 'cancelHorizontalSwipe'): void }>();
+
+// 前後のコンテンツへ移動しても設定が続くように、状態は親 (MkLightbox) 側に置く
+// TODO: ドライブファイルの properties にピクセルアートかどうかを持たせ、既定値をそこから決める
+const pixelatedZoom = defineModel<boolean>('pixelatedZoom', { required: true });
+
 const rootEl = useTemplateRef('rootEl');
 const mainEl = useTemplateRef('mainEl');
 const videoEl = useTemplateRef('videoEl');
@@ -151,6 +211,23 @@ function calcContentRenderingSize(content: LightboxContent) {
 	if (content.width == null || content.height == null || content.width <= 0 || content.height <= 0) return null;
 	const ratio = Math.min((window.innerWidth - padding.left - padding.right) / content.width, (window.innerHeight - padding.top - padding.bottom) / content.height);
 	return { width: content.width * ratio, height: content.height * ratio };
+}
+
+// 縦横比が決まっていないと video 要素は表示領域いっぱいの箱になり、実際には何も描かれていない
+// 余白部分のクリックまで video が食ってしまう (= 背景クリックで閉じられない)。先に確定させておく
+const videoAspectRatio = ref<number | null>(
+	props.content.width != null && props.content.height != null && props.content.width > 0 && props.content.height > 0
+		? props.content.width / props.content.height
+		: null,
+);
+
+function onVideoLoadedMetadata() {
+	onOriginalLoaded();
+
+	// ドライブ上のメタデータが無い場合に限り、動画自体の初期サイズから縦横比を確定させる
+	if (videoAspectRatio.value != null) return;
+	if (videoEl.value == null || videoEl.value.videoWidth === 0 || videoEl.value.videoHeight === 0) return;
+	videoAspectRatio.value = videoEl.value.videoWidth / videoEl.value.videoHeight;
 }
 
 const contentRenderingSize = calcContentRenderingSize(props.content);
@@ -247,12 +324,20 @@ let clickAction: 'hidden' | 'video' | null = null;
 let pointerId: number | null = null;
 let start = { x: 0, y: 0 };
 let last = { x: 0, y: 0 };
+/** 軸が確定した時点のポインタ位置。ここを基準に描画することで、確定した瞬間に表示が飛ぶのを防ぐ */
+let swipeOrigin = { x: 0, y: 0 };
 let horizontal = false;
 let vertical = false;
 let horizontalDelta = 0;
-let verticalDelta = 0;
 const pointers = new Map<number, PointerEvent>();
 let pinchDistance = 0;
+
+let velocitySamples: PointerSample[] = [];
+
+function pushVelocitySample(time: number, x: number, y: number) {
+	velocitySamples.push({ time, x, y });
+	while (velocitySamples.length > 2 && time - velocitySamples[0]!.time > VELOCITY_WINDOW) velocitySamples.shift();
+}
 
 function resolveClickAction(target: EventTarget | null) {
 	if (!(target instanceof Element)) return null;
@@ -267,7 +352,11 @@ function onPointerdown(ev: PointerEvent) {
 	clickAction = resolveClickAction(ev.target);
 	if (pointerId == null) {
 		pointerId = ev.pointerId;
-		start = last = { x: ev.clientX, y: ev.clientY };
+		start = last = swipeOrigin = { x: ev.clientX, y: ev.clientY };
+		velocitySamples = [];
+		// pointerdown 自体を最初のサンプルとして積む。これが無いと pointermove が1回しか発生しない
+		// ような素早いフリックでサンプルが1つしか溜まらず、速度が常に 0 と評価されてしまう
+		pushVelocitySample(ev.timeStamp, ev.clientX, ev.clientY);
 	}
 }
 
@@ -292,14 +381,20 @@ function onPointermove(ev: PointerEvent) {
 	const dy = ev.clientY - last.y;
 	if (Math.abs(ev.clientX - start.x) > 5 || Math.abs(ev.clientY - start.y) > 5) isClick = false;
 	if (isZooming.value) transform.value = clampTransform({ x: transform.value.x + dx, y: transform.value.y + dy, scale: transform.value.scale });
-	else if (vertical) {
-		transform.value.y += dy;
-		verticalDelta += dy;
-	} else if (horizontal) {
-		horizontalDelta = ev.clientX - start.x;
+	else if (vertical) transform.value.y += dy;
+	else if (horizontal) {
+		horizontalDelta = ev.clientX - swipeOrigin.x;
 		emit('horizontalSwipe', horizontalDelta);
-	} else if (Math.abs(dy) > Math.abs(dx)) vertical = true;
-	else horizontal = true;
+	} else {
+		const axis = resolveSwipeAxis(ev.clientX - start.x, ev.clientY - start.y);
+		if (axis != null) {
+			// 確定した地点を描画の基準に置き直すことで、ヒステリシス分だけ表示が飛ぶのを防ぐ
+			swipeOrigin = { x: ev.clientX, y: ev.clientY };
+			if (axis === 'vertical') vertical = true;
+			else horizontal = true;
+		}
+	}
+	pushVelocitySample(ev.timeStamp, ev.clientX, ev.clientY);
 	last = { x: ev.clientX, y: ev.clientY };
 }
 
@@ -311,23 +406,32 @@ function onPointerup(ev: PointerEvent) {
 		const [nextPointer] = pointers.values();
 		if (nextPointer == null) return;
 		pointerId = nextPointer.pointerId;
-		start = last = { x: nextPointer.clientX, y: nextPointer.clientY };
+		start = last = swipeOrigin = { x: nextPointer.clientX, y: nextPointer.clientY };
+		velocitySamples = [];
 		isClick = false;
 	} else if (pointerId === ev.pointerId) {
 		pointerId = null;
+		// 離した時点で取り直す。指を止めたまま離した場合はここで速度が 0 になり、
+		// 直前のフリックの速度が残っていてスワイプが誤成立するのを防げる
+		const velocity = averagePointerVelocity(velocitySamples, ev.timeStamp);
+		// 判定にはジェスチャー開始点からの総移動量を使う。描画用の delta は軸が確定した地点が基準で、
+		// 確定までのヒステリシス分と確定した pointermove 自体の移動量を含まないため、
+		// pointermove が1回しか発生しないような素早いフリックが握り潰されてしまう
+		const totalX = ev.clientX - start.x;
+		const totalY = ev.clientY - start.y;
 		if (vertical) {
-			if (Math.abs(verticalDelta) > 200) closeThis();
+			if (shouldCloseByVerticalSwipe(totalY, velocity.y, window.innerHeight)) closeThis();
 			else resetToNeutral();
 		} else if (horizontal) {
-			if (horizontalDelta < -150) emit('next');
-			else if (horizontalDelta > 150) emit('prev');
+			const intent = resolveHorizontalSwipeIntent(totalX, velocity.x);
+			if (intent === 'next') emit('next');
+			else if (intent === 'prev') emit('prev');
 			else emit('cancelHorizontalSwipe');
 		}
 	}
 	horizontal = false;
 	vertical = false;
 	horizontalDelta = 0;
-	verticalDelta = 0;
 	if (isZooming.value) {
 		const normalized = clampTransform(transform.value);
 		if (normalized.scale === 1) resetToNeutral();
@@ -345,6 +449,16 @@ const doubleTapDetector = makeDoubleTapDetector(ev => {
 	}
 });
 
+function onTouchmove(ev: TouchEvent) {
+	doubleTapDetector.onTouchmove(ev);
+
+	// touch-action: none だけでは慣性スクロールが発生した扱いになるブラウザがあり、
+	// その後の1タップが「慣性スクロールを止めるタップ」として握り潰される。ジェスチャ中は明示的に止める
+	if (vertical || horizontal || isZooming.value || pointers.size > 1) {
+		ev.preventDefault();
+	}
+}
+
 function cancelPointerGesture() {
 	const wasVertical = vertical;
 	const wasHorizontal = horizontal;
@@ -356,7 +470,7 @@ function cancelPointerGesture() {
 	horizontal = false;
 	vertical = false;
 	horizontalDelta = 0;
-	verticalDelta = 0;
+	velocitySamples = [];
 	doubleTapDetector.reset();
 	if (wasVertical || transform.value.scale <= 1) resetToNeutral();
 	if (wasHorizontal) emit('cancelHorizontalSwipe');
@@ -390,7 +504,9 @@ watch(() => props.content, content => {
 	if (content.file == null) hide.value = false;
 	else {
 		hide.value = shouldHideFileByDefault(content.file, true);
-		if (content.file.isSensitive && prefer.nsfw !== 'force' && props.initiallyOpened) hide.value = false;
+		// 最初に開いた1枚はタイムライン側で既に明示的に表示させたものなので、
+		// 「常にぼかす」設定であってもここで隠し直さない
+		if (content.file.isSensitive && props.initiallyOpened) hide.value = false;
 	}
 }, { deep: true, immediate: true });
 watch(rootEl, root => { if (root != null) { infoShowing.value = true; hideForFallback.value = false; } }, { immediate: true });
@@ -421,11 +537,20 @@ function onVideoClick() {
 
 function openMenu(ev: PointerEvent) {
 	const menu: MenuItem[] = [{ type: 'component', component: markRaw(XFileInfo), props: { content: props.content } }, { type: 'divider' }, {
+		type: 'switch',
+		text: i18n.ts.pixelatedZoom,
+		icon: 'ti ti-grain',
+		ref: pixelatedZoom,
+	}, {
 		text: i18n.ts.hide,
 		icon: 'ti ti-eye-off',
 		action: () => { hide.value = true; },
 	}];
-	if (props.content.file != null) menu.push({ type: 'divider' }, ...getFileMenu(props.content.file));
+	if (props.content.file != null) {
+		// 権限やdevModeによっては空になるので、空のままdividerだけ足さない
+		const fileMenu = getFileMenu(props.content.file);
+		if (fileMenu.length > 0) menu.push({ type: 'divider' }, ...fileMenu);
+	}
 	os.popupMenu(menu, (ev.currentTarget ?? ev.target ?? undefined) as HTMLElement | undefined);
 }
 
@@ -448,9 +573,13 @@ defineExpose({ onActive, onDeactive, closeThis });
 .main { touch-action: none; }
 .transformer { width: 100%; height: 100%; box-sizing: border-box; padding: v-bind("padding.top + 'px'") v-bind("padding.right + 'px'") v-bind("padding.bottom + 'px'") v-bind("padding.left + 'px'"); transform-origin: left top; }
 .transition { transition: transform 200ms ease; }
-.contentWrapper { position: relative; width: 100%; height: 100%; transition: scale 200ms ease, opacity 200ms ease; }
+// container-type は .videoSized が使う 100cqw / 100cqh の基準 (= padding を除いた実際の表示領域)
+.contentWrapper { position: relative; width: 100%; height: 100%; container-type: size; transition: scale 200ms ease, opacity 200ms ease; }
 .hideForFallback { scale: .7; opacity: 0; }
 .content { display: block; user-select: none; position: absolute; inset: 0; margin: auto; width: 100%; height: 100%; object-fit: contain; }
+.pixelatedZoom { image-rendering: pixelated; }
+.video { display: block; user-select: none; position: absolute; top: 50%; left: 50%; translate: -50% -50%; width: 100%; height: 100%; object-fit: contain; }
+.videoSized { width: min(100cqw, calc(100cqh * v-bind("videoAspectRatio ?? 16 / 9"))); height: auto; aspect-ratio: v-bind("videoAspectRatio ?? 16 / 9"); background-color: #000; }
 .thumbnail { pointer-events: none; }
 .loading { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; pointer-events: none; }
 .hidden { position: absolute; inset: 0; margin: auto; display: grid; place-items: center; overflow: clip; padding: 0; border: 0; color: inherit; background: transparent; }
@@ -461,9 +590,10 @@ defineExpose({ onActive, onDeactive, closeThis });
 .hiddenText { position: absolute; inset: 0; z-index: 1; display: flex; justify-content: center; align-items: center; text-align: center; cursor: pointer; color: #fff; }
 .withBlur { backdrop-filter: blur(12px); }
 .hiddenTextWrapper { display: grid; gap: 4px; }
-.playIconWrapper { position: absolute; inset: 0; display: grid; place-items: center; }
+.playIconWrapper { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
 .playIcon { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 100%; font-size: 120%; background: var(--MI_THEME-accent); color: var(--MI_THEME-fgOnAccent); transition: scale 100ms ease; }
-.playIconWrapper:hover .playIcon { scale: 1.2; }
+// アイコン自体はクリックを受け取らないので、hover は下の video 要素を経由して拾う
+.video:hover ~ .playIconWrapper .playIcon { scale: 1.2; }
 .header, .footer { position: absolute; left: 0; right: 0; opacity: 0; transition: opacity 200ms ease, translate 200ms ease; }
 .header { top: 0; height: v-bind("headerSize + 'px'"); translate: 0 -100%; }
 .footer { bottom: 0; height: v-bind("footerSize + 'px'"); translate: 0 100%; }
