@@ -87,7 +87,7 @@ function onMockToggleReaction(emoji: string, count: number) {
 
 function canReact(reaction: string) {
 	if (!$i) return false;
-	// TODO: CheckPermissions
+	// TODO: checkReactionPermissionsを使ってリアクション可否を判定する
 	return !reaction.match(/@\w/) && (customEmojisMap.has(reaction) || isSupportedEmoji(reaction));
 }
 

@@ -76,7 +76,7 @@ async function add() {
 
 	const id = genId();
 
-	// TODO: page-editor.vueのと共通化
+	// TODO: ../index.vueの要素追加処理と共通化する
 	if (type === 'text') {
 		children.value.push({
 			id,

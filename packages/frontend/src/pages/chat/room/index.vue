@@ -381,7 +381,7 @@ function notifyNewMessage() {
 
 function onVisibilitychange() {
 	if (window.document.hidden) return;
-	// TODO
+	// TODO: 表示を再開したときに未読メッセージを既読にする
 }
 
 onMounted(() => {

@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</Transition>
 	</template>
 	<template v-else-if="display === 'oneByOne'">
-		<!-- TODO -->
+		<!-- TODO: インスタンスを一定間隔で一件ずつ表示する -->
 	</template>
 </span>
 </template>
