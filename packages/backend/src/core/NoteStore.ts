@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { note, type NoteInsert, type NoteRow } from '@/db/schema/note.js';
@@ -854,38 +854,59 @@ export async function listPublicNotesFromDatabase(
 		poll?: boolean;
 	},
 ): Promise<MiNote[]> {
-	const conditions: SQL[] = [
-		notePaginationCondition(options),
-		eq(note.visibility, 'public'),
-		eq(note.localOnly, false),
-	];
+	// note は34列あり、組み立て直しに実測 227µs/回かかる。フィルタの有無で SQL の形が変わるので、
+	// 形を決める値 (絞り込みフラグと since/until の有無) をそのまま key にして組み立て済みを使い回す。
+	// 形に影響しない値 (limit と since/until の中身) だけ placeholder で渡す。
+	const hasSinceId = options.sinceId != null;
+	const hasUntilId = options.untilId != null;
+	const key =
+		`note:public:${hasSinceId}:${hasUntilId}:${options.local === true}` +
+		`:${options.reply}:${options.renote}:${options.withFiles}:${options.poll}`;
 
-	if (options.local) {
-		conditions.push(isNull(note.userHost));
-	}
+	const statement = preparedQueryFor(db, key, () => {
+		const conditions: SQL[] = [eq(note.visibility, 'public'), eq(note.localOnly, false)];
 
-	if (options.reply !== undefined) {
-		conditions.push(options.reply ? isNotNull(note.replyId) : isNull(note.replyId));
-	}
+		if (hasSinceId) {
+			conditions.push(gt(note.id, sql.placeholder('sinceId')));
+		}
 
-	if (options.renote !== undefined) {
-		conditions.push(options.renote ? isNotNull(note.renoteId) : isNull(note.renoteId));
-	}
+		if (hasUntilId) {
+			conditions.push(lt(note.id, sql.placeholder('untilId')));
+		}
 
-	if (options.withFiles !== undefined) {
-		conditions.push(options.withFiles ? sql`${note.fileIds} != '{}'` : sql`${note.fileIds} = '{}'`);
-	}
+		if (options.local) {
+			conditions.push(isNull(note.userHost));
+		}
 
-	if (options.poll !== undefined) {
-		conditions.push(eq(note.hasPoll, options.poll));
-	}
+		if (options.reply !== undefined) {
+			conditions.push(options.reply ? isNotNull(note.replyId) : isNull(note.replyId));
+		}
 
-	const rows = await db
-		.select()
-		.from(note)
-		.where(and(...conditions))
-		.orderBy(options.sinceId && !options.untilId ? asc(note.id) : desc(note.id))
-		.limit(options.limit);
+		if (options.renote !== undefined) {
+			conditions.push(options.renote ? isNotNull(note.renoteId) : isNull(note.renoteId));
+		}
+
+		if (options.withFiles !== undefined) {
+			conditions.push(options.withFiles ? sql`${note.fileIds} != '{}'` : sql`${note.fileIds} = '{}'`);
+		}
+
+		if (options.poll !== undefined) {
+			conditions.push(eq(note.hasPoll, options.poll));
+		}
+
+		return db
+			.select()
+			.from(note)
+			.where(and(...conditions))
+			.orderBy(hasSinceId && !hasUntilId ? asc(note.id) : desc(note.id))
+			.limit(sql.placeholder('limit'))
+			.prepare(UNNAMED_PREPARED_STATEMENT);
+	});
+	const rows = await statement.execute({
+		limit: options.limit,
+		sinceId: options.sinceId,
+		untilId: options.untilId,
+	});
 
 	return rows.map((row) => deserializeNote(row));
 }
