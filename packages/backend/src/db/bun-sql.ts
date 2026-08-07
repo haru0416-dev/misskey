@@ -7,6 +7,7 @@ import { SQL } from 'bun';
 import { drizzle } from 'drizzle-orm/bun-sql';
 import type { Config } from '@/config.js';
 import { createDrizzleQueryLogger, type MiDrizzleDatabase } from '@/drizzle.js';
+import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import MisskeyLogger from '@/logger.js';
 
 // bun ランタイム限定のDBドライバ。`import { SQL } from 'bun'` を含むため、node で動かす経路
@@ -133,8 +134,11 @@ function buildConnectionUrl(config: Config): string {
 }
 
 export function createBunSqlRuntime(config: Config): BunSqlRuntime {
+	// Bun.sql は node-postgres と違って起動時に max ぶんの接続を一気に張るので、
+	// この値がそのままこのプロセスのPostgreSQL接続数になる。
+	const maxConnections = resolveDatabasePoolSize(config);
 	const client = new SQL(buildConnectionUrl(config), {
-		max: config.database.pool.maximumConnections,
+		max: maxConnections,
 		idleTimeout: Math.ceil(config.database.pool.idleConnectionTimeoutMs / 1000),
 		connectionTimeout: Math.ceil(config.database.pool.connectionTimeoutMs / 1000),
 		// 名前付きprepared statementはタイムライン系の `= ANY($n)` でgeneric planに落ちて
@@ -148,7 +152,7 @@ export function createBunSqlRuntime(config: Config): BunSqlRuntime {
 		...(queryLogger === undefined ? {} : { logger: queryLogger }),
 	});
 
-	logger.info(`Using Bun.sql driver (max: ${config.database.pool.maximumConnections} connections)`);
+	logger.info(`Using Bun.sql driver (max: ${maxConnections} connections)`);
 
 	return {
 		// 結果の型マッピングは node-postgres 経路と一致することを実データで確認済 (timestamp / 配列 /

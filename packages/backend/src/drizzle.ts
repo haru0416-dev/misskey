@@ -8,6 +8,7 @@ import pg, { type Pool, type PoolConfig } from 'pg';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger as DrizzleLogger } from 'drizzle-orm/logger';
 import type { Config } from '@/config.js';
+import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import MisskeyLogger from '@/logger.js';
 
 pg.types.setTypeParser(20, Number);
@@ -64,7 +65,7 @@ export function createDrizzlePool(config: Config): MiDrizzlePool {
 		database: config.database.primary.name,
 		...(config.database.primary.ssl == null ? {} : { ssl: config.database.primary.ssl }),
 		min: config.database.pool.minimumConnections,
-		max: config.database.pool.maximumConnections,
+		max: resolveDatabasePoolSize(config),
 		connectionTimeoutMillis: config.database.pool.connectionTimeoutMs,
 		idleTimeoutMillis: config.database.pool.idleConnectionTimeoutMs,
 		statement_timeout: config.database.pool.statementTimeoutMs,

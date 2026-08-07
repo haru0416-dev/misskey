@@ -84,11 +84,12 @@ export async function launchHonoServer(
 	config: Config,
 	logger = new Logger('hono', 'cyan'),
 	dependencies?: RuntimeDependencies,
+	options?: { daemons?: boolean },
 ): Promise<HonoServerRuntime> {
 	const deps = dependencies ?? (await createRuntimeDependencies(config));
 	const disposers: RuntimeDisposer[] = dependencies == null ? [() => deps.dispose()] : [];
 	try {
-		return await launchHonoServerWithDependencies(config, logger, deps, disposers);
+		return await launchHonoServerWithDependencies(config, logger, deps, disposers, options?.daemons ?? false);
 	} catch (error) {
 		try {
 			await disposeServerRuntime(disposers);
@@ -104,6 +105,7 @@ async function launchHonoServerWithDependencies(
 	logger: Logger,
 	deps: Awaited<ReturnType<typeof createRuntimeDependencies>>,
 	disposers: RuntimeDisposer[],
+	daemons: boolean,
 ): Promise<HonoServerRuntime> {
 	const eventPublishers = createHonoEventPublishers({
 		config,
@@ -262,7 +264,9 @@ async function launchHonoServerWithDependencies(
 		publishMainStream: eventPublishers.publishMainStream,
 	} satisfies HonoStreamServerDependencies;
 
-	if (!envOption.noDaemons) {
+	// デーモンはホスト全体で1プロセスだけが持つ (master が cluster-roles.ts で割り当てる)。
+	// 複数プロセスで動かすと同じ統計がプロセス数ぶん重複して全ストリームへ配信されてしまう。
+	if (daemons && !envOption.noDaemons) {
 		const queueStatsDaemon = startHonoQueueStatsDaemon({
 			config,
 			deliverQueue: deps.deliverQueue,
@@ -297,6 +301,9 @@ async function launchHonoServerWithDependencies(
 					}
 				}
 
+				// CPUプロファイル上は requestIP() が全体の 6.4% を占めるが、これを遅延化 (server を env で
+				// 渡し getRequestIp() 側で解決) しても rps / CPU per req はどちらも変わらなかった。
+				// 実コストは Bun の HTTP 層側にあり、ここを外しても消えない。
 				const remoteAddress = bunServerInstance.requestIP(request)?.address;
 				if (remoteAddress != null) {
 					request.headers.set('x-misskey-remote-address', remoteAddress);
