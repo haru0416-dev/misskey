@@ -347,6 +347,33 @@ describe('Note', () => {
 		assert.strictEqual(castAsError(bobReply.body).error.code, 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE');
 	});
 
+	test('visibility: followersなノートにvisibility: publicで返信すると、返信もfollowersになる', async () => {
+		const aliceNote = await api(
+			'notes/create',
+			{
+				text: 'followers only note',
+				visibility: 'followers',
+			},
+			alice,
+		);
+
+		assert.strictEqual(aliceNote.status, 200);
+
+		// 返信が public のまま通ると、フォロワー限定投稿にぶら下がったスレッドが第三者から見えてしまう
+		const aliceReply = await api(
+			'notes/create',
+			{
+				text: 'reply to my own followers note',
+				replyId: aliceNote.body.createdNote.id,
+				visibility: 'public',
+			},
+			alice,
+		);
+
+		assert.strictEqual(aliceReply.status, 200);
+		assert.strictEqual(aliceReply.body.createdNote.visibility, 'followers');
+	});
+
 	test('visibility: specifiedなノートに対してvisibility: specifiedで返信できる', async () => {
 		const aliceNote = await api(
 			'notes/create',

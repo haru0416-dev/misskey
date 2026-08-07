@@ -9,6 +9,7 @@ import { computed, markRaw, onUnmounted, ref, triggerRef } from 'vue';
 import type { MenuItem } from '@/types/menu.js';
 import type { WatermarkLayers, WatermarkPreset } from '@/features/image-editor/watermark/WatermarkRenderer.js';
 import type { ImageFrameParams } from '@/features/image-editor/frame/ImageFrameRenderer.js';
+import type { LightboxContent } from '@/features/media-viewer/components/MkLightbox.item.vue';
 import { genId } from '@/utility/id.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
@@ -49,6 +50,8 @@ export type UploaderItem = {
 	suffix: string;
 	progress: { max: number; value: number } | null;
 	thumbnail: string | null;
+	/** アップロード前のプレビュー用。サムネイルを出せない種別でも必ず持つ */
+	objectUrl: string;
 	preprocessing: boolean;
 	preprocessProgress: number | null;
 	uploading: boolean;
@@ -70,6 +73,35 @@ export type UploaderItem = {
 
 export function getUploadName(item: UploaderItem): string {
 	return item.name + (item.name.endsWith(item.suffix) ? '' : item.suffix);
+}
+
+/** アップロード前のファイルを MkLightbox で見られるのは画像と動画だけ */
+export function isPreviewableUploaderItem(item: UploaderItem): boolean {
+	return item.file.type.startsWith('image/') || item.file.type.startsWith('video/');
+}
+
+/** アップロード前のファイルをビューアーで開く。`items` のうちプレビューできるものが並ぶ */
+export async function previewUploaderItem(items: UploaderItem[], target: UploaderItem): Promise<void> {
+	const contents = items.filter(isPreviewableUploaderItem).map<LightboxContent>((item) => ({
+		id: item.id,
+		type: item.file.type.startsWith('video/') ? 'video' : 'image',
+		url: item.objectUrl,
+		thumbnailUrl: item.thumbnail,
+		filename: getUploadName(item),
+	}));
+	const defaultIndex = contents.findIndex((content) => content.id === target.id);
+	if (defaultIndex === -1) return;
+
+	const { dispose } = await os.popupAsyncWithDialog(
+		import('@/features/media-viewer/components/MkLightbox.vue').then((x) => x.default),
+		{
+			defaultIndex,
+			contents,
+		},
+		{
+			closed: () => dispose(),
+		},
+	);
 }
 
 function getCompressionSettings(level: 0 | 1 | 2 | 3) {
@@ -124,12 +156,15 @@ export function useUploader(
 			uploaderFeatures.value.watermark && $i.policies.watermarkAvailable
 				? (prefer.watermarkPresets.find((p) => p.id === prefer.defaultWatermarkPresetId) ?? null)
 				: null;
+		// サムネイルを持てない種別 (動画など) でもプレビューには実体が要るので、種別に依らず作る
+		const objectUrl = window.URL.createObjectURL(file);
 		items.value.push({
 			id,
 			name: prefer.keepOriginalFilename ? filename : id + extension,
 			suffix: '',
 			progress: null,
-			thumbnail: THUMBNAIL_SUPPORTED_TYPES.includes(file.type) ? window.URL.createObjectURL(file) : null,
+			thumbnail: THUMBNAIL_SUPPORTED_TYPES.includes(file.type) ? objectUrl : null,
+			objectUrl,
 			preprocessing: false,
 			preprocessProgress: null,
 			uploading: false,
@@ -158,10 +193,26 @@ export function useUploader(
 		}
 	}
 
+	/** thumbnail は objectUrl と同じ URL を指していることがあるので、重複して revoke しない */
+	function revokeItemObjectUrls(item: UploaderItem) {
+		if (item.thumbnail != null && item.thumbnail !== item.objectUrl) URL.revokeObjectURL(item.thumbnail);
+		URL.revokeObjectURL(item.objectUrl);
+	}
+
+	/** 差し替え後のファイルから objectUrl / thumbnail を作り直す (古い URL は解放する) */
+	function replaceItemObjectUrls(item: UploaderItem, file: Blob | File): Pick<UploaderItem, 'objectUrl' | 'thumbnail'> {
+		revokeItemObjectUrls(item);
+		const objectUrl = window.URL.createObjectURL(file);
+		return {
+			objectUrl,
+			thumbnail: THUMBNAIL_SUPPORTED_TYPES.includes(file.type) ? objectUrl : null,
+		};
+	}
+
 	function removeItem(item: UploaderItem) {
 		const index = items.value.indexOf(item);
 		if (index === -1) return;
-		if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
+		revokeItemObjectUrls(item);
 		items.value.splice(index, 1);
 	}
 
@@ -215,6 +266,17 @@ export function useUploader(
 						);
 					},
 				},
+				...(isPreviewableUploaderItem(item)
+					? [
+							{
+								text: i18n.ts.preview,
+								icon: 'ti ti-photo-search',
+								action: () => {
+									previewUploaderItem(items.value, item);
+								},
+							},
+						]
+					: []),
 				{
 					type: 'divider',
 				},
@@ -238,11 +300,10 @@ export function useUploader(
 						text: i18n.ts.cropImage,
 						action: async () => {
 							const cropped = await os.cropImageFile(item.file, { aspectRatio: null });
-							if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
 							items.value.splice(items.value.indexOf(item), 1, {
 								...item,
 								file: markRaw(cropped),
-								thumbnail: window.URL.createObjectURL(cropped),
+								...replaceItemObjectUrls(item, cropped),
 							});
 							const reactiveItem = items.value.find((x) => x.id === item.id)!;
 							preprocess(reactiveItem).then(() => {
@@ -267,11 +328,10 @@ export function useUploader(
 								},
 								{
 									ok: (file) => {
-										if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
 										items.value.splice(items.value.indexOf(item), 1, {
 											...item,
 											file: markRaw(file),
-											thumbnail: window.URL.createObjectURL(file),
+											...replaceItemObjectUrls(item, file),
 										});
 										const reactiveItem = items.value.find((x) => x.id === item.id)!;
 										preprocess(reactiveItem).then(() => {
@@ -775,10 +835,7 @@ export function useUploader(
 
 		imageBitmap.close();
 
-		if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
-		item.thumbnail = THUMBNAIL_SUPPORTED_TYPES.includes(preprocessedFile.type)
-			? window.URL.createObjectURL(preprocessedFile)
-			: null;
+		Object.assign(item, replaceItemObjectUrls(item, preprocessedFile));
 		item.preprocessedFile = markRaw(preprocessedFile);
 	}
 
@@ -843,16 +900,13 @@ export function useUploader(
 			item.suffix = '';
 		}
 
-		if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
-		item.thumbnail = THUMBNAIL_SUPPORTED_TYPES.includes(preprocessedFile.type)
-			? window.URL.createObjectURL(preprocessedFile)
-			: null;
+		Object.assign(item, replaceItemObjectUrls(item, preprocessedFile));
 		item.preprocessedFile = markRaw(preprocessedFile);
 	}
 
 	function reset() {
 		for (const item of items.value) {
-			if (item.thumbnail != null) URL.revokeObjectURL(item.thumbnail);
+			revokeItemObjectUrls(item);
 		}
 
 		abortAll();

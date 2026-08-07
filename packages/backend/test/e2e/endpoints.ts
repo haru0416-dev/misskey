@@ -10088,6 +10088,11 @@ describe('Endpoints', () => {
 			const stateAfterMute = await api('notes/state', { noteId }, muter);
 			assert.strictEqual(stateAfterMute.body.isMutedThread, true);
 
+			// (userId, threadId) は unique なので、二重ミュートは 500 ではなく明示的なエラーになる
+			const duplicate = await api('notes/thread-muting/create', { noteId }, muter);
+			assert.strictEqual(duplicate.status, 400);
+			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_MUTING');
+
 			const unmuted = await api('notes/thread-muting/delete', { noteId }, muter);
 			assert.strictEqual(unmuted.status, 204);
 
@@ -12495,15 +12500,20 @@ describe('Endpoints', () => {
 			});
 
 			try {
-				const resetRoot = await api('admin/reset-password', { userId: alice.id }, alice);
-				assert.strictEqual(resetRoot.status, 400);
-				assert.strictEqual(castAsError(resetRoot.body as any).error.code, 'CANNOT_RESET_PASSWORD_OF_ROOT_USER');
-				const unsetRootMfa = await api('admin/unset-mfa', { userId: alice.id }, alice);
-				assert.strictEqual(unsetRootMfa.status, 403);
-				assert.strictEqual(castAsError(unsetRootMfa.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				const resetRootByAdministrator = await api('admin/reset-password', { userId: alice.id }, administrator);
+				assert.strictEqual(resetRootByAdministrator.status, 400);
+				assert.strictEqual(castAsError(resetRootByAdministrator.body as any).error.code, 'ACCESS_DENIED');
+				const unsetRootMfaByAdministrator = await api('admin/unset-mfa', { userId: alice.id }, administrator);
+				assert.strictEqual(unsetRootMfaByAdministrator.status, 400);
+				assert.strictEqual(castAsError(unsetRootMfaByAdministrator.body as any).error.code, 'ACCESS_DENIED');
 				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, alice.id);
 				assert.strictEqual(profile.password, rootPassword);
 				assert.strictEqual(profile.twoFactorEnabled, true);
+
+				// 本人の操作は乗っ取りにならないので通す
+				const resetRootBySelf = await api('admin/reset-password', { userId: alice.id }, alice);
+				assert.strictEqual(resetRootBySelf.status, 200);
+				assert.strictEqual(resetRootBySelf.body.password.length, 8);
 			} finally {
 				await updateUserProfileInDatabase(db, alice.id, {
 					password: originalRootProfile.password,
@@ -12515,11 +12525,11 @@ describe('Endpoints', () => {
 			}
 
 			const resetAdminByModerator = await api('admin/reset-password', { userId: adminTarget.id }, moderator);
-			assert.strictEqual(resetAdminByModerator.status, 403);
-			assert.strictEqual(castAsError(resetAdminByModerator.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			assert.strictEqual(resetAdminByModerator.status, 400);
+			assert.strictEqual(castAsError(resetAdminByModerator.body as any).error.code, 'ACCESS_DENIED');
 			const unsetAdminMfaByModerator = await api('admin/unset-mfa', { userId: adminTarget.id }, moderator);
-			assert.strictEqual(unsetAdminMfaByModerator.status, 403);
-			assert.strictEqual(castAsError(unsetAdminMfaByModerator.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			assert.strictEqual(unsetAdminMfaByModerator.status, 400);
+			assert.strictEqual(castAsError(unsetAdminMfaByModerator.body as any).error.code, 'ACCESS_DENIED');
 			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, adminTarget.id);
 			assert.strictEqual(profile.password, adminPassword);
 			assert.strictEqual(profile.twoFactorEnabled, true);
@@ -12533,14 +12543,16 @@ describe('Endpoints', () => {
 			assert.strictEqual(await bcrypt.compare(resetOrdinaryByModerator.body.password, profile.password!), true);
 			assert.strictEqual(profile.twoFactorEnabled, false);
 
+			// 管理者どうしでも横取りはできない
 			const resetAdminByAdministrator = await api('admin/reset-password', { userId: adminTarget.id }, administrator);
-			assert.strictEqual(resetAdminByAdministrator.status, 200);
-			assert.strictEqual(resetAdminByAdministrator.body.password.length, 8);
+			assert.strictEqual(resetAdminByAdministrator.status, 400);
+			assert.strictEqual(castAsError(resetAdminByAdministrator.body as any).error.code, 'ACCESS_DENIED');
 			const unsetAdminMfaByAdministrator = await api('admin/unset-mfa', { userId: adminTarget.id }, administrator);
-			assert.strictEqual(unsetAdminMfaByAdministrator.status, 204);
+			assert.strictEqual(unsetAdminMfaByAdministrator.status, 400);
+			assert.strictEqual(castAsError(unsetAdminMfaByAdministrator.body as any).error.code, 'ACCESS_DENIED');
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, adminTarget.id);
-			assert.strictEqual(await bcrypt.compare(resetAdminByAdministrator.body.password, profile.password!), true);
-			assert.strictEqual(profile.twoFactorEnabled, false);
+			assert.strictEqual(profile.password, adminPassword);
+			assert.strictEqual(profile.twoFactorEnabled, true);
 		});
 
 		test('admin/reset-password と unset 系 endpoint は DB 更新、token scope、role、ログを維持する', async () => {
@@ -13192,13 +13204,19 @@ describe('Endpoints', () => {
 				assert.strictEqual(typeof queueStats.body.qualifiedName, 'string');
 				assert.strictEqual(typeof queueStats.body.db.version, 'string');
 
-				const emojiScopeToken = await createAppToken(alice, ['read:admin:emoji']);
-				const legacyStats = await api('admin/queue/stats', {}, { token: emojiScopeToken });
+				const queueScopeToken = await createAppToken(alice, ['read:admin:queue']);
+				const legacyStats = await api('admin/queue/stats', {}, { token: queueScopeToken });
 				assert.strictEqual(legacyStats.status, 200);
 				assert.strictEqual(typeof legacyStats.body.deliver, 'object');
 				assert.strictEqual(typeof legacyStats.body.inbox, 'object');
 				assert.strictEqual(typeof legacyStats.body.db, 'object');
 				assert.strictEqual(typeof legacyStats.body.objectStorage, 'object');
+
+				// キューの情報なので、他の admin スコープしか持たないトークンでは読めてはいけない
+				const emojiScopeToken = await createAppToken(alice, ['read:admin:emoji']);
+				const deniedStats = await api('admin/queue/stats', {}, { token: emojiScopeToken });
+				assert.strictEqual(deniedStats.status, 403);
+				assert.strictEqual(castAsError(deniedStats.body as any).error.code, 'PERMISSION_DENIED');
 
 				const deliverDelayed = await api('admin/queue/deliver-delayed', {}, alice);
 				assert.strictEqual(deliverDelayed.status, 200);
@@ -13225,10 +13243,6 @@ describe('Endpoints', () => {
 				const readQueueToken = await createAppToken(alice, ['read:admin:queue']);
 				const queuesWithToken = await api('admin/queue/queues', {}, { token: readQueueToken });
 				assert.strictEqual(queuesWithToken.status, 200);
-
-				const legacyStatsScopeDenied = await api('admin/queue/stats', {}, { token: readQueueToken });
-				assert.strictEqual(legacyStatsScopeDenied.status, 403);
-				assert.strictEqual(castAsError(legacyStatsScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
 
 				const deniedToken = await createAppToken(alice, ['read:admin:relays']);
 				const scopeDenied = await api('admin/queue/queues', {}, { token: deniedToken });
@@ -16071,6 +16085,17 @@ describe('Endpoints', () => {
 			);
 			assert.strictEqual(followed.status, 204);
 			assert.strictEqual(await channelFollowingExistsInDatabase(db, alice.id, target.id), true);
+
+			// (followerId, followeeId) は unique なので、二重フォローは 500 ではなく明示的なエラーになる
+			const followedAgain = await api(
+				'channels/follow',
+				{
+					channelId: target.id,
+				},
+				alice,
+			);
+			assert.strictEqual(followedAgain.status, 400);
+			assert.strictEqual(castAsError(followedAgain.body as any).error.code, 'ALREADY_FOLLOWING');
 
 			const unfollowed = await api(
 				'channels/unfollow',

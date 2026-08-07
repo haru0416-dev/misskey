@@ -20,7 +20,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div :class="$style.itemActionWrapper">
 				<MkButton :iconOnly="true" rounded @click="emit('showMenu', displayItem.item, $event)"><i class="ti ti-dots"></i></MkButton>
 			</div>
-			<div :class="$style.itemThumbnail" :style="{ backgroundImage: `url(${ displayItem.item.thumbnail })` }" @click="onThumbnailClick(displayItem.item, $event)"></div>
+			<div
+				:class="[$style.itemThumbnail, { [$style.itemThumbnailPreviewable]: displayItem.previewable }]"
+				:style="{ backgroundImage: `url(${ displayItem.item.thumbnail })` }"
+				:title="displayItem.previewable ? i18n.ts.preview : undefined"
+				@click="onThumbnailClick(displayItem.item)"
+			></div>
 			<div :class="$style.itemBody">
 				<div>
 					<i v-if="displayItem.item.isSensitive" style="color: var(--MI_THEME-warn); margin-right: 0.5em;" class="ti ti-eye-exclamation"></i>
@@ -51,7 +56,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed } from 'vue';
 import { isLink } from '@shared/utility/is-link.js';
-import { getUploadName } from '@/features/drive/useUploader.js';
+import { getUploadName, isPreviewableUploaderItem, previewUploaderItem } from '@/features/drive/useUploader.js';
 import type { UploaderItem } from '@/features/drive/useUploader.js';
 import { i18n } from '@/i18n.js';
 import MkButton from '@/components/form/MkButton.vue';
@@ -64,6 +69,7 @@ const props = defineProps<{
 const displayItems = computed(() => props.items.map(item => ({
 	item,
 	nameParts: getUploadNameParts(item),
+	previewable: isPreviewableUploaderItem(item),
 })));
 
 const emit = defineEmits<{
@@ -98,8 +104,9 @@ function onContextmenu(item: UploaderItem, ev: PointerEvent) {
 	emit('showMenuViaContextmenu', item, ev);
 }
 
-function onThumbnailClick(item: UploaderItem, ev: PointerEvent) {
-	// TODO: preview when item is image
+function onThumbnailClick(item: UploaderItem) {
+	if (!isPreviewableUploaderItem(item)) return;
+	previewUploaderItem(props.items, item);
 }
 </script>
 
@@ -182,6 +189,10 @@ function onThumbnailClick(item: UploaderItem, ev: PointerEvent) {
 	background-position: center;
 	background-repeat: no-repeat;
 	border-radius: 6px;
+
+	&.itemThumbnailPreviewable {
+		cursor: pointer;
+	}
 }
 
 .itemBody {

@@ -1183,6 +1183,11 @@ export const endpointMetas = {
 					code: 'NO_SUCH_NOTE',
 					id: '5ff67ada-ed3b-2e71-8e87-a1a421e177d2',
 				},
+				alreadyMuting: {
+					message: 'You are already muting that thread.',
+					code: 'ALREADY_MUTING',
+					id: 'c146e22d-1141-4b31-b28d-176371014d18',
+				},
 			},
 		} as const,
 		paramDef: noteIdOnlyParamDef,

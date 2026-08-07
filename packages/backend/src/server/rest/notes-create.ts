@@ -1309,8 +1309,17 @@ export async function createNoteForHonoApi(
 		}
 	}
 
-	if (data.reply && data.reply.visibility !== 'public' && data.visibility === 'public') {
-		data.visibility = 'home';
+	// リプライは返信対象より広い公開範囲になれない。
+	// 特に followers 宛てへのリプライを home のまま通すと、フォロワー限定投稿にぶら下がったスレッドが
+	// プロフィール・ローカルタイムラインから第三者に見えてしまう。
+	// specified (ダイレクト) 宛ては notes/create 側で公開範囲不一致を先に弾いており、
+	// ここで specified へ落とすと宛先の無いノートを作ってしまうので触らない。
+	if (data.reply) {
+		if (data.reply.visibility === 'home' && data.visibility === 'public') {
+			data.visibility = 'home';
+		} else if (data.reply.visibility === 'followers' && (data.visibility === 'public' || data.visibility === 'home')) {
+			data.visibility = 'followers';
+		}
 	}
 
 	if (data.renote && data.renote.localOnly && data.channel == null) data.localOnly = true;

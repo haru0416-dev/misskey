@@ -143,6 +143,7 @@ export function getDriveFileMenu(
 			action: () =>
 				os.post({
 					initialFiles: [file],
+					instant: true,
 				}),
 		},
 		{

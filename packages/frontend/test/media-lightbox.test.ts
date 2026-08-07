@@ -9,9 +9,13 @@ import './init';
 import { components } from '@/components/index.js';
 import { directives } from '@/directives/index.js';
 import MkLightboxItem, {
+	averagePointerVelocity,
 	calculatePinchScale,
 	calculateSourceTransform,
 	normalizeGestureTransform,
+	resolveHorizontalSwipeIntent,
+	resolveSwipeAxis,
+	shouldCloseByVerticalSwipe,
 } from '@/features/media-viewer/components/MkLightbox.item.vue';
 import MkLightbox from '@/features/media-viewer/components/MkLightbox.vue';
 import MkImgWithBlurhash from '@/features/media-viewer/components/MkImgWithBlurhash.vue';
@@ -45,6 +49,42 @@ describe('media lightbox', () => {
 		assert.ok(calculatePinchScale(1, -1000) > 0);
 	});
 
+	test('locks the swipe axis only after the gesture is unambiguous', () => {
+		// 動き出しのわずかな横ぶれで縦スワイプが横に固定されると、そのジェスチャーでは閉じられなくなる
+		assert.equal(resolveSwipeAxis(3, 1), null);
+		assert.equal(resolveSwipeAxis(4, 9), null);
+		assert.equal(resolveSwipeAxis(4, 40), 'vertical');
+		assert.equal(resolveSwipeAxis(-40, 4), 'horizontal');
+		assert.equal(resolveSwipeAxis(20, 20), null);
+	});
+
+	test('averages the pointer velocity and drops it once the samples go stale', () => {
+		const samples = [
+			{ time: 1000, x: 0, y: 0 },
+			{ time: 1050, x: 0, y: 50 },
+		];
+		assert.deepEqual(averagePointerVelocity(samples, 1050), { x: 0, y: 1 });
+		// 指を止めたまま離した場合、直前のフリックの速度が残っていてはいけない
+		assert.deepEqual(averagePointerVelocity(samples, 1400), { x: 0, y: 0 });
+		assert.deepEqual(averagePointerVelocity([{ time: 1000, x: 0, y: 0 }], 1000), { x: 0, y: 0 });
+	});
+
+	test('closes on a short flick as well as on a long vertical drag', () => {
+		assert.equal(shouldCloseByVerticalSwipe(200, 0, 900), true);
+		assert.equal(shouldCloseByVerticalSwipe(30, 0, 900), false);
+		assert.equal(shouldCloseByVerticalSwipe(30, 1.5, 900), true);
+		// 弾いた向きと逆に離した場合は成立させない
+		assert.equal(shouldCloseByVerticalSwipe(-30, 1.5, 900), false);
+	});
+
+	test('resolves the horizontal swipe intent from distance or flick', () => {
+		assert.equal(resolveHorizontalSwipeIntent(-200, 0), 'next');
+		assert.equal(resolveHorizontalSwipeIntent(200, 0), 'prev');
+		assert.equal(resolveHorizontalSwipeIntent(-20, -1.5), 'next');
+		assert.equal(resolveHorizontalSwipeIntent(20, 1.5), 'prev');
+		assert.equal(resolveHorizontalSwipeIntent(20, 0), null);
+	});
+
 	test('starts source animation from the original image without a thumbnail', async () => {
 		const sourceElement = window.document.createElement('img');
 		sourceElement.style.objectFit = 'contain';
@@ -62,6 +102,7 @@ describe('media lightbox', () => {
 		const result = render(MkLightboxItem, {
 			props: {
 				activated: true,
+				pixelatedZoom: false,
 				content: {
 					id: 'image',
 					type: 'image',

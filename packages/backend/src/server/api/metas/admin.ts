@@ -2140,10 +2140,10 @@ export const endpointMetas = {
 					code: 'NO_SUCH_USER',
 					id: 'ccafc7fe-5074-4edd-9dc0-8ef9ef6a701d',
 				},
-				cannotResetPasswordOfRootUser: {
-					message: 'Cannot reset password of the root user.',
-					code: 'CANNOT_RESET_PASSWORD_OF_ROOT_USER',
-					id: 'f28fc207-42ca-44c7-a577-44b4f0ec5999',
+				accessDenied: {
+					message: 'Access denied.',
+					code: 'ACCESS_DENIED',
+					id: 'cda8f8ce-89a6-4f92-8055-33bbe0c1464d',
 				},
 			},
 
@@ -2604,6 +2604,11 @@ export const endpointMetas = {
 					message: 'No such user.',
 					code: 'NO_SUCH_USER',
 					id: 'ccafc7fe-5074-4edd-9dc0-8ef9ef6a701d',
+				},
+				accessDenied: {
+					message: 'Access denied.',
+					code: 'ACCESS_DENIED',
+					id: 'cda8f8ce-89a6-4f92-8055-33bbe0c1464d',
 				},
 			},
 		} as const,
