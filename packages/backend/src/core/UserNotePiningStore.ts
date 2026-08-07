@@ -70,10 +70,6 @@ export async function listUserNotePiningsByUserIdsFromDatabase(
 	return rows.map((row) => deserializeUserNotePining(row));
 }
 
-export async function createUserNotePiningInDatabase(db: MiDrizzleDatabase, data: UserNotePiningInsert): Promise<void> {
-	await db.insert(userNotePining).values(data);
-}
-
 export async function createUserNotePiningWithinLimitInDatabase(
 	db: MiDrizzleDatabase,
 	data: UserNotePiningInsert,

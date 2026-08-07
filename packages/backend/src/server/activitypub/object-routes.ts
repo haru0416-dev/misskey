@@ -391,8 +391,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 
 	// Hono は /@:acct のようなセグメント内プレフィックス付きパラメータを解釈できないため、
 	// feed.ts と同じくワイルドカード+手動パースで /@acct (サブパスなし) のAP要求のみ処理する。
-	// Fastify 撤去 (f531161adc) で移植されず、SPA フォールバックに落ちて HTML を
-	// 返していた ActivityPub オブジェクト。リモートが uri を解決できなくなる。
+	// このルートが無いと SPA フォールバックに落ちて HTML を返し、リモートが uri を解決できなくなる。
 	app.get('/emojis/:emoji', async (c) => {
 		if (deps.meta.federation === 'none') return apError(403);
 

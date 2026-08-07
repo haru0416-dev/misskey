@@ -20,7 +20,7 @@ export async function createPasswordResetRequestInDatabase(
 	await db.insert(passwordResetRequest).values(data);
 }
 
-export const PASSWORD_RESET_REQUEST_EXPIRY_MS = 1000 * 60 * 30;
+const PASSWORD_RESET_REQUEST_EXPIRY_MS = 1000 * 60 * 30;
 
 export function isPasswordResetRequestExpired(request: PasswordResetRequestRow): boolean {
 	return Date.now() - parseId(request.id).date.getTime() > PASSWORD_RESET_REQUEST_EXPIRY_MS;

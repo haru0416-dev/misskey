@@ -637,10 +637,9 @@ async function pushChatNotificationForHonoApi(
 	await pushSwNotificationForHonoApi(deps, userId, 'newChatMessage', body);
 }
 
-// Ports the notifierId-aware filtering from NotificationService#createNotificationInternal
-// (never/following/follower/mutualFollow/followingOrFollower + mute check) via direct DB
-// queries instead of NestJS's redis-backed caches (CacheService), consistent with the
-// simplification already used throughout this Hono migration.
+// Apply notifierId-aware filtering (never/following/follower/mutualFollow/
+// followingOrFollower + mute check) with direct DB queries so the current relationships
+// determine whether the notification is sent.
 async function createChatRoomInvitationNotificationForHonoApi(
 	deps: HonoApiChatDependencies,
 	notifieeId: MiUser['id'],

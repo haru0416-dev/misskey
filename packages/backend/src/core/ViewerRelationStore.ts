@@ -119,7 +119,7 @@ const kindOrder: readonly ViewerRelationKind[] = [
 	'mutedInstance',
 ];
 
-export function emptyViewerRelationSnapshot(kinds: readonly ViewerRelationKind[] = []): ViewerRelationSnapshot {
+function emptyViewerRelationSnapshot(kinds: readonly ViewerRelationKind[] = []): ViewerRelationSnapshot {
 	return {
 		kinds: new Set(kinds),
 		followeeIds: [],

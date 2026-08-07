@@ -34,7 +34,7 @@ import {
 
 // TODO: Consider migrating to @node-oauth/oauth2-server once
 // https://github.com/node-oauth/node-oauth2-server/issues/180 is figured out.
-// Upstream the various validations and RFC9207 implementation in that case.
+// Upstream the various validations and RFC 9207 implementation in that case.
 
 // Follows https://indieauth.spec.indieweb.org/#client-identifier
 // This is also mostly similar to https://developers.google.com/identity/protocols/oauth2/web-server#uri-validation

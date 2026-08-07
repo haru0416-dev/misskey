@@ -149,13 +149,11 @@ function renderError(e?: Error): unknown {
 }
 
 /**
- * QueueProcessorService 相当。NestJS の Nest DI コンテナを介さず、BullMQ の `Bull.Worker` を
- * 直接 `deps` (プレーンオブジェクト) 付きのハンドラ関数にバインドする。
+ * BullMQ の `Bull.Worker` を `deps` (プレーンオブジェクト) 付きのハンドラ関数にバインドする。
  *
- * 元の QueueProcessorService が組み立てる10個の Worker (system/db/deliver/inbox/
- * userWebhookDeliver/systemWebhookDeliver/relationship/objectStorage/endedPollNotification/
- * postScheduledNote) 全てのコードがこの関数に揃った (inbox = ApInboxService の全アクティビティ種別
- * 移植を含む)。本番のジョブキュー起動経路は `boot/common.ts` の `jobQueue()`。
+ * system/db/deliver/inbox/userWebhookDeliver/systemWebhookDeliver/relationship/objectStorage/
+ * endedPollNotification/postScheduledNote の10個の Worker をここで組み立てる。
+ * 本番のジョブキュー起動経路は `boot/common.ts` の `jobQueue()`。
  */
 export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQueueWorkers {
 	const outboxLogger = deps.logger.createSubLogger('queue-outbox');

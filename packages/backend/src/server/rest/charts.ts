@@ -65,9 +65,8 @@ type HonoChartSchema = Record<
 >;
 
 // getChart()/getChartRaw() never touch tickMajor/tickMinor (those only run on the
-// write-side tick()/save() paths), so a read-only stub is a faithful, stateless port
-// of Chart.getChart() without needing the write-side services each concrete NestJS
-// chart subclass otherwise requires (UserEntityService, UtilityService, IdService, etc).
+// write-side tick()/save() paths), so a read-only stub can call Chart.getChart()
+// without the write-side dependencies required by each concrete chart.
 class HonoReadOnlyChart<S extends HonoChartSchema> extends Chart<S> {
 	protected async tickMajor(): Promise<Partial<KVs<S>>> {
 		return {};
