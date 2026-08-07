@@ -43,10 +43,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
+import { useServerStats } from './use-server-stats.js';
 import bytes from '@/filters/bytes.js';
-import { genId } from '@/utility/id.js';
 
 const props = defineProps<{
 	connection: Misskey.IChannelConnection<Misskey.Channels['serverStats']>,
@@ -66,20 +66,6 @@ const outHeadX = ref<number>();
 const outHeadY = ref<number>();
 const inRecent = ref<number>(0);
 const outRecent = ref<number>(0);
-
-onMounted(() => {
-	props.connection.on('stats', onStats);
-	props.connection.on('statsLog', onStatsLog);
-	props.connection.send('requestLog', {
-		id: genId(),
-		length: 50,
-	});
-});
-
-onBeforeUnmount(() => {
-	props.connection.off('stats', onStats);
-	props.connection.off('statsLog', onStatsLog);
-});
 
 function onStats(connStats: Misskey.entities.ServerStats) {
 	stats.value.push(connStats);
@@ -105,11 +91,7 @@ function onStats(connStats: Misskey.entities.ServerStats) {
 	outRecent.value = connStats.net.tx;
 }
 
-function onStatsLog(statsLog: Misskey.entities.ServerStatsLog) {
-	for (const revStats of statsLog.toReversed()) {
-		onStats(revStats);
-	}
-}
+useServerStats(props.connection, onStats);
 </script>
 
 <style lang="scss" scoped>

@@ -20,11 +20,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, watch, computed } from 'vue';
-import * as Misskey from 'misskey-js';
-import { url as base } from '@shared/utility/config.js';
-import { useInterval } from '@shared/utility/use-interval.js';
+import { computed } from 'vue';
 import { useWidgetPropsManager } from './widget.js';
+import { useRssFeed } from './use-rss-feed.js';
 import { i18n } from '@/i18n.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
@@ -72,43 +70,8 @@ const { widgetProps, configure } = useWidgetPropsManager(name,
 	emit,
 );
 
-const rawItems = ref<Misskey.entities.FetchRssResponse['items']>([]);
+const { rawItems, fetching } = useRssFeed(widgetProps);
 const items = computed(() => rawItems.value.slice(0, widgetProps.maxEntries));
-const fetching = ref(true);
-const fetchEndpoint = computed(() => {
-	const url = new URL('/api/fetch-rss', base);
-	url.searchParams.set('url', widgetProps.url);
-	return url.toString();
-});
-const intervalClear = ref<(() => void) | undefined>();
-
-const tick = () => {
-	if (window.document.visibilityState === 'hidden' && rawItems.value.length !== 0) return;
-
-	window.fetch(fetchEndpoint.value, {})
-		.then(res => {
-			if (!res.ok) throw new Error();
-			return res.json();
-		})
-		.then((feed: Misskey.entities.FetchRssResponse) => {
-			rawItems.value = feed.items;
-			fetching.value = false;
-		})
-		.catch(() => {
-			fetching.value = false;
-		});
-};
-
-watch(fetchEndpoint, tick);
-watch(() => widgetProps.refreshIntervalSec, () => {
-	if (intervalClear.value) {
-		intervalClear.value();
-	}
-	intervalClear.value = useInterval(tick, Math.max(10000, widgetProps.refreshIntervalSec * 1000), {
-		immediate: true,
-		afterMounted: true,
-	});
-}, { immediate: true });
 
 defineExpose<WidgetComponentExpose>({
 	name,
