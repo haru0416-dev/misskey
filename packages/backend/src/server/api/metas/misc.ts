@@ -663,6 +663,29 @@ export const endpointMetas = {
 				max: 30,
 			},
 
+			errors: {
+				invalidUrl: {
+					message: 'Invalid URL.',
+					code: 'INVALID_URL',
+					id: '89b7ee05-ccfc-4bdd-9b13-61172fd1e06c',
+					httpStatusCode: 400,
+				},
+				fetchRssFailed: {
+					message: 'Failed to fetch RSS.',
+					code: 'FETCH_RSS_FAILED',
+					id: '8db5d3d8-31d7-452f-b0cc-ca3b8925de12',
+					kind: 'server',
+					httpStatusCode: 422,
+				},
+				fetchRssUnavailable: {
+					message: 'RSS fetching is temporarily unavailable.',
+					code: 'FETCH_RSS_UNAVAILABLE',
+					id: '91e6ff44-c63f-4725-9ad0-b7a40d7f7655',
+					kind: 'server',
+					httpStatusCode: 503,
+				},
+			},
+
 			res: {
 				type: 'object',
 				properties: {

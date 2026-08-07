@@ -275,7 +275,7 @@ export const endpointMetas = {
 
 			requireCredential: true,
 			requireModerator: true,
-			kind: 'read:admin:emoji',
+			kind: 'read:admin:queue',
 
 			res: {
 				type: 'object',

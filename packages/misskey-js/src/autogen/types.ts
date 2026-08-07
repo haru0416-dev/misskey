@@ -640,7 +640,7 @@ export type paths = {
          * admin/queue/stats
          * @description No description provided.
          *
-         *     **Credential required**: *Yes* / **Permission**: *read:admin:emoji*
+         *     **Credential required**: *Yes* / **Permission**: *read:admin:queue*
          */
         post: operations['admin___queue___stats'];
     };
@@ -22167,6 +22167,15 @@ export interface operations {
                     'application/json': components['schemas']['Error'];
                 };
             };
+            /** @description Unprocessable content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
             /** @description Too many requests */
             429: {
                 headers: {
@@ -22178,6 +22187,15 @@ export interface operations {
             };
             /** @description Internal server error */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    'application/json': components['schemas']['Error'];
+                };
+            };
+            /** @description HTTP 503 error */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

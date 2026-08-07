@@ -21,6 +21,7 @@ import { hashPassword } from '@/misc/password.js';
 import { HonoApiError } from './error.js';
 import type { HonoApiAuthenticated } from './auth.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
+import { isHonoApiAdministrator } from './role-policy.js';
 import { createLocalSignupAccount, packSignupUser, type SignupDependencies, type SignupResponse } from './signup.js';
 import {
 	packMeDetailedForHonoApi,
@@ -109,7 +110,11 @@ export async function handleHonoApiAdminAccountsCreate(
 		} else if (params.setupPassword != null && params.setupPassword.trim() !== '') {
 			throw adminAccountCreateWrongInitialPasswordError();
 		}
-	} else if ((rootUserId != null && rootUserId !== auth.user?.id) || auth.token !== null) {
+	} else if (
+		auth.token !== null ||
+		// root だけに限ると、後から管理者ロールを付与したアカウントがこのAPIを使えない
+		!(await isHonoApiAdministrator({ ...deps, meta: currentMeta }, auth.user))
+	) {
 		throw adminAccountCreateAccessDeniedError();
 	}
 

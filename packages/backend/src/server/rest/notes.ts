@@ -440,6 +440,15 @@ function notesThreadMutingCreateNoSuchNoteError(): HonoApiError {
 	});
 }
 
+function notesThreadMutingCreateAlreadyMutingError(): HonoApiError {
+	return new HonoApiError({
+		status: 400,
+		message: 'You are already muting that thread.',
+		code: 'ALREADY_MUTING',
+		id: 'c146e22d-1141-4b31-b28d-176371014d18',
+	});
+}
+
 export async function handleHonoApiNotesThreadMutingCreate(
 	deps: HonoApiNotesDependencies,
 	me: MiLocalUser,
@@ -449,11 +458,17 @@ export async function handleHonoApiNotesThreadMutingCreate(
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesThreadMutingCreateNoSuchNoteError();
 
-	await createNoteThreadMutingInDatabase(deps.db, {
-		id: genId(),
-		threadId: note.threadId ?? note.id,
-		userId: me.id,
-	});
+	try {
+		await createNoteThreadMutingInDatabase(deps.db, {
+			id: genId(),
+			threadId: note.threadId ?? note.id,
+			userId: me.id,
+		});
+	} catch (err) {
+		// (userId, threadId) には unique 制約があるので、二重ミュートは 500 ではなく明示的なエラーにする
+		if (isDuplicateKeyValueDatabaseError(err)) throw notesThreadMutingCreateAlreadyMutingError();
+		throw err;
+	}
 }
 
 function notesThreadMutingDeleteNoSuchNoteError(): HonoApiError {

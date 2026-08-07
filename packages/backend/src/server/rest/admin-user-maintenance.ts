@@ -18,7 +18,7 @@ import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError, rolePermissionDeniedError } from './error.js';
+import { HonoApiError } from './error.js';
 import { isHonoApiAdministrator } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 
@@ -50,23 +50,26 @@ function noSuchUserError(): HonoApiError {
 	});
 }
 
-function cannotResetPasswordOfRootUserError(): HonoApiError {
+function accessDeniedError(): HonoApiError {
 	return new HonoApiError({
 		status: 400,
-		message: 'Cannot reset password of the root user.',
-		code: 'CANNOT_RESET_PASSWORD_OF_ROOT_USER',
-		id: 'f28fc207-42ca-44c7-a577-44b4f0ec5999',
+		message: 'Access denied.',
+		code: 'ACCESS_DENIED',
+		id: 'cda8f8ce-89a6-4f92-8055-33bbe0c1464d',
 	});
 }
 
-async function assertCanMaintainUser(
+/**
+ * パスワードリセットと MFA 解除は対象アカウントの乗っ取りそのものなので、対象が管理者なら
+ * 本人以外は一律に弾く (root は常に管理者扱い)。モデレーターからの管理者乗っ取りだけでなく、
+ * 管理者どうしの横取りも防ぐ。
+ */
+async function assertCanTakeOverUser(
 	deps: HonoApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
 	user: MiUser,
 ): Promise<void> {
-	if (!(await isHonoApiAdministrator(deps, me)) && (await isHonoApiAdministrator(deps, user))) {
-		throw rolePermissionDeniedError();
-	}
+	if (me.id !== user.id && (await isHonoApiAdministrator(deps, user))) throw accessDeniedError();
 }
 
 export async function handleHonoApiAdminResetPassword(
@@ -77,8 +80,7 @@ export async function handleHonoApiAdminResetPassword(
 	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw noSuchUserError();
-	if (deps.meta.rootUserId === user.id) throw cannotResetPasswordOfRootUserError();
-	await assertCanMaintainUser(deps, me, user);
+	await assertCanTakeOverUser(deps, me, user);
 
 	const passwd = secureRndstr(8);
 	await updateUserProfileInDatabase(deps.db, user.id, {
@@ -102,8 +104,7 @@ export async function handleHonoApiAdminUnsetMfa(
 	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw noSuchUserError();
-	if (deps.meta.rootUserId === user.id) throw rolePermissionDeniedError();
-	await assertCanMaintainUser(deps, me, user);
+	await assertCanTakeOverUser(deps, me, user);
 
 	await unsetUserMfaInDatabase(deps.db, user.id);
 	await logModerationEventInDatabase(deps, me, 'unsetMfa', {

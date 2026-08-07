@@ -8,6 +8,7 @@ import type { Config } from '@/config.js';
 import { RootUserAlreadyAssignedError } from '@/core/SignupStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
+import type { MiRole } from '@/models/Role.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import {
 	handleHonoApiAdminAccountsCreate,
@@ -15,17 +16,32 @@ import {
 } from '@/server/rest/admin-accounts.js';
 import type { SignupResponse } from '@/server/rest/signup.js';
 
-const { createLocalSignupAccountMock, fetchMetaFromDatabaseMock, hashPasswordMock, packSignupUserMock } = vi.hoisted(
-	() => ({
-		createLocalSignupAccountMock: vi.fn(),
-		fetchMetaFromDatabaseMock: vi.fn(),
-		hashPasswordMock: vi.fn(),
-		packSignupUserMock: vi.fn(),
-	}),
-);
+const {
+	createLocalSignupAccountMock,
+	fetchMetaFromDatabaseMock,
+	hashPasswordMock,
+	listRoleAssignmentsByUserIdFromDatabaseMock,
+	listRolesFromDatabaseMock,
+	packSignupUserMock,
+} = vi.hoisted(() => ({
+	createLocalSignupAccountMock: vi.fn(),
+	fetchMetaFromDatabaseMock: vi.fn(),
+	hashPasswordMock: vi.fn(),
+	listRoleAssignmentsByUserIdFromDatabaseMock: vi.fn(),
+	listRolesFromDatabaseMock: vi.fn(),
+	packSignupUserMock: vi.fn(),
+}));
 
 vi.mock('@/core/MetaStore.js', () => ({
 	fetchMetaFromDatabase: fetchMetaFromDatabaseMock,
+}));
+
+vi.mock('@/core/RoleStore.js', () => ({
+	listRolesFromDatabase: listRolesFromDatabaseMock,
+}));
+
+vi.mock('@/core/RoleAssignmentStore.js', () => ({
+	listRoleAssignmentsByUserIdFromDatabase: listRoleAssignmentsByUserIdFromDatabaseMock,
 }));
 
 vi.mock('@/misc/password.js', () => ({
@@ -49,6 +65,8 @@ describe('handleHonoApiAdminAccountsCreate', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		hashPasswordMock.mockResolvedValue('hashed');
+		listRolesFromDatabaseMock.mockResolvedValue([]);
+		listRoleAssignmentsByUserIdFromDatabaseMock.mockResolvedValue([]);
 	});
 
 	test('rejects a non-root native user when the reactive meta is stale', async () => {
@@ -98,6 +116,30 @@ describe('handleHonoApiAdminAccountsCreate', () => {
 				rootClaim: 'skip',
 			}),
 		);
+	});
+
+	test('accepts a non-root user who holds an administrator role', async () => {
+		const account = { id: 'created' } as MiUser;
+		const response = { id: 'created', token: 'token' } as unknown as SignupResponse;
+		fetchMetaFromDatabaseMock.mockResolvedValue({ rootUserId: 'root' } as MiMeta);
+		listRolesFromDatabaseMock.mockResolvedValue([{ id: 'admins', isAdministrator: true } as MiRole]);
+		listRoleAssignmentsByUserIdFromDatabaseMock.mockResolvedValue([{ roleId: 'admins', expiresAt: null }]);
+		createLocalSignupAccountMock.mockResolvedValue({ account, token: 'token' });
+		packSignupUserMock.mockResolvedValue(response);
+
+		await expect(
+			handleHonoApiAdminAccountsCreate(
+				createDeps(),
+				{
+					user: { id: 'not-root' } as MiLocalUser,
+					token: null,
+				},
+				{
+					username: 'created',
+					password: 'password',
+				},
+			),
+		).resolves.toBe(response);
 	});
 
 	test('does not create a normal account when another process claims root first', async () => {

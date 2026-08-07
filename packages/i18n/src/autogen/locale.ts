@@ -5809,6 +5809,10 @@ export interface Locale extends ILocale {
      * 先頭に追加
      */
     "prepend": string;
+    /**
+     * ピクセルアート拡大モード
+     */
+    "pixelatedZoom": string;
     "_imageEditing": {
         "_vars": {
             /**

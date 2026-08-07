@@ -443,7 +443,9 @@ function checkMissingMention() {
 		const ast = mfm.parse(text.value);
 
 		for (const x of mfm.extractMentions(ast)) {
-			if (!visibleUsers.value.some(u => (u.username === x.username) && (u.host === x.host))) {
+			// ローカルユーザーは宛先では host === null だが、本文では `@user@example.com` と
+			// 自ホスト付きで書かれうる。同一視しないと宛先に居るのに未指定扱いになる
+			if (!visibleUsers.value.some(u => (u.username === x.username) && ((u.host === x.host) || (x.host === host && u.host == null)))) {
 				hasNotSpecifiedMentions.value = true;
 				return;
 			}

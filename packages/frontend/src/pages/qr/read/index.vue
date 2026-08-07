@@ -248,27 +248,44 @@ async function toggleFlash(to = false) {
 	}
 }
 
-async function startQr() {
+// start() の解決を待つ間にページを離れる (= stop する) ことがあり、その場合に解決結果を
+// 反映するとカメラが停止したのに起動中の状態が残ってしまう。世代を数えて古い結果を捨てる。
+let initializeId = 0;
+
+function startQr() {
 	if (!scannerInstance.value) return;
-	await scannerInstance.value.start();
-	qrStarted.value = true;
+	const currentInitializeId = ++initializeId;
+	qrStarted.value = false;
+	scannerInstance.value.start()
+		.then(async () => {
+			if (currentInitializeId !== initializeId) return;
+			qrStarted.value = true;
+			if (!scannerInstance.value) return;
+			const hasFlash = await scannerInstance.value.hasFlash();
+			if (currentInitializeId !== initializeId) return;
+			flashCanToggle.value = hasFlash;
+			flash.value = scannerInstance.value.isFlashOn();
+		})
+		.catch(err => {
+			if (currentInitializeId !== initializeId) return;
+			qrStarted.value = false;
+			os.alert({
+				type: 'error',
+				text: err.toString(),
+			});
+			console.error(err);
+		});
 }
 
 function stopQr() {
+	initializeId++;
 	if (!scannerInstance.value) return;
 	scannerInstance.value.stop();
 	qrStarted.value = false;
 }
 
 onActivated(() => {
-	startQr().catch(err => {
-		qrStarted.value = false;
-		os.alert({
-			type: 'error',
-			text: err.toString(),
-		});
-		console.error(err);
-	});
+	startQr();
 });
 
 onDeactivated(() => {
@@ -319,21 +336,7 @@ onMounted(() => {
 		},
 	);
 
-	scannerInstance.value.start()
-		.then(async () => {
-			qrStarted.value = true;
-			if (!scannerInstance.value) return;
-			flashCanToggle.value = await scannerInstance.value.hasFlash();
-			flash.value = scannerInstance.value.isFlashOn();
-		})
-		.catch(err => {
-			qrStarted.value = false;
-			os.alert({
-				type: 'error',
-				text: err.toString(),
-			});
-			console.error(err);
-		});
+	startQr();
 });
 
 onUnmounted(() => {
@@ -342,6 +345,7 @@ onUnmounted(() => {
 		timer.value = null;
 	}
 
+	initializeId++;
 	scannerInstance.value?.destroy();
 });
 </script>

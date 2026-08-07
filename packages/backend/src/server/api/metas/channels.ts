@@ -108,6 +108,11 @@ export const endpointMetas = {
 					code: 'NO_SUCH_CHANNEL',
 					id: 'c0031718-d573-4e85-928e-10039f1fbb68',
 				},
+				alreadyFollowing: {
+					message: 'You are already following that channel.',
+					code: 'ALREADY_FOLLOWING',
+					id: '7db31665-651e-40c1-8e6e-28e9ad829a2d',
+				},
 			},
 		} as const,
 		paramDef: channelFollowParamDef,
