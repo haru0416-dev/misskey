@@ -23,6 +23,25 @@ import {
 	ServerStatsLog,
 } from './entities.js';
 
+type ChatReactionEvent = {
+	reaction: string;
+	user?: UserLite;
+	messageId: ChatMessageLite['id'];
+};
+
+type ChatEvents = {
+	message: (payload: ChatMessageLite) => void;
+	deleted: (payload: ChatMessageLite['id']) => void;
+	react: (payload: ChatReactionEvent) => void;
+	unreact: (payload: ChatReactionEvent) => void;
+};
+
+type ChatReceives = {
+	read: {
+		id: ChatMessageLite['id'];
+	};
+};
+
 export type Channels = {
 	main: {
 		params: null;
@@ -200,49 +219,15 @@ export type Channels = {
 		params: {
 			otherId: string;
 		};
-		events: {
-			message: (payload: ChatMessageLite) => void;
-			deleted: (payload: ChatMessageLite['id']) => void;
-			react: (payload: {
-				reaction: string;
-				user?: UserLite;
-				messageId: ChatMessageLite['id'];
-			}) => void;
-			unreact: (payload: {
-				reaction: string;
-				user?: UserLite;
-				messageId: ChatMessageLite['id'];
-			}) => void;
-		};
-		receives: {
-			read: {
-				id: ChatMessageLite['id'];
-			};
-		};
+		events: ChatEvents;
+		receives: ChatReceives;
 	};
 	chatRoom: {
 		params: {
 			roomId: string;
 		};
-		events: {
-			message: (payload: ChatMessageLite) => void;
-			deleted: (payload: ChatMessageLite['id']) => void;
-			react: (payload: {
-				reaction: string;
-				user?: UserLite;
-				messageId: ChatMessageLite['id'];
-			}) => void;
-			unreact: (payload: {
-				reaction: string;
-				user?: UserLite;
-				messageId: ChatMessageLite['id'];
-			}) => void;
-		};
-		receives: {
-			read: {
-				id: ChatMessageLite['id'];
-			};
-		};
+		events: ChatEvents;
+		receives: ChatReceives;
 	};
 };
 
