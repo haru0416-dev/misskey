@@ -78,7 +78,6 @@
 		"@vue/compiler-sfc": "3.5.38",
 		"cross-env": "10.1.0",
 		"execa": "9.6.1",
-		"ignore-walk": "9.0.0",
 		"js-yaml": "5.2.1",
 		"jscpd": "5.0.12",
 		"knip": "6.27.0",
