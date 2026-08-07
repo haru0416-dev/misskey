@@ -28,7 +28,8 @@ server:
     hsts: true
     ipRateLimit: true
   process:
-    workers: 1
+    httpWorkers: 1
+    queueWorkers: 1
     computationThreadsPerWorker: 1
     pidFile: /tmp/misskey.pid
 
@@ -43,7 +44,10 @@ database:
     # ssl: true
   pool:
     minimumConnections: 0
-    maximumConnections: 30
+    # このホスト全体でPostgreSQLへ張る接続数の上限。プロセスごとではないので、
+    # server.process.httpWorkers / queueWorkers を増やしてもここは増やさなくてよい
+    # (DBを使うプロセス数で自動的に分割される)。PostgreSQL側の max_connections を超えないこと。
+    maximumConnectionsPerHost: 60
     connectionTimeout: 5s
     idleConnectionTimeout: 30s
     statementTimeout: 10s

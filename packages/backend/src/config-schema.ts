@@ -129,7 +129,14 @@ export const sourceConfigV2Schema = z.strictObject({
 				.prefault({}),
 			process: z
 				.strictObject({
-					workers: positiveIntegerSchema.default(1),
+					/**
+					 * HTTP を捌くプロセス数。1 ならメインプロセス自身が listen し、2 以上ならメインプロセスは
+					 * listen せず fork したワーカーだけが listen する (bun の node:cluster は SO_REUSEPORT 実装)。
+					 * このVPS (6コア) での実測では 1→3 で rps +42% だが CPU効率は 730→609 rps/core へ落ちる。
+					 */
+					httpWorkers: nonNegativeIntegerSchema.default(1),
+					/** ジョブキューを捌くプロセス数。0 にするとこのホストではキューを処理しない。 */
+					queueWorkers: nonNegativeIntegerSchema.default(1),
 					computationThreadsPerWorker: positiveIntegerSchema.default(1),
 					pidFile: z.string().min(1).default('/tmp/misskey.pid'),
 				})
@@ -149,15 +156,29 @@ export const sourceConfigV2Schema = z.strictObject({
 			pool: z
 				.strictObject({
 					minimumConnections: nonNegativeIntegerSchema.default(0),
-					maximumConnections: positiveIntegerSchema.default(30),
+					/**
+					 * このホストが PostgreSQL へ張る接続数の上限。**プロセスごとではなくホスト全体の予算**で、
+					 * DBを使うプロセス数 (HTTP + キュー) で割ったものが各プロセスのプール上限になる。
+					 *
+					 * プロセスごとの指定にすると `httpWorkers: 3` + キュー1 で 30×4 = 120 接続を要求し、
+					 * PostgreSQL の既定 `max_connections = 100` に張り付いて溢れる (実測で確認)。
+					 *
+					 * 既定の 60 は「既定トポロジ (HTTP 1 + キュー 1) で 1プロセスあたり 30」になる値。
+					 * 1プロセスが必要とする接続数はそのプロセスが受け持つ同時実行数に比例するので、
+					 * プロセスを増やしたときにこの値を増やす必要は無い (同時実行も分割されるため)。
+					 * 実測 (同時128接続、/api/notes): HTTP1プロセスでは 15/プロセスだと 1023 rps に対し
+					 * 30/プロセスで 1154 rps (+12.8%)。HTTP3プロセスでは 7/プロセスで 1336 rps に対し
+					 * 24/プロセスでも 1383 rps (+3.5%) と、分割後は少ない接続数でほぼ頭打ちになる。
+					 */
+					maximumConnectionsPerHost: positiveIntegerSchema.default(60),
 					connectionTimeout: durationSchema.default('5s'),
 					idleConnectionTimeout: durationSchema.default('30s'),
 					statementTimeout: durationSchema.default('10s'),
 				})
 				.prefault({}),
 		})
-		.refine((value) => value.pool.minimumConnections <= value.pool.maximumConnections, {
-			message: 'minimumConnections must not exceed maximumConnections',
+		.refine((value) => value.pool.minimumConnections <= value.pool.maximumConnectionsPerHost, {
+			message: 'minimumConnections must not exceed maximumConnectionsPerHost',
 			path: ['pool', 'minimumConnections'],
 		}),
 	valkey: z

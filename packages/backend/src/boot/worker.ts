@@ -4,8 +4,8 @@
  */
 
 import cluster from 'node:cluster';
-import { envOption } from '@/env.js';
 import type { Config } from '@/config.js';
+import { assignmentFromEnv } from './cluster-roles.js';
 import { initExtraThreadPool, jobQueue, server } from './common.js';
 
 /**
@@ -16,8 +16,11 @@ export async function workerMain(config: Config) {
 
 	initExtraThreadPool(config);
 
-	if (envOption.onlyServer) {
-		const runtime = await server(config);
+	// 役割は master が fork 時に env で渡す (cluster-roles.ts)
+	const assignment = assignmentFromEnv();
+
+	if (assignment.role === 'server') {
+		const runtime = await server(config, undefined, { daemons: assignment.ownsDaemons });
 		dispose = () => runtime.dispose();
 	} else {
 		const runtime = await jobQueue(config);
