@@ -98,7 +98,7 @@ export async function openClient(order: SwMessageOrderType, url: string, loginId
 	return globalThis.clients.openWindow(loginId ? getUrlWithLoginId(url, loginId) : url);
 }
 
-export async function findClient(): Promise<WindowClient | null> {
+async function findClient(): Promise<WindowClient | null> {
 	const clients = await globalThis.clients.matchAll({
 		type: 'window',
 	});
