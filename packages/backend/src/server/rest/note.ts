@@ -338,7 +338,7 @@ function treatVisibility(packedNote: Packed<'Note'>): Packed<'Note'>['visibility
 	return packedNote.visibility;
 }
 
-export async function shouldHideNoteForHonoApi(
+async function shouldHideNoteForHonoApi(
 	deps: HonoApiNoteDependencies,
 	packedNote: Packed<'Note'>,
 	meId: MiUser['id'] | null,
@@ -374,7 +374,7 @@ export async function shouldHideNoteForHonoApi(
 	return false;
 }
 
-export function hideNoteForHonoApi(packedNote: Packed<'Note'>): void {
+function hideNoteForHonoApi(packedNote: Packed<'Note'>): void {
 	packedNote.visibleUserIds = undefined;
 	packedNote.fileIds = [];
 	packedNote.files = [];

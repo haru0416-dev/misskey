@@ -158,22 +158,6 @@ export async function listBlockingsByBlockerIdWithPaginationFromDatabase(
 	return rows.map((row) => deserializeBlocking(row));
 }
 
-export async function listBlockeeIdsByBlockerIdFromDatabase(
-	db: MiDrizzleDatabase,
-	blockerId: MiUser['id'],
-): Promise<MiUser['id'][]> {
-	const statement = preparedQueryFor(db, 'blocking:blockeeIdsByBlockerId', () =>
-		db
-			.select({ blockeeId: blocking.blockeeId })
-			.from(blocking)
-			.where(eq(blocking.blockerId, sql.placeholder('blockerId')))
-			.prepare(UNNAMED_PREPARED_STATEMENT),
-	);
-	const rows = await statement.execute({ blockerId });
-
-	return rows.map((row) => row.blockeeId);
-}
-
 export async function listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase(
 	db: MiDrizzleDatabase,
 	blockerId: MiUser['id'],

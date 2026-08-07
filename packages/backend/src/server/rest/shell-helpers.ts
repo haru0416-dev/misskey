@@ -130,8 +130,7 @@ function apiErrorResponse(c: Context, err: HonoApiError): Response {
 	});
 }
 
-// upstream (Fastify) はJSONエンドポイントに 1 MiB の bodyLimit を設定していた。同じ上限で
-// 実バイト数を数えながら読む (超過は 413)。
+// JSONエンドポイントの 1 MiB 上限を、実バイト数を数えながら適用する (超過は 413)。
 const JSON_BODY_LIMIT = 1024 * 1024;
 const textDecoder = new TextDecoder();
 
