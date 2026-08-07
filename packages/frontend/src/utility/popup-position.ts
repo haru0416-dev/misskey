@@ -110,7 +110,7 @@ export function calcPopupPosition(
 				top = rect.top + window.scrollY;
 				if (props.alignOffset != null) top += props.alignOffset;
 			} else if (props.align === 'bottom') {
-				// TODO
+				// TODO: アンカーの下端に揃える位置を計算する
 			} else {
 				// center
 				top = rect.top + window.scrollY + props.anchorElement.offsetHeight / 2;

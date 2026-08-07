@@ -123,7 +123,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 									>
 										<i class="ti ti-calendar-x"></i> {{ i18n.ts._drafts.cancelSchedule }}
 									</MkButton>
-									<!-- TODO
+									<!-- TODO: 予約日時を変更する操作を実装する
 									<MkButton
 										small
 										@click="reSchedule(draft)"
