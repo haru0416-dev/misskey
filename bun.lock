@@ -11,7 +11,6 @@
         "@vue/compiler-sfc": "3.5.38",
         "cross-env": "10.1.0",
         "execa": "9.6.1",
-        "ignore-walk": "9.0.0",
         "js-yaml": "5.2.1",
         "jscpd": "5.0.12",
         "knip": "6.27.0",
@@ -244,7 +243,6 @@
         "frontend-shared": "workspace:*",
         "i18n": "workspace:*",
         "icons-subsetter": "workspace:*",
-        "json5": "2.2.3",
         "mfm-js": "workspace:*",
         "misskey-js": "workspace:*",
         "punycode.js": "2.3.1",
@@ -2211,8 +2209,6 @@
     "ieee754": ["ieee754@1.2.1", "", {}, "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA=="],
 
     "ignore": ["ignore@5.3.2", "", {}, "sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g=="],
-
-    "ignore-walk": ["ignore-walk@9.0.0", "", { "dependencies": { "minimatch": "10.2.5" } }, "sha512-tCBEZV2z2FNpIDl2vrhiWzIHzs4qOAuIDEO85eS02vZ3L1U3P56qpPL8GuGGAijDktAEaq2swMkO/Fmbo7YmfQ=="],
 
     "image2uri": ["image2uri@2.1.2", "", { "dependencies": { "node-fetch": "^3.3.1" } }, "sha512-3b2zRma8I3zulb4OCkZruRw1VsnysT9phBzOJj+x3lPkwybJtNa5Sz6Dw8jSQI6OL7Ns4H5h8Y26EJbwq4GhQQ=="],
 
