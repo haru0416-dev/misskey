@@ -108,7 +108,8 @@ export type Config = {
 			ipRateLimit: boolean;
 		};
 		process: {
-			workers: number;
+			httpWorkers: number;
+			queueWorkers: number;
 			computationThreadsPerWorker: number;
 			pidFile: string;
 		};
@@ -124,7 +125,7 @@ export type Config = {
 		};
 		pool: {
 			minimumConnections: number;
-			maximumConnections: number;
+			maximumConnectionsPerHost: number;
 			connectionTimeoutMs: number;
 			idleConnectionTimeoutMs: number;
 			statementTimeoutMs: number;
@@ -373,7 +374,7 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 			},
 			pool: {
 				minimumConnections: source.database.pool.minimumConnections,
-				maximumConnections: source.database.pool.maximumConnections,
+				maximumConnectionsPerHost: source.database.pool.maximumConnectionsPerHost,
 				connectionTimeoutMs: parseDuration(source.database.pool.connectionTimeout),
 				idleConnectionTimeoutMs: parseDuration(source.database.pool.idleConnectionTimeout),
 				statementTimeoutMs: parseDuration(source.database.pool.statementTimeout),

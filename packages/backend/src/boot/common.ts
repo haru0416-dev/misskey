@@ -20,9 +20,13 @@ export function initExtraThreadPool(config: Config) {
 	slaccInitialized = true;
 }
 
-export async function server(config = loadConfig(), dependencies?: RuntimeDependencies) {
+export async function server(
+	config = loadConfig(),
+	dependencies?: RuntimeDependencies,
+	options?: { daemons?: boolean },
+) {
 	const { launchHonoServer } = await import('./server.js');
-	return await launchHonoServer(config, undefined, dependencies);
+	return await launchHonoServer(config, undefined, dependencies, options);
 }
 
 export type JobQueueRuntime = {

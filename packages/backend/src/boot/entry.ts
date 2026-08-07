@@ -16,6 +16,7 @@ import Logger, { configureLogger } from '@/logger.js';
 import { loadConfig } from '@/config.js';
 import { envOption } from '../env.js';
 import { initializeTelemetry, recordException, shutdownTelemetry } from '../telemetry.js';
+import { assignmentByWorkerId } from './cluster-roles.js';
 import { readyRef } from './ready.js';
 
 const config = loadConfig();
@@ -42,7 +43,17 @@ cluster.on('online', (worker) => {
 
 cluster.on('exit', (worker) => {
 	clusterLogger.error(chalk.red(`[${worker.id}] died :(`));
-	if (!shuttingDown) cluster.fork();
+	const assignment = assignmentByWorkerId.get(worker.id);
+	assignmentByWorkerId.delete(worker.id);
+	if (shuttingDown) return;
+
+	// 素の cluster.fork() で復帰させると役割 (HTTP / キュー / デーモン担当) が失われるので、
+	// master が割り当てたものと同じ役割で fork し直す。
+	if (assignment == null) {
+		clusterLogger.error(`No role recorded for worker [${worker.id}]; not respawning`);
+		return;
+	}
+	void import('./master.js').then(({ spawnWorker }) => spawnWorker(assignment));
 });
 
 if (!envOption.quiet) {
