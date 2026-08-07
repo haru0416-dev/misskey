@@ -62,13 +62,14 @@
 - 全体 lint / typecheck: `bun run lint`
 - Backend unit test: `bun run --bun --filter backend test`
 - Backend e2e test: `bun run --bun --filter backend test:e2e`
+- Backend e2e test (本番と同じ bun ランタイム + `Bun.sql`): `bun run --bun --filter backend test:e2e:bun`
 - Backend federation test: `bun run --bun --filter backend test:fed`
 - Frontend test: `bun run --bun --filter frontend test`
 - Migration 差分検査: `bun run --bun --filter backend check-migrations`
 - schema.ts差分からmigration自動生成: `bun run --filter backend db:generate`
 - `misskey-js` 再生成 (API 変更後必須): `bun run build-misskey-js-with-types`
 
-**注意:** backend テスト (`test` / `test:e2e` / `test:fed`) 実行前に `.config/test.yml` が必要。未作成の場合は `cp .github/misskey/test.yml .config/test.yml` を実行してから走らせる。各テストスクリプトが内部で `cross-env NODE_ENV=test bun run compile-config` を呼ぶため、コピー済みであれば追加の compile-config は不要。
+**注意:** backend テスト (`test` / `test:e2e` / `test:fed`) 実行前に `.config/test.yml` が必要。未作成の場合は `cp .github/misskey/test.yml .config/test.yml` を実行してから走らせる。各テストスクリプトが内部で `NODE_ENV=test bun run compile-config` を呼ぶため、コピー済みであれば追加の compile-config は不要。
 
 変更範囲に応じて最も近いコマンドから優先して検証し、必要なら全体コマンドに広げること。
 

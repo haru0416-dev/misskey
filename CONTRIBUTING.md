@@ -247,6 +247,11 @@ bun run --bun --filter backend test -- packages/backend/test/unit/activitypub.ts
 bun run --bun --filter backend test:e2e -- packages/backend/test/e2e/nodeinfo.ts
 ```
 
+`test` and `test:e2e` respawn the test runner under Node, so they never exercise the `Bun.sql` database driver that production uses. To run the same E2E suite against a server booted with the real Bun runtime and driver:
+```sh
+bun run --bun --filter backend test:e2e:bun
+```
+
 #### Running Multiple-server E2E Tests
 See [`/packages/backend/test-federation/README.md`](/packages/backend/test-federation/README.md).
 
@@ -386,99 +391,13 @@ export const handlers = [
 ];
 ```
 
-Don't forget to re-run the `.storybook/generate.js` script after adding, editing, or removing the above files.
+Don't forget to re-run the generator after adding, editing, or removing the above files:
 
-## Nest
-
-### Nest Service Circular dependency / Nestでサービスの循環参照でエラーが起きた場合
-
-#### forwardRef
-まずは簡単に`forwardRef`を試してみる
-
-```typescript
-export class FooService {
-	constructor(
-		@Inject(forwardRef(() => BarService))
-		private barService: BarService
-	) {
-	}
-}
+```sh
+cd packages/frontend/.storybook && bun generate.tsx
 ```
 
-#### OnModuleInit
-できなければ`OnModuleInit`を使う
-
-```typescript
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
-import { BarService } from '@/core/BarService';
-
-@Injectable()
-export class FooService implements OnModuleInit {
-	private barService: BarService // constructorから移動してくる
-
-	constructor(
-		private moduleRef: ModuleRef,
-	) {
-	}
-
-	async onModuleInit() {
-		this.barService = this.moduleRef.get(BarService.name);
-	}
-
-	public async niceMethod() {
-		return await this.barService.incredibleMethod({ hoge: 'fuga' });
-	}
-}
-```
-
-##### Service Unit Test
-テストで`onModuleInit`を呼び出す必要がある
-
-```typescript
-// import ...
-
-describe('test', () => {
-	let app: TestingModule;
-	let fooService: FooService; // for test case
-	let barService: BarService; // for test case
-
-	beforeEach(async () => {
-		app = await Test.createTestingModule({
-			imports: ...,
-			providers: [
-				FooService,
-				{ // mockする (mockは必須ではないかもしれない)
-					provide: BarService,
-					useFactory: () => ({
-						incredibleMethod: jest.fn(),
-					}),
-				},
-				{ // Provideにする
-					provide: BarService.name,
-					useExisting: BarService,
-				},
-			],
-		})
-			.useMocker(...
-			.compile();
-
-		fooService = app.get<FooService>(FooService);
-		barService = app.get<BarService>(BarService) as jest.Mocked<BarService>;
-
-		// onModuleInitを実行する
-		await fooService.onModuleInit();
-	});
-
-	test('nice', () => {
-		await fooService.niceMethod();
-
-		expect(barService.incredibleMethod).toHaveBeenCalled();
-		expect(barService.incredibleMethod.mock.lastCall![0])
-			.toEqual({ hoge: 'fuga' });
-	});
-})
-```
+(`.storybook/*.js` are tsgo build outputs and are gitignored. Always edit the `.ts` / `.tsx` sources.)
 
 ## Notes
 
@@ -496,75 +415,39 @@ bun run build-misskey-js-with-types
 
 Just execute `bun install` to fix it.
 
-### INSERTするときにはsaveではなくinsertを使用する
-#6441
-
-### placeholder
-SQLをクエリビルダで組み立てる際、使用するプレースホルダは重複してはならない
-例えば
+### `sql`テンプレートに生の配列を埋め込まない
+drizzleの`sql`テンプレートにJSの配列をそのまま埋め込むと、要素ごとに別々のプレースホルダへ展開されてしまう
 ``` ts
-query.andWhere(new Brackets(qb => {
-	for (const type of ps.fileType) {
-		qb.orWhere(`:type = ANY(note.attachedFileTypes)`, { type: type });
-	}
-}));
+sql`${note.userId} = ANY(${userIds})`
+// → "note"."userId" = ANY(($1, $2, $3))  ← 配列ではないので不正
 ```
-と書くと、ループ中で`type`というプレースホルダが複数回使われてしまいおかしくなる
-だから次のようにする必要がある
-```ts
-query.andWhere(new Brackets(qb => {
-	for (const type of ps.fileType) {
-		const i = ps.fileType.indexOf(type);
-		qb.orWhere(`:type${i} = ANY(note.attachedFileTypes)`, { [`type${i}`]: type });
-	}
-}));
+配列を1個の配列パラメータとして渡すには`sql.param()`で包む
+``` ts
+sql`${note.userId} = ANY(${sql.param(userIds)})`
+// → "note"."userId" = ANY($1)
 ```
-
-### Not `null` in TypeORM
-```ts
-const foo = await Foos.findOne({
-	bar: Not(null)
-});
-```
-のようなクエリ(`bar`が`null`ではない)は期待通りに動作しない。
-次のようにします:
-```ts
-const foo = await Foos.findOne({
-	bar: Not(IsNull())
-});
-```
+`= ANY(sql.param(...))`は要素数が変わってもプレースホルダの数が変わらないので、prepared statementを使い回す場合にも都合が良い
 
 ### `null` in SQL
-SQLを発行する際、パラメータが`null`になる可能性のある場合はSQL文を出し分けなければならない
-例えば
+`eq()`に`null`を渡しても`IS NULL`にはならず、`col = $1`(パラメータが`null`)というクエリになって何にもマッチしない
+`null`になり得る値と比較するときは`isNull()` / `isNotNull()`で出し分けること
 ``` ts
-query.where('file.folderId = :folderId', { folderId: ps.folderId });
-```
-という処理で、`ps.folderId`が`null`だと結果的に`file.folderId = null`のようなクエリが発行されてしまい、これは正しいSQLではないので期待した結果が得られない
-だから次のようにする必要がある
-``` ts
-if (ps.folderId) {
-	query.where('file.folderId = :folderId', { folderId: ps.folderId });
-} else {
-	query.where('file.folderId IS NULL');
-}
+// NG: ps.folderIdがnullだと常に0件になる
+.where(eq(driveFile.folderId, ps.folderId))
+
+// OK
+.where(ps.folderId != null ? eq(driveFile.folderId, ps.folderId) : isNull(driveFile.folderId))
 ```
 
 ### `[]` in SQL
-SQLを発行する際、`IN`のパラメータが`[]`(空の配列)になる可能性のある場合はSQL文を出し分けなければならない
-例えば
+`inArray()` / `notInArray()`は空配列を渡すとそれぞれ`false` / `true`にコンパイルされるので、`IN ()`のような壊れたSQLにはならない
+ただし結果が自明なクエリをDBへ往復させることになるので、空になり得る場合は問い合わせ自体を省くのが望ましい
 ``` ts
-const users = await Users.find({
-	id: In(userIds)
-});
+const users = userIds.length > 0
+	? await db.select().from(userTable).where(inArray(userTable.id, userIds))
+	: [];
 ```
-という処理で、`userIds`が`[]`だと結果的に`user.id IN ()`のようなクエリが発行されてしまい、これは正しいSQLではないので期待した結果が得られない
-だから次のようにする必要がある
-``` ts
-const users = userIds.length > 0 ? await Users.find({
-	id: In(userIds)
-}) : [];
-```
+手書きの`sql`テンプレートで`IN (...)`を組み立てる場合はこの保護が働かないので、自分で空配列を弾くこと
 
 ### 配列のインデックス in SQL
 SQLでは配列のインデックスは**1始まり**。
