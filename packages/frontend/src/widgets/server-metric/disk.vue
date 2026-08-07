@@ -32,32 +32,9 @@ const available = computed(() => props.meta.fs.total - props.meta.fs.used);
 </script>
 
 <style lang="scss" scoped>
+@use './pie-metric';
+
 .zbwaqsat {
-	display: flex;
-	padding: var(--MI-space-lg);
-
-	> .pie {
-		height: 82px;
-		flex-shrink: 0;
-		margin-right: var(--MI-space-lg);
-	}
-
-	> div {
-		flex: 1;
-
-		> p {
-			margin: 0;
-			font-size: 0.8em;
-
-			&:first-child {
-				font-weight: bold;
-				margin-bottom: var(--MI-space-xs);
-
-				> i {
-					margin-right: var(--MI-space-xs);
-				}
-			}
-		}
-	}
+	@include pie-metric.root;
 }
 </style>

@@ -75,8 +75,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
+import { useServerStats } from './use-server-stats.js';
 import { genId } from '@/utility/id.js';
 
 const props = defineProps<{
@@ -102,20 +103,6 @@ const memHeadY = ref<number>();
 const cpuP = ref<string>('');
 const memP = ref<string>('');
 
-onMounted(() => {
-	props.connection.on('stats', onStats);
-	props.connection.on('statsLog', onStatsLog);
-	props.connection.send('requestLog', {
-		id: genId(),
-		length: 50,
-	});
-});
-
-onBeforeUnmount(() => {
-	props.connection.off('stats', onStats);
-	props.connection.off('statsLog', onStatsLog);
-});
-
 function onStats(connStats: Misskey.entities.ServerStats) {
 	stats.value.push(connStats);
 	if (stats.value.length > 50) stats.value.shift();
@@ -137,11 +124,7 @@ function onStats(connStats: Misskey.entities.ServerStats) {
 	memP.value = (connStats.mem.active / props.meta.mem.total * 100).toFixed(0);
 }
 
-function onStatsLog(statsLog: Misskey.entities.ServerStatsLog) {
-	for (const revStats of statsLog.toReversed()) {
-		onStats(revStats);
-	}
-}
+useServerStats(props.connection, onStats);
 </script>
 
 <style lang="scss" scoped>
