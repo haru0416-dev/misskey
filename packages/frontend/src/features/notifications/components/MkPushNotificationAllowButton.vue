@@ -167,7 +167,7 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
 }
 
 if (navigator.serviceWorker == null) {
-	// TODO: よしなに？
+	// Service Worker非対応時はsupportedの初期値falseを維持する
 } else {
 	navigator.serviceWorker.ready.then(async swr => {
 		registration.value = swr;

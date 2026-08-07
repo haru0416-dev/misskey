@@ -193,7 +193,7 @@ const align = () => {
 	if (props.anchor.x === 'center') {
 		left = x + (props.anchorElement.offsetWidth / 2) - (width / 2);
 	} else if (props.anchor.x === 'left') {
-		// TODO
+		// TODO: アンカーの左側に配置する位置を計算する
 	} else if (props.anchor.x === 'right') {
 		left = x + props.anchorElement.offsetWidth;
 	}
@@ -201,7 +201,7 @@ const align = () => {
 	if (props.anchor.y === 'center') {
 		top = (y - (height / 2));
 	} else if (props.anchor.y === 'top') {
-		// TODO
+		// TODO: アンカーの上側に配置する位置を計算する
 	} else if (props.anchor.y === 'bottom') {
 		top = y + props.anchorElement.offsetHeight;
 	}

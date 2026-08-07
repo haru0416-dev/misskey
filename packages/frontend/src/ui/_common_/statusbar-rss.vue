@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</Transition>
 	</template>
 	<template v-else-if="display === 'oneByOne'">
-		<!-- TODO -->
+		<!-- TODO: RSS項目を一定間隔で一件ずつ表示する -->
 	</template>
 </span>
 </template>

@@ -61,7 +61,7 @@ const emojiName = computed(() => props.reaction.replaceAll(/:/g, '').replace(/@\
 const canToggle = computed(() => {
 	const emoji = customEmojisMap.get(emojiName.value) ?? getUnicodeEmojiOrNull(props.reaction);
 
-	// TODO
+	// TODO: checkReactionPermissionsを使ってリアクション可否を判定する
 	//return !props.reaction.match(/@\w/) && $i && emoji && checkReactionPermissions($i, props.note, emoji);
 	return props.reaction.match(/@\w/) == null && $i != null && emoji != null;
 });

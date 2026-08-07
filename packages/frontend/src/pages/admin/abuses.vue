@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</MkSelect>
 			</div>
 
-			<!-- TODO
+			<!-- TODO: ユーザー名とホストによる検索を実装する
 			<div class="inputs" style="display: flex; padding-top: 1.2em;">
 				<MkInput v-model="searchUsername" style="margin: 0; flex: 1;" type="text" :spellcheck="false">
 					<span>{{ i18n.ts.username }}</span>
