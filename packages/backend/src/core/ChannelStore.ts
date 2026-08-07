@@ -4,6 +4,7 @@
  */
 
 import { and, asc, desc, eq, gt, inArray, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { channel, type ChannelInsert, type ChannelRow } from '@/db/schema/channel.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -55,7 +56,16 @@ export async function listChannelsByIdsFromDatabase(
 ): Promise<MiChannel[]> {
 	if (ids.length === 0) return [];
 
-	const rows = await db.select().from(channel).where(inArray(channel.id, ids));
+	// IN (...) は件数ぶんプレースホルダが増えて SQL の形が変わるため、
+	// 形を固定できる = ANY(配列1個) にして組み立て済みを使い回す
+	const statement = preparedQueryFor(db, 'channel:byIds', () =>
+		db
+			.select()
+			.from(channel)
+			.where(sql`${channel.id} = ANY(${sql.placeholder('ids')})`)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
+	const rows = await statement.execute({ ids });
 
 	return rows.map((row) => deserializeChannel(row));
 }
