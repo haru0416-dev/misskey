@@ -1,19 +1,13 @@
 {
 	"$schema": "https://unpkg.com/knip@6/schema.json",
 	"ignore": [
-		"**/built/**",
-		"**/built-test/**",
-		"**/js-built/**",
-		"**/node_modules/**",
 		"packages/backend/migration/_legacy/**",
 		"packages/backend/assets/**",
 		"packages/frontend/assets/**",
 		"packages/frontend/public/**",
-		"packages/i18n/src/autogen/**",
-		"packages/misskey-js/src/autogen/**",
 		"**/public/**"
 	],
-	"ignoreBinaries": ["taskkill"],
+	"ignoreBinaries": ["taskkill", "generate.tsx"],
 	"ignoreDependencies": [
 		"@typescript/lib-webworker",
 		"@tabler/icons-webfont",
@@ -26,19 +20,15 @@
 	"workspaces": {
 		".": {
 			"entry": ["scripts/*.{mjs,cjs,ts}", ".github/scripts/*.{mjs,cjs,mts,ts}"],
-			"project": ["scripts/**/*.{mjs,cjs,ts}", ".github/scripts/**/*.{mjs,cjs,mts,ts}"]
+			"project": ["scripts/**/*.{mjs,cjs,ts}", ".github/scripts/**/*.{mjs,cjs,mts,ts}"],
+			"ignoreDependencies": ["pg", "ioredis"]
 		},
 		"packages/backend": {
 			"entry": [
-				"src/boot/entry.ts",
-				"src/boot/cli.ts",
-				"src/misc/migration-runner.ts",
 				"scripts/*.{js,mjs,mts,ts}",
 				"test/**/*.ts",
 				"test-server/**/*.ts",
 				"test-federation/**/*.ts",
-				"rolldown.config.ts",
-				"drizzle.config.ts",
 				"vitest.config.*.ts"
 			]
 		},
@@ -46,33 +36,41 @@
 			"entry": [
 				"src/_boot_.ts",
 				"src/workers/*.ts",
-				"build.ts",
-				"vite.config.ts",
 				"builder/**/*.ts",
 				"lib/**/*.ts",
 				"test/**/*.ts",
 				".storybook/*.{ts,tsx}",
 				"src/**/*.stories.impl.ts",
-				"src/**/*.stories.meta.ts"
-			]
+				"src/**/*.stories.meta.ts",
+				"src/features/image-editor/effects/*.ts"
+			],
+			"ignoreDependencies": ["frontend-shared"]
 		},
 		"packages/frontend-embed": {
-			"entry": ["src/boot.ts", "src/workers/*.ts", "build.ts", "vite.config.ts"]
+			"entry": ["src/boot.ts", "src/workers/*.ts"],
+			"ignoreDependencies": ["frontend-shared", "shiki", "frontend"]
 		},
 		"packages/sw": {
-			"entry": ["src/sw.ts", "build.js"]
+			"entry": ["src/sw.ts"],
+			"ignoreDependencies": ["frontend-shared"]
 		},
 		"packages/frontend-shared": {
-			"entry": ["utility/**/*.ts", "themes/**/*.ts", "@types/**/*.ts"]
+			"entry": ["utility/**/*.ts", "@types/**/*.ts"],
+			"paths": {
+				"@shared/*": ["./*"]
+			}
 		},
 		"packages/misskey-js": {
-			"entry": ["src/index.ts", "test/**/*.ts", "generator/**/*.ts", "test-d/**/*.ts"]
+			"entry": ["test/**/*.ts", "test-d/**/*.ts"]
 		},
 		"packages/i18n": {
-			"entry": ["src/index.ts", "build.ts", "scripts/**/*.ts"]
+			"entry": ["src/index.ts", "src/const.ts", "scripts/**/*.ts"]
 		},
 		"packages/icons-subsetter": {
-			"entry": ["src/index.ts", "src/cli.ts", "build.ts"]
+			"ignoreDependencies": ["harfbuzzjs"]
+		},
+		"packages/mfm-js": {
+			"ignoreDependencies": ["@microsoft/api-extractor"]
 		}
 	}
 }

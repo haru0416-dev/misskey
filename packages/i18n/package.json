@@ -19,7 +19,6 @@
 		"verify": "bun scripts/verify.ts",
 		"build": "bun ./build.ts",
 		"watch": "bun ./build.ts --watch",
-		"tsd": "tsd",
 		"typecheck": "tsgo --noEmit",
 		"lint": "bun run --bun typecheck"
 	},
