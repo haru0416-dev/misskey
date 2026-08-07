@@ -168,7 +168,7 @@ const HONO_STREAM_CHANNELS: Record<string, HonoStreamChannelDefinition<HonoStrea
 	serverStats: honoStreamChannelServerStats,
 };
 
-/** Connection.ts 相当。NestJS のリクエストスコープDIを介さない、コネクション単位のプレーンクラス。 */
+/** ストリーミング接続ごとの状態とチャンネル購読を保持する。 */
 export class HonoStreamConnection {
 	public readonly user?: MiUser;
 	public readonly token?: MiAccessToken;

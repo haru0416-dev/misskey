@@ -73,8 +73,7 @@ export type HonoApiDriveFileUploadDependencies = Omit<HonoApiDriveFilesDependenc
 		publishDriveStream?: HonoApiDriveStreamPublisher;
 	};
 
-// fastify の @fastify/multipart は truncated 判定・欠如判定のいずれもエラーボディ無しの生ステータスで返しており、
-// endpoint-base.ts の FILE_REQUIRED (4267801e-...) は HTTP 経由では到達しない dead code のため、ここでも再現しない。
+// ファイル欠如・サイズ超過は、API互換性のためエラーボディ無しの生ステータスとして呼び出し元へ返す。
 export type HonoApiMultipartResult =
 	| { status: 'missing-file' }
 	| { status: 'too-large' }
@@ -88,7 +87,6 @@ export async function readHonoApiMultipartRequest(
 	config: Pick<Config, 'limits'>,
 ): Promise<HonoApiMultipartResult> {
 	// c.req.formData() はボディ全体を上限なしでメモリに読むため、先に上限つきで読み切る。
-	// upstream (Fastify @fastify/multipart) の limits.fileSize による途中打ち切り相当。
 	class BodyLimitExceeded extends Error {}
 	let rawBody: Uint8Array;
 	try {
@@ -968,7 +966,7 @@ export function handleHonoApiDriveFilesUploadFromUrl(
 ): void {
 	const params = parseHonoApiParams(driveFilesUploadFromUrlParamDef, body);
 
-	// 元の NestJS ハンドラも await/catch せず fire-and-forget しているため、同様に呼び出し元へは即座に返す。
+	// バックグラウンド処理として開始し、呼び出し元へは即座に返す。
 	uploadDriveFileFromUrlForHonoApi(deps, {
 		url: params.url,
 		user: me,

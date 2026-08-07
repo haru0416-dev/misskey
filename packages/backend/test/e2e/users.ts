@@ -1188,8 +1188,6 @@ describe('ユーザー', () => {
 		assert.deepStrictEqual(response, expected);
 	});
 
-	// 原典 (NestJS/TypeORM) では QueryFailedError: missing FROM-clause entry for table "note" で
-	// 壊れていたが、Hono移行後のdrizzle実装では動作するためテストを有効化した。
 	test('のオススメを取得することができる', async () => {
 		const parameters = {};
 		const response = await successfulApiCall({ endpoint: 'users/recommendation', parameters, user: alice });

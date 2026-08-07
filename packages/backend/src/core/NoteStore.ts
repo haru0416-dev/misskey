@@ -405,19 +405,6 @@ export async function fetchNoteByIdAndUserIdFromDatabase(
 	return row ? deserializeNote(row) : null;
 }
 
-export async function adjustNoteClippedCountInDatabase(
-	db: MiDrizzleDatabase,
-	id: MiNote['id'],
-	value: number,
-): Promise<void> {
-	await db
-		.update(note)
-		.set({
-			clippedCount: sql`${note.clippedCount} + ${value}`,
-		})
-		.where(eq(note.id, id));
-}
-
 export async function fetchNoteByIdOrFailFromDatabase(db: MiDrizzleDatabase, id: MiNote['id']): Promise<MiNote> {
 	const found = await fetchNoteByIdFromDatabase(db, id);
 

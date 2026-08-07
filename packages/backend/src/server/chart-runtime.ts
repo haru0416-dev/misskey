@@ -55,10 +55,9 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 
 // Chart.commit() only ever buffers in-memory diffs; Chart.save() (called on a 20-minute
-// interval, mirroring ChartManagementService) is what actually persists them. Since the
-// Hono server is a long-lived process just like the NestJS one, these writer instances
-// are constructed once at boot (see createRuntimeDependencies) and shared across requests
-// via deps, not recreated per-request.
+// interval) is what actually persists them. These writer instances are constructed once
+// at boot (see createRuntimeDependencies) and shared across requests via deps, not recreated
+// per-request.
 type HonoChartWriterDependencies = {
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
