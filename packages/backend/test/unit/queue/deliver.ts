@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createInstanceInDatabase } from '@/core/InstanceStore.js';
+import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/InstanceStore.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { StatusError } from '@/misc/status-error.js';
@@ -157,5 +157,14 @@ describe('hono-queue-deliver', () => {
 				}),
 			),
 		).rejects.toBeInstanceOf(Bull.UnrecoverableError);
+
+		// 配送失敗時のインスタンス情報更新はfire-and-forget (queue/handlers/deliver.ts) のため、
+		// ここで終端の書き込み (isNotResponding=true) まで待たないと afterAll の dispose と競合し、
+		// クローズ済みDB接続への書き込みがunhandled errorとしてrunを失敗させる (Bun.sqlで顕在化)。
+		await expect
+			.poll(async () => (await fetchInstanceByHostFromDatabase(runtime.db, host))?.isNotResponding, {
+				timeout: 10000,
+			})
+			.toBe(true);
 	});
 });
