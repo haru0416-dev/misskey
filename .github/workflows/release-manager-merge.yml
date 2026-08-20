@@ -88,19 +88,47 @@ jobs:
       - name: Wait for checks on the version commit
         run: |
           expected_head=$(git rev-parse HEAD)
+          settled_signature=''
+          settled_polls=0
           for attempt in $(seq 1 60); do
             data=$(gh pr view "$PR_NUMBER" --json headRefOid,reviewDecision,isDraft,mergeStateStatus,statusCheckRollup,mergeable)
             head=$(jq -r '.headRefOid' <<<"$data")
             checks=$(jq '.statusCheckRollup | length' <<<"$data")
-            pending=$(jq '[.statusCheckRollup[] | select((.conclusion // .state) != "SUCCESS" and (.conclusion // .state) != "COMPLETED")] | length' <<<"$data")
-            if [ "$head" = "$expected_head" ] && [ "$checks" -gt 0 ] && [ "$pending" -eq 0 ] && jq -e '
+            mapfile -t incomplete < <(jq -r '
+              [
+                .statusCheckRollup[] |
+                {
+                  name: (.name // .context // "<unnamed>"),
+                  result: (.conclusion // .state // "UNKNOWN")
+                } |
+                select(.result != "SUCCESS" and .result != "COMPLETED")
+              ] |
+              sort_by(.name, .result) |
+              .[] |
+              "\(.name)=\(.result)"
+            ' <<<"$data")
+            if [ "$head" = "$expected_head" ] && [ "$checks" -gt 0 ] && [ "${#incomplete[@]}" -eq 0 ] && jq -e '
                 (.isDraft | not) and
                 .reviewDecision == "APPROVED" and
                 .mergeable == "MERGEABLE" and
                 (.mergeStateStatus == "CLEAN" or .mergeStateStatus == "BLOCKED")
               ' <<<"$data" >/dev/null; then
-              exit 0
+              signature=$(jq -c '[.statusCheckRollup[] | { name: (.name // .context), result: (.conclusion // .state) }] | sort_by(.name, .result)' <<<"$data")
+              if [ "$signature" = "$settled_signature" ]; then
+                settled_polls=$((settled_polls + 1))
+              else
+                settled_signature=$signature
+                settled_polls=1
+              fi
+              if [ "$settled_polls" -ge 3 ]; then
+                exit 0
+              fi
+            else
+              settled_signature=''
+              settled_polls=0
             fi
+            printf 'Waiting for checks (attempt %d/60). Registered: %d; incomplete: %s; merge state: %s; settled polls: %d/3\n' \
+              "$attempt" "$checks" "${incomplete[*]:-none}" "$(jq -r '.mergeStateStatus' <<<"$data")" "$settled_polls"
             sleep 10
           done
           echo "Timed out waiting for checks on $expected_head" >&2

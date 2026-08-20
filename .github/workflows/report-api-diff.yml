@@ -27,10 +27,6 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
       - name: Check artifacts
         run: ls -lh artifacts/
-      - name: Load PR Number
-        id: load-pr-num
-        run: echo "pr-number=$(cat artifacts/pr_number)" >> "$GITHUB_OUTPUT"
-
       - name: Arrange json files
         run: |
           jq '.' ./artifacts/api-base.json > ./api-base.json
@@ -69,16 +65,58 @@ jobs:
           fi
 
           echo "$FOOTER" >> ./output.md
-      - uses: thollander/actions-comment-pull-request@v3
+      - name: Validate pull request target
+        id: validate-pr
+        if: always()
+        uses: actions/github-script@v9
         with:
-          pr-number: ${{ steps.load-pr-num.outputs.pr-number }}
+          script: |
+            const fs = require('node:fs');
+            const workflowRun = context.payload.workflow_run;
+            const rawPrNumber = fs.readFileSync('artifacts/pr_number', 'utf8').trim();
+            if (!/^\d+$/.test(rawPrNumber)) {
+              core.setFailed('The artifact pull request number is invalid.');
+              return;
+            }
+
+            const prNumber = Number(rawPrNumber);
+            const associatedPullRequests = workflowRun.pull_requests ?? [];
+            const runHeadSha = workflowRun.head_sha;
+            const associatedPullRequest = associatedPullRequests.find(pr =>
+              pr.number === prNumber && pr.head?.sha === runHeadSha);
+            if (associatedPullRequest == null) {
+              core.setFailed(`Workflow run ${workflowRun.id} is associated with a different pull request or head.`);
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const currentPullRequest = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+            if (currentPullRequest.data.head?.sha !== runHeadSha) {
+              core.setFailed(`Pull request #${prNumber} no longer has workflow run head ${runHeadSha}.`);
+              return;
+            }
+            if (currentPullRequest.data.base.repo?.full_name !== `${owner}/${repo}` ||
+                currentPullRequest.data.head.repo?.full_name !== workflowRun.head_repository?.full_name) {
+              core.setFailed(`Pull request #${prNumber} repository identity does not match workflow run ${workflowRun.id}.`);
+              return;
+            }
+
+            core.setOutput('pr-number', String(prNumber));
+      - uses: thollander/actions-comment-pull-request@v3
+        if: success() && steps.validate-pr.outputs.pr-number
+        with:
+          pr-number: ${{ steps.validate-pr.outputs.pr-number }}
           comment-tag: show_diff
           file-path: ./output.md
       - name: Tell error to PR
         uses: thollander/actions-comment-pull-request@v3
-        if: failure() && steps.load-pr-num.outputs.pr-number
+        if: failure() && steps.validate-pr.outputs.pr-number
         with:
-          pr-number: ${{ steps.load-pr-num.outputs.pr-number }}
+          pr-number: ${{ steps.validate-pr.outputs.pr-number }}
           comment-tag: show_diff_error
           message: |
             api.jsonの差分作成中にエラーが発生しました。詳細は[Workflowのログ](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})を確認してください。

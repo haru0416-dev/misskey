@@ -8,6 +8,9 @@ on:
       - improve-misskey-js-autogen-check
     paths:
       - packages/backend/**
+      - packages/misskey-js/generator/**
+      - packages/misskey-js/src/autogen/**
+      - .github/workflows/check-misskey-js-autogen.yml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
