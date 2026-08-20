@@ -16,8 +16,10 @@ import {
 	enqueueAccountDeleteCoordinatorInOutbox,
 	enqueueDbJobInOutbox,
 	enqueueDeliverJobInOutbox,
+	enqueueInlineDbJobInOutbox,
 	getQueueOutboxStats,
 	publishDbOutboxRowEagerly,
+	runInlineDbOutboxJob,
 } from '@/core/QueueOutboxStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -80,6 +82,38 @@ describe('queue outbox', () => {
 			oldestPendingAgeMs: null,
 		});
 		await job?.remove();
+	});
+
+	test('does not dispatch a DB row while its inline owner holds the lease', async () => {
+		const inlineJob = await enqueueInlineDbJobInOutbox(
+			runtime.db,
+			'deleteAccount',
+			{ user: { id: 'queue-outbox-inline-user' }, soft: true },
+			{ removeOnComplete: true },
+		);
+		await runtime.db
+			.update(queueOutbox)
+			.set({ leaseExpiresAt: new Date(0) })
+			.where(eq(queueOutbox.id, inlineJob.outboxId));
+		let finishTask!: () => void;
+		const taskFinished = new Promise<void>((resolve) => {
+			finishTask = resolve;
+		});
+		let taskStarted!: () => void;
+		const started = new Promise<void>((resolve) => {
+			taskStarted = resolve;
+		});
+		const running = runInlineDbOutboxJob(runtime.db, inlineJob, async () => {
+			taskStarted();
+			await taskFinished;
+		});
+
+		await started;
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(0);
+		expect(await runtime.dbQueue.getJob(`outbox-${inlineJob.outboxId}`)).toBeUndefined();
+		finishTask();
+		await expect(running).resolves.toBe(true);
+		expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, inlineJob.outboxId))).toHaveLength(0);
 	});
 
 	test('publishes delivery outside the claim transaction and keeps its row', async () => {

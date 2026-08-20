@@ -49,6 +49,7 @@ export const user = pgTable(
 		tags: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
 		score: integer().default(0).notNull(),
 		isSuspended: boolean().default(false).notNull(),
+		suspensionTransitionId: varchar({ length: 32 }),
 		isLocked: boolean().default(false).notNull(),
 		isBot: boolean().default(false).notNull(),
 		isCat: boolean().default(false).notNull(),

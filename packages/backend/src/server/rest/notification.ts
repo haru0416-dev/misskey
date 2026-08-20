@@ -167,26 +167,76 @@ export function toXListId(id: string): string {
 	return `${date}-${BigInt.asUintN(64, additional).toString()}`;
 }
 
+export async function resolveNotificationStreamId(
+	deps: Pick<HonoApiNotificationDependencies, 'redis'>,
+	userId: MiUser['id'],
+	notificationId: string,
+): Promise<string> {
+	const key = `notificationTimeline:${userId}`;
+	const canonicalId = toXListId(notificationId);
+	if ((await deps.redis.xrange(key, canonicalId, canonicalId)).length > 0) return canonicalId;
+
+	// Delayed durable retries may be appended with a generated stream ID. The stream is MAXLEN-bounded,
+	// so resolving the API-visible notification ID with a bounded scan is preferable to losing deletion/pagination.
+	const entries = await deps.redis.xrevrange(key, '+', '-');
+	for (const [streamId, fields] of entries) {
+		const dataIndex = fields.indexOf('data');
+		const data = fields[dataIndex + 1];
+		if (dataIndex === -1 || data == null) continue;
+		try {
+			if ((JSON.parse(data) as { id?: unknown }).id === notificationId) return streamId;
+		} catch {
+			// Ignore malformed legacy entries and continue looking for the requested notification.
+		}
+	}
+	return canonicalId;
+}
+
+const appendNotificationWithGeneratedStreamId = `
+local entries = redis.call('XRANGE', KEYS[1], '-', '+')
+for _, entry in ipairs(entries) do
+	local fields = entry[2]
+	for index = 1, #fields, 2 do
+		if fields[index] == 'data' and fields[index + 1] == ARGV[2] then
+			return entry[1]
+		end
+	end
+end
+return redis.call('XADD', KEYS[1], 'MAXLEN', '~', ARGV[1], '*', 'data', ARGV[2])
+`;
+
 export async function xaddHonoApiNotification(
 	deps: HonoApiNotificationDependencies,
 	userId: MiUser['id'],
 	notification: { id: string } & Record<string, unknown>,
 ): Promise<string> {
-	while (true) {
-		try {
-			return (await deps.redis.xadd(
-				`notificationTimeline:${userId}`,
-				'MAXLEN',
-				'~',
+	const key = `notificationTimeline:${userId}`;
+	const streamId = toXListId(notification.id);
+	const serialized = JSON.stringify(notification);
+	try {
+		return (await deps.redis.xadd(
+			key,
+			'MAXLEN',
+			'~',
+			deps.config.limits.userNotifications.toString(),
+			streamId,
+			'data',
+			serialized,
+		))!;
+	} catch (err) {
+		if (!(err instanceof ReplyError)) throw err;
+		const existing = await deps.redis.xrange(key, streamId, streamId);
+		if (existing[0]?.[1]?.[1] === serialized) return streamId;
+		if (existing.length > 0) throw err;
+		return String(
+			await deps.redis.eval(
+				appendNotificationWithGeneratedStreamId,
+				1,
+				key,
 				deps.config.limits.userNotifications.toString(),
-				toXListId(notification.id),
-				'data',
-				JSON.stringify(notification),
-			))!;
-		} catch (err) {
-			if (err instanceof ReplyError) continue;
-			throw err;
-		}
+				serialized,
+			),
+		);
 	}
 }
 
@@ -657,7 +707,7 @@ export async function handleHonoApiNotificationsDelete(
 ): Promise<void> {
 	const params = parseHonoApiParams(notificationsDeleteParamDef, body);
 	const streamKey = `notificationTimeline:${me.id}`;
-	const redisId = toXListId(params.notificationId);
+	const redisId = await resolveNotificationStreamId(deps, me.id, params.notificationId);
 	let idsToDelete = [redisId];
 
 	if (params.grouped) {

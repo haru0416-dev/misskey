@@ -13,6 +13,7 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { DeliverJobData } from '@/queue/types.js';
+import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
 import { isFederationAllowedUri, signedPostForHonoApi } from '../../server/rest/ap-resolve.js';
 import {
 	fetchFederatedInstance,
@@ -53,6 +54,17 @@ export async function handleHonoQueueDeliver(
 	deps: HonoQueueDeliverDependencies,
 	job: Bull.Job<DeliverJobData>,
 ): Promise<string> {
+	if (job.data.userStateGuard != null) {
+		const guard = job.data.userStateGuard;
+		const guardedUser = await fetchUserByIdFromDatabase(deps.db, guard.userId);
+		if (
+			guardedUser == null ||
+			guardedUser.isSuspended !== guard.isSuspended ||
+			guardedUser.suspensionTransitionId !== guard.transitionId
+		) {
+			return 'skip (stale user state)';
+		}
+	}
 	const { host } = new URL(job.data.to);
 
 	if (!isFederationAllowedUri(deps.config, deps.meta, job.data.to)) {

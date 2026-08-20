@@ -69,6 +69,8 @@ export class MiUser {
 
 	public isSuspended: boolean;
 
+	public suspensionTransitionId: string | null;
+
 	public isLocked: boolean;
 
 	public isBot: boolean;

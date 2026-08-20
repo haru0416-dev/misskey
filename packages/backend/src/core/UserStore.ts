@@ -10,6 +10,7 @@ import { userProfile, type UserProfileInsert } from '@/db/schema/user-profile.js
 import { userPublickey, type UserPublickeyInsert } from '@/db/schema/user-publickey.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
+import { genUuidv7 } from '@/misc/id/uuidv7.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 
 export type UserUpdate = Partial<Omit<UserRow, 'id'>>;
@@ -688,8 +689,20 @@ export async function updateUserSuspendedStateInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiUser['id'],
 	isSuspended: boolean,
-): Promise<void> {
-	await db.update(userTable).set({ isSuspended }).where(eq(userTable.id, id));
+): Promise<{ transitionedAt: Date; transitionId: string }> {
+	const [current] = await db
+		.select({ updatedAt: userTable.updatedAt })
+		.from(userTable)
+		.where(eq(userTable.id, id))
+		.for('update')
+		.limit(1);
+	const updatedAt = new Date(Math.max(Date.now(), (current?.updatedAt?.getTime() ?? 0) + 1));
+	const transitionId = genUuidv7(updatedAt.getTime());
+	await db
+		.update(userTable)
+		.set({ isSuspended, suspensionTransitionId: transitionId, updatedAt })
+		.where(eq(userTable.id, id));
+	return { transitionedAt: updatedAt, transitionId };
 }
 
 export async function updateUserInDatabase(db: MiDrizzleDatabase, id: MiUser['id'], values: UserUpdate): Promise<void> {

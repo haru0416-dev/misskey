@@ -8,7 +8,11 @@ import { genId } from '@/misc/id/gen-id.js';
 import type { MiUser } from '@/models/User.js';
 import type { ModerationLogPayloads } from '@/types.js';
 import { moderationLogTypes } from '@/types.js';
-import { createModerationLogInDatabase, createModerationLogsInDatabase } from './ModerationLogStore.js';
+import {
+	createModerationLogIfNotExistsInDatabase,
+	createModerationLogInDatabase,
+	createModerationLogsInDatabase,
+} from './ModerationLogStore.js';
 
 export async function logModerationEventInDatabase<T extends (typeof moderationLogTypes)[number]>(
 	deps: {
@@ -24,6 +28,22 @@ export async function logModerationEventInDatabase<T extends (typeof moderationL
 		type,
 		info: info ?? {},
 	});
+}
+
+export async function logModerationEventWithIdInDatabase<T extends (typeof moderationLogTypes)[number]>(
+	deps: { db: MiDrizzleDatabase },
+	moderator: { id: MiUser['id'] },
+	type: T,
+	info?: ModerationLogPayloads[T],
+	id = genId(),
+): Promise<string> {
+	await createModerationLogIfNotExistsInDatabase(deps.db, {
+		id,
+		userId: moderator.id,
+		type,
+		info: info ?? {},
+	});
+	return id;
 }
 
 export async function logModerationEventsInDatabase<T extends (typeof moderationLogTypes)[number]>(

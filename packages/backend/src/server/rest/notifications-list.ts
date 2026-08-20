@@ -33,7 +33,11 @@ import {
 import { packHonoApiRole, packHonoApiRoles, type HonoApiRoleDependencies } from './roles.js';
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
-import { markAllHonoApiNotificationsAsRead, toXListId, type HonoApiNotificationDependencies } from './notification.js';
+import {
+	markAllHonoApiNotificationsAsRead,
+	resolveNotificationStreamId,
+	type HonoApiNotificationDependencies,
+} from './notification.js';
 
 export type HonoApiNotificationsListDependencies = HonoApiNoteDependencies &
 	HonoApiChatDependencies &
@@ -65,8 +69,10 @@ async function getHonoApiNotifications(
 	},
 ): Promise<MiNotification[]> {
 	const limit = options.limit ?? 20;
-	let sinceTime = options.sinceId ? toXListId(options.sinceId) : null;
-	let untilTime = options.untilId ? toXListId(options.untilId) : null;
+	let [sinceTime, untilTime] = await Promise.all([
+		options.sinceId ? resolveNotificationStreamId(deps, userId, options.sinceId) : null,
+		options.untilId ? resolveNotificationStreamId(deps, userId, options.untilId) : null,
+	]);
 	const includeTypeSet = options.includeTypes && options.includeTypes.length > 0 ? new Set(options.includeTypes) : null;
 	const excludeTypeSet = options.excludeTypes && options.excludeTypes.length > 0 ? new Set(options.excludeTypes) : null;
 

@@ -421,10 +421,6 @@ export async function updateDriveFilesFolderByIdsAndUserIdInDatabase(
 		.where(and(inArray(driveFile.id, ids), eq(driveFile.userId, userId)));
 }
 
-export async function deleteDriveFileByIdInDatabase(db: MiDrizzleDatabase, id: MiDriveFile['id']): Promise<void> {
-	await db.delete(driveFile).where(eq(driveFile.id, id));
-}
-
 async function countDriveFilesByUserHostFromDatabase(
 	db: MiDrizzleDatabase,
 	userHost: NonNullable<MiDriveFile['userHost']>,

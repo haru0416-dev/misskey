@@ -31,6 +31,8 @@ const MAX_POLL_INTERVAL_MS = 30_000;
 const READY_BATCH_SIZE = 500;
 const RECONCILE_BATCH_SIZE = 500;
 
+type OutboxDbJobName = 'deleteAccount' | 'deleteDriveFile' | 'userSuspensionPostEffects' | 'notePostCreate';
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -50,6 +52,8 @@ type SerializedDeleteAccountData = Record<string, unknown> & {
 type SerializedDeleteAccountUser = Record<string, unknown> & {
 	id?: unknown;
 };
+
+type SerializedDbJobData = Record<string, unknown>;
 
 type SerializedJobOptions = Record<string, unknown> & {
 	attempts?: unknown;
@@ -100,33 +104,145 @@ function parseKeepJobs(value: unknown): KeepJobsOption | undefined | typeof inva
 	};
 }
 
-function parseDbOutboxJob(row: QueueOutboxRow): DbJobBulkInput<'deleteAccount'> | null {
-	if (row.queue !== QUEUE.DB || row.name !== 'deleteAccount' || !isRecord(row.data) || !isRecord(row.opts)) return null;
+function parseDbJobData(name: OutboxDbJobName, value: SerializedDbJobData): DbJobMap[OutboxDbJobName] | null {
+	switch (name) {
+		case 'deleteAccount': {
+			const user = value['user'];
+			if (!isRecord(user) || typeof (user as SerializedDeleteAccountUser).id !== 'string') return null;
+			if (value['soft'] !== undefined && typeof value['soft'] !== 'boolean') return null;
+			return value as DbJobMap['deleteAccount'];
+		}
+		case 'deleteDriveFile': {
+			const file = value['file'];
+			const replacementKeys = value['replacementKeys'];
+			return typeof value['operationId'] === 'string' &&
+				isRecord(file) &&
+				typeof file['id'] === 'string' &&
+				(file['userId'] === null || typeof file['userId'] === 'string') &&
+				(file['userHost'] === null || typeof file['userHost'] === 'string') &&
+				(file['userUsername'] === null || typeof file['userUsername'] === 'string') &&
+				typeof file['size'] === 'number' &&
+				(file['uri'] === null || typeof file['uri'] === 'string') &&
+				typeof file['storedInternal'] === 'boolean' &&
+				typeof file['isLink'] === 'boolean' &&
+				(file['accessKey'] === null || typeof file['accessKey'] === 'string') &&
+				(file['thumbnailUrl'] === null || typeof file['thumbnailUrl'] === 'string') &&
+				(file['thumbnailAccessKey'] === null || typeof file['thumbnailAccessKey'] === 'string') &&
+				(file['webpublicUrl'] === null || typeof file['webpublicUrl'] === 'string') &&
+				(file['webpublicAccessKey'] === null || typeof file['webpublicAccessKey'] === 'string') &&
+				typeof value['isExpired'] === 'boolean' &&
+				(replacementKeys === undefined ||
+					(isRecord(replacementKeys) &&
+						typeof replacementKeys['accessKey'] === 'string' &&
+						typeof replacementKeys['thumbnailAccessKey'] === 'string' &&
+						typeof replacementKeys['webpublicAccessKey'] === 'string')) &&
+				(value['deleterId'] === undefined || typeof value['deleterId'] === 'string')
+				? (value as DbJobMap['deleteDriveFile'])
+				: null;
+		}
+		case 'userSuspensionPostEffects':
+			return typeof value['userId'] === 'string' &&
+				typeof value['isSuspended'] === 'boolean' &&
+				typeof value['transitionedAt'] === 'string' &&
+				typeof value['transitionId'] === 'string'
+				? (value as DbJobMap['userSuspensionPostEffects'])
+				: null;
+		case 'notePostCreate':
+			return typeof value['noteId'] === 'string' &&
+				typeof value['silent'] === 'boolean' &&
+				(value['reply'] === null ||
+					(isRecord(value['reply']) &&
+						typeof value['reply']['id'] === 'string' &&
+						typeof value['reply']['userId'] === 'string' &&
+						(value['reply']['userHost'] === null || typeof value['reply']['userHost'] === 'string') &&
+						(value['reply']['threadId'] === null || typeof value['reply']['threadId'] === 'string'))) &&
+				(value['renote'] === null ||
+					(isRecord(value['renote']) &&
+						typeof value['renote']['id'] === 'string' &&
+						typeof value['renote']['userId'] === 'string' &&
+						(value['renote']['userHost'] === null || typeof value['renote']['userHost'] === 'string') &&
+						(value['renote']['uri'] === null || typeof value['renote']['uri'] === 'string'))) &&
+				[
+					'analytics',
+					'fanout',
+					'antennas',
+					'followerNotifications',
+					'poll',
+					'streamsAndRole',
+					'notifications',
+					'webhooks',
+					'federation',
+				].includes(value['stage'] as string) &&
+				Array.isArray(value['mentionedUserIds']) &&
+				value['mentionedUserIds'].every((id) => typeof id === 'string')
+				? (value as DbJobMap['notePostCreate'])
+				: null;
+		default:
+			return null;
+	}
+}
+
+function parseDbOutboxJob(row: QueueOutboxRow): DbJobBulkInput | null {
+	if (row.queue !== QUEUE.DB || !isRecord(row.data) || !isRecord(row.opts)) return null;
+	if (!['deleteAccount', 'deleteDriveFile', 'userSuspensionPostEffects', 'notePostCreate'].includes(row.name))
+		return null;
+	const name = row.name as OutboxDbJobName;
 	const data = row.data as SerializedDeleteAccountData;
-	const user = data.user;
-	if (!isRecord(user) || typeof (user as SerializedDeleteAccountUser).id !== 'string') return null;
-	if (data.soft !== undefined && typeof data.soft !== 'boolean') return null;
+	const parsedData = parseDbJobData(name, data);
+	if (parsedData == null) return null;
 	const removeOnComplete = parseKeepJobs((row.opts as SerializedJobOptions).removeOnComplete);
 	const removeOnFail = parseKeepJobs((row.opts as SerializedJobOptions).removeOnFail);
 	if (removeOnComplete === invalidKeepJobs || removeOnFail === invalidKeepJobs) return null;
+	const serializedOpts = row.opts as SerializedJobOptions;
+	if (
+		serializedOpts.attempts !== undefined &&
+		(typeof serializedOpts.attempts !== 'number' ||
+			!Number.isInteger(serializedOpts.attempts) ||
+			serializedOpts.attempts < 1)
+	)
+		return null;
+	const backoff = serializedOpts.backoff;
+	if (
+		backoff !== undefined &&
+		(!isRecord(backoff) ||
+			(backoff['type'] !== 'custom' && backoff['type'] !== 'exponential') ||
+			(backoff['delay'] !== undefined && typeof backoff['delay'] !== 'number'))
+	)
+		return null;
+	const parsedBackoff =
+		backoff === undefined
+			? undefined
+			: {
+					type: backoff['type'] as 'custom' | 'exponential',
+					...(backoff['delay'] === undefined ? {} : { delay: backoff['delay'] as number }),
+				};
 
-	return {
-		name: 'deleteAccount',
-		data: {
-			user: { id: (user as SerializedDeleteAccountUser).id as string },
-			...(data.soft === undefined ? {} : { soft: data.soft }),
-			...(row.kind === 'accountDeleteCoordinator'
-				? { accountDeleteCoordinatorId: row.id }
-				: typeof data.accountDeleteCoordinatorId === 'string'
-					? { accountDeleteCoordinatorId: data.accountDeleteCoordinatorId }
-					: {}),
-		},
-		opts: {
-			...(removeOnComplete === undefined ? {} : { removeOnComplete }),
-			...(removeOnFail === undefined ? {} : { removeOnFail }),
-			jobId: row.externalJobId ?? `outbox-${row.id}`,
-		},
+	const opts = {
+		...(serializedOpts.attempts === undefined ? {} : { attempts: serializedOpts.attempts }),
+		...(parsedBackoff === undefined ? {} : { backoff: parsedBackoff }),
+		...(removeOnComplete === undefined ? {} : { removeOnComplete }),
+		...(removeOnFail === undefined ? {} : { removeOnFail }),
+		jobId: row.externalJobId ?? `outbox-${row.id}`,
 	};
+	switch (name) {
+		case 'deleteAccount':
+			return {
+				name,
+				data: {
+					...(parsedData as DbJobMap['deleteAccount']),
+					...(row.kind === 'accountDeleteCoordinator' ? { accountDeleteCoordinatorId: row.id } : {}),
+				},
+				opts,
+			};
+		case 'deleteDriveFile':
+			return { name, data: parsedData as DbJobMap['deleteDriveFile'], opts };
+		case 'userSuspensionPostEffects':
+			return { name, data: parsedData as DbJobMap['userSuspensionPostEffects'], opts };
+		case 'notePostCreate':
+			return { name, data: parsedData as DbJobMap['notePostCreate'], opts };
+		default:
+			return null;
+	}
 }
 
 function parseDeliverOutboxJob(row: QueueOutboxRow): DeliverJobBulkInput | null {
@@ -235,11 +351,11 @@ async function resolveDeliverJobStates(
 	return states;
 }
 
-export async function enqueueDbJobInOutbox(
+export async function enqueueDbJobInOutbox<K extends OutboxDbJobName>(
 	db: MiDrizzleDatabase,
-	name: 'deleteAccount',
-	data: DbJobMap['deleteAccount'],
-	opts: Pick<Bull.BulkJobOptions, 'removeOnComplete' | 'removeOnFail'>,
+	name: K,
+	data: DbJobMap[K],
+	opts: Bull.BulkJobOptions,
 ): Promise<string> {
 	const id = genId();
 	await db.insert(queueOutbox).values({
@@ -252,6 +368,85 @@ export async function enqueueDbJobInOutbox(
 		externalJobId: `outbox-${id}`,
 	});
 	return id;
+}
+
+export type InlineDbOutboxJob = {
+	outboxId: string;
+	leaseToken: string;
+};
+
+export async function enqueueInlineDbJobInOutbox<K extends OutboxDbJobName>(
+	db: MiDrizzleDatabase,
+	name: K,
+	data: DbJobMap[K],
+	opts: Bull.BulkJobOptions,
+): Promise<InlineDbOutboxJob> {
+	const outboxId = genId();
+	const leaseToken = genId();
+	const now = new Date();
+	await db.insert(queueOutbox).values({
+		id: outboxId,
+		queue: QUEUE.DB,
+		name,
+		kind: 'job',
+		state: 'publishing',
+		data,
+		opts,
+		externalJobId: `outbox-${outboxId}`,
+		leaseToken,
+		leaseExpiresAt: new Date(now.getTime() + CLAIM_LEASE_MS),
+		updatedAt: now,
+	});
+	return { outboxId, leaseToken };
+}
+
+export async function runInlineDbOutboxJob(
+	db: MiDrizzleDatabase,
+	job: InlineDbOutboxJob,
+	task: (db: MiDrizzleDatabase) => Promise<void>,
+): Promise<boolean> {
+	try {
+		return await db.transaction(async (transaction) => {
+			const tx = transaction as MiDrizzleDatabase;
+			const [owned] = await tx
+				.select({ id: queueOutbox.id })
+				.from(queueOutbox)
+				.where(
+					and(
+						eq(queueOutbox.id, job.outboxId),
+						eq(queueOutbox.state, 'publishing'),
+						eq(queueOutbox.leaseToken, job.leaseToken),
+					),
+				)
+				.for('update')
+				.limit(1);
+			if (owned == null) return false;
+
+			await task(tx);
+			await tx.delete(queueOutbox).where(eq(queueOutbox.id, job.outboxId));
+			return true;
+		});
+	} catch (error) {
+		await db
+			.update(queueOutbox)
+			.set({
+				state: 'ready',
+				availableAt: new Date(),
+				leaseToken: null,
+				leaseExpiresAt: null,
+				lastError: errorDetails(error),
+				updatedAt: new Date(),
+				revision: sql`${queueOutbox.revision} + 1`,
+			})
+			.where(
+				and(
+					eq(queueOutbox.id, job.outboxId),
+					eq(queueOutbox.state, 'publishing'),
+					eq(queueOutbox.leaseToken, job.leaseToken),
+				),
+			);
+		throw error;
+	}
 }
 
 export async function enqueueDeliverJobInOutbox(
@@ -323,14 +518,16 @@ export async function enqueueAccountDeleteCoordinatorInOutbox(
  * ディスパッチャが同じ jobId を再作成してしまい、アカウント削除ジョブが二重実行され得る。
  * 発行に失敗した場合は行を残すので、そのままディスパッチャの再送に委ねられる。
  */
-export function publishDbOutboxRowEagerly(
+export function publishDbOutboxRowEagerly<K extends OutboxDbJobName>(
 	db: MiDrizzleDatabase,
 	dbQueue: DbQueue,
 	outboxId: string,
-	job: Omit<DbJobBulkInput<'deleteAccount'>, 'opts'> & { opts: Bull.BulkJobOptions },
+	job: Omit<DbJobBulkInput<K>, 'opts'> & { opts: Bull.BulkJobOptions },
 ): Promise<void> {
 	return (async () => {
-		await addDbJobs(dbQueue, [{ ...job, opts: { ...job.opts, jobId: `outbox-${outboxId}` } }]);
+		await addDbJobs(dbQueue, [
+			{ name: job.name, data: job.data, opts: { ...job.opts, jobId: `outbox-${outboxId}` } } as DbJobBulkInput<K>,
+		]);
 		await db.delete(queueOutbox).where(and(eq(queueOutbox.id, outboxId), eq(queueOutbox.state, 'ready')));
 	})().catch(() => {
 		// 発行できなかった行はそのまま残るので、ディスパッチャが次のポーリングで再送する

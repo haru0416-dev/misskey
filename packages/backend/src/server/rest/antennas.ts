@@ -287,6 +287,7 @@ export async function addNoteToAntennasForHonoApi(
 	for (const antenna of matchedAntennas) {
 		const tl = `antennaTimeline:${antenna.id}`;
 		if (parseId(note.id).date.getTime() > Date.now() - 1000 * 60 * 3) {
+			redisPipeline.lrem('list:' + tl, 0, note.id);
 			redisPipeline.lpush('list:' + tl, note.id);
 			if (Math.random() < 0.1) {
 				redisPipeline.ltrim('list:' + tl, 0, 200 - 1);
@@ -294,13 +295,19 @@ export async function addNoteToAntennasForHonoApi(
 		} else {
 			const lastId = await deps.redisForTimelines.lindex('list:' + tl, -1);
 			if (lastId == null || parseId(note.id).date.getTime() > parseId(lastId).date.getTime()) {
-				await deps.redisForTimelines.lpush('list:' + tl, note.id);
+				await deps.redisForTimelines
+					.multi()
+					.lrem('list:' + tl, 0, note.id)
+					.lpush('list:' + tl, note.id)
+					.exec();
 			}
 		}
-		deps.publishAntennaStream?.(antenna.id, 'note', note);
 	}
 
 	await redisPipeline.exec();
+	for (const antenna of matchedAntennas) {
+		deps.publishAntennaStream?.(antenna.id, 'note', note);
+	}
 }
 
 function noSuchAntennaError(id: string): HonoApiError {

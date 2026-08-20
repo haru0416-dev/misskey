@@ -27,7 +27,11 @@ import {
 	updateDriveFileInDatabase,
 } from '@/core/DriveFileStore.js';
 import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/DriveFolderStore.js';
-import { startDriveFileDeletion } from '@/core/DriveFileDeletionLogic.js';
+import {
+	enqueueDriveFileDeletion,
+	publishEnqueuedDriveFileDeletion,
+	startDriveFileDeletion,
+} from '@/core/DriveFileDeletionLogic.js';
 import type { FileInfoService } from '@/core/FileInfoService.js';
 import type { IImage } from '@/core/ImageProcessingService.js';
 import type { ImageProcessingService } from '@/core/ImageProcessingService.js';
@@ -494,7 +498,7 @@ async function persistStoredDriveFileForHonoApi(
 						await updateDriveFileInDatabase(transaction, matched.id, { isSensitive: true });
 						matched.isSensitive = true;
 					}
-					return { file: matched, inserted: false, expiredFiles: [] };
+					return { file: matched, inserted: false, expiredFileDeletions: [] };
 				}
 			}
 
@@ -524,12 +528,16 @@ async function persistStoredDriveFileForHonoApi(
 			}
 
 			const file = await createDriveFileInDatabase(transaction, stored.file);
-			return { file, inserted: true, expiredFiles };
+			const expiredFileDeletions = [];
+			for (const expiredFile of expiredFiles) {
+				expiredFileDeletions.push(await enqueueDriveFileDeletion(transaction, expiredFile, true));
+			}
+			return { file, inserted: true, expiredFileDeletions };
 		});
 
 		if (!result.inserted) await stored.cleanup();
-		for (const expiredFile of result.expiredFiles) {
-			startDriveFileDeletion(buildDriveFileDeletionDependencies(deps), expiredFile, true);
+		for (const deletion of result.expiredFileDeletions) {
+			publishEnqueuedDriveFileDeletion(deps, deletion);
 		}
 		return { file: result.file, inserted: result.inserted };
 	} catch (err) {
@@ -552,7 +560,7 @@ async function expireOldDriveFileForHonoApi(
 
 	const files = await listDriveFilesByIdsFromDatabase(deps.db, exceedFileIds);
 	for (const file of files) {
-		startDriveFileDeletion(buildDriveFileDeletionDependencies(deps), file, true);
+		await startDriveFileDeletion(buildDriveFileDeletionDependencies(deps), file, true);
 	}
 }
 

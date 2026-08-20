@@ -6,6 +6,7 @@
 import { and, count, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { webhook, deserializeWebhook, type WebhookInsert } from '@/db/schema/webhook.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { acquireAdvisoryTransactionLockInDatabase } from '@/misc/db-advisory-lock.js';
 import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -99,6 +100,21 @@ export async function createWebhookInDatabase(db: MiDrizzleDatabase, data: Webho
 	}
 
 	return deserializeWebhook(row);
+}
+
+export async function createWebhookWithinLimitInDatabase(
+	db: MiDrizzleDatabase,
+	data: WebhookInsert,
+	limit: number,
+): Promise<MiWebhook | null> {
+	return await db.transaction(async (tx) => {
+		await acquireAdvisoryTransactionLockInDatabase(tx, 'webhook-limit', data.userId);
+		if ((await countWebhooksByUserIdFromDatabase(tx, data.userId)) >= limit) return null;
+
+		const [row] = await tx.insert(webhook).values(data).returning();
+		if (row == null) throw new Error('Failed to create webhook');
+		return deserializeWebhook(row);
+	});
 }
 
 export async function updateWebhookInDatabase(
