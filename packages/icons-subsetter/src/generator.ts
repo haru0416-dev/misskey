@@ -6,6 +6,7 @@
 import { promises as fsp, existsSync } from 'node:fs';
 import path from 'node:path';
 import { generateSubsettedFont } from './subsetter.js';
+import { runWriteTasks } from './write-tasks.js';
 
 const filesToScan = {
 	frontend: 'packages/frontend/src/**/*.{ts,vue}',
@@ -64,7 +65,7 @@ async function main() {
 
 	const subsettedFonts = await generateSubsettedFont(fontPath + 'tabler-icons.ttf', unicodeRangeValues);
 
-	await Promise.allSettled(Array.from(subsettedFonts.entries()).map(async ([key, buffer]) => {
+	await runWriteTasks(Array.from(subsettedFonts.entries()).map(([key, buffer]) => async () => {
 		const unicodeValues = unicodeRangeValues.get(key);
 		if (unicodeValues === undefined) throw new Error(`Unicode values for ${key} were not found.`);
 
