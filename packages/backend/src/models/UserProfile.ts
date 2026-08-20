@@ -17,7 +17,7 @@ export class MiUserProfile {
 
 	public location: string | null;
 
-	// Note: There's index named IDX_de22cd2b445eee31ae51cdbe99 for SUBSTR("birthday", 6, 5)
+	// birthday の月日検索用に SUBSTR("birthday", 6, 5) の索引を持つ。
 	public birthday: string | null;
 
 	public description: string | null;
