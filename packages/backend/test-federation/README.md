@@ -14,15 +14,15 @@ cd packages/backend/test-federation
 First, you need to start servers by executing following commands:
 ```sh
 bash ./setup.sh
-BUN_VERSION=1.3.14 docker compose up --scale tester=0
+BUN_VERSION=1.4.0 docker compose up --scale tester=0
 ```
 
 Then you can run all tests by a following command:
 ```sh
-BUN_VERSION=1.3.14 docker compose run --no-deps --rm tester
+BUN_VERSION=1.4.0 docker compose run --no-deps --rm tester
 ```
 
 For testing a specific file, run a following command:
 ```sh
-BUN_VERSION=1.3.14 docker compose run --no-deps --rm tester -- bun run --bun --filter backend test:fed test-federation/test/user.test.ts
+BUN_VERSION=1.4.0 docker compose run --no-deps --rm tester -- bun run --bun --filter backend test:fed test-federation/test/user.test.ts
 ```
