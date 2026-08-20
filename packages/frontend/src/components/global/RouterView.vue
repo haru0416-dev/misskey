@@ -67,7 +67,7 @@ router.useListener('change', ({ resolved }) => {
 	background-color: var(--MI_THEME-bg);
 
 	/**
-	 * FIXME: Safari 26 で contain: layout を指定するとバグるので、hotfixとして _pageContainer の content: strict を上書き
+	 * Safari 26 では contain: layout の指定により表示が崩れるため、_pageContainer の content: strict を上書きする。
 	 * https://github.com/misskey-dev/misskey/issues/16204#issuecomment-3265404776
 	 * https://bugs.webkit.org/show_bug.cgi?id=297186
 	 */

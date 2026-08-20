@@ -19,7 +19,7 @@ import { deepEqual } from '@/utility/deep-equal.js';
 import { deepClone } from '@/utility/clone.js';
 import type { Cloneable } from '@/utility/clone.js';
 
-// NOTE: 明示的な設定値のひとつとして null もあり得るため、設定が存在しないかどうかを判定する目的で null で比較したり ?? を使ってはいけない
+// null は有効な設定値でもあるため、設定の存在判定に null 比較や ?? を使わない。
 
 export type PREF = typeof PREF_DEF;
 type DefaultValues = {
@@ -30,7 +30,7 @@ export type ValueOf<K extends keyof PREF> = DefaultValues[K];
 export type Scope = Partial<{
 	server: string | null; // host
 	account: string | null; // userId
-	device: string | null; // 将来のため
+	device: string | null;
 }>;
 
 type ValueMeta = Partial<{
@@ -183,10 +183,9 @@ export function definePreferences<T extends Record<string, unknown>>(x: {
 export function getInitialPrefValue<K extends keyof PREF>(k: K): ValueOf<K> {
 	const _default = PREF_DEF[k].default;
 	if (typeof _default === 'function') {
-		// factory
 		return _default() as ValueOf<K>;
 	} else {
-		// 参照渡しになるのを防ぐためclone
+		// 設定値の参照共有を避けるため複製する。
 		return deepClone(_default as unknown as ValueOf<K>);
 	}
 }
@@ -357,9 +356,7 @@ function createPreferencesStoreState(
 	};
 }
 
-// TODO: PreferencesStoreForGuest のような非ログイン専用storeを分離すればcurrentAccountのnullチェックやaccountがnullであるスコープのレコード挿入などが不要になり綺麗になるかもしれない
-//       と思ったけど操作アカウントが存在しない場合も考慮する現在の設計の方が汎用的かつ堅牢かもしれない
-// NOTE: accountDependentな設定は初期状態であってもアカウントごとのスコープでレコードを作成しておかないと、サーバー同期する際に正しく動作しなくなる
+// accountDependent な設定は、初期状態でもアカウントごとのスコープにレコードを作成する。サーバー同期に必要な不変条件。
 export function createPreferencesStore(io: StorageProvider, currentAccount: { id: string } | null, pinia: Pinia) {
 	const localRevisions = new Map<keyof PREF, number>();
 	const usePreferencesStore = defineStore('preferences', {
@@ -426,8 +423,6 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 				_save();
 
 				if (record[2].sync) {
-					// awaitの必要なし
-					// TODO: リクエストを間引く
 					io.cloudSet({ key, scope: record[0], value: record[1] });
 				}
 			},
@@ -595,7 +590,6 @@ export function createPreferencesStore(io: StorageProvider, currentAccount: { id
 					} else if (choice === 'merge') {
 						return mergedValue!;
 					} else {
-						// TSを黙らすため
 						return undefined;
 					}
 				}

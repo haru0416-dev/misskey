@@ -7,7 +7,7 @@ import { throttle } from 'throttle-debounce';
 import { nextTick, onActivated, onDeactivated, onUnmounted, watch } from 'vue';
 import type { Ref } from 'vue';
 
-// note render skippingによる高さの変化を避けるため表示中のanchorを基準に復元する。
+// note render skipping による高さの変化を避けるため、表示中の anchor を基準に復元する。
 // 復元後も先頭に留まった場合は、保存したscrollTopへフォールバックする。
 
 export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | null | undefined>): void {
@@ -38,7 +38,6 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 
 				const anchorEls = el.querySelectorAll<HTMLElement>('[data-scroll-anchor]');
 				for (let i = anchorEls.length - 1; i > -1; i--) {
-					// 下から見た方が速い
 					const anchorEl = anchorEls[i];
 					if (anchorEl == null) continue;
 					const anchorTop = anchorEl.getBoundingClientRect().top;
@@ -52,13 +51,11 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 				}
 			};
 
-			// ほんとはscrollイベントじゃなくてonBeforeDeactivatedでやりたい
 			// https://github.com/vuejs/vue/issues/9454
 			// https://github.com/vuejs/rfcs/pull/284
 			const throttledCaptureAnchor = throttle(1000, captureAnchor);
 			el.addEventListener('scroll', throttledCaptureAnchor, { passive: true });
-			// スクロール後すぐにクリックするとthrottleによりanchorIdが古いまま残るため、
-			// pointerdownで遷移直前のアンカーを同期的に取得する
+			// スクロール後のクリックでは throttle 前の anchorId が残るため、pointerdown で更新する。
 			el.addEventListener('pointerdown', captureAnchor, { passive: true });
 
 			onCleanup(() => {

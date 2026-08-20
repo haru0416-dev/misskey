@@ -117,8 +117,8 @@ function g(id: string) {
 const containerStyle = computed(() => {
 	if (c.type !== 'container') return undefined;
 
-	// width, color, styleのうち一つでも指定があれば、枠線がちゃんと表示されるようにwidthとstyleのデフォルト値を設定
-	// radiusは単に角を丸める用途もあるため除外
+	// 枠線の一部だけ指定された場合も、ブラウザの初期値に依存せず表示できるようにする。
+	// radius単独の指定は枠線を必要としないため判定対象から除外する。
 	const isBordered = c.borderWidth ?? c.borderColor ?? c.borderStyle;
 
 	const border = isBordered ? {

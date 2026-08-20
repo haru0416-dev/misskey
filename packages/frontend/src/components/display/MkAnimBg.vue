@@ -155,6 +155,5 @@ onUnmounted(() => {
 	removeVisibilityListener?.();
 	removeVisibilityListener = null;
 
-	// TODO: WebGLリソースの解放
 });
 </script>

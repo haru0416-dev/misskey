@@ -53,7 +53,7 @@ export type MkPaginationOptions = {
 	 * - down: 下方向 (default)
 	 * - both: 双方向
 	 *
-	 * NOTE: この方向はページネーションの方向であって、アイテムの並び順ではない
+	 * この方向はページネーションの進行方向であり、アイテムの並び順ではない。
 	 */
 	direction?: 'up' | 'down' | 'both';
 	pullToRefresh?: boolean;
@@ -94,7 +94,6 @@ function onContextmenu(ev: PointerEvent) {
 	if (ev.target && isLink(ev.target as HTMLElement)) return;
 	if (window.getSelection()?.toString() !== '') return;
 
-	// TODO: 並び順設定
 	os.contextMenu([{
 		icon: 'ti ti-refresh',
 		text: i18n.ts.reload,

@@ -8,7 +8,7 @@ import { markRaw } from 'vue';
 import { $i } from '@/i.js';
 import { wsOrigin } from '@shared/utility/config.js';
 
-// heart beat interval in ms
+// ハートビートの間隔（ミリ秒）。
 const HEART_BEAT_INTERVAL = 1000 * 60;
 
 let stream: Misskey.IStream | null = null;
@@ -42,7 +42,7 @@ export function useStream(): Misskey.IStream {
 
 	scheduleHeartbeat();
 
-	// send heartbeat right now when last send time is over HEART_BEAT_INTERVAL
+	// 前回の送信から間隔以上経過していれば、表示復帰時にすぐ送信する。
 	window.document.addEventListener('visibilitychange', () => {
 		if (!stream) return;
 		if (window.document.visibilityState !== 'visible') {

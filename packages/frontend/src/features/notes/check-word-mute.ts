@@ -26,9 +26,7 @@ function compileMutes(mutedWords: Array<string | string[]>): CompiledMute[] {
 		if (source == null) continue;
 		try {
 			compiled.push({ source: filter, regexp: new RegExp(source, regexp[2] ?? '') });
-		} catch (_) {
-			// This should never happen due to input sanitisation.
-		}
+		} catch (_) {}
 	}
 
 	compiledMutesCache.set(mutedWords, compiled);

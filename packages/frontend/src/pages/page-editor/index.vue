@@ -217,7 +217,6 @@ async function add() {
 
 	const id = genId();
 
-	// TODO: ./els/section.vueの要素追加処理と共通化する
 	if (type === 'text') {
 		content.value.push({
 			id,

@@ -56,7 +56,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		miLocalStorage.setItem('lastVersion', version);
 
 		try {
-			// 変なバージョン文字列来るとcompareVersionsでエラーになるため
+			// version 形式が不正な場合は比較できないため、更新状態を変更しない。
 			if (lastVersion != null && compareVersions(version, lastVersion) === 1) {
 				isClientUpdated = true;
 			}
@@ -66,7 +66,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 	}
 	//#endregion
 
-	//#region Detect language & fetch translations
+	//#region 言語の検出と翻訳の取得
 	storeBootloaderErrors({ ...i18n.ts._bootErrors, reload: i18n.ts.reload });
 
 	if (import.meta.hot) {
@@ -76,8 +76,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 				await new Promise((resolve) => {
 					window.setTimeout(resolve, 500);
 				});
-				// Replace the cached response before reloading. `no-store` would fetch the
-				// latest locale but leave the stale response in the browser cache.
+				// 再読み込み前にキャッシュ済みの翻訳を置き換える。`no-store` ではブラウザキャッシュに古い応答が残る。
 				await window
 					.fetch(`/assets/locales/${lang}.${version}.json`, { cache: 'reload' })
 					.then(async (res) => res.status === 200 && (await res.text()));
@@ -95,13 +94,12 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		window.history.replaceState(null, '', window.location.href.replace('#pswp', ''));
 	}
 
-	// 一斉リロード
 	reloadChannel.addEventListener('message', (ev: MessageEvent<string | null>) => {
 		if (ev.data !== null) window.location.href = ev.data;
 		else window.location.reload();
 	});
 
-	//#region Set lang attr
+	//#region lang 属性の設定
 	const html = window.document.documentElement;
 	html.setAttribute('lang', lang);
 	//#endregion
@@ -132,7 +130,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 	}
 	//#endregion
 
-	//#region Sync dark mode
+	//#region ダークモードの同期
 	if (prefer.syncDeviceDarkMode) {
 		store.set('darkMode', isDeviceDarkmode());
 	}
@@ -155,9 +153,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		}
 	}
 
-	// NOTE: この処理は必ずクライアント更新チェック処理より後に来ること(テーマ再構築のため)
-	// NOTE: この処理は必ずダークモード判定処理より後に来ること(初回のテーマ適用のため)
-	// NOTE: この処理は必ずサーバーテーマ適用処理より後に来ること(二重発火を防ぐため)
+	// クライアント更新、端末のダークモード、サーバーテーマの反映後に監視を開始する。
 	// see: https://github.com/misskey-dev/misskey/issues/16562
 	watch(
 		() => store.darkMode,
@@ -225,7 +221,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		{ immediate: true },
 	);
 
-	// Keep screen on. 再取得のたびにvisibilitychangeリスナーを増やさない。
+	// visibilitychange リスナーは再取得のたびに追加しない。
 	if (prefer.keepScreenOn && 'wakeLock' in navigator) {
 		let wakeLock: WakeLockSentinel | null = null;
 		let requestingWakeLock = false;
@@ -270,7 +266,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		window.document.documentElement.classList.add('forceSelectableAll');
 	}
 
-	//#region Fetch user
+	//#region ユーザー情報の取得
 	if ($i?.token) {
 		if (_DEV_) {
 			console.log('account cache found. refreshing...');
@@ -286,7 +282,6 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 		/* empty */
 	}
 
-	// analytics
 	fetchInstanceMetaPromise.then(async () => {
 		await initAnalytics(instance);
 
@@ -310,7 +305,7 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 	components(app);
 
 	// https://github.com/misskey-dev/misskey/pull/8575#issuecomment-1114239210
-	// なぜか2回実行されることがあるため、mountするdivを1つに制限する
+	// 複数回初期化されても mount 先を一つにする。
 	const rootEl = ((): HTMLElement => {
 		const MISSKEY_MOUNT_DIV_ID = 'misskey_app';
 
@@ -344,7 +339,6 @@ export async function common(app: App<Element>, prepareVue: () => Promise<void>)
 
 	app.mount(rootEl);
 
-	// boot.jsのやつを解除
 	window.onerror = null;
 	window.onunhandledrejection = null;
 
@@ -385,7 +379,7 @@ function removeSplash() {
 		splash.style.opacity = '0';
 		splash.style.pointerEvents = 'none';
 
-		// transitionendイベントが発火しない場合があるため
+		// transitionend が発火しない場合にもスプラッシュを除去する。
 		window.setTimeout(() => {
 			splash.remove();
 		}, 1000);

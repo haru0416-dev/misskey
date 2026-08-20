@@ -19,7 +19,6 @@ import { TAB_ID } from '@/tab-id.js';
 import { DeferredTaskScheduler } from '@/utility/deferred-task-scheduler.js';
 import { pinia } from '@/store/pinia.js';
 
-// クラウド同期用グループ名
 const syncGroup = 'default';
 
 function isNoSuchKeyError(err: unknown): boolean {
@@ -36,8 +35,6 @@ const io: StorageProvider = {
 	},
 
 	cloudGet: async <K extends keyof PREF>(ctx: { key: K; scope: Scope }) => {
-		// TODO: この取得方法だとアカウントが変わると保存場所も変わってしまうので改修する
-		// 例えば複数アカウントある場合でも設定値を保存するための「プライマリアカウント」を設定できるようにするとか
 		try {
 			const cloudData = (await misskeyApi('i/registry/get', {
 				scope: ['client', 'preferences', 'sync'],
@@ -51,7 +48,6 @@ const io: StorageProvider = {
 			};
 		} catch (err) {
 			if (isNoSuchKeyError(err)) {
-				// TODO: いちいちエラーキャッチするのは面倒なのでキーが無くてもエラーにならない maybe-get のようなエンドポイントをバックエンドに実装する
 				return null;
 			} else {
 				throw err;
@@ -68,7 +64,6 @@ const io: StorageProvider = {
 			})) as [Scope, unknown][];
 		} catch (err) {
 			if (isNoSuchKeyError(err)) {
-				// TODO: いちいちエラーキャッチするのは面倒なのでキーが無くてもエラーにならない maybe-get のようなエンドポイントをバックエンドに実装する
 				cloudData = [];
 			} else {
 				throw err;
@@ -91,7 +86,6 @@ const io: StorageProvider = {
 	},
 
 	cloudGetBulk: async <K extends keyof PREF>(ctx: { needs: { key: K; scope: Scope }[] }) => {
-		// TODO: 値の取得を1つのリクエストで済ませたい(バックエンド側でAPIの新設が必要)
 		const fetchings = ctx.needs.map((need) => io.cloudGet(need).then((res) => [need.key, res] as const));
 		const cloudDatas = await Promise.all(fetchings);
 

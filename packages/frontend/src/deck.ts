@@ -71,7 +71,7 @@ export type Column = {
 	onlyFiles?: boolean;
 	mediaView?: boolean;
 	soundSetting?: SoundStore;
-	// The cache for the name of the antenna, channel, list, or role
+	// アンテナ・チャンネル・リスト・ロールの名前をキャッシュする。
 	timelineNameCache?: string;
 };
 

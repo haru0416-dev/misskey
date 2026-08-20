@@ -117,7 +117,6 @@ async function subscribe() {
 			// 違うapplicationServerKey (または gcm_sender_id)のサブスクリプションが
 			// 既に存在していることが原因でエラーになった可能性があるので、
 			// そのサブスクリプションを解除しておく
-			// （これは実行されなさそうだけど、おまじない的に古い実装から残してある）
 			await unsubscribe();
 		}), null, null);
 }

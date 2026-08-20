@@ -237,7 +237,7 @@ function saveFields() {
 
 function save() {
 	os.apiWithDialog('i/update', {
-		// 空文字列をnullにしたいので??は使うな
+		// 空文字列を null に変換するため、?? ではなく || を使う。
 		name: profile.name || null,
 		description: profile.description || null,
 		followedMessage: profile.followedMessage || null,

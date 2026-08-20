@@ -4,7 +4,7 @@
  */
 
 :root {
-	/* Foundation: shared scales. */
+	/* 基礎値: 共通スケール。 */
 	--MI-space-2xs: 2px;
 	--MI-space-xs: 4px;
 	--MI-space-sm: 8px;
@@ -29,7 +29,7 @@
 	--MI-control-md: 44px;
 	--MI-control-lg: 52px;
 
-	/* Semantic: theme-aware surfaces, borders, and depth. */
+	/* 意味値: テーマに応じた面、境界線、影。 */
 	--MI-surface-page: var(--MI_THEME-bg);
 	--MI-surface-panel: var(--MI_THEME-panel);
 	--MI-surface-panel-hover: color-mix(in oklab, var(--MI_THEME-panel) 94%, var(--MI_THEME-fg));
@@ -44,7 +44,7 @@
 	--MI-minBottomSpacingMobile: calc(72px + max(var(--MI-space-md), env(safe-area-inset-bottom, 0px)));
 	--MI-minBottomSpacing: var(--MI-minBottomSpacingMobile);
 
-	/* Compatibility: keep existing extensions and component overrides working. */
+	/* 互換性: 既存の拡張とコンポーネント上書きを維持する。 */
 	--MI-radius: var(--MI-radius-md);
 	--MI-marginFull: var(--MI-layout-gutter);
 	--MI-marginHalf: var(--MI-layout-gutter-compact);

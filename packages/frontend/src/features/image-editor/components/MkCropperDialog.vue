@@ -118,7 +118,7 @@ function onImageLoad() {
 }
 
 onMounted(() => {
-	if (imgEl.value == null) return; // TSを黙らすため
+	if (imgEl.value == null) return;
 
 	cropper = new Cropper(imgEl.value, {
 	});

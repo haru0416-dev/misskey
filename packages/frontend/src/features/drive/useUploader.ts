@@ -28,12 +28,7 @@ const THUMBNAIL_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'ima
 
 const IMAGE_EDITING_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-const VIDEO_COMPRESSION_SUPPORTED_TYPES = [
-	// TODO
-	'video/mp4',
-	'video/quicktime',
-	'video/x-matroska',
-];
+const VIDEO_COMPRESSION_SUPPORTED_TYPES = ['video/mp4', 'video/quicktime', 'video/x-matroska'];
 
 const IMAGE_PREPROCESS_NEEDED_TYPES = [...IMAGE_EDITING_SUPPORTED_TYPES];
 
@@ -316,7 +311,6 @@ export function useUploader(
 					icon: 'ti ti-resize',
 					text: i18n.ts.resize,
 					action: async () => {
-						// TODO
 					},
 				},*/ {
 						icon: 'ti ti-sparkles',

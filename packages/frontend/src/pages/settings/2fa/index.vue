@@ -99,7 +99,7 @@ import { updateCurrentAccountPartial } from '@/accounts.js';
 
 const $i = ensureSignin();
 
-// メモ: 各エンドポイントはmeUpdatedを発行するため、refreshAccountは不要
+// 各エンドポイントが meUpdated を発行するため、refreshAccount は呼び出さない。
 
 withDefaults(defineProps<{
 	first?: boolean;

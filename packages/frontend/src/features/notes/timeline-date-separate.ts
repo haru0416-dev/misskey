@@ -12,7 +12,6 @@ function getDateText(dateInstance: Date) {
 	return `${month.toString()}/${date.toString()}`;
 }
 
-// TODO: いちいちDateインスタンス作成するのは無駄感あるから文字列のまま解析したい
 export function isSeparatorNeeded(prev: string | null, next: string | null) {
 	if (prev == null || next == null) return false;
 	const prevDate = new Date(prev);
@@ -24,7 +23,6 @@ export function isSeparatorNeeded(prev: string | null, next: string | null) {
 	);
 }
 
-// TODO: いちいちDateインスタンス作成するのは無駄感あるから文字列のまま解析したい
 export function getSeparatorInfo(prev: string | null, next: string | null) {
 	if (prev == null || next == null) return null;
 	const prevDate = new Date(prev);

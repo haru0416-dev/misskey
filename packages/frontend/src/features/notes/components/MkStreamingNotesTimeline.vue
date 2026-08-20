@@ -499,7 +499,6 @@ const POLLING_INTERVAL =
 	MIN_POLLING_INTERVAL;
 
 if (!store.realtimeMode) {
-	// TODO: 先頭のノートの作成日時が1日以上前であれば流速が遅いTLと見做してインターバルを通常より延ばす
 	useInterval(async () => {
 		paginator.fetchNewer({
 			toQueue: !isTop() || isPausingUpdate,
