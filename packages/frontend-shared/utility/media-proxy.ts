@@ -30,7 +30,7 @@ export class MediaProxy {
 			imageUrl.startsWith(localProxy + '/')
 		) {
 			// もう既にproxyっぽそうだったらurlを取り出す
-			_imageUrl = new URL(imageUrl).searchParams.get('url') ?? imageUrl;
+			_imageUrl = new URL(imageUrl, this.url).searchParams.get('url') ?? imageUrl;
 		}
 
 		return `${mustOrigin ? localProxy : this.serverMetadata.mediaProxy}/${

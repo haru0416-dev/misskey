@@ -17,6 +17,7 @@ import { isWebpSupported } from '@/utility/is-webp-supported.js';
 import { uploadFile, UploadAbortedError } from '@/features/drive/drive.js';
 import * as os from '@/os.js';
 import { ensureSignin } from '@/i.js';
+import { renderCanvasToBlob } from '@/utility/canvas-to-blob.js';
 
 export type UploaderFeatures = {
 	imageEditing?: boolean;
@@ -753,17 +754,12 @@ export function useUploader(
 				image: imageBitmap,
 			});
 
-			await renderer.render(item.watermarkLayers);
-
-			preprocessedFile = await new Promise<Blob>((resolve) => {
-				canvas.toBlob((blob) => {
-					if (blob == null) {
-						throw new Error('Failed to convert canvas to blob');
-					}
-					resolve(blob);
-					renderer.destroy();
-				}, 'image/png');
-			});
+			preprocessedFile = await renderCanvasToBlob(
+				canvas,
+				() => renderer.render(item.watermarkLayers!),
+				() => renderer.destroy(),
+				'image/png',
+			);
 		}
 
 		const needsImageFrame =
@@ -783,17 +779,12 @@ export function useUploader(
 				filename: item.name,
 			});
 
-			await frameRenderer.render(item.imageFrameParams);
-
-			preprocessedFile = await new Promise<Blob>((resolve) => {
-				canvas.toBlob((blob) => {
-					if (blob == null) {
-						throw new Error('Failed to convert canvas to blob');
-					}
-					resolve(blob);
-					frameRenderer.destroy();
-				}, 'image/png');
-			});
+			preprocessedFile = await renderCanvasToBlob(
+				canvas,
+				() => frameRenderer.render(item.imageFrameParams!),
+				() => frameRenderer.destroy(),
+				'image/png',
+			);
 		}
 
 		const compressionSettings = getCompressionSettings(item.compressionLevel);

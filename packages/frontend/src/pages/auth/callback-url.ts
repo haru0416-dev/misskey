@@ -18,9 +18,13 @@ const DISALLOWED_CALLBACK_PROTOCOLS = new Set([
 	'vbscript:',
 ]);
 
-export function createAuthCallbackUrl(callbackUrl: string, token: string): string {
+export function setAuthCallbackUrlParameter(callbackUrl: string, name: string, value: string): string {
 	const url = new URL(callbackUrl);
 	if (DISALLOWED_CALLBACK_PROTOCOLS.has(url.protocol)) throw new Error('invalid url');
-	url.searchParams.set('token', token);
+	url.searchParams.set(name, value);
 	return url.toString();
+}
+
+export function createAuthCallbackUrl(callbackUrl: string, token: string): string {
+	return setAuthCallbackUrlParameter(callbackUrl, 'token', token);
 }

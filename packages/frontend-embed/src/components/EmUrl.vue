@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <component
-	:is="self ? EmA : 'a'" ref="el" :class="$style.root" class="_link" :[attr]="self ? props.url.substring(local.length) : props.url" :rel="rel ?? 'nofollow noopener'" :target="target"
+	:is="self ? EmA : 'a'" ref="el" :class="$style.root" class="_link" :[attr]="self ? localPath : props.url" :rel="rel ?? 'nofollow noopener'" :target="target"
 	@contextmenu.stop="() => {}"
 >
 	<template v-if="!self">
@@ -28,6 +28,7 @@ import { ref } from 'vue';
 import { toUnicode as decodePunycode } from 'punycode.js';
 import EmA from './EmA.vue';
 import { url as local } from '@shared/utility/config.js';
+import { isSameOrigin } from '@shared/utility/url.js';
 
 function safeURIDecode(str: string): string {
 	try {
@@ -45,9 +46,10 @@ const props = withDefaults(defineProps<{
 	showUrlPreview: true,
 });
 
-const self = props.url.startsWith(local);
 const url = new URL(props.url);
 if (!['http:', 'https:'].includes(url.protocol)) throw new Error('invalid url');
+const self = isSameOrigin(url, local);
+const localPath = url.pathname + url.search + url.hash;
 const el = ref();
 
 const schema = url.protocol;

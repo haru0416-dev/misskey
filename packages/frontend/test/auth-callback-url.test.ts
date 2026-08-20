@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { createAuthCallbackUrl } from '@/pages/auth/callback-url.js';
+import { createAuthCallbackUrl, setAuthCallbackUrlParameter } from '@/pages/auth/callback-url.js';
 
 describe('createAuthCallbackUrl', () => {
 	test('preserves existing query parameters and fragment', () => {
@@ -27,5 +27,14 @@ describe('createAuthCallbackUrl', () => {
 
 	test('supports native app callback schemes', () => {
 		expect(createAuthCallbackUrl('misskey://callback', 'token')).toBe('misskey://callback?token=token');
+	});
+
+	test('uses the same protocol validation for MiAuth session callbacks', () => {
+		expect(setAuthCallbackUrlParameter('misskey://callback?foo=bar', 'session', 'a b')).toBe(
+			'misskey://callback?foo=bar&session=a+b',
+		);
+		for (const url of ['javascript:alert(1)', 'ftp://example.com/callback', 'intent://callback']) {
+			expect(() => setAuthCallbackUrlParameter(url, 'session', 'session')).toThrow('invalid url');
+		}
 	});
 });

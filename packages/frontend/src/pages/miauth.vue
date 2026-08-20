@@ -34,6 +34,7 @@ import PageWithAnimBg from '@/components/global/PageWithAnimBg.vue';
 import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { definePage } from '@/page.js';
+import { setAuthCallbackUrlParameter } from '@/pages/auth/callback-url.js';
 
 const props = defineProps<{
 	session: string;
@@ -57,10 +58,7 @@ async function onAccept(token: string) {
 		permission: _permissions.value,
 	}, token).then(() => {
 		if (props.callback && props.callback !== '') {
-			const cbUrl = new URL(props.callback);
-			if (['javascript:', 'file:', 'data:', 'mailto:', 'tel:', 'vbscript:'].includes(cbUrl.protocol)) throw new Error('invalid url');
-			cbUrl.searchParams.set('session', props.session);
-			window.location.href = cbUrl.toString();
+			window.location.href = setAuthCallbackUrlParameter(props.callback, 'session', props.session);
 		} else {
 			authRoot.value?.showUI('success');
 		}

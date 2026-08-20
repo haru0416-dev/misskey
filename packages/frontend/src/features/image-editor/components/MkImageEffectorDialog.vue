@@ -62,6 +62,7 @@ import XLayer from '@/features/image-editor/components/MkImageEffectorDialog.Lay
 import * as os from '@/os.js';
 import { FXS } from '@/features/image-editor/effect/fxs.js';
 import { genId } from '@/utility/id.js';
+import { canvasToBlob } from '@/utility/canvas-to-blob.js';
 
 const props = defineProps<{
 	image: File;
@@ -203,13 +204,23 @@ async function save() {
 
 	await nextTick(); // waitingがレンダリングされるまで待つ
 
-	renderer.changeResolution(imageBitmap.width, imageBitmap.height); // 本番レンダリングのためオリジナル画質に戻す
-	await renderer.render(layers); // toBlobの直前にレンダリングしないと何故か壊れる
-	canvasEl.value.toBlob((blob) => {
-		emit('ok', new File([blob!], `image-${Date.now()}.png`, { type: 'image/png' }));
+	try {
+		renderer.changeResolution(imageBitmap.width, imageBitmap.height); // 本番レンダリングのためオリジナル画質に戻す
+		await renderer.render(layers); // toBlobの直前にレンダリングしないと何故か壊れる
+		const blob = await canvasToBlob(canvasEl.value, 'image/png');
+		emit('ok', new File([blob], `image-${Date.now()}.png`, { type: 'image/png' }));
 		dialog.value?.close();
+	} catch (err) {
+		console.error(err);
 		closeWaiting();
-	}, 'image/png');
+		os.alert({
+			type: 'error',
+			text: i18n.ts.somethingHappened,
+		});
+		return;
+	}
+
+	closeWaiting();
 }
 
 const enabled = ref(true);
