@@ -12,7 +12,6 @@ export class MiAd {
 
 	public place: string;
 
-	// 今は使われていないが将来的に活用される可能性はある
 	public priority: string;
 
 	public ratio: number;

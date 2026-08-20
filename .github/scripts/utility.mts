@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// NOTE: このファイルはworkflow上でバックエンドからも参照されるため、side effectがあってはならない
+// このファイルはワークフローからバックエンド用にも参照されるため、副作用を持たせない。
 
 import { spawn } from 'node:child_process';
 import { promises as fs } from 'node:fs';

@@ -3,13 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/**
- * fork したプロセスに「HTTPを捌くのかキューを捌くのか」「デーモンの持ち主か」を伝える。
- *
- * 以前は `MK_ONLY_SERVER` の有無だけで役割が決まっていたため、HTTPを複数プロセスにすると
- * キューを一切動かせなかった (master は fork しかせず、worker は全部 HTTP になる)。
- * 役割をプロセス単位で持たせることで「HTTP を N プロセス + キューを M プロセス」を表現できる。
- */
+/** HTTP とキューのプロセス数を独立して構成できるよう、fork したワーカーへ処理役割を割り当てる。 */
 export type WorkerRole = 'server' | 'queue';
 
 export type WorkerAssignment = {

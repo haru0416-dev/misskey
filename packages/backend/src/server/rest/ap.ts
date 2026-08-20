@@ -124,9 +124,6 @@ async function mergePackForHonoApi(
 	return null;
 }
 
-/**
- * ap/show の fetchAny 相当。URIからUserかNoteを解決する。
- */
 async function fetchAnyForHonoApi(
 	deps: HonoApiApShowDependencies,
 	uri: string,

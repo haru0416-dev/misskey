@@ -108,8 +108,8 @@ function onDragstart(ev: DragEvent, item: T) {
 	};
 
 	// Chrome では dragstart 中の DOM 変更でドラッグが終了するため、状態変更を遅延させる。
-	// SEE: https://stackoverflow.com/questions/19639969/html5-dragend-event-firing-immediately
-	// SEE: https://issues.chromium.org/issues/41150279
+	// https://stackoverflow.com/questions/19639969/html5-dragend-event-firing-immediately
+	// https://issues.chromium.org/issues/41150279
 	window.setTimeout(() => {
 		dragging.value = true;
 	}, 10);

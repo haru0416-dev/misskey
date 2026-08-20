@@ -105,7 +105,6 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 			}
 		}
 	} catch (error) {
-		// console.error(error);
 		console.error('Failed to initialise the seasonal screen effect canvas context:', error);
 	}
 
@@ -270,7 +269,6 @@ export async function mainBoot(app: App<Element>, setRootComponent: (component: 
 		}
 	}
 
-	// shortcut
 	let safemodeRequestCount = 0;
 	let safemodeRequestTimer: number | null = null;
 	const keymap = {

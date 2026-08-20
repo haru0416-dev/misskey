@@ -45,7 +45,7 @@ describe('2要素認証', () => {
 	const coseEc2X = '4932eaacc657565705e4287e7870ce3aad55545d99d35a98a472dc52880cfc8f';
 	const coseEc2Y = '5ca68303bf2c0433473e3d5cb8586bc2c8c43a4945a496fce8dbeda8b23ab0b1';
 
-	// private key only for testing
+	// この秘密鍵はテストデータとしてのみ使用する。
 	const pemToSign =
 		'-----BEGIN EC PRIVATE KEY-----\n' +
 		'MHcCAQEEIHqe/keuXyolbXzgLOu+YFJjDBGWVgXc3QCXfyqwDPf2oAoGCCqGSM49\n' +
@@ -101,7 +101,7 @@ describe('2要素認証', () => {
 		name: string;
 		credential: RegistrationResponseJSON;
 	} => {
-		// A COSE encoded public key
+		// COSE 形式でエンコードした公開鍵
 		const credentialPublicKey = encodeToCbor(
 			new Map<number, unknown>([
 				[-1, coseEc2CrvP256],

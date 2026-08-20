@@ -70,7 +70,7 @@ export class APIClient {
 		const credential = args[1];
 		return new Promise((resolve, reject) => {
 			let mediaType = 'application/json';
-			// （autogenがバグったときのため、念の為nullチェックも行う）
+			// 生成定義にnullが含まれる場合は、デフォルト値を維持する。
 			if (this.assertSpecialEpReqType(endpoint) && endpointReqTypes[endpoint] != null) {
 				mediaType = endpointReqTypes[endpoint];
 			}
@@ -99,7 +99,6 @@ export class APIClient {
 						} else if (typeof value === 'object') {
 							payload.append(key, JSON.stringify(value));
 						} else {
-							// FormDataは元々string以外の値を渡されると自動でstringへ変換するため、明示的に変換しても挙動は変わらない
 							payload.append(key, String(value));
 						}
 					}

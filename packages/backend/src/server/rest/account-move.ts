@@ -133,7 +133,7 @@ async function resolveMoveDestinationUserForHonoApi(
 		host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.runtime.host)
 			? null
 			: toPunyForHonoApi(host);
-	// 原典は RemoteUserResolveService.resolveUser — 未知のリモートユーザーはWebFingerで解決する
+	// 未知のリモートユーザーは WebFinger で解決する。
 	// deps の型に HonoApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
 	// (shell の実 deps は両方を満たす)
 	return await resolveUserForHonoApi(deps as unknown as HonoApiApPersonDependencies, username, normalizedHost).catch(
@@ -330,9 +330,8 @@ async function adjustFollowingCountsForHonoApi(
 		);
 	}
 
-	// リモートインスタンスの統計更新 (enableStatsForFederatedInstances 有効時) とチャート更新
-	// (PerUserFollowingChart) は hono 側にチャートライターが未移植のため見送り。
-	// フォロー/フォロワーカウントの実データ更新は上記で完了しており、チャートは補助的な集計のみ。
+	// この経路はリモートインスタンス統計と PerUserFollowingChart を更新しない。
+	// フォロー・フォロワーカウントの実データ更新は上記で完了する。
 }
 
 async function moveFromLocalForHonoApi(
@@ -359,7 +358,7 @@ async function moveFromLocalForHonoApi(
 	const srcPerson = await renderPersonForHonoApi(deps, updatedSrc);
 	const updateAct = addActivityContext(deps.config, renderUpdateForHonoApi(deps.config, srcPerson, updatedSrc));
 	await deliverNoteActivityForHonoApi(deps, updatedSrc, updateAct, { directRecipients: [], deliverToFollowers: true });
-	// 原典 AccountMoveService#moveFromLocal 同様、リレー配信は await しない。
+	// リレー配信は fire-and-forget とし、アカウント移行の完了を待たせない。
 	void deliverToRelaysForHonoApi(deps, { id: updatedSrc.id, host: null }, updateAct).catch(() => {});
 
 	const moveAct = addActivityContext(deps.config, renderMoveForHonoApi(deps.config, updatedSrc, dst));
@@ -384,8 +383,7 @@ async function moveFromLocalForHonoApi(
 	return iObj;
 }
 
-/** AccountMoveService#postMoveProcess 相当。ローカルからの引っ越し (i/move) と、リモートアクターの
- * movedToUri 検知 (updatePersonForHonoApi 経由) の両方から呼ばれる共通の移行カスケード。 */
+/** ローカルからの引っ越しとリモートアクターの movedToUri 検知の両方から呼ぶ。 */
 export async function postMoveProcessForHonoApi(
 	deps: HonoApiAccountMoveDependencies,
 	src: MiUser,

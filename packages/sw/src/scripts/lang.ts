@@ -3,9 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/*
- * Language manager for SW
- */
 import { get, set } from 'idb-keyval';
 import { I18n } from '@shared/utility/i18n.js';
 import { FETCH_TIMEOUT_MS } from '@/const.js';

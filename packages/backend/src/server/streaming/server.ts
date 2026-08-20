@@ -102,7 +102,7 @@ export function emitHonoStreamRedisMessage(globalEv: EventEmitter, data: string)
 	globalEv.emit(channel, message);
 }
 
-/** StreamingApiServerService 相当。`server.on('upgrade', ...)` を直接フックし、Hono の fetch パイプラインは経由しない。 */
+/** WebSocket upgrade は `server.on('upgrade', ...)` で処理し、Hono の fetch パイプラインを経由しない。 */
 export function attachHonoStreamServer(
 	server: Server,
 	deps: HonoStreamServerDependencies,

@@ -17,7 +17,7 @@ export function createS3Service(httpRequestService: HttpRequestService) {
 	function getS3Client(meta: MiMeta): S3Client {
 		const u = meta.objectStorageEndpoint
 			? `${meta.objectStorageUseSSL ? 'https' : 'http'}://${meta.objectStorageEndpoint}`
-			: `${meta.objectStorageUseSSL ? 'https' : 'http'}://example.net`; // dummy url to select http(s) agent
+			: `${meta.objectStorageUseSSL ? 'https' : 'http'}://example.net`; // HTTP(S) エージェント選択用のダミー URL
 
 		const agent = httpRequestService.getAgentByUrl(new URL(u), !meta.objectStorageUseProxy, true);
 		const handlerOption: NodeHttpHandlerOptions = {};
@@ -39,7 +39,7 @@ export function createS3Service(httpRequestService: HttpRequestService) {
 				: {}),
 			...(meta.objectStorageRegion ? { region: meta.objectStorageRegion } : {}), // 空文字列も省略するため ?? は使わない
 			tls: meta.objectStorageUseSSL,
-			forcePathStyle: meta.objectStorageEndpoint ? meta.objectStorageS3ForcePathStyle : false, // AWS with endPoint omitted
+			forcePathStyle: meta.objectStorageEndpoint ? meta.objectStorageS3ForcePathStyle : false, // endpoint 未指定の AWS S3 では仮想ホスト形式を使う
 			requestHandler: new NodeHttpHandler(handlerOption),
 			requestChecksumCalculation: 'WHEN_REQUIRED',
 			responseChecksumValidation: 'WHEN_REQUIRED',

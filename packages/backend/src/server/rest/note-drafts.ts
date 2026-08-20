@@ -318,7 +318,7 @@ async function clearNoteDraftSchedule(deps: HonoApiNoteDraftDependencies, draft:
 		if (job != null && !(await job.isActive())) await job.remove();
 	}
 
-	// Stale revisions are rejected by the worker, so request handling never scans the entire queue.
+	// 古い revision は worker が拒否するため、リクエスト処理でキュー全体を走査しない。
 }
 
 async function packNoteDraftForHonoApi(

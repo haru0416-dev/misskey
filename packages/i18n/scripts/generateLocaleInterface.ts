@@ -143,12 +143,11 @@ export async function generateLocaleInterface(localesDir: string): Promise<void>
 	const outputPath = `${autogenDir}/locale.ts`;
 	if (fs.existsSync(outputPath) && fs.readFileSync(outputPath, 'utf-8') === printed) return;
 
-	// watcherや並行readerに未完成または一時欠落したファイルを見せないよう、atomicに置換する。
+	// watcher や並行 reader に未完成のファイルを見せないため、テンポラリファイルから rename で置換する。
 	fs.writeFileSync(`${autogenDir}/_locale.ts`, printed, 'utf-8');
 	fs.renameSync(`${autogenDir}/_locale.ts`, outputPath);
 }
 
-// スクリプトとして直接実行された場合
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
 	await generateLocaleInterface(resolve(__dirname, '../../../locales'));

@@ -47,7 +47,7 @@ export const adminDriveUserParamDef = z.object({
 	userId: misskeyId(),
 });
 
-// Accepts either `fileId` or `url` (both may be present at once); at least one is required.
+// `fileId` または `url` を受け付ける。両方を指定してもよく、少なくとも一方は必須。
 const adminDriveShowFileParamDef = z
 	.object({
 		fileId: misskeyId().optional(),
@@ -79,7 +79,7 @@ export const adminDriveFilesParamDef = z.object({
 		.nullable()
 		.optional(),
 	origin: z.enum(['combined', 'local', 'remote']).default('local'),
-	/** The local host is represented with `null`. */
+	/** ローカルホストは null で表す。 */
 	hostname: z.string().nullable().default(null),
 });
 

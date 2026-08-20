@@ -74,7 +74,6 @@ Ui:render([
 const PRESET_OMIKUJI = `/// @ ${AISCRIPT_VERSION}
 // ユーザーごとに日替わりのおみくじのプリセット
 
-// 選択肢
 let choices = [
 	"ｷﾞｶﾞ吉"
 	"大吉"
@@ -86,16 +85,13 @@ let choices = [
 	"大凶"
 ]
 
-// シードが「PlayID+ユーザーID+今日の日付」である乱数生成器を用意
+// 同じPlayID・ユーザーID・日付では同じ結果にする
 let random = Math:gen_rng(\`{THIS_ID}{USER_ID}{Date:year()}{Date:month()}{Date:day()}\`)
 
-// ランダムに選択肢を選ぶ
 let chosen = choices[random(0, (choices.len - 1))]
 
-// 結果のテキスト
 let result = \`今日のあなたの運勢は **{chosen}** です。\`
 
-// UIを表示
 Ui:render([
 	Ui:C:container({
 		align: 'center'

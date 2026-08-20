@@ -34,8 +34,7 @@ async function connectToRedis(redisOptions) {
 	}
 }
 
-// If not all of these are defined, the default one gets reused.
-// so we use a Set to only try connecting once to each **uniq** redis.
+// 個別設定がない接続先には primary の設定が再利用されるため、Set で重複接続を避ける。
 const promises = Array.from(
 	new Set([
 		config.valkey.primary,

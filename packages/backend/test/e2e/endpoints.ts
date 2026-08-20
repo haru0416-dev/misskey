@@ -1893,7 +1893,7 @@ describe('Endpoints', () => {
 				true,
 			);
 
-			// chat/rooms/members requires write:chat (not read:chat) per its original meta.kind.
+			// chat/rooms/members は write:chat を要求し、read:chat では利用できない。
 			const readOnlyToken = await createAppToken(owner, ['read:chat']);
 			const membersWithReadOnlyToken = await api(
 				'chat/rooms/members',
@@ -1957,7 +1957,7 @@ describe('Endpoints', () => {
 			const ignored = await api('chat/rooms/invitations/ignore', { roomId: room.body.id }, invitee);
 			assert.strictEqual(ignored.status, 204);
 
-			// Ignoring hides the invitation from the default inbox listing (ignored: false) without revoking it.
+			// ignore 済みの招待は既定の一覧（ignored: false）から除外されるが、招待自体は取り消されない。
 			const inboxAfterIgnore = await api('chat/rooms/invitations/inbox', {}, invitee);
 			assert.strictEqual(inboxAfterIgnore.status, 200);
 			assert.strictEqual(
@@ -6141,7 +6141,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(typeof registered.body.secret, 'string');
 			assert.strictEqual(typeof registered.body.qr, 'string');
 
-			// MISSKEY_TEST_CHECK_DUPLICATED_TOTP is unset here, so the server accepts any TOTP token in test env.
+			// テスト環境では MISSKEY_TEST_CHECK_DUPLICATED_TOTP 未設定時に任意の TOTP トークンが受理される。
 			const done = await api('i/2fa/done', { token: '000000' }, user);
 			assert.strictEqual(done.status, 200);
 			assert.strictEqual((done.body as any).backupCodes.length, 5);
@@ -7956,7 +7956,7 @@ describe('Endpoints', () => {
 			const appNotification = notifications.find((n) => n.type === 'app');
 			assert.ok(appNotification);
 			// Redis stream 上の生の通知は customBody/customHeader/customIcon で保持され、
-			// body/header/icon への改名は i/notifications の pack 時に行われる (原典と同じ)
+			// body/header/icon への改名は i/notifications の pack 時に行われる。
 			assert.strictEqual(appNotification.customBody, 'hello world');
 			assert.strictEqual(appNotification.customHeader, 'my header');
 			assert.strictEqual(appNotification.customIcon, 'https://example.com/icon.png');
@@ -9127,8 +9127,8 @@ describe('Endpoints', () => {
 			return Math.floor((Date.now() - FEATURED_EPOCH) / PER_USER_NOTES_RANKING_WINDOW);
 		}
 
-		// ランキング書き込み側 (ReactionService.create 等の30%確率更新) はHono未移植のため、
-		// ここではRedis ZSETに直接書き込んで読み取りロジックのみを単体検証する。
+		// ランキング書き込みは確率的に行われるため、Redis ZSETに直接書き込んで
+		// 読み取りロジックだけを決定的に検証する。
 		test('per-userランキングに載ったノートをid降順で返し、untilId絞り込み、ブロックによる早期returnを維持する', async () => {
 			const config = fixtureConfig;
 			const suffix = Date.now().toString(36).slice(-8);
@@ -9263,7 +9263,7 @@ describe('Endpoints', () => {
 			const target = await signup({ username: `hurst${suffix}` });
 
 			// alice はrootUserIdだが明示的なmoderatorロールを持たないため、
-			// getModeratorIds({includeAdmins:true, excludeExpire:true})の対象に含まれない(元実装と同様、includeRootは渡されない)。
+			// getModeratorIds({includeAdmins:true, excludeExpire:true}) の対象に含まれない (includeRoot は渡されない)。
 			// 通知対象として検証可能にするため、専用のmoderatorロールを付与したユーザーを用意する。
 			const moderator = await signup({ username: `hursm${suffix}` });
 			const moderatorRole = await role(alice, { name: `hono report-abuse moderator ${suffix}`, isModerator: true });
@@ -9819,7 +9819,7 @@ describe('Endpoints', () => {
 				replyId: replyTargetId,
 				renoteId: renoteTargetId,
 				reactions: { '👍': 2 },
-				// 直近2秒以内のノートはDBを引かず pair cache から myReaction を解決する (原典と同じ最適化)。
+				// 直近 2 秒以内のノートは DB を引かず pair cache から myReaction を解決する。
 				// reactions の合計数 (2) 以上の pair が無いと cache 不完全とみなされ 2秒ガードで
 				// undefined になるため、reactions と整合する 2 件の pair を用意する
 				reactionAndUserPairCache: [`${reactor.id}/👍`, `${author.id}/👍`],
@@ -9981,7 +9981,7 @@ describe('Endpoints', () => {
 			const children = await api('notes/children', { noteId: rootId });
 			assert.strictEqual(children.status, 200);
 			const childIds = children.body.map((n: any) => n.id).sort();
-			// 純リノート (text/ファイル/投票なし) は原典どおり children に含まれない (引用のみ含まれる)
+			// 純リノート (text/ファイル/投票なし) は children に含まれず、引用のみ含まれる。
 			assert.deepStrictEqual(childIds, [replyId]);
 
 			const replies = await api('notes/replies', { noteId: rootId });
@@ -10612,7 +10612,7 @@ describe('Endpoints', () => {
 			const other = await signup({ username: `hunro${suffix}` });
 			const rootNote = await post(other, { text: 'users/notes withReplies root', visibility: 'public' });
 			// author の userTimeline (Redis) を空にしないための通常投稿。空だとDBフォールバックになり、
-			// DBフォールバック経路は原典同様リプライを除外しない。
+			// DB フォールバック経路ではリプライを除外しない。
 			const normalNoteId = (await post(author, { text: 'users/notes withReplies normal', visibility: 'public' })).id;
 			const replyNoteId = (
 				await post(author, { text: 'users/notes withReplies reply', visibility: 'public', replyId: rootNote.id })
@@ -10900,7 +10900,7 @@ describe('Endpoints', () => {
 				visibility: 'public',
 			});
 
-			// canSearchNotes はデフォルト false (原典同様) のため、ロールで許可してから検索する
+			// canSearchNotes はデフォルト false のため、ロールで許可してから検索する。
 			const searchRole = await role(alice, {}, { canSearchNotes: { priority: 1, useDefault: false, value: true } });
 			await api('admin/roles/assign', { userId: author.id, roleId: searchRole.id }, alice);
 
@@ -16661,7 +16661,7 @@ describe('Endpoints', () => {
 			const mediaType = `image/${type}`;
 
 			const getWebpublicType = async (user: misskey.entities.SignupResponse, fileId: string): Promise<string> => {
-				// drive/files/create does not expose webpublicType directly, so get it by posting it
+				// drive/files/create のレスポンスに webpublicType がないため、投稿経由で確認する。
 				const res = await post(user, {
 					text: mediaType,
 					fileIds: [fileId],

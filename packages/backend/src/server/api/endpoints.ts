@@ -134,8 +134,8 @@ export interface IEndpoint {
 	name: string;
 	meta: IEndpointMeta;
 	// 429件中428件の paramDef が z.ZodType 化済み。残り1件 (admin/update-meta の
-	// adminUpdateMetaJsonSchema, AdminUpdateMetaLogic.ts) のみ旧 JSON Schema 形式で、
-	// それが解消されるまで Schema 側の型を残す。
+	// adminUpdateMetaJsonSchema, AdminUpdateMetaLogic.ts) は JSON Schema 形式のため、
+	// Schema 側の型も受け付ける。
 	params: Schema | z.ZodType;
 }
 

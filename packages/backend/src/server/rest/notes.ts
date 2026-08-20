@@ -621,7 +621,7 @@ export async function handleHonoApiNotes(
 		}),
 	);
 
-	// 元実装 (notes.ts) は noteEntityService.packMany(notes) を me なしで呼んでおり、常に匿名扱いでパックする。
+	// me を指定せず、常に匿名としてパックする。
 	return await packNoteManyForHonoApi(deps, notes, null);
 }
 
@@ -1081,8 +1081,7 @@ export async function handleHonoApiNotesSearch(
 
 	const provider = deps.config.search.provider ?? 'sqlLike';
 	if (provider !== 'sqlLike' && provider !== 'sqlPgroonga') {
-		// Meilisearch-backed search is not ported to hono; this hono route is only
-		// reachable when the sql-based fulltext search provider is configured.
+		// Meilisearch 検索は Hono に移植していないため、SQL ベースの全文検索 provider 設定時だけ到達する。
 		throw notesSearchUnavailableError();
 	}
 

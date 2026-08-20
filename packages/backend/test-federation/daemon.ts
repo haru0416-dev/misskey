@@ -4,7 +4,7 @@ import { Redis } from 'ioredis';
 const TESTER_IP_ADDRESS = '172.20.1.1';
 
 /**
- * This should be same as {@link file://./../src/misc/get-ip-hash.ts}.
+ * {@link file://./../src/misc/get-ip-hash.ts} と同じ計算方法を使う。
  */
 function getIpHash(ip: string) {
 	const prefix = ipaddr
@@ -17,7 +17,7 @@ function getIpHash(ip: string) {
 }
 
 /**
- * This prevents hitting rate limit when login.
+ * サインイン時のレート制限に達しないようにする。
  */
 export async function purgeLimit(host: string, client: Redis) {
 	const ipHash = getIpHash(TESTER_IP_ADDRESS);

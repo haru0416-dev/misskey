@@ -280,7 +280,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		const security =
 			authMode === 'required' ? [{ bearerAuth: [] }] : authMode === 'optional' ? [{}, { bearerAuth: [] }] : undefined;
 		const baseInfo = {
-			// misskey-js generator treats `___` as the encoded endpoint path separator.
+			// misskey-js generator は `___` をエンドポイントパスの区切り文字として扱う。
 			operationId: endpoint.name.replaceAll('/', '___'),
 			summary: endpoint.name,
 			description: desc,

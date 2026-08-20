@@ -54,10 +54,8 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 
-// Chart.commit() only ever buffers in-memory diffs; Chart.save() (called on a 20-minute
-// interval) is what actually persists them. These writer instances are constructed once
-// at boot (see createRuntimeDependencies) and shared across requests via deps, not recreated
-// per-request.
+// Chart.commit() はメモリ上の差分だけを保持し、20 分間隔で呼ぶ Chart.save() が永続化する。
+// writer は起動時に1回だけ生成し、deps 経由でリクエスト間で共有する。
 type HonoChartWriterDependencies = {
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
@@ -464,9 +462,8 @@ class HonoFederationChartWriter extends Chart<typeof federationChartSchema> {
 	}
 
 	private notBlockedHost(column: SQL, blocked: string[]): SQL {
-		// 生のJS配列を ${blocked} で渡すと drizzle が ($1, $2, ...) の record に展開してしまい
-		// `op ANY/ALL (array) requires array on right side` の実行時エラーになる (blockedHosts
-		// 非空のインスタンスで tickMinor が毎回失敗していた)。sql.param で単一の配列パラメータにする。
+		// 生の JS 配列は drizzle により record へ展開され、ANY/ALL の右辺に必要な配列にならない。
+		// sql.param で単一の配列パラメータとして渡す。
 		return blocked.length === 0 ? sql`TRUE` : sql`${column} NOT ILIKE ALL(${sql.param(blocked)})`;
 	}
 

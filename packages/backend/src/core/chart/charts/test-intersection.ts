@@ -12,7 +12,6 @@ import Chart from '../core.js';
 import { name, schema } from './entities/test-intersection.js';
 import type { KVs } from '../core.js';
 
-/** テスト用の Chart。 */
 export default class TestIntersectionChart extends Chart<typeof schema> {
 	constructor(
 		private db: MiDrizzleDatabase,

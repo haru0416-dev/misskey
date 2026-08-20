@@ -16,9 +16,8 @@ export type HonoQueueEndedPollNotificationDependencies = HonoApiNotificationDepe
 };
 
 /**
- * EndedPollNotificationProcessorService.process 相当。
- * CacheService.userProfileCache は queue processor では不要と判断し、DBを直接読む
- * (established convention: 未認証・レート制限なしエンドポイント以外ではキャッシュを使わない)。
+ * キュープロセッサーは認証・レート制限の境界外で動作するため、
+ * ユーザープロフィールをプロセスローカルキャッシュに保持せず直接DBから読む。
  */
 export async function handleHonoQueueEndedPollNotification(
 	deps: HonoQueueEndedPollNotificationDependencies,

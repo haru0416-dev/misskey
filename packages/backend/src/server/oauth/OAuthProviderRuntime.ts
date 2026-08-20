@@ -32,13 +32,10 @@ import {
 	UnsupportedResponseTypeError,
 } from './errors.js';
 
-// TODO: Consider migrating to @node-oauth/oauth2-server once
-// https://github.com/node-oauth/node-oauth2-server/issues/180 is figured out.
-// Upstream the various validations and RFC 9207 implementation in that case.
-
-// Follows https://indieauth.spec.indieweb.org/#client-identifier
-// This is also mostly similar to https://developers.google.com/identity/protocols/oauth2/web-server#uri-validation
-// although Google has stricter rule.
+// client_id は IndieAuth の仕様に従い URL として検証する。
+// https://indieauth.spec.indieweb.org/#client-identifier
+// Google の URI 検証とも概ね同じだが、Google の方が厳格である。
+// https://developers.google.com/identity/protocols/oauth2/web-server#uri-validation
 function validateClientId(raw: string): URL {
 	const url = ((): URL => {
 		try {

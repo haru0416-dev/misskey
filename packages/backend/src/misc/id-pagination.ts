@@ -23,7 +23,6 @@ export type IdGenerator = {
 	gen(time?: number): string;
 };
 
-/** Resolves cursor pagination, giving explicit IDs precedence over dates. */
 export function resolveIdPagination(options: IdPaginationOptions): IdPagination {
 	if (options.sinceId && options.untilId) {
 		return { sinceId: options.sinceId, untilId: options.untilId, order: 'desc' };
@@ -36,7 +35,7 @@ export function resolveIdPagination(options: IdPaginationOptions): IdPagination 
 	}
 }
 
-/** Resolves cursor pagination after converting optional date bounds to IDs. */
+/** ID が指定されている場合は日時境界を参照しない。 */
 export function resolveDateIdPagination(idGenerator: IdGenerator, options: DateIdPaginationOptions): IdPagination {
 	if (options.sinceId || options.untilId) {
 		return resolveIdPagination(options);

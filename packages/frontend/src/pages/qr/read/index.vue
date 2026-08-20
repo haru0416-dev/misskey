@@ -162,7 +162,6 @@ async function processResult(result: QrScanner.ScanResult) {
 	}
 
 	if (sources.has(trimmed)) return;
-	// URI の情報を取得する。
 	sources.set(trimmed, null);
 
 	await misskeyApi('ap/show', { uri: trimmed })

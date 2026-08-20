@@ -34,7 +34,7 @@ export function isRenote(note: MiNote): note is Renote {
 }
 
 export function isQuote(note: Renote): note is Quote {
-	// NOTE: SYNC WITH NoteCreateService.isQuote
+	// NoteCreateService.isQuote と判定条件を一致させる。
 	return note.text != null || note.cw != null || note.replyId != null || note.hasPoll || note.fileIds.length > 0;
 }
 

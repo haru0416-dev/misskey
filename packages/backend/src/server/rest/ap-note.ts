@@ -207,7 +207,6 @@ async function extractPollFromQuestionForHonoApi(
 	return { choices, votes, multiple, expiresAt };
 }
 
-/** ApQuestionService.updateQuestion 相当。投票数が変化していれば true を返す。 */
 export async function updateQuestionFromApForHonoApi(
 	deps: HonoApiApNoteDependencies,
 	value: string | IObject,
@@ -262,7 +261,7 @@ export async function updateQuestionFromApForHonoApi(
 	return changed;
 }
 
-/** PollService.vote (AP由来の投票受信) 相当。配送は呼び出し元で deliverQuestionUpdateForHonoApi を使う。 */
+/** AP由来の投票更新の配送は呼び出し元で行う。 */
 async function voteFromApForHonoApi(
 	deps: HonoApiApNoteDependencies,
 	actor: { id: MiUser['id'] },
@@ -291,13 +290,7 @@ async function voteFromApForHonoApi(
 	deps.publishNoteStream?.(note, 'pollVoted', { choice, userId: actor.id });
 }
 
-/**
- * ApNoteService.createNote 相当。
- *
- * 意図的な簡略化: なし (禁止ワードチェックの実行順序のみ、投稿者解決の前に行う原文と異なり
- * 本移植では actor 解決後に行う — createNoteForHonoApi 内で必ずチェックされるため結果は同じだが、
- * リソース消費(無駄な resolvePerson 呼び出し)の観点でのみ原文と異なる)。
- */
+/** 禁止ワードは actor 解決後、ノート作成前に createNoteForHonoApi 内で必ず検査する。 */
 export async function createNoteFromApForHonoApi(
 	deps: HonoApiApNoteDependencies,
 	value: string | IObject,

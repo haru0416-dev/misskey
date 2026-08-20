@@ -46,7 +46,7 @@ import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from './role-p
 import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from './user.js';
 import { parseHonoApiParams } from './validation.js';
 
-/** `pageNameSchema` (旧 ajv 用 JSON Schema フラグメント) の pattern を Zod 用に再利用する。 */
+/** `pageNameSchema` の pattern を Zod 用に再利用する。 */
 const pageNamePattern = new RegExp(pageNameSchema.pattern);
 
 export type HonoApiPageDependencies = HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies;
@@ -433,7 +433,7 @@ type PagesDeleteParams = {
 	pageId: string;
 };
 
-/** PageService.delete 相当。not-found/forbiddenはHTTPエラーに変換せず、そのままステータスとして返す。 */
+/** not-found/forbiddenはHTTPエラーに変換せず、そのままステータスとして返す。 */
 export async function deletePageForHonoApi(
 	deps: HonoApiPageDependencies,
 	me: MiUser,
@@ -495,10 +495,8 @@ export async function handleHonoApiPagesDelete(
 }
 
 /**
- * 旧 ajv 版は `anyOf` で「pageId 単体」または「name+username の組」のどちらかが妥当ならOKとしていた
- * (各分岐とも additionalProperties: true のため、他方のプロパティが型不正な値で紛れ込んでいても
- * 分岐自体の可否には影響しない)。z.union はまさに同じ「いずれかの分岐が成功すればOK」という評価をする
- * ため、素直に anyOf の等価表現として使える (ajv/zod 突き合わせ検証で確認済み)。
+ * pageId、または name と username の組のいずれかが妥当なら受理する。
+ * 一方の分岐に含まれないプロパティは判定に影響しない。
  */
 export const pagesShowParamDef = z.union([
 	z.object({ pageId: misskeyId() }),

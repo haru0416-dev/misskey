@@ -35,10 +35,10 @@ import { ref, useTemplateRef, computed, onMounted, onBeforeUnmount, watch, onUnm
 import type Reciever_typeReferenceOnly from '@mcaptcha/core-glue';
 import { store } from '@/store.js';
 
-// APIs provided by Captcha services
-// see: https://docs.hcaptcha.com/configuration/#javascript-api
-// see: https://developers.google.com/recaptcha/docs/display?hl=ja
-// see: https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicitly-render-the-turnstile-widget
+// 各 CAPTCHA サービスが提供する API。
+// https://docs.hcaptcha.com/configuration/#javascript-api
+// https://developers.google.com/recaptcha/docs/display?hl=ja
+// https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicitly-render-the-turnstile-widget
 export type Captcha = {
 	render(container: string | Node, options: {
 		readonly [_ in 'sitekey' | 'theme' | 'type' | 'size' | 'tabindex' | 'callback' | 'expired' | 'expired-callback' | 'error-callback' | 'endpoint']?: unknown;
@@ -62,7 +62,7 @@ declare global {
 
 const props = defineProps<{
 	provider: CaptchaProvider;
-	sitekey: string | null; // null will show error on request
+	sitekey: string | null; // null を指定するとリクエスト時にエラーを表示する。
 	secretKey?: string | null;
 	instanceUrl?: string | null;
 	modelValue?: string | null;

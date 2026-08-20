@@ -33,10 +33,10 @@ function readBooleanEnv(name, defaultValue) {
 	throw new Error(`${name} must be one of: 1, 0, true, false`);
 }
 
-const SAMPLE_COUNT = readIntegerEnv('MK_MEMORY_SAMPLE_COUNT', 3, 1); // Number of samples to measure
-const STARTUP_TIMEOUT = readIntegerEnv('MK_MEMORY_STARTUP_TIMEOUT_MS', 120000, 1); // Timeout for server startup
-const MEMORY_SETTLE_TIME = readIntegerEnv('MK_MEMORY_SETTLE_TIME_MS', 10000, 0); // Wait after startup for memory to settle
-const IPC_TIMEOUT = readIntegerEnv('MK_MEMORY_IPC_TIMEOUT_MS', 30000, 1); // Timeout for IPC responses
+const SAMPLE_COUNT = readIntegerEnv('MK_MEMORY_SAMPLE_COUNT', 3, 1);
+const STARTUP_TIMEOUT = readIntegerEnv('MK_MEMORY_STARTUP_TIMEOUT_MS', 120000, 1);
+const MEMORY_SETTLE_TIME = readIntegerEnv('MK_MEMORY_SETTLE_TIME_MS', 10000, 0);
+const IPC_TIMEOUT = readIntegerEnv('MK_MEMORY_IPC_TIMEOUT_MS', 30000, 1);
 const REQUEST_COUNT = readIntegerEnv('MK_MEMORY_REQUEST_COUNT', 10, 0);
 const HEAP_SNAPSHOT = readBooleanEnv('MK_MEMORY_HEAP_SNAPSHOT', false);
 const HEAP_SNAPSHOT_TIMEOUT = readIntegerEnv('MK_MEMORY_HEAP_SNAPSHOT_TIMEOUT_MS', 120000, 1);
@@ -174,7 +174,7 @@ function collapseHeapSnapshotBreakdown(breakdowns: Record<string, Record<string,
 	return collapsed;
 }
 
-// Keep these buckets aligned with Chrome DevTools' heap snapshot Statistics view.
+// Chrome DevTools のヒープスナップショット Statistics 表示と分類を一致させる。
 function analyzeHeapSnapshot(snapshot) {
 	const meta = snapshot?.snapshot?.meta;
 	const nodes = snapshot?.nodes;
@@ -469,7 +469,7 @@ async function getAllMemoryUsage(serverProcess: ChildProcess) {
 }
 
 async function measureMemory() {
-	// Start the Misskey backend server using fork to enable IPC
+	// IPC を使うため、Misskey backend を fork で起動する。
 	const serverProcess = fork(join(__dirname, '../built/entry.js'), [], {
 		cwd: join(__dirname, '..'),
 		env: {
@@ -485,14 +485,12 @@ async function measureMemory() {
 
 	let serverReady = false;
 
-	// Listen for the 'ok' message from the server indicating it's ready
 	serverProcess.on('message', (message) => {
 		if (message === 'ok') {
 			serverReady = true;
 		}
 	});
 
-	// Handle server output
 	serverProcess.stdout?.on('data', (data) => {
 		process.stderr.write(`[server stdout] ${data}`);
 	});
@@ -501,7 +499,6 @@ async function measureMemory() {
 		process.stderr.write(`[server stderr] ${data}`);
 	});
 
-	// Handle server error
 	serverProcess.on('error', (err) => {
 		process.stderr.write(`[server error] ${err}\n`);
 	});
@@ -539,7 +536,6 @@ async function measureMemory() {
 	//	});
 	//}
 
-	// Wait for server to be ready or timeout
 	const startupStartTime = Date.now();
 	// eslint-disable-next-line no-unmodified-loop-condition -- serverReady is set by the 'message' event handler registered above
 	while (!serverReady) {
@@ -553,7 +549,6 @@ async function measureMemory() {
 	const startupTime = Date.now() - startupStartTime;
 	process.stderr.write(`Server started in ${startupTime}ms\n`);
 
-	// Wait for memory to settle
 	await setTimeout(MEMORY_SETTLE_TIME);
 
 	//const beforeGc = await getAllMemoryUsage(serverProcess);
@@ -573,17 +568,15 @@ async function measureMemory() {
 
 	const heapSnapshotAfterGc = await getHeapSnapshotStatistics(serverProcess);
 
-	// Stop the server
 	serverProcess.kill('SIGTERM');
 
-	// Wait for process to exit
 	let exited = false;
 	await new Promise((resolve) => {
 		serverProcess.on('exit', () => {
 			exited = true;
 			resolve(undefined);
 		});
-		// Force kill after 10 seconds if not exited
+		// 終了イベントが届かない異常時に計測処理が待ち続けないよう、10秒で強制終了する。
 		setTimeout(10000).then(() => {
 			if (!exited) {
 				serverProcess.kill('SIGKILL');
@@ -649,7 +642,6 @@ async function main() {
 		samples: results,
 	};
 
-	// Output as JSON to stdout
 	console.log(JSON.stringify(result, null, 2));
 }
 

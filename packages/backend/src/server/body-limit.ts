@@ -30,10 +30,9 @@ export async function readRequestBodyWithLimit(
 	const body = request.body;
 	if (body == null) return new Uint8Array(0);
 
-	// Hono's bodyLimit middleware trusts the HTTP framing when Content-Length is present and
-	// Transfer-Encoding is absent. Avoiding per-chunk Web Streams work is important for the
-	// overwhelmingly common fixed-length JSON request. The post-read check preserves correctness
-	// for direct Request callers whose declared and actual sizes differ.
+	// Content-Length があり Transfer-Encoding がない場合、Hono の bodyLimit middleware は HTTP のフレーミングを信頼する。
+	// 固定長 JSON リクエストが大半のため、チャンクごとの Web Streams 処理を避ける。
+	// 事前申告と実際のサイズが異なる Request でも、読み取り後の検査で上限を保証する。
 	if (!hasTransferEncoding && hasSafeContentLength) {
 		const raw = new Uint8Array(await request.arrayBuffer());
 		if (raw.byteLength > limit) throw makeLimitError();

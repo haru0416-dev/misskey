@@ -229,7 +229,7 @@ export interface InternalEventTypes {
 
 type EventTypesToEventPayload<T> = EventUnionFromDictionary<UndefinedAsNullAll<SerializedAll<T>>>;
 
-// name/messages(spec) pairs dictionary
+// name/messages (仕様) の組み合わせ辞書。
 export type GlobalEvents = {
 	internal: {
 		name: 'internal';

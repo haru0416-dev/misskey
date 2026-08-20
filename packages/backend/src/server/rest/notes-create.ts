@@ -180,7 +180,7 @@ export function isKeyWordIncludedForHonoApi(text: string, keyWords: string[]): b
 	});
 }
 
-/** HashtagService#updateHashtagsRanking 相当。hashtags は normalizeForSearch 済みで渡すこと。 */
+/** hashtags は normalizeForSearch 済みで渡すこと。 */
 export async function updateHashtagsRankingsForHonoApi(
 	deps: { meta: Pick<MiMeta, 'hiddenTags' | 'sensitiveWords'>; redis: Redis.Redis },
 	hashtags: string[],
@@ -1231,7 +1231,6 @@ export async function handleHonoQueueNotePostCreate(
 	);
 }
 
-/** RoleService.addNoteToRoleTimeline 相当。投稿者の保持ロール (コンディショナル含む) のタイムラインへfanoutし、roleTimelineStream を配信する。 */
 async function addNoteToRoleTimelinesForHonoApi(
 	deps: HonoApiNotesCreateDependencies,
 	noteObj: Packed<'Note'>,

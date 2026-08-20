@@ -5,7 +5,7 @@
 
 import { createCanvas } from '@napi-rs/canvas';
 
-// deterministic PRNG (xmur3 hash + mulberry32), replaces the unmaintained random-seed package
+// xmur3 hash + mulberry32 による決定的 PRNG を使う。
 function createSeededRandom(seed: string): (max: number) => number {
 	let h = 1779033703 ^ seed.length;
 	for (let i = 0; i < seed.length; i++) {
@@ -22,7 +22,7 @@ function createSeededRandom(seed: string): (max: number) => number {
 }
 
 const size = 128; // px
-const n = 5; // resolution
+const n = 5;
 const margin = size / 4;
 const colors: readonly (readonly [string, string])[] = [
 	['#FF512F', '#DD2476'],

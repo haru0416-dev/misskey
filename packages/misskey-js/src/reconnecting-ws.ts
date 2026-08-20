@@ -1,11 +1,6 @@
 /**
- * 最小限の自動再接続付き WebSocket ラッパー。
- * 未メンテの reconnecting-websocket パッケージの、Misskey が実際に使っていた
- * 挙動 (指数バックオフ再接続 / 接続タイムアウト / open・close・message の
- * リスナーが再接続を跨いで生存 / 未接続時の send はバッファして open 時に flush)
- * のみを実装する。send のバッファリングは必須挙動: Misskey はチャンネルの
- * connect メッセージを WebSocket の接続完了を待たずに送るため、破棄すると
- * 初回接続時に一切のチャンネル購読が成立しない。
+ * Misskeyのチャンネル購読は接続完了前にconnectメッセージを送るため、
+ * このキューを破棄してはならない。
  */
 
 type WebSocketEventMap = {
@@ -26,7 +21,7 @@ type WebSocketLike = {
 	close(): void;
 };
 
-// DOM の WebSocket と npm の ws パッケージの両方を受け付けるため、コンストラクタは緩く取る
+// DOMのWebSocketとnpmのwsの両方を受け付けるため、コンストラクターの型を共通部分に限定する。
 export type WebSocketConstructor = new (url: string, protocols?: string | string[]) => any;
 
 export type ReconnectingWebSocketOptions = {
@@ -99,7 +94,7 @@ export class ReconnectingWebSocket {
 		this.listeners[type].delete(listener);
 	}
 
-	/** 未接続時は (旧実装と同じく) バッファし、open 時にまとめて送信する */
+	/** 未接続時の送信データはキューに保持し、open時にまとめて送信する。 */
 	public send(data: string): void {
 		if (this.ws != null && this.ws.readyState === WS_OPEN) {
 			this.ws.send(data);

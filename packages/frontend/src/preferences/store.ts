@@ -28,8 +28,8 @@ type DefaultValues = {
 export type ValueOf<K extends keyof PREF> = DefaultValues[K];
 
 export type Scope = Partial<{
-	server: string | null; // host
-	account: string | null; // userId
+	server: string | null;
+	account: string | null;
 	device: string | null;
 }>;
 

@@ -118,7 +118,7 @@ export const api = async <E extends keyof misskey.Endpoints, P extends misskey.E
 	return {
 		status: res.status,
 		headers: res.headers,
-		// FIXME: removing this non-null assertion: requires better typing around empty response.
+		// 空レスポンスの型を表現できるようになるまで non-null assertion を使う。
 		body: body!,
 	};
 };
@@ -175,7 +175,7 @@ export const post = async (
 
 	const res = await api('notes/create', q, user);
 
-	// FIXME: the return type should reflect this fact.
+	// このヘルパーは成功レスポンスを前提とするため、API 型で null 許容の createdNote に非 null アサーションが必要。
 	return (res.body ? res.body.createdNote : null)!;
 };
 
@@ -357,7 +357,7 @@ export const role = async (
 			name: 'New Role',
 			target: 'manual',
 			policies: {
-				// spread するのは配列ではなくオブジェクト (以前は 0,1,2... の数値キーになっていた)
+				// API の policies は配列ではなくオブジェクトとして展開する。
 				...Object.fromEntries(
 					Object.entries(DEFAULT_POLICIES).map(([k, v]) => [
 						k,
@@ -378,20 +378,12 @@ export const role = async (
 };
 
 interface UploadOptions {
-	/** Optional, absolute path or relative from ./resources/ */
 	path?: string | URL;
-	/** The name to be used for the file upload */
 	name?: string;
-	/** The drive folder to upload into. */
 	folderId?: string;
-	/** A Blob can be provided instead of path */
 	blob?: Blob;
 }
 
-/**
- * Upload file
- * @param user User
- */
 export const uploadFile = async (
 	user?: UserToken,
 	{ path, name, folderId, blob }: UploadOptions = {},

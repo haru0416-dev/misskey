@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// Keep int8 values as numbers for compatibility with existing query code.
+// 既存のクエリコードとの互換性のため、int8 を number として扱う。
 import pg, { type Pool, type PoolConfig } from 'pg';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger as DrizzleLogger } from 'drizzle-orm/logger';

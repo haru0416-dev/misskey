@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/**
- * Erebia Entry Point!
- */
-
 import cluster from 'node:cluster';
 import { EventEmitter } from 'node:events';
 import { writeHeapSnapshot } from 'node:v8';

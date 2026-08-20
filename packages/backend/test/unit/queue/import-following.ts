@@ -110,12 +110,8 @@ describe('hono-queue-db (importFollowing)', () => {
 		const follower = await createTestUser('honoqueueimpfollowdbme');
 		const followee = await createTestUser('honoqueueimpfollowdbtarget');
 
-		// NOTE: 元実装のImportFollowingProcessorService.processDbは `parts.slice(2)` で
-		// key=value行を読んでいるが、following importの行フォーマットは
-		// `acct,withReplies=true` の2カラムしかなく、withReplies自体はindex 1にあるため
-		// このループは実質デッドコードで、行ごとのwithReplies指定は常に無視され、
-		// job.data.withReplies (ジョブ全体で1つ) だけが使われる。元実装のバグをそのまま
-		// 忠実に再現しており、修正はしていない。
+		// following import の行は `acct,withReplies=true` の2カラムで、withReplies は index 1 にある。
+		// 処理では job.data.withReplies (ジョブ全体で1つ) のみを使うため、行ごとの指定は反映されない。
 		await handleHonoQueueImportFollowingToDb(
 			deps,
 			fakeJob<DbUserImportToDbJobData>({

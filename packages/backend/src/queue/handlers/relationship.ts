@@ -59,7 +59,6 @@ async function deliverAcceptFollowActivity(
 	enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 }
 
-/** UserFollowingService.follow 相当。inbox の Follow アクティビティ受信からも呼ばれる。 */
 export async function followWithSideEffectsForHonoApi(
 	deps: HonoQueueRelationshipDependencies,
 	follower: MiLocalUser | MiRemoteUser,
@@ -123,7 +122,7 @@ export async function followWithSideEffectsForHonoApi(
 	) {
 		let autoAccept = false;
 
-		// 鍵アカウントであっても、既にフォローされていた場合はスルー (この時点で到達不能だが元実装通り残す)
+		// 鍵アカウントでも既存のフォロー関係があれば自動承認する。
 		if (await followingExistsInDatabase(deps.db, follower.id, followee.id)) {
 			autoAccept = true;
 		}
@@ -133,7 +132,7 @@ export async function followWithSideEffectsForHonoApi(
 			autoAccept = await followingExistsInDatabase(deps.db, followee.id, follower.id);
 		}
 
-		// Automatically accept if the follower is an account who has moved and the locked followee had accepted the old account.
+		// フォロワーが移行済みアカウントで、非公開のフォロー先が旧アカウントを承認済みなら自動承認する。
 		if (!autoAccept && followee.isLocked) {
 			autoAccept = !!(await validateAlsoKnownAsForHonoApi(
 				deps,
@@ -173,7 +172,6 @@ export async function followWithSideEffectsForHonoApi(
 	return 'ok';
 }
 
-/** UserFollowingService.follow 相当 (RelationshipProcessorService.processFollow から呼ばれる)。 */
 export async function handleHonoQueueRelationshipFollow(
 	deps: HonoQueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
@@ -195,7 +193,6 @@ export async function handleHonoQueueRelationshipFollow(
 	);
 }
 
-/** UserFollowingService.unfollow 相当 (RelationshipProcessorService.processUnfollow から呼ばれる)。 */
 export async function handleHonoQueueRelationshipUnfollow(
 	deps: HonoQueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,

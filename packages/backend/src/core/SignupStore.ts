@@ -38,7 +38,7 @@ export async function createSignupAccountInDatabase(
 	data: SignupAccountInsert,
 ): Promise<{ account: MiUser; rootClaimed: boolean }> {
 	const result = await db.transaction(async (tx) => {
-		// Serialize the global used_username reservation, including test-only remote signups.
+		// テスト用のリモート登録を含め、used_username の予約を直列化する。
 		await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`signup:${data.usernameLower}`}))`);
 		const hostCondition = data.host == null ? isNull(userTable.host) : eq(userTable.host, data.host);
 

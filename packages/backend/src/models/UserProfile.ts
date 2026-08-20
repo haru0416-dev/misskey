@@ -17,7 +17,7 @@ export class MiUserProfile {
 
 	public location: string | null;
 
-	// birthday の月日検索用に SUBSTR("birthday", 6, 5) の索引を持つ。
+	// birthday の月日検索では、IDX_USERPROFILE_BIRTHDAY_DATE（get_birthday_date("birthday")）を使用する。
 	public birthday: string | null;
 
 	public description: string | null;

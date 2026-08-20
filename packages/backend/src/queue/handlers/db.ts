@@ -503,8 +503,6 @@ export async function handleHonoQueueExportFollowing(
 }
 
 /**
- * ImportMuting/ImportBlocking/ImportFollowingProcessorService 共通の
- * 「CSV1行(acct)からミュート/ブロック/フォロー対象ユーザーを解決する」ロジック相当。
  * ローカルユーザーの解決に失敗した場合はnullを返す (呼び出し元でスキップする)。
  */
 async function resolveImportTargetUserForHonoApi(
@@ -559,7 +557,7 @@ export async function handleHonoQueueImportMuting(
 			});
 			deps.publishInternalEvent?.('mute', { muterId: user.id, muteeId: target.id });
 		} catch {
-			// 元実装同様、行単位のエラーはログのみで処理を継続する
+			// 1行の失敗でインポート全体を中断しない。
 		}
 	}
 }
@@ -618,7 +616,7 @@ export async function handleHonoQueueImportUserLists(
 
 			await addUserListMemberForHonoApi(deps, target, list, user, { withReplies });
 		} catch {
-			// 元実装同様、行単位のエラーはログのみで処理を継続する
+			// 1行の失敗でインポート全体を中断しない。
 		}
 	}
 }
@@ -648,7 +646,6 @@ async function enqueueImportLines<K extends 'importBlockingToDb' | 'importFollow
 	}
 }
 
-/** ImportBlockingProcessorService.process 相当。CSVの行ごとにimportBlockingToDbジョブを積む。 */
 export async function handleHonoQueueImportBlocking(
 	deps: HonoQueueDbDependencies,
 	job: Bull.Job<DbUserImportJobData>,
@@ -688,11 +685,10 @@ export async function handleHonoQueueImportBlockingToDb(
 			toRelationshipJobForHonoApi(deps.config, 'block', { from: { id: user.id }, to: { id: target.id }, silent: true }),
 		]);
 	} catch {
-		// 元実装同様、行単位のエラーはログのみで処理を継続する
+		// 1行の失敗でインポート全体を中断しない。
 	}
 }
 
-/** ImportFollowingProcessorService.process 相当。CSVの行ごとにimportFollowingToDbジョブを積む。 */
 export async function handleHonoQueueImportFollowing(
 	deps: HonoQueueDbDependencies,
 	job: Bull.Job<DbUserImportJobData>,
@@ -757,7 +753,7 @@ export async function handleHonoQueueImportFollowingToDb(
 			),
 		]);
 	} catch {
-		// 元実装同様、行単位のエラーはログのみで処理を継続する
+		// 1行の失敗でインポート全体を中断しない。
 	}
 }
 
@@ -893,10 +889,7 @@ function serializeNoteForHonoApi(
 }
 
 /**
- * ExportNotesProcessorService.process 相当。
- * 元実装はWeb Streams API (NoteStream/JsonArrayStream/FileWriterStream) でメモリを
- * 抑えているが、他のexport系ポートと同じ「fs.createWriteStreamへの逐次write」方式でも
- * 同じくノート単位でストリーム書き込みされるため、メモリ特性を維持したまま簡潔に移植した。
+ * ノート単位で fs.createWriteStream へ逐次書き込みし、全件をメモリに保持しない。
  */
 export async function handleHonoQueueExportNotes(
 	deps: HonoQueueDbDependencies,
@@ -1078,7 +1071,7 @@ async function processClipsForHonoApi(
 		cursor = clips.at(-1)?.id ?? null;
 
 		for (const clip of clips) {
-			// Stringify but remove the last `]}`
+			// 文字列化するが、末尾の `]}` は除く。
 			const content = JSON.stringify(serializeClipForHonoApi(clip)).slice(0, -2);
 			const isFirst = exportedClipsCount === 0;
 			await writer.write(isFirst ? content : ',\n' + content);

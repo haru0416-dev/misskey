@@ -6,9 +6,6 @@
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 
-/**
- * Clipboard に文字列をコピーする。
- */
 export function copyToClipboard(input: string | null) {
 	if (input) {
 		navigator.clipboard.writeText(input);

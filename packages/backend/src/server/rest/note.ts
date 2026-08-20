@@ -392,10 +392,6 @@ function collectRenoteChainForHonoApi(note: Packed<'Note'>): Packed<'Note'>[] {
 	return renoteChain;
 }
 
-/**
- * NoteStreamingHidingService.filter 相当。ストリーミング配信用にノートの内容を隠す
- * (あるいはそもそも送信しない) 判定及び処理を行う。
- */
 export async function filterNoteForStreamingHidingForHonoApi(
 	deps: HonoApiNoteDependencies,
 	note: Packed<'Note'>,
@@ -501,7 +497,7 @@ type PackNoteChannel = NonNullable<Awaited<ReturnType<typeof fetchChannelByIdFro
 
 /**
  * packNoteManyForHonoApi が事前一括取得した結果。`noteIds` に含まれるノートについてのみ
- * 各 Map の内容を信頼してよい (含まれないノートは従来どおり個別取得にフォールバックする)。
+ * 各 Map の内容を信頼してよい。含まれないノートは個別取得にフォールバックする。
  */
 export type PackNoteBatchHint = {
 	noteIds: Set<MiNote['id']>;

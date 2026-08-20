@@ -261,7 +261,7 @@ describe('createFileServerApp', () => {
 			try {
 				fs.unlinkSync(filePath);
 			} catch {
-				// NOP
+				// 削除対象の状態にかかわらず、クリーンアップ中の全例外を後続処理のために無視する。
 			}
 		}
 		storedPaths.length = 0;

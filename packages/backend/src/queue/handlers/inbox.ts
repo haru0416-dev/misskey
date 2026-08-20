@@ -52,9 +52,8 @@ function collapseUpdateInstanceJobs(oldJob: UpdateInstanceJob, newJob: UpdateIns
 	};
 }
 
-// 元実装 (InboxProcessorService) 同様、プロセス内シングルトンの CollapsedQueue で
-// インスタンス更新をまとめて (5分間隔で) 反映する。deps は初回呼び出し時のものに固定されるが、
-// db/redis 等の実体は起動時から不変のため問題ない。
+// インスタンス更新はプロセス内シングルトンの CollapsedQueue でまとめて 5 分間隔で反映する。
+// deps は初回呼び出し時のものに固定されるが、db/redis 等の実体は起動時から不変である。
 let updateInstanceQueue: CollapsedQueue<string, UpdateInstanceJob> | undefined;
 
 function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueue<string, UpdateInstanceJob> {
@@ -81,7 +80,7 @@ function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueu
 	return updateInstanceQueue;
 }
 
-/** InboxProcessorService.dispose 相当。テストでの明示的なflush用。 */
+/** テストから更新キューを明示的にflushするために公開する。 */
 export async function flushHonoQueueInboxUpdateInstanceQueue(): Promise<void> {
 	await updateInstanceQueue?.performAllNow();
 }

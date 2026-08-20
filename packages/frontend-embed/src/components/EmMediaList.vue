@@ -66,7 +66,7 @@ const previewable = (file: Misskey.entities.DriveFile): boolean => {
 	&.n1 {
 		grid-template-rows: 1fr;
 
-		// default but fallback (expand)
+		// コンテナクエリが使えない場合の既定値
 		min-height: 64px;
 		max-height: clamp(
 			64px,
@@ -77,19 +77,19 @@ const previewable = (file: Misskey.entities.DriveFile): boolean => {
 		&.n116_9 {
 			min-height: initial;
 			max-height: initial;
-			aspect-ratio: 16 / 9; // fallback
+			aspect-ratio: 16 / 9; // コンテナクエリが使えない場合の比率
 		}
 
 		&.n11_1{
 			min-height: initial;
 			max-height: initial;
-			aspect-ratio: 1 / 1; // fallback
+			aspect-ratio: 1 / 1; // コンテナクエリが使えない場合の比率
 		}
 
 		&.n12_3 {
 			min-height: initial;
 			max-height: initial;
-			aspect-ratio: 2 / 3; // fallback
+			aspect-ratio: 2 / 3; // コンテナクエリが使えない場合の比率
 		}
 	}
 

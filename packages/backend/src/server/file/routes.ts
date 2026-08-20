@@ -217,9 +217,8 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		const redirect = createRedirectToOmitSearch(c, reply);
 		if (redirect) return redirect;
 
-		// app-default.jpg は元々独立した静的ルートだったが、同一セグメント位置での
-		// static ルートと :param ルートの共存は RegExpRouter 非対応で、その1ルートの
-		// せいでアプリ全体が TrieRouter へフォールバックするため、ここに統合した。
+		// static ルートと :param ルートを同じセグメント位置に置くと RegExpRouter 非対応のため、
+		// app-default.jpg をこのルートで処理してアプリ全体の TrieRouter フォールバックを避ける。
 		if (c.req.param('key') === 'app-default.jpg') {
 			reply.header('Content-Type', 'image/jpeg');
 			reply.header('Cache-Control', 'max-age=31536000, immutable');
@@ -242,10 +241,8 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		return await toResponse(null, reply, c.req.method);
 	});
 
-	// NOTE: 以前は `/proxy/:url{.*}` だったが、複数セグメントを跨ぐ正規表現パラメータは
-	// RegExpRouter 非対応で、SmartRouter がこの1ルートのためにアプリ全体 (500超ルート) を
-	// TrieRouter へフォールバックさせていた。ワイルドカードで受けてパスから自前で切り出す
-	// (percent-decode はパラメータ抽出と同じ挙動になるよう自前で行う)。
+	// 複数セグメントを跨ぐ正規表現パラメータは RegExpRouter 非対応のため、ワイルドカードで受けて
+	// パスから URL を切り出す。percent-decode はパラメータ抽出と同じ挙動になるよう自前で行う。
 	app.get('/proxy/*', async (c) => {
 		const reply = new HonoFileReply();
 		const rawUrl = c.req.path.slice('/proxy/'.length);
@@ -253,7 +250,7 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		try {
 			url = decodeURIComponent(rawUrl);
 		} catch {
-			// 不正なpercent-encodingはデコードせずそのまま扱う (旧パラメータ抽出と同じ寛容さ)
+			// 不正な percent-encoding はデコードせず、そのまま扱う。
 		}
 		const request = createFileServerRequest(c, { url });
 		const body = await proxyHandler

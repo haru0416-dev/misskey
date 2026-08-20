@@ -11,7 +11,6 @@ import { api, castAsError, post, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Block', () => {
-	// alice blocks bob
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 	let carol: misskey.entities.SignupResponse;

@@ -110,7 +110,7 @@ export const adminShowUsersParamDef = z.object({
 		.default('all'),
 	origin: z.enum(['combined', 'local', 'remote']).optional().default('combined'),
 	username: z.string().nullable().optional().default(null),
-	/** The local host is represented with `null`. */
+	/** ローカルホストは null で表す。 */
 	hostname: z.string().nullable().optional().default(null),
 });
 

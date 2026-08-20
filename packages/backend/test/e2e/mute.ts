@@ -11,7 +11,6 @@ import { api, post, react, signup, waitFire } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Mute', () => {
-	// alice mutes carol
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 	let carol: misskey.entities.SignupResponse;
@@ -22,7 +21,6 @@ describe('Mute', () => {
 			bob = await signup({ username: 'bob' });
 			carol = await signup({ username: 'carol' });
 
-			// Mute: alice ==> carol
 			await api(
 				'mute/create',
 				{

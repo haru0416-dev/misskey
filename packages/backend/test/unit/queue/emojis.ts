@@ -40,7 +40,6 @@ function fakeJob<T>(data: T): Bull.Job<T> {
 
 // カスタム絵文字export/importはDriveService.addFileのuploadableFileTypesチェックに
 // application/zipが含まれないため、モデレーターでない限り常に失敗する
-// (元実装のDriveService.addFileも同一のチェックを持つ — 絵文字管理自体が管理者限定機能であることに由来する)。
 // そのためテストユーザーには明示的にモデレーターロールを付与する。
 async function createModeratorTestUser(runtime: RuntimeDeps, prefix: string): Promise<MiUser> {
 	const id = genId();
