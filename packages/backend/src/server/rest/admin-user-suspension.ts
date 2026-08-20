@@ -248,7 +248,7 @@ async function changeSuspensionState(
 			} as Bull.Job<DbUserSuspensionPostEffectsJobData>);
 		});
 	} catch {
-		// The released row is picked up by the dispatcher on its next poll.
+		// 解放済みの outbox 行は次回のポーリングで再処理される。
 	}
 }
 

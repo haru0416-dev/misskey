@@ -125,7 +125,7 @@ export function attachHonoStreamServer(
 		reconnectRefreshPromise = (async () => {
 			do {
 				reconnectRefreshQueued = false;
-				// A reconnect observed during refresh requires one complete follow-up snapshot pass.
+				// 更新中に再接続した場合は、更新完了後にスナップショットをもう一度取得する。
 				// eslint-disable-next-line no-await-in-loop
 				await refreshHonoStreamConnections(activeConnections);
 			} while (reconnectRefreshQueued);

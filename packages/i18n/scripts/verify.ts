@@ -88,8 +88,6 @@ export async function loadBuiltLocales(): Promise<Record<string, LocaleRecord>> 
 	return locales as Record<string, LocaleRecord>;
 }
 
-// index.tsはtsのまま動かすことを想定していない（ビルド成果物を外部に公開する）.
-// よってビルド後のものを検証する
 if (import.meta.main) {
 	process.exitCode = runVerification(await loadBuiltLocales());
 }

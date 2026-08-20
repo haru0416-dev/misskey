@@ -98,7 +98,6 @@ async function postProcessDriveFileDeletion(
 		};
 	}
 
-	// リモートファイル期限切れ削除後は直リンクにする
 	const finalized = await deps.db.transaction(async (transaction) => {
 		if (isExpired && file.userHost !== null && file.uri != null) {
 			const replacementKeys = data.replacementKeys;
@@ -111,7 +110,6 @@ async function postProcessDriveFileDeletion(
 					thumbnailUrl: null,
 					webpublicUrl: null,
 					storedInternal: false,
-					// ローカルプロキシ用
 					accessKey: replacementKeys.accessKey,
 					thumbnailAccessKey: replacementKeys.thumbnailAccessKey,
 					webpublicAccessKey: replacementKeys.webpublicAccessKey,
@@ -250,7 +248,7 @@ export async function startDriveFileDeletion(
 			await postProcessDriveFileDeletion(txDeps, data, deleter);
 		});
 	} catch {
-		// The released row is picked up by the dispatcher on its next poll.
+		// 解放済みの outbox 行は次回のポーリングで再処理される。
 	}
 }
 

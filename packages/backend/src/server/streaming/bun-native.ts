@@ -37,9 +37,8 @@ function errorResponse(error: HonoApiError): Response {
  * ws パッケージの handleUpgrade パターンだと、同一プロセス内に他のソケット接続 (DB pool や
  * ioredis 等) が1つでもあるとレスポンスがクライアントに届かず永久にハングするバグを踏む
  * (bun 1.3.14 で確認、ws パッケージを完全に迂回した手書き101レスポンスでも再現)。
- * このハングは bun 1.4.0 で修正済み (最小再現で 1.3.14=ハング / 1.4.0=成功 を確認)。
- * それでも Bun.serve() のネイティブ websocket API の方が compat 層を経由せず速いため、
- * bun 実行時はこちらを使い続け、Node (テスト実行時) は server.ts の node:http 実装を使う。
+ * 最小再現では bun 1.3.14 がハングし、1.4.0 は成功した。Bun.serve() は compat 層を経由しないため、
+ * Bun 実行時はこちらを使い、Node 実行時は server.ts の node:http 実装を使う。
  */
 export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies, streamingPath = '/streaming') {
 	const globalEv = new EventEmitter();
@@ -57,7 +56,7 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 		reconnectRefreshPromise = (async () => {
 			do {
 				reconnectRefreshQueued = false;
-				// A reconnect observed during refresh requires one complete follow-up snapshot pass.
+				// 更新中に再接続した場合は、更新完了後にスナップショットをもう一度取得する。
 				// eslint-disable-next-line no-await-in-loop
 				await refreshHonoStreamConnections(activeConnections);
 			} while (reconnectRefreshQueued);

@@ -3,11 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// かつては Bun 上で vitest を実行すると外部化された zod の ESM interop 解析に失敗して
-// 全テストファイルが即死したため、本物の Node.js へ respawn していた (respawn_with_node.js)。
-// vitest.config.ts の `server.deps.inline: ['zod']` で回避できると分かったため respawn は
-// 撤去し、vitest は起動元のランタイム (通常は `bun run --bun` 経由の Bun) でそのまま動かす。
-// Bun 実行時は DB ドライバも本番同様 Bun.sql が選ばれる (src/runtime-dependencies.ts)。
+// Bun.sql 経路を検証するため、vitest は起動元の Bun ランタイムで動かす。
+// zod は vitest.config.ts で Vite の変換対象に含める必要がある。
 
 import { execa } from 'execa';
 

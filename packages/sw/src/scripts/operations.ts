@@ -97,7 +97,7 @@ export async function openClient(order: SwMessageOrderType, url: string, loginId
 			client.postMessage({ type: 'order', ...query, order, ...(loginId === undefined ? {} : { loginId }), url } satisfies SwMessage);
 			return client;
 		} catch {
-			// The client may have closed after matchAll(). Open a fresh window instead.
+			// matchAll() の完了後に閉じられたクライアントは再利用できない。
 		}
 	}
 

@@ -3,13 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// かつては (1) Bun 上の vitest が zod の ESM interop で全滅するため Node.js へ respawn し、
-// (2) 実行順の決定性のためソート済みファイルを明示引数で渡していた。
-// (1) は vitest.config.ts の `server.deps.inline: ['zod']` で解消し、(2) は
-// vitest.config.e2e.ts の AlphabeticalSequencer に移した (bun では多数のファイル引数を
-// 渡すと vitest が起動後にハングするため、include glob + sequencer 方式が必須)。
-// vitest は起動元のランタイム (通常は `bun run --bun` 経由の Bun) でそのまま動く。
-// Bun 実行時はテスト対象アプリの DB ドライバも本番同様 Bun.sql が選ばれる。
+// Bun.sql 経路を検証するため、vitest とテスト対象アプリは起動元の Bun ランタイムで動かす。
+// 多数のファイル引数を渡すと Bun 上の vitest が起動後にハングするため、対象と順序は
+// vitest.config.e2e.ts の include と AlphabeticalSequencer で固定する。
 
 import { execa } from 'execa';
 

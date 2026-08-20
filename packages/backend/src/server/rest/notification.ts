@@ -176,8 +176,8 @@ export async function resolveNotificationStreamId(
 	const canonicalId = toXListId(notificationId);
 	if ((await deps.redis.xrange(key, canonicalId, canonicalId)).length > 0) return canonicalId;
 
-	// Delayed durable retries may be appended with a generated stream ID. The stream is MAXLEN-bounded,
-	// so resolving the API-visible notification ID with a bounded scan is preferable to losing deletion/pagination.
+	// 遅延再試行では自動生成 ID が付く場合がある。ストリームは MAXLEN 制限済みなので、
+	// API 上の通知 ID を全走査しても探索量は制限内に収まる。
 	const entries = await deps.redis.xrevrange(key, '+', '-');
 	for (const [streamId, fields] of entries) {
 		const dataIndex = fields.indexOf('data');
@@ -186,7 +186,7 @@ export async function resolveNotificationStreamId(
 		try {
 			if ((JSON.parse(data) as { id?: unknown }).id === notificationId) return streamId;
 		} catch {
-			// Ignore malformed legacy entries and continue looking for the requested notification.
+			// 不正な既存エントリがあっても、対象通知の探索は継続する。
 		}
 	}
 	return canonicalId;
