@@ -12,9 +12,7 @@ import Chart from '../core.js';
 import { name, schema } from './entities/test.js';
 import type { KVs } from '../core.js';
 
-/**
- * For testing
- */
+/** テスト用の Chart。 */
 export default class TestChart extends Chart<typeof schema> {
 	public total = 0; // publicにするのはテストのため
 

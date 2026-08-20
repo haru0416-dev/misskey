@@ -12,9 +12,7 @@ import Chart from '../core.js';
 import { name, schema } from './entities/test-unique.js';
 import type { KVs } from '../core.js';
 
-/**
- * For testing
- */
+/** テスト用の Chart。 */
 export default class TestUniqueChart extends Chart<typeof schema> {
 	constructor(
 		private db: MiDrizzleDatabase,
