@@ -16,10 +16,13 @@ class FakeWebSocket {
 	}
 
 	public send(data: string): void {
+		if (this.readyState !== 1) throw new Error(`send while socket state is ${this.readyState}`);
 		this.sent.push(data);
 	}
 
-	public close(): void {}
+	public close(): void {
+		this.readyState = 2;
+	}
 
 	public open(): void {
 		this.readyState = 1;
@@ -54,6 +57,48 @@ describe('ReconnectingWebSocket', () => {
 		ws.open();
 
 		expect(ws.sent).toEqual([halfLimit, halfLimit]);
+		socket.close();
+	});
+
+	test('sends messages from open listeners before flushing the offline queue', () => {
+		FakeWebSocket.instances = [];
+		const socket = new ReconnectingWebSocket('wss://example.test', undefined, { WebSocket: FakeWebSocket });
+		const ws = FakeWebSocket.instances[0]!;
+
+		socket.send('normal-1');
+		socket.send('normal-2');
+		socket.addEventListener('open', () => {
+			socket.send('open-1');
+			socket.send('open-2');
+		});
+		ws.open();
+
+		expect(ws.sent).toEqual(['open-1', 'open-2', 'normal-1', 'normal-2']);
+		socket.close();
+	});
+
+	test('does not flush queued messages when an open listener closes the socket', () => {
+		FakeWebSocket.instances = [];
+		const socket = new ReconnectingWebSocket('wss://example.test', undefined, { WebSocket: FakeWebSocket });
+		const ws = FakeWebSocket.instances[0]!;
+		socket.send('queued');
+		socket.addEventListener('open', () => socket.close());
+
+		expect(() => ws.open()).not.toThrow();
+		expect(ws.sent).toEqual([]);
+	});
+
+	test('flushes queued messages before rethrowing an open listener error', () => {
+		FakeWebSocket.instances = [];
+		const socket = new ReconnectingWebSocket('wss://example.test', undefined, { WebSocket: FakeWebSocket });
+		const ws = FakeWebSocket.instances[0]!;
+		socket.send('queued');
+		socket.addEventListener('open', () => {
+			throw new Error('listener failed');
+		});
+
+		expect(() => ws.open()).toThrow('listener failed');
+		expect(ws.sent).toEqual(['queued']);
 		socket.close();
 	});
 });
