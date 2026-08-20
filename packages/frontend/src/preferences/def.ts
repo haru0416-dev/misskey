@@ -16,7 +16,7 @@ import type { DeckProfile } from '@/deck.js';
 import type { WatermarkPreset } from '@/features/image-editor/watermark/WatermarkRenderer.js';
 import type { ImageFramePreset } from '@/features/image-editor/frame/ImageFrameRenderer.js';
 import { genId } from '@/utility/id.js';
-import { DEFAULT_DEVICE_KIND } from '@/utility/device-kind.js';
+import { deviceKind } from '@/utility/device-kind.js';
 import { deepEqual } from '@/utility/deep-equal.js';
 import type { SearchEngine } from '@/features/search/search-engine.js';
 
@@ -414,7 +414,7 @@ export const PREF_DEF = definePreferences({
 		default: false,
 	},
 	makeEveryTextElementsSelectable: {
-		default: DEFAULT_DEVICE_KIND === 'desktop',
+		default: deviceKind === 'desktop',
 	},
 	showNavbarSubButtons: {
 		default: true,

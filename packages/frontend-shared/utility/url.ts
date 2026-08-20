@@ -35,6 +35,10 @@ export function tryParseUrl(url: string | URL, base?: string | URL): URL | null 
 	}
 }
 
+export function isSameOrigin(url: string | URL, base: string | URL): boolean {
+	return new URL(url, base).origin === new URL(base).origin;
+}
+
 export function maybeMakeRelative(urlStr: string, baseStr: string): string {
 	try {
 		const baseObj = new URL(baseStr);
