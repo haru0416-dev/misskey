@@ -69,7 +69,7 @@ globalThis.addEventListener('install', (ev) => {
 		ev.addRoutes({
 			condition: {
 				// doc: https://developer.mozilla.org/ja/docs/Web/API/URLPattern
-				// @ts-expect-error 実験的なAPIなので型定義がない
+				// @ts-ignore 実験的なAPIなので実行環境と型定義の対応状況が一致しない
 				urlPattern: new URLPattern({}),
 			},
 			source: 'fetch-event',
@@ -211,10 +211,15 @@ globalThis.addEventListener('notificationclick', (ev: ServiceWorkerGlobalScopeEv
 				}
 		}
 
-		if (client) {
-			client.focus();
+		try {
+			if (client) {
+				await client.focus();
+			}
+		} catch (error) {
+			if (_DEV_) console.warn('notification client focus failed', error);
+		} finally {
+			notification.close();
 		}
-		notification.close();
 	})());
 });
 
@@ -231,13 +236,13 @@ globalThis.addEventListener('message', (ev: ServiceWorkerGlobalScopeEventMap['me
 				return; // TODO
 		}
 
-		if (typeof ev.data === 'object') {
+		if (typeof ev.data === 'object' && ev.data !== null) {
 			// E.g. '[object Array]' → 'array'
 			const otype = Object.prototype.toString.call(ev.data).slice(8, -1).toLowerCase();
 
 			if (otype === 'object') {
-				if (ev.data.msg === 'initialize') {
-					swLang.setLang(ev.data.lang);
+				if (ev.data.msg === 'initialize' && typeof ev.data.lang === 'string' && ev.data.lang.length > 0) {
+					await swLang.setLang(ev.data.lang);
 				}
 			}
 		}
