@@ -279,8 +279,9 @@ async function launchHonoServerWithDependencies(
 
 	// bun ランタイムの node:http compat 層は 'upgrade' イベントで生ソケットに書き込むパターンだと
 	// 同一プロセス内に他のソケット接続 (DB pool / ioredis 等) があるとレスポンスがクライアントに
-	// 届かず永久にハングするバグがある (bun 1.3.14 で確認済み)。Bun.serve() のネイティブ websocket
-	// API はこの経路を通らないため、bun 実行時のみこちらを使う。詳細は streaming/bun-native.ts 参照。
+	// 届かず永久にハングするバグがあった (bun 1.3.14 で確認、1.4.0 で修正済み)。修正後も compat 層を
+	// 経由しない Bun.serve() ネイティブ websocket の方が有利なため、bun 実行時はこちらを使い続ける。
+	// 詳細は streaming/bun-native.ts 参照。
 	if (typeof Bun !== 'undefined') {
 		const streamRuntime = createBunNativeStreamRuntime(streamDeps);
 		disposers.push(() => streamRuntime.dispose());

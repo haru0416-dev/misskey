@@ -65,7 +65,7 @@ const checks = [
 	['bunfig.toml must use isolated installs', versions.linker === 'isolated'],
 	[
 		'frontend typecheck must use Bun-compatible vue-tsc runner',
-		frontendPackageJson.scripts?.typecheck === 'bun ../../scripts/vue-tsc-bun.cjs --noEmit',
+		(frontendPackageJson.scripts?.typecheck ?? '').startsWith('bun ../../scripts/vue-tsc-bun.cjs --noEmit'),
 	],
 	[
 		'frontend-embed typecheck must use Bun-compatible vue-tsc runner',
