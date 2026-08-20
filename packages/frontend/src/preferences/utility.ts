@@ -194,7 +194,6 @@ export async function deleteCloudBackup(key: string) {
 export async function restoreFromCloudBackup() {
 	if ($i == null) return;
 
-	// TODO: 更新日時でソートしたい
 	const backups = await listCloudBackups();
 
 	if (backups.length === 0) {

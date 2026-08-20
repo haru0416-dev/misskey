@@ -7,7 +7,7 @@ import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 
 /**
- * Clipboardに値をコピー(TODO: 文字列以外も対応)
+ * Clipboard に文字列をコピーする。
  */
 export function copyToClipboard(input: string | null) {
 	if (input) {

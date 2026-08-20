@@ -20,8 +20,8 @@ export function useHeightTransition(options: HeightTransitionOptions = {}) {
 	function enter(el: Element) {
 		if (!(el instanceof HTMLElement)) return;
 
-		// 中断されたleaveが残したインラインheightを掃除してから自然高さを測る
-		// (これが残っていると clip された高さ (≈0) を自然高さとして採寸してしまう)
+		// 中断されたleaveが残したインラインheightを除去してから自然高さを測る。
+		// 残ったheightを測ると、折りたたまれた高さを自然高さとして扱ってしまう。
 		el.style.height = '';
 		const elementHeight = el.getBoundingClientRect().height;
 		const maxHeight = options.maxHeight?.() ?? Infinity;

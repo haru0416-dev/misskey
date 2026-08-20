@@ -29,7 +29,7 @@ export type ImageFrameParams = {
 	bgColor: [r: number, g: number, b: number];
 	fgColor: [r: number, g: number, b: number];
 	font: 'serif' | 'sans-serif';
-	borderRadius: number; // TODO
+	borderRadius: number;
 };
 
 export type ImageFramePreset = {

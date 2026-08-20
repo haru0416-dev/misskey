@@ -136,7 +136,7 @@ async function enter(el: Element) {
 	const elementWidth = el.getBoundingClientRect().width;
 	el.style.width = '0';
 	el.style.paddingLeft = '0';
-	el.offsetWidth; // reflow
+		el.offsetWidth; // スタイル変更を反映するため reflow を発生させる。
 	el.style.width = `${elementWidth}px`;
 	el.style.paddingLeft = '';
 	nextTick(() => {
@@ -155,7 +155,7 @@ async function leave(el: Element) {
 	const elementWidth = el.getBoundingClientRect().width;
 	el.style.width = `${elementWidth}px`;
 	el.style.paddingLeft = '';
-	el.offsetWidth; // reflow
+	el.offsetWidth; // スタイル変更を反映するため reflow を発生させる。
 	el.style.width = '0';
 	el.style.paddingLeft = '0';
 }

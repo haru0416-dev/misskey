@@ -118,7 +118,6 @@ function copy() {
 }
 
 function paste() {
-	// TODO: validate
 	navigator.clipboard.readText().then(text => {
 		emojis.value = text.split(' ');
 	});

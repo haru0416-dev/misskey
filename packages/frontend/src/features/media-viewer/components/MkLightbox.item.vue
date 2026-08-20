@@ -184,7 +184,6 @@ const props = withDefaults(defineProps<{ content: LightboxContent; activated: bo
 const emit = defineEmits<{ (ev: 'close'): void; (ev: 'horizontalSwipe', offset: number): void; (ev: 'next'): void; (ev: 'prev'): void; (ev: 'cancelHorizontalSwipe'): void }>();
 
 // 前後のコンテンツへ移動しても設定が続くように、状態は親 (MkLightbox) 側に置く
-// TODO: ドライブファイルの properties にピクセルアートかどうかを持たせ、既定値をそこから決める
 const pixelatedZoom = defineModel<boolean>('pixelatedZoom', { required: true });
 
 const rootEl = useTemplateRef('rootEl');

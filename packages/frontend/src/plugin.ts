@@ -274,7 +274,7 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 	const plugin = prefer.plugins.find((x) => x.installId === id);
 	if (!plugin) return;
 
-	// 後方互換性のため
+	// 旧形式のプラグイン API 名を維持する。
 	if (plugin.src == null) return;
 
 	pluginLogs.value.set(plugin.installId, []);
@@ -316,7 +316,7 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 					message: `${err}`,
 					isError: true,
 				});
-				throw err; // install時のtry-catchに反応させる
+				throw err; // インストール側の try-catch で処理する。
 			},
 		},
 	);
@@ -499,7 +499,7 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 		'Plugin:config': values.OBJ(config),
 	};
 
-	// 後方互換性のため
+	// 旧形式のプラグイン API 名を維持する。
 	const compatibilityAliases = [
 		['Plugin:register_post_form_action', 'Plugin:register:post_form_action'],
 		['Plugin:register_user_action', 'Plugin:register:user_action'],

@@ -90,7 +90,7 @@ body,
 }
 
 body {
-	/* NOTE: htmlにも overflow: clip を設定したいところだが、設定すると何故か少なくともChromeで html が main thread scrolling になりパフォーマンスが(多分)落ちる */
+	/* html に overflow: clip を設定すると Chrome で main thread scrolling になり、スクロール性能が低下する。 */
 	overflow: clip;
 }
 
@@ -156,12 +156,11 @@ rt {
 	text-align: center;
 }
 
-/* TODO: 引数は現在CSS変数経由で受け取っているが、将来的にはattr()を使った方が綺麗そう */
 ._spacer {
 	width: 100%;
 	max-width: min(var(--MI_SPACER-w, 100%), calc(100% - (var(--MI_SPACER-max, 24px) * 2)));
 
-	/* marginを使って余白を表現すると、margin特有の親突き抜け仕様などが厄介になってくるので上下はpaddingを使う */
+	/* margin の包含規則を避けるため、上下の余白は padding で指定する。 */
 	padding: var(--MI_SPACER-max, 24px) 0;
 	margin: 0 auto;
 
@@ -199,12 +198,7 @@ rt {
 	overflow-y: scroll;
 	overscroll-behavior: contain;
 
-	/*
-	理屈は知らないけど、ここでbackgroundを設定しておかないと
-	スクロールコンテナーが少なくともChromeにおいて
-	main thread scrolling になってしまい、パフォーマンスが(多分)落ちる。
-	backgroundが透明だと裏側を描画しないといけなくなるとかそういう理由かもしれない
-	*/
+	/* Chrome で main thread scrolling になるのを避けるため、背景色を設定する。 */
 	background: var(--MI_THEME-bg);
 }
 
@@ -604,11 +598,11 @@ rt {
 	font-size: var(--mfm-zoom-size);
 
 	.mfm-x2, .mfm-x3, .mfm-x4 {
-		/* only half effective */
+		/* 入れ子の拡大率は半分だけ適用する。 */
 		font-size: calc(var(--mfm-zoom-size) / 2 + 50%);
 
 		.mfm-x2, .mfm-x3, .mfm-x4 {
-			/* disabled */
+			/* これ以上の入れ子では拡大しない。 */
 			font-size: 100%;
 		}
 	}

@@ -71,12 +71,12 @@ export type CompleteInfo = {
 		payload: string;
 		query: string;
 	},
-	// `:emo` -> `:emoji:` or some unicode emoji
+	// `:emo` から `:emoji:` または Unicode 絵文字を補完する。
 	emoji: {
 		payload: string;
 		query: string;
 	},
-	// like emoji but for `:emoji:` -> unicode emoji
+	// `:emoji:` から Unicode 絵文字を補完する。
 	emojiComplete: {
 		payload: string;
 		query: string;
@@ -166,14 +166,13 @@ export default {
 type PropsType<T extends keyof CompleteInfo> = {
 	type: T;
 	q: CompleteInfo[T]['query'];
-	// なぜかわからないけど HTMLTextAreaElement | HTMLInputElement だと addEventListener/removeEventListenerがエラー
+	// union 型のままでは addEventListener/removeEventListener の呼び出しで型エラーになるため、HTMLElement と交差させる。
 	textarea: (HTMLTextAreaElement | HTMLInputElement) & HTMLElement;
 	close: () => void;
 	x: number;
 	y: number;
 };
-//const props = defineProps<PropsType<keyof CompleteInfo>>();
-// ↑と同じだけど↓にしないとdiscriminated unionにならない。
+
 // https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes-func.html#discriminated-unions
 const props = defineProps<PropsType<'user'> | PropsType<'hashtag'> | PropsType<'emoji'> | PropsType<'emojiComplete'> | PropsType<'mfmTag'> | PropsType<'mfmParam'>>();
 

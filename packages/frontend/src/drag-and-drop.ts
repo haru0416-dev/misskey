@@ -35,7 +35,7 @@ const dragDataValidators = {
 	},
 };
 
-// NOTE: dataTransfer の format は大文字小文字区別されないっぽいので toLowerCase が必要
+// DataTransfer の形式名は大文字小文字を区別しないため、読み書きで小文字に統一する。
 
 export function setDragData<T extends keyof DragDataMap>(event: DragEvent, type: T, data: DragDataMap[T]) {
 	if (event.dataTransfer == null) return;

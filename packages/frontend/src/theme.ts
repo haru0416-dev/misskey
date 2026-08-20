@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// TODO: (可能な部分を)sharedに抽出して frontend-embed と共通化
-
 import { ref, nextTick } from 'vue';
 import { EventEmitter } from 'eventemitter3';
 import { version } from '@shared/utility/config.js';
@@ -62,16 +60,14 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 
 	/** テーマを更新し、同時に適用します。 */
 	public updateTheme(newTheme: Theme) {
-		if (newTheme.id === this.theme?.id && version === miLocalStorage.getItem('themeCachedVersion')) return; // 変更なし
+		if (newTheme.id === this.theme?.id && version === miLocalStorage.getItem('themeCachedVersion')) return;
 
 		this.isPreviewMode = false;
 
-		// テーマを更新
 		this._theme = deepClone(newTheme);
 		const compiled = this.compile(newTheme);
 		this._compiledTheme = compiled;
 
-		// 適用中のテーマも更新
 		this._currentTheme = deepClone(this.theme);
 		this._currentCompiledTheme = deepClone(compiled);
 
@@ -82,7 +78,6 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 	public previewTheme(theme: Theme) {
 		this.isPreviewMode = true;
 
-		// 適用中のテーマを更新
 		this._currentTheme = deepClone(theme);
 		this._currentCompiledTheme = this.compile(theme);
 
@@ -93,7 +88,6 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 	public clearPreview() {
 		this.isPreviewMode = false;
 
-		// 適用中のテーマを常用しているテーマに戻す
 		this._currentTheme = deepClone(this.theme);
 		this._currentCompiledTheme = deepClone(this.compiledTheme);
 
@@ -108,8 +102,7 @@ class ThemeManager extends EventEmitter<ThemeManagerEvents> {
 	private applyTheme() {
 		if (this.currentTheme == null || this.currentCompiledTheme == null) return;
 
-		// visibilityStateがhiddenな状態でstartViewTransitionするとブラウザによってはエラーになる
-		// 通常hiddenな時に呼ばれることはないが、iOSのPWAだとアプリ切り替え時に(何故か)hiddenな状態で(何故か)一瞬デバイスのダークモード判定が変わりapplyThemeが呼ばれる場合がある
+		// hidden 中の startViewTransition はブラウザによって失敗するため、visible のときだけ使用する。
 		if (window.document.startViewTransition != null && window.document.visibilityState === 'visible') {
 			window.document.documentElement.classList.add('_themeChanging_');
 			const finish = () => {

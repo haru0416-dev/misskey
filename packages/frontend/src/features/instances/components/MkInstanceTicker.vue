@@ -38,7 +38,7 @@ const props = withDefaults(defineProps<{
 	displayMode: 'normal',
 });
 
-// if no instance data is given, this is for the local instance
+// instance がない場合はローカルインスタンスを表示する。
 const instanceName = computed(() => props.host == null ? localInstanceName : props.instance?.name ?? props.host);
 
 const faviconUrl = computed(() => {

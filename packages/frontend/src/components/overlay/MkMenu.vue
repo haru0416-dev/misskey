@@ -306,7 +306,7 @@ watch(() => props.items, () => {
 		const item = items[i];
 		if (item == null) continue;
 
-		if ('then' in item) { // if item is Promise
+		if ('then' in item) {
 			items[i] = { type: 'pending' };
 			item.then(actualItem => {
 				if (items2.value?.[i]) items2.value[i] = actualItem;
@@ -405,7 +405,6 @@ async function showChildren(item: MenuParent, ev: MouseEvent | PointerEvent | Ke
 		emit('hide');
 	} else {
 		childTarget.value = (ev.currentTarget ?? ev.target) as HTMLElement;
-		// これでもリアクティビティは保たれる
 		childMenu.value = children;
 		childMenuKey.value++;
 		childShowingItem.value = item;
@@ -521,7 +520,7 @@ const guard = reactive({
 const guardPolygon = computed(() =>
 	guard.enabled
 		? guard.direction === 'toRight'
-			? `polygon(${guard.cursorSideX}px ${guard.cursorSideY}px, 101% ${guard.childSideTopY}px, 101% ${guard.childSideBottomY}px)` // ぴったり端に100%で覆ってもなぜか端でカーソルのイベントが後ろに貫通するので1%だけ伸ばす
+			? `polygon(${guard.cursorSideX}px ${guard.cursorSideY}px, 101% ${guard.childSideTopY}px, 101% ${guard.childSideBottomY}px)` // 100% では端のポインターイベントが背後へ抜けるため 1% 余分に広げる。
 			: `polygon(0% ${guard.childSideTopY}px, 0% ${guard.childSideBottomY}px, ${guard.cursorSideX}px ${guard.cursorSideY}px)`
 		: 'polygon(0 0, 0 0, 0 0)',
 );

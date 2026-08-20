@@ -82,7 +82,7 @@ function touchStart(event: TouchEvent) {
 	if (touch == null) return;
 	startScreenX = touch.screenX;
 	startScreenY = touch.screenY;
-	swipeDirectionLocked = null; // スワイプ方向をリセット
+	swipeDirectionLocked = null;
 }
 
 function touchMove(event: TouchEvent) {
@@ -101,7 +101,6 @@ function touchMove(event: TouchEvent) {
 	let distanceX = touch.screenX - startScreenX;
 	let distanceY = touch.screenY - startScreenY;
 
-	// スワイプ方向をロック
 	if (!swipeDirectionLocked) {
 		const angle = Math.abs(Math.atan2(distanceY, distanceX) * (180 / Math.PI));
 		if (angle > 90 - SWIPE_DIRECTION_ANGLE_THRESHOLD && angle < 90 + SWIPE_DIRECTION_ANGLE_THRESHOLD) {
@@ -111,7 +110,6 @@ function touchMove(event: TouchEvent) {
 		}
 	}
 
-	// 縦方向のスワイプの場合は中断
 	if (swipeDirectionLocked === 'vertical') {
 		swipeAborted = true;
 		pullDistance.value = 0;
@@ -138,7 +136,7 @@ function touchMove(event: TouchEvent) {
 	isSwiping.value = true;
 	isSwipingForClass.value = true;
 	nextTick(() => {
-		// グリッチを控えるため、1.5px以上の差がないと更新しない
+		// 1.5px 未満の差では再描画しない。
 		if (Math.abs(distanceX - pullDistance.value) < 1.5) return;
 		pullDistance.value = distanceX;
 	});
@@ -186,10 +184,9 @@ function touchEnd(event: TouchEvent) {
 		isSwipingForClass.value = false;
 	}, 400);
 
-	swipeDirectionLocked = null; // スワイプ方向をリセット
+	swipeDirectionLocked = null;
 }
 
-/** 横スワイプに関与する可能性のある要素を調べる */
 function hasSomethingToDoWithXSwipe(el: HTMLElement) {
 	if (['INPUT', 'TEXTAREA'].includes(el.tagName)) return true;
 	if (el.isContentEditable) return true;

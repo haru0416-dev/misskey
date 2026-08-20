@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<span ref="el" style="display: inline-block;">
 		<slot></slot>
 	</span>
-	<!-- なぜか path に対する key が機能しないため
+	<!-- path の key が安定しないため未使用。
 	<svg :width="width" :height="height" :viewBox="`0 0 ${width} ${height}`" xmlns="http://www.w3.org/2000/svg">
 		<path v-for="particle in particles" :key="particle.id" style="transform-origin: center; transform-box: fill-box;"
 			:transform="`translate(${particle.x} ${particle.y})`"

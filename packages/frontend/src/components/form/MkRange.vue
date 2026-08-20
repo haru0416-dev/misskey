@@ -192,7 +192,7 @@ function onMouseenter() {
 let lastClickTime: number | null = null;
 
 function onMousedown(ev: MouseEvent | TouchEvent) {
-	if (props.disabled) return; // Prevent interaction if disabled
+	if (props.disabled) return;
 
 	ev.preventDefault();
 

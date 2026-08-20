@@ -142,9 +142,7 @@ const bgSame = ref(false);
 const opened = ref(asPage ? false : props.defaultOpen);
 const openedAtLeastOnce = ref(opened.value);
 
-// 高さはインラインstyleで常にJS駆動する (MkContainer/MkFoldableSectionと同一パス)。
-// CSSクラス (enterFrom等) 頼みの開始状態はペイントタイミング次第で1フレーム全高が見える
-// レースがあるため、interpolate-size対応ブラウザでもJS側で駆動する
+// CSS クラスだけではペイントのタイミングによって全高が一瞬表示されるため、高さは常に JS で指定する。
 const { enter, afterEnter, leave, afterLeave } = useHeightTransition({
 	maxHeight: () => props.maxHeight,
 });
@@ -203,10 +201,8 @@ watch(opened, (isOpened) => {
 <style lang="scss" module>
 .transition_toggle_enterActive,
 .transition_toggle_leaveActive {
-	// overflow-y: hidden はスクロールコンテナを作るため、アニメーション中だけ子孫のsticky header
-	// (入れ子のMkFolderヘッダー等) の吸着基準がこのwrapperに切り替わり、ヘッダーが下方向へ
-	// 押し出されて終了時にカクっと戻る。clip はスクロールコンテナを作らないのでこれを防げる。
-	// clip 単体だと子要素のmarginが突き抜けるため flow-root でBFCを作って抑える (hiddenと同じ包含挙動)
+	// hidden はスクロールコンテナを作って sticky header の基準を変えるため使用しない。
+	// clip だけでは子要素の margin が外側へ出るため、flow-root で BFC を作る。
 	overflow-y: clip;
 	display: flow-root;
 	transition: opacity 0.3s, height 0.3s;

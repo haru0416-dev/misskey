@@ -170,9 +170,7 @@ type Options<T extends AsUiComponent> = T extends AsUiButtons
 	? WithExplicitUndefined<Omit<T, 'id' | 'type' | 'buttons'>> & { buttons: Options<AsUiButton>[] }
 	: WithExplicitUndefined<Omit<T, 'id' | 'type'>>;
 
-function patch(id: string, def: values.Value, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>) {
-	// TODO: AiScriptのUi:patchで指定されたコンポーネント定義を反映する
-}
+function patch(id: string, def: values.Value, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>) {}
 
 function getRootOptions(def: values.Value | undefined): Options<AsUiRoot> {
 	utils.assertObject(def);
@@ -648,8 +646,6 @@ export function registerAsUiLib(components: Ref<AsUiComponent>[], done: (root: R
 		'Ui:patch': values.FN_NATIVE(([id, val], opts) => {
 			utils.assertString(id);
 			utils.assertArray(val);
-			// TODO: patchの実装後にAiScriptからの呼び出しを有効化する
-			// patch(id.value, val.value, opts.call);
 		}),
 
 		'Ui:get': values.FN_NATIVE(([id], opts) => {
@@ -662,7 +658,6 @@ export function registerAsUiLib(components: Ref<AsUiComponent>[], done: (root: R
 			}
 		}),
 
-		// Ui:root.update({ children: [...] }) の糖衣構文
 		'Ui:render': values.FN_NATIVE(([children], opts) => {
 			utils.assertArray(children);
 

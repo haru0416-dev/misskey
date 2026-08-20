@@ -116,8 +116,7 @@ function onLoad() {
 }
 
 function checkAlreadyLoaded() {
-	// srcが同一URLの他要素で既にブラウザキャッシュ済みの場合、loadイベントが発火しないことがあるため、
-	// complete状態を能動的にチェックする
+	// 同一 URL がキャッシュ済みだと load が発火しない場合があるため、complete も確認する。
 	if (imgSrc.value != null && img.value?.complete) {
 		onLoad();
 	}

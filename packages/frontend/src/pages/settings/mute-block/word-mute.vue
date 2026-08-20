@@ -47,27 +47,27 @@ watch(mutedWords, () => {
 
 async function save() {
 	const parseMutes = (mutes: string) => {
-		// split into lines, remove empty lines and unnecessary whitespace
+		// 行に分割し、空行と不要な空白を除く。
 		let lines = mutes.trim().split('\n').map(line => line.trim()).filter(line => line !== '') as (string | string[])[];
 
-		// check each line if it is a RegExp or not
+		// 各行が正規表現かどうかを確認する。
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i] as string;
 			const regexp = line.match(/^\/(.+)\/(.*)$/);
 			if (regexp) {
-				// check that the RegExp is valid
+				// 正規表現として解釈できることを確認する。
 				try {
 					// 正規表現として妥当かどうかだけを見る (不正なら throw する)
-					// note that regex lines will not be split by spaces!
+					// 正規表現の行は空白で分割しない。
 					void new RegExp(regexp[1] ?? '', regexp[2] ?? '');
 				} catch (err) {
-					// invalid syntax: do not save, do not reset changed flag
+					// 構文が不正な場合は保存せず、変更状態も維持する。
 					os.alert({
 						type: 'error',
 						title: i18n.ts.regexpError,
 						text: i18n.tsx.regexpErrorDescription({ tab: 'word mute', line: i + 1 }) + '\n' + String(err),
 					});
-					// re-throw error so these invalid settings are not saved
+					// 不正な設定を保存しないため、エラーを再送出する。
 					throw err;
 				}
 			} else {
