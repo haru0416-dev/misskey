@@ -13,7 +13,7 @@ import type { Locale } from 'i18n';
 
 export const MISSKEY_CACHE_PREFIX = 'mk-cache-';
 
-class SwLang {
+export class SwLang {
 	public cacheName = `${MISSKEY_CACHE_PREFIX}${_VERSION_}`;
 
 	public lang: Promise<string> = get('lang').then(async prelang => {
@@ -21,10 +21,14 @@ class SwLang {
 		return prelang;
 	});
 
-	public setLang(newLang: string): Promise<I18n<Locale>> {
+	public async setLang(newLang: string): Promise<I18n<Locale>> {
 		this.lang = Promise.resolve(newLang);
-		set('lang', newLang);
-		return this.fetchLocale();
+		try {
+			await set('lang', newLang);
+		} catch (error) {
+			if (_DEV_) console.warn('language persistence failed', error);
+		}
+		return await this.fetchLocale();
 	}
 
 	public i18n: Promise<I18n<Locale>> | null = null;
@@ -51,7 +55,11 @@ class SwLang {
 				const clone = localeRes.clone();
 				if (!clone.clone().ok) throw new Error('locale fetching error');
 
-				caches.open(this.cacheName).then(cache => cache.put(localeUrl, clone));
+				try {
+					await caches.open(this.cacheName).then(cache => cache.put(localeUrl, clone));
+				} catch (error) {
+					if (_DEV_) console.warn('locale cache write failed', error);
+				}
 			} finally {
 				globalThis.clearTimeout(timeout);
 			}

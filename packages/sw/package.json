@@ -4,7 +4,8 @@
 	"scripts": {
 		"watch": "bun build.js watch",
 		"build": "bun build.js",
-		"typecheck": "tsgo --noEmit",
+		"test": "vitest run",
+		"typecheck": "tsgo --noEmit && tsgo -p tsconfig.test.json --noEmit",
 		"lint": "bun run --bun typecheck"
 	},
 	"dependencies": {
@@ -15,7 +16,9 @@
 	},
 	"devDependencies": {
 		"@typescript/lib-webworker": "npm:@types/serviceworker@0.0.74",
-		"esbuild": "0.28.1"
+		"@types/node": "26.0.1",
+		"esbuild": "0.28.1",
+		"vitest": "4.1.9"
 	},
 	"type": "module"
 }
