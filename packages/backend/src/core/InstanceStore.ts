@@ -33,6 +33,22 @@ export async function createInstanceInDatabase(db: MiDrizzleDatabase, values: In
 	return deserializeInstance(row);
 }
 
+export async function createInstanceIfNotExistsInDatabase(
+	db: MiDrizzleDatabase,
+	values: InstanceInsert,
+): Promise<MiInstance> {
+	const [inserted] = await db
+		.insert(instance)
+		.values(values)
+		.onConflictDoNothing({ target: instance.host })
+		.returning();
+	if (inserted != null) return deserializeInstance(inserted);
+
+	const existing = await fetchInstanceByHostFromDatabase(db, values.host);
+	if (existing == null) throw new EntityNotFoundError('MiInstance', values);
+	return existing;
+}
+
 export async function updateInstanceInDatabase(
 	db: MiDrizzleDatabase,
 	id: MiInstance['id'],

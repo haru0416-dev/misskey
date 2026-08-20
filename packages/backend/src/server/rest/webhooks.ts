@@ -7,8 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import {
-	countWebhooksByUserIdFromDatabase,
-	createWebhookInDatabase,
+	createWebhookWithinLimitInDatabase,
 	deleteWebhookFromDatabase,
 	fetchWebhookByIdAndUserIdFromDatabase,
 	listWebhooksByUserIdFromDatabase,
@@ -213,8 +212,19 @@ export async function handleHonoApiIWebhooksCreate(
 ): Promise<HonoApiUserWebhook> {
 	const params = parseHonoApiParams(webhooksCreateParamDef, body);
 
-	const currentWebhooksCount = await countWebhooksByUserIdFromDatabase(deps.db, me.id);
-	if (currentWebhooksCount >= webhookLimit) {
+	const webhook = await createWebhookWithinLimitInDatabase(
+		deps.db,
+		{
+			id: genId(),
+			userId: me.id,
+			name: params.name,
+			url: params.url,
+			secret: params.secret,
+			on: params.on,
+		},
+		webhookLimit,
+	);
+	if (webhook == null) {
 		throw new HonoApiError({
 			status: 400,
 			message: 'You cannot create webhook any more.',
@@ -222,15 +232,6 @@ export async function handleHonoApiIWebhooksCreate(
 			id: '87a9bb19-111e-4e37-81d3-a3e7426453b0',
 		});
 	}
-
-	const webhook = await createWebhookInDatabase(deps.db, {
-		id: genId(),
-		userId: me.id,
-		name: params.name,
-		url: params.url,
-		secret: params.secret,
-		on: params.on,
-	});
 
 	deps.publishInternalEvent?.('webhookCreated', webhook);
 
@@ -528,11 +529,14 @@ export async function handleHonoApiIWebhooksTest(
 		});
 	}
 
-	const send = <T extends WebhookEventTypes>(type: T, contents: unknown): void => {
+	const send = async <T extends WebhookEventTypes>(
+		type: T,
+		contents: UserWebhookDeliverJobData<T>['content'],
+	): Promise<void> => {
 		const merged = { ...webhook, ...omitUndefined(params.override ?? {}) };
-		const data: UserWebhookDeliverJobData = {
+		const data: UserWebhookDeliverJobData<T> = {
 			type,
-			content: contents as UserWebhookDeliverJobData['content'],
+			content: contents,
 			webhookId: merged.id,
 			userId: merged.userId,
 			to: merged.url,
@@ -541,7 +545,7 @@ export async function handleHonoApiIWebhooksTest(
 			eventId: randomUUID(),
 		};
 
-		deps.userWebhookDeliverQueue.add(merged.id, data, {
+		await deps.userWebhookDeliverQueue.add(merged.id, data, {
 			attempts: 1,
 			backoff: { type: 'custom' },
 			...queueRetentionOptions(deps.config),
@@ -577,35 +581,41 @@ export async function handleHonoApiIWebhooksTest(
 
 	switch (params.type) {
 		case 'note': {
-			send('note', { note: await toWebhookTestPackedNote(deps, dummyNote1) });
+			await send('note', { note: await toWebhookTestPackedNote(deps, dummyNote1) });
 			break;
 		}
 		case 'reply': {
-			send('reply', { note: await toWebhookTestPackedNote(deps, dummyReply1) });
+			await send('reply', { note: await toWebhookTestPackedNote(deps, dummyReply1) });
 			break;
 		}
 		case 'renote': {
-			send('renote', { note: await toWebhookTestPackedNote(deps, dummyRenote1) });
+			await send('renote', { note: await toWebhookTestPackedNote(deps, dummyRenote1) });
 			break;
 		}
 		case 'mention': {
-			send('mention', { note: await toWebhookTestPackedNote(deps, dummyMention1) });
+			await send('mention', { note: await toWebhookTestPackedNote(deps, dummyMention1) });
 			break;
 		}
 		case 'follow': {
-			send('follow', { user: await toWebhookTestPackedUserDetailedNotMe(deps, webhookTestDummyUser1) });
+			await send('follow', { user: await toWebhookTestPackedUserDetailedNotMe(deps, webhookTestDummyUser1) });
 			break;
 		}
 		case 'followed': {
-			send('followed', { user: await toWebhookTestPackedUserLite(deps, webhookTestDummyUser2) });
+			await send('followed', { user: await toWebhookTestPackedUserLite(deps, webhookTestDummyUser2) });
 			break;
 		}
 		case 'unfollow': {
-			send('unfollow', { user: await toWebhookTestPackedUserDetailedNotMe(deps, webhookTestDummyUser3) });
+			await send('unfollow', { user: await toWebhookTestPackedUserDetailedNotMe(deps, webhookTestDummyUser3) });
 			break;
 		}
-		case 'reaction':
-			return;
+		case 'reaction': {
+			await send('reaction', {
+				note: await toWebhookTestPackedNote(deps, dummyNote1),
+				reaction: '👍',
+				user: await toWebhookTestPackedUserLite(deps, webhookTestDummyUser2),
+			});
+			break;
+		}
 		default: {
 			return;
 		}

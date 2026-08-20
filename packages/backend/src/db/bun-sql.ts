@@ -86,7 +86,7 @@ function normalizeDatabaseError(error: unknown): unknown {
 	return error;
 }
 
-function wrapBunSqlClient(client: SQL): DrizzleBunSqlClient {
+function wrapBunSqlClient(client: SQL, transactionClient = client): DrizzleBunSqlClient {
 	return {
 		unsafe: (queryText, params) => {
 			// Bun.sql のクエリオブジェクトは遅延実行。`.values()` と await のどちらが先に来るか
@@ -109,7 +109,7 @@ function wrapBunSqlClient(client: SQL): DrizzleBunSqlClient {
 			};
 		},
 		begin: (callback) =>
-			(client.begin((tx) => callback(wrapBunSqlClient(tx as unknown as SQL))) as Promise<unknown>).catch(
+			(transactionClient.begin((tx) => callback(wrapBunSqlClient(tx as unknown as SQL))) as Promise<unknown>).catch(
 				(error: unknown) => {
 					throw normalizeDatabaseError(error);
 				},
@@ -137,18 +137,32 @@ export function createBunSqlRuntime(config: Config): BunSqlRuntime {
 	// Bun.sql は node-postgres と違って起動時に max ぶんの接続を一気に張るので、
 	// この値がそのままこのプロセスのPostgreSQL接続数になる。
 	const maxConnections = resolveDatabasePoolSize(config);
-	const client = new SQL(buildConnectionUrl(config), {
-		max: maxConnections,
+	const connectionUrl = buildConnectionUrl(config);
+	const sqlOptions = {
 		idleTimeout: Math.ceil(config.database.pool.idleConnectionTimeoutMs / 1000),
 		connectionTimeout: Math.ceil(config.database.pool.connectionTimeoutMs / 1000),
 		// 名前付きprepared statementはタイムライン系の `= ANY($n)` でgeneric planに落ちて
 		// 107倍遅くなる実測がある (src/db/prepared.ts 参照) ため、既定のprepareは切る。
 		prepare: false,
 		...(config.database.primary.ssl == null ? {} : { ssl: config.database.primary.ssl }),
+	};
+	const transactionConnections = Math.floor(maxConnections / 2);
+	const client = new SQL(connectionUrl, {
+		...sqlOptions,
+		max: maxConnections - transactionConnections,
 	});
+	// Bun 1.3.14 は begin() が予約中の接続を通常クエリへ再配布するため、高並行時に
+	// transaction abort状態が別リクエストへ漏れる。接続数予算を増やさずpoolを分離する。
+	const transactionClient =
+		transactionConnections === 0
+			? client
+			: new SQL(connectionUrl, {
+					...sqlOptions,
+					max: transactionConnections,
+				});
 	const queryLogger = createDrizzleQueryLogger(config);
 	const db = drizzle({
-		client: wrapBunSqlClient(client) as unknown as SQL,
+		client: wrapBunSqlClient(client, transactionClient) as unknown as SQL,
 		...(queryLogger === undefined ? {} : { logger: queryLogger }),
 	});
 
@@ -158,6 +172,9 @@ export function createBunSqlRuntime(config: Config): BunSqlRuntime {
 		// 結果の型マッピングは node-postgres 経路と一致することを実データで確認済 (timestamp / 配列 /
 		// jsonb / bytea)。`rows` の形もラッパで揃えているため、呼び出し側の型は共通のものを使う。
 		db: db as unknown as MiDrizzleDatabase,
-		close: () => client.close(),
+		close: async () => {
+			await client.close();
+			if (transactionClient !== client) await transactionClient.close();
+		},
 	};
 }

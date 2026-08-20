@@ -19,9 +19,9 @@ import {
 import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/DriveFolderStore.js';
 import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } from '@/core/ChatMessageStore.js';
 import type { InternalStorageService } from '@/core/InternalStorageService.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import { logModerationEventInDatabase, logModerationEventWithIdInDatabase } from '@/core/ModerationLogLogic.js';
 import { listNotesByAttachedFileIdFromDatabase } from '@/core/NoteStore.js';
-import type { ObjectStorageQueue } from '@/core/queues.js';
+import type { DbQueue, ObjectStorageQueue } from '@/core/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -49,6 +49,7 @@ export type HonoApiDriveFilesDependencies = HonoApiNoteDependencies &
 	HonoApiRolePolicyDependencies &
 	HonoApiChatDependencies & {
 		objectStorageQueue: ObjectStorageQueue;
+		dbQueue: DbQueue;
 		internalStorageService: Pick<InternalStorageService, 'del'>;
 		chartWriters: HonoChartWriters;
 	};
@@ -291,6 +292,8 @@ export async function handleHonoApiDriveFilesAttachedNotes(
 export function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDependencies): DriveFileDeletionDependencies {
 	return {
 		db: deps.db,
+		config: deps.config,
+		dbQueue: deps.dbQueue,
 		meta: deps.meta,
 		deleteInternalFile: (key) => deps.internalStorageService.del(key),
 		enqueueDeleteObjectStorageFile: (key) =>
@@ -309,7 +312,8 @@ export function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDepend
 		updateInstanceDriveChart: (file, isAdditional) => deps.chartWriters.instanceChart.updateDrive(file, isAdditional),
 		publishDriveStream: (userId, type, value) => deps.publishDriveStream?.(userId, type, value),
 		isModerator: (user) => isHonoApiModerator(deps, user),
-		logDriveFileDeletion: (deleter, info) => logModerationEventInDatabase(deps, deleter, 'deleteDriveFile', info),
+		logDriveFileDeletion: (db, deleter, logId, info) =>
+			logModerationEventWithIdInDatabase({ db }, deleter, 'deleteDriveFile', info, logId),
 	};
 }
 
@@ -335,7 +339,7 @@ export async function handleHonoApiDriveFilesDelete(
 		throw accessDeniedError('5eb8d909-2540-4970-90b8-dd6f86088121');
 	}
 
-	startDriveFileDeletion(buildDriveFileDeletionDependencies(deps), file, false, me);
+	await startDriveFileDeletion(buildDriveFileDeletionDependencies(deps), file, false, me);
 }
 
 export const driveFilesUpdateParamDef = z.object({

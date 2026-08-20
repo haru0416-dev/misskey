@@ -442,7 +442,7 @@ export async function handleHonoApiAdminFederationDeleteAllFiles(
 	const files = await listAllDriveFilesByUserHostFromDatabase(deps.db, params.host);
 
 	for (const file of files) {
-		startHonoApiAdminDriveFileDeletion(deps, file);
+		await startHonoApiAdminDriveFileDeletion(deps, file);
 	}
 }
 

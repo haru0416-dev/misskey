@@ -10,6 +10,7 @@ import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import { allSettled } from '@/misc/promise-tracker.js';
 import type { GlobalEvents } from '@/core/global-events.js';
 import { createAiService } from '@/core/AiService.js';
@@ -239,14 +240,17 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		// minimumConnections の既定は0で、クエリを流さない限り接続は張られない。
 		const drizzlePool = (resources.drizzlePool = createDrizzlePool(config));
 		// bun 限定モジュールなので、node で動くテスト経路から読まれないよう動的 import にしている。
-		const db = shouldUseBunSql()
-			? await (async () => {
-					const { createBunSqlRuntime } = await import('@/db/bun-sql.js');
-					const runtime = createBunSqlRuntime(config);
-					resources.bunSqlClose = runtime.close;
-					return runtime.db;
-				})()
-			: createDrizzleDatabase(drizzlePool, config);
+		// Bun 1.3.14 のtransaction接続リークを避けるには通常クエリ用とtransaction用の
+		// 2 poolが必要。接続予算1では分離できないため、その構成だけpgへフォールバックする。
+		const db =
+			shouldUseBunSql() && resolveDatabasePoolSize(config) >= 2
+				? await (async () => {
+						const { createBunSqlRuntime } = await import('@/db/bun-sql.js');
+						const runtime = createBunSqlRuntime(config);
+						resources.bunSqlClose = runtime.close;
+						return runtime.db;
+					})()
+				: createDrizzleDatabase(drizzlePool, config);
 		const redis = (resources.redis = createRedisClient(config));
 		const redisForPub = (resources.redisForPub = createRedisForPub(config));
 		const redisForSub = (resources.redisForSub = await createRedisForSub(config));

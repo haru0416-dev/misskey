@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import * as mfm from 'mfm-js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { JsonLd } from '@/core/activitypub/json-ld.js';
-import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
+import { createDeliverJob, enqueueDeliverJob } from '@/core/DeliverQueue.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { DeliverQueue } from '@/core/queues.js';
 import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
@@ -309,7 +309,7 @@ function renderAnnounceForHonoApi(
 
 export async function renderNoteOrRenoteActivityForHonoApi(
 	deps: HonoApiNoteApDependencies,
-	data: { localOnly: boolean; renote: MiNote | null; isQuote: boolean },
+	data: { localOnly: boolean; renote: Pick<MiNote, 'id' | 'uri'> | null; isQuote: boolean },
 	note: MiNote,
 ): Promise<Record<string, unknown> | null> {
 	if (data.localOnly) return null;
@@ -333,6 +333,7 @@ export async function deliverNoteActivityForHonoApi(
 	options: {
 		directRecipients: MiUser[];
 		deliverToFollowers: boolean;
+		jobIdPrefix?: string;
 	},
 ): Promise<void> {
 	if (activity == null) return;
@@ -370,7 +371,14 @@ export async function deliverNoteActivityForHonoApi(
 		Array.from(inboxes.entries(), ([to, isSharedInbox]) => ({
 			name: to.replace('https://', '').replace('/inbox', ''),
 			data: { user: { id: author.id }, content: contentBody, digest, to, isSharedInbox } as DeliverJobData,
-			opts,
+			opts: {
+				...opts,
+				...(options.jobIdPrefix == null
+					? {}
+					: {
+							jobId: `${options.jobIdPrefix}-${createHash('sha256').update(to).digest('hex').slice(0, 24)}`,
+						}),
+			},
 		})),
 	);
 }
@@ -586,6 +594,7 @@ export async function deliverToRelaysForHonoApi(
 	deps: HonoApiRelayDeliverDependencies,
 	user: { id: MiUser['id']; host: null },
 	activity: Record<string, unknown> | null,
+	jobIdPrefix?: string,
 ): Promise<void> {
 	if (activity == null) return;
 
@@ -597,7 +606,21 @@ export async function deliverToRelaysForHonoApi(
 
 	const signed = await attachLdSignatureForHonoApi(deps, copy, user);
 
-	for (const relay of relays) {
-		void enqueueDeliverJob(deps.deliverQueue, deps.config, user, signed as unknown as IActivity, relay.inbox, false);
+	if (jobIdPrefix == null) {
+		for (const relay of relays) {
+			void enqueueDeliverJob(deps.deliverQueue, deps.config, user, signed as unknown as IActivity, relay.inbox, false);
+		}
+		return;
 	}
+
+	await Promise.all(
+		relays.map(async (relay) => {
+			const job = createDeliverJob(deps.config, user, signed as unknown as IActivity, relay.inbox, false);
+			if (job == null) return;
+			await deps.deliverQueue.add(job.name, job.data, {
+				...job.opts,
+				jobId: `${jobIdPrefix}-${createHash('sha256').update(relay.inbox).digest('hex').slice(0, 24)}`,
+			});
+		}),
+	);
 }

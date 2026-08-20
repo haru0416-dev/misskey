@@ -38,6 +38,13 @@ export async function createModerationLogInDatabase(db: MiDrizzleDatabase, data:
 	await db.insert(moderationLog).values(data);
 }
 
+export async function createModerationLogIfNotExistsInDatabase(
+	db: MiDrizzleDatabase,
+	data: ModerationLogInsert,
+): Promise<void> {
+	await db.insert(moderationLog).values(data).onConflictDoNothing({ target: moderationLog.id });
+}
+
 export async function createModerationLogsInDatabase(
 	db: MiDrizzleDatabase,
 	data: ModerationLogInsert[],

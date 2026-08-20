@@ -55,6 +55,7 @@ import {
 } from './handlers/object-storage.js';
 import {
 	handleHonoQueueDeleteDriveFiles,
+	handleHonoQueueDeleteDriveFile,
 	handleHonoQueueExportAntennas,
 	handleHonoQueueExportBlocking,
 	handleHonoQueueExportFollowing,
@@ -80,6 +81,8 @@ import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies }
 import type { SystemJobName } from './system-job-schedulers.js';
 import { dispatchQueueOutbox } from '@/core/QueueOutboxStore.js';
 import type { DbJobData, DbJobName } from '@/queue/types.js';
+import { handleHonoQueueUserSuspensionPostEffects } from '@/server/rest/admin-user-suspension.js';
+import { handleHonoQueueNotePostCreate } from '@/server/rest/notes-create.js';
 
 export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies &
 	HonoQueueRelationshipDependencies &
@@ -445,6 +448,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}
 
 	const dbJobHandlers = {
+		deleteDriveFile: (job) => handleHonoQueueDeleteDriveFile(deps, job),
 		deleteDriveFiles: (job) => handleHonoQueueDeleteDriveFiles(deps, job),
 		exportMuting: (job) => handleHonoQueueExportMuting(deps, job),
 		exportBlocking: (job) => handleHonoQueueExportBlocking(deps, job),
@@ -463,6 +467,8 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 		exportCustomEmojis: (job) => handleHonoQueueExportCustomEmojis(deps, job),
 		importCustomEmojis: (job) => handleHonoQueueImportCustomEmojis(deps, job),
 		deleteAccount: (job) => handleHonoQueueDeleteAccount(deps, job),
+		userSuspensionPostEffects: (job) => handleHonoQueueUserSuspensionPostEffects(deps, job),
+		notePostCreate: (job) => handleHonoQueueNotePostCreate(deps, job),
 	} satisfies DbJobHandlerMap;
 	const dispatchDbJob = <K extends DbJobName>(job: Bull.Job<DbJobData<K>, unknown, K>): Promise<unknown> => {
 		if (!Object.hasOwn(dbJobHandlers, job.name)) throw new Error(`unrecognized job type ${job.name} for db`);

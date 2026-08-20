@@ -18,4 +18,10 @@ export type UserWebhookPayload<T extends WebhookEventTypes> = T extends 'note' |
 			? {
 					user: Packed<'UserLite'>;
 				}
-			: never;
+			: T extends 'reaction'
+				? {
+						note: Packed<'Note'>;
+						reaction: string;
+						user: Packed<'UserLite'>;
+					}
+				: never;

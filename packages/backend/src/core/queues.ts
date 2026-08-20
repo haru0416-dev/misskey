@@ -36,20 +36,12 @@ export type DeliverJobBulkInput = {
 export type InboxQueue = Bull.Queue<InboxJobData>;
 type RawDbQueue = Bull.Queue<DbJobData<DbJobName>, unknown, DbJobName>;
 export type DbQueue = Omit<RawDbQueue, 'add' | 'addBulk'>;
-export type DbJobInput<K extends DbJobName = DbJobName> = {
-	[Name in K]: {
-		name: Name;
-		data: DbJobMap[Name];
-		opts?: Bull.JobsOptions;
-	};
-}[K];
-export type DbJobBulkInput<K extends DbJobName = DbJobName> = {
-	[Name in K]: {
-		name: Name;
-		data: DbJobMap[Name];
-		opts?: Bull.BulkJobOptions;
-	};
-}[K];
+export type DbJobInput<K extends DbJobName = DbJobName> = K extends DbJobName
+	? { name: K; data: DbJobMap[K]; opts?: Bull.JobsOptions }
+	: never;
+export type DbJobBulkInput<K extends DbJobName = DbJobName> = K extends DbJobName
+	? { name: K; data: DbJobMap[K]; opts?: Bull.BulkJobOptions }
+	: never;
 export type RelationshipQueue = Bull.Queue<RelationshipJobData>;
 export type ObjectStorageQueue = Bull.Queue;
 export type UserWebhookDeliverQueue = Bull.Queue<UserWebhookDeliverJobData>;
@@ -59,7 +51,7 @@ export async function addDbJob(queue: DbQueue, job: DbJobInput): Promise<void> {
 	await (queue as RawDbQueue).add(job.name, job.data, job.opts);
 }
 
-export async function addDbJobs<K extends DbJobName>(queue: DbQueue, jobs: DbJobBulkInput<K>[]): Promise<void> {
+export async function addDbJobs(queue: DbQueue, jobs: DbJobBulkInput[]): Promise<void> {
 	await (queue as RawDbQueue).addBulk(jobs);
 }
 
