@@ -19,6 +19,12 @@ database:
     user: postgres
     password:
       plainText: ''
+  # Bun.sql ドライバは起動時に上限まで接続を先張りする。e2e はテストファイルごとにアプリを
+  # 再起動するため、既定の60のままだと新旧インスタンスの重なりで PostgreSQL の
+  # max_connections=100 を超える (too many clients already, 53300)。テストは逐次実行で
+  # 並行度が低いので小さな予算で足りる。node-postgres 経路は遅延接続なので影響なし。
+  pool:
+    maximumConnectionsPerHost: 16
 
 valkey:
   connections:

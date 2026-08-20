@@ -42,28 +42,31 @@ cp .github/misskey/test.yml .config/test.yml
 - 配置: `packages/backend/test/` 配下
 - カバレッジ: `bun run --bun --filter backend test-and-coverage`
 
-### `test:e2e` と `test:e2e:bun` の違い (★ どちらか一方では本番経路を検証できない)
+### `test:e2e` と `test:e2e:bun` の違い
 
-`test:e2e` は vitest (Node.js) と **同じプロセス内に** テスト対象サーバーを立てる。つまり本番が使う
-**bun ランタイム固有の実装は一切通らない** — 特に DB ドライバは `MK_DB_DRIVER` の既定が bun 上でのみ
-`Bun.sql` になるため、`test:e2e` で緑でも本番の DB 経路は未検証のまま残る (実例: Bun.sql は SQLSTATE を
-`code` でなく `errno` に入れるため一意制約違反が全て 500 になるバグが `test:e2e` を素通りした)。
+`test:e2e` は vitest と **同じプロセス内に** テスト対象サーバーを立てる。2026-08-21 以降 vitest 自体が
+Bun ランタイムで動くため、この経路でも Bun 固有実装 (Bun.sql / Bun.serve) が通る
+(それ以前は vitest が Node respawn だったため Bun 経路が完全に未検証で、Bun.sql が SQLSTATE を
+`code` でなく `errno` に入れるバグが素通りした実害があった)。
 
 `test:e2e:bun` は `scripts/run_e2e_bun.js` がテスト対象サーバーだけを **bun の別プロセス** として起動し、
 vitest からは `MISSKEY_E2E_TARGET_MODE=external` で HTTP 越しに叩かせる。テスト本体は同じ
-`test/e2e/*.ts` なので件数も同じ。**backend の DB / HTTP / ストリーミングの低層を触ったら両方通すこと**。
+`test/e2e/*.ts` なので件数も同じ。in-process と違い **本番と同じ built 済み `entry.js` の起動経路**を
+検証できるのが現在の固有価値。DB / HTTP / ストリーミングの低層を触ったら引き続き両方通すこと。
 
-### unit / e2e フルスイートの既知の落とし穴 (Bun ランタイムで vitest を起動すると壊れる)
+### unit / e2e は Bun ランタイムの vitest で動く (2026-08-21 以降)
 
-`test` / `test:e2e` / `test-and-coverage(:e2e)` は最後のテスト実行ステップを `scripts/run_unit.js` / `scripts/run_e2e.js` 経由で行っている。これは意図的な回避策 (2026-07-07 対応):
+`test` / `test:e2e` / `test-and-coverage(:e2e)` の vitest は起動元ランタイム (通常は `bun run --bun` 経由の **Bun**) でそのまま動く。Bun 実行時はテスト対象アプリの DB ドライバも本番同様 **Bun.sql** が選ばれるため、unit / e2e でも本番 DB 経路がカバーされる。これを成立させている 3 つの前提を壊さないこと:
 
-- テストファイルが一定数以上ある状態で vitest を **Bun ランタイムで** 実行すると (`include` glob 経由でも、全ファイルパスを明示的にCLI引数で渡しても同様)、`zod` の named export `z` が未初期化のまま参照され (unit では `[vite] The requested module 'zod' does not provide an export named 'z'`、e2e では `TypeError: undefined is not an object (evaluating 'z.string')`)、**全テストファイルが即座に巻き添えで失敗する**。
-- 同じコマンドを **Node.js で** 実行すると再現しない。ファイル数を減らすとBunでも再現しないため、「Bun + 一定数以上のファイル」という組み合わせで初めて顕在化するBun側のESM初期化順序のバグと推測される (Bun 1.3.14 時点)。単体ファイルや少数ファイルの実行では再現しないため見つかりにくい。
-- 両スクリプトは自分が Bun で起動されたことを検知すると `scripts/respawn_with_node.js` で **本物の Node.js** により自分自身を再起動する。
-- ★ **フォーク爆弾の教訓 (2026-07-07 実際にホストがフリーズした)**: `bun run --bun` は PATH の先頭に `/tmp/bun-node-<hash>/` を注入し、その中の `node` は **bun 本体への symlink**。そのため素朴に `execa('node', ...)` で再起動すると子もまた Bun になり無限再帰でプロセスが際限なく増える (600個超を観測)。さらに、スクリプト自身を本物の node で再起動できても **PATH を掃除しないと** そこから spawn する `node_modules/.bin/vitest` (shebang `#!/usr/bin/env node`) が再び Bun に化ける。`respawn_with_node.js` は (1) realpath 比較で本物の node を解決し、(2) shim ディレクトリを PATH から除去して子に渡し、(3) 環境変数ガードで2段目以降の respawn を禁止する。この3点を欠いた「自己再起動スクリプト」を書いてはいけない。
+- **`vitest.config.ts` の `server.deps.inline: ['zod']` を外さない。** 外部化された zod を Bun がネイティブ import すると named export の interop 解析に失敗し、全テストファイルが即死する ([oven-sh/bun#21614](https://github.com/oven-sh/bun/issues/21614)、bun 1.3〜1.4 で再現確認済)。inline で vite の変換経路に通すと回避できる。同型のエラーが別パッケージで出たら inline 配列に追加する。
+- **e2e のファイル列挙を CLI 引数方式に戻さない。** Bun 上の vitest は多数のファイル引数 (31個で再現) を渡すと起動後にハングする。実行順の決定性は `vitest.config.e2e.ts` の `AlphabeticalSequencer` が担っており、include glob で全ファイルが拾われる。
+- **テスト用 DB 接続予算 (`.github/misskey/test.yml` の `maximumConnectionsPerHost: 16`) を既定に戻さない。** Bun.sql は起動時に上限まで接続を先張りするため、e2e のファイル毎アプリ再起動の重なりで PostgreSQL の `max_connections=100` を超える (53300 too many clients)。
+
+歴史的経緯: 2026-07-07〜2026-08-21 は上記 zod バグの回避としてテストを本物の Node.js へ respawn していた (`scripts/respawn_with_node.js`、削除済)。**フォーク爆弾の教訓は今も有効**: `bun run --bun` は PATH の先頭に `/tmp/bun-node-<hash>/` を注入し、その中の `node` は **bun 本体への symlink**。「node で再起動する」自己再起動スクリプトは (1) realpath 比較で本物の node を解決し、(2) shim ディレクトリを PATH から除去し、(3) 環境変数ガードで再帰を禁止しない限り、無限再帰でホストをフリーズさせる (2026-07-07 に600プロセス超で実害)。
+
 - vitest には必ず `run` サブコマンドを明示する (省略すると watch モードに入り得て、プロセスが終了せず残り続ける)。
-- 新しいテストファイルを追加しても vitest の include glob / `run_e2e.js` の列挙が動的に拾うため、package.json 側の追加対応は不要。
-- upstream バグは [oven-sh/bun#21614](https://github.com/oven-sh/bun/issues/21614) (zod の `export { z }` namespace 再export が、変換された中間モジュール経由の import でのみ束縛を失う。最小 repro 付きコメント提出済 2026-07-07)。この Issue がクローズされ、修正版 Bun で再現しないことを確認できたら、`run_unit.js` / `run_e2e.js` を経由せず `vitest run --config ...` 直呼びに戻してよい。
+- 新しいテストファイルは vitest の include glob が動的に拾うため、package.json 側の追加対応は不要。
+- N+1 検査のクエリカウンタは `test/query-counter.ts` の `countDatabaseQueries(runtime.db)` を使う (node の pg Pool と bun の Bun.sql ラッパを自動判別)。pg Pool 直フックの旧 `countPoolQueries` は Bun.sql 経路を数えられないため削除済。
 
 ## e2e テストの配置
 

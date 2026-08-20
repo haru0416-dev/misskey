@@ -3,20 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// e2e (scripts/run_e2e.js) と同じ Bun ランタイムの ESM 初期化バグの影響で、unit テストも
-// Bun 上で vitest を実行すると多数のテストファイルを読み込んだ際に
-// `[vite] The requested module 'zod' does not provide an export named 'z'` が発生し、
-// 全テストファイルが即座に失敗する (詳細は
-// .claude/skills/working-on-backend/references/knowledge/backend-testing.md 参照)。
-// `bun run --bun` はスクリプト文字列内に `vitest ...` と書いていても Bun 自身で
-// 実行してしまう (`--bun` フラグの仕様) ため、package.json 側の対策では回避できない。
-// このファイル自身が Bun で起動されたことを検知したら、本物の Node.js で自分自身を
-// 再起動することで確実に Node.js 上で vitest を実行させる
-// (node の解決方法とフォーク爆弾対策は respawn_with_node.js のコメント参照)。
-if (typeof Bun !== 'undefined') {
-	const { respawnWithNode } = await import('./respawn_with_node.js');
-	await respawnWithNode(); // 戻ってこない (子プロセスの終了コードで exit する)
-}
+// かつては Bun 上で vitest を実行すると外部化された zod の ESM interop 解析に失敗して
+// 全テストファイルが即死したため、本物の Node.js へ respawn していた (respawn_with_node.js)。
+// vitest.config.ts の `server.deps.inline: ['zod']` で回避できると分かったため respawn は
+// 撤去し、vitest は起動元のランタイム (通常は `bun run --bun` 経由の Bun) でそのまま動かす。
+// Bun 実行時は DB ドライバも本番同様 Bun.sql が選ばれる (src/runtime-dependencies.ts)。
 
 import { execa } from 'execa';
 
