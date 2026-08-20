@@ -17,6 +17,7 @@
 	"scripts": {
 		"generate": "bun scripts/generateLocaleInterface.ts",
 		"verify": "bun scripts/verify.ts",
+		"test": "bun run build && vitest run test",
 		"build": "bun ./build.ts",
 		"watch": "bun ./build.ts --watch",
 		"typecheck": "tsgo --noEmit",
@@ -29,7 +30,8 @@
 		"@types/node": "26.0.1",
 		"chokidar": "5.0.0",
 		"esbuild": "0.28.1",
-		"typescript": "6.0.3"
+		"typescript": "6.0.3",
+		"vitest": "4.1.9"
 	},
 	"dependencies": {
 		"js-yaml": "5.2.2"

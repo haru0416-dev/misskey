@@ -3,68 +3,93 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-let valid = true;
-
 interface LocaleRecord {
-	[key: string]: string | LocaleRecord;
+	[key: string]: unknown;
 }
 
-interface ErrorData {
+interface VerificationErrorData {
 	expected?: string;
 	actual?: string;
 	parameter?: string;
 }
 
-function writeError(type: string, lang: string, tree: string, data: ErrorData): void {
-	process.stderr.write(JSON.stringify({ type, lang, tree, data }));
-	process.stderr.write('\n');
-	valid = false;
+export interface VerificationError {
+	type: 'mismatched_type' | 'missing_parameter';
+	lang: string;
+	tree: string;
+	data: VerificationErrorData;
 }
 
-function verify(expected: LocaleRecord, actual: LocaleRecord, lang: string, trace?: string): void {
+function isLocaleRecord(value: unknown): value is LocaleRecord {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function valueType(value: unknown): string {
+	if (Array.isArray(value)) return 'array';
+	if (value === null) return 'null';
+	return typeof value;
+}
+
+function verify(expected: LocaleRecord, actual: LocaleRecord, lang: string, errors: VerificationError[], trace?: string): void {
 	for (const key in expected) {
 		if (!Object.prototype.hasOwnProperty.call(actual, key)) {
 			continue;
 		}
-		if (typeof expected[key] === 'object') {
-			if (typeof actual[key] !== 'object') {
-				writeError('mismatched_type', lang, trace ? `${trace}.${key}` : key, { expected: 'object', actual: typeof actual[key] });
+
+		const expectedValue = expected[key];
+		const actualValue = actual[key];
+		const tree = trace ? `${trace}.${key}` : key;
+
+		if (isLocaleRecord(expectedValue)) {
+			if (!isLocaleRecord(actualValue)) {
+				errors.push({ type: 'mismatched_type', lang, tree, data: { expected: 'object', actual: valueType(actualValue) } });
 				continue;
 			}
-			verify(expected[key] as LocaleRecord, actual[key] as LocaleRecord, lang, trace ? `${trace}.${key}` : key);
-		} else if (typeof expected[key] === 'string') {
-			switch (typeof actual[key]) {
-				case 'object':
-					writeError('mismatched_type', lang, trace ? `${trace}.${key}` : key, { expected: 'string', actual: 'object' });
-					break;
-				case 'undefined':
-					continue;
-				case 'string': {
-					const expectedParameters = new Set((expected[key] as string).match(/\{[^}]+\}/g)?.map((s) => s.slice(1, -1)));
-					const actualParameters = new Set((actual[key] as string).match(/\{[^}]+\}/g)?.map((s) => s.slice(1, -1)));
-					for (const parameter of expectedParameters) {
-						if (!actualParameters.has(parameter)) {
-							writeError('missing_parameter', lang, trace ? `${trace}.${key}` : key, { parameter });
-						}
-					}
+			verify(expectedValue, actualValue, lang, errors, tree);
+		} else if (typeof expectedValue === 'string') {
+			if (typeof actualValue !== 'string') {
+				errors.push({ type: 'mismatched_type', lang, tree, data: { expected: 'string', actual: valueType(actualValue) } });
+				continue;
+			}
+
+			const expectedParameters = new Set(expectedValue.match(/\{[^}]+\}/g)?.map((s) => s.slice(1, -1)));
+			const actualParameters = new Set(actualValue.match(/\{[^}]+\}/g)?.map((s) => s.slice(1, -1)));
+			for (const parameter of expectedParameters) {
+				if (!actualParameters.has(parameter)) {
+					errors.push({ type: 'missing_parameter', lang, tree, data: { parameter } });
 				}
 			}
 		}
 	}
 }
 
-// index.tsはtsのまま動かすことを想定していない（ビルド成果物を外部に公開する）.
-// よってビルド後のものを検証する
-const locales = await import('../built/index.js');
-const { 'ja-JP': original, ...verifiees } = locales as unknown as Record<string, LocaleRecord>;
+export function verifyLocales(locales: Record<string, LocaleRecord>): VerificationError[] {
+	const original = locales['ja-JP'];
+	if (original === undefined) throw new Error('The ja-JP locale was not found.');
 
-for (const lang in verifiees) {
-	if (!Object.prototype.hasOwnProperty.call(locales, lang)) {
-		continue;
+	const errors: VerificationError[] = [];
+	for (const [lang, locale] of Object.entries(locales)) {
+		if (lang !== 'ja-JP') verify(original, locale, lang, errors);
 	}
-	verify(original, verifiees[lang], lang);
+	return errors;
 }
 
-if (!valid) {
-	process.exit(1);
+export function runVerification(
+	locales: Record<string, LocaleRecord>,
+	writeError: (error: VerificationError) => void = (error) => process.stderr.write(`${JSON.stringify(error)}\n`),
+): number {
+	const errors = verifyLocales(locales);
+	for (const error of errors) writeError(error);
+	return errors.length > 0 ? 1 : 0;
+}
+
+export async function loadBuiltLocales(): Promise<Record<string, LocaleRecord>> {
+	const { locales } = await import('../built/index.js');
+	return locales as Record<string, LocaleRecord>;
+}
+
+// index.tsはtsのまま動かすことを想定していない（ビルド成果物を外部に公開する）.
+// よってビルド後のものを検証する
+if (import.meta.main) {
+	process.exitCode = runVerification(await loadBuiltLocales());
 }

@@ -6,12 +6,14 @@
 	"type": "module",
 	"scripts": {
 		"build": "bun src/generator.ts",
+		"test": "vitest run test",
 		"typecheck": "tsgo --noEmit",
 		"lint": "bun run --bun typecheck"
 	},
 	"devDependencies": {
 		"@types/node": "26.0.1",
-		"@types/wawoff2": "1.0.2"
+		"@types/wawoff2": "1.0.2",
+		"vitest": "4.1.9"
 	},
 	"dependencies": {
 		"@tabler/icons-webfont": "3.44.0",
