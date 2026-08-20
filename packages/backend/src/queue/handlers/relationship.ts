@@ -200,6 +200,13 @@ export async function handleHonoQueueRelationshipUnfollow(
 	deps: HonoQueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
 ): Promise<string> {
+	if (job.data.userStateGuard != null) {
+		const guard = job.data.userStateGuard;
+		const guardedUser = await fetchUserByIdOrFailFromDatabase(deps.db, guard.userId);
+		if (guardedUser.isSuspended !== guard.isSuspended || guardedUser.suspensionTransitionId !== guard.transitionId) {
+			return 'skip (stale user state)';
+		}
+	}
 	const [follower, followee] = await Promise.all([
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),

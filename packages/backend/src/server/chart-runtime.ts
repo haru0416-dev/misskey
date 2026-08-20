@@ -77,7 +77,7 @@ class HonoDriveChartWriter extends Chart<typeof driveChartSchema> {
 		return {};
 	}
 
-	public async update(file: MiDriveFile, isAdditional: boolean): Promise<void> {
+	public async update(file: Pick<MiDriveFile, 'userHost' | 'size'>, isAdditional: boolean): Promise<void> {
 		const fileSizeKb = file.size / 1000;
 		this.commit(
 			file.userHost === null
@@ -106,7 +106,7 @@ class HonoPerUserDriveChartWriter extends Chart<typeof perUserDriveChartSchema> 
 		return {};
 	}
 
-	public async update(file: MiDriveFile, isAdditional: boolean): Promise<void> {
+	public async update(file: Pick<MiDriveFile, 'userId' | 'size'>, isAdditional: boolean): Promise<void> {
 		if (file.userId == null) return;
 		const fileSizeKb = file.size / 1000;
 		this.commit(
@@ -132,7 +132,7 @@ class HonoInstanceChartWriter extends Chart<typeof instanceChartSchema> {
 		return {};
 	}
 
-	public async updateDrive(file: MiDriveFile, isAdditional: boolean): Promise<void> {
+	public async updateDrive(file: Pick<MiDriveFile, 'userHost' | 'size'>, isAdditional: boolean): Promise<void> {
 		const fileSizeKb = file.size / 1000;
 		this.commit(
 			{

@@ -37,6 +37,7 @@ import { parseHonoApiParams } from './validation.js';
 export type HonoApiAdminDriveDependencies = HonoApiRolePolicyDependencies & {
 	internalStorageService: Pick<InternalStorageService, 'del'>;
 	objectStorageQueue: ObjectStorageQueue;
+	dbQueue: import('@/core/queues.js').DbQueue;
 	publishDriveStream?: HonoApiDriveStreamPublisher;
 };
 
@@ -179,10 +180,15 @@ function enqueueDeleteObjectStorageFile(
 	);
 }
 
-export function startHonoApiAdminDriveFileDeletion(deps: HonoApiAdminDriveDependencies, file: MiDriveFile): void {
-	startDriveFileDeletion(
+export async function startHonoApiAdminDriveFileDeletion(
+	deps: HonoApiAdminDriveDependencies,
+	file: MiDriveFile,
+): Promise<void> {
+	await startDriveFileDeletion(
 		{
 			db: deps.db,
+			config: deps.config,
+			dbQueue: deps.dbQueue,
 			meta: deps.meta,
 			deleteInternalFile: (key) => deps.internalStorageService.del(key),
 			enqueueDeleteObjectStorageFile: (key) =>
@@ -257,7 +263,7 @@ export async function handleHonoApiAdminDriveCleanup(
 	const files = await listOrphanDriveFilesFromDatabase(deps.db);
 
 	for (const file of files) {
-		startHonoApiAdminDriveFileDeletion(deps, file);
+		await startHonoApiAdminDriveFileDeletion(deps, file);
 	}
 }
 
@@ -269,7 +275,7 @@ export async function handleHonoApiAdminDeleteAllFilesOfAUser(
 	const files = await listAllDriveFilesByUserIdFromDatabase(deps.db, params.userId);
 
 	for (const file of files) {
-		startHonoApiAdminDriveFileDeletion(deps, file);
+		await startHonoApiAdminDriveFileDeletion(deps, file);
 	}
 }
 

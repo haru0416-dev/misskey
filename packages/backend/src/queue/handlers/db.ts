@@ -14,8 +14,10 @@ import { listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
 import type { ExportedAntenna } from '@/core/AntennaImport.js';
 import {
 	countDriveFilesByUserIdFromDatabase,
+	fetchDriveFileByIdFromDatabase,
 	listDriveFilesByUserIdWithPaginationFromDatabase,
 } from '@/core/DriveFileStore.js';
+import { finishEnqueuedDriveFileDeletion } from '@/core/DriveFileDeletionLogic.js';
 import { listFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
 import {
 	countMutingsByMuterIdFromDatabase,
@@ -39,7 +41,6 @@ import {
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
 } from '@/core/UserStore.js';
-import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
 import {
 	countNoteFavoritesByUserIdFromDatabase,
 	listNoteFavoritesByUserIdFromDatabase,
@@ -66,9 +67,11 @@ import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
 import { addDbJobs, type DbJobBulkInput, type DbQueue, type RelationshipQueue } from '@/core/queues.js';
+import { logModerationEventWithIdInDatabase } from '@/core/ModerationLogLogic.js';
 import type {
 	DBExportAntennasData,
 	DbExportFollowingData,
+	DbDeleteDriveFileJobData,
 	DbJobDataWithUser,
 	DbUserImportJobData,
 	DbUserImportToDbJobData,
@@ -92,7 +95,12 @@ import {
 	type HonoApiNotificationDependencies,
 } from '../../server/rest/notification.js';
 import { addUserListMemberForHonoApi, type HonoApiUsersListsDependencies } from '../../server/rest/users-lists.js';
-import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './object-storage.js';
+import { isHonoApiModerator } from '../../server/rest/role-policy.js';
+import {
+	deleteFileSyncForHonoApi,
+	deleteObjectStorageFileForHonoApi,
+	type HonoQueueObjectStorageDependencies,
+} from './object-storage.js';
 
 export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies &
 	HonoApiDriveFileUploadDependencies &
@@ -195,6 +203,25 @@ export async function handleHonoQueueDeleteDriveFiles(
 
 		job.updateProgress((deletedCount / total) * 100);
 	}
+}
+
+export async function handleHonoQueueDeleteDriveFile(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbDeleteDriveFileJobData>,
+): Promise<void> {
+	const deleter = job.data.deleterId == null ? undefined : await fetchUserByIdFromDatabase(deps.db, job.data.deleterId);
+	await finishEnqueuedDriveFileDeletion(
+		{
+			...deps,
+			deleteInternalFile: (key) => deps.internalStorageService.del(key),
+			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFileForHonoApi(deps, key),
+			isModerator: (user) => isHonoApiModerator(deps, user),
+			logDriveFileDeletion: (db, moderator, logId, info) =>
+				logModerationEventWithIdInDatabase({ db }, moderator, 'deleteDriveFile', info, logId),
+		},
+		job.data,
+		deleter ?? undefined,
+	);
 }
 
 export async function handleHonoQueueExportMuting(

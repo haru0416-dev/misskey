@@ -82,6 +82,7 @@ describe('addNoteToAntennasForHonoApi', () => {
 		listActiveAntennasFromDatabaseMock.mockResolvedValue([followerAntenna, strangerAntenna, authorAntenna]);
 		const publishAntennaStream = vi.fn();
 		const pipeline = {
+			lrem: vi.fn(),
 			lpush: vi.fn(),
 			ltrim: vi.fn(),
 			exec: vi.fn(async () => []),
@@ -128,6 +129,7 @@ describe('addNoteToAntennasForHonoApi', () => {
 		antenna.excludeBots = true;
 		listActiveAntennasFromDatabaseMock.mockResolvedValue([antenna]);
 		const pipeline = {
+			lrem: vi.fn(),
 			lpush: vi.fn(),
 			ltrim: vi.fn(),
 			exec: vi.fn(async () => []),
