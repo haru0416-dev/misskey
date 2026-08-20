@@ -207,7 +207,7 @@ const XTimeline = defineAsyncComponent(() => import('./index/timeline.vue'));
 
 const props = withDefaults(defineProps<{
 	user: Misskey.entities.UserDetailed;
-	/** Test only; MkNotesTimeline currently causes problems in vitest */
+	/** Vitest では MkNotesTimeline が正常に動作しないため、テスト時だけ無効化する。 */
 	disableNotes?: boolean;
 }>(), {
 	disableNotes: false,

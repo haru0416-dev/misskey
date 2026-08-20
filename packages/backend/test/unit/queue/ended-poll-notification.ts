@@ -100,8 +100,7 @@ describe('hono-queue-ended-poll-notification', () => {
 		publishedNotifications.length = 0;
 		await handleHonoQueueEndedPollNotification(deps, fakeJob({ noteId }));
 
-		// createPollEndedNotification は元実装 (NotificationService.createNotification) 同様
-		// trackPromiseによるfire-and-forgetのため、publishMainStream呼び出し完了をポーリングで待つ。
+		// trackPromise による fire-and-forget のため、publishMainStream の呼び出し完了をポーリングで待つ。
 		for (let i = 0; i < 20 && publishedNotifications.length < 2; i++) {
 			await new Promise((resolve) => setTimeout(resolve, 100));
 		}

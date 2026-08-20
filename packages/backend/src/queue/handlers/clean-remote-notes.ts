@@ -215,7 +215,7 @@ export async function handleHonoQueueCleanRemoteNotes(
 		};
 	}
 
-	// start with a conservative limit and adjust it based on the query duration
+	// 控えめな上限から始め、クエリ時間に応じて調整する。
 	const minimumLimit = 10;
 	let currentLimit = 100;
 	let cursorLeft = '0';

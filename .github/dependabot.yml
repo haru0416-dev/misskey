@@ -1,6 +1,3 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
 # https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 
 version: 2
@@ -11,15 +8,15 @@ updates:
       interval: daily
     open-pull-requests-limit: 5
 
-  # Add only the root, not each workspace item
+  # ワークスペースごとではなく、ルートだけを対象にする。
   # https://github.com/dependabot/dependabot-core/issues/4993#issuecomment-1289133027
   - package-ecosystem: npm
     directory: '/'
     schedule:
       interval: daily
     open-pull-requests-limit: 5
-    # List dependencies required to be updated together, sharing the same version numbers.
-    # Those who simply have the common owner (e.g. @fastify) don't need to be listed.
+    # 同じバージョン番号で同時に更新する必要がある依存関係だけを列挙する。
+    # @fastify のように所有者が共通するだけの依存関係は対象外とする。
     groups:
       aws-sdk:
         patterns:

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// How to run:
+// 実行方法:
 // bun run test:e2e -- e2e/timelines.ts
 
 import * as assert from 'assert';

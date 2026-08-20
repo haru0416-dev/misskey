@@ -980,7 +980,6 @@ export function handleHonoApiDriveFilesUploadFromUrl(
 ): void {
 	const params = parseHonoApiParams(driveFilesUploadFromUrlParamDef, body);
 
-	// バックグラウンド処理として開始し、呼び出し元へは即座に返す。
 	uploadDriveFileFromUrlForHonoApi(deps, {
 		url: params.url,
 		user: me,
@@ -988,7 +987,7 @@ export function handleHonoApiDriveFilesUploadFromUrl(
 		sensitive: params.isSensitive,
 		force: params.force,
 		comment: params.comment,
-		// 元の upload-from-url.ts は create.ts と異なり enableIpLogging によるゲートを行わず、常に ip/headers を渡す。
+		// URLアップロードは enableIpLogging に関係なく接続元情報を記録する。
 		requestIp: ip,
 		requestHeaders: headers,
 	}).then((file) => {

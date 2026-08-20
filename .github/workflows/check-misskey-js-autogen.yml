@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # This pull_request_target job executes the PR merge ref. Keep permissions read-only,
-  # persist-credentials disabled, and never expose secrets to its steps.
+  # pull_request_target ジョブは PR のマージ ref を実行するため、権限は読み取り専用にする。
+  # persist-credentials を無効にし、各ステップで secret を公開しない。
   generate-misskey-js:
     runs-on: ubuntu-latest
     permissions:
@@ -48,7 +48,6 @@ jobs:
       - name: install dependencies
         run: bun install --frozen-lockfile
 
-      # generate api.json
       - name: Copy Config
         run: cp .config/example.yml .config/default.yml
       - name: Build
@@ -56,20 +55,18 @@ jobs:
       - name: Generate API JSON
         run: bun run --bun --filter backend generate-api-json
 
-      # build misskey js
       - name: Build misskey-js
         run: |-
           cp packages/backend/built/api.json packages/misskey-js/generator/api.json
           bun run --bun --filter misskey-js-type-generator generate
 
-      # packages/misskey-js/generator/built/autogen
       - name: Upload Generated
         uses: actions/upload-artifact@v7
         with:
           name: generated-misskey-js
           path: packages/misskey-js/generator/built/autogen
 
-  # pull_request_target safety: permissions: read-all, and no user codes are executed
+  # pull_request_target の安全性確保のため、権限を読み取り専用にし、ユーザーコードを実行しない。
   get-actual-misskey-js:
     runs-on: ubuntu-latest
     permissions:
@@ -89,7 +86,7 @@ jobs:
           name: actual-misskey-js
           path: packages/misskey-js/src/autogen
 
-  # pull_request_target safety: nothing is cloned from repository
+  # pull_request_target の安全性確保のため、リポジトリを clone しない。
   comment-misskey-js-autogen:
     runs-on: ubuntu-latest
     needs: [generate-misskey-js, get-actual-misskey-js]

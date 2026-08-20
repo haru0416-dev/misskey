@@ -104,7 +104,7 @@ async function deliverPinnedChangeForHonoApi(
 	);
 
 	await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
-	// 原典 NotePiningService#deliverPinnedChange 同様、リレー配信は await しない。
+	// リレー配信は fire-and-forget とし、ピン留め処理の完了を待たせない。
 	void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, content).catch(() => {});
 }
 

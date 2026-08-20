@@ -29,7 +29,7 @@ function spawnBun(args) {
 		cwd: rootDir,
 		...(isWindows
 			? {
-					// Keep Ctrl+C handling in this supervisor, then relay output manually.
+					// Ctrl+C はこの supervisor で処理し、出力を手動で中継する。
 					windowsVerbatimArguments: true,
 					windowsHide: false,
 					env: shouldForceColor ? { FORCE_COLOR: '1' } : undefined,

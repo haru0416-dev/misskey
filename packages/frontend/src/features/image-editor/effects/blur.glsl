@@ -56,7 +56,7 @@ void main() {
 	float totalSamples = 0.0;
 	float jitter = rand(in_uv);
 
-	// Sample in a circular pattern to avoid axis-aligned artifacts
+	// 軸方向のアーティファクトを避けるため、円形にサンプリングする。
 	for (int i = 0; i < sampleCount; i++) {
 		float fi = float(i);
 		float radius = sqrt((fi + 0.5) / sampleCountF);

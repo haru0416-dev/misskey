@@ -36,7 +36,6 @@ describe('export-clips', () => {
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 
-	// XXX: Any better way to get the result?
 	async function pollFirstDriveFile(): Promise<any> {
 		const deadline = Date.now() + 30_000;
 		while (Date.now() < deadline) {
@@ -78,7 +77,6 @@ describe('export-clips', () => {
 	});
 
 	beforeEach(async () => {
-		// Clean all clips and files of alice
 		const clips = (await api('clips/list', {}, alice)).body;
 		await Promise.all(
 			clips.map(async (clip) => {
@@ -270,7 +268,6 @@ describe('export-clips', () => {
 	});
 
 	test("Clipping other user's note (followers only notes are included when following)", async () => {
-		// Alice follows Bob
 		await api('following/create', { userId: bob.id }, alice);
 
 		const res = await api(

@@ -92,7 +92,6 @@ describe('Timeline', () => {
 		const endpointFired = noteInB != null;
 		strictEqual(endpointFired, expect);
 
-		// Let's check Delete reception
 		if (expect) {
 			const streamingFired = await isNoteUpdatedEventFired(
 				'b.test',
@@ -116,7 +115,7 @@ describe('Timeline', () => {
 	}
 
 	describe('homeTimeline', () => {
-		// NOTE: narrowing scope intentionally to prevent mistakes by copy-and-paste
+		// コピー＆ペーストによる対象漏れを防ぐため、homeTimeline のみを対象にする。
 		const homeTimeline = 'homeTimeline';
 
 		describe("Check reception of remote followee's Note", () => {
@@ -327,7 +326,7 @@ describe('Timeline', () => {
 		});
 	});
 
-	// TODO: Cannot test
+	// 未対応のためテストできない。
 	describe.skip('antenna', () => {
 		const antenna = 'antenna';
 

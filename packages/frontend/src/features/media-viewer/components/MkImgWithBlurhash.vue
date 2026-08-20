@@ -98,7 +98,7 @@ const imgWidth = ref(props.width);
 const imgHeight = ref(props.height);
 const hide = computed(() => !loaded.value || props.forceBlurhash);
 
-// 読み込み前はimg要素がv-showでdisplay:noneになっており、ネイティブのloading="lazy"は
+// img要素は読み込み完了までv-showでdisplay:noneになっており、ネイティブのloading="lazy"は
 // レイアウトボックスを持たない要素の交差判定ができず永久にフェッチを開始しない。
 // そのため、常時表示されているroot要素をIntersectionObserverで監視し、
 // ビューポート近傍に入ってから初めてsrcを結びつける（自前の遅延読み込み）

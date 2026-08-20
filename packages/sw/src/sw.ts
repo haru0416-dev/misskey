@@ -100,7 +100,6 @@ globalThis.addEventListener('fetch', ev => {
 });
 
 globalThis.addEventListener('push', ev => {
-	// クライアント取得
 	ev.waitUntil(globalThis.clients.matchAll({
 		includeUncontrolled: true,
 		type: 'window',
@@ -233,11 +232,10 @@ globalThis.addEventListener('message', (ev: ServiceWorkerGlobalScopeEventMap['me
 							.filter(name => name.startsWith(MISSKEY_CACHE_PREFIX))
 							.map(name => caches.delete(name)),
 					));
-				return; // TODO
+				return;
 		}
 
 		if (typeof ev.data === 'object' && ev.data !== null) {
-			// E.g. '[object Array]' → 'array'
 			const otype = Object.prototype.toString.call(ev.data).slice(8, -1).toLowerCase();
 
 			if (otype === 'object') {

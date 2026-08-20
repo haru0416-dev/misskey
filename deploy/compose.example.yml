@@ -34,7 +34,7 @@ services:
     networks:
       - internal_network
     volumes:
-      # Keep the existing path so upgrades reuse Redis-compatible persisted data.
+      # Redis 互換の永続データを更新後も再利用するため、既存のパスを維持する。
       - ../redis:/data
     healthcheck:
       test: ['CMD', 'valkey-cli', 'ping']

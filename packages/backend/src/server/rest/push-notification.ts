@@ -15,7 +15,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 
-// packages/sw/src/types.ts の pushNotificationDataMap と対応 (原典 PushNotificationService と同じ)
+// packages/sw/src/types.ts の pushNotificationDataMap と形式を揃える。
 export type PushNotificationsTypes = {
 	notification: Packed<'Notification'> | Record<string, unknown>;
 	unreadAntennaNote: {
@@ -62,7 +62,6 @@ function truncateNotificationBody<T extends keyof PushNotificationsTypes>(
 }
 
 /**
- * ユーザーの全 Service Worker 購読へ push を配信する。原典 PushNotificationService.pushNotification 相当。
  * fire-and-forget (配信失敗はエンドポイント失効時の購読削除以外は握りつぶす) なので await 不要。
  */
 export async function pushSwNotificationForHonoApi<T extends keyof PushNotificationsTypes>(

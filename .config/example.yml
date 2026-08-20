@@ -1,5 +1,5 @@
-# Erebia server configuration
-# All keys are validated strictly. Durations use ms/s/m/h/d and sizes use B/KiB/MiB/GiB.
+# Erebia サーバーの設定
+# すべてのキーを厳密に検証する。期間は ms/s/m/h/d、サイズは B/KiB/MiB/GiB を使用する。
 
 configVersion: 2
 

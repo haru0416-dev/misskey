@@ -228,7 +228,7 @@ describe('ユーザー', () => {
 				inbox: `https://${host}/inbox`,
 				uri: `https://${host}/users/${id}`,
 				// users/search-by-username-and-host は「非フォロー かつ updatedAt IS NULL」の
-				// ユーザーを返さない (原典と同じ挙動) ため、アクティブなユーザーとして用意する
+				// ユーザーを返さないため、アクティブなユーザーとして用意する。
 				updatedAt: new Date(),
 				...(options.tags ? { tags: options.tags } : {}),
 			},

@@ -178,7 +178,6 @@ export async function fetchOrRegisterFederatedInstance(
 	});
 }
 
-/** FederatedInstanceService.fetch() 相当 (登録はしない)。 */
 export async function fetchFederatedInstance(
 	deps: FederatedInstanceDependencies,
 	host: string,
@@ -188,7 +187,6 @@ export async function fetchFederatedInstance(
 	return await fetchInstanceByHostFromDatabase(deps.db, host);
 }
 
-/** FederatedInstanceService.update() 相当。 */
 export async function updateFederatedInstance(
 	deps: FederatedInstanceDependencies,
 	id: MiInstance['id'],

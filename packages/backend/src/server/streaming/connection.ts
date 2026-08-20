@@ -116,7 +116,7 @@ type ConnectionSnapshot = {
 	userMutedInstances: Set<string>;
 };
 
-/** Connection#fetch 相当。原典が Redis キャッシュ経由で読んでいた関連セットは直接DB読みに置き換えている。 */
+/** ストリーミング接続で使う関連セットを DB から取得する。 */
 async function fetchStreamConnectionSnapshot(
 	deps: HonoStreamConnectionDependencies,
 	userId: MiUser['id'],
@@ -597,7 +597,7 @@ export async function refreshHonoStreamConnections(
 			let lastError: unknown;
 			let refreshed = false;
 			for (const delayMs of REFRESH_RETRY_DELAYS_MS) {
-				// Retries are deliberately serialized to avoid amplifying a recovering database outage.
+				// 復旧中の DB 障害を増幅しないよう、再試行を直列化する。
 				// eslint-disable-next-line no-await-in-loop
 				if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
 				try {

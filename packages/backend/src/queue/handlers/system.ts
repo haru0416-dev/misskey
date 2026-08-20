@@ -42,7 +42,7 @@ export type HonoQueueSystemDependencies = {
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-/** TickChartsProcessorService.process 相当。DBへの同時接続を避けるため直列に実行する。 */
+/** DBへの同時接続を避けるため直列に実行する。 */
 export async function handleHonoQueueTickCharts(deps: HonoQueueSystemDependencies): Promise<void> {
 	await deps.chartWriters.federationChart.tick(false);
 	await deps.chartWriters.notesChart.tick(false);
@@ -133,7 +133,6 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 	}
 }
 
-/** CheckExpiredMutingsProcessorService.process 相当。 */
 export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDependencies): Promise<void> {
 	const expiredMutings = await listExpiredMutingsFromDatabase(deps.db, new Date());
 	if (expiredMutings.length > 0) {
@@ -160,7 +159,6 @@ export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDe
 	}
 }
 
-/** BakeBufferedReactionsProcessorService.process 相当 (ReactionsBufferingService.bake()込み)。 */
 export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystemDependencies): Promise<void> {
 	if (!deps.meta.enableReactionsBuffering) return;
 

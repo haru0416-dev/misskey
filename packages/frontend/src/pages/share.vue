@@ -31,7 +31,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-// SPECIFICATION: https://misskey-hub.net/docs/for-users/features/share-form/
+// https://misskey-hub.net/docs/for-users/features/share-form/
 
 import { ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
@@ -83,7 +83,6 @@ async function init() {
 
 			noteText += new URL(url).href;
 		} catch {
-			// URLコンストラクターで解釈できない場合は、入力値をそのまま本文へ追加する。
 			noteText += url;
 		}
 	}

@@ -5,7 +5,7 @@
 
 import bcrypt from 'bcryptjs';
 
-// 従来実装 (bcrypt.genSalt(8)) と同じコスト
+// 既存ハッシュと互換性を保つため、bcrypt のコストは 8 に固定する。
 const BCRYPT_COST = 8;
 
 // bcrypt は 72 バイトまでしか見ない。bcryptjs は暗黙に切り詰めるが、

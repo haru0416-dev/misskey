@@ -102,7 +102,6 @@ const emit = defineEmits<{
 
 const rootEl = shallowRef<HTMLElement>();
 
-// 遡り中かどうか
 const backed = ref(false);
 
 const scrollRemove = ref<(() => void) | null>(null);
@@ -142,7 +141,6 @@ let isPausingUpdate = false;
 let timerForSetPause: number | null = null;
 const BACKGROUND_PAUSE_WAIT_SEC = 10;
 
-// 先頭が表示されているかどうかを検出
 // https://qiita.com/mkataigi/items/0154aefd2223ce23398e
 const scrollObserver = ref<IntersectionObserver>();
 
@@ -347,7 +345,7 @@ watch(visibility, () => {
 			timerForSetPause = null;
 		},
 		BACKGROUND_PAUSE_WAIT_SEC * 1000);
-	} else { // 'visible'
+	} else {
 		if (timerForSetPause) {
 			window.clearTimeout(timerForSetPause);
 			timerForSetPause = null;
@@ -360,11 +358,6 @@ watch(visibility, () => {
 	}
 });
 
-/**
- * 最新のものとして1つだけアイテムを追加する
- * ストリーミングから降ってきたアイテムはこれで追加する
- * @param item アイテム
- */
 const prepend = (item: MisskeyEntity): void => {
 	if (items.value.size === 0) {
 		items.value.set(item.id, item);
@@ -376,10 +369,6 @@ const prepend = (item: MisskeyEntity): void => {
 	else prependQueue(item);
 };
 
-/**
- * 新着アイテムをitemsの先頭に追加し、displayLimitを適用する
- * @param newItems 新しいアイテムの配列
- */
 function unshiftItems(newItems: MisskeyEntity[]) {
 	const length = newItems.length + items.value.size;
 	items.value = new Map([...arrayToEntries(newItems), ...items.value].slice(0, props.displayLimit));
@@ -387,10 +376,6 @@ function unshiftItems(newItems: MisskeyEntity[]) {
 	if (length >= props.displayLimit) more.value = true;
 }
 
-/**
- * 古いアイテムをitemsの末尾に追加し、displayLimitを適用する
- * @param oldItems 古いアイテムの配列
- */
 function concatItems(oldItems: MisskeyEntity[]) {
 	const length = oldItems.length + items.value.size;
 	items.value = new Map([...items.value, ...arrayToEntries(oldItems)].slice(0, props.displayLimit));
@@ -407,9 +392,6 @@ function prependQueue(newItem: MisskeyEntity) {
 	queue.value = new Map([[newItem.id, newItem], ...queue.value].slice(0, props.displayLimit) as [string, MisskeyEntity][]);
 }
 
-/*
- * アイテムを末尾に追加する（使うの？）
- */
 const appendItem = (item: MisskeyEntity): void => {
 	items.value.set(item.id, item);
 };

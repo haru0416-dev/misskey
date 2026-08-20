@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 function makeCleanup(dir: string): () => void {
-	// in non-production environments, temp files are kept for debugging
+	// 本番環境以外ではデバッグ用に一時ファイルを残す。
 	if (process.env['NODE_ENV'] !== 'production') return () => {};
 	return () => {
 		rm(dir, { recursive: true, force: true }).catch(() => {});

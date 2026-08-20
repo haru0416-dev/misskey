@@ -68,7 +68,7 @@ function isPrivateIp(ip: string, allowedPrivateNetworks: string[] | undefined): 
 
 /**
  * fetch のレスポンスボディを最大 limit バイトまで読み取る。超過したら例外を投げる。
- * node-fetch の `size` オプション相当 (グローバル fetch には無いので自前で実装)。
+ * グローバル fetch にはレスポンスサイズ制限がないため、読み取り中にも上限を検査する。
  */
 async function readBodyWithLimit(res: Response, limit: number): Promise<Uint8Array> {
 	const contentLength = res.headers.get('content-length');
@@ -283,7 +283,7 @@ export function createHttpRequestService(config: Config) {
 	 * private-IP ブロックは Bun ランタイムでは機能しない。そこで fetch を投げる前にこの事前チェックで防ぐ。
 	 * 解決とその後の fetch は別々に名前解決するため DNS rebinding の TOCTOU 窓は残るが (dnsCache により
 	 * 実質縮小される)、宛先への直接的な private-IP アクセスは確実に遮断できる。
-	 * `getAgentByUrl` 等 got/S3 経路は Node 実行時 (テスト) には従来どおり socket レベルで遮断される。
+	 * `getAgentByUrl` 等の got/S3 経路は Node 実行時には socket レベルで遮断される。
 	 */
 	async function assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<void> {
 		if (isLocalAddressAllowed) return;

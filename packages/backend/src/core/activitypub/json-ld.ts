@@ -19,7 +19,7 @@ import { validateContentTypeSetAsJsonLD } from './misc/validator.js';
 import type { ContextDefinition, JsonLdDocument } from 'jsonld';
 import type { JsonLd as JsonLdObject, RemoteDocument } from 'jsonld/jsonld-spec.js';
 
-// RsaSignature2017 implementation is based on https://github.com/transmute-industries/RsaSignature2017
+// RsaSignature2017 の実装は https://github.com/transmute-industries/RsaSignature2017 を基にしている。
 
 export class JsonLdError extends IdentifiableError {}
 
@@ -129,7 +129,7 @@ export class JsonLd {
 	@bindThis
 	public async compact(data: unknown, context: unknown = CONTEXT): Promise<JsonLdDocument> {
 		const customLoader = this.getLoader();
-		// XXX: Importing jsonld dynamically since Jest frequently fails to import it statically
+		// Jest では jsonld の静的 import が頻繁に失敗するため、動的に import する。
 		// https://github.com/misskey-dev/misskey/pull/9894#discussion_r1103753595
 		return (await import('jsonld')).default.compact(data as unknown as JsonLdDocument, context as ContextDefinition, {
 			documentLoader: customLoader,
@@ -144,10 +144,7 @@ export class JsonLd {
 		});
 	}
 
-	/**
-	 * Prevent any further HTTP requests from being made for the sake of
-	 * validating JSON-LD signatures.
-	 */
+	/** JSON-LD 署名検証のための追加 HTTP リクエストを発生させない。 */
 	@bindThis
 	public freeze(): void {
 		this.frozen = true;

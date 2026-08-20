@@ -10,11 +10,7 @@ import type { ESTree } from 'rolldown/utils';
 import type { Plugin } from 'vite';
 import type { CallExpression, Expression } from 'estree';
 
-// This plugin transforms `unref(i18n)` to `i18n` in the code, which is useful for removing unnecessary unref calls
-// and helps locale inliner runs after vite build to inline the locale data into the final build.
-//
-// locale inliner cannot know minifiedSymbol(i18n) is 'unref(i18n)' or 'otherFunctionsWithEffect(i18n)' so
-// it is necessary to remove unref calls before minification.
+// ミニファイ後は i18n の識別子が変わり、ロケールインライナーが unref(i18n) と他の副作用を持つ呼び出しを区別できないため、ミニファイ前に unref を除去する。
 export function pluginRemoveUnrefI18n({
 	i18nSymbolName = 'i18n',
 }: {
@@ -34,11 +30,8 @@ export function pluginRemoveUnrefI18n({
 						node.callee.name === 'unref' &&
 						node.arguments.length === 1
 					) {
-						// calls to unref with single argument
 						const arg = node.arguments[0];
 						if (arg?.type === 'Identifier' && arg.name === i18nSymbolName) {
-							// this is unref(i18n) so replace it with i18n
-							// to replace, remove the 'unref(' and the trailing ')'
 							assertType<CallExpression>(node);
 							assertType<Expression>(arg);
 							magicString.remove(node.start, arg.start);

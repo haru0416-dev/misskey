@@ -4,8 +4,7 @@
  */
 
 /**
- * Basic OAuth tests to make sure the library is correctly integrated to Misskey
- * and not regressed by version updates or potential migration to another library.
+ * OAuth ライブラリが Misskey に正しく統合され、依存関係の更新や実装変更で退行しないことを確認する。
  */
 
 process.env['NODE_ENV'] = 'test';
@@ -427,12 +426,11 @@ describe('OAuth', () => {
 	// https://datatracker.ietf.org/doc/html/rfc7636.html
 	describe('PKCE', () => {
 		// https://datatracker.ietf.org/doc/html/rfc7636.html#section-4.4.1
-		// '... the authorization endpoint MUST return the authorization
-		// error response with the "error" value set to "invalid_request".'
+		// authorization endpoint は error に invalid_request を設定したエラー応答を返す。
 		test('Require PKCE', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
-			// Pattern 1: No PKCE fields at all
+			// パターン 1: PKCE フィールドなし
 			let response = await fetch(
 				client.authorizeURL({
 					redirect_uri,
@@ -443,7 +441,7 @@ describe('OAuth', () => {
 			);
 			assertIndirectError(response, 'invalid_request');
 
-			// Pattern 2: Only code_challenge
+			// パターン 2: code_challenge のみ
 			response = await fetch(
 				client.authorizeURL({
 					redirect_uri,
@@ -455,7 +453,7 @@ describe('OAuth', () => {
 			);
 			assertIndirectError(response, 'invalid_request');
 
-			// Pattern 3: Only code_challenge_method
+			// パターン 3: code_challenge_method のみ
 			response = await fetch(
 				client.authorizeURL({
 					redirect_uri,
@@ -467,7 +465,7 @@ describe('OAuth', () => {
 			);
 			assertIndirectError(response, 'invalid_request');
 
-			// Pattern 4: Unsupported code_challenge_method
+			// パターン 4: 未対応の code_challenge_method
 			response = await fetch(
 				client.authorizeURL({
 					redirect_uri,
@@ -481,7 +479,7 @@ describe('OAuth', () => {
 			assertIndirectError(response, 'invalid_request');
 		});
 
-		// Use precomputed challenge/verifier set here for deterministic test
+		// テスト結果を決定的にするため、事前計算した challenge/verifier を使う。
 		const code_challenge =
 			'4w2GDuvaxXlw2l46k5PFIoIcTGHdzw2i3hrn-C_Q6f7u0-nTYKd-beVEYy9XinYsGtAix.Nnvr.GByD3lAii2ibPRsSDrZgIN0YQb.kfevcfR9aDKoTLyOUm4hW4ABhs';
 		const code_verifier = 'Ew8VSBiH59JirLlg7ocFpLQ6NXuFC1W_rn8gmRzBKc8';
@@ -515,9 +513,7 @@ describe('OAuth', () => {
 	});
 
 	// https://datatracker.ietf.org/doc/html/rfc6749.html#section-4.1.2
-	// "If an authorization code is used more than once, the authorization server
-	// MUST deny the request and SHOULD revoke (when possible) all tokens
-	// previously issued based on that authorization code."
+	// 認可コードが複数回使われた場合、要求を拒否し、可能ならそのコードに基づく発行済みトークンを失効させる。
 	describe('Revoking authorization code', () => {
 		test('On success', async () => {
 			const { code_challenge, code_verifier } = await pkceChallenge(128);
@@ -666,11 +662,7 @@ describe('OAuth', () => {
 
 	// https://datatracker.ietf.org/doc/html/rfc6749.html#section-3.3
 	describe('Scope', () => {
-		// "If the client omits the scope parameter when requesting
-		// authorization, the authorization server MUST either process the
-		// request using a pre-defined default value or fail the request
-		// indicating an invalid scope."
-		// (And Misskey does the latter)
+		// scope が省略された場合、既定値で処理するか invalid_scope を示して失敗させる。
 		test('Missing scope', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
@@ -718,15 +710,11 @@ describe('OAuth', () => {
 			assertIndirectError(response, 'invalid_scope');
 		});
 
-		// "If the issued access token scope
-		// is different from the one requested by the client, the authorization
-		// server MUST include the "scope" response parameter to inform the
-		// client of the actual scope granted."
-		// (Although Misskey always return scope, which is also fine)
+		// 要求と異なる scope を認可した場合、実際に付与した scope を response parameter で通知する。
 		test('Partially known scopes', async () => {
 			const { code_challenge, code_verifier } = await pkceChallenge(128);
 
-			// Just get the known scope for this case for backward compatibility
+			// このケースでは既知の scope だけを取得する。
 			const { client, code } = await fetchAuthorizationCode(
 				alice,
 				'write:notes test:unknown test:unknown2',
@@ -805,10 +793,7 @@ describe('OAuth', () => {
 	});
 
 	// https://datatracker.ietf.org/doc/html/rfc6749.html#section-3.1.2.4
-	// "If an authorization request fails validation due to a missing,
-	// invalid, or mismatching redirection URI, the authorization server
-	// SHOULD inform the resource owner of the error and MUST NOT
-	// automatically redirect the user-agent to the invalid redirection URI."
+	// redirection URI がない、無効、または不一致の場合はエラーを通知し、無効な URI へ自動リダイレクトしない。
 	describe('Redirection', () => {
 		test('Invalid redirect_uri at authorization endpoint', async () => {
 			const client = new AuthorizationCode(clientConfig);
@@ -918,8 +903,7 @@ describe('OAuth', () => {
 		assert.ok(body.scopes_supported.includes('write:notes'));
 	});
 
-	// Any error on decision endpoint is solely on Misskey side and nothing to do with the client.
-	// Do not use indirect error here.
+	// decision endpoint のエラーは Misskey 側のエラーであり、クライアントには依存しないため direct error を使う。
 	describe('Decision endpoint', () => {
 		test('No login token', async () => {
 			const client = new AuthorizationCode(clientConfig);
@@ -973,7 +957,7 @@ describe('OAuth', () => {
 		});
 	});
 
-	// Only authorization code grant is supported
+	// 対応する grant type は authorization code のみ。
 	describe('Grant type', () => {
 		test('Implicit grant is not supported', async () => {
 			const url = new URL('/oauth/authorize', host);
@@ -1293,7 +1277,7 @@ describe('OAuth', () => {
 						} as AuthorizationParamsExtended),
 					);
 
-					// direct error because there's no redirect URI to ping
+					// リダイレクト先がないため direct error を返す。
 					await assertDirectError(response, 400, 'invalid_request');
 				});
 			});

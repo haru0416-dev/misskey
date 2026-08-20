@@ -357,8 +357,8 @@ export async function deliverNoteActivityForHonoApi(
 
 	if (inboxes.size === 0) return;
 
-	// JSON.stringify + digest はフォロワー数に比例するホットパスのため、enqueueDeliverJob を
-	// inbox ごとにループするのではなく QueueService#deliverMany 相当を addBulk で一括投入する。
+	// JSON.stringify + digest はフォロワー数に比例するホットパスのため、
+	// inbox ごとの投入を避けて addBulk で一括投入する。
 	const contentBody = JSON.stringify(activity);
 	const digest = ApRequestCreator.createDigest(contentBody);
 	const opts = {
@@ -565,12 +565,11 @@ export async function deliverQuestionUpdateForHonoApi(
 			renderUpdateForHonoApi(deps.config, await renderNoteForHonoApi(deps, note, false), user),
 		);
 		await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
-		// 原典 PollService#deliverQuestionUpdate 同様、リレー配信は await しない。
+		// リレー配信は fire-and-forget とし、アンケート更新を待たせない。
 		void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, content).catch(() => {});
 	}
 }
 
-/** ApRendererService#attachLdSignature 相当。RsaSignature2017 (LD 署名) をアクティビティに付与する。 */
 export async function attachLdSignatureForHonoApi(
 	deps: Pick<HonoApiRelayDeliverDependencies, 'db' | 'config' | 'httpRequestService'>,
 	activity: Record<string, unknown>,
@@ -587,9 +586,7 @@ export async function attachLdSignatureForHonoApi(
 	);
 }
 
-/** RelayService#deliverToRelays 相当。原典の 10 分 MemorySingleCache (relaysCache) は、確立済みの
- * 「hono 側では in-process cache を持たない」方針に従い accepted リレーの直接 DB 読みに置換
- * (小さなテーブルの単純 SELECT で、リレー未設定インスタンスでは空配列即 return)。 */
+/** accepted リレーを直接 DB から読み、リレー未設定インスタンスでは空配列で終了する。 */
 export async function deliverToRelaysForHonoApi(
 	deps: HonoApiRelayDeliverDependencies,
 	user: { id: MiUser['id']; host: null },

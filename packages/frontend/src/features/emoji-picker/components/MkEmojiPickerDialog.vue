@@ -75,7 +75,6 @@ function opening() {
 	picker.value?.reset();
 	picker.value?.focus();
 
-	// ダイアログの描画完了後にフォーカスを設定する。
 	window.setTimeout(() => {
 		picker.value?.focus();
 	}, 10);

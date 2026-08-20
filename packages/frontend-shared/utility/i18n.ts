@@ -75,7 +75,7 @@ function compileInterpolator(value: string, onMissing?: (expression: string) => 
 }
 
 type Tsx<T extends ILocale> = {
-	// `string extends T[K] ? never : K` part removes non-parameterized string keys from Tsx type.
+	// `string extends T[K] ? never : K`で、パラメータを持たない文字列キーをTsx型から除外する。
 	readonly [K in keyof T as string extends T[K] ? never : K]: T[K] extends ParameterizedString<infer P>
 		? (arg: { readonly [_ in P]: string | number }) => string
 		: // @ts-expect-error -- 証明省略
@@ -113,11 +113,9 @@ export class I18n<T extends ILocale> {
 
 					console.error(`Unexpected locale key: ${String(p)}`);
 
-					// A locale can temporarily be stale while the development server is
-					// rebuilding it. Returning an object here makes Vue inspect and stringify
-					// the proxy, which turns its internal keys into more locale lookups and can
-					// ultimately break rendering. Keep the diagnostic, but degrade to a safe
-					// display value until the updated locale is loaded.
+					// 開発サーバーの再ビルド中はlocaleが一時的に古くなることがある。
+					// オブジェクトを返すとVueの検査でProxyの内部キーが追加のlocale検索になり、
+					// 描画を壊すため、診断を残して安全な表示値を返す。
 					return String(p);
 				}
 			}

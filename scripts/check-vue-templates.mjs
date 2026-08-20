@@ -6,9 +6,8 @@
 // 全 .vue の template を Vue のコンパイラに通し、パースエラーを検出する。
 //
 // oxlint も vue-tsc も template の構文 (属性の重複など) は見ないため、
-// この検査が無いと `bun run build` で初めて落ちる。実際に MkYouTubePlayer.vue で
-// :style が重複したままビルドが壊れていたのを取りこぼした (cd3023da14)。
-// フルビルドは重いので、パースだけを lint に組み込んでいる。
+// この検査でビルド前に検出できるようにする。
+// フルビルドは重いため、パースだけを lint に組み込む。
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';

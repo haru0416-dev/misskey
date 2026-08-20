@@ -45,6 +45,5 @@ export class MiAntenna {
 
 	public excludeNotesInSensitiveChannel: boolean;
 }
-// Note for future developers: When you added a new column,
-// You should update ExportAntennaProcessorService and ImportAntennaProcessorService
-// to export and import antennas correctly.
+// カラムを追加する場合は、ExportAntennaProcessorService と ImportAntennaProcessorService の
+// エクスポート・インポート対象も更新する。

@@ -123,8 +123,7 @@ export function parseLocalApUri(
 	};
 }
 
-/** ApDbResolverService.getNoteFromApId 相当。ローカルの MemoryKVCache は認証済み・レート制限付き
- * エンドポイント (ap/show) 限定の利用のため省略し、直接DBを読む。 */
+/** 認証済み・レート制限付きの ap/show だけが使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
 export async function getNoteFromApIdForHonoApi(
 	deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase },
 	value: string | IObject,
@@ -137,7 +136,7 @@ export async function getNoteFromApIdForHonoApi(
 	return await fetchNoteByUriFromDatabase(deps.db, parsed.uri);
 }
 
-/** ApDbResolverService.getUserFromApId 相当。キャッシュ省略は上記と同様の理由。 */
+/** 認証済み・レート制限付きの ap/show だけが使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
 export async function getUserFromApIdForHonoApi(
 	deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase },
 	value: string | IObject,
@@ -157,7 +156,7 @@ export type HonoApiAuthUser = {
 	key: MiUserPublickey | null;
 };
 
-/** ApDbResolverService.getAuthUserFromKeyId 相当。キャッシュ省略は上記と同様の理由。 */
+/** 認証済み・レート制限付きの AP 解決経路で使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
 export async function getAuthUserFromKeyIdForHonoApi(
 	deps: { db: MiDrizzleDatabase },
 	keyId: string,
@@ -315,7 +314,7 @@ async function signedGetForHonoApi(
 				}
 			}
 		} catch (_) {
-			// something went wrong parsing the HTML, ignore the whole thing
+			// HTML の解析に失敗したため、全体を無視する。
 		}
 	}
 
@@ -363,12 +362,8 @@ export async function signedPostForHonoApi(
 }
 
 /**
- * ApResolverService.Resolver#resolve 相当。
- * オリジナルは Resolver インスタンスごとに history / recursionLimit を保持し、同一インスタンス上の
- * 複数回の resolve 呼び出しに跨って再帰を防ぐ。ここでは呼び出し元が同じ `history` Set を明示的に
- * 使い回すことで同じ挙動を再現する(省略すると呼び出しごとに新規 Set が使われ、単発呼び出しでは
- * 常に空集合になるため実質無効化される — 1 リクエストにつき resolve を 1 回しか呼ばない ap/get は
- * この省略形で問題ない)。
+ * 複数回の解決を跨いで再帰を防ぐ呼び出し元は、同じ `history` Set を明示的に使い回すこと。
+ * 省略時は呼び出しごとに新しい Set を使うため、単発解決に限って使用できる。
  */
 export async function resolveApObjectForHonoApi(
 	deps: HonoApiApResolveDependencies,

@@ -106,34 +106,25 @@ void main() {
 	vec4 wmCol = vec4(0.0);
 
 	if (u_repeat) {
-		// アライメントに基づく中心で回転
 		vec2 q = rectCenter + rot(theta) * (p - rectCenter);
 
-		// タイルグリッドの原点をrectMin（アライメント位置）に設定
 		vec2 gridOrigin = rectMin - margin;
 		vec2 qFromOrigin = q - gridOrigin;
 
-		// タイルサイズ(ウォーターマーク + マージン)で正規化
 		vec2 tile = wmSize + margin * 2.0;
 		vec2 tileUv = qFromOrigin / tile;
 
-		// タイル内のローカル座標(0..1)を取得
 		vec2 localUv = fract(tileUv);
 
-		// ローカル座標をピクセル単位に変換
 		vec2 localPos = localUv * tile;
 
-		// マージン領域内かチェック
 		bool inMargin = any(lessThan(localPos, margin)) || any(greaterThanEqual(localPos, margin + wmSize));
 
 		if (!inMargin) {
-			// ウォーターマーク領域内: UV座標を計算
 			vec2 uvWm = (localPos - margin) / wmSize;
 			wmCol = texture(u_watermark, uvWm);
 		}
-		// マージン領域の場合は透明(wmCol = vec4(0.0))のまま
 	} else {
-		// アライメントと回転に従い一枚だけ描画
 		vec2 q = rectCenter + rot(theta) * (p - rectCenter);
 		bool inside = all(greaterThanEqual(q, rectMin)) && all(lessThan(q, rectMax));
 		if (inside) {

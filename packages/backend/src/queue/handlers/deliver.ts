@@ -44,12 +44,9 @@ export type HonoQueueDeliverDependencies = {
 	chartWriters: Pick<HonoChartWriters, 'instanceChart' | 'apRequestChart' | 'federationChart'>;
 };
 
-// DeliverProcessorService はプロセス内に1インスタンスのみ生成される前提で
-// suspendedHostsCache をインスタンスフィールドとして保持していた。Hono側では
-// キュー処理関数自体がプロセスごとに1つしか生成されないため、モジュールスコープの
-// シングルトンとして同じ役割を持たせる。
+// キュー処理関数はプロセスごとに1つだけ生成されるため、停止ホストキャッシュをモジュールスコープで共有する。
 // Set<string> で保持し、ジョブ毎の .map().includes() (配列再構築+線形探索) を避けてO(1)判定にする。
-const suspendedHostsCache = new MemorySingleCache<Set<string>>(1000 * 60 * 60); // 1h
+const suspendedHostsCache = new MemorySingleCache<Set<string>>(1000 * 60 * 60);
 
 // 配送後のインスタンス情報更新は非同期のため、失敗を unhandled rejection にしない。
 const logger = new MisskeyLogger('queue').createSubLogger('deliver');
@@ -188,7 +185,7 @@ export async function handleHonoQueueDeliver(
 			// 5xx etc.
 			throw new Error(`${res.statusCode} ${res.statusMessage}`, { cause: res });
 		} else {
-			// DNS error, socket error, timeout ...
+			// DNS エラー、ソケットエラー、タイムアウトなど。
 			throw res;
 		}
 	}

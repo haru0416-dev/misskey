@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: syuilo and misskey-project
 # SPDX-License-Identifier: AGPL-3.0-only
 
-# Read the same compiled configuration as the server instead of reparsing YAML.
+# YAML を再解析せず、サーバーと同じコンパイル済み設定を読み込む。
 exec bun -e '
 const envelope = await Bun.file("/misskey/built/.config.json").json();
 const port = envelope.config?.server?.listen?.tcp?.port;

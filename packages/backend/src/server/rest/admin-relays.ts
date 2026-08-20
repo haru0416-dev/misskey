@@ -76,10 +76,7 @@ export async function relayRejectedForHonoApi(
 	return JSON.stringify(result);
 }
 
-/**
- * RelayService.isRelayActor 相当。原典の10分キャッシュに対応する RelayStore 側の
- * 同期無効化付き短命キャッシュ (listRelaysByStatusFromDatabaseCached) を使う。
- */
+/** accepted リレーの短命キャッシュを使い、actor がリレーか判定する。 */
 export async function isRelayActorForHonoApi(
 	deps: Pick<HonoApiAdminRelaysDependencies, 'db'>,
 	actor: { inbox: string | null; sharedInbox: string | null },

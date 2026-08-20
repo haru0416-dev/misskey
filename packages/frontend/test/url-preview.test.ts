@@ -57,7 +57,6 @@ describe('MkUrlPreview', () => {
 		const button = buttons[0];
 		if (button == null) throw new Error('URL preview button was not found');
 		button.click();
-		// Wait for the click event to be fired
 		await Promise.resolve();
 
 		return mkUrlPreview.container.querySelector('iframe');

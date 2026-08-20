@@ -17,13 +17,13 @@ import { api, channel, clip, galleryPost, page, play, post, signup, simpleGet, u
 import type { SimpleGetResponse } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
-// Request Accept in lowercase
+// Accept ヘッダーを小文字で送信する。
 const ONLY_AP = 'application/activity+json';
 const PREFER_AP = 'application/activity+json, */*';
 const PREFER_HTML = 'text/html, */*';
 const UNSPECIFIED = '*/*';
 
-// Response Content-Type in lowercase
+// Content-Type ヘッダーを小文字で返す。
 const AP = 'application/activity+json; charset=utf-8';
 const HTML = 'text/html; charset=utf-8';
 const JSON_UTF8 = 'application/json; charset=utf-8';
@@ -58,7 +58,7 @@ describe('Webリソース', () => {
 		const { path, accept, cookie, type } = param;
 		const res = await simpleGet(path, accept, cookie);
 		assert.strictEqual(res.status, 200);
-		// Header values are case-insensitive
+		// ヘッダー値は大文字小文字を区別しない。
 		assert.strictEqual(res.type?.toLowerCase(), (type ?? HTML).toLowerCase());
 		return res;
 	};

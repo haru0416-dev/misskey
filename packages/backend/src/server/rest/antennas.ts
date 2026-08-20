@@ -189,9 +189,7 @@ export async function checkHitAntennaForHonoApi(
 }
 
 /**
- * AntennaService.onMoveAccount 相当。src ユーザーを users リストに含むアンテナへ dst の acct を追記する。
- * 原典はプロセス内キャッシュ (getAntennas) からアンテナ一覧を取得していたが、addNoteToAntennasForHonoApi
- * と同じ判断で毎回DBから読む。
+ * アカウント移行直前の users リストを基準に対象を決めるため、アンテナ一覧は毎回DBから読む。
  */
 export async function onMoveAccountForHonoApi(
 	deps: {
@@ -202,7 +200,7 @@ export async function onMoveAccountForHonoApi(
 	src: MiUser,
 	dst: MiUser,
 ): Promise<void> {
-	// There is a possibility for users to add the srcUser to their antennas, but it's low, so we don't check it.
+	// srcUser が自分のアンテナに含まれる可能性は低いため、移行対象として確認しない。
 
 	const srcUserAcct = getFullApAccount(deps.config, src.username, src.host).toLowerCase();
 	const antennasToMigrate = (await listActiveAntennasFromDatabase(deps.db)).filter((antenna) => {
@@ -226,8 +224,7 @@ export async function onMoveAccountForHonoApi(
 }
 
 /**
- * AntennaService.addNoteToAntennas 相当。原典はプロセス内キャッシュからアクティブなアンテナ一覧を
- * 取得していたが、更新直後の取りこぼしを避けるためDBから取得し、評価だけを分割実行する。
+ * アクティブなアンテナ一覧を DB から取得し、評価を分割して実行する。
  * FanoutTimelineService.push と同じく直近3分以内のノートのみ即時lpushし、古いノートは末尾IDと比較する。
  */
 export async function addNoteToAntennasForHonoApi(

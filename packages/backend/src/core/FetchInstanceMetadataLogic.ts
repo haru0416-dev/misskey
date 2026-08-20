@@ -206,7 +206,7 @@ async function getThemeColor(
 	return null;
 }
 
-// parses hex / rgb() / hsl() / named CSS colors to '#rrggbb' (replaces tinycolor2)
+// hex / rgb() / hsl() / CSS カラー名を '#rrggbb' に変換する。
 function parseCssColorToHex(input: string): string | null {
 	const str = input.trim().toLowerCase();
 

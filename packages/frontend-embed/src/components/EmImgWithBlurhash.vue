@@ -115,14 +115,12 @@ function drawImage(bitmap: CanvasImageSource) {
 		return;
 	}
 
-	// canvasがない（mountedされていない）場合はTmpに保存しておく
 	if (!canvas.value) {
 		if (typeof ImageBitmap !== 'undefined' && bitmapTmp.value instanceof ImageBitmap) bitmapTmp.value.close();
 		bitmapTmp.value = bitmap;
 		return;
 	}
 
-	// canvasがあれば描画する
 	bitmapTmp.value = undefined;
 	try {
 		const ctx = canvas.value.getContext('2d');
@@ -141,7 +139,6 @@ function drawAvg() {
 	const ctx = canvas.value.getContext('2d');
 	if (!ctx) return;
 
-	// avgColorでお茶をにごす
 	ctx.beginPath();
 	ctx.fillStyle = color;
 	ctx.fillRect(0, 0, canvasWidth.value, canvasHeight.value);
@@ -197,7 +194,6 @@ watch(() => props.hash, () => {
 });
 
 onMounted(() => {
-	// drawImageがmountedより先に呼ばれている場合はここで描画する
 	if (bitmapTmp.value) {
 		drawImage(bitmapTmp.value);
 	}

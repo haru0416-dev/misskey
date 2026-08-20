@@ -14,15 +14,14 @@ export class MiNoteDraft {
 
 	public replyId: MiNote['id'] | null;
 
-	// There is a possibility that replyId is not null but reply is null when the reply note is deleted.
+	// 返信先ノートが削除されると、replyId が null でなくても reply は null になり得る。
 	public reply: MiNote | null;
 
 	public renoteId: MiNote['id'] | null;
 
-	// There is a possibility that renoteId is not null but renote is null when the renote note is deleted.
+	// リノート先ノートが削除されると、renoteId が null でなくても renote は null になり得る。
 	public renote: MiNote | null;
 
-	// TODO: varcharにしたい(Note.tsと同じ)
 	public text: string | null;
 
 	public cw: string | null;
@@ -51,8 +50,7 @@ export class MiNoteDraft {
 
 	public channelId: MiChannel['id'] | null;
 
-	// There is a possibility that channelId is not null but channel is null when the channel is deleted.
-	// (deleting channel is not implemented so it's not happening now but may happen in the future)
+	// チャンネルが削除されると、channelId が null でなくても channel は null になり得る。
 	public channel: MiChannel | null;
 
 	public hasPoll: boolean;

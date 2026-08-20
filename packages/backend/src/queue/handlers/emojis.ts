@@ -77,7 +77,7 @@ export async function handleHonoQueueExportCustomEmojis(
 			await deps.downloadService.downloadUrl(emoji.originalUrl, emojiPath);
 			downloaded = true;
 		} catch {
-			// 元実装同様、ダウンロード失敗した絵文字はdownloaded:falseで記録して継続する
+			// ダウンロードに失敗した絵文字も downloaded:false で記録し、処理を継続する。
 		}
 
 		if (!downloaded) {
@@ -186,7 +186,7 @@ export async function handleHonoQueueImportCustomEmojis(
 					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
 				});
 			} catch {
-				// 元実装同様、1件の失敗はログのみで継続する
+				// 1件の失敗でインポート全体を中断しない。
 				continue;
 			}
 		}

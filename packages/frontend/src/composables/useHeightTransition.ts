@@ -26,7 +26,7 @@ export function useHeightTransition(options: HeightTransitionOptions = {}) {
 		const elementHeight = el.getBoundingClientRect().height;
 		const maxHeight = options.maxHeight?.() ?? Infinity;
 		el.style.height = '0';
-		el.offsetHeight; // reflow
+		el.offsetHeight; // レイアウトを確定させるために再計算を強制する。
 		el.style.height = `${Math.min(elementHeight, maxHeight)}px`;
 	}
 

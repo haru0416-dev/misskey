@@ -12,7 +12,6 @@ import Chart from '../core.js';
 import { name, schema } from './entities/test-grouped.js';
 import type { KVs } from '../core.js';
 
-/** テスト用の Chart。 */
 export default class TestGroupedChart extends Chart<typeof schema> {
 	private total = {} as Record<string, number>;
 

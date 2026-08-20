@@ -634,7 +634,6 @@ describe('Account Move', () => {
 		});
 
 		test('Prohibit access after moving: /drive/files/create', async () => {
-			// FIXME: 一旦逃げておく
 			const res = await uploadFile(alice);
 
 			assert.strictEqual(res.status, 403);

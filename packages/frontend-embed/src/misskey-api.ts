@@ -19,7 +19,6 @@ type OptionalEndpoint = {
 	[E in keyof Misskey.Endpoints]: Misskey.Endpoints[E] extends { reqOptional: true } ? E : never;
 }[keyof Misskey.Endpoints];
 
-// Implements Misskey.api.ApiClient.request
 export function misskeyApi<
 	ResT = void,
 	E extends OptionalEndpoint = OptionalEndpoint,
@@ -48,7 +47,6 @@ export function misskeyApi<
 	};
 
 	const promise = new Promise<_ResT>((resolve, reject) => {
-		// Send request
 		window.fetch(`${apiUrl}/${endpoint}`, {
 			method: 'POST',
 			body: JSON.stringify(data ?? {}),
@@ -76,7 +74,6 @@ export function misskeyApi<
 	return promise;
 }
 
-// Implements Misskey.api.ApiClient.request
 export function misskeyApiGet<
 	ResT = void,
 	E extends OptionalEndpoint = OptionalEndpoint,
@@ -108,7 +105,6 @@ export function misskeyApiGet<
 	);
 
 	const promise = new Promise<_ResT>((resolve, reject) => {
-		// Send request
 		window.fetch(`${apiUrl}/${endpoint}?${query}`, {
 			method: 'GET',
 			credentials: 'omit',

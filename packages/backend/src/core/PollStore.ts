@@ -84,7 +84,7 @@ export async function incrementPollVoteInDatabase(
 	noteId: MiNote['id'],
 	choice: number,
 ): Promise<void> {
-	// In SQL, array index is 1 based
+	// SQL の配列添字は 1 始まり。
 	const index = choice + 1;
 	await db.execute(sql`UPDATE "poll" SET "votes"[${index}] = "votes"[${index}] + 1 WHERE "noteId" = ${noteId}`);
 }

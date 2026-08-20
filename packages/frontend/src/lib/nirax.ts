@@ -168,7 +168,6 @@ function buildFullPath(args: {
 			const replaceRegex = new RegExp(`:${key}(\\?)?`, 'g');
 			fullPath = fullPath.replace(replaceRegex, value ? encodeURIComponent(value) : '');
 		}
-		// 指定されなかった任意パラメータを除去する。
 		fullPath = fullPath.replace(/\/:\w+\?(?=\/|$)/g, '');
 	}
 

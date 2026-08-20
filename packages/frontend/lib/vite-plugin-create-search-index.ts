@@ -53,14 +53,12 @@ export type Options = {
 	verbose?: boolean;
 };
 
-// マーカー関係を表す型
 interface MarkerRelation {
 	parentId?: string;
 	markerId: string;
 	node: ElementNode;
 }
 
-// ロガー
 let logger = {
 	info: (msg: string, options?: LogOptions) => {},
 	warn: (msg: string, options?: LogOptions) => {},
@@ -89,15 +87,14 @@ function initLogger(options: Options) {
 	};
 }
 
-//region AST Utility
+//region AST ユーティリティ
 
 type WalkVueNode = RootNode | TemplateChildNode | SimpleExpressionNode;
 
 /**
- * Walks the Vue AST.
- * @param nodes
- * @param context The context value passed to callback. you can update context for children by returning value in callback
- * @param callback Returns false if you don't want to walk inner tree
+ * Vue AST を深さ優先で走査する。
+ * callback が false を返すと、その再帰呼び出しを終了して同じ階層の後続ノードも走査しない。
+ * undefined 以外の戻り値は子へ渡す context として使う。
  */
 function walkVueElements<C extends {} | null>(
 	nodes: WalkVueNode[],
@@ -141,23 +138,18 @@ function findAttribute(
 
 function findEndOfStartTagAttributes(node: ElementNode): number {
 	if (node.children.length > 0) {
-		// 子要素がある場合、最初の子要素の開始位置を基準にする
 		const nodeStart = node.loc.start.offset;
 		const firstChildStart = node.children[0].loc.start.offset;
 		const endOfStartTag = node.loc.source.lastIndexOf('>', firstChildStart - nodeStart);
 		if (endOfStartTag === -1) throw new Error('Bug: Failed to find end of start tag');
 		return nodeStart + endOfStartTag;
 	} else {
-		// 子要素がない場合、自身の終了位置から逆算
 		return node.isSelfClosing ? node.loc.end.offset - 1 : node.loc.end.offset;
 	}
 }
 
 //endregion
 
-/**
- * TypeScriptコード生成
- */
 function generateJavaScriptCode(resolvedRootMarkers: SearchIndexItem[]): string {
 	return `import { i18n } from '@/i18n.js';\nexport const searchIndexes = ${customStringify(resolvedRootMarkers)};\n`;
 }
@@ -168,18 +160,14 @@ function generateJavaScriptCode(resolvedRootMarkers: SearchIndexItem[]): string 
  */
 function customStringify(obj: unknown): string {
 	return JSON.stringify(obj).replaceAll(/"(.*?)"/g, (all, group) => {
-		// propertyAccessProxy が i18n 参照を "${i18n.xxx}"のような形に変換してるので、これをそのまま`${i18n.xxx}`
-		// のような形にすると、実行時にi18nのプロパティにアクセスするようになる。
-		// objectのkeyでは``が使えないので、${ が使われている場合にのみ``に置き換えるようにする
+		// propertyAccessProxy が生成する ${i18n.xxx} を実行時の参照として保持する。
+		// オブジェクトキーではテンプレートリテラルを使えないため、${ を含む値だけ置換する。
 		return group.includes('${') ? '`' + group + '`' : all;
 	});
 }
 
-// region extractElementText
+// region 要素テキスト抽出
 
-/**
- * 要素のノードの中身のテキストを抽出する
- */
 function extractElementText(node: ElementNode, id: string): string | null {
 	return extractElementTextChecked(node, node.tag, id);
 }
@@ -218,7 +206,7 @@ function extractElementText2Inner(node: TemplateChildNode, processingNodeName: s
 		case NodeTypes.TEXT:
 			return node.content;
 		case NodeTypes.COMMENT:
-			// We skip comments
+			// コメントノードは検索対象に含めない。
 			return '';
 		case NodeTypes.IF:
 		case NodeTypes.IF_BRANCH:
@@ -233,11 +221,8 @@ function extractElementText2Inner(node: TemplateChildNode, processingNodeName: s
 
 // endregion
 
-// region extractUsageInfoFromTemplateAst
+// region テンプレート AST から検索情報を抽出
 
-/**
- * SearchLabel/SearchText/SearchIconを探して抽出する関数
- */
 function extractSugarTags(
 	nodes: TemplateChildNode[],
 	id: string,
@@ -251,11 +236,11 @@ function extractSugarTags(
 	walkVueElements(nodes, null, (node) => {
 		switch (node.tag) {
 			case 'SearchMarker':
-				return false; // SearchMarkerはスキップ
+				return false;
 			case 'SearchLabel':
 				if (label !== undefined) {
 					logger.warn(`Duplicate SearchLabel found, ignoring the second one at ${id}:${node.loc.start.line}`);
-					break; // 2つ目のSearchLabelは無視
+					break;
 				}
 
 				label = extractElementText(node, id);
@@ -269,7 +254,7 @@ function extractSugarTags(
 			case 'SearchIcon':
 				if (icon !== undefined) {
 					logger.warn(`Duplicate SearchIcon found, ignoring the second one at ${id}:${node.loc.start.line}`);
-					break; // 2つ目のSearchIconは無視
+					break;
 				}
 
 				if (node.children.length !== 1) {
@@ -289,7 +274,6 @@ function extractSugarTags(
 		return;
 	});
 
-	// デバッグ情報
 	logger.info(`Extraction completed: label=${label}, text=[${texts.join(', ')}, icon=${icon}]`);
 	return { label: label ?? null, texts, icon: icon ?? null };
 }
@@ -344,26 +328,22 @@ function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: 
 			return;
 		}
 
-		// マーカーID取得
 		const markerIdProp = node.props?.find((p) => p.name === 'markerId');
 		const markerId = markerIdProp?.type == NodeTypes.ATTRIBUTE ? markerIdProp.value?.content : null;
 
-		// SearchMarkerにマーカーIDがない場合はエラー
 		if (markerId == null) {
 			logger.error(`Marker ID not found for node: ${JSON.stringify(node)}`);
 			throw new Error(`Marker ID not found in file ${id}`);
 		}
 
-		// マーカー基本情報
 		const markerInfo: SearchIndexItem = {
 			id: markerId,
 			parentId: parentId ?? undefined,
-			label: '', // デフォルト値
+			label: '',
 			keywords: [],
 			texts: [],
 		};
 
-		// バインドプロパティを取得
 		const path = getStringProp(findAttribute(node.props, 'path'), id);
 		const icon = getStringProp(findAttribute(node.props, 'icon'), id);
 		const label = getStringProp(findAttribute(node.props, 'label'), id);
@@ -378,13 +358,12 @@ function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: 
 		if (keywords) markerInfo.keywords = keywords;
 		if (texts) markerInfo.texts = texts;
 
-		// pathがない場合はファイルパスを設定 (ネストされた `dir/index.vue` 規約にも対応)
+		// path 未指定時は管理画面・設定画面の index.vue に対応する URL を補う。
 		if (markerInfo.path == null && parentId == null) {
 			const m = id.match(/\/(admin|settings)\/([^/]+)\/index\.vue$/) ?? id.match(/\/(admin|settings)\/([^/]+)\.vue$/);
 			if (m) markerInfo.path = `/${m[1]}/${m[2]}`;
 		}
 
-		// SearchLabelとSearchTextを抽出 (AST全体を探索)
 		{
 			const extracted = extractSugarTags(node.children, id);
 			if (extracted.label && markerInfo.label)
@@ -400,7 +379,6 @@ function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: 
 			logger.warn(`No label found for ${markerId} at ${id}:${node.loc.start.line}`);
 		}
 
-		// マーカーを登録
 		markerMap.set(markerId, markerInfo);
 		allMarkers.push(markerInfo);
 		return markerId;
@@ -411,16 +389,14 @@ function extractUsageInfoFromTemplateAst(templateAst: RootNode | undefined, id: 
 
 //endregion
 
-//region evalExpression
+//region 式評価
 
 /**
- * expr を実行します。
- * i18n はそのアクセスを保持するために propertyAccessProxy を使用しています。
+ * i18n の Proxy をビルド時に実値へ解決せず、プロパティパスを文字列として結果に残すために式を評価する。
  */
 function evalExpression(expr: string): unknown {
 	const rarResult = Function('i18n', `return ${expr}`)(i18nProxy);
-	// JSON.stringify を一回通すことで、 AccessProxy を文字列に変換する
-	// Walk してもいいんだけど横着してJSON.stringifyしてる。ビルド時にしか通らないのであんまりパフォーマンス気にする必要ないんで
+	// Proxy が保持する i18n のプロパティパスを実行時コードへ渡すため、評価結果を JSON 経由で文字列化する。
 	return JSON.parse(JSON.stringify(rarResult));
 }
 
@@ -461,7 +437,6 @@ function propertyAccessProxyToJSON(this: AccessProxy, hint: string) {
  * プロパティのアクセスを保持するための Proxy オブジェクトを作成します。
  *
  * この関数で生成した proxy は JSON でシリアライズするか、`${}`のように string にすると、 ${property.path} のような形になる。
- * @param path
  */
 function propertyAccessProxy(path: string[]): AccessProxy {
 	const target: AccessProxy = {
@@ -489,7 +464,7 @@ export function collectFileMarkers(id: string, code: string | RolldownMagicStrin
 
 		if (errors.length > 0) {
 			logger.error(`Compile Error: ${id}, ${errors}`);
-			return []; // エラーが発生したファイルはスキップ
+			return [];
 		}
 
 		return extractUsageInfoFromTemplateAst(descriptor.template?.ast, id);
@@ -506,7 +481,6 @@ export function collectFileMarkers(id: string, code: string | RolldownMagicStrin
 type TransformedCode = Exclude<TransformResult, string>;
 
 export class MarkerIdAssigner {
-	// key: file id
 	private cache: Map<string, TransformedCode>;
 
 	constructor() {
@@ -518,7 +492,6 @@ export class MarkerIdAssigner {
 	}
 
 	public processFile(id: string, code: string): TransformedCode {
-		// try cache first
 		if (this.cache.has(id)) {
 			return this.cache.get(id)!;
 		}
@@ -528,16 +501,16 @@ export class MarkerIdAssigner {
 	}
 
 	#processImpl(id: string, code: string): TransformedCode {
-		const s = new RolldownMagicString(code); // magic-string のインスタンスを作成
+		const s = new RolldownMagicString(code);
 
 		const parsed = vueSfcParse(code, { filename: id });
 		if (!parsed.descriptor.template) {
 			return {
-				code, // テンプレートがない場合は元のコードを返す
+				code,
 			};
 		}
-		const ast = parsed.descriptor.template.ast; // テンプレート AST を取得
-		const markerRelations: MarkerRelation[] = []; //  MarkerRelation 配列を初期化
+		const ast = parsed.descriptor.template.ast;
+		const markerRelations: MarkerRelation[] = [];
 
 		if (!ast) {
 			return {
@@ -558,12 +531,10 @@ export class MarkerIdAssigner {
 					return logger.error(`markerId must have a value at ${id}:${markerIdProp.loc.start.line}`);
 				nodeMarkerId = markerIdProp.value.content;
 			} else {
-				// ファイルパスと行番号からハッシュ値を生成
-				// この際実行環境で差が出ないようにファイルパスを正規化
+				// 実行環境による差を避けるため、正規化したファイルパスと行番号からハッシュ値を生成する。
 				const idKey = id.replace(/\\/g, '/').split('packages/frontend/')[1];
 				const generatedMarkerId = toBase62(hash(`${idKey}:${node.loc.start.line}`));
 
-				// markerId attribute を追加
 				const endOfStartTag = findEndOfStartTagAttributes(node);
 				s.appendRight(
 					endOfStartTag,
@@ -582,11 +553,8 @@ export class MarkerIdAssigner {
 			return nodeMarkerId;
 		});
 
-		// 2段階目: :children 属性の追加
-		// 最初に親マーカーごとに子マーカーIDを集約する処理を追加
 		const parentChildrenMap = new Map<string, string[]>();
 
-		// 1. まず親ごとのすべての子マーカーIDを収集
 		markerRelations.forEach((relation) => {
 			if (relation.parentId) {
 				if (!parentChildrenMap.has(relation.parentId)) {
@@ -596,7 +564,6 @@ export class MarkerIdAssigner {
 			}
 		});
 
-		// 2. 親ごとにまとめて :children 属性を処理
 		for (const [parentId, childIds] of parentChildrenMap.entries()) {
 			const parentRelation = markerRelations.find((r) => r.markerId === parentId);
 			if (!parentRelation) continue;
@@ -609,7 +576,6 @@ export class MarkerIdAssigner {
 					continue;
 				}
 
-				// AST で :children 属性が検出された場合、それを更新
 				const childrenValue = getStringArrayProp(childrenProp, id);
 				if (childrenValue == null) continue;
 
@@ -624,7 +590,6 @@ export class MarkerIdAssigner {
 				s.overwrite(childrenProp.exp!.loc.start.offset, childrenProp.exp!.loc.end.offset, expression);
 				logger.info(`Added ${childIds.length} child markerIds to existing :children in ${id}`);
 			} else {
-				// :children 属性がまだない場合、新規作成
 				const endOfParentStartTag = findEndOfStartTagAttributes(parentNode);
 				s.appendRight(endOfParentStartTag, ` :children="${JSON5.stringify(childIds).replace(/"/g, "'")}"`);
 				logger.info(`Created new :children attribute with ${childIds.length} markerIds in ${id}`);
@@ -632,28 +597,24 @@ export class MarkerIdAssigner {
 		}
 
 		return {
-			code: s.toString(), // 変更後のコードを返す
+			code: s.toString(),
 		};
 	}
 
 	async getOrLoad(id: string) {
-		// if there already exists a cache, return it
-		// note cahce will be invalidated on file change so the cache must be up to date
 		let code = this.getCached(id)?.code;
 		if (code != null) {
 			return code;
 		}
 
-		// if no cache found, read and parse the file
 		const originalCode = await fs.promises.readFile(id, 'utf-8');
 
-		// Other code may already parsed the file while we were waiting for the file to be read so re-check the cache
+		// 読み込み中に別処理が解析している可能性があるため、読み込み後にキャッシュを再確認する。
 		code = this.getCached(id)?.code;
 		if (code != null) {
 			return code;
 		}
 
-		// parse the file
 		code = this.processFile(id, originalCode)?.code;
 		return code;
 	}
@@ -663,14 +624,13 @@ export class MarkerIdAssigner {
 	}
 }
 
-// Vite プラグインとして export
 export default function pluginCreateSearchIndex(options: Options): PluginOption {
 	const assigner = new MarkerIdAssigner();
 	return [createSearchIndex(options, assigner), pluginCreateSearchIndexVirtualModule(options, assigner)];
 }
 
 function createSearchIndex(options: Options, assigner: MarkerIdAssigner): Plugin {
-	initLogger(options); // ロガーを初期化
+	initLogger(options);
 	const root = normalizePath(process.cwd());
 
 	function isTargetFile(id: string): boolean {
@@ -724,7 +684,7 @@ export function pluginCreateSearchIndexVirtualModule(options: Options, asigner: 
 
 	return {
 		name: 'generateSearchIndexVirtualModule',
-		// hotUpdate hook を vite:vue よりもあとに実行したいため enforce: post
+		// vite:vue の後に hotUpdate hook を実行する必要があるため、enforce を post にする。
 		enforce: 'post',
 
 		async resolveId(id) {
@@ -757,7 +717,7 @@ export function pluginCreateSearchIndexVirtualModule(options: Options, asigner: 
 
 			const searchIndexFilePath = parseSearchIndexFileId(id);
 			if (searchIndexFilePath != null) {
-				// call load to update the index file when the file is changed
+				// 対象ファイルの変更時に検索インデックスを再生成する。
 				this.addWatchFile(searchIndexFilePath);
 
 				const code = await asigner.getOrLoad(searchIndexFilePath);

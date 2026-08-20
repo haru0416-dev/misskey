@@ -5,7 +5,7 @@
 
 /**
  * HTTP Link ヘッダ (RFC 8288) から、指定した rel を持つリンクの URI を抽出する。
- * 旧依存 `http-link-header` の置き換えで、必要だった機能 (parse().get('rel', x)) のみ実装。
+ * 対応範囲は rel 属性による URI 抽出に限定する。
  * rel 属性は空白区切りの複数値を取れ、比較は大文字小文字を区別しない。
  */
 export function extractLinkHeaderUrisByRel(header: string, rel: string): string[] {

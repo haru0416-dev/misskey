@@ -51,7 +51,7 @@ describe('ChatMessageStore history', () => {
 			id: genId(),
 			muterId: viewer.id,
 			muteeId: muted.id,
-			// Chat history preserves the existing behavior until the expiry cleanup removes this row.
+			// 期限切れ行が削除されるまではチャット履歴の除外対象になる。
 			expiresAt: new Date(0),
 		});
 

@@ -18,10 +18,6 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 
 const disposableEmailDomainsSet = new Set(disposableEmailDomains);
 
-/**
- * deep-email-validator の validateDisposable + validateMx 相当。
- * 使い捨てドメインリストとの照合と、MX レコードが引けるかどうかを検査する。
- */
 async function validateEmailDeliverability(emailAddress: string): Promise<{
 	valid: boolean;
 	reason: 'disposable' | 'mx' | null;
@@ -220,7 +216,7 @@ export function createEmailService(
 			} else if (meta.enableTruemailApi && meta.truemailInstance && meta.truemailAuthKey != null) {
 				validated = await trueMail(meta.truemailInstance, emailAddress, meta.truemailAuthKey);
 			} else {
-				// 従来 deep-email-validator に相当する検査 (regex は validateEmailFormat で確認済)。
+				// regex は validateEmailFormat で確認済みのため、ここでは配送可能性を検査する。
 				// SMTP 検査は日本だと25ポートが殆どのプロバイダーで塞がれていてタイムアウトになるのでしない
 				validated = await validateEmailDeliverability(emailAddress);
 			}

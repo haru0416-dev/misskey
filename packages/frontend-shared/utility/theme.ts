@@ -61,7 +61,7 @@ function oklchToTinycolor(val: string): tinycolor.Instance | null {
 	const alpha = alphaRaw != null ? parseOklchComponent(alphaRaw, 1) : 1;
 	if (![l, c, h, alpha].every(Number.isFinite)) return null;
 
-	// OKLCH → OKLab → linear sRGB → sRGB
+	// OKLCH → OKLab → 線形 sRGB → sRGB
 	const a = c * Math.cos((h * Math.PI) / 180);
 	const b = c * Math.sin((h * Math.PI) / 180);
 	const l_ = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
@@ -129,13 +129,10 @@ function getThemeReferenceColor(theme: Theme, key: string, stack: string[], dept
 
 function getColor(theme: Theme, val: string, stack: string[] = [], depth = 0): tinycolor.Instance {
 	if (val[0] === '@') {
-		// ref (prop)
 		return getThemeReferenceColor(theme, val.substring(1), stack, depth);
 	} else if (val[0] === '$') {
-		// ref (const)
 		return getThemeReferenceColor(theme, val, stack, depth);
 	} else if (val[0] === ':') {
-		// func
 		if (depth >= MAX_THEME_REFERENCE_DEPTH) {
 			throw new Error('Theme reference limit exceeded');
 		}
@@ -171,7 +168,6 @@ function getColor(theme: Theme, val: string, stack: string[] = [], depth = 0): t
 		throw new Error(`Theme contains invalid function: ${val}`);
 	}
 
-	// other case
 	const oklch = oklchToTinycolor(val);
 	if (oklch != null) return oklch;
 
@@ -188,7 +184,7 @@ export function compile(theme: Theme): CompiledTheme {
 	const props = {} as CompiledTheme;
 
 	for (const [k, v] of Object.entries(resolvedTheme.props)) {
-		if (k.startsWith('$')) continue; // ignore const
+		if (k.startsWith('$')) continue;
 
 		props[k] = v.startsWith('"') ? v.replace(/^"\s*/, '') : genValue(getColor(resolvedTheme, v));
 	}

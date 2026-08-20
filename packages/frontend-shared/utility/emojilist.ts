@@ -50,7 +50,7 @@ for (const [i, emo] of emojilist.entries()) {
 export const emojiCharByCategory = _charGroupByCategory;
 
 export function getUnicodeEmojiOrNull(char: string): UnicodeEmojiDef | null {
-	// Colorize it because emojilist.json assumes that
+	// emojilist.jsonがカラースタイルを前提としているため変換する
 	return (
 		unicodeEmojisMap.get(forceColorizeEmoji(char)) ??
 		// カラースタイル絵文字がjsonに無い場合はテキストスタイル絵文字にフォールバックする
@@ -70,7 +70,7 @@ export function isSupportedEmoji(char: string): boolean {
 }
 
 export function getEmojiName(char: string): string {
-	// Colorize it because emojilist.json assumes that
+	// emojilist.jsonがカラースタイルを前提としているため変換する
 	const idx = _indexByChar.get(forceColorizeEmoji(char)) ?? _indexByChar.get(char);
 	if (idx === undefined) {
 		// 絵文字情報がjsonに無い場合は名前の取得が出来ないのでそのまま返すしか無い

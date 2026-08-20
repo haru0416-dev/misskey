@@ -22,7 +22,6 @@
 		return;
 	}
 
-	// パラメータに応じてsplashのスタイルを変更
 	const params = new URLSearchParams(location.search);
 	if (params.has('rounded') && params.get('rounded') === 'false') {
 		document.documentElement.classList.add('norounded');
@@ -31,7 +30,7 @@
 		document.documentElement.classList.add('noborder');
 	}
 
-	//#region Detect language & fetch translations
+	//#region 言語の検出と翻訳の取得
 	const supportedLangs = LANGS;
 	/** @type { string } */
 	let lang = localStorage.getItem('lang');
@@ -41,19 +40,19 @@
 		} else {
 			lang = supportedLangs.find(x => x.split('-')[0] === navigator.language);
 
-			// Fallback
+			// 一致する言語がない場合は英語にする
 			if (lang == null) lang = 'en-US';
 		}
 	}
 
-	// for https://github.com/misskey-dev/misskey/issues/10202
+	// localStorage の lang が不正な値になる場合があるため、文字列化可能性と "null" を検査する。
 	if (lang == null || lang.toString == null || lang.toString() === 'null') {
 		console.error('invalid lang value detected!!!', typeof lang, lang);
 		lang = 'en-US';
 	}
 	//#endregion
 
-	//#region Script
+	//#region スクリプト
 	for (const file of [CLIENT_ENTRY, ...CLIENT_PRELOADS]) {
 		if (file == null) continue;
 		const link = document.createElement('link');
@@ -89,7 +88,7 @@
 	}
 
 	async function renderError(code) {
-		// Cannot set property 'innerHTML' of null を回避
+		// DOM構築前は本文を書き換えられないため、構築完了を待つ
 		if (document.readyState === 'loading') {
 			await new Promise(resolve => window.addEventListener('DOMContentLoaded', resolve));
 		}
@@ -100,7 +99,7 @@
 			messages = JSON.parse(bootloaderLocales);
 		}
 		if (!messages) {
-			// older version of misskey does not store bootloaderLocales, stores locale as a whole
+			// bootloaderLocalesがない場合は、locale全体から起動時の文言を取得する
 			const legacyLocale = localStorage.getItem('locale');
 			if (legacyLocale) {
 				const parsed = JSON.parse(legacyLocale);

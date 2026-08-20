@@ -300,7 +300,7 @@ export async function resolveImageForHonoApi(
 
 		if (!file.isLink || file.url === image.url) return file;
 
-		// URLが異なっている場合、同じ画像が以前に異なるURLで登録されていたということなので、URLを更新する
+		// リンクとして保持するファイルの URL が変わった場合は、現在の画像 URL に更新する。
 		await updateDriveFileInDatabase(deps.db, file.id, { url: image.url, uri: image.url });
 		return await fetchDriveFileByIdOrFailFromDatabase(deps.db, file.id);
 	} catch {
@@ -380,10 +380,8 @@ async function isPublicCollectionForHonoApi(
 export type HonoApiUpdatePersonDependencies = HonoApiApPersonDependencies & HonoApiAccountMoveDependencies;
 
 /**
- * ApPersonService#processRemoteMove 相当。updatePersonForHonoApi が movedToUri の新規出現/変更を
- * 検知した際に呼ばれる。dst (移行先アカウント) が本当に src (移行元) を alsoKnownAs で承認しているかを
- * 確認した上で、hono-api-account-move.ts の postMoveProcessForHonoApi (フォロワーのフォロー先切り替え・
- * ブロック/ミュート/ロール/リストの引き継ぎ) を実行する。
+ * updatePersonForHonoApi が movedToUri の新規出現・変更を検知したときに呼ぶ。
+ * 移行先が移行元を alsoKnownAs で承認している場合だけ移行カスケードを実行する。
  */
 async function processRemoteMoveForHonoApi(
 	deps: HonoApiUpdatePersonDependencies,
@@ -425,13 +423,9 @@ async function processRemoteMoveForHonoApi(
 }
 
 /**
- * ApPersonService.updatePerson 相当。
- *
- * 意図的な簡略化:
- * - updateFeatured (ピン留めノートの再取得): ApNoteService.createNote/resolveNote 相当 (数百行、ap/show 移植と同じ
- *   インフラが必要) が未移植のため今回は呼び出しを省略する。ピン留めノートの一覧はリモートユーザーの再フェッチだけでは
- *   更新されなくなるが、プロフィール本体の更新という本エンドポイントの主目的には影響しない。
- * - cacheService.uriPersonCache の更新: プロセス内メモリキャッシュのため省略 (既存の移行方針と同様)。
+ * updateFeatured に必要なノート作成・解決の依存を持たないため、この経路では実行しない。
+ * リモートユーザーの再取得だけではピン留めノート一覧は更新されない。
+ * uriPersonCache はプロセス内メモリキャッシュのため、この経路では更新しない。
  */
 export async function updatePersonForHonoApi(
 	deps: HonoApiUpdatePersonDependencies,
@@ -441,8 +435,7 @@ export async function updatePersonForHonoApi(
 	hint?: IObject,
 ): Promise<void> {
 	const history = new Set<string>();
-	// 原典 ApPersonService.updatePerson と同じく、Update activity に埋め込まれた
-	// オブジェクトが渡されていれば再フェッチしない (中間キャッシュ (nginx等) が
+	// Update activity に埋め込まれたオブジェクトが渡されていれば再フェッチしない (中間キャッシュ (nginx 等) が
 	// 古い Person を返すと更新が反映されないため、hint の利用は正しさに直結する)
 	const object = hint ?? (await resolveApObjectForHonoApi(deps, uri, FetchAllowSoftFailMask.Strict, history));
 
@@ -582,16 +575,9 @@ export async function updatePersonForHonoApi(
 }
 
 /**
- * ApPersonService.createPerson 相当。
- *
- * 意図的な簡略化:
- * - updateFeatured (ピン留めノート再取得): updatePersonForHonoApi と同様、ApNoteService.createNote 相当が
- *   未移植のため呼び出しを省略する。
- * - fetchInstanceMetadataService.fetchInstanceMetadata (新規インスタンスのfavicon/nodeinfo取得) と
- *   chart類 (usersChart/instanceChart) の更新: 分析目的の副作用であり、ap/show の主目的である
- *   「リモートユーザーを作成してレスポンスとして返す」ことには影響しないため省略する。
- *   インスタンス行自体の作成/ユーザー数カウントは `fetchOrRegisterInstanceForHonoApi` +
- *   `adjustInstanceUsersCountFromDatabase` で再現する。
+ * updateFeatured に必要なノート作成の依存を持たないため、この経路では実行しない。
+ * インスタンスメタデータ取得とチャート更新は分析用の副作用なので、ユーザー作成経路には含めない。
+ * インスタンス行の作成とユーザー数更新は、この経路内で完了させる。
  */
 export async function createPersonForHonoApi(
 	deps: HonoApiApPersonDependencies,
@@ -738,7 +724,7 @@ export async function createPersonForHonoApi(
 	return user;
 }
 
-/** ApPersonService.fetchPerson 相当。プロセス内キャッシュ (uriPersonCache) は既存の移行方針に沿って省略。 */
+/** uriPersonCache はプロセス内キャッシュのため、この経路では更新しない。 */
 export async function fetchPersonForHonoApi(
 	deps: HonoApiApPersonDependencies,
 	uri: string,
@@ -764,7 +750,7 @@ export async function resolvePersonForHonoApi(
 	return await createPersonForHonoApi(deps, uri, history);
 }
 
-/** ApDbResolverService.getAuthUserFromApId 相当。キャッシュ省略は getUserFromApIdForHonoApi と同様の理由。 */
+/** 認証済み・レート制限付きの AP 解決経路で使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
 export async function getAuthUserFromApIdForHonoApi(
 	deps: HonoApiApPersonDependencies,
 	uri: string,
@@ -781,7 +767,6 @@ function getUserUriForApPerson(config: Pick<Config, 'instance'>, user: MiLocalUs
 }
 
 /**
- * AccountMoveService.validateAlsoKnownAs 相当。
  * dst の alsoKnownAs を辿り、movedToUri が dst を指す旧アカウントが実在するかを調べる。
  */
 export async function validateAlsoKnownAsForHonoApi(
@@ -810,7 +795,7 @@ export async function validateAlsoKnownAsForHonoApi(
 	for (const srcUri of dst.alsoKnownAs) {
 		try {
 			let src = await fetchPersonForHonoApi(deps, srcUri);
-			if (!src) continue; // oldAccountを探してもこのサーバーに存在しない場合はフォロー関係もないということなのでスルー
+			if (!src) continue; // このサーバーに存在しない旧アカウントにはフォロー関係がないため対象外とする。
 
 			if (dst.host != null && src.host != null) {
 				if (Date.now() - (src.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {
@@ -826,7 +811,7 @@ export async function validateAlsoKnownAsForHonoApi(
 				if (instant && resultUser) return resultUser;
 			}
 		} catch {
-			/* skip if any error happens */
+			/* エラーが発生した候補は対象外とする。 */
 		}
 	}
 
@@ -918,8 +903,7 @@ async function resolveSelfForHonoApi(
 }
 
 /**
- * RemoteUserResolveService.resolveUser 相当。username@host からローカル/リモートユーザーを解決する。
- * リモートの場合、未登録ならWebFinger→createPersonForHonoApiで新規作成し、登録済みかつ
+ * リモートユーザーが未登録ならWebFingerで解決して作成し、登録済みかつ
  * 24時間以上再取得していなければWebFinger→updatePersonForHonoApiで再同期する。
  */
 export async function resolveUserForHonoApi(
@@ -967,7 +951,7 @@ export async function resolveUserForHonoApi(
 		const self = await resolveSelfForHonoApi(deps, acctLower);
 
 		if (user.uri !== self.href) {
-			// if uri mismatch, Fix (user@host <=> AP's Person id(RemoteUser.uri)) mapping.
+			// URI が一致しない場合は user@host と AP の Person ID (RemoteUser.uri) の対応を修正する。
 			const uri = new URL(self.href);
 			if (uri.hostname !== punyHost) {
 				throw new Error('Invalid uri');

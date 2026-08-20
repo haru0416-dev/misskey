@@ -95,22 +95,19 @@ const rootSetting: Required<GridSetting['root']> = {
 	...props.settings.root,
 };
 
-// non-reactive
+// 設定は初期値として固定し、リアクティブに追従させない。
 const rowSetting: Required<GridRowSetting> = {
 	...defaultGridRowSetting,
 	...props.settings.row,
 };
 
-// non-reactive
 const columnSettings = props.settings.cols;
 
-// non-reactive
 const cellSettings = props.settings.cells ?? {};
 
 const { data } = toRefs(props);
 
 // #region Event Definitions
-// region Event Definitions
 
 /**
  * grid -> 各子コンポーネントのイベント経路を担う{@link GridEventEmitter}。おもにpropsでの伝搬が難しいイベントを伝搬するために使用する。
@@ -740,7 +737,6 @@ function onContextMenu(ev: PointerEvent) {
 	const context = createContext();
 	const menuItems = Array.of<MenuItem>();
 	switch (true) {
-		// 通常セルのコンテキストメニュー作成
 		case availableCellAddress(cellAddress): {
 			const cell = getCellAt(cellAddress);
 			if (cell == null) break;
@@ -749,7 +745,6 @@ function onContextMenu(ev: PointerEvent) {
 			}
 			break;
 		}
-		// 列ヘッダセルのコンテキストメニュー作成
 		case isColumnHeaderCellAddress(cellAddress): {
 			const col = columns.value[cellAddress.col];
 			if (col == null) break;
@@ -758,7 +753,6 @@ function onContextMenu(ev: PointerEvent) {
 			}
 			break;
 		}
-		// 行ヘッダセルのコンテキストメニュー作成
 		case isRowNumberCellAddress(cellAddress): {
 			const row = rows.value[cellAddress.row];
 			if (row == null) break;
@@ -1142,17 +1136,13 @@ function refreshData() {
 		console.log('[grid][refresh-data][begin]');
 	}
 
-	// データを元に行・列・セルを作成する。
-	// 行は元データの配列の長さに応じて作成するが、最低限の行数は設定によって決まる。
-	// 行数が変わるたびに都度レンダリングするとパフォーマンスがイマイチなので、あらかじめ多めにセルを用意しておくための措置。
+	// 行数変動時の再レンダリングを抑えるため、minimumDefinitionCount まではセルを事前確保する。
 	const _data: DataSource[] = data.value;
 	const _rows: GridRow[] = (_data.length > rowSetting.minimumDefinitionCount)
 		? _data.map((_, index) => createRow(index, true, rowSetting))
 		: Array.from({ length: rowSetting.minimumDefinitionCount }, (_, index) => createRow(index, index < _data.length, rowSetting));
 	const _cols: GridColumn[] = columns.value;
 
-	// 行・列の定義から、元データの配列より値を取得してセルを作成する。
-	// 行・列の定義はそれぞれインデックスを持っており、そのインデックスは元データの配列番地に対応している。
 	const _cells: RowHolder[] = _rows.map(row => {
 		const origin = _data[row.index] ?? {};
 		const newCells = row.using
@@ -1178,14 +1168,8 @@ function refreshData() {
 }
 
 /**
- * セル値を部分更新する。この関数は、外部起因でデータが変更された場合に呼ばれる。
- *
- * 外部起因でデータが変更された場合は{@link data}の値が変更されるが、何処の番地がどのように変わったのかまでは検知できない。
- * セルをすべて作り直せばいいが、その手法だと以下のデメリットがある。
- * - 描画負荷がかかる
- * - 各セルが持つ個別の状態（選択中状態やバリデーション結果など）が失われる
- *
- * そこで、新しい値とセルが持つ値を突き合わせ、変更があった場合のみ値を更新し、セルそのものは使いまわしつつ値を最新化する。
+ * data の変更から更新番地を特定できないため、既存セルとの比較で変更箇所を検出する。
+ * セルを再利用し、選択状態とバリデーション結果を維持する。
  */
 function patchData(newItems: DataSource[]) {
 	if (_DEV_) {
@@ -1198,7 +1182,6 @@ function patchData(newItems: DataSource[]) {
 		const newRows = Array.of<GridRow>();
 		const newCells = Array.of<RowHolder>();
 
-		// 未使用の行を含めても足りないので新しい行を追加する
 		for (let rowIdx = rows.value.length; rowIdx < newItems.length; rowIdx++) {
 			const newItem = newItems[rowIdx];
 			if (newItem == null) continue;
@@ -1217,11 +1200,9 @@ function patchData(newItems: DataSource[]) {
 		applyRowRules(newCells.flatMap(it => it.cells));
 	}
 
-	// 行数の上限が欲しい場合はここに設けてもいいかもしれない
-
 	const usingRows = rows.value.filter(it => it.using);
 	if (usingRows.length > newItems.length) {
-		// 行数が減っているので古い行をクリアする（再マウント・再レンダリングが重いので要素そのものは消さない）
+		// 再マウントの負荷を避けるため、余った行は削除せず再利用可能な状態へ戻す。
 		for (let rowIdx = newItems.length; rowIdx < usingRows.length; rowIdx++) {
 			const row = rows.value[rowIdx];
 			const holder = cells.value[rowIdx];
@@ -1235,7 +1216,6 @@ function patchData(newItems: DataSource[]) {
 		}
 	}
 
-	// 新しい値と既に設定されていた値を入れ替える
 	const changedCells = Array.of<GridCell>();
 	for (let rowIdx = 0; rowIdx < newItems.length; rowIdx++) {
 		const holder = cells.value[rowIdx];
@@ -1266,7 +1246,7 @@ function patchData(newItems: DataSource[]) {
 
 		applyRowRules(changedCells);
 
-		// セル値が書き換わっており、バリデーションの結果も変わっているので外部に通知する必要がある
+		// 値の変更でバリデーション結果も変わるため、外部へ通知する。
 		emitGridEvent({
 			type: 'cell-validation',
 			all: cells.value
@@ -1290,15 +1270,14 @@ onMounted(() => {
 
 	const bindToList = columnSettings.map(it => it.bindTo);
 	if (new Set(bindToList).size !== columnSettings.length) {
-		// 取得元のプロパティ名重複は許容したくない
+		// 同じ取得元を複数列へ割り当てると更新対象を一意に決められない。
 		throw new Error(`Duplicate bindTo setting : [${bindToList.join(',')}]}]`);
 	}
 
 	if (rootEl.value) {
 		resizeObserver.observe(rootEl.value);
 
-		// 初期表示時にコンテンツが表示されていない場合はhidden状態にしておく。
-		// コンテンツ表示時にresizeイベントが発生するが、そのときにhidden状態にしておかないとサイズの再計算が走らないので
+		// 非表示中は hidden にしておかないと、表示時の resize でサイズが再計算されない。
 		const bounds = rootEl.value.getBoundingClientRect();
 		if (bounds.width === 0 || bounds.height === 0) {
 			state.value = 'hidden';

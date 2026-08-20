@@ -670,9 +670,8 @@ export async function insertFollowingWithSideEffects(
 	]);
 }
 
-// 鍵アカウントであっても、moveした後のアカウントで、move前に既にフォローが承認されていた場合は自動承認する。
-// AccountMoveService.validateAlsoKnownAs(follower, check, instant=true) の簡易移植 (ローカルの follower のみが本エンドポイントに到達するため、
-// リモートユーザーの AP 再取得ブランチは対象外)。
+// 移行前に承認済みのフォローは、移行後の鍵アカウントでも自動承認する。
+// この経路へ到達する follower はローカルユーザーに限られるため、AP 再取得は不要。
 async function checkAutoAcceptIfMovedForHonoApi(
 	deps: HonoApiFollowingDependencies,
 	follower: MiUser,
@@ -865,7 +864,7 @@ export async function handleHonoApiFollowingInvalidate(
 	return await packUserLiteForHonoApi(deps, follower);
 }
 
-/** UserFollowingService.acceptFollowRequest 相当。フォローリクエストが存在しない場合は例外を投げる。 */
+/** フォローリクエストが存在しない場合は例外を投げる。 */
 export async function acceptFollowRequestForHonoApi(
 	deps: HonoApiFollowingDependencies,
 	followee: MiUser,
@@ -957,7 +956,7 @@ export async function acceptAllFollowRequestsForHonoApi(
 						);
 					}
 				} catch {
-					// One stale or invalid request must not prevent the remaining requests from being accepted.
+					// 古い、または不正な1件で残りのリクエストの承認を止めない。
 				}
 			}),
 		),

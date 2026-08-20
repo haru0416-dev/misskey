@@ -73,9 +73,7 @@ export async function deleteNoteForHonoApi(
 	deps.publishNoteStream?.(note, 'deleted', { deletedAt });
 
 	if (user.host == null && !note.localOnly) {
-		// 元の NoteDeleteService#delete も、renote 先ノートの解決とアクティビティのレンダリングは
-		// delete() 本体の同期フロー内で await しており(失敗時は削除全体を reject させる)、
-		// 実際の配送(deliverToConcerned)だけを fire-and-forget にしている。同じ非同期境界を再現する。
+		// アクティビティ生成の失敗は削除を失敗させ、ネットワーク配送だけをバックグラウンドで行う。
 		const activity = await renderNoteDeleteOrUndoAnnounceActivityForHonoApi(deps, note, user);
 		(async () => {
 			const directRecipients = await resolveMentionedAndInvolvedRemoteUsersForHonoApi(deps, note);
@@ -84,7 +82,6 @@ export async function deleteNoteForHonoApi(
 				deliverToFollowers: true,
 			});
 
-			// 原典 NoteDeleteService#deliverToConcerned 同様、リレーにも配信する (fire-and-forget)。
 			void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, activity).catch(() => {});
 		})().catch(() => {});
 	}

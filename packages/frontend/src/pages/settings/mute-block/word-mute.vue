@@ -47,15 +47,12 @@ watch(mutedWords, () => {
 
 async function save() {
 	const parseMutes = (mutes: string) => {
-		// 行に分割し、空行と不要な空白を除く。
 		let lines = mutes.trim().split('\n').map(line => line.trim()).filter(line => line !== '') as (string | string[])[];
 
-		// 各行が正規表現かどうかを確認する。
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i] as string;
 			const regexp = line.match(/^\/(.+)\/(.*)$/);
 			if (regexp) {
-				// 正規表現として解釈できることを確認する。
 				try {
 					// 正規表現として妥当かどうかだけを見る (不正なら throw する)
 					// 正規表現の行は空白で分割しない。
@@ -82,7 +79,7 @@ async function save() {
 	try {
 		parsed = parseMutes(mutedWords.value);
 	} catch (err) {
-		// already displayed error message in parseMutes
+		// parseMutes 側でエラーを表示済みのため、ここでは保存だけを中止する。
 		return;
 	}
 

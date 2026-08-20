@@ -46,7 +46,7 @@ const props = withDefaults(defineProps<{
 	note: Misskey.entities.Note;
 	detail?: boolean;
 
-	// how many notes are in between this one and the note being viewed in detail
+	// 詳細表示中のノートとの間にあるノートの数
 	depth?: number;
 }>(), {
 	depth: 1,

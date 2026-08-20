@@ -89,9 +89,9 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 		const regexpregexp = /^\/(.+)\/(.*)$/;
 
 		const matched = keyWords.some((filter) => {
-			// represents RegExp
+			// 正規表現形式を表す。
 			const regexp = filter.match(regexpregexp);
-			// This should never happen due to input sanitisation.
+			// 入力検証済みのため、この分岐には到達しない。
 			if (!regexp) {
 				const words = filter.split(' ');
 				return words.every((keyword) => text.includes(keyword));
@@ -101,7 +101,7 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 				if (pattern == null || flags == null) return false;
 				return getCachedRE2(pattern, flags).test(text);
 			} catch (_) {
-				// This should never happen due to input sanitisation.
+				// 入力検証済みのため、この分岐には到達しない。
 				return false;
 			}
 		});

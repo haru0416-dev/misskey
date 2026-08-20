@@ -221,8 +221,7 @@ export async function unfollow(
 }
 
 /**
- * UserFollowingService.remoteReject 相当。リモートのフォロー対象から Reject を受信したときの後始末で、
- * unfollow() と異なり (受信した Reject への応答として) 一切配送を行わない。
+ * リモートのフォロー対象から Reject を受信したときは、一切配送せず関係だけを削除する。
  */
 export async function remoteRejectForHonoApi(
 	deps: HonoApiAccountBlockingDependencies,
@@ -321,7 +320,7 @@ async function deliverUndoBlockActivity(
 	);
 }
 
-/** UserBlockingService.block 相当。ガード (自分自身・二重ブロック) は呼び出し側の責務。 */
+/** 自分自身・二重ブロックのガードは呼び出し側の責務。 */
 export async function blockForHonoApi(
 	deps: HonoApiAccountBlockingDependencies,
 	blocker: MiUser,
@@ -376,7 +375,7 @@ export async function handleHonoApiBlockingCreate(
 	return await packUserDetailedNotMeForHonoApi(deps, blocking.blockee, blocking.blocker);
 }
 
-/** UserBlockingService.unblock 相当。ブロック行が存在しない場合は何もしない。 */
+/** ブロック行が存在しない場合は何もしない。 */
 export async function unblockForHonoApi(
 	deps: HonoApiAccountBlockingDependencies,
 	blocker: MiUser,

@@ -19,7 +19,6 @@ export type HonoDaemonQueueStatsDependencies = {
 	inboxQueue: InboxQueue;
 };
 
-/** QueueStatsService.start 相当。deliver/inbox キューの稼働状況を定期的にglobalEventBus経由でブロードキャストする。 */
 export function startHonoQueueStatsDaemon(deps: HonoDaemonQueueStatsDependencies): { dispose: () => void } {
 	const log: unknown[] = [];
 

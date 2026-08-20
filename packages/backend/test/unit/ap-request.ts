@@ -16,14 +16,14 @@ export const buildParsedSignature = (signingString: string, signature: string, a
 	return {
 		scheme: 'Signature',
 		params: {
-			keyId: 'KeyID', // dummy, not used for verify
+			keyId: 'KeyID', // 署名検証では使わないダミー値
 			algorithm: algorithm,
-			headers: ['(request-target)', 'date', 'host', 'digest'], // dummy, not used for verify
+			headers: ['(request-target)', 'date', 'host', 'digest'], // 署名検証では使わないダミー値
 			signature: signature,
 		},
 		signingString: signingString,
 		algorithm: algorithm.toUpperCase(),
-		keyId: 'KeyID', // dummy, not used for verify
+		keyId: 'KeyID', // 署名検証では使わないダミー値
 	};
 };
 
@@ -101,7 +101,7 @@ describe('ap-request', () => {
 			'validation should pass with hash in request URL',
 		);
 
-		// fix issues like threads
+		// www サブドメインを含む URL の組合せを検証する。
 		// https://github.com/misskey-dev/misskey/issues/15039
 		const withOrWithoutWWW = ['https://alice.example.com/abc', 'https://www.alice.example.com/abc'];
 

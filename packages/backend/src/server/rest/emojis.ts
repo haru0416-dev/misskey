@@ -65,7 +65,7 @@ export const adminEmojiListParamDef = z.object({
 
 export const adminEmojiListRemoteParamDef = z.object({
 	query: z.string().nullable().default(null),
-	/** Use `null` to represent the local host. */
+	/** ローカルホストは null で表す。 */
 	host: z.string().nullable().default(null),
 	limit: z.number().int().min(1).max(100).default(10),
 	sinceId: misskeyId().optional(),
@@ -77,7 +77,7 @@ export const adminEmojiListRemoteParamDef = z.object({
 export const adminEmojiAddParamDef = z.object({
 	name: z.string().regex(/^[a-zA-Z0-9_]+$/),
 	fileId: misskeyId(),
-	/** Use `null` to reset the category. */
+	/** null でカテゴリを解除する。 */
 	category: z.string().nullable().optional(),
 	aliases: z.array(z.string()).optional(),
 	license: z.string().nullable().optional(),
@@ -99,7 +99,7 @@ const adminEmojiUpdateParamDef = z
 		id: z.unknown().optional(),
 		name: z.unknown().optional(),
 		fileId: misskeyId().optional(),
-		/** Use `null` to reset the category. */
+		/** null でカテゴリを解除する。 */
 		category: z.string().nullable().optional(),
 		aliases: z.array(z.string()).optional(),
 		license: z.string().nullable().optional(),
@@ -160,13 +160,13 @@ export const adminEmojiImportZipParamDef = z.object({
 
 export const adminEmojiSetCategoryBulkParamDef = z.object({
 	ids: z.array(misskeyId()),
-	/** Use `null` to reset the category. */
+	/** null でカテゴリを解除する。 */
 	category: z.string().nullable().optional(),
 });
 
 export const adminEmojiSetLicenseBulkParamDef = z.object({
 	ids: z.array(misskeyId()),
-	/** Use `null` to reset the license. */
+	/** null でライセンスを解除する。 */
 	license: z.string().nullable().optional(),
 });
 

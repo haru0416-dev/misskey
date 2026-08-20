@@ -49,7 +49,7 @@ export async function signout() {
 			),
 		]);
 	} catch {
-		// nothing
+		// IndexedDB の削除失敗でもサインアウト処理を継続する。
 	} finally {
 		window.clearTimeout(timeout);
 	}

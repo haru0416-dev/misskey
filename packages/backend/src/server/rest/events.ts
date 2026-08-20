@@ -85,8 +85,8 @@ export type HonoRedisEventPublisherDependencies = {
 };
 
 /**
- * GlobalEventService#publish 相当。`type == null` のときは body でラップせず
- * value をそのまま message にする (publishNotesStream が唯一 type=null で呼ばれる)。
+ * `type == null` のときは body でラップせず value をそのまま message にする。
+ * publishNotesStream だけが type=null で呼び出す。
  */
 function publishToChannel(
 	deps: HonoRedisEventPublisherDependencies,

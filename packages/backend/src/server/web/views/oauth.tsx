@@ -14,9 +14,7 @@ export function OAuthPage(
 		scope: string[];
 	}>,
 ) {
-	//- Should be removed by the page when it loads, so that it won't needlessly
-	//- stay when user navigates away via the navigation bar
-	//- XXX: Remove navigation bar in auth page?
+	// OAuth ページの読み込み後にメタ要素を削除し、画面遷移後に残さない。
 	function metaBlock() {
 		return (
 			<>

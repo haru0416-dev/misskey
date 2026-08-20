@@ -25,13 +25,11 @@ function rawStatus(status: number): Response {
 	return new Response(null, { status });
 }
 
-// ActivityPubServerService の inbox ルート登録時の bodyLimit: 1024 * 64 相当。
+// inbox の受信本文は 64 KiB までに制限する。
 const INBOX_BODY_LIMIT_BYTES = 1024 * 64;
 class InboxBodyLimitExceeded extends Error {}
 
-/**
- * QueueService.inbox 相当。ジョブ名はアクティビティIDから生成する。
- */
+/** ジョブ名はアクティビティIDから生成する。 */
 function enqueueInboxJob(
 	deps: InboxEndpointDependencies,
 	activity: IActivity,
@@ -49,8 +47,8 @@ function enqueueInboxJob(
 }
 
 /**
- * ActivityPubServerService#inbox 相当。`POST /inbox` / `POST /users/:user/inbox` の
- * HTTP-Signature検証(のうち、リクエスト構造上のパラメータ検証部分)とDigest検証を行い、
+ * `POST /inbox` / `POST /users/:user/inbox` の HTTP-Signature検証のうち、
+ * リクエスト構造上のパラメータ検証とDigest検証を行い、
  * 妥当なアクティビティのみ inboxQueue に積む。実際の署名者解決・署名検証自体は
  * (キューが混雑していても受付だけは高速に返せるよう) キュー処理側 (hono-queue-inbox.ts) で行う。
  */
@@ -87,12 +85,12 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 	}
 
 	if (!signature.params.headers.includes('host') || headers['host'] !== deps.config.runtime.host) {
-		// Host not specified or not match.
+		// Host が署名対象に含まれない、または設定値と一致しない。
 		return rawStatus(401);
 	}
 
 	if (!signature.params.headers.includes('digest')) {
-		// Digest not found.
+		// Digest が署名対象に含まれない。
 		return rawStatus(401);
 	}
 
@@ -124,9 +122,7 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 		return rawStatus(400);
 	}
 
-	// Reject structurally invalid activities (e.g. missing actor) here instead
-	// of letting them fail deep inside the inbox processor. An actor-less
-	// activity can never be authenticated, so there is no point enqueueing it.
+	// actor のない Activity は認証できないため、inbox processor 内で失敗させずここで拒否する。
 	if (typeof body !== 'object' || body == null || !('actor' in body) || (body as { actor?: unknown }).actor == null) {
 		return rawStatus(400);
 	}

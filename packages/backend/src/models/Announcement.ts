@@ -16,7 +16,6 @@ export class MiAnnouncement {
 
 	public imageUrl: string | null;
 
-	// info, warning, error, success
 	public icon: 'info' | 'warning' | 'error' | 'success';
 
 	// normal ... お知らせページ掲載

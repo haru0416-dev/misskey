@@ -74,7 +74,7 @@ export const Default = {
 			],
 		},
 		chromatic: {
-			// `XActivity` is not compatible with Chromatic for now
+			// XActivity は Chromatic と互換性がないため、スナップショットを無効化する。
 			disableSnapshot: true,
 		},
 	},

@@ -4,7 +4,7 @@
  */
 
 // structredCloneが遅いため
-// SEE: http://var.blog.jp/archives/86038606.html
+// 参照: http://var.blog.jp/archives/86038606.html
 
 export type Cloneable = string | number | boolean | null | undefined | { [key: string]: Cloneable } | Cloneable[];
 

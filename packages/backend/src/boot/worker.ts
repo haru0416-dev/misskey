@@ -8,9 +8,6 @@ import type { Config } from '@/config.js';
 import { assignmentFromEnv } from './cluster-roles.js';
 import { initExtraThreadPool, jobQueue, server } from './common.js';
 
-/**
- * Init worker process
- */
 export async function workerMain(config: Config) {
 	let dispose: () => Promise<void>;
 

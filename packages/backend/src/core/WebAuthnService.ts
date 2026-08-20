@@ -160,7 +160,6 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 	}
 
 	/**
-	 * Initiate Passkey Auth (Without specifying user)
 	 * @returns authenticationOptions
 	 */
 	async function initiateSignInWithPasskeyAuthentication(
@@ -179,9 +178,8 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 	}
 
 	/**
-	 * Verify Webauthn AuthenticationCredential
 	 * @throws IdentifiableError
-	 * @returns If the challenge is successful, return the user ID. Otherwise, return null.
+	 * @returns 認証成功時はユーザーID、検証不成立時はnull。
 	 */
 	async function verifySignInWithPasskeyAuthentication(
 		context: string,
@@ -249,11 +247,11 @@ export function createWebAuthnService(config: Config, meta: MiMeta, redisClient:
 			throw new IdentifiableError('36b96a7d-b547-412d-aeed-2d611cdc8cdc', 'unknown key');
 		}
 
-		// マイグレーション
+		// counterが0で87文字の公開鍵は、非圧縮EC公開鍵としてCOSE形式へ正規化する。
 		if (key.counter === 0 && key.publicKey.length === 87) {
 			const cert = new Uint8Array(Buffer.from(key.publicKey, 'base64url'));
 			if (cert[0] === 0x04) {
-				// 前の実装ではいつも 0x04 で始まっていた
+				// 0x04は非圧縮EC公開鍵のプレフィックス。
 				const halfLength = (cert.length - 1) / 2;
 
 				const cborMap = new Map<number, number | Uint8Array>();

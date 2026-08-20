@@ -12,7 +12,6 @@ import XNet from '@/widgets/server-metric/net.vue';
 
 type Connection = Misskey.IChannelConnection<Misskey.Channels['serverStats']>;
 
-/** `serverStats` チャンネルの購読部分だけを再現するダミー接続。 */
 function createConnection() {
 	const listeners = new Map<string, Set<(payload: never) => void>>();
 	const sent: { type: string; payload: unknown }[] = [];

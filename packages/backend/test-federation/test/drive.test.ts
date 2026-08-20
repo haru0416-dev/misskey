@@ -70,7 +70,7 @@ describe('Drive', () => {
 				// console.log(`a.test: ${JSON.stringify(updatedImage, null, '\t')}`);
 				// console.log(`b.test: ${JSON.stringify(updatedImageInB, null, '\t')}`);
 
-				// FIXME: not updated with `drive/files/update`
+				// drive/files/update の変更は連合先に反映されない。
 				strictEqual(updatedImage.isSensitive, true);
 				strictEqual(updatedImage.name, 'updated_192.jpg');
 				strictEqual(updatedImageInB.isSensitive, false);
@@ -95,9 +95,7 @@ describe('Drive', () => {
 			test('Check consistency', () => {
 				// console.log(`b.test: ${JSON.stringify(reupdatedImageInB, null, '\t')}`);
 
-				// `isSensitive` is updated
 				strictEqual(reupdatedImageInB.isSensitive, true);
-				// FIXME: but `name` is not updated
 				strictEqual(reupdatedImageInB.name, '192.jpg');
 			});
 		});

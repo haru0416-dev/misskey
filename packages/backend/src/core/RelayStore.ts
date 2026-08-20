@@ -22,9 +22,8 @@ function invalidateRelayCache(): void {
 }
 
 /**
- * listRelaysByStatusFromDatabase のプロセスローカル短命キャッシュ版 (原典 RelayService の
- * 10分 MemorySingleCache 相当)。公開ノート作成毎の accepted リレー解決と inbox の
- * リレーアクター判定ホットパス専用。リレーは管理者操作でしか変化せず、このプロセスの書き込みは
+ * 公開ノート作成毎の accepted リレー解決と inbox のリレーアクター判定に限って使う
+ * プロセスローカル短命キャッシュ。リレーは管理者操作でしか変化せず、このプロセスの書き込みは
  * RelayStore の書き込み関数内で同期無効化される。管理系一覧は非キャッシュ版を使うこと。
  */
 export async function listRelaysByStatusFromDatabaseCached(

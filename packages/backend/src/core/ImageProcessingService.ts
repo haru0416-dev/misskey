@@ -46,7 +46,6 @@ const avifDefault: AvifOptions = {
 import { Readable } from 'node:stream';
 
 export function createImageProcessingService() {
-	/** リサイズ、メタデータ除去、向き補正、アニメーション停止を行い WebP に変換する。 */
 	async function convertToWebp(
 		path: string,
 		width: number,
@@ -101,7 +100,6 @@ export function createImageProcessingService() {
 		};
 	}
 
-	/** リサイズ、メタデータ除去、向き補正、アニメーション停止を行い AVIF に変換する。 */
 	async function convertToAvif(
 		path: string,
 		width: number,
@@ -156,7 +154,6 @@ export function createImageProcessingService() {
 		};
 	}
 
-	/** リサイズ、メタデータ除去、向き補正、アニメーション停止を行い PNG に変換する。 */
 	async function convertToPng(path: string, width: number, height: number): Promise<IImage> {
 		return convertSharpToPng(sharp(path), width, height);
 	}

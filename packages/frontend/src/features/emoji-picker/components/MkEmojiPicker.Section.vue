@@ -85,7 +85,6 @@ const emojis = computed(() => Array.isArray(props.emojis) ? props.emojis : props
 
 const shown = ref(!!props.initialShown);
 
-/** @see MkEmojiPicker.vue */
 function computeButtonTitle(ev: PointerEvent): void {
 	const elm = ev.target as HTMLElement;
 	const emoji = elm.dataset['emoji'] as string;

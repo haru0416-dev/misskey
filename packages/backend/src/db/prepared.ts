@@ -19,15 +19,9 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 const preparedQueriesByDatabase = new WeakMap<object, Map<string, unknown>>();
 
 /**
- * prepared query に名前を **付けない** ための番兵。
- *
- * drizzle の `.prepare(name)` は name をそのまま node-postgres の query config へ渡し、
- * name があると PostgreSQL 側が名前付きプリペアド文になる。名前付きにすると
- * 5回目以降にジェネリックプランが採用され得るが、ホームタイムラインのクエリは
- * フォロイー配列 `= ANY($n)` の選択率をプランナが読めないため、実測で
- * 実行 1.37ms → 146.6ms (107倍) まで悪化した。
- * ここで欲しいのは「JS 側の組み立てを省く」ことだけなので、名前は付けない
- * (= 従来どおり無名文として毎回プランされる)。
+ * `.prepare(name)` に渡し、SQL の組み立て結果だけを再利用しつつ PostgreSQL では無名文として実行させる。
+ * 名前付き文はホームタイムラインの `= ANY($n)` でジェネリックプランを選び得て、
+ * 実測で 1.37 ms から 146.6 ms へ悪化する。
  */
 export const UNNAMED_PREPARED_STATEMENT = undefined as unknown as string;
 

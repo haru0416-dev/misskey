@@ -31,11 +31,11 @@ describe('Abuse report', () => {
 			const reportsInB = await bModerator.client.request('admin/abuse-user-reports', {});
 			const reportInB = reportsInB.find((report) => report.comment.includes(comment));
 			if (reportInB == null) throw new Error('Forwarded abuse report was not found in b.test');
-			// NOTE: reporter is not Alice, and is not moderator in A
+			// reporter は Alice ではなく、A の moderator でもない。
 			strictEqual(reportInB.reporter.url, 'https://a.test/@system.actor');
 			strictEqual(reportInB.targetUserId, bob.id);
 
-			// NOTE: cannot forward multiple times
+			// 同じレポートは複数回転送できない。
 			await rejects(
 				async () => await aModerator.client.request('admin/forward-abuse-user-report', { reportId: report.id }),
 				(err: any) => {

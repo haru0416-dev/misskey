@@ -164,7 +164,6 @@ async function reveal() {
 	hide.value = false;
 }
 
-// Menu
 const menuShowing = ref(false);
 
 function showMenu(ev: MouseEvent) {
@@ -216,7 +215,6 @@ function showMenu(ev: MouseEvent) {
 	});
 }
 
-// MediaControl: Common State
 const isReady = ref(false);
 const isPlaying = ref(false);
 const elapsedTimeMs = ref(0);
@@ -241,7 +239,6 @@ const bufferedDataRatio = computed(() => {
 	return bufferedEnd.value / audioEl.value.duration;
 });
 
-// MediaControl Events
 function togglePlayPause() {
 	if (!isReady.value || !audioEl.value) return;
 
