@@ -3403,6 +3403,7 @@ export class Stream extends EventEmitter<StreamEvents> implements IStream {
 export type StreamEvents = {
     _connected_: void;
     _disconnected_: void;
+    _error_: (error: Error) => void;
 } & BroadcastEvents;
 
 // Warning: (ae-forgotten-export) The symbol "SwitchCase" needs to be exported by the entry point index.d.ts
@@ -3651,8 +3652,8 @@ type VerifyEmailRequest = NonNullable<operations['verify-email']['requestBody']>
 
 // Warnings were encountered during analysis:
 //
-// src/streaming.ts:54:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocketOptions" needs to be exported by the entry point index.d.ts
-// src/streaming.ts:55:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
+// src/streaming.ts:57:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocketOptions" needs to be exported by the entry point index.d.ts
+// src/streaming.ts:58:3 - (ae-forgotten-export) The symbol "ReconnectingWebSocket" needs to be exported by the entry point index.d.ts
 // src/streaming.types.ts:222:3 - (ae-forgotten-export) The symbol "ChatEvents" needs to be exported by the entry point index.d.ts
 // src/streaming.types.ts:223:3 - (ae-forgotten-export) The symbol "ChatReceives" needs to be exported by the entry point index.d.ts
 

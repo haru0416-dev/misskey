@@ -14,9 +14,12 @@ export function urlQuery(obj: Record<string, string | number | boolean | undefin
 
 type AnyOf<T extends Record<PropertyKey, unknown>> = T[keyof T];
 
+const RESERVED_STREAM_EVENT_TYPES = new Set(['_connected_', '_disconnected_', '_error_']);
+
 export type StreamEvents = {
 	_connected_: void;
 	_disconnected_: void;
+	_error_: (error: Error) => void;
 } & BroadcastEvents;
 
 export interface IStream extends EventEmitter<StreamEvents> {
@@ -168,13 +171,17 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		const isReconnect = this.state === 'reconnecting';
 
 		this.state = 'connected';
-		this.emit('_connected_');
 
 		// チャンネル再接続
 		if (isReconnect) {
 			for (const p of this.sharedConnectionPools) p.connect();
 			for (const c of this.nonSharedConnections) c.connect();
 		}
+
+		// ReconnectingWebSocket がオフラインキューをflushした後に公開イベントを通知する。
+		queueMicrotask(() => {
+			if (this.state === 'connected') this.emit('_connected_');
+		});
 	}
 
 	/**
@@ -192,26 +199,55 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	 * Callback of when received a message from connection
 	 */
 	private onMessage(message: { data: string; }): void {
-		const { type, body } = JSON.parse(message.data);
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(message.data);
+		} catch (error) {
+			this.emit('_error_', new Error('Failed to parse streaming message as JSON', { cause: error }));
+			return;
+		}
+
+		if (!isRecord(parsed) || typeof parsed['type'] !== 'string') {
+			this.emit('_error_', new Error('Invalid streaming message envelope'));
+			return;
+		}
+
+		const type = parsed['type'];
+		const body = parsed['body'];
 
 		if (type === 'channel') {
-			const connections = this.connectionsById.get(body.id);
+			if (!isRecord(body) || typeof body['id'] !== 'string' || typeof body['type'] !== 'string') {
+				this.emit('_error_', new Error('Invalid streaming channel message'));
+				return;
+			}
+			const id = body['id'];
+			const channelType = body['type'];
+			const channelBody = body['body'];
+			const connections = this.connectionsById.get(id);
 
 			if (connections) {
 				for (const c of connections) {
-					c.emit(body.type, body.body);
+					const emit = c.emit as unknown as (event: string, payload: unknown) => boolean;
+					emit.call(c, channelType, channelBody);
 					c.inCount++;
 				}
 			}
 		} else if (type === 'connected') {
-			const connections = this.connectionsById.get(body.id);
-			this.connectedChannelIds.add(body.id);
+			if (!isRecord(body) || typeof body['id'] !== 'string') {
+				this.emit('_error_', new Error('Invalid streaming connected message'));
+				return;
+			}
+			const id = body['id'];
+			const connections = this.connectionsById.get(id);
 
 			if (connections) {
+				this.connectedChannelIds.add(id);
 				for (const c of connections) c.markConnected();
 			}
+		} else if (RESERVED_STREAM_EVENT_TYPES.has(type)) {
+			this.emit('_error_', new Error(`Reserved streaming event type received: ${type}`));
 		} else {
-			this.emit(type, body);
+			this.emit(type as keyof BroadcastEvents, body as never);
 		}
 	}
 
@@ -248,6 +284,10 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 	public close(): void {
 		this.stream.close();
 	}
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 // TODO: これらのクラスを Stream クラスの内部クラスにすれば余計なメンバをpublicにしないで済むかも？
