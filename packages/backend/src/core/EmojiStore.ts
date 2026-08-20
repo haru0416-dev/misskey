@@ -126,8 +126,8 @@ export function invalidateEmojiCache(): void {
 }
 
 /**
- * fetchEmojiByNameAndHostFromDatabase のプロセスローカル短命キャッシュ版 (原典 CustomEmojiService の
- * MemoryKVCache<MiEmoji | null> 相当。存在しない絵文字も null でキャッシュする)。
+ * fetchEmojiByNameAndHostFromDatabase のプロセスローカル短命キャッシュ版。
+ * 存在しない絵文字も null でキャッシュする。
  * ノート/リアクション/AP レンダリングのカスタム絵文字解決 (絵文字1件=1クエリのホットパス) 専用。
  * このプロセスの書き込みは EmojiStore の書き込み関数内で同期無効化されるが、別プロセスの書き込みは
  * 最大 TTL (60秒) 遅れる。即時性が必要な管理系・単発参照系は非キャッシュ版を使うこと。

@@ -37,9 +37,6 @@ function greet(props: { version: string }) {
 	bootLogger.info(`Erebia v${props.version}`, null, true);
 }
 
-/**
- * Init master process
- */
 export async function masterMain(config: Config) {
 	const disposers: Array<() => Promise<void>> = [];
 

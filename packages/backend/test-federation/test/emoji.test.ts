@@ -72,7 +72,6 @@ describe('Emoji', () => {
 		const noteInB = first(notes);
 
 		strictEqual(noteInB.text, `I love \u200b:${emoji.name}:\u200b`);
-		// deepStrictEqual(noteInB.emojis, {}); // TODO: this fails (why?)
 		deepStrictEqual({ ...noteInB.emojis }, {});
 	});
 

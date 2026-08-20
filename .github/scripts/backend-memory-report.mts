@@ -106,7 +106,7 @@ function renderMainTableForPhase(
 	];
 
 	function formatDeltaMemory(deltaKiB: number) {
-		return util.formatColoredDelta(deltaKiB, (v) => formatMemoryMb(v), 100); // 0.1 MB threshold
+		return util.formatColoredDelta(deltaKiB, (v) => formatMemoryMb(v), 100); // 0.1 MB の閾値
 	}
 
 	for (const metric of metrics) {

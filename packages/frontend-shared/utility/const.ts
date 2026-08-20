@@ -7,7 +7,7 @@
 // ここに含まれないものは application/octet-stream としてレスポンスされる
 // SVGはXSSを生むので許可しない
 export const FILE_TYPE_BROWSERSAFE = [
-	// Images
+	// 画像
 	'image/png',
 	'image/gif',
 	'image/jpeg',
@@ -18,13 +18,13 @@ export const FILE_TYPE_BROWSERSAFE = [
 	'image/tiff',
 	'image/x-icon',
 
-	// OggS
+	// OggS形式
 	'audio/opus',
 	'video/ogg',
 	'audio/ogg',
 	'application/ogg',
 
-	// ISO/IEC base media file format
+	// ISO/IEC base media file format形式
 	'video/quicktime',
 	'video/mp4',
 	'audio/mp4',
@@ -41,7 +41,7 @@ export const FILE_TYPE_BROWSERSAFE = [
 
 	'audio/aac',
 
-	// see https://github.com/misskey-dev/misskey/pull/10686
+	// https://github.com/misskey-dev/misskey/pull/10686
 	'audio/flac',
 	'audio/wav',
 ];

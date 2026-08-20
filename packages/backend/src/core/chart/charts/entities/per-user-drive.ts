@@ -9,11 +9,11 @@ export const name = 'perUserDrive';
 
 export const schema = {
 	totalCount: { accumulate: true },
-	totalSize: { accumulate: true }, // in kilobyte
+	totalSize: { accumulate: true }, // キロバイト単位
 	incCount: { range: 'small' },
-	incSize: {}, // in kilobyte
+	incSize: {}, // キロバイト単位
 	decCount: { range: 'small' },
-	decSize: {}, // in kilobyte
+	decSize: {}, // キロバイト単位
 } as const;
 
 const entity = Chart.schemaToEntity(name, schema, true);

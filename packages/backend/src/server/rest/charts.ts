@@ -64,9 +64,8 @@ type HonoChartSchema = Record<
 	}
 >;
 
-// getChart()/getChartRaw() never touch tickMajor/tickMinor (those only run on the
-// write-side tick()/save() paths), so a read-only stub can call Chart.getChart()
-// without the write-side dependencies required by each concrete chart.
+// getChart()/getChartRaw() は tickMajor/tickMinor を呼ばないため、読み取り専用の stub は
+// 各チャートの書き込み側依存なしで Chart.getChart() を呼び出せる。
 class HonoReadOnlyChart<S extends HonoChartSchema> extends Chart<S> {
 	protected async tickMajor(): Promise<Partial<KVs<S>>> {
 		return {};
@@ -218,8 +217,8 @@ export async function handleHonoApiChartsUserReactions(deps: HonoApiChartDepende
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
-const statsReactionsCountCache = new MemoryKVCache<number>(1000 * 60 * 60); // 1h
-const statsInstancesCountCache = new MemoryKVCache<number>(1000 * 60 * 60); // 1h
+const statsReactionsCountCache = new MemoryKVCache<number>(1000 * 60 * 60);
+const statsInstancesCountCache = new MemoryKVCache<number>(1000 * 60 * 60);
 
 export async function handleHonoApiStats(deps: HonoApiChartDependencies): Promise<Record<string, unknown>> {
 	const notesChart = await createHonoApiChart(deps, notesChartName, notesChartSchema).getChart('hour', 1, null);

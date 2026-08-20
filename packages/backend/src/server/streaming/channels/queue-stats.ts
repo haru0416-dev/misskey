@@ -10,7 +10,6 @@ import type { HonoStreamChannelDefinition } from '../channel.js';
 
 const ev = globalEventBus;
 
-/** QueueStatsChannel 相当。hono-daemon-queue-stats.ts が発行する globalEventBus イベントを購読する。 */
 export const honoStreamChannelQueueStats: HonoStreamChannelDefinition<unknown> = {
 	shouldShare: true,
 	requireCredential: false,

@@ -21,9 +21,7 @@ export type HonoStreamChannelSubscriber = {
 };
 
 /**
- * Connection.ts が持っていた「フォロー/ミュート/ブロック関係のスナップショット」を
- * プレーンオブジェクトとして channel 初期化関数に渡すための型。Channel 基底クラスの
- * protected getter 群 (user/userProfile/following/...) 相当。
+ * channel 初期化時点のフォロー・ミュート・ブロック関係を保持するスナップショット。
  */
 export type HonoStreamChannelContext = {
 	id: string;
@@ -76,7 +74,6 @@ export type HonoStreamChannelHandle = {
 };
 
 /**
- * Channel クラス + そのサブクラスの静的プロパティ (chName/shouldShare/requireCredential/kind) 相当。
  * `init` が `false` を返す/初期化不可の場合は接続を拒否する。
  */
 export type HonoStreamChannelDefinition<Deps> = {

@@ -54,11 +54,9 @@ const html = computed(() => highlighter.codeToHtml(props.code, {
 async function fetchLanguage(to: string): Promise<void> {
 	const language = to as BundledLanguage;
 
-	// Check for the loaded languages, and load the language if it's not loaded yet.
 	if (!highlighter.getLoadedLanguages().includes(language)) {
-		// Check if the language is supported by Shiki
 		const bundles = bundledLanguagesInfo.filter((bundle) => {
-			// Languages are specified by their id, they can also have aliases (i. e. "js" and "javascript")
+			// Shiki は言語 ID とエイリアスの両方を受け付けるため、両方を照合する。
 			return bundle.id === language || bundle.aliases?.includes(language);
 		});
 		const bundle = bundles[0];

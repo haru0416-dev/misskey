@@ -10,7 +10,7 @@ import { runWriteTasks } from './write-tasks.js';
 
 const filesToScan = {
 	frontend: 'packages/frontend/src/**/*.{ts,vue}',
-	// frontendSharedは現在アイコン使用箇所がないため未生成。有効化する場合は利用側で生成CSSもimportする。
+	// frontendShared はアイコンの使用箇所がなく、生成 CSS を利用側で読み込む必要もないため対象外。
 	//frontendShared: 'packages/frontend-shared/utility/**/*.{ts}',
 	frontendEmbed: 'packages/frontend-embed/src/**/*.{ts,vue}',
 };
@@ -77,7 +77,6 @@ async function main() {
 	src: url("./tabler-icons.woff2") format("woff2");
 }`];
 
-		// サブセット化したフォントの中身がある（＝unicodeRangeValuesの配列が空ではない）場合のみ、サブセットしたものに関する情報を追記
 		if (unicodeValues.length > 0) {
 			await fsp.writeFile(`./built/tabler-icons-${key}.woff2`, buffer);
 
@@ -118,7 +117,6 @@ async function main() {
 
 			cssRules.push(classTiBaseRule);
 
-			// 使用されているアイコンのclassとの対応を追記
 			for (const icon of unicodeValues) {
 				const iconClasses = Array.from(rgMap.entries()).filter(([_, unicode]) => Number.parseInt(unicode, 16) === icon);
 				if (iconClasses.length > 1) {

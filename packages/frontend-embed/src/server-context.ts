@@ -13,5 +13,5 @@ export type ServerContext = {
 	user?: Misskey.entities.UserLite;
 } | null;
 
-// NOTE: devモードのときしか embedCtx が null になることは無い
+// 開発モード以外ではembedCtxが必ず設定される。
 export const serverContext: ServerContext = readServerContext<NonNullable<ServerContext>>('misskey_embedCtx');

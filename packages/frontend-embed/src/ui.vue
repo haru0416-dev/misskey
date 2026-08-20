@@ -59,13 +59,13 @@ if (_DEV_) console.log(page, contentId);
 
 const embedParams = inject(DI.embedParams, defaultEmbedParams);
 
-//#region Embed Style
+//#region 埋め込みスタイル
 const embedRounded = ref(embedParams.rounded);
 const embedNoBorder = ref(!embedParams.border);
 const maxHeight = ref(embedParams.maxHeight ?? 0);
 //#endregion
 
-//#region Embed Resizer
+//#region 埋め込みサイズの通知
 const rootEl = shallowRef<HTMLElement | null>(null);
 
 let previousHeight = 0;

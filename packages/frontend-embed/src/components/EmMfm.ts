@@ -69,12 +69,6 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 
 	const useAnim = true;
 
-	/**
-	 * Gen Vue Elements from MFM AST
-	 * @param ast MFM AST
-	 * @param scale How times large the text is
-	 * @param disableNyaize Whether nyaize is disabled or not
-	 */
 	const genEl = (ast: mfm.MfmNode[], scale: number, disableNyaize = false) => ast.map((token): VNode | string | (VNode | string)[] => {
 		switch (token.type) {
 			case 'text': {

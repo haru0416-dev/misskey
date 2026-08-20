@@ -259,8 +259,6 @@ const headerActions = computed(() => []);
 const headerTabs = computed(() => []);
 
 definePage(() => INFO.value);
-// w 890
-// h 700
 </script>
 
 <style lang="scss" scoped>

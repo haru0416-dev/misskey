@@ -9,7 +9,7 @@ import { misskeyApi } from '@/misskey-api.js';
 
 const _serverMetadata = readServerContext<Misskey.entities.MetaDetailed>('misskey_meta');
 
-// NOTE: devモードのときしか _serverMetadata が null になることは無い
+// 開発モード以外では_serverMetadataが必ず設定される。
 export const serverMetadata: Misskey.entities.MetaDetailed = _serverMetadata ?? await misskeyApi('meta', {
 	detail: true,
 });

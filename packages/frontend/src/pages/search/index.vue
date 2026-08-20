@@ -40,7 +40,7 @@ const props = withDefaults(defineProps<{
 	host?: string | null,
 	type?: 'note' | 'user',
 	origin?: 'combined' | 'local' | 'remote',
-	// For storybook only
+	// Storybook 以外では指定しない。
 	ignoreNotesSearchAvailable?: boolean,
 }>(), {
 	query: '',

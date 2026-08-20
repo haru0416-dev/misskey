@@ -34,10 +34,8 @@ export type JobQueueRuntime = {
 };
 
 /**
- * QueueProcessorService 相当。hono-queue-shell.ts の createHonoQueueWorkers が
- * 10個全てのBullMQ Workerを構築する。ChartManagementService相当の定期chart保存
- * (20分間隔) は createRuntimeDependencies 内で常に起動される (startHonoChartWriterSaveInterval)
- * ため、ここで個別に呼び出す必要はない。
+ * 定期chart保存は createRuntimeDependencies 内で常に起動されるため、
+ * ここで個別に起動してはならない。
  */
 export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDependencies): Promise<JobQueueRuntime> {
 	const { createRuntimeDependencies } = await import('../runtime-dependencies.js');
@@ -48,7 +46,7 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 	const deps = dependencies ?? (await createRuntimeDependencies(config));
 	const logger = deps.loggerService.getLogger('queue', 'orange');
 	await syncSystemJobSchedulers(deps.systemQueue, deps.config);
-	// 原典の QueueProcessorService は DI 経由で GlobalEventService (全ストリーム配信) を持っていた。
+	// publisher は AP 受信で作成されたノート・通知などを全ストリームへ配信するために必要。
 	// publisher を渡さないと、AP受信 (inbox) で作成されたノート・通知等のストリーム配信が
 	// optional チェーンで黙って無効化され、リモート発のイベントが一切WebSocketに流れなくなる
 	const workerDeps = {
@@ -84,7 +82,7 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 	const workers = createHonoQueueWorkers(workerDeps);
 
 	// Bull.Worker#run() は内部のメインループが解決するまで (= close() されるまで) 待ち続けるため、
-	// 元の QueueProcessorService#start() 同様ここでは await しない。
+	// 起動時には await しない。
 	void workers.start().catch((err) => logger.error('Failed to start queue workers', { e: err }));
 
 	return {

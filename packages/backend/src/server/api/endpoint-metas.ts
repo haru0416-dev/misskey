@@ -4,10 +4,8 @@
  */
 
 /*
- * Consolidated endpoint metadata assembly.
- * Key order below MUST stay sorted by UTF-16 code unit order (the order the
- * legacy `import * as` module-namespace object exposed) — it determines the
- * endpoint ordering of the public /api.json document.
+ * エンドポイントメタデータを統合する。
+ * 公開 `/api.json` のエンドポイント順序に使うため、以下のキーは UTF-16 コード単位順を維持する。
  */
 import { endpointMetas as adminMetas } from './metas/admin.js';
 import { endpointMetas as adminAbuseReportMetas } from './metas/admin-abuse-report.js';

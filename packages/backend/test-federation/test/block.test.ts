@@ -42,15 +42,10 @@ describe('Block', () => {
 			strictEqual(followers.length, 0);
 		});
 
-		// NOTE: upstream では Undo(Block) の連合が機能せず「解除後もブロックされたまま」になる既知バグを
-		// FIXME 付きで固定化していたが、本ポートはブロック解除が正しく連合されるため、
-		// upstream が test.skip で同梱していた本来の期待値 (下の 'Can follow if unblocked') を有効化する
 		test.skip('Cannot follow even if unblocked', async () => {
-			// unblock here
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
 			await sleep();
 
-			// TODO: why still being blocked?
 			await rejects(
 				async () => await bob.client.request('following/create', { userId: aliceInB.id }),
 				(err: any) => {
@@ -169,17 +164,13 @@ describe('Block', () => {
 			);
 		});
 
-		// NOTE: 上の follow と同様、本ポートではブロック解除が正しく連合されるため FIXME ケースを skip し
-		// upstream が test.skip で同梱していた本来の期待値を有効化する
 		test.skip('Cannot reaction even if unblocked', async () => {
-			// unblock here
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
 			await sleep();
 
 			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
 
-			// TODO: why still being blocked?
 			await rejects(
 				async () => await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '😅' }),
 				(err: any) => {
@@ -216,7 +207,7 @@ describe('Block', () => {
 			]);
 		});
 
-		/** NOTE: You should mute the target to stop receiving notifications */
+		/** 通知の受信を止めるため、対象ユーザーをミュートする。 */
 		test('Can mention and notified even if blocked', async () => {
 			await alice.client.request('blocking/create', { userId: bobInA.id });
 			await sleep();

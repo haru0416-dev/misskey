@@ -352,14 +352,12 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 		}
 	}
 
-	/**
-	 * Detect MIME Type and extension
-	 */
+	/** MIME タイプと拡張子を判定する。 */
 	async function detectType(path: string): Promise<{
 		mime: string;
 		ext: string | null;
 	}> {
-		// Check 0 byte
+		// 0 バイトのファイルを確認する。
 		const fileSize = await getFileSize(path);
 		if (fileSize === 0) {
 			return TYPE_OCTET_STREAM;
@@ -426,9 +424,7 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 		return hash.read();
 	}
 
-	/**
-	 * Detect dimensions of image
-	 */
+	/** 画像の寸法を判定する。 */
 	async function detectImageSize(
 		path: string,
 		mime: string,
@@ -469,9 +465,7 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 		};
 	}
 
-	/**
-	 * Calculate blurhash string of image
-	 */
+	/** 画像の blurhash 文字列を計算する。 */
 	async function getBlurhash(path: string, type: string): Promise<string> {
 		const sharp = await sharpBmp(path, type);
 		const { data: buffer, info } = await sharp

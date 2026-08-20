@@ -159,7 +159,7 @@ watch(rawSearchQuery, (value) => {
 
 			searchResult.value.push({
 				id: item.id,
-				path: path ?? '/', // never gets `/`
+				path: path ?? '/', // 開発時は直前で null を拒否するため、'/' は本番用のフォールバック。
 				label: item.label,
 				parentLabels: parentLabels.toReversed(),
 				...(icon === undefined ? {} : { icon }),

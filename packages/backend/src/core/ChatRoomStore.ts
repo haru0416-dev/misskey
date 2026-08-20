@@ -21,7 +21,7 @@ import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { MiUser } from '@/models/User.js';
 
 export type ChatRoomRecordOrder = 'asc' | 'desc';
-// Invitation creation and joining must acquire the room lock before the per-user lock.
+// 招待の作成と参加では、ユーザー単位のロックより先にルームのロックを取得する。
 export class ChatRoomCapacityExceededError extends Error {}
 export class ChatRoomInvitationConflictError extends Error {}
 export class ChatRoomInvitationNotFoundError extends Error {}

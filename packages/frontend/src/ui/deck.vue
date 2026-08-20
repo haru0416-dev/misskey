@@ -19,7 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<XAnnouncements v-if="$i"/>
 			<XStatusBars/>
 			<div :class="$style.columnsWrapper">
-				<!-- passive: https://bugs.webkit.org/show_bug.cgi?id=281300 -->
+				<!-- WebKit の不具合を避けるため passive を明示する: https://bugs.webkit.org/show_bug.cgi?id=281300 -->
 				<div ref="columnsEl" :class="[$style.columns, { [$style.center]: prefer['deck.columnAlign'] === 'center', [$style.snapScroll]: snapScroll }]" @contextmenu.self.prevent="onContextmenu" @wheel.passive.self="onWheel">
 					<!-- sectionを利用しているのは、deck.vue側でcolumnに対してfirst-of-typeを効かせるため -->
 					<section

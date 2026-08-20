@@ -13,9 +13,9 @@ on:
       - packages/sw/**
       - packages/i18n/**
       - packages/icons-subsetter/**
-      # for permissions
+      # 権限関連
       - packages/misskey-js/**
-      # for e2e
+      # e2e 関連
       - packages/backend/**
       - tests/e2e/**
       - package.json
@@ -31,9 +31,9 @@ on:
       - packages/sw/**
       - packages/i18n/**
       - packages/icons-subsetter/**
-      # for permissions
+      # 権限関連
       - packages/misskey-js/**
-      # for e2e
+      # e2e 関連
       - packages/backend/**
       - tests/e2e/**
       - package.json

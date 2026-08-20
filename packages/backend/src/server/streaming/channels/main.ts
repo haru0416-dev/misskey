@@ -30,7 +30,7 @@ export const honoStreamChannelMain: HonoStreamChannelDefinition<HonoApiNoteDepen
 			switch (data.type) {
 				case 'notification': {
 					const body = data.body as MainStreamNotificationBody;
-					// Ignore notifications from instances the user has muted
+					// ユーザーがミュートしたインスタンスの通知を無視する。
 					if (isUserFromMutedInstance(body as Packed<'Notification'>, ctx.userMutedInstances)) return;
 					if (body.userId && ctx.userIdsWhoMeMuting.has(body.userId)) return;
 

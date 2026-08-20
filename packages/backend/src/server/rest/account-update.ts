@@ -452,7 +452,7 @@ async function publishAccountUpdateToFollowersForHonoApi(
 	const person = await renderPersonForHonoApi(deps, localUser);
 	const content = addActivityContext(deps.config, renderUpdateForHonoApi(deps.config, person, localUser));
 
-	// リレーへの配信は LD-signature (attachLdSignature) が必要だが、hono 側に JsonLd 署名基盤が未移植のため見送っている。
+	// リレー配送には LD-signature が必要なため、署名しないこの経路ではフォロワー配送だけを行う。
 	await deliverNoteActivityForHonoApi(deps, localUser, content, { directRecipients: [], deliverToFollowers: true });
 }
 
@@ -466,7 +466,7 @@ async function resolveAlsoKnownAsUserForHonoApi(deps: HonoApiAccountUpdateDepend
 		host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.runtime.host)
 			? null
 			: toPunyForHonoApi(host);
-	// 原典は RemoteUserResolveService.resolveUser — 未知のリモートユーザーはWebFingerで解決する
+	// 未知のリモートユーザーは WebFinger で解決する。
 	// deps の型に HonoApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
 	// (shell の実 deps は両方を満たす)
 	return await resolveUserForHonoApi(deps as unknown as HonoApiApPersonDependencies, username, normalizedHost).catch(
@@ -489,7 +489,7 @@ export async function updateUsertagsForHonoApi(
 	const detachedNames = [
 		...new Set(user.tags.filter((tag) => !tags.includes(tag)).map((tag) => normalizeForSearch(tag))),
 	];
-	// 原典 HashtagService#updateHashtag 同様、ランキング更新は fire-and-forget (デタッチ側でも呼ばれる)。
+	// ランキング更新は fire-and-forget とし、タグ更新処理を待たせない。
 	void updateHashtagsRankingsForHonoApi(deps, [...attachedNames, ...detachedNames], user.id).catch(() => {});
 	await recordHashtagUsagesInDatabase(deps.db, {
 		entries: attachedNames.map((name) => ({ id: genId(), name })),

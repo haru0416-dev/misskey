@@ -141,7 +141,7 @@ export async function getHonoApiRolePolicies(
 		const baseValue = isValidPolicyValue(name, basePolicies[name]) ? basePolicies[name] : DEFAULT_POLICIES[name];
 		if (roles.length === 0) return aggregate([baseValue]);
 
-		// policies は jsonb なので、過去に壊れた形で書き込まれた値が入っていることがある。
+		// policies は jsonb なので、壊れた形で保存された値が入っていることがある。
 		// ここで例外を投げるとそのロールを持つユーザーの全APIが500になるため、既定値へフォールバックする。
 		const policies = roles.map((role) => {
 			const policy = role.policies[name] as unknown;
@@ -233,10 +233,7 @@ export async function isHonoApiAdministrator(
 	return roles.some((role) => role.isAdministrator);
 }
 
-/**
- * `requiredRolePolicy` 相当のゲート判定。元の ApiCallService は
- * `if (ep.meta.requiredRolePolicy != null && !user.isRoot)` として root を常に通していた。
- */
+/** root ユーザーは requiredRolePolicy の値にかかわらず許可する。 */
 export async function hasHonoApiRolePolicyOrIsRoot(
 	deps: HonoApiRolePolicyDependencies,
 	user: MiUser,

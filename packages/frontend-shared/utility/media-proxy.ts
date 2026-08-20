@@ -29,7 +29,6 @@ export class MediaProxy {
 			imageUrl.startsWith('/proxy/') ||
 			imageUrl.startsWith(localProxy + '/')
 		) {
-			// もう既にproxyっぽそうだったらurlを取り出す
 			_imageUrl = new URL(imageUrl, this.url).searchParams.get('url') ?? imageUrl;
 		}
 
@@ -52,13 +51,11 @@ export class MediaProxy {
 		const u = baseUrl.startsWith('http') ? new URL(baseUrl) : new URL(baseUrl, this.url);
 
 		if (u.href.startsWith(`${this.url}/emoji/`)) {
-			// もう既にemojiっぽそうだったらsearchParams付けるだけ
 			u.searchParams.set('static', '1');
 			return u.href;
 		}
 
 		if (u.href.startsWith(this.serverMetadata.mediaProxy + '/')) {
-			// もう既にproxyっぽそうだったらsearchParams付けるだけ
 			u.searchParams.set('static', '1');
 			return u.href;
 		}

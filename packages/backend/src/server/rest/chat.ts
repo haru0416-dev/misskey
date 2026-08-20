@@ -590,7 +590,7 @@ async function packChatRoomMembershipsForHonoApi(
 }
 
 // ---------------------------------------------------------------------------
-// service logic (ports of ChatService)
+// ChatService のサービスロジック。
 // ---------------------------------------------------------------------------
 
 async function getChatAvailabilityForHonoApi(
@@ -637,9 +637,8 @@ async function pushChatNotificationForHonoApi(
 	await pushSwNotificationForHonoApi(deps, userId, 'newChatMessage', body);
 }
 
-// Apply notifierId-aware filtering (never/following/follower/mutualFollow/
-// followingOrFollower + mute check) with direct DB queries so the current relationships
-// determine whether the notification is sent.
+// notifierId を考慮したフィルタ (never/following/follower/mutualFollow/
+// followingOrFollower と mute 判定) を DB から直接読み、現在の関係で通知可否を判定する。
 async function createChatRoomInvitationNotificationForHonoApi(
 	deps: HonoApiChatDependencies,
 	notifieeId: MiUser['id'],

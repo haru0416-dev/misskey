@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/*
- * Operations
- * 各種操作
- */
 import { APIClient } from 'misskey-js/api.js';
 import type * as Misskey from 'misskey-js';
 import type { SwMessage, SwMessageOrderType } from '@/types.js';
@@ -54,17 +50,14 @@ export function sendMarkAllAsRead(userId: string): Promise<null | undefined | vo
 	});
 }
 
-// rendered acctからユーザーを開く
 export function openUser(acct: string, loginId?: string): ReturnType<typeof openClient> {
 	return openClient('push', `/@${acct}`, loginId, { acct });
 }
 
-// noteIdからノートを開く
 export function openNote(noteId: string, loginId?: string): ReturnType<typeof openClient> {
 	return openClient('push', `/notes/${noteId}`, loginId, { noteId });
 }
 
-// antennaIdからアンテナタイムラインを開く
 export function openAntenna(antennaId: string, loginId: string): ReturnType<typeof openClient> {
 	return openClient('push', `/timeline/antenna/${antennaId}`, loginId, { antennaId });
 }
@@ -77,9 +70,7 @@ export function openChat(body: Misskey.entities.ChatMessage, loginId: string): R
 	}
 }
 
-// post-formのオプションから投稿フォームを開く
 export async function openPost(options: { initialText?: string; reply?: Misskey.entities.Note; renote?: Misskey.entities.Note }, loginId?: string): ReturnType<typeof openClient> {
-	// クエリを作成しておく
 	const url = '/share';
 	const query = new URLSearchParams();
 	if (options.initialText) query.set('text', options.initialText);

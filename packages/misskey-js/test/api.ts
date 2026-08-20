@@ -292,7 +292,7 @@ describe('API', () => {
 		const fetchMock = vi
 			.spyOn(globalThis, 'fetch')
 			.mockImplementation(async () => {
-				// 本来返すべき値は`Role`型だが、テストなのでお茶を濁す
+				// レスポンスの型検証はこのテストの対象外のため、空のオブジェクトを返す。
 				return new Response('{}', { status: 200 });
 			});
 

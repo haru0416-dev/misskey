@@ -25,7 +25,6 @@ function cpuTicks() {
 	return { idle, total };
 }
 
-/** os-utils の cpuUsage() 相当。CPU_SAMPLE_MS 間隔でtickを2回サンプリングし、idle以外の割合を返す。 */
 function cpuUsage(): Promise<number> {
 	const start = cpuTicks();
 	return new Promise((resolve) => {
@@ -59,7 +58,6 @@ export type HonoDaemonServerStatsDependencies = {
 	meta: Pick<MiMeta, 'enableServerMachineStats'>;
 };
 
-/** ServerStatsService.start 相当。サーバーのCPU/メモリ/ネットワーク/ディスク使用状況を定期的にglobalEventBus経由でブロードキャストする。 */
 export function startHonoServerStatsDaemon(deps: HonoDaemonServerStatsDependencies): { dispose: () => void } {
 	if (!deps.meta.enableServerMachineStats) {
 		return { dispose: () => {} };

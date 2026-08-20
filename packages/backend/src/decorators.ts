@@ -5,11 +5,6 @@
 
 // https://github.com/andreypopp/autobind-decorator
 
-/**
- * Return a descriptor removing the value and returning a getter
- * The getter will return a .bind version of the function
- * and memoize the result against a symbol on the instance
- */
 export function bindThis(target: any, key: string, descriptor: any) {
 	const fn = descriptor.value;
 

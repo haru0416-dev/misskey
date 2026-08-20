@@ -31,7 +31,6 @@ jobs:
         if: steps.get_pr.outputs.pr_number != ''
         run: echo "target_version=$(jq -r '.version | split("-")[0]' package.json)" >> "$GITHUB_OUTPUT"
         id: v
-      # CHANGELOG.mdの内容を取得
       - name: Get changelog
         if: steps.get_pr.outputs.pr_number != ''
         run: |
@@ -43,7 +42,6 @@ jobs:
         env:
           VERSION: ${{ steps.v.outputs.target_version }}
         id: changelog
-      # PRのnotesを更新
       - name: Update PR
         if: steps.get_pr.outputs.pr_number != ''
         run: |

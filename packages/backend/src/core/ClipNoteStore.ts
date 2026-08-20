@@ -99,7 +99,7 @@ export async function createClipNoteWithinLimitInDatabase(
 		await acquireAdvisoryTransactionLockInDatabase(tx, 'clip-note-limit', data.clipId);
 		if ((await countClipNotesByClipIdFromDatabase(tx, data.clipId)) >= limit) return 'tooManyClipNotes';
 
-		// Note deletion locks the note before cascading to clip_note, so keep the same lock order here.
+		// ノート削除は note から clip_note の順にロックするため、同じ順序にしてデッドロックを避ける。
 		const [lockedNote] = await tx
 			.select({ id: note.id })
 			.from(note)

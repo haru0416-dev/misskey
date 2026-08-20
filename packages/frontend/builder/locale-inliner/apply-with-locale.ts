@@ -51,7 +51,8 @@ export function applyWithLocale(
 						.join(',')}})`;
 				} else {
 					fileLogger.warn(`Cannot find localization key ${modification.localizationKey.join('.')}`);
-					replacement = '(() => "")'; // placeholder for missing locale
+					// ロケールが見つからない場合も、生成コードを有効な関数として保つ。
+					replacement = '(() => "")';
 				}
 				sourceCode.update(modification.begin, modification.end, replacement);
 				break;
@@ -72,10 +73,9 @@ export function applyWithLocale(
 					}
 					components.push(JSON.stringify(format.slice(lastIndex)));
 
-					// we replace with `(({name,count})=>(name+count+"some"))`
 					const paramList = Array.from(params).join(',');
 					let body = components.filter((x) => x !== '""').join('+');
-					if (body === '') body = '""'; // if the body is empty, we return empty string
+					if (body === '') body = '""';
 					return `(({${paramList}})=>(${body}))`;
 				}
 			}
@@ -88,8 +88,7 @@ export function applyWithLocale(
 				break;
 			}
 			case 'locale-json': {
-				// locale-json is inlined to place where initialize module-level variable which is executed only once.
-				// In such case we can use JSON.parse to speed up the parsing script.
+				// モジュール初期化時に一度だけ評価される箇所へ埋め込むため、JSON.parse で解析する。
 				// https://v8.dev/blog/cost-of-javascript-2019#json
 				sourceCode.update(
 					modification.begin,
@@ -110,7 +109,7 @@ function getPropertyByPath(localeJson: ILocale, localizationKey: string[]): stri
 	let current: ILocale | string = localeJson;
 	for (const key of localizationKey) {
 		if (typeof current !== 'object' || !(key in current)) {
-			return null; // Key not found
+			return null;
 		}
 		const next: string | ILocale | undefined = current[key];
 		if (next == null) return null;

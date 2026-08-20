@@ -38,7 +38,7 @@ describe('deck column updates', () => {
 		addColumnWidget('column', { id: 'widget', name: 'clock', data: {} });
 
 		expect(columns.value[0]?.widgets?.[0]?.id).toBe('widget');
-		// columns collection + persisted profile
+		// columns と永続化プロファイルの両方で複製される。
 		expect(deepCloneMock).toHaveBeenCalledTimes(2);
 	});
 });

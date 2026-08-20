@@ -16,7 +16,7 @@ export function createVideoProcessingService(config: Config, imageProcessingServ
 		const [dir, cleanup] = await createTempDir();
 
 		try {
-			// 従来の fluent-ffmpeg screenshot({ timestamps: ['5%'] }) と同じく、動画長の 5% 地点のフレームを切り出す
+			// 動画長の 5% 地点のフレームを切り出す。
 			const duration = Number((await ffprobe(source).catch(() => null))?.format.duration);
 			const seek = Number.isFinite(duration) ? duration * 0.05 : 0;
 

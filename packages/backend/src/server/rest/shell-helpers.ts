@@ -105,8 +105,8 @@ export function publicCacheHeadersWhenAnonymous(auth: HonoApiAuthenticated, seco
 function apiErrorResponse(c: Context, err: HonoApiError): Response {
 	setApiHeaders(c);
 
-	// ApiCallService.#sendApiError 相当: 401以外のclient系エラーには invalid_request の
-	// WWW-Authenticate を付ける (401系/permission系は error.ts のファクトリが個別に設定済み)。
+	// 401以外のclient系エラーには invalid_request の WWW-Authenticate を付ける。
+	// 401系・permission系は error.ts のファクトリが個別に設定する。
 	const extraHeaders: Record<string, string> = {};
 	if (
 		err.kind === 'client' &&
@@ -148,7 +148,7 @@ export async function jsonBody(c: Context): Promise<Record<string, unknown>> {
 export function tokenFromRequest(c: Context, body: Record<string, unknown>): string | null {
 	const authorization = c.req.header('authorization');
 	if (authorization != null) {
-		// 原典 (ApiCallService) 同様、スキーム名は大文字小文字を区別する ('bearer' は不可)
+		// スキーム名は大文字小文字を区別するため、'bearer' は受け付けない。
 		const match = authorization.match(/^Bearer (.+)$/);
 		if (match?.[1] != null) return match[1];
 	}

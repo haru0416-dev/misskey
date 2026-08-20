@@ -31,7 +31,7 @@ import { i18n } from '@/i18n.js';
 
 console.log('Erebia Embed');
 
-//#region Embedパラメータの取得・パース
+//#region 埋め込みパラメータの取得・パース
 const params = new URLSearchParams(window.location.search);
 const embedParams = parseEmbedParams(params);
 if (_DEV_) console.log(embedParams);
@@ -61,14 +61,12 @@ if (embedParams.colorMode === 'dark') {
 }
 //#endregion
 
-//#region Detect language & fetch translations
+//#region 言語の検出と翻訳の取得
 storeBootloaderErrors({ ...i18n.ts._bootErrors, reload: i18n.ts.reload });
 //#endregion
 
-// サイズの制限
 window.document.documentElement.style.maxWidth = '500px';
 
-// iframeIdの設定
 function setIframeIdHandler(event: MessageEvent) {
 	if (event.data?.type === 'misskey:embedParent:registerIframeId' && event.data.payload?.iframeId != null) {
 		setIframeId(event.data.payload.iframeId);
@@ -80,7 +78,7 @@ window.addEventListener('message', setIframeIdHandler);
 
 try {
 	await fetchCustomEmojis();
-} catch (err) { /* empty */ }
+} catch (err) { /* 空のcatch */ }
 
 const app = createApp(
 	defineAsyncComponent(() => import('@/ui.vue')),
@@ -95,7 +93,7 @@ app.provide(DI.serverContext, serverContext);
 app.provide(DI.embedParams, embedParams);
 
 // https://github.com/misskey-dev/misskey/pull/8575#issuecomment-1114239210
-// なぜか2回実行されることがあるため、mountするdivを1つに制限する
+// 複数回実行されてもマウント先を共有するため、ルート要素を1つに限定する
 const rootEl = ((): HTMLElement => {
 	const MISSKEY_MOUNT_DIV_ID = 'misskey_app';
 
@@ -116,13 +114,12 @@ postMessageToParentWindow('misskey:embed:ready');
 
 app.mount(rootEl);
 
-// boot.jsのやつを解除
 window.onerror = null;
 window.onunhandledrejection = null;
 
 removeSplash();
 
-//#region Self-XSS 対策メッセージ
+//#region Self-XSS対策メッセージ
 console.log(
 	`%c${i18n.ts._selfXssPrevention.warning}`,
 	'color: #f00; background-color: #ff0; font-size: 36px; padding: 4px;',
@@ -149,7 +146,7 @@ function removeSplash() {
 		splash.style.opacity = '0';
 		splash.style.pointerEvents = 'none';
 
-		// transitionendイベントが発火しない場合があるため
+		// transitionendイベントが発火しない場合でもスプラッシュを削除する
 		window.setTimeout(() => {
 			splash.remove();
 		}, 1000);

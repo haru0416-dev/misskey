@@ -26,7 +26,6 @@ const props = defineProps<{
 	}
 }>();
 
-// if no instance data is given, this is for the local instance
 const instance = props.instance ?? {
 	name: serverMetadata.name,
 	themeColor: (window.document.querySelector('meta[name="theme-color-orig"]') as HTMLMetaElement)?.content,

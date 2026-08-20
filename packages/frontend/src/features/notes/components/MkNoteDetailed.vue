@@ -308,7 +308,6 @@ const inChannel = inject(DI.inChannel, null);
 
 let note = deepClone(props.note);
 
-// plugin
 const noteViewInterruptors = getPluginHandlers('note_view_interruptor');
 const hideByPlugin = ref(false);
 if (noteViewInterruptors.length > 0) {

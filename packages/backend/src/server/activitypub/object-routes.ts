@@ -58,10 +58,9 @@ const LD_JSON = 'application/ld+json; profile="https://www.w3.org/ns/activitystr
 const HTML_TYPE = 'text/html';
 
 /**
- * upstream (ActivityPubServerService) の `accepts(request).type(['html', ACTIVITY_JSON, LD_JSON])`
- * によるルート分岐を再現する。以前の正規表現判定は q 値 (q=0 の明示拒否含む) と優先順位を無視して
- * おり、`Accept: text/html, application/activity+json` のような複合ヘッダで upstream (HTML) と
- * 逆の結果 (AP JSON) を返していた。
+ * `accepts(request).type(['html', ACTIVITY_JSON, LD_JSON])` によるルート分岐を実装する。
+ * q 値 (q=0 の明示拒否を含む) と優先順位を評価し、`Accept: text/html, application/activity+json`
+ * のような複合ヘッダでも正しい形式を返す。
  */
 function wantsAp(c: Context): boolean {
 	const preferred = preferredMediaType(c.req.header('accept'), [HTML_TYPE, ACTIVITY_JSON, LD_JSON]);
@@ -99,7 +98,6 @@ function isSelfHost(configHost: string, host: string | null): boolean {
 	return domainToASCII(configHost.toLowerCase()) === domainToASCII(host.toLowerCase());
 }
 
-/** ApRendererService.addContext 相当 (型を緩めたローカル版)。 */
 function withApContext(obj: Record<string, unknown>): Record<string, unknown> {
 	return { '@context': CONTEXT, ...obj };
 }
@@ -132,7 +130,6 @@ async function renderUserInfo(deps: ApObjectRoutesDependencies, c: Context, user
 }
 
 /**
- * ActivityPubServerService 相当の ActivityPub オブジェクト GET サーバー。
  * /users/:user, /@:acct, /notes/:note は Accept ヘッダが AP を要求するときのみ応答し、
  * それ以外は next() で後段のクライアントページへフォールスルーする。
  */
@@ -413,7 +410,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		return apJson(c, withApContext(await renderLikeForHonoApi(deps, reaction, note)));
 	});
 
-	// フォローが成立する前にも参照されうるので、following の存在は確認しない (旧実装と同じ)
+	// フォロー成立前にも参照されるため、following の存在は確認しない。
 	app.get('/follows/:follower/:followee', async (c) => {
 		if (deps.meta.federation === 'none') return apError(403);
 

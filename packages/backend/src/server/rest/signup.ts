@@ -185,7 +185,7 @@ export async function createLocalSignupAccount(
 		deps.publishInternalEvent?.('metaUpdated', { before: beforeMeta, after: deps.meta });
 	}
 
-	// SignupService.signup 相当: userCreated system webhook をエンキューする (原典同様 await しない)。
+	// userCreated system webhook はエンキューのみ行い、登録処理の完了を待たせない。
 	if (deps.systemWebhookDeliverQueue != null) {
 		const queue = deps.systemWebhookDeliverQueue;
 		void (async () => {

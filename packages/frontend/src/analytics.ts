@@ -107,7 +107,6 @@ export async function initAnalytics(instance: Misskey.entities.MetaDetailed) {
 	const { default: Analytics } = await import('analytics');
 	const plugins: AnalyticsPlugin[] = [];
 
-	// Google Analytics
 	if (instance.googleAnalyticsMeasurementId) {
 		//@ts-expect-error Dynamic import
 		const { default: googleAnalytics } = await import('@analytics/google-analytics');

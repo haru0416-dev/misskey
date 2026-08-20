@@ -4,8 +4,7 @@
  */
 
 /**
- * YAMLファイルをJSONファイルに変換するスクリプト
- * ビルド前に実行し、ランタイムにYAMLパーサーを含まないようにする
+ * ランタイムへ YAML パーサーを含めないため、ビルド時に設定を JSON へ変換する。
  */
 
 import fs from 'node:fs';
@@ -21,7 +20,6 @@ const configDir = resolve(_dirname, '../../../.config');
 const OUTPUT_PATH = resolve(_dirname, '../../../built/.config.json');
 
 /**
- * YAMLファイルをJSONファイルに変換
  * @param {string} ymlPath - YAMLファイルのパス
  */
 function yamlToJson(ymlPath) {

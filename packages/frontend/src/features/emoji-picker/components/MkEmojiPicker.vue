@@ -410,7 +410,6 @@ function getDef(emoji: string): string | Misskey.entities.EmojiSimple | UnicodeE
 	}
 }
 
-/** @see MkEmojiPicker.Section.vue */
 function computeButtonTitle(ev: PointerEvent): void {
 	const elm = ev.target as HTMLElement;
 	const emoji = elm.dataset['emoji'] as string;

@@ -273,7 +273,7 @@ function onDragstart(ev: DragEvent) {
 	setDragData(ev, 'deckColumn', props.column.id);
 
 	// Chromeのバグで、Dragstartハンドラ内ですぐにDOMを変更する(=リアクティブなプロパティを変更する)とDragが終了してしまう
-	// SEE: https://stackoverflow.com/questions/19639969/html5-dragend-event-firing-immediately
+	// https://stackoverflow.com/questions/19639969/html5-dragend-event-firing-immediately
 	window.setTimeout(() => {
 		dragging.value = true;
 	}, 10);

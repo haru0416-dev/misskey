@@ -77,10 +77,10 @@ async function run() {
 	}, {
 		in: aiScriptReadline,
 		out: (value) => {
-			// nop
+			// ウィジェットでは標準出力を使用しない。
 		},
 		log: (type, params) => {
-			// nop
+			// ウィジェットではログ出力を使用しない。
 		},
 	});
 

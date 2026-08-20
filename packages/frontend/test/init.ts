@@ -11,7 +11,7 @@ import { ref } from 'vue';
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
 
-// XXX: misskey-js panics if WebSocket is not defined
+// WebSocket が未定義だと misskey-js の初期化に失敗する。
 vi.stubGlobal(
 	'WebSocket',
 	class WebSocket extends EventTarget {
@@ -31,7 +31,7 @@ vi.stubGlobal(
 	},
 );
 
-// XXX: localStorageがない場合がある
+// テスト環境では localStorage が存在しない場合がある。
 const localStorageMock = (() => {
 	const store = new Map<string, string>();
 	return {
@@ -51,7 +51,7 @@ const localStorageMock = (() => {
 })();
 vi.stubGlobal('localStorage', localStorageMock);
 
-// 中でlocalStorageを使うので上と順番を変えてはいけない
+// i18n の読み込み時に localStorage を参照するため、localStorage のモック設定後に実行する。
 const { default: locales } = await import('i18n');
 
 fetchMocker.mockIf(/^\/assets\/locales\/.*\.json$/, async () => {
@@ -77,7 +77,6 @@ export type TestPreferenceReactive = Record<string, Ref<unknown>> & {
 };
 
 export const preferState: TestPreferenceState = {
-	// なんかtestがうまいこと動かないのでここに書く
 	dataSaver: {
 		media: false,
 		avatar: false,
@@ -130,7 +129,6 @@ vi.mock('@/preferences.js', () => {
 	};
 });
 
-// Add mocks for Web Audio API
 const AudioNodeMock = vi.fn(() => ({
 	connect: vi.fn(() => ({ connect: vi.fn() })),
 	start: vi.fn(),

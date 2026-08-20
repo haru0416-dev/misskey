@@ -22,7 +22,7 @@ export type LoginUser = SigninResponse & {
 	password: string;
 };
 
-/** used for avoiding overload and some endpoints */
+/** オーバーロードと一部 endpoint の呼び出しに対応するための型。 */
 export type Request = <E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']>(
 	endpoint: E,
 	params: P,
@@ -62,7 +62,7 @@ export async function waitFor(
 }
 
 async function signin(host: Host, params: Misskey.entities.SigninFlowRequest): Promise<SigninResponse> {
-	// wait for a second to prevent hit rate limit
+	// サインイン時のレート制限を避けるため 1 秒待つ。
 	await sleep(1000);
 
 	return await (new Misskey.api.APIClient({ origin: `https://${host}` }).request as Request)('signin-flow', params)

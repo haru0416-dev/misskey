@@ -15,7 +15,7 @@ async function generateBaseTypes(
 ) {
 	const lines: string[] = [];
 
-	// NOTE: Align `operationId` of GET and POST to avoid duplication of type definitions
+	// GETとPOSTでoperationIdを揃え、型定義の重複を防ぐ。
 	const openApi = JSON.parse(await readFile(openApiJsonPath, 'utf8')) as OpenAPI3;
 	for (const [key, item] of Object.entries(openApi.paths!)) {
 		assert('post' in item);
@@ -84,7 +84,7 @@ async function generateEndpoints(
 	const endpointReqMediaTypes: EndpointReqMediaType[] = [];
 	const endpointReqMediaTypesSet = new Set<string>();
 
-	// misskey-jsはPOST固定で送っているので、こちらも決め打ちする。別メソッドに対応することがあればこちらも直す必要あり
+	// misskey-jsはPOSTだけを送信するため、POSTの定義だけを生成する。
 	const paths = openApiDocs.paths ?? {};
 	const postPathItems = Object.keys(paths)
 		.map(it => ({
@@ -103,7 +103,7 @@ async function generateEndpoints(
 			const reqContent = operation.requestBody.content;
 			const supportMediaTypes = Object.keys(reqContent);
 			if (supportMediaTypes.length > 0) {
-				// いまのところ複数のメディアタイプをとるエンドポイントは無いので決め打ちする
+				// 複数のメディアタイプに対応する選択規則がないため、先頭の1件を採用する。
 				const req = new OperationTypeAlias(
 					operationId,
 					path,
@@ -125,7 +125,7 @@ async function generateEndpoints(
 			const resContent = operation.responses['200'].content;
 			const supportMediaTypes = Object.keys(resContent);
 			if (supportMediaTypes.length > 0) {
-				// いまのところ複数のメディアタイプを返すエンドポイントは無いので決め打ちする
+				// 複数のメディアタイプに対応する選択規則がないため、先頭の1件を採用する。
 				endpoint.response = new OperationTypeAlias(
 					operationId,
 					path,
@@ -202,7 +202,7 @@ async function generateApiClientJSDoc(
 		description: string;
 	}[] = [];
 
-	// misskey-jsはPOST固定で送っているので、こちらも決め打ちする。別メソッドに対応することがあればこちらも直す必要あり
+	// misskey-jsはPOSTだけを送信するため、POSTの定義だけを生成する。
 	const paths = openApiDocs.paths ?? {};
 	const postPathItems = Object.keys(paths)
 		.map(it => ({

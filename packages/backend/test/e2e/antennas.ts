@@ -932,7 +932,7 @@ describe('アンテナ', () => {
 		});
 
 		// 日付指定のPaginationは検証しない:
-		// BUG sinceDate/untilDate は genId(date) を境界IDに変換する実装 (原典と同じ) のため、
+		// sinceDate/untilDate は genId(date) を境界 ID に変換するため、
 		// その時刻ちょうどに作成されたレコードの包含が下位ビットの乱数次第で非決定的になる。
 		// https://github.com/misskey-dev/misskey/issues/10476 系の既知の上流仕様。
 		test.each([{ label: 'ID指定', offsetBy: 'id' }] as const)(

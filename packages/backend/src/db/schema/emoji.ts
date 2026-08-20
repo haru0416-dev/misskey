@@ -33,7 +33,6 @@ export const emoji = pgTable(
 		index('IDX_EMOJI_HOST').on(table.host),
 		index('IDX_EMOJI_CATEGORY').on(table.category),
 		uniqueIndex('IDX_EMOJI_NAME_HOST_UNIQUE').on(table.name, table.host),
-		// GIN for roleIdsThatCanBeUsedThisEmojiAsReaction in production
 		index('IDX_EMOJI_ROLE_IDS').using('gin', table.roleIdsThatCanBeUsedThisEmojiAsReaction),
 	],
 );

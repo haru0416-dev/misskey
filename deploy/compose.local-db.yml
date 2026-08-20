@@ -1,4 +1,4 @@
-# このconfigは、dockerでMisskey本体を起動せず、ValkeyとPostgreSQLなどだけを起動します
+# この設定では Docker で Misskey 本体を起動せず、Valkey と PostgreSQL などだけを起動する。
 
 x-logging: &default-logging
   driver: json-file

@@ -39,7 +39,7 @@ const colorizedNativeEmoji = computed(() => colorizeEmoji(props.emoji));
 const isMuted = checkMutedEmoji(props.emoji);
 const shouldMute = computed(() => isMuted.value && !props.ignoreMuted);
 
-// Searching from an array with 2000 items for every emoji felt like too energy-consuming, so I decided to do it lazily on pointerenter
+// 約 2000 件の配列を絵文字ごとに検索するコストを避けるため、pointerenter 時に遅延計算する。
 function computeTitle(event: PointerEvent): void {
 	(event.target as HTMLElement).title = getEmojiName(props.emoji);
 }

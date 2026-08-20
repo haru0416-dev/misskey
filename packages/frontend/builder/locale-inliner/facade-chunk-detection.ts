@@ -10,7 +10,7 @@ import type { ESTree as RolldownESTree } from 'rolldown/utils';
 
 interface FacadeInfo {
 	fileName: string;
-	// facade export name => internal name
+	// facade の公開名から内部名への対応表
 	nameMap: Partial<Record<string, string>>;
 }
 
@@ -27,18 +27,11 @@ export function detectI18nFacadeChunk(sourceCode: string, fileName: string, file
 		return null;
 	}
 
-	// check if the file is like facade.
-	// if file is like following we treat them as facade.
-	// ```
-	// import { something } from "file";
-	// export { something };
-	// ```
-	if (programNode.body.length !== 2) return null; // not a facade
+	// import と export だけからなるモジュールを facade として扱う。
+	if (programNode.body.length !== 2) return null;
 	const [importDecl, exportDecl] = programNode.body;
-	if (importDecl?.type !== 'ImportDeclaration') return null; // not a facade
-	if (exportDecl?.type !== 'ExportNamedDeclaration') return null; // not a facade
-
-	// the file is a facade file.
+	if (importDecl?.type !== 'ImportDeclaration') return null;
+	if (exportDecl?.type !== 'ExportNamedDeclaration') return null;
 
 	const sourcePath = importDecl.source.value;
 	const sourceName = path.posix.basename(sourcePath);

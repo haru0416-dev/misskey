@@ -131,7 +131,7 @@ export class ApRequestCreator {
 		request.headers = this.#objectAssignWithLcKey(request.headers, {
 			Signature: signatureHeader,
 		});
-		// node-fetch will generate this for us. if we keep 'Host', it won't change with redirects!
+		// node-fetch が付与するため、'Host' を残すとリダイレクト後も変わらない。
 		delete request.headers['host'];
 
 		return {

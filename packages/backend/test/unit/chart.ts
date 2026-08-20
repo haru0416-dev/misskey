@@ -323,7 +323,7 @@ describe('Chart', () => {
 	});
 
 	// 要求された範囲の最も古い箇所に位置するログが存在しない場合でもパディングできる
-	// Issue #3190
+	// https://github.com/misskey-dev/misskey/issues/3190
 	test('Can padding from past range 2', async () => {
 		await testChart.increment();
 		await testChart.save();

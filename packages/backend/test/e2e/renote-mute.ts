@@ -13,7 +13,6 @@ import type * as misskey from 'misskey-js';
 const STREAMING_NEGATIVE_TIMEOUT_MS = 500;
 
 describe('Renote Mute', () => {
-	// alice mutes carol
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 	let carol: misskey.entities.SignupResponse;

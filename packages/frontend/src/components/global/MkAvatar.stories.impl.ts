@@ -62,9 +62,8 @@ export const ProfilePageCat = {
 	parameters: {
 		...ProfilePage.parameters,
 		chromatic: {
-			/* Your story couldn’t be captured because it exceeds our 25,000,000px limit. Its dimensions are 5,504,893x5,504,892px. Possible ways to resolve:
-			 * * Separate pages into components
-			 * * Minimize the number of very large elements in a story
+			/* 5,504,893x5,504,892px となり、Chromatic の 25,000,000px 制限を超えるため撮影しない。
+			 * 解消するにはページのコンポーネント分割か、大きな要素数の削減が必要。
 			 */
 			disableSnapshot: true,
 		},

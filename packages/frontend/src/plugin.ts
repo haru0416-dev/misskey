@@ -274,7 +274,7 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 	const plugin = prefer.plugins.find((x) => x.installId === id);
 	if (!plugin) return;
 
-	// 旧形式のプラグイン API 名を維持する。
+	// 旧保存形式ではプラグインのソースが保存されていない。
 	if (plugin.src == null) return;
 
 	pluginLogs.value.set(plugin.installId, []);

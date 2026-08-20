@@ -85,12 +85,6 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 	let vnodeKey = 0;
 	const nextKey = () => vnodeKey++;
 
-	/**
-	 * Gen Vue Elements from MFM AST
-	 * @param ast MFM AST
-	 * @param scale How times large the text is
-	 * @param disableNyaize Whether nyaize is disabled or not
-	 */
 	const genEl = (ast: mfm.MfmNode[], scale: number, disableNyaize = false) =>
 		ast
 			.map((token): VNode | string | (VNode | string)[] => {

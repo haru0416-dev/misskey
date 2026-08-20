@@ -58,7 +58,6 @@ export async function handleHonoQueueDeleteAccount(
 	}
 
 	{
-		// Delete notes
 		let cursor: MiNote['id'] | null = null;
 
 		for (;;) {
@@ -83,7 +82,6 @@ export async function handleHonoQueueDeleteAccount(
 	}
 
 	{
-		// Delete files
 		let cursor: MiDriveFile['id'] | null = null;
 
 		for (;;) {
@@ -103,8 +101,8 @@ export async function handleHonoQueueDeleteAccount(
 	}
 
 	{
-		// delete pages. Necessary for decrementing pageCount of notes.
-		// NOTE: 元実装同様カーソルを使わない — 削除自体が次イテレーションの取得ウィンドウを進める。
+		// ページ削除はノートの pageCount を減らすために必要。
+		// 削除で取得ウィンドウが進むため、カーソルを使わず先頭から再取得する。
 		for (;;) {
 			const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, user.id, {
 				limit: 100,
@@ -123,10 +121,9 @@ export async function handleHonoQueueDeleteAccount(
 	}
 
 	{
-		// Send email notification
+		// アカウント削除通知は送信完了を待たない。
 		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 		if (profile.email && profile.emailVerified) {
-			// 元実装同様、送信完了を待たない
 			void deps.emailService.sendEmail(
 				profile.email,
 				'Account deleted',

@@ -90,7 +90,6 @@ function isUgcVisibleToVisitor(deps: Pick<ClientPagesDependencies, 'meta'>, user
 }
 
 /**
- * ClientServerService のエンティティ別SSRページ (ユーザー/ノート/Pages/Play/クリップ/ギャラリー) 相当。
  * 該当エンティティが見つからない・可視でない場合は next() で後段の client-base (汎用ページ) に委ねる。
  */
 export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
@@ -142,8 +141,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 	app.get('/play/:id', async (c, next) => {
 		const flash = await fetchFlashByIdFromDatabase(deps.db, c.req.param('id'));
 
-		// 原典 (ClientServerService) は visibility を見ずに描画していたが、非公開 Play の
-		// タイトル等が匿名訪問者へ漏れるため public のみ SSR する (非公開は汎用ページへ)。
+		// 非公開 Play のタイトル等が匿名訪問者へ漏れるため、public のみ SSR する (非公開は汎用ページへ)。
 		if (flash?.visibility === 'public') {
 			const packedFlash = (await packFlashForHonoApi(deps, flash, null)) as unknown as Packed<'Flash'>;
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, flash.userId);
@@ -359,7 +357,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			}
 
 			const page = await fetchPageByNameAndUserIdFromDatabase(deps.db, segments[2]!, user.id);
-			// 原典は非公開 Page も描画していたが、タイトル等が匿名訪問者へ漏れるため public のみ SSR する。
+			// タイトル等が匿名訪問者へ漏れるため、public のみ SSR する。
 			if (page == null || page.visibility !== 'public') {
 				await next();
 				return;

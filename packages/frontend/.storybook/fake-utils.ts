@@ -5,9 +5,6 @@
 
 import seedrandom from 'seedrandom';
 
-/**
- * AIで生成した無作為なファーストネーム
- */
 export const firstNameDict = [
 	'Ethan',
 	'Olivia',
@@ -41,9 +38,6 @@ export const firstNameDict = [
 	'Lily',
 ];
 
-/**
- * AIで生成した無作為なラストネーム
- */
 export const lastNameDict = [
 	'Anderson',
 	'Johnson',
@@ -77,9 +71,6 @@ export const lastNameDict = [
 	'Cooper',
 ];
 
-/**
- * AIで生成した無作為な国名
- */
 export const countryDict = [
 	'Japan',
 	'Canada',
@@ -116,7 +107,7 @@ export const countryDict = [
 export function text(length: number = 10, seed?: string): string {
 	let result = '';
 
-	// シード値を使う場合、同じ数値が羅列されるが、ランダム文字列という意味では満たせていると思うのでこのまま使っておく
+	// シード指定時は同じ乱数値が続くが、テスト用文字列としての要件を満たす。
 	const rand = seed ? seedrandom(seed)() : Math.random();
 	while (result.length < length) {
 		result += rand.toString(36).substring(2);

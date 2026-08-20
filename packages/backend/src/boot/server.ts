@@ -70,7 +70,7 @@ async function disposeServerRuntime(disposers: RuntimeDisposer[]): Promise<void>
 	let firstError: unknown;
 	for (const dispose of pending) {
 		try {
-			// Cleanup order is significant, but every disposer must still be attempted.
+			// 解放順序は重要だが、各 disposer の実行は省略しない。
 			// eslint-disable-next-line no-await-in-loop
 			await dispose();
 		} catch (error) {

@@ -98,7 +98,7 @@ export async function teardown(): Promise<void> {
 
 export async function startJobQueue(): Promise<TestJobQueueRuntime> {
 	if (testTarget.workerMode === 'external') {
-		// External targets own their background workers; the test process must not start the TS queue runtime.
+		// 外部ターゲットがバックグラウンドワーカーを所有するため、テストプロセスでは TS キューを起動しない。
 		return { close: async () => {} };
 	}
 

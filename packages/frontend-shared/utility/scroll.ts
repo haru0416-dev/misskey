@@ -37,7 +37,6 @@ export function getScrollPosition(el: HTMLElement | null): number {
 }
 
 export function onScrollTop(el: HTMLElement, cb: (topVisible: boolean) => unknown, tolerance = 1, once = false) {
-	// とりあえず評価してみる
 	const firstTopVisible = isHeadVisible(el);
 	if (el.isConnected && firstTopVisible) {
 		cb(firstTopVisible);
@@ -72,7 +71,6 @@ export function onScrollTop(el: HTMLElement, cb: (topVisible: boolean) => unknow
 export function onScrollBottom(el: HTMLElement, cb: () => unknown, tolerance = 1, once = false) {
 	const container = getScrollContainer(el);
 
-	// とりあえず評価してみる
 	if (el.isConnected && isTailVisible(el, tolerance, container)) {
 		cb();
 		if (once) return null;
@@ -104,21 +102,10 @@ export function scrollInContainer(el: HTMLElement, options: ScrollToOptions | un
 	}
 }
 
-/**
- * Scroll to Top
- * @param el Scroll container element
- * @param options Scroll options
- */
 export function scrollToTop(el: HTMLElement, options: { behavior?: ScrollBehavior } = {}) {
 	scrollInContainer(el, { top: 0, ...options });
 }
 
-/**
- * Scroll to Bottom
- * @param el Content element
- * @param options Scroll options
- * @param container Scroll container element
- */
 export function scrollToBottom(el: HTMLElement, options: ScrollToOptions = {}, container = getScrollContainer(el)) {
 	if (container) {
 		container.scroll({ top: el.scrollHeight - container.clientHeight + getStickyTop(el, container) || 0, ...options });

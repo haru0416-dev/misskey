@@ -16,7 +16,7 @@ const urlRegexFull = /^https?:\/\/[\w\/:%#@$&?!()\[\]~.,=+\-]+$/;
 
 export function createMfmService(config: Config) {
 	function fromHtml(html: string, hashtagNames?: string[]): string {
-		// some AP servers like Pixelfed use br tags as well as newlines
+		// Pixelfed など一部の AP サーバーは改行だけでなく br タグも使う。
 		html = html.replace(/<br\s?\/?>\r?\n/gi, '\n');
 
 		const normalizedHashtagNames =
@@ -167,7 +167,7 @@ export function createMfmService(config: Config) {
 						if (child.tagName === 'RT' && ruby.length > 0) {
 							const rt = getText(child);
 							if (/\s|\[|\]/.test(rt)) {
-								// If any space is included in rt, it is treated as a normal text
+								// rt に空白が含まれる場合は通常のテキストとして扱う。
 								ruby = [];
 								analyzeChildren(node.childNodes);
 								break;
@@ -176,7 +176,7 @@ export function createMfmService(config: Config) {
 								continue;
 							}
 						}
-						// If any other element is included in ruby, it is treated as a normal text
+						// ruby に別の要素が含まれる場合は通常のテキストとして扱う。
 						ruby = [];
 						analyzeChildren(node.childNodes);
 						break;
@@ -187,7 +187,7 @@ export function createMfmService(config: Config) {
 					break;
 				}
 
-				// block code (<pre><code>)
+				// ブロックコード (<pre><code>)
 				case 'PRE': {
 					if (
 						node.childNodes.length === 1 &&
@@ -212,7 +212,7 @@ export function createMfmService(config: Config) {
 					break;
 				}
 
-				// inline code (<code>)
+				// インラインコード (<code>)
 				case 'CODE': {
 					text += '`';
 					analyzeChildren(node.childNodes);
@@ -240,7 +240,7 @@ export function createMfmService(config: Config) {
 					break;
 				}
 
-				// other block elements
+				// その他のブロック要素
 				case 'DIV':
 				case 'HEADER':
 				case 'FOOTER':
@@ -254,7 +254,7 @@ export function createMfmService(config: Config) {
 				}
 
 				default: {
-					// includes inline elements
+					// インライン要素を含む。
 					analyzeChildren(node.childNodes);
 					break;
 				}

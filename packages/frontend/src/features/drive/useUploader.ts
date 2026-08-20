@@ -108,13 +108,13 @@ function getCompressionSettings(level: 0 | 1 | 2 | 3) {
 		};
 	} else if (level === 2) {
 		return {
-			maxWidth: 2000 * 0.75, // =1500
-			maxHeight: 2000 * 0.75, // =1500
+			maxWidth: 2000 * 0.75,
+			maxHeight: 2000 * 0.75,
 		};
 	} else if (level === 3) {
 		return {
-			maxWidth: 2000 * 0.75 * 0.75, // =1125
-			maxHeight: 2000 * 0.75 * 0.75, // =1125
+			maxWidth: 2000 * 0.75 * 0.75,
+			maxHeight: 2000 * 0.75 * 0.75,
 		};
 	} else {
 		return null;

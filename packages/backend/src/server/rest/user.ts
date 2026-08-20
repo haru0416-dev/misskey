@@ -271,8 +271,7 @@ type UserDetailedExtras = {
 };
 
 /**
- * UserEntityService.pack (detail:true) が計算していたロール/ポリシー/ピン/リレーション/2FA系フィールド群。
- * relation は me が別ユーザーのときのみ、twoFactor は本人閲覧または moderator 閲覧のときのみ非null。
+ * relation は me が別ユーザーの場合のみ、twoFactor は本人またはモデレーターが閲覧する場合のみ返す。
  */
 async function buildUserDetailedExtrasForHonoApi(
 	deps: UserPackingDependencies,
@@ -399,8 +398,8 @@ export async function packUserDetailedNotMeManyForHonoApi(
 				)
 			: null;
 
-	// ユーザー毎に発行していた roles(2クエリ)+pins(1クエリ) を一覧単位の3クエリに集約する
-	// (負荷計測で role_assignment/role 各68k回・pining 54k回/3分の主因だった)。
+	// ロール・割り当て・ピンは一覧単位の3クエリで取得する。
+	// ユーザー単位で取得すると、3分間に role_assignment/role 各68k回、pining 54k回のクエリが発生する。
 	const [allRoles, allAssignments, allPins] = await Promise.all([
 		listRolesFromDatabase(deps.db),
 		listRoleAssignmentsByUserIdsFromDatabase(deps.db, userIds),
