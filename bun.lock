@@ -291,6 +291,7 @@
         "chokidar": "5.0.0",
         "esbuild": "0.28.1",
         "typescript": "6.0.3",
+        "vitest": "4.1.9",
       },
     },
     "packages/icons-subsetter": {
@@ -304,6 +305,7 @@
       "devDependencies": {
         "@types/node": "26.0.1",
         "@types/wawoff2": "1.0.2",
+        "vitest": "4.1.9",
       },
     },
     "packages/mfm-js": {
@@ -359,8 +361,10 @@
         "misskey-js": "workspace:*",
       },
       "devDependencies": {
+        "@types/node": "26.0.1",
         "@typescript/lib-webworker": "npm:@types/serviceworker@0.0.74",
         "esbuild": "0.28.1",
+        "vitest": "4.1.9",
       },
     },
     "scripts/changelog-checker": {
