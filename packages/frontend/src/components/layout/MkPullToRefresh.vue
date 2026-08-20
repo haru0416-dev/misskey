@@ -64,11 +64,11 @@ function getScreenY(event: TouchEvent | MouseEvent | PointerEvent): number {
 	} else if ('screenY' in event) {
 		return event.screenY;
 	} else {
-		return 0; // TSを黙らせるため
+		return 0;
 	}
 }
 
-// When at the top of the page, disable vertical overscroll so passive touch listeners can take over.
+// ページ上端では縦方向の overscroll を無効にし、passive touch listener に処理を渡す。
 function lockDownScroll() {
 	if (scrollEl == null) return;
 	scrollEl.style.touchAction = 'pan-x pan-down pinch-zoom';

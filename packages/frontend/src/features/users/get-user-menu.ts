@@ -237,7 +237,7 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 						genEmbedCode('user-timeline', user.id);
 					},
 				},
-			], // TODO: ユーザーカードの埋め込みなど
+			],
 		});
 	}
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// structredCloneが遅いため
+// Vue Ref を IndexedDB に保存する経路では structuredClone が使えないため、対象型を再帰的に複製する。
 // SEE: http://var.blog.jp/archives/86038606.html
 // あと、Vue RefをIndexedDBに保存しようとしてstructredCloneを使ったらエラーになった
 // https://github.com/misskey-dev/misskey/pull/8098#issuecomment-1114144045

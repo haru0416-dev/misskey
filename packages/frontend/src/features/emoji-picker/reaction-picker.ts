@@ -38,7 +38,7 @@ class ReactionPicker {
 		const anchorRef = shallowRef(anchorElement);
 		const targetNoteRef = ref(targetNote);
 
-		// defineAsyncComponentはiOS等でユーザーアクティベーションが失われてfocusが効かなくなるため使用不可
+		// iOS では defineAsyncComponent によりユーザーアクティベーションが失われ、フォーカスできないため使用しない。
 		const { dispose } = popup(
 			MkEmojiPickerDialog,
 			{

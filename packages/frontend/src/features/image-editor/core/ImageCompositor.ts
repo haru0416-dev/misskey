@@ -36,8 +36,6 @@ export function defineImageCompositorFunction<PS extends ImageCompositorFunction
 	return fn;
 }
 
-// TODO: per layer cache
-
 export class ImageCompositor<FNS extends Record<string, ImageCompositorFunction<any>>> {
 	private gl: WebGL2RenderingContext;
 	private canvas: HTMLCanvasElement | null = null;

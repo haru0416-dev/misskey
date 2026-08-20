@@ -326,7 +326,6 @@ function onMessage(message: Misskey.entities.ChatMessageLite) {
 
 	messages.value.unshift(normalizeMessage(message));
 
-	// TODO: DOM的にバックグラウンドになっていないかどうかも考慮する
 	if (message.fromUserId !== $i.id && !window.document.hidden && isActivated) {
 		connection.value?.send('read', {
 			id: message.id,
@@ -381,7 +380,6 @@ function notifyNewMessage() {
 
 function onVisibilitychange() {
 	if (window.document.hidden) return;
-	// TODO: 表示を再開したときに未読メッセージを既読にする
 }
 
 onMounted(() => {
