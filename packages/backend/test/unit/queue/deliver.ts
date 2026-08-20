@@ -158,9 +158,7 @@ describe('hono-queue-deliver', () => {
 			),
 		).rejects.toBeInstanceOf(Bull.UnrecoverableError);
 
-		// 配送失敗時のインスタンス情報更新はfire-and-forget (queue/handlers/deliver.ts) のため、
-		// ここで終端の書き込み (isNotResponding=true) まで待たないと afterAll の dispose と競合し、
-		// クローズ済みDB接続への書き込みがunhandled errorとしてrunを失敗させる (Bun.sqlで顕在化)。
+		// インスタンス情報更新は非同期なので、DB破棄前に isNotResponding=true の書き込み完了を待つ。
 		await expect
 			.poll(async () => (await fetchInstanceByHostFromDatabase(runtime.db, host))?.isNotResponding, {
 				timeout: 10000,

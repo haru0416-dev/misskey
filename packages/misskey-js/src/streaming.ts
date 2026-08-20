@@ -178,7 +178,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 			for (const c of this.nonSharedConnections) c.connect();
 		}
 
-		// ReconnectingWebSocket がオフラインキューをflushした後に公開イベントを通知する。
+		// _connected_ はオフラインキューの flush 完了後に通知する。
 		queueMicrotask(() => {
 			if (this.state === 'connected') this.emit('_connected_');
 		});

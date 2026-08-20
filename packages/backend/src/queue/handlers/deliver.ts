@@ -51,8 +51,7 @@ export type HonoQueueDeliverDependencies = {
 // Set<string> で保持し、ジョブ毎の .map().includes() (配列再構築+線形探索) を避けてO(1)判定にする。
 const suspendedHostsCache = new MemorySingleCache<Set<string>>(1000 * 60 * 60); // 1h
 
-// 配送結果に応じたインスタンス情報の更新はジョブの完了を待たせない (fire-and-forget)。
-// その失敗を unhandled rejection にしないための受け皿。
+// 配送後のインスタンス情報更新は非同期のため、失敗を unhandled rejection にしない。
 const logger = new MisskeyLogger('queue').createSubLogger('deliver');
 const logBackgroundInstanceUpdateError = (error: unknown): void => {
 	logger.error('background federated-instance update failed', { error });
@@ -148,7 +147,6 @@ export async function handleHonoQueueDeliver(
 						notRespondingSince: new Date(),
 					});
 				} else if (i2.notRespondingSince) {
-					// 1週間以上不通ならサスペンド
 					if (
 						i2.suspensionState === 'none' &&
 						i2.notRespondingSince.getTime() <= Date.now() - 1000 * 60 * 60 * 24 * 7
@@ -158,8 +156,7 @@ export async function handleHonoQueueDeliver(
 						});
 					}
 				} else {
-					// isNotRespondingがtrueでnotRespondingSinceがnullの場合はnotRespondingSinceをセット
-					// notRespondingSinceは新たな機能なので、それ以前のデータにはnotRespondingSinceがない場合がある
+					// isNotResponding=true かつ notRespondingSince=NULL の既存行を許容する。
 					await updateFederatedInstance(deps, i2.id, {
 						notRespondingSince: new Date(),
 					});
