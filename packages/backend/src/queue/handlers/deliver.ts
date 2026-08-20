@@ -14,6 +14,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import MisskeyLogger from '@/logger.js';
 import { isFederationAllowedUri, signedPostForHonoApi } from '../../server/rest/ap-resolve.js';
 import {
 	fetchFederatedInstance,
@@ -49,6 +50,13 @@ export type HonoQueueDeliverDependencies = {
 // シングルトンとして同じ役割を持たせる。
 // Set<string> で保持し、ジョブ毎の .map().includes() (配列再構築+線形探索) を避けてO(1)判定にする。
 const suspendedHostsCache = new MemorySingleCache<Set<string>>(1000 * 60 * 60); // 1h
+
+// 配送結果に応じたインスタンス情報の更新はジョブの完了を待たせない (fire-and-forget)。
+// その失敗を unhandled rejection にしないための受け皿。
+const logger = new MisskeyLogger('queue').createSubLogger('deliver');
+const logBackgroundInstanceUpdateError = (error: unknown): void => {
+	logger.error('background federated-instance update failed', { error });
+};
 
 export async function handleHonoQueueDeliver(
 	deps: HonoQueueDeliverDependencies,
@@ -95,76 +103,86 @@ export async function handleHonoQueueDeliver(
 		void deps.chartWriters.apRequestChart.deliverSucc();
 		void deps.chartWriters.federationChart.deliverd(host, true);
 
-		process.nextTick(async () => {
-			if (i == null) return;
+		process.nextTick(
+			() =>
+				void (async () => {
+					if (i == null) return;
 
-			if (i.isNotResponding) {
-				await updateFederatedInstance(deps, i.id, {
-					isNotResponding: false,
-					notRespondingSince: null,
-				});
-			}
+					if (i.isNotResponding) {
+						await updateFederatedInstance(deps, i.id, {
+							isNotResponding: false,
+							notRespondingSince: null,
+						});
+					}
 
-			if (deps.meta.enableStatsForFederatedInstances) {
-				await fetchInstanceMetadataWithSideEffects(
-					{
-						httpRequestService: deps.httpRequestService,
-						logger: { error: () => {}, info: () => {} },
-						tryLock: (h) => tryLockFetchInstanceMetadata(deps, h),
-						unlock: (h) => unlockFetchInstanceMetadata(deps, h),
-						fetchOrRegisterInstance: (h) => fetchOrRegisterFederatedInstance(deps, h),
-						updateInstance: (id, updates) => updateFederatedInstance(deps, id, updates).then(() => {}),
-					},
-					i,
-				);
-			}
+					if (deps.meta.enableStatsForFederatedInstances) {
+						await fetchInstanceMetadataWithSideEffects(
+							{
+								httpRequestService: deps.httpRequestService,
+								logger: { error: () => {}, info: () => {} },
+								tryLock: (h) => tryLockFetchInstanceMetadata(deps, h),
+								unlock: (h) => unlockFetchInstanceMetadata(deps, h),
+								fetchOrRegisterInstance: (h) => fetchOrRegisterFederatedInstance(deps, h),
+								updateInstance: (id, updates) => updateFederatedInstance(deps, id, updates).then(() => {}),
+							},
+							i,
+						);
+					}
 
-			if (deps.meta.enableChartsForFederatedInstances) {
-				void deps.chartWriters.instanceChart.requestSent(i.host, true);
-			}
-		});
+					if (deps.meta.enableChartsForFederatedInstances) {
+						void deps.chartWriters.instanceChart.requestSent(i.host, true);
+					}
+				})().catch(logBackgroundInstanceUpdateError),
+		);
 
 		return 'Success';
 	} catch (res) {
 		void deps.chartWriters.apRequestChart.deliverFail();
 		void deps.chartWriters.federationChart.deliverd(host, false);
 
-		fetchOrRegisterFederatedInstance(deps, host).then(async (i2) => {
-			if (!i2.isNotResponding) {
-				await updateFederatedInstance(deps, i2.id, {
-					isNotResponding: true,
-					notRespondingSince: new Date(),
-				});
-			} else if (i2.notRespondingSince) {
-				// 1週間以上不通ならサスペンド
-				if (i2.suspensionState === 'none' && i2.notRespondingSince.getTime() <= Date.now() - 1000 * 60 * 60 * 24 * 7) {
+		fetchOrRegisterFederatedInstance(deps, host)
+			.then(async (i2) => {
+				if (!i2.isNotResponding) {
 					await updateFederatedInstance(deps, i2.id, {
-						suspensionState: 'autoSuspendedForNotResponding',
+						isNotResponding: true,
+						notRespondingSince: new Date(),
+					});
+				} else if (i2.notRespondingSince) {
+					// 1週間以上不通ならサスペンド
+					if (
+						i2.suspensionState === 'none' &&
+						i2.notRespondingSince.getTime() <= Date.now() - 1000 * 60 * 60 * 24 * 7
+					) {
+						await updateFederatedInstance(deps, i2.id, {
+							suspensionState: 'autoSuspendedForNotResponding',
+						});
+					}
+				} else {
+					// isNotRespondingがtrueでnotRespondingSinceがnullの場合はnotRespondingSinceをセット
+					// notRespondingSinceは新たな機能なので、それ以前のデータにはnotRespondingSinceがない場合がある
+					await updateFederatedInstance(deps, i2.id, {
+						notRespondingSince: new Date(),
 					});
 				}
-			} else {
-				// isNotRespondingがtrueでnotRespondingSinceがnullの場合はnotRespondingSinceをセット
-				// notRespondingSinceは新たな機能なので、それ以前のデータにはnotRespondingSinceがない場合がある
-				await updateFederatedInstance(deps, i2.id, {
-					notRespondingSince: new Date(),
-				});
-			}
 
-			if (deps.meta.enableChartsForFederatedInstances) {
-				void deps.chartWriters.instanceChart.requestSent(i2.host, false);
-			}
-		});
+				if (deps.meta.enableChartsForFederatedInstances) {
+					void deps.chartWriters.instanceChart.requestSent(i2.host, false);
+				}
+			})
+			.catch(logBackgroundInstanceUpdateError);
 
 		if (res instanceof StatusError) {
 			// 4xx
 			if (!res.isRetryable) {
 				// 相手が閉鎖していることを明示しているため、配送停止する
 				if (job.data.isSharedInbox && res.statusCode === 410) {
-					fetchOrRegisterFederatedInstance(deps, host).then((i2) =>
-						updateFederatedInstance(deps, i2.id, {
-							suspensionState: 'goneSuspended',
-						}),
-					);
+					fetchOrRegisterFederatedInstance(deps, host)
+						.then((i2) =>
+							updateFederatedInstance(deps, i2.id, {
+								suspensionState: 'goneSuspended',
+							}),
+						)
+						.catch(logBackgroundInstanceUpdateError);
 					throw new Bull.UnrecoverableError(`${host} is gone`);
 				}
 				throw new Bull.UnrecoverableError(`${res.statusCode} ${res.statusMessage}`);
