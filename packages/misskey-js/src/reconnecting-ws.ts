@@ -172,6 +172,13 @@ export class ReconnectingWebSocket {
 				this.connectionTimer = null;
 			}
 			this.retryCount = 0;
+			let listenerError: unknown;
+			try {
+				this.emit('open', ev);
+			} catch (error) {
+				listenerError = error;
+			}
+			if (this.closed || this.ws !== ws || ws.readyState !== WS_OPEN) return;
 			if (this.messageQueue.length > 0) {
 				const queue = this.messageQueue;
 				this.messageQueue = [];
@@ -180,7 +187,7 @@ export class ReconnectingWebSocket {
 					ws.send(data);
 				}
 			}
-			this.emit('open', ev);
+			if (listenerError !== undefined) throw listenerError;
 		};
 		ws.onmessage = (ev) => {
 			this.emit('message', ev as { data: string });
