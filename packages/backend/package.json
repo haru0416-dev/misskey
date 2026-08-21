@@ -31,21 +31,6 @@
 		"check-migrations": "bun run compile-config && bun ./built/migration-runner.js check",
 		"generate-api-json": "bun run compile-config && bun ./scripts/generate_api_json.js"
 	},
-	"optionalDependencies": {
-		"slacc-android-arm-eabi": "0.2.0",
-		"slacc-android-arm64": "0.2.0",
-		"slacc-darwin-arm64": "0.2.0",
-		"slacc-darwin-universal": "0.2.0",
-		"slacc-darwin-x64": "0.2.0",
-		"slacc-freebsd-x64": "0.2.0",
-		"slacc-linux-arm-gnueabihf": "0.2.0",
-		"slacc-linux-arm64-gnu": "0.2.0",
-		"slacc-linux-arm64-musl": "0.2.0",
-		"slacc-linux-x64-gnu": "0.2.0",
-		"slacc-linux-x64-musl": "0.2.0",
-		"slacc-win32-arm64-msvc": "0.2.0",
-		"slacc-win32-x64-msvc": "0.2.0"
-	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "3.1076.0",
 		"@aws-sdk/lib-storage": "3.1076.0",
@@ -66,7 +51,6 @@
 		"@simplewebauthn/server": "13.3.2",
 		"@smithy/node-http-handler": "4.9.1",
 		"archiver": "8.0.0",
-		"bcryptjs": "3.0.3",
 		"blurhash": "2.0.5",
 		"bullmq": "5.79.2",
 		"cacheable-lookup": "7.0.0",
@@ -108,7 +92,6 @@
 	},
 	"devDependencies": {
 		"@fedify/vocab": "2.3.1",
-		"@oxc-project/runtime": "0.138.0",
 		"@kitajs/ts-html-plugin": "4.1.4",
 		"@types/archiver": "8.0.0",
 		"@types/jsonld": "1.5.15",

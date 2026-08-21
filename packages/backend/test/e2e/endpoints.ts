@@ -9,7 +9,6 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
-import bcrypt from 'bcryptjs';
 import * as Bull from 'bullmq';
 import { describe, beforeAll, afterAll, test, expect } from 'vitest';
 import { toXListId } from '@/server/rest/notification.js';
@@ -140,6 +139,8 @@ import {
 	uploadFile,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
+
+const bunPassword = Bun!.password;
 
 function getAt<T>(values: readonly T[], index: number): T {
 	const value = values[index];
@@ -317,13 +318,12 @@ describe('Endpoints', () => {
 		test('pending user can complete signup and sign in', async () => {
 			const config = fixtureConfig;
 			const password = 'pending-password';
-			const salt = await bcrypt.genSalt(8);
 			const pending = await createUserPendingInDatabase(db, {
 				id: genId(),
 				code: 'pending-signup-test',
 				username: 'pendinguser',
 				email: 'pending@example.test',
-				password: await bcrypt.hash(password, salt),
+				password: await bunPassword.hash(password, { algorithm: 'bcrypt', cost: 8 }),
 			});
 
 			const res = await api('signup-pending', {
@@ -4965,8 +4965,8 @@ describe('Endpoints', () => {
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
 			const [matchesNewPassword, matchesReusedPassword] = await Promise.all([
-				bcrypt.compare('new-reset-password', profile.password!),
-				bcrypt.compare('reused-reset-password', profile.password!),
+				bunPassword.verify('new-reset-password', profile.password!, 'bcrypt'),
+				bunPassword.verify('reused-reset-password', profile.password!, 'bcrypt'),
 			]);
 			assert.strictEqual(matchesNewPassword, true);
 			assert.strictEqual(matchesReusedPassword, false);
@@ -4991,7 +4991,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(castAsError(res.body as any).error.code, 'INCORRECT_PASSWORD');
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(await bcrypt.compare('test', profile.password!), true);
+			assert.strictEqual(await bunPassword.verify('test', profile.password!, 'bcrypt'), true);
 		});
 
 		test('i/regenerate-token は誤ったパスワードでINCORRECT_PASSWORDを返し、トークンを変えない', async () => {
@@ -12481,8 +12481,8 @@ describe('Endpoints', () => {
 			});
 
 			const originalRootProfile = await fetchUserProfileByUserIdOrFailFromDatabase(db, alice.id);
-			const rootPassword = await bcrypt.hash('root-password', 8);
-			const adminPassword = await bcrypt.hash('admin-password', 8);
+			const rootPassword = await bunPassword.hash('root-password', { algorithm: 'bcrypt', cost: 8 });
+			const adminPassword = await bunPassword.hash('admin-password', { algorithm: 'bcrypt', cost: 8 });
 			await updateUserProfileInDatabase(db, alice.id, {
 				password: rootPassword,
 				twoFactorSecret: 'root-two-factor-secret',
@@ -12494,7 +12494,7 @@ describe('Endpoints', () => {
 				twoFactorEnabled: true,
 			});
 			await updateUserProfileInDatabase(db, ordinaryTarget.id, {
-				password: await bcrypt.hash('ordinary-password', 8),
+				password: await bunPassword.hash('ordinary-password', { algorithm: 'bcrypt', cost: 8 }),
 				twoFactorSecret: 'ordinary-two-factor-secret',
 				twoFactorEnabled: true,
 			});
@@ -12540,7 +12540,10 @@ describe('Endpoints', () => {
 			const unsetOrdinaryMfaByModerator = await api('admin/unset-mfa', { userId: ordinaryTarget.id }, moderator);
 			assert.strictEqual(unsetOrdinaryMfaByModerator.status, 204);
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, ordinaryTarget.id);
-			assert.strictEqual(await bcrypt.compare(resetOrdinaryByModerator.body.password, profile.password!), true);
+			assert.strictEqual(
+				await bunPassword.verify(resetOrdinaryByModerator.body.password, profile.password!, 'bcrypt'),
+				true,
+			);
 			assert.strictEqual(profile.twoFactorEnabled, false);
 
 			// 管理者どうしでも横取りはできない
@@ -12586,7 +12589,7 @@ describe('Endpoints', () => {
 			});
 
 			await updateUserProfileInDatabase(db, target.id, {
-				password: await bcrypt.hash('old-password', 8),
+				password: await bunPassword.hash('old-password', { algorithm: 'bcrypt', cost: 8 }),
 				twoFactorSecret: 'two-factor-secret',
 				twoFactorBackupSecret: ['backup-code'],
 				twoFactorEnabled: true,
@@ -12605,14 +12608,14 @@ describe('Endpoints', () => {
 			assert.strictEqual(reset.status, 200);
 			assert.strictEqual(reset.body.password.length, 8);
 			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(await bcrypt.compare(reset.body.password, profile.password!), true);
+			assert.strictEqual(await bunPassword.verify(reset.body.password, profile.password!, 'bcrypt'), true);
 
 			const resetToken = await createAppToken(alice, ['write:admin:reset-password']);
 			const resetByToken = await api('admin/reset-password', { userId: target.id }, { token: resetToken });
 			assert.strictEqual(resetByToken.status, 200);
 			assert.strictEqual(resetByToken.body.password.length, 8);
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(await bcrypt.compare(resetByToken.body.password, profile.password!), true);
+			assert.strictEqual(await bunPassword.verify(resetByToken.body.password, profile.password!, 'bcrypt'), true);
 
 			const noSuchReset = await api('admin/reset-password', { userId: '000000000000000000000000' }, alice);
 			assert.strictEqual(noSuchReset.status, 400);
