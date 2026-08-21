@@ -5,13 +5,11 @@
 
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execa } from 'execa';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
 const rootDir = _dirname + '/../';
 
-/** @type {Set<import('execa').ResultPromise>} */
 const childProcesses = new Set();
 let shuttingDown = false;
 /** @type {Promise<void> | null} */
@@ -21,32 +19,22 @@ function spawnBun(args) {
 	const isWindows = process.platform === 'win32';
 	const shouldForceColor =
 		(process.stdout.isTTY || process.stderr.isTTY) && process.env.FORCE_COLOR == null && process.env.NO_COLOR == null;
-	const command = isWindows ? (process.env.ComSpec ?? 'cmd.exe') : 'bun';
-	const commandArgs = isWindows
-		? ['/d', '/s', '/c', `start "" /b /wait "${process.execPath}" ${args.map((arg) => `"${arg}"`).join(' ')}`]
-		: args;
-	const childProcess = execa(command, commandArgs, {
+	const command = isWindows
+		? [
+				process.env.ComSpec ?? 'cmd.exe',
+				'/d',
+				'/s',
+				'/c',
+				`start "" /b /wait "${process.execPath}" ${args.map((arg) => `"${arg}"`).join(' ')}`,
+			]
+		: [process.execPath, ...args];
+	const childProcess = Bun.spawn(command, {
 		cwd: rootDir,
-		...(isWindows
-			? {
-					// Ctrl+C はこの supervisor で処理し、出力を手動で中継する。
-					windowsVerbatimArguments: true,
-					windowsHide: false,
-					env: shouldForceColor ? { FORCE_COLOR: '1' } : undefined,
-					stdout: 'pipe',
-					stderr: 'pipe',
-					buffer: false,
-				}
-			: {
-					stdout: process.stdout,
-					stderr: process.stderr,
-				}),
+		env: shouldForceColor ? { ...process.env, FORCE_COLOR: '1' } : process.env,
+		stdout: 'inherit',
+		stderr: 'inherit',
+		windowsVerbatimArguments: isWindows,
 	});
-
-	if (isWindows) {
-		childProcess.stdout?.pipe(process.stdout, { end: false });
-		childProcess.stderr?.pipe(process.stderr, { end: false });
-	}
 
 	childProcesses.add(childProcess);
 	return childProcess;
@@ -55,7 +43,8 @@ function spawnBun(args) {
 async function runBun(args) {
 	const childProcess = spawnBun(args);
 	try {
-		return await childProcess;
+		const exitCode = await childProcess.exited;
+		if (exitCode !== 0) throw new Error(`${args.join(' ')} exited with code ${exitCode}`);
 	} finally {
 		childProcesses.delete(childProcess);
 	}
@@ -63,32 +52,27 @@ async function runBun(args) {
 
 function startBun(args) {
 	const childProcess = spawnBun(args);
-	void childProcess.then(
-		() => {
-			childProcesses.delete(childProcess);
-			if (!shuttingDown) void shutdown(1);
-		},
-		(error) => {
-			childProcesses.delete(childProcess);
-			if (!shuttingDown) {
-				console.error(error);
-				void shutdown(1);
-			}
-		},
-	);
+	void childProcess.exited.then((exitCode) => {
+		childProcesses.delete(childProcess);
+		if (!shuttingDown) {
+			if (exitCode !== 0) console.error(`${args.join(' ')} exited with code ${exitCode}`);
+			void shutdown(1);
+		}
+	});
 }
 
 async function stopChildProcess(childProcess) {
 	if (process.platform === 'win32' && childProcess.pid != null) {
-		const result = await execa('taskkill', ['/pid', childProcess.pid.toString(), '/t', '/f'], {
-			reject: false,
+		const taskkill = Bun.spawn(['taskkill', '/pid', childProcess.pid.toString(), '/t', '/f'], {
+			stdout: 'ignore',
+			stderr: 'ignore',
 		});
-		if (result.failed) childProcess.kill();
+		if ((await taskkill.exited) !== 0) childProcess.kill();
 	} else {
 		childProcess.kill();
 	}
 
-	await childProcess.catch(() => {});
+	await childProcess.exited;
 }
 
 function shutdown(exitCode) {

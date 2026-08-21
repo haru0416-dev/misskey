@@ -76,7 +76,6 @@
 		"@types/node": "26.0.1",
 		"@typescript/native-preview": "7.0.0-dev.20260629.1",
 		"@vue/compiler-sfc": "3.5.38",
-		"execa": "9.6.1",
 		"jscpd": "5.0.12",
 		"knip": "6.27.0",
 		"oxfmt": "0.56.0",

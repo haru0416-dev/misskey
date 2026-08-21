@@ -1,22 +1,22 @@
 import { defineConfig } from 'rolldown';
 import { version as summalyVersion } from '@misskey-dev/summaly';
 import type { Plugin, ExternalOption } from 'rolldown';
-import { execa } from 'execa';
-import type { ResultPromise } from 'execa';
 
 /**
  * Watchモード時にバックエンドの起動・停止制御を行うプラグイン
  */
 function backendDevServerPlugin(): Plugin {
-	let backendProcess: ResultPromise | null = null;
+	let backendProcess: Bun.Subprocess | null = null;
 	let backendShutdownPromise: Promise<void> | null = null;
 
 	async function runBuildAssets() {
-		await execa('bun', ['run', 'build-assets'], {
+		const buildAssets = Bun!.spawn([process.execPath, 'run', 'build-assets'], {
 			cwd: '../../',
-			stdout: process.stdout,
-			stderr: process.stderr,
+			stdout: 'inherit',
+			stderr: 'inherit',
 		});
+		const exitCode = await buildAssets.exited;
+		if (exitCode !== 0) throw new Error(`build-assets exited with code ${exitCode}`);
 	}
 
 	async function killBackendProcess() {
@@ -25,19 +25,19 @@ function backendDevServerPlugin(): Plugin {
 
 		const processToKill = backendProcess;
 		backendProcess = null;
-		processToKill.catch(() => {});
 
 		backendShutdownPromise = (async () => {
 			if (process.platform === 'win32' && processToKill.pid != null) {
-				const result = await execa('taskkill', ['/pid', processToKill.pid.toString(), '/t', '/f'], {
-					reject: false,
+				const taskkill = Bun!.spawn(['taskkill', '/pid', processToKill.pid.toString(), '/t', '/f'], {
+					stdout: 'ignore',
+					stderr: 'ignore',
 				});
-				if (result.failed) processToKill.kill();
+				if ((await taskkill.exited) !== 0) processToKill.kill();
 			} else {
 				processToKill.kill();
 			}
 
-			await processToKill.catch(() => {});
+			await processToKill.exited;
 		})().finally(() => {
 			backendShutdownPromise = null;
 		});
@@ -50,12 +50,20 @@ function backendDevServerPlugin(): Plugin {
 		async closeBundle() {
 			await runBuildAssets();
 			await killBackendProcess();
-			backendProcess = execa('bun', ['./built/entry.js'], {
-				stdout: process.stdout,
-				stderr: process.stderr,
+			const startedProcess = Bun!.spawn([process.execPath, './built/entry.js'], {
+				stdout: 'inherit',
+				stderr: 'inherit',
 				env: {
+					...process.env,
 					NODE_ENV: 'development',
 				},
+			});
+			backendProcess = startedProcess;
+			void startedProcess.exited.then((exitCode) => {
+				if (backendProcess !== startedProcess) return;
+				backendProcess = null;
+				console.error(`backend exited with code ${exitCode}`);
+				process.exit(exitCode === 0 ? 1 : exitCode);
 			});
 		},
 		async watchChange() {
