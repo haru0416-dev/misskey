@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { extname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -20,11 +20,6 @@ const bunNativeCandidates = {
 		status: 'replace',
 		api: 'crypto.randomUUID() / Bun.randomUUIDv7()',
 		note: 'The current AiScript use only generates UUID v4 values.',
-	},
-	'js-yaml': {
-		status: 'evaluate',
-		api: 'Bun.YAML',
-		note: 'Parse-only uses are direct replacements; migrate-config uses dump options that need output comparison.',
 	},
 	execa: {
 		status: 'evaluate',
@@ -118,7 +113,9 @@ function packageNameFromSpecifier(specifier) {
 function trackedSourceFiles(root) {
 	const result = spawnSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' });
 	if (result.status !== 0) throw new Error(result.stderr || 'git ls-files failed');
-	return result.stdout.split('\0').filter((file) => sourceExtensions.has(extname(file)));
+	return result.stdout
+		.split('\0')
+		.filter((file) => sourceExtensions.has(extname(file)) && existsSync(`${root}/${file}`));
 }
 
 function collectSourceUsage(root) {
