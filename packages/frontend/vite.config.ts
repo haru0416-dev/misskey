@@ -6,8 +6,8 @@ import { replacePlugin } from 'rolldown/plugins';
 import { visualizer } from 'rollup-plugin-visualizer';
 import type { PluginOption, UserConfig } from 'vite';
 import { defineConfig } from 'vite';
-import * as yaml from 'js-yaml';
 import { promises as fsp } from 'fs';
+import { parse } from 'yaml';
 
 import locales from 'i18n';
 import meta from '../../package.json';
@@ -22,7 +22,7 @@ import { Features } from 'lightningcss';
 
 const url =
 	process.env.NODE_ENV === 'development'
-		? (yaml.load(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
+		? (parse(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
 		: null;
 const host = url ? new URL(url).hostname : undefined;
 

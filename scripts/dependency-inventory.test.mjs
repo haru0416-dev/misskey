@@ -29,7 +29,8 @@ test('dependencyClosure handles shared dependencies and cycles', () => {
 test('reads the repository JSONC lockfile and source usage', () => {
 	const { inventory } = createDependencyInventory();
 	expect(inventory.summary.resolvedInstances).toBeGreaterThan(inventory.summary.resolvedPackageNames);
-	expect(inventory.nativeCandidates.find((candidate) => candidate.name === 'js-yaml')?.usage).toContain(
-		'scripts/build-assets.mjs',
+	expect(inventory.directRoots.find((dependency) => dependency.name === 'js-yaml')).toBeUndefined();
+	expect(inventory.directRoots.find((dependency) => dependency.name === 'yaml')?.usage).toContain(
+		'scripts/migrate-config-v2.mjs',
 	);
 });

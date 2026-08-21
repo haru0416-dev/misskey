@@ -1,6 +1,7 @@
 ## Unreleased
 
 ### General
+- Fix: 旧形式の設定を現行のプロセス数・DB接続予算へ移行できない問題を修正し、YAML処理の依存を整理
 - Fix: 依存パッケージの既知脆弱性39件中38件を修正 (hono 4.12.34 / undici 7.29.0 / postcss 8.5.23 / find-my-way 9.7.0 ほか。親パッケージが古い版を固定していたものは overrides で修正版を強制。残1件は esbuild dev server の脆弱性で、当リポジトリに該当経路なし)
 - Fix: AiScriptのタイマー・文字列index処理と、misskey-jsのストリーミング再接続・入力検証を修正
 - Enhance: プロジェクトの表示名とNodeInfoのソフトウェア名をErebiaへ変更

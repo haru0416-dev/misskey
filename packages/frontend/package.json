@@ -84,7 +84,6 @@
 		"astring": "1.9.0",
 		"chromatic": "17.5.0",
 		"happy-dom": "20.10.6",
-		"js-yaml": "5.2.2",
 		"lightningcss": "1.32.0",
 		"magic-string": "0.30.21",
 		"micromatch": "4.0.8",
@@ -104,6 +103,7 @@
 		"vite-plugin-turbosnap": "1.0.3",
 		"vitest": "4.1.9",
 		"vitest-fetch-mock": "0.4.5",
+		"yaml": "2.9.0",
 		"vue-component-type-helpers": "3.3.5",
 		"vue-tsc": "3.3.5"
 	}

@@ -1,8 +1,8 @@
 import path from 'path';
 import pluginVue from '@vitejs/plugin-vue';
 import { defineConfig, type UserConfig } from 'vite';
-import * as yaml from 'js-yaml';
 import { promises as fsp } from 'fs';
+import { parse } from 'yaml';
 
 import locales from 'i18n';
 import meta from '../../package.json';
@@ -11,7 +11,9 @@ import pluginJson5 from '../frontend/lib/vite-plugin-json5.js';
 import { pluginRemoveUnrefI18n } from '../frontend/builder/rollup-plugin-remove-unref-i18n';
 import { Features } from 'lightningcss';
 
-const url = process.env.NODE_ENV === 'development' ? (yaml.load(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url : null;
+const url = process.env.NODE_ENV === 'development'
+	? (parse(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
+	: null;
 const host = url ? (new URL(url)).hostname : undefined;
 
 const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.json', '.json5', '.svg', '.sass', '.scss', '.css', '.vue'];

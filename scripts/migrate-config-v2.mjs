@@ -6,7 +6,7 @@
 import fs from 'node:fs/promises';
 import { isIP } from 'node:net';
 import path from 'node:path';
-import * as yaml from 'js-yaml';
+import { parse, stringify } from 'yaml';
 import { sourceConfigV2Schema } from '../packages/backend/src/config-schema.ts';
 
 const [inputArgument, outputArgument] = process.argv.slice(2);
@@ -17,7 +17,7 @@ if (inputArgument == null || outputArgument == null) {
 
 const inputPath = path.resolve(inputArgument);
 const outputPath = path.resolve(outputArgument);
-const old = yaml.load(await fs.readFile(inputPath, 'utf8'));
+const old = parse(await fs.readFile(inputPath, 'utf8'));
 if (typeof old !== 'object' || old == null || Array.isArray(old))
 	throw new Error('The source configuration must be an object.');
 if (old.configVersion != null) throw new Error('The source configuration is already versioned.');
@@ -139,7 +139,8 @@ const migrated = {
 			ipRateLimit: old.enableIpRateLimit ?? true,
 		},
 		process: {
-			workers: old.clusterLimit ?? 1,
+			httpWorkers: 1,
+			queueWorkers: old.clusterLimit ?? 1,
 			computationThreadsPerWorker: old.threadPoolSize ?? 1,
 			pidFile: old.pidFile ?? '/tmp/misskey.pid',
 		},
@@ -154,7 +155,8 @@ const migrated = {
 			...(databaseExtra.ssl == null ? {} : { ssl: Boolean(databaseExtra.ssl) }),
 		},
 		pool: {
-			maximumConnections: databaseExtra.max ?? 30,
+			// 旧設定の既定構成ではHTTPとキューの2プロセスがそれぞれ同じ上限を持つ。
+			maximumConnectionsPerHost: (databaseExtra.max ?? 30) * 2,
 			statementTimeout: duration(databaseExtra.statement_timeout ?? 10_000),
 		},
 	},
@@ -230,5 +232,8 @@ const migrated = {
 };
 
 sourceConfigV2Schema.parse(migrated);
-await fs.writeFile(outputPath, yaml.dump(migrated, { noRefs: true, lineWidth: 120 }), { flag: 'wx', mode: 0o600 });
+await fs.writeFile(outputPath, stringify(migrated, { aliasDuplicateObjects: false, lineWidth: 120 }), {
+	flag: 'wx',
+	mode: 0o600,
+});
 console.log(`${inputPath} -> ${outputPath}`);
