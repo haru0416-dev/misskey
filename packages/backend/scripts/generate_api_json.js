@@ -4,14 +4,11 @@
  */
 
 import { writeFileSync, existsSync } from 'node:fs';
-import { execa } from 'execa';
+import { spawnChecked } from '../../../scripts/spawn-checked.mjs';
 
 async function main() {
 	if (!process.argv.includes('--no-build')) {
-		await execa('bun', ['run', 'build'], {
-			stdout: process.stdout,
-			stderr: process.stderr,
-		});
+		await spawnChecked([process.execPath, 'run', 'build']);
 	}
 
 	if (!existsSync('./built')) {
