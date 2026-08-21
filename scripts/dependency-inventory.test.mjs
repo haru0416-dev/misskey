@@ -29,7 +29,7 @@ test('dependencyClosure handles shared dependencies and cycles', () => {
 test('reads the repository JSONC lockfile and source usage', () => {
 	const { inventory } = createDependencyInventory();
 	expect(inventory.summary.resolvedInstances).toBeGreaterThan(inventory.summary.resolvedPackageNames);
-	expect(inventory.nativeCandidates.find((candidate) => candidate.name === 'uuid')?.usage).toContain(
-		'packages/aiscript/src/interpreter/lib/std.ts',
+	expect(inventory.nativeCandidates.find((candidate) => candidate.name === 'js-yaml')?.usage).toContain(
+		'scripts/build-assets.mjs',
 	);
 });
