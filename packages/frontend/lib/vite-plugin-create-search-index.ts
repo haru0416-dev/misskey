@@ -21,7 +21,7 @@ import { RolldownMagicString } from 'rolldown';
 import type { TransformResult } from 'rolldown';
 import path from 'node:path';
 import { hash, toBase62 } from '../vite.config';
-import { minimatch } from 'minimatch';
+import { createTargetFileMatcher } from './search-index-target-matcher.js';
 import {
 	type AttributeNode,
 	type DirectiveNode,
@@ -632,11 +632,7 @@ export default function pluginCreateSearchIndex(options: Options): PluginOption 
 function createSearchIndex(options: Options, assigner: MarkerIdAssigner): Plugin {
 	initLogger(options);
 	const root = normalizePath(process.cwd());
-
-	function isTargetFile(id: string): boolean {
-		const relativePath = path.posix.relative(root, id);
-		return options.targetFilePaths.some((pat) => minimatch(relativePath, pat));
-	}
+	const isTargetFile = createTargetFileMatcher(root, options.targetFilePaths);
 
 	return {
 		name: 'autoAssignMarkerId',
@@ -665,11 +661,7 @@ export function pluginCreateSearchIndexVirtualModule(options: Options, asigner: 
 	const searchIndexSuffix = options.fileVirtualModuleSuffix ?? '.ts';
 	const allSearchIndexFile = options.mainVirtualModule;
 	const root = normalizePath(process.cwd());
-
-	function isTargetFile(id: string): boolean {
-		const relativePath = path.posix.relative(root, id);
-		return options.targetFilePaths.some((pat) => minimatch(relativePath, pat));
-	}
+	const isTargetFile = createTargetFileMatcher(root, options.targetFilePaths);
 
 	function parseSearchIndexFileId(id: string): string | null {
 		const noQuery = id.split('?')[0];
