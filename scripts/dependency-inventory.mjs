@@ -21,11 +21,6 @@ const bunNativeCandidates = {
 		api: 'crypto.randomUUID() / Bun.randomUUIDv7()',
 		note: 'The current AiScript use only generates UUID v4 values.',
 	},
-	execa: {
-		status: 'evaluate',
-		api: 'Bun.spawn() / Bun Shell',
-		note: 'Simple build wrappers are replaceable; process supervision and Windows signal handling need tests.',
-	},
 	semver: {
 		status: 'evaluate',
 		api: 'Bun.semver',
