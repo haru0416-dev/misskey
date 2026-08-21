@@ -27,7 +27,6 @@
 		"@types/punycode.js": "npm:@types/punycode@2.1.4",
 		"@types/tinycolor2": "1.4.6",
 		"@vitejs/plugin-vue": "6.0.7",
-		"execa": "9.6.1",
 		"frontend": "workspace:*",
 		"js-yaml": "5.2.2",
 		"lightningcss": "1.32.0",

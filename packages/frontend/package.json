@@ -83,7 +83,6 @@
 		"@vue/compiler-core": "3.5.38",
 		"astring": "1.9.0",
 		"chromatic": "17.5.0",
-		"execa": "9.6.1",
 		"happy-dom": "20.10.6",
 		"js-yaml": "5.2.2",
 		"lightningcss": "1.32.0",
