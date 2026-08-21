@@ -46,11 +46,6 @@ const bunNativeCandidates = {
 		api: 'Bun.RedisClient',
 		note: 'BullMQ and the existing Pub/Sub/event API depend on ioredis compatibility.',
 	},
-	bcryptjs: {
-		status: 'retain',
-		api: 'Bun.password',
-		note: 'Bun.password is already the fast path; bcryptjs preserves legacy hash compatibility.',
-	},
 	tar: {
 		status: 'evaluate',
 		api: 'Bun.Archive',

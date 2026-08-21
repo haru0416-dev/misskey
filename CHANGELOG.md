@@ -13,7 +13,7 @@
 - Enhance: ノート翻訳サービスとしてセルフホスト可能なLibreTranslateに対応
 - Enhance: 非推奨だった `read:messaging` / `write:messaging` API 権限スコープを削除
 - Enhance: ゲーム機能を削除
-- Enhance: フロントエンド/ビルドツール周辺の未使用依存パッケージ19個を削除 (埋め込みウィジェットのuuidをネイティブ `crypto.randomUUID()` に置換、`form-data` 経由の High 脆弱性1件を解消)
+- Enhance: 未使用・重複依存を削除し、パスワード処理をBun標準APIへ置換 (埋め込みウィジェットのuuidをネイティブ `crypto.randomUUID()` に置換、`form-data` 経由の High 脆弱性1件を解消)
 - Enhance: メンション抽出処理を共通化し、同一アカウントへの重複した検索や処理を抑制
 - Fix: AiScript / AiSON のオブジェクト変換で `__proto__` キーがプロトタイプとして解釈される問題を修正
 - Fix: AiScriptの循環参照を含む値のJavaScript変換・文字列化でスタックオーバーフローや誤った省略表示が発生する問題を修正
