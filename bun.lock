@@ -276,6 +276,9 @@
     },
     "packages/i18n": {
       "name": "i18n",
+      "dependencies": {
+        "js-yaml": "5.2.2",
+      },
       "devDependencies": {
         "@types/node": "26.0.1",
         "chokidar": "5.0.0",

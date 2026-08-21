@@ -4,6 +4,7 @@
  */
 
 import * as fs from 'node:fs';
+import * as yaml from 'js-yaml';
 import { languages, primaries } from './const.js';
 import type { Locale } from './autogen/locale.js';
 import type { ILocale, ParameterizedString } from './types.js';
@@ -13,10 +14,6 @@ type Language = typeof languages[number];
 type PrimaryLang = keyof typeof primaries;
 
 type Locales = Record<Language, ILocale>;
-
-const bunRuntime = (globalThis as typeof globalThis & {
-	Bun: { YAML: { parse(text: string): unknown } };
-}).Bun;
 
 const backspaceRegExp = new RegExp(String.fromCodePoint(0x08), 'g');
 const upstreamBrandPaths = new Set([
@@ -100,7 +97,7 @@ function build(): Record<Language, Locale> {
 	// https://github.com/misskey-dev/misskey/pull/14057#issuecomment-2192833785
 	const metaUrl = import.meta.url;
 	const locales = languages.reduce<Locales>((a, lang) => {
-		a[lang] = (bunRuntime.YAML.parse(clean(fs.readFileSync(new URL(`./locales/${lang}.yml`, metaUrl), 'utf-8'))) ?? {}) as ILocale;
+		a[lang] = (yaml.load(clean(fs.readFileSync(new URL(`./locales/${lang}.yml`, metaUrl), 'utf-8'))) ?? {}) as ILocale;
 		return a;
 	}, {} as Locales);
 
