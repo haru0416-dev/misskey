@@ -4,7 +4,6 @@
  */
 
 import * as fs from 'node:fs';
-import * as yaml from 'js-yaml';
 import { languages, primaries } from './const.js';
 import type { Locale } from './autogen/locale.js';
 import type { ILocale, ParameterizedString } from './types.js';
@@ -15,7 +14,6 @@ type PrimaryLang = keyof typeof primaries;
 
 type Locales = Record<Language, ILocale>;
 
-const backspaceRegExp = new RegExp(String.fromCodePoint(0x08), 'g');
 const upstreamBrandPaths = new Set([
 	'aboutMisskey',
 	'chooseServerOnMisskeyHub',
@@ -40,11 +38,6 @@ function merge<T extends ILocale>(...args: (T | ILocale | undefined)[]): T {
 				return acc;
 			}, {}),
 	}), {} as ILocale) as T;
-}
-
-// YAMLを壊すバックスペース文字を除去する。
-function clean(text: string) {
-	return text.replace(backspaceRegExp, '');
 }
 
 // 空文字列はフォールバックを無効化するため、プロパティを削除する。
@@ -97,7 +90,7 @@ function build(): Record<Language, Locale> {
 	// https://github.com/misskey-dev/misskey/pull/14057#issuecomment-2192833785
 	const metaUrl = import.meta.url;
 	const locales = languages.reduce<Locales>((a, lang) => {
-		a[lang] = (yaml.load(clean(fs.readFileSync(new URL(`./locales/${lang}.yml`, metaUrl), 'utf-8'))) ?? {}) as ILocale;
+		a[lang] = JSON.parse(fs.readFileSync(new URL(`./locales/${lang}.json`, metaUrl), 'utf-8')) as ILocale;
 		return a;
 	}, {} as Locales);
 
