@@ -4,8 +4,22 @@
  */
 
 // bun-types パッケージ全体を "types" に追加すると @types/node の Request/Response/WebSocket 等の
-// グローバル宣言と衝突するため、実際に使っている Bun.serve 関連のAPIだけを最小限に手書きしている。
+// グローバル宣言と衝突するため、実際に使っているBun APIだけを最小限に手書きしている。
 declare namespace Bun {
+	interface Subprocess {
+		readonly pid: number;
+		readonly exited: Promise<number>;
+		kill(signal?: number | NodeJS.Signals): void;
+	}
+
+	interface SpawnOptions {
+		cwd?: string;
+		env?: Record<string, string | undefined>;
+		stdout?: 'inherit' | 'ignore' | 'pipe';
+		stderr?: 'inherit' | 'ignore' | 'pipe';
+		windowsVerbatimArguments?: boolean;
+	}
+
 	interface ServerWebSocket<T = undefined> {
 		data: T;
 		readonly readyState: number;
@@ -76,6 +90,7 @@ declare module 'bun' {
 declare const Bun:
 	| {
 			serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
+			spawn(command: string[], options?: Bun.SpawnOptions): Bun.Subprocess;
 			password: {
 				hash(password: string, options: { algorithm: 'bcrypt'; cost: number }): Promise<string>;
 				hashSync(password: string, options: { algorithm: 'bcrypt'; cost: number }): string;

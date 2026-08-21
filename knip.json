@@ -7,7 +7,7 @@
 		"packages/frontend/public/**",
 		"**/public/**"
 	],
-	"ignoreBinaries": ["dedupe", "taskkill", "generate.tsx"],
+	"ignoreBinaries": ["dedupe", "generate.tsx"],
 	"ignoreDependencies": [
 		"@typescript/lib-webworker",
 		"@tabler/icons-webfont",
