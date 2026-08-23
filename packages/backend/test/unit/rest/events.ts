@@ -11,7 +11,9 @@ describe('createHonoEventPublishers', () => {
 		const published: { host: string; message: string }[] = [];
 		const publishers = createHonoEventPublishers({
 			config: { runtime: { host: 'example.tld' } },
-			publish: (host, message) => published.push({ host, message }),
+			publish: (host, message) => {
+				published.push({ host, message });
+			},
 		});
 
 		const note = { id: 'note1', text: 'hello' } as unknown as Parameters<typeof publishers.publishNotesStream>[0];
@@ -29,7 +31,9 @@ describe('createHonoEventPublishers', () => {
 		const published: { host: string; message: string }[] = [];
 		const publishers = createHonoEventPublishers({
 			config: { runtime: { host: 'example.tld' } },
-			publish: (host, message) => published.push({ host, message }),
+			publish: (host, message) => {
+				published.push({ host, message });
+			},
 		});
 
 		publishers.publishMainStream('user1', 'notification', { id: 'n1' });
@@ -44,7 +48,9 @@ describe('createHonoEventPublishers', () => {
 		const published: { host: string; message: string }[] = [];
 		const publishers = createHonoEventPublishers({
 			config: { runtime: { host: 'example.tld' } },
-			publish: (host, message) => published.push({ host, message }),
+			publish: (host, message) => {
+				published.push({ host, message });
+			},
 		});
 
 		publishers.publishInternalEvent('metaUpdated' as never);
