@@ -81,7 +81,7 @@ export type HonoApiNoteStreamPublisher = <K extends keyof NoteEventTypes>(
 
 export type HonoRedisEventPublisherDependencies = {
 	config: { runtime: Pick<Config['runtime'], 'host'> };
-	publish: (host: string, message: string) => void;
+	publish: (host: string, message: string) => void | Promise<unknown>;
 };
 
 /**
@@ -96,7 +96,11 @@ function publishToChannel(
 ): void {
 	const message = type == null ? value : value === undefined ? { type, body: null } : { type, body: value };
 
-	deps.publish(deps.config.runtime.host, JSON.stringify({ channel, message }));
+	// publish は fire-and-forget。応答後ドレイン等から Redis 切断後に発火しても
+	// 未処理リジェクションにしない。
+	Promise.resolve(deps.publish(deps.config.runtime.host, JSON.stringify({ channel, message }))).catch((error) => {
+		console.error(`Failed to publish to channel ${channel}`, error);
+	});
 }
 
 export type HonoEventPublishers = {
