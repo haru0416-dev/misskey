@@ -784,6 +784,43 @@ const notePostCreateStages = [
 	'federation',
 ] as const satisfies readonly DbNotePostCreateStage[];
 
+/**
+ * enqueue 時点で no-op と確定するステージ。条件は postNoteCreatedForHonoApi の
+ * 各ステージ冒頭ガードの鏡像に保つこと。DB 参照が要る判定はここに置かない。
+ */
+function isNoopPostCreateStage(
+	stage: DbNotePostCreateStage,
+	data: CreateNoteData,
+	user: { host: MiUser['host'] },
+	silent: boolean,
+	mentionedUsers: MiUser[],
+): boolean {
+	switch (stage) {
+		case 'poll':
+			return data.poll?.expiresAt == null;
+		case 'followerNotifications':
+			return data.reply != null || data.visibility === 'specified';
+		case 'notifications': {
+			if (silent) return true;
+			const hasLocalMention = mentionedUsers.some((u) => u.host == null);
+			const hasLocalReplyTarget = data.reply != null && data.reply.userHost === null;
+			const hasLocalRenoteTarget = data.renote != null && data.renote.userHost === null;
+			return !hasLocalMention && !hasLocalReplyTarget && !hasLocalRenoteTarget;
+		}
+		case 'webhooks':
+		case 'streamsAndRole':
+			return silent;
+		case 'federation':
+			return silent || data.localOnly || user.host != null;
+		default:
+			return false;
+	}
+}
+
+// 応答後ドレインの直列化チェーン。定常負荷 (create ~15/s × ドレイン ~20ms) では
+// 遅延なく消化でき、溜まってもoutbox 行が耐障害性を担保する。
+let deferredStageDrainChain: Promise<void> = Promise.resolve();
+
 type PersistedNote = {
 	note: MiNote;
 	outboxJobs: (InlineDbOutboxJob & { data: DbNotePostCreateJobData })[];
@@ -935,6 +972,7 @@ async function insertNoteForHonoApi(
 			const note = { ...insert, reply: data.reply ?? null, renote: data.renote ?? null } as unknown as MiNote;
 			const outboxJobs: PersistedNote['outboxJobs'] = [];
 			for (const stage of notePostCreateStages) {
+				if (isNoopPostCreateStage(stage, data, user, silent, mentionedUsers)) continue;
 				const jobData: DbNotePostCreateJobData = {
 					noteId: note.id,
 					mentionedUserIds: mentionedUsers.map((u) => u.id),
@@ -1438,6 +1476,7 @@ export async function createNoteForHonoApi(
 	silent = false,
 	persist: (insert: (db: MiDrizzleDatabase) => Promise<PersistedNote>) => Promise<PersistedNote> = (insert) =>
 		insert(deps.db),
+	options: { deferPostPersistStages?: boolean } = {},
 ): Promise<MiNote> {
 	if (data.reply && data.channel && data.reply.channelId !== data.channel.id) {
 		data.channel = data.reply.channelId ? await fetchChannelByIdFromDatabase(deps.db, data.reply.channelId) : null;
@@ -1585,7 +1624,7 @@ export async function createNoteForHonoApi(
 	const persisted = await persist((db) =>
 		insertNoteForHonoApi(deps, user, data, tags, emojis, finalMentionedUsers, silent, db),
 	);
-	for (const outboxJob of persisted.outboxJobs) {
+	const runOutboxJob = async (outboxJob: (typeof persisted.outboxJobs)[number]): Promise<void> => {
 		try {
 			await runInlineDbOutboxJob(deps.db, outboxJob, async (db) => {
 				await postNoteCreatedForHonoApi(
@@ -1604,6 +1643,33 @@ export async function createNoteForHonoApi(
 				`Failed to complete post-create stage ${outboxJob.data.stage} for note ${persisted.note.id}`,
 				error,
 			);
+		}
+	};
+
+	if (options.deferPostPersistStages) {
+		// fanout は read-your-writes (作成直後の自TL 参照)、antennas は「作成時点に存在する
+		// アンテナと照合する」順序を守るため、応答前に完了させる。どちらもインメモリ+Redis
+		// 主体で軽い。
+		const awaitedStages: DbNotePostCreateStage[] = ['fanout', 'antennas'];
+		for (const outboxJob of persisted.outboxJobs) {
+			if (awaitedStages.includes(outboxJob.data.stage)) await runOutboxJob(outboxJob);
+		}
+		// 残りは応答後にドレイン。outbox 行はコミット済みなので、未実行のままプロセスが
+		// 死んでもリース失効後にキューワーカーが回収する。プロセス全体で直列化するのは、
+		// 並行ドレインの束が DB プールを奪って foreground の p99 を悪化させるため。
+		deferredStageDrainChain = deferredStageDrainChain
+			.then(async () => {
+				for (const outboxJob of persisted.outboxJobs) {
+					if (!awaitedStages.includes(outboxJob.data.stage)) await runOutboxJob(outboxJob);
+				}
+			})
+			.catch((error) => {
+				console.error(`Failed to drain post-create stages for note ${persisted.note.id}`, error);
+			});
+	} else {
+		// キュー経路は await 自体がバックプレッシャーなので同期のまま。
+		for (const outboxJob of persisted.outboxJobs) {
+			await runOutboxJob(outboxJob);
 		}
 	}
 	return persisted.note;
@@ -1630,6 +1696,7 @@ export async function fetchAndCreateNoteForHonoApi(
 		apEmojis?: string[] | null;
 	},
 	persist?: Parameters<typeof createNoteForHonoApi>[4],
+	options: Parameters<typeof createNoteForHonoApi>[5] = {},
 ): Promise<MiNote> {
 	const visibleUsers =
 		data.visibleUserIds.length > 0
@@ -1713,6 +1780,7 @@ export async function fetchAndCreateNoteForHonoApi(
 		}),
 		false,
 		persist,
+		options,
 	);
 }
 
@@ -1796,6 +1864,8 @@ export async function handleHonoApiNotesCreate(
 				apHashtags: ps.noExtractHashtags ? [] : undefined,
 				apEmojis: ps.noExtractEmojis ? [] : undefined,
 			}),
+			undefined,
+			{ deferPostPersistStages: true },
 		);
 
 		return { createdNote: await packNoteForHonoApi(deps, note, me) };
