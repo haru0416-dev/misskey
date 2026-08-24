@@ -115,7 +115,13 @@ const rolesThatCanBeUsedThisEmojiAsReaction = ref<Misskey.entities.Role[]>([]);
 const file = ref<Misskey.entities.DriveFile>();
 
 watch(roleIdsThatCanBeUsedThisEmojiAsReaction, async () => {
-	rolesThatCanBeUsedThisEmojiAsReaction.value = (await Promise.all(roleIdsThatCanBeUsedThisEmojiAsReaction.value.map((id) => misskeyApi('admin/roles/show', { roleId: id }).catch(() => null)))).filter(x => x != null);
+	// ロールIDごとに admin/roles/show を叩くと割り当て数だけリクエストが増える。
+	// admin/roles/list は引数なしで全件返し、要求権限も同一 (read:admin:roles) なので1回で解決できる。
+	const allRoles = await misskeyApi('admin/roles/list').catch(() => null);
+	if (allRoles == null) return;
+	rolesThatCanBeUsedThisEmojiAsReaction.value = roleIdsThatCanBeUsedThisEmojiAsReaction.value
+		.map((id) => allRoles.find((role) => role.id === id))
+		.filter(x => x != null);
 }, { immediate: true });
 
 const imgUrl = computed(() => file.value ? file.value.url : props.emoji ? props.emoji.url : null);
