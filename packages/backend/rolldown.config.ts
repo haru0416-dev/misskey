@@ -94,7 +94,6 @@ export default defineConfig((args) => {
 		'ioredis',
 		'pg',
 		'sharp',
-		'jsdom',
 		'ipaddr.js',
 		'file-type',
 	];
