@@ -99,7 +99,13 @@ const roleIdsThatCanBeUsedThisDecoration = ref(props.avatarDecoration ? props.av
 const rolesThatCanBeUsedThisDecoration = ref<Misskey.entities.Role[]>([]);
 
 watch(roleIdsThatCanBeUsedThisDecoration, async () => {
-	rolesThatCanBeUsedThisDecoration.value = (await Promise.all(roleIdsThatCanBeUsedThisDecoration.value.map((id) => misskeyApi('admin/roles/show', { roleId: id }).catch(() => null)))).filter(x => x != null);
+	// ロールIDごとに admin/roles/show を叩くと割り当て数だけリクエストが増える。
+	// admin/roles/list は引数なしで全件返し、要求権限も同一 (read:admin:roles) なので1回で解決できる。
+	const allRoles = await misskeyApi('admin/roles/list').catch(() => null);
+	if (allRoles == null) return;
+	rolesThatCanBeUsedThisDecoration.value = roleIdsThatCanBeUsedThisDecoration.value
+		.map((id) => allRoles.find((role) => role.id === id))
+		.filter(x => x != null);
 }, { immediate: true });
 
 async function addRole() {
