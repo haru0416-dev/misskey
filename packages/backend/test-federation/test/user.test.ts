@@ -11,6 +11,7 @@ import {
 	resolveRemoteNote,
 	resolveRemoteUser,
 	sleep,
+	waitFor,
 } from './utils.js';
 
 const [aAdmin, bAdmin] = await Promise.all([fetchAdmin('a.test'), fetchAdmin('b.test')]);
@@ -388,10 +389,10 @@ describe('User', () => {
 				strictEqual(followers.length, 1);
 
 				await alice.client.request('i/delete-account', { password: alice.password });
-				await sleep();
 
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 0);
+				// 削除に伴う Delete の配送は outbox のディスパッチャ (1秒周期) を経由するため、
+				// sleep() の既定 250ms では届かない (実測で約1秒)。条件が満たされるまで待つ。
+				await waitFor(async () => (await bob.client.request('users/following', { userId: bob.id })).length === 0);
 
 				await rejects(
 					async () => await bob.client.request('following/create', { userId: aliceInB.id }),
