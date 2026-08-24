@@ -11,10 +11,15 @@
 | `composables/` | 複数featureから使うVueライフサイクル・リアクティビティ処理 |
 | `directives/` | グローバルまたは横断的なVue directive |
 | `query/` | API query cacheの共通基盤 |
+| `filters/` | 表示用の値整形 (バイト数・日時・数値など) |
 | `store/`, `preferences/` | アプリケーション横断stateと永続化 |
 | `utility/` | Vueや特定featureに依存しない小さな横断処理 |
+| `lib/` | Vueにもfeatureにも依存しない自前ライブラリ (現在はルーターの `nirax.ts` のみ) |
+| `types/` | 複数の層から参照する型定義だけを置く |
 | `ui/` | アプリケーションシェルとレイアウト |
 | `widgets/` | widgetランタイムと各widget |
+| `aiscript/` | AiScript実行環境との接続 (API・UI定義) |
+| `shaders/` | WebGLで使うGLSL |
 | `workers/` | Web Worker entrypoints |
 
 ## Shared component categories
