@@ -666,7 +666,7 @@ describe('Endpoints', () => {
 			const untouchedTarget = await signup({ username: `haua${suffix}` });
 			const targetIds = [accountDeleteTarget.id, accountTokenTarget.id, deleteAccountTarget.id, untouchedTarget.id];
 			const getDeleteAccountJobs = async (userId: string) => {
-				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				return jobs.filter((job) => job.name === 'deleteAccount' && job.data.user.id === userId);
 			};
 			const waitDeleteAccountJob = async (userId: string) => {
@@ -681,7 +681,7 @@ describe('Endpoints', () => {
 				assert.fail(`deleteAccount job was not found for ${userId}`);
 			};
 			const removeDeleteAccountJobs = async () => {
-				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				await Promise.all(
 					jobs
 						.filter((job) => job.name === 'deleteAccount' && targetIds.includes(job.data.user.id))
@@ -2326,7 +2326,7 @@ describe('Endpoints', () => {
 
 			let job: Bull.Job<RelationshipJobData> | undefined;
 			for (let i = 0; i < 10; i++) {
-				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				job = jobs.find(
 					(job) =>
 						job.name === 'unfollow' &&
@@ -3020,7 +3020,7 @@ describe('Endpoints', () => {
 
 			let job: Bull.Job<ObjectStorageJobData> | undefined;
 			for (let i = 0; i < 10; i++) {
-				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				job = jobs.find((job) => job.name === 'cleanRemoteFiles');
 				if (job != null) break;
 				await new Promise((resolve) => setTimeout(resolve, 100));
@@ -3031,7 +3031,7 @@ describe('Endpoints', () => {
 			const token = await createAppToken(alice, ['write:admin:drive']);
 			const cleanedByToken = await api('admin/drive/clean-remote-files', {}, { token });
 			assert.strictEqual(cleanedByToken.status, 204);
-			const tokenJobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			const tokenJobs = await objectStorageQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			await Promise.all(tokenJobs.filter((job) => job.name === 'cleanRemoteFiles').map((job) => job.remove()));
 
 			const wrongScopeToken = await createAppToken(alice, ['read:admin:drive']);
@@ -3092,7 +3092,7 @@ describe('Endpoints', () => {
 			};
 			const waitDeleteObjectStorageJob = async (key: string) => {
 				for (let i = 0; i < 10; i++) {
-					const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+					const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 					const job = jobs.find((job) => job.name === 'deleteFile' && (job.data as { key: string }).key === key);
 					if (job != null) return job;
 					await new Promise((resolve) => setTimeout(resolve, 100));
@@ -3100,7 +3100,7 @@ describe('Endpoints', () => {
 				assert.fail(`deleteFile objectStorage job was not found: ${key}`);
 			};
 			const removeObjectStorageJobs = async () => {
-				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				await Promise.all(
 					jobs
 						.filter((job) => job.name === 'deleteFile' && targetKeys.includes((job.data as { key: string }).key))
@@ -4188,7 +4188,7 @@ describe('Endpoints', () => {
 
 			const fileId = genId(now);
 			const removeImportJobs = async () => {
-				const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				await Promise.all(
 					jobs
 						.filter(
@@ -4205,7 +4205,7 @@ describe('Endpoints', () => {
 
 				let job: Bull.Job<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
 				for (let i = 0; i < 10; i++) {
-					const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+					const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 					job = jobs.find(
 						(job) =>
 							job.name === 'importCustomEmojis' &&
@@ -5530,7 +5530,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(createdDraft.isActuallyScheduled, true);
 			assert.strictEqual(createdDraft.scheduledAt, futureScheduledAt);
 
-			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			assert.strictEqual(
 				jobs.some((job) => job.data.noteDraftId === createdDraft.id),
 				true,
@@ -5646,7 +5646,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(updatedDraft.isActuallyScheduled, true);
 			assert.strictEqual(updatedDraft.scheduledAt, futureScheduledAt);
 
-			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			assert.strictEqual(
 				jobs.some((job) => job.data.noteDraftId === draft.id),
 				true,
@@ -5664,7 +5664,7 @@ describe('Endpoints', () => {
 			assert.strictEqual((updatedWithoutSchedule.body as any).updatedDraft.scheduledAt, futureScheduledAt);
 			assert.strictEqual((updatedWithoutSchedule.body as any).updatedDraft.isActuallyScheduled, true);
 
-			const jobsAfterUpdate = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			const jobsAfterUpdate = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			assert.strictEqual(
 				jobsAfterUpdate.some((job) => job.data.noteDraftId === draft.id),
 				true,
@@ -5765,7 +5765,7 @@ describe('Endpoints', () => {
 			const afterDelete = await fetchNoteDraftByIdFromDatabase(db, draft.id);
 			assert.strictEqual(afterDelete, null);
 
-			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			assert.strictEqual(
 				jobs.some((job) => job.data.noteDraftId === draft.id),
 				false,
@@ -7548,7 +7548,7 @@ describe('Endpoints', () => {
 
 	describe('export jobs', () => {
 		const getExportJobs = async (jobName: string, userId: string) => {
-			const jobs = await dbQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+			const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			return jobs.filter((job) => job.name === jobName && (job.data as any).user?.id === userId);
 		};
 		const waitExportJob = async (jobName: string, userId: string) => {
@@ -11385,7 +11385,7 @@ describe('Endpoints', () => {
 			url: string,
 		): Promise<Bull.Job<SystemWebhookDeliverJobData>> {
 			for (let i = 0; i < 10; i++) {
-				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				const job = jobs.find(
 					(job) =>
 						job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type && job.data.to === url,
@@ -11787,7 +11787,7 @@ describe('Endpoints', () => {
 			type: SystemWebhookDeliverJobData['type'],
 		): Promise<Bull.Job<SystemWebhookDeliverJobData>> {
 			for (let i = 0; i < 10; i++) {
-				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				const job = jobs.find(
 					(job) => job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type,
 				);
@@ -11800,7 +11800,7 @@ describe('Endpoints', () => {
 
 		async function findDeliverJob(inbox: string, type: 'Flag'): Promise<Bull.Job<DeliverJobData>> {
 			for (let i = 0; i < 10; i++) {
-				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				for (const job of jobs) {
 					if (job.data.to !== inbox) continue;
 
@@ -12821,7 +12821,7 @@ describe('Endpoints', () => {
 			assert.strictEqual(targetUser.isSuspended, true);
 
 			for (let i = 0; i < 10; i++) {
-				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				const job = jobs.find(
 					(job) =>
 						job.name === 'unfollow' &&
@@ -12998,7 +12998,7 @@ describe('Endpoints', () => {
 	describe('admin/relays', () => {
 		async function findDeliverJob(inbox: string, type: 'Follow' | 'Undo'): Promise<Bull.Job<DeliverJobData>> {
 			for (let i = 0; i < 10; i++) {
-				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed', 'paused'], 0, 100, false);
+				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				for (const job of jobs) {
 					if (job.data.to !== inbox) continue;
 

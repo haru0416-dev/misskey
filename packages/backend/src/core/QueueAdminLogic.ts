@@ -360,7 +360,7 @@ export async function getQueueStats(deps: AdminQueueDependencies, queueType: Que
 	const isPaused = await queue.isPaused();
 	const metricsCompleted = await queue.getMetrics('completed', 0, MetricsTime.ONE_WEEK);
 	const metricsFailed = await queue.getMetrics('failed', 0, MetricsTime.ONE_WEEK);
-	const db = parseQueueDatabaseInfo(await (await queue.client).info());
+	const db = parseQueueDatabaseInfo(await (await queue.getBackend().client).info());
 
 	return {
 		name: queueType,
