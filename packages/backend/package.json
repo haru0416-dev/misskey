@@ -32,8 +32,8 @@
 		"generate-api-json": "bun run compile-config && bun ./scripts/generate_api_json.js"
 	},
 	"dependencies": {
-		"@aws-sdk/client-s3": "3.1076.0",
-		"@aws-sdk/lib-storage": "3.1076.0",
+		"@aws-sdk/client-s3": "3.1115.0",
+		"@aws-sdk/lib-storage": "3.1115.0",
 		"@kitajs/html": "4.2.13",
 		"@misskey-dev/emoji-assets": "17.0.6",
 		"@misskey-dev/emoji-data": "17.0.6",
