@@ -17,6 +17,7 @@
 
 ### General
 
+- Change: バージョン番号を upstream の日付形式 (2026.6.x) から切り離し、`0.1.0` から振り直し (nodeinfo の `software.version` と「サーバー情報」の表示が変わる)
 - Enhance: YAML処理の直接依存を整理
 - Fix: 依存パッケージの既知脆弱性39件中38件を修正 (hono 4.12.34 / undici 7.29.0 / postcss 8.5.23 / find-my-way 9.7.0 ほか。親パッケージが古い版を固定していたものは overrides で修正版を強制。残1件は esbuild dev server の脆弱性で、当リポジトリに該当経路なし)
 - Fix: AiScriptのタイマー・文字列index処理と、misskey-jsのストリーミング再接続・入力検証を修正
