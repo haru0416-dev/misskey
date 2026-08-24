@@ -312,9 +312,10 @@ async function resolveDeliverJobStates(
 
 	let replies: [Error | null, unknown][] | null;
 	try {
-		// bullmq の IRedisClient 型は BullMQ 自身が使うコマンドしか宣言していないが、接続オプションから
+		// bullmq v6 は datastore を抽象化したため生クライアントは backend 側の脱出口に移った。
+		// IRedisClient 型は BullMQ 自身が使うコマンドしか宣言していないが、接続オプションから
 		// 生成される実体は ioredis クライアントの Proxy (createIORedisClient) なので ioredis として扱える。
-		const client = (await deliverQueue.client) as unknown as Redis.Redis;
+		const client = (await deliverQueue.getBackend().client) as unknown as Redis.Redis;
 		const completedKey = deliverQueue.toKey('completed');
 		const failedKey = deliverQueue.toKey('failed');
 		const pipeline = client.pipeline();

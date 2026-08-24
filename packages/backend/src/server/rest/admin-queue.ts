@@ -51,7 +51,10 @@ export const adminQueueClearParamDef = z.object({
 
 export const adminQueueJobsParamDef = z.object({
 	queue: z.enum(QUEUE_TYPES),
-	state: z.array(z.enum(['active', 'wait', 'delayed', 'completed', 'failed', 'paused'])),
+	// bullmq v6 で JobType から 'paused' が外れた。キューの一時停止はキュー単位の状態になり、
+	// 個別ジョブが paused として並ぶことはなくなったため一覧の絞り込みからも除く。
+	// clean は v6 でも 'paused' を受けるので adminQueueClearParamDef 側には残している。
+	state: z.array(z.enum(['active', 'wait', 'delayed', 'completed', 'failed'])),
 	search: z.string().optional(),
 });
 
