@@ -7,7 +7,7 @@ import * as fs from 'node:fs';
 import sharp from 'sharp';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import type { Config } from '@/config.js';
-import { FILE_TYPE_BROWSERSAFE } from '@/const.js';
+import { FILE_TYPE_BROWSERSAFE, PROXY_LOOP_USER_AGENT_TOKENS } from '@/const.js';
 import { StatusError } from '@/misc/status-error.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import { correctFilename } from '@/misc/correct-filename.js';
@@ -105,7 +105,8 @@ export class FileServerProxyHandler {
 		if (!userAgent) {
 			throw new StatusError('User-Agent is required', 400, 'User-Agent is required');
 		}
-		if (userAgent.toLowerCase().includes('misskey/')) {
+		const normalizedUserAgent = userAgent.toLowerCase();
+		if (PROXY_LOOP_USER_AGENT_TOKENS.some((token) => normalizedUserAgent.includes(token))) {
 			throw new StatusError('Refusing to proxy a request from another proxy', 403, 'Proxy is recursive');
 		}
 	}
