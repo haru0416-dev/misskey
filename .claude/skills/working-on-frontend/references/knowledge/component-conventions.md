@@ -15,7 +15,7 @@ Misskey の Vue 3 SFC 規約と、新規 `Mk*` コンポーネント / 既存コ
 
 ## SFC スタイルの基本
 
-Composition API + `<script setup lang="ts">` を基本とする (Options API は新規導入しない)。型宣言や module スコープのユーティリティを置きたい時は、setup ブロックと **併用** する形で追加の `<script lang="ts">` ブロックを置いて構わない (例: [MkInput.vue](../../../../../packages/frontend/src/components/MkInput.vue) は `SupportedTypes` 型を別ブロックで宣言してから setup を書いている)。SCSS は **CSS Modules** で書き、`<style lang="scss" module>` を使う。
+Composition API + `<script setup lang="ts">` を基本とする (Options API は新規導入しない)。型宣言や module スコープのユーティリティを置きたい時は、setup ブロックと **併用** する形で追加の `<script lang="ts">` ブロックを置いて構わない (例: [MkInput.vue](../../../../../packages/frontend/src/components/form/MkInput.vue) は `SupportedTypes` 型を別ブロックで宣言してから setup を書いている)。SCSS は **CSS Modules** で書き、`<style lang="scss" module>` を使う。
 
 ```vue
 <!--
@@ -58,7 +58,7 @@ import { ref } from 'vue';
 
 ### simple (`<slot>` + 単純 props)
 
-下記は `<slot>` + props + `withDefaults` の典型パターンを示す**合成例** (特定ファイルの写しではない)。実在する単純コンポーネントの例は [MkInfo.vue](../../../../../packages/frontend/src/components/MkInfo.vue) 等を参照。
+下記は `<slot>` + props + `withDefaults` の典型パターンを示す**合成例** (特定ファイルの写しではない)。実在する単純コンポーネントの例は [MkInfo.vue](../../../../../packages/frontend/src/components/display/MkInfo.vue) 等を参照。
 
 ```vue
 <!--
@@ -113,7 +113,7 @@ const props = withDefaults(defineProps<{
 
 ### generic + 2 ブロック script
 
-参考: [MkInput.vue](../../../../../packages/frontend/src/components/MkInput.vue)
+参考: [MkInput.vue](../../../../../packages/frontend/src/components/form/MkInput.vue)
 
 型ジェネリックを取りつつ、その型計算や `type` エイリアス宣言を setup ブロックの中に書きたくない場合は、**型宣言用 `<script lang="ts">` と setup 用 `<script lang="ts" setup>` を 2 つ並べる** 構成にできる。
 
@@ -169,7 +169,7 @@ function select(value: T) {
 
 ### `defineModel` で v-model 連動
 
-参考: [MkSelect.vue](../../../../../packages/frontend/src/components/MkSelect.vue), [MkRadios.vue](../../../../../packages/frontend/src/components/MkRadios.vue)
+参考: [MkSelect.vue](../../../../../packages/frontend/src/components/form/MkSelect.vue), [MkRadios.vue](../../../../../packages/frontend/src/components/form/MkRadios.vue)
 
 `defineModel` を使うと `props.modelValue` + `emit('update:modelValue', v)` の 2 行が 1 行に圧縮できる。
 
@@ -203,7 +203,7 @@ const props = defineProps<{
 
 ### emit + 名前付き slot で外部から動作を差し込む
 
-下記は emit + 名前付き slot の典型パターンを示す**合成例** (特定ファイルの写しではない)。クリック時の処理を呼び出し元に委ねるパターン (確認 UI など)。なお [MkButton.vue](../../../../../packages/frontend/src/components/MkButton.vue) 自体は `(ev: 'click', payload: PointerEvent)` のみを emit する単機能ボタンで、この合成例とは構造が異なる。
+下記は emit + 名前付き slot の典型パターンを示す**合成例** (特定ファイルの写しではない)。クリック時の処理を呼び出し元に委ねるパターン (確認 UI など)。なお [MkButton.vue](../../../../../packages/frontend/src/components/form/MkButton.vue) 自体は `(ev: 'click', payload: PointerEvent)` のみを emit する単機能ボタンで、この合成例とは構造が異なる。
 
 ```vue
 <template>
@@ -307,7 +307,7 @@ URL に飛ばない `<a href="#" @click.prevent>` は a11y / SEO 両面で良く
 </label>
 ```
 
-label を slot で受け取る共通コンポーネント ([MkInput.vue](../../../../../packages/frontend/src/components/MkInput.vue), [MkSwitch.vue](../../../../../packages/frontend/src/components/MkSwitch.vue)) を使うとこの規約は自然に守れる。
+label を slot で受け取る共通コンポーネント ([MkInput.vue](../../../../../packages/frontend/src/components/form/MkInput.vue), [MkSwitch.vue](../../../../../packages/frontend/src/components/form/MkSwitch.vue)) を使うとこの規約は自然に守れる。
 
 #### `aria-label` で代替
 
@@ -337,17 +337,17 @@ function onClick() {
 ### キーボード操作
 
 - Tab で全ての操作可能要素にたどり着けること (`tabindex="-1"` を不用意に付けない)
-- モーダル / popup を開いたら focus trap を考える ([MkModal.vue](../../../../../packages/frontend/src/components/MkModal.vue) のような既存コンポーネントは内部で対応している)
+- モーダル / popup を開いたら focus trap を考える ([MkModal.vue](../../../../../packages/frontend/src/components/overlay/MkModal.vue) のような既存コンポーネントは内部で対応している)
 - リスト中の項目は矢印キー操作も考慮する。Space / Enter で開く・確定する UI は `MkSelect.vue` の `@keydown.space.enter`(メニューを開く) パターンを参考にする
 
 ### 既存実装の参考
 
 | パターン | 既存コンポーネント |
 |---|---|
-| 標準的なボタン | [MkButton.vue](../../../../../packages/frontend/src/components/MkButton.vue) |
-| カスタム UI でも a11y を満たす | [MkSwitch.vue](../../../../../packages/frontend/src/components/MkSwitch.vue) |
-| input + label slot | [MkInput.vue](../../../../../packages/frontend/src/components/MkInput.vue) |
-| キーボード操作対応の選択 UI | [MkSelect.vue](../../../../../packages/frontend/src/components/MkSelect.vue) |
+| 標準的なボタン | [MkButton.vue](../../../../../packages/frontend/src/components/form/MkButton.vue) |
+| カスタム UI でも a11y を満たす | [MkSwitch.vue](../../../../../packages/frontend/src/components/form/MkSwitch.vue) |
+| input + label slot | [MkInput.vue](../../../../../packages/frontend/src/components/form/MkInput.vue) |
+| キーボード操作対応の選択 UI | [MkSelect.vue](../../../../../packages/frontend/src/components/form/MkSelect.vue) |
 
 ### ありがちな PR レビュー指摘
 
