@@ -1,161 +1,44 @@
 # Contribution guide
-We're glad you're interested in contributing Misskey! In this document you will find the information you need to contribute to the project.
 
-> [!NOTE]
-> This project uses Japanese as its major language, **but you do not need to translate and write the Issues/PRs in Japanese.**
-> Also, you might receive comments on your Issue/PR in Japanese, but you do not need to reply to them in Japanese as well.\
-> The accuracy of machine translation into Japanese is not high, so it will be easier for us to understand if you write it in the original language.
-> It will also allow the reader to use the translation tool of their preference if necessary.
+このリポジトリは [Misskey](https://github.com/misskey-dev/misskey) から分岐したフォークで、upstream への追従は行っていない。
+Issue / PR はこのリポジトリに対して出すこと (upstream の Issue・Discussions・Discord は対象外)。
 
-## Roadmap
-See [ROADMAP.md](./ROADMAP.md)
+ここには開発環境の作り方と、コードを書くうえでの決まりごとをまとめている。
+AI コーディングエージェント向けの規約は [AGENTS.md](./AGENTS.md) にある。
 
 ## Issues
-Before creating an issue, please check the following:
-- To avoid duplication, please search for similar issues before creating a new issue.
-- Do not use Issues to ask questions or troubleshooting.
-	- Issues should only be used to feature requests, suggestions, and bug tracking.
-	- Please ask questions or troubleshooting in [GitHub Discussions](https://github.com/misskey-dev/misskey/discussions) or [Discord](https://discord.gg/Wp8gVStHW3).
 
-> [!WARNING]
-> Do not close issues that are about to be resolved. It should remain open until a commit that actually resolves it is merged.
+- 重複を避けるため、同じ内容の Issue が既にないか検索してから作成する
+- Issue は要望・提案・不具合の報告に使う。質問やトラブルシュートには使わない
+- 解決しそうな Issue でも、実際に解決するコミットがマージされるまではクローズしない
+- **脆弱性は Issue / PR に書かない**。[SECURITY.md](./SECURITY.md) の手順に従う
 
-### Recommended discussing before implementation
-We welcome your proposal.
+## Pull Request
 
-When you want to add a feature or fix a bug, **first have the design and policy reviewed in an Issue** (if it is not there, please make one). Without this step, there is a high possibility that the PR will not be merged even if it is implemented.
+- タイトルには種類が分かる prefix を付ける (`fix` / `refactor` / `feat` / `enhance` / `perf` / `chore` 等)
+- ひとつの PR に複数の種類の変更や関心を混ぜない
+- 対応する Issue がある場合は本文から参照する
+- 利用者に影響のある変更は [`CHANGELOG.md`](/CHANGELOG.md) の `## Unreleased` に 1 行追記する。リファクタリングなど利用者に影響しない変更では不要
+- 機能追加・バグ修正には可能な限りテストを足す
+- 事前に `bun run lint` とテストを通す ([Testing](#testing) 参照)
+- UI の変更を含む場合はスクリーンショットを貼る
 
-At this point, you also need to clarify the goals of the PR you will create, and make sure that the other members of the team are aware of them.
-PRs that do not have a clear set of do's and don'ts tend to be bloated and difficult to review.
+本文の雛形は [.github/pull_request_template.md](.github/pull_request_template.md)。
 
-Also, when you start implementation, assign yourself to the Issue (if you cannot do it yourself, ask Committer to assign you).
-By expressing your intention to work on the Issue, you can prevent conflicts in the work.
+### ActivityPub payload を変更するとき
 
-To the Committers: you should not assign someone on it before the Final Decision.
+連合先には他実装や古いバージョンが含まれるため、拡張プロパティ (拡張として独自に足すプロパティ) には制約がある。
 
-### How issues are triaged
-
-The Committers may:
-* close an issue that is not reproducible on latest stable release,
-* merge an issue into another issue,
-* split an issue into multiple issues,
-* or re-open that has been closed for some reason which is not applicable anymore.
-
-@syuilo reserves the Final Decision rights including whether the project will implement feature and how to implement, these rights are not always exercised.
-
-## Well-known branches
-- **`master`** branch is tracking the latest release and used for production purposes.
-- **`develop`** branch is where we work for the next release.
-	- When you create a PR, basically target it to this branch.
-- **`l10n_develop`** branch is reserved for localization management.
-
-## Creating a PR
-Thank you for your PR! Before creating a PR, please check the following:
-- If possible, prefix the title with a keyword that identifies the type of this PR, as shown below.
-	- `fix` / `refactor` / `feat` / `enhance` / `perf` / `chore` etc
-	- Also, make sure that the granularity of this PR is appropriate. Please do not include more than one type of change or interest in a single PR.
-- If there is an Issue which will be resolved by this PR, please include a reference to the Issue in the text.
-- Please add the summary of the changes to [`CHANGELOG.md`](/CHANGELOG.md). However, this is not necessary for changes that do not affect the users, such as refactoring.
-- Check if there are any documents that need to be created or updated due to this change.
-- If you have added a feature or fixed a bug, please add a test case if possible.
-- Please make sure that tests and Lint are passed in advance.
-	- You can run it with `bun run test` and `bun run lint`. [See more info](#testing)
-- If this PR includes UI changes, please attach a screenshot in the text.
-
-Thanks for your cooperation 🤗
-
-### Additional things for ActivityPub payload changes
-*This section is specific to misskey-dev implementation. Other fork or implementation may take different way. A significant difference is that non-"misskey-dev" extension is not described in the misskey-hub's document.*
-
-If PR includes changes to ActivityPub payload, please reflect it in [misskey-hub's document](https://github.com/misskey-dev/misskey-hub-next/blob/master/content/ns.md) by sending PR.
-
-The name of purporsed extension property (referred as "extended property" in later) to ActivityPub shall be prefixed by `_misskey_`. (i.e. `_misskey_quote`)
-
-The extended property in `packages/backend/src/core/activitypub/type.ts` **must** be declared as optional because ActivityPub payloads that comes from older Misskey or other implementation may not contain it.
-
-The extended property must be included in the context definition. Context is defined in `packages/backend/src/core/activitypub/misc/contexts.ts`.
-The key shall be same as the name of extended property, and the value shall be same as "short IRI".
-
-"Short IRI" is defined in misskey-hub's document, but usually takes form of `misskey:<name of extended property>`. (i.e. `misskey:_misskey_quote`)
-
-One should not add property that has defined before by other implementation, or add custom variant value to "well-known" property.
-
-## Reviewers guide
-Be willing to comment on the good points and not just the things you want fixed 💯
-
-読んでおくといいやつ
-- https://blog.lacolaco.net/posts/1e2cf439b3c2/
-- https://konifar-zatsu.hatenadiary.jp/entry/2024/11/05/192421
-
-### Review perspective
-- Scope
-	- Are the goals of the PR clear?
-	- Is the granularity of the PR appropriate?
-- Security
-	- Does merging this PR create a vulnerability?
-- Performance
-	- Will merging this PR cause unexpected performance degradation?
-	- Is there a more efficient way?
-- Testing
-	- Does the test ensure the expected behavior?
-	- Are there any omissions or gaps?
-	- Does it check for anomalies?
-
-## Security Advisory
-### For reporter
-Thank you for your reporting!
-
-If you can also create a patch to fix the vulnerability, please create a PR on the private fork.
-
-> [!note]
-> There is a GitHub bug that prevents merging if a PR not following the develop branch of upstream, so please keep follow the develop branch.
-
-### For misskey-dev member
-修正PRがdevelopに追従されていないとマージできないので、マージできなかったら
-
-> Could you merge or rebase onto upstream develop branch?
-
-などと伝える。
-
-## Deploy
-The `/deploy` command by issue comment can be used to deploy the contents of a PR to the preview environment.
-```
-/deploy sha=<commit hash>
-```
-An actual domain will be assigned so you can test the federation.
-
-## Merge
-
-## Release
-### Release Instructions
-1. Commit version changes in the `develop` branch ([package.json](package.json))
-2. Create a release PR.
-	- Into `master` from `develop` branch.
-	- The title must be in the format `Release: x.y.z`.
-		- `x.y.z` is the new version you are trying to release.
-3. Deploy and perform a simple QA check. Also verify that the tests passed.
-4. Merge it. (Do not squash commit)
-5. Create a [release of GitHub](https://github.com/misskey-dev/misskey/releases)
-	- The target branch must be `master`
-	- The tag name must be the version
-
-> [!NOTE]
-> Why this instruction is necessary:
-> - To perform final QA checks
-> - To distribute responsibility
-> - To check direct commits to develop
-> - To celebrate the release together 🎉
+- 名前は `_misskey_` を prefix する (例: `_misskey_quote`)。プロトコル上の識別子は互換性のため Misskey 由来の名前を維持する
+- `packages/backend/src/core/activitypub/type.ts` での宣言は **必ず optional** にする (拡張プロパティを持たない payload が届くため)
+- context 定義 (`packages/backend/src/core/activitypub/misc/contexts.ts`) にも追加する。キーは拡張プロパティ名と同じ、値は short IRI (`misskey:<拡張プロパティ名>`)
+- 他実装が既に定義しているプロパティを再定義したり、well-known なプロパティへ独自の値を足したりしない
 
 ## Localization (l10n)
-Misskey uses [Crowdin](https://crowdin.com/project/misskey) for localization management.
-You can improve our translations with your Crowdin account.
-Your changes in Crowdin are automatically submitted as a PR (with the title "New Crowdin translations") to the repository.
-The owner [@syuilo](https://github.com/syuilo) merges the PR into the develop branch before the next release.
 
-If your language is not listed in Crowdin, please open an issue. We will add it to Crowdin.
-For newly added languages, once the translation progress per language exceeds 70%, it will be officially introduced into Misskey and made available to users.
-
-![Crowdin](https://d322cqt584bo4o.cloudfront.net/misskey/localized.svg)
+`locales/ja-JP.yml` **以外の locale YAML を手動編集しない**。他言語ファイルは Crowdin からの配信先として扱われており
+([crowdin.yml](crowdin.yml) の `ja-JP.yml` → `locales/%locale%.yml` マッピング)、手動編集は次の同期で失われる。
+詳細は [locales/README.md](locales/README.md)。
 
 ## Development
 ### Setup
@@ -247,7 +130,7 @@ bun run --bun --filter backend test -- packages/backend/test/unit/activitypub.ts
 bun run --bun --filter backend test:e2e -- packages/backend/test/e2e/nodeinfo.ts
 ```
 
-`test` and `test:e2e` respawn the test runner under Node, so they never exercise the `Bun.sql` database driver that production uses. To run the same E2E suite against a server booted with the real Bun runtime and driver:
+`test` and `test:e2e` run vitest on the Bun runtime, with the application under test in the same process. `test:e2e:bun` runs the same E2E suite against a server booted as a separate process, so the assertions go through a real HTTP boundary:
 ```sh
 bun run --bun --filter backend test:e2e:bun
 ```

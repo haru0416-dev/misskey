@@ -1,6 +1,8 @@
 # **DO NOT edit locale files** except `ja-JP.yml`.
 
-When you add text to the ja-JP file (of misskey-dev/misskey), it will automatically be applied to other language files.
-Translations added in ja-JP file should contain the original Japanese strings.
+`ja-JP.yml` に追加したテキストは Crowdin 経由で他の言語ファイルへ配信される。
+他言語ファイル (`en-US.yml` など `ja-JP.yml` 以外すべて) を手で編集すると、次の同期で上書きされて失われる。
 
-Please see [Contribution guide](../CONTRIBUTING.md) for more information.
+`ja-JP.yml` に追加する翻訳には、元の日本語文字列をそのまま書くこと。
+
+詳細は [Contribution guide](../CONTRIBUTING.md) を参照。
