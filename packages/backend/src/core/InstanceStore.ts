@@ -6,6 +6,7 @@
 import { and, asc, count, desc, eq, gt, inArray, like, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import { instance, type InstanceInsert, type InstanceRow } from '@/db/schema/instance.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
+import { preparedQueryFor, UNNAMED_PREPARED_STATEMENT } from '@/db/prepared.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
 import type { MiInstance } from '@/models/Instance.js';
@@ -18,7 +19,18 @@ export async function fetchInstanceByHostFromDatabase(
 	db: MiDrizzleDatabase,
 	host: MiInstance['host'],
 ): Promise<MiInstance | null> {
-	const [row] = await db.select().from(instance).where(eq(instance.host, host)).limit(1);
+	// 配送ジョブは宛先ごとにこの参照を行うため、同一ホストへ大量配送すると呼び出し回数が
+	// 配送件数に比例する (実測: 60投稿=12,060配送で 14,251回、発行クエリ全体の79%)。
+	// 23列の SELECT を毎回組み立て直すコストが無視できないので prepared query を使い回す。
+	const statement = preparedQueryFor(db, 'instance:byHost', () =>
+		db
+			.select()
+			.from(instance)
+			.where(eq(instance.host, sql.placeholder('host')))
+			.limit(1)
+			.prepare(UNNAMED_PREPARED_STATEMENT),
+	);
+	const [row] = await statement.execute({ host });
 
 	return row ? deserializeInstance(row) : null;
 }
