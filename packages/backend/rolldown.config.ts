@@ -81,6 +81,10 @@ export default defineConfig((args) => {
 
 	// 通常のビルド時にexternalとするモジュール
 	const externalModules: ExternalOption = [
+		// slacc 本体もバンドルしない。napi-rs のローダーは `slacc-linux-x64-gnu` 等を
+		// 自分の位置から require するため、バンドルへ取り込むと解決の起点が built/ になり、
+		// isolated リンカ (bunfig.toml) がストア配下にしか置かないネイティブパッケージを見つけられない。
+		'slacc',
 		/^slacc-.*/,
 		/^@opentelemetry\/.*/,
 		/^@napi-rs\/.*/,
