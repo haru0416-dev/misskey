@@ -192,6 +192,7 @@
 
 ### Server
 
+- Enhance: ノート作成時に積む作成後処理ジョブを1回の一括INSERTにまとめ、1投稿あたりのDB往復を削減 (実測56.2→50.2クエリ)
 - Change: 外部へ送信する User-Agent の製品名を `Misskey` から `Erebia` へ変更 (メディアプロキシの再帰検出は `erebia/` と `misskey/` の両方を弾く)
 - Enhance: ノート作成APIの応答を作成後処理の完了を待たずに返すようにし、レイテンシを改善 (負荷下p50 -60%。作成後処理はfanout完了後にバックグラウンドで逐次実行され、失敗時は従来どおりoutbox経由で再実行される)
 - Enhance: ランタイムをBun 1.4.0へ更新し、Node.js / pnpm ベースの実行環境要件を廃止 (Docker Image も `oven/bun:1.4.0` 系に更新)

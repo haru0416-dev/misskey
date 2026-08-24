@@ -375,29 +375,50 @@ export type InlineDbOutboxJob = {
 	leaseToken: string;
 };
 
+/**
+ * 同一リクエストで複数ジョブを積むときは 1 文にまとめる。ノート作成は post-create の
+ * ステージ数だけ enqueue するため、1 件ずつ INSERT すると往復がステージ数に比例する
+ * (実測で 1 投稿 56 文中 7 文)。返り値は dataList と同じ順序で、id は生成順に単調増加する。
+ */
+export async function enqueueInlineDbJobsInOutbox<K extends OutboxDbJobName>(
+	db: MiDrizzleDatabase,
+	name: K,
+	dataList: DbJobMap[K][],
+	opts: Bull.BulkJobOptions,
+): Promise<InlineDbOutboxJob[]> {
+	if (dataList.length === 0) return [];
+
+	const now = new Date();
+	const leaseExpiresAt = new Date(now.getTime() + CLAIM_LEASE_MS);
+	const jobs = dataList.map(() => ({ outboxId: genId(), leaseToken: genId() }));
+
+	await db.insert(queueOutbox).values(
+		dataList.map((data, index) => ({
+			id: jobs[index]!.outboxId,
+			queue: QUEUE.DB,
+			name,
+			kind: 'job' as const,
+			state: 'publishing' as const,
+			data,
+			opts,
+			externalJobId: `outbox-${jobs[index]!.outboxId}`,
+			leaseToken: jobs[index]!.leaseToken,
+			leaseExpiresAt,
+			updatedAt: now,
+		})),
+	);
+
+	return jobs;
+}
+
 export async function enqueueInlineDbJobInOutbox<K extends OutboxDbJobName>(
 	db: MiDrizzleDatabase,
 	name: K,
 	data: DbJobMap[K],
 	opts: Bull.BulkJobOptions,
 ): Promise<InlineDbOutboxJob> {
-	const outboxId = genId();
-	const leaseToken = genId();
-	const now = new Date();
-	await db.insert(queueOutbox).values({
-		id: outboxId,
-		queue: QUEUE.DB,
-		name,
-		kind: 'job',
-		state: 'publishing',
-		data,
-		opts,
-		externalJobId: `outbox-${outboxId}`,
-		leaseToken,
-		leaseExpiresAt: new Date(now.getTime() + CLAIM_LEASE_MS),
-		updatedAt: now,
-	});
-	return { outboxId, leaseToken };
+	const [job] = await enqueueInlineDbJobsInOutbox(db, name, [data], opts);
+	return job!;
 }
 
 export async function runInlineDbOutboxJob(

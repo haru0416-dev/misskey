@@ -23,7 +23,7 @@ import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { concat } from '@/misc/prelude/array.js';
 import type { Config } from '@/config.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { enqueueInlineDbJobInOutbox, runInlineDbOutboxJob } from '@/core/QueueOutboxStore.js';
+import { enqueueInlineDbJobsInOutbox, runInlineDbOutboxJob } from '@/core/QueueOutboxStore.js';
 import type { InlineDbOutboxJob } from '@/core/QueueOutboxStore.js';
 import type { MiMeta } from '@/models/_.js';
 import type { IPoll } from '@/models/Poll.js';
@@ -970,7 +970,7 @@ async function insertNoteForHonoApi(
 			}
 
 			const note = { ...insert, reply: data.reply ?? null, renote: data.renote ?? null } as unknown as MiNote;
-			const outboxJobs: PersistedNote['outboxJobs'] = [];
+			const jobDataList: DbNotePostCreateJobData[] = [];
 			for (const stage of notePostCreateStages) {
 				if (isNoopPostCreateStage(stage, data, user, silent, mentionedUsers)) continue;
 				const jobData: DbNotePostCreateJobData = {
@@ -997,14 +997,18 @@ async function insertNoteForHonoApi(
 					silent,
 					stage,
 				};
-				const outboxJob = await enqueueInlineDbJobInOutbox(tx, 'notePostCreate', jobData, {
-					attempts: 12,
-					backoff: { type: 'exponential', delay: 1000 },
-					removeOnComplete: true,
-					removeOnFail: false,
-				});
-				outboxJobs.push({ ...outboxJob, data: jobData });
+				jobDataList.push(jobData);
 			}
+			const enqueued = await enqueueInlineDbJobsInOutbox(tx, 'notePostCreate', jobDataList, {
+				attempts: 12,
+				backoff: { type: 'exponential', delay: 1000 },
+				removeOnComplete: true,
+				removeOnFail: false,
+			});
+			const outboxJobs: PersistedNote['outboxJobs'] = enqueued.map((outboxJob, index) => ({
+				...outboxJob,
+				data: jobDataList[index]!,
+			}));
 			return { note, outboxJobs };
 		});
 	} catch (err) {
