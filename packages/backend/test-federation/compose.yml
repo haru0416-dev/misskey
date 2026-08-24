@@ -63,6 +63,11 @@ services:
         source: ../vitest.config.fed.ts
         target: /misskey/packages/backend/vitest.config.fed.ts
         read_only: true
+      # test:fed は compile-config を経由するため、backend のビルド成果物 (config-schema.js) が要る
+      - type: bind
+        source: ../built
+        target: /misskey/packages/backend/built
+        read_only: true
       - type: bind
         source: ../scripts/compile_config.js
         target: /misskey/packages/backend/scripts/compile_config.js
