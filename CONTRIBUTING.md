@@ -164,19 +164,24 @@ niraxは、Misskeyで使用しているオリジナルのフロントエンド�
 **vue-routerから影響を多大に受けているので、まずはvue-routerについて学ぶことをお勧めします。**
 
 ### ルート定義
-ルート定義は、以下の形式のオブジェクトの配列です。
+実装は [`/packages/frontend/src/lib/nirax.ts`](/packages/frontend/src/lib/nirax.ts)、
+ルート定義そのものは [`/packages/frontend/src/router.definition.ts`](/packages/frontend/src/router.definition.ts) にあります。
+
+ルート定義は以下の形式のオブジェクトの配列です。
 
 ```ts
 {
-	name?: string;
 	path: string;
-	component: Component;
+	name?: string;
 	query?: Record<string, string>;
 	loginRequired?: boolean;
 	hash?: string;
 	children?: RouteDef[];
 }
 ```
+
+これに加えて、描画するルートは `component: Component` を、リダイレクトするルートは
+`redirect: string | ((props: Map<string, string | boolean>) => string)` を持ちます (両者のユニオンが `RouteDef`)。
 
 > [!WARNING]
 > 現状、ルートは定義された順に評価されます。
