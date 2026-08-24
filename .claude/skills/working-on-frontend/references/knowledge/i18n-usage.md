@@ -84,7 +84,7 @@ driveAboutTip: "ドライブでは、過去に...<br>\nノートに添付する�
 
 時間経過などで翻訳キー自体を切り替えたい場合の慣習。`computed` でラップし、ブラケット記法で翻訳キーを動的に選ぶ。
 
-出典: [packages/frontend/src/components/MkPoll.vue](../../../../../packages/frontend/src/components/MkPoll.vue) の `_poll` 動的キー
+出典: [packages/frontend/src/features/notes/components/MkPoll.vue](../../../../../packages/frontend/src/features/notes/components/MkPoll.vue) の `_poll` 動的キー
 
 ```ts
 const timer = computed(() => i18n.tsx._poll[
@@ -118,7 +118,7 @@ _poll:
 
 キー名が数字始まりや予約語の場合、ドット記法ではアクセスできずブラケット記法を使う。
 
-出典: [packages/frontend/src/components/MkSignin.totp.vue](../../../../../packages/frontend/src/components/MkSignin.totp.vue)
+出典: [packages/frontend/src/features/auth/components/MkSignin.Totp.vue](../../../../../packages/frontend/src/features/auth/components/MkSignin.Totp.vue)
 
 ```vue
 <div :class="$style.totpDescription">{{ i18n.ts['2fa'] }}</div>
@@ -137,7 +137,7 @@ _poll:
 
 別の翻訳済み文字列をパラメータとして渡せる。
 
-出典: [packages/frontend/src/components/MkSignupDialog.rules.vue](../../../../../packages/frontend/src/components/MkSignupDialog.rules.vue)
+出典: [packages/frontend/src/features/auth/components/MkSignupDialog.Rules.vue](../../../../../packages/frontend/src/features/auth/components/MkSignupDialog.Rules.vue)
 
 ```ts
 i18n.tsx.iHaveReadXCarefullyAndAgree({ x: i18n.ts.serverRules })
@@ -247,7 +247,7 @@ i18n 周辺で踏みやすい失敗とその対処。エラー文字列で grep 
 
 **症状**:
 ```
-packages/frontend/src/components/MkXxx.vue
+packages/frontend/src/components/form/MkXxx.vue
 > i18n.ts.newKey
   Property 'newKey' does not exist on type 'Locale'.
 ```

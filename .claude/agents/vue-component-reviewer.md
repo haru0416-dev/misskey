@@ -118,7 +118,7 @@ git diff "$BASE"...HEAD -- 'packages/frontend/src/**/*.vue' \
 
 - 共有 `Mk*` コンポーネントを新規追加した場合、`Mk<Name>.stories.impl.ts` が同階層に併設されているか (サブディレクトリ含む。例: `components/global/MkAvatar.stories.impl.ts`, `components/grid/MkGrid.stories.impl.ts`)。
 - **ファイル名は `.stories.impl.ts` 固定** (`.stories.ts` は生成物なので手編集・コミット不可)。
-- 既存 [MkButton.stories.impl.ts](../../packages/frontend/src/components/MkButton.stories.impl.ts) を雛形例として参照する。
+- 既存 [MkButton.stories.impl.ts](../../packages/frontend/src/components/form/MkButton.stories.impl.ts) を雛形例として参照する。
 
 検出 (新規追加された `Mk*.vue` をサブディレクトリ含めて拾う):
 
@@ -152,7 +152,7 @@ git diff --name-only --diff-filter=A "$BASE"...HEAD -- \
 
 ```
 ## 🔴 Critical
-- packages/frontend/src/components/MkFoo.vue:1
+- packages/frontend/src/components/form/MkFoo.vue:1
   SPDX ヘッダーが HTML コメント形式ではなく TS 形式になっている。
   `<!-- ... -->` で書き直すこと。
 
@@ -172,7 +172,7 @@ git diff --name-only --diff-filter=A "$BASE"...HEAD -- \
 - [.claude/skills/working-on-frontend/references/knowledge/component-conventions.md](../skills/working-on-frontend/references/knowledge/component-conventions.md) — SFC 規約・a11y チェックリスト
 - [.claude/skills/working-on-frontend/references/knowledge/scss-modules.md](../skills/working-on-frontend/references/knowledge/scss-modules.md) — SCSS Modules / CSS 変数
 - [os.ts](../../packages/frontend/src/os.ts) — UI 操作 API
-- [MkButton.vue](../../packages/frontend/src/components/MkButton.vue)
-- [MkInput.vue](../../packages/frontend/src/components/MkInput.vue) — generic SFC 例
-- [MkButton.stories.impl.ts](../../packages/frontend/src/components/MkButton.stories.impl.ts) — Storybook 雛形
+- [MkButton.vue](../../packages/frontend/src/components/form/MkButton.vue)
+- [MkInput.vue](../../packages/frontend/src/components/form/MkInput.vue) — generic SFC 例
+- [MkButton.stories.impl.ts](../../packages/frontend/src/components/form/MkButton.stories.impl.ts) — Storybook 雛形
 - [AGENTS.md](../../AGENTS.md) — SPDX / locales 編集制限 / CHANGELOG 書式などの最低限ルール (Codex / Copilot と共通)

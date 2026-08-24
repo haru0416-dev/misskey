@@ -49,7 +49,7 @@ export const Default = {
 
 ## 複数 story (variant 別)
 
-参考: [MkButton.stories.impl.ts](../../../../../packages/frontend/src/components/MkButton.stories.impl.ts)
+参考: [MkButton.stories.impl.ts](../../../../../packages/frontend/src/components/form/MkButton.stories.impl.ts)
 
 variant / size / 状態などのバリエーションがあるなら、`Default` を base にして spread で派生させると簡潔。
 
