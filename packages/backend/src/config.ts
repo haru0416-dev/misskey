@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import type { RedisOptions } from 'ioredis';
 import type { InstrumentationConfigMap } from '@opentelemetry/auto-instrumentations-node';
+import { PRODUCT_NAME } from '@/const.js';
 import {
 	compiledConfigEnvelopeSchema,
 	parseByteSize,
@@ -488,7 +489,7 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 			hostname: instanceUrl.hostname,
 			apiUrl: `${url}/api`,
 			authUrl: `${url}/auth`,
-			userAgent: `Misskey/${meta.version} (${url})`,
+			userAgent: `${PRODUCT_NAME}/${meta.version} (${url})`,
 			frontendManifestExists: fs.existsSync(resolve(projectBuiltDir, '_frontend_vite_/manifest.json')),
 			frontendEmbedManifestExists: fs.existsSync(resolve(projectBuiltDir, '_frontend_embed_vite_/manifest.json')),
 			rootDir,
