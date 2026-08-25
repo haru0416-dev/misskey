@@ -871,6 +871,7 @@ export const endpointMetas = {
 	},
 	'notes/reactions': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'reactions'],
 
 			requireCredential: false,

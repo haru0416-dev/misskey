@@ -21,6 +21,7 @@ import { chartParamDef, instanceChartParamDef, perUserChartParamDef } from '@/se
 export const endpointMetas = {
 	'charts/active-users': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users'],
 
 			res: getJsonSchema(schema),
@@ -32,6 +33,7 @@ export const endpointMetas = {
 	},
 	'charts/ap-request': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts'],
 
 			res: getJsonSchema(schema_2),
@@ -43,6 +45,7 @@ export const endpointMetas = {
 	},
 	'charts/drive': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'drive'],
 
 			res: getJsonSchema(schema_3),
@@ -54,6 +57,7 @@ export const endpointMetas = {
 	},
 	'charts/federation': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts'],
 
 			res: getJsonSchema(schema_4),
@@ -65,6 +69,7 @@ export const endpointMetas = {
 	},
 	'charts/instance': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts'],
 
 			res: getJsonSchema(schema_5),
@@ -76,6 +81,7 @@ export const endpointMetas = {
 	},
 	'charts/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'notes'],
 
 			res: getJsonSchema(schema_6),
@@ -87,6 +93,7 @@ export const endpointMetas = {
 	},
 	'charts/user/drive': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'drive', 'users'],
 
 			res: getJsonSchema(schema_7),
@@ -98,6 +105,7 @@ export const endpointMetas = {
 	},
 	'charts/user/following': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users', 'following'],
 
 			res: getJsonSchema(schema_8),
@@ -109,6 +117,7 @@ export const endpointMetas = {
 	},
 	'charts/user/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users', 'notes'],
 
 			res: getJsonSchema(schema_9),
@@ -120,6 +129,7 @@ export const endpointMetas = {
 	},
 	'charts/user/pv': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users'],
 
 			res: getJsonSchema(schema_10),
@@ -131,6 +141,7 @@ export const endpointMetas = {
 	},
 	'charts/user/reactions': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users', 'reactions'],
 
 			res: getJsonSchema(schema_11),
@@ -142,6 +153,7 @@ export const endpointMetas = {
 	},
 	'charts/users': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users'],
 
 			res: getJsonSchema(schema_12),

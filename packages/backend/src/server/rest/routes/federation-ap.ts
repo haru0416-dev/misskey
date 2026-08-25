@@ -60,7 +60,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		});
 	});
 
-	app.post('/federation/instances', async (c) => {
+	app.on(['POST', 'QUERY'], '/federation/instances', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
