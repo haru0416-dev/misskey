@@ -259,7 +259,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.on(
 		['POST', 'QUERY'],
 		'/users/achievements',
-		endpointHandler(deps, 'users/achievements', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'users/achievements', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiUsersAchievements(deps, body)),
 		),
 	);
@@ -267,7 +267,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.on(
 		['POST', 'QUERY'],
 		'/users/pages',
-		endpointHandler(deps, 'users/pages', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'users/pages', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiUsersPages(deps, body)),
 		),
 	);
@@ -283,7 +283,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.on(
 		['POST', 'QUERY'],
 		'/users/flashs',
-		endpointHandler(deps, 'users/flashs', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'users/flashs', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiUsersFlashs(deps, body)),
 		),
 	);
@@ -392,7 +392,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.on(
 		['POST', 'QUERY'],
 		'/username/available',
-		endpointHandler(deps, 'username/available', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'username/available', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiUsernameAvailable(deps, body)),
 		),
 	);
