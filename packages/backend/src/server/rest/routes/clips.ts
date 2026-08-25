@@ -27,6 +27,7 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post('/clips/favorite', async (c) => {
@@ -55,71 +56,51 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/clips/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:account');
+	app.on(
+		['POST', 'QUERY'],
+		'/clips/list',
+		endpointHandler(deps, 'clips/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiClipsList(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiClipsList(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/clips/show',
+		endpointHandlerAnonymous(deps, 'clips/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiClipsShow(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/clips/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-			assertTokenPermission(auth, 'read:account');
+	app.on(
+		['POST', 'QUERY'],
+		'/clips/my-favorites',
+		endpointHandler(deps, 'clips/my-favorites', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiClipsMyFavorites(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiClipsShow(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/clips/notes',
+		endpointHandlerAnonymous(deps, 'clips/notes', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiClipsNotes(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/clips/my-favorites', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:clip-favorite');
+	app.post(
+		'/clips/create',
+		endpointHandler(deps, 'clips/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiClipsCreate(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiClipsMyFavorites(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/clips/notes', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-			assertTokenPermission(auth, 'read:account');
-
-			return jsonResponse(c, await handleHonoApiClipsNotes(deps, auth.user, body));
-		});
-	});
-
-	app.post('/clips/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-
-			return jsonResponse(c, await handleHonoApiClipsCreate(deps, auth.user, body));
-		});
-	});
-
-	app.post('/clips/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-
-			return jsonResponse(c, await handleHonoApiClipsUpdate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/clips/update',
+		endpointHandler(deps, 'clips/update', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiClipsUpdate(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/clips/delete', async (c) => {
 		return await runApiEndpoint(c, async () => {

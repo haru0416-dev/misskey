@@ -37,55 +37,59 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.on(['POST', 'QUERY'], '/hashtags/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiHashtagsList(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/hashtags/list',
+		endpointHandler(deps, 'hashtags/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsList(deps, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/hashtags/search', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiHashtagsSearch(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/hashtags/search',
+		endpointHandler(deps, 'hashtags/search', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsSearch(deps, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/hashtags/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiHashtagsShow(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/hashtags/show',
+		endpointHandler(deps, 'hashtags/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsShow(deps, body)),
+		),
+	);
 
-	app.get('/hashtags/trend', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			return jsonResponse(c, await handleHonoApiHashtagsTrend(deps, c.req.query()), 200, {
+	app.get(
+		'/hashtags/trend',
+		endpointHandler(deps, 'hashtags/trend', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsTrend(deps, c.req.query()), 200, {
 				'Cache-Control': 'public, max-age=60',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/hashtags/trend', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			// meta の cacheSec: 60 は GET/POST 双方に掛かる (他の cacheSec 宣言と同様)
-			return jsonResponse(c, await handleHonoApiHashtagsTrend(deps, body), 200, {
+	app.on(
+		['POST', 'QUERY'],
+		'/hashtags/trend',
+		endpointHandler(deps, 'hashtags/trend', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsTrend(deps, body), 200, {
 				'Cache-Control': 'public, max-age=60',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/hashtags/users', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiHashtagsUsers(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/hashtags/users',
+		endpointHandlerAnonymous(deps, 'hashtags/users', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsUsers(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/invite/create', async (c) => {
 		return await runApiEndpoint(c, async () => {

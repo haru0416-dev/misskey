@@ -31,20 +31,18 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/endpoints', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			return jsonResponse(c, await handleHonoApiEndpoints());
-		});
-	});
+	app.post(
+		'/endpoints',
+		endpointHandler(deps, 'endpoints', async ({ body, auth, c }) => jsonResponse(c, await handleHonoApiEndpoints())),
+	);
 
-	app.post('/endpoint', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiEndpoint(body));
-		});
-	});
+	app.post(
+		'/endpoint',
+		endpointHandler(deps, 'endpoint', async ({ body, auth, c }) => jsonResponse(c, await handleHonoApiEndpoint(body))),
+	);
 
 	app.get('/federation/instances', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -74,14 +72,13 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/federation/show-instance', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiFederationShowInstance(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/federation/show-instance',
+		endpointHandlerAnonymous(deps, 'federation/show-instance', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFederationShowInstance(deps, auth.user, body)),
+		),
+	);
 
 	app.get('/federation/stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -111,28 +108,29 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/federation/users', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/federation/users',
+		endpointHandlerAnonymous(deps, 'federation/users', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFederationUsers(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiFederationUsers(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/federation/followers',
+		endpointHandler(deps, 'federation/followers', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFederationFollowers(deps, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/federation/followers', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiFederationFollowers(deps, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/federation/following', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiFederationFollowing(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/federation/following',
+		endpointHandler(deps, 'federation/following', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFederationFollowing(deps, body)),
+		),
+	);
 
 	app.on(['POST', 'QUERY'], '/ap/get', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -185,14 +183,10 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		});
 	});
 
-	app.post('/fetch-external-resources', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
-			return jsonResponse(c, await handleHonoApiFetchExternalResources(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/fetch-external-resources',
+		endpointHandler(deps, 'fetch-external-resources', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFetchExternalResources(deps, auth.user, body)),
+		),
+	);
 }

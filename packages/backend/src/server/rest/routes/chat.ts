@@ -35,18 +35,16 @@ import {
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.on(['POST', 'QUERY'], '/chat/history', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:chat');
-
-			return jsonResponse(c, await handleHonoApiChatHistory(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/chat/history',
+		endpointHandler(deps, 'chat/history', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatHistory(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/chat/read-all', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -138,49 +136,37 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/chat/messages/room-timeline', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:chat');
+	app.on(
+		['POST', 'QUERY'],
+		'/chat/messages/room-timeline',
+		endpointHandler(deps, 'chat/messages/room-timeline', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatMessagesRoomTimeline(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiChatMessagesRoomTimeline(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/chat/messages/search',
+		endpointHandler(deps, 'chat/messages/search', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatMessagesSearch(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/chat/messages/search', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:chat');
+	app.on(
+		['POST', 'QUERY'],
+		'/chat/messages/show',
+		endpointHandler(deps, 'chat/messages/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatMessagesShow(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiChatMessagesSearch(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/chat/messages/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:chat');
-
-			return jsonResponse(c, await handleHonoApiChatMessagesShow(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/chat/messages/user-timeline', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:chat');
-
-			return jsonResponse(c, await handleHonoApiChatMessagesUserTimeline(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/chat/messages/user-timeline',
+		endpointHandler(deps, 'chat/messages/user-timeline', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatMessagesUserTimeline(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/chat/rooms/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -215,38 +201,28 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/rooms/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:chat');
+	app.post(
+		'/chat/rooms/update',
+		endpointHandler(deps, 'chat/rooms/update', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatRoomsUpdate(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiChatRoomsUpdate(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/chat/rooms/show',
+		endpointHandler(deps, 'chat/rooms/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatRoomsShow(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/chat/rooms/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:chat');
-
-			return jsonResponse(c, await handleHonoApiChatRoomsShow(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/chat/rooms/owned', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:chat');
-
-			return jsonResponse(c, await handleHonoApiChatRoomsOwned(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/chat/rooms/owned',
+		endpointHandler(deps, 'chat/rooms/owned', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatRoomsOwned(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/chat/rooms/join', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -260,16 +236,13 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/chat/rooms/joining', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:chat');
-
-			return jsonResponse(c, await handleHonoApiChatRoomsJoining(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/chat/rooms/joining',
+		endpointHandler(deps, 'chat/rooms/joining', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatRoomsJoining(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/chat/rooms/leave', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -283,16 +256,12 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/rooms/members', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:chat');
-
-			return jsonResponse(c, await handleHonoApiChatRoomsMembers(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/chat/rooms/members',
+		endpointHandler(deps, 'chat/rooms/members', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatRoomsMembers(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/chat/rooms/mute', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -339,25 +308,19 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/chat/rooms/invitations/inbox', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:chat');
+	app.on(
+		['POST', 'QUERY'],
+		'/chat/rooms/invitations/inbox',
+		endpointHandler(deps, 'chat/rooms/invitations/inbox', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatRoomsInvitationsInbox(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiChatRoomsInvitationsInbox(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/chat/rooms/invitations/outbox', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:chat');
-
-			return jsonResponse(c, await handleHonoApiChatRoomsInvitationsOutbox(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/chat/rooms/invitations/outbox',
+		endpointHandler(deps, 'chat/rooms/invitations/outbox', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatRoomsInvitationsOutbox(deps, auth.user, body)),
+		),
+	);
 }
