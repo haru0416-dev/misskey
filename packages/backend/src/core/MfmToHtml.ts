@@ -11,7 +11,7 @@ import type * as mfm from 'mfm-js';
 
 export function mfmToHtml(
 	config: Config,
-	nodes: mfm.MfmNode[] | null,
+	nodes: readonly mfm.MfmNode[] | null,
 	mentionedRemoteUsers: IMentionedRemoteUsers = [],
 	extraHtml: string | null = null,
 ): string | null {
@@ -19,7 +19,7 @@ export function mfmToHtml(
 		return null;
 	}
 
-	function toHtml(children?: mfm.MfmNode[]): string {
+	function toHtml(children?: readonly mfm.MfmNode[]): string {
 		if (children == null) return '';
 		return children.map((x) => handlers[x.type](x)).join('');
 	}

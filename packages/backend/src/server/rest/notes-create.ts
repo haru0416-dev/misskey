@@ -12,6 +12,7 @@ import { DB_MAX_NOTE_TEXT_LENGTH, MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
+import { parseMfmCached } from '@/misc/mfm-parse-cache.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
@@ -1577,7 +1578,7 @@ export async function createNoteForHonoApi(
 	let mentionedUsers: MiUser[] | null | undefined = data.apMentions;
 
 	if (!tags || !emojis || !mentionedUsers) {
-		const tokens = data.text ? mfm.parse(data.text) : [];
+		const tokens = data.text ? parseMfmCached(data.text) : [];
 		const cwTokens = data.cw ? mfm.parse(data.cw) : [];
 		const choiceTokens = data.poll?.choices ? concat(data.poll.choices.map((c) => mfm.parse(c))) : [];
 		const combined = tokens.concat(cwTokens).concat(choiceTokens);
