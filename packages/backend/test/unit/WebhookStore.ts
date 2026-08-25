@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'node:assert';
 import type { PoolClient } from 'pg';
-import { afterAll, beforeAll, describe, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { countWebhooksByUserIdFromDatabase, createWebhookWithinLimitInDatabase } from '@/core/WebhookStore.js';
 import { user } from '@/db/schema/user.js';
@@ -72,8 +71,8 @@ describe('WebhookStore', () => {
 			await waitForTwoAdvisoryLockWaiters(blocker);
 			await blocker.query('COMMIT');
 			const results = await resultsPromise;
-			assert.strictEqual(results.filter((result) => result != null).length, 1);
-			assert.strictEqual(await countWebhooksByUserIdFromDatabase(firstDb, userId), 1);
+			expect(results.filter((result) => result != null).length).toBe(1);
+			expect(await countWebhooksByUserIdFromDatabase(firstDb, userId)).toBe(1);
 		} finally {
 			blocker.release();
 		}

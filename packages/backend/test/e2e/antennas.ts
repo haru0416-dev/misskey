@@ -5,8 +5,7 @@
 
 process.env['NODE_ENV'] = 'test';
 
-import * as assert from 'assert';
-import { afterAll, describe, beforeAll, beforeEach, test } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import {
 	api,
 	failedApiCall,
@@ -162,7 +161,7 @@ describe('アンテナ', () => {
 			parameters: defaultParam,
 			user: alice,
 		});
-		assert.match(response.id, /[0-9a-z]{10}/);
+		expect(response.id).toMatch(/[0-9a-z]{10}/);
 		const expected: Antenna = {
 			id: response.id,
 			caseSensitive: false,
@@ -182,7 +181,7 @@ describe('アンテナ', () => {
 			localOnly: false,
 			notify: false,
 		};
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 
 	test('が上限いっぱいまで作成できること', async () => {
@@ -197,7 +196,7 @@ describe('アンテナ', () => {
 		);
 
 		const expected = await successfulApiCall({ endpoint: 'antennas/list', parameters: {}, user: alice });
-		assert.deepStrictEqual(response.sort(compareBy((s) => s.id)), expected.sort(compareBy((s) => s.id)));
+		expect(response.sort(compareBy((s) => s.id))).toStrictEqual(expected.sort(compareBy((s) => s.id)));
 
 		await failedApiCall(
 			{
@@ -271,9 +270,9 @@ describe('アンテナ', () => {
 			parameters: { antennaId: antenna.id, name: 'renamed' },
 			user: alice,
 		});
-		assert.strictEqual(response.name, 'renamed');
-		assert.strictEqual(response.src, 'list');
-		assert.strictEqual(response.userListId, aliceList.id);
+		expect(response.name).toBe('renamed');
+		expect(response.src).toBe('list');
+		expect(response.userListId).toBe(aliceList.id);
 	});
 
 	test('を src=list 以外に変更するとリストの紐付けが外れる', async () => {
@@ -282,14 +281,14 @@ describe('アンテナ', () => {
 			parameters: { ...defaultParam, src: 'list', userListId: aliceList.id },
 			user: alice,
 		});
-		assert.strictEqual(antenna.userListId, aliceList.id);
+		expect(antenna.userListId).toBe(aliceList.id);
 		const response = await successfulApiCall({
 			endpoint: 'antennas/update',
 			parameters: { antennaId: antenna.id, ...defaultParam, src: 'all' },
 			user: alice,
 		});
-		assert.strictEqual(response.src, 'all');
-		assert.strictEqual(response.userListId, null);
+		expect(response.src).toBe('all');
+		expect(response.userListId).toBe(null);
 	});
 
 	const antennaParamPattern = [
@@ -321,7 +320,7 @@ describe('アンテナ', () => {
 			user: alice,
 		});
 		const expected = { ...response, ...parameters() };
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 
 	test('を作成する時キーワードが指定されていないとエラーになる', async () => {
@@ -347,7 +346,7 @@ describe('アンテナ', () => {
 			user: alice,
 		});
 		const expected = { ...response, ...parameters() };
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('は他人のものは変更できない', async () => {
 		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
@@ -404,7 +403,7 @@ describe('アンテナ', () => {
 			user: alice,
 		});
 		const expected = { ...antenna };
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('は他人のものをID指定で表示できない', async () => {
 		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
@@ -431,7 +430,7 @@ describe('アンテナ', () => {
 			user: alice,
 		});
 		const expected = [{ ...antenna }];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 
 	test('を削除できること。', async () => {
@@ -441,9 +440,9 @@ describe('アンテナ', () => {
 			parameters: { antennaId: antenna.id },
 			user: alice,
 		});
-		assert.deepStrictEqual(response, null);
+		expect(response).toStrictEqual(null);
 		const list = await successfulApiCall({ endpoint: 'antennas/list', parameters: {}, user: alice });
-		assert.deepStrictEqual(list, []);
+		expect(list).toStrictEqual([]);
 	});
 	test('は他人のものを削除できない', async () => {
 		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
@@ -461,7 +460,7 @@ describe('アンテナ', () => {
 		);
 		// 本人にはまだ見える
 		const list = await successfulApiCall({ endpoint: 'antennas/list', parameters: {}, user: alice });
-		assert.deepStrictEqual(list.map((a) => a.id).includes(antenna.id), true);
+		expect(list.map((a) => a.id).includes(antenna.id)).toStrictEqual(true);
 	});
 
 	describe('のノート', () => {
@@ -491,7 +490,7 @@ describe('アンテナ', () => {
 			const note = await post(bob, { text: `test ${keyword}` });
 			const response = await waitForAntennaNotes(alice, antenna.id, 1);
 			const expected = [note];
-			assert.deepStrictEqual(response, expected);
+			expect(response).toStrictEqual(expected);
 		});
 
 		test('followersノートは投稿者をフォローしている所有者のアンテナだけに入る', async () => {
@@ -510,8 +509,8 @@ describe('アンテナ', () => {
 
 			const followerNotes = await waitForAntennaNotes(alice, followerAntenna.id, 1);
 			const strangerNotes = await waitForAntennaNotes(bob, strangerAntenna.id, 0);
-			assert.deepStrictEqual(followerNotes, [note]);
-			assert.deepStrictEqual(strangerNotes, []);
+			expect(followerNotes).toStrictEqual([note]);
+			expect(strangerNotes).toStrictEqual([]);
 		});
 
 		test('から指定したノートだけ削除でき、ノート本体や他人のアンテナには影響しないこと。', async () => {
@@ -545,21 +544,21 @@ describe('アンテナ', () => {
 				parameters: { antennaId: antenna.id },
 				user: alice,
 			});
-			assert.deepStrictEqual(response, [remainingNote]);
+			expect(response).toStrictEqual([remainingNote]);
 
 			const note = await successfulApiCall({
 				endpoint: 'notes/show',
 				parameters: { noteId: removedNote.id },
 				user: alice,
 			});
-			assert.deepStrictEqual(note, removedNote);
+			expect(note).toStrictEqual(removedNote);
 
 			const otherResponse = await successfulApiCall({
 				endpoint: 'antennas/notes',
 				parameters: { antennaId: otherAntenna.id },
 				user: bob,
 			});
-			assert.deepStrictEqual(otherResponse, [removedNote, remainingNote]);
+			expect(otherResponse).toStrictEqual([removedNote, remainingNote]);
 		});
 
 		test('から存在しないノートを削除しても成功すること。', async () => {
@@ -896,11 +895,8 @@ describe('アンテナ', () => {
 			);
 
 			const response = await waitForAntennaNotes(alice, antenna.id, expected.length);
-			assert.deepStrictEqual(
-				response.map(({ userId, id, text }) => ({ userId, id, text })),
-				expected.map(({ userId, id, text }) => ({ userId, id, text })),
-			);
-			assert.deepStrictEqual(response, expected);
+			expect(response.map(({ userId, id, text }) => ({ userId, id, text }))).toStrictEqual(expected.map(({ userId, id, text }) => ({ userId, id, text })));
+			expect(response).toStrictEqual(expected);
 		});
 
 		test('が取得できること（センシティブチャンネルのノートを除く）', async () => {
@@ -928,7 +924,7 @@ describe('アンテナ', () => {
 			const response = await waitForAntennaNotes(alice, antenna.id, 2);
 			// 最後に投稿したものが先頭に来る。
 			const expected = [noteInNonSensitiveChannel, noteInLocal];
-			assert.deepStrictEqual(response, expected);
+			expect(response).toStrictEqual(expected);
 		});
 
 		// 日付指定のPaginationは検証しない:
@@ -997,7 +993,7 @@ describe('アンテナ', () => {
 					user: alice,
 				});
 			}
-			assert.strictEqual(shown.isActive, true);
+			expect(shown.isActive).toBe(true);
 		});
 	});
 });

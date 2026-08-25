@@ -6,7 +6,7 @@
 process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'node:assert';
-import { afterAll, beforeAll, describe, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
@@ -146,32 +146,26 @@ describe('counter integrity under concurrent deletion', () => {
 			async () => await api('notes/delete', { noteId: reply.id }, owner),
 		]);
 
-		assert.deepStrictEqual(
-			responses.map((response) => response.status),
-			[204, 204],
-		);
+		expect(responses.map((response) => response.status)).toStrictEqual([204, 204]);
 		const storedParent = await fetchNoteByIdFromDatabase(db, parent.id);
 		assert.ok(storedParent);
-		assert.strictEqual(storedParent.repliesCount, 0);
+		expect(storedParent.repliesCount).toBe(0);
 	});
 
 	test('concurrent clip removals decrement clippedCount once', async () => {
 		const note = await post(owner, { text: 'clip target' });
 		const clip = await api('clips/create', { name: 'counter integrity' }, owner);
-		assert.strictEqual(clip.status, 200);
-		assert.strictEqual((await api('clips/add-note', { clipId: clip.body.id, noteId: note.id }, owner)).status, 204);
+		expect(clip.status).toBe(200);
+		expect((await api('clips/add-note', { clipId: clip.body.id, noteId: note.id }, owner)).status).toBe(204);
 
 		const responses = await runAfterBothBlockOnNoteRowLock(pool, note.id, [
 			async () => await api('clips/remove-note', { clipId: clip.body.id, noteId: note.id }, owner),
 			async () => await api('clips/remove-note', { clipId: clip.body.id, noteId: note.id }, owner),
 		]);
 
-		assert.deepStrictEqual(
-			responses.map((response) => response.status),
-			[204, 204],
-		);
+		expect(responses.map((response) => response.status)).toStrictEqual([204, 204]);
 		const storedNote = await fetchNoteByIdFromDatabase(db, note.id);
 		assert.ok(storedNote);
-		assert.strictEqual(storedNote.clippedCount, 0);
+		expect(storedNote.clippedCount).toBe(0);
 	});
 });

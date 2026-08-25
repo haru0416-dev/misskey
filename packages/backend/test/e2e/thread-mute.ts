@@ -5,8 +5,7 @@
 
 process.env['NODE_ENV'] = 'test';
 
-import * as assert from 'assert';
-import { beforeAll, describe, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { api, connectStream, post, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -35,20 +34,11 @@ describe('Note thread mute', () => {
 
 		const res = await api('notes/mentions', {}, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(Array.isArray(res.body), true);
-		assert.strictEqual(
-			res.body.some((note) => note.id === bobNote.id),
-			false,
-		);
-		assert.strictEqual(
-			res.body.some((note) => note.id === carolReply.id),
-			false,
-		);
-		assert.strictEqual(
-			res.body.some((note) => note.id === carolReplyWithoutMention.id),
-			false,
-		);
+		expect(res.status).toBe(200);
+		expect(Array.isArray(res.body)).toBe(true);
+		expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+		expect(res.body.some((note) => note.id === carolReply.id)).toBe(false);
+		expect(res.body.some((note) => note.id === carolReplyWithoutMention.id)).toBe(false);
 	});
 
 	test('i/notifications にミュートしているスレッドの通知が含まれない', async () => {
@@ -62,16 +52,10 @@ describe('Note thread mute', () => {
 
 		const res = await api('i/notifications', {}, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(Array.isArray(res.body), true);
-		assert.strictEqual(
-			res.body.some((notification) => 'note' in notification && notification.note.id === carolReply.id),
-			false,
-		);
-		assert.strictEqual(
-			res.body.some((notification) => 'note' in notification && notification.note.id === carolReplyWithoutMention.id),
-			false,
-		);
+		expect(res.status).toBe(200);
+		expect(Array.isArray(res.body)).toBe(true);
+		expect(res.body.some((notification) => 'note' in notification && notification.note.id === carolReply.id)).toBe(false);
+		expect(res.body.some((notification) => 'note' in notification && notification.note.id === carolReplyWithoutMention.id)).toBe(false);
 
 		// NOTE: bobの投稿はスレッドミュート前に行われたため通知に含まれていてもよい
 	});

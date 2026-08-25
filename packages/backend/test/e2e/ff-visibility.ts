@@ -5,8 +5,7 @@
 
 process.env['NODE_ENV'] = 'test';
 
-import * as assert from 'assert';
-import { describe, beforeAll, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { api, signup, simpleGet } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -48,10 +47,10 @@ describe('FF visibility', () => {
 			bob,
 		);
 
-		assert.strictEqual(followingRes.status, 200);
-		assert.strictEqual(Array.isArray(followingRes.body), true);
-		assert.strictEqual(followersRes.status, 200);
-		assert.strictEqual(Array.isArray(followersRes.body), true);
+		expect(followingRes.status).toBe(200);
+		expect(Array.isArray(followingRes.body)).toBe(true);
+		expect(followersRes.status).toBe(200);
+		expect(Array.isArray(followersRes.body)).toBe(true);
 	});
 
 	test('followingVisibility が public であれば followersVisibility の設定に関わらずユーザーのフォローを誰でも見れる', async () => {
@@ -72,8 +71,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -92,8 +91,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -112,8 +111,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 	});
 
@@ -135,8 +134,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -155,8 +154,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -175,8 +174,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 	});
 
@@ -205,10 +204,10 @@ describe('FF visibility', () => {
 			alice,
 		);
 
-		assert.strictEqual(followingRes.status, 200);
-		assert.strictEqual(Array.isArray(followingRes.body), true);
-		assert.strictEqual(followersRes.status, 200);
-		assert.strictEqual(Array.isArray(followersRes.body), true);
+		expect(followingRes.status).toBe(200);
+		expect(Array.isArray(followingRes.body)).toBe(true);
+		expect(followersRes.status).toBe(200);
+		expect(Array.isArray(followersRes.body)).toBe(true);
 	});
 
 	test('followingVisibility が followers なユーザーのフォローを followersVisibility の設定に関わらず自分で見れる', async () => {
@@ -229,8 +228,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -249,8 +248,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -269,8 +268,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 	});
 
@@ -292,8 +291,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -312,8 +311,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -332,8 +331,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 	});
 
@@ -362,8 +361,8 @@ describe('FF visibility', () => {
 			bob,
 		);
 
-		assert.strictEqual(followingRes.status, 400);
-		assert.strictEqual(followersRes.status, 400);
+		expect(followingRes.status).toBe(400);
+		expect(followersRes.status).toBe(400);
 	});
 
 	test('followingVisibility が followers なユーザーのフォローを followersVisibility の設定に関わらず非フォロワーが見れない', async () => {
@@ -384,7 +383,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 400);
+			expect(followingRes.status).toBe(400);
 		}
 		{
 			await api(
@@ -403,7 +402,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 400);
+			expect(followingRes.status).toBe(400);
 		}
 		{
 			await api(
@@ -422,7 +421,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 400);
+			expect(followingRes.status).toBe(400);
 		}
 	});
 
@@ -444,7 +443,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 400);
+			expect(followersRes.status).toBe(400);
 		}
 		{
 			await api(
@@ -463,7 +462,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 400);
+			expect(followersRes.status).toBe(400);
 		}
 		{
 			await api(
@@ -482,7 +481,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 400);
+			expect(followersRes.status).toBe(400);
 		}
 	});
 
@@ -519,10 +518,10 @@ describe('FF visibility', () => {
 			bob,
 		);
 
-		assert.strictEqual(followingRes.status, 200);
-		assert.strictEqual(Array.isArray(followingRes.body), true);
-		assert.strictEqual(followersRes.status, 200);
-		assert.strictEqual(Array.isArray(followersRes.body), true);
+		expect(followingRes.status).toBe(200);
+		expect(Array.isArray(followingRes.body)).toBe(true);
+		expect(followersRes.status).toBe(200);
+		expect(Array.isArray(followersRes.body)).toBe(true);
 	});
 
 	test('followingVisibility が followers なユーザーのフォローを followersVisibility の設定に関わらずフォロワーが見れる', async () => {
@@ -550,8 +549,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -577,8 +576,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -604,8 +603,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 	});
 
@@ -634,8 +633,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -661,8 +660,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -688,8 +687,8 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 	});
 
@@ -718,10 +717,10 @@ describe('FF visibility', () => {
 			alice,
 		);
 
-		assert.strictEqual(followingRes.status, 200);
-		assert.strictEqual(Array.isArray(followingRes.body), true);
-		assert.strictEqual(followersRes.status, 200);
-		assert.strictEqual(Array.isArray(followersRes.body), true);
+		expect(followingRes.status).toBe(200);
+		expect(Array.isArray(followingRes.body)).toBe(true);
+		expect(followersRes.status).toBe(200);
+		expect(Array.isArray(followersRes.body)).toBe(true);
 	});
 
 	test('followingVisibility が private なユーザーのフォローを followersVisibility の設定に関わらず自分で見れる', async () => {
@@ -742,8 +741,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -762,8 +761,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -782,8 +781,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followingRes.status, 200);
-			assert.strictEqual(Array.isArray(followingRes.body), true);
+			expect(followingRes.status).toBe(200);
+			expect(Array.isArray(followingRes.body)).toBe(true);
 		}
 	});
 
@@ -805,8 +804,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -825,8 +824,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 		{
 			await api(
@@ -845,8 +844,8 @@ describe('FF visibility', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followersRes.status, 200);
-			assert.strictEqual(Array.isArray(followersRes.body), true);
+			expect(followersRes.status).toBe(200);
+			expect(Array.isArray(followersRes.body)).toBe(true);
 		}
 	});
 
@@ -875,8 +874,8 @@ describe('FF visibility', () => {
 			bob,
 		);
 
-		assert.strictEqual(followingRes.status, 400);
-		assert.strictEqual(followersRes.status, 400);
+		expect(followingRes.status).toBe(400);
+		expect(followersRes.status).toBe(400);
 	});
 
 	test('followingVisibility が private なユーザーのフォローを followersVisibility の設定に関わらず他人が見れない', async () => {
@@ -897,7 +896,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 400);
+			expect(followingRes.status).toBe(400);
 		}
 		{
 			await api(
@@ -916,7 +915,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 400);
+			expect(followingRes.status).toBe(400);
 		}
 		{
 			await api(
@@ -935,7 +934,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followingRes.status, 400);
+			expect(followingRes.status).toBe(400);
 		}
 	});
 
@@ -957,7 +956,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 400);
+			expect(followersRes.status).toBe(400);
 		}
 		{
 			await api(
@@ -976,7 +975,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 400);
+			expect(followersRes.status).toBe(400);
 		}
 		{
 			await api(
@@ -995,7 +994,7 @@ describe('FF visibility', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(followersRes.status, 400);
+			expect(followersRes.status).toBe(400);
 		}
 	});
 
@@ -1011,7 +1010,7 @@ describe('FF visibility', () => {
 				);
 
 				const followingRes = await simpleGet(`/users/${alice.id}/following`, 'application/activity+json');
-				assert.strictEqual(followingRes.status, 200);
+				expect(followingRes.status).toBe(200);
 			}
 			{
 				await api(
@@ -1023,7 +1022,7 @@ describe('FF visibility', () => {
 				);
 
 				const followingRes = await simpleGet(`/users/${alice.id}/following`, 'application/activity+json');
-				assert.strictEqual(followingRes.status, 403);
+				expect(followingRes.status).toBe(403);
 			}
 			{
 				await api(
@@ -1035,7 +1034,7 @@ describe('FF visibility', () => {
 				);
 
 				const followingRes = await simpleGet(`/users/${alice.id}/following`, 'application/activity+json');
-				assert.strictEqual(followingRes.status, 403);
+				expect(followingRes.status).toBe(403);
 			}
 		});
 
@@ -1050,7 +1049,7 @@ describe('FF visibility', () => {
 				);
 
 				const followersRes = await simpleGet(`/users/${alice.id}/followers`, 'application/activity+json');
-				assert.strictEqual(followersRes.status, 200);
+				expect(followersRes.status).toBe(200);
 			}
 			{
 				await api(
@@ -1062,7 +1061,7 @@ describe('FF visibility', () => {
 				);
 
 				const followersRes = await simpleGet(`/users/${alice.id}/followers`, 'application/activity+json');
-				assert.strictEqual(followersRes.status, 403);
+				expect(followersRes.status).toBe(403);
 			}
 			{
 				await api(
@@ -1074,7 +1073,7 @@ describe('FF visibility', () => {
 				);
 
 				const followersRes = await simpleGet(`/users/${alice.id}/followers`, 'application/activity+json');
-				assert.strictEqual(followersRes.status, 403);
+				expect(followersRes.status).toBe(403);
 			}
 		});
 	});

@@ -5,8 +5,7 @@
 
 process.env['NODE_ENV'] = 'test';
 
-import * as assert from 'assert';
-import { beforeAll, describe, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { api, post, signup, waitFire } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -35,7 +34,7 @@ describe('Renote Mute', () => {
 			alice,
 		);
 
-		assert.strictEqual(res.status, 204);
+		expect(res.status).toBe(204);
 	});
 
 	test('タイムラインにリノートミュートしているユーザーのリノートが含まれない', async () => {
@@ -45,20 +44,11 @@ describe('Renote Mute', () => {
 
 		const res = await api('notes/local-timeline', {}, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(Array.isArray(res.body), true);
-		assert.strictEqual(
-			res.body.some((note) => note.id === bobNote.id),
-			true,
-		);
-		assert.strictEqual(
-			res.body.some((note) => note.id === carolRenote.id),
-			false,
-		);
-		assert.strictEqual(
-			res.body.some((note) => note.id === carolNote.id),
-			true,
-		);
+		expect(res.status).toBe(200);
+		expect(Array.isArray(res.body)).toBe(true);
+		expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+		expect(res.body.some((note) => note.id === carolRenote.id)).toBe(false);
+		expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
 	});
 
 	test('タイムラインにリノートミュートしているユーザーの引用が含まれる', async () => {
@@ -68,20 +58,11 @@ describe('Renote Mute', () => {
 
 		const res = await api('notes/local-timeline', {}, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(Array.isArray(res.body), true);
-		assert.strictEqual(
-			res.body.some((note) => note.id === bobNote.id),
-			true,
-		);
-		assert.strictEqual(
-			res.body.some((note) => note.id === carolRenote.id),
-			true,
-		);
-		assert.strictEqual(
-			res.body.some((note) => note.id === carolNote.id),
-			true,
-		);
+		expect(res.status).toBe(200);
+		expect(Array.isArray(res.body)).toBe(true);
+		expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+		expect(res.body.some((note) => note.id === carolRenote.id)).toBe(true);
+		expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
 	});
 
 	// #12956
@@ -91,16 +72,10 @@ describe('Renote Mute', () => {
 
 		const res = await api('notes/local-timeline', {}, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(Array.isArray(res.body), true);
-		assert.strictEqual(
-			res.body.some((note) => note.id === carolNote.id),
-			true,
-		);
-		assert.strictEqual(
-			res.body.some((note) => note.id === bobRenote.id),
-			true,
-		);
+		expect(res.status).toBe(200);
+		expect(Array.isArray(res.body)).toBe(true);
+		expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
+		expect(res.body.some((note) => note.id === bobRenote.id)).toBe(true);
 	});
 
 	test('ストリームにリノートミュートしているユーザーのリノートが流れない', async () => {
@@ -115,7 +90,7 @@ describe('Renote Mute', () => {
 			STREAMING_NEGATIVE_TIMEOUT_MS,
 		);
 
-		assert.strictEqual(fired, false);
+		expect(fired).toBe(false);
 	});
 
 	test('ストリームにリノートミュートしているユーザーの引用が流れる', async () => {
@@ -128,7 +103,7 @@ describe('Renote Mute', () => {
 			(msg) => msg.type === 'note' && msg.body['userId'] === carol.id,
 		);
 
-		assert.strictEqual(fired, true);
+		expect(fired).toBe(true);
 	});
 
 	// #12956
@@ -142,6 +117,6 @@ describe('Renote Mute', () => {
 			(msg) => msg.type === 'note' && msg.body['userId'] === bob.id,
 		);
 
-		assert.strictEqual(fired, true);
+		expect(fired).toBe(true);
 	});
 });

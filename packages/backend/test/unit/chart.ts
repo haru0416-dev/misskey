@@ -5,8 +5,7 @@
 
 process.env['NODE_ENV'] = 'test';
 
-import * as assert from 'assert';
-import { describe, beforeEach, afterEach, afterAll, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
 import * as Redis from 'ioredis';
 import Chart from '@/core/chart/core.js';
@@ -92,7 +91,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 0, 0],
@@ -100,7 +99,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 0, 0],
@@ -116,7 +115,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [1, 0, 0],
 				inc: [0, 0, 0],
@@ -124,7 +123,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [1, 0, 0],
 				inc: [0, 0, 0],
@@ -137,7 +136,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [0, 0, 0],
@@ -145,7 +144,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [0, 0, 0],
@@ -163,7 +162,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [3, 0, 0],
@@ -171,7 +170,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [3, 0, 0],
@@ -189,7 +188,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 0, 0],
@@ -197,7 +196,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 0, 0],
@@ -218,7 +217,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 1, 0],
@@ -226,7 +225,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [2, 0, 0],
@@ -248,7 +247,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 1, 0],
@@ -256,7 +255,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [2, 0, 0],
@@ -278,7 +277,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 0, 1],
@@ -286,7 +285,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [2, 0, 0],
@@ -305,7 +304,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [0, 0, 0],
@@ -313,7 +312,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 0, 0],
@@ -336,7 +335,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, null);
 		const chartDays = await testChart.getChart('day', 3, null);
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 0, 0],
@@ -344,7 +343,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [2, 0, 0],
@@ -365,7 +364,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, new Date(Date.UTC(2000, 0, 1, 0, 0, 0)));
 		const chartDays = await testChart.getChart('day', 3, new Date(Date.UTC(2000, 0, 1, 0, 0, 0)));
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 0, 0],
@@ -373,7 +372,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [2, 0, 0],
@@ -396,7 +395,7 @@ describe('Chart', () => {
 		const chartHours = await testChart.getChart('hour', 3, new Date(Date.UTC(2000, 0, 1, 0, 0, 0)));
 		const chartDays = await testChart.getChart('day', 3, new Date(Date.UTC(2000, 0, 1, 0, 0, 0)));
 
-		assert.deepStrictEqual(chartHours, {
+		expect(chartHours).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [1, 0, 0],
@@ -404,7 +403,7 @@ describe('Chart', () => {
 			},
 		});
 
-		assert.deepStrictEqual(chartDays, {
+		expect(chartDays).toStrictEqual({
 			foo: {
 				dec: [0, 0, 0],
 				inc: [2, 0, 0],
@@ -423,7 +422,7 @@ describe('Chart', () => {
 			const bobChartHours = await testGroupedChart.getChart('hour', 3, null, 'bob');
 			const bobChartDays = await testGroupedChart.getChart('day', 3, null, 'bob');
 
-			assert.deepStrictEqual(aliceChartHours, {
+			expect(aliceChartHours).toStrictEqual({
 				foo: {
 					dec: [0, 0, 0],
 					inc: [1, 0, 0],
@@ -431,7 +430,7 @@ describe('Chart', () => {
 				},
 			});
 
-			assert.deepStrictEqual(aliceChartDays, {
+			expect(aliceChartDays).toStrictEqual({
 				foo: {
 					dec: [0, 0, 0],
 					inc: [1, 0, 0],
@@ -439,7 +438,7 @@ describe('Chart', () => {
 				},
 			});
 
-			assert.deepStrictEqual(bobChartHours, {
+			expect(bobChartHours).toStrictEqual({
 				foo: {
 					dec: [0, 0, 0],
 					inc: [0, 0, 0],
@@ -447,7 +446,7 @@ describe('Chart', () => {
 				},
 			});
 
-			assert.deepStrictEqual(bobChartDays, {
+			expect(bobChartDays).toStrictEqual({
 				foo: {
 					dec: [0, 0, 0],
 					inc: [0, 0, 0],
@@ -481,14 +480,14 @@ describe('Chart', () => {
 			const aliceChartHours = await testGroupedChart.getChart('hour', 1, null, 'alice');
 			const aliceChartDays = await testGroupedChart.getChart('day', 1, null, 'alice');
 
-			assert.deepStrictEqual(aliceChartHours, {
+			expect(aliceChartHours).toStrictEqual({
 				foo: {
 					dec: [0],
 					inc: [2],
 					total: [2],
 				},
 			});
-			assert.deepStrictEqual(aliceChartDays, {
+			expect(aliceChartDays).toStrictEqual({
 				foo: {
 					dec: [0],
 					inc: [2],
@@ -523,14 +522,14 @@ describe('Chart', () => {
 			const aliceChartHours = await testGroupedChart.getChart('hour', 1, null, 'alice');
 			const aliceChartDays = await testGroupedChart.getChart('day', 1, null, 'alice');
 
-			assert.deepStrictEqual(aliceChartHours, {
+			expect(aliceChartHours).toStrictEqual({
 				foo: {
 					dec: [0],
 					inc: [2],
 					total: [2],
 				},
 			});
-			assert.deepStrictEqual(aliceChartDays, {
+			expect(aliceChartDays).toStrictEqual({
 				foo: {
 					dec: [0],
 					inc: [2],
@@ -550,11 +549,11 @@ describe('Chart', () => {
 			const chartHours = await testUniqueChart.getChart('hour', 3, null);
 			const chartDays = await testUniqueChart.getChart('day', 3, null);
 
-			assert.deepStrictEqual(chartHours, {
+			expect(chartHours).toStrictEqual({
 				foo: [2, 0, 0],
 			});
 
-			assert.deepStrictEqual(chartDays, {
+			expect(chartDays).toStrictEqual({
 				foo: [2, 0, 0],
 			});
 		});
@@ -569,13 +568,13 @@ describe('Chart', () => {
 				const chartHours = await testIntersectionChart.getChart('hour', 3, null);
 				const chartDays = await testIntersectionChart.getChart('day', 3, null);
 
-				assert.deepStrictEqual(chartHours, {
+				expect(chartHours).toStrictEqual({
 					a: [2, 0, 0],
 					b: [1, 0, 0],
 					aAndB: [0, 0, 0],
 				});
 
-				assert.deepStrictEqual(chartDays, {
+				expect(chartDays).toStrictEqual({
 					a: [2, 0, 0],
 					b: [1, 0, 0],
 					aAndB: [0, 0, 0],
@@ -592,13 +591,13 @@ describe('Chart', () => {
 				const chartHours = await testIntersectionChart.getChart('hour', 3, null);
 				const chartDays = await testIntersectionChart.getChart('day', 3, null);
 
-				assert.deepStrictEqual(chartHours, {
+				expect(chartHours).toStrictEqual({
 					a: [2, 0, 0],
 					b: [2, 0, 0],
 					aAndB: [1, 0, 0],
 				});
 
-				assert.deepStrictEqual(chartDays, {
+				expect(chartDays).toStrictEqual({
 					a: [2, 0, 0],
 					b: [2, 0, 0],
 					aAndB: [1, 0, 0],
@@ -616,7 +615,7 @@ describe('Chart', () => {
 			const chartHours = await testChart.getChart('hour', 3, null);
 			const chartDays = await testChart.getChart('day', 3, null);
 
-			assert.deepStrictEqual(chartHours, {
+			expect(chartHours).toStrictEqual({
 				foo: {
 					dec: [0, 0, 0],
 					inc: [0, 0, 0],
@@ -624,7 +623,7 @@ describe('Chart', () => {
 				},
 			});
 
-			assert.deepStrictEqual(chartDays, {
+			expect(chartDays).toStrictEqual({
 				foo: {
 					dec: [0, 0, 0],
 					inc: [0, 0, 0],
@@ -646,7 +645,7 @@ describe('Chart', () => {
 			const chartHours = await testChart.getChart('hour', 3, null);
 			const chartDays = await testChart.getChart('day', 3, null);
 
-			assert.deepStrictEqual(chartHours, {
+			expect(chartHours).toStrictEqual({
 				foo: {
 					dec: [0, 0, 0],
 					inc: [0, 1, 0],
@@ -654,7 +653,7 @@ describe('Chart', () => {
 				},
 			});
 
-			assert.deepStrictEqual(chartDays, {
+			expect(chartDays).toStrictEqual({
 				foo: {
 					dec: [0, 0, 0],
 					inc: [1, 0, 0],

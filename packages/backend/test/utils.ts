@@ -17,6 +17,7 @@ import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/val
 import type { HonoApiErrorBody } from '@/server/rest/error.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { resolveStreamingUrl, resolveTargetUrl, startJobQueue, testTarget } from './target.js';
+import { expect } from 'vitest';
 
 export { resolveStreamingUrl, resolveTargetUrl, startJobQueue } from './target.js';
 export type { TestJobQueueRuntime } from './target.js';
@@ -61,7 +62,7 @@ export const successfulApiCall = async <E extends keyof misskey.Endpoints, P ext
 	const { endpoint, parameters, user } = request;
 	const res = await api(endpoint, parameters, user);
 	const status = assertion.status ?? (res.body == null ? 204 : 200);
-	assert.strictEqual(res.status, status, inspect(res.body, { depth: 5, colors: true }));
+	expect(res.status, inspect(res.body, { depth: 5, colors: true })).toBe(status);
 
 	return res.body as misskey.api.SwitchCaseResponseType<E, P>;
 };
@@ -77,10 +78,10 @@ export const failedApiCall = async <E extends keyof misskey.Endpoints, P extends
 	const { endpoint, parameters, user } = request;
 	const { status, code, id } = assertion;
 	const res = await api(endpoint, parameters, user);
-	assert.strictEqual(res.status, status, inspect(res.body));
+	expect(res.status, inspect(res.body)).toBe(status);
 	assert.ok(res.body);
-	assert.strictEqual(castAsError(res.body as any).error.code, code, inspect(res.body));
-	assert.strictEqual(castAsError(res.body as any).error.id, id, inspect(res.body));
+	expect(castAsError(res.body as any).error.code, inspect(res.body)).toBe(code);
+	expect(castAsError(res.body as any).error.id, inspect(res.body)).toBe(id);
 };
 
 export const api = async <E extends keyof misskey.Endpoints, P extends misskey.Endpoints[E]['req']>(
@@ -700,9 +701,7 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 				last = await fetchEntities(rangeToParam({ limit, until: last.at(-1), since: end }));
 			}
 			actual.push(end);
-			assert.deepStrictEqual(
-				actual.map(({ id, createdAt }) => id + ':' + createdAt),
-				expected.map(({ id, createdAt }) => id + ':' + createdAt));
+			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(expected.map(({ id, createdAt }) => id + ':' + createdAt));
 		}
 
 		// 2. sinceId/Date指定+limitで取得してつなぎ合わせた結果が期待通りになっていること
@@ -714,9 +713,7 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 				actual.push(...last);
 				last = await fetchEntities(rangeToParam({ limit, since: last.at(-1) }));
 			}
-			assert.deepStrictEqual(
-				actual.map(({ id, createdAt }) => id + ':' + createdAt),
-				expected.map(({ id, createdAt }) => id + ':' + createdAt));
+			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(expected.map(({ id, createdAt }) => id + ':' + createdAt));
 		}
 		*/
 
@@ -728,10 +725,7 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 				actual.push(...last);
 				last = await fetchEntities(rangeToParam(omitUndefined({ limit, until: last.at(-1) })));
 			}
-			assert.deepStrictEqual(
-				actual.map(({ id, createdAt }) => id + ':' + createdAt),
-				expected.map(({ id, createdAt }) => id + ':' + createdAt),
-			);
+			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(expected.map(({ id, createdAt }) => id + ':' + createdAt));
 		}
 
 		// 4. offset指定+limitで取得してつなぎ合わせた結果が期待通りになっていること
@@ -744,10 +738,7 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 				last = await fetchEntities(omitUndefined({ limit, offset }));
 				offset += limit ?? 10;
 			}
-			assert.deepStrictEqual(
-				actual.map(({ id, createdAt }) => id + ':' + createdAt),
-				expected.map(({ id, createdAt }) => id + ':' + createdAt),
-			);
+			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(expected.map(({ id, createdAt }) => id + ':' + createdAt));
 		}
 	}
 }
