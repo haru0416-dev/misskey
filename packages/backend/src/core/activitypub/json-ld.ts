@@ -19,6 +19,41 @@ import type { JsonLd as JsonLdObject, RemoteDocument } from 'jsonld/jsonld-spec.
 
 // RsaSignature2017 の実装は https://github.com/transmute-industries/RsaSignature2017 を基にしている。
 
+/** N-Quads のリテラルとして出せない文字を退避する。 */
+function escapeNQuadLiteral(value: string): string {
+	return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+}
+
+/**
+ * RsaSignature2017 の署名オプションを、jsonld.normalize を通さず正規形 (N-Quads) にする。
+ *
+ * このオブジェクトは creator / nonce / created (と任意の domain) だけの固定構造で、正規形は
+ * 述語の辞書順に並んだ3〜4行にしかならない。jsonld.normalize のコストは文書の大きさではなく
+ * 固定費が主体で、実測ではこの極小オブジェクトの正規化が活動本体と同じだけかかっていた
+ * (1回あたり options 0.318ms / data 0.333ms)。
+ *
+ * 想定と少しでも違う形が来たら null を返し、呼び出し側は jsonld.normalize に委ねる。
+ * 署名が壊れると連合が黙って壊れるため、既知の形以外を自前で組み立てない。
+ */
+export function canonicalizeSignatureOptions(options: Record<string, unknown>): string | null {
+	const { '@context': context, creator, nonce, created, domain, ...rest } = options;
+	if (context !== 'https://w3id.org/identity/v1') return null;
+	if (typeof creator !== 'string' || typeof nonce !== 'string' || typeof created !== 'string') return null;
+	if (domain !== undefined && typeof domain !== 'string') return null;
+	if (Object.keys(rest).length > 0) return null;
+
+	const lines = [
+		`_:c14n0 <http://purl.org/dc/terms/created> "${escapeNQuadLiteral(created)}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .`,
+		`_:c14n0 <http://purl.org/dc/terms/creator> <${creator}> .`,
+	];
+	if (domain !== undefined) {
+		lines.push(`_:c14n0 <https://w3id.org/security#domain> "${escapeNQuadLiteral(domain)}" .`);
+	}
+	lines.push(`_:c14n0 <https://w3id.org/security#nonce> "${escapeNQuadLiteral(nonce)}" .`);
+
+	return `${lines.join('\n')}\n`;
+}
+
 export class JsonLdError extends IdentifiableError {}
 
 class JsonLdCacheOverflowError extends JsonLdError {
@@ -113,8 +148,10 @@ export class JsonLd {
 		delete transformedOptions['type'];
 		delete transformedOptions['id'];
 		delete transformedOptions['signatureValue'];
-		const canonizedOptions = await this.normalize(transformedOptions as unknown as JsonLdDocument);
-		const optionsHash = this.sha256(canonizedOptions.toString());
+		const canonizedOptions =
+			canonicalizeSignatureOptions(transformedOptions) ??
+			(await this.normalize(transformedOptions as unknown as JsonLdDocument)).toString();
+		const optionsHash = this.sha256(canonizedOptions);
 		const transformedData: Record<string, unknown> = { ...(data as Record<string, unknown>) };
 		delete transformedData['signature'];
 		const cannonizedData = await this.normalize(transformedData as unknown as JsonLdDocument);
