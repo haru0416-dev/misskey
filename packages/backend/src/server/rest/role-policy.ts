@@ -12,6 +12,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import type { MiMeta, MiRole } from '@/models/_.js';
 import type { RoleCondFormulaValue } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
+import { memoizeInRequest } from '@/misc/request-scope.js';
 
 export type HonoApiRolePolicyDependencies = {
 	config: Config;
@@ -97,9 +98,11 @@ export function computeHonoApiUserRoles(
 export async function getHonoApiUserRoles(deps: HonoApiRolePolicyDependencies, user: MiUser | null): Promise<MiRole[]> {
 	if (user == null) return [];
 
+	// 同一リクエスト内で複数箇所から呼ばれる (notes/create と users/show でそれぞれ3回)。
+	// ロール定義は全員で共通、割り当てはユーザーごとなので、キーを分けて memo する。
 	const [roles, assignments] = await Promise.all([
-		listRolesFromDatabase(deps.db),
-		listRoleAssignmentsByUserIdFromDatabase(deps.db, user.id),
+		memoizeInRequest('role:all', () => listRolesFromDatabase(deps.db)),
+		memoizeInRequest(`roleAssignment:${user.id}`, () => listRoleAssignmentsByUserIdFromDatabase(deps.db, user.id)),
 	]);
 
 	return computeHonoApiUserRoles(deps, user, roles, assignments);

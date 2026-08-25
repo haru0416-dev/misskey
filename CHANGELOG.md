@@ -201,6 +201,7 @@
 - Enhance: ActivityPubのLD署名で、投稿ごとに秘密鍵をPEMから解析し直していたのをやめ、HTTP署名側と同じ署名器キャッシュを共有 (負荷時の実測でCPU −7%)
 - Enhance: LD署名の署名オプションの正規化を、固定構造向けの直接生成に置き換え (jsonld.normalize 比で 91.2% 削減。リレー設定済みインスタンスの投稿経路に効く)
 - Enhance: ノート本文のMFMパース結果を使い回すようにし、1投稿につき2回行っていたパースを1回に削減
+- Enhance: 同一リクエスト内で3回引いていたロール定義と割り当てを1回に集約 (users/show で role系クエリ 6→3本、notes/create で 6→2本)
 - Change: 外部へ送信する User-Agent の製品名を `Misskey` から `Erebia` へ変更 (メディアプロキシの再帰検出は `erebia/` と `misskey/` の両方を弾く)
 - Enhance: ノート作成APIの応答を作成後処理の完了を待たずに返すようにし、レイテンシを改善 (負荷下p50 -60%。作成後処理はfanout完了後にバックグラウンドで逐次実行され、失敗時は従来どおりoutbox経由で再実行される)
 - Enhance: ランタイムをBun 1.4.0へ更新し、Node.js / pnpm ベースの実行環境要件を廃止 (Docker Image も `oven/bun:1.4.0` 系に更新)
