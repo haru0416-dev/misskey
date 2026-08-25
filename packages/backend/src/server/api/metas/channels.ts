@@ -20,6 +20,7 @@ import { HOUR } from '@/const.js';
 export const endpointMetas = {
 	'channels/create': {
 		meta: {
+			requireRolePolicy: 'canCreateChannel',
 			tags: ['channels'],
 
 			requireCredential: true,

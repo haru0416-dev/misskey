@@ -24,6 +24,8 @@ import {
 	tokenFromRequest,
 } from './shell-helpers.js';
 import { assertHonoApiRateLimitForUser, type HonoApiEndpointRateLimit } from './rate-limit.js';
+import { rolePermissionDeniedError } from './error.js';
+import { hasHonoApiRolePolicyOrIsRoot } from './role-policy.js';
 
 /** 認証を通した後の資格情報。requireCredential のエンドポイントでは user が非 null。 */
 export type AuthedCredential = { user: MiLocalUser; token: MiAccessToken | null };
@@ -53,6 +55,7 @@ export async function withEndpointGuards<T>(
 		requireAdmin?: boolean;
 		secure?: boolean;
 		prohibitMoved?: boolean;
+		requireRolePolicy?: Parameters<typeof hasHonoApiRolePolicyOrIsRoot>[2];
 		kind?: string;
 		limit?: HonoApiEndpointRateLimit;
 	};
@@ -76,6 +79,12 @@ export async function withEndpointGuards<T>(
 
 	if (meta.prohibitMoved === true) {
 		assertProhibitMoved((auth as AuthedCredential).user);
+	}
+
+	if (meta.requireRolePolicy != null) {
+		if (!(await hasHonoApiRolePolicyOrIsRoot(deps, (auth as AuthedCredential).user, meta.requireRolePolicy))) {
+			throw rolePermissionDeniedError();
+		}
 	}
 
 	if (meta.requireAdmin === true) {

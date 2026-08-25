@@ -50,6 +50,12 @@ interface IEndpointMetaBase {
 	readonly prohibitMoved?: boolean;
 
 	/**
+	 * 実行に必要なロールポリシー名。root は常に通る。
+	 * 権限 (kind) とは別軸で、インスタンスがロールで許可を配る種類の制限に使う。
+	 */
+	readonly requireRolePolicy?: string;
+
+	/**
 	 * エンドポイントのリミテーションに関するやつ
 	 * 省略した場合はリミテーションは無いものとして解釈されます。
 	 */

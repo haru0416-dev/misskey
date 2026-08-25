@@ -20,6 +20,7 @@ import {
 export const endpointMetas = {
 	'admin/emoji/add': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -53,6 +54,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/add-aliases-bulk': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -71,6 +73,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/copy': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -108,6 +111,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/delete': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -126,6 +130,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/delete-bulk': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -136,6 +141,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/import-zip': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canManageCustomEmojis',
@@ -144,6 +150,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/list': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			allowQuery: true,
 			tags: ['admin'],
 
@@ -165,6 +172,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/list-remote': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			allowQuery: true,
 			tags: ['admin'],
 
@@ -186,6 +194,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/remove-aliases-bulk': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -204,6 +213,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/set-aliases-bulk': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -222,6 +232,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/set-category-bulk': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -240,6 +251,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/set-license-bulk': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -258,6 +270,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/update': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			tags: ['admin'],
 
 			requireCredential: true,
