@@ -46,4 +46,14 @@ describe(correctFilename, () => {
 	test('non ascii with space', () => {
 		expect(correctFilename('ファイル 名前', 'jpg')).toBe('ファイル 名前.jpg');
 	});
+
+	// dll と exe はどちらも portable executable で file-type が判別しきれない。
+	it('dll to exe', () => {
+		expect(correctFilename('test.dll', 'exe')).toBe('test.dll');
+	});
+
+	// 拡張子の判定は末尾だけを見る。途中のドットを拾うと二重付与になる。
+	it('multiple dots, matching last ext', () => {
+		expect(correctFilename('test.tar.jpg', 'jpg')).toBe('test.tar.jpg');
+	});
 });
