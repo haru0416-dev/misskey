@@ -192,7 +192,7 @@
 - Fix: `misskey-js` のモデレーションログ型に `pauseQueue` / `resumeQueue` が含まれておらず、キューの一時停止・再開のログを型付きで扱えなかった問題を修正
 
 ### Server
-- Feat: 認証不要の読み取りAPI 46本を HTTP QUERY (RFC 10008) でも受け付けるように (POST も従来どおり受ける。QUERY は safe かつ idempotent なので Cache-Control が中間キャッシュに実際に効く)
+- Feat: 読み取りAPI 183本を HTTP QUERY (RFC 10008) でも受け付けるように (POST も従来どおり受ける。QUERY は safe かつ idempotent なので Cache-Control が中間キャッシュに実際に効く)
 - Enhance: Hono を 4.13.2 に更新
 
 - Enhance: ジョブキューの BullMQ を v6 に更新 (ioredis 固定ではなくなり、node-redis / Bun 組み込みクライアント / PostgreSQL バックエンドが選択肢に入った)

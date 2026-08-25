@@ -156,6 +156,7 @@ export const endpointMetas = {
 	},
 	'following/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -232,6 +233,7 @@ export const endpointMetas = {
 	},
 	'following/requests/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['following', 'account'],
 
 			requireCredential: true,
@@ -291,6 +293,7 @@ export const endpointMetas = {
 	},
 	'following/requests/sent': {
 		meta: {
+			allowQuery: true,
 			tags: ['following', 'account'],
 
 			requireCredential: true,

@@ -15,6 +15,7 @@ import {
 export const endpointMetas = {
 	'federation/followers': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
@@ -35,6 +36,7 @@ export const endpointMetas = {
 	},
 	'federation/following': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
@@ -78,6 +80,7 @@ export const endpointMetas = {
 	},
 	'federation/show-instance': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,

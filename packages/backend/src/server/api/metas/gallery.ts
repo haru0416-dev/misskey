@@ -37,6 +37,7 @@ export const endpointMetas = {
 	},
 	'gallery/popular': {
 		meta: {
+			allowQuery: true,
 			tags: ['gallery'],
 
 			requireCredential: false,
@@ -57,6 +58,7 @@ export const endpointMetas = {
 	},
 	'gallery/posts': {
 		meta: {
+			allowQuery: true,
 			tags: ['gallery'],
 
 			res: {

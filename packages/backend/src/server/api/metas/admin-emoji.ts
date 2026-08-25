@@ -144,6 +144,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -164,6 +165,7 @@ export const endpointMetas = {
 	},
 	'admin/emoji/list-remote': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,

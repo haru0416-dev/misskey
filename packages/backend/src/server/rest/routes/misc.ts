@@ -217,7 +217,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/roles/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/roles/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -244,7 +244,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/roles/notes', async (c) => {
+	app.on(['POST', 'QUERY'], '/roles/notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -339,7 +339,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/get-avatar-decorations', async (c) => {
+	app.on(['POST', 'QUERY'], '/get-avatar-decorations', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiGetAvatarDecorations(deps, body));

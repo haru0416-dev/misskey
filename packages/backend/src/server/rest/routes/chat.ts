@@ -37,7 +37,7 @@ import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/chat/history', async (c) => {
+	app.on(['POST', 'QUERY'], '/chat/history', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -138,7 +138,7 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/messages/room-timeline', async (c) => {
+	app.on(['POST', 'QUERY'], '/chat/messages/room-timeline', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -149,7 +149,7 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/messages/search', async (c) => {
+	app.on(['POST', 'QUERY'], '/chat/messages/search', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -160,7 +160,7 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/messages/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/chat/messages/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -171,7 +171,7 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/messages/user-timeline', async (c) => {
+	app.on(['POST', 'QUERY'], '/chat/messages/user-timeline', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -226,7 +226,7 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/rooms/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/chat/rooms/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -237,7 +237,7 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/rooms/owned', async (c) => {
+	app.on(['POST', 'QUERY'], '/chat/rooms/owned', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -260,7 +260,7 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/rooms/joining', async (c) => {
+	app.on(['POST', 'QUERY'], '/chat/rooms/joining', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -339,7 +339,7 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/rooms/invitations/inbox', async (c) => {
+	app.on(['POST', 'QUERY'], '/chat/rooms/invitations/inbox', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -350,7 +350,7 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/chat/rooms/invitations/outbox', async (c) => {
+	app.on(['POST', 'QUERY'], '/chat/rooms/invitations/outbox', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

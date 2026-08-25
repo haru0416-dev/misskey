@@ -73,6 +73,7 @@ export const endpointMetas = {
 	},
 	'antennas/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['antennas', 'account'],
 
 			requireCredential: true,
@@ -145,6 +146,7 @@ export const endpointMetas = {
 	},
 	'antennas/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['antennas', 'account'],
 
 			requireCredential: true,

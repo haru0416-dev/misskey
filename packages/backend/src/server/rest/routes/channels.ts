@@ -91,7 +91,7 @@ export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/channels/timeline', async (c) => {
+	app.on(['POST', 'QUERY'], '/channels/timeline', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -113,7 +113,7 @@ export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/channels/followed', async (c) => {
+	app.on(['POST', 'QUERY'], '/channels/followed', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -124,7 +124,7 @@ export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/channels/my-favorites', async (c) => {
+	app.on(['POST', 'QUERY'], '/channels/my-favorites', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -161,7 +161,7 @@ export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/channels/mute/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/channels/mute/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -173,7 +173,7 @@ export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/channels/owned', async (c) => {
+	app.on(['POST', 'QUERY'], '/channels/owned', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

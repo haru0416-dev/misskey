@@ -159,6 +159,7 @@ export const endpointMetas = {
 	},
 	'chat/messages/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -226,6 +227,7 @@ export const endpointMetas = {
 	},
 	'chat/messages/user-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -256,6 +258,7 @@ export const endpointMetas = {
 	},
 	'chat/messages/room-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -286,6 +289,7 @@ export const endpointMetas = {
 	},
 	'chat/messages/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -420,6 +424,7 @@ export const endpointMetas = {
 	},
 	'chat/rooms/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -445,6 +450,7 @@ export const endpointMetas = {
 	},
 	'chat/rooms/owned': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -469,6 +475,7 @@ export const endpointMetas = {
 	},
 	'chat/rooms/joining': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -610,6 +617,7 @@ export const endpointMetas = {
 	},
 	'chat/rooms/invitations/inbox': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -634,6 +642,7 @@ export const endpointMetas = {
 	},
 	'chat/rooms/invitations/outbox': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -664,6 +673,7 @@ export const endpointMetas = {
 	},
 	'chat/history': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
