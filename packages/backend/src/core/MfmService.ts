@@ -14,6 +14,83 @@ import type * as mfm from 'mfm-js';
 const urlRegex = /^https?:\/\/[\w\/:%#@$&?!()\[\]~.,=+\-]+/;
 const urlRegexFull = /^https?:\/\/[\w\/:%#@$&?!()\[\]~.,=+\-]+$/;
 
+/**
+ * a タグを MFM へ変換する。ハッシュタグ・メンション・リンクのどれとして扱うかは、
+ * 本文とhref とrel の組み合わせで決まる。
+ */
+function anchorToMfm(
+	node: htmlParser.HTMLElement,
+	txt: string,
+	normalizedHashtagNames: Set<string> | undefined,
+): string {
+	const rel = node.attributes['rel'];
+	const href = node.attributes['href'];
+
+	if (normalizedHashtagNames && href != null && normalizedHashtagNames.has(normalizeForSearch(txt))) {
+		return txt;
+	}
+
+	if (txt.startsWith('@') && !(rel != null && rel.startsWith('me '))) {
+		const part = txt.split('@');
+		// user@host 形式は href のホストを補って acct にする。既に3片なら補う必要がない。
+		if (part.length === 2 && href) return `${txt}@${new URL(href).hostname}`;
+		if (part.length === 3) return txt;
+		return '';
+	}
+
+	if (!href && !txt) return '';
+	if (!href) return txt;
+	if (!txt || txt === href) {
+		// #6383: Missing text node
+		return href.match(urlRegexFull) ? href : `<${href}>`;
+	}
+	// #6846
+	return href.match(urlRegex) && !href.match(urlRegexFull) ? `[${txt}](<${href}>)` : `[${txt}](${href})`;
+}
+
+/** ノード配下のテキストを、br だけ改行に置き換えて連結する。 */
+function getText(node: htmlParser.Node): string {
+	if (node instanceof htmlParser.TextNode) return node.textContent;
+	if (!(node instanceof htmlParser.HTMLElement)) return '';
+	if (node.tagName === 'BR') return '\n';
+	if (node.childNodes != null) return node.childNodes.map((n) => getText(n)).join('');
+	return '';
+}
+
+/** ruby として扱えない文字。含まれていたら MFM の $[ruby ] 記法に載せられない。 */
+const RUBY_UNSUPPORTED = /\s|\[|\]/;
+
+/**
+ * ruby タグから (親文字, ふりがな) の対を取り出す。
+ *
+ * MFM の記法に載せられない中身 (空白や括弧、想定外の子要素) が混ざっていたら null を返す。
+ * 呼び出し側はその場合、通常のテキストとして解析し直す。
+ */
+function parseRubyPairs(node: htmlParser.HTMLElement): [string, string][] | null {
+	const ruby: [string, string][] = [];
+
+	for (const child of node.childNodes) {
+		if (child instanceof htmlParser.TextNode && !RUBY_UNSUPPORTED.test(child.textContent)) {
+			ruby.push([child.textContent, '']);
+			continue;
+		}
+
+		if (!(child instanceof htmlParser.HTMLElement)) continue;
+		if (child.tagName === 'RP') continue;
+
+		if (child.tagName === 'RT' && ruby.length > 0) {
+			const rt = getText(child);
+			if (RUBY_UNSUPPORTED.test(rt)) return null;
+			ruby.at(-1)![1] = rt;
+			continue;
+		}
+
+		return null;
+	}
+
+	return ruby;
+}
+
 export function createMfmService(config: Config) {
 	function fromHtml(html: string, hashtagNames?: string[]): string {
 		// Pixelfed など一部の AP サーバーは改行だけでなく br タグも使う。
@@ -31,18 +108,6 @@ export function createMfmService(config: Config) {
 		}
 
 		return text.trim();
-
-		function getText(node: htmlParser.Node): string {
-			if (node instanceof htmlParser.TextNode) return node.textContent;
-			if (!(node instanceof htmlParser.HTMLElement)) return '';
-			if (node.tagName === 'BR') return '\n';
-
-			if (node.childNodes != null) {
-				return node.childNodes.map((n) => getText(n)).join('');
-			}
-
-			return '';
-		}
 
 		function analyzeChildren(childNodes: htmlParser.Node[] | null): void {
 			if (childNodes != null) {
@@ -69,46 +134,7 @@ export function createMfmService(config: Config) {
 				}
 
 				case 'A': {
-					const txt = getText(node);
-					const rel = node.attributes['rel'];
-					const href = node.attributes['href'];
-
-					if (normalizedHashtagNames && href != null && normalizedHashtagNames.has(normalizeForSearch(txt))) {
-						text += txt;
-					} else if (txt.startsWith('@') && !(rel != null && rel.startsWith('me '))) {
-						const part = txt.split('@');
-
-						if (part.length === 2 && href) {
-							const acct = `${txt}@${new URL(href).hostname}`;
-							text += acct;
-						} else if (part.length === 3) {
-							text += txt;
-						}
-					} else {
-						const generateLink = () => {
-							if (!href && !txt) {
-								return '';
-							}
-							if (!href) {
-								return txt;
-							}
-							if (!txt || txt === href) {
-								// #6383: Missing text node
-								if (href.match(urlRegexFull)) {
-									return href;
-								} else {
-									return `<${href}>`;
-								}
-							}
-							if (href.match(urlRegex) && !href.match(urlRegexFull)) {
-								return `[${txt}](<${href}>)`; // #6846
-							} else {
-								return `[${txt}](${href})`;
-							}
-						};
-
-						text += generateLink();
-					}
+					text += anchorToMfm(node, getText(node), normalizedHashtagNames);
 					break;
 				}
 
@@ -151,38 +177,13 @@ export function createMfmService(config: Config) {
 				}
 
 				case 'RUBY': {
-					let ruby: [string, string][] = [];
-					for (const child of node.childNodes) {
-						if (child instanceof htmlParser.TextNode && !/\s|\[|\]/.test(child.textContent)) {
-							ruby.push([child.textContent, '']);
-							continue;
-						}
-
-						if (!(child instanceof htmlParser.HTMLElement)) continue;
-
-						if (child.tagName === 'RP') {
-							continue;
-						}
-
-						if (child.tagName === 'RT' && ruby.length > 0) {
-							const rt = getText(child);
-							if (/\s|\[|\]/.test(rt)) {
-								// rt に空白が含まれる場合は通常のテキストとして扱う。
-								ruby = [];
-								analyzeChildren(node.childNodes);
-								break;
-							} else {
-								ruby.at(-1)![1] = rt;
-								continue;
-							}
-						}
-						// ruby に別の要素が含まれる場合は通常のテキストとして扱う。
-						ruby = [];
+					const ruby = parseRubyPairs(node);
+					if (ruby == null) {
 						analyzeChildren(node.childNodes);
-						break;
-					}
-					for (const [base, rt] of ruby) {
-						text += `$[ruby ${base} ${rt}]`;
+					} else {
+						for (const [base, rt] of ruby) {
+							text += `$[ruby ${base} ${rt}]`;
+						}
 					}
 					break;
 				}
