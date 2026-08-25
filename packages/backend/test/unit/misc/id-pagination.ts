@@ -30,6 +30,16 @@ describe('misc:id-pagination', () => {
 		expect(idGenerator.gen).toHaveBeenCalledTimes(2);
 	});
 
+	test('treats the epoch as a real bound rather than an absent one', () => {
+		const idGenerator = { gen: vi.fn((time) => `id-${time}`) };
+
+		expect(resolveDateIdPagination(idGenerator, { untilDate: 0 })).toEqual({
+			sinceId: null,
+			untilId: 'id-0',
+			order: 'desc',
+		});
+	});
+
 	test('gives explicit IDs precedence over date bounds', () => {
 		const idGenerator = { gen: vi.fn((time) => `id-${time}`) };
 
