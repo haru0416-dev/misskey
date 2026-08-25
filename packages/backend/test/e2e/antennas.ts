@@ -199,7 +199,7 @@ describe('アンテナ', () => {
 		const expected = await successfulApiCall({ endpoint: 'antennas/list', parameters: {}, user: alice });
 		assert.deepStrictEqual(response.sort(compareBy((s) => s.id)), expected.sort(compareBy((s) => s.id)));
 
-		failedApiCall(
+		await failedApiCall(
 			{
 				endpoint: 'antennas/create',
 				parameters: { ...defaultParam },
@@ -214,7 +214,7 @@ describe('アンテナ', () => {
 	});
 
 	test('を作成するとき他人のリストを指定したらエラーになる', async () => {
-		failedApiCall(
+		await failedApiCall(
 			{
 				endpoint: 'antennas/create',
 				parameters: { ...defaultParam, src: 'list', userListId: bobList.id },
@@ -367,7 +367,7 @@ describe('アンテナ', () => {
 
 	test('を変更するとき他人のリストを指定したらエラーになる', async () => {
 		const antenna = await successfulApiCall({ endpoint: 'antennas/create', parameters: defaultParam, user: alice });
-		failedApiCall(
+		await failedApiCall(
 			{
 				endpoint: 'antennas/update',
 				parameters: { antennaId: antenna.id, ...defaultParam, src: 'list', userListId: bobList.id },
