@@ -163,18 +163,13 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/drafts/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/notes/drafts/delete',
+		endpointHandler(deps, 'notes/drafts/delete', async ({ body, auth, c }) => {
 			await handleHonoApiNotesDraftsDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -209,17 +204,13 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/users/update-memo', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/users/update-memo',
+		endpointHandler(deps, 'users/update-memo', async ({ body, auth, c }) => {
 			await handleHonoApiUsersUpdateMemo(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -237,17 +228,13 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/users/report-abuse', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:report-abuse');
-
+	app.post(
+		'/users/report-abuse',
+		endpointHandler(deps, 'users/report-abuse', async ({ body, auth, c }) => {
 			await handleHonoApiUsersReportAbuse(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -353,17 +340,13 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/users/lists/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/users/lists/delete',
+		endpointHandler(deps, 'users/lists/delete', async ({ body, auth, c }) => {
 			await handleHonoApiUsersListsDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/users/lists/update',
@@ -372,29 +355,21 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/users/lists/favorite', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/users/lists/favorite',
+		endpointHandler(deps, 'users/lists/favorite', async ({ body, auth, c }) => {
 			await handleHonoApiUsersListsFavorite(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/users/lists/unfavorite', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/users/lists/unfavorite',
+		endpointHandler(deps, 'users/lists/unfavorite', async ({ body, auth, c }) => {
 			await handleHonoApiUsersListsUnfavorite(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/users/lists/create',
@@ -410,18 +385,13 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/users/lists/pull', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/users/lists/pull',
+		endpointHandler(deps, 'users/lists/pull', async ({ body, auth, c }) => {
 			await handleHonoApiUsersListsPull(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/users/lists/push', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -453,18 +423,13 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/users/lists/update-membership', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/users/lists/update-membership',
+		endpointHandler(deps, 'users/lists/update-membership', async ({ body, auth, c }) => {
 			await handleHonoApiUsersListsUpdateMembership(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -474,13 +439,13 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/verify-email', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
+	app.post(
+		'/verify-email',
+		endpointHandlerAnonymous(deps, 'verify-email', async ({ body, auth, c }) => {
 			await authenticateOptionalRequest(deps, c, body);
 
 			await handleHonoApiVerifyEmail(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 }

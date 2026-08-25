@@ -100,17 +100,13 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/pages/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:pages');
-
+	app.post(
+		'/pages/delete',
+		endpointHandler(deps, 'pages/delete', async ({ body, auth, c }) => {
 			await handleHonoApiPagesDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -128,31 +124,21 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		),
 	);
 
-	app.post('/pages/like', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:page-likes');
-
+	app.post(
+		'/pages/like',
+		endpointHandler(deps, 'pages/like', async ({ body, auth, c }) => {
 			await handleHonoApiPagesLike(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/pages/unlike', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:page-likes');
-
+	app.post(
+		'/pages/unlike',
+		endpointHandler(deps, 'pages/unlike', async ({ body, auth, c }) => {
 			await handleHonoApiPagesUnlike(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/ping', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -161,17 +147,13 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/promo/read', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/promo/read',
+		endpointHandler(deps, 'promo/read', async ({ body, auth, c }) => {
 			await handleHonoApiPromoRead(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.get(
 		'/retention',
@@ -191,29 +173,29 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		),
 	);
 
-	app.post('/request-reset-password', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
+	app.post(
+		'/request-reset-password',
+		endpointHandler(deps, 'request-reset-password', async ({ body, auth, c }) => {
 			await handleHonoApiRequestResetPassword(deps, body, getRequestIp(c, deps.config));
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/reset-password', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
+	app.post(
+		'/reset-password',
+		endpointHandler(deps, 'reset-password', async ({ body, auth, c }) => {
 			await handleHonoApiResetPassword(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/reset-db', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
+	app.post(
+		'/reset-db',
+		endpointHandler(deps, 'reset-db', async ({ body, auth, c }) => {
 			await handleHonoApiResetDb(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -279,15 +261,13 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		),
 	);
 
-	app.post('/sw/unregister', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
+	app.post(
+		'/sw/unregister',
+		endpointHandlerAnonymous(deps, 'sw/unregister', async ({ body, auth, c }) => {
 			await handleHonoApiSwUnregister(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/sw/update-registration',

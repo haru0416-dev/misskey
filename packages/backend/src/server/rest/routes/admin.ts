@@ -140,18 +140,15 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/update-meta', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:meta');
+	app.post(
+		'/admin/update-meta',
+		endpointHandler(deps, 'admin/update-meta', async ({ body, auth, c }) => {
 			await assertHonoApiAdmin(deps, auth);
 
 			await handleHonoApiAdminUpdateMeta(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/admin/update-proxy-account',
@@ -160,31 +157,25 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/accounts/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:account');
+	app.post(
+		'/admin/accounts/delete',
+		endpointHandler(deps, 'admin/accounts/delete', async ({ body, auth, c }) => {
 			await assertHonoApiAdmin(deps, auth);
 
 			await handleHonoApiAdminAccountsDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/delete-account', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:delete-account');
+	app.post(
+		'/admin/delete-account',
+		endpointHandler(deps, 'admin/delete-account', async ({ body, auth, c }) => {
 			await assertHonoApiAdmin(deps, auth);
 
 			await handleHonoApiAdminDeleteAccount(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/admin/abuse-report/notification-recipient/create',
@@ -193,18 +184,15 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/abuse-report/notification-recipient/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
+	app.post(
+		'/admin/abuse-report/notification-recipient/delete',
+		endpointHandler(deps, 'admin/abuse-report/notification-recipient/delete', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminAbuseReportNotificationRecipientDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -229,31 +217,25 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/resolve-abuse-user-report', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:resolve-abuse-user-report');
+	app.post(
+		'/admin/resolve-abuse-user-report',
+		endpointHandler(deps, 'admin/resolve-abuse-user-report', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminResolveAbuseUserReport(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/forward-abuse-user-report', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:resolve-abuse-user-report');
+	app.post(
+		'/admin/forward-abuse-user-report',
+		endpointHandler(deps, 'admin/forward-abuse-user-report', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminForwardAbuseUserReport(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -263,18 +245,15 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/update-abuse-user-report', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:resolve-abuse-user-report');
+	app.post(
+		'/admin/update-abuse-user-report',
+		endpointHandler(deps, 'admin/update-abuse-user-report', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminUpdateAbuseUserReport(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/admin/ad/create',
@@ -283,18 +262,16 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/ad/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
+	app.post(
+		'/admin/ad/delete',
+		endpointHandler(deps, 'admin/ad/delete', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 			assertTokenPermission(auth, 'write:admin:ad');
 
 			await handleHonoApiAdminAdDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -304,18 +281,16 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/ad/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
+	app.post(
+		'/admin/ad/update',
+		endpointHandler(deps, 'admin/ad/update', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 			assertTokenPermission(auth, 'write:admin:ad');
 
 			await handleHonoApiAdminAdUpdate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/admin/announcements/create',
@@ -324,18 +299,16 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/announcements/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
+	app.post(
+		'/admin/announcements/delete',
+		endpointHandler(deps, 'admin/announcements/delete', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 			assertTokenPermission(auth, 'write:admin:announcements');
 
 			await handleHonoApiAdminAnnouncementsDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -345,18 +318,16 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/announcements/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
+	app.post(
+		'/admin/announcements/update',
+		endpointHandler(deps, 'admin/announcements/update', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 			assertTokenPermission(auth, 'write:admin:announcements');
 
 			await handleHonoApiAdminAnnouncementsUpdate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/admin/avatar-decorations/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -423,18 +394,15 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/roles/assign', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:roles');
+	app.post(
+		'/admin/roles/assign',
+		endpointHandler(deps, 'admin/roles/assign', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminRolesAssign(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/admin/roles/create',
@@ -443,18 +411,15 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/roles/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:roles');
+	app.post(
+		'/admin/roles/delete',
+		endpointHandler(deps, 'admin/roles/delete', async ({ body, auth, c }) => {
 			await assertHonoApiAdmin(deps, auth);
 
 			await handleHonoApiAdminRolesDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -480,44 +445,35 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/roles/unassign', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:roles');
+	app.post(
+		'/admin/roles/unassign',
+		endpointHandler(deps, 'admin/roles/unassign', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminRolesUnassign(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/roles/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:roles');
+	app.post(
+		'/admin/roles/update',
+		endpointHandler(deps, 'admin/roles/update', async ({ body, auth, c }) => {
 			await assertHonoApiAdmin(deps, auth);
 
 			await handleHonoApiAdminRolesUpdate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/roles/update-default-policies', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:roles');
+	app.post(
+		'/admin/roles/update-default-policies',
+		endpointHandler(deps, 'admin/roles/update-default-policies', async ({ body, auth, c }) => {
 			await assertHonoApiAdmin(deps, auth);
 
 			await handleHonoApiAdminRolesUpdateDefaultPolicies(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/admin/system-webhook/create',
@@ -526,18 +482,15 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/system-webhook/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
+	app.post(
+		'/admin/system-webhook/delete',
+		endpointHandler(deps, 'admin/system-webhook/delete', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminSystemWebhookDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/admin/system-webhook/list',
@@ -638,109 +591,85 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/relays/remove', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:relays');
+	app.post(
+		'/admin/relays/remove',
+		endpointHandler(deps, 'admin/relays/remove', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminRelaysRemove(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/federation/update-instance', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:federation');
+	app.post(
+		'/admin/federation/update-instance',
+		endpointHandler(deps, 'admin/federation/update-instance', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminFederationUpdateInstance(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/federation/refresh-remote-instance-metadata', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:federation');
+	app.post(
+		'/admin/federation/refresh-remote-instance-metadata',
+		endpointHandler(deps, 'admin/federation/refresh-remote-instance-metadata', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminFederationRefreshRemoteInstanceMetadata(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/federation/remove-all-following', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:federation');
+	app.post(
+		'/admin/federation/remove-all-following',
+		endpointHandler(deps, 'admin/federation/remove-all-following', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminFederationRemoveAllFollowing(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/federation/delete-all-files', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:federation');
+	app.post(
+		'/admin/federation/delete-all-files',
+		endpointHandler(deps, 'admin/federation/delete-all-files', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminFederationDeleteAllFiles(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/drive/clean-remote-files', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:drive');
+	app.post(
+		'/admin/drive/clean-remote-files',
+		endpointHandler(deps, 'admin/drive/clean-remote-files', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminDriveCleanRemoteFiles(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/drive/cleanup', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:drive');
+	app.post(
+		'/admin/drive/cleanup',
+		endpointHandler(deps, 'admin/drive/cleanup', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminDriveCleanup(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/delete-all-files-of-a-user', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:delete-all-files-of-a-user');
+	app.post(
+		'/admin/delete-all-files-of-a-user',
+		endpointHandler(deps, 'admin/delete-all-files-of-a-user', async ({ body, auth, c }) => {
 			await assertHonoApiAdmin(deps, auth);
 
 			await handleHonoApiAdminDeleteAllFilesOfAUser(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -758,18 +687,15 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/promo/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:promo');
+	app.post(
+		'/admin/promo/create',
+		endpointHandler(deps, 'admin/promo/create', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminPromoCreate(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/admin/reset-password',
@@ -778,94 +704,73 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/unset-mfa', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:unset-mfa');
+	app.post(
+		'/admin/unset-mfa',
+		endpointHandler(deps, 'admin/unset-mfa', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminUnsetMfa(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/unset-user-avatar', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:unset-user-avatar');
+	app.post(
+		'/admin/unset-user-avatar',
+		endpointHandler(deps, 'admin/unset-user-avatar', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminUnsetUserAvatar(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/unset-user-banner', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:unset-user-banner');
+	app.post(
+		'/admin/unset-user-banner',
+		endpointHandler(deps, 'admin/unset-user-banner', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminUnsetUserBanner(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/update-user-note', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:user-note');
+	app.post(
+		'/admin/update-user-note',
+		endpointHandler(deps, 'admin/update-user-note', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminUpdateUserNote(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/suspend-user', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:suspend-user');
+	app.post(
+		'/admin/suspend-user',
+		endpointHandler(deps, 'admin/suspend-user', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminSuspendUser(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/unsuspend-user', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:unsuspend-user');
+	app.post(
+		'/admin/unsuspend-user',
+		endpointHandler(deps, 'admin/unsuspend-user', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminUnsuspendUser(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/send-email', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:send-email');
+	app.post(
+		'/admin/send-email',
+		endpointHandler(deps, 'admin/send-email', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminSendEmail(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 }

@@ -155,13 +155,13 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		});
 	});
 
-	app.post('/federation/update-remote-user', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
+	app.post(
+		'/federation/update-remote-user',
+		endpointHandler(deps, 'federation/update-remote-user', async ({ body, auth, c }) => {
 			await handleHonoApiFederationUpdateRemoteUser(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/ap/show', async (c) => {
 		return await runApiEndpoint(c, async () => {

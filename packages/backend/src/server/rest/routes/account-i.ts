@@ -170,41 +170,29 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.post('/i/change-password', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
+	app.post(
+		'/i/change-password',
+		endpointHandler(deps, 'i/change-password', async ({ body, auth, c }) => {
 			await handleHonoApiIChangePassword(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/i/regenerate-token', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
+	app.post(
+		'/i/regenerate-token',
+		endpointHandler(deps, 'i/regenerate-token', async ({ body, auth, c }) => {
 			await handleHonoApiIRegenerateToken(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/i/delete-account', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
+	app.post(
+		'/i/delete-account',
+		endpointHandler(deps, 'i/delete-account', async ({ body, auth, c }) => {
 			await handleHonoApiIDeleteAccount(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/i/update-email', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -268,29 +256,21 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.post('/i/2fa/unregister', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
+	app.post(
+		'/i/2fa/unregister',
+		endpointHandler(deps, 'i/2fa/unregister', async ({ body, auth, c }) => {
 			await handleHonoApiI2faUnregister(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/i/2fa/password-less', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
+	app.post(
+		'/i/2fa/password-less',
+		endpointHandler(deps, 'i/2fa/password-less', async ({ body, auth, c }) => {
 			await handleHonoApiI2faPasswordLess(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -308,17 +288,13 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.post('/i/revoke-token', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
+	app.post(
+		'/i/revoke-token',
+		endpointHandler(deps, 'i/revoke-token', async ({ body, auth, c }) => {
 			await handleHonoApiIRevokeToken(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -360,17 +336,13 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.post('/i/registry/remove', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/i/registry/remove',
+		endpointHandler(deps, 'i/registry/remove', async ({ body, auth, c }) => {
 			await handleHonoApiRegistryRemove(deps, auth.user, auth.token, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -380,17 +352,13 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.post('/i/registry/set', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/i/registry/set',
+		endpointHandler(deps, 'i/registry/set', async ({ body, auth, c }) => {
 			await handleHonoApiRegistrySet(deps, auth.user, auth.token, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -432,29 +400,21 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.post('/i/webhooks/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/i/webhooks/delete',
+		endpointHandler(deps, 'i/webhooks/delete', async ({ body, auth, c }) => {
 			await handleHonoApiIWebhooksDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/i/webhooks/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/i/webhooks/update',
+		endpointHandler(deps, 'i/webhooks/update', async ({ body, auth, c }) => {
 			await handleHonoApiIWebhooksUpdate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/i/webhooks/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
