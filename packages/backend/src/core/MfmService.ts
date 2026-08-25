@@ -264,7 +264,7 @@ export function createMfmService(config: Config) {
 	}
 
 	function toHtml(
-		nodes: mfm.MfmNode[] | null,
+		nodes: readonly mfm.MfmNode[] | null,
 		mentionedRemoteUsers: IMentionedRemoteUsers = [],
 		extraHtml: string | null = null,
 	) {
