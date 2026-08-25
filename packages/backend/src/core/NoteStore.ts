@@ -1527,6 +1527,53 @@ export async function listUserTimelineNotesFromDatabase(
 	return result.rows.map((row) => deserializeNote(row));
 }
 
+/**
+ * フォローを起点にするタイムライン (home / hybrid / userList) が共通で持つ絞り込み。
+ *
+ * いずれも AND で結合されるので、条件を積む順序は結果に影響しない。
+ */
+function renoteAndFileConditions(options: {
+	me: { id: MiUser['id'] };
+	includeMyRenotes: boolean;
+	includeRenotedMyNotes: boolean;
+	includeLocalRenotes: boolean;
+	withFiles: boolean;
+	withRenotes: boolean;
+}): SQL[] {
+	const conditions: SQL[] = [];
+
+	if (!options.includeMyRenotes) {
+		conditions.push(sql`(
+			"note"."userId" != ${options.me.id}
+			OR NOT (${pureRenoteCondition('note')})
+		)`);
+	}
+
+	if (!options.includeRenotedMyNotes) {
+		conditions.push(sql`(
+			"note"."renoteUserId" != ${options.me.id}
+			OR NOT (${pureRenoteCondition('note')})
+		)`);
+	}
+
+	if (!options.includeLocalRenotes) {
+		conditions.push(sql`(
+			"note"."renoteUserHost" IS NOT NULL
+			OR NOT (${pureRenoteCondition('note')})
+		)`);
+	}
+
+	if (!options.withRenotes) {
+		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
+	}
+
+	if (options.withFiles) {
+		conditions.push(sql`${note.fileIds} != '{}'`);
+	}
+
+	return conditions;
+}
+
 export async function listHomeTimelineNotesFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {
@@ -1604,34 +1651,7 @@ export async function listHomeTimelineNotesFromDatabase(
 		`);
 	}
 
-	if (!options.includeMyRenotes) {
-		conditions.push(sql`(
-			"note"."userId" != ${options.me.id}
-			OR NOT (${pureRenoteCondition('note')})
-		)`);
-	}
-
-	if (!options.includeRenotedMyNotes) {
-		conditions.push(sql`(
-			"note"."renoteUserId" != ${options.me.id}
-			OR NOT (${pureRenoteCondition('note')})
-		)`);
-	}
-
-	if (!options.includeLocalRenotes) {
-		conditions.push(sql`(
-			"note"."renoteUserHost" IS NOT NULL
-			OR NOT (${pureRenoteCondition('note')})
-		)`);
-	}
-
-	if (options.withFiles) {
-		conditions.push(sql`${note.fileIds} != '{}'`);
-	}
-
-	if (!options.withRenotes) {
-		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
-	}
+	conditions.push(...renoteAndFileConditions(options));
 
 	return await executeTimelineNoteQuery(db, conditions, options);
 }
@@ -1711,34 +1731,7 @@ export async function listHybridTimelineNotesFromDatabase(
 		)`);
 	}
 
-	if (!options.includeMyRenotes) {
-		conditions.push(sql`(
-			"note"."userId" != ${options.me.id}
-			OR NOT (${pureRenoteCondition('note')})
-		)`);
-	}
-
-	if (!options.includeRenotedMyNotes) {
-		conditions.push(sql`(
-			"note"."renoteUserId" != ${options.me.id}
-			OR NOT (${pureRenoteCondition('note')})
-		)`);
-	}
-
-	if (!options.includeLocalRenotes) {
-		conditions.push(sql`(
-			"note"."renoteUserHost" IS NOT NULL
-			OR NOT (${pureRenoteCondition('note')})
-		)`);
-	}
-
-	if (!options.withRenotes) {
-		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
-	}
-
-	if (options.withFiles) {
-		conditions.push(sql`${note.fileIds} != '{}'`);
-	}
+	conditions.push(...renoteAndFileConditions(options));
 
 	return await executeTimelineNoteQuery(db, conditions, options);
 }
@@ -1794,34 +1787,7 @@ export async function listUserListTimelineNotesFromDatabase(
 		)`);
 	}
 
-	if (!options.includeMyRenotes) {
-		conditions.push(sql`(
-			"note"."userId" != ${options.me.id}
-			OR NOT (${pureRenoteCondition('note')})
-		)`);
-	}
-
-	if (!options.includeRenotedMyNotes) {
-		conditions.push(sql`(
-			"note"."renoteUserId" != ${options.me.id}
-			OR NOT (${pureRenoteCondition('note')})
-		)`);
-	}
-
-	if (!options.includeLocalRenotes) {
-		conditions.push(sql`(
-			"note"."renoteUserHost" IS NOT NULL
-			OR NOT (${pureRenoteCondition('note')})
-		)`);
-	}
-
-	if (!options.withRenotes) {
-		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
-	}
-
-	if (options.withFiles) {
-		conditions.push(sql`${note.fileIds} != '{}'`);
-	}
+	conditions.push(...renoteAndFileConditions(options));
 
 	const result = await db.execute<NoteRow>(sql`
 		SELECT "note".*
