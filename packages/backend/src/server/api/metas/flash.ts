@@ -69,6 +69,7 @@ export const endpointMetas = {
 	},
 	'flash/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['flash'],
 
 			requireCredential: false,
@@ -176,6 +177,7 @@ export const endpointMetas = {
 	},
 	'flash/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['flashs'],
 
 			requireCredential: false,
@@ -256,6 +258,7 @@ export const endpointMetas = {
 	},
 	'flash/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['flash'],
 
 			requireCredential: false,

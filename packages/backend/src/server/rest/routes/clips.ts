@@ -66,7 +66,7 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/clips/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/clips/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -87,7 +87,7 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/clips/notes', async (c) => {
+	app.on(['POST', 'QUERY'], '/clips/notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);

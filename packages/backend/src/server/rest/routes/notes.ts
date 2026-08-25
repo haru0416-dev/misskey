@@ -179,7 +179,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -188,7 +188,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/children', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/children', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -217,7 +217,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/replies', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/replies', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -365,7 +365,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/featured', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/featured', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -438,7 +438,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/search', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/search', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);

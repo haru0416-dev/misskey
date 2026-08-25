@@ -175,6 +175,7 @@ export const endpointMetas = {
 	},
 	'clips/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notes', 'clips'],
 
 			requireCredential: false,
@@ -231,6 +232,7 @@ export const endpointMetas = {
 	},
 	'clips/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['clips', 'account'],
 
 			requireCredential: false,

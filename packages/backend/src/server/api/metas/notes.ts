@@ -60,6 +60,7 @@ export const endpointMetas = {
 	},
 	'notes/children': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
@@ -662,6 +663,7 @@ export const endpointMetas = {
 	},
 	'notes/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
@@ -996,6 +998,7 @@ export const endpointMetas = {
 	},
 	'notes/replies': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
@@ -1016,6 +1019,7 @@ export const endpointMetas = {
 	},
 	'notes/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
@@ -1062,6 +1066,7 @@ export const endpointMetas = {
 	},
 	'notes/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,

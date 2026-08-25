@@ -74,6 +74,7 @@ export const endpointMetas = {
 	},
 	'channels/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels'],
 
 			requireCredential: false,
@@ -185,6 +186,7 @@ export const endpointMetas = {
 	},
 	'channels/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels'],
 
 			requireCredential: false,
@@ -205,6 +207,7 @@ export const endpointMetas = {
 	},
 	'channels/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels'],
 
 			requireCredential: false,
