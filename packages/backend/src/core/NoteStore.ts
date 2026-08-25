@@ -841,6 +841,19 @@ export async function listRenoteNotesFromDatabase(
 	return result.rows.map((row) => deserializeNote(row));
 }
 
+/** ファイルを持つノートに絞る。 */
+function hasFilesCondition(): SQL {
+	return sql`${note.fileIds} != '{}'`;
+}
+
+/**
+ * ファイルの有無で絞る。二値の `withFiles` と違い、false を「ファイルを持たないノートだけ」と解釈する。
+ * 未指定のときは呼び出し側で条件そのものを積まないこと。
+ */
+function fileCountCondition(withFiles: boolean): SQL {
+	return withFiles ? sql`${note.fileIds} != '{}'` : sql`${note.fileIds} = '{}'`;
+}
+
 export async function listPublicNotesFromDatabase(
 	db: MiDrizzleDatabase,
 	options: {
@@ -887,7 +900,7 @@ export async function listPublicNotesFromDatabase(
 		}
 
 		if (options.withFiles !== undefined) {
-			conditions.push(options.withFiles ? sql`${note.fileIds} != '{}'` : sql`${note.fileIds} = '{}'`);
+			conditions.push(fileCountCondition(options.withFiles));
 		}
 
 		if (options.poll !== undefined) {
@@ -1109,6 +1122,8 @@ export async function searchNotesByTextFromDatabase(
 
 	if (options.withFiles != null) {
 		conditions.push(
+			// fileIds != '{}' と結果は同じだが、こちらは並列 Seq Scan にならない計画が選ばれる。
+			// 見通しのために表現を揃えると計画が変わるので、この関数では cardinality のまま残す。
 			options.withFiles ? sql`cardinality("note"."fileIds") > 0` : sql`cardinality("note"."fileIds") = 0`,
 		);
 	}
@@ -1255,9 +1270,7 @@ export async function listNotesByTagSearchFromDatabase(
 		conditions.push(options.renote ? isNotNull(note.renoteId) : isNull(note.renoteId));
 	}
 
-	if (options.withFiles) {
-		conditions.push(sql`${note.fileIds} != '{}'`);
-	}
+	if (options.withFiles) conditions.push(hasFilesCondition());
 
 	if (options.poll != null) {
 		conditions.push(eq(note.hasPoll, options.poll));
@@ -1331,9 +1344,7 @@ export async function listGlobalTimelineNotesFromDatabase(
 		conditions.push(mutedUserRenotesCondition(options.me));
 	}
 
-	if (options.withFiles) {
-		conditions.push(sql`${note.fileIds} != '{}'`);
-	}
+	if (options.withFiles) conditions.push(hasFilesCondition());
 
 	if (!options.withRenotes) {
 		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
@@ -1379,9 +1390,7 @@ export async function listLocalTimelineNotesFromDatabase(
 		)`);
 	}
 
-	if (options.withFiles) {
-		conditions.push(sql`${note.fileIds} != '{}'`);
-	}
+	if (options.withFiles) conditions.push(hasFilesCondition());
 
 	if (!options.withReplies) {
 		conditions.push(sql`(
@@ -1496,9 +1505,7 @@ export async function listUserTimelineNotesFromDatabase(
 		)`);
 	}
 
-	if (options.withFiles) {
-		conditions.push(sql`${note.fileIds} != '{}'`);
-	}
+	if (options.withFiles) conditions.push(hasFilesCondition());
 
 	if (!options.withRenotes) {
 		conditions.push(sql`(
@@ -1567,9 +1574,7 @@ function renoteAndFileConditions(options: {
 		conditions.push(sql`NOT (${pureRenoteCondition('note')})`);
 	}
 
-	if (options.withFiles) {
-		conditions.push(sql`${note.fileIds} != '{}'`);
-	}
+	if (options.withFiles) conditions.push(hasFilesCondition());
 
 	return conditions;
 }
