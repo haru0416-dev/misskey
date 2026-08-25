@@ -16,6 +16,7 @@ import { hasHonoApiRolePolicyOrIsRoot, isHonoApiAdministrator, isHonoApiModerato
 import type { HonoApiSigninFlowResult } from './signin.js';
 import type { HonoApiSigninWithPasskeyResult } from './signin-with-passkey.js';
 import type { ApiShellDependencies } from './shell.js';
+import { runInRequestScope } from '@/misc/request-scope.js';
 
 export function setApiHeaders(c: Context): void {
 	c.header('Access-Control-Allow-Origin', '*');
@@ -193,7 +194,8 @@ const apiLogger = new Logger('api', 'gray');
 
 export async function runApiEndpoint(c: Context, handler: () => Promise<Response>): Promise<Response> {
 	try {
-		return await handler();
+		// リクエスト内 memo のスコープ。同じ問い合わせを1リクエストで何度も投げている箇所を畳む。
+		return await runInRequestScope(handler);
 	} catch (err) {
 		if (err instanceof HonoApiError) {
 			return apiErrorResponse(c, err);
