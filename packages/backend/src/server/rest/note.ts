@@ -129,7 +129,7 @@ async function getBufferedReactions(
 
 	const pipeline = deps.redis.pipeline();
 	pipeline.hgetall(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`);
-	pipeline.zrange(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, 0, -1);
+	pipeline.zrange(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, 0, '-1');
 	const results = await pipeline.exec();
 
 	const resultDeltas = (results?.[0]?.[1] ?? {}) as Record<string, string>;
@@ -157,7 +157,7 @@ async function getBufferedReactionsMany(
 	const pipeline = deps.redis.pipeline();
 	for (const noteId of noteIds) {
 		pipeline.hgetall(`${REACTIONS_BUFFER_DELTA_PREFIX}:${noteId}`);
-		pipeline.zrange(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, 0, -1);
+		pipeline.zrange(`${REACTIONS_BUFFER_PAIR_PREFIX}:${noteId}`, 0, '-1');
 	}
 	const results = await pipeline.exec();
 
@@ -1051,8 +1051,8 @@ async function getFeaturedRankingOfForHonoApi(
 	const previousWindow = currentWindow - 1;
 
 	const redisPipeline = redis.pipeline();
-	redisPipeline.zrange(`${name}:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
-	redisPipeline.zrange(`${name}:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	redisPipeline.zrange(`${name}:${currentWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
+	redisPipeline.zrange(`${name}:${previousWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
 	const [currentRankingResult, previousRankingResult] = await redisPipeline
 		.exec()
 		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : [[], []]));

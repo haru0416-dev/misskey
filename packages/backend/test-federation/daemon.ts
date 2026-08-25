@@ -22,7 +22,7 @@ function getIpHash(ip: string) {
 export async function purgeLimit(host: string, client: Redis) {
 	const ipHash = getIpHash(TESTER_IP_ADDRESS);
 	const key = `${host}:limit:${ipHash}:signin`;
-	const res = await client.zrange(key, 0, -1);
+	const res = await client.zrange(key, 0, '-1');
 	if (res.length !== 0) {
 		console.log(`${key} - ${JSON.stringify(res)}`);
 		await client.del(key);
