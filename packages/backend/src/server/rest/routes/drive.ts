@@ -205,25 +205,12 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/drive/folders/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:drive');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'drive/folders/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 10,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiDriveFoldersCreate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/drive/folders/create',
+		endpointHandler(deps, 'drive/folders/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFoldersCreate(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/drive/folders/delete',

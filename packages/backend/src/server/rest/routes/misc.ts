@@ -57,48 +57,20 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		endpointHandler(deps, 'meta', async ({ body, auth, c }) => jsonResponse(c, await handleHonoApiMeta(deps, body))),
 	);
 
-	app.post('/pages/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:pages');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'pages/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 10,
-				},
-				auth.user,
-			);
+	app.post(
+		'/pages/create',
+		endpointHandler(deps, 'pages/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiPagesCreate(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiPagesCreate(deps, auth.user, body));
-		});
-	});
-
-	app.post('/pages/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:pages');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'pages/update',
-				{
-					duration: 60 * 60 * 1000,
-					max: 300,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/pages/update',
+		endpointHandler(deps, 'pages/update', async ({ body, auth, c }) => {
 			await handleHonoApiPagesUpdate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/pages/delete',

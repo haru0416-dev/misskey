@@ -163,25 +163,12 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		}),
 	);
 
-	app.post('/ap/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:account');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'ap/show',
-				{
-					duration: 60 * 60 * 1000,
-					max: 30,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiApShow(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/ap/show',
+		endpointHandler(deps, 'ap/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiApShow(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/fetch-external-resources',

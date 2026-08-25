@@ -67,46 +67,19 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.post('/i/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/update',
-				{
-					duration: 60 * 60 * 1000,
-					max: 20,
-				},
-				auth.user,
-			);
+	app.post(
+		'/i/update',
+		endpointHandler(deps, 'i/update', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiIUpdate(deps, auth.user, auth.token, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiIUpdate(deps, auth.user, auth.token, body));
-		});
-	});
-
-	app.post('/i/move', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			assertProhibitMoved(auth.user);
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/move',
-				{
-					duration: 24 * 60 * 60 * 1000,
-					max: 5,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiIMove(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/i/move',
+		endpointHandler(deps, 'i/move', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiIMove(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/i/pin',
@@ -122,45 +95,21 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.on(['POST', 'QUERY'], '/i/notifications', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:notifications');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/notifications',
-				{
-					duration: 30000,
-					max: 30,
-				},
-				auth.user,
-			);
+	app.on(
+		['POST', 'QUERY'],
+		'/i/notifications',
+		endpointHandler(deps, 'i/notifications', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiINotifications(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiINotifications(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/i/notifications-grouped', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:notifications');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/notifications-grouped',
-				{
-					duration: 30000,
-					max: 30,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiINotificationsGrouped(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/i/notifications-grouped',
+		endpointHandler(deps, 'i/notifications-grouped', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiINotificationsGrouped(deps, auth.user, body)),
+		),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -194,25 +143,12 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		}),
 	);
 
-	app.post('/i/update-email', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/update-email',
-				{
-					duration: 60 * 60 * 1000,
-					max: 3,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiIUpdateEmail(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/i/update-email',
+		endpointHandler(deps, 'i/update-email', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiIUpdateEmail(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/i/2fa/register',
@@ -428,25 +364,11 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/webhooks/test', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			assertTokenPermission(auth, 'read:account');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/webhooks/test',
-				{
-					duration: 15 * 60 * 1000,
-					max: 60,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/i/webhooks/test',
+		endpointHandler(deps, 'i/webhooks/test', async ({ body, auth, c }) => {
 			await handleHonoApiIWebhooksTest(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 }

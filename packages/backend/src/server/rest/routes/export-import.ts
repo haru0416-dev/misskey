@@ -36,6 +36,7 @@ import {
 	runApiEndpoint,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post('/export-custom-emojis', async (c) => {

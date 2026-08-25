@@ -55,26 +55,12 @@ import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/following/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'following/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 100,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiFollowingCreate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/following/create',
+		endpointHandler(deps, 'following/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFollowingCreate(deps, auth.user, body)),
+		),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -84,65 +70,26 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		),
 	);
 
-	app.post('/following/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'following/delete',
-				{
-					duration: 60 * 60 * 1000,
-					max: 100,
-				},
-				auth.user,
-			);
+	app.post(
+		'/following/delete',
+		endpointHandler(deps, 'following/delete', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFollowingDelete(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiFollowingDelete(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/following/update',
+		endpointHandler(deps, 'following/update', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFollowingUpdate(deps, auth.user, body)),
+		),
+	);
 
-	app.post('/following/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'following/update',
-				{
-					duration: 60 * 60 * 1000,
-					max: 100,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiFollowingUpdate(deps, auth.user, body));
-		});
-	});
-
-	app.post('/following/invalidate', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'following/invalidate',
-				{
-					duration: 60 * 60 * 1000,
-					max: 100,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiFollowingInvalidate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/following/invalidate',
+		endpointHandler(deps, 'following/invalidate', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFollowingInvalidate(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/following/requests/accept',
@@ -215,47 +162,19 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		),
 	);
 
-	app.post('/gallery/posts/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:gallery');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'gallery/posts/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 20,
-				},
-				auth.user,
-			);
+	app.post(
+		'/gallery/posts/create',
+		endpointHandler(deps, 'gallery/posts/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiGalleryPostsCreate(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiGalleryPostsCreate(deps, auth.user, body));
-		});
-	});
-
-	app.post('/gallery/posts/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:gallery');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'gallery/posts/update',
-				{
-					duration: 60 * 60 * 1000,
-					max: 300,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiGalleryPostsUpdate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/gallery/posts/update',
+		endpointHandler(deps, 'gallery/posts/update', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiGalleryPostsUpdate(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/gallery/posts/delete',
@@ -313,48 +232,20 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		}),
 	);
 
-	app.post('/flash/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:flash');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'flash/update',
-				{
-					duration: 60 * 60 * 1000,
-					max: 300,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/flash/update',
+		endpointHandler(deps, 'flash/update', async ({ body, auth, c }) => {
 			await handleHonoApiFlashUpdate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/flash/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:flash');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'flash/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 10,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiFlashCreate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/flash/create',
+		endpointHandler(deps, 'flash/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFlashCreate(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/flash/delete',
@@ -404,24 +295,11 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		),
 	);
 
-	app.post('/following/update-all', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:following');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'following/update-all',
-				{
-					duration: 60 * 60 * 1000,
-					max: 10,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/following/update-all',
+		endpointHandler(deps, 'following/update-all', async ({ body, auth, c }) => {
 			await handleHonoApiFollowingUpdateAll(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 }
