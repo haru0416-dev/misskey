@@ -168,8 +168,9 @@ describe('API guard drift', () => {
 			if (meta == null) continue;
 
 			const declared = new Set(expectedGuards(meta).flatMap((guard) => guard.accepts));
-			for (const [, called] of registration.body.matchAll(GUARD_CALL)) {
-				if (!declared.has(called)) {
+			for (const match of registration.body.matchAll(GUARD_CALL)) {
+				const called = match[1];
+				if (called != null && !declared.has(called)) {
 					errors.push(`${registration.file}: ${name} は ${called} を呼んでいるが meta に対応する宣言が無い`);
 				}
 			}
