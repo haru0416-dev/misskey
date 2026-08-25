@@ -145,7 +145,6 @@ import type * as misskey from 'misskey-js';
  * 後続のプロパティアクセスが型エラーになる。
  */
 
-
 const bunPassword = Bun!.password;
 
 function getAt<T>(values: readonly T[], index: number): T {
@@ -289,15 +288,14 @@ describe('Endpoints', () => {
 			const staleMeta = { ...before, rootUserId: null, rootUser: null };
 			const suffix = Date.now().toString(36).slice(-8);
 			const requiredUsername = `requiredroot${suffix}`;
-			await assert.rejects(
+			await expect(
 				createLocalSignupAccount(db, staleMeta, {
 					username: requiredUsername,
 					host: null,
 					passwordHash: null,
 					rootClaim: 'required',
 				}),
-				(error) => error instanceof RootUserAlreadyAssignedError,
-			);
+			).rejects.toSatisfy((error) => error instanceof RootUserAlreadyAssignedError);
 			expect(await fetchLocalUserByUsernameFromDatabase(db, requiredUsername)).toBe(null);
 
 			const result = await createLocalSignupAccount(db, staleMeta, {
@@ -309,14 +307,13 @@ describe('Endpoints', () => {
 			expect(result.account.username).toBe(`staleroot${suffix}`);
 			expect((await fetchMetaFromDatabase(db)).rootUserId).toBe(before.rootUserId);
 
-			await assert.rejects(
+			await expect(
 				createLocalSignupAccount(db, staleMeta, {
 					username: 'admin',
 					host: null,
 					passwordHash: null,
 				}),
-				{ code: 'USED_USERNAME' },
-			);
+			).rejects.toMatchObject({ code: 'USED_USERNAME' });
 		});
 	});
 
@@ -364,7 +361,7 @@ describe('Endpoints', () => {
 			});
 
 			expect(res.status).toBe(200);
-			if (res.body == null) assert.fail('endpoint metadata is missing');
+			if (res.body == null) expect.unreachable('endpoint metadata is missing');
 			assert.ok(Array.isArray(res.body.params));
 			assert.ok(res.body.params.some((param) => param.name === 'name' && param.type === 'String'));
 
@@ -397,7 +394,7 @@ describe('Endpoints', () => {
 
 			expect(detailed.status).toBe(200);
 			expect(detailedBody.uri).toBe(origin);
-			if (detailedBody.features == null) assert.fail('detailed meta features are missing');
+			if (detailedBody.features == null) expect.unreachable('detailed meta features are missing');
 			expect(detailedBody.features.miauth).toBe(true);
 			expect(typeof detailedBody.proxyAccountName).toBe('string');
 		});
@@ -678,7 +675,7 @@ describe('Endpoints', () => {
 					if (jobs[0] != null) return jobs[0];
 					await new Promise((resolve) => setTimeout(resolve, 100));
 				}
-				assert.fail(`deleteAccount job was not found for ${userId}`);
+				expect.unreachable(`deleteAccount job was not found for ${userId}`);
 			};
 			const removeDeleteAccountJobs = async () => {
 				const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
@@ -2167,14 +2164,16 @@ describe('Endpoints', () => {
 				]);
 				if (suspendLogs.length > 0 && noteLogs.length > 0) {
 					expect(suspendLogs.some((log) => (log.info as any).host === host)).toBe(true);
-					expect(noteLogs.some(
+					expect(
+						noteLogs.some(
 							(log) =>
 								(log.info as any).before === 'before update' && (log.info as any).after === `updated note ${suffix}`,
-						)).toBe(true);
+						),
+					).toBe(true);
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) assert.fail('remote instance moderation logs were not found');
+				if (i === 9) expect.unreachable('remote instance moderation logs were not found');
 			}
 
 			const token = await createAppToken(alice, ['write:admin:federation']);
@@ -2420,10 +2419,12 @@ describe('Endpoints', () => {
 			expect(questionRes.body['id']).toBe(questionUri);
 			const choices: unknown = Reflect.get(questionRes.body, 'oneOf');
 			if (!Array.isArray(choices)) throw new Error('ActivityPub Question choices are missing');
-			expect(choices.map((choice: unknown) => {
+			expect(
+				choices.map((choice: unknown) => {
 					assert.ok(typeof choice === 'object' && choice != null);
 					return Reflect.get(choice, 'name');
-				})).toStrictEqual(['a', 'b']);
+				}),
+			).toStrictEqual(['a', 'b']);
 
 			const likeNote = await post(alice, { text: 'ap/get like target' });
 			const reactionId = genId(now + 1);
@@ -3016,7 +3017,7 @@ describe('Endpoints', () => {
 					if ((await fetchDriveFileByIdFromDatabase(db, fileId)) == null) return;
 					await new Promise((resolve) => setTimeout(resolve, 100));
 				}
-				assert.fail(`drive file was not deleted: ${fileId}`);
+				expect.unreachable(`drive file was not deleted: ${fileId}`);
 			};
 			const waitDeleteObjectStorageJob = async (key: string) => {
 				for (let i = 0; i < 10; i++) {
@@ -3025,7 +3026,7 @@ describe('Endpoints', () => {
 					if (job != null) return job;
 					await new Promise((resolve) => setTimeout(resolve, 100));
 				}
-				assert.fail(`deleteFile objectStorage job was not found: ${key}`);
+				expect.unreachable(`deleteFile objectStorage job was not found: ${key}`);
 			};
 			const removeObjectStorageJobs = async () => {
 				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
@@ -4006,7 +4007,7 @@ describe('Endpoints', () => {
 						break;
 					}
 					await new Promise((resolve) => setTimeout(resolve, 100));
-					if (i === 9) assert.fail('deleteCustomEmoji moderation logs were not found');
+					if (i === 9) expect.unreachable('deleteCustomEmoji moderation logs were not found');
 				}
 
 				const tokenTarget = await insertEmojiInDatabase(db, {
@@ -5553,7 +5554,9 @@ describe('Endpoints', () => {
 			);
 			expect(extendedVisibilityReply.status).toBe(400);
 			expect(castAsError(extendedVisibilityReply.body as any).error.id).toBe('215dbc76-336c-4d2a-9605-95766ba7dab0');
-			expect(castAsError(extendedVisibilityReply.body as any).error.code).toBe('CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY');
+			expect(castAsError(extendedVisibilityReply.body as any).error.code).toBe(
+				'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
+			);
 
 			const foreignDraft = await createNoteDraftInDatabase(db, {
 				id: genId(),
@@ -6899,7 +6902,9 @@ describe('Endpoints', () => {
 			);
 			expect(requested.status).toBe(200);
 			expect(requested.body.id).toBe(lockedFollowee.id);
-			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, requestFollower.id, lockedFollowee.id)).toBe(null);
+			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, requestFollower.id, lockedFollowee.id)).toBe(
+				null,
+			);
 
 			const followRequest = await fetchFollowRequestFromDatabase(db, requestFollower.id, lockedFollowee.id);
 			assert.ok(followRequest);
@@ -7356,7 +7361,7 @@ describe('Endpoints', () => {
 				if (jobs[0] != null) return jobs[0];
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
-			assert.fail(`${jobName} job was not found for ${userId}`);
+			expect.unreachable(`${jobName} job was not found for ${userId}`);
 		};
 
 		test.each([
@@ -7912,7 +7917,7 @@ describe('Endpoints', () => {
 			expect(app.status).toBe(200);
 			const appSecret = app.body.secret;
 			if (typeof appSecret !== 'string') {
-				assert.fail('app secret is missing');
+				expect.unreachable('app secret is missing');
 			}
 
 			const generated = await api('auth/session/generate', {
@@ -7953,7 +7958,7 @@ describe('Endpoints', () => {
 			expect(userkey.status).toBe(200);
 			const accessToken = userkey.body.accessToken;
 			if (typeof accessToken !== 'string') {
-				assert.fail('access token is missing');
+				expect.unreachable('access token is missing');
 			}
 			expect(userkey.body.user.id).toBe(alice.id);
 
@@ -8024,7 +8029,7 @@ describe('Endpoints', () => {
 			expect(created.status).toBe(200);
 			const appSecret = created.body.secret;
 			if (typeof appSecret !== 'string') {
-				assert.fail('app secret is missing');
+				expect.unreachable('app secret is missing');
 			}
 
 			const generated = await api('auth/session/generate', {
@@ -8050,7 +8055,7 @@ describe('Endpoints', () => {
 			expect(userkey.status).toBe(200);
 			const accessToken = userkey.body.accessToken;
 			if (typeof accessToken !== 'string') {
-				assert.fail('access token is missing');
+				expect.unreachable('access token is missing');
 			}
 
 			return {
@@ -10912,7 +10917,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 			expect(unassigned.status).toBe(204);
-			expect(await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id)).toBe(null);
+			expect(await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id)).toBe(
+				null,
+			);
 
 			const unassignedAgain = await api(
 				'admin/roles/unassign',
@@ -11061,7 +11068,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
+			expect.unreachable(`system webhook deliver job was not found: ${webhookId}`);
 		}
 
 		test('admin/system-webhook は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
@@ -11444,7 +11451,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.fail(`system webhook deliver job was not found: ${webhookId}`);
+			expect.unreachable(`system webhook deliver job was not found: ${webhookId}`);
 		}
 
 		async function findDeliverJob(inbox: string, type: 'Flag'): Promise<Bull.Job<DeliverJobData>> {
@@ -11459,7 +11466,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.fail(`deliver job was not found: ${inbox} ${type}`);
+			expect.unreachable(`deliver job was not found: ${inbox} ${type}`);
 		}
 
 		test('admin/abuse-user-reports は一覧、filter、token scope、roleを維持する', async () => {
@@ -11494,7 +11501,11 @@ describe('Endpoints', () => {
 			);
 			expect(listed.status).toBe(200);
 			const listedReports = listed.body as any[];
-			expect(listedReports.slice(0, 3).map((report) => report.id)).toStrictEqual([unresolved.id, resolved.id, remoteReporter.id]);
+			expect(listedReports.slice(0, 3).map((report) => report.id)).toStrictEqual([
+				unresolved.id,
+				resolved.id,
+				remoteReporter.id,
+			]);
 			const packedResolved = listedReports.find((report) => report.id === resolved.id);
 			expect(packedResolved.comment).toBe(`Hono abuse report list resolved ${suffix}`);
 			expect(packedResolved.resolved).toBe(true);
@@ -11669,11 +11680,13 @@ describe('Endpoints', () => {
 					search: report.id,
 				});
 				if (logs.length > 0) {
-					expect(logs.some((log) => (log.info as any).reportId === report.id && (log.info as any).resolvedAs === 'accept')).toBe(true);
+					expect(
+						logs.some((log) => (log.info as any).reportId === report.id && (log.info as any).resolvedAs === 'accept'),
+					).toBe(true);
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) assert.fail('resolveAbuseReport moderation log was not found');
+				if (i === 9) expect.unreachable('resolveAbuseReport moderation log was not found');
 			}
 		});
 
@@ -11721,7 +11734,9 @@ describe('Endpoints', () => {
 			const deliverJob = await findDeliverJob(targetInbox, 'Flag');
 			expect(deliverJob.data.to).toBe(targetInbox);
 			expect(deliverJob.data.isSharedInbox).toBe(false);
-			expect(deliverJob.data.digest).toBe(`SHA-256=${createHash('sha256').update(deliverJob.data.content).digest('base64')}`);
+			expect(deliverJob.data.digest).toBe(
+				`SHA-256=${createHash('sha256').update(deliverJob.data.content).digest('base64')}`,
+			);
 			const flag = JSON.parse(deliverJob.data.content) as any;
 			expect(flag.type).toBe('Flag');
 			expect(flag.actor.startsWith(`${origin}/users/`)).toBe(true);
@@ -11797,7 +11812,7 @@ describe('Endpoints', () => {
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) assert.fail('forwardAbuseReport moderation log was not found');
+				if (i === 9) expect.unreachable('forwardAbuseReport moderation log was not found');
 			}
 		});
 
@@ -11878,16 +11893,18 @@ describe('Endpoints', () => {
 					search: report.id,
 				});
 				if (logs.length > 0) {
-					expect(logs.some(
+					expect(
+						logs.some(
 							(log) =>
 								(log.info as any).reportId === report.id &&
 								(log.info as any).before === report.moderationNote &&
 								(log.info as any).after === moderationNote,
-						)).toBe(true);
+						),
+					).toBe(true);
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) assert.fail('updateAbuseReportNote moderation log was not found');
+				if (i === 9) expect.unreachable('updateAbuseReportNote moderation log was not found');
 			}
 		});
 	});
@@ -12360,11 +12377,13 @@ describe('Endpoints', () => {
 					search: target.id,
 				});
 				if (logs.length > 0) {
-					expect(logs.some((log) => (log.info as any).before === 'before note' && (log.info as any).after === text)).toBe(true);
+					expect(
+						logs.some((log) => (log.info as any).before === 'before note' && (log.info as any).after === text),
+					).toBe(true);
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) assert.fail('updateUserNote moderation log was not found');
+				if (i === 9) expect.unreachable('updateUserNote moderation log was not found');
 			}
 		});
 
@@ -12441,7 +12460,7 @@ describe('Endpoints', () => {
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) assert.fail('suspend-user unfollow job was not created');
+				if (i === 9) expect.unreachable('suspend-user unfollow job was not created');
 			}
 
 			const suspendTokenTarget = await signup({ username: `hstt${suffix}` });
@@ -12615,7 +12634,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.fail(`deliver job was not found: ${inbox} ${type}`);
+			expect.unreachable(`deliver job was not found: ${inbox} ${type}`);
 		}
 
 		test('admin/relays/list はrelay一覧、moderator権限、token scopeを維持する', async () => {
@@ -12646,16 +12665,20 @@ describe('Endpoints', () => {
 
 			const listed = await api('admin/relays/list', {}, alice);
 			expect(listed.status).toBe(200);
-			expect(listed.body
+			expect(
+				listed.body
 					.filter((relay) => expected.some((expectedRelay) => expectedRelay.id === relay.id))
-					.sort((a, b) => a.id.localeCompare(b.id))).toStrictEqual(expected);
+					.sort((a, b) => a.id.localeCompare(b.id)),
+			).toStrictEqual(expected);
 
 			const readToken = await createAppToken(alice, ['read:admin:relays']);
 			const listedWithApp = await api('admin/relays/list', {}, { token: readToken });
 			expect(listedWithApp.status).toBe(200);
-			expect(listedWithApp.body
+			expect(
+				listedWithApp.body
 					.filter((relay) => expected.some((expectedRelay) => expectedRelay.id === relay.id))
-					.sort((a, b) => a.id.localeCompare(b.id))).toStrictEqual(expected);
+					.sort((a, b) => a.id.localeCompare(b.id)),
+			).toStrictEqual(expected);
 
 			const deniedToken = await createAppToken(alice, ['read:admin:user-ips']);
 			const scopeDenied = await api('admin/relays/list', {}, { token: deniedToken });
@@ -12685,7 +12708,9 @@ describe('Endpoints', () => {
 			const followJob = await findDeliverJob(inbox, 'Follow');
 			expect(followJob.data.to).toBe(inbox);
 			expect(followJob.data.isSharedInbox).toBe(false);
-			expect(followJob.data.digest).toBe(`SHA-256=${createHash('sha256').update(followJob.data.content).digest('base64')}`);
+			expect(followJob.data.digest).toBe(
+				`SHA-256=${createHash('sha256').update(followJob.data.content).digest('base64')}`,
+			);
 
 			const follow = JSON.parse(followJob.data.content) as any;
 			expect(follow.type).toBe('Follow');
@@ -12874,7 +12899,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.fail(`moderation log was not found: ${type}`);
+			expect.unreachable(`moderation log was not found: ${type}`);
 		}
 
 		test('admin/queue のwrite endpointはqueue操作、moderation log、権限を維持する', async () => {
@@ -15354,9 +15379,11 @@ describe('Endpoints', () => {
 
 			const followedList = await api('channels/followed', { limit: 20 }, alice);
 			expect(followedList.status).toBe(200);
-			expect((followedList.body as any[])
+			expect(
+				(followedList.body as any[])
 					.filter((channel) => channel.id === followed.id)
-					.map((channel) => channel.isFollowing)).toStrictEqual([true]);
+					.map((channel) => channel.isFollowing),
+			).toStrictEqual([true]);
 
 			const favorites = await api('channels/my-favorites', {}, alice);
 			expect(favorites.status).toBe(200);
@@ -16219,7 +16246,9 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 			assert.ok(res.body);
 			expect(castAsError(res.body as unknown as Record<string, unknown>).error.code).toBe('NO_SUCH_FOLDER');
-			expect(castAsError(res.body as unknown as Record<string, unknown>).error.id).toBe('12e7caa8-224f-471d-978a-653a81cf4c90');
+			expect(castAsError(res.body as unknown as Record<string, unknown>).error.id).toBe(
+				'12e7caa8-224f-471d-978a-653a81cf4c90',
+			);
 		});
 
 		test('SVGファイルを作成できる', async () => {

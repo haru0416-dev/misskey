@@ -540,14 +540,16 @@ describe('クリップ', () => {
 		});
 
 		// Promise.allで返ってくる配列には順序保障がないのでidでソートして厳密比較
-		expect(res.sort(compareBy<Misskey.entities.Clip>((s) => s.id)), // sinceIdとuntilId自体は結果に含まれない
+		expect(
+			res.sort(compareBy<Misskey.entities.Clip>((s) => s.id)), // sinceIdとuntilId自体は結果に含まれない
 			getAt(clips, 1).id +
 				' ... ' +
 				getAt(clips, 3).id +
 				' with ' +
 				clips.map((s) => s.id) +
 				' vs. ' +
-				res.map((s) => s.id)).toStrictEqual([getAt(clips, 2), getAt(clips, 3), getAt(clips, 4)]);
+				res.map((s) => s.id),
+		).toStrictEqual([getAt(clips, 2), getAt(clips, 3), getAt(clips, 4)]);
 	});
 
 	test.each([
@@ -1086,7 +1088,9 @@ describe('クリップ', () => {
 			// 自分のノートは非公開でも入れられるし、見える
 			// 他人の非公開ノートは入れられるけど、除外される
 			const expects = [aliceNote, aliceHomeNote, aliceFollowersNote, aliceSpecifiedNote, bobNote, bobHomeNote];
-			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(expects.sort(compareBy((s) => s.id)).map((x) => x.id));
+			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(
+				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
+			);
 		});
 
 		test('を始端IDとlimitで取得できる。', async () => {
@@ -1104,7 +1108,9 @@ describe('クリップ', () => {
 
 			// Promise.allで返ってくる配列はID順で並んでないのでソートして厳密比較
 			const expects = [getAt(noteList, 3), getAt(noteList, 4), getAt(noteList, 5)];
-			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(expects.sort(compareBy((s) => s.id)).map((x) => x.id));
+			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(
+				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
+			);
 		});
 
 		test('をID範囲指定で取得できる。', async () => {
@@ -1122,7 +1128,9 @@ describe('クリップ', () => {
 
 			// Promise.allで返ってくる配列はID順で並んでないのでソートして厳密比較
 			const expects = [getAt(noteList, 2), getAt(noteList, 3)];
-			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(expects.sort(compareBy((s) => s.id)).map((x) => x.id));
+			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(
+				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
+			);
 		});
 
 		test('Remoteのノートもクリップできる。', async () => {
@@ -1175,7 +1183,9 @@ describe('クリップ', () => {
 
 			const res = await notes({ clipId: publicClip.id }, { user: undefined });
 			const expects = [aliceNote, aliceHomeNote];
-			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(expects.sort(compareBy((s) => s.id)).map((x) => x.id));
+			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(
+				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
+			);
 		});
 
 		test('ミュートしているユーザーのノートはクリップから取得されない。', async () => {

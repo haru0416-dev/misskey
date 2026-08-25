@@ -416,7 +416,9 @@ describe('Note', () => {
 		);
 
 		expect(bobReply.status).toBe(400);
-		expect(castAsError(bobReply.body).error.code).toBe('CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY');
+		expect(castAsError(bobReply.body).error.code).toBe(
+			'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
+		);
 	});
 
 	test('文字数ぎりぎりで怒られない', async () => {

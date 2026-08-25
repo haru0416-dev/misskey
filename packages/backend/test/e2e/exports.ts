@@ -58,7 +58,7 @@ describe('export-clips', () => {
 			expect(res.status).toBe(200);
 			return await res.json();
 		}
-		assert.fail('Timed out waiting for exported drive file');
+		expect.unreachable('Timed out waiting for exported drive file');
 	}
 
 	beforeAll(
@@ -398,7 +398,7 @@ describe('export-clips', () => {
 				break;
 			}
 			if (Date.now() >= deadline) {
-				assert.fail('Timed out waiting for imported blocking relationship');
+				expect.unreachable('Timed out waiting for imported blocking relationship');
 			}
 			await new Promise((resolve) => setTimeout(resolve, 250));
 		}
