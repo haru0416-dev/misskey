@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
-import { describe, test, beforeAll } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 
 import { loadConfig } from '@/config.js';
 import { createApMfmService, type ApMfmService } from '@/core/activitypub/ApMfmService.js';
@@ -26,11 +25,9 @@ describe('ApMfmService', () => {
 
 			const { content, noMisskeyContent } = apMfmService.getNoteHtml(note);
 
-			assert.equal(noMisskeyContent, true, 'noMisskeyContent');
-			assert.equal(
-				content,
+			expect(noMisskeyContent, 'noMisskeyContent').toBe(true);
+			expect(content, 'content').toBe(
 				'テキスト <a href="http://misskey.local/tags/%E3%82%BF%E3%82%B0" rel="tag">#タグ</a> <a href="http://misskey.local/@mention" class="u-url mention">@mention</a> 🍊 ​:emoji:​ <a href="https://example.com/">https://example.com</a>',
-				'content',
 			);
 		});
 
@@ -42,8 +39,8 @@ describe('ApMfmService', () => {
 
 			const { content, noMisskeyContent } = apMfmService.getNoteHtml(note);
 
-			assert.equal(noMisskeyContent, false, 'noMisskeyContent');
-			assert.equal(content, '<i>foo</i>', 'content');
+			expect(noMisskeyContent, 'noMisskeyContent').toBe(false);
+			expect(content, 'content').toBe('<i>foo</i>');
 		});
 	});
 });

@@ -496,17 +496,16 @@ describe('OAuth', () => {
 				test(title, async () => {
 					const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
-					await assert.rejects(
+					await expect(
 						client.getToken({
 							code,
 							redirect_uri,
 							code_verifier: wrong_verifier,
 						} as AuthorizationTokenConfigExtended),
-						(err: GetTokenError) => {
-							expect(err.data.payload.error).toBe('invalid_grant');
-							return true;
-						},
-					);
+					).rejects.toSatisfy((err: GetTokenError) => {
+						expect(err.data.payload.error).toBe('invalid_grant');
+						return true;
+					});
 				});
 			}
 		});
@@ -525,39 +524,37 @@ describe('OAuth', () => {
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
 
-			await assert.rejects(
+			await expect(
 				client.getToken({
 					code,
 					redirect_uri,
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
-				(err: GetTokenError) => {
-					expect(err.data.payload.error).toBe('invalid_grant');
-					return true;
-				},
-			);
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
+				return true;
+			});
 		});
 
 		test('On failure', async () => {
 			const { code_challenge, code_verifier } = await pkceChallenge(128);
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
-			await assert.rejects(client.getToken({ code, redirect_uri }), (err: GetTokenError) => {
+			await expect(client.getToken({ code, redirect_uri })).rejects.toSatisfy((err: GetTokenError) => {
 				expect(err.data.payload.error).toBe('invalid_grant');
 				return true;
 			});
 
-			await assert.rejects(
+			await expect(
 				client.getToken({
 					code,
 					redirect_uri,
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
-				(err: GetTokenError) => {
-					expect(err.data.payload.error).toBe('invalid_grant');
-					return true;
-				},
-			);
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
+				return true;
+			});
 		});
 
 		test('Revoke the already granted access token', async () => {
@@ -580,17 +577,16 @@ describe('OAuth', () => {
 			);
 			expect(createResult.status).toBe(200);
 
-			await assert.rejects(
+			await expect(
 				client.getToken({
 					code,
 					redirect_uri,
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
-				(err: GetTokenError) => {
-					expect(err.data.payload.error).toBe('invalid_grant');
-					return true;
-				},
-			);
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
+				return true;
+			});
 
 			const createResult2 = await api(
 				'notes/create',
@@ -844,17 +840,16 @@ describe('OAuth', () => {
 
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
-			await assert.rejects(
+			await expect(
 				client.getToken({
 					code,
 					redirect_uri: 'http://127.0.0.2/',
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
-				(err: GetTokenError) => {
-					expect(err.data.payload.error).toBe('invalid_grant');
-					return true;
-				},
-			);
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
+				return true;
+			});
 		});
 
 		test('Invalid redirect_uri including the valid one at token endpoint', async () => {
@@ -862,17 +857,16 @@ describe('OAuth', () => {
 
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
-			await assert.rejects(
+			await expect(
 				client.getToken({
 					code,
 					redirect_uri: 'http://127.0.0.1/redirection',
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
-				(err: GetTokenError) => {
-					expect(err.data.payload.error).toBe('invalid_grant');
-					return true;
-				},
-			);
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
+				return true;
+			});
 		});
 
 		test('No redirect_uri at token endpoint', async () => {
@@ -880,16 +874,15 @@ describe('OAuth', () => {
 
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
-			await assert.rejects(
+			await expect(
 				client.getToken({
 					code,
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
-				(err: GetTokenError) => {
-					expect(err.data.payload.error).toBe('invalid_grant');
-					return true;
-				},
-			);
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
+				return true;
+			});
 		});
 	});
 
@@ -975,16 +968,15 @@ describe('OAuth', () => {
 				},
 			});
 
-			await assert.rejects(
+			await expect(
 				client.getToken({
 					username: 'alice',
 					password: 'test',
 				}),
-				(err: GetTokenError) => {
-					expect(err.data.payload.error).toBe('unsupported_grant_type');
-					return true;
-				},
-			);
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('unsupported_grant_type');
+				return true;
+			});
 		});
 
 		test('Client credential grant is not supported', async () => {
@@ -996,7 +988,7 @@ describe('OAuth', () => {
 				},
 			});
 
-			await assert.rejects(client.getToken({}), (err: GetTokenError) => {
+			await expect(client.getToken({})).rejects.toSatisfy((err: GetTokenError) => {
 				expect(err.data.payload.error).toBe('unsupported_grant_type');
 				return true;
 			});

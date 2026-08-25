@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
 import * as mfm from 'mfm-js';
 import { beforeAll, describe, expect, test } from 'vitest';
 
@@ -21,25 +20,25 @@ describe('MfmService', () => {
 		test('br', () => {
 			const input = 'foo\nbar\nbaz';
 			const output = 'foo<br />bar<br />baz';
-			assert.equal(mfmService.toHtml(mfm.parse(input)), output);
+			expect(mfmService.toHtml(mfm.parse(input))).toBe(output);
 		});
 
 		test('br alt', () => {
 			const input = 'foo\r\nbar\rbaz';
 			const output = 'foo<br />bar<br />baz';
-			assert.equal(mfmService.toHtml(mfm.parse(input)), output);
+			expect(mfmService.toHtml(mfm.parse(input))).toBe(output);
 		});
 
 		test('Do not generate unnecessary span', () => {
 			const input = 'foo $[tada bar]';
 			const output = 'foo <i>bar</i>';
-			assert.equal(mfmService.toHtml(mfm.parse(input)), output);
+			expect(mfmService.toHtml(mfm.parse(input))).toBe(output);
 		});
 
 		test('escape', () => {
 			const input = '```\n<p>Hello, world!</p>\n```';
 			const output = '<pre><code>&lt;p&gt;Hello, world!&lt;/p&gt;</code></pre>';
-			assert.equal(mfmService.toHtml(mfm.parse(input)), output);
+			expect(mfmService.toHtml(mfm.parse(input))).toBe(output);
 		});
 	});
 
@@ -73,19 +72,27 @@ describe('MfmService', () => {
 		});
 
 		test('link with different text', () => {
-			expect(mfmService.fromHtml('<p>a <a href="https://example.com/b">c</a> d</p>')).toStrictEqual('a [c](https://example.com/b) d');
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/b">c</a> d</p>')).toStrictEqual(
+				'a [c](https://example.com/b) d',
+			);
 		});
 
 		test('link with different text, but not encoded', () => {
-			expect(mfmService.fromHtml('<p>a <a href="https://example.com/ä">c</a> d</p>')).toStrictEqual('a [c](<https://example.com/ä>) d');
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/ä">c</a> d</p>')).toStrictEqual(
+				'a [c](<https://example.com/ä>) d',
+			);
 		});
 
 		test('link with same text', () => {
-			expect(mfmService.fromHtml('<p>a <a href="https://example.com/b">https://example.com/b</a> d</p>')).toStrictEqual('a https://example.com/b d');
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/b">https://example.com/b</a> d</p>')).toStrictEqual(
+				'a https://example.com/b d',
+			);
 		});
 
 		test('link with same text, but not encoded', () => {
-			expect(mfmService.fromHtml('<p>a <a href="https://example.com/ä">https://example.com/ä</a> d</p>')).toStrictEqual('a <https://example.com/ä> d');
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/ä">https://example.com/ä</a> d</p>')).toStrictEqual(
+				'a <https://example.com/ä> d',
+			);
 		});
 
 		test('link with no url', () => {
@@ -97,7 +104,9 @@ describe('MfmService', () => {
 		});
 
 		test('link without text', () => {
-			expect(mfmService.fromHtml('<p>a <a href="https://example.com/b"></a> d</p>')).toStrictEqual('a https://example.com/b d');
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/b"></a> d</p>')).toStrictEqual(
+				'a https://example.com/b d',
+			);
 		});
 
 		test('link without both', () => {
@@ -105,30 +114,46 @@ describe('MfmService', () => {
 		});
 
 		test('ruby', () => {
-			expect(mfmService.fromHtml('<p>a <ruby>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp></ruby> b</p>')).toStrictEqual('a $[ruby Misskey ミスキー] b');
-			expect(mfmService.fromHtml(
+			expect(mfmService.fromHtml('<p>a <ruby>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp></ruby> b</p>')).toStrictEqual(
+				'a $[ruby Misskey ミスキー] b',
+			);
+			expect(
+				mfmService.fromHtml(
 					'<p>a <ruby>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp></ruby> b</p>',
-				)).toStrictEqual('a $[ruby Misskey ミスキー]$[ruby Misskey ミスキー] b');
+				),
+			).toStrictEqual('a $[ruby Misskey ミスキー]$[ruby Misskey ミスキー] b');
 		});
 
 		test('ruby with spaces', () => {
-			expect(mfmService.fromHtml('<p>a <ruby>Miss key<rp>(</rp><rt>ミスキー</rt><rp>)</rp> b</ruby> c</p>')).toStrictEqual('a Miss key(ミスキー) b c');
-			expect(mfmService.fromHtml('<p>a <ruby>Misskey<rp>(</rp><rt>ミス キー</rt><rp>)</rp> b</ruby> c</p>')).toStrictEqual('a Misskey(ミス キー) b c');
-			expect(mfmService.fromHtml(
+			expect(
+				mfmService.fromHtml('<p>a <ruby>Miss key<rp>(</rp><rt>ミスキー</rt><rp>)</rp> b</ruby> c</p>'),
+			).toStrictEqual('a Miss key(ミスキー) b c');
+			expect(
+				mfmService.fromHtml('<p>a <ruby>Misskey<rp>(</rp><rt>ミス キー</rt><rp>)</rp> b</ruby> c</p>'),
+			).toStrictEqual('a Misskey(ミス キー) b c');
+			expect(
+				mfmService.fromHtml(
 					'<p>a <ruby>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp>Misskey<rp>(</rp><rt>ミス キー</rt><rp>)</rp>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp></ruby> b</p>',
-				)).toStrictEqual('a Misskey(ミスキー)Misskey(ミス キー)Misskey(ミスキー) b');
+				),
+			).toStrictEqual('a Misskey(ミスキー)Misskey(ミス キー)Misskey(ミスキー) b');
 		});
 
 		test('ruby with other inline tags', () => {
-			expect(mfmService.fromHtml('<p>a <ruby><strong>Misskey</strong><rp>(</rp><rt>ミスキー</rt><rp>)</rp> b</ruby> c</p>')).toStrictEqual('a **Misskey**(ミスキー) b c');
+			expect(
+				mfmService.fromHtml('<p>a <ruby><strong>Misskey</strong><rp>(</rp><rt>ミスキー</rt><rp>)</rp> b</ruby> c</p>'),
+			).toStrictEqual('a **Misskey**(ミスキー) b c');
 		});
 
 		test('mention', () => {
-			expect(mfmService.fromHtml('<p>a <a href="https://example.com/@user" class="u-url mention">@user</a> d</p>')).toStrictEqual('a @user@example.com d');
+			expect(
+				mfmService.fromHtml('<p>a <a href="https://example.com/@user" class="u-url mention">@user</a> d</p>'),
+			).toStrictEqual('a @user@example.com d');
 		});
 
 		test('hashtag', () => {
-			expect(mfmService.fromHtml('<p>a <a href="https://example.com/tags/a">#a</a> d</p>', ['#a'])).toStrictEqual('a #a d');
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/tags/a">#a</a> d</p>', ['#a'])).toStrictEqual(
+				'a #a d',
+			);
 		});
 	});
 });
