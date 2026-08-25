@@ -54,47 +54,19 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		}),
 	);
 
-	app.post('/chat/messages/create-to-user', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'chat/messages/create-to-user',
-				{
-					duration: 60 * 60 * 1000,
-					max: 500,
-				},
-				auth.user,
-			);
+	app.post(
+		'/chat/messages/create-to-user',
+		endpointHandler(deps, 'chat/messages/create-to-user', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatMessagesCreateToUser(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiChatMessagesCreateToUser(deps, auth.user, body));
-		});
-	});
-
-	app.post('/chat/messages/create-to-room', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'chat/messages/create-to-room',
-				{
-					duration: 60 * 60 * 1000,
-					max: 500,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiChatMessagesCreateToRoom(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/chat/messages/create-to-room',
+		endpointHandler(deps, 'chat/messages/create-to-room', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatMessagesCreateToRoom(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/chat/messages/delete',
@@ -152,26 +124,12 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		),
 	);
 
-	app.post('/chat/rooms/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'chat/rooms/create',
-				{
-					duration: 24 * 60 * 60 * 1000,
-					max: 10,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiChatRoomsCreate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/chat/rooms/create',
+		endpointHandler(deps, 'chat/rooms/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatRoomsCreate(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/chat/rooms/delete',
@@ -243,26 +201,12 @@ export function registerChatRoutes(app: Hono, deps: ApiShellDependencies): void 
 		}),
 	);
 
-	app.post('/chat/rooms/invitations/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:chat');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'chat/rooms/invitations/create',
-				{
-					duration: 24 * 60 * 60 * 1000,
-					max: 50,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiChatRoomsInvitationsCreate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/chat/rooms/invitations/create',
+		endpointHandler(deps, 'chat/rooms/invitations/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChatRoomsInvitationsCreate(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/chat/rooms/invitations/ignore',

@@ -506,28 +506,16 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/admin/system-webhook/test', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
+	app.post(
+		'/admin/system-webhook/test',
+		endpointHandler(deps, 'admin/system-webhook/test', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 			// 外部 URL への HTTP 配送をキューに積むので、無制限だと増幅送信の踏み台になる
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'admin/system-webhook/test',
-				{
-					duration: 15 * 60 * 1000,
-					max: 60,
-				},
-				auth.user,
-			);
 
 			await handleHonoApiAdminSystemWebhookTest(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/admin/system-webhook/update',

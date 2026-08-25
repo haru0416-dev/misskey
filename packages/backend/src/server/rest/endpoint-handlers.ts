@@ -23,6 +23,7 @@ import {
 	runApiEndpoint,
 	tokenFromRequest,
 } from './shell-helpers.js';
+import { assertHonoApiRateLimitForUser, type HonoApiEndpointRateLimit } from './rate-limit.js';
 
 /** 認証を通した後の資格情報。requireCredential のエンドポイントでは user が非 null。 */
 export type AuthedCredential = { user: MiLocalUser; token: MiAccessToken | null };
@@ -40,7 +41,9 @@ export type AuthedCredential = { user: MiLocalUser; token: MiAccessToken | null 
  */
 export async function withEndpointGuards<T>(
 	c: Context,
-	deps: Parameters<typeof authenticateHonoApiToken>[0] & Parameters<typeof assertHonoApiModerator>[0],
+	deps: Parameters<typeof authenticateHonoApiToken>[0] &
+		Parameters<typeof assertHonoApiModerator>[0] &
+		Parameters<typeof assertHonoApiRateLimitForUser>[0],
 	name: keyof typeof endpointMetas,
 	run: (args: { body: Record<string, unknown>; auth: HonoApiAuthenticated }) => Promise<T>,
 ): Promise<T> {
@@ -51,6 +54,7 @@ export async function withEndpointGuards<T>(
 		secure?: boolean;
 		prohibitMoved?: boolean;
 		kind?: string;
+		limit?: HonoApiEndpointRateLimit;
 	};
 
 	const body = await jsonBody(c);
@@ -78,6 +82,12 @@ export async function withEndpointGuards<T>(
 		await assertHonoApiAdmin(deps, auth as AuthedCredential);
 	} else if (meta.requireModerator === true) {
 		await assertHonoApiModerator(deps, auth as AuthedCredential);
+	}
+
+	// レートリミットは資格情報を要するものだけ meta から適用する。未認証でも通る
+	// エンドポイントの制限は IP 単位で、呼び出し側が別途掛けている。
+	if (meta.limit != null && auth.user != null) {
+		await assertHonoApiRateLimitForUser(deps, name, meta.limit, auth.user);
 	}
 
 	return await run({ body, auth });

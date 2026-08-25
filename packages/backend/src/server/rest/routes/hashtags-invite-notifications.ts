@@ -137,26 +137,13 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		),
 	);
 
-	app.post('/notifications/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:notifications');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'notifications/create',
-				{
-					duration: 1000 * 60,
-					max: 10,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/notifications/create',
+		endpointHandler(deps, 'notifications/create', async ({ body, auth, c }) => {
 			await handleHonoApiNotificationsCreate(deps, auth.user, auth.token, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/notifications/flush', async (c) => {
 		return await runApiEndpoint(c, async () => {

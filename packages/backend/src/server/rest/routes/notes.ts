@@ -66,52 +66,32 @@ import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/notes/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:notes');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'notes/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 300,
-				},
-				auth.user,
-			);
+	app.post(
+		'/notes/create',
+		endpointHandler(deps, 'notes/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesCreate(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiNotesCreate(deps, auth.user, body));
-		});
-	});
-
-	app.post('/notes/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:notes');
+	app.post(
+		'/notes/delete',
+		endpointHandler(deps, 'notes/delete', async ({ body, auth, c }) => {
 			await assertHonoApiRateLimitForUser(deps, 'notes/delete', notesDeleteRateLimit, auth.user);
 
 			await handleHonoApiNotesDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/notes/unrenote', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:notes');
+	app.post(
+		'/notes/unrenote',
+		endpointHandler(deps, 'notes/unrenote', async ({ body, auth, c }) => {
 			await assertHonoApiRateLimitForUser(deps, 'notes/unrenote', notesUnrenoteRateLimit, auth.user);
 
 			await handleHonoApiNotesUnrenote(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/notes/reactions/create',
@@ -121,18 +101,15 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		}),
 	);
 
-	app.post('/notes/reactions/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:reactions');
+	app.post(
+		'/notes/reactions/delete',
+		endpointHandler(deps, 'notes/reactions/delete', async ({ body, auth, c }) => {
 			await assertHonoApiRateLimitForUser(deps, 'notes/reactions/delete', reactionsDeleteRateLimit, auth.user);
 
 			await handleHonoApiNotesReactionsDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.get('/notes/reactions', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -226,27 +203,13 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/notes/favorites/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:favorites');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'notes/favorites/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 20,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/notes/favorites/create',
+		endpointHandler(deps, 'notes/favorites/create', async ({ body, auth, c }) => {
 			await handleHonoApiNotesFavoritesCreate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/notes/favorites/delete',
@@ -256,26 +219,13 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		}),
 	);
 
-	app.post('/notes/thread-muting/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'notes/thread-muting/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 10,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/notes/thread-muting/create',
+		endpointHandler(deps, 'notes/thread-muting/create', async ({ body, auth, c }) => {
 			await handleHonoApiNotesThreadMutingCreate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/notes/thread-muting/delete',
