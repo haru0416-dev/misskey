@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';

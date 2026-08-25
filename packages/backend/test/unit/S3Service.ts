@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 
 import * as http from 'node:http';
 import * as https from 'node:https';

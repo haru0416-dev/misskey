@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 
 import { createHash, randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';

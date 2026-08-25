@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 
 import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';

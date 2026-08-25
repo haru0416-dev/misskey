@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 
 import * as htmlParser from 'node-html-parser';
 import { describe, expect, test } from 'vitest';

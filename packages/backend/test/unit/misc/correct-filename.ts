@@ -3,44 +3,44 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { describe, expect, it, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { correctFilename } from '@/misc/correct-filename.js';
 
 describe(correctFilename, () => {
-	it('no ext to null', () => {
+	test('no ext to null', () => {
 		expect(correctFilename('test', null)).toBe('test.unknown');
 	});
-	it('no ext to jpg', () => {
+	test('no ext to jpg', () => {
 		expect(correctFilename('test', 'jpg')).toBe('test.jpg');
 	});
-	it('jpg to webp', () => {
+	test('jpg to webp', () => {
 		expect(correctFilename('test.jpg', 'webp')).toBe('test.jpg.webp');
 	});
-	it('jpg to .webp', () => {
+	test('jpg to .webp', () => {
 		expect(correctFilename('test.jpg', '.webp')).toBe('test.jpg.webp');
 	});
-	it('jpeg to jpg', () => {
+	test('jpeg to jpg', () => {
 		expect(correctFilename('test.jpeg', 'jpg')).toBe('test.jpeg');
 	});
-	it('JPEG to jpg', () => {
+	test('JPEG to jpg', () => {
 		expect(correctFilename('test.JPEG', 'jpg')).toBe('test.JPEG');
 	});
-	it('jpg to jpg', () => {
+	test('jpg to jpg', () => {
 		expect(correctFilename('test.jpg', 'jpg')).toBe('test.jpg');
 	});
-	it('JPG to jpg', () => {
+	test('JPG to jpg', () => {
 		expect(correctFilename('test.JPG', 'jpg')).toBe('test.JPG');
 	});
-	it('tiff to tif', () => {
+	test('tiff to tif', () => {
 		expect(correctFilename('test.tiff', 'tif')).toBe('test.tiff');
 	});
-	it('skip gz', () => {
+	test('skip gz', () => {
 		expect(correctFilename('test.unitypackage', 'gz')).toBe('test.unitypackage');
 	});
-	it('skip text file', () => {
+	test('skip text file', () => {
 		expect(correctFilename('test.txt', null)).toBe('test.txt');
 	});
-	it('unknown', () => {
+	test('unknown', () => {
 		expect(correctFilename('test.hoge', null)).toBe('test.hoge');
 	});
 	test('non ascii with space', () => {
@@ -48,12 +48,12 @@ describe(correctFilename, () => {
 	});
 
 	// dll と exe はどちらも portable executable で file-type が判別しきれない。
-	it('dll to exe', () => {
+	test('dll to exe', () => {
 		expect(correctFilename('test.dll', 'exe')).toBe('test.dll');
 	});
 
 	// 拡張子の判定は末尾だけを見る。途中のドットを拾うと二重付与になる。
-	it('multiple dots, matching last ext', () => {
+	test('multiple dots, matching last ext', () => {
 		expect(correctFilename('test.tar.jpg', 'jpg')).toBe('test.tar.jpg');
 	});
 });

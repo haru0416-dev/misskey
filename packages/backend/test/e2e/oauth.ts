@@ -7,7 +7,6 @@
  * OAuth ライブラリが Misskey に正しく統合され、依存関係の更新や実装変更で退行しないことを確認する。
  */
 
-process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
 import { createServer, type Server, type ServerResponse } from 'node:http';

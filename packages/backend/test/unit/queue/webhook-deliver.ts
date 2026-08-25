@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
