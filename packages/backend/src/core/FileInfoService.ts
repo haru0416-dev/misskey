@@ -45,6 +45,93 @@ const TYPE_SVG = {
 	ext: 'svg',
 };
 
+function exists(path: string): Promise<boolean> {
+	return fs.promises.access(path).then(
+		() => true,
+		() => false,
+	);
+}
+
+/**
+ * ビデオファイルにビデオトラックがあるかどうかチェック
+ * （ない場合：m4a, webmなど）
+ *
+ * @param path ファイルパス
+ * @returns ビデオトラックがあるかどうか（エラー発生時は常に`true`を返す）
+ */
+async function getFileSize(path: string): Promise<number> {
+	return (await fs.promises.stat(path)).size;
+}
+
+async function calcHash(path: string): Promise<string> {
+	const hash = crypto.createHash('md5').setEncoding('hex');
+	await stream.pipeline(fs.createReadStream(path), hash);
+	return hash.read();
+}
+
+/** 画像の寸法を判定する。 */
+async function detectImageSize(
+	path: string,
+	mime: string,
+): Promise<{
+	width: number;
+	height: number;
+	wUnits: string;
+	hUnits: string;
+	orientation?: number | undefined;
+}> {
+	// sharp は PSD を読めないため、ヘッダ (26 bytes, big-endian) を直接パースする
+	if (mime === 'image/vnd.adobe.photoshop') {
+		const fd = await fs.promises.open(path, 'r');
+		try {
+			const header = Buffer.alloc(26);
+			await fd.read(header, 0, 26, 0);
+			if (header.toString('latin1', 0, 4) !== '8BPS') throw new Error('invalid PSD header');
+			return {
+				width: header.readUInt32BE(18),
+				height: header.readUInt32BE(14),
+				wUnits: 'px',
+				hUnits: 'px',
+			};
+		} finally {
+			await fd.close();
+		}
+	}
+
+	// 寸法はヘッダから読むだけでデコードしないため、pixel 上限は外す (上限判定は呼び出し側で行う)
+	const metadata = await (await sharpBmp(path, mime, { limitInputPixels: false })).metadata();
+	if (metadata.width == null || metadata.height == null) throw new Error('cannot detect image dimensions');
+	return {
+		width: metadata.width,
+		height: metadata.height,
+		wUnits: 'px',
+		hUnits: 'px',
+		orientation: metadata.orientation,
+	};
+}
+
+/** 画像の blurhash 文字列を計算する。 */
+async function getBlurhash(path: string, type: string): Promise<string> {
+	const sharp = await sharpBmp(path, type);
+	const { data: buffer, info } = await sharp
+		.raw()
+		.ensureAlpha()
+		.resize(64, 64, { fit: 'inside' })
+		.toBuffer({ resolveWithObject: true });
+	return blurhash.encode(new Uint8ClampedArray(buffer), info.width, info.height, 5, 5);
+}
+
+async function checkSvg(path: string): Promise<boolean> {
+	try {
+		const size = await getFileSize(path);
+		if (size > 1 * 1024 * 1024) return false;
+		const buffer = await fs.promises.readFile(path);
+		return isSvg(buffer.toString());
+	} catch {
+		return false;
+	}
+}
+
 export function createFileInfoService(aiService: AiService, loggerService: LoggerService) {
 	const logger = loggerService.getLogger('file-info');
 
@@ -326,20 +413,6 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 		}
 	}
 
-	function exists(path: string): Promise<boolean> {
-		return fs.promises.access(path).then(
-			() => true,
-			() => false,
-		);
-	}
-
-	/**
-	 * ビデオファイルにビデオトラックがあるかどうかチェック
-	 * （ない場合：m4a, webmなど）
-	 *
-	 * @param path ファイルパス
-	 * @returns ビデオトラックがあるかどうか（エラー発生時は常に`true`を返す）
-	 */
 	async function hasVideoTrackOnVideoFile(path: string): Promise<boolean> {
 		const sublogger = logger.createSubLogger('ffprobe');
 		sublogger.info(`Checking the video file. File path: ${path}`);
@@ -401,79 +474,6 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 
 		// それでも種類が不明なら application/octet-stream にする
 		return TYPE_OCTET_STREAM;
-	}
-
-	async function checkSvg(path: string): Promise<boolean> {
-		try {
-			const size = await getFileSize(path);
-			if (size > 1 * 1024 * 1024) return false;
-			const buffer = await fs.promises.readFile(path);
-			return isSvg(buffer.toString());
-		} catch {
-			return false;
-		}
-	}
-
-	async function getFileSize(path: string): Promise<number> {
-		return (await fs.promises.stat(path)).size;
-	}
-
-	async function calcHash(path: string): Promise<string> {
-		const hash = crypto.createHash('md5').setEncoding('hex');
-		await stream.pipeline(fs.createReadStream(path), hash);
-		return hash.read();
-	}
-
-	/** 画像の寸法を判定する。 */
-	async function detectImageSize(
-		path: string,
-		mime: string,
-	): Promise<{
-		width: number;
-		height: number;
-		wUnits: string;
-		hUnits: string;
-		orientation?: number | undefined;
-	}> {
-		// sharp は PSD を読めないため、ヘッダ (26 bytes, big-endian) を直接パースする
-		if (mime === 'image/vnd.adobe.photoshop') {
-			const fd = await fs.promises.open(path, 'r');
-			try {
-				const header = Buffer.alloc(26);
-				await fd.read(header, 0, 26, 0);
-				if (header.toString('latin1', 0, 4) !== '8BPS') throw new Error('invalid PSD header');
-				return {
-					width: header.readUInt32BE(18),
-					height: header.readUInt32BE(14),
-					wUnits: 'px',
-					hUnits: 'px',
-				};
-			} finally {
-				await fd.close();
-			}
-		}
-
-		// 寸法はヘッダから読むだけでデコードしないため、pixel 上限は外す (上限判定は呼び出し側で行う)
-		const metadata = await (await sharpBmp(path, mime, { limitInputPixels: false })).metadata();
-		if (metadata.width == null || metadata.height == null) throw new Error('cannot detect image dimensions');
-		return {
-			width: metadata.width,
-			height: metadata.height,
-			wUnits: 'px',
-			hUnits: 'px',
-			orientation: metadata.orientation,
-		};
-	}
-
-	/** 画像の blurhash 文字列を計算する。 */
-	async function getBlurhash(path: string, type: string): Promise<string> {
-		const sharp = await sharpBmp(path, type);
-		const { data: buffer, info } = await sharp
-			.raw()
-			.ensureAlpha()
-			.resize(64, 64, { fit: 'inside' })
-			.toBuffer({ resolveWithObject: true });
-		return blurhash.encode(new Uint8ClampedArray(buffer), info.width, info.height, 5, 5);
 	}
 
 	return { getFileInfo, detectType, checkSvg, getFileSize };
