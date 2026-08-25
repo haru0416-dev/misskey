@@ -45,7 +45,7 @@ import {
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/drive/files', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/files', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -56,7 +56,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/stream', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/stream', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -124,7 +124,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/files/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/files/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -135,7 +135,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/files/find', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/files/find', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -146,7 +146,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/files/find-by-hash', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/files/find-by-hash', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -157,7 +157,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/files/attached-notes', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/files/attached-notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -168,7 +168,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/files/attached-chat-messages', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/files/attached-chat-messages', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -225,7 +225,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/files/check-existence', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/files/check-existence', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -236,7 +236,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/folders', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/folders', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -279,7 +279,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/folders/find', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/folders/find', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -290,7 +290,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/folders/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/drive/folders/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

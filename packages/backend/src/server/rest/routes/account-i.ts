@@ -134,7 +134,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/notifications', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/notifications', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -154,7 +154,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/notifications-grouped', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/notifications-grouped', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -174,7 +174,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/favorites', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/favorites', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -331,7 +331,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/apps', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/apps', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -342,7 +342,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/authorized-apps', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/authorized-apps', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -365,7 +365,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/registry/get', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/registry/get', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -376,7 +376,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/registry/get-all', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/registry/get-all', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -387,7 +387,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/registry/get-detail', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/registry/get-detail', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -398,7 +398,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/registry/keys', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/registry/keys', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -409,7 +409,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/registry/keys-with-type', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/registry/keys-with-type', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -432,7 +432,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/registry/scopes-with-domain', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/registry/scopes-with-domain', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -455,7 +455,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/pages', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/pages', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -466,7 +466,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/page-likes', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/page-likes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -477,7 +477,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/signin-history', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/signin-history', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -488,7 +488,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/webhooks/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/webhooks/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -499,7 +499,7 @@ export function registerAccountIRoutes(app: Hono, deps: ApiShellDependencies): v
 		});
 	});
 
-	app.post('/i/webhooks/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/webhooks/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

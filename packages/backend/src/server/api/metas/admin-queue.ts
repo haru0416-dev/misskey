@@ -27,6 +27,7 @@ export const endpointMetas = {
 	},
 	'admin/queue/deliver-delayed': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -58,6 +59,7 @@ export const endpointMetas = {
 	},
 	'admin/queue/inbox-delayed': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -109,6 +111,7 @@ export const endpointMetas = {
 	},
 	'admin/queue/show-job': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -125,6 +128,7 @@ export const endpointMetas = {
 	},
 	'admin/queue/show-job-logs': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -176,6 +180,7 @@ export const endpointMetas = {
 	},
 	'admin/queue/jobs': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -197,6 +202,7 @@ export const endpointMetas = {
 	},
 	'admin/queue/outbox-dead-letters': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -271,6 +277,7 @@ export const endpointMetas = {
 	},
 	'admin/queue/stats': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -309,6 +316,7 @@ export const endpointMetas = {
 	},
 	'admin/queue/queues': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -380,6 +388,7 @@ export const endpointMetas = {
 	},
 	'admin/queue/queue-stats': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,

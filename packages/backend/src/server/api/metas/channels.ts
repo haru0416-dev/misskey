@@ -120,6 +120,7 @@ export const endpointMetas = {
 	},
 	'channels/followed': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels', 'account'],
 
 			requireCredential: true,
@@ -142,6 +143,7 @@ export const endpointMetas = {
 	},
 	'channels/my-favorites': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels', 'account'],
 
 			requireCredential: true,
@@ -164,6 +166,7 @@ export const endpointMetas = {
 	},
 	'channels/owned': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels', 'account'],
 
 			requireCredential: true,
@@ -231,6 +234,7 @@ export const endpointMetas = {
 	},
 	'channels/timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'channels'],
 
 			requireCredential: false,
@@ -403,6 +407,7 @@ export const endpointMetas = {
 	},
 	'channels/mute/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels', 'mute'],
 
 			requireCredential: true,

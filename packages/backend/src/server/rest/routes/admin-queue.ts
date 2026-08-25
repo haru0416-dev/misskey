@@ -40,7 +40,7 @@ import {
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/admin/queue/queues', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/queue/queues', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -52,7 +52,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/queue/queue-stats', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/queue/queue-stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -64,7 +64,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/queue/stats', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/queue/stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -76,7 +76,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/queue/deliver-delayed', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/queue/deliver-delayed', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -88,7 +88,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/queue/inbox-delayed', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/queue/inbox-delayed', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -100,7 +100,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/queue/jobs', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/queue/jobs', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -112,7 +112,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/queue/outbox-dead-letters', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/queue/outbox-dead-letters', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -150,7 +150,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/queue/show-job', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/queue/show-job', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -162,7 +162,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/queue/show-job-logs', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/queue/show-job-logs', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -252,7 +252,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/get-index-stats', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/get-index-stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -266,7 +266,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/get-table-stats', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/get-table-stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -280,7 +280,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		});
 	});
 
-	app.post('/admin/captcha/current', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/captcha/current', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

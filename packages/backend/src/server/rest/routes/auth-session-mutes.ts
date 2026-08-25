@@ -121,7 +121,7 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		});
 	});
 
-	app.post('/blocking/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/blocking/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -166,7 +166,7 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		});
 	});
 
-	app.post('/mute/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/mute/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -211,7 +211,7 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		});
 	});
 
-	app.post('/renote-mute/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/renote-mute/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

@@ -75,7 +75,7 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/following/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/following/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -169,7 +169,7 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/following/requests/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/following/requests/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -192,7 +192,7 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/following/requests/sent', async (c) => {
+	app.on(['POST', 'QUERY'], '/following/requests/sent', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -212,7 +212,7 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/gallery/popular', async (c) => {
+	app.on(['POST', 'QUERY'], '/gallery/popular', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -221,7 +221,7 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/gallery/posts', async (c) => {
+	app.on(['POST', 'QUERY'], '/gallery/posts', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -319,7 +319,7 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/i/gallery/posts', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/gallery/posts', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -330,7 +330,7 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/i/gallery/likes', async (c) => {
+	app.on(['POST', 'QUERY'], '/i/gallery/likes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -431,7 +431,7 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/flash/my', async (c) => {
+	app.on(['POST', 'QUERY'], '/flash/my', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -442,7 +442,7 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/flash/my-likes', async (c) => {
+	app.on(['POST', 'QUERY'], '/flash/my-likes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

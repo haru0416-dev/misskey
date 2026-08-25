@@ -62,6 +62,7 @@ export const endpointMetas = {
 	},
 	'admin/abuse-report/notification-recipient/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin', 'abuse-report', 'notification-recipient'],
 
 			requireCredential: true,
@@ -81,6 +82,7 @@ export const endpointMetas = {
 	},
 	'admin/abuse-report/notification-recipient/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin', 'abuse-report', 'notification-recipient'],
 
 			requireCredential: true,

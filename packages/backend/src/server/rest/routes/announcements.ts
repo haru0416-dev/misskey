@@ -74,7 +74,7 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		});
 	});
 
-	app.post('/pinned-users', async (c) => {
+	app.on(['POST', 'QUERY'], '/pinned-users', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -95,7 +95,7 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		});
 	});
 
-	app.post('/email-address/available', async (c) => {
+	app.on(['POST', 'QUERY'], '/email-address/available', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiEmailAddressAvailable(deps, body));

@@ -277,6 +277,7 @@ export const endpointMetas = {
 	},
 	'i/apps': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 
 			secure: true,
@@ -331,6 +332,7 @@ export const endpointMetas = {
 	},
 	'i/authorized-apps': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 
 			secure: true,
@@ -514,6 +516,7 @@ export const endpointMetas = {
 	},
 	'i/favorites': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notes', 'favorites'],
 
 			requireCredential: true,
@@ -536,6 +539,7 @@ export const endpointMetas = {
 	},
 	'i/gallery/likes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'gallery'],
 
 			requireCredential: true,
@@ -571,6 +575,7 @@ export const endpointMetas = {
 	},
 	'i/gallery/posts': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'gallery'],
 
 			requireCredential: true,
@@ -816,6 +821,7 @@ export const endpointMetas = {
 	},
 	'i/notifications': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notifications'],
 
 			requireCredential: true,
@@ -843,6 +849,7 @@ export const endpointMetas = {
 	},
 	'i/notifications-grouped': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notifications'],
 
 			requireCredential: true,
@@ -870,6 +877,7 @@ export const endpointMetas = {
 	},
 	'i/page-likes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'pages'],
 
 			requireCredential: true,
@@ -903,6 +911,7 @@ export const endpointMetas = {
 	},
 	'i/pages': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'pages'],
 
 			requireCredential: true,
@@ -991,6 +1000,7 @@ export const endpointMetas = {
 	},
 	'i/registry/get': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1010,6 +1020,7 @@ export const endpointMetas = {
 	},
 	'i/registry/get-all': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1021,6 +1032,7 @@ export const endpointMetas = {
 	},
 	'i/registry/get-detail': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1049,6 +1061,7 @@ export const endpointMetas = {
 	},
 	'i/registry/keys': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1063,6 +1076,7 @@ export const endpointMetas = {
 	},
 	'i/registry/keys-with-type': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1084,6 +1098,7 @@ export const endpointMetas = {
 	},
 	'i/registry/scopes-with-domain': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			secure: true,
 
@@ -1128,6 +1143,7 @@ export const endpointMetas = {
 	},
 	'i/signin-history': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			secure: true,
 
@@ -1384,6 +1400,7 @@ export const endpointMetas = {
 	},
 	'i/webhooks/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['webhooks', 'account'],
 
 			requireCredential: true,
@@ -1402,6 +1419,7 @@ export const endpointMetas = {
 	},
 	'i/webhooks/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['webhooks'],
 
 			requireCredential: true,

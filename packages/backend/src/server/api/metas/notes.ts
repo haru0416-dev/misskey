@@ -81,6 +81,7 @@ export const endpointMetas = {
 	},
 	'notes/clips': {
 		meta: {
+			allowQuery: true,
 			tags: ['clips', 'notes'],
 
 			requireCredential: false,
@@ -109,6 +110,7 @@ export const endpointMetas = {
 	},
 	'notes/conversation': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
@@ -284,6 +286,7 @@ export const endpointMetas = {
 	},
 	'notes/drafts/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'drafts'],
 
 			requireCredential: true,
@@ -588,6 +591,7 @@ export const endpointMetas = {
 	},
 	'notes/drafts/count': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'drafts'],
 
 			requireCredential: true,
@@ -686,6 +690,7 @@ export const endpointMetas = {
 	},
 	'notes/global-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			res: {
@@ -712,6 +717,7 @@ export const endpointMetas = {
 	},
 	'notes/hybrid-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -747,6 +753,7 @@ export const endpointMetas = {
 	},
 	'notes/local-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			res: {
@@ -779,6 +786,7 @@ export const endpointMetas = {
 	},
 	'notes/mentions': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -800,6 +808,7 @@ export const endpointMetas = {
 	},
 	'notes/polls/recommendation': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -971,6 +980,7 @@ export const endpointMetas = {
 	},
 	'notes/renotes': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
@@ -1049,6 +1059,7 @@ export const endpointMetas = {
 	},
 	'notes/search-by-tag': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'hashtags'],
 
 			res: {
@@ -1103,6 +1114,7 @@ export const endpointMetas = {
 	},
 	'notes/show-partial-bulk': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
@@ -1145,6 +1157,7 @@ export const endpointMetas = {
 	},
 	'notes/state': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -1218,6 +1231,7 @@ export const endpointMetas = {
 	},
 	'notes/timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -1239,6 +1253,7 @@ export const endpointMetas = {
 	},
 	'notes/translate': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -1300,6 +1315,7 @@ export const endpointMetas = {
 	},
 	'notes/user-list-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'lists'],
 
 			requireCredential: true,

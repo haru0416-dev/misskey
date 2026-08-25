@@ -130,7 +130,7 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 		});
 	});
 
-	app.post('/antennas/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/antennas/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -141,7 +141,7 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 		});
 	});
 
-	app.post('/antennas/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/antennas/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -185,7 +185,7 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 		});
 	});
 
-	app.post('/app/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/app/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
