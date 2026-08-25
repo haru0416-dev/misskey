@@ -114,6 +114,7 @@ import {
 	assertHonoApiCanManageAvatarDecorations,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post('/admin/accounts/create', async (c) => {
@@ -600,17 +601,12 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/admin/system-webhook/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			await assertHonoApiModerator(deps, auth);
-
-			return jsonResponse(c, await handleHonoApiAdminSystemWebhookCreate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/admin/system-webhook/create',
+		endpointHandler(deps, 'admin/system-webhook/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAdminSystemWebhookCreate(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/admin/system-webhook/delete', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -625,29 +621,19 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/admin/system-webhook/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			await assertHonoApiModerator(deps, auth);
+	app.post(
+		'/admin/system-webhook/list',
+		endpointHandler(deps, 'admin/system-webhook/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAdminSystemWebhookList(deps, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiAdminSystemWebhookList(deps, body));
-		});
-	});
-
-	app.post('/admin/system-webhook/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			await assertHonoApiModerator(deps, auth);
-
-			return jsonResponse(c, await handleHonoApiAdminSystemWebhookShow(deps, body));
-		});
-	});
+	app.post(
+		'/admin/system-webhook/show',
+		endpointHandler(deps, 'admin/system-webhook/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAdminSystemWebhookShow(deps, body)),
+		),
+	);
 
 	app.post('/admin/system-webhook/test', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -672,17 +658,12 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/admin/system-webhook/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			await assertHonoApiModerator(deps, auth);
-
-			return jsonResponse(c, await handleHonoApiAdminSystemWebhookUpdate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/admin/system-webhook/update',
+		endpointHandler(deps, 'admin/system-webhook/update', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAdminSystemWebhookUpdate(deps, auth.user, body)),
+		),
+	);
 
 	app.on(['POST', 'QUERY'], '/admin/show-moderation-logs', async (c) => {
 		return await runApiEndpoint(c, async () => {
