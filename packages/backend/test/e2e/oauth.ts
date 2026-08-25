@@ -11,7 +11,7 @@ process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
 import { createServer, type Server, type ServerResponse } from 'node:http';
-import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import {
 	AuthorizationCode,
 	type AuthorizationTokenConfig,
@@ -196,10 +196,10 @@ async function fetchAuthorizationCode(
 			code_challenge_method: 'S256',
 		} as AuthorizationParamsExtended),
 	);
-	assert.strictEqual(response.status, 200);
+	expect(response.status).toBe(200);
 
 	const decisionResponse = await fetchDecisionFromResponse(response, user);
-	assert.strictEqual(decisionResponse.status, 302);
+	expect(decisionResponse.status).toBe(302);
 
 	const locationHeader = decisionResponse.headers.get('location');
 	assert.ok(locationHeader);
@@ -214,25 +214,25 @@ async function fetchAuthorizationCode(
 }
 
 function assertIndirectError(response: Response, error: string): void {
-	assert.strictEqual(response.status, 302);
+	expect(response.status).toBe(302);
 
 	const locationHeader = response.headers.get('location');
 	assert.ok(locationHeader);
 
 	const location = new URL(locationHeader);
-	assert.strictEqual(location.searchParams.get('error'), error);
+	expect(location.searchParams.get('error')).toBe(error);
 
 	// https://datatracker.ietf.org/doc/html/rfc9207#name-response-parameter-iss
-	assert.strictEqual(location.searchParams.get('iss'), 'http://misskey.local');
+	expect(location.searchParams.get('iss')).toBe('http://misskey.local');
 	// https://datatracker.ietf.org/doc/html/rfc6749.html#section-4.1.2.1
 	assert.ok(location.searchParams.has('state'));
 }
 
 async function assertDirectError(response: Response, status: number, error: string): Promise<void> {
-	assert.strictEqual(response.status, status);
+	expect(response.status).toBe(status);
 
 	const data = (await response.json()) as any;
-	assert.strictEqual(data.error, error);
+	expect(data.error).toBe(error);
 }
 
 describe('OAuth', () => {
@@ -290,26 +290,26 @@ describe('OAuth', () => {
 				code_challenge_method: 'S256',
 			} as AuthorizationParamsExtended),
 		);
-		assert.strictEqual(response.status, 200);
+		expect(response.status).toBe(200);
 
 		const meta = getMeta(await response.text());
-		assert.strictEqual(typeof meta.transactionId, 'string');
+		expect(typeof meta.transactionId).toBe('string');
 		assert.ok(meta.transactionId);
-		assert.strictEqual(meta.clientName, 'Misklient');
+		expect(meta.clientName).toBe('Misklient');
 
 		const decisionResponse = await fetchDecision(meta.transactionId, alice);
-		assert.strictEqual(decisionResponse.status, 302);
+		expect(decisionResponse.status).toBe(302);
 		assert.ok(decisionResponse.headers.has('location'));
 
 		const locationHeader = decisionResponse.headers.get('location');
 		assert.ok(locationHeader);
 
 		const location = new URL(locationHeader);
-		assert.strictEqual(location.origin + location.pathname, redirect_uri);
+		expect(location.origin + location.pathname).toBe(redirect_uri);
 		assert.ok(location.searchParams.has('code'));
-		assert.strictEqual(location.searchParams.get('state'), 'state');
+		expect(location.searchParams.get('state')).toBe('state');
 		// https://datatracker.ietf.org/doc/html/rfc9207#name-response-parameter-iss
-		assert.strictEqual(location.searchParams.get('iss'), 'http://misskey.local');
+		expect(location.searchParams.get('iss')).toBe('http://misskey.local');
 
 		const code = new URL(location).searchParams.get('code');
 		assert.ok(code);
@@ -319,9 +319,9 @@ describe('OAuth', () => {
 			redirect_uri,
 			code_verifier,
 		} as AuthorizationTokenConfigExtended);
-		assert.strictEqual(typeof token.token['access_token'], 'string');
-		assert.strictEqual(token.token['token_type'], 'Bearer');
-		assert.strictEqual(token.token['scope'], 'write:notes');
+		expect(typeof token.token['access_token']).toBe('string');
+		expect(token.token['token_type']).toBe('Bearer');
+		expect(token.token['scope']).toBe('write:notes');
 
 		const createResult = await api(
 			'notes/create',
@@ -331,10 +331,10 @@ describe('OAuth', () => {
 				bearer: true,
 			},
 		);
-		assert.strictEqual(createResult.status, 200);
+		expect(createResult.status).toBe(200);
 
 		const createResultBody = createResult.body as misskey.Endpoints['notes/create']['res'];
-		assert.strictEqual(createResultBody.createdNote.text, 'test');
+		expect(createResultBody.createdNote.text).toBe('test');
 	});
 
 	test('Two concurrent flows', async () => {
@@ -352,7 +352,7 @@ describe('OAuth', () => {
 				code_challenge_method: 'S256',
 			} as AuthorizationParamsExtended),
 		);
-		assert.strictEqual(responseAlice.status, 200);
+		expect(responseAlice.status).toBe(200);
 
 		const responseBob = await fetch(
 			client.authorizeURL({
@@ -363,13 +363,13 @@ describe('OAuth', () => {
 				code_challenge_method: 'S256',
 			} as AuthorizationParamsExtended),
 		);
-		assert.strictEqual(responseBob.status, 200);
+		expect(responseBob.status).toBe(200);
 
 		const decisionResponseAlice = await fetchDecisionFromResponse(responseAlice, alice);
-		assert.strictEqual(decisionResponseAlice.status, 302);
+		expect(decisionResponseAlice.status).toBe(302);
 
 		const decisionResponseBob = await fetchDecisionFromResponse(responseBob, bob);
-		assert.strictEqual(decisionResponseBob.status, 302);
+		expect(decisionResponseBob.status).toBe(302);
 
 		const locationHeaderAlice = decisionResponseAlice.headers.get('location');
 		assert.ok(locationHeaderAlice);
@@ -404,7 +404,7 @@ describe('OAuth', () => {
 				bearer: true,
 			},
 		);
-		assert.strictEqual(createResultAlice.status, 200);
+		expect(createResultAlice.status).toBe(200);
 
 		const createResultBob = await api(
 			'notes/create',
@@ -414,13 +414,13 @@ describe('OAuth', () => {
 				bearer: true,
 			},
 		);
-		assert.strictEqual(createResultAlice.status, 200);
+		expect(createResultAlice.status).toBe(200);
 
 		const createResultBodyAlice = (await createResultAlice.body) as misskey.Endpoints['notes/create']['res'];
-		assert.strictEqual(createResultBodyAlice.createdNote.user.username, 'alice');
+		expect(createResultBodyAlice.createdNote.user.username).toBe('alice');
 
 		const createResultBodyBob = (await createResultBob.body) as misskey.Endpoints['notes/create']['res'];
-		assert.strictEqual(createResultBodyBob.createdNote.user.username, 'bob');
+		expect(createResultBodyBob.createdNote.user.username).toBe('bob');
 	});
 
 	// https://datatracker.ietf.org/doc/html/rfc7636.html
@@ -503,7 +503,7 @@ describe('OAuth', () => {
 							code_verifier: wrong_verifier,
 						} as AuthorizationTokenConfigExtended),
 						(err: GetTokenError) => {
-							assert.strictEqual(err.data.payload.error, 'invalid_grant');
+							expect(err.data.payload.error).toBe('invalid_grant');
 							return true;
 						},
 					);
@@ -532,7 +532,7 @@ describe('OAuth', () => {
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
 				(err: GetTokenError) => {
-					assert.strictEqual(err.data.payload.error, 'invalid_grant');
+					expect(err.data.payload.error).toBe('invalid_grant');
 					return true;
 				},
 			);
@@ -543,7 +543,7 @@ describe('OAuth', () => {
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
 			await assert.rejects(client.getToken({ code, redirect_uri }), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'invalid_grant');
+				expect(err.data.payload.error).toBe('invalid_grant');
 				return true;
 			});
 
@@ -554,7 +554,7 @@ describe('OAuth', () => {
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
 				(err: GetTokenError) => {
-					assert.strictEqual(err.data.payload.error, 'invalid_grant');
+					expect(err.data.payload.error).toBe('invalid_grant');
 					return true;
 				},
 			);
@@ -578,7 +578,7 @@ describe('OAuth', () => {
 					bearer: true,
 				},
 			);
-			assert.strictEqual(createResult.status, 200);
+			expect(createResult.status).toBe(200);
 
 			await assert.rejects(
 				client.getToken({
@@ -587,7 +587,7 @@ describe('OAuth', () => {
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
 				(err: GetTokenError) => {
-					assert.strictEqual(err.data.payload.error, 'invalid_grant');
+					expect(err.data.payload.error).toBe('invalid_grant');
 					return true;
 				},
 			);
@@ -600,7 +600,7 @@ describe('OAuth', () => {
 					bearer: true,
 				},
 			);
-			assert.strictEqual(createResult2.status, 401);
+			expect(createResult2.status).toBe(401);
 		});
 
 		test('Concurrent exchanges do not leave a usable access token', async () => {
@@ -617,7 +617,7 @@ describe('OAuth', () => {
 			const rejected = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
 			assert.ok(rejected.length >= 1);
 			for (const result of rejected) {
-				assert.strictEqual((result.reason as GetTokenError).data.payload.error, 'invalid_grant');
+				expect((result.reason as GetTokenError).data.payload.error).toBe('invalid_grant');
 			}
 
 			for (const result of results) {
@@ -630,7 +630,7 @@ describe('OAuth', () => {
 						bearer: true,
 					},
 				);
-				assert.strictEqual(createResult.status, 401);
+				expect(createResult.status).toBe(401);
 			}
 		});
 	});
@@ -647,10 +647,10 @@ describe('OAuth', () => {
 				code_challenge_method: 'S256',
 			} as AuthorizationParamsExtended),
 		);
-		assert.strictEqual(response.status, 200);
+		expect(response.status).toBe(200);
 
 		const decisionResponse = await fetchDecisionFromResponse(response, alice, { cancel: true });
-		assert.strictEqual(decisionResponse.status, 302);
+		expect(decisionResponse.status).toBe(302);
 
 		const locationHeader = decisionResponse.headers.get('location');
 		assert.ok(locationHeader);
@@ -727,7 +727,7 @@ describe('OAuth', () => {
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
 
-			assert.strictEqual(token.token['scope'], 'write:notes');
+			expect(token.token['scope']).toBe('write:notes');
 		});
 
 		test('Known scopes', async () => {
@@ -743,7 +743,7 @@ describe('OAuth', () => {
 				} as AuthorizationParamsExtended),
 			);
 
-			assert.strictEqual(response.status, 200);
+			expect(response.status).toBe(200);
 		});
 
 		test('Duplicated scopes', async () => {
@@ -760,7 +760,7 @@ describe('OAuth', () => {
 				redirect_uri,
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
-			assert.strictEqual(token.token['scope'], 'write:notes read:account');
+			expect(token.token['scope']).toBe('write:notes read:account');
 		});
 
 		test('Scope check by API', async () => {
@@ -773,7 +773,7 @@ describe('OAuth', () => {
 				redirect_uri,
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
-			assert.strictEqual(typeof token.token['access_token'], 'string');
+			expect(typeof token.token['access_token']).toBe('string');
 
 			const createResult = await api(
 				'notes/create',
@@ -783,7 +783,7 @@ describe('OAuth', () => {
 					bearer: true,
 				},
 			);
-			assert.strictEqual(createResult.status, 403);
+			expect(createResult.status).toBe(403);
 			assert.ok(
 				createResult.headers
 					.get('WWW-Authenticate')
@@ -851,7 +851,7 @@ describe('OAuth', () => {
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
 				(err: GetTokenError) => {
-					assert.strictEqual(err.data.payload.error, 'invalid_grant');
+					expect(err.data.payload.error).toBe('invalid_grant');
 					return true;
 				},
 			);
@@ -869,7 +869,7 @@ describe('OAuth', () => {
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
 				(err: GetTokenError) => {
-					assert.strictEqual(err.data.payload.error, 'invalid_grant');
+					expect(err.data.payload.error).toBe('invalid_grant');
 					return true;
 				},
 			);
@@ -886,7 +886,7 @@ describe('OAuth', () => {
 					code_verifier,
 				} as AuthorizationTokenConfigExtended),
 				(err: GetTokenError) => {
-					assert.strictEqual(err.data.payload.error, 'invalid_grant');
+					expect(err.data.payload.error).toBe('invalid_grant');
 					return true;
 				},
 			);
@@ -896,10 +896,10 @@ describe('OAuth', () => {
 	// https://datatracker.ietf.org/doc/html/rfc8414
 	test('Server metadata', async () => {
 		const response = await fetch(new URL('.well-known/oauth-authorization-server', host));
-		assert.strictEqual(response.status, 200);
+		expect(response.status).toBe(200);
 
 		const body = (await response.json()) as any;
-		assert.strictEqual(body.issuer, 'http://misskey.local');
+		expect(body.issuer).toBe('http://misskey.local');
 		assert.ok(body.scopes_supported.includes('write:notes'));
 	});
 
@@ -909,7 +909,7 @@ describe('OAuth', () => {
 			const client = new AuthorizationCode(clientConfig);
 
 			const response = await fetch(client.authorizeURL(basicAuthParams));
-			assert.strictEqual(response.status, 200);
+			expect(response.status).toBe(200);
 
 			const { transactionId } = getMeta(await response.text());
 			assert.ok(transactionId);
@@ -981,7 +981,7 @@ describe('OAuth', () => {
 					password: 'test',
 				}),
 				(err: GetTokenError) => {
-					assert.strictEqual(err.data.payload.error, 'unsupported_grant_type');
+					expect(err.data.payload.error).toBe('unsupported_grant_type');
 					return true;
 				},
 			);
@@ -997,7 +997,7 @@ describe('OAuth', () => {
 			});
 
 			await assert.rejects(client.getToken({}), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'unsupported_grant_type');
+				expect(err.data.payload.error).toBe('unsupported_grant_type');
 				return true;
 			});
 		});
@@ -1022,15 +1022,15 @@ describe('OAuth', () => {
 				}),
 			});
 
-			assert.strictEqual(response.status, 200);
+			expect(response.status).toBe(200);
 			const tokenResponse = (await response.json()) as {
 				access_token: string;
 				token_type: string;
 				scope: string;
 			};
-			assert.strictEqual(typeof tokenResponse.access_token, 'string');
-			assert.strictEqual(tokenResponse.token_type, 'Bearer');
-			assert.strictEqual(tokenResponse.scope, 'write:notes');
+			expect(typeof tokenResponse.access_token).toBe('string');
+			expect(tokenResponse.token_type).toBe('Bearer');
+			expect(tokenResponse.scope).toBe('write:notes');
 		});
 
 		test('Accept x-www-form-urlencoded payload', async () => {
@@ -1051,15 +1051,15 @@ describe('OAuth', () => {
 				}),
 			});
 
-			assert.strictEqual(response.status, 200);
+			expect(response.status).toBe(200);
 			const tokenResponse = (await response.json()) as {
 				access_token: string;
 				token_type: string;
 				scope: string;
 			};
-			assert.strictEqual(typeof tokenResponse.access_token, 'string');
-			assert.strictEqual(tokenResponse.token_type, 'Bearer');
-			assert.strictEqual(tokenResponse.scope, 'write:notes');
+			expect(typeof tokenResponse.access_token).toBe('string');
+			expect(tokenResponse.token_type).toBe('Bearer');
+			expect(tokenResponse.scope).toBe('write:notes');
 		});
 	});
 
@@ -1089,10 +1089,10 @@ describe('OAuth', () => {
 						code_challenge_method: 'S256',
 					} as AuthorizationParamsExtended),
 				);
-				assert.strictEqual(response.status, 200);
+				expect(response.status).toBe(200);
 				const meta = getMeta(await response.text());
-				assert.strictEqual(meta.clientName, 'Misklient JSON');
-				assert.strictEqual(meta.clientLogo, `http://127.0.0.1:${clientPort}/logo.png`);
+				expect(meta.clientName).toBe('Misklient JSON');
+				expect(meta.clientLogo).toBe(`http://127.0.0.1:${clientPort}/logo.png`);
 			});
 
 			test('Merge Link header redirect_uri with JSON redirect_uris', async () => {
@@ -1118,7 +1118,7 @@ describe('OAuth', () => {
 						code_challenge_method: 'S256',
 					} as AuthorizationParamsExtended),
 				);
-				assert.strictEqual(ok1.status, 200);
+				expect(ok1.status).toBe(200);
 
 				const ok2 = await fetch(
 					client.authorizeURL({
@@ -1129,7 +1129,7 @@ describe('OAuth', () => {
 						code_challenge_method: 'S256',
 					} as AuthorizationParamsExtended),
 				);
-				assert.strictEqual(ok2.status, 200);
+				expect(ok2.status).toBe(200);
 			});
 
 			test('Reject when client_id does not match retrieved URL', async () => {
@@ -1253,7 +1253,7 @@ describe('OAuth', () => {
 								code_challenge_method: 'S256',
 							} as AuthorizationParamsExtended),
 						);
-						assert.strictEqual(response.status, 200);
+						expect(response.status).toBe(200);
 					});
 				}
 
@@ -1315,8 +1315,8 @@ describe('OAuth', () => {
 						code_challenge_method: 'S256',
 					} as AuthorizationParamsExtended),
 				);
-				assert.strictEqual(response.status, 200);
-				assert.strictEqual(getMeta(await response.text()).clientName, `http://127.0.0.1:${clientPort}/`);
+				expect(response.status).toBe(200);
+				expect(getMeta(await response.text()).clientName).toBe(`http://127.0.0.1:${clientPort}/`);
 			});
 
 			test('With Logo', async () => {
@@ -1343,10 +1343,10 @@ describe('OAuth', () => {
 						code_challenge_method: 'S256',
 					} as AuthorizationParamsExtended),
 				);
-				assert.strictEqual(response.status, 200);
+				expect(response.status).toBe(200);
 				const meta = getMeta(await response.text());
-				assert.strictEqual(meta.clientName, 'Misklient');
-				assert.strictEqual(meta.clientLogo, `http://127.0.0.1:${clientPort}/logo.png`);
+				expect(meta.clientName).toBe('Misklient');
+				expect(meta.clientLogo).toBe(`http://127.0.0.1:${clientPort}/logo.png`);
 			});
 
 			test('Missing Logo', async () => {
@@ -1370,10 +1370,10 @@ describe('OAuth', () => {
 						code_challenge_method: 'S256',
 					} as AuthorizationParamsExtended),
 				);
-				assert.strictEqual(response.status, 200);
+				expect(response.status).toBe(200);
 				const meta = getMeta(await response.text());
-				assert.strictEqual(meta.clientName, 'Misklient');
-				assert.strictEqual(meta.clientLogo, undefined);
+				expect(meta.clientName).toBe('Misklient');
+				expect(meta.clientLogo).toBe(undefined);
 			});
 
 			test('Mismatching URL in h-app', async () => {
@@ -1397,22 +1397,22 @@ describe('OAuth', () => {
 						code_challenge_method: 'S256',
 					} as AuthorizationParamsExtended),
 				);
-				assert.strictEqual(response.status, 200);
-				assert.strictEqual(getMeta(await response.text()).clientName, `http://127.0.0.1:${clientPort}/`);
+				expect(response.status).toBe(200);
+				expect(getMeta(await response.text()).clientName).toBe(`http://127.0.0.1:${clientPort}/`);
 			});
 		});
 	});
 
 	test('Unknown OAuth endpoint', async () => {
 		const response = await fetch(new URL('/oauth/foo', host));
-		assert.strictEqual(response.status, 404);
+		expect(response.status).toBe(404);
 	});
 
 	describe('CORS', () => {
 		test('Token endpoint should support CORS', async () => {
 			const response = await fetch(new URL('/oauth/token', host), { method: 'POST' });
 			assert.ok(!response.ok);
-			assert.strictEqual(response.headers.get('Access-Control-Allow-Origin'), '*');
+			expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
 		});
 
 		test('Authorize endpoint should not support CORS', async () => {

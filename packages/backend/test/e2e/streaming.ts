@@ -6,7 +6,7 @@
 process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
-import { describe, beforeAll, afterAll, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { WebSocket } from 'ws';
 import {
 	createFollowingInDatabase,
@@ -151,7 +151,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'mention' && msg.body['userId'] === ayano.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('renote event', async () => {
@@ -162,7 +162,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'renote' && msg.body['renoteId'] === kyokoNote.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 		});
 
@@ -175,7 +175,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['text'] === 'foo',
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('自分の visibility: followers な投稿が流れる', async () => {
@@ -186,7 +186,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['text'] === 'foo',
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしているユーザーの投稿が流れる', async () => {
@@ -197,7 +197,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしているユーザーの visibility: followers な投稿が流れる', async () => {
@@ -208,7 +208,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしているユーザーの visibility: followers な投稿への返信が流れる', async () => {
@@ -221,7 +221,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id && msg.body['replyId'] === note.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしているユーザーのフォローしていないユーザーの visibility: followers な投稿への返信が流れない', async () => {
@@ -234,7 +234,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('フォローしているユーザーのフォローしていないユーザーの visibility: followers な投稿への返信のリノートが流れない', async () => {
@@ -248,7 +248,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('フォローしていないユーザーの投稿は流れない', async () => {
@@ -259,7 +259,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === ayano.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('フォローしているユーザーのダイレクト投稿が流れる', async () => {
@@ -270,7 +270,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしているユーザーでも自分が指定されていないダイレクト投稿は流れない', async () => {
@@ -281,7 +281,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			/**
@@ -296,7 +296,7 @@ describe('Streaming', () => {
 					msg => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 			 */
 
@@ -324,7 +324,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('visibility: specified な投稿に対するリプライで visibleUserIds が収縮されたとき、その収縮されたユーザーの HTL にはそのリプライが流れない', async () => {
@@ -351,7 +351,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('withRenotes: false のときリノートが流れない', async () => {
@@ -363,7 +363,7 @@ describe('Streaming', () => {
 					{ withRenotes: false },
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('withRenotes: false のとき引用リノートが流れる', async () => {
@@ -375,7 +375,7 @@ describe('Streaming', () => {
 					{ withRenotes: false },
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('withRenotes: false のとき投票のみのリノートが流れる', async () => {
@@ -387,7 +387,7 @@ describe('Streaming', () => {
 					{ withRenotes: false },
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('withReplies: true のとき自分のfollowers投稿に対するリプライが流れる', async () => {
@@ -399,7 +399,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === ayano.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('withReplies: false でも自分の投稿に対するリプライが流れる', async () => {
@@ -411,7 +411,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === erin.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 		});
 
@@ -424,7 +424,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['text'] === 'foo',
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしていないローカルユーザーの投稿が流れる', async () => {
@@ -435,7 +435,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === chitose.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			/* TODO
@@ -446,7 +446,7 @@ describe('Streaming', () => {
 					msg => msg.type === 'note' && msg.body.userId === chinatsu.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('フォローしてたとしてもリモートユーザーの投稿は流れない', async () => {
@@ -456,7 +456,7 @@ describe('Streaming', () => {
 					msg => msg.type === 'note' && msg.body.userId === akari.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 			*/
 
@@ -468,7 +468,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('フォローしているローカルユーザーのダイレクト投稿は流れない', async () => {
@@ -479,7 +479,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('フォローしていないローカルユーザーのフォロワー宛て投稿は流れない', async () => {
@@ -490,7 +490,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === chitose.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 		});
 
@@ -503,7 +503,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['text'] === 'foo',
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('自分の visibility: followers な投稿が流れる', async () => {
@@ -514,7 +514,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['text'] === 'foo',
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしていないローカルユーザーの投稿が流れる', async () => {
@@ -525,7 +525,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === chitose.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			/* TODO
@@ -536,7 +536,7 @@ describe('Streaming', () => {
 					msg => msg.type === 'note' && msg.body.userId === akari.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしていないリモートユーザーの投稿は流れない', async () => {
@@ -546,7 +546,7 @@ describe('Streaming', () => {
 					msg => msg.type === 'note' && msg.body.userId === chinatsu.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 			*/
 
@@ -558,7 +558,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしているユーザーのホーム投稿が流れる', async () => {
@@ -569,7 +569,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしているユーザーの visibility: followers な投稿が流れる', async () => {
@@ -580,7 +580,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('フォローしていないローカルユーザーのホーム投稿は流れない', async () => {
@@ -591,7 +591,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === chitose.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('フォローしていないローカルユーザーのフォロワー宛て投稿は流れない', async () => {
@@ -602,7 +602,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === chitose.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('withReplies: true のとき自分のfollowers投稿に対するリプライが流れる', async () => {
@@ -614,7 +614,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === ayano.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('withReplies: false でも自分の投稿に対するリプライが流れる', async () => {
@@ -626,7 +626,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === erin.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('withReplies: true のフォローしていない人のfollowersノートに対するリプライが流れない', async () => {
@@ -640,7 +640,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === ayano.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 		});
 
@@ -653,7 +653,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === chitose.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			/* TODO
@@ -664,7 +664,7 @@ describe('Streaming', () => {
 					msg => msg.type === 'note' && msg.body.userId === chinatsu.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 			*/
 
@@ -676,7 +676,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			test('withReplies = falseでフォローしてる人によるリプライが流れてくる', async () => {
@@ -687,7 +687,7 @@ describe('Streaming', () => {
 					(msg) => msg.type === 'note' && msg.body['userId'] === kyoko.id,
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 		});
 
@@ -701,7 +701,7 @@ describe('Streaming', () => {
 					{ listId: list.id },
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			test('リストに入れていないユーザーの投稿は流れない', async () => {
@@ -713,7 +713,7 @@ describe('Streaming', () => {
 					{ listId: list.id },
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			// #4471
@@ -726,7 +726,7 @@ describe('Streaming', () => {
 					{ listId: list.id },
 				);
 
-				assert.strictEqual(fired, true);
+				expect(fired).toBe(true);
 			});
 
 			// #4335
@@ -739,7 +739,7 @@ describe('Streaming', () => {
 					{ listId: list.id },
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			// #10443
@@ -753,7 +753,7 @@ describe('Streaming', () => {
 					{ listId: list.id },
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			// #10443
@@ -767,7 +767,7 @@ describe('Streaming', () => {
 					{ listId: list.id },
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			// #10443
@@ -781,7 +781,7 @@ describe('Streaming', () => {
 					{ listId: list.id },
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			// #10443
@@ -803,7 +803,7 @@ describe('Streaming', () => {
 					{ listId: list.id },
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			// #10443
@@ -825,7 +825,7 @@ describe('Streaming', () => {
 					{ listId: list.id },
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 
 			// #10443
@@ -847,7 +847,7 @@ describe('Streaming', () => {
 					{ listId: list.id },
 				);
 
-				assert.strictEqual(fired, false);
+				expect(fired).toBe(false);
 			});
 		});
 
@@ -864,7 +864,7 @@ describe('Streaming', () => {
 			});
 
 			socket.close();
-			assert.strictEqual(established, false);
+			expect(established).toBe(false);
 
 			const fired = await waitFire(
 				{ token: application2 },
@@ -873,7 +873,7 @@ describe('Streaming', () => {
 				(msg) => msg.type === 'note' && msg.body['userId'] === ayano.id,
 			);
 
-			assert.strictEqual(fired, true);
+			expect(fired).toBe(true);
 		});
 
 		describe('Hashtag Timeline', () => {
@@ -896,29 +896,29 @@ describe('Streaming', () => {
 				);
 
 			test('指定したハッシュタグの投稿が流れる', async () => {
-				assert.strictEqual(await receives([['streaminghashtag']], '#streaminghashtag'), true);
+				expect(await receives([['streaminghashtag']], '#streaminghashtag')).toBe(true);
 			});
 
 			test('指定したハッシュタグの投稿が流れる (AND)', async () => {
 				const query = [['streamingandfoo', 'streamingandbar']];
-				assert.strictEqual(await receives(query, '#streamingandfoo #streamingandbar'), true);
-				assert.strictEqual(await doesNotReceive(query, '#streamingandfoo'), false);
+				expect(await receives(query, '#streamingandfoo #streamingandbar')).toBe(true);
+				expect(await doesNotReceive(query, '#streamingandfoo')).toBe(false);
 			});
 
 			test('指定したハッシュタグの投稿が流れる (OR)', async () => {
 				const query = [['streamingorfoo'], ['streamingorbar']];
-				assert.strictEqual(await receives(query, '#streamingorfoo'), true);
-				assert.strictEqual(await receives(query, '#streamingorbar'), true);
-				assert.strictEqual(await receives(query, '#streamingorfoo #streamingorbar'), true);
-				assert.strictEqual(await doesNotReceive(query, '#streamingorpiyo'), false);
+				expect(await receives(query, '#streamingorfoo')).toBe(true);
+				expect(await receives(query, '#streamingorbar')).toBe(true);
+				expect(await receives(query, '#streamingorfoo #streamingorbar')).toBe(true);
+				expect(await doesNotReceive(query, '#streamingorpiyo')).toBe(false);
 			});
 
 			test('指定したハッシュタグの投稿が流れる (AND + OR)', async () => {
 				const query = [['streamingmixedfoo', 'streamingmixedbar'], ['streamingmixedpiyo']];
-				assert.strictEqual(await receives(query, '#streamingmixedfoo #streamingmixedbar'), true);
-				assert.strictEqual(await receives(query, '#streamingmixedpiyo'), true);
-				assert.strictEqual(await doesNotReceive(query, '#streamingmixedfoo'), false);
-				assert.strictEqual(await doesNotReceive(query, '#streamingmixedwaaa'), false);
+				expect(await receives(query, '#streamingmixedfoo #streamingmixedbar')).toBe(true);
+				expect(await receives(query, '#streamingmixedpiyo')).toBe(true);
+				expect(await doesNotReceive(query, '#streamingmixedfoo')).toBe(false);
+				expect(await doesNotReceive(query, '#streamingmixedwaaa')).toBe(false);
 			});
 
 			test('同名タグの並行作成でユーザー情報を失わない', async () => {
@@ -926,13 +926,13 @@ describe('Streaming', () => {
 				await Promise.all([post(ayano, { text: `#${tag}` }), post(chitose, { text: `#${tag}` })]);
 
 				const rows = await findHashtagsByName(db, tag);
-				assert.strictEqual(rows.length, 1);
+				expect(rows.length).toBe(1);
 				const row = rows[0];
 				assert.ok(row);
-				assert.deepStrictEqual(row.mentionedUserIds.toSorted(), [ayano.id, chitose.id].toSorted());
-				assert.strictEqual(row.mentionedUsersCount, 2);
-				assert.deepStrictEqual(row.mentionedLocalUserIds.toSorted(), [ayano.id, chitose.id].toSorted());
-				assert.strictEqual(row.mentionedLocalUsersCount, 2);
+				expect(row.mentionedUserIds.toSorted()).toStrictEqual([ayano.id, chitose.id].toSorted());
+				expect(row.mentionedUsersCount).toBe(2);
+				expect(row.mentionedLocalUserIds.toSorted()).toStrictEqual([ayano.id, chitose.id].toSorted());
+				expect(row.mentionedLocalUsersCount).toBe(2);
 			});
 		});
 	});
