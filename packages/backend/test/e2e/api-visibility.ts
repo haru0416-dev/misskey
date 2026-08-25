@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 
 import { beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { UserToken, api, post, signup } from '../utils.js';
