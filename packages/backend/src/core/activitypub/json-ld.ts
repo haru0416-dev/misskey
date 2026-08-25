@@ -5,15 +5,13 @@
 
 import * as crypto from 'node:crypto';
 import { promisify } from 'node:util';
-import { Signer } from 'slacc';
-import type { SignatureAlgorithmIdentifier } from 'slacc';
 
 // slacc の SignatureAlgorithmIdentifier は ambient const enum のため isolatedModules 下では値として import できない。
 // 値自体は enum メンバー名と同じ文字列なので、型だけ import してリテラルをそのまま渡す。
-const RSA_2048_8192 = 'Rsa2048_8192' as SignatureAlgorithmIdentifier;
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { bindThis } from '@/decorators.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { getCachedSigner } from './signer-cache.js';
 import { CONTEXT, PRELOADED_CONTEXTS } from './misc/contexts.js';
 import { validateContentTypeSetAsJsonLD } from './misc/validator.js';
 import type { ContextDefinition, JsonLdDocument } from 'jsonld';
@@ -80,7 +78,7 @@ export class JsonLd {
 
 		const toBeSigned = await this.createVerifyData(data, options);
 
-		const signer = Signer.fromPkcs8Pem(RSA_2048_8192, privateKey);
+		const signer = getCachedSigner(privateKey);
 		const sign = promisify(signer.signRaw).bind(signer);
 
 		const signature = await sign(Buffer.from(toBeSigned));
