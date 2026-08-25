@@ -55,6 +55,7 @@ export const endpointMetas = {
 	},
 	'federation/instances': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,

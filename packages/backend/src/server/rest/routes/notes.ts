@@ -152,7 +152,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/reactions', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/reactions', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -406,7 +406,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/featured-notes', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/featured-notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
