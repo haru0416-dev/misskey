@@ -38,6 +38,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { IMentionedRemoteUsers, MiNote } from '@/models/Note.js';
+import { parseMfmCached } from '@/misc/mfm-parse-cache.js';
 import type { MiUser } from '@/models/User.js';
 import type { DeliverJobData } from '@/queue/types.js';
 
@@ -173,7 +174,7 @@ export async function renderNoteForHonoApi(
 	const summary = note.cw === '' ? '​' : (note.cw ?? undefined);
 
 	const mfmService = createMfmService(deps.config as Config);
-	const parsed = note.text ? mfm.parse(note.text) : [];
+	const parsed = note.text ? parseMfmCached(note.text) : [];
 	const extraHtml =
 		quote != null ? `<br><br><span class="quote-inline">RE: <a href="${quote}">${quote}</a></span>` : null;
 	const noMisskeyContent =
