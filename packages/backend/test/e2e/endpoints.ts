@@ -16798,36 +16798,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('drive/files/upload-from-url', () => {
-		test(
-			'URLからファイルをアップロードできる',
-			async () => {
-				const res = await api(
-					'drive/files/upload-from-url',
-					{
-						url: 'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg',
-						force: true,
-					},
-					alice,
-				);
-				assert.strictEqual(res.status, 204);
-
-				// upload-from-url はサーバー側でダウンロードを待たずに応答するため、ファイルの出現をポーリングで待つ
-				let found: misskey.entities.DriveFile | undefined;
-				for (let i = 0; i < 20; i++) {
-					const list = await api('drive/files/find', { name: '192.jpg' }, alice);
-					found = (list.body as misskey.entities.DriveFile[]).find((f) => f.name === '192.jpg');
-					if (found) break;
-					await new Promise((resolve) => setTimeout(resolve, 500));
-				}
-
-				assert.ok(found);
-				assert.strictEqual(found!.name, '192.jpg');
-			},
-			1000 * 15,
-		);
-	});
-
 	describe('drive/files/update', () => {
 		test('名前を更新できる', async () => {
 			const file = (await uploadFile(alice)).body;

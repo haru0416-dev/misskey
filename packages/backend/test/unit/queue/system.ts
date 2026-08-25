@@ -179,16 +179,51 @@ describe('hono-queue-system', () => {
 	});
 
 	describe('chart processors', () => {
-		test('handleHonoQueueTickCharts: 12種のチャートを直列にtickする', async () => {
+		// チャートを1つ追加してハンドラー側への追記を忘れると、そのチャートだけ永久に集計されない。
+		// 実DBに対する実行 (SQLの健全性) と、呼び出し対象の網羅の両方を見る。
+		function recordChartCalls(): { chartWriters: HonoChartWriters; calls: Map<string, string[]> } {
+			const calls = new Map<string, string[]>();
+			const spied = Object.fromEntries(
+				Object.keys(chartWriters).map((name) => [
+					name,
+					new Proxy(
+						{},
+						{
+							get: (_target, method: string) => async (): Promise<void> => {
+								calls.set(name, [...(calls.get(name) ?? []), method]);
+							},
+						},
+					),
+				]),
+			) as unknown as HonoChartWriters;
+			return { chartWriters: spied, calls };
+		}
+
+		test('handleHonoQueueTickCharts: chartWriters の全チャートを tick する', async () => {
 			await expect(handleHonoQueueTickCharts(deps)).resolves.toBeUndefined();
+
+			const recorded = recordChartCalls();
+			await handleHonoQueueTickCharts({ ...deps, chartWriters: recorded.chartWriters });
+			expect([...recorded.calls.keys()].sort()).toStrictEqual(Object.keys(chartWriters).sort());
+			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['tick']);
 		});
 
-		test('handleHonoQueueResyncCharts: drive/notes/usersチャートをresyncする', async () => {
+		test('handleHonoQueueResyncCharts: drive/notes/users チャートだけを resync する', async () => {
 			await expect(handleHonoQueueResyncCharts(deps)).resolves.toBeUndefined();
+
+			const recorded = recordChartCalls();
+			await handleHonoQueueResyncCharts({ ...deps, chartWriters: recorded.chartWriters });
+			expect([...recorded.calls.keys()].sort()).toStrictEqual(['driveChart', 'notesChart', 'usersChart']);
+			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['resync']);
 		});
 
-		test('handleHonoQueueCleanCharts: 12種のチャートを直列にcleanする', async () => {
+		test('handleHonoQueueCleanCharts: chartWriters の全チャートを clean する', async () => {
 			await expect(handleHonoQueueCleanCharts(deps)).resolves.toBeUndefined();
+
+			const recorded = recordChartCalls();
+			await handleHonoQueueCleanCharts({ ...deps, chartWriters: recorded.chartWriters });
+			expect([...recorded.calls.keys()].sort()).toStrictEqual(Object.keys(chartWriters).sort());
+			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['clean']);
 		});
 	});
 
