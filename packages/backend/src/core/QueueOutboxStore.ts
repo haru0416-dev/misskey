@@ -376,11 +376,6 @@ export type InlineDbOutboxJob = {
 	leaseToken: string;
 };
 
-/**
- * 同一リクエストで複数ジョブを積むときは 1 文にまとめる。ノート作成は post-create の
- * ステージ数だけ enqueue するため、1 件ずつ INSERT すると往復がステージ数に比例する
- * (実測で 1 投稿 56 文中 7 文)。返り値は dataList と同じ順序で、id は生成順に単調増加する。
- */
 export async function enqueueInlineDbJobsInOutbox<K extends OutboxDbJobName>(
 	db: MiDrizzleDatabase,
 	name: K,
@@ -420,6 +415,62 @@ export async function enqueueInlineDbJobInOutbox<K extends OutboxDbJobName>(
 ): Promise<InlineDbOutboxJob> {
 	const [job] = await enqueueInlineDbJobsInOutbox(db, name, [data], opts);
 	return job!;
+}
+
+/**
+ * リースを握っているプロセス自身が、claim を挟まずに outbox 行をまとめて完了させる。
+ *
+ * 行を書いたのは同一プロセスの直前のトランザクションで、リース期限内は他のワーカーが
+ * 拾わない。よって所有権の再確認 (SELECT ... FOR UPDATE) は成功経路では常に自明に真になる。
+ * leaseToken 付きの条件 DELETE 1本で、所有権の確認と完了を同時に行う。
+ */
+export async function completeInlineDbOutboxJobs(db: MiDrizzleDatabase, jobs: InlineDbOutboxJob[]): Promise<void> {
+	if (jobs.length === 0) return;
+	await db.delete(queueOutbox).where(
+		and(
+			inArray(
+				queueOutbox.id,
+				jobs.map((job) => job.outboxId),
+			),
+			eq(queueOutbox.state, 'publishing'),
+			inArray(
+				queueOutbox.leaseToken,
+				jobs.map((job) => job.leaseToken),
+			),
+		),
+	);
+}
+
+/**
+ * インライン実行が失敗したとき、未完了の行を再試行可能な状態へ戻す。行はステージ毎に
+ * 独立しているので、失敗したステージ以降だけが再試行される。
+ */
+export async function releaseInlineDbOutboxJobs(
+	db: MiDrizzleDatabase,
+	jobs: InlineDbOutboxJob[],
+	error: unknown,
+): Promise<void> {
+	if (jobs.length === 0) return;
+	await db
+		.update(queueOutbox)
+		.set({
+			state: 'ready',
+			availableAt: new Date(),
+			leaseToken: null,
+			leaseExpiresAt: null,
+			lastError: errorDetails(error),
+			updatedAt: new Date(),
+			revision: sql`${queueOutbox.revision} + 1`,
+		})
+		.where(
+			and(
+				inArray(
+					queueOutbox.id,
+					jobs.map((job) => job.outboxId),
+				),
+				eq(queueOutbox.state, 'publishing'),
+			),
+		);
 }
 
 export async function runInlineDbOutboxJob(
