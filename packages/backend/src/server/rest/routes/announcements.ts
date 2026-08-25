@@ -82,7 +82,7 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 	app.on(
 		['POST', 'QUERY'],
 		'/email-address/available',
-		endpointHandler(deps, 'email-address/available', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'email-address/available', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiEmailAddressAvailable(deps, body)),
 		),
 	);

@@ -36,12 +36,16 @@ import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.
 export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post(
 		'/endpoints',
-		endpointHandler(deps, 'endpoints', async ({ body, auth, c }) => jsonResponse(c, await handleHonoApiEndpoints())),
+		endpointHandlerAnonymous(deps, 'endpoints', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiEndpoints()),
+		),
 	);
 
 	app.post(
 		'/endpoint',
-		endpointHandler(deps, 'endpoint', async ({ body, auth, c }) => jsonResponse(c, await handleHonoApiEndpoint(body))),
+		endpointHandlerAnonymous(deps, 'endpoint', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiEndpoint(body)),
+		),
 	);
 
 	app.get('/federation/instances', async (c) => {
@@ -119,7 +123,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 	app.on(
 		['POST', 'QUERY'],
 		'/federation/followers',
-		endpointHandler(deps, 'federation/followers', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'federation/followers', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiFederationFollowers(deps, body)),
 		),
 	);
@@ -127,7 +131,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 	app.on(
 		['POST', 'QUERY'],
 		'/federation/following',
-		endpointHandler(deps, 'federation/following', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'federation/following', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiFederationFollowing(deps, body)),
 		),
 	);
@@ -157,7 +161,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 
 	app.post(
 		'/federation/update-remote-user',
-		endpointHandler(deps, 'federation/update-remote-user', async ({ body, auth, c }) => {
+		endpointHandlerAnonymous(deps, 'federation/update-remote-user', async ({ body, auth, c }) => {
 			await handleHonoApiFederationUpdateRemoteUser(deps, body);
 			return emptyResponse(c);
 		}),
