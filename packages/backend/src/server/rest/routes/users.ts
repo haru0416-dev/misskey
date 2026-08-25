@@ -240,7 +240,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/search', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/search', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -371,7 +371,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/lists/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/lists/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -381,7 +381,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/lists/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/lists/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -497,7 +497,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/lists/get-memberships', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/lists/get-memberships', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);

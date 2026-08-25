@@ -101,6 +101,11 @@ interface IEndpointMetaBase {
 	 * GETでのリクエストを許容するか否か
 	 */
 	readonly allowGet?: boolean;
+	/**
+	 * QUERY (RFC 10008) でも受け付けるか。safe かつ idempotent な読み取りにのみ付けること。
+	 * 書き込みに付けると中間プロキシが安全に再送してよいものとして扱う。
+	 */
+	readonly allowQuery?: boolean;
 
 	/**
 	 * 正常応答をキャッシュ (Cache-Control: public) する秒数

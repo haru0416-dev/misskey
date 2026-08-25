@@ -40,7 +40,7 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		});
 	});
 
-	app.post('/announcements/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/announcements/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);

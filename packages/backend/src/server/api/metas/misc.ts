@@ -63,6 +63,7 @@ export const endpointMetas = {
 	},
 	'announcements/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['meta'],
 
 			requireCredential: false,
@@ -282,6 +283,7 @@ export const endpointMetas = {
 	},
 	'auth/session/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['auth'],
 
 			requireCredential: false,
@@ -1564,6 +1566,7 @@ export const endpointMetas = {
 	},
 	'roles/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['role', 'users'],
 
 			requireCredential: false,
@@ -1587,6 +1590,7 @@ export const endpointMetas = {
 	},
 	'roles/users': {
 		meta: {
+			allowQuery: true,
 			tags: ['role', 'users'],
 
 			requireCredential: false,

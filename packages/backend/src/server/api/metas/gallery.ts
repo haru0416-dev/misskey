@@ -16,6 +16,7 @@ import { HOUR } from '@/const.js';
 export const endpointMetas = {
 	'gallery/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['gallery'],
 
 			requireCredential: false,
@@ -156,6 +157,7 @@ export const endpointMetas = {
 	},
 	'gallery/posts/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['gallery'],
 
 			requireCredential: false,
