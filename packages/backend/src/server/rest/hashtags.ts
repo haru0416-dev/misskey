@@ -91,8 +91,8 @@ async function getFeaturedRanking(
 	const previousWindow = currentWindow - 1;
 
 	const redisPipeline = redis.pipeline();
-	redisPipeline.zrange(`${name}:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
-	redisPipeline.zrange(`${name}:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	redisPipeline.zrange(`${name}:${currentWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
+	redisPipeline.zrange(`${name}:${previousWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
 	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline
 		.exec()
 		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : []));
