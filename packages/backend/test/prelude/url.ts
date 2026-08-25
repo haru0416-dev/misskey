@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'assert';
-import { describe, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { query } from '../../src/misc/prelude/url.js';
 
 describe('url', () => {
@@ -14,6 +13,6 @@ describe('url', () => {
 			bar: 'b a r',
 			baz: undefined,
 		});
-		assert.deepStrictEqual(s, 'foo=%E3%81%B5%E3%81%85&bar=b%20a%20r');
+		expect(s).toStrictEqual('foo=%E3%81%B5%E3%81%85&bar=b%20a%20r');
 	});
 });

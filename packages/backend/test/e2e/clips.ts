@@ -6,7 +6,7 @@
 process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
-import { afterAll, describe, beforeAll, beforeEach, afterEach, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import {
 	DEFAULT_POLICIES,
 	createNoteInDatabase,
@@ -62,7 +62,7 @@ describe('クリップ', () => {
 		});
 
 		// 入力が結果として入っていること
-		assert.deepStrictEqual(clip, {
+		expect(clip).toStrictEqual({
 			...clip,
 			...defaultCreate(),
 			...parameters,
@@ -104,7 +104,7 @@ describe('クリップ', () => {
 
 		// 入力が結果として入っていること。clipIdはidになるので消しておく
 		delete (parameters as { clipId?: string }).clipId;
-		assert.deepStrictEqual(clip, {
+		expect(clip).toStrictEqual({
 			...clip,
 			...parameters,
 		});
@@ -198,13 +198,13 @@ describe('クリップ', () => {
 	test('の作成ができる', async () => {
 		const res = await create();
 		// ISO 8601で日付が返ってくること
-		assert.strictEqual(res.createdAt, new Date(res.createdAt).toISOString());
-		assert.strictEqual(res.lastClippedAt, null);
-		assert.strictEqual(res.name, 'test');
-		assert.strictEqual(res.description, null);
-		assert.strictEqual(res.isPublic, false);
-		assert.strictEqual(res.favoritedCount, 0);
-		assert.strictEqual(res.isFavorited, false);
+		expect(res.createdAt).toBe(new Date(res.createdAt).toISOString());
+		expect(res.lastClippedAt).toBe(null);
+		expect(res.name).toBe('test');
+		expect(res.description).toBe(null);
+		expect(res.isPublic).toBe(false);
+		expect(res.favoritedCount).toBe(0);
+		expect(res.isFavorited).toBe(false);
 	});
 
 	test('の作成はポリシーで定められた数以上はできない。', async () => {
@@ -273,7 +273,7 @@ describe('クリップ', () => {
 			user: alice,
 		});
 
-		assert.deepStrictEqual(clip, {
+		expect(clip).toStrictEqual({
 			...clip,
 			...defaultCreate(),
 			description: null,
@@ -289,13 +289,13 @@ describe('クリップ', () => {
 		});
 
 		// ISO 8601で日付が返ってくること
-		assert.strictEqual(res.createdAt, new Date(res.createdAt).toISOString());
-		assert.strictEqual(res.lastClippedAt, null);
-		assert.strictEqual(res.name, 'updated');
-		assert.strictEqual(res.description, 'new description');
-		assert.strictEqual(res.isPublic, true);
-		assert.strictEqual(res.favoritedCount, 0);
-		assert.strictEqual(res.isFavorited, false);
+		expect(res.createdAt).toBe(new Date(res.createdAt).toISOString());
+		expect(res.lastClippedAt).toBe(null);
+		expect(res.name).toBe('updated');
+		expect(res.description).toBe('new description');
+		expect(res.isPublic).toBe(true);
+		expect(res.favoritedCount).toBe(0);
+		expect(res.isFavorited).toBe(false);
 	});
 
 	test.each(createClipAllowedPattern)('の更新は$labelでもできる', async ({ parameters }) => {
@@ -356,7 +356,7 @@ describe('クリップ', () => {
 			user: alice,
 		});
 
-		assert.deepStrictEqual(clip, {
+		expect(clip).toStrictEqual({
 			...clip,
 			name: 'updated',
 			description: null,
@@ -367,7 +367,7 @@ describe('クリップ', () => {
 		await deleteClip({
 			clipId: (await create()).id,
 		});
-		assert.deepStrictEqual(await list({}), []);
+		expect(await list({})).toStrictEqual([]);
 	});
 
 	test.each([
@@ -411,7 +411,7 @@ describe('クリップ', () => {
 	test('のID指定取得ができる', async () => {
 		const clip = await create();
 		const res = await show({ clipId: clip.id });
-		assert.deepStrictEqual(res, clip);
+		expect(res).toStrictEqual(clip);
 	});
 
 	test('のID指定取得は他人のPrivateなクリップは取得できない', async () => {
@@ -461,7 +461,7 @@ describe('クリップ', () => {
 
 	test('の一覧(clips/list)が取得できる(空)', async () => {
 		const res = await list({});
-		assert.deepStrictEqual(res, []);
+		expect(res).toStrictEqual([]);
 	});
 
 	test('の一覧(clips/list)が取得できる(上限いっぱい)', async () => {
@@ -472,14 +472,14 @@ describe('クリップ', () => {
 		});
 
 		// 作成responseの配列には順序保障がないのでidでソートして厳密比較
-		assert.deepStrictEqual(res.toReversed(), clips.sort(compareBy((s) => s.id)));
+		expect(res.toReversed()).toStrictEqual(clips.sort(compareBy((s) => s.id)));
 	});
 
 	test('の一覧が取得できる(空)', async () => {
 		const res = await usersClips({
 			userId: alice.id,
 		});
-		assert.deepStrictEqual(res, []);
+		expect(res).toStrictEqual([]);
 	});
 
 	test.each([{ label: '' }, { label: '他人アカウントから', user: () => bob }])('の一覧が$label取得できる', async () => {
@@ -489,11 +489,11 @@ describe('クリップ', () => {
 		});
 
 		// 返ってくる配列には順序保障がないのでidでソートして厳密比較
-		assert.deepStrictEqual(res.sort(compareBy<Misskey.entities.Clip>((s) => s.id)), clips.sort(compareBy((s) => s.id)));
+		expect(res.sort(compareBy<Misskey.entities.Clip>((s) => s.id))).toStrictEqual(clips.sort(compareBy((s) => s.id)));
 
 		// 認証状態で見たときだけisFavoritedが入っている
 		for (const clip of res) {
-			assert.strictEqual(clip.isFavorited, false);
+			expect(clip.isFavorited).toBe(false);
 		}
 	});
 
@@ -515,7 +515,7 @@ describe('クリップ', () => {
 
 		// 未認証で見たときはisFavoritedは入らない
 		for (const clip of res) {
-			assert.strictEqual('isFavorited' in clip, false);
+			expect('isFavorited' in clip).toBe(false);
 		}
 	});
 
@@ -526,7 +526,7 @@ describe('クリップ', () => {
 			userId: alice.id,
 			limit: 2,
 		});
-		assert.deepStrictEqual(res, [aliceClip]);
+		expect(res).toStrictEqual([aliceClip]);
 	});
 
 	test('の一覧はID指定で範囲選択ができる', async () => {
@@ -540,17 +540,14 @@ describe('クリップ', () => {
 		});
 
 		// Promise.allで返ってくる配列には順序保障がないのでidでソートして厳密比較
-		assert.deepStrictEqual(
-			res.sort(compareBy<Misskey.entities.Clip>((s) => s.id)),
-			[getAt(clips, 2), getAt(clips, 3), getAt(clips, 4)], // sinceIdとuntilId自体は結果に含まれない
+		expect(res.sort(compareBy<Misskey.entities.Clip>((s) => s.id)), // sinceIdとuntilId自体は結果に含まれない
 			getAt(clips, 1).id +
 				' ... ' +
 				getAt(clips, 3).id +
 				' with ' +
 				clips.map((s) => s.id) +
 				' vs. ' +
-				res.map((s) => s.id),
-		);
+				res.map((s) => s.id)).toStrictEqual([getAt(clips, 2), getAt(clips, 3), getAt(clips, 4)]);
 	});
 
 	test.each([
@@ -658,21 +655,21 @@ describe('クリップ', () => {
 		test('を設定できる。', async () => {
 			await favorite({ clipId: aliceClip.id });
 			const clip = await show({ clipId: aliceClip.id });
-			assert.strictEqual(clip.favoritedCount, 1);
-			assert.strictEqual(clip.isFavorited, true);
+			expect(clip.favoritedCount).toBe(1);
+			expect(clip.isFavorited).toBe(true);
 		});
 
 		test('はPublicな他人のクリップに設定できる。', async () => {
 			const publicClip = await create({ isPublic: true });
 			await favorite({ clipId: publicClip.id }, { user: bob });
 			const clip = await show({ clipId: publicClip.id }, { user: bob });
-			assert.strictEqual(clip.favoritedCount, 1);
-			assert.strictEqual(clip.isFavorited, true);
+			expect(clip.favoritedCount).toBe(1);
+			expect(clip.isFavorited).toBe(true);
 
 			// isFavoritedは見る人によって切り替わる。
 			const clip2 = await show({ clipId: publicClip.id });
-			assert.strictEqual(clip2.favoritedCount, 1);
-			assert.strictEqual(clip2.isFavorited, false);
+			expect(clip2.favoritedCount).toBe(1);
+			expect(clip2.isFavorited).toBe(false);
 		});
 
 		test('は1つのクリップに対して複数人が設定できる。', async () => {
@@ -680,12 +677,12 @@ describe('クリップ', () => {
 			await favorite({ clipId: publicClip.id }, { user: bob });
 			await favorite({ clipId: publicClip.id });
 			const clip = await show({ clipId: publicClip.id }, { user: bob });
-			assert.strictEqual(clip.favoritedCount, 2);
-			assert.strictEqual(clip.isFavorited, true);
+			expect(clip.favoritedCount).toBe(2);
+			expect(clip.isFavorited).toBe(true);
 
 			const clip2 = await show({ clipId: publicClip.id });
-			assert.strictEqual(clip2.favoritedCount, 2);
-			assert.strictEqual(clip2.isFavorited, true);
+			expect(clip2.favoritedCount).toBe(2);
+			expect(clip2.isFavorited).toBe(true);
 		});
 
 		test('は11を超えて設定できる。', async () => {
@@ -702,10 +699,10 @@ describe('クリップ', () => {
 
 			// pagenationはない。全部一気にとれる。
 			const favorited = await myFavorites();
-			assert.strictEqual(favorited.length, clips.length);
+			expect(favorited.length).toBe(clips.length);
 			for (const clip of favorited) {
-				assert.strictEqual(clip.favoritedCount, 1);
-				assert.strictEqual(clip.isFavorited, true);
+				expect(clip.favoritedCount).toBe(1);
+				expect(clip.isFavorited).toBe(true);
 			}
 		});
 
@@ -769,9 +766,9 @@ describe('クリップ', () => {
 			await favorite({ clipId: aliceClip.id });
 			await unfavorite({ clipId: aliceClip.id });
 			const clip = await show({ clipId: aliceClip.id });
-			assert.strictEqual(clip.favoritedCount, 0);
-			assert.strictEqual(clip.isFavorited, false);
-			assert.deepStrictEqual(await myFavorites(), []);
+			expect(clip.favoritedCount).toBe(0);
+			expect(clip.isFavorited).toBe(false);
+			expect(await myFavorites()).toStrictEqual([]);
 		});
 
 		test.each([
@@ -822,13 +819,13 @@ describe('クリップ', () => {
 		test('を取得できる。', async () => {
 			await favorite({ clipId: aliceClip.id });
 			const favorited = await myFavorites();
-			assert.deepStrictEqual(favorited, [await show({ clipId: aliceClip.id })]);
+			expect(favorited).toStrictEqual([await show({ clipId: aliceClip.id })]);
 		});
 
 		test('を取得したとき他人のお気に入りは含まない。', async () => {
 			await favorite({ clipId: aliceClip.id });
 			const favorited = await myFavorites({ user: bob });
-			assert.deepStrictEqual(favorited, []);
+			expect(favorited).toStrictEqual([]);
 		});
 	});
 
@@ -899,11 +896,8 @@ describe('クリップ', () => {
 		test('を追加できる。', async () => {
 			await addNote({ clipId: aliceClip.id, noteId: aliceNote.id });
 			const res = await show({ clipId: aliceClip.id });
-			assert.strictEqual(res.lastClippedAt, res.lastClippedAt ? new Date(res.lastClippedAt).toISOString() : null);
-			assert.deepStrictEqual(
-				(await notes({ clipId: aliceClip.id })).map((x) => x.id),
-				[aliceNote.id],
-			);
+			expect(res.lastClippedAt).toBe(res.lastClippedAt ? new Date(res.lastClippedAt).toISOString() : null);
+			expect((await notes({ clipId: aliceClip.id })).map((x) => x.id)).toStrictEqual([aliceNote.id]);
 
 			// 他人の非公開ノートも突っ込める
 			await addNote({ clipId: aliceClip.id, noteId: bobHomeNote.id });
@@ -1029,7 +1023,7 @@ describe('クリップ', () => {
 		test('を削除できる。', async () => {
 			await addNote({ clipId: aliceClip.id, noteId: aliceNote.id });
 			await removeNote({ clipId: aliceClip.id, noteId: aliceNote.id });
-			assert.deepStrictEqual(await notes({ clipId: aliceClip.id }), []);
+			expect(await notes({ clipId: aliceClip.id })).toStrictEqual([]);
 		});
 
 		test.each([
@@ -1092,10 +1086,7 @@ describe('クリップ', () => {
 			// 自分のノートは非公開でも入れられるし、見える
 			// 他人の非公開ノートは入れられるけど、除外される
 			const expects = [aliceNote, aliceHomeNote, aliceFollowersNote, aliceSpecifiedNote, bobNote, bobHomeNote];
-			assert.deepStrictEqual(
-				res.sort(compareBy((s) => s.id)).map((x) => x.id),
-				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
-			);
+			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(expects.sort(compareBy((s) => s.id)).map((x) => x.id));
 		});
 
 		test('を始端IDとlimitで取得できる。', async () => {
@@ -1113,10 +1104,7 @@ describe('クリップ', () => {
 
 			// Promise.allで返ってくる配列はID順で並んでないのでソートして厳密比較
 			const expects = [getAt(noteList, 3), getAt(noteList, 4), getAt(noteList, 5)];
-			assert.deepStrictEqual(
-				res.sort(compareBy((s) => s.id)).map((x) => x.id),
-				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
-			);
+			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(expects.sort(compareBy((s) => s.id)).map((x) => x.id));
 		});
 
 		test('をID範囲指定で取得できる。', async () => {
@@ -1134,10 +1122,7 @@ describe('クリップ', () => {
 
 			// Promise.allで返ってくる配列はID順で並んでないのでソートして厳密比較
 			const expects = [getAt(noteList, 2), getAt(noteList, 3)];
-			assert.deepStrictEqual(
-				res.sort(compareBy((s) => s.id)).map((x) => x.id),
-				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
-			);
+			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(expects.sort(compareBy((s) => s.id)).map((x) => x.id));
 		});
 
 		test('Remoteのノートもクリップできる。', async () => {
@@ -1171,20 +1156,14 @@ describe('クリップ', () => {
 
 			await addNote({ clipId: aliceClip.id, noteId: remoteNoteId });
 			const res = await notes({ clipId: aliceClip.id });
-			assert.deepStrictEqual(
-				res.map((x) => x.id),
-				[remoteNoteId],
-			);
+			expect(res.map((x) => x.id)).toStrictEqual([remoteNoteId]);
 		});
 
 		test('は他人のPublicなクリップからも取得できる。', async () => {
 			const bobClip = await create({ isPublic: true }, { user: bob });
 			await addNote({ clipId: bobClip.id, noteId: aliceNote.id }, { user: bob });
 			const res = await notes({ clipId: bobClip.id });
-			assert.deepStrictEqual(
-				res.map((x) => x.id),
-				[aliceNote.id],
-			);
+			expect(res.map((x) => x.id)).toStrictEqual([aliceNote.id]);
 		});
 
 		test('はPublicなクリップなら認証なしでも取得できる。(非公開ノートは含まれない)', async () => {
@@ -1196,10 +1175,7 @@ describe('クリップ', () => {
 
 			const res = await notes({ clipId: publicClip.id }, { user: undefined });
 			const expects = [aliceNote, aliceHomeNote];
-			assert.deepStrictEqual(
-				res.sort(compareBy((s) => s.id)).map((x) => x.id),
-				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
-			);
+			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(expects.sort(compareBy((s) => s.id)).map((x) => x.id));
 		});
 
 		test('ミュートしているユーザーのノートはクリップから取得されない。', async () => {
@@ -1211,10 +1187,7 @@ describe('クリップ', () => {
 			// viewerがbobをミュートするとbobのノートだけ見えなくなる
 			await api('mute/create', { userId: bob.id }, viewer);
 			const res = await notes({ clipId: aliceClip.id }, { user: viewer });
-			assert.deepStrictEqual(
-				res.map((x) => x.id),
-				[aliceNote.id],
-			);
+			expect(res.map((x) => x.id)).toStrictEqual([aliceNote.id]);
 		});
 
 		test('ブロックされているユーザーからはブロック元のノートがクリップから取得されない。', async () => {
@@ -1226,10 +1199,7 @@ describe('クリップ', () => {
 			// bobがviewerをブロックするとbobのノートだけ見えなくなる
 			await api('blocking/create', { userId: viewer.id }, bob);
 			const res = await notes({ clipId: aliceClip.id }, { user: viewer });
-			assert.deepStrictEqual(
-				res.map((x) => x.id),
-				[aliceNote.id],
-			);
+			expect(res.map((x) => x.id)).toStrictEqual([aliceNote.id]);
 		});
 
 		test.each([

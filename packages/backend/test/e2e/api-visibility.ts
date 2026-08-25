@@ -5,8 +5,7 @@
 
 process.env['NODE_ENV'] = 'test';
 
-import * as assert from 'assert';
-import { describe, beforeAll, beforeEach, test } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { UserToken, api, post, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -77,353 +76,353 @@ describe('API visibility', () => {
 
 		test('[show] public-postを自分が見れる', async () => {
 			const res = await show(pub.id, alice);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] public-postをフォロワーが見れる', async () => {
 			const res = await show(pub.id, follower);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] public-postを非フォロワーが見れる', async () => {
 			const res = await show(pub.id, other);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] public-postを未認証が見れる', async () => {
 			const res = await show(pub.id);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] home-postを自分が見れる', async () => {
 			const res = await show(home.id, alice);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] home-postをフォロワーが見れる', async () => {
 			const res = await show(home.id, follower);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] home-postを非フォロワーが見れる', async () => {
 			const res = await show(home.id, other);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] home-postを未認証が見れる', async () => {
 			const res = await show(home.id);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] followers-postを自分が見れる', async () => {
 			const res = await show(fol.id, alice);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] followers-postをフォロワーが見れる', async () => {
 			const res = await show(fol.id, follower);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] followers-postを非フォロワーが見れない', async () => {
 			const res = await show(fol.id, other);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] followers-postを未認証が見れない', async () => {
 			const res = await show(fol.id);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] specified-postを自分が見れる', async () => {
 			const res = await show(spe.id, alice);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] specified-postを指定ユーザーが見れる', async () => {
 			const res = await show(spe.id, target);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] specified-postをフォロワーが見れない', async () => {
 			const res = await show(spe.id, follower);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] specified-postを非フォロワーが見れない', async () => {
 			const res = await show(spe.id, other);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] specified-postを未認証が見れない', async () => {
 			const res = await show(spe.id);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] public-replyを自分が見れる', async () => {
 			const res = await show(pubR.id, alice);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] public-replyをされた人が見れる', async () => {
 			const res = await show(pubR.id, target);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] public-replyをフォロワーが見れる', async () => {
 			const res = await show(pubR.id, follower);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] public-replyを非フォロワーが見れる', async () => {
 			const res = await show(pubR.id, other);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] public-replyを未認証が見れる', async () => {
 			const res = await show(pubR.id);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] home-replyを自分が見れる', async () => {
 			const res = await show(homeR.id, alice);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] home-replyをされた人が見れる', async () => {
 			const res = await show(homeR.id, target);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] home-replyをフォロワーが見れる', async () => {
 			const res = await show(homeR.id, follower);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] home-replyを非フォロワーが見れる', async () => {
 			const res = await show(homeR.id, other);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] home-replyを未認証が見れる', async () => {
 			const res = await show(homeR.id);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] followers-replyを自分が見れる', async () => {
 			const res = await show(folR.id, alice);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] followers-replyを非フォロワーでもリプライされていれば見れる', async () => {
 			const res = await show(folR.id, target);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] followers-replyをフォロワーが見れる', async () => {
 			const res = await show(folR.id, follower);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] followers-replyを非フォロワーが見れない', async () => {
 			const res = await show(folR.id, other);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] followers-replyを未認証が見れない', async () => {
 			const res = await show(folR.id);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] specified-replyを自分が見れる', async () => {
 			const res = await show(speR.id, alice);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] specified-replyを指定ユーザーが見れる', async () => {
 			const res = await show(speR.id, target);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] specified-replyをされた人が指定されてなくても見れる', async () => {
 			const res = await show(speR.id, target);
-			assert.strictEqual(res.body.text, 'x');
+			expect(res.body.text).toBe('x');
 		});
 
 		test('[show] specified-replyをフォロワーが見れない', async () => {
 			const res = await show(speR.id, follower);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] specified-replyを非フォロワーが見れない', async () => {
 			const res = await show(speR.id, other);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] specified-replyを未認証が見れない', async () => {
 			const res = await show(speR.id);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] public-mentionを自分が見れる', async () => {
 			const res = await show(pubM.id, alice);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] public-mentionをされた人が見れる', async () => {
 			const res = await show(pubM.id, target);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] public-mentionをフォロワーが見れる', async () => {
 			const res = await show(pubM.id, follower);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] public-mentionを非フォロワーが見れる', async () => {
 			const res = await show(pubM.id, other);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] public-mentionを未認証が見れる', async () => {
 			const res = await show(pubM.id);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] home-mentionを自分が見れる', async () => {
 			const res = await show(homeM.id, alice);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] home-mentionをされた人が見れる', async () => {
 			const res = await show(homeM.id, target);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] home-mentionをフォロワーが見れる', async () => {
 			const res = await show(homeM.id, follower);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] home-mentionを非フォロワーが見れる', async () => {
 			const res = await show(homeM.id, other);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] home-mentionを未認証が見れる', async () => {
 			const res = await show(homeM.id);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] followers-mentionを自分が見れる', async () => {
 			const res = await show(folM.id, alice);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] followers-mentionをメンションされていれば非フォロワーでも見れる', async () => {
 			const res = await show(folM.id, target);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] followers-mentionをフォロワーが見れる', async () => {
 			const res = await show(folM.id, follower);
-			assert.strictEqual(res.body.text, '@target x');
+			expect(res.body.text).toBe('@target x');
 		});
 
 		test('[show] followers-mentionを非フォロワーが見れない', async () => {
 			const res = await show(folM.id, other);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] followers-mentionを未認証が見れない', async () => {
 			const res = await show(folM.id);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] specified-mentionを自分が見れる', async () => {
 			const res = await show(speM.id, alice);
-			assert.strictEqual(res.body.text, '@target2 x');
+			expect(res.body.text).toBe('@target2 x');
 		});
 
 		test('[show] specified-mentionを指定ユーザーが見れる', async () => {
 			const res = await show(speM.id, target);
-			assert.strictEqual(res.body.text, '@target2 x');
+			expect(res.body.text).toBe('@target2 x');
 		});
 
 		test('[show] specified-mentionをされた人が指定されてなかったら見れない', async () => {
 			const res = await show(speM.id, target2);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] specified-mentionをフォロワーが見れない', async () => {
 			const res = await show(speM.id, follower);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] specified-mentionを非フォロワーが見れない', async () => {
 			const res = await show(speM.id, other);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[show] specified-mentionを未認証が見れない', async () => {
 			const res = await show(speM.id);
-			assert.strictEqual(res.body.isHidden, true);
+			expect(res.body.isHidden).toBe(true);
 		});
 
 		test('[HTL] public-post が 自分が見れる', async () => {
 			const res = await api('notes/timeline', { limit: 100 }, alice);
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const notes = res.body.filter((n) => n.id === pub.id);
-			assert.strictEqual(notes[0]?.text, 'x');
+			expect(notes[0]?.text).toBe('x');
 		});
 
 		test('[HTL] public-post が 非フォロワーから見れない', async () => {
 			const res = await api('notes/timeline', { limit: 100 }, other);
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const notes = res.body.filter((n) => n.id === pub.id);
-			assert.strictEqual(notes.length, 0);
+			expect(notes.length).toBe(0);
 		});
 
 		test('[HTL] followers-post が フォロワーから見れる', async () => {
 			const res = await api('notes/timeline', { limit: 100 }, follower);
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const notes = res.body.filter((n) => n.id === fol.id);
-			assert.strictEqual(notes[0]?.text, 'x');
+			expect(notes[0]?.text).toBe('x');
 		});
 
 		test('[replies] followers-reply が フォロワーから見れる', async () => {
 			const res = await api('notes/replies', { noteId: tgt.id, limit: 100 }, follower);
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const notes = res.body.filter((n) => n.id === folR.id);
-			assert.strictEqual(notes[0]?.text, 'x');
+			expect(notes[0]?.text).toBe('x');
 		});
 
 		test('[replies] followers-reply が 非フォロワー (リプライ先ではない) から見れない', async () => {
 			const res = await api('notes/replies', { noteId: tgt.id, limit: 100 }, other);
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const notes = res.body.filter((n) => n.id === folR.id);
-			assert.strictEqual(notes.length, 0);
+			expect(notes.length).toBe(0);
 		});
 
 		test('[replies] followers-reply が 非フォロワー (リプライ先である) から見れる', async () => {
 			const res = await api('notes/replies', { noteId: tgt.id, limit: 100 }, target);
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const notes = res.body.filter((n) => n.id === folR.id);
-			assert.strictEqual(notes[0]?.text, 'x');
+			expect(notes[0]?.text).toBe('x');
 		});
 
 		test('[mentions] followers-reply が 非フォロワー (リプライ先である) から見れる', async () => {
 			const res = await api('notes/mentions', { limit: 100 }, target);
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const notes = res.body.filter((n) => n.id === folR.id);
-			assert.strictEqual(notes[0]?.text, 'x');
+			expect(notes[0]?.text).toBe('x');
 		});
 
 		test('[mentions] followers-mention が 非フォロワー (メンション先である) から見れる', async () => {
 			const res = await api('notes/mentions', { limit: 100 }, target);
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const notes = res.body.filter((n) => n.id === folM.id);
-			assert.strictEqual(notes[0]?.text, '@target x');
+			expect(notes[0]?.text).toBe('@target x');
 		});
 	});
 });

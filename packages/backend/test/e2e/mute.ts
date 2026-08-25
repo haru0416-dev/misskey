@@ -5,8 +5,7 @@
 
 process.env['NODE_ENV'] = 'test';
 
-import * as assert from 'assert';
-import { beforeAll, describe, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { api, post, react, signup, waitFire } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -41,7 +40,7 @@ describe('Mute', () => {
 			alice,
 		);
 
-		assert.strictEqual(res.status, 204);
+		expect(res.status).toBe(204);
 
 		// 単体でも走らせられるように副作用消す
 		await api(
@@ -59,16 +58,10 @@ describe('Mute', () => {
 
 		const res = await api('notes/mentions', {}, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(Array.isArray(res.body), true);
-		assert.strictEqual(
-			res.body.some((note) => note.id === bobNote.id),
-			true,
-		);
-		assert.strictEqual(
-			res.body.some((note) => note.id === carolNote.id),
-			false,
-		);
+		expect(res.status).toBe(200);
+		expect(Array.isArray(res.body)).toBe(true);
+		expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+		expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 	});
 
 	test('ミュートしているユーザーからメンションされても、ストリームに unreadNotification イベントが流れてこない', async () => {
@@ -82,7 +75,7 @@ describe('Mute', () => {
 			(msg) => msg.type === 'unreadNotification',
 		);
 
-		assert.strictEqual(fired, false);
+		expect(fired).toBe(false);
 	});
 
 	describe('Timeline', () => {
@@ -93,20 +86,11 @@ describe('Mute', () => {
 
 			const res = await api('notes/local-timeline', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
-			assert.strictEqual(
-				res.body.some((note) => note.id === aliceNote.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((note) => note.id === bobNote.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((note) => note.id === carolNote.id),
-				false,
-			);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
+			expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+			expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+			expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 		});
 
 		test('タイムラインにミュートしているユーザーの投稿のRenoteが含まれない', async () => {
@@ -118,20 +102,11 @@ describe('Mute', () => {
 
 			const res = await api('notes/local-timeline', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
-			assert.strictEqual(
-				res.body.some((note) => note.id === aliceNote.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((note) => note.id === bobNote.id),
-				false,
-			);
-			assert.strictEqual(
-				res.body.some((note) => note.id === carolNote.id),
-				false,
-			);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
+			expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+			expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+			expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 		});
 	});
 
@@ -143,16 +118,10 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
 		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
@@ -162,17 +131,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
 		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
@@ -182,17 +145,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
 		test('通知にミュートしているユーザーからの引用リノートが含まれない', async () => {
@@ -202,17 +159,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
 		test('通知にミュートしているユーザーからのリノートが含まれない', async () => {
@@ -222,17 +173,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
 		test('通知にミュートしているユーザーからのフォロー通知が含まれない', async () => {
@@ -241,17 +186,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 
 			await api('following/delete', { userId: alice.id }, bob);
 			await api('following/delete', { userId: alice.id }, carol);
@@ -264,17 +203,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 
 			await api('following/delete', { userId: alice.id }, bob);
 			await api('following/delete', { userId: alice.id }, carol);
@@ -289,16 +222,10 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications-grouped', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
 			const aliceNote = await post(alice, { text: 'hi' });
@@ -307,17 +234,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications-grouped', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
 		test('通知にミュートしているユーザーからのリプライが含まれない', async () => {
@@ -327,17 +248,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications-grouped', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
 		test('通知にミュートしているユーザーからの引用リノートが含まれない', async () => {
@@ -347,17 +262,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications-grouped', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
 		test('通知にミュートしているユーザーからのリノートが含まれない', async () => {
@@ -367,17 +276,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications-grouped', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 
 		test('通知にミュートしているユーザーからのフォロー通知が含まれない', async () => {
@@ -386,17 +289,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications-grouped', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 
 			await api('following/delete', { userId: alice.id }, bob);
 			await api('following/delete', { userId: alice.id }, carol);
@@ -409,17 +306,11 @@ describe('Mute', () => {
 
 			const res = await api('i/notifications-grouped', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === bob.id),
-				true,
-			);
-			assert.strictEqual(
-				res.body.some((notification) => 'userId' in notification && notification.userId === carol.id),
-				false,
-			);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === bob.id)).toBe(true);
+			expect(res.body.some((notification) => 'userId' in notification && notification.userId === carol.id)).toBe(false);
 		});
 	});
 });

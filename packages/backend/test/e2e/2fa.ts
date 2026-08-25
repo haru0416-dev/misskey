@@ -26,7 +26,13 @@ import type {
 	RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 import type * as misskey from 'misskey-js';
-import { describe, beforeAll, beforeEach, afterEach, afterAll, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+/*
+ * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
+ * node:assert を使う。expect の matcher は `asserts` 述語を持たないため、判別子を検査しても
+ * 後続のプロパティアクセスが型エラーになる。
+ */
+
 
 describe('2要素認証', () => {
 	let alice: misskey.entities.SignupResponse;
@@ -68,7 +74,7 @@ describe('2要素認証', () => {
 			},
 			user,
 		);
-		assert.strictEqual(registerResponse.status, 200);
+		expect(registerResponse.status).toBe(200);
 
 		const doneResponse = await api(
 			'i/2fa/done',
@@ -77,7 +83,7 @@ describe('2要素認証', () => {
 			},
 			user,
 		);
-		assert.strictEqual(doneResponse.status, 200);
+		expect(doneResponse.status).toBe(200);
 
 		return registerResponse.body.secret;
 	};
@@ -251,12 +257,12 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerResponse.status, 200);
+		expect(registerResponse.status).toBe(200);
 		assert.notEqual(registerResponse.body.qr, undefined);
 		assert.notEqual(registerResponse.body.url, undefined);
 		assert.notEqual(registerResponse.body.secret, undefined);
-		assert.strictEqual(registerResponse.body.label, username);
-		assert.strictEqual(registerResponse.body.issuer, config.runtime.host);
+		expect(registerResponse.body.label).toBe(username);
+		expect(registerResponse.body.issuer).toBe(config.runtime.host);
 
 		const doneResponse = await api(
 			'i/2fa/done',
@@ -265,13 +271,13 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(doneResponse.status, 200);
+		expect(doneResponse.status).toBe(200);
 
 		const signinWithoutTokenResponse = await api('signin-flow', {
 			...signinParam(),
 		});
-		assert.strictEqual(signinWithoutTokenResponse.status, 200);
-		assert.deepStrictEqual(signinWithoutTokenResponse.body, {
+		expect(signinWithoutTokenResponse.status).toBe(200);
+		expect(signinWithoutTokenResponse.body).toStrictEqual({
 			finished: false,
 			next: 'totp',
 		});
@@ -280,7 +286,7 @@ describe('2要素認証', () => {
 			...signinParam(),
 			token: otpToken(registerResponse.body.secret),
 		});
-		assert.strictEqual(signinResponse.status, 200);
+		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, true);
 		assert.notEqual(signinResponse.body.i, undefined);
 
@@ -303,7 +309,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerResponse.status, 200);
+		expect(registerResponse.status).toBe(200);
 
 		const doneResponse = await api(
 			'i/2fa/done',
@@ -312,7 +318,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(doneResponse.status, 200);
+		expect(doneResponse.status).toBe(200);
 
 		const registerKeyResponse = await api(
 			'i/2fa/register-key',
@@ -322,7 +328,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerKeyResponse.status, 200);
+		expect(registerKeyResponse.status).toBe(200);
 		assert.notEqual(registerKeyResponse.body.rp, undefined);
 		assert.notEqual(registerKeyResponse.body.challenge, undefined);
 
@@ -338,22 +344,19 @@ describe('2要素認証', () => {
 			} as any) as any,
 			alice,
 		);
-		assert.strictEqual(keyDoneResponse.status, 200);
-		assert.strictEqual(keyDoneResponse.body.id, credentialId.toString('base64url'));
-		assert.strictEqual(keyDoneResponse.body.name, keyName);
+		expect(keyDoneResponse.status).toBe(200);
+		expect(keyDoneResponse.body.id).toBe(credentialId.toString('base64url'));
+		expect(keyDoneResponse.body.name).toBe(keyName);
 
 		const signinResponse = await api('signin-flow', {
 			...signinParam(),
 		});
-		assert.strictEqual(signinResponse.status, 200);
+		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, false);
 		assert.strictEqual(signinResponse.body.next, 'passkey');
 		assert.notEqual(signinResponse.body.authRequest.challenge, undefined);
 		assert.notEqual(signinResponse.body.authRequest.allowCredentials, undefined);
-		assert.strictEqual(
-			signinResponse.body.authRequest.allowCredentials && signinResponse.body.authRequest.allowCredentials[0]?.id,
-			credentialId.toString('base64url'),
-		);
+		expect(signinResponse.body.authRequest.allowCredentials && signinResponse.body.authRequest.allowCredentials[0]?.id).toBe(credentialId.toString('base64url'));
 
 		const signinResponse2 = await api(
 			'signin-flow',
@@ -363,7 +366,7 @@ describe('2要素認証', () => {
 				requestOptions: signinResponse.body.authRequest,
 			}),
 		);
-		assert.strictEqual(signinResponse2.status, 200);
+		expect(signinResponse2.status).toBe(200);
 		assert.strictEqual(signinResponse2.body.finished, true);
 		assert.notEqual(signinResponse2.body.i, undefined);
 
@@ -386,7 +389,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerResponse.status, 200);
+		expect(registerResponse.status).toBe(200);
 
 		const doneResponse = await api(
 			'i/2fa/done',
@@ -395,7 +398,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(doneResponse.status, 200);
+		expect(doneResponse.status).toBe(200);
 
 		const registerKeyResponse = await api(
 			'i/2fa/register-key',
@@ -405,7 +408,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerKeyResponse.status, 200);
+		expect(registerKeyResponse.status).toBe(200);
 
 		const keyName = 'example-key';
 		const credentialId = crypto.randomBytes(0x41);
@@ -419,7 +422,7 @@ describe('2要素認証', () => {
 			} as any) as any,
 			alice,
 		);
-		assert.strictEqual(keyDoneResponse.status, 200);
+		expect(keyDoneResponse.status).toBe(200);
 
 		const passwordLessResponse = await api(
 			'i/2fa/password-less',
@@ -428,17 +431,17 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(passwordLessResponse.status, 204);
+		expect(passwordLessResponse.status).toBe(204);
 
 		const iResponse = await api('i', {}, alice);
-		assert.strictEqual(iResponse.status, 200);
-		assert.strictEqual(iResponse.body.usePasswordLessLogin, true);
+		expect(iResponse.status).toBe(200);
+		expect(iResponse.body.usePasswordLessLogin).toBe(true);
 
 		const signinResponse = await api('signin-flow', {
 			...signinParam(),
 			password: '',
 		});
-		assert.strictEqual(signinResponse.status, 200);
+		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, false);
 		assert.strictEqual(signinResponse.body.next, 'passkey');
 		assert.notEqual(signinResponse.body.authRequest.challenge, undefined);
@@ -452,7 +455,7 @@ describe('2要素認証', () => {
 			} as any),
 			password: '',
 		});
-		assert.strictEqual(signinResponse2.status, 200);
+		expect(signinResponse2.status).toBe(200);
 		assert.strictEqual(signinResponse2.body.finished, true);
 		assert.notEqual(signinResponse2.body.i, undefined);
 
@@ -470,7 +473,7 @@ describe('2要素認証', () => {
 	test('専用パスキーサインインが完了し、不正なcontext・credential・ユーザー状態を拒否する。', async () => {
 		const passkeyUser = await signup({ username: `pk_${crypto.randomBytes(4).toString('hex')}`, password });
 		const registerResponse = await api('i/2fa/register', { password }, passkeyUser);
-		assert.strictEqual(registerResponse.status, 200);
+		expect(registerResponse.status).toBe(200);
 
 		const doneResponse = await api(
 			'i/2fa/done',
@@ -479,7 +482,7 @@ describe('2要素認証', () => {
 			},
 			passkeyUser,
 		);
-		assert.strictEqual(doneResponse.status, 200);
+		expect(doneResponse.status).toBe(200);
 
 		const registerKeyResponse = await api(
 			'i/2fa/register-key',
@@ -489,7 +492,7 @@ describe('2要素認証', () => {
 			},
 			passkeyUser,
 		);
-		assert.strictEqual(registerKeyResponse.status, 200);
+		expect(registerKeyResponse.status).toBe(200);
 
 		const credentialId = crypto.randomBytes(0x41);
 		const keyDoneResponse = await api(
@@ -502,7 +505,7 @@ describe('2要素認証', () => {
 			} as any) as any,
 			passkeyUser,
 		);
-		assert.strictEqual(keyDoneResponse.status, 200);
+		expect(keyDoneResponse.status).toBe(200);
 
 		let lastPasskeyCallAt = 0;
 		const callPasskey = async <P extends misskey.entities.SigninWithPasskeyRequest>(params: P) => {
@@ -515,7 +518,7 @@ describe('2要素認証', () => {
 		let signCount = 0;
 		const createCredential = async (id = credentialId) => {
 			const init = await callPasskey({});
-			assert.strictEqual(init.status, 200);
+			expect(init.status).toBe(200);
 			const request = signinWithSecurityKeyParam({
 				keyName: 'dedicated-signin-key',
 				credentialId: id,
@@ -532,40 +535,31 @@ describe('2要素認証', () => {
 				...contextMismatch,
 				context: crypto.randomUUID(),
 			});
-			assert.strictEqual(contextMismatchResponse.status, 403);
-			assert.strictEqual(
-				castAsError(contextMismatchResponse.body as any).error.id,
-				'2d16e51c-007b-4edd-afd2-f7dd02c947f6',
-			);
+			expect(contextMismatchResponse.status).toBe(403);
+			expect(castAsError(contextMismatchResponse.body as any).error.id).toBe('2d16e51c-007b-4edd-afd2-f7dd02c947f6');
 
 			const invalidCredential = await createCredential(crypto.randomBytes(0x41));
 			const invalidCredentialResponse = await callPasskey(invalidCredential);
-			assert.strictEqual(invalidCredentialResponse.status, 403);
-			assert.strictEqual(
-				castAsError(invalidCredentialResponse.body as any).error.id,
-				'36b96a7d-b547-412d-aeed-2d611cdc8cdc',
-			);
+			expect(invalidCredentialResponse.status).toBe(403);
+			expect(castAsError(invalidCredentialResponse.body as any).error.id).toBe('36b96a7d-b547-412d-aeed-2d611cdc8cdc');
 
 			const passwordlessDisabled = await callPasskey(await createCredential());
-			assert.strictEqual(passwordlessDisabled.status, 403);
-			assert.strictEqual(
-				castAsError(passwordlessDisabled.body as any).error.id,
-				'2d84773e-f7b7-4d0b-8f72-bb69b584c912',
-			);
+			expect(passwordlessDisabled.status).toBe(403);
+			expect(castAsError(passwordlessDisabled.body as any).error.id).toBe('2d84773e-f7b7-4d0b-8f72-bb69b584c912');
 
 			await updateUserProfileInDatabase(database, passkeyUser.id, { usePasswordLessLogin: true });
 			await updateUserInDatabase(database, passkeyUser.id, { isSuspended: true });
 
 			const suspended = await callPasskey(await createCredential());
-			assert.strictEqual(suspended.status, 403);
-			assert.strictEqual(castAsError(suspended.body as any).error.id, 'e03a5f46-d309-4865-9b69-56282d94e1eb');
+			expect(suspended.status).toBe(403);
+			expect(castAsError(suspended.body as any).error.id).toBe('e03a5f46-d309-4865-9b69-56282d94e1eb');
 
 			await updateUserInDatabase(database, passkeyUser.id, { isSuspended: false });
 
 			const completed = await callPasskey(await createCredential());
-			assert.strictEqual(completed.status, 200);
+			expect(completed.status).toBe(200);
 			const completedBody = completed.body as unknown as misskey.entities.SigninWithPasskeyResponse;
-			assert.strictEqual(completedBody.signinResponse.finished, true);
+			expect(completedBody.signinResponse.finished).toBe(true);
 			assert.notEqual(completedBody.signinResponse.i, undefined);
 		} finally {
 			await updateUserInDatabase(database, passkeyUser.id, { isSuspended: false });
@@ -589,7 +583,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerResponse.status, 200);
+		expect(registerResponse.status).toBe(200);
 
 		const doneResponse = await api(
 			'i/2fa/done',
@@ -598,7 +592,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(doneResponse.status, 200);
+		expect(doneResponse.status).toBe(200);
 
 		const registerKeyResponse = await api(
 			'i/2fa/register-key',
@@ -608,7 +602,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerKeyResponse.status, 200);
+		expect(registerKeyResponse.status).toBe(200);
 
 		const keyName = 'example-key';
 		const credentialId = crypto.randomBytes(0x41);
@@ -622,7 +616,7 @@ describe('2要素認証', () => {
 			} as any) as any,
 			alice,
 		);
-		assert.strictEqual(keyDoneResponse.status, 200);
+		expect(keyDoneResponse.status).toBe(200);
 
 		const renamedKey = 'other-key';
 		const updateKeyResponse = await api(
@@ -633,18 +627,18 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(updateKeyResponse.status, 200);
+		expect(updateKeyResponse.status).toBe(200);
 
 		const iResponse = await api('i', {}, alice);
-		assert.strictEqual(iResponse.status, 200);
+		expect(iResponse.status).toBe(200);
 		assert.ok(iResponse.body.securityKeysList);
 		const securityKeys = iResponse.body.securityKeysList.filter(
 			(s: { id: string }) => s.id === credentialId.toString('base64url'),
 		);
-		assert.strictEqual(securityKeys.length, 1);
+		expect(securityKeys.length).toBe(1);
 		const securityKey = securityKeys[0];
 		assert.ok(securityKey);
-		assert.strictEqual(securityKey.name, renamedKey);
+		expect(securityKey.name).toBe(renamedKey);
 		assert.notEqual(securityKey.lastUsed, undefined);
 
 		// 後片付け
@@ -666,7 +660,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerResponse.status, 200);
+		expect(registerResponse.status).toBe(200);
 
 		const doneResponse = await api(
 			'i/2fa/done',
@@ -675,7 +669,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(doneResponse.status, 200);
+		expect(doneResponse.status).toBe(200);
 
 		const registerKeyResponse = await api(
 			'i/2fa/register-key',
@@ -685,7 +679,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerKeyResponse.status, 200);
+		expect(registerKeyResponse.status).toBe(200);
 
 		const keyName = 'example-key';
 		const credentialId = crypto.randomBytes(0x41);
@@ -699,11 +693,11 @@ describe('2要素認証', () => {
 			} as any) as any,
 			alice,
 		);
-		assert.strictEqual(keyDoneResponse.status, 200);
+		expect(keyDoneResponse.status).toBe(200);
 
 		// テストの実行順によっては複数残ってるので全部消す
 		const beforeIResponse = await api('i', {}, alice);
-		assert.strictEqual(beforeIResponse.status, 200);
+		expect(beforeIResponse.status).toBe(200);
 		assert.ok(beforeIResponse.body.securityKeysList);
 		for (const key of beforeIResponse.body.securityKeysList) {
 			const removeKeyResponse = await api(
@@ -715,18 +709,18 @@ describe('2要素認証', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(removeKeyResponse.status, 200);
+			expect(removeKeyResponse.status).toBe(200);
 		}
 
 		const afterIResponse = await api('i', {}, alice);
-		assert.strictEqual(afterIResponse.status, 200);
-		assert.strictEqual(afterIResponse.body.securityKeys, false);
+		expect(afterIResponse.status).toBe(200);
+		expect(afterIResponse.body.securityKeys).toBe(false);
 
 		const signinResponse = await api('signin-flow', {
 			...signinParam(),
 			token: otpToken(registerResponse.body.secret),
 		});
-		assert.strictEqual(signinResponse.status, 200);
+		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, true);
 		assert.notEqual(signinResponse.body.i, undefined);
 
@@ -749,7 +743,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerResponse.status, 200);
+		expect(registerResponse.status).toBe(200);
 
 		const doneResponse = await api(
 			'i/2fa/done',
@@ -758,11 +752,11 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(doneResponse.status, 200);
+		expect(doneResponse.status).toBe(200);
 
 		const iResponse = await api('i', {}, alice);
-		assert.strictEqual(iResponse.status, 200);
-		assert.strictEqual(iResponse.body.twoFactorEnabled, true);
+		expect(iResponse.status).toBe(200);
+		expect(iResponse.body.twoFactorEnabled).toBe(true);
 
 		const unregisterResponse = await api(
 			'i/2fa/unregister',
@@ -772,12 +766,12 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(unregisterResponse.status, 204);
+		expect(unregisterResponse.status).toBe(204);
 
 		const signinResponse = await api('signin-flow', {
 			...signinParam(),
 		});
-		assert.strictEqual(signinResponse.status, 200);
+		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, true);
 		assert.notEqual(signinResponse.body.i, undefined);
 
@@ -803,14 +797,14 @@ describe('2要素認証', () => {
 				password,
 				token: otpToken(secret),
 			});
-			assert.strictEqual(oldPasswordResponse.status, 200);
+			expect(oldPasswordResponse.status).toBe(200);
 			assert.strictEqual(oldPasswordResponse.body.finished, true);
 
 			const newPasswordResponse = await api('signin-flow', {
 				username: user.username,
 				password: newPassword,
 			});
-			assert.strictEqual(newPasswordResponse.status, 403);
+			expect(newPasswordResponse.status).toBe(403);
 		};
 
 		try {
@@ -823,8 +817,8 @@ describe('2要素認証', () => {
 				user,
 			);
 			// 2FA失敗は利用者の入力ミスなので、500 INTERNAL_ERROR ではなく明示的なAPIエラーであること
-			assert.strictEqual(missingTokenResponse.status, 400, JSON.stringify(missingTokenResponse.body));
-			assert.strictEqual(castAsError(missingTokenResponse.body as any).error.code, 'TWO_FACTOR_AUTHENTICATION_FAILED');
+			expect(missingTokenResponse.status, JSON.stringify(missingTokenResponse.body)).toBe(400);
+			expect(castAsError(missingTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertPasswordUnchanged();
 
 			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
@@ -838,11 +832,8 @@ describe('2要素認証', () => {
 					},
 					user,
 				);
-				assert.strictEqual(invalidTokenResponse.status, 400, JSON.stringify(invalidTokenResponse.body));
-				assert.strictEqual(
-					castAsError(invalidTokenResponse.body as any).error.code,
-					'TWO_FACTOR_AUTHENTICATION_FAILED',
-				);
+				expect(invalidTokenResponse.status, JSON.stringify(invalidTokenResponse.body)).toBe(400);
+				expect(castAsError(invalidTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			} finally {
 				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
 			}
@@ -863,13 +854,13 @@ describe('2要素認証', () => {
 		const user = await signup({ username: `tfem_${crypto.randomBytes(4).toString('hex')}`, password });
 		const secret = await enableTotp(user);
 		const beforeResponse = await api('i', {}, user);
-		assert.strictEqual(beforeResponse.status, 200);
+		expect(beforeResponse.status).toBe(200);
 
 		const assertEmailUnchanged = async (): Promise<void> => {
 			const afterResponse = await api('i', {}, user);
-			assert.strictEqual(afterResponse.status, 200);
-			assert.strictEqual(afterResponse.body.email, beforeResponse.body.email);
-			assert.strictEqual(afterResponse.body.emailVerified, beforeResponse.body.emailVerified);
+			expect(afterResponse.status).toBe(200);
+			expect(afterResponse.body.email).toBe(beforeResponse.body.email);
+			expect(afterResponse.body.emailVerified).toBe(beforeResponse.body.emailVerified);
 		};
 
 		try {
@@ -881,8 +872,8 @@ describe('2要素認証', () => {
 				},
 				user,
 			);
-			assert.strictEqual(missingTokenResponse.status, 400, JSON.stringify(missingTokenResponse.body));
-			assert.strictEqual(castAsError(missingTokenResponse.body as any).error.code, 'TWO_FACTOR_AUTHENTICATION_FAILED');
+			expect(missingTokenResponse.status, JSON.stringify(missingTokenResponse.body)).toBe(400);
+			expect(castAsError(missingTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertEmailUnchanged();
 
 			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
@@ -896,11 +887,8 @@ describe('2要素認証', () => {
 					},
 					user,
 				);
-				assert.strictEqual(invalidTokenResponse.status, 400, JSON.stringify(invalidTokenResponse.body));
-				assert.strictEqual(
-					castAsError(invalidTokenResponse.body as any).error.code,
-					'TWO_FACTOR_AUTHENTICATION_FAILED',
-				);
+				expect(invalidTokenResponse.status, JSON.stringify(invalidTokenResponse.body)).toBe(400);
+				expect(castAsError(invalidTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			} finally {
 				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
 			}
@@ -923,8 +911,8 @@ describe('2要素認証', () => {
 
 		const assertAccountNotDeleted = async (): Promise<void> => {
 			const iResponse = await api('i', {}, user);
-			assert.strictEqual(iResponse.status, 200);
-			assert.strictEqual(iResponse.body.isDeleted, false);
+			expect(iResponse.status).toBe(200);
+			expect(iResponse.body.isDeleted).toBe(false);
 		};
 
 		try {
@@ -935,8 +923,8 @@ describe('2要素認証', () => {
 				},
 				user,
 			);
-			assert.strictEqual(missingTokenResponse.status, 400, JSON.stringify(missingTokenResponse.body));
-			assert.strictEqual(castAsError(missingTokenResponse.body as any).error.code, 'TWO_FACTOR_AUTHENTICATION_FAILED');
+			expect(missingTokenResponse.status, JSON.stringify(missingTokenResponse.body)).toBe(400);
+			expect(castAsError(missingTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertAccountNotDeleted();
 
 			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '1' });
@@ -949,11 +937,8 @@ describe('2要素認証', () => {
 					},
 					user,
 				);
-				assert.strictEqual(invalidTokenResponse.status, 400, JSON.stringify(invalidTokenResponse.body));
-				assert.strictEqual(
-					castAsError(invalidTokenResponse.body as any).error.code,
-					'TWO_FACTOR_AUTHENTICATION_FAILED',
-				);
+				expect(invalidTokenResponse.status, JSON.stringify(invalidTokenResponse.body)).toBe(400);
+				expect(castAsError(invalidTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			} finally {
 				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
 			}
@@ -980,7 +965,7 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(registerResponse.status, 200);
+		expect(registerResponse.status).toBe(200);
 
 		const sharedOtpToken = otpToken(registerResponse.body.secret);
 		const doneResponse = await api(
@@ -990,14 +975,14 @@ describe('2要素認証', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(doneResponse.status, 200);
+		expect(doneResponse.status).toBe(200);
 
 		try {
 			const signinResponse = await api('signin-flow', {
 				...signinParam(),
 				token: sharedOtpToken,
 			});
-			assert.strictEqual(signinResponse.status, 403);
+			expect(signinResponse.status).toBe(403);
 		} finally {
 			await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_DUPLICATED_TOTP', value: '' });
 			await api(

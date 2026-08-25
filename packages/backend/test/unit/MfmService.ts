@@ -5,7 +5,7 @@
 
 import * as assert from 'assert';
 import * as mfm from 'mfm-js';
-import { beforeAll, describe, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 
 import { loadConfig } from '@/config.js';
 import { createMfmService, type MfmService } from '@/core/MfmService.js';
@@ -45,129 +45,90 @@ describe('MfmService', () => {
 
 	describe('fromHtml', () => {
 		test('p', () => {
-			assert.deepStrictEqual(mfmService.fromHtml('<p>a</p><p>b</p>'), 'a\n\nb');
+			expect(mfmService.fromHtml('<p>a</p><p>b</p>')).toStrictEqual('a\n\nb');
 		});
 
 		test('block element', () => {
-			assert.deepStrictEqual(mfmService.fromHtml('<div>a</div><div>b</div>'), 'a\nb');
+			expect(mfmService.fromHtml('<div>a</div><div>b</div>')).toStrictEqual('a\nb');
 		});
 
 		test('inline element', () => {
-			assert.deepStrictEqual(mfmService.fromHtml('<ul><li>a</li><li>b</li></ul>'), 'a\nb');
+			expect(mfmService.fromHtml('<ul><li>a</li><li>b</li></ul>')).toStrictEqual('a\nb');
 		});
 
 		test('block code', () => {
-			assert.deepStrictEqual(mfmService.fromHtml('<pre><code>a\nb</code></pre>'), '```\na\nb\n```');
+			expect(mfmService.fromHtml('<pre><code>a\nb</code></pre>')).toStrictEqual('```\na\nb\n```');
 		});
 
 		test('inline code', () => {
-			assert.deepStrictEqual(mfmService.fromHtml('<code>a</code>'), '`a`');
+			expect(mfmService.fromHtml('<code>a</code>')).toStrictEqual('`a`');
 		});
 
 		test('quote', () => {
-			assert.deepStrictEqual(mfmService.fromHtml('<blockquote>a\nb</blockquote>'), '> a\n> b');
+			expect(mfmService.fromHtml('<blockquote>a\nb</blockquote>')).toStrictEqual('> a\n> b');
 		});
 
 		test('br', () => {
-			assert.deepStrictEqual(mfmService.fromHtml('<p>abc<br><br/>d</p>'), 'abc\n\nd');
+			expect(mfmService.fromHtml('<p>abc<br><br/>d</p>')).toStrictEqual('abc\n\nd');
 		});
 
 		test('link with different text', () => {
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <a href="https://example.com/b">c</a> d</p>'),
-				'a [c](https://example.com/b) d',
-			);
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/b">c</a> d</p>')).toStrictEqual('a [c](https://example.com/b) d');
 		});
 
 		test('link with different text, but not encoded', () => {
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <a href="https://example.com/ä">c</a> d</p>'),
-				'a [c](<https://example.com/ä>) d',
-			);
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/ä">c</a> d</p>')).toStrictEqual('a [c](<https://example.com/ä>) d');
 		});
 
 		test('link with same text', () => {
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <a href="https://example.com/b">https://example.com/b</a> d</p>'),
-				'a https://example.com/b d',
-			);
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/b">https://example.com/b</a> d</p>')).toStrictEqual('a https://example.com/b d');
 		});
 
 		test('link with same text, but not encoded', () => {
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <a href="https://example.com/ä">https://example.com/ä</a> d</p>'),
-				'a <https://example.com/ä> d',
-			);
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/ä">https://example.com/ä</a> d</p>')).toStrictEqual('a <https://example.com/ä> d');
 		});
 
 		test('link with no url', () => {
-			assert.deepStrictEqual(mfmService.fromHtml('<p>a <a href="b">c</a> d</p>'), 'a [c](b) d');
+			expect(mfmService.fromHtml('<p>a <a href="b">c</a> d</p>')).toStrictEqual('a [c](b) d');
 		});
 
 		test('link without href', () => {
-			assert.deepStrictEqual(mfmService.fromHtml('<p>a <a>c</a> d</p>'), 'a c d');
+			expect(mfmService.fromHtml('<p>a <a>c</a> d</p>')).toStrictEqual('a c d');
 		});
 
 		test('link without text', () => {
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <a href="https://example.com/b"></a> d</p>'),
-				'a https://example.com/b d',
-			);
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/b"></a> d</p>')).toStrictEqual('a https://example.com/b d');
 		});
 
 		test('link without both', () => {
-			assert.deepStrictEqual(mfmService.fromHtml('<p>a <a></a> d</p>'), 'a  d');
+			expect(mfmService.fromHtml('<p>a <a></a> d</p>')).toStrictEqual('a  d');
 		});
 
 		test('ruby', () => {
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <ruby>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp></ruby> b</p>'),
-				'a $[ruby Misskey ミスキー] b',
-			);
-			assert.deepStrictEqual(
-				mfmService.fromHtml(
+			expect(mfmService.fromHtml('<p>a <ruby>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp></ruby> b</p>')).toStrictEqual('a $[ruby Misskey ミスキー] b');
+			expect(mfmService.fromHtml(
 					'<p>a <ruby>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp></ruby> b</p>',
-				),
-				'a $[ruby Misskey ミスキー]$[ruby Misskey ミスキー] b',
-			);
+				)).toStrictEqual('a $[ruby Misskey ミスキー]$[ruby Misskey ミスキー] b');
 		});
 
 		test('ruby with spaces', () => {
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <ruby>Miss key<rp>(</rp><rt>ミスキー</rt><rp>)</rp> b</ruby> c</p>'),
-				'a Miss key(ミスキー) b c',
-			);
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <ruby>Misskey<rp>(</rp><rt>ミス キー</rt><rp>)</rp> b</ruby> c</p>'),
-				'a Misskey(ミス キー) b c',
-			);
-			assert.deepStrictEqual(
-				mfmService.fromHtml(
+			expect(mfmService.fromHtml('<p>a <ruby>Miss key<rp>(</rp><rt>ミスキー</rt><rp>)</rp> b</ruby> c</p>')).toStrictEqual('a Miss key(ミスキー) b c');
+			expect(mfmService.fromHtml('<p>a <ruby>Misskey<rp>(</rp><rt>ミス キー</rt><rp>)</rp> b</ruby> c</p>')).toStrictEqual('a Misskey(ミス キー) b c');
+			expect(mfmService.fromHtml(
 					'<p>a <ruby>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp>Misskey<rp>(</rp><rt>ミス キー</rt><rp>)</rp>Misskey<rp>(</rp><rt>ミスキー</rt><rp>)</rp></ruby> b</p>',
-				),
-				'a Misskey(ミスキー)Misskey(ミス キー)Misskey(ミスキー) b',
-			);
+				)).toStrictEqual('a Misskey(ミスキー)Misskey(ミス キー)Misskey(ミスキー) b');
 		});
 
 		test('ruby with other inline tags', () => {
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <ruby><strong>Misskey</strong><rp>(</rp><rt>ミスキー</rt><rp>)</rp> b</ruby> c</p>'),
-				'a **Misskey**(ミスキー) b c',
-			);
+			expect(mfmService.fromHtml('<p>a <ruby><strong>Misskey</strong><rp>(</rp><rt>ミスキー</rt><rp>)</rp> b</ruby> c</p>')).toStrictEqual('a **Misskey**(ミスキー) b c');
 		});
 
 		test('mention', () => {
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <a href="https://example.com/@user" class="u-url mention">@user</a> d</p>'),
-				'a @user@example.com d',
-			);
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/@user" class="u-url mention">@user</a> d</p>')).toStrictEqual('a @user@example.com d');
 		});
 
 		test('hashtag', () => {
-			assert.deepStrictEqual(
-				mfmService.fromHtml('<p>a <a href="https://example.com/tags/a">#a</a> d</p>', ['#a']),
-				'a #a d',
-			);
+			expect(mfmService.fromHtml('<p>a <a href="https://example.com/tags/a">#a</a> d</p>', ['#a'])).toStrictEqual('a #a d');
 		});
 	});
 });

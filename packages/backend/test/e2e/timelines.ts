@@ -7,7 +7,7 @@
 // bun run test:e2e -- e2e/timelines.ts
 
 import * as assert from 'assert';
-import { describe, beforeAll, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { entities } from 'misskey-js';
 import { Redis } from 'ioredis';
 import { SignupResponse, Note } from 'misskey-js/entities.js';
@@ -39,7 +39,7 @@ async function muteChannel(channelId: string, user: UserToken) {
 
 async function uploadTimelineFile(user: UserToken): Promise<entities.DriveFile> {
 	const res = await uploadFile(user, { path: '192.png' });
-	assert.strictEqual(res.status, 200);
+	expect(res.status).toBe(200);
 	assert.ok(res.body);
 	return res.body;
 }
@@ -120,11 +120,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === aliceNote.id),
-						true,
-					);
-					assert.strictEqual(res.body.find((note) => note.id === aliceNote.id)?.text, 'hi');
+					expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+					expect(res.body.find((note) => note.id === aliceNote.id)?.text).toBe('hi');
 				});
 
 				test('フォローしているユーザーのノートが含まれる', async () => {
@@ -136,14 +133,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('フォローしているユーザーの visibility: followers なノートが含まれる', async () => {
@@ -155,15 +146,9 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(res.body.find((note) => note.id === bobNote.id)?.text, 'hi');
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.find((note) => note.id === bobNote.id)?.text).toBe('hi');
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('withReplies: false でフォローしているユーザーの他人への返信が含まれない', async () => {
@@ -175,14 +160,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
@@ -198,14 +177,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							false,
-						);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 					},
 				);
 
@@ -224,14 +197,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('withReplies: true でフォローしているユーザーの他人の visibility: followers な投稿への返信が含まれない', async () => {
@@ -245,14 +212,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
@@ -270,15 +231,9 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							true,
-						);
-						assert.strictEqual(res.body.find((note) => note.id === carolNote.id)?.text, 'hi');
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
+						expect(res.body.find((note) => note.id === carolNote.id)?.text).toBe('hi');
 					},
 				);
 
@@ -296,14 +251,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === aliceNote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(true);
 					},
 				);
 
@@ -323,14 +272,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
 				});
 
 				test('withReplies: false でフォローしているユーザーのそのユーザー自身への返信が含まれる', async () => {
@@ -342,14 +285,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote1.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote2.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote1.id)).toBe(true);
+					expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
 				});
 
 				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
@@ -364,14 +301,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 					},
 				);
 
@@ -384,14 +315,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === aliceNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
 				});
 
 				test('フォローしているユーザーの他人の投稿のリノートが含まれる', async () => {
@@ -403,14 +328,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('[withRenotes: false] フォローしているユーザーの投稿が含まれる', async () => {
@@ -429,14 +348,8 @@ describe('Timelines', () => {
 						alice,
 					);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('[withRenotes: false] フォローしているユーザーのファイルのみの投稿が含まれる', async () => {
@@ -456,14 +369,8 @@ describe('Timelines', () => {
 						alice,
 					);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('[withRenotes: false] フォローしているユーザーの他人の投稿のリノートが含まれない', async () => {
@@ -481,14 +388,8 @@ describe('Timelines', () => {
 						alice,
 					);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('[withRenotes: false] フォローしているユーザーの他人の投稿の引用が含まれる', async () => {
@@ -506,14 +407,8 @@ describe('Timelines', () => {
 						alice,
 					);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('フォローしているユーザーの他人への visibility: specified なノートが含まれない', async () => {
@@ -524,10 +419,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('フォローしているユーザーが行ったミュートしているユーザーのリノートが含まれない', async () => {
@@ -540,14 +432,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('withReplies: true でフォローしているユーザーが行ったミュートしているユーザーの投稿への返信が含まれない', async () => {
@@ -561,14 +447,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('ミュートしているユーザーのノートの、関係のないユーザによる引用ノートの、フォローしているユーザーによるリノートが含まれない', async () => {
@@ -582,18 +462,9 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === daveNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === daveNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('ミュートしているユーザーのノートの、関係のないユーザによるリプライの、フォローしているユーザーによるリノートが含まれない', async () => {
@@ -607,18 +478,9 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === daveNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === daveNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('フォローしているリモートユーザーのノートが含まれる', async () => {
@@ -631,10 +493,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('フォローしているリモートユーザーの visibility: home なノートが含まれる', async () => {
@@ -647,10 +506,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test(
@@ -667,22 +523,10 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100, withFiles: true }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote1.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote2.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote1.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote2.id),
-							false,
-						);
+						expect(res.body.some((note) => note.id === bobNote1.id)).toBe(false);
+						expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote1.id)).toBe(false);
+						expect(res.body.some((note) => note.id === carolNote2.id)).toBe(false);
 					},
 					1000 * 30,
 				);
@@ -696,10 +540,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('自分の visibility: specified なノートが含まれる', async () => {
@@ -709,11 +550,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === aliceNote.id),
-						true,
-					);
-					assert.strictEqual(res.body.find((note) => note.id === aliceNote.id)?.text, 'hi');
+					expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+					expect(res.body.find((note) => note.id === aliceNote.id)?.text).toBe('hi');
 				});
 
 				test('フォローしているユーザーの自身を visibleUserIds に指定した visibility: specified なノートが含まれる', async () => {
@@ -724,11 +562,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(res.body.find((note) => note.id === bobNote.id)?.text, 'hi');
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.find((note) => note.id === bobNote.id)?.text).toBe('hi');
 				});
 
 				test('フォローしていないユーザーの自身を visibleUserIds に指定した visibility: specified なノートが含まれない', async () => {
@@ -738,10 +573,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('フォローしているユーザーの自身を visibleUserIds に指定していない visibility: specified なノートが含まれない', async () => {
@@ -752,10 +584,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
@@ -774,11 +603,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(res.body.find((note) => note.id === aliceNote.id)?.text, 'ok');
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.find((note) => note.id === aliceNote.id)?.text).toBe('ok');
 					},
 				);
 
@@ -788,8 +614,8 @@ describe('Timelines', () => {
 				const aliceNote = await post(alice, { text: 'hi', visibility: 'specified', visibleUserIds: [bob.id] });
 				const bobNote = await post(bob, { text: 'ok', visibility: 'specified', visibleUserIds: [alice.id], replyId: aliceNote.id });
 				const res = await api('notes/timeline', { limit: 100 }, alice);
-				assert.strictEqual(res.body.some(note => note.id === bobNote.id), true);
-				assert.strictEqual(res.body.find(note => note.id === bobNote.id).text, 'ok');
+				expect(res.body.some(note => note.id === bobNote.id)).toBe(true);
+				expect(res.body.find(note => note.id === bobNote.id).text).toBe('ok');
 			});
 			*/
 
@@ -807,10 +633,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				describe('Channel', () => {
@@ -824,10 +647,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザ未フォロー　＝　TLに流れる', async () => {
@@ -841,10 +661,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 					});
 
 					test('チャンネル未フォロー　＋　ユーザフォロー　＝　TLに流れない', async () => {
@@ -858,10 +675,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
@@ -876,10 +690,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 					});
 
 					test('チャンネル未フォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -893,10 +704,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -911,10 +719,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネル未フォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -929,10 +734,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -948,10 +750,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザ未フォロー　＝　TLに流れない', async () => {
@@ -965,10 +764,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＝　TLに流れない', async () => {
@@ -983,10 +779,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
@@ -1001,10 +794,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
@@ -1020,10 +810,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1038,10 +825,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1057,10 +841,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1076,10 +857,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1096,10 +874,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 				});
 
@@ -1120,14 +895,14 @@ describe('Timelines', () => {
 
 					if (enableFanoutTimeline) {
 						// NOTE: notes/timeline だと DB へのフォールバックが効くので Redis を直接見て確かめる
-						assert.strictEqual(await redisForTimelines.exists(`list:homeTimeline:${bob.id}`), 1);
+						expect(await redisForTimelines.exists(`list:homeTimeline:${bob.id}`)).toBe(1);
 
 						const bobHTL = await redisForTimelines.lrange(`list:homeTimeline:${bob.id}`, 0, -1);
-						assert.strictEqual(bobHTL.includes(aliceNote.id), true);
-						assert.strictEqual(bobHTL.includes(bobNote.id), true);
-						assert.strictEqual(bobHTL.includes(carolNote.id), false);
+						expect(bobHTL.includes(aliceNote.id)).toBe(true);
+						expect(bobHTL.includes(bobNote.id)).toBe(true);
+						expect(bobHTL.includes(carolNote.id)).toBe(false);
 					} else {
-						assert.strictEqual(await redisForTimelines.exists(`list:homeTimeline:${bob.id}`), 0);
+						expect(await redisForTimelines.exists(`list:homeTimeline:${bob.id}`)).toBe(0);
 					}
 				});
 
@@ -1146,7 +921,7 @@ describe('Timelines', () => {
 					await post(bob, { text: "I'm Bob." });
 
 					// NOTE: notes/timeline だと DB へのフォールバックが効くので Redis を直接見て確かめる
-					assert.strictEqual(await redisForTimelines.exists(`list:homeTimeline:${bob.id}`), 0);
+					expect(await redisForTimelines.exists(`list:homeTimeline:${bob.id}`)).toBe(0);
 				});
 
 				describe('凍結', () => {
@@ -1167,18 +942,9 @@ describe('Timelines', () => {
 
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
 						const res = await api('notes/timeline', { limit: 100 }, alice);
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							false,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 					});
 
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
@@ -1186,19 +952,10 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							true,
-						);
-						assert.strictEqual(res.body.find((note) => note.id === carolNote.id)?.text, "kon'nichiwa");
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
+						expect(res.body.find((note) => note.id === carolNote.id)?.text).toBe("kon'nichiwa");
 					});
 				});
 
@@ -1222,26 +979,11 @@ describe('Timelines', () => {
 
 					test('凍結後に凍結されたユーザーに対するRenoteや凍結されたユーザーのRenoteが見えなくなる', async () => {
 						const res = await api('notes/timeline', { limit: 100 }, alice);
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobRenote.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolRenote.id),
-							false,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+						expect(res.body.some((note) => note.id === bobRenote.id)).toBe(false);
+						expect(res.body.some((note) => note.id === carolRenote.id)).toBe(false);
 					});
 
 					test('凍結解除後に凍結されていたユーザーに対するRenoteや凍結されたユーザーのRenoteが見えるようになる', async () => {
@@ -1249,26 +991,11 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobRenote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolRenote.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobRenote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolRenote.id)).toBe(true);
 					});
 				});
 
@@ -1296,18 +1023,9 @@ describe('Timelines', () => {
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							false,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 					});
 
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
@@ -1315,18 +1033,9 @@ describe('Timelines', () => {
 
 						const res = await api('notes/timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
 					});
 				});
 			});
@@ -1340,14 +1049,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('他人の他人への返信が含まれない', async () => {
@@ -1358,14 +1061,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
 				});
 
 				test('他人のその人自身への返信が含まれる', async () => {
@@ -1376,14 +1073,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote1.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote2.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote1.id)).toBe(true);
+					expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
 				});
 
 				test('チャンネル投稿が含まれない', async () => {
@@ -1394,10 +1085,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('リモートユーザーのノートが含まれない', async () => {
@@ -1407,10 +1095,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				// 含まれても良いと思うけど実装が面倒なので含まれない
@@ -1423,14 +1108,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('ミュートしているユーザーのノートが含まれない', async () => {
@@ -1442,14 +1121,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('フォローしているユーザーが行ったミュートしているユーザーのリノートが含まれない', async () => {
@@ -1462,14 +1135,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('withReplies: true でフォローしているユーザーが行ったミュートしているユーザーの投稿への返信が含まれない', async () => {
@@ -1483,14 +1150,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
 				test('ミュートしているユーザーのノートの、関係のないユーザによる引用ノートの、リノートが含まれない', async () => {
@@ -1503,18 +1164,9 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === daveNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === daveNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('ミュートしているユーザーのノートの、関係のないユーザによるリプライの、リノートが含まれない', async () => {
@@ -1527,18 +1179,9 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === daveNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === daveNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
@@ -1553,14 +1196,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 					},
 				);
 
@@ -1575,14 +1212,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 					},
 				);
 
@@ -1594,10 +1225,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100, withReplies: true }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test(
@@ -1611,14 +1239,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100, withFiles: true }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote1.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote2.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === bobNote1.id)).toBe(false);
+						expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
 					},
 					1000 * 10,
 				);
@@ -1634,10 +1256,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザ未フォロー　＝　TLに流れない', async () => {
@@ -1651,10 +1270,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネル未フォロー　＋　ユーザフォロー　＝　TLに流れない', async () => {
@@ -1668,10 +1284,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザフォロー　＝　TLに流れない', async () => {
@@ -1686,10 +1299,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネル未フォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1703,10 +1313,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1721,10 +1328,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネル未フォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1739,10 +1343,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1758,10 +1359,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザ未フォロー　＝　TLに流れる', async () => {
@@ -1775,10 +1373,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＝　TLに流れる', async () => {
@@ -1793,10 +1388,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
@@ -1811,10 +1403,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
@@ -1830,10 +1419,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1848,10 +1434,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1867,10 +1450,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1886,10 +1466,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -1906,10 +1483,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 				});
 			});
@@ -1922,10 +1496,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('ローカルユーザーの visibility: home なノートが含まれない', async () => {
@@ -1935,10 +1506,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('フォローしているローカルユーザーの visibility: home なノートが含まれる', async () => {
@@ -1949,10 +1517,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
@@ -1967,14 +1532,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 					},
 				);
 
@@ -1989,14 +1548,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === carolNote.id),
-						false,
-					);
+					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note: any) => note.id === carolNote.id)).toBe(false);
 				});
 
 				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
@@ -2014,15 +1567,9 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === carolNote.id),
-							true,
-						);
-						assert.strictEqual(res.body.find((note: any) => note.id === carolNote.id)?.text, 'hi');
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note: any) => note.id === carolNote.id)).toBe(true);
+						expect(res.body.find((note: any) => note.id === carolNote.id)?.text).toBe('hi');
 					},
 				);
 
@@ -2040,14 +1587,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === aliceNote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(true);
 					},
 				);
 
@@ -2059,14 +1600,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === carolNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
+					expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
 				});
 
 				test('リモートユーザーのノートが含まれない', async () => {
@@ -2076,10 +1611,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('フォローしているリモートユーザーのノートが含まれる', async () => {
@@ -2092,10 +1624,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('フォローしているリモートユーザーの visibility: home なノートが含まれる', async () => {
@@ -2108,10 +1637,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
@@ -2125,14 +1651,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/local-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 					},
 				);
 
@@ -2144,10 +1664,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/hybrid-timeline', { limit: 100, withReplies: true }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test(
@@ -2161,14 +1678,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100, withFiles: true }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote1.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote2.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === bobNote1.id)).toBe(false);
+						expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
 					},
 					1000 * 10,
 				);
@@ -2184,10 +1695,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザ未フォロー　＝　TLに流れる', async () => {
@@ -2201,10 +1709,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 					});
 
 					test('チャンネル未フォロー　＋　ユーザフォロー　＝　TLに流れない', async () => {
@@ -2218,10 +1723,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
@@ -2236,10 +1738,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 					});
 
 					test('チャンネル未フォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2253,10 +1752,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2271,10 +1767,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネル未フォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2289,10 +1782,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2308,10 +1798,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザ未フォロー　＝　TLに流れる', async () => {
@@ -2325,10 +1812,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＝　TLに流れる', async () => {
@@ -2343,10 +1827,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
@@ -2361,10 +1842,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＝　TLに流れる', async () => {
@@ -2380,10 +1858,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2398,10 +1873,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザ未フォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2417,10 +1889,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2436,10 +1905,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　ユーザフォロー　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2456,10 +1922,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 				});
 
@@ -2488,22 +1951,10 @@ describe('Timelines', () => {
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === daveNote.id),
-							false,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+						expect(res.body.some((note) => note.id === daveNote.id)).toBe(false);
 					});
 
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
@@ -2512,22 +1963,10 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === daveNote.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === daveNote.id)).toBe(true);
 					});
 				});
 
@@ -2559,18 +1998,9 @@ describe('Timelines', () => {
 					test('凍結後に凍結されたユーザーのノートは見えなくなる', async () => {
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === elleNote.id),
-							false,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+						expect(res.body.some((note) => note.id === elleNote.id)).toBe(false);
 					});
 
 					test('凍結解除後に凍結されていたユーザーのノートは見えるようになる', async () => {
@@ -2579,18 +2009,9 @@ describe('Timelines', () => {
 
 						const res = await api('notes/hybrid-timeline', { limit: 100 }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === aliceNote.id),
-							true,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === carolNote.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === elleNote.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+						expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
+						expect(res.body.some((note) => note.id === elleNote.id)).toBe(true);
 					});
 				});
 			});
@@ -2605,10 +2026,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('リスインしているフォローしていないユーザーの visibility: home なノートが含まれる', async () => {
@@ -2620,10 +2038,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('リスインしているフォローしていないユーザーの visibility: followers なノートが含まれない', async () => {
@@ -2635,10 +2050,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('リスインしているフォローしていないユーザーの他人への返信が含まれない', async () => {
@@ -2651,10 +2063,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('リスインしているフォローしていないユーザーのユーザー自身への返信が含まれる', async () => {
@@ -2667,14 +2076,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote1.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote2.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote1.id)).toBe(true);
+					expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
 				});
 
 				test('withReplies: false でリスインしているフォローしていないユーザーからの自分への返信が含まれる', async () => {
@@ -2688,10 +2091,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('withReplies: false でリスインしているフォローしていないユーザーの他人への返信が含まれない', async () => {
@@ -2705,10 +2105,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('withReplies: true でリスインしているフォローしていないユーザーの他人への返信が含まれる', async () => {
@@ -2722,10 +2119,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('リスインしているフォローしているユーザーの visibility: home なノートが含まれる', async () => {
@@ -2738,10 +2132,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('リスインしているフォローしているユーザーの visibility: followers なノートが含まれる', async () => {
@@ -2754,11 +2145,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(res.body.find((note) => note.id === bobNote.id)?.text, 'hi');
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.find((note) => note.id === bobNote.id)?.text).toBe('hi');
 				});
 
 				test('リスインしている自分の visibility: followers なノートが含まれる', async () => {
@@ -2770,11 +2158,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === aliceNote.id),
-						true,
-					);
-					assert.strictEqual(res.body.find((note) => note.id === aliceNote.id)?.text, 'hi');
+					expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+					expect(res.body.find((note) => note.id === aliceNote.id)?.text).toBe('hi');
 				});
 
 				test('リスインしているユーザーのチャンネルノートが含まれない', async () => {
@@ -2787,10 +2172,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test(
@@ -2806,14 +2188,8 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { listId: list.id, withFiles: true }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote1.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote2.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === bobNote1.id)).toBe(false);
+						expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
 					},
 					1000 * 10,
 				);
@@ -2827,11 +2203,8 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(res.body.find((note) => note.id === bobNote.id)?.text, 'hi');
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.find((note) => note.id === bobNote.id)?.text).toBe('hi');
 				});
 
 				test('リスインしているユーザーの自身宛てではない visibility: specified なノートが含まれない', async () => {
@@ -2844,10 +2217,7 @@ describe('Timelines', () => {
 
 					const res = await api('notes/user-list-timeline', { listId: list.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				describe('Channel', () => {
@@ -2863,10 +2233,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　リスインしてない　＝　TLに流れない', async () => {
@@ -2882,10 +2249,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネル未フォロー　＋　リスインしてる　＝　TLに流れない', async () => {
@@ -2901,10 +2265,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　リスインしてる　＝　TLに流れない', async () => {
@@ -2921,10 +2282,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネル未フォロー　＋　リスインしてない　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2940,10 +2298,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　リスインしてない　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2960,10 +2315,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネル未フォロー　＋　リスインしてる　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -2980,10 +2332,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('チャンネルフォロー　＋　リスインしてる　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -3001,10 +2350,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　リスインしてない　＝　TLに流れない', async () => {
@@ -3020,10 +2366,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　リスインしてない　＝　TLに流れない', async () => {
@@ -3040,10 +2383,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　リスインしてる　＝　TLに流れる', async () => {
@@ -3060,10 +2400,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　リスインしてる　＝　TLに流れる', async () => {
@@ -3081,10 +2418,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　リスインしてない　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -3101,10 +2435,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　リスインしてない　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -3122,10 +2453,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネル未フォロー　＋　リスインしてる　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -3143,10 +2471,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルフォロー　＋　リスインしてる　＋　チャンネルミュート　＝　TLに流れない', async () => {
@@ -3165,10 +2490,7 @@ describe('Timelines', () => {
 
 						const res = await api('notes/user-list-timeline', { limit: 100, listId: list.id }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 				});
 			});
@@ -3181,10 +2503,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('フォローしていないユーザーの visibility: followers なノートが含まれない', async () => {
@@ -3194,10 +2513,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('フォローしているユーザーの visibility: followers なノートが含まれる', async () => {
@@ -3208,11 +2524,8 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
-					assert.strictEqual(res.body.find((note) => note.id === bobNote.id)?.text, 'hi');
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
+					expect(res.body.find((note) => note.id === bobNote.id)?.text).toBe('hi');
 				});
 
 				test('自身の visibility: followers なノートが含まれる', async () => {
@@ -3222,11 +2535,8 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: alice.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === aliceNote.id),
-						true,
-					);
-					assert.strictEqual(res.body.find((note) => note.id === aliceNote.id)?.text, 'hi');
+					expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
+					expect(res.body.find((note) => note.id === aliceNote.id)?.text).toBe('hi');
 				});
 
 				test('チャンネル投稿が含まれない', async () => {
@@ -3237,10 +2547,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
@@ -3253,14 +2560,8 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote1.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote2.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote1.id)).toBe(true);
+					expect(res.body.some((note) => note.id === bobNote2.id)).toBe(false);
 				});
 
 				test('[withReplies: true] 他人への返信が含まれる', async () => {
@@ -3272,14 +2573,8 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id, withReplies: true }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote1.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote2.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote1.id)).toBe(true);
+					expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
 				});
 
 				test('[withReplies: true] 他人への visibility: specified な返信が含まれない', async () => {
@@ -3291,14 +2586,8 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id, withReplies: true }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote1.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote2.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote1.id)).toBe(true);
+					expect(res.body.some((note) => note.id === bobNote2.id)).toBe(false);
 				});
 
 				test(
@@ -3312,14 +2601,8 @@ describe('Timelines', () => {
 
 						const res = await api('users/notes', { userId: bob.id, withFiles: true }, alice);
 
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote1.id),
-							false,
-						);
-						assert.strictEqual(
-							res.body.some((note) => note.id === bobNote2.id),
-							true,
-						);
+						expect(res.body.some((note) => note.id === bobNote1.id)).toBe(false);
+						expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
 					},
 					1000 * 10,
 				);
@@ -3332,10 +2615,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('[withChannelNotes: true] 他人が取得した場合センシティブチャンネル投稿が含まれない', async () => {
@@ -3346,10 +2626,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('[withChannelNotes: true] 自分が取得した場合センシティブチャンネル投稿が含まれる', async () => {
@@ -3360,10 +2637,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, bob);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('[withChannelNotes: true] 他人が取得した場合センシティブチャンネル投稿のリノートが含まれない', async () => {
@@ -3375,10 +2649,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobRenote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobRenote.id)).toBe(false);
 				});
 
 				// リノート自体は channelId が NULL なので、チャンネル投稿を除外する条件では弾けない
@@ -3391,10 +2662,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobRenote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobRenote.id)).toBe(false);
 				});
 
 				test('[withChannelNotes: false] 他人が取得した場合通常チャンネル投稿のリノートは含まれる', async () => {
@@ -3406,10 +2674,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobRenote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobRenote.id)).toBe(true);
 				});
 
 				test('[withChannelNotes: true] 自分が取得した場合センシティブチャンネル投稿のリノートが含まれる', async () => {
@@ -3421,10 +2686,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, bob);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobRenote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobRenote.id)).toBe(true);
 				});
 
 				test('ミュートしているユーザーに関連する投稿が含まれない', async () => {
@@ -3436,10 +2698,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('ミュートしているユーザーのノートの、関係のないユーザによる引用ノートの、リノートが含まれない', async () => {
@@ -3452,10 +2711,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id, limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('ミュートしているユーザーのノートの、関係のないユーザによるリプライの、リノートが含まれない', async () => {
@@ -3469,10 +2725,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id, limit: 100 }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('ミュートしていても userId に指定したユーザーの投稿が含まれる', async () => {
@@ -3487,26 +2740,11 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote1.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote2.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote3.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote4.id),
-						true,
-					);
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote5.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === bobNote1.id)).toBe(true);
+					expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
+					expect(res.body.some((note) => note.id === bobNote3.id)).toBe(true);
+					expect(res.body.some((note) => note.id === bobNote4.id)).toBe(true);
+					expect(res.body.some((note) => note.id === bobNote5.id)).toBe(true);
 				});
 
 				test('自身の visibility: specified なノートが含まれる', async () => {
@@ -3516,10 +2754,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: alice.id, withReplies: true }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === aliceNote.id),
-						true,
-					);
+					expect(res.body.some((note) => note.id === aliceNote.id)).toBe(true);
 				});
 
 				test('visibleUserIds に指定されてない visibility: specified なノートが含まれない', async () => {
@@ -3529,10 +2764,7 @@ describe('Timelines', () => {
 
 					const res = await api('users/notes', { userId: bob.id, withReplies: true }, alice);
 
-					assert.strictEqual(
-						res.body.some((note) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
 				/** @see https://github.com/misskey-dev/misskey/issues/14000 */
@@ -3545,7 +2777,7 @@ describe('Timelines', () => {
 					const note3 = await post(alice, { text: '3' });
 
 					const res = await api('users/notes', { userId: alice.id, sinceId: noteSince.id });
-					assert.deepStrictEqual(res.body, [note1, note2, note3]);
+					expect(res.body).toStrictEqual([note1, note2, note3]);
 				});
 
 				test('FTT: sinceId にキャッシュより古いノートを指定しても、sinceId と untilId による絞り込みが正しく動作する', async () => {
@@ -3559,7 +2791,7 @@ describe('Timelines', () => {
 					await post(alice, { text: '4' });
 
 					const res = await api('users/notes', { userId: alice.id, sinceId: noteSince.id, untilId: noteUntil.id });
-					assert.deepStrictEqual(res.body, [note3, note2, note1]);
+					expect(res.body).toStrictEqual([note3, note2, note1]);
 				});
 
 				describe('Channel', () => {
@@ -3573,10 +2805,7 @@ describe('Timelines', () => {
 
 						const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 					});
 
 					test('チャンネルミュート　＝　TLに流れない', async () => {
@@ -3590,10 +2819,7 @@ describe('Timelines', () => {
 
 						const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobNote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 					});
 
 					test('[チャンネル外リノート] チャンネルミュートなし　＝　TLに流れる', async () => {
@@ -3607,10 +2833,7 @@ describe('Timelines', () => {
 
 						const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							true,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 					});
 
 					test('[チャンネル外リノート] チャンネルミュート　＝　TLに流れない', async () => {
@@ -3625,10 +2848,7 @@ describe('Timelines', () => {
 
 						const res = await api('users/notes', { userId: bob.id, withChannelNotes: true }, alice);
 
-						assert.strictEqual(
-							res.body.some((note: any) => note.id === bobRenote.id),
-							false,
-						);
+						expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 					});
 				});
 			});
@@ -3644,14 +2864,8 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === aliceNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(false);
+					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('閲覧中チャンネルとは別チャンネルのノートは含まれない', async () => {
@@ -3665,14 +2879,8 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === aliceNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(false);
+					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('閲覧中チャンネルのノートにリノートが含まれる', async () => {
@@ -3686,10 +2894,7 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobRenote.id),
-						true,
-					);
+					expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 				});
 
 				test('閲覧中チャンネルとは別チャンネルからのリノートが含まれる', async () => {
@@ -3704,10 +2909,7 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobRenote.id),
-						true,
-					);
+					expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 				});
 
 				test('閲覧中チャンネルに自分の他人への返信が含まれる', async () => {
@@ -3720,10 +2922,7 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === aliceNote.id),
-						true,
-					);
+					expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(true);
 				});
 
 				test('閲覧中チャンネルに他人の自分への返信が含まれる', async () => {
@@ -3736,10 +2935,7 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('閲覧中チャンネルにミュートしているユーザのノートは含まれない', async () => {
@@ -3754,14 +2950,8 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === aliceNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(false);
+					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('閲覧中チャンネルにこちらをブロックしているユーザのノートは含まれない', async () => {
@@ -3776,14 +2966,8 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === aliceNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobNote.id),
-						false,
-					);
+					expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(false);
+					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(false);
 				});
 
 				test('閲覧中チャンネルをミュートしていてもノートが含まれる', async () => {
@@ -3797,14 +2981,8 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === aliceNote.id),
-						false,
-					);
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobNote.id),
-						true,
-					);
+					expect(res.body.some((note: any) => note.id === aliceNote.id)).toBe(false);
+					expect(res.body.some((note: any) => note.id === bobNote.id)).toBe(true);
 				});
 
 				test('閲覧中チャンネルをミュートしていても、同チャンネルのリノートが含まれる', async () => {
@@ -3819,10 +2997,7 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobRenote.id),
-						true,
-					);
+					expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 				});
 
 				test('閲覧中チャンネルをミュートしていても、同チャンネルのリプライが含まれる', async () => {
@@ -3837,10 +3012,7 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobRenote.id),
-						true,
-					);
+					expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(true);
 				});
 
 				test('閲覧中チャンネルとは別チャンネルをミュートしているとき、そのチャンネルからのリノートは含まれない', async () => {
@@ -3856,10 +3028,7 @@ describe('Timelines', () => {
 
 					const res = await api('channels/timeline', { channelId: channel.id }, alice);
 
-					assert.strictEqual(
-						res.body.some((note: any) => note.id === bobRenote.id),
-						false,
-					);
+					expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 				});
 			});
 			// TODO: リノートミュート済みユーザーのテスト

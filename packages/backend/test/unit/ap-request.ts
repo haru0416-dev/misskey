@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { describe, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import * as assert from 'assert';
 import httpSignature from '@peertube/http-signature';
 
@@ -47,8 +47,8 @@ describe('ap-request', () => {
 		const parsed = buildParsedSignature(req.signingString, req.signature, 'rsa-sha256');
 
 		const result = httpSignature.verifySignature(parsed, keypair.publicKey);
-		assert.deepStrictEqual(result, true);
-		assert.match(req.signingString, /^\(request-target\): post \/inbox\?sharedInbox=true$/m);
+		expect(result).toStrictEqual(true);
+		expect(req.signingString).toMatch(/^\(request-target\): post \/inbox\?sharedInbox=true$/m);
 	});
 
 	test('createSignedGet with verify', async () => {
@@ -64,8 +64,8 @@ describe('ap-request', () => {
 		const parsed = buildParsedSignature(req.signingString, req.signature, 'rsa-sha256');
 
 		const result = httpSignature.verifySignature(parsed, keypair.publicKey);
-		assert.deepStrictEqual(result, true);
-		assert.match(req.signingString, /^\(request-target\): get \/outbox\?page=true$/m);
+		expect(result).toStrictEqual(true);
+		expect(req.signingString).toMatch(/^\(request-target\): get \/outbox\?page=true$/m);
 	});
 
 	test('rejects non matching domain', () => {

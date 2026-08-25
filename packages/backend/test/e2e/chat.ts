@@ -4,7 +4,7 @@
  */
 
 import * as assert from 'node:assert';
-import { beforeAll, describe, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { api, signup } from '../utils.js';
 
 type SignupUser = Awaited<ReturnType<typeof signup>>;
@@ -29,9 +29,9 @@ describe('Chat', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(roomRes.status, 200);
-		assert.strictEqual(roomRes.body.name, 'team room');
-		assert.strictEqual(roomRes.body.ownerId, alice.id);
+		expect(roomRes.status).toBe(200);
+		expect(roomRes.body.name).toBe('team room');
+		expect(roomRes.body.ownerId).toBe(alice.id);
 
 		const roomId = roomRes.body.id;
 
@@ -42,7 +42,7 @@ describe('Chat', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(owned.status, 200);
+		expect(owned.status).toBe(200);
 		assert.ok(owned.body.some((room) => room.id === roomId && room.name === 'team room'));
 
 		const show = await api(
@@ -52,8 +52,8 @@ describe('Chat', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(show.status, 200);
-		assert.strictEqual(show.body.id, roomId);
+		expect(show.status).toBe(200);
+		expect(show.body.id).toBe(roomId);
 
 		const update = await api(
 			'chat/rooms/update',
@@ -64,9 +64,9 @@ describe('Chat', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(update.status, 200);
-		assert.strictEqual(update.body.name, 'team room updated');
-		assert.strictEqual(update.body.description, 'updated room for drizzle migration');
+		expect(update.status).toBe(200);
+		expect(update.body.name).toBe('team room updated');
+		expect(update.body.description).toBe('updated room for drizzle migration');
 
 		const inviteBob = await api(
 			'chat/rooms/invitations/create',
@@ -76,9 +76,9 @@ describe('Chat', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(inviteBob.status, 200);
-		assert.strictEqual(inviteBob.body.roomId, roomId);
-		assert.strictEqual(inviteBob.body.userId, bob.id);
+		expect(inviteBob.status).toBe(200);
+		expect(inviteBob.body.roomId).toBe(roomId);
+		expect(inviteBob.body.userId).toBe(bob.id);
 
 		const outbox = await api(
 			'chat/rooms/invitations/outbox',
@@ -88,7 +88,7 @@ describe('Chat', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(outbox.status, 200);
+		expect(outbox.status).toBe(200);
 		assert.ok(outbox.body.some((invitation) => invitation.id === inviteBob.body.id));
 
 		const inbox = await api(
@@ -98,11 +98,11 @@ describe('Chat', () => {
 			},
 			bob,
 		);
-		assert.strictEqual(inbox.status, 200);
+		expect(inbox.status).toBe(200);
 		assert.ok(inbox.body.some((invitation) => invitation.roomId === roomId));
 
 		const join = await api('chat/rooms/join', { roomId }, bob);
-		assert.strictEqual(join.status, 204);
+		expect(join.status).toBe(204);
 
 		const joinedRooms = await api(
 			'chat/rooms/joining',
@@ -111,7 +111,7 @@ describe('Chat', () => {
 			},
 			bob,
 		);
-		assert.strictEqual(joinedRooms.status, 200);
+		expect(joinedRooms.status).toBe(200);
 		assert.ok(
 			joinedRooms.body.some(
 				(membership) => membership.roomId === roomId && membership.room?.name === 'team room updated',
@@ -126,7 +126,7 @@ describe('Chat', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(members.status, 200);
+		expect(members.status).toBe(200);
 		assert.ok(members.body.some((membership) => membership.userId === bob.id && membership.user?.username === 'bob'));
 
 		const mute = await api(
@@ -137,7 +137,7 @@ describe('Chat', () => {
 			},
 			bob,
 		);
-		assert.strictEqual(mute.status, 204);
+		expect(mute.status).toBe(204);
 
 		const mutedRooms = await api(
 			'chat/rooms/joining',
@@ -146,7 +146,7 @@ describe('Chat', () => {
 			},
 			bob,
 		);
-		assert.strictEqual(mutedRooms.status, 200);
+		expect(mutedRooms.status).toBe(200);
 		assert.ok(mutedRooms.body.some((membership) => membership.roomId === roomId && membership.room?.isMuted === true));
 
 		const message = await api(
@@ -157,9 +157,9 @@ describe('Chat', () => {
 			},
 			bob,
 		);
-		assert.strictEqual(message.status, 200);
-		assert.strictEqual(message.body.text, 'hello room');
-		assert.strictEqual(message.body.toRoomId, roomId);
+		expect(message.status).toBe(200);
+		expect(message.body.text).toBe('hello room');
+		expect(message.body.toRoomId).toBe(roomId);
 
 		const timeline = await api(
 			'chat/messages/room-timeline',
@@ -169,7 +169,7 @@ describe('Chat', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(timeline.status, 200);
+		expect(timeline.status).toBe(200);
 		assert.ok(timeline.body.some((item) => item.id === message.body.id && item.text === 'hello room'));
 
 		const search = await api(
@@ -180,7 +180,7 @@ describe('Chat', () => {
 			},
 			bob,
 		);
-		assert.strictEqual(search.status, 200);
+		expect(search.status).toBe(200);
 		assert.ok(search.body.some((item) => item.id === message.body.id && item.toRoomId === roomId));
 
 		const inviteCarol = await api(
@@ -191,7 +191,7 @@ describe('Chat', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(inviteCarol.status, 200);
+		expect(inviteCarol.status).toBe(200);
 
 		const ignore = await api(
 			'chat/rooms/invitations/ignore',
@@ -200,7 +200,7 @@ describe('Chat', () => {
 			},
 			carol,
 		);
-		assert.strictEqual(ignore.status, 204);
+		expect(ignore.status).toBe(204);
 
 		const carolInbox = await api(
 			'chat/rooms/invitations/inbox',
@@ -209,14 +209,11 @@ describe('Chat', () => {
 			},
 			carol,
 		);
-		assert.strictEqual(carolInbox.status, 200);
-		assert.strictEqual(
-			carolInbox.body.some((invitation) => invitation.roomId === roomId),
-			false,
-		);
+		expect(carolInbox.status).toBe(200);
+		expect(carolInbox.body.some((invitation) => invitation.roomId === roomId)).toBe(false);
 
 		const leave = await api('chat/rooms/leave', { roomId }, bob);
-		assert.strictEqual(leave.status, 204);
+		expect(leave.status).toBe(204);
 
 		const afterLeave = await api(
 			'chat/rooms/joining',
@@ -225,13 +222,10 @@ describe('Chat', () => {
 			},
 			bob,
 		);
-		assert.strictEqual(afterLeave.status, 200);
-		assert.strictEqual(
-			afterLeave.body.some((membership) => membership.roomId === roomId),
-			false,
-		);
+		expect(afterLeave.status).toBe(200);
+		expect(afterLeave.body.some((membership) => membership.roomId === roomId)).toBe(false);
 
 		const remove = await api('chat/rooms/delete', { roomId }, alice);
-		assert.strictEqual(remove.status, 204);
+		expect(remove.status).toBe(204);
 	});
 });

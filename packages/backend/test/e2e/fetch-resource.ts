@@ -5,8 +5,7 @@
 
 process.env['NODE_ENV'] = 'test';
 
-import * as assert from 'assert';
-import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import {
 	createUserWithProfileAndPublickeyInDatabase,
 	genId,
@@ -57,9 +56,9 @@ describe('Webリソース', () => {
 	): Promise<SimpleGetResponse> => {
 		const { path, accept, cookie, type } = param;
 		const res = await simpleGet(path, accept, cookie);
-		assert.strictEqual(res.status, 200);
+		expect(res.status).toBe(200);
 		// ヘッダー値は大文字小文字を区別しない。
-		assert.strictEqual(res.type?.toLowerCase(), (type ?? HTML).toLowerCase());
+		expect(res.type?.toLowerCase()).toBe((type ?? HTML).toLowerCase());
 		return res;
 	};
 
@@ -71,12 +70,12 @@ describe('Webリソース', () => {
 	): Promise<SimpleGetResponse> => {
 		const { path, accept, cookie, status, code } = param;
 		const res = await simpleGet(path, accept, cookie);
-		assert.notStrictEqual(res.status, 200);
+		expect(res.status).not.toBe(200);
 		if (status != null) {
-			assert.strictEqual(res.status, status);
+			expect(res.status).toBe(status);
 		}
 		if (code != null) {
-			assert.strictEqual(res.body.error.code, code);
+			expect(res.body.error.code).toBe(code);
 		}
 		return res;
 	};
@@ -248,8 +247,8 @@ describe('Webリソース', () => {
 					accept,
 					type: HTML,
 				});
-				assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-				assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
+				expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+				expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 
 				// TODO ogタグの検証
 				// TODO profile.noCrawleの検証
@@ -267,7 +266,7 @@ describe('Webリソース', () => {
 					accept,
 					type: HTML,
 				});
-				assert.strictEqual(res.location, null);
+				expect(res.location).toBe(null);
 			});
 		});
 
@@ -278,7 +277,7 @@ describe('Webリソース', () => {
 					accept,
 					type: AP,
 				});
-				assert.strictEqual(res.body.type, 'Person');
+				expect(res.body.type).toBe('Person');
 			});
 
 			test('は存在しないIDのときActivityPubとしてGETできない。', async () =>
@@ -288,8 +287,8 @@ describe('Webリソース', () => {
 				}));
 			test('はオリジナルにリダイレクトされる。(リモートユーザー)', async () => {
 				const res = await simpleGet(path(remoteUserAcct), accept);
-				assert.strictEqual(res.status, 301);
-				assert.strictEqual(res.location, remoteUserUri);
+				expect(res.status).toBe(301);
+				expect(res.location).toBe(remoteUserUri);
 			});
 		});
 	});
@@ -311,8 +310,8 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(alice.username),
 			});
-			assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-			assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
+			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 		});
 	});
 
@@ -323,9 +322,9 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(alice.username, alicePage.name),
 			});
-			assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-			assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
-			assert.strictEqual(metaTag(res, 'misskey:page-id'), alicePage.id);
+			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
+			expect(metaTag(res, 'misskey:page-id')).toBe(alicePage.id);
 
 			// TODO ogタグの検証
 			// TODO profile.noCrawleの検証
@@ -344,8 +343,8 @@ describe('Webリソース', () => {
 		describe.each([{ accept: PREFER_HTML }, { accept: UNSPECIFIED }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('は/@:usernameにリダイレクトする', async () => {
 				const res = await simpleGet(path(alice.id), accept);
-				assert.strictEqual(res.status, 302);
-				assert.strictEqual(res.location, `/@${alice.username}`);
+				expect(res.status).toBe(302);
+				expect(res.location).toBe(`/@${alice.username}`);
 			});
 
 			test('は存在しないユーザーはGETできない。', async () =>
@@ -361,7 +360,7 @@ describe('Webリソース', () => {
 					accept,
 					type: AP,
 				});
-				assert.strictEqual(res.body.type, 'Person');
+				expect(res.body.type).toBe('Person');
 			});
 
 			test('は存在しないIDのときActivityPubとしてGETできない。', async () =>
@@ -401,7 +400,7 @@ describe('Webリソース', () => {
 				path: path(alice.id),
 				type: AP,
 			});
-			assert.strictEqual(res.body.type, 'OrderedCollection');
+			expect(res.body.type).toBe('OrderedCollection');
 		});
 	});
 
@@ -415,9 +414,9 @@ describe('Webリソース', () => {
 					accept,
 					type: HTML,
 				});
-				assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-				assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
-				assert.strictEqual(metaTag(res, 'misskey:note-id'), alicesPost.id);
+				expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+				expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
+				expect(metaTag(res, 'misskey:note-id')).toBe(alicesPost.id);
 
 				// TODO ogタグの検証
 				// TODO profile.noCrawleの検証
@@ -437,7 +436,7 @@ describe('Webリソース', () => {
 					accept,
 					type: AP,
 				});
-				assert.strictEqual(res.body.type, 'Note');
+				expect(res.body.type).toBe('Note');
 			});
 
 			test('は存在しないIDのときActivityPubとしてGETできない。', async () =>
@@ -455,9 +454,9 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(alicePlay.id),
 			});
-			assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-			assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
-			assert.strictEqual(metaTag(res, 'misskey:flash-id'), alicePlay.id);
+			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
+			expect(metaTag(res, 'misskey:flash-id')).toBe(alicePlay.id);
 
 			// TODO ogタグの検証
 			// TODO profile.noCrawleの検証
@@ -477,9 +476,9 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(aliceClip.id),
 			});
-			assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-			assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
-			assert.strictEqual(metaTag(res, 'misskey:clip-id'), aliceClip.id);
+			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
+			expect(metaTag(res, 'misskey:clip-id')).toBe(aliceClip.id);
 
 			// TODO ogタグの検証
 			// TODO profile.noCrawleの検証
@@ -498,8 +497,8 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(aliceGalleryPost.id),
 			});
-			assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-			assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
+			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 
 			// FIXME: misskey:gallery-post-idみたいなmetaタグの設定がない
 			// TODO profile.noCrawleの検証

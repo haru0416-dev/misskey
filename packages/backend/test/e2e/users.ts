@@ -6,7 +6,7 @@
 process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
-import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { inspect } from 'node:util';
 import {
 	DEFAULT_POLICIES,
@@ -356,99 +356,99 @@ describe('ユーザー', () => {
 		})) as unknown as misskey.entities.SignupResponse; // BUG MeDetailedに足りないキーがある
 
 		// signupの時はtokenが含まれる特別なMeDetailedが返ってくる
-		assert.match(response.token, /[a-zA-Z0-9]{16}/);
+		expect(response.token).toMatch(/[a-zA-Z0-9]{16}/);
 
 		// UserLite
-		assert.match(response.id, /[0-9a-z]{10}/);
-		assert.strictEqual(response.name, null);
-		assert.strictEqual(response.username, 'zoe');
-		assert.strictEqual(response.host, null);
-		response.avatarUrl && assert.match(response.avatarUrl, /^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
-		assert.strictEqual(response.avatarBlurhash, null);
-		assert.deepStrictEqual(response.avatarDecorations, []);
-		assert.strictEqual(response.isBot, false);
-		assert.strictEqual(response.isCat, false);
-		assert.strictEqual(response.instance, undefined);
-		assert.deepStrictEqual(response.emojis, {});
-		assert.strictEqual(response.onlineStatus, 'unknown');
-		assert.deepStrictEqual(response.badgeRoles, []);
+		expect(response.id).toMatch(/[0-9a-z]{10}/);
+		expect(response.name).toBe(null);
+		expect(response.username).toBe('zoe');
+		expect(response.host).toBe(null);
+		response.avatarUrl && expect(response.avatarUrl).toMatch(/^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
+		expect(response.avatarBlurhash).toBe(null);
+		expect(response.avatarDecorations).toStrictEqual([]);
+		expect(response.isBot).toBe(false);
+		expect(response.isCat).toBe(false);
+		expect(response.instance).toBe(undefined);
+		expect(response.emojis).toStrictEqual({});
+		expect(response.onlineStatus).toBe('unknown');
+		expect(response.badgeRoles).toStrictEqual([]);
 		// UserDetailedNotMeOnly
-		assert.strictEqual(response.url, null);
-		assert.strictEqual(response.uri, null);
-		assert.strictEqual(response.movedTo, null);
-		assert.strictEqual(response.alsoKnownAs, null);
-		assert.strictEqual(response.createdAt, new Date(response.createdAt).toISOString());
-		assert.strictEqual(response.updatedAt, null);
-		assert.strictEqual(response.lastFetchedAt, null);
-		assert.strictEqual(response.bannerUrl, null);
-		assert.strictEqual(response.bannerBlurhash, null);
-		assert.strictEqual(response.isLocked, false);
-		assert.strictEqual(response.isSilenced, false);
-		assert.strictEqual(response.isSuspended, false);
-		assert.strictEqual(response.description, null);
-		assert.strictEqual(response.location, null);
-		assert.strictEqual(response.birthday, null);
-		assert.strictEqual(response.lang, null);
-		assert.deepStrictEqual(response.fields, []);
-		assert.deepStrictEqual(response.verifiedLinks, []);
-		assert.strictEqual(response.followersCount, 0);
-		assert.strictEqual(response.followingCount, 0);
-		assert.strictEqual(response.notesCount, 0);
-		assert.deepStrictEqual(response.pinnedNoteIds, []);
-		assert.deepStrictEqual(response.pinnedNotes, []);
-		assert.strictEqual(response.pinnedPageId, null);
-		assert.strictEqual(response.pinnedPage, null);
-		assert.strictEqual(response.publicReactions, true);
-		assert.strictEqual(response.followingVisibility, 'public');
-		assert.strictEqual(response.followersVisibility, 'public');
-		assert.strictEqual(response.chatScope, 'mutual');
-		assert.strictEqual(response.canChat, true);
-		assert.deepStrictEqual(response.roles, []);
-		assert.strictEqual(response.memo, null);
+		expect(response.url).toBe(null);
+		expect(response.uri).toBe(null);
+		expect(response.movedTo).toBe(null);
+		expect(response.alsoKnownAs).toBe(null);
+		expect(response.createdAt).toBe(new Date(response.createdAt).toISOString());
+		expect(response.updatedAt).toBe(null);
+		expect(response.lastFetchedAt).toBe(null);
+		expect(response.bannerUrl).toBe(null);
+		expect(response.bannerBlurhash).toBe(null);
+		expect(response.isLocked).toBe(false);
+		expect(response.isSilenced).toBe(false);
+		expect(response.isSuspended).toBe(false);
+		expect(response.description).toBe(null);
+		expect(response.location).toBe(null);
+		expect(response.birthday).toBe(null);
+		expect(response.lang).toBe(null);
+		expect(response.fields).toStrictEqual([]);
+		expect(response.verifiedLinks).toStrictEqual([]);
+		expect(response.followersCount).toBe(0);
+		expect(response.followingCount).toBe(0);
+		expect(response.notesCount).toBe(0);
+		expect(response.pinnedNoteIds).toStrictEqual([]);
+		expect(response.pinnedNotes).toStrictEqual([]);
+		expect(response.pinnedPageId).toBe(null);
+		expect(response.pinnedPage).toBe(null);
+		expect(response.publicReactions).toBe(true);
+		expect(response.followingVisibility).toBe('public');
+		expect(response.followersVisibility).toBe('public');
+		expect(response.chatScope).toBe('mutual');
+		expect(response.canChat).toBe(true);
+		expect(response.roles).toStrictEqual([]);
+		expect(response.memo).toBe(null);
 
 		// MeDetailedOnly
-		assert.strictEqual(response.avatarId, null);
-		assert.strictEqual(response.bannerId, null);
-		assert.strictEqual(response.followedMessage, null);
-		assert.strictEqual(response.isModerator, false);
-		assert.strictEqual(response.isAdmin, false);
-		assert.strictEqual(response.injectFeaturedNote, true);
-		assert.strictEqual(response.receiveAnnouncementEmail, true);
-		assert.strictEqual(response.alwaysMarkNsfw, false);
-		assert.strictEqual(response.autoSensitive, false);
-		assert.strictEqual(response.carefulBot, false);
-		assert.strictEqual(response.autoAcceptFollowed, true);
-		assert.strictEqual(response.noCrawle, false);
-		assert.strictEqual(response.preventAiLearning, true);
-		assert.strictEqual(response.isExplorable, true);
-		assert.strictEqual(response.isDeleted, false);
-		assert.strictEqual(response.twoFactorBackupCodesStock, 'none');
-		assert.strictEqual(response.hideOnlineStatus, false);
-		assert.strictEqual(response.hasUnreadSpecifiedNotes, false);
-		assert.strictEqual(response.hasUnreadMentions, false);
-		assert.strictEqual(response.hasUnreadAnnouncement, false);
-		assert.strictEqual(response.hasUnreadAntenna, false);
-		assert.strictEqual(response.hasUnreadChannel, false);
-		assert.strictEqual(response.hasUnreadChatMessages, false);
-		assert.strictEqual(response.hasUnreadNotification, false);
-		assert.strictEqual(response.unreadNotificationsCount, 0);
-		assert.strictEqual(response.hasPendingReceivedFollowRequest, false);
-		assert.deepStrictEqual(response.unreadAnnouncements, []);
-		assert.deepStrictEqual(response.mutedWords, []);
-		assert.deepStrictEqual(response.mutedInstances, []);
+		expect(response.avatarId).toBe(null);
+		expect(response.bannerId).toBe(null);
+		expect(response.followedMessage).toBe(null);
+		expect(response.isModerator).toBe(false);
+		expect(response.isAdmin).toBe(false);
+		expect(response.injectFeaturedNote).toBe(true);
+		expect(response.receiveAnnouncementEmail).toBe(true);
+		expect(response.alwaysMarkNsfw).toBe(false);
+		expect(response.autoSensitive).toBe(false);
+		expect(response.carefulBot).toBe(false);
+		expect(response.autoAcceptFollowed).toBe(true);
+		expect(response.noCrawle).toBe(false);
+		expect(response.preventAiLearning).toBe(true);
+		expect(response.isExplorable).toBe(true);
+		expect(response.isDeleted).toBe(false);
+		expect(response.twoFactorBackupCodesStock).toBe('none');
+		expect(response.hideOnlineStatus).toBe(false);
+		expect(response.hasUnreadSpecifiedNotes).toBe(false);
+		expect(response.hasUnreadMentions).toBe(false);
+		expect(response.hasUnreadAnnouncement).toBe(false);
+		expect(response.hasUnreadAntenna).toBe(false);
+		expect(response.hasUnreadChannel).toBe(false);
+		expect(response.hasUnreadChatMessages).toBe(false);
+		expect(response.hasUnreadNotification).toBe(false);
+		expect(response.unreadNotificationsCount).toBe(0);
+		expect(response.hasPendingReceivedFollowRequest).toBe(false);
+		expect(response.unreadAnnouncements).toStrictEqual([]);
+		expect(response.mutedWords).toStrictEqual([]);
+		expect(response.mutedInstances).toStrictEqual([]);
 		// @ts-expect-error 後方互換のため
-		assert.deepStrictEqual(response.mutingNotificationTypes, []);
-		assert.deepStrictEqual(response.notificationRecieveConfig, {});
-		assert.deepStrictEqual(response.emailNotificationTypes, ['follow', 'receiveFollowRequest']);
-		assert.deepStrictEqual(response.achievements, []);
-		assert.deepStrictEqual(response.loggedInDays, 0);
-		assert.deepStrictEqual(response.policies, DEFAULT_POLICIES);
-		assert.strictEqual(response.twoFactorEnabled, false);
-		assert.strictEqual(response.usePasswordLessLogin, false);
-		assert.strictEqual(response.securityKeys, false);
-		assert.notStrictEqual(response.email, undefined);
-		assert.strictEqual(response.emailVerified, false);
-		assert.deepStrictEqual(response.securityKeysList, []);
+		expect(response.mutingNotificationTypes).toStrictEqual([]);
+		expect(response.notificationRecieveConfig).toStrictEqual({});
+		expect(response.emailNotificationTypes).toStrictEqual(['follow', 'receiveFollowRequest']);
+		expect(response.achievements).toStrictEqual([]);
+		expect(response.loggedInDays).toStrictEqual(0);
+		expect(response.policies).toStrictEqual(DEFAULT_POLICIES);
+		expect(response.twoFactorEnabled).toBe(false);
+		expect(response.usePasswordLessLogin).toBe(false);
+		expect(response.securityKeys).toBe(false);
+		expect(response.email).not.toBe(undefined);
+		expect(response.emailVerified).toBe(false);
+		expect(response.securityKeysList).toStrictEqual([]);
 	});
 
 	test('を読み取ることができること（自分）、キーが過不足なく入っていること。', async () => {
@@ -459,7 +459,7 @@ describe('ユーザー', () => {
 		});
 		const expected = meDetailed(userNoNote, true);
 		expected.loggedInDays = 1; // iはloggedInDaysを更新する
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 
 	test.each([
@@ -528,22 +528,22 @@ describe('ユーザー', () => {
 	] as const)('を書き換えることができる($#)', async ({ parameters }) => {
 		const response = await successfulApiCall({ endpoint: 'i/update', parameters: parameters(), user: alice });
 		const expected = { ...meDetailed(alice, true), ...parameters() };
-		assert.deepStrictEqual(response, expected, inspect(parameters()));
+		expect(response, inspect(parameters())).toStrictEqual(expected);
 	});
 
 	test('を書き換えることができる(Avatar)', async () => {
 		const aliceFile = (await uploadFile(alice)).body;
 		const parameters = { avatarId: aliceFile!.id };
 		const response = await successfulApiCall({ endpoint: 'i/update', parameters: parameters, user: alice });
-		assert.match(response.avatarUrl ?? '.', /^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
-		assert.match(response.avatarBlurhash ?? '.', /[ -~]{54}/);
+		expect(response.avatarUrl ?? '.').toMatch(/^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
+		expect(response.avatarBlurhash ?? '.').toMatch(/[ -~]{54}/);
 		const expected = {
 			...meDetailed(alice, true),
 			avatarId: aliceFile!.id,
 			avatarBlurhash: response.avatarBlurhash,
 			avatarUrl: response.avatarUrl,
 		};
-		assert.deepStrictEqual(response, expected, inspect(parameters));
+		expect(response, inspect(parameters)).toStrictEqual(expected);
 
 		const parameters2 = { avatarId: null };
 		const response2 = await successfulApiCall({ endpoint: 'i/update', parameters: parameters2, user: alice });
@@ -553,22 +553,22 @@ describe('ユーザー', () => {
 			avatarBlurhash: null,
 			avatarUrl: alice.avatarUrl, // 解除した場合、identiconになる
 		};
-		assert.deepStrictEqual(response2, expected2, inspect(parameters));
+		expect(response2, inspect(parameters)).toStrictEqual(expected2);
 	});
 
 	test('を書き換えることができる(Banner)', async () => {
 		const aliceFile = (await uploadFile(alice)).body;
 		const parameters = { bannerId: aliceFile!.id };
 		const response = await successfulApiCall({ endpoint: 'i/update', parameters: parameters, user: alice });
-		assert.match(response.bannerUrl ?? '.', /^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
-		assert.match(response.bannerBlurhash ?? '.', /[ -~]{54}/);
+		expect(response.bannerUrl ?? '.').toMatch(/^[-a-zA-Z0-9@:%._\+~#&?=\/]+$/);
+		expect(response.bannerBlurhash ?? '.').toMatch(/[ -~]{54}/);
 		const expected = {
 			...meDetailed(alice, true),
 			bannerId: aliceFile!.id,
 			bannerBlurhash: response.bannerBlurhash,
 			bannerUrl: response.bannerUrl,
 		};
-		assert.deepStrictEqual(response, expected, inspect(parameters));
+		expect(response, inspect(parameters)).toStrictEqual(expected);
 
 		const parameters2 = { bannerId: null };
 		const response2 = await successfulApiCall({ endpoint: 'i/update', parameters: parameters2, user: alice });
@@ -578,18 +578,18 @@ describe('ユーザー', () => {
 			bannerBlurhash: null,
 			bannerUrl: null,
 		};
-		assert.deepStrictEqual(response2, expected2, inspect(parameters));
+		expect(response2, inspect(parameters)).toStrictEqual(expected2);
 	});
 
 	test('を書き換えることができる(ピン止めノート)', async () => {
 		const parameters = { noteId: aliceNote.id };
 		const response = await successfulApiCall({ endpoint: 'i/pin', parameters, user: alice });
 		const expected = { ...meDetailed(alice, false), pinnedNoteIds: [aliceNote.id], pinnedNotes: [aliceNote] };
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 
 		const response2 = await successfulApiCall({ endpoint: 'i/unpin', parameters, user: alice });
 		const expected2 = meDetailed(alice, false);
-		assert.deepStrictEqual(response2, expected2);
+		expect(response2).toStrictEqual(expected2);
 	});
 
 	test.each([
@@ -601,7 +601,7 @@ describe('ユーザー', () => {
 		const parameters = { userId: bob.id, memo };
 		await successfulApiCall({ endpoint: 'users/update-memo', parameters, user: alice });
 		const response = await show(bob.id, alice);
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 
 	test.each([
@@ -645,7 +645,7 @@ describe('ユーザー', () => {
 			const index = selector(x) < selector(y) ? -1 : selector(x) > selector(y) ? 1 : 0;
 			return index * (parameters.sort?.startsWith('+') ? -1 : 1);
 		});
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test.each([
 		{ label: '「見つけやすくする」がOFFのユーザーが含まれない', user: () => userNotExplorable, excluded: true },
@@ -661,10 +661,7 @@ describe('ユーザー', () => {
 		const parameters = { limit: 100 };
 		const response = await successfulApiCall({ endpoint: 'users', parameters, user: alice });
 		const expected = (excluded ?? false) ? [] : [await show(user().id, alice)];
-		assert.deepStrictEqual(
-			response.filter((u) => u.id === user().id),
-			expected,
-		);
+		expect(response.filter((u) => u.id === user().id)).toStrictEqual(expected);
 	});
 	test('をリスト形式で取得することができる（リモート, hostname指定）', async () => {
 		const remote1 = await createRemoteUser();
@@ -675,7 +672,7 @@ describe('ユーザー', () => {
 		const response = await successfulApiCall({ endpoint: 'users', parameters, user: alice });
 		// デフォルトはID昇順
 		const expected = await Promise.all([remote1, remote2].map((u) => show(u.id, alice)));
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('をリスト形式で取得することができる（pagenation）', async () => {
 		const expected = await successfulApiCall({ endpoint: 'users', parameters: { limit: 100 }, user: alice });
@@ -720,7 +717,7 @@ describe('ユーザー', () => {
 	] as const)('を取得することができる（$label）', async ({ parameters, user, type }) => {
 		const response = await successfulApiCall({ endpoint: 'users/show', parameters: parameters(), user: user?.() });
 		const expected = type(alice);
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test.each([
 		{
@@ -851,7 +848,7 @@ describe('ユーザー', () => {
 			parameters: { userId: user().id },
 			user: me?.() ?? alice,
 		});
-		assert.strictEqual(selector(response as any), (expected ?? ((): true => true))());
+		expect(selector(response as any)).toBe((expected ?? ((): true => true))());
 	});
 	test('を取得することができ、Publicなロールがセットされていること', async () => {
 		const response = await successfulApiCall({
@@ -859,8 +856,8 @@ describe('ユーザー', () => {
 			parameters: { userId: userRolePublic.id },
 			user: alice,
 		});
-		assert.deepStrictEqual(response.badgeRoles, []);
-		assert.deepStrictEqual(response.roles, [
+		expect(response.badgeRoles).toStrictEqual([]);
+		expect(response.roles).toStrictEqual([
 			{
 				id: rolePublic.id,
 				name: rolePublic.name,
@@ -879,14 +876,14 @@ describe('ユーザー', () => {
 			parameters: { userId: userRoleBadge.id },
 			user: alice,
 		});
-		assert.deepStrictEqual(response.badgeRoles, [
+		expect(response.badgeRoles).toStrictEqual([
 			{
 				name: roleBadge.name,
 				iconUrl: roleBadge.iconUrl,
 				displayOrder: roleBadge.displayOrder,
 			},
 		]);
-		assert.deepStrictEqual(response.roles, [
+		expect(response.roles).toStrictEqual([
 			{
 				id: roleBadge.id,
 				name: roleBadge.name,
@@ -903,7 +900,7 @@ describe('ユーザー', () => {
 		const parameters = { userIds: [] };
 		const response = await successfulApiCall({ endpoint: 'users/show', parameters, user: alice });
 		const expected: [] = [];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('をID指定のリスト形式で取得することができる', async () => {
 		const parameters = { userIds: [bob.id, alice.id, carol.id] };
@@ -913,7 +910,7 @@ describe('ユーザー', () => {
 			await successfulApiCall({ endpoint: 'users/show', parameters: { userId: alice.id }, user: alice }),
 			await successfulApiCall({ endpoint: 'users/show', parameters: { userId: carol.id }, user: alice }),
 		];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test.each([
 		{ label: '「見つけやすくする」がOFFのユーザーが含まれる', user: () => userNotExplorable },
@@ -932,27 +929,27 @@ describe('ユーザー', () => {
 		const parameters = { userIds: [user().id] };
 		const response = await successfulApiCall({ endpoint: 'users/show', parameters, user: me?.() ?? alice });
 		const expected = (excluded ?? false) ? [] : [await show(user().id, me?.() ?? alice)];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('をID指定のリスト形式で取得することができる(リモート)', async () => {
 		const remote = await createRemoteUser();
 		const parameters = { userIds: [remote.id, bob.id] };
 		const response = await successfulApiCall({ endpoint: 'users/show', parameters, user: alice });
 		const expected = [await show(remote.id, alice), await show(bob.id, alice)];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 
 	test('を検索することができる', async () => {
 		const parameters = { query: 'carol', limit: 10 };
 		const response = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
 		const expected = [await show(carol.id, alice)];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('を検索することができる(UserLite)', async () => {
 		const parameters = { query: 'carol', detail: false, limit: 10 };
 		const response = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
 		const expected = [userLite(await show(carol.id, alice))];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test.each([
 		{ label: '「見つけやすくする」がOFFのユーザーが含まれる', user: () => userNotExplorable },
@@ -968,14 +965,14 @@ describe('ユーザー', () => {
 		const parameters = { query: user().username, limit: 1 };
 		const response = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
 		const expected = (excluded ?? false) ? [] : [await show(user().id, alice)];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('を検索することができる(リモート)', async () => {
 		const remote = await createRemoteUser();
 		const parameters = { query: remote.username, origin: 'remote', limit: 10 } as const;
 		const response = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
 		const expected = [await show(remote.id, alice)];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('を検索することができる(pagenation)', async () => {
 		// 検索結果は updatedAt DESC NULLS LAST で並ぶため、それぞれ投稿して
@@ -1000,7 +997,7 @@ describe('ユーザー', () => {
 			await new Promise((resolve) => setTimeout(resolve, 100));
 			expected = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
 		}
-		assert.deepStrictEqual(expected.map((u) => u.id).join(','), orderStabilized);
+		expect(expected.map((u) => u.id).join(',')).toStrictEqual(orderStabilized);
 		// users/searchはoffsetのみサポートする
 		await testPaginationConsistency(
 			expected,
@@ -1037,7 +1034,7 @@ describe('ユーザー', () => {
 			user: alice,
 		});
 		const expected = await Promise.all(user().map((u) => show(u.id, alice)));
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test.each([
 		{ label: '「見つけやすくする」がOFFのユーザーが含まれる', user: () => userNotExplorable },
@@ -1057,7 +1054,7 @@ describe('ユーザー', () => {
 			user: alice,
 		});
 		const expected = (excluded ?? false) ? [] : [await show(user().id, alice)];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('をID&ホスト指定で検索できる(リモート)', async () => {
 		const remote = await createRemoteUser();
@@ -1068,7 +1065,7 @@ describe('ユーザー', () => {
 			user: alice,
 		});
 		const expected = [await show(remote.id, alice)];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 
 	test('がよくリプライをするユーザーのリストを取得できる', async () => {
@@ -1084,7 +1081,7 @@ describe('ユーザー', () => {
 				weight: (usersReplying.length - i) / usersReplying.length,
 			})),
 		);
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test.each([
 		{ label: '「見つけやすくする」がOFFのユーザーが含まれる', user: () => userNotExplorable },
@@ -1109,10 +1106,7 @@ describe('ユーザー', () => {
 			user: alice,
 		});
 		const expected = (excluded ?? false) ? [] : [await show(user().id, alice)];
-		assert.deepStrictEqual(
-			response.map((s) => s.user).filter((u) => u.id === user().id),
-			expected,
-		);
+		expect(response.map((s) => s.user).filter((u) => u.id === user().id)).toStrictEqual(expected);
 	});
 
 	test.each([
@@ -1156,7 +1150,7 @@ describe('ユーザー', () => {
 			const index = selector(x) < selector(y) ? -1 : selector(x) > selector(y) ? 1 : 0;
 			return index * (parameters.sort.startsWith('+') ? -1 : 1);
 		});
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test.each([
 		{ label: '「見つけやすくする」がOFFのユーザーが含まれる', user: () => userNotExplorable },
@@ -1177,7 +1171,7 @@ describe('ユーザー', () => {
 		const parameters = { tag: hashtag, limit: 100, sort: '-follower' } as const;
 		const response = await successfulApiCall({ endpoint: 'hashtags/users', parameters, user: alice });
 		const expected = (excluded ?? false) ? [] : [await show(user().id, alice)];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('をハッシュタグ指定で取得することができる(リモート)', async () => {
 		const hashtag = `remotetag${Date.now().toString(36).slice(-6)}`;
@@ -1185,16 +1179,16 @@ describe('ユーザー', () => {
 		const parameters = { tag: hashtag, limit: 100, sort: '-follower', origin: 'remote' } as const;
 		const response = await successfulApiCall({ endpoint: 'hashtags/users', parameters, user: alice });
 		const expected = [await show(remote.id, alice)];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 
 	test('のオススメを取得することができる', async () => {
 		const parameters = {};
 		const response = await successfulApiCall({ endpoint: 'users/recommendation', parameters, user: alice });
-		assert.notStrictEqual(response.length, 0);
+		expect(response.length).not.toBe(0);
 		// 呼び出し主体(alice)視点のUserDetailedとして返る
 		const expected = await Promise.all(response.map((u) => show(u.id, alice)));
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 
 	test('のピン止めユーザーを取得することができる', async () => {
@@ -1206,7 +1200,7 @@ describe('ユーザー', () => {
 		const parameters = {} as const;
 		const response = await successfulApiCall({ endpoint: 'pinned-users', parameters, user: alice });
 		const expected = await Promise.all([bob, carol].map((u) => show(u.id, alice)));
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 
 	test('を管理人として確認することができる(admin/show-user)', async () => {
@@ -1216,16 +1210,16 @@ describe('ユーザー', () => {
 			parameters: { userId: user.id },
 			user: root,
 		});
-		assert.strictEqual(response.email, null);
-		assert.strictEqual(response.emailVerified, false);
-		assert.strictEqual(response.isModerator, false);
-		assert.strictEqual(response.isSilenced, false);
-		assert.strictEqual(response.isSuspended, false);
-		assert.strictEqual(response.moderationNote, '');
-		assert.deepStrictEqual(response.signins, []);
-		assert.deepStrictEqual(response.roles, []);
-		assert.deepStrictEqual(response.roleAssigns, []);
-		assert.deepStrictEqual(response.policies, DEFAULT_POLICIES);
+		expect(response.email).toBe(null);
+		expect(response.emailVerified).toBe(false);
+		expect(response.isModerator).toBe(false);
+		expect(response.isSilenced).toBe(false);
+		expect(response.isSuspended).toBe(false);
+		expect(response.moderationNote).toBe('');
+		expect(response.signins).toStrictEqual([]);
+		expect(response.roles).toStrictEqual([]);
+		expect(response.roleAssigns).toStrictEqual([]);
+		expect(response.policies).toStrictEqual(DEFAULT_POLICIES);
 	});
 	test('を管理人として確認することができる(admin/show-users)', async () => {
 		const response = await successfulApiCall({
@@ -1234,7 +1228,7 @@ describe('ユーザー', () => {
 			user: root,
 		});
 		const expected = [await show(carol.id)];
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 	test('をサーバー向けに取得することができる(federation/users)', async () => {
 		const remote1 = await createRemoteUser();
@@ -1243,6 +1237,6 @@ describe('ユーザー', () => {
 		const response = await successfulApiCall({ endpoint: 'federation/users', parameters, user: alice });
 		// ID降順ページネーション
 		const expected = await Promise.all([remote2, remote1].map((u) => show(u.id, alice)));
-		assert.deepStrictEqual(response, expected);
+		expect(response).toStrictEqual(expected);
 	});
 });

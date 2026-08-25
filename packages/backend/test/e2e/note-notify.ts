@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as assert from 'node:assert';
 import { setTimeout } from 'node:timers/promises';
-import { describe, beforeAll, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { api, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -29,14 +28,14 @@ describe('following/list', () => {
 		const res1 = await api('following/list', { notification: true }, alice);
 		const res2 = await api('following/list', {}, alice);
 
-		assert.strictEqual(res1.status, 200);
-		assert.strictEqual(Array.isArray(res1.body), true);
-		assert.strictEqual(res1.body.length, 0);
+		expect(res1.status).toBe(200);
+		expect(Array.isArray(res1.body)).toBe(true);
+		expect(res1.body.length).toBe(0);
 
-		assert.strictEqual(res2.status, 200);
-		assert.strictEqual(Array.isArray(res2.body), true);
-		assert.strictEqual(res2.body.length, 1);
-		assert.strictEqual(res2.body[0]?.followeeId, bob.id);
+		expect(res2.status).toBe(200);
+		expect(Array.isArray(res2.body)).toBe(true);
+		expect(res2.body.length).toBe(1);
+		expect(res2.body[0]?.followeeId).toBe(bob.id);
 	});
 
 	test('通知設定ありのフォローがある場合、そのユーザーが返る', async () => {
@@ -45,9 +44,9 @@ describe('following/list', () => {
 
 		const res = await api('following/list', { notification: true }, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(res.body.length, 1);
-		assert.strictEqual(res.body[0]?.followeeId, carol.id);
+		expect(res.status).toBe(200);
+		expect(res.body.length).toBe(1);
+		expect(res.body[0]?.followeeId).toBe(carol.id);
 	});
 
 	test('複数ユーザーで通知設定ありの場合、全員返る', async () => {
@@ -55,11 +54,11 @@ describe('following/list', () => {
 
 		const res = await api('following/list', { notification: true }, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(res.body.length, 2);
+		expect(res.status).toBe(200);
+		expect(res.body.length).toBe(2);
 
 		const ids = res.body.map((u) => u.followeeId).sort();
-		assert.deepStrictEqual(ids, [bob.id, carol.id].sort());
+		expect(ids).toStrictEqual([bob.id, carol.id].sort());
 	});
 
 	test('通知設定をOFF（none）にすると notification: true な一覧から外れる', async () => {
@@ -68,14 +67,14 @@ describe('following/list', () => {
 		const res1 = await api('following/list', { notification: true }, alice);
 		const res2 = await api('following/list', {}, alice);
 
-		assert.strictEqual(res1.status, 200);
-		assert.strictEqual(res1.body.length, 1);
-		assert.strictEqual(res1.body[0]?.followeeId, carol.id);
+		expect(res1.status).toBe(200);
+		expect(res1.body.length).toBe(1);
+		expect(res1.body[0]?.followeeId).toBe(carol.id);
 
-		assert.strictEqual(res2.status, 200);
-		assert.strictEqual(res2.body.length, 2);
+		expect(res2.status).toBe(200);
+		expect(res2.body.length).toBe(2);
 		const ids = res2.body.map((u) => u.followeeId).sort();
-		assert.deepStrictEqual(ids, [bob.id, carol.id].sort());
+		expect(ids).toStrictEqual([bob.id, carol.id].sort());
 	});
 
 	test('他のユーザーの通知対象は見えない', async () => {
@@ -84,11 +83,11 @@ describe('following/list', () => {
 
 		const aliceRes = await api('following/list', { notification: true }, alice);
 		const aliceIds = aliceRes.body.map((u) => u.followeeId);
-		assert.strictEqual(aliceIds.includes(bob.id), false);
+		expect(aliceIds.includes(bob.id)).toBe(false);
 
 		const bobRes = await api('following/list', { notification: true }, bob);
-		assert.strictEqual(bobRes.body.length, 1);
-		assert.strictEqual(bobRes.body[0]?.followeeId, carol.id);
+		expect(bobRes.body.length).toBe(1);
+		expect(bobRes.body[0]?.followeeId).toBe(carol.id);
 
 		await api('following/delete', { userId: carol.id }, bob);
 	});
@@ -104,18 +103,18 @@ describe('following/list', () => {
 			},
 			bob,
 		);
-		assert.strictEqual(textOnlyRes.status, 200);
+		expect(textOnlyRes.status).toBe(200);
 		// Redis への反映を待つ。
 		await setTimeout(100);
 
 		const beforeRes = await api('i/notifications', {}, alice);
-		assert.strictEqual(beforeRes.status, 200);
+		expect(beforeRes.status).toBe(200);
 		const noteNotif = beforeRes.body.filter(
 			(n: { type: string; note?: { id: string } }) =>
 				n.type === 'note' && n.note?.id === textOnlyRes.body.createdNote.id,
 		);
 
-		assert.strictEqual(noteNotif.length, 1, '投稿の通知が届かなかった');
+		expect(noteNotif.length, '投稿の通知が届かなかった').toBe(1);
 
 		await api('following/update', { userId: bob.id, notify: 'none' }, alice);
 		await api('notifications/mark-all-as-read', {}, alice);
@@ -125,16 +124,16 @@ describe('following/list', () => {
 		await api('following/update', { userId: bob.id, notify: 'normal' }, alice);
 
 		const allRes = await api('following/list', { notification: true }, alice);
-		assert.strictEqual(allRes.status, 200);
-		assert.strictEqual(allRes.body.length, 2);
+		expect(allRes.status).toBe(200);
+		expect(allRes.body.length).toBe(2);
 
 		const res = await api('following/list', { notification: true, limit: 1 }, alice);
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(res.body.length, 1);
+		expect(res.status).toBe(200);
+		expect(res.body.length).toBe(1);
 	});
 
 	test('未認証の場合はエラー', async () => {
 		const res = await api('following/list', {});
-		assert.strictEqual(res.status, 401);
+		expect(res.status).toBe(401);
 	});
 });

@@ -139,6 +139,12 @@ import {
 	uploadFile,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
+/*
+ * アサーションは vitest の expect に寄せているが、判別可能ユニオンの分岐を確定させる箇所だけ
+ * node:assert を使う。expect の matcher は `asserts` 述語を持たないため、判別子を検査しても
+ * 後続のプロパティアクセスが型エラーになる。
+ */
+
 
 const bunPassword = Bun!.password;
 
@@ -219,7 +225,7 @@ describe('Endpoints', () => {
 				username: 'test.',
 				password: 'test',
 			});
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('空のパスワードでアカウントが作成できない', async () => {
@@ -227,7 +233,7 @@ describe('Endpoints', () => {
 				username: 'test',
 				password: '',
 			});
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('正しくアカウントが作成できる', async () => {
@@ -238,9 +244,9 @@ describe('Endpoints', () => {
 
 			const res = await api('signup', me);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.username, me.username);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.username).toBe(me.username);
 		});
 
 		test('同じユーザー名のアカウントは作成できない', async () => {
@@ -249,7 +255,7 @@ describe('Endpoints', () => {
 				password: 'test1',
 			});
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('同じリモートユーザー名の並行作成は一方だけ成功する', async () => {
@@ -259,10 +265,10 @@ describe('Endpoints', () => {
 				host: 'remote.example.com',
 			};
 			const results = await Promise.all([api('signup', params), api('signup', params)]);
-			assert.strictEqual(results.filter((result) => result.status === 200).length, 1);
+			expect(results.filter((result) => result.status === 200).length).toBe(1);
 			const duplicated = results.find((result) => result.status === 400);
 			assert.ok(duplicated);
-			assert.strictEqual(castAsError(duplicated.body as any).error.code, 'DUPLICATED_USERNAME');
+			expect(castAsError(duplicated.body as any).error.code).toBe('DUPLICATED_USERNAME');
 		});
 
 		test('異なるホストでも使用済みユーザー名を並行作成できない', async () => {
@@ -271,10 +277,10 @@ describe('Endpoints', () => {
 				api('signup', { username, password: 'test', host: 'remote-a.example.com' }),
 				api('signup', { username, password: 'test', host: 'remote-b.example.com' }),
 			]);
-			assert.strictEqual(results.filter((result) => result.status === 200).length, 1);
+			expect(results.filter((result) => result.status === 200).length).toBe(1);
 			const used = results.find((result) => result.status === 400);
 			assert.ok(used);
-			assert.strictEqual(castAsError(used.body as any).error.code, 'USED_USERNAME');
+			expect(castAsError(used.body as any).error.code).toBe('USED_USERNAME');
 		});
 
 		test('stale root claim does not roll back a valid signup after another process claimed root', async () => {
@@ -292,7 +298,7 @@ describe('Endpoints', () => {
 				}),
 				(error) => error instanceof RootUserAlreadyAssignedError,
 			);
-			assert.strictEqual(await fetchLocalUserByUsernameFromDatabase(db, requiredUsername), null);
+			expect(await fetchLocalUserByUsernameFromDatabase(db, requiredUsername)).toBe(null);
 
 			const result = await createLocalSignupAccount(db, staleMeta, {
 				username: `staleroot${suffix}`,
@@ -300,8 +306,8 @@ describe('Endpoints', () => {
 				passwordHash: null,
 			});
 
-			assert.strictEqual(result.account.username, `staleroot${suffix}`);
-			assert.strictEqual((await fetchMetaFromDatabase(db)).rootUserId, before.rootUserId);
+			expect(result.account.username).toBe(`staleroot${suffix}`);
+			expect((await fetchMetaFromDatabase(db)).rootUserId).toBe(before.rootUserId);
 
 			await assert.rejects(
 				createLocalSignupAccount(db, staleMeta, {
@@ -330,14 +336,14 @@ describe('Endpoints', () => {
 				code: pending.code,
 			});
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const body = res.body as misskey.entities.SigninFlowResponse & { finished: true };
-			assert.strictEqual(body.finished, true);
-			assert.strictEqual(typeof body.i, 'string');
+			expect(body.finished).toBe(true);
+			expect(typeof body.i).toBe('string');
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, body.id);
-			assert.strictEqual(profile.email, pending.email);
-			assert.strictEqual(profile.emailVerified, true);
+			expect(profile.email).toBe(pending.email);
+			expect(profile.emailVerified).toBe(true);
 		});
 	});
 
@@ -345,7 +351,7 @@ describe('Endpoints', () => {
 		test('endpoints returns known endpoint names', async () => {
 			const res = await api('endpoints', {});
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			assert.ok(Array.isArray(res.body));
 			assert.ok(res.body.includes('endpoint'));
 			assert.ok(res.body.includes('endpoints'));
@@ -357,7 +363,7 @@ describe('Endpoints', () => {
 				endpoint: 'i/update',
 			});
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			if (res.body == null) assert.fail('endpoint metadata is missing');
 			assert.ok(Array.isArray(res.body.params));
 			assert.ok(res.body.params.some((param) => param.name === 'name' && param.type === 'String'));
@@ -366,8 +372,8 @@ describe('Endpoints', () => {
 				endpoint: 'missing/endpoint',
 			});
 
-			assert.strictEqual(missing.status, 200);
-			assert.strictEqual(missing.body, null);
+			expect(missing.status).toBe(200);
+			expect(missing.body).toBe(null);
 		});
 	});
 
@@ -377,10 +383,10 @@ describe('Endpoints', () => {
 				detail: false,
 			});
 
-			assert.strictEqual(lite.status, 200);
-			assert.strictEqual(lite.body.uri, origin);
-			assert.strictEqual(typeof lite.body.version, 'string');
-			assert.strictEqual((lite.body as Record<string, unknown>)['features'], undefined);
+			expect(lite.status).toBe(200);
+			expect(lite.body.uri).toBe(origin);
+			expect(typeof lite.body.version).toBe('string');
+			expect((lite.body as Record<string, unknown>)['features']).toBe(undefined);
 
 			const detailed = await api('meta', {});
 			const detailedBody = detailed.body as {
@@ -389,11 +395,11 @@ describe('Endpoints', () => {
 				proxyAccountName?: unknown;
 			};
 
-			assert.strictEqual(detailed.status, 200);
-			assert.strictEqual(detailedBody.uri, origin);
+			expect(detailed.status).toBe(200);
+			expect(detailedBody.uri).toBe(origin);
 			if (detailedBody.features == null) assert.fail('detailed meta features are missing');
-			assert.strictEqual(detailedBody.features.miauth, true);
-			assert.strictEqual(typeof detailedBody.proxyAccountName, 'string');
+			expect(detailedBody.features.miauth).toBe(true);
+			expect(typeof detailedBody.proxyAccountName).toBe('string');
 		});
 
 		test('ping returns current timestamp', async () => {
@@ -401,8 +407,8 @@ describe('Endpoints', () => {
 			const res = await api('ping', {});
 			const after = Date.now();
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body.pong, 'number');
+			expect(res.status).toBe(200);
+			expect(typeof res.body.pong).toBe('number');
 			assert.ok(res.body.pong >= before);
 			assert.ok(res.body.pong <= after);
 		});
@@ -410,8 +416,8 @@ describe('Endpoints', () => {
 		test('server-info supports GET and cache header', async () => {
 			const res = await relativeFetch('api/server-info');
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=60');
+			expect(res.status).toBe(200);
+			expect(res.headers.get('cache-control')).toBe('public, max-age=60');
 
 			const body = (await res.json()) as {
 				machine: unknown;
@@ -419,12 +425,12 @@ describe('Endpoints', () => {
 				mem?: { total?: unknown };
 				fs?: { total?: unknown; used?: unknown };
 			};
-			assert.strictEqual(typeof body.machine, 'string');
-			assert.strictEqual(typeof body.cpu?.model, 'string');
-			assert.strictEqual(typeof body.cpu?.cores, 'number');
-			assert.strictEqual(typeof body.mem?.total, 'number');
-			assert.strictEqual(typeof body.fs?.total, 'number');
-			assert.strictEqual(typeof body.fs?.used, 'number');
+			expect(typeof body.machine).toBe('string');
+			expect(typeof body.cpu?.model).toBe('string');
+			expect(typeof body.cpu?.cores).toBe('number');
+			expect(typeof body.mem?.total).toBe('number');
+			expect(typeof body.fs?.total).toBe('number');
+			expect(typeof body.fs?.used).toBe('number');
 		});
 
 		test('test endpoint validates params and applies defaults', async () => {
@@ -432,10 +438,10 @@ describe('Endpoints', () => {
 				required: true,
 			});
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.required, true);
-			assert.strictEqual(res.body.default, 'hello');
-			assert.strictEqual(res.body.nullableDefault, 'hello');
+			expect(res.status).toBe(200);
+			expect(res.body.required).toBe(true);
+			expect(res.body.default).toBe('hello');
+			expect(res.body.nullableDefault).toBe('hello');
 
 			const invalid = await relativeFetch('api/test', {
 				method: 'POST',
@@ -443,8 +449,8 @@ describe('Endpoints', () => {
 				body: JSON.stringify({ required: 'yes' }),
 			});
 
-			assert.strictEqual(invalid.status, 400);
-			assert.strictEqual(castAsError((await invalid.json()) as Record<string, unknown>).error.code, 'INVALID_PARAM');
+			expect(invalid.status).toBe(400);
+			expect(castAsError((await invalid.json()) as Record<string, unknown>).error.code).toBe('INVALID_PARAM');
 		});
 	});
 
@@ -453,32 +459,32 @@ describe('Endpoints', () => {
 			const meta = await fetchMetaFromDatabase(db);
 			const res = await api('admin/meta', {}, alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.uri, origin);
-			assert.strictEqual(typeof res.body.version, 'string');
-			assert.strictEqual(res.body.emailRequiredForSignup, meta.emailRequiredForSignup);
-			assert.strictEqual(res.body.signupRateLimitMinIntervalSeconds, meta.signupRateLimitMinIntervalSeconds);
-			assert.strictEqual(res.body.signupRateLimitMaxPerHour, meta.signupRateLimitMaxPerHour);
-			assert.strictEqual(res.body.translatorProvider, meta.translatorProvider);
-			assert.strictEqual(res.body.libreTranslateApiUrl, meta.libreTranslateApiUrl);
-			assert.strictEqual(res.body.federation, meta.federation);
-			assert.deepStrictEqual(res.body.urlPreviewSensitiveList, meta.urlPreviewSensitiveList);
-			assert.strictEqual(typeof res.body.proxyAccountId, 'string');
-			assert.strictEqual((res.body.policies as { canPublicNote?: boolean }).canPublicNote, true);
+			expect(res.status).toBe(200);
+			expect(res.body.uri).toBe(origin);
+			expect(typeof res.body.version).toBe('string');
+			expect(res.body.emailRequiredForSignup).toBe(meta.emailRequiredForSignup);
+			expect(res.body.signupRateLimitMinIntervalSeconds).toBe(meta.signupRateLimitMinIntervalSeconds);
+			expect(res.body.signupRateLimitMaxPerHour).toBe(meta.signupRateLimitMaxPerHour);
+			expect(res.body.translatorProvider).toBe(meta.translatorProvider);
+			expect(res.body.libreTranslateApiUrl).toBe(meta.libreTranslateApiUrl);
+			expect(res.body.federation).toBe(meta.federation);
+			expect(res.body.urlPreviewSensitiveList).toStrictEqual(meta.urlPreviewSensitiveList);
+			expect(typeof res.body.proxyAccountId).toBe('string');
+			expect((res.body.policies as { canPublicNote?: boolean }).canPublicNote).toBe(true);
 
 			const readToken = await createAppToken(alice, ['read:admin:meta']);
 			const byToken = await api('admin/meta', {}, { token: readToken });
-			assert.strictEqual(byToken.status, 200);
-			assert.strictEqual(byToken.body.proxyAccountId, res.body.proxyAccountId);
+			expect(byToken.status).toBe(200);
+			expect(byToken.body.proxyAccountId).toBe(res.body.proxyAccountId);
 
 			const wrongScopeToken = await createAppToken(alice, ['read:admin:drive']);
 			const scopeDenied = await api('admin/meta', {}, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const roleDenied = await api('admin/meta', {}, bob);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 
 		test('admin/update-meta は設定変換、scope、管理者権限、ログを維持する', async () => {
@@ -488,12 +494,12 @@ describe('Endpoints', () => {
 
 			const wrongScopeToken = await createAppToken(alice, ['read:admin:meta']);
 			const scopeDenied = await api('admin/update-meta', { name: updatedName }, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const roleDenied = await api('admin/update-meta', { name: updatedName }, bob);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			try {
 				const writeToken = await createAppToken(alice, ['write:admin:meta']);
@@ -530,38 +536,38 @@ describe('Endpoints', () => {
 					},
 					{ token: writeToken },
 				);
-				assert.strictEqual(updated.status, 204);
+				expect(updated.status).toBe(204);
 
 				const after = await fetchMetaFromDatabase(db);
-				assert.strictEqual(after.name, updatedName);
-				assert.strictEqual(after.disableRegistration, before.disableRegistration);
-				assert.strictEqual(after.signupRateLimitMinIntervalSeconds, 15);
-				assert.strictEqual(after.signupRateLimitMaxPerHour, 20);
-				assert.strictEqual(after.translatorProvider, 'libreTranslate');
-				assert.strictEqual(after.libreTranslateApiUrl, 'https://translate.example/base');
-				assert.strictEqual(after.libreTranslateApiKey, 'test-key');
-				assert.deepStrictEqual(after.pinnedUsers, ['@alice']);
-				assert.deepStrictEqual(after.hiddenTags, [`hono-meta-${now}`]);
-				assert.deepStrictEqual(after.blockedHosts, ['blocked.example']);
-				assert.deepStrictEqual(after.silencedHosts, ['Blocked.Example', 'aaa.example', 'zzz.example']);
-				assert.deepStrictEqual(after.mediaSilencedHosts, ['Blocked.Example', 'media.example']);
-				assert.deepStrictEqual(after.langs, ['ja-JP']);
-				assert.strictEqual(after.mcaptchaSitekey, `mcaptcha-${now}`);
-				assert.strictEqual(after.googleAnalyticsMeasurementId, null);
-				assert.strictEqual(after.sensitiveMediaDetectionApiUrl, null);
-				assert.strictEqual(after.deeplAuthKey, null);
-				assert.strictEqual(after.truemailInstance, null);
-				assert.strictEqual(after.termsOfServiceUrl, `https://example.com/tos-${now}`);
-				assert.strictEqual(after.repositoryUrl, null);
-				assert.strictEqual(after.urlPreviewSummaryProxyUrl, `https://example.com/summary-${now}`);
-				assert.deepStrictEqual(after.urlPreviewSensitiveList, [`example.com ${now}`, `/preview-${now}/`]);
+				expect(after.name).toBe(updatedName);
+				expect(after.disableRegistration).toBe(before.disableRegistration);
+				expect(after.signupRateLimitMinIntervalSeconds).toBe(15);
+				expect(after.signupRateLimitMaxPerHour).toBe(20);
+				expect(after.translatorProvider).toBe('libreTranslate');
+				expect(after.libreTranslateApiUrl).toBe('https://translate.example/base');
+				expect(after.libreTranslateApiKey).toBe('test-key');
+				expect(after.pinnedUsers).toStrictEqual(['@alice']);
+				expect(after.hiddenTags).toStrictEqual([`hono-meta-${now}`]);
+				expect(after.blockedHosts).toStrictEqual(['blocked.example']);
+				expect(after.silencedHosts).toStrictEqual(['Blocked.Example', 'aaa.example', 'zzz.example']);
+				expect(after.mediaSilencedHosts).toStrictEqual(['Blocked.Example', 'media.example']);
+				expect(after.langs).toStrictEqual(['ja-JP']);
+				expect(after.mcaptchaSitekey).toBe(`mcaptcha-${now}`);
+				expect(after.googleAnalyticsMeasurementId).toBe(null);
+				expect(after.sensitiveMediaDetectionApiUrl).toBe(null);
+				expect(after.deeplAuthKey).toBe(null);
+				expect(after.truemailInstance).toBe(null);
+				expect(after.termsOfServiceUrl).toBe(`https://example.com/tos-${now}`);
+				expect(after.repositoryUrl).toBe(null);
+				expect(after.urlPreviewSummaryProxyUrl).toBe(`https://example.com/summary-${now}`);
+				expect(after.urlPreviewSensitiveList).toStrictEqual([`example.com ${now}`, `/preview-${now}/`]);
 				const adminMeta = await api('admin/meta', {}, alice);
-				assert.strictEqual(adminMeta.status, 200);
-				assert.deepStrictEqual(adminMeta.body.urlPreviewSensitiveList, after.urlPreviewSensitiveList);
-				assert.strictEqual(after.clientOptions.entrancePageStyle, 'simple');
-				assert.strictEqual(after.clientOptions.showTimelineForVisitor, false);
-				assert.strictEqual(after.clientOptions.showActivitiesForVisitor, before.clientOptions.showActivitiesForVisitor);
-				assert.deepStrictEqual(after.federationHosts, ['remote.example']);
+				expect(adminMeta.status).toBe(200);
+				expect(adminMeta.body.urlPreviewSensitiveList).toStrictEqual(after.urlPreviewSensitiveList);
+				expect(after.clientOptions.entrancePageStyle).toBe('simple');
+				expect(after.clientOptions.showTimelineForVisitor).toBe(false);
+				expect(after.clientOptions.showActivitiesForVisitor).toBe(before.clientOptions.showActivitiesForVisitor);
+				expect(after.federationHosts).toStrictEqual(['remote.example']);
 
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 10,
@@ -611,21 +617,21 @@ describe('Endpoints', () => {
 
 			const wrongScopeToken = await createAppToken(alice, ['read:admin:account']);
 			const scopeDenied = await api('admin/update-proxy-account', { description }, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const roleDenied = await api('admin/update-proxy-account', { description }, bob);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			try {
 				const updated = await api('admin/update-proxy-account', { description }, alice);
-				assert.strictEqual(updated.status, 200);
-				assert.strictEqual(typeof updated.body.id, 'string');
-				assert.strictEqual(updated.body.description, description);
+				expect(updated.status).toBe(200);
+				expect(typeof updated.body.id).toBe('string');
+				expect(updated.body.description).toBe(description);
 
 				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, updated.body.id);
-				assert.strictEqual(profile.description, description);
+				expect(profile.description).toBe(description);
 
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 5,
@@ -644,18 +650,12 @@ describe('Endpoints', () => {
 		test('存在しないユーザーの削除はNO_SUCH_USERを返す', async () => {
 			const missingUserId = 'zzzzzzzzzzzzzzzzzzzzzzzzzz';
 			const missingFromAccountsDelete = await api('admin/accounts/delete', { userId: missingUserId }, alice);
-			assert.strictEqual(missingFromAccountsDelete.status, 400);
-			assert.strictEqual(
-				castAsError(missingFromAccountsDelete.body as any).error.id,
-				'f26ff6c4-278d-4c07-af5a-224c9d1e53f3',
-			);
+			expect(missingFromAccountsDelete.status).toBe(400);
+			expect(castAsError(missingFromAccountsDelete.body as any).error.id).toBe('f26ff6c4-278d-4c07-af5a-224c9d1e53f3');
 
 			const missingFromDeleteAccount = await api('admin/delete-account', { userId: missingUserId }, alice);
-			assert.strictEqual(missingFromDeleteAccount.status, 400);
-			assert.strictEqual(
-				castAsError(missingFromDeleteAccount.body as any).error.id,
-				'7ccf53b8-f359-45a7-b376-5f05a7bdfa93',
-			);
+			expect(missingFromDeleteAccount.status).toBe(400);
+			expect(castAsError(missingFromDeleteAccount.body as any).error.id).toBe('7ccf53b8-f359-45a7-b376-5f05a7bdfa93');
 		});
 
 		test('admin/accounts/delete と admin/delete-account は削除状態、job、scope、roleを維持する', async () => {
@@ -691,10 +691,10 @@ describe('Endpoints', () => {
 
 			try {
 				const deletedByNative = await api('admin/accounts/delete', { userId: accountDeleteTarget.id }, alice);
-				assert.strictEqual(deletedByNative.status, 204);
-				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, accountDeleteTarget.id)).isDeleted, true);
+				expect(deletedByNative.status).toBe(204);
+				expect((await fetchUserByIdOrFailFromDatabase(db, accountDeleteTarget.id)).isDeleted).toBe(true);
 				const nativeJob = await waitDeleteAccountJob(accountDeleteTarget.id);
-				assert.strictEqual((nativeJob.data as DbJobData<'deleteAccount'>).soft, false);
+				expect((nativeJob.data as DbJobData<'deleteAccount'>).soft).toBe(false);
 
 				const accountToken = await createAppToken(alice, ['write:admin:account']);
 				const deletedByToken = await api(
@@ -702,10 +702,10 @@ describe('Endpoints', () => {
 					{ userId: accountTokenTarget.id },
 					{ token: accountToken },
 				);
-				assert.strictEqual(deletedByToken.status, 204);
-				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, accountTokenTarget.id)).isDeleted, true);
+				expect(deletedByToken.status).toBe(204);
+				expect((await fetchUserByIdOrFailFromDatabase(db, accountTokenTarget.id)).isDeleted).toBe(true);
 				const tokenJob = await waitDeleteAccountJob(accountTokenTarget.id);
-				assert.strictEqual((tokenJob.data as DbJobData<'deleteAccount'>).soft, false);
+				expect((tokenJob.data as DbJobData<'deleteAccount'>).soft).toBe(false);
 
 				const deleteAccountToken = await createAppToken(alice, ['write:admin:delete-account']);
 				const deletedByDeleteAccount = await api(
@@ -713,14 +713,14 @@ describe('Endpoints', () => {
 					{ userId: deleteAccountTarget.id },
 					{ token: deleteAccountToken },
 				);
-				assert.strictEqual(deletedByDeleteAccount.status, 204);
-				assert.strictEqual((await fetchUserByIdOrFailFromDatabase(db, deleteAccountTarget.id)).isDeleted, true);
+				expect(deletedByDeleteAccount.status).toBe(204);
+				expect((await fetchUserByIdOrFailFromDatabase(db, deleteAccountTarget.id)).isDeleted).toBe(true);
 				const deleteAccountJob = await waitDeleteAccountJob(deleteAccountTarget.id);
-				assert.strictEqual((deleteAccountJob.data as DbJobData<'deleteAccount'>).soft, false);
+				expect((deleteAccountJob.data as DbJobData<'deleteAccount'>).soft).toBe(false);
 
 				const alreadyDeleted = await api('admin/delete-account', { userId: deleteAccountTarget.id }, alice);
-				assert.strictEqual(alreadyDeleted.status, 204);
-				assert.strictEqual((await getDeleteAccountJobs(deleteAccountTarget.id)).length, 1);
+				expect(alreadyDeleted.status).toBe(204);
+				expect((await getDeleteAccountJobs(deleteAccountTarget.id)).length).toBe(1);
 
 				const wrongAccountScope = await createAppToken(alice, ['read:admin:account']);
 				const accountScopeDenied = await api(
@@ -728,8 +728,8 @@ describe('Endpoints', () => {
 					{ userId: untouchedTarget.id },
 					{ token: wrongAccountScope },
 				);
-				assert.strictEqual(accountScopeDenied.status, 403);
-				assert.strictEqual(castAsError(accountScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(accountScopeDenied.status).toBe(403);
+				expect(castAsError(accountScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const wrongDeleteAccountScope = await createAppToken(alice, ['write:admin:account']);
 				const deleteAccountScopeDenied = await api(
@@ -737,16 +737,16 @@ describe('Endpoints', () => {
 					{ userId: untouchedTarget.id },
 					{ token: wrongDeleteAccountScope },
 				);
-				assert.strictEqual(deleteAccountScopeDenied.status, 403);
-				assert.strictEqual(castAsError(deleteAccountScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(deleteAccountScopeDenied.status).toBe(403);
+				expect(castAsError(deleteAccountScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const accountRoleDenied = await api('admin/accounts/delete', { userId: untouchedTarget.id }, bob);
-				assert.strictEqual(accountRoleDenied.status, 403);
-				assert.strictEqual(castAsError(accountRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(accountRoleDenied.status).toBe(403);
+				expect(castAsError(accountRoleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 				const deleteAccountRoleDenied = await api('admin/delete-account', { userId: untouchedTarget.id }, bob);
-				assert.strictEqual(deleteAccountRoleDenied.status, 403);
-				assert.strictEqual(castAsError(deleteAccountRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(deleteAccountRoleDenied.status).toBe(403);
+				expect(castAsError(deleteAccountRoleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await removeDeleteAccountJobs();
 			}
@@ -765,13 +765,13 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.username, `hacreate${suffix}`);
-			assert.strictEqual(typeof (created.body as { token?: unknown }).token, 'string');
+			expect(created.status).toBe(200);
+			expect(created.body.username).toBe(`hacreate${suffix}`);
+			expect(typeof (created.body as { token?: unknown }).token).toBe('string');
 
 			const user = await fetchUserByIdOrFailFromDatabase(db, created.body.id);
-			assert.strictEqual(user.username, `hacreate${suffix}`);
-			assert.strictEqual(user.host, null);
+			expect(user.username).toBe(`hacreate${suffix}`);
+			expect(user.host).toBe(null);
 
 			const token = await createAppToken(alice, ['write:admin:account']);
 			const appDenied = await api(
@@ -783,9 +783,9 @@ describe('Endpoints', () => {
 				},
 				{ token },
 			);
-			assert.strictEqual(appDenied.status, 400);
-			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
-			assert.strictEqual(castAsError(appDenied.body as any).error.id, '1fb7cb09-d46a-4fff-b8df-057708cce513');
+			expect(appDenied.status).toBe(400);
+			expect(castAsError(appDenied.body as any).error.code).toBe('ACCESS_DENIED');
+			expect(castAsError(appDenied.body as any).error.id).toBe('1fb7cb09-d46a-4fff-b8df-057708cce513');
 
 			const nonRootDenied = await api(
 				'admin/accounts/create',
@@ -796,8 +796,8 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(nonRootDenied.status, 400);
-			assert.strictEqual(castAsError(nonRootDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(nonRootDenied.status).toBe(400);
+			expect(castAsError(nonRootDenied.body as any).error.code).toBe('ACCESS_DENIED');
 		});
 
 		test('同じユーザー名の並行作成は一方だけ成功する', async () => {
@@ -809,9 +809,9 @@ describe('Endpoints', () => {
 			const successful = results.filter((result) => result.status === 200);
 			const duplicated = results.filter((result) => result.status === 400);
 
-			assert.strictEqual(successful.length, 1);
-			assert.strictEqual(duplicated.length, 1);
-			assert.strictEqual(castAsError(duplicated[0]!.body as any).error.code, 'DUPLICATED_USERNAME');
+			expect(successful.length).toBe(1);
+			expect(duplicated.length).toBe(1);
+			expect(castAsError(duplicated[0]!.body as any).error.code).toBe('DUPLICATED_USERNAME');
 		});
 	});
 
@@ -866,67 +866,67 @@ describe('Endpoints', () => {
 
 			const wrongWriteToken = await createAppToken(blocker, ['read:blocks']);
 			const createScopeDenied = await api('blocking/create', { userId: blockee.id }, { token: wrongWriteToken });
-			assert.strictEqual(createScopeDenied.status, 403);
-			assert.strictEqual(castAsError(createScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(createScopeDenied.status).toBe(403);
+			expect(castAsError(createScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const selfBlock = await api('blocking/create', { userId: blocker.id }, blocker);
-			assert.strictEqual(selfBlock.status, 400);
-			assert.strictEqual(castAsError(selfBlock.body as any).error.code, 'BLOCKEE_IS_YOURSELF');
-			assert.strictEqual(castAsError(selfBlock.body as any).error.id, '88b19138-f28d-42c0-8499-6a31bbd0fdc6');
+			expect(selfBlock.status).toBe(400);
+			expect(castAsError(selfBlock.body as any).error.code).toBe('BLOCKEE_IS_YOURSELF');
+			expect(castAsError(selfBlock.body as any).error.id).toBe('88b19138-f28d-42c0-8499-6a31bbd0fdc6');
 
 			const noSuch = await api('blocking/create', { userId: genId(now - 1000) }, blocker);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
-			assert.strictEqual(castAsError(noSuch.body as any).error.id, '7cc4f851-e2f1-4621-9633-ec9e1d00c01e');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_USER');
+			expect(castAsError(noSuch.body as any).error.id).toBe('7cc4f851-e2f1-4621-9633-ec9e1d00c01e');
 
 			const created = await api('blocking/create', { userId: blockee.id }, blocker);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.id, blockee.id);
+			expect(created.status).toBe(200);
+			expect(created.body.id).toBe(blockee.id);
 
 			const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, blocker.id, blockee.id);
 			assert.ok(blocking);
-			assert.strictEqual(blocking.blockerId, blocker.id);
-			assert.strictEqual(blocking.blockeeId, blockee.id);
-			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blocker.id, blockee.id), null);
-			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blockee.id, blocker.id), null);
-			assert.strictEqual(await fetchFollowRequestFromDatabase(db, blocker.id, blockee.id), null);
-			assert.strictEqual(await fetchFollowRequestFromDatabase(db, blockee.id, blocker.id), null);
-			assert.strictEqual(await userListMembershipExistsInDatabase(db, blocker.id, userList.id), false);
+			expect(blocking.blockerId).toBe(blocker.id);
+			expect(blocking.blockeeId).toBe(blockee.id);
+			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blocker.id, blockee.id)).toBe(null);
+			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, blockee.id, blocker.id)).toBe(null);
+			expect(await fetchFollowRequestFromDatabase(db, blocker.id, blockee.id)).toBe(null);
+			expect(await fetchFollowRequestFromDatabase(db, blockee.id, blocker.id)).toBe(null);
+			expect(await userListMembershipExistsInDatabase(db, blocker.id, userList.id)).toBe(false);
 
 			const refreshedBlocker = await fetchUserByIdOrFailFromDatabase(db, blocker.id);
 			const refreshedBlockee = await fetchUserByIdOrFailFromDatabase(db, blockee.id);
-			assert.strictEqual(refreshedBlocker.followingCount, 0);
-			assert.strictEqual(refreshedBlocker.followersCount, 0);
-			assert.strictEqual(refreshedBlockee.followingCount, 0);
-			assert.strictEqual(refreshedBlockee.followersCount, 0);
+			expect(refreshedBlocker.followingCount).toBe(0);
+			expect(refreshedBlocker.followersCount).toBe(0);
+			expect(refreshedBlockee.followingCount).toBe(0);
+			expect(refreshedBlockee.followersCount).toBe(0);
 
 			const duplicate = await api('blocking/create', { userId: blockee.id }, blocker);
-			assert.strictEqual(duplicate.status, 400);
-			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_BLOCKING');
-			assert.strictEqual(castAsError(duplicate.body as any).error.id, '787fed64-acb9-464a-82eb-afbd745b9614');
+			expect(duplicate.status).toBe(400);
+			expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_BLOCKING');
+			expect(castAsError(duplicate.body as any).error.id).toBe('787fed64-acb9-464a-82eb-afbd745b9614');
 
 			const readToken = await createAppToken(blocker, ['read:blocks']);
 			const list = await api('blocking/list', { limit: 10 }, { token: readToken });
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			const listed = (list.body as any[]).find((item) => item.blockeeId === blockee.id);
 			assert.ok(listed);
-			assert.strictEqual(listed.id, blocking.id);
-			assert.strictEqual(listed.blockee.id, blockee.id);
+			expect(listed.id).toBe(blocking.id);
+			expect(listed.blockee.id).toBe(blockee.id);
 
 			const wrongReadToken = await createAppToken(blocker, ['write:blocks']);
 			const listScopeDenied = await api('blocking/list', {}, { token: wrongReadToken });
-			assert.strictEqual(listScopeDenied.status, 403);
-			assert.strictEqual(castAsError(listScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(listScopeDenied.status).toBe(403);
+			expect(castAsError(listScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const deleted = await api('blocking/delete', { userId: blockee.id }, blocker);
-			assert.strictEqual(deleted.status, 200);
-			assert.strictEqual(deleted.body.id, blockee.id);
-			assert.strictEqual(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, blocker.id, blockee.id), null);
+			expect(deleted.status).toBe(200);
+			expect(deleted.body.id).toBe(blockee.id);
+			expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, blocker.id, blockee.id)).toBe(null);
 
 			const notBlocking = await api('blocking/delete', { userId: blockee.id }, blocker);
-			assert.strictEqual(notBlocking.status, 400);
-			assert.strictEqual(castAsError(notBlocking.body as any).error.code, 'NOT_BLOCKING');
-			assert.strictEqual(castAsError(notBlocking.body as any).error.id, '291b2efa-60c6-45c0-9f6a-045c8f9b02cd');
+			expect(notBlocking.status).toBe(400);
+			expect(castAsError(notBlocking.body as any).error.code).toBe('NOT_BLOCKING');
+			expect(castAsError(notBlocking.body as any).error.id).toBe('291b2efa-60c6-45c0-9f6a-045c8f9b02cd');
 		});
 	});
 
@@ -940,81 +940,81 @@ describe('Endpoints', () => {
 
 			const wrongWriteToken = await createAppToken(muter, ['read:mutes']);
 			const muteScopeDenied = await api('mute/create', { userId: mutee.id }, { token: wrongWriteToken });
-			assert.strictEqual(muteScopeDenied.status, 403);
-			assert.strictEqual(castAsError(muteScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(muteScopeDenied.status).toBe(403);
+			expect(castAsError(muteScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const created = await api('mute/create', { userId: mutee.id, expiresAt }, muter);
-			assert.strictEqual(created.status, 204);
+			expect(created.status).toBe(204);
 			const muting = await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, mutee.id);
 			assert.ok(muting);
-			assert.strictEqual(muting.muterId, muter.id);
-			assert.strictEqual(muting.muteeId, mutee.id);
-			assert.strictEqual(muting.expiresAt?.getTime(), expiresAt);
+			expect(muting.muterId).toBe(muter.id);
+			expect(muting.muteeId).toBe(mutee.id);
+			expect(muting.expiresAt?.getTime()).toBe(expiresAt);
 
 			const duplicate = await api('mute/create', { userId: mutee.id }, muter);
-			assert.strictEqual(duplicate.status, 400);
-			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_MUTING');
+			expect(duplicate.status).toBe(400);
+			expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_MUTING');
 
 			const selfMute = await api('mute/create', { userId: muter.id }, muter);
-			assert.strictEqual(selfMute.status, 400);
-			assert.strictEqual(castAsError(selfMute.body as any).error.code, 'MUTEE_IS_YOURSELF');
+			expect(selfMute.status).toBe(400);
+			expect(castAsError(selfMute.body as any).error.code).toBe('MUTEE_IS_YOURSELF');
 
 			const pastMuteTarget = await signup({ username: `hpmute${suffix}` });
 			const pastMute = await api('mute/create', { userId: pastMuteTarget.id, expiresAt: Date.now() - 1000 }, muter);
-			assert.strictEqual(pastMute.status, 204);
-			assert.strictEqual(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, pastMuteTarget.id), null);
+			expect(pastMute.status).toBe(204);
+			expect(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, pastMuteTarget.id)).toBe(null);
 
 			const readToken = await createAppToken(muter, ['read:mutes']);
 			const list = await api('mute/list', { limit: 10 }, { token: readToken });
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			const listed = (list.body as any[]).find((item) => item.muteeId === mutee.id);
 			assert.ok(listed);
-			assert.strictEqual(listed.id, muting.id);
-			assert.strictEqual(listed.mutee.id, mutee.id);
-			assert.strictEqual(listed.expiresAt, new Date(expiresAt).toISOString());
+			expect(listed.id).toBe(muting.id);
+			expect(listed.mutee.id).toBe(mutee.id);
+			expect(listed.expiresAt).toBe(new Date(expiresAt).toISOString());
 
 			const wrongReadToken = await createAppToken(muter, ['write:mutes']);
 			const listScopeDenied = await api('mute/list', {}, { token: wrongReadToken });
-			assert.strictEqual(listScopeDenied.status, 403);
-			assert.strictEqual(castAsError(listScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(listScopeDenied.status).toBe(403);
+			expect(castAsError(listScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const deleted = await api('mute/delete', { userId: mutee.id }, muter);
-			assert.strictEqual(deleted.status, 204);
-			assert.strictEqual(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, mutee.id), null);
+			expect(deleted.status).toBe(204);
+			expect(await fetchMutingByMuterIdAndMuteeIdFromDatabase(db, muter.id, mutee.id)).toBe(null);
 
 			const notMuting = await api('mute/delete', { userId: mutee.id }, muter);
-			assert.strictEqual(notMuting.status, 400);
-			assert.strictEqual(castAsError(notMuting.body as any).error.code, 'NOT_MUTING');
+			expect(notMuting.status).toBe(400);
+			expect(castAsError(notMuting.body as any).error.code).toBe('NOT_MUTING');
 
 			const renoteScopeDenied = await api('renote-mute/create', { userId: renoteMutee.id }, { token: wrongWriteToken });
-			assert.strictEqual(renoteScopeDenied.status, 403);
-			assert.strictEqual(castAsError(renoteScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(renoteScopeDenied.status).toBe(403);
+			expect(castAsError(renoteScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const renoteCreated = await api('renote-mute/create', { userId: renoteMutee.id }, muter);
-			assert.strictEqual(renoteCreated.status, 204);
+			expect(renoteCreated.status).toBe(204);
 			const renoteMuting = await fetchRenoteMutingFromDatabase(db, muter.id, renoteMutee.id);
 			assert.ok(renoteMuting);
-			assert.strictEqual(renoteMuting.muterId, muter.id);
-			assert.strictEqual(renoteMuting.muteeId, renoteMutee.id);
+			expect(renoteMuting.muterId).toBe(muter.id);
+			expect(renoteMuting.muteeId).toBe(renoteMutee.id);
 
 			const renoteDuplicate = await api('renote-mute/create', { userId: renoteMutee.id }, muter);
-			assert.strictEqual(renoteDuplicate.status, 400);
-			assert.strictEqual(castAsError(renoteDuplicate.body as any).error.code, 'ALREADY_MUTING');
+			expect(renoteDuplicate.status).toBe(400);
+			expect(castAsError(renoteDuplicate.body as any).error.code).toBe('ALREADY_MUTING');
 
 			const renoteList = await api('renote-mute/list', { limit: 10 }, { token: readToken });
-			assert.strictEqual(renoteList.status, 200);
+			expect(renoteList.status).toBe(200);
 			const renoteListed = (renoteList.body as any[]).find((item) => item.muteeId === renoteMutee.id);
 			assert.ok(renoteListed);
-			assert.strictEqual(renoteListed.id, renoteMuting.id);
-			assert.strictEqual(renoteListed.mutee.id, renoteMutee.id);
+			expect(renoteListed.id).toBe(renoteMuting.id);
+			expect(renoteListed.mutee.id).toBe(renoteMutee.id);
 
 			const renoteDeleted = await api('renote-mute/delete', { userId: renoteMutee.id }, muter);
-			assert.strictEqual(renoteDeleted.status, 204);
-			assert.strictEqual(await fetchRenoteMutingFromDatabase(db, muter.id, renoteMutee.id), null);
+			expect(renoteDeleted.status).toBe(204);
+			expect(await fetchRenoteMutingFromDatabase(db, muter.id, renoteMutee.id)).toBe(null);
 
 			const renoteNotMuting = await api('renote-mute/delete', { userId: renoteMutee.id }, muter);
-			assert.strictEqual(renoteNotMuting.status, 400);
-			assert.strictEqual(castAsError(renoteNotMuting.body as any).error.code, 'NOT_MUTING');
+			expect(renoteNotMuting.status).toBe(400);
+			expect(castAsError(renoteNotMuting.body as any).error.code).toBe('NOT_MUTING');
 		});
 	});
 
@@ -1023,45 +1023,45 @@ describe('Endpoints', () => {
 			const available = await api('username/available', {
 				username: 'availableuser',
 			});
-			assert.strictEqual(available.status, 200);
-			assert.strictEqual(available.body.available, true);
+			expect(available.status).toBe(200);
+			expect(available.body.available).toBe(true);
 
 			const taken = await api('username/available', {
 				username: alice.username,
 			});
-			assert.strictEqual(taken.status, 200);
-			assert.strictEqual(taken.body.available, false);
+			expect(taken.status).toBe(200);
+			expect(taken.body.available).toBe(false);
 
 			const invalid = await api('username/available', {
 				username: 'invalid.user',
 			});
-			assert.strictEqual(invalid.status, 400);
+			expect(invalid.status).toBe(400);
 		});
 
 		test('email address availability validates format', async () => {
 			const available = await api('email-address/available', {
 				emailAddress: 'available@example.com',
 			});
-			assert.strictEqual(available.status, 200);
-			assert.strictEqual(available.body.available, true);
-			assert.strictEqual(available.body.reason, null);
+			expect(available.status).toBe(200);
+			expect(available.body.available).toBe(true);
+			expect(available.body.reason).toBe(null);
 
 			const invalid = await api('email-address/available', {
 				emailAddress: 'invalid-email',
 			});
-			assert.strictEqual(invalid.status, 200);
-			assert.strictEqual(invalid.body.available, false);
-			assert.strictEqual(invalid.body.reason, 'format');
+			expect(invalid.status).toBe(200);
+			expect(invalid.body.available).toBe(false);
+			expect(invalid.body.reason).toBe('format');
 		});
 
 		test('online users count supports GET and cache header', async () => {
 			const res = await relativeFetch('api/get-online-users-count');
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=60');
+			expect(res.status).toBe(200);
+			expect(res.headers.get('cache-control')).toBe('public, max-age=60');
 
 			const body = (await res.json()) as { count?: unknown };
-			assert.strictEqual(typeof body.count, 'number');
+			expect(typeof body.count).toBe('number');
 		});
 	});
 
@@ -1076,29 +1076,29 @@ describe('Endpoints', () => {
 			});
 
 			const found = await api('admin/accounts/find-by-email', { email }, alice);
-			assert.strictEqual(found.status, 200);
-			assert.strictEqual(found.body.id, target.id);
-			assert.strictEqual(found.body.username, target.username);
+			expect(found.status).toBe(200);
+			expect(found.body.id).toBe(target.id);
+			expect(found.body.username).toBe(target.username);
 
 			const missing = await api('admin/accounts/find-by-email', { email: `missing-${now}@example.test` }, alice);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'USER_NOT_FOUND');
-			assert.strictEqual(castAsError(missing.body as any).error.id, 'cb865949-8af5-4062-a88c-ef55e8786d1d');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('USER_NOT_FOUND');
+			expect(castAsError(missing.body as any).error.id).toBe('cb865949-8af5-4062-a88c-ef55e8786d1d');
 
 			const readToken = await createAppToken(alice, ['read:admin:account']);
 			const foundWithToken = await api('admin/accounts/find-by-email', { email }, { token: readToken });
-			assert.strictEqual(foundWithToken.status, 200);
-			assert.strictEqual(foundWithToken.body.id, target.id);
+			expect(foundWithToken.status).toBe(200);
+			expect(foundWithToken.body.id).toBe(target.id);
 
 			const deniedToken = await createAppToken(alice, ['read:admin:queue']);
 			const scopeDenied = await api('admin/accounts/find-by-email', { email }, { token: deniedToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hoem${now.toString(36)}` });
 			const roleDenied = await api('admin/accounts/find-by-email', { email }, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
 
@@ -1120,8 +1120,8 @@ describe('Endpoints', () => {
 			});
 
 			const list = await relativeFetch('api/emojis');
-			assert.strictEqual(list.status, 200);
-			assert.strictEqual(list.headers.get('cache-control'), 'public, max-age=3600');
+			expect(list.status).toBe(200);
+			expect(list.headers.get('cache-control')).toBe('public, max-age=3600');
 
 			const listBody = (await list.json()) as {
 				emojis?: {
@@ -1135,31 +1135,31 @@ describe('Endpoints', () => {
 			};
 			const listedEmoji = listBody.emojis?.find((item) => item.name === emoji.name);
 			assert.ok(listedEmoji);
-			assert.strictEqual(listedEmoji.url, emoji.publicUrl);
-			assert.strictEqual(listedEmoji.category, emoji.category);
-			assert.deepStrictEqual(listedEmoji.aliases, emoji.aliases);
-			assert.strictEqual(listedEmoji.localOnly, true);
-			assert.strictEqual(listedEmoji.isSensitive, true);
+			expect(listedEmoji.url).toBe(emoji.publicUrl);
+			expect(listedEmoji.category).toBe(emoji.category);
+			expect(listedEmoji.aliases).toStrictEqual(emoji.aliases);
+			expect(listedEmoji.localOnly).toBe(true);
+			expect(listedEmoji.isSensitive).toBe(true);
 
 			const detail = await api('emoji', {
 				name: emoji.name,
 			});
-			assert.strictEqual(detail.status, 200);
-			assert.strictEqual(detail.body.id, emoji.id);
-			assert.strictEqual(detail.body.name, emoji.name);
-			assert.strictEqual(detail.body.host, null);
-			assert.strictEqual(detail.body.url, emoji.publicUrl);
-			assert.strictEqual(detail.body.license, emoji.license);
-			assert.strictEqual(detail.body.localOnly, true);
-			assert.strictEqual(detail.body.isSensitive, true);
+			expect(detail.status).toBe(200);
+			expect(detail.body.id).toBe(emoji.id);
+			expect(detail.body.name).toBe(emoji.name);
+			expect(detail.body.host).toBe(null);
+			expect(detail.body.url).toBe(emoji.publicUrl);
+			expect(detail.body.license).toBe(emoji.license);
+			expect(detail.body.localOnly).toBe(true);
+			expect(detail.body.isSensitive).toBe(true);
 
 			const detailByGet = await relativeFetch(`api/emoji?name=${emoji.name}`);
-			assert.strictEqual(detailByGet.status, 200);
-			assert.strictEqual(detailByGet.headers.get('cache-control'), 'public, max-age=3600');
+			expect(detailByGet.status).toBe(200);
+			expect(detailByGet.headers.get('cache-control')).toBe('public, max-age=3600');
 
 			const missing = await api('emoji', { name: `missing_${Date.now().toString(36)}` });
-			assert.strictEqual(missing.status, 404);
-			assert.strictEqual(castAsError(missing.body as any).error.id, 'e2785b66-dca3-4087-9cac-b93c541cc425');
+			expect(missing.status).toBe(404);
+			expect(castAsError(missing.body as any).error.id).toBe('e2785b66-dca3-4087-9cac-b93c541cc425');
 		});
 	});
 
@@ -1188,14 +1188,14 @@ describe('Endpoints', () => {
 			await createRetentionAggregationInDatabase(db, latest);
 
 			const res = await relativeFetch('api/retention');
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=3600');
+			expect(res.status).toBe(200);
+			expect(res.headers.get('cache-control')).toBe('public, max-age=3600');
 
 			const body = (await res.json()) as { createdAt?: unknown; users?: unknown; data?: Record<string, unknown> }[];
 			const record = body.find((item) => item.createdAt === latest.createdAt.toISOString());
 			assert.ok(record);
-			assert.strictEqual(record.users, latest.usersCount);
-			assert.deepStrictEqual(record.data, latest.data);
+			expect(record.users).toBe(latest.usersCount);
+			expect(record.data).toStrictEqual(latest.data);
 		});
 	});
 
@@ -1244,31 +1244,31 @@ describe('Endpoints', () => {
 				limit: 5,
 				sort: '+mentionedUsers',
 			});
-			assert.strictEqual(list.status, 200);
-			assert.strictEqual(getAt(list.body, 0).tag, primary);
-			assert.strictEqual(getAt(list.body, 0).mentionedUsersCount, 1000002);
-			assert.strictEqual(getAt(list.body, 0).attachedLocalUsersCount, 1000001);
+			expect(list.status).toBe(200);
+			expect(getAt(list.body, 0).tag).toBe(primary);
+			expect(getAt(list.body, 0).mentionedUsersCount).toBe(1000002);
+			expect(getAt(list.body, 0).attachedLocalUsersCount).toBe(1000001);
 
 			const search = await api('hashtags/search', {
 				query: `hono_hashtag_`,
 				limit: 10,
 			});
-			assert.strictEqual(search.status, 200);
+			expect(search.status).toBe(200);
 			assert.ok(search.body.includes(primary));
 			assert.ok(search.body.includes(secondary));
 
 			const shown = await api('hashtags/show', {
 				tag: primary.toUpperCase(),
 			});
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.tag, primary);
-			assert.strictEqual(shown.body.mentionedLocalUsersCount, 1000002);
+			expect(shown.status).toBe(200);
+			expect(shown.body.tag).toBe(primary);
+			expect(shown.body.mentionedLocalUsersCount).toBe(1000002);
 
 			const missing = await api('hashtags/show', {
 				tag: `missing_${primary}`,
 			});
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_HASHTAG');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_HASHTAG');
 		});
 
 		test('drive/files, drive/files/show, drive/files/find, and drive/files/find-by-hash scope results to the caller', async () => {
@@ -1288,41 +1288,32 @@ describe('Endpoints', () => {
 			});
 
 			const list = await api('drive/files', { limit: 100 }, alice);
-			assert.strictEqual(list.status, 200);
-			assert.strictEqual(
-				(list.body as any[]).some((f) => f.id === file.id),
-				true,
-			);
+			expect(list.status).toBe(200);
+			expect((list.body as any[]).some((f) => f.id === file.id)).toBe(true);
 
 			const shownById = await api('drive/files/show', { fileId: file.id }, alice);
-			assert.strictEqual(shownById.status, 200);
-			assert.strictEqual(shownById.body.id, file.id);
+			expect(shownById.status).toBe(200);
+			expect(shownById.body.id).toBe(file.id);
 
 			const shownByUrl = await api('drive/files/show', { url: file.url }, alice);
-			assert.strictEqual(shownByUrl.status, 200);
-			assert.strictEqual(shownByUrl.body.id, file.id);
+			expect(shownByUrl.status).toBe(200);
+			expect(shownByUrl.body.id).toBe(file.id);
 
 			const notFound = await api('drive/files/show', { fileId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
-			assert.strictEqual(notFound.status, 400);
-			assert.strictEqual(castAsError(notFound.body as any).error.id, '067bc436-2718-4795-b0fb-ecbe43949e31');
+			expect(notFound.status).toBe(400);
+			expect(castAsError(notFound.body as any).error.id).toBe('067bc436-2718-4795-b0fb-ecbe43949e31');
 
 			const deniedForBob = await api('drive/files/show', { fileId: file.id }, bob);
-			assert.strictEqual(deniedForBob.status, 400);
-			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, '25b73c73-68b1-41d0-bad1-381cfdf6579f');
+			expect(deniedForBob.status).toBe(400);
+			expect(castAsError(deniedForBob.body as any).error.id).toBe('25b73c73-68b1-41d0-bad1-381cfdf6579f');
 
 			const found = await api('drive/files/find', { name: file.name }, alice);
-			assert.strictEqual(found.status, 200);
-			assert.strictEqual(
-				(found.body as any[]).some((f) => f.id === file.id),
-				true,
-			);
+			expect(found.status).toBe(200);
+			expect((found.body as any[]).some((f) => f.id === file.id)).toBe(true);
 
 			const foundByHash = await api('drive/files/find-by-hash', { md5 }, alice);
-			assert.strictEqual(foundByHash.status, 200);
-			assert.strictEqual(
-				(foundByHash.body as any[]).some((f) => f.id === file.id),
-				true,
-			);
+			expect(foundByHash.status).toBe(200);
+			expect((foundByHash.body as any[]).some((f) => f.id === file.id)).toBe(true);
 		});
 
 		test('drive/stream は自分のファイルのみtype絞り込み・ページングして返す', async () => {
@@ -1369,17 +1360,14 @@ describe('Endpoints', () => {
 			});
 
 			const all = await api('drive/stream', { limit: 100 }, user);
-			assert.strictEqual(all.status, 200);
-			assert.strictEqual(all.body.length, 2);
+			expect(all.status).toBe(200);
+			expect(all.body.length).toBe(2);
 			assert.ok(!all.body.some((f: any) => f.id === otherFile.id));
-			assert.strictEqual(getAt(all.body, 0).user, null);
+			expect(getAt(all.body, 0).user).toBe(null);
 
 			const imagesOnly = await api('drive/stream', { limit: 100, type: 'image/png' }, user);
-			assert.strictEqual(imagesOnly.status, 200);
-			assert.deepStrictEqual(
-				imagesOnly.body.map((f: any) => f.id),
-				[imageFile.id],
-			);
+			expect(imagesOnly.status).toBe(200);
+			expect(imagesOnly.body.map((f: any) => f.id)).toStrictEqual([imageFile.id]);
 		});
 
 		test('drive/files/attached-notes finds notes referencing a file and rejects non-owners', async () => {
@@ -1407,15 +1395,12 @@ describe('Endpoints', () => {
 			});
 
 			const found = await api('drive/files/attached-notes', { fileId: file.id }, alice);
-			assert.strictEqual(found.status, 200);
-			assert.strictEqual(
-				(found.body as any[]).some((n) => n.id === noteId),
-				true,
-			);
+			expect(found.status).toBe(200);
+			expect((found.body as any[]).some((n) => n.id === noteId)).toBe(true);
 
 			const deniedForBob = await api('drive/files/attached-notes', { fileId: file.id }, bob);
-			assert.strictEqual(deniedForBob.status, 400);
-			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, 'c118ece3-2e4b-4296-99d1-51756e32d232');
+			expect(deniedForBob.status).toBe(400);
+			expect(castAsError(deniedForBob.body as any).error.id).toBe('c118ece3-2e4b-4296-99d1-51756e32d232');
 		});
 
 		test('drive/files/attached-chat-messages finds chat messages referencing a file and rejects non-owners', async () => {
@@ -1439,18 +1424,15 @@ describe('Endpoints', () => {
 			});
 
 			const message = await api('chat/messages/create-to-user', { toUserId: recipient.id, fileId: file.id }, sender);
-			assert.strictEqual(message.status, 200);
+			expect(message.status).toBe(200);
 
 			const found = await api('drive/files/attached-chat-messages', { fileId: file.id }, sender);
-			assert.strictEqual(found.status, 200);
-			assert.strictEqual(
-				(found.body as any[]).some((m) => m.id === message.body.id),
-				true,
-			);
+			expect(found.status).toBe(200);
+			expect((found.body as any[]).some((m) => m.id === message.body.id)).toBe(true);
 
 			const deniedForCarol = await api('drive/files/attached-chat-messages', { fileId: file.id }, carol);
-			assert.strictEqual(deniedForCarol.status, 400);
-			assert.strictEqual(castAsError(deniedForCarol.body as any).error.id, '485ce26d-f5d2-4313-9783-e689d131eafb');
+			expect(deniedForCarol.status).toBe(400);
+			expect(castAsError(deniedForCarol.body as any).error.id).toBe('485ce26d-f5d2-4313-9783-e689d131eafb');
 		});
 
 		test('drive/files/update renames, moves, and toggles sensitivity, rejecting invalid input and foreign access', async () => {
@@ -1476,20 +1458,20 @@ describe('Endpoints', () => {
 			});
 
 			const deniedForBob = await api('drive/files/update', { fileId: file.id, name: 'hijack.bin' }, bob);
-			assert.strictEqual(deniedForBob.status, 400);
-			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, '01a53b27-82fc-445b-a0c1-b558465a8ed2');
+			expect(deniedForBob.status).toBe(400);
+			expect(castAsError(deniedForBob.body as any).error.id).toBe('01a53b27-82fc-445b-a0c1-b558465a8ed2');
 
 			const invalidName = await api('drive/files/update', { fileId: file.id, name: 'has/slash' }, alice);
-			assert.strictEqual(invalidName.status, 400);
-			assert.strictEqual(castAsError(invalidName.body as any).error.id, '395e7156-f9f0-475e-af89-53c3c23080c2');
+			expect(invalidName.status).toBe(400);
+			expect(castAsError(invalidName.body as any).error.id).toBe('395e7156-f9f0-475e-af89-53c3c23080c2');
 
 			const noSuchFolder = await api(
 				'drive/files/update',
 				{ fileId: file.id, folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
 				alice,
 			);
-			assert.strictEqual(noSuchFolder.status, 400);
-			assert.strictEqual(castAsError(noSuchFolder.body as any).error.id, 'ea8fb7a5-af77-4a08-b608-c0218176cd73');
+			expect(noSuchFolder.status).toBe(400);
+			expect(castAsError(noSuchFolder.body as any).error.id).toBe('ea8fb7a5-af77-4a08-b608-c0218176cd73');
 
 			const updated = await api(
 				'drive/files/update',
@@ -1502,15 +1484,15 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 200);
-			assert.strictEqual(updated.body.name, `hono-drive-updated-${suffix}.bin`);
-			assert.strictEqual(updated.body.folderId, folder.id);
-			assert.strictEqual(updated.body.isSensitive, true);
-			assert.strictEqual(updated.body.comment, 'updated comment');
+			expect(updated.status).toBe(200);
+			expect(updated.body.name).toBe(`hono-drive-updated-${suffix}.bin`);
+			expect(updated.body.folderId).toBe(folder.id);
+			expect(updated.body.isSensitive).toBe(true);
+			expect(updated.body.comment).toBe('updated comment');
 
 			const missing = await api('drive/files/update', { fileId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', name: 'x' }, alice);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.id, 'e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.id).toBe('e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
 		});
 
 		test('drive/files/delete removes a file, rejecting foreign access and missing files', async () => {
@@ -1531,11 +1513,11 @@ describe('Endpoints', () => {
 			});
 
 			const deniedForBob = await api('drive/files/delete', { fileId: file.id }, bob);
-			assert.strictEqual(deniedForBob.status, 400);
-			assert.strictEqual(castAsError(deniedForBob.body as any).error.id, '5eb8d909-2540-4970-90b8-dd6f86088121');
+			expect(deniedForBob.status).toBe(400);
+			expect(castAsError(deniedForBob.body as any).error.id).toBe('5eb8d909-2540-4970-90b8-dd6f86088121');
 
 			const deleted = await api('drive/files/delete', { fileId: file.id }, alice);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			// 実ファイルの削除はレスポンスを待たない fire-and-forget のため、DB からの削除が反映されるまでポーリングする
 			let missing;
@@ -1544,8 +1526,8 @@ describe('Endpoints', () => {
 				if (missing.status === 400) break;
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
-			assert.strictEqual(missing!.status, 400);
-			assert.strictEqual(castAsError(missing!.body as any).error.id, '908939ec-e52b-4458-b395-1025195cea58');
+			expect(missing!.status).toBe(400);
+			expect(castAsError(missing!.body as any).error.id).toBe('908939ec-e52b-4458-b395-1025195cea58');
 		});
 
 		test('drive/files/move-bulk moves multiple files into a folder', async () => {
@@ -1582,22 +1564,22 @@ describe('Endpoints', () => {
 			});
 
 			const moved = await api('drive/files/move-bulk', { fileIds: [fileA.id, fileB.id], folderId: folder.id }, alice);
-			assert.strictEqual(moved.status, 204);
+			expect(moved.status).toBe(204);
 
-			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId, folder.id);
-			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileB.id))?.folderId, folder.id);
+			expect((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId).toBe(folder.id);
+			expect((await fetchDriveFileByIdFromDatabase(db, fileB.id))?.folderId).toBe(folder.id);
 
 			const movedBack = await api('drive/files/move-bulk', { fileIds: [fileA.id, fileB.id], folderId: null }, alice);
-			assert.strictEqual(movedBack.status, 204);
-			assert.strictEqual((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId, null);
+			expect(movedBack.status).toBe(204);
+			expect((await fetchDriveFileByIdFromDatabase(db, fileA.id))?.folderId).toBe(null);
 
 			const missingFolder = await api(
 				'drive/files/move-bulk',
 				{ fileIds: [fileA.id], folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
 				alice,
 			);
-			assert.strictEqual(missingFolder.status, 400);
-			assert.strictEqual(castAsError(missingFolder.body as any).error.id, 'abdd73a9-6225-4140-a3e4-8089c77168bc');
+			expect(missingFolder.status).toBe(400);
+			expect(castAsError(missingFolder.body as any).error.id).toBe('abdd73a9-6225-4140-a3e4-8089c77168bc');
 		});
 
 		test('chat/messages/create-to-user, show, react, unreact, and delete manage a 1-on-1 message lifecycle', async () => {
@@ -1610,123 +1592,117 @@ describe('Endpoints', () => {
 				{ text: 'hi', toUserId: unavailableRecipient.id },
 				sender,
 			);
-			assert.strictEqual(unavailable.status, 400);
-			assert.strictEqual(castAsError(unavailable.body as any).error.code, 'CHAT_NOT_AVAILABLE');
+			expect(unavailable.status).toBe(400);
+			expect(castAsError(unavailable.body as any).error.code).toBe('CHAT_NOT_AVAILABLE');
 			await api('blocking/create', { userId: sender.id }, unavailableRecipient);
 			const unavailableAndBlocked = await api(
 				'chat/messages/create-to-user',
 				{ text: 'hi', toUserId: unavailableRecipient.id },
 				sender,
 			);
-			assert.strictEqual(unavailableAndBlocked.status, 400);
-			assert.strictEqual(castAsError(unavailableAndBlocked.body as any).error.code, 'CHAT_NOT_AVAILABLE');
+			expect(unavailableAndBlocked.status).toBe(400);
+			expect(castAsError(unavailableAndBlocked.body as any).error.code).toBe('CHAT_NOT_AVAILABLE');
 			// chatScope はデフォルト 'mutual' のため、相互フォローを確立してからチャットする
 			await api('following/create', { userId: recipient.id }, sender);
 			await api('following/create', { userId: sender.id }, recipient);
 
 			const selfSend = await api('chat/messages/create-to-user', { text: 'hi', toUserId: sender.id }, sender);
-			assert.strictEqual(selfSend.status, 400);
-			assert.strictEqual(castAsError(selfSend.body as any).error.id, '17e2ba79-e22a-4cbc-bf91-d327643f4a7e');
+			expect(selfSend.status).toBe(400);
+			expect(castAsError(selfSend.body as any).error.id).toBe('17e2ba79-e22a-4cbc-bf91-d327643f4a7e');
 
 			const noContent = await api('chat/messages/create-to-user', { toUserId: recipient.id }, sender);
-			assert.strictEqual(noContent.status, 400);
-			assert.strictEqual(castAsError(noContent.body as any).error.id, '25587321-b0e6-449c-9239-f8925092942c');
+			expect(noContent.status).toBe(400);
+			expect(castAsError(noContent.body as any).error.id).toBe('25587321-b0e6-449c-9239-f8925092942c');
 
 			const noSuchUser = await api(
 				'chat/messages/create-to-user',
 				{ text: 'hi', toUserId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
 				sender,
 			);
-			assert.strictEqual(noSuchUser.status, 400);
-			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, '11795c64-40ea-4198-b06e-3c873ed9039d');
+			expect(noSuchUser.status).toBe(400);
+			expect(castAsError(noSuchUser.body as any).error.id).toBe('11795c64-40ea-4198-b06e-3c873ed9039d');
 
 			const noSuchReactionTarget = await api(
 				'chat/messages/react',
 				{ messageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', reaction: '👍' },
 				recipient,
 			);
-			assert.strictEqual(noSuchReactionTarget.status, 400);
-			assert.strictEqual(
-				castAsError(noSuchReactionTarget.body as any).error.id,
-				'9b5839b9-0ba0-4351-8c35-37082093d200',
-			);
+			expect(noSuchReactionTarget.status).toBe(400);
+			expect(castAsError(noSuchReactionTarget.body as any).error.id).toBe('9b5839b9-0ba0-4351-8c35-37082093d200');
 
 			const noSuchUnreactionTarget = await api(
 				'chat/messages/unreact',
 				{ messageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', reaction: '👍' },
 				recipient,
 			);
-			assert.strictEqual(noSuchUnreactionTarget.status, 400);
-			assert.strictEqual(
-				castAsError(noSuchUnreactionTarget.body as any).error.id,
-				'c39ea42f-e3ca-428a-ad57-390e0a711595',
-			);
+			expect(noSuchUnreactionTarget.status).toBe(400);
+			expect(castAsError(noSuchUnreactionTarget.body as any).error.id).toBe('c39ea42f-e3ca-428a-ad57-390e0a711595');
 
 			const created = await api(
 				'chat/messages/create-to-user',
 				{ text: 'hello there', toUserId: recipient.id },
 				sender,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.text, 'hello there');
-			assert.strictEqual(created.body.toUserId, recipient.id);
+			expect(created.status).toBe(200);
+			expect(created.body.text).toBe('hello there');
+			expect(created.body.toUserId).toBe(recipient.id);
 
 			const shownBySender = await api('chat/messages/show', { messageId: created.body.id }, sender);
-			assert.strictEqual(shownBySender.status, 200);
-			assert.strictEqual(shownBySender.body.fromUserId, sender.id);
+			expect(shownBySender.status).toBe(200);
+			expect(shownBySender.body.fromUserId).toBe(sender.id);
 
 			const outsider = await signup({ username: `chatoutsdr${suffix}` });
 			const shownByOutsider = await api('chat/messages/show', { messageId: created.body.id }, outsider);
-			assert.strictEqual(shownByOutsider.status, 400);
-			assert.strictEqual(castAsError(shownByOutsider.body as any).error.id, '3710865b-1848-4da9-8d61-cfed15510b93');
+			expect(shownByOutsider.status).toBe(400);
+			expect(castAsError(shownByOutsider.body as any).error.id).toBe('3710865b-1848-4da9-8d61-cfed15510b93');
 
 			const invalidReaction = await api(
 				'chat/messages/react',
 				{ messageId: created.body.id, reaction: 'not-an-emoji' },
 				recipient,
 			);
-			assert.strictEqual(invalidReaction.status, 400);
-			assert.strictEqual(castAsError(invalidReaction.body as any).error.code, 'INVALID_PARAM');
+			expect(invalidReaction.status).toBe(400);
+			expect(castAsError(invalidReaction.body as any).error.code).toBe('INVALID_PARAM');
 
 			const ownReaction = await api('chat/messages/react', { messageId: created.body.id, reaction: '👍' }, sender);
-			assert.strictEqual(ownReaction.status, 400);
-			assert.strictEqual(castAsError(ownReaction.body as any).error.id, '9b5839b9-0ba0-4351-8c35-37082093d200');
+			expect(ownReaction.status).toBe(400);
+			expect(castAsError(ownReaction.body as any).error.id).toBe('9b5839b9-0ba0-4351-8c35-37082093d200');
 
 			const reacted = await api('chat/messages/react', { messageId: created.body.id, reaction: '👍' }, recipient);
-			assert.strictEqual(reacted.status, 204);
+			expect(reacted.status).toBe(204);
 			const unreactedByOutsider = await api(
 				'chat/messages/unreact',
 				{ messageId: created.body.id, reaction: '👍' },
 				outsider,
 			);
-			assert.strictEqual(unreactedByOutsider.status, 400);
-			assert.strictEqual(castAsError(unreactedByOutsider.body as any).error.id, 'c39ea42f-e3ca-428a-ad57-390e0a711595');
+			expect(unreactedByOutsider.status).toBe(400);
+			expect(castAsError(unreactedByOutsider.body as any).error.id).toBe('c39ea42f-e3ca-428a-ad57-390e0a711595');
 
 			const shownAfterReact = await api('chat/messages/show', { messageId: created.body.id }, sender);
-			assert.strictEqual(shownAfterReact.status, 200);
-			assert.strictEqual(shownAfterReact.body.reactions.length, 1);
-			assert.strictEqual(getAt(shownAfterReact.body.reactions, 0).reaction, '👍');
+			expect(shownAfterReact.status).toBe(200);
+			expect(shownAfterReact.body.reactions.length).toBe(1);
+			expect(getAt(shownAfterReact.body.reactions, 0).reaction).toBe('👍');
 
 			const unreacted = await api('chat/messages/unreact', { messageId: created.body.id, reaction: '👍' }, recipient);
-			assert.strictEqual(unreacted.status, 204);
+			expect(unreacted.status).toBe(204);
 
 			const deleteByOther = await api('chat/messages/delete', { messageId: created.body.id }, recipient);
-			assert.strictEqual(deleteByOther.status, 400);
-			assert.strictEqual(castAsError(deleteByOther.body as any).error.id, '36b67f0e-66a6-414b-83df-992a55294f17');
+			expect(deleteByOther.status).toBe(400);
+			expect(castAsError(deleteByOther.body as any).error.id).toBe('36b67f0e-66a6-414b-83df-992a55294f17');
 
 			const deleted = await api('chat/messages/delete', { messageId: created.body.id }, sender);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			await api('i/update', { chatScope: 'everyone' }, recipient);
 			const blocked = await api('blocking/create', { userId: sender.id }, recipient);
-			assert.strictEqual(blocked.status, 200);
+			expect(blocked.status).toBe(200);
 			const sendAfterBlock = await api(
 				'chat/messages/create-to-user',
 				{ text: 'blocked', toUserId: recipient.id },
 				sender,
 			);
-			assert.strictEqual(sendAfterBlock.status, 400);
-			assert.strictEqual(castAsError(sendAfterBlock.body as any).error.id, 'c15a5199-7422-4968-941a-2a462c478f7d');
+			expect(sendAfterBlock.status).toBe(400);
+			expect(castAsError(sendAfterBlock.body as any).error.id).toBe('c15a5199-7422-4968-941a-2a462c478f7d');
 		});
 
 		test('chat/messages/user-timeline and chat/history reflect sent messages and read state', async () => {
@@ -1741,22 +1717,19 @@ describe('Endpoints', () => {
 				{ text: 'timeline message', toUserId: recipient.id },
 				sender,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const timeline = await api('chat/messages/user-timeline', { userId: recipient.id }, sender);
-			assert.strictEqual(timeline.status, 200);
-			assert.strictEqual(
-				(timeline.body as any[]).some((m) => m.id === created.body.id),
-				true,
-			);
+			expect(timeline.status).toBe(200);
+			expect((timeline.body as any[]).some((m) => m.id === created.body.id)).toBe(true);
 
 			const history = await api('chat/history', {}, sender);
-			assert.strictEqual(history.status, 200);
+			expect(history.status).toBe(200);
 			const historyEntry = (history.body as any[]).find((m) => m.id === created.body.id);
 			assert.ok(historyEntry);
 
 			const readAll = await api('chat/read-all', {}, recipient);
-			assert.strictEqual(readAll.status, 204);
+			expect(readAll.status).toBe(204);
 		});
 
 		test('chat/rooms lifecycle: create, invite, join, message, members, mute, and leave', async () => {
@@ -1767,131 +1740,113 @@ describe('Endpoints', () => {
 			const noSuchRoomId = 'zzzzzzzzzzzzzzzzzzzzzzzzzz';
 
 			const joinMissing = await api('chat/rooms/join', { roomId: noSuchRoomId }, invitee);
-			assert.strictEqual(joinMissing.status, 400);
-			assert.strictEqual(castAsError(joinMissing.body as any).error.id, '84416476-5ce8-4a2c-b568-9569f1b10733');
+			expect(joinMissing.status).toBe(400);
+			expect(castAsError(joinMissing.body as any).error.id).toBe('84416476-5ce8-4a2c-b568-9569f1b10733');
 
 			const leaveMissing = await api('chat/rooms/leave', { roomId: noSuchRoomId }, invitee);
-			assert.strictEqual(leaveMissing.status, 400);
-			assert.strictEqual(castAsError(leaveMissing.body as any).error.id, 'cb7f3179-50e8-4389-8c30-dbe2650a67c9');
+			expect(leaveMissing.status).toBe(400);
+			expect(castAsError(leaveMissing.body as any).error.id).toBe('cb7f3179-50e8-4389-8c30-dbe2650a67c9');
 
 			const muteMissing = await api('chat/rooms/mute', { roomId: noSuchRoomId, mute: true }, invitee);
-			assert.strictEqual(muteMissing.status, 400);
-			assert.strictEqual(castAsError(muteMissing.body as any).error.id, 'c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df');
+			expect(muteMissing.status).toBe(400);
+			expect(castAsError(muteMissing.body as any).error.id).toBe('c2cde4eb-8d0f-42f1-8f2f-c4d6bfc8e5df');
 
 			const room = await api(
 				'chat/rooms/create',
 				{ name: `hono-chat-room-${suffix}`, description: 'test room' },
 				owner,
 			);
-			assert.strictEqual(room.status, 200);
+			expect(room.status).toBe(200);
 			const missingInvitee = await api(
 				'chat/rooms/invitations/create',
 				{ roomId: room.body.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
 				owner,
 			);
-			assert.strictEqual(missingInvitee.status, 400);
-			assert.strictEqual(castAsError(missingInvitee.body as any).error.id, '0f451b9e-fc21-491a-b2bf-46331103a945');
-			assert.strictEqual(room.body.name, `hono-chat-room-${suffix}`);
+			expect(missingInvitee.status).toBe(400);
+			expect(castAsError(missingInvitee.body as any).error.id).toBe('0f451b9e-fc21-491a-b2bf-46331103a945');
+			expect(room.body.name).toBe(`hono-chat-room-${suffix}`);
 
 			const shown = await api('chat/rooms/show', { roomId: room.body.id }, owner);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, room.body.id);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(room.body.id);
 
 			const shownByOutsider = await api('chat/rooms/show', { roomId: room.body.id }, invitee);
-			assert.strictEqual(shownByOutsider.status, 400);
-			assert.strictEqual(castAsError(shownByOutsider.body as any).error.id, '857ae02f-8759-4d20-9adb-6e95fffe4fd7');
+			expect(shownByOutsider.status).toBe(400);
+			expect(castAsError(shownByOutsider.body as any).error.id).toBe('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
 
 			const owned = await api('chat/rooms/owned', {}, owner);
-			assert.strictEqual(owned.status, 200);
-			assert.strictEqual(
-				(owned.body as any[]).some((r) => r.id === room.body.id),
-				true,
-			);
+			expect(owned.status).toBe(200);
+			expect((owned.body as any[]).some((r) => r.id === room.body.id)).toBe(true);
 
 			const invitation = await api(
 				'chat/rooms/invitations/create',
 				{ roomId: room.body.id, userId: invitee.id },
 				owner,
 			);
-			assert.strictEqual(invitation.status, 200);
-			assert.strictEqual(invitation.body.userId, invitee.id);
+			expect(invitation.status).toBe(200);
+			expect(invitation.body.userId).toBe(invitee.id);
 			const parallelInvitations = await Promise.all([
 				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
 				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
 			]);
-			assert.strictEqual(parallelInvitations.filter((result) => result.status === 200).length, 1);
+			expect(parallelInvitations.filter((result) => result.status === 200).length).toBe(1);
 			const parallelDuplicate = parallelInvitations.find((result) => result.status === 400);
 			assert.ok(parallelDuplicate);
-			assert.strictEqual(castAsError(parallelDuplicate.body as any).error.code, 'CANNOT_CREATE_INVITATION');
+			expect(castAsError(parallelDuplicate.body as any).error.code).toBe('CANNOT_CREATE_INVITATION');
 			const [parallelJoin, invitationDuringJoin] = await Promise.all([
 				api('chat/rooms/join', { roomId: room.body.id }, parallelInvitee),
 				api('chat/rooms/invitations/create', { roomId: room.body.id, userId: parallelInvitee.id }, owner),
 			]);
-			assert.strictEqual(parallelJoin.status, 204);
-			assert.strictEqual(invitationDuringJoin.status, 400);
-			assert.strictEqual(castAsError(invitationDuringJoin.body as any).error.code, 'CANNOT_CREATE_INVITATION');
+			expect(parallelJoin.status).toBe(204);
+			expect(invitationDuringJoin.status).toBe(400);
+			expect(castAsError(invitationDuringJoin.body as any).error.code).toBe('CANNOT_CREATE_INVITATION');
 
 			const duplicateInvitation = await api(
 				'chat/rooms/invitations/create',
 				{ roomId: room.body.id, userId: invitee.id },
 				owner,
 			);
-			assert.strictEqual(duplicateInvitation.status, 400);
-			assert.strictEqual(castAsError(duplicateInvitation.body as any).error.code, 'CANNOT_CREATE_INVITATION');
+			expect(duplicateInvitation.status).toBe(400);
+			expect(castAsError(duplicateInvitation.body as any).error.code).toBe('CANNOT_CREATE_INVITATION');
 
 			const selfInvitation = await api(
 				'chat/rooms/invitations/create',
 				{ roomId: room.body.id, userId: owner.id },
 				owner,
 			);
-			assert.strictEqual(selfInvitation.status, 400);
-			assert.strictEqual(castAsError(selfInvitation.body as any).error.code, 'INVALID_PARAM');
+			expect(selfInvitation.status).toBe(400);
+			expect(castAsError(selfInvitation.body as any).error.code).toBe('INVALID_PARAM');
 
 			const outbox = await api('chat/rooms/invitations/outbox', { roomId: room.body.id }, owner);
-			assert.strictEqual(outbox.status, 200);
-			assert.strictEqual(
-				(outbox.body as any[]).some((i) => i.id === invitation.body.id),
-				true,
-			);
+			expect(outbox.status).toBe(200);
+			expect((outbox.body as any[]).some((i) => i.id === invitation.body.id)).toBe(true);
 
 			const inbox = await api('chat/rooms/invitations/inbox', {}, invitee);
-			assert.strictEqual(inbox.status, 200);
-			assert.strictEqual(
-				(inbox.body as any[]).some((i) => i.id === invitation.body.id),
-				true,
-			);
+			expect(inbox.status).toBe(200);
+			expect((inbox.body as any[]).some((i) => i.id === invitation.body.id)).toBe(true);
 
 			const joined = await api('chat/rooms/join', { roomId: room.body.id }, invitee);
-			assert.strictEqual(joined.status, 204);
+			expect(joined.status).toBe(204);
 
 			const joining = await api('chat/rooms/joining', {}, invitee);
-			assert.strictEqual(joining.status, 200);
-			assert.strictEqual(
-				(joining.body as any[]).some((m) => m.roomId === room.body.id),
-				true,
-			);
+			expect(joining.status).toBe(200);
+			expect((joining.body as any[]).some((m) => m.roomId === room.body.id)).toBe(true);
 
 			const roomMessage = await api(
 				'chat/messages/create-to-room',
 				{ text: 'hello room', toRoomId: room.body.id },
 				owner,
 			);
-			assert.strictEqual(roomMessage.status, 200);
-			assert.strictEqual(roomMessage.body.toRoomId, room.body.id);
+			expect(roomMessage.status).toBe(200);
+			expect(roomMessage.body.toRoomId).toBe(room.body.id);
 
 			const roomTimeline = await api('chat/messages/room-timeline', { roomId: room.body.id }, invitee);
-			assert.strictEqual(roomTimeline.status, 200);
-			assert.strictEqual(
-				(roomTimeline.body as any[]).some((m) => m.id === roomMessage.body.id),
-				true,
-			);
+			expect(roomTimeline.status).toBe(200);
+			expect((roomTimeline.body as any[]).some((m) => m.id === roomMessage.body.id)).toBe(true);
 
 			const members = await api('chat/rooms/members', { roomId: room.body.id }, owner);
-			assert.strictEqual(members.status, 200);
-			assert.strictEqual(
-				(members.body as any[]).some((m) => m.user.id === invitee.id),
-				true,
-			);
+			expect(members.status).toBe(200);
+			expect((members.body as any[]).some((m) => m.user.id === invitee.id)).toBe(true);
 
 			// chat/rooms/members は write:chat を要求し、read:chat では利用できない。
 			const readOnlyToken = await createAppToken(owner, ['read:chat']);
@@ -1900,35 +1855,32 @@ describe('Endpoints', () => {
 				{ roomId: room.body.id },
 				{ token: readOnlyToken },
 			);
-			assert.strictEqual(membersWithReadOnlyToken.status, 403);
+			expect(membersWithReadOnlyToken.status).toBe(403);
 
 			const muted = await api('chat/rooms/mute', { roomId: room.body.id, mute: true }, invitee);
-			assert.strictEqual(muted.status, 204);
+			expect(muted.status).toBe(204);
 
 			const searchResult = await api('chat/messages/search', { query: 'hello room', roomId: room.body.id }, owner);
-			assert.strictEqual(searchResult.status, 200);
-			assert.strictEqual(
-				(searchResult.body as any[]).some((m) => m.id === roomMessage.body.id),
-				true,
-			);
+			expect(searchResult.status).toBe(200);
+			expect((searchResult.body as any[]).some((m) => m.id === roomMessage.body.id)).toBe(true);
 
 			const updated = await api(
 				'chat/rooms/update',
 				{ roomId: room.body.id, name: `hono-chat-room-renamed-${suffix}` },
 				owner,
 			);
-			assert.strictEqual(updated.status, 200);
-			assert.strictEqual(updated.body.name, `hono-chat-room-renamed-${suffix}`);
+			expect(updated.status).toBe(200);
+			expect(updated.body.name).toBe(`hono-chat-room-renamed-${suffix}`);
 
 			const left = await api('chat/rooms/leave', { roomId: room.body.id }, invitee);
-			assert.strictEqual(left.status, 204);
+			expect(left.status).toBe(204);
 
 			const deniedDelete = await api('chat/rooms/delete', { roomId: room.body.id }, invitee);
-			assert.strictEqual(deniedDelete.status, 400);
-			assert.strictEqual(castAsError(deniedDelete.body as any).error.id, 'd4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
+			expect(deniedDelete.status).toBe(400);
+			expect(castAsError(deniedDelete.body as any).error.id).toBe('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
 
 			const deleted = await api('chat/rooms/delete', { roomId: room.body.id }, owner);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 		});
 
 		test('chat/rooms/invitations/ignore lets a user decline without joining', async () => {
@@ -1941,32 +1893,29 @@ describe('Endpoints', () => {
 				{ roomId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
 				invitee,
 			);
-			assert.strictEqual(ignoreMissing.status, 400);
-			assert.strictEqual(castAsError(ignoreMissing.body as any).error.id, '5130557e-5a11-4cfb-9cc5-fe60cda5de0d');
+			expect(ignoreMissing.status).toBe(400);
+			expect(castAsError(ignoreMissing.body as any).error.id).toBe('5130557e-5a11-4cfb-9cc5-fe60cda5de0d');
 
 			const room = await api('chat/rooms/create', { name: `hono-ignore-room-${suffix}` }, owner);
-			assert.strictEqual(room.status, 200);
+			expect(room.status).toBe(200);
 
 			const invitation = await api(
 				'chat/rooms/invitations/create',
 				{ roomId: room.body.id, userId: invitee.id },
 				owner,
 			);
-			assert.strictEqual(invitation.status, 200);
+			expect(invitation.status).toBe(200);
 
 			const ignored = await api('chat/rooms/invitations/ignore', { roomId: room.body.id }, invitee);
-			assert.strictEqual(ignored.status, 204);
+			expect(ignored.status).toBe(204);
 
 			// ignore 済みの招待は既定の一覧（ignored: false）から除外されるが、招待自体は取り消されない。
 			const inboxAfterIgnore = await api('chat/rooms/invitations/inbox', {}, invitee);
-			assert.strictEqual(inboxAfterIgnore.status, 200);
-			assert.strictEqual(
-				(inboxAfterIgnore.body as any[]).some((i) => i.id === invitation.body.id),
-				false,
-			);
+			expect(inboxAfterIgnore.status).toBe(200);
+			expect((inboxAfterIgnore.body as any[]).some((i) => i.id === invitation.body.id)).toBe(false);
 
 			const joinAfterIgnore = await api('chat/rooms/join', { roomId: room.body.id }, invitee);
-			assert.strictEqual(joinAfterIgnore.status, 204);
+			expect(joinAfterIgnore.status).toBe(204);
 		});
 
 		test('hashtags/users finds users tagged with the given hashtag', async () => {
@@ -1979,18 +1928,15 @@ describe('Endpoints', () => {
 				tag,
 				sort: '+follower',
 			});
-			assert.strictEqual(found.status, 200);
-			assert.strictEqual(
-				(found.body as any[]).some((u) => u.id === tagged.id),
-				true,
-			);
+			expect(found.status).toBe(200);
+			expect((found.body as any[]).some((u) => u.id === tagged.id)).toBe(true);
 
 			const notFound = await api('hashtags/users', {
 				tag: `missing_${tag}`,
 				sort: '+follower',
 			});
-			assert.strictEqual(notFound.status, 200);
-			assert.strictEqual((notFound.body as any[]).length, 0);
+			expect(notFound.status).toBe(200);
+			expect((notFound.body as any[]).length).toBe(0);
 		});
 
 		test('trend returns Redis-backed hashtag ranking charts', async () => {
@@ -2008,10 +1954,10 @@ describe('Endpoints', () => {
 				await redis.pfadd(`hashtagUsers:${tag}:${chartWindow}`, alice.id, bob.id);
 
 				const trend = await api('hashtags/trend', {});
-				assert.strictEqual(trend.status, 200);
+				expect(trend.status).toBe(200);
 				const ranked = trend.body.find((item) => item.tag === tag);
 				assert.ok(ranked);
-				assert.strictEqual(ranked.chart.length, 20);
+				expect(ranked.chart.length).toBe(20);
 				assert.ok(ranked.usersCount >= 1);
 			} finally {
 				await redis.zrem(`featuredHashtagsRanking:${rankingWindow}`, tag);
@@ -2058,14 +2004,14 @@ describe('Endpoints', () => {
 			});
 
 			const res = await api('get-avatar-decorations', {});
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const listed = res.body.find((item) => item.id === decoration.id);
 			assert.ok(listed);
-			assert.strictEqual(listed.name, decoration.name);
-			assert.strictEqual(listed.description, decoration.description);
-			assert.strictEqual(listed.url, decoration.url);
-			assert.deepStrictEqual(listed.roleIdsThatCanBeUsedThisDecoration, [createdRole.id]);
-			assert.strictEqual(listed.category, decoration.category);
+			expect(listed.name).toBe(decoration.name);
+			expect(listed.description).toBe(decoration.description);
+			expect(listed.url).toBe(decoration.url);
+			expect(listed.roleIdsThatCanBeUsedThisDecoration).toStrictEqual([createdRole.id]);
+			expect(listed.category).toBe(decoration.category);
 		});
 	});
 
@@ -2128,8 +2074,8 @@ describe('Endpoints', () => {
 				sort: '+followers',
 			});
 			const instances = await relativeFetch(`api/federation/instances?${instancesQuery.toString()}`);
-			assert.strictEqual(instances.status, 200);
-			assert.strictEqual(instances.headers.get('cache-control'), 'public, max-age=3600');
+			expect(instances.status).toBe(200);
+			expect(instances.headers.get('cache-control')).toBe('public, max-age=3600');
 
 			const instancesBody = (await instances.json()) as {
 				id?: unknown;
@@ -2145,24 +2091,24 @@ describe('Endpoints', () => {
 			}[];
 			const listedAlpha = instancesBody.find((instance) => instance.id === alpha.id);
 			assert.ok(listedAlpha);
-			assert.strictEqual(listedAlpha.host, alpha.host);
-			assert.strictEqual(listedAlpha.name, alpha.name);
-			assert.strictEqual(listedAlpha.followersCount, alpha.followersCount);
-			assert.strictEqual(listedAlpha.isSuspended, false);
-			assert.strictEqual(listedAlpha.suspensionState, 'none');
-			assert.strictEqual(listedAlpha.softwareName, alpha.softwareName);
-			assert.strictEqual(listedAlpha.infoUpdatedAt, alpha.infoUpdatedAt?.toISOString());
-			assert.strictEqual(listedAlpha.latestRequestReceivedAt, alpha.latestRequestReceivedAt?.toISOString());
-			assert.strictEqual(listedAlpha.moderationNote, null);
+			expect(listedAlpha.host).toBe(alpha.host);
+			expect(listedAlpha.name).toBe(alpha.name);
+			expect(listedAlpha.followersCount).toBe(alpha.followersCount);
+			expect(listedAlpha.isSuspended).toBe(false);
+			expect(listedAlpha.suspensionState).toBe('none');
+			expect(listedAlpha.softwareName).toBe(alpha.softwareName);
+			expect(listedAlpha.infoUpdatedAt).toBe(alpha.infoUpdatedAt?.toISOString());
+			expect(listedAlpha.latestRequestReceivedAt).toBe(alpha.latestRequestReceivedAt?.toISOString());
+			expect(listedAlpha.moderationNote).toBe(null);
 
 			const shown = await api('federation/show-instance', { host: alpha.host.toUpperCase() });
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body?.id, alpha.id);
-			assert.strictEqual(shown.body?.host, alpha.host);
+			expect(shown.status).toBe(200);
+			expect(shown.body?.id).toBe(alpha.id);
+			expect(shown.body?.host).toBe(alpha.host);
 
 			const stats = await relativeFetch('api/federation/stats?limit=1');
-			assert.strictEqual(stats.status, 200);
-			assert.strictEqual(stats.headers.get('cache-control'), 'public, max-age=3600');
+			expect(stats.status).toBe(200);
+			expect(stats.headers.get('cache-control')).toBe('public, max-age=3600');
 
 			const statsBody = (await stats.json()) as {
 				topSubInstances?: { id?: unknown }[];
@@ -2170,10 +2116,10 @@ describe('Endpoints', () => {
 				otherFollowersCount?: unknown;
 				otherFollowingCount?: unknown;
 			};
-			assert.strictEqual(statsBody.topSubInstances?.[0]?.id, alpha.id);
-			assert.strictEqual(statsBody.topPubInstances?.[0]?.id, beta.id);
-			assert.strictEqual(typeof statsBody.otherFollowersCount, 'number');
-			assert.strictEqual(typeof statsBody.otherFollowingCount, 'number');
+			expect(statsBody.topSubInstances?.[0]?.id).toBe(alpha.id);
+			expect(statsBody.topPubInstances?.[0]?.id).toBe(beta.id);
+			expect(typeof statsBody.otherFollowersCount).toBe('number');
+			expect(typeof statsBody.otherFollowingCount).toBe('number');
 		});
 
 		test('admin/federation/update-instance は suspension、moderationNote、token scope、role、ログを維持する', async () => {
@@ -2197,12 +2143,12 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(suspended.status, 204);
+			expect(suspended.status).toBe(204);
 
 			let after = await fetchInstanceByHostFromDatabase(db, host);
 			assert.ok(after);
-			assert.strictEqual(after.suspensionState, 'manuallySuspended');
-			assert.strictEqual(after.moderationNote, `updated note ${suffix}`);
+			expect(after.suspensionState).toBe('manuallySuspended');
+			expect(after.moderationNote).toBe(`updated note ${suffix}`);
 
 			for (let i = 0; i < 10; i++) {
 				const [suspendLogs, noteLogs] = await Promise.all([
@@ -2220,17 +2166,11 @@ describe('Endpoints', () => {
 					}),
 				]);
 				if (suspendLogs.length > 0 && noteLogs.length > 0) {
-					assert.strictEqual(
-						suspendLogs.some((log) => (log.info as any).host === host),
-						true,
-					);
-					assert.strictEqual(
-						noteLogs.some(
+					expect(suspendLogs.some((log) => (log.info as any).host === host)).toBe(true);
+					expect(noteLogs.some(
 							(log) =>
 								(log.info as any).before === 'before update' && (log.info as any).after === `updated note ${suffix}`,
-						),
-						true,
-					);
+						)).toBe(true);
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
@@ -2246,21 +2186,21 @@ describe('Endpoints', () => {
 				},
 				{ token },
 			);
-			assert.strictEqual(unsuspended.status, 204);
+			expect(unsuspended.status).toBe(204);
 			after = await fetchInstanceByHostFromDatabase(db, host);
 			assert.ok(after);
-			assert.strictEqual(after.suspensionState, 'none');
-			assert.strictEqual(after.moderationNote, `updated note ${suffix}`);
+			expect(after.suspensionState).toBe('none');
+			expect(after.moderationNote).toBe(`updated note ${suffix}`);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api('admin/federation/update-instance', { host }, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `haf${suffix}` });
 			const roleDenied = await api('admin/federation/update-instance', { host }, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 
 		test('admin/federation/refresh-remote-instance-metadata は即時応答、token scope、roleを維持する', async () => {
@@ -2281,7 +2221,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(refreshed.status, 204);
+			expect(refreshed.status).toBe(204);
 
 			const token = await createAppToken(alice, ['write:admin:federation']);
 			const refreshedByToken = await api(
@@ -2291,7 +2231,7 @@ describe('Endpoints', () => {
 				},
 				{ token },
 			);
-			assert.strictEqual(refreshedByToken.status, 204);
+			expect(refreshedByToken.status).toBe(204);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api(
@@ -2299,13 +2239,13 @@ describe('Endpoints', () => {
 				{ host },
 				{ token: wrongScopeToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `harf${suffix}` });
 			const roleDenied = await api('admin/federation/refresh-remote-instance-metadata', { host }, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 
 		test('admin/federation/remove-all-following は remote follower の unfollow job を作る', async () => {
@@ -2322,7 +2262,7 @@ describe('Endpoints', () => {
 			});
 
 			const removed = await api('admin/federation/remove-all-following', { host }, alice);
-			assert.strictEqual(removed.status, 204);
+			expect(removed.status).toBe(204);
 
 			let job: Bull.Job<RelationshipJobData> | undefined;
 			for (let i = 0; i < 10; i++) {
@@ -2342,8 +2282,8 @@ describe('Endpoints', () => {
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api('admin/federation/remove-all-following', { host }, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 		});
 
 		test('federation/users はhostでフィルタしUserDetailedNotMeを返す', async () => {
@@ -2368,15 +2308,15 @@ describe('Endpoints', () => {
 			});
 
 			const users = await api('federation/users', { host });
-			assert.strictEqual(users.status, 200);
-			assert.strictEqual(users.body.length, 1);
-			assert.strictEqual(getAt(users.body, 0).id, remoteUser.id);
-			assert.strictEqual(getAt(users.body, 0).host, host);
-			assert.strictEqual('email' in getAt(users.body, 0), false);
+			expect(users.status).toBe(200);
+			expect(users.body.length).toBe(1);
+			expect(getAt(users.body, 0).id).toBe(remoteUser.id);
+			expect(getAt(users.body, 0).host).toBe(host);
+			expect('email' in getAt(users.body, 0)).toBe(false);
 
 			const empty = await api('federation/users', { host: `hono-fed-users-none-${suffix}.example` });
-			assert.strictEqual(empty.status, 200);
-			assert.strictEqual(empty.body.length, 0);
+			expect(empty.status).toBe(200);
+			expect(empty.body.length).toBe(0);
 		});
 
 		test('federation/followers と federation/following はhostでフィルタしFollowingを返す', async () => {
@@ -2401,18 +2341,18 @@ describe('Endpoints', () => {
 			});
 
 			const followers = await api('federation/followers', { host: remoteFolloweeHost });
-			assert.strictEqual(followers.status, 200);
-			assert.strictEqual(followers.body.length, 1);
-			assert.strictEqual(followers.body[0]!.followerId, follower.id);
-			assert.strictEqual(followers.body[0]!.followeeId, followee.id);
-			assert.strictEqual(followers.body[0]!.followee!.id, followee.id);
+			expect(followers.status).toBe(200);
+			expect(followers.body.length).toBe(1);
+			expect(followers.body[0]!.followerId).toBe(follower.id);
+			expect(followers.body[0]!.followeeId).toBe(followee.id);
+			expect(followers.body[0]!.followee!.id).toBe(followee.id);
 
 			const following = await api('federation/following', { host: remoteFollowerHost });
-			assert.strictEqual(following.status, 200);
-			assert.strictEqual(following.body.length, 1);
-			assert.strictEqual(following.body[0]!.followerId, followee.id);
-			assert.strictEqual(following.body[0]!.followeeId, follower.id);
-			assert.strictEqual(following.body[0]!.followee!.id, follower.id);
+			expect(following.status).toBe(200);
+			expect(following.body.length).toBe(1);
+			expect(following.body[0]!.followerId).toBe(followee.id);
+			expect(following.body[0]!.followeeId).toBe(follower.id);
+			expect(following.body[0]!.followee!.id).toBe(follower.id);
 		});
 	});
 
@@ -2424,29 +2364,29 @@ describe('Endpoints', () => {
 			const noteUri = `${config.instance.url}/notes/${note.id}`;
 
 			const noteRes = await api('ap/get', { uri: noteUri }, alice);
-			assert.strictEqual(noteRes.status, 200);
-			assert.strictEqual(noteRes.body['type'], 'Note');
-			assert.strictEqual(noteRes.body['id'], noteUri);
+			expect(noteRes.status).toBe(200);
+			expect(noteRes.body['type']).toBe('Note');
+			expect(noteRes.body['id']).toBe(noteUri);
 			const content: unknown = Reflect.get(noteRes.body, 'content');
 			if (typeof content !== 'string') throw new Error('ActivityPub Note content is missing');
 			assert.ok(content.includes('ap/get resolve target'));
 
 			const userUri = `${config.instance.url}/users/${alice.id}`;
 			const userRes = await api('ap/get', { uri: userUri }, alice);
-			assert.strictEqual(userRes.status, 200);
-			assert.strictEqual(userRes.body['type'], 'Person');
-			assert.strictEqual(userRes.body['id'], userUri);
-			assert.strictEqual(userRes.body['preferredUsername'], alice.username);
+			expect(userRes.status).toBe(200);
+			expect(userRes.body['type']).toBe('Person');
+			expect(userRes.body['id']).toBe(userUri);
+			expect(userRes.body['preferredUsername']).toBe(alice.username);
 
 			const scopeDeniedToken = await createAppToken(alice, ['read:account']);
 			const scopeDenied = await api('ap/get', { uri: noteUri }, { token: scopeDeniedToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honoapget${Date.now().toString(36)}` });
 			const roleDenied = await api('ap/get', { uri: noteUri }, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 
 		test('questions/likes/followsのローカルURIも解決できる', async () => {
@@ -2475,18 +2415,15 @@ describe('Endpoints', () => {
 			});
 			const questionUri = `${config.instance.url}/questions/${pollNoteId}`;
 			const questionRes = await api('ap/get', { uri: questionUri }, alice);
-			assert.strictEqual(questionRes.status, 200);
-			assert.strictEqual(questionRes.body['type'], 'Question');
-			assert.strictEqual(questionRes.body['id'], questionUri);
+			expect(questionRes.status).toBe(200);
+			expect(questionRes.body['type']).toBe('Question');
+			expect(questionRes.body['id']).toBe(questionUri);
 			const choices: unknown = Reflect.get(questionRes.body, 'oneOf');
 			if (!Array.isArray(choices)) throw new Error('ActivityPub Question choices are missing');
-			assert.deepStrictEqual(
-				choices.map((choice: unknown) => {
+			expect(choices.map((choice: unknown) => {
 					assert.ok(typeof choice === 'object' && choice != null);
 					return Reflect.get(choice, 'name');
-				}),
-				['a', 'b'],
-			);
+				})).toStrictEqual(['a', 'b']);
 
 			const likeNote = await post(alice, { text: 'ap/get like target' });
 			const reactionId = genId(now + 1);
@@ -2498,10 +2435,10 @@ describe('Endpoints', () => {
 			});
 			const likeUri = `${config.instance.url}/likes/${reactionId}`;
 			const likeRes = await api('ap/get', { uri: likeUri }, alice);
-			assert.strictEqual(likeRes.status, 200);
-			assert.strictEqual(likeRes.body['type'], 'Like');
-			assert.strictEqual(likeRes.body['id'], likeUri);
-			assert.strictEqual(likeRes.body['object'], `${config.instance.url}/notes/${likeNote.id}`);
+			expect(likeRes.status).toBe(200);
+			expect(likeRes.body['type']).toBe('Like');
+			expect(likeRes.body['id']).toBe(likeUri);
+			expect(likeRes.body['object']).toBe(`${config.instance.url}/notes/${likeNote.id}`);
 
 			const remoteHost = `ap-get-remote-${suffix}.example`;
 			const remoteFolloweeId = genId(now + 2);
@@ -2526,11 +2463,11 @@ describe('Endpoints', () => {
 			});
 			const followUri = `${config.instance.url}/follows/${followRequest.id}`;
 			const followRes = await api('ap/get', { uri: followUri }, alice);
-			assert.strictEqual(followRes.status, 200);
-			assert.strictEqual(followRes.body['type'], 'Follow');
-			assert.strictEqual(followRes.body['id'], followUri);
-			assert.strictEqual(followRes.body['actor'], `${config.instance.url}/users/${alice.id}`);
-			assert.strictEqual(followRes.body['object'], remoteFollowee.uri);
+			expect(followRes.status).toBe(200);
+			expect(followRes.body['type']).toBe('Follow');
+			expect(followRes.body['id']).toBe(followUri);
+			expect(followRes.body['actor']).toBe(`${config.instance.url}/users/${alice.id}`);
+			expect(followRes.body['object']).toBe(remoteFollowee.uri);
 		});
 	});
 
@@ -2549,7 +2486,7 @@ describe('Endpoints', () => {
 			// 変更してキャッシュ無効化イベントを発行させる。
 			const originalMeta = await fetchMetaFromDatabase(db);
 			const disableSigning = await api('admin/update-meta', { signToActivityPubGet: false }, alice);
-			assert.strictEqual(disableSigning.status, 204);
+			expect(disableSigning.status).toBe(204);
 			const onePixelPng = Buffer.from(
 				'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
 				'base64',
@@ -2622,18 +2559,18 @@ describe('Endpoints', () => {
 				});
 
 				const res = await api('federation/update-remote-user', { userId: remoteUser.id });
-				assert.strictEqual(res.status, 204, JSON.stringify(res.body));
+				expect(res.status, JSON.stringify(res.body)).toBe(204);
 
 				const updated = await fetchUserByIdOrFailFromDatabase(db, remoteUser.id);
-				assert.strictEqual(updated.name, 'Updated Remote Name');
-				assert.strictEqual(updated.isLocked, true);
+				expect(updated.name).toBe('Updated Remote Name');
+				expect(updated.isLocked).toBe(true);
 				assert.ok(updated.avatarId != null);
 				assert.ok(updated.avatarUrl != null);
 
 				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, remoteUser.id);
-				assert.strictEqual(profile.description, 'updated bio');
-				assert.strictEqual(profile.followingVisibility, 'public');
-				assert.strictEqual(profile.followersVisibility, 'public');
+				expect(profile.description).toBe('updated bio');
+				expect(profile.followingVisibility).toBe('public');
+				expect(profile.followersVisibility).toBe('public');
 			} finally {
 				actorServer?.close();
 				await api('admin/update-meta', { signToActivityPubGet: originalMeta.signToActivityPubGet }, alice);
@@ -2642,14 +2579,14 @@ describe('Endpoints', () => {
 
 		test('存在しないuserIdは500ではなくNO_SUCH_USERを返す', async () => {
 			const res = await api('federation/update-remote-user', { userId: '000000000000000000000000' });
-			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
-			assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_USER');
+			expect(res.status, JSON.stringify(res.body)).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('NO_SUCH_USER');
 		});
 
 		test('ローカルユーザーを指定すると500ではなくNOT_REMOTE_USERを返す', async () => {
 			const res = await api('federation/update-remote-user', { userId: alice.id });
-			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
-			assert.strictEqual(castAsError(res.body as any).error.code, 'NOT_REMOTE_USER');
+			expect(res.status, JSON.stringify(res.body)).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('NOT_REMOTE_USER');
 		});
 	});
 
@@ -2658,15 +2595,15 @@ describe('Endpoints', () => {
 			const config = fixtureConfig;
 
 			const userRes = await api('ap/show', { uri: `${config.instance.url}/users/${alice.id}` }, alice);
-			assert.strictEqual(userRes.status, 200);
-			assert.strictEqual(userRes.body.type, 'User');
-			assert.strictEqual(userRes.body.object.id, alice.id);
+			expect(userRes.status).toBe(200);
+			expect(userRes.body.type).toBe('User');
+			expect(userRes.body.object.id).toBe(alice.id);
 
 			const note = await post(alice, { text: 'ap/show local note target' });
 			const noteRes = await api('ap/show', { uri: `${config.instance.url}/notes/${note.id}` }, alice);
-			assert.strictEqual(noteRes.status, 200);
-			assert.strictEqual(noteRes.body.type, 'Note');
-			assert.strictEqual(noteRes.body.object.id, note.id);
+			expect(noteRes.status).toBe(200);
+			expect(noteRes.body.type).toBe('Note');
+			expect(noteRes.body.object.id).toBe(note.id);
 		});
 
 		test('連合が許可されていないホストはFEDERATION_NOT_ALLOWEDを維持する', async () => {
@@ -2677,9 +2614,9 @@ describe('Endpoints', () => {
 			await api('admin/update-meta', { blockedHosts: [...before.body.blockedHosts, blockedHost] }, alice);
 			try {
 				const res = await api('ap/show', { uri: `https://${blockedHost}/users/someone` }, alice);
-				assert.strictEqual(res.status, 400);
-				assert.strictEqual(castAsError(res.body as any).error.code, 'FEDERATION_NOT_ALLOWED');
-				assert.strictEqual(castAsError(res.body as any).error.id, '974b799e-1a29-4889-b706-18d4dd93e266');
+				expect(res.status).toBe(400);
+				expect(castAsError(res.body as any).error.code).toBe('FEDERATION_NOT_ALLOWED');
+				expect(castAsError(res.body as any).error.id).toBe('974b799e-1a29-4889-b706-18d4dd93e266');
 			} finally {
 				await api('admin/update-meta', { blockedHosts: before.body.blockedHosts }, alice);
 			}
@@ -2687,9 +2624,9 @@ describe('Endpoints', () => {
 
 		test('フラグメント付きURIはURI_INVALIDを維持する', async () => {
 			const res = await api('ap/show', { uri: 'https://ap-show-fragment-test.example/users/someone#fragment' }, alice);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.code, 'URI_INVALID');
-			assert.strictEqual(castAsError(res.body as any).error.id, '1a5eab56-e47b-48c2-8d5e-217b897d70db');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('URI_INVALID');
+			expect(castAsError(res.body as any).error.id).toBe('1a5eab56-e47b-48c2-8d5e-217b897d70db');
 		});
 
 		test('未知のリモートUser/Noteを新規作成して返す', async () => {
@@ -2698,7 +2635,7 @@ describe('Endpoints', () => {
 
 			const originalMeta = await fetchMetaFromDatabase(db);
 			const disableSigning = await api('admin/update-meta', { signToActivityPubGet: false }, alice);
-			assert.strictEqual(disableSigning.status, 204);
+			expect(disableSigning.status).toBe(204);
 
 			let server: Server | undefined;
 			let actorUri = '';
@@ -2744,20 +2681,20 @@ describe('Endpoints', () => {
 				noteUri = `http://${host}/notes/note${suffix}`;
 
 				const userRes = await api('ap/show', { uri: actorUri }, alice);
-				assert.strictEqual(userRes.status, 200, JSON.stringify(userRes.body));
+				expect(userRes.status, JSON.stringify(userRes.body)).toBe(200);
 				assert.strictEqual(userRes.body.type, 'User');
-				assert.strictEqual(userRes.body.object.username, `apshowremote${suffix}`);
-				assert.strictEqual(userRes.body.object.host, host);
+				expect(userRes.body.object.username).toBe(`apshowremote${suffix}`);
+				expect(userRes.body.object.host).toBe(host);
 
 				const noteRes = await api('ap/show', { uri: noteUri }, alice);
-				assert.strictEqual(noteRes.status, 200);
+				expect(noteRes.status).toBe(200);
 				assert.strictEqual(noteRes.body.type, 'Note');
 				assert.ok((noteRes.body.object.text as string)?.includes('ap/show remote note'));
-				assert.strictEqual(noteRes.body.object.user.username, `apshowremote${suffix}`);
+				expect(noteRes.body.object.user.username).toBe(`apshowremote${suffix}`);
 
 				const createdNote = await fetchNoteByIdFromDatabase(db, noteRes.body.object.id);
-				assert.strictEqual(createdNote?.uri, noteUri);
-				assert.strictEqual(createdNote?.visibility, 'public');
+				expect(createdNote?.uri).toBe(noteUri);
+				expect(createdNote?.visibility).toBe('public');
 			} finally {
 				server?.close();
 				await api('admin/update-meta', { signToActivityPubGet: originalMeta.signToActivityPubGet }, alice);
@@ -2829,29 +2766,26 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(listed.status, 200);
+			expect(listed.status).toBe(200);
 			const localFiles = listed.body as any[];
-			assert.deepStrictEqual(
-				localFiles.map((file) => file.id),
-				[firstLocal.id, secondLocal.id],
-			);
-			assert.strictEqual(typeof localFiles[0].createdAt, 'string');
-			assert.strictEqual(localFiles[0].name, firstLocal.name);
-			assert.strictEqual(localFiles[0].type, fileType);
-			assert.strictEqual(localFiles[0].md5, firstMd5);
-			assert.strictEqual(localFiles[0].size, 101);
-			assert.strictEqual(localFiles[0].isSensitive, false);
-			assert.strictEqual(localFiles[0].blurhash, null);
-			assert.deepStrictEqual(localFiles[0].properties, { width: 30, height: 40, orientation: 6 });
-			assert.strictEqual(localFiles[0].url, firstLocal.url);
-			assert.strictEqual(localFiles[0].thumbnailUrl, firstLocal.thumbnailUrl);
-			assert.strictEqual(localFiles[0].comment, `first local ${suffix}`);
-			assert.strictEqual(localFiles[0].folderId, folder.id);
-			assert.strictEqual(localFiles[0].folder.id, folder.id);
-			assert.strictEqual(localFiles[0].folder.name, folder.name);
-			assert.strictEqual(localFiles[0].folder.filesCount, 1);
-			assert.strictEqual(localFiles[0].userId, bob.id);
-			assert.strictEqual(localFiles[0].user.id, bob.id);
+			expect(localFiles.map((file) => file.id)).toStrictEqual([firstLocal.id, secondLocal.id]);
+			expect(typeof localFiles[0].createdAt).toBe('string');
+			expect(localFiles[0].name).toBe(firstLocal.name);
+			expect(localFiles[0].type).toBe(fileType);
+			expect(localFiles[0].md5).toBe(firstMd5);
+			expect(localFiles[0].size).toBe(101);
+			expect(localFiles[0].isSensitive).toBe(false);
+			expect(localFiles[0].blurhash).toBe(null);
+			expect(localFiles[0].properties).toStrictEqual({ width: 30, height: 40, orientation: 6 });
+			expect(localFiles[0].url).toBe(firstLocal.url);
+			expect(localFiles[0].thumbnailUrl).toBe(firstLocal.thumbnailUrl);
+			expect(localFiles[0].comment).toBe(`first local ${suffix}`);
+			expect(localFiles[0].folderId).toBe(folder.id);
+			expect(localFiles[0].folder.id).toBe(folder.id);
+			expect(localFiles[0].folder.name).toBe(folder.name);
+			expect(localFiles[0].folder.filesCount).toBe(1);
+			expect(localFiles[0].userId).toBe(bob.id);
+			expect(localFiles[0].user.id).toBe(bob.id);
 
 			const byUser = await api(
 				'admin/drive/files',
@@ -2863,11 +2797,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(byUser.status, 200);
-			assert.deepStrictEqual(
-				(byUser.body as any[]).map((file) => file.id),
-				[firstLocal.id, secondLocal.id],
-			);
+			expect(byUser.status).toBe(200);
+			expect((byUser.body as any[]).map((file) => file.id)).toStrictEqual([firstLocal.id, secondLocal.id]);
 
 			const remoteFiles = await api(
 				'admin/drive/files',
@@ -2880,13 +2811,10 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(remoteFiles.status, 200);
-			assert.deepStrictEqual(
-				(remoteFiles.body as any[]).map((file) => file.id),
-				[remote.id],
-			);
-			assert.strictEqual((remoteFiles.body as any[])[0].userId, null);
-			assert.strictEqual((remoteFiles.body as any[])[0].user, null);
+			expect(remoteFiles.status).toBe(200);
+			expect((remoteFiles.body as any[]).map((file) => file.id)).toStrictEqual([remote.id]);
+			expect((remoteFiles.body as any[])[0].userId).toBe(null);
+			expect((remoteFiles.body as any[])[0].user).toBe(null);
 
 			const token = await createAppToken(alice, ['read:admin:drive']);
 			const listedByToken = await api(
@@ -2899,13 +2827,13 @@ describe('Endpoints', () => {
 				},
 				{ token },
 			);
-			assert.strictEqual(listedByToken.status, 200);
-			assert.strictEqual((listedByToken.body as any[])[0].id, secondLocal.id);
+			expect(listedByToken.status).toBe(200);
+			expect((listedByToken.body as any[])[0].id).toBe(secondLocal.id);
 
 			const wrongScopeToken = await createAppToken(alice, ['read:drive']);
 			const scopeDenied = await api('admin/drive/files', {}, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 		});
 
 		test('admin/drive/show-file は fileId/url、秘匿 header、token scope、role、404を維持する', async () => {
@@ -2956,67 +2884,67 @@ describe('Endpoints', () => {
 			});
 
 			const shown = await api('admin/drive/show-file', { fileId: bobFile.id }, alice);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, bobFile.id);
-			assert.strictEqual(typeof shown.body.createdAt, 'string');
-			assert.strictEqual(shown.body.userId, bob.id);
-			assert.strictEqual(shown.body.md5, bobMd5);
-			assert.strictEqual(shown.body.name, bobFile.name);
-			assert.strictEqual(shown.body.type, bobFile.type);
-			assert.strictEqual(shown.body.size, bobFile.size);
-			assert.strictEqual(shown.body.comment, bobFile.comment);
-			assert.strictEqual(shown.body.blurhash, bobFile.blurhash);
-			assert.deepStrictEqual(shown.body.properties, { width: 10, height: 20 });
-			assert.strictEqual(shown.body.storedInternal, true);
-			assert.strictEqual(shown.body.url, bobFile.url);
-			assert.strictEqual(shown.body.thumbnailUrl, bobFile.thumbnailUrl);
-			assert.strictEqual(shown.body.webpublicUrl, bobFile.webpublicUrl);
-			assert.strictEqual(shown.body.accessKey, bobFile.accessKey);
-			assert.strictEqual(shown.body.thumbnailAccessKey, bobFile.thumbnailAccessKey);
-			assert.strictEqual(shown.body.webpublicAccessKey, bobFile.webpublicAccessKey);
-			assert.strictEqual((shown.body as any).webpublicType, bobFile.webpublicType);
-			assert.strictEqual(shown.body.uri, bobFile.uri);
-			assert.strictEqual(shown.body.src, bobFile.src);
-			assert.strictEqual(shown.body.isSensitive, true);
-			assert.strictEqual(shown.body.maybeSensitive, true);
-			assert.strictEqual(shown.body.maybePorn, false);
-			assert.strictEqual(shown.body.isLink, true);
-			assert.strictEqual(shown.body.requestIp, '192.0.2.10');
-			assert.deepStrictEqual(shown.body.requestHeaders, { authorization: 'secret', 'user-agent': 'test-agent' });
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(bobFile.id);
+			expect(typeof shown.body.createdAt).toBe('string');
+			expect(shown.body.userId).toBe(bob.id);
+			expect(shown.body.md5).toBe(bobMd5);
+			expect(shown.body.name).toBe(bobFile.name);
+			expect(shown.body.type).toBe(bobFile.type);
+			expect(shown.body.size).toBe(bobFile.size);
+			expect(shown.body.comment).toBe(bobFile.comment);
+			expect(shown.body.blurhash).toBe(bobFile.blurhash);
+			expect(shown.body.properties).toStrictEqual({ width: 10, height: 20 });
+			expect(shown.body.storedInternal).toBe(true);
+			expect(shown.body.url).toBe(bobFile.url);
+			expect(shown.body.thumbnailUrl).toBe(bobFile.thumbnailUrl);
+			expect(shown.body.webpublicUrl).toBe(bobFile.webpublicUrl);
+			expect(shown.body.accessKey).toBe(bobFile.accessKey);
+			expect(shown.body.thumbnailAccessKey).toBe(bobFile.thumbnailAccessKey);
+			expect(shown.body.webpublicAccessKey).toBe(bobFile.webpublicAccessKey);
+			expect((shown.body as any).webpublicType).toBe(bobFile.webpublicType);
+			expect(shown.body.uri).toBe(bobFile.uri);
+			expect(shown.body.src).toBe(bobFile.src);
+			expect(shown.body.isSensitive).toBe(true);
+			expect(shown.body.maybeSensitive).toBe(true);
+			expect(shown.body.maybePorn).toBe(false);
+			expect(shown.body.isLink).toBe(true);
+			expect(shown.body.requestIp).toBe('192.0.2.10');
+			expect(shown.body.requestHeaders).toStrictEqual({ authorization: 'secret', 'user-agent': 'test-agent' });
 
 			const shownByUrl = await api('admin/drive/show-file', { url: bobFile.url }, alice);
-			assert.strictEqual(shownByUrl.status, 200);
-			assert.strictEqual(shownByUrl.body.id, bobFile.id);
+			expect(shownByUrl.status).toBe(200);
+			expect(shownByUrl.body.id).toBe(bobFile.id);
 
 			const ownedByModerator = await api('admin/drive/show-file', { fileId: aliceFile.id }, alice);
-			assert.strictEqual(ownedByModerator.status, 200);
-			assert.strictEqual(ownedByModerator.body.requestIp, '192.0.2.11');
-			assert.strictEqual(ownedByModerator.body.requestHeaders, null);
+			expect(ownedByModerator.status).toBe(200);
+			expect(ownedByModerator.body.requestIp).toBe('192.0.2.11');
+			expect(ownedByModerator.body.requestHeaders).toBe(null);
 
 			const token = await createAppToken(alice, ['read:admin:drive']);
 			const shownByToken = await api('admin/drive/show-file', { fileId: bobFile.id }, { token });
-			assert.strictEqual(shownByToken.status, 200);
-			assert.strictEqual(shownByToken.body.id, bobFile.id);
+			expect(shownByToken.status).toBe(200);
+			expect(shownByToken.body.id).toBe(bobFile.id);
 
 			const wrongScopeToken = await createAppToken(alice, ['read:drive']);
 			const scopeDenied = await api('admin/drive/show-file', { fileId: bobFile.id }, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hads${suffix}` });
 			const roleDenied = await api('admin/drive/show-file', { fileId: bobFile.id }, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const missing = await api('admin/drive/show-file', { fileId: '000000000000000000000000' }, alice);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_FILE');
-			assert.strictEqual(castAsError(missing.body as any).error.id, 'caf3ca38-c6e5-472e-a30c-b05377dcc240');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_FILE');
+			expect(castAsError(missing.body as any).error.id).toBe('caf3ca38-c6e5-472e-a30c-b05377dcc240');
 		});
 
 		test('admin/drive/clean-remote-files は objectStorage queue job と権限を維持する', async () => {
 			const cleaned = await api('admin/drive/clean-remote-files', {}, alice);
-			assert.strictEqual(cleaned.status, 204);
+			expect(cleaned.status).toBe(204);
 
 			let job: Bull.Job<ObjectStorageJobData> | undefined;
 			for (let i = 0; i < 10; i++) {
@@ -3030,14 +2958,14 @@ describe('Endpoints', () => {
 
 			const token = await createAppToken(alice, ['write:admin:drive']);
 			const cleanedByToken = await api('admin/drive/clean-remote-files', {}, { token });
-			assert.strictEqual(cleanedByToken.status, 204);
+			expect(cleanedByToken.status).toBe(204);
 			const tokenJobs = await objectStorageQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			await Promise.all(tokenJobs.filter((job) => job.name === 'cleanRemoteFiles').map((job) => job.remove()));
 
 			const wrongScopeToken = await createAppToken(alice, ['read:admin:drive']);
 			const scopeDenied = await api('admin/drive/clean-remote-files', {}, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 		});
 
 		test('admin drive deletion endpoints は DB削除、objectStorage job、scope、roleを維持する', async () => {
@@ -3110,19 +3038,19 @@ describe('Endpoints', () => {
 
 			try {
 				const cleaned = await api('admin/drive/cleanup', {}, alice);
-				assert.strictEqual(cleaned.status, 204);
+				expect(cleaned.status).toBe(204);
 				const userDeleted = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, alice);
-				assert.strictEqual(userDeleted.status, 204);
+				expect(userDeleted.status).toBe(204);
 				const remoteDeleted = await api('admin/federation/delete-all-files', { host: remoteHost }, alice);
-				assert.strictEqual(remoteDeleted.status, 204);
+				expect(remoteDeleted.status).toBe(204);
 
 				await Promise.all(targetIds.map(waitDeleted));
 				const jobs = await Promise.all(targetKeys.map(waitDeleteObjectStorageJob));
-				assert.deepStrictEqual(jobs.map((job) => job.data.key).sort(), targetKeys.sort());
+				expect(jobs.map((job) => job.data.key).sort()).toStrictEqual(targetKeys.sort());
 
 				const driveToken = await createAppToken(alice, ['write:admin:drive']);
 				const cleanupByToken = await api('admin/drive/cleanup', {}, { token: driveToken });
-				assert.strictEqual(cleanupByToken.status, 204);
+				expect(cleanupByToken.status).toBe(204);
 
 				const deleteFilesToken = await createAppToken(alice, ['write:admin:delete-all-files-of-a-user']);
 				const userDeleteByToken = await api(
@@ -3130,7 +3058,7 @@ describe('Endpoints', () => {
 					{ userId: bob.id },
 					{ token: deleteFilesToken },
 				);
-				assert.strictEqual(userDeleteByToken.status, 204);
+				expect(userDeleteByToken.status).toBe(204);
 
 				const federationToken = await createAppToken(alice, ['write:admin:federation']);
 				const federationDeleteByToken = await api(
@@ -3138,12 +3066,12 @@ describe('Endpoints', () => {
 					{ host: remoteHost },
 					{ token: federationToken },
 				);
-				assert.strictEqual(federationDeleteByToken.status, 204);
+				expect(federationDeleteByToken.status).toBe(204);
 
 				const driveScopeDeniedToken = await createAppToken(alice, ['read:admin:drive']);
 				const cleanupScopeDenied = await api('admin/drive/cleanup', {}, { token: driveScopeDeniedToken });
-				assert.strictEqual(cleanupScopeDenied.status, 403);
-				assert.strictEqual(castAsError(cleanupScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(cleanupScopeDenied.status).toBe(403);
+				expect(castAsError(cleanupScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const userDeleteScopeDeniedToken = await createAppToken(alice, ['write:admin:account']);
 				const userDeleteScopeDenied = await api(
@@ -3151,8 +3079,8 @@ describe('Endpoints', () => {
 					{ userId: bob.id },
 					{ token: userDeleteScopeDeniedToken },
 				);
-				assert.strictEqual(userDeleteScopeDenied.status, 403);
-				assert.strictEqual(castAsError(userDeleteScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(userDeleteScopeDenied.status).toBe(403);
+				expect(castAsError(userDeleteScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const federationScopeDeniedToken = await createAppToken(alice, ['write:admin:user-note']);
 				const federationScopeDenied = await api(
@@ -3160,20 +3088,20 @@ describe('Endpoints', () => {
 					{ host: remoteHost },
 					{ token: federationScopeDeniedToken },
 				);
-				assert.strictEqual(federationScopeDenied.status, 403);
-				assert.strictEqual(castAsError(federationScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(federationScopeDenied.status).toBe(403);
+				expect(castAsError(federationScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const cleanupRoleDenied = await api('admin/drive/cleanup', {}, bob);
-				assert.strictEqual(cleanupRoleDenied.status, 403);
-				assert.strictEqual(castAsError(cleanupRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(cleanupRoleDenied.status).toBe(403);
+				expect(castAsError(cleanupRoleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 				const userDeleteRoleDenied = await api('admin/delete-all-files-of-a-user', { userId: bob.id }, bob);
-				assert.strictEqual(userDeleteRoleDenied.status, 403);
-				assert.strictEqual(castAsError(userDeleteRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(userDeleteRoleDenied.status).toBe(403);
+				expect(castAsError(userDeleteRoleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 				const federationRoleDenied = await api('admin/federation/delete-all-files', { host: remoteHost }, bob);
-				assert.strictEqual(federationRoleDenied.status, 403);
-				assert.strictEqual(castAsError(federationRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(federationRoleDenied.status).toBe(403);
+				expect(castAsError(federationRoleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await removeObjectStorageJobs();
 			}
@@ -3203,7 +3131,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
 			const localFirst = await insertEmojiInDatabase(db, {
 				id: genId(now - 2000),
@@ -3269,21 +3197,18 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(listed.status, 200);
+				expect(listed.status).toBe(200);
 				const localEmojis = listed.body as any[];
-				assert.deepStrictEqual(
-					localEmojis.map((emoji) => emoji.id),
-					[localFirst.id, localSecond.id],
-				);
-				assert.strictEqual(localEmojis[0].name, localFirst.name);
-				assert.deepStrictEqual(localEmojis[0].aliases, [`alias_${suffix}`]);
-				assert.strictEqual(localEmojis[0].category, `category_${suffix}`);
-				assert.strictEqual(localEmojis[0].url, localFirst.originalUrl);
-				assert.strictEqual(localEmojis[0].license, `license ${suffix}`);
-				assert.strictEqual(localEmojis[0].isSensitive, true);
-				assert.strictEqual(localEmojis[0].localOnly, true);
-				assert.deepStrictEqual(localEmojis[0].roleIdsThatCanBeUsedThisEmojiAsReaction, []);
-				assert.strictEqual(localEmojis[1].url, localSecond.publicUrl);
+				expect(localEmojis.map((emoji) => emoji.id)).toStrictEqual([localFirst.id, localSecond.id]);
+				expect(localEmojis[0].name).toBe(localFirst.name);
+				expect(localEmojis[0].aliases).toStrictEqual([`alias_${suffix}`]);
+				expect(localEmojis[0].category).toBe(`category_${suffix}`);
+				expect(localEmojis[0].url).toBe(localFirst.originalUrl);
+				expect(localEmojis[0].license).toBe(`license ${suffix}`);
+				expect(localEmojis[0].isSensitive).toBe(true);
+				expect(localEmojis[0].localOnly).toBe(true);
+				expect(localEmojis[0].roleIdsThatCanBeUsedThisEmojiAsReaction).toStrictEqual([]);
+				expect(localEmojis[1].url).toBe(localSecond.publicUrl);
 
 				const listedByColonQuery = await api(
 					'admin/emoji/list',
@@ -3294,11 +3219,8 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(listedByColonQuery.status, 200);
-				assert.deepStrictEqual(
-					(listedByColonQuery.body as any[]).map((emoji) => emoji.id),
-					[localFirst.id],
-				);
+				expect(listedByColonQuery.status).toBe(200);
+				expect((listedByColonQuery.body as any[]).map((emoji) => emoji.id)).toStrictEqual([localFirst.id]);
 
 				const remoteListed = await api(
 					'admin/emoji/list-remote',
@@ -3310,16 +3232,13 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(remoteListed.status, 200);
+				expect(remoteListed.status).toBe(200);
 				const remoteEmojis = remoteListed.body as any[];
-				assert.deepStrictEqual(
-					remoteEmojis.map((emoji) => emoji.id),
-					[remoteNewer.id, remoteOlder.id],
-				);
-				assert.strictEqual(remoteEmojis[0].host, remoteHost);
-				assert.strictEqual(remoteEmojis[0].url, remoteNewer.publicUrl);
-				assert.strictEqual(remoteEmojis[0].license, `remote license ${suffix}`);
-				assert.strictEqual(remoteEmojis[0].isSensitive, true);
+				expect(remoteEmojis.map((emoji) => emoji.id)).toStrictEqual([remoteNewer.id, remoteOlder.id]);
+				expect(remoteEmojis[0].host).toBe(remoteHost);
+				expect(remoteEmojis[0].url).toBe(remoteNewer.publicUrl);
+				expect(remoteEmojis[0].license).toBe(`remote license ${suffix}`);
+				expect(remoteEmojis[0].isSensitive).toBe(true);
 
 				const readToken = await createAppToken(manager, ['read:admin:emoji']);
 				const byToken = await api(
@@ -3331,20 +3250,17 @@ describe('Endpoints', () => {
 					},
 					{ token: readToken },
 				);
-				assert.strictEqual(byToken.status, 200);
-				assert.deepStrictEqual(
-					(byToken.body as any[]).map((emoji) => emoji.id),
-					[remoteNewer.id],
-				);
+				expect(byToken.status).toBe(200);
+				expect((byToken.body as any[]).map((emoji) => emoji.id)).toStrictEqual([remoteNewer.id]);
 
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:meta']);
 				const scopeDenied = await api('admin/emoji/list', {}, { token: wrongScopeToken });
-				assert.strictEqual(scopeDenied.status, 403);
-				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(scopeDenied.status).toBe(403);
+				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const roleDenied = await api('admin/emoji/list', {}, bob);
-				assert.strictEqual(roleDenied.status, 403);
-				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDenied.status).toBe(403);
+				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await api(
 					'admin/roles/unassign',
@@ -3386,7 +3302,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
 			const localFirst = await insertEmojiInDatabase(db, {
 				id: genId(now - 3000),
@@ -3439,17 +3355,14 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(listed.status, 200);
-				assert.deepStrictEqual(
-					listed.body.emojis.map((e: any) => e.id),
-					[localFirst.id, localSecond.id],
-				);
-				assert.strictEqual(listed.body.count, 2);
-				assert.strictEqual(listed.body.allCount, 2);
-				assert.strictEqual(listed.body.allPages, 1);
-				assert.strictEqual(getAt(listed.body.emojis, 0).originalUrl, localFirst.originalUrl);
-				assert.strictEqual(getAt(listed.body.emojis, 1).publicUrl, localSecond.publicUrl);
-				assert.strictEqual(getAt(listed.body.emojis, 1).isSensitive, true);
+				expect(listed.status).toBe(200);
+				expect(listed.body.emojis.map((e: any) => e.id)).toStrictEqual([localFirst.id, localSecond.id]);
+				expect(listed.body.count).toBe(2);
+				expect(listed.body.allCount).toBe(2);
+				expect(listed.body.allPages).toBe(1);
+				expect(getAt(listed.body.emojis, 0).originalUrl).toBe(localFirst.originalUrl);
+				expect(getAt(listed.body.emojis, 1).publicUrl).toBe(localSecond.publicUrl);
+				expect(getAt(listed.body.emojis, 1).isSensitive).toBe(true);
 
 				const remoteListed = await api(
 					'v2/admin/emoji/list',
@@ -3459,12 +3372,9 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(remoteListed.status, 200);
-				assert.deepStrictEqual(
-					remoteListed.body.emojis.map((e: any) => e.id),
-					[remoteEmoji.id],
-				);
-				assert.strictEqual(getAt(remoteListed.body.emojis, 0).host, remoteHost);
+				expect(remoteListed.status).toBe(200);
+				expect(remoteListed.body.emojis.map((e: any) => e.id)).toStrictEqual([remoteEmoji.id]);
+				expect(getAt(remoteListed.body.emojis, 0).host).toBe(remoteHost);
 
 				const paged = await api(
 					'v2/admin/emoji/list',
@@ -3476,23 +3386,20 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(paged.status, 200);
-				assert.deepStrictEqual(
-					paged.body.emojis.map((e: any) => e.id),
-					[localSecond.id],
-				);
-				assert.strictEqual(paged.body.count, 1);
-				assert.strictEqual(paged.body.allCount, 3);
-				assert.strictEqual(paged.body.allPages, 3);
+				expect(paged.status).toBe(200);
+				expect(paged.body.emojis.map((e: any) => e.id)).toStrictEqual([localSecond.id]);
+				expect(paged.body.count).toBe(1);
+				expect(paged.body.allCount).toBe(3);
+				expect(paged.body.allPages).toBe(3);
 
 				const roleDenied = await api('v2/admin/emoji/list', {}, bob);
-				assert.strictEqual(roleDenied.status, 403);
-				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDenied.status).toBe(403);
+				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:meta']);
 				const scopeDenied = await api('v2/admin/emoji/list', {}, { token: wrongScopeToken });
-				assert.strictEqual(scopeDenied.status, 403);
-				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(scopeDenied.status).toBe(403);
+				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 			} finally {
 				await api(
 					'admin/roles/unassign',
@@ -3533,7 +3440,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
 			const addMd5 = createHash('md5').update(`hono-emoji-add-${suffix}`).digest('hex');
 			const addFile = await createDriveFileInDatabase(db, {
@@ -3570,8 +3477,8 @@ describe('Endpoints', () => {
 					},
 					{ token: wrongScopeToken },
 				);
-				assert.strictEqual(scopeDenied.status, 403);
-				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(scopeDenied.status).toBe(403);
+				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const added = await api(
 					'admin/emoji/add',
@@ -3587,14 +3494,14 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(added.status, 200);
-				assert.strictEqual(added.body.name, `honoemoji_add_${suffix}`);
-				assert.strictEqual(added.body.url, addFile.url);
-				assert.strictEqual(added.body.category, `write_${suffix}`);
-				assert.deepStrictEqual(added.body.aliases, [`alias_${suffix}`]);
-				assert.strictEqual(added.body.license, `license ${suffix}`);
-				assert.strictEqual(added.body.isSensitive, true);
-				assert.strictEqual(added.body.localOnly, true);
+				expect(added.status).toBe(200);
+				expect(added.body.name).toBe(`honoemoji_add_${suffix}`);
+				expect(added.body.url).toBe(addFile.url);
+				expect(added.body.category).toBe(`write_${suffix}`);
+				expect(added.body.aliases).toStrictEqual([`alias_${suffix}`]);
+				expect(added.body.license).toBe(`license ${suffix}`);
+				expect(added.body.isSensitive).toBe(true);
+				expect(added.body.localOnly).toBe(true);
 
 				const duplicate = await api(
 					'admin/emoji/add',
@@ -3604,8 +3511,8 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(duplicate.status, 400);
-				assert.strictEqual(castAsError(duplicate.body as any).error.code, 'DUPLICATE_NAME');
+				expect(duplicate.status).toBe(400);
+				expect(castAsError(duplicate.body as any).error.code).toBe('DUPLICATE_NAME');
 
 				const roleDenied = await api(
 					'admin/emoji/update',
@@ -3615,8 +3522,8 @@ describe('Endpoints', () => {
 					},
 					bob,
 				);
-				assert.strictEqual(roleDenied.status, 403);
-				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDenied.status).toBe(403);
+				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 				const updated = await api(
 					'admin/emoji/update',
@@ -3633,18 +3540,18 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(updated.status, 204);
+				expect(updated.status).toBe(204);
 
 				const after = await fetchEmojiByIdOrFailFromDatabase(db, added.body.id);
-				assert.strictEqual(after.name, `honoemoji_updated_${suffix}`);
-				assert.strictEqual(after.category, null);
-				assert.deepStrictEqual(after.aliases, [`updated_${suffix}`]);
-				assert.strictEqual(after.license, null);
-				assert.strictEqual(after.isSensitive, false);
-				assert.strictEqual(after.localOnly, false);
-				assert.strictEqual(after.originalUrl, updateFile.url);
-				assert.strictEqual(after.publicUrl, updateFile.url);
-				assert.strictEqual(after.type, updateFile.type);
+				expect(after.name).toBe(`honoemoji_updated_${suffix}`);
+				expect(after.category).toBe(null);
+				expect(after.aliases).toStrictEqual([`updated_${suffix}`]);
+				expect(after.license).toBe(null);
+				expect(after.isSensitive).toBe(false);
+				expect(after.localOnly).toBe(false);
+				expect(after.originalUrl).toBe(updateFile.url);
+				expect(after.publicUrl).toBe(updateFile.url);
+				expect(after.type).toBe(updateFile.type);
 				assert.ok(after.updatedAt);
 
 				const renamedDuplicate = await api(
@@ -3655,7 +3562,7 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(renamedDuplicate.status, 204);
+				expect(renamedDuplicate.status).toBe(204);
 
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 20,
@@ -3705,7 +3612,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
 			const png = Buffer.from(
 				'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
@@ -3742,37 +3649,37 @@ describe('Endpoints', () => {
 			try {
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
 				const scopeDenied = await api('admin/emoji/copy', { emojiId: remote.id }, { token: wrongScopeToken });
-				assert.strictEqual(scopeDenied.status, 403);
-				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(scopeDenied.status).toBe(403);
+				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const roleDenied = await api('admin/emoji/copy', { emojiId: remote.id }, bob);
-				assert.strictEqual(roleDenied.status, 403);
-				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDenied.status).toBe(403);
+				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 				const copied = await api('admin/emoji/copy', { emojiId: remote.id }, manager);
-				assert.strictEqual(copied.status, 200);
+				expect(copied.status).toBe(200);
 				const copiedBody = copied.body as any;
-				assert.strictEqual(copiedBody.name, remote.name);
-				assert.strictEqual(copiedBody.host, null);
-				assert.deepStrictEqual(copiedBody.aliases, [`copy_alias_${suffix}`]);
-				assert.strictEqual(copiedBody.category, `copy_category_${suffix}`);
-				assert.strictEqual(copiedBody.license, `copy license ${suffix}`);
-				assert.strictEqual(copiedBody.isSensitive, true);
-				assert.strictEqual(copiedBody.localOnly, true);
+				expect(copiedBody.name).toBe(remote.name);
+				expect(copiedBody.host).toBe(null);
+				expect(copiedBody.aliases).toStrictEqual([`copy_alias_${suffix}`]);
+				expect(copiedBody.category).toBe(`copy_category_${suffix}`);
+				expect(copiedBody.license).toBe(`copy license ${suffix}`);
+				expect(copiedBody.isSensitive).toBe(true);
+				expect(copiedBody.localOnly).toBe(true);
 
 				const copiedEmoji = await fetchEmojiByIdOrFailFromDatabase(db, copiedBody.id);
-				assert.strictEqual(copiedEmoji.host, null);
-				assert.strictEqual(copiedEmoji.name, remote.name);
-				assert.notStrictEqual(copiedEmoji.originalUrl, remote.originalUrl);
-				assert.strictEqual(copiedEmoji.publicUrl, copiedEmoji.originalUrl);
-				assert.strictEqual(copiedEmoji.type, 'image/png');
+				expect(copiedEmoji.host).toBe(null);
+				expect(copiedEmoji.name).toBe(remote.name);
+				expect(copiedEmoji.originalUrl).not.toBe(remote.originalUrl);
+				expect(copiedEmoji.publicUrl).toBe(copiedEmoji.originalUrl);
+				expect(copiedEmoji.type).toBe('image/png');
 
 				const driveFile = await fetchDriveFileByUrlFromDatabase(db, copiedEmoji.originalUrl);
 				assert.ok(driveFile);
-				assert.strictEqual(driveFile.userId, null);
-				assert.strictEqual(driveFile.userHost, null);
-				assert.strictEqual(driveFile.src, imageUrl);
-				assert.strictEqual(driveFile.type, 'image/png');
+				expect(driveFile.userId).toBe(null);
+				expect(driveFile.userHost).toBe(null);
+				expect(driveFile.src).toBe(imageUrl);
+				expect(driveFile.type).toBe('image/png');
 
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 10,
@@ -3784,8 +3691,8 @@ describe('Endpoints', () => {
 				assert.ok(logs.some((log) => (log.info as any).emojiId === copiedEmoji.id));
 
 				const duplicate = await api('admin/emoji/copy', { emojiId: remote.id }, manager);
-				assert.strictEqual(duplicate.status, 400);
-				assert.strictEqual(castAsError(duplicate.body as any).error.code, 'DUPLICATE_NAME');
+				expect(duplicate.status).toBe(400);
+				expect(castAsError(duplicate.body as any).error.code).toBe('DUPLICATE_NAME');
 			} finally {
 				await new Promise<void>((resolve, reject) => {
 					imageServer?.close((err) => (err ? reject(err) : resolve()));
@@ -3829,7 +3736,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
 			const first = await insertEmojiInDatabase(db, {
 				id: genId(now - 1000),
@@ -3867,9 +3774,9 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(missing.status, 400);
-				assert.strictEqual(castAsError(missing.body as any).error.id, '756e37b2-8e81-421c-9d18-740a6932d57f');
-				assert.strictEqual((await fetchEmojiByIdOrFailFromDatabase(db, first.id)).category, null);
+				expect(missing.status).toBe(400);
+				expect(castAsError(missing.body as any).error.id).toBe('756e37b2-8e81-421c-9d18-740a6932d57f');
+				expect((await fetchEmojiByIdOrFailFromDatabase(db, first.id)).category).toBe(null);
 
 				const addAliases = await api(
 					'admin/emoji/add-aliases-bulk',
@@ -3879,12 +3786,12 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(addAliases.status, 204);
+				expect(addAliases.status).toBe(204);
 
 				let afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
 				let afterSecond = await fetchEmojiByIdOrFailFromDatabase(db, second.id);
-				assert.deepStrictEqual(afterFirst.aliases, [`base_${suffix}`, `added_${suffix}`]);
-				assert.deepStrictEqual(afterSecond.aliases, [`added_${suffix}`, `base_${suffix}`]);
+				expect(afterFirst.aliases).toStrictEqual([`base_${suffix}`, `added_${suffix}`]);
+				expect(afterSecond.aliases).toStrictEqual([`added_${suffix}`, `base_${suffix}`]);
 
 				const removeAliases = await api(
 					'admin/emoji/remove-aliases-bulk',
@@ -3894,9 +3801,9 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(removeAliases.status, 204);
+				expect(removeAliases.status).toBe(204);
 				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
-				assert.deepStrictEqual(afterFirst.aliases, [`added_${suffix}`]);
+				expect(afterFirst.aliases).toStrictEqual([`added_${suffix}`]);
 
 				const setAliases = await api(
 					'admin/emoji/set-aliases-bulk',
@@ -3906,7 +3813,7 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(setAliases.status, 204);
+				expect(setAliases.status).toBe(204);
 
 				const setCategory = await api(
 					'admin/emoji/set-category-bulk',
@@ -3916,7 +3823,7 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(setCategory.status, 204);
+				expect(setCategory.status).toBe(204);
 
 				const setLicense = await api(
 					'admin/emoji/set-license-bulk',
@@ -3926,7 +3833,7 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(setLicense.status, 204);
+				expect(setLicense.status).toBe(204);
 
 				const resetLicense = await api(
 					'admin/emoji/set-license-bulk',
@@ -3936,16 +3843,16 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(resetLicense.status, 204);
+				expect(resetLicense.status).toBe(204);
 
 				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
 				afterSecond = await fetchEmojiByIdOrFailFromDatabase(db, second.id);
-				assert.deepStrictEqual(afterFirst.aliases, [`added_${suffix}`]);
-				assert.deepStrictEqual(afterSecond.aliases, [`final_${suffix}`]);
-				assert.strictEqual(afterFirst.category, `bulk_category_${suffix}`);
-				assert.strictEqual(afterSecond.category, `bulk_category_${suffix}`);
-				assert.strictEqual(afterFirst.license, `bulk license ${suffix}`);
-				assert.strictEqual(afterSecond.license, null);
+				expect(afterFirst.aliases).toStrictEqual([`added_${suffix}`]);
+				expect(afterSecond.aliases).toStrictEqual([`final_${suffix}`]);
+				expect(afterFirst.category).toBe(`bulk_category_${suffix}`);
+				expect(afterSecond.category).toBe(`bulk_category_${suffix}`);
+				expect(afterFirst.license).toBe(`bulk license ${suffix}`);
+				expect(afterSecond.license).toBe(null);
 				assert.ok(afterFirst.updatedAt);
 				assert.ok(afterSecond.updatedAt);
 
@@ -3958,9 +3865,9 @@ describe('Endpoints', () => {
 					},
 					{ token },
 				);
-				assert.strictEqual(tokenUpdated.status, 204);
+				expect(tokenUpdated.status).toBe(204);
 				afterFirst = await fetchEmojiByIdOrFailFromDatabase(db, first.id);
-				assert.strictEqual(afterFirst.category, null);
+				expect(afterFirst.category).toBe(null);
 
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
 				const scopeDenied = await api(
@@ -3971,8 +3878,8 @@ describe('Endpoints', () => {
 					},
 					{ token: wrongScopeToken },
 				);
-				assert.strictEqual(scopeDenied.status, 403);
-				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(scopeDenied.status).toBe(403);
+				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const roleDenied = await api(
 					'admin/emoji/set-category-bulk',
@@ -3982,8 +3889,8 @@ describe('Endpoints', () => {
 					},
 					bob,
 				);
-				assert.strictEqual(roleDenied.status, 403);
-				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDenied.status).toBe(403);
+				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await api(
 					'admin/roles/unassign',
@@ -4024,7 +3931,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
 			const single = await insertEmojiInDatabase(db, {
 				id: genId(now - 2000),
@@ -4068,11 +3975,11 @@ describe('Endpoints', () => {
 
 			try {
 				const deleted = await api('admin/emoji/delete', { id: single.id }, manager);
-				assert.strictEqual(deleted.status, 204);
-				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, single.id), null);
+				expect(deleted.status).toBe(204);
+				expect(await fetchEmojiByIdFromDatabase(db, single.id)).toBe(null);
 				const deletedAgain = await api('admin/emoji/delete', { id: single.id }, manager);
-				assert.strictEqual(deletedAgain.status, 400);
-				assert.strictEqual(castAsError(deletedAgain.body as any).error.id, 'be83669b-773a-44b7-b1f8-e5e5170ac3c2');
+				expect(deletedAgain.status).toBe(400);
+				expect(castAsError(deletedAgain.body as any).error.id).toBe('be83669b-773a-44b7-b1f8-e5e5170ac3c2');
 
 				const deletedBulk = await api(
 					'admin/emoji/delete-bulk',
@@ -4081,9 +3988,9 @@ describe('Endpoints', () => {
 					},
 					manager,
 				);
-				assert.strictEqual(deletedBulk.status, 204);
-				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, bulkFirst.id), null);
-				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, bulkSecond.id), null);
+				expect(deletedBulk.status).toBe(204);
+				expect(await fetchEmojiByIdFromDatabase(db, bulkFirst.id)).toBe(null);
+				expect(await fetchEmojiByIdFromDatabase(db, bulkSecond.id)).toBe(null);
 
 				for (let i = 0; i < 10; i++) {
 					const logs = await listModerationLogsFromDatabase(db, {
@@ -4093,18 +4000,9 @@ describe('Endpoints', () => {
 						search: suffix,
 					});
 					if (logs.length >= 3) {
-						assert.strictEqual(
-							logs.some((log) => (log.info as any).emojiId === single.id),
-							true,
-						);
-						assert.strictEqual(
-							logs.some((log) => (log.info as any).emojiId === bulkFirst.id),
-							true,
-						);
-						assert.strictEqual(
-							logs.some((log) => (log.info as any).emojiId === bulkSecond.id),
-							true,
-						);
+						expect(logs.some((log) => (log.info as any).emojiId === single.id)).toBe(true);
+						expect(logs.some((log) => (log.info as any).emojiId === bulkFirst.id)).toBe(true);
+						expect(logs.some((log) => (log.info as any).emojiId === bulkSecond.id)).toBe(true);
 						break;
 					}
 					await new Promise((resolve) => setTimeout(resolve, 100));
@@ -4126,8 +4024,8 @@ describe('Endpoints', () => {
 				});
 				const token = await createAppToken(manager, ['write:admin:emoji']);
 				const deletedByToken = await api('admin/emoji/delete', { id: tokenTarget.id }, { token });
-				assert.strictEqual(deletedByToken.status, 204);
-				assert.strictEqual(await fetchEmojiByIdFromDatabase(db, tokenTarget.id), null);
+				expect(deletedByToken.status).toBe(204);
+				expect(await fetchEmojiByIdFromDatabase(db, tokenTarget.id)).toBe(null);
 
 				const wrongScopeToken = await createAppToken(manager, ['read:admin:emoji']);
 				const scopeDenied = await api(
@@ -4137,12 +4035,12 @@ describe('Endpoints', () => {
 					},
 					{ token: wrongScopeToken },
 				);
-				assert.strictEqual(scopeDenied.status, 403);
-				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(scopeDenied.status).toBe(403);
+				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const roleDenied = await api('admin/emoji/delete', { id: tokenTarget.id }, bob);
-				assert.strictEqual(roleDenied.status, 403);
-				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDenied.status).toBe(403);
+				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await api(
 					'admin/roles/unassign',
@@ -4184,7 +4082,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
 			const fileId = genId(now);
 			const removeImportJobs = async () => {
@@ -4201,7 +4099,7 @@ describe('Endpoints', () => {
 
 			try {
 				const imported = await api('admin/emoji/import-zip', { fileId }, manager);
-				assert.strictEqual(imported.status, 204);
+				expect(imported.status).toBe(204);
 
 				let job: Bull.Job<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
 				for (let i = 0; i < 10; i++) {
@@ -4216,19 +4114,19 @@ describe('Endpoints', () => {
 					await new Promise((resolve) => setTimeout(resolve, 100));
 				}
 				assert.ok(job);
-				assert.deepStrictEqual(job.data as DbJobData<'importCustomEmojis'>, {
+				expect(job.data as DbJobData<'importCustomEmojis'>).toStrictEqual({
 					user: { id: manager.id },
 					fileId,
 				});
 
 				const token = await createAppToken(manager, ['write:admin:emoji']);
 				const appDenied = await api('admin/emoji/import-zip', { fileId: genId(now + 1) }, { token });
-				assert.strictEqual(appDenied.status, 400);
-				assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+				expect(appDenied.status).toBe(400);
+				expect(castAsError(appDenied.body as any).error.code).toBe('ACCESS_DENIED');
 
 				const roleDenied = await api('admin/emoji/import-zip', { fileId: genId(now + 2) }, bob);
-				assert.strictEqual(roleDenied.status, 403);
-				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDenied.status).toBe(403);
+				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await removeImportJobs();
 				await api(
@@ -4289,29 +4187,29 @@ describe('Endpoints', () => {
 			});
 
 			const anonymousList = await api('announcements', { limit: 10 });
-			assert.strictEqual(anonymousList.status, 200);
+			expect(anonymousList.status).toBe(200);
 			assert.ok(anonymousList.body.some((announcement) => announcement.id === globalAnnouncement.id));
 			assert.ok(!anonymousList.body.some((announcement) => announcement.id === userAnnouncement.id));
 
 			const aliceList = await api('announcements', { limit: 10 }, alice);
-			assert.strictEqual(aliceList.status, 200);
+			expect(aliceList.status).toBe(200);
 			const listedGlobal = aliceList.body.find((announcement) => announcement.id === globalAnnouncement.id);
 			const listedUser = aliceList.body.find((announcement) => announcement.id === userAnnouncement.id);
-			assert.strictEqual(listedGlobal?.isRead, true);
-			assert.strictEqual(listedUser?.forYou, true);
-			assert.strictEqual(listedUser?.isRead, false);
+			expect(listedGlobal?.isRead).toBe(true);
+			expect(listedUser?.forYou).toBe(true);
+			expect(listedUser?.isRead).toBe(false);
 
 			const shownGlobal = await api('announcements/show', {
 				announcementId: globalAnnouncement.id,
 			});
-			assert.strictEqual(shownGlobal.status, 200);
-			assert.strictEqual(shownGlobal.body.title, globalAnnouncement.title);
+			expect(shownGlobal.status).toBe(200);
+			expect(shownGlobal.body.title).toBe(globalAnnouncement.title);
 
 			const hiddenUser = await api('announcements/show', {
 				announcementId: userAnnouncement.id,
 			});
-			assert.strictEqual(hiddenUser.status, 404);
-			assert.strictEqual(castAsError(hiddenUser.body as any).error.code, 'NO_SUCH_ANNOUNCEMENT');
+			expect(hiddenUser.status).toBe(404);
+			expect(castAsError(hiddenUser.body as any).error.code).toBe('NO_SUCH_ANNOUNCEMENT');
 
 			const shownUser = await api(
 				'announcements/show',
@@ -4320,9 +4218,9 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(shownUser.status, 200);
-			assert.strictEqual(shownUser.body.forYou, true);
-			assert.strictEqual(shownUser.body.needConfirmationToRead, true);
+			expect(shownUser.status).toBe(200);
+			expect(shownUser.body.forYou).toBe(true);
+			expect(shownUser.body.needConfirmationToRead).toBe(true);
 		});
 
 		test('i/read-announcement は既読化し全既読ならreadAllAnnouncementsを発行する', async () => {
@@ -4346,13 +4244,13 @@ describe('Endpoints', () => {
 			});
 
 			const res = await api('i/read-announcement', { announcementId: announcement.id }, reader);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const read = await announcementReadExistsInDatabase(db, reader.id, announcement.id);
-			assert.strictEqual(read, true);
+			expect(read).toBe(true);
 
 			const stillUnread = await api('i/read-announcement', { announcementId: announcement.id }, reader);
-			assert.strictEqual(stillUnread.status, 204);
+			expect(stillUnread.status).toBe(204);
 		});
 	});
 
@@ -4363,9 +4261,9 @@ describe('Endpoints', () => {
 				password: 'bar',
 			});
 
-			assert.strictEqual(res.status, 403);
-			assert.strictEqual(castAsError(res.body as any).error.code, 'AUTHENTICATION_FAILED');
-			assert.strictEqual(castAsError(res.body as any).error.kind, 'permission');
+			expect(res.status).toBe(403);
+			expect(castAsError(res.body as any).error.code).toBe('AUTHENTICATION_FAILED');
+			expect(castAsError(res.body as any).error.kind).toBe('permission');
 		});
 
 		test('クエリをインジェクションできない', async () => {
@@ -4377,9 +4275,9 @@ describe('Endpoints', () => {
 				},
 			});
 
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.code, 'INVALID_PARAM');
-			assert.strictEqual(castAsError(res.body as any).error.kind, 'client');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('INVALID_PARAM');
+			expect(castAsError(res.body as any).error.kind).toBe('client');
 		});
 
 		test('正しい情報でサインインできる', async () => {
@@ -4388,7 +4286,7 @@ describe('Endpoints', () => {
 				password: 'test1',
 			});
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 		});
 	});
 
@@ -4396,9 +4294,9 @@ describe('Endpoints', () => {
 		test('パスキーサインインの challenge を開始できる', async () => {
 			const res = await api('signin-with-passkey', {});
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body.context, 'string');
-			assert.strictEqual(typeof res.body.option.challenge, 'string');
+			expect(res.status).toBe(200);
+			expect(typeof res.body.context).toBe('string');
+			expect(typeof res.body.option.challenge).toBe('string');
 		});
 	});
 
@@ -4429,31 +4327,22 @@ describe('Endpoints', () => {
 			});
 
 			const history = await api('i/signin-history', { limit: 20 }, alice);
-			assert.strictEqual(history.status, 200);
+			expect(history.status).toBe(200);
 			const newerIndex = history.body.findIndex((item) => item.id === newer.id);
 			const olderIndex = history.body.findIndex((item) => item.id === older.id);
 			assert.ok(newerIndex >= 0);
 			assert.ok(olderIndex >= 0);
 			assert.ok(newerIndex < olderIndex);
-			assert.strictEqual(getAt(history.body, newerIndex).createdAt, new Date(now - 1000).toISOString());
-			assert.strictEqual(getAt(history.body, newerIndex).ip, newer.ip);
-			assert.deepStrictEqual(getAt(history.body, newerIndex).headers, newer.headers);
-			assert.strictEqual(getAt(history.body, newerIndex).success, false);
-			assert.strictEqual(
-				history.body.some((item) => item.id === otherUser.id),
-				false,
-			);
+			expect(getAt(history.body, newerIndex).createdAt).toBe(new Date(now - 1000).toISOString());
+			expect(getAt(history.body, newerIndex).ip).toBe(newer.ip);
+			expect(getAt(history.body, newerIndex).headers).toStrictEqual(newer.headers);
+			expect(getAt(history.body, newerIndex).success).toBe(false);
+			expect(history.body.some((item) => item.id === otherUser.id)).toBe(false);
 
 			const afterOlder = await api('i/signin-history', { sinceId: older.id, limit: 20 }, alice);
-			assert.strictEqual(afterOlder.status, 200);
-			assert.strictEqual(
-				afterOlder.body.some((item) => item.id === newer.id),
-				true,
-			);
-			assert.strictEqual(
-				afterOlder.body.some((item) => item.id === older.id),
-				false,
-			);
+			expect(afterOlder.status).toBe(200);
+			expect(afterOlder.body.some((item) => item.id === newer.id)).toBe(true);
+			expect(afterOlder.body.some((item) => item.id === older.id)).toBe(false);
 		});
 	});
 
@@ -4477,7 +4366,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(setNative.status, 204);
+			expect(setNative.status).toBe(204);
 
 			const gotNative = await api(
 				'i/registry/get',
@@ -4487,8 +4376,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(gotNative.status, 200);
-			assert.deepStrictEqual(gotNative.body, nativeValue);
+			expect(gotNative.status).toBe(200);
+			expect(gotNative.body).toStrictEqual(nativeValue);
 
 			const detail = await api(
 				'i/registry/get-detail',
@@ -4498,9 +4387,9 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(detail.status, 200);
-			assert.strictEqual(typeof detail.body.updatedAt, 'string');
-			assert.deepStrictEqual(detail.body.value, nativeValue);
+			expect(detail.status).toBe(200);
+			expect(typeof detail.body.updatedAt).toBe('string');
+			expect(detail.body.value).toStrictEqual(nativeValue);
 
 			const all = await api(
 				'i/registry/get-all',
@@ -4509,8 +4398,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(all.status, 200);
-			assert.deepStrictEqual(all.body[nativeKey], nativeValue);
+			expect(all.status).toBe(200);
+			expect(all.body[nativeKey]).toStrictEqual(nativeValue);
 
 			const keys = await api(
 				'i/registry/keys',
@@ -4519,7 +4408,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(keys.status, 200);
+			expect(keys.status).toBe(200);
 			assert.ok(keys.body.includes(nativeKey));
 
 			const keysWithType = await api(
@@ -4529,8 +4418,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(keysWithType.status, 200);
-			assert.strictEqual(keysWithType.body[nativeKey], 'object');
+			expect(keysWithType.status).toBe(200);
+			expect(keysWithType.body[nativeKey]).toBe('object');
 
 			const appToken = await createAppToken(alice, ['read:account', 'write:account']);
 			const appScope = ['hono', 'registry_app'];
@@ -4545,7 +4434,7 @@ describe('Endpoints', () => {
 				},
 				{ token: appToken },
 			);
-			assert.strictEqual(setApp.status, 204);
+			expect(setApp.status).toBe(204);
 
 			const gotApp = await api(
 				'i/registry/get',
@@ -4555,8 +4444,8 @@ describe('Endpoints', () => {
 				},
 				{ token: appToken },
 			);
-			assert.strictEqual(gotApp.status, 200);
-			assert.deepStrictEqual(gotApp.body, appValue);
+			expect(gotApp.status).toBe(200);
+			expect(gotApp.body).toStrictEqual(appValue);
 
 			const nativeCannotReadAppDomain = await api(
 				'i/registry/get',
@@ -4566,11 +4455,11 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(nativeCannotReadAppDomain.status, 400);
-			assert.strictEqual(castAsError(nativeCannotReadAppDomain.body as any).error.code, 'NO_SUCH_KEY');
+			expect(nativeCannotReadAppDomain.status).toBe(400);
+			expect(castAsError(nativeCannotReadAppDomain.body as any).error.code).toBe('NO_SUCH_KEY');
 
 			const scopesWithDomain = await api('i/registry/scopes-with-domain', {}, alice);
-			assert.strictEqual(scopesWithDomain.status, 200);
+			expect(scopesWithDomain.status).toBe(200);
 			assert.ok(
 				scopesWithDomain.body.some(
 					(item) => item.domain === null && item.scopes.some((scope) => scope.join('.') === nativeScope.join('.')),
@@ -4583,8 +4472,8 @@ describe('Endpoints', () => {
 			);
 
 			const appDenied = await api('i/registry/scopes-with-domain', {}, { token: appToken });
-			assert.strictEqual(appDenied.status, 400);
-			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(appDenied.status).toBe(400);
+			expect(castAsError(appDenied.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const removed = await api(
 				'i/registry/remove',
@@ -4594,7 +4483,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(removed.status, 204);
+			expect(removed.status).toBe(204);
 			const afterRemove = await api(
 				'i/registry/get',
 				{
@@ -4603,8 +4492,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(afterRemove.status, 400);
-			assert.strictEqual(castAsError(afterRemove.body as any).error.code, 'NO_SUCH_KEY');
+			expect(afterRemove.status).toBe(400);
+			expect(castAsError(afterRemove.body as any).error.code).toBe('NO_SUCH_KEY');
 		});
 	});
 
@@ -4657,17 +4546,17 @@ describe('Endpoints', () => {
 			const url = `http://127.0.0.1:${address.port}/feed.xml`;
 
 			const post = await api('fetch-rss', { url });
-			assert.strictEqual(post.status, 200);
-			assert.strictEqual(post.body.title, 'Hono RSS Feed');
-			assert.strictEqual(getAt(post.body.items, 0).title, 'First entry');
-			assert.strictEqual(getAt(post.body.items, 0).guid, 'entry-1');
+			expect(post.status).toBe(200);
+			expect(post.body.title).toBe('Hono RSS Feed');
+			expect(getAt(post.body.items, 0).title).toBe('First entry');
+			expect(getAt(post.body.items, 0).guid).toBe('entry-1');
 
 			const get = await relativeFetch(`api/fetch-rss?url=${encodeURIComponent(url)}`);
-			assert.strictEqual(get.status, 200);
-			assert.strictEqual(get.headers.get('cache-control'), 'public, max-age=180');
+			expect(get.status).toBe(200);
+			expect(get.headers.get('cache-control')).toBe('public, max-age=180');
 			const getBody = (await get.json()) as { title?: string; items?: { title?: string }[] };
-			assert.strictEqual(getBody.title, 'Hono RSS Feed');
-			assert.strictEqual(getAt(getDefined(getBody.items), 0).title, 'First entry');
+			expect(getBody.title).toBe('Hono RSS Feed');
+			expect(getAt(getDefined(getBody.items), 0).title).toBe('First entry');
 		});
 	});
 
@@ -4722,8 +4611,8 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.deepStrictEqual(res.body, {
+			expect(res.status).toBe(200);
+			expect(res.body).toStrictEqual({
 				type: 'text/plain',
 				data,
 			});
@@ -4739,8 +4628,8 @@ describe('Endpoints', () => {
 				},
 				{ token: appToken },
 			);
-			assert.strictEqual(appDenied.status, 400);
-			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(appDenied.status).toBe(400);
+			expect(castAsError(appDenied.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const mismatched = await api(
 				'fetch-external-resources',
@@ -4750,8 +4639,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(mismatched.status, 400);
-			assert.strictEqual(castAsError(mismatched.body as any).error.code, 'EXT_RESOURCE_HASH_DIDNT_MATCH');
+			expect(mismatched.status).toBe(400);
+			expect(castAsError(mismatched.body as any).error.code).toBe('EXT_RESOURCE_HASH_DIDNT_MATCH');
 
 			const invalid = await api(
 				'fetch-external-resources',
@@ -4761,8 +4650,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(invalid.status, 400);
-			assert.strictEqual(castAsError(invalid.body as any).error.code, 'EXT_RESOURCE_RETURNED_INVALID_SCHEMA');
+			expect(invalid.status).toBe(400);
+			expect(castAsError(invalid.body as any).error.code).toBe('EXT_RESOURCE_RETURNED_INVALID_SCHEMA');
 		});
 	});
 
@@ -4779,21 +4668,21 @@ describe('Endpoints', () => {
 			});
 
 			const shown = await api('sw/show-registration', { endpoint }, alice);
-			assert.strictEqual(shown.status, 200);
-			assert.deepStrictEqual(shown.body, {
+			expect(shown.status).toBe(200);
+			expect(shown.body).toStrictEqual({
 				userId: alice.id,
 				endpoint,
 				sendReadMessage: true,
 			});
 
 			const missing = await api('sw/show-registration', { endpoint }, bob);
-			assert.strictEqual(missing.status, 200);
-			assert.strictEqual(missing.body, null);
+			expect(missing.status).toBe(200);
+			expect(missing.body).toBe(null);
 
 			const appToken = await createAppToken(alice, ['read:account']);
 			const appDenied = await api('sw/show-registration', { endpoint }, { token: appToken });
-			assert.strictEqual(appDenied.status, 400);
-			assert.strictEqual(castAsError(appDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(appDenied.status).toBe(400);
+			expect(castAsError(appDenied.body as any).error.code).toBe('ACCESS_DENIED');
 		});
 
 		test('sw registration lifecycle creates, updates, and unregisters subscriptions', async () => {
@@ -4809,11 +4698,11 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(registered.status, 200);
-			assert.strictEqual(registered.body.state, 'subscribed');
-			assert.strictEqual(registered.body.userId, alice.id);
-			assert.strictEqual(registered.body.endpoint, endpoint);
-			assert.strictEqual(registered.body.sendReadMessage, true);
+			expect(registered.status).toBe(200);
+			expect(registered.body.state).toBe('subscribed');
+			expect(registered.body.userId).toBe(alice.id);
+			expect(registered.body.endpoint).toBe(endpoint);
+			expect(registered.body.sendReadMessage).toBe(true);
 
 			const same = await api(
 				'sw/register',
@@ -4825,8 +4714,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(same.status, 200);
-			assert.strictEqual(same.body.state, 'already-subscribed');
+			expect(same.status).toBe(200);
+			expect(same.body.state).toBe('already-subscribed');
 
 			const updated = await api(
 				'sw/update-registration',
@@ -4836,8 +4725,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 200);
-			assert.deepStrictEqual(updated.body, {
+			expect(updated.status).toBe(200);
+			expect(updated.body).toStrictEqual({
 				userId: alice.id,
 				endpoint,
 				sendReadMessage: false,
@@ -4850,16 +4739,16 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(missingUpdate.status, 400);
-			assert.strictEqual(castAsError(missingUpdate.body as any).error.code, 'NO_SUCH_REGISTRATION');
+			expect(missingUpdate.status).toBe(400);
+			expect(castAsError(missingUpdate.body as any).error.code).toBe('NO_SUCH_REGISTRATION');
 
 			const unregistered = await api('sw/unregister', { endpoint }, alice);
-			assert.strictEqual(unregistered.status, 204);
-			assert.strictEqual(unregistered.body, null);
+			expect(unregistered.status).toBe(204);
+			expect(unregistered.body).toBe(null);
 
 			const afterUnregister = await api('sw/show-registration', { endpoint }, alice);
-			assert.strictEqual(afterUnregister.status, 200);
-			assert.strictEqual(afterUnregister.body, null);
+			expect(afterUnregister.status).toBe(200);
+			expect(afterUnregister.body).toBe(null);
 		});
 
 		test('sw secure endpoints reject app tokens and unregister accepts anonymous requests', async () => {
@@ -4884,19 +4773,19 @@ describe('Endpoints', () => {
 				},
 				{ token: appToken },
 			);
-			assert.strictEqual(appRegisterDenied.status, 400);
-			assert.strictEqual(castAsError(appRegisterDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(appRegisterDenied.status).toBe(400);
+			expect(castAsError(appRegisterDenied.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const appUpdateDenied = await api('sw/update-registration', { endpoint }, { token: appToken });
-			assert.strictEqual(appUpdateDenied.status, 400);
-			assert.strictEqual(castAsError(appUpdateDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(appUpdateDenied.status).toBe(400);
+			expect(castAsError(appUpdateDenied.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const anonymousUnregister = await api('sw/unregister', { endpoint });
-			assert.strictEqual(anonymousUnregister.status, 204);
+			expect(anonymousUnregister.status).toBe(204);
 
 			const afterAnonymousUnregister = await api('sw/show-registration', { endpoint }, alice);
-			assert.strictEqual(afterAnonymousUnregister.status, 200);
-			assert.strictEqual(afterAnonymousUnregister.body, null);
+			expect(afterAnonymousUnregister.status).toBe(200);
+			expect(afterAnonymousUnregister.body).toBe(null);
 		});
 	});
 
@@ -4906,14 +4795,14 @@ describe('Endpoints', () => {
 				username: 'missing_reset_user',
 				email: 'missing-reset-user@example.test',
 			});
-			assert.strictEqual(accepted.status, 204);
-			assert.strictEqual(accepted.body, null);
+			expect(accepted.status).toBe(204);
+			expect(accepted.body).toBe(null);
 
 			const invalid = await api('request-reset-password', {
 				username: 'missing_reset_user',
 			} as any);
-			assert.strictEqual(invalid.status, 400);
-			assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAM');
+			expect(invalid.status).toBe(400);
+			expect(castAsError(invalid.body as any).error.code).toBe('INVALID_PARAM');
 		});
 	});
 
@@ -4930,8 +4819,8 @@ describe('Endpoints', () => {
 				token,
 				password: 'new-reset-password',
 			});
-			assert.strictEqual(reset.status, 204);
-			assert.strictEqual(reset.body, null);
+			expect(reset.status).toBe(204);
+			expect(reset.body).toBe(null);
 
 			// 使用済み・存在しない・期限切れのトークンは利用者側の事情なので、
 			// 500 INTERNAL_ERROR ではなく理由の分かるAPIエラーで返す
@@ -4939,15 +4828,15 @@ describe('Endpoints', () => {
 				token,
 				password: 'reused-reset-password',
 			});
-			assert.strictEqual(reused.status, 400, JSON.stringify(reused.body));
-			assert.strictEqual(castAsError(reused.body as any).error.code, 'INVALID_TOKEN');
+			expect(reused.status, JSON.stringify(reused.body)).toBe(400);
+			expect(castAsError(reused.body as any).error.code).toBe('INVALID_TOKEN');
 
 			const unknown = await api('reset-password', {
 				token: `reset-token-${genId()}`,
 				password: 'unknown-reset-password',
 			});
-			assert.strictEqual(unknown.status, 400, JSON.stringify(unknown.body));
-			assert.strictEqual(castAsError(unknown.body as any).error.code, 'INVALID_TOKEN');
+			expect(unknown.status, JSON.stringify(unknown.body)).toBe(400);
+			expect(castAsError(unknown.body as any).error.code).toBe('INVALID_TOKEN');
 
 			// 30分より前に発行されたトークン (idに時刻が埋まっている) は期限切れ扱い
 			const expiredToken = `reset-token-expired-${genId()}`;
@@ -4960,16 +4849,16 @@ describe('Endpoints', () => {
 				token: expiredToken,
 				password: 'expired-reset-password',
 			});
-			assert.strictEqual(expired.status, 400, JSON.stringify(expired.body));
-			assert.strictEqual(castAsError(expired.body as any).error.code, 'INVALID_TOKEN');
+			expect(expired.status, JSON.stringify(expired.body)).toBe(400);
+			expect(castAsError(expired.body as any).error.code).toBe('INVALID_TOKEN');
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, carol.id);
 			const [matchesNewPassword, matchesReusedPassword] = await Promise.all([
 				bunPassword.verify('new-reset-password', profile.password!, 'bcrypt'),
 				bunPassword.verify('reused-reset-password', profile.password!, 'bcrypt'),
 			]);
-			assert.strictEqual(matchesNewPassword, true);
-			assert.strictEqual(matchesReusedPassword, false);
+			expect(matchesNewPassword).toBe(true);
+			expect(matchesReusedPassword).toBe(false);
 		});
 	});
 
@@ -4987,11 +4876,11 @@ describe('Endpoints', () => {
 				},
 				user,
 			);
-			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
-			assert.strictEqual(castAsError(res.body as any).error.code, 'INCORRECT_PASSWORD');
+			expect(res.status, JSON.stringify(res.body)).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('INCORRECT_PASSWORD');
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(await bunPassword.verify('test', profile.password!, 'bcrypt'), true);
+			expect(await bunPassword.verify('test', profile.password!, 'bcrypt')).toBe(true);
 		});
 
 		test('i/regenerate-token は誤ったパスワードでINCORRECT_PASSWORDを返し、トークンを変えない', async () => {
@@ -4999,22 +4888,22 @@ describe('Endpoints', () => {
 			const before = await fetchUserByIdOrFailFromDatabase(db, user.id);
 
 			const res = await api('i/regenerate-token', { password: 'wrong-password' }, user);
-			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
-			assert.strictEqual(castAsError(res.body as any).error.code, 'INCORRECT_PASSWORD');
+			expect(res.status, JSON.stringify(res.body)).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('INCORRECT_PASSWORD');
 
 			const after = await fetchUserByIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(after.token, before.token);
+			expect(after.token).toBe(before.token);
 		});
 
 		test('i/delete-account は誤ったパスワードでINCORRECT_PASSWORDを返し、アカウントを消さない', async () => {
 			const user = await signup();
 
 			const res = await api('i/delete-account', { password: 'wrong-password' }, user);
-			assert.strictEqual(res.status, 400, JSON.stringify(res.body));
-			assert.strictEqual(castAsError(res.body as any).error.code, 'INCORRECT_PASSWORD');
+			expect(res.status, JSON.stringify(res.body)).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('INCORRECT_PASSWORD');
 
 			const after = await fetchUserByIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(after.isDeleted, false);
+			expect(after.isDeleted).toBe(false);
 		});
 	});
 
@@ -5028,16 +4917,16 @@ describe('Endpoints', () => {
 			});
 
 			const verified = await api('verify-email', { code });
-			assert.strictEqual(verified.status, 204);
-			assert.strictEqual(verified.body, null);
+			expect(verified.status).toBe(204);
+			expect(verified.body).toBe(null);
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, dave.id);
-			assert.strictEqual(profile.emailVerified, true);
-			assert.strictEqual(profile.emailVerifyCode, null);
+			expect(profile.emailVerified).toBe(true);
+			expect(profile.emailVerifyCode).toBe(null);
 
 			const missing = await api('verify-email', { code: 'missing-code' });
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_CODE');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_CODE');
 		});
 	});
 
@@ -5055,18 +4944,18 @@ describe('Endpoints', () => {
 			});
 
 			const created = await api('admin/promo/create', { noteId, expiresAt: now + 60_000 }, alice);
-			assert.strictEqual(created.status, 204);
-			assert.strictEqual(await isPromoNoteExists(db, noteId), true);
+			expect(created.status).toBe(204);
+			expect(await isPromoNoteExists(db, noteId)).toBe(true);
 
 			const duplicate = await api('admin/promo/create', { noteId, expiresAt: now + 120_000 }, alice);
-			assert.strictEqual(duplicate.status, 400);
-			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_PROMOTED');
-			assert.strictEqual(castAsError(duplicate.body as any).error.id, 'ae427aa2-7a41-484f-a18c-2c1104051604');
+			expect(duplicate.status).toBe(400);
+			expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_PROMOTED');
+			expect(castAsError(duplicate.body as any).error.id).toBe('ae427aa2-7a41-484f-a18c-2c1104051604');
 
 			const missing = await api('admin/promo/create', { noteId: genId(), expiresAt: now + 60_000 }, alice);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
-			assert.strictEqual(castAsError(missing.body as any).error.id, 'ee449fbe-af2a-453b-9cae-cf2fe7c895fc');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_NOTE');
+			expect(castAsError(missing.body as any).error.id).toBe('ee449fbe-af2a-453b-9cae-cf2fe7c895fc');
 
 			const writeToken = await createAppToken(alice, ['write:admin:promo']);
 			const tokenNoteId = genId();
@@ -5082,7 +4971,7 @@ describe('Endpoints', () => {
 				{ noteId: tokenNoteId, expiresAt: now + 60_000 },
 				{ token: writeToken },
 			);
-			assert.strictEqual(createdWithToken.status, 204);
+			expect(createdWithToken.status).toBe(204);
 
 			const deniedToken = await createAppToken(alice, ['read:admin:queue']);
 			const scopeDenied = await api(
@@ -5090,13 +4979,13 @@ describe('Endpoints', () => {
 				{ noteId: genId(), expiresAt: now + 60_000 },
 				{ token: deniedToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honopromo${now.toString(36)}` });
 			const roleDenied = await api('admin/promo/create', { noteId: genId(), expiresAt: now + 60_000 }, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 
 		test('promo/read records a promoted note as read idempotently', async () => {
@@ -5111,16 +5000,16 @@ describe('Endpoints', () => {
 			});
 
 			const read = await api('promo/read', { noteId }, bob);
-			assert.strictEqual(read.status, 204);
-			assert.strictEqual(read.body, null);
-			assert.strictEqual(await isPromoReadExists(db, bob.id, noteId), true);
+			expect(read.status).toBe(204);
+			expect(read.body).toBe(null);
+			expect(await isPromoReadExists(db, bob.id, noteId)).toBe(true);
 
 			const duplicate = await api('promo/read', { noteId }, bob);
-			assert.strictEqual(duplicate.status, 204);
+			expect(duplicate.status).toBe(204);
 
 			const missing = await api('promo/read', { noteId: genId() }, bob);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_NOTE');
 		});
 
 		test('promo/read requires write account permission for app tokens', async () => {
@@ -5136,8 +5025,8 @@ describe('Endpoints', () => {
 			const appToken = await createAppToken(bob, ['read:account']);
 
 			const denied = await api('promo/read', { noteId }, { token: appToken });
-			assert.strictEqual(denied.status, 403);
-			assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(denied.status).toBe(403);
+			expect(castAsError(denied.body as any).error.code).toBe('PERMISSION_DENIED');
 		});
 	});
 
@@ -5195,72 +5084,69 @@ describe('Endpoints', () => {
 			const { userList } = await createFavoriteFixtures(`hono-favorite-list-${Date.now()}`);
 
 			const favorite = await api('users/lists/favorite', { listId: userList.id }, bob);
-			assert.strictEqual(favorite.status, 204);
-			assert.strictEqual(await userListFavoriteExistsInDatabase(db, bob.id, userList.id), true);
+			expect(favorite.status).toBe(204);
+			expect(await userListFavoriteExistsInDatabase(db, bob.id, userList.id)).toBe(true);
 
 			const duplicate = await api('users/lists/favorite', { listId: userList.id }, bob);
-			assert.strictEqual(duplicate.status, 400);
-			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_FAVORITED');
-			assert.strictEqual(castAsError(duplicate.body as any).error.id, '6425bba0-985b-461e-af1b-518070e72081');
+			expect(duplicate.status).toBe(400);
+			expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_FAVORITED');
+			expect(castAsError(duplicate.body as any).error.id).toBe('6425bba0-985b-461e-af1b-518070e72081');
 
 			const unfavorite = await api('users/lists/unfavorite', { listId: userList.id }, bob);
-			assert.strictEqual(unfavorite.status, 204);
-			assert.strictEqual(await userListFavoriteExistsInDatabase(db, bob.id, userList.id), false);
+			expect(unfavorite.status).toBe(204);
+			expect(await userListFavoriteExistsInDatabase(db, bob.id, userList.id)).toBe(false);
 
 			const missingFavorite = await api('users/lists/unfavorite', { listId: userList.id }, bob);
-			assert.strictEqual(missingFavorite.status, 400);
-			assert.strictEqual(castAsError(missingFavorite.body as any).error.id, '835c4b27-463d-4cfa-969b-a9058678d465');
+			expect(missingFavorite.status).toBe(400);
+			expect(castAsError(missingFavorite.body as any).error.id).toBe('835c4b27-463d-4cfa-969b-a9058678d465');
 		});
 
 		test('clip, channel, page, and flash endpoints keep lifecycle semantics', async () => {
 			const { clip, channel, page, flash } = await createFavoriteFixtures(`hono-favorite-${Date.now()}`);
 
 			const clipFavorite = await api('clips/favorite', { clipId: clip.id }, bob);
-			assert.strictEqual(clipFavorite.status, 204);
-			assert.strictEqual(await clipFavoriteExistsInDatabase(db, bob.id, clip.id), true);
+			expect(clipFavorite.status).toBe(204);
+			expect(await clipFavoriteExistsInDatabase(db, bob.id, clip.id)).toBe(true);
 
 			const duplicateClipFavorite = await api('clips/favorite', { clipId: clip.id }, bob);
-			assert.strictEqual(duplicateClipFavorite.status, 400);
-			assert.strictEqual(
-				castAsError(duplicateClipFavorite.body as any).error.id,
-				'92658936-c625-4273-8326-2d790129256e',
-			);
+			expect(duplicateClipFavorite.status).toBe(400);
+			expect(castAsError(duplicateClipFavorite.body as any).error.id).toBe('92658936-c625-4273-8326-2d790129256e');
 
 			const clipUnfavorite = await api('clips/unfavorite', { clipId: clip.id }, bob);
-			assert.strictEqual(clipUnfavorite.status, 204);
-			assert.strictEqual(await clipFavoriteExistsInDatabase(db, bob.id, clip.id), false);
+			expect(clipUnfavorite.status).toBe(204);
+			expect(await clipFavoriteExistsInDatabase(db, bob.id, clip.id)).toBe(false);
 
 			const channelFavorite = await api('channels/favorite', { channelId: channel.id }, bob);
-			assert.strictEqual(channelFavorite.status, 204);
-			assert.strictEqual(await channelFavoriteExistsInDatabase(db, bob.id, channel.id), true);
+			expect(channelFavorite.status).toBe(204);
+			expect(await channelFavoriteExistsInDatabase(db, bob.id, channel.id)).toBe(true);
 
 			const channelUnfavorite = await api('channels/unfavorite', { channelId: channel.id }, bob);
-			assert.strictEqual(channelUnfavorite.status, 204);
-			assert.strictEqual(await channelFavoriteExistsInDatabase(db, bob.id, channel.id), false);
+			expect(channelUnfavorite.status).toBe(204);
+			expect(await channelFavoriteExistsInDatabase(db, bob.id, channel.id)).toBe(false);
 
 			const pageLike = await api('pages/like', { pageId: page.id }, bob);
-			assert.strictEqual(pageLike.status, 204);
-			assert.strictEqual(await pageLikeExistsInDatabase(db, bob.id, page.id), true);
+			expect(pageLike.status).toBe(204);
+			expect(await pageLikeExistsInDatabase(db, bob.id, page.id)).toBe(true);
 
 			const ownPageLike = await api('pages/like', { pageId: page.id }, alice);
-			assert.strictEqual(ownPageLike.status, 400);
-			assert.strictEqual(castAsError(ownPageLike.body as any).error.id, '28800466-e6db-40f2-8fae-bf9e82aa92b8');
+			expect(ownPageLike.status).toBe(400);
+			expect(castAsError(ownPageLike.body as any).error.id).toBe('28800466-e6db-40f2-8fae-bf9e82aa92b8');
 
 			const pageUnlike = await api('pages/unlike', { pageId: page.id }, bob);
-			assert.strictEqual(pageUnlike.status, 204);
-			assert.strictEqual(await pageLikeExistsInDatabase(db, bob.id, page.id), false);
+			expect(pageUnlike.status).toBe(204);
+			expect(await pageLikeExistsInDatabase(db, bob.id, page.id)).toBe(false);
 
 			const flashLike = await api('flash/like', { flashId: flash.id }, bob);
-			assert.strictEqual(flashLike.status, 204);
-			assert.strictEqual(await flashLikeExistsInDatabase(db, bob.id, flash.id), true);
+			expect(flashLike.status).toBe(204);
+			expect(await flashLikeExistsInDatabase(db, bob.id, flash.id)).toBe(true);
 
 			const ownFlashLike = await api('flash/like', { flashId: flash.id }, alice);
-			assert.strictEqual(ownFlashLike.status, 400);
-			assert.strictEqual(castAsError(ownFlashLike.body as any).error.id, '3fd8a0e7-5955-4ba9-85bb-bf3e0c30e13b');
+			expect(ownFlashLike.status).toBe(400);
+			expect(castAsError(ownFlashLike.body as any).error.id).toBe('3fd8a0e7-5955-4ba9-85bb-bf3e0c30e13b');
 
 			const flashUnlike = await api('flash/unlike', { flashId: flash.id }, bob);
-			assert.strictEqual(flashUnlike.status, 204);
-			assert.strictEqual(await flashLikeExistsInDatabase(db, bob.id, flash.id), false);
+			expect(flashUnlike.status).toBe(204);
+			expect(await flashLikeExistsInDatabase(db, bob.id, flash.id)).toBe(false);
 		});
 
 		test('favorite and like endpoints require matching app token permissions', async () => {
@@ -5277,8 +5163,8 @@ describe('Endpoints', () => {
 				['flash/like', { flashId: flash.id }],
 			] as const) {
 				const denied = await api(endpoint, params as any, { token: appToken });
-				assert.strictEqual(denied.status, 403, endpoint);
-				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+				expect(denied.status, endpoint).toBe(403);
+				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
 			}
 		});
 
@@ -5290,10 +5176,10 @@ describe('Endpoints', () => {
 			});
 
 			const denied = await api('pages/like', { pageId: page.id }, movedUser);
-			assert.strictEqual(denied.status, 403);
-			assert.strictEqual(castAsError(denied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
-			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
-			assert.strictEqual(await pageLikeExistsInDatabase(db, movedUser.id, page.id), false);
+			expect(denied.status).toBe(403);
+			expect(castAsError(denied.body as any).error.code).toBe('YOUR_ACCOUNT_MOVED');
+			expect(castAsError(denied.body as any).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+			expect(await pageLikeExistsInDatabase(db, movedUser.id, page.id)).toBe(false);
 		});
 	});
 
@@ -5314,16 +5200,16 @@ describe('Endpoints', () => {
 			});
 
 			const exists = await api('drive/files/check-existence', { md5 }, alice);
-			assert.strictEqual(exists.status, 200);
-			assert.strictEqual(exists.body, true);
+			expect(exists.status).toBe(200);
+			expect(exists.body).toBe(true);
 
 			const otherUser = await api('drive/files/check-existence', { md5 }, bob);
-			assert.strictEqual(otherUser.status, 200);
-			assert.strictEqual(otherUser.body, false);
+			expect(otherUser.status).toBe(200);
+			expect(otherUser.body).toBe(false);
 
 			const missing = await api('drive/files/check-existence', { md5: '0'.repeat(32) }, alice);
-			assert.strictEqual(missing.status, 200);
-			assert.strictEqual(missing.body, false);
+			expect(missing.status).toBe(200);
+			expect(missing.body).toBe(false);
 		});
 
 		test('drive/folders list, find, and show preserve ownership and detail fields', async () => {
@@ -5367,26 +5253,14 @@ describe('Endpoints', () => {
 			});
 
 			const rootList = await api('drive/folders', { folderId: null }, alice);
-			assert.strictEqual(rootList.status, 200);
-			assert.strictEqual(
-				(rootList.body as any[]).some((item) => item.id === parent.id),
-				true,
-			);
-			assert.strictEqual(
-				(rootList.body as any[]).some((item) => item.id === rootChildName.id),
-				true,
-			);
-			assert.strictEqual(
-				(rootList.body as any[]).some((item) => item.id === otherUserFolder.id),
-				false,
-			);
+			expect(rootList.status).toBe(200);
+			expect((rootList.body as any[]).some((item) => item.id === parent.id)).toBe(true);
+			expect((rootList.body as any[]).some((item) => item.id === rootChildName.id)).toBe(true);
+			expect((rootList.body as any[]).some((item) => item.id === otherUserFolder.id)).toBe(false);
 
 			const childList = await api('drive/folders', { folderId: parent.id }, alice);
-			assert.strictEqual(childList.status, 200);
-			assert.deepStrictEqual(
-				(childList.body as any[]).map((item) => item.id),
-				[child.id],
-			);
+			expect(childList.status).toBe(200);
+			expect((childList.body as any[]).map((item) => item.id)).toStrictEqual([child.id]);
 
 			const childFind = await api(
 				'drive/folders/find',
@@ -5396,11 +5270,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(childFind.status, 200);
-			assert.deepStrictEqual(
-				(childFind.body as any[]).map((item) => item.id),
-				[child.id],
-			);
+			expect(childFind.status).toBe(200);
+			expect((childFind.body as any[]).map((item) => item.id)).toStrictEqual([child.id]);
 
 			const rootFind = await api(
 				'drive/folders/find',
@@ -5410,45 +5281,36 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(rootFind.status, 200);
-			assert.strictEqual(
-				(rootFind.body as any[]).some((item) => item.id === rootChildName.id),
-				true,
-			);
-			assert.strictEqual(
-				(rootFind.body as any[]).some((item) => item.id === child.id),
-				false,
-			);
-			assert.strictEqual(
-				(rootFind.body as any[]).some((item) => item.id === otherUserFolder.id),
-				false,
-			);
+			expect(rootFind.status).toBe(200);
+			expect((rootFind.body as any[]).some((item) => item.id === rootChildName.id)).toBe(true);
+			expect((rootFind.body as any[]).some((item) => item.id === child.id)).toBe(false);
+			expect((rootFind.body as any[]).some((item) => item.id === otherUserFolder.id)).toBe(false);
 
 			const showParent = await api('drive/folders/show', { folderId: parent.id }, alice);
-			assert.strictEqual(showParent.status, 200);
+			expect(showParent.status).toBe(200);
 			const shownParent = showParent.body as any;
-			assert.strictEqual(shownParent.id, parent.id);
-			assert.strictEqual(shownParent.parentId, null);
-			assert.strictEqual(shownParent.foldersCount, 1);
-			assert.strictEqual(shownParent.filesCount, 1);
-			assert.strictEqual(typeof shownParent.createdAt, 'string');
+			expect(shownParent.id).toBe(parent.id);
+			expect(shownParent.parentId).toBe(null);
+			expect(shownParent.foldersCount).toBe(1);
+			expect(shownParent.filesCount).toBe(1);
+			expect(typeof shownParent.createdAt).toBe('string');
 
 			const showChild = await api('drive/folders/show', { folderId: child.id }, alice);
-			assert.strictEqual(showChild.status, 200);
+			expect(showChild.status).toBe(200);
 			const shownChild = showChild.body as any;
-			assert.strictEqual(shownChild.id, child.id);
+			expect(shownChild.id).toBe(child.id);
 			assert.ok(shownChild.parent);
-			assert.strictEqual(shownChild.parent.id, parent.id);
+			expect(shownChild.parent.id).toBe(parent.id);
 
 			const otherUserShow = await api('drive/folders/show', { folderId: parent.id }, bob);
-			assert.strictEqual(otherUserShow.status, 400);
-			assert.strictEqual(castAsError(otherUserShow.body as any).error.id, 'd74ab9eb-bb09-4bba-bf24-fb58f761e1e9');
+			expect(otherUserShow.status).toBe(400);
+			expect(castAsError(otherUserShow.body as any).error.id).toBe('d74ab9eb-bb09-4bba-bf24-fb58f761e1e9');
 		});
 
 		test('notes/drafts/count returns the caller draft count and rejects moved users', async () => {
 			const config = fixtureConfig;
 			const before = await api('notes/drafts/count', {}, alice);
-			assert.strictEqual(before.status, 200);
+			expect(before.status).toBe(200);
 
 			await createNoteDraftInDatabase(db, {
 				id: genId(),
@@ -5473,8 +5335,8 @@ describe('Endpoints', () => {
 			});
 
 			const after = await api('notes/drafts/count', {}, alice);
-			assert.strictEqual(after.status, 200);
-			assert.strictEqual(after.body, (before.body as number) + 2);
+			expect(after.status).toBe(200);
+			expect(after.body).toBe((before.body as number) + 2);
 
 			const movedUser = await signup({ username: `mvdraft${Date.now().toString(36)}` });
 			await updateUserInDatabase(db, movedUser.id, {
@@ -5482,9 +5344,9 @@ describe('Endpoints', () => {
 			});
 
 			const denied = await api('notes/drafts/count', {}, movedUser);
-			assert.strictEqual(denied.status, 403);
-			assert.strictEqual(castAsError(denied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
-			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+			expect(denied.status).toBe(403);
+			expect(castAsError(denied.body as any).error.code).toBe('YOUR_ACCOUNT_MOVED');
+			expect(castAsError(denied.body as any).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
 		});
 
 		test('notes/drafts/create creates a draft with reply/renote/poll/channel and schedules it', async () => {
@@ -5514,31 +5376,28 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 			const createdDraft = (created.body as any).createdDraft;
-			assert.strictEqual(createdDraft.text, 'hono draft create');
-			assert.strictEqual(createdDraft.userId, alice.id);
-			assert.strictEqual(createdDraft.replyId, replyTarget.id);
-			assert.strictEqual(createdDraft.reply.id, replyTarget.id);
-			assert.strictEqual(createdDraft.renoteId, renoteTarget.id);
-			assert.strictEqual(createdDraft.renote.id, renoteTarget.id);
-			assert.strictEqual(createdDraft.channelId, channel.id);
-			assert.strictEqual(createdDraft.channel.id, channel.id);
-			assert.deepStrictEqual(createdDraft.fileIds, [file.body!.id]);
-			assert.strictEqual(createdDraft.files[0].id, file.body!.id);
-			assert.deepStrictEqual(createdDraft.poll.choices, ['a', 'b']);
-			assert.strictEqual(createdDraft.isActuallyScheduled, true);
-			assert.strictEqual(createdDraft.scheduledAt, futureScheduledAt);
+			expect(createdDraft.text).toBe('hono draft create');
+			expect(createdDraft.userId).toBe(alice.id);
+			expect(createdDraft.replyId).toBe(replyTarget.id);
+			expect(createdDraft.reply.id).toBe(replyTarget.id);
+			expect(createdDraft.renoteId).toBe(renoteTarget.id);
+			expect(createdDraft.renote.id).toBe(renoteTarget.id);
+			expect(createdDraft.channelId).toBe(channel.id);
+			expect(createdDraft.channel.id).toBe(channel.id);
+			expect(createdDraft.fileIds).toStrictEqual([file.body!.id]);
+			expect(createdDraft.files[0].id).toBe(file.body!.id);
+			expect(createdDraft.poll.choices).toStrictEqual(['a', 'b']);
+			expect(createdDraft.isActuallyScheduled).toBe(true);
+			expect(createdDraft.scheduledAt).toBe(futureScheduledAt);
 
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
-			assert.strictEqual(
-				jobs.some((job) => job.data.noteDraftId === createdDraft.id),
-				true,
-			);
+			expect(jobs.some((job) => job.data.noteDraftId === createdDraft.id)).toBe(true);
 
 			// scheduledNoteLimit (デフォルト1) を後続テストで消費しないよう後片付け
 			const cleanup = await api('notes/drafts/delete', { draftId: createdDraft.id }, alice);
-			assert.strictEqual(cleanup.status, 204);
+			expect(cleanup.status).toBe(204);
 		});
 
 		test('notes/drafts/create validates scheduling and referenced entities', async () => {
@@ -5551,8 +5410,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(scheduledAtRequired.status, 400);
-			assert.strictEqual(castAsError(scheduledAtRequired.body as any).error.id, '15e28a55-e74c-4d65-89b7-8880cdaaa87d');
+			expect(scheduledAtRequired.status).toBe(400);
+			expect(castAsError(scheduledAtRequired.body as any).error.id).toBe('15e28a55-e74c-4d65-89b7-8880cdaaa87d');
 
 			const scheduledAtPast = await api(
 				'notes/drafts/create',
@@ -5562,8 +5421,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(scheduledAtPast.status, 400);
-			assert.strictEqual(castAsError(scheduledAtPast.body as any).error.id, 'e4bed6c9-017e-4934-aed0-01c22cc60ec1');
+			expect(scheduledAtPast.status).toBe(400);
+			expect(castAsError(scheduledAtPast.body as any).error.id).toBe('e4bed6c9-017e-4934-aed0-01c22cc60ec1');
 
 			const noSuchFile = await api(
 				'notes/drafts/create',
@@ -5572,8 +5431,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(noSuchFile.status, 400);
-			assert.strictEqual(castAsError(noSuchFile.body as any).error.id, 'b6992544-63e7-67f0-fa7f-32444b1b5306');
+			expect(noSuchFile.status).toBe(400);
+			expect(castAsError(noSuchFile.body as any).error.id).toBe('b6992544-63e7-67f0-fa7f-32444b1b5306');
 
 			const noSuchRenoteTarget = await api(
 				'notes/drafts/create',
@@ -5582,8 +5441,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(noSuchRenoteTarget.status, 400);
-			assert.strictEqual(castAsError(noSuchRenoteTarget.body as any).error.id, 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4');
+			expect(noSuchRenoteTarget.status).toBe(400);
+			expect(castAsError(noSuchRenoteTarget.body as any).error.id).toBe('b5c90186-4ab0-49c8-9bba-a1f76c282ba4');
 
 			const original = await post(alice, { text: 'pure renote source' });
 			const pureRenote = await post(alice, { renoteId: original.id });
@@ -5594,8 +5453,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(cannotReRenote.status, 400);
-			assert.strictEqual(castAsError(cannotReRenote.body as any).error.id, 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a');
+			expect(cannotReRenote.status).toBe(400);
+			expect(castAsError(cannotReRenote.body as any).error.id).toBe('fd4cc33e-2a37-48dd-99cc-9b806eb2031a');
 
 			const noSuchReplyTarget = await api(
 				'notes/drafts/create',
@@ -5604,8 +5463,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(noSuchReplyTarget.status, 400);
-			assert.strictEqual(castAsError(noSuchReplyTarget.body as any).error.id, '749ee0f6-d3da-459a-bf02-282e2da4292c');
+			expect(noSuchReplyTarget.status).toBe(400);
+			expect(castAsError(noSuchReplyTarget.body as any).error.id).toBe('749ee0f6-d3da-459a-bf02-282e2da4292c');
 
 			const noSuchChannel = await api(
 				'notes/drafts/create',
@@ -5614,8 +5473,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(noSuchChannel.status, 400);
-			assert.strictEqual(castAsError(noSuchChannel.body as any).error.id, 'b1653923-5453-4edc-b786-7c4f39bb0bbb');
+			expect(noSuchChannel.status).toBe(400);
+			expect(castAsError(noSuchChannel.body as any).error.id).toBe('b1653923-5453-4edc-b786-7c4f39bb0bbb');
 		});
 
 		test('notes/drafts/update updates a draft, reschedules it, and rejects foreign or missing drafts', async () => {
@@ -5639,18 +5498,15 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 200);
+			expect(updated.status).toBe(200);
 			const updatedDraft = (updated.body as any).updatedDraft;
-			assert.strictEqual(updatedDraft.id, draft.id);
-			assert.strictEqual(updatedDraft.text, 'after update');
-			assert.strictEqual(updatedDraft.isActuallyScheduled, true);
-			assert.strictEqual(updatedDraft.scheduledAt, futureScheduledAt);
+			expect(updatedDraft.id).toBe(draft.id);
+			expect(updatedDraft.text).toBe('after update');
+			expect(updatedDraft.isActuallyScheduled).toBe(true);
+			expect(updatedDraft.scheduledAt).toBe(futureScheduledAt);
 
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
-			assert.strictEqual(
-				jobs.some((job) => job.data.noteDraftId === draft.id),
-				true,
-			);
+			expect(jobs.some((job) => job.data.noteDraftId === draft.id)).toBe(true);
 
 			const updatedWithoutSchedule = await api(
 				'notes/drafts/update',
@@ -5660,15 +5516,12 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updatedWithoutSchedule.status, 200);
-			assert.strictEqual((updatedWithoutSchedule.body as any).updatedDraft.scheduledAt, futureScheduledAt);
-			assert.strictEqual((updatedWithoutSchedule.body as any).updatedDraft.isActuallyScheduled, true);
+			expect(updatedWithoutSchedule.status).toBe(200);
+			expect((updatedWithoutSchedule.body as any).updatedDraft.scheduledAt).toBe(futureScheduledAt);
+			expect((updatedWithoutSchedule.body as any).updatedDraft.isActuallyScheduled).toBe(true);
 
 			const jobsAfterUpdate = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
-			assert.strictEqual(
-				jobsAfterUpdate.some((job) => job.data.noteDraftId === draft.id),
-				true,
-			);
+			expect(jobsAfterUpdate.some((job) => job.data.noteDraftId === draft.id)).toBe(true);
 
 			const original = await post(alice, { text: 'update pure renote source' });
 			const pureRenote = await post(alice, { renoteId: original.id });
@@ -5680,9 +5533,9 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(cannotRenote.status, 400);
-			assert.strictEqual(castAsError(cannotRenote.body as any).error.id, '76cc5583-5a14-4ad3-8717-0298507e32db');
-			assert.strictEqual(castAsError(cannotRenote.body as any).error.code, 'CANNOT_RENOTE');
+			expect(cannotRenote.status).toBe(400);
+			expect(castAsError(cannotRenote.body as any).error.id).toBe('76cc5583-5a14-4ad3-8717-0298507e32db');
+			expect(castAsError(cannotRenote.body as any).error.code).toBe('CANNOT_RENOTE');
 
 			const specifiedReplyTarget = await post(alice, {
 				text: 'specified reply target',
@@ -5698,15 +5551,9 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(extendedVisibilityReply.status, 400);
-			assert.strictEqual(
-				castAsError(extendedVisibilityReply.body as any).error.id,
-				'215dbc76-336c-4d2a-9605-95766ba7dab0',
-			);
-			assert.strictEqual(
-				castAsError(extendedVisibilityReply.body as any).error.code,
-				'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
-			);
+			expect(extendedVisibilityReply.status).toBe(400);
+			expect(castAsError(extendedVisibilityReply.body as any).error.id).toBe('215dbc76-336c-4d2a-9605-95766ba7dab0');
+			expect(castAsError(extendedVisibilityReply.body as any).error.code).toBe('CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY');
 
 			const foreignDraft = await createNoteDraftInDatabase(db, {
 				id: genId(),
@@ -5723,8 +5570,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(foreignUpdate.status, 400);
-			assert.strictEqual(castAsError(foreignUpdate.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
+			expect(foreignUpdate.status).toBe(400);
+			expect(castAsError(foreignUpdate.body as any).error.id).toBe('49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
 
 			const missingUpdate = await api(
 				'notes/drafts/update',
@@ -5734,8 +5581,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingUpdate.status, 400);
-			assert.strictEqual(castAsError(missingUpdate.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
+			expect(missingUpdate.status).toBe(400);
+			expect(castAsError(missingUpdate.body as any).error.id).toBe('49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
 		});
 
 		test('notes/drafts/delete removes a draft and its schedule, rejecting missing drafts', async () => {
@@ -5760,20 +5607,17 @@ describe('Endpoints', () => {
 			);
 
 			const deleted = await api('notes/drafts/delete', { draftId: draft.id }, alice);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			const afterDelete = await fetchNoteDraftByIdFromDatabase(db, draft.id);
-			assert.strictEqual(afterDelete, null);
+			expect(afterDelete).toBe(null);
 
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
-			assert.strictEqual(
-				jobs.some((job) => job.data.noteDraftId === draft.id),
-				false,
-			);
+			expect(jobs.some((job) => job.data.noteDraftId === draft.id)).toBe(false);
 
 			const missingDelete = await api('notes/drafts/delete', { draftId: draft.id }, alice);
-			assert.strictEqual(missingDelete.status, 400);
-			assert.strictEqual(castAsError(missingDelete.body as any).error.id, '49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
+			expect(missingDelete.status).toBe(400);
+			expect(castAsError(missingDelete.body as any).error.id).toBe('49cd6b9d-848e-41ee-b0b9-adaca711a6b1');
 		});
 
 		test('notes/drafts/list paginates and filters by scheduled state', async () => {
@@ -5796,40 +5640,37 @@ describe('Endpoints', () => {
 			});
 
 			const scheduledOnly = await api('notes/drafts/list', { scheduled: true }, alice);
-			assert.strictEqual(scheduledOnly.status, 200);
+			expect(scheduledOnly.status).toBe(200);
 			const scheduledIds = (scheduledOnly.body as any[]).map((d) => d.id);
-			assert.strictEqual(scheduledIds.includes(scheduledDraft.id), true);
-			assert.strictEqual(scheduledIds.includes(plainDraft.id), false);
+			expect(scheduledIds.includes(scheduledDraft.id)).toBe(true);
+			expect(scheduledIds.includes(plainDraft.id)).toBe(false);
 
 			const unscheduledOnly = await api('notes/drafts/list', { scheduled: false }, alice);
-			assert.strictEqual(unscheduledOnly.status, 200);
+			expect(unscheduledOnly.status).toBe(200);
 			const unscheduledIds = (unscheduledOnly.body as any[]).map((d) => d.id);
-			assert.strictEqual(unscheduledIds.includes(plainDraft.id), true);
-			assert.strictEqual(unscheduledIds.includes(scheduledDraft.id), false);
+			expect(unscheduledIds.includes(plainDraft.id)).toBe(true);
+			expect(unscheduledIds.includes(scheduledDraft.id)).toBe(false);
 
 			const limited = await api('notes/drafts/list', { limit: 1, untilId: plainDraft.id }, alice);
-			assert.strictEqual(limited.status, 200);
-			assert.strictEqual((limited.body as any[]).length, 1);
+			expect(limited.status).toBe(200);
+			expect((limited.body as any[]).length).toBe(1);
 		});
 
 		test('charts/notes returns a chart shaped array of the requested length', async () => {
 			const res = await api('charts/notes', { span: 'day', limit: 5 });
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const body = res.body as { local: { total: number[] }; remote: { total: number[] } };
-			assert.strictEqual(body.local.total.length, 5);
-			assert.strictEqual(body.remote.total.length, 5);
-			assert.strictEqual(
-				body.local.total.every((v) => typeof v === 'number'),
-				true,
-			);
+			expect(body.local.total.length).toBe(5);
+			expect(body.remote.total.length).toBe(5);
+			expect(body.local.total.every((v) => typeof v === 'number')).toBe(true);
 		});
 
 		test('charts/notes via GET sets a public cache-control header for anonymous requests', async () => {
 			const res = await relativeFetch('api/charts/notes?span=hour&limit=3');
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.headers.get('cache-control'), 'public, max-age=3600');
+			expect(res.status).toBe(200);
+			expect(res.headers.get('cache-control')).toBe('public, max-age=3600');
 			const body = (await res.json()) as { local: { total: number[] } };
-			assert.strictEqual(body.local.total.length, 3);
+			expect(body.local.total.length).toBe(3);
 		});
 
 		test('charts/instance groups results by the given host', async () => {
@@ -5842,24 +5683,24 @@ describe('Endpoints', () => {
 			});
 
 			const res = await api('charts/instance', { span: 'day', limit: 5, host });
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const body = res.body as { notes: { total: number[] } };
-			assert.strictEqual(body.notes.total.length, 5);
+			expect(body.notes.total.length).toBe(5);
 		});
 
 		test('charts/user/notes returns a per-user chart scoped to the given userId', async () => {
 			const res = await api('charts/user/notes', { span: 'day', limit: 5, userId: alice.id });
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const body = res.body as { total: number[] };
-			assert.strictEqual(body.total.length, 5);
+			expect(body.total.length).toBe(5);
 		});
 
 		test('charts/user/drive returns a per-user drive chart scoped to the given userId', async () => {
 			const res = await api('charts/user/drive', { span: 'day', limit: 5, userId: alice.id });
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const body = res.body as { totalCount: number[]; totalSize: number[] };
-			assert.strictEqual(body.totalCount.length, 5);
-			assert.strictEqual(body.totalSize.length, 5);
+			expect(body.totalCount.length).toBe(5);
+			expect(body.totalSize.length).toBe(5);
 		});
 
 		test('antennas/create creates an antenna, rejects empty keywords, and validates the user list', async () => {
@@ -5879,10 +5720,10 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.name, `antenna-${suffix}`);
-			assert.strictEqual(created.body.src, 'home');
-			assert.strictEqual(created.body.isActive, true);
+			expect(created.status).toBe(200);
+			expect(created.body.name).toBe(`antenna-${suffix}`);
+			expect(created.body.src).toBe('home');
+			expect(created.body.isActive).toBe(true);
 
 			const empty = await api(
 				'antennas/create',
@@ -5898,8 +5739,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(empty.status, 400);
-			assert.strictEqual(castAsError(empty.body as any).error.id, '53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
+			expect(empty.status).toBe(400);
+			expect(castAsError(empty.body as any).error.id).toBe('53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
 
 			const noSuchList = await api(
 				'antennas/create',
@@ -5916,8 +5757,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(noSuchList.status, 400);
-			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
+			expect(noSuchList.status).toBe(400);
+			expect(castAsError(noSuchList.body as any).error.id).toBe('95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
 
 			const config = fixtureConfig;
 			const userList = await createUserListInDatabase(db, {
@@ -5940,8 +5781,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(withList.status, 200);
-			assert.strictEqual(withList.body.userListId, userList.id);
+			expect(withList.status).toBe(200);
+			expect(withList.body.userListId).toBe(userList.id);
 		});
 
 		test('antennas/update updates an antenna and rejects foreign or missing antennas', async () => {
@@ -5960,7 +5801,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const updated = await api(
 				'antennas/update',
@@ -5970,8 +5811,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 200);
-			assert.strictEqual(updated.body.name, `antenna-upd-renamed-${suffix}`);
+			expect(updated.status).toBe(200);
+			expect(updated.body.name).toBe(`antenna-upd-renamed-${suffix}`);
 
 			const emptyKeywordUpdate = await api(
 				'antennas/update',
@@ -5982,8 +5823,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(emptyKeywordUpdate.status, 400);
-			assert.strictEqual(castAsError(emptyKeywordUpdate.body as any).error.id, '721aaff6-4e1b-4d88-8de6-877fae9f68c4');
+			expect(emptyKeywordUpdate.status).toBe(400);
+			expect(castAsError(emptyKeywordUpdate.body as any).error.id).toBe('721aaff6-4e1b-4d88-8de6-877fae9f68c4');
 
 			const foreignUpdate = await api(
 				'antennas/update',
@@ -5993,8 +5834,8 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(foreignUpdate.status, 400);
-			assert.strictEqual(castAsError(foreignUpdate.body as any).error.id, '10c673ac-8852-48eb-aa1f-f5b67f069290');
+			expect(foreignUpdate.status).toBe(400);
+			expect(castAsError(foreignUpdate.body as any).error.id).toBe('10c673ac-8852-48eb-aa1f-f5b67f069290');
 
 			const missingUpdate = await api(
 				'antennas/update',
@@ -6004,8 +5845,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingUpdate.status, 400);
-			assert.strictEqual(castAsError(missingUpdate.body as any).error.id, '10c673ac-8852-48eb-aa1f-f5b67f069290');
+			expect(missingUpdate.status).toBe(400);
+			expect(castAsError(missingUpdate.body as any).error.id).toBe('10c673ac-8852-48eb-aa1f-f5b67f069290');
 		});
 
 		test('antennas/show and antennas/list scope antennas to the caller', async () => {
@@ -6024,22 +5865,19 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const shown = await api('antennas/show', { antennaId: created.body.id }, alice);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, created.body.id);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(created.body.id);
 
 			const shownByBob = await api('antennas/show', { antennaId: created.body.id }, bob);
-			assert.strictEqual(shownByBob.status, 400);
-			assert.strictEqual(castAsError(shownByBob.body as any).error.id, 'c06569fb-b025-4f23-b22d-1fcd20d2816b');
+			expect(shownByBob.status).toBe(400);
+			expect(castAsError(shownByBob.body as any).error.id).toBe('c06569fb-b025-4f23-b22d-1fcd20d2816b');
 
 			const list = await api('antennas/list', {}, alice);
-			assert.strictEqual(list.status, 200);
-			assert.strictEqual(
-				(list.body as any[]).some((a) => a.id === created.body.id),
-				true,
-			);
+			expect(list.status).toBe(200);
+			expect((list.body as any[]).some((a) => a.id === created.body.id)).toBe(true);
 		});
 
 		test('antennas/delete removes an antenna, rejecting foreign or missing antennas', async () => {
@@ -6058,18 +5896,18 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const foreignDelete = await api('antennas/delete', { antennaId: created.body.id }, bob);
-			assert.strictEqual(foreignDelete.status, 400);
-			assert.strictEqual(castAsError(foreignDelete.body as any).error.id, 'b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
+			expect(foreignDelete.status).toBe(400);
+			expect(castAsError(foreignDelete.body as any).error.id).toBe('b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
 
 			const deleted = await api('antennas/delete', { antennaId: created.body.id }, alice);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			const missingDelete = await api('antennas/delete', { antennaId: created.body.id }, alice);
-			assert.strictEqual(missingDelete.status, 400);
-			assert.strictEqual(castAsError(missingDelete.body as any).error.id, 'b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
+			expect(missingDelete.status).toBe(400);
+			expect(castAsError(missingDelete.body as any).error.id).toBe('b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
 		});
 
 		test('antennas/notes returns fanout-timeline notes and antennas/remove-note removes one', async () => {
@@ -6088,7 +5926,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 			const antennaId = created.body.id;
 
 			const noteId = genId();
@@ -6104,25 +5942,22 @@ describe('Endpoints', () => {
 				await redis.lpush(`list:antennaTimeline:${antennaId}`, noteId);
 
 				const notes = await api('antennas/notes', { antennaId, limit: 10 }, alice);
-				assert.strictEqual(notes.status, 200);
-				assert.strictEqual(
-					(notes.body as any[]).some((n) => n.id === noteId),
-					true,
-				);
+				expect(notes.status).toBe(200);
+				expect((notes.body as any[]).some((n) => n.id === noteId)).toBe(true);
 
 				const removed = await api('antennas/remove-note', { antennaId, noteId }, alice);
-				assert.strictEqual(removed.status, 204);
+				expect(removed.status).toBe(204);
 
 				const remaining = await redis.lrange(`list:antennaTimeline:${antennaId}`, 0, -1);
-				assert.strictEqual(remaining.includes(noteId), false);
+				expect(remaining.includes(noteId)).toBe(false);
 
 				const missingAntenna = await api(
 					'antennas/remove-note',
 					{ antennaId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', noteId },
 					alice,
 				);
-				assert.strictEqual(missingAntenna.status, 400);
-				assert.strictEqual(castAsError(missingAntenna.body as any).error.id, '850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
+				expect(missingAntenna.status).toBe(400);
+				expect(castAsError(missingAntenna.body as any).error.id).toBe('850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
 			} finally {
 				await redis.del(`list:antennaTimeline:${antennaId}`);
 				await closeRedisConnection(redis);
@@ -6133,39 +5968,39 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `twofa${Date.now().toString(36)}` });
 
 			const wrongPassword = await api('i/2fa/register', { password: 'wrong' }, user);
-			assert.strictEqual(wrongPassword.status, 400);
-			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '78d6c839-20c9-4c66-b90a-fc0542168b48');
+			expect(wrongPassword.status).toBe(400);
+			expect(castAsError(wrongPassword.body as any).error.id).toBe('78d6c839-20c9-4c66-b90a-fc0542168b48');
 
 			const registered = await api('i/2fa/register', { password: 'test' }, user);
-			assert.strictEqual(registered.status, 200);
-			assert.strictEqual(typeof registered.body.secret, 'string');
-			assert.strictEqual(typeof registered.body.qr, 'string');
+			expect(registered.status).toBe(200);
+			expect(typeof registered.body.secret).toBe('string');
+			expect(typeof registered.body.qr).toBe('string');
 
 			// テスト環境では MISSKEY_TEST_CHECK_DUPLICATED_TOTP 未設定時に任意の TOTP トークンが受理される。
 			const done = await api('i/2fa/done', { token: '000000' }, user);
-			assert.strictEqual(done.status, 200);
-			assert.strictEqual((done.body as any).backupCodes.length, 5);
+			expect(done.status).toBe(200);
+			expect((done.body as any).backupCodes.length).toBe(5);
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(profile.twoFactorEnabled, true);
+			expect(profile.twoFactorEnabled).toBe(true);
 
 			const unregistered = await api('i/2fa/unregister', { password: 'test', token: '000000' }, user);
-			assert.strictEqual(unregistered.status, 204);
+			expect(unregistered.status).toBe(204);
 
 			const afterUnregister = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(afterUnregister.twoFactorEnabled, false);
+			expect(afterUnregister.twoFactorEnabled).toBe(false);
 		});
 
 		test('i/2fa/register-key requires two-factor authentication to already be enabled', async () => {
 			const user = await signup({ username: `twofakey${Date.now().toString(36)}` });
 
 			const notEnabled = await api('i/2fa/register-key', { password: 'test' }, user);
-			assert.strictEqual(notEnabled.status, 400);
-			assert.strictEqual(castAsError(notEnabled.body as any).error.id, 'bf32b864-449b-47b8-974e-f9a5468546f1');
+			expect(notEnabled.status).toBe(400);
+			expect(castAsError(notEnabled.body as any).error.id).toBe('bf32b864-449b-47b8-974e-f9a5468546f1');
 
 			const wrongPassword = await api('i/2fa/register-key', { password: 'wrong' }, user);
-			assert.strictEqual(wrongPassword.status, 400);
-			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '38769596-efe2-4faf-9bec-abbb3f2cd9ba');
+			expect(wrongPassword.status).toBe(400);
+			expect(castAsError(wrongPassword.body as any).error.id).toBe('38769596-efe2-4faf-9bec-abbb3f2cd9ba');
 		});
 
 		test('i/2fa/key-done requires a matching password and two-factor authentication to already be enabled', async () => {
@@ -6176,16 +6011,16 @@ describe('Endpoints', () => {
 				{ password: 'wrong', name: 'my key', credential: {} as never },
 				user,
 			);
-			assert.strictEqual(wrongPassword.status, 400);
-			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '0d7ec6d2-e652-443e-a7bf-9ee9a0cd77b0');
+			expect(wrongPassword.status).toBe(400);
+			expect(castAsError(wrongPassword.body as any).error.id).toBe('0d7ec6d2-e652-443e-a7bf-9ee9a0cd77b0');
 
 			const notEnabled = await api(
 				'i/2fa/key-done',
 				{ password: 'test', name: 'my key', credential: {} as never },
 				user,
 			);
-			assert.strictEqual(notEnabled.status, 400);
-			assert.strictEqual(castAsError(notEnabled.body as any).error.id, '798d6847-b1ed-4f9c-b1f9-163c42655995');
+			expect(notEnabled.status).toBe(400);
+			expect(castAsError(notEnabled.body as any).error.id).toBe('798d6847-b1ed-4f9c-b1f9-163c42655995');
 		});
 
 		test('i/2fa/update-key and i/2fa/remove-key manage an existing security key', async () => {
@@ -6207,35 +6042,35 @@ describe('Endpoints', () => {
 				{ name: 'renamed', credentialId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
 				user,
 			);
-			assert.strictEqual(noSuchKey.status, 400);
-			assert.strictEqual(castAsError(noSuchKey.body as any).error.id, 'f9c5467f-d492-4d3c-9a8g-a70dacc86512');
+			expect(noSuchKey.status).toBe(400);
+			expect(castAsError(noSuchKey.body as any).error.id).toBe('f9c5467f-d492-4d3c-9a8g-a70dacc86512');
 
 			const accessDenied = await api('i/2fa/update-key', { name: 'renamed', credentialId: keyId }, alice);
-			assert.strictEqual(accessDenied.status, 400);
-			assert.strictEqual(castAsError(accessDenied.body as any).error.id, '1fb7cb09-d46a-4fff-b8df-057708cce513');
+			expect(accessDenied.status).toBe(400);
+			expect(castAsError(accessDenied.body as any).error.id).toBe('1fb7cb09-d46a-4fff-b8df-057708cce513');
 
 			const updated = await api('i/2fa/update-key', { name: 'renamed', credentialId: keyId }, user);
-			assert.strictEqual(updated.status, 200);
-			assert.deepStrictEqual(updated.body, {});
+			expect(updated.status).toBe(200);
+			expect(updated.body).toStrictEqual({});
 
 			const wrongPassword = await api('i/2fa/remove-key', { password: 'wrong', credentialId: keyId }, user);
-			assert.strictEqual(wrongPassword.status, 400);
-			assert.strictEqual(castAsError(wrongPassword.body as any).error.id, '141c598d-a825-44c8-9173-cfb9d92be493');
+			expect(wrongPassword.status).toBe(400);
+			expect(castAsError(wrongPassword.body as any).error.id).toBe('141c598d-a825-44c8-9173-cfb9d92be493');
 
 			const removed = await api('i/2fa/remove-key', { password: 'test', credentialId: keyId }, user);
-			assert.strictEqual(removed.status, 200);
-			assert.deepStrictEqual(removed.body, {});
+			expect(removed.status).toBe(200);
+			expect(removed.body).toStrictEqual({});
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(profile.usePasswordLessLogin, false);
+			expect(profile.usePasswordLessLogin).toBe(false);
 		});
 
 		test('i/2fa/password-less requires a security key before it can be enabled', async () => {
 			const user = await signup({ username: `twofapwless${Date.now().toString(36)}` });
 
 			const noKey = await api('i/2fa/password-less', { value: true }, user);
-			assert.strictEqual(noKey.status, 400);
-			assert.strictEqual(castAsError(noKey.body as any).error.id, 'f9c54d7f-d4c2-4d3c-9a8g-a70daac86512');
+			expect(noKey.status).toBe(400);
+			expect(castAsError(noKey.body as any).error.id).toBe('f9c54d7f-d4c2-4d3c-9a8g-a70daac86512');
 
 			await createUserSecurityKeyInDatabase(db, {
 				id: `hono-pwless-key-${Date.now().toString(36)}`,
@@ -6249,10 +6084,10 @@ describe('Endpoints', () => {
 			});
 
 			const enabled = await api('i/2fa/password-less', { value: true }, user);
-			assert.strictEqual(enabled.status, 204);
+			expect(enabled.status).toBe(204);
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(profile.usePasswordLessLogin, true);
+			expect(profile.usePasswordLessLogin).toBe(true);
 		});
 
 		test('pages/create creates a page and rejects missing files or duplicate names', async () => {
@@ -6271,11 +6106,11 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.name, `hono-page-${suffix}`);
-			assert.strictEqual(created.body.userId, alice.id);
-			assert.strictEqual(created.body.eyeCatchingImageId, file.body!.id);
-			assert.strictEqual(created.body.eyeCatchingImage!.id, file.body!.id);
+			expect(created.status).toBe(200);
+			expect(created.body.name).toBe(`hono-page-${suffix}`);
+			expect(created.body.userId).toBe(alice.id);
+			expect(created.body.eyeCatchingImageId).toBe(file.body!.id);
+			expect(created.body.eyeCatchingImage!.id).toBe(file.body!.id);
 
 			const noSuchFile = await api(
 				'pages/create',
@@ -6289,8 +6124,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(noSuchFile.status, 400);
-			assert.strictEqual(castAsError(noSuchFile.body as any).error.id, 'b7b97489-0f66-4b12-a5ff-b21bd63f6e1c');
+			expect(noSuchFile.status).toBe(400);
+			expect(castAsError(noSuchFile.body as any).error.id).toBe('b7b97489-0f66-4b12-a5ff-b21bd63f6e1c');
 
 			const duplicateName = await api(
 				'pages/create',
@@ -6303,8 +6138,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(duplicateName.status, 400);
-			assert.strictEqual(castAsError(duplicateName.body as any).error.id, '4650348e-301c-499a-83c9-6aa988c66bc1');
+			expect(duplicateName.status).toBe(400);
+			expect(castAsError(duplicateName.body as any).error.id).toBe('4650348e-301c-499a-83c9-6aa988c66bc1');
 		});
 
 		test('pages/update updates a page and rejects missing pages, foreign pages, and name conflicts', async () => {
@@ -6351,11 +6186,11 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 204);
+			expect(updated.status).toBe(204);
 
 			const shown = await api('pages/show', { pageId: page.id }, alice);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.title, `after update ${suffix}`);
+			expect(shown.status).toBe(200);
+			expect(shown.body.title).toBe(`after update ${suffix}`);
 
 			const missing = await api(
 				'pages/update',
@@ -6365,8 +6200,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.id, '21149b9e-3616-4778-9592-c4ce89f5a864');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.id).toBe('21149b9e-3616-4778-9592-c4ce89f5a864');
 
 			const foreign = await api(
 				'pages/update',
@@ -6376,8 +6211,8 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(foreign.status, 400);
-			assert.strictEqual(castAsError(foreign.body as any).error.id, '3c15cd52-3b4b-4274-967d-6456fc4f792b');
+			expect(foreign.status).toBe(400);
+			expect(castAsError(foreign.body as any).error.id).toBe('3c15cd52-3b4b-4274-967d-6456fc4f792b');
 
 			const nameConflict = await api(
 				'pages/update',
@@ -6387,8 +6222,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(nameConflict.status, 400);
-			assert.strictEqual(castAsError(nameConflict.body as any).error.id, '2298a392-d4a1-44c5-9ebb-ac1aeaa5a9ab');
+			expect(nameConflict.status).toBe(400);
+			expect(castAsError(nameConflict.body as any).error.id).toBe('2298a392-d4a1-44c5-9ebb-ac1aeaa5a9ab');
 		});
 
 		test("pages/delete removes a page, rejects foreign pages, and allows moderators to delete others' pages", async () => {
@@ -6412,8 +6247,8 @@ describe('Endpoints', () => {
 			});
 
 			const foreign = await api('pages/delete', { pageId: page.id }, bob);
-			assert.strictEqual(foreign.status, 400);
-			assert.strictEqual(castAsError(foreign.body as any).error.id, '8b741b3e-2c22-44b3-a15f-29949aa1601e');
+			expect(foreign.status).toBe(400);
+			expect(castAsError(foreign.body as any).error.id).toBe('8b741b3e-2c22-44b3-a15f-29949aa1601e');
 
 			const moderatorRole = await role(alice, { isModerator: true });
 			const moderator = await signup({ username: `pagemod${suffix}` });
@@ -6424,18 +6259,18 @@ describe('Endpoints', () => {
 			});
 
 			const deleted = await api('pages/delete', { pageId: page.id }, moderator);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			const logs = await listModerationLogsFromDatabase(db, { limit: 100, order: 'desc' });
 			const log = logs.find(
 				(l) => l.userId === moderator.id && l.type === 'deletePage' && (l.info as any).pageId === page.id,
 			);
 			assert.ok(log);
-			assert.strictEqual((log!.info as any).pageUserId, alice.id);
+			expect((log!.info as any).pageUserId).toBe(alice.id);
 
 			const missing = await api('pages/delete', { pageId: page.id }, alice);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.id, 'eb0c6e1d-d519-4764-9486-52a7e1c6392a');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.id).toBe('eb0c6e1d-d519-4764-9486-52a7e1c6392a');
 		});
 
 		test('pages/show finds a page by id or by name and username, and pages/featured lists liked pages', async () => {
@@ -6459,26 +6294,23 @@ describe('Endpoints', () => {
 			});
 
 			const byId = await api('pages/show', { pageId: page.id });
-			assert.strictEqual(byId.status, 200);
-			assert.strictEqual(byId.body.id, page.id);
+			expect(byId.status).toBe(200);
+			expect(byId.body.id).toBe(page.id);
 
 			const byName = await api('pages/show', { name: page.name, username: alice.username });
-			assert.strictEqual(byName.status, 200);
-			assert.strictEqual(byName.body.id, page.id);
+			expect(byName.status).toBe(200);
+			expect(byName.body.id).toBe(page.id);
 
 			const notFound = await api('pages/show', { pageId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' });
-			assert.strictEqual(notFound.status, 400);
-			assert.strictEqual(castAsError(notFound.body as any).error.id, '222120c0-3ead-4528-811b-b96f233388d7');
+			expect(notFound.status).toBe(400);
+			expect(castAsError(notFound.body as any).error.id).toBe('222120c0-3ead-4528-811b-b96f233388d7');
 
 			const liked = await api('pages/like', { pageId: page.id }, bob);
-			assert.strictEqual(liked.status, 204);
+			expect(liked.status).toBe(204);
 
 			const featured = await api('pages/featured', {});
-			assert.strictEqual(featured.status, 200);
-			assert.strictEqual(
-				(featured.body as any[]).some((p) => p.id === page.id),
-				true,
-			);
+			expect(featured.status).toBe(200);
+			expect((featured.body as any[]).some((p) => p.id === page.id)).toBe(true);
 		});
 
 		test("i/pages lists the caller's pages and i/page-likes lists liked pages", async () => {
@@ -6502,20 +6334,17 @@ describe('Endpoints', () => {
 			});
 
 			const ownPages = await api('i/pages', {}, alice);
-			assert.strictEqual(ownPages.status, 200);
-			assert.strictEqual(
-				(ownPages.body as any[]).some((p) => p.id === page.id),
-				true,
-			);
+			expect(ownPages.status).toBe(200);
+			expect((ownPages.body as any[]).some((p) => p.id === page.id)).toBe(true);
 
 			const liked = await api('pages/like', { pageId: page.id }, bob);
-			assert.strictEqual(liked.status, 204);
+			expect(liked.status).toBe(204);
 
 			const likes = await api('i/page-likes', {}, bob);
-			assert.strictEqual(likes.status, 200);
+			expect(likes.status).toBe(200);
 			const likeEntry = (likes.body as any[]).find((l) => l.page.id === page.id);
 			assert.ok(likeEntry);
-			assert.strictEqual(typeof likeEntry.id, 'string');
+			expect(typeof likeEntry.id).toBe('string');
 		});
 
 		test("users/pages lists only a user's public pages without credentials", async () => {
@@ -6539,11 +6368,8 @@ describe('Endpoints', () => {
 			});
 
 			const shown = await api('users/pages', { userId: alice.id });
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(
-				(shown.body as any[]).some((p) => p.id === publicPage.id),
-				true,
-			);
+			expect(shown.status).toBe(200);
+			expect((shown.body as any[]).some((p) => p.id === publicPage.id)).toBe(true);
 		});
 
 		test('users/lists/push adds a member, rejects duplicates, missing lists/users, and blocked users', async () => {
@@ -6562,28 +6388,28 @@ describe('Endpoints', () => {
 			});
 
 			const noSuchList = await api('users/lists/push', { listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', userId: bob.id }, alice);
-			assert.strictEqual(noSuchList.status, 400);
-			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '2214501d-ac96-4049-b717-91e42272a711');
+			expect(noSuchList.status).toBe(400);
+			expect(castAsError(noSuchList.body as any).error.id).toBe('2214501d-ac96-4049-b717-91e42272a711');
 
 			const noSuchUser = await api(
 				'users/lists/push',
 				{ listId: userList.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
 				alice,
 			);
-			assert.strictEqual(noSuchUser.status, 400);
-			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, 'a89abd3d-f0bc-4cce-beb1-2f446f4f1e6a');
+			expect(noSuchUser.status).toBe(400);
+			expect(castAsError(noSuchUser.body as any).error.id).toBe('a89abd3d-f0bc-4cce-beb1-2f446f4f1e6a');
 
 			const blocked = await api('users/lists/push', { listId: userList.id, userId: blocker.id }, alice);
-			assert.strictEqual(blocked.status, 400);
-			assert.strictEqual(castAsError(blocked.body as any).error.id, '990232c5-3f9d-4d83-9f3f-ef27b6332a4b');
+			expect(blocked.status).toBe(400);
+			expect(castAsError(blocked.body as any).error.id).toBe('990232c5-3f9d-4d83-9f3f-ef27b6332a4b');
 
 			const pushed = await api('users/lists/push', { listId: userList.id, userId: bob.id }, alice);
-			assert.strictEqual(pushed.status, 204);
-			assert.strictEqual(await userListMembershipExistsInDatabase(db, bob.id, userList.id), true);
+			expect(pushed.status).toBe(204);
+			expect(await userListMembershipExistsInDatabase(db, bob.id, userList.id)).toBe(true);
 
 			const duplicate = await api('users/lists/push', { listId: userList.id, userId: bob.id }, alice);
-			assert.strictEqual(duplicate.status, 400);
-			assert.strictEqual(castAsError(duplicate.body as any).error.id, '1de7c884-1595-49e9-857e-61f12f4d4fc5');
+			expect(duplicate.status).toBe(400);
+			expect(castAsError(duplicate.body as any).error.id).toBe('1de7c884-1595-49e9-857e-61f12f4d4fc5');
 		});
 
 		test('users/lists/pull removes a member and rejects missing lists or users', async () => {
@@ -6602,20 +6428,20 @@ describe('Endpoints', () => {
 			});
 
 			const noSuchList = await api('users/lists/pull', { listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', userId: bob.id }, alice);
-			assert.strictEqual(noSuchList.status, 400);
-			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
+			expect(noSuchList.status).toBe(400);
+			expect(castAsError(noSuchList.body as any).error.id).toBe('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
 
 			const noSuchUser = await api(
 				'users/lists/pull',
 				{ listId: userList.id, userId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' },
 				alice,
 			);
-			assert.strictEqual(noSuchUser.status, 400);
-			assert.strictEqual(castAsError(noSuchUser.body as any).error.id, '588e7f72-c744-4a61-b180-d354e912bda2');
+			expect(noSuchUser.status).toBe(400);
+			expect(castAsError(noSuchUser.body as any).error.id).toBe('588e7f72-c744-4a61-b180-d354e912bda2');
 
 			const pulled = await api('users/lists/pull', { listId: userList.id, userId: bob.id }, alice);
-			assert.strictEqual(pulled.status, 204);
-			assert.strictEqual(await userListMembershipExistsInDatabase(db, bob.id, userList.id), false);
+			expect(pulled.status).toBe(204);
+			expect(await userListMembershipExistsInDatabase(db, bob.id, userList.id)).toBe(false);
 		});
 
 		test('users/lists/update-membership toggles withReplies for a member', async () => {
@@ -6639,14 +6465,14 @@ describe('Endpoints', () => {
 				{ listId: userList.id, userId: bob.id, withReplies: true },
 				alice,
 			);
-			assert.strictEqual(updated.status, 204);
+			expect(updated.status).toBe(204);
 
 			const memberships = await api('users/lists/get-memberships', { listId: userList.id }, alice);
-			assert.strictEqual(memberships.status, 200);
+			expect(memberships.status).toBe(200);
 			const membership = (memberships.body as any[]).find((m) => m.userId === bob.id);
 			assert.ok(membership);
-			assert.strictEqual(membership.withReplies, true);
-			assert.strictEqual(membership.user.id, bob.id);
+			expect(membership.withReplies).toBe(true);
+			expect(membership.user.id).toBe(bob.id);
 		});
 
 		test('users/lists/get-memberships supports forPublic without credentials', async () => {
@@ -6666,18 +6492,15 @@ describe('Endpoints', () => {
 			});
 
 			const publicMemberships = await api('users/lists/get-memberships', { listId: userList.id, forPublic: true });
-			assert.strictEqual(publicMemberships.status, 200);
-			assert.strictEqual(
-				(publicMemberships.body as any[]).some((m) => m.userId === bob.id),
-				true,
-			);
+			expect(publicMemberships.status).toBe(200);
+			expect((publicMemberships.body as any[]).some((m) => m.userId === bob.id)).toBe(true);
 
 			const missing = await api('users/lists/get-memberships', {
 				listId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz',
 				forPublic: true,
 			});
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.id, '7bc05c21-1d7a-41ae-88f1-66820f4dc686');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.id).toBe('7bc05c21-1d7a-41ae-88f1-66820f4dc686');
 		});
 
 		test('users/lists/create-from-public copies members from an existing public list', async () => {
@@ -6708,18 +6531,18 @@ describe('Endpoints', () => {
 			});
 
 			const noSuchList = await api('users/lists/create-from-public', { name: 'copy', listId: privateList.id }, copier);
-			assert.strictEqual(noSuchList.status, 400);
-			assert.strictEqual(castAsError(noSuchList.body as any).error.id, '9292f798-6175-4f7d-93f4-b6742279667d');
+			expect(noSuchList.status).toBe(400);
+			expect(castAsError(noSuchList.body as any).error.id).toBe('9292f798-6175-4f7d-93f4-b6742279667d');
 
 			const copied = await api(
 				'users/lists/create-from-public',
 				{ name: `hono-copied-list-${suffix}`, listId: sourceList.id },
 				copier,
 			);
-			assert.strictEqual(copied.status, 200);
-			assert.strictEqual(copied.body.name, `hono-copied-list-${suffix}`);
-			assert.deepStrictEqual(copied.body.userIds, [carol.id]);
-			assert.strictEqual(await userListMembershipExistsInDatabase(db, carol.id, copied.body.id), true);
+			expect(copied.status).toBe(200);
+			expect(copied.body.name).toBe(`hono-copied-list-${suffix}`);
+			expect(copied.body.userIds).toStrictEqual([carol.id]);
+			expect(await userListMembershipExistsInDatabase(db, carol.id, copied.body.id)).toBe(true);
 
 			const blockedSourceList = await createUserListInDatabase(db, {
 				id: genId(),
@@ -6745,9 +6568,9 @@ describe('Endpoints', () => {
 					{ name: blockedCopyName, listId: blockedSourceList.id },
 					copier,
 				);
-				assert.strictEqual(blocked.status, 400);
-				assert.strictEqual(castAsError(blocked.body as any).error.id, 'a2497f2a-2389-439c-8626-5298540530f4');
-				assert.strictEqual(await fetchUserListByNameAndUserIdFromDatabase(db, blockedCopyName, copier.id), null);
+				expect(blocked.status).toBe(400);
+				expect(castAsError(blocked.body as any).error.id).toBe('a2497f2a-2389-439c-8626-5298540530f4');
+				expect(await fetchUserListByNameAndUserIdFromDatabase(db, blockedCopyName, copier.id)).toBe(null);
 			} finally {
 				await deleteBlockingByIdFromDatabase(db, blocking.id);
 			}
@@ -6780,10 +6603,10 @@ describe('Endpoints', () => {
 					copier2,
 				),
 			]);
-			assert.strictEqual(firstCopy.status, 200);
-			assert.strictEqual(secondCopy.status, 200);
-			assert.deepStrictEqual(new Set(firstCopy.body.userIds), new Set([copier.id, bob.id]));
-			assert.deepStrictEqual(new Set(secondCopy.body.userIds), new Set([copier.id, bob.id]));
+			expect(firstCopy.status).toBe(200);
+			expect(secondCopy.status).toBe(200);
+			expect(new Set(firstCopy.body.userIds)).toStrictEqual(new Set([copier.id, bob.id]));
+			expect(new Set(secondCopy.body.userIds)).toStrictEqual(new Set([copier.id, bob.id]));
 			await Promise.all([
 				deleteUserListByIdInDatabase(db, firstCopy.body.id),
 				deleteUserListByIdInDatabase(db, copied.body.id),
@@ -6801,8 +6624,8 @@ describe('Endpoints', () => {
 			await updateUserProfileInDatabase(db, alice.id, { achievements });
 
 			const res = await api('users/achievements', { userId: alice.id });
-			assert.strictEqual(res.status, 200);
-			assert.deepStrictEqual(res.body, achievements);
+			expect(res.status).toBe(200);
+			expect(res.body).toStrictEqual(achievements);
 		});
 
 		test('i/webhooks list, show, update, and delete are scoped to the caller', async () => {
@@ -6841,25 +6664,22 @@ describe('Endpoints', () => {
 			};
 
 			const list = await api('i/webhooks/list', {}, alice);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			const listed = (list.body as any[]).find((item) => item.id === webhook.id);
-			assert.deepStrictEqual(listed, expected);
-			assert.strictEqual(
-				(list.body as any[]).some((item) => item.id === otherWebhook.id),
-				false,
-			);
+			expect(listed).toStrictEqual(expected);
+			expect((list.body as any[]).some((item) => item.id === otherWebhook.id)).toBe(false);
 
 			const show = await api('i/webhooks/show', { webhookId: webhook.id }, alice);
-			assert.strictEqual(show.status, 200);
-			assert.deepStrictEqual(show.body, expected);
+			expect(show.status).toBe(200);
+			expect(show.body).toStrictEqual(expected);
 
 			const noSuch = await api('i/webhooks/show', { webhookId: otherWebhook.id }, alice);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.id, '50f614d9-3047-4f7e-90d8-ad6b2d5fb098');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.id).toBe('50f614d9-3047-4f7e-90d8-ad6b2d5fb098');
 
 			const updateOther = await api('i/webhooks/update', { webhookId: otherWebhook.id, name: 'bad update' }, alice);
-			assert.strictEqual(updateOther.status, 400);
-			assert.strictEqual(castAsError(updateOther.body as any).error.id, 'fb0fea69-da18-45b1-828d-bd4fd1612518');
+			expect(updateOther.status).toBe(400);
+			expect(castAsError(updateOther.body as any).error.id).toBe('fb0fea69-da18-45b1-828d-bd4fd1612518');
 
 			const update = await api(
 				'i/webhooks/update',
@@ -6873,22 +6693,22 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(update.status, 204);
+			expect(update.status).toBe(204);
 
 			const updated = await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, alice.id);
-			assert.strictEqual(updated?.name, 'hono webhook updated');
-			assert.deepStrictEqual(updated?.on, ['followed']);
-			assert.strictEqual(updated?.url, 'https://example.com/hono-webhook-updated');
-			assert.strictEqual(updated?.secret, '');
-			assert.strictEqual(updated?.active, false);
+			expect(updated?.name).toBe('hono webhook updated');
+			expect(updated?.on).toStrictEqual(['followed']);
+			expect(updated?.url).toBe('https://example.com/hono-webhook-updated');
+			expect(updated?.secret).toBe('');
+			expect(updated?.active).toBe(false);
 
 			const deleteOther = await api('i/webhooks/delete', { webhookId: otherWebhook.id }, alice);
-			assert.strictEqual(deleteOther.status, 400);
-			assert.strictEqual(castAsError(deleteOther.body as any).error.id, 'bae73e5a-5522-4965-ae19-3a8688e71d82');
+			expect(deleteOther.status).toBe(400);
+			expect(castAsError(deleteOther.body as any).error.id).toBe('bae73e5a-5522-4965-ae19-3a8688e71d82');
 
 			const deleted = await api('i/webhooks/delete', { webhookId: webhook.id }, alice);
-			assert.strictEqual(deleted.status, 204);
-			assert.strictEqual(await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, alice.id), null);
+			expect(deleted.status).toBe(204);
+			expect(await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, alice.id)).toBe(null);
 		});
 
 		test('users/lists/delete removes only the caller list and preserves error id', async () => {
@@ -6901,17 +6721,17 @@ describe('Endpoints', () => {
 			});
 
 			const otherUser = await api('users/lists/delete', { listId: userList.id }, bob);
-			assert.strictEqual(otherUser.status, 400);
-			assert.strictEqual(castAsError(otherUser.body as any).error.id, '78436795-db79-42f5-b1e2-55ea2cf19166');
-			assert.notStrictEqual(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id), null);
+			expect(otherUser.status).toBe(400);
+			expect(castAsError(otherUser.body as any).error.id).toBe('78436795-db79-42f5-b1e2-55ea2cf19166');
+			expect(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id)).not.toBe(null);
 
 			const deleted = await api('users/lists/delete', { listId: userList.id }, alice);
-			assert.strictEqual(deleted.status, 204);
-			assert.strictEqual(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id), null);
+			expect(deleted.status).toBe(204);
+			expect(await fetchUserListByIdAndUserIdFromDatabase(db, userList.id, alice.id)).toBe(null);
 
 			const missing = await api('users/lists/delete', { listId: userList.id }, alice);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.id, '78436795-db79-42f5-b1e2-55ea2cf19166');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.id).toBe('78436795-db79-42f5-b1e2-55ea2cf19166');
 		});
 
 		test('users/lists list, show, and update preserve visibility and ownership semantics', async () => {
@@ -6936,56 +6756,38 @@ describe('Endpoints', () => {
 			});
 
 			const ownList = await api('users/lists/list', {}, alice);
-			assert.strictEqual(ownList.status, 200);
-			assert.strictEqual(
-				(ownList.body as any[]).some((item) => item.id === privateList.id),
-				true,
-			);
-			assert.strictEqual(
-				(ownList.body as any[]).some((item) => item.id === publicList.id),
-				true,
-			);
+			expect(ownList.status).toBe(200);
+			expect((ownList.body as any[]).some((item) => item.id === privateList.id)).toBe(true);
+			expect((ownList.body as any[]).some((item) => item.id === publicList.id)).toBe(true);
 
 			const publicOnly = await api('users/lists/list', { userId: alice.id });
-			assert.strictEqual(publicOnly.status, 200);
-			assert.strictEqual(
-				(publicOnly.body as any[]).some((item) => item.id === publicList.id),
-				true,
-			);
-			assert.strictEqual(
-				(publicOnly.body as any[]).some((item) => item.id === privateList.id),
-				false,
-			);
+			expect(publicOnly.status).toBe(200);
+			expect((publicOnly.body as any[]).some((item) => item.id === publicList.id)).toBe(true);
+			expect((publicOnly.body as any[]).some((item) => item.id === privateList.id)).toBe(false);
 
 			const invalidAnonymousList = await api('users/lists/list', {});
-			assert.strictEqual(invalidAnonymousList.status, 400);
-			assert.strictEqual(
-				castAsError(invalidAnonymousList.body as any).error.id,
-				'ab36de0e-29e9-48cb-9732-d82f1281620d',
-			);
+			expect(invalidAnonymousList.status).toBe(400);
+			expect(castAsError(invalidAnonymousList.body as any).error.id).toBe('ab36de0e-29e9-48cb-9732-d82f1281620d');
 
 			const privateShowByOwner = await api('users/lists/show', { listId: privateList.id }, alice);
-			assert.strictEqual(privateShowByOwner.status, 200);
-			assert.strictEqual(privateShowByOwner.body.id, privateList.id);
+			expect(privateShowByOwner.status).toBe(200);
+			expect(privateShowByOwner.body.id).toBe(privateList.id);
 
 			const privateShowAnonymous = await api('users/lists/show', { listId: privateList.id });
-			assert.strictEqual(privateShowAnonymous.status, 400);
-			assert.strictEqual(
-				castAsError(privateShowAnonymous.body as any).error.id,
-				'7bc05c21-1d7a-41ae-88f1-66820f4dc686',
-			);
+			expect(privateShowAnonymous.status).toBe(400);
+			expect(castAsError(privateShowAnonymous.body as any).error.id).toBe('7bc05c21-1d7a-41ae-88f1-66820f4dc686');
 
 			const favorite = await api('users/lists/favorite', { listId: publicList.id }, bob);
-			assert.strictEqual(favorite.status, 204);
+			expect(favorite.status).toBe(204);
 			const publicShow = await api('users/lists/show', { listId: publicList.id, forPublic: true }, bob);
-			assert.strictEqual(publicShow.status, 200);
-			assert.strictEqual(publicShow.body.id, publicList.id);
-			assert.strictEqual(publicShow.body.likedCount, 1);
-			assert.strictEqual(publicShow.body.isLiked, true);
+			expect(publicShow.status).toBe(200);
+			expect(publicShow.body.id).toBe(publicList.id);
+			expect(publicShow.body.likedCount).toBe(1);
+			expect(publicShow.body.isLiked).toBe(true);
 
 			const otherUserUpdate = await api('users/lists/update', { listId: privateList.id, name: 'bad update' }, bob);
-			assert.strictEqual(otherUserUpdate.status, 400);
-			assert.strictEqual(castAsError(otherUserUpdate.body as any).error.id, '796666fe-3dff-4d39-becb-8a5932c1d5b7');
+			expect(otherUserUpdate.status).toBe(400);
+			expect(castAsError(otherUserUpdate.body as any).error.id).toBe('796666fe-3dff-4d39-becb-8a5932c1d5b7');
 
 			const update = await api(
 				'users/lists/update',
@@ -6996,14 +6798,14 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(update.status, 200);
-			assert.strictEqual(update.body.id, privateList.id);
-			assert.strictEqual(update.body.name, 'hono updated list');
-			assert.strictEqual(update.body.isPublic, true);
+			expect(update.status).toBe(200);
+			expect(update.body.id).toBe(privateList.id);
+			expect(update.body.name).toBe('hono updated list');
+			expect(update.body.isPublic).toBe(true);
 
 			const fetched = await fetchUserListByIdAndUserIdFromDatabase(db, privateList.id, alice.id);
-			assert.strictEqual(fetched?.name, 'hono updated list');
-			assert.strictEqual(fetched?.isPublic, true);
+			expect(fetched?.name).toBe('hono updated list');
+			expect(fetched?.isPublic).toBe(true);
 		});
 
 		test('Hono account data endpoints require matching app token permissions', async () => {
@@ -7030,8 +6832,8 @@ describe('Endpoints', () => {
 				['users/lists/update', { listId: genId() }, readAccountToken],
 			] as const) {
 				const denied = await api(endpoint, params as any, { token });
-				assert.strictEqual(denied.status, 403, endpoint);
-				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+				expect(denied.status, endpoint).toBe(403);
+				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
 			}
 		});
 	});
@@ -7045,46 +6847,46 @@ describe('Endpoints', () => {
 
 			const wrongWriteToken = await createAppToken(follower, ['read:following']);
 			const scopeDenied = await api('following/create', { userId: followee.id }, { token: wrongWriteToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const selfFollow = await api('following/create', { userId: follower.id }, follower);
-			assert.strictEqual(selfFollow.status, 400);
-			assert.strictEqual(castAsError(selfFollow.body as any).error.code, 'FOLLOWEE_IS_YOURSELF');
-			assert.strictEqual(castAsError(selfFollow.body as any).error.id, '26fbe7bb-a331-4857-af17-205b426669a9');
+			expect(selfFollow.status).toBe(400);
+			expect(castAsError(selfFollow.body as any).error.code).toBe('FOLLOWEE_IS_YOURSELF');
+			expect(castAsError(selfFollow.body as any).error.id).toBe('26fbe7bb-a331-4857-af17-205b426669a9');
 
 			const noSuch = await api('following/create', { userId: genId(now - 1000) }, follower);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
-			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_USER');
+			expect(castAsError(noSuch.body as any).error.id).toBe('fcd2eef9-a9b2-4c4f-8624-038099e90aa5');
 
 			const created = await api('following/create', { userId: followee.id, withReplies: true }, follower);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.id, followee.id);
+			expect(created.status).toBe(200);
+			expect(created.body.id).toBe(followee.id);
 
 			const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
 			assert.ok(following);
-			assert.strictEqual(following.withReplies, true);
+			expect(following.withReplies).toBe(true);
 
 			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
 			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
-			assert.strictEqual(refreshedFollower.followingCount, 1);
-			assert.strictEqual(refreshedFollowee.followersCount, 1);
+			expect(refreshedFollower.followingCount).toBe(1);
+			expect(refreshedFollowee.followersCount).toBe(1);
 
 			const duplicate = await api('following/create', { userId: followee.id }, follower);
-			assert.strictEqual(duplicate.status, 400);
-			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_FOLLOWING');
-			assert.strictEqual(castAsError(duplicate.body as any).error.id, '35387507-38c7-4cb9-9197-300b93783fa0');
+			expect(duplicate.status).toBe(400);
+			expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_FOLLOWING');
+			expect(castAsError(duplicate.body as any).error.id).toBe('35387507-38c7-4cb9-9197-300b93783fa0');
 
 			const blocker = await signup({ username: `hfcb${suffix}` });
 			const blockedUser = await signup({ username: `hfcbu${suffix}` });
 			const block = await api('blocking/create', { userId: blockedUser.id }, blocker);
-			assert.strictEqual(block.status, 200);
+			expect(block.status).toBe(200);
 
 			const blocked = await api('following/create', { userId: blocker.id }, blockedUser);
-			assert.strictEqual(blocked.status, 400);
-			assert.strictEqual(castAsError(blocked.body as any).error.code, 'BLOCKED');
-			assert.strictEqual(castAsError(blocked.body as any).error.id, 'c4ab57cc-4e41-45e9-bfd9-584f61e35ce0');
+			expect(blocked.status).toBe(400);
+			expect(castAsError(blocked.body as any).error.code).toBe('BLOCKED');
+			expect(castAsError(blocked.body as any).error.id).toBe('c4ab57cc-4e41-45e9-bfd9-584f61e35ce0');
 
 			const lockedFollowee = await signup({ username: `hfcl${suffix}` });
 			const requestFollower = await signup({ username: `hfcr${suffix}` });
@@ -7095,16 +6897,13 @@ describe('Endpoints', () => {
 				{ userId: lockedFollowee.id, withReplies: false },
 				requestFollower,
 			);
-			assert.strictEqual(requested.status, 200);
-			assert.strictEqual(requested.body.id, lockedFollowee.id);
-			assert.strictEqual(
-				await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, requestFollower.id, lockedFollowee.id),
-				null,
-			);
+			expect(requested.status).toBe(200);
+			expect(requested.body.id).toBe(lockedFollowee.id);
+			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, requestFollower.id, lockedFollowee.id)).toBe(null);
 
 			const followRequest = await fetchFollowRequestFromDatabase(db, requestFollower.id, lockedFollowee.id);
 			assert.ok(followRequest);
-			assert.strictEqual(followRequest.withReplies, false);
+			expect(followRequest.withReplies).toBe(false);
 		});
 
 		test('following/update は notify/withReplies 変更、scope、エラーを維持する', async () => {
@@ -7119,23 +6918,23 @@ describe('Endpoints', () => {
 				{ userId: followee.id, notify: 'normal' },
 				{ token: wrongWriteToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const selfUpdate = await api('following/update', { userId: follower.id, notify: 'normal' }, follower);
-			assert.strictEqual(selfUpdate.status, 400);
-			assert.strictEqual(castAsError(selfUpdate.body as any).error.code, 'FOLLOWEE_IS_YOURSELF');
-			assert.strictEqual(castAsError(selfUpdate.body as any).error.id, '4c4cbaf9-962a-463b-8418-a5e365dbf2eb');
+			expect(selfUpdate.status).toBe(400);
+			expect(castAsError(selfUpdate.body as any).error.code).toBe('FOLLOWEE_IS_YOURSELF');
+			expect(castAsError(selfUpdate.body as any).error.id).toBe('4c4cbaf9-962a-463b-8418-a5e365dbf2eb');
 
 			const noSuch = await api('following/update', { userId: genId(Date.now() - 1000), notify: 'normal' }, follower);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
-			assert.strictEqual(castAsError(noSuch.body as any).error.id, '14318698-f67e-492a-99da-5353a5ac52be');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_USER');
+			expect(castAsError(noSuch.body as any).error.id).toBe('14318698-f67e-492a-99da-5353a5ac52be');
 
 			const notFollowing = await api('following/update', { userId: followee.id, notify: 'normal' }, follower);
-			assert.strictEqual(notFollowing.status, 400);
-			assert.strictEqual(castAsError(notFollowing.body as any).error.code, 'NOT_FOLLOWING');
-			assert.strictEqual(castAsError(notFollowing.body as any).error.id, 'b8dc75cf-1cb5-46c9-b14b-5f1ffbd782c9');
+			expect(notFollowing.status).toBe(400);
+			expect(castAsError(notFollowing.body as any).error.code).toBe('NOT_FOLLOWING');
+			expect(castAsError(notFollowing.body as any).error.id).toBe('b8dc75cf-1cb5-46c9-b14b-5f1ffbd782c9');
 
 			await api('following/create', { userId: followee.id, withReplies: false }, follower);
 
@@ -7144,18 +6943,18 @@ describe('Endpoints', () => {
 				{ userId: followee.id, notify: 'normal', withReplies: true },
 				follower,
 			);
-			assert.strictEqual(updated.status, 200);
-			assert.strictEqual(updated.body.id, follower.id);
+			expect(updated.status).toBe(200);
+			expect(updated.body.id).toBe(follower.id);
 
 			const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
-			assert.strictEqual(following?.notify, 'normal');
-			assert.strictEqual(following?.withReplies, true);
+			expect(following?.notify).toBe('normal');
+			expect(following?.withReplies).toBe(true);
 
 			const clearedNotify = await api('following/update', { userId: followee.id, notify: 'none' }, follower);
-			assert.strictEqual(clearedNotify.status, 200);
+			expect(clearedNotify.status).toBe(200);
 			const refreshed = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
-			assert.strictEqual(refreshed?.notify, null);
-			assert.strictEqual(refreshed?.withReplies, true);
+			expect(refreshed?.notify).toBe(null);
+			expect(refreshed?.withReplies).toBe(true);
 		});
 
 		test('following/delete は unfollow、カウント減算、scope、エラーを維持する', async () => {
@@ -7165,37 +6964,37 @@ describe('Endpoints', () => {
 
 			const wrongWriteToken = await createAppToken(follower, ['read:following']);
 			const scopeDenied = await api('following/delete', { userId: followee.id }, { token: wrongWriteToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const selfUnfollow = await api('following/delete', { userId: follower.id }, follower);
-			assert.strictEqual(selfUnfollow.status, 400);
-			assert.strictEqual(castAsError(selfUnfollow.body as any).error.code, 'FOLLOWEE_IS_YOURSELF');
-			assert.strictEqual(castAsError(selfUnfollow.body as any).error.id, 'd9e400b9-36b0-4808-b1d8-79e707f1296c');
+			expect(selfUnfollow.status).toBe(400);
+			expect(castAsError(selfUnfollow.body as any).error.code).toBe('FOLLOWEE_IS_YOURSELF');
+			expect(castAsError(selfUnfollow.body as any).error.id).toBe('d9e400b9-36b0-4808-b1d8-79e707f1296c');
 
 			const noSuch = await api('following/delete', { userId: genId(Date.now() - 1000) }, follower);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
-			assert.strictEqual(castAsError(noSuch.body as any).error.id, '5b12c78d-2b28-4dca-99d2-f56139b42ff8');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_USER');
+			expect(castAsError(noSuch.body as any).error.id).toBe('5b12c78d-2b28-4dca-99d2-f56139b42ff8');
 
 			const notFollowing = await api('following/delete', { userId: followee.id }, follower);
-			assert.strictEqual(notFollowing.status, 400);
-			assert.strictEqual(castAsError(notFollowing.body as any).error.code, 'NOT_FOLLOWING');
-			assert.strictEqual(castAsError(notFollowing.body as any).error.id, '5dbf82f5-c92b-40b1-87d1-6c8c0741fd09');
+			expect(notFollowing.status).toBe(400);
+			expect(castAsError(notFollowing.body as any).error.code).toBe('NOT_FOLLOWING');
+			expect(castAsError(notFollowing.body as any).error.id).toBe('5dbf82f5-c92b-40b1-87d1-6c8c0741fd09');
 
 			await api('following/create', { userId: followee.id, withReplies: true }, follower);
 			assert.ok(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id));
 
 			const deleted = await api('following/delete', { userId: followee.id }, follower);
-			assert.strictEqual(deleted.status, 200);
-			assert.strictEqual(deleted.body.id, followee.id);
+			expect(deleted.status).toBe(200);
+			expect(deleted.body.id).toBe(followee.id);
 
-			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id), null);
+			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id)).toBe(null);
 
 			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
 			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
-			assert.strictEqual(refreshedFollower.followingCount, 0);
-			assert.strictEqual(refreshedFollowee.followersCount, 0);
+			expect(refreshedFollower.followingCount).toBe(0);
+			expect(refreshedFollowee.followersCount).toBe(0);
 		});
 
 		test('following/invalidate は他人のフォローを解除、カウント減算、scope、エラーを維持する', async () => {
@@ -7205,37 +7004,37 @@ describe('Endpoints', () => {
 
 			const wrongWriteToken = await createAppToken(followee, ['read:following']);
 			const scopeDenied = await api('following/invalidate', { userId: follower.id }, { token: wrongWriteToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const selfInvalidate = await api('following/invalidate', { userId: followee.id }, followee);
-			assert.strictEqual(selfInvalidate.status, 400);
-			assert.strictEqual(castAsError(selfInvalidate.body as any).error.code, 'FOLLOWER_IS_YOURSELF');
-			assert.strictEqual(castAsError(selfInvalidate.body as any).error.id, '07dc03b9-03da-422d-885b-438313707662');
+			expect(selfInvalidate.status).toBe(400);
+			expect(castAsError(selfInvalidate.body as any).error.code).toBe('FOLLOWER_IS_YOURSELF');
+			expect(castAsError(selfInvalidate.body as any).error.id).toBe('07dc03b9-03da-422d-885b-438313707662');
 
 			const noSuch = await api('following/invalidate', { userId: genId(Date.now() - 1000) }, followee);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
-			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'b77e6ae6-a3e5-40da-9cc8-c240115479cc');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_USER');
+			expect(castAsError(noSuch.body as any).error.id).toBe('b77e6ae6-a3e5-40da-9cc8-c240115479cc');
 
 			const notFollowing = await api('following/invalidate', { userId: follower.id }, followee);
-			assert.strictEqual(notFollowing.status, 400);
-			assert.strictEqual(castAsError(notFollowing.body as any).error.code, 'NOT_FOLLOWING');
-			assert.strictEqual(castAsError(notFollowing.body as any).error.id, '918faac3-074f-41ae-9c43-ed5d2946770d');
+			expect(notFollowing.status).toBe(400);
+			expect(castAsError(notFollowing.body as any).error.code).toBe('NOT_FOLLOWING');
+			expect(castAsError(notFollowing.body as any).error.id).toBe('918faac3-074f-41ae-9c43-ed5d2946770d');
 
 			await api('following/create', { userId: followee.id, withReplies: true }, follower);
 			assert.ok(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id));
 
 			const invalidated = await api('following/invalidate', { userId: follower.id }, followee);
-			assert.strictEqual(invalidated.status, 200);
-			assert.strictEqual(invalidated.body.id, follower.id);
+			expect(invalidated.status).toBe(200);
+			expect(invalidated.body.id).toBe(follower.id);
 
-			assert.strictEqual(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id), null);
+			expect(await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id)).toBe(null);
 
 			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
 			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
-			assert.strictEqual(refreshedFollower.followingCount, 0);
-			assert.strictEqual(refreshedFollowee.followersCount, 0);
+			expect(refreshedFollower.followingCount).toBe(0);
+			expect(refreshedFollowee.followersCount).toBe(0);
 		});
 
 		test('following/requests/accept は保留リクエストを承認しfollowレコードを作成する', async () => {
@@ -7247,35 +7046,35 @@ describe('Endpoints', () => {
 
 			const wrongWriteToken = await createAppToken(followee, ['read:following']);
 			const scopeDenied = await api('following/requests/accept', { userId: follower.id }, { token: wrongWriteToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const noSuch = await api('following/requests/accept', { userId: genId(Date.now() - 1000) }, followee);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
-			assert.strictEqual(castAsError(noSuch.body as any).error.id, '66ce1645-d66c-46bb-8b79-96739af885bd');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_USER');
+			expect(castAsError(noSuch.body as any).error.id).toBe('66ce1645-d66c-46bb-8b79-96739af885bd');
 
 			const noRequest = await api('following/requests/accept', { userId: follower.id }, followee);
-			assert.strictEqual(noRequest.status, 400);
-			assert.strictEqual(castAsError(noRequest.body as any).error.code, 'NO_FOLLOW_REQUEST');
-			assert.strictEqual(castAsError(noRequest.body as any).error.id, 'bcde4f8b-0913-4614-8881-614e522fb041');
+			expect(noRequest.status).toBe(400);
+			expect(castAsError(noRequest.body as any).error.code).toBe('NO_FOLLOW_REQUEST');
+			expect(castAsError(noRequest.body as any).error.id).toBe('bcde4f8b-0913-4614-8881-614e522fb041');
 
 			const created = await api('following/create', { userId: followee.id, withReplies: true }, follower);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 			assert.ok(await fetchFollowRequestFromDatabase(db, follower.id, followee.id));
 
 			const accepted = await api('following/requests/accept', { userId: follower.id }, followee);
-			assert.strictEqual(accepted.status, 204);
+			expect(accepted.status).toBe(204);
 
-			assert.strictEqual(await fetchFollowRequestFromDatabase(db, follower.id, followee.id), null);
+			expect(await fetchFollowRequestFromDatabase(db, follower.id, followee.id)).toBe(null);
 			const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, follower.id, followee.id);
 			assert.ok(following);
-			assert.strictEqual(following.withReplies, true);
+			expect(following.withReplies).toBe(true);
 
 			const refreshedFollower = await fetchUserByIdOrFailFromDatabase(db, follower.id);
 			const refreshedFollowee = await fetchUserByIdOrFailFromDatabase(db, followee.id);
-			assert.strictEqual(refreshedFollower.followingCount, 1);
-			assert.strictEqual(refreshedFollowee.followersCount, 1);
+			expect(refreshedFollower.followingCount).toBe(1);
+			expect(refreshedFollowee.followersCount).toBe(1);
 		});
 
 		test('following/requests/cancel は送信済みリクエストを取消しUserLiteを返す', async () => {
@@ -7287,26 +7086,26 @@ describe('Endpoints', () => {
 
 			const wrongWriteToken = await createAppToken(follower, ['read:following']);
 			const scopeDenied = await api('following/requests/cancel', { userId: followee.id }, { token: wrongWriteToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const noSuch = await api('following/requests/cancel', { userId: genId(Date.now() - 1000) }, follower);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
-			assert.strictEqual(castAsError(noSuch.body as any).error.id, '4e68c551-fc4c-4e46-bb41-7d4a37bf9dab');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_USER');
+			expect(castAsError(noSuch.body as any).error.id).toBe('4e68c551-fc4c-4e46-bb41-7d4a37bf9dab');
 
 			const notFound = await api('following/requests/cancel', { userId: followee.id }, follower);
-			assert.strictEqual(notFound.status, 400);
-			assert.strictEqual(castAsError(notFound.body as any).error.code, 'FOLLOW_REQUEST_NOT_FOUND');
-			assert.strictEqual(castAsError(notFound.body as any).error.id, '089b125b-d338-482a-9a09-e2622ac9f8d4');
+			expect(notFound.status).toBe(400);
+			expect(castAsError(notFound.body as any).error.code).toBe('FOLLOW_REQUEST_NOT_FOUND');
+			expect(castAsError(notFound.body as any).error.id).toBe('089b125b-d338-482a-9a09-e2622ac9f8d4');
 
 			await api('following/create', { userId: followee.id }, follower);
 			assert.ok(await fetchFollowRequestFromDatabase(db, follower.id, followee.id));
 
 			const cancelled = await api('following/requests/cancel', { userId: followee.id }, follower);
-			assert.strictEqual(cancelled.status, 200);
-			assert.strictEqual(cancelled.body.id, followee.id);
-			assert.strictEqual(await fetchFollowRequestFromDatabase(db, follower.id, followee.id), null);
+			expect(cancelled.status).toBe(200);
+			expect(cancelled.body.id).toBe(followee.id);
+			expect(await fetchFollowRequestFromDatabase(db, follower.id, followee.id)).toBe(null);
 		});
 
 		test('following/requests/reject は受信済みリクエストを拒否し再実行しても冪等', async () => {
@@ -7318,23 +7117,23 @@ describe('Endpoints', () => {
 
 			const wrongWriteToken = await createAppToken(followee, ['read:following']);
 			const scopeDenied = await api('following/requests/reject', { userId: follower.id }, { token: wrongWriteToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const noSuch = await api('following/requests/reject', { userId: genId(Date.now() - 1000) }, followee);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_USER');
-			assert.strictEqual(castAsError(noSuch.body as any).error.id, 'abc2ffa6-25b2-4380-ba99-321ff3a94555');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_USER');
+			expect(castAsError(noSuch.body as any).error.id).toBe('abc2ffa6-25b2-4380-ba99-321ff3a94555');
 
 			await api('following/create', { userId: followee.id }, follower);
 			assert.ok(await fetchFollowRequestFromDatabase(db, follower.id, followee.id));
 
 			const rejected = await api('following/requests/reject', { userId: follower.id }, followee);
-			assert.strictEqual(rejected.status, 204);
-			assert.strictEqual(await fetchFollowRequestFromDatabase(db, follower.id, followee.id), null);
+			expect(rejected.status).toBe(204);
+			expect(await fetchFollowRequestFromDatabase(db, follower.id, followee.id)).toBe(null);
 
 			const rejectedAgain = await api('following/requests/reject', { userId: follower.id }, followee);
-			assert.strictEqual(rejectedAgain.status, 204);
+			expect(rejectedAgain.status).toBe(204);
 		});
 
 		test('following/requests/list と sent はページングして follower/followee を含む', async () => {
@@ -7348,21 +7147,21 @@ describe('Endpoints', () => {
 			await api('following/create', { userId: followee.id }, followerB);
 
 			const list = await api('following/requests/list', {}, followee);
-			assert.strictEqual(list.status, 200);
-			assert.strictEqual(list.body.length, 2);
+			expect(list.status).toBe(200);
+			expect(list.body.length).toBe(2);
 			const listFollowerIds = list.body.map((r: any) => r.follower.id).sort();
-			assert.deepStrictEqual(listFollowerIds, [followerA.id, followerB.id].sort());
-			assert.strictEqual(getAt(list.body, 0).followee.id, followee.id);
+			expect(listFollowerIds).toStrictEqual([followerA.id, followerB.id].sort());
+			expect(getAt(list.body, 0).followee.id).toBe(followee.id);
 
 			const sentA = await api('following/requests/sent', {}, followerA);
-			assert.strictEqual(sentA.status, 200);
-			assert.strictEqual(sentA.body.length, 1);
-			assert.strictEqual(getAt(sentA.body, 0).follower.id, followerA.id);
-			assert.strictEqual(getAt(sentA.body, 0).followee.id, followee.id);
+			expect(sentA.status).toBe(200);
+			expect(sentA.body.length).toBe(1);
+			expect(getAt(sentA.body, 0).follower.id).toBe(followerA.id);
+			expect(getAt(sentA.body, 0).followee.id).toBe(followee.id);
 
 			const limited = await api('following/requests/list', { limit: 1 }, followee);
-			assert.strictEqual(limited.status, 200);
-			assert.strictEqual(limited.body.length, 1);
+			expect(limited.status).toBe(200);
+			expect(limited.body.length).toBe(1);
 		});
 
 		test('following/list はフォロー中一覧を followee 情報付きでページングする', async () => {
@@ -7375,21 +7174,21 @@ describe('Endpoints', () => {
 			await api('following/create', { userId: followeeB.id }, follower);
 
 			const list = await api('following/list', {}, follower);
-			assert.strictEqual(list.status, 200);
-			assert.strictEqual(list.body.length, 2);
+			expect(list.status).toBe(200);
+			expect(list.body.length).toBe(2);
 			const followeeIds = list.body.map((f: any) => f.followeeId).sort();
-			assert.deepStrictEqual(followeeIds, [followeeA.id, followeeB.id].sort());
-			assert.strictEqual(list.body[0]!.followerId, follower.id);
+			expect(followeeIds).toStrictEqual([followeeA.id, followeeB.id].sort());
+			expect(list.body[0]!.followerId).toBe(follower.id);
 			assert.ok(list.body[0]!.followee!.id);
-			assert.strictEqual(list.body[0]!.follower, undefined);
+			expect(list.body[0]!.follower).toBe(undefined);
 
 			const limited = await api('following/list', { limit: 1 }, follower);
-			assert.strictEqual(limited.status, 200);
-			assert.strictEqual(limited.body.length, 1);
+			expect(limited.status).toBe(200);
+			expect(limited.body.length).toBe(1);
 
 			const strangerList = await api('following/list', {}, followeeA);
-			assert.strictEqual(strangerList.status, 200);
-			assert.strictEqual(strangerList.body.length, 0);
+			expect(strangerList.status).toBe(200);
+			expect(strangerList.body.length).toBe(0);
 		});
 
 		test('following/update-all updates only the caller followings', async () => {
@@ -7430,17 +7229,17 @@ describe('Endpoints', () => {
 				},
 				updater,
 			);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const updaterToA = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, updater.id, targetA.id);
 			const updaterToB = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, updater.id, targetB.id);
 			const aToUpdater = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(db, targetA.id, updater.id);
-			assert.strictEqual(updaterToA?.notify, null);
-			assert.strictEqual(updaterToA?.withReplies, true);
-			assert.strictEqual(updaterToB?.notify, null);
-			assert.strictEqual(updaterToB?.withReplies, true);
-			assert.strictEqual(aToUpdater?.notify, 'normal');
-			assert.strictEqual(aToUpdater?.withReplies, false);
+			expect(updaterToA?.notify).toBe(null);
+			expect(updaterToA?.withReplies).toBe(true);
+			expect(updaterToB?.notify).toBe(null);
+			expect(updaterToB?.withReplies).toBe(true);
+			expect(aToUpdater?.notify).toBe('normal');
+			expect(aToUpdater?.withReplies).toBe(false);
 		});
 
 		test('flash/update updates own flash and preserves ownership errors', async () => {
@@ -7478,22 +7277,22 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 204);
+			expect(updated.status).toBe(204);
 
 			const fetched = await fetchFlashByIdFromDatabase(db, flash.id);
-			assert.strictEqual(fetched?.title, 'new title');
-			assert.strictEqual(fetched?.summary, 'new summary');
-			assert.strictEqual(fetched?.script, 'new script');
-			assert.deepStrictEqual(fetched?.permissions, ['read:account']);
-			assert.strictEqual(fetched?.visibility, 'private');
+			expect(fetched?.title).toBe('new title');
+			expect(fetched?.summary).toBe('new summary');
+			expect(fetched?.script).toBe('new script');
+			expect(fetched?.permissions).toStrictEqual(['read:account']);
+			expect(fetched?.visibility).toBe('private');
 
 			const denied = await api('flash/update', { flashId: otherFlash.id, title: 'bad update' }, alice);
-			assert.strictEqual(denied.status, 400);
-			assert.strictEqual(castAsError(denied.body as any).error.id, '08e60c88-5948-478e-a132-02ec701d67b2');
+			expect(denied.status).toBe(400);
+			expect(castAsError(denied.body as any).error.id).toBe('08e60c88-5948-478e-a132-02ec701d67b2');
 
 			const missing = await api('flash/update', { flashId: genId() }, alice);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.id, '611e13d2-309e-419a-a5e4-e0422da39b02');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.id).toBe('611e13d2-309e-419a-a5e4-e0422da39b02');
 		});
 
 		test('flash/update rejects moved users before side effects', async () => {
@@ -7514,11 +7313,11 @@ describe('Endpoints', () => {
 			});
 
 			const denied = await api('flash/update', { flashId: flash.id, title: 'updated by moved user' }, movedUser);
-			assert.strictEqual(denied.status, 403);
-			assert.strictEqual(castAsError(denied.body as any).error.id, '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
+			expect(denied.status).toBe(403);
+			expect(castAsError(denied.body as any).error.id).toBe('56f20ec9-fd06-4fa5-841b-edd6d7d4fa31');
 
 			const unchanged = await fetchFlashByIdFromDatabase(db, flash.id);
-			assert.strictEqual(unchanged?.title, 'moved title');
+			expect(unchanged?.title).toBe('moved title');
 		});
 
 		test('Hono rate limited write endpoints require matching app token permissions', async () => {
@@ -7540,8 +7339,8 @@ describe('Endpoints', () => {
 				['flash/update', { flashId: flash.id, title: 'denied update' }],
 			] as const) {
 				const denied = await api(endpoint, params as any, { token: readAccountToken });
-				assert.strictEqual(denied.status, 403, endpoint);
-				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+				expect(denied.status, endpoint).toBe(403);
+				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
 			}
 		});
 	});
@@ -7574,7 +7373,7 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hej${suffix}` });
 
 			const res = await api(endpoint, {}, user);
-			assert.strictEqual(res.status, 204, JSON.stringify(res.body));
+			expect(res.status, JSON.stringify(res.body)).toBe(204);
 
 			const job = await waitExportJob(jobName, user.id);
 			await job.remove();
@@ -7585,11 +7384,11 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hejf${suffix}` });
 
 			const res = await api('i/export-following', { excludeMuting: true, excludeInactive: true }, user);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const job = await waitExportJob('exportFollowing', user.id);
-			assert.strictEqual((job.data as any).excludeMuting, true);
-			assert.strictEqual((job.data as any).excludeInactive, true);
+			expect((job.data as any).excludeMuting).toBe(true);
+			expect((job.data as any).excludeInactive).toBe(true);
 			await job.remove();
 		});
 	});
@@ -7601,7 +7400,7 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hca${suffix}` });
 
 			const res = await api('i/claim-achievement', { name: 'notes1' }, user);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
 			assert.ok(profile.achievements.some((a) => a.name === 'notes1'));
@@ -7620,9 +7419,9 @@ describe('Endpoints', () => {
 			}
 
 			const again = await api('i/claim-achievement', { name: 'notes1' }, user);
-			assert.strictEqual(again.status, 204);
+			expect(again.status).toBe(204);
 			const profileAfter = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(profileAfter.achievements.filter((a) => a.name === 'notes1').length, 1);
+			expect(profileAfter.achievements.filter((a) => a.name === 'notes1').length).toBe(1);
 		});
 	});
 
@@ -7637,25 +7436,25 @@ describe('Endpoints', () => {
 				{ name: 'hook', url: 'https://example.com/hook', on: ['note'] },
 				{ token: wrongScopeToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const created = await api(
 				'i/webhooks/create',
 				{ name: 'hook', url: 'https://example.com/hook', on: ['note'], secret: 'sh' },
 				user,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.name, 'hook');
-			assert.strictEqual(created.body.url, 'https://example.com/hook');
-			assert.deepStrictEqual(created.body.on, ['note']);
-			assert.strictEqual(created.body.secret, 'sh');
-			assert.strictEqual(created.body.active, true);
-			assert.strictEqual(created.body.userId, user.id);
+			expect(created.status).toBe(200);
+			expect(created.body.name).toBe('hook');
+			expect(created.body.url).toBe('https://example.com/hook');
+			expect(created.body.on).toStrictEqual(['note']);
+			expect(created.body.secret).toBe('sh');
+			expect(created.body.active).toBe(true);
+			expect(created.body.userId).toBe(user.id);
 
 			const shown = await api('i/webhooks/show', { webhookId: created.body.id }, user);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, created.body.id);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(created.body.id);
 		});
 	});
 
@@ -7670,7 +7469,7 @@ describe('Endpoints', () => {
 				{ name: 'test-hook', url: 'https://example.com/test-hook', on: ['note'] },
 				owner,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			for (const type of [
 				'note',
@@ -7683,12 +7482,12 @@ describe('Endpoints', () => {
 				'reaction',
 			] as const) {
 				const res = await api('i/webhooks/test', { webhookId: created.body.id, type }, owner);
-				assert.strictEqual(res.status, 204, `type=${type} should succeed`);
+				expect(res.status, `type=${type} should succeed`).toBe(204);
 			}
 
 			const noSuch = await api('i/webhooks/test', { webhookId: created.body.id, type: 'note' }, stranger);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_WEBHOOK');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_WEBHOOK');
 		});
 	});
 
@@ -7704,7 +7503,7 @@ describe('Endpoints', () => {
 				},
 			);
 			const assign = await api('admin/roles/assign', { roleId: importRole.id, userId }, alice);
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 		}
 
 		async function makeDriveFile(userId: string, suffix: string, size: number) {
@@ -7733,28 +7532,28 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hib${suffix}` });
 
 			const deniedBeforeGrant = await api('i/import-blocking', { fileId: genId() }, user);
-			assert.strictEqual(deniedBeforeGrant.status, 403);
-			assert.strictEqual(castAsError(deniedBeforeGrant.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(deniedBeforeGrant.status).toBe(403);
+			expect(castAsError(deniedBeforeGrant.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			await grantImportPolicy(user.id, suffix, 'canImportBlocking');
 
 			const noSuchFile = await api('i/import-blocking', { fileId: genId() }, user);
-			assert.strictEqual(noSuchFile.status, 400);
-			assert.strictEqual(castAsError(noSuchFile.body as any).error.code, 'NO_SUCH_FILE');
+			expect(noSuchFile.status).toBe(400);
+			expect(castAsError(noSuchFile.body as any).error.code).toBe('NO_SUCH_FILE');
 
 			const emptyFile = await makeDriveFile(user.id, `${suffix}e`, 0);
 			const emptyRes = await api('i/import-blocking', { fileId: emptyFile.id }, user);
-			assert.strictEqual(emptyRes.status, 400);
-			assert.strictEqual(castAsError(emptyRes.body as any).error.code, 'EMPTY_FILE');
+			expect(emptyRes.status).toBe(400);
+			expect(castAsError(emptyRes.body as any).error.code).toBe('EMPTY_FILE');
 
 			const bigFile = await makeDriveFile(user.id, `${suffix}b`, 65 * 1024);
 			const bigRes = await api('i/import-blocking', { fileId: bigFile.id }, user);
-			assert.strictEqual(bigRes.status, 400);
-			assert.strictEqual(castAsError(bigRes.body as any).error.code, 'TOO_BIG_FILE');
+			expect(bigRes.status).toBe(400);
+			expect(castAsError(bigRes.body as any).error.code).toBe('TOO_BIG_FILE');
 
 			const okFile = await makeDriveFile(user.id, `${suffix}o`, 1024);
 			const okRes = await api('i/import-blocking', { fileId: okFile.id }, user);
-			assert.strictEqual(okRes.status, 204);
+			expect(okRes.status).toBe(204);
 		});
 
 		test('i/import-following, i/import-muting, i/import-user-lists はrole policyを維持しファイルがあれば成功する', async () => {
@@ -7767,15 +7566,15 @@ describe('Endpoints', () => {
 
 			const followingFile = await makeDriveFile(user.id, `${suffix}f`, 1024);
 			const followingRes = await api('i/import-following', { fileId: followingFile.id, withReplies: true }, user);
-			assert.strictEqual(followingRes.status, 204);
+			expect(followingRes.status).toBe(204);
 
 			const mutingFile = await makeDriveFile(user.id, `${suffix}m`, 1024);
 			const mutingRes = await api('i/import-muting', { fileId: mutingFile.id }, user);
-			assert.strictEqual(mutingRes.status, 204);
+			expect(mutingRes.status).toBe(204);
 
 			const userListsFile = await makeDriveFile(user.id, `${suffix}u`, 1024);
 			const userListsRes = await api('i/import-user-lists', { fileId: userListsFile.id }, user);
-			assert.strictEqual(userListsRes.status, 204);
+			expect(userListsRes.status).toBe(204);
 		});
 
 		// i/import-antennas はファイル内容を自分自身のURL(config.instance.url)からHTTPダウンロードする。
@@ -7785,19 +7584,19 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hia${suffix}` });
 
 			const deniedBeforeGrant = await api('i/import-antennas', { fileId: genId() }, user);
-			assert.strictEqual(deniedBeforeGrant.status, 403);
-			assert.strictEqual(castAsError(deniedBeforeGrant.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(deniedBeforeGrant.status).toBe(403);
+			expect(castAsError(deniedBeforeGrant.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			await grantImportPolicy(user.id, suffix, 'canImportAntennas');
 
 			const noSuchFile = await api('i/import-antennas', { fileId: genId() }, user);
-			assert.strictEqual(noSuchFile.status, 400);
-			assert.strictEqual(castAsError(noSuchFile.body as any).error.code, 'NO_SUCH_FILE');
+			expect(noSuchFile.status).toBe(400);
+			expect(castAsError(noSuchFile.body as any).error.code).toBe('NO_SUCH_FILE');
 
 			const emptyFile = await makeDriveFile(user.id, `${suffix}e`, 0);
 			const emptyRes = await api('i/import-antennas', { fileId: emptyFile.id }, user);
-			assert.strictEqual(emptyRes.status, 400);
-			assert.strictEqual(castAsError(emptyRes.body as any).error.code, 'EMPTY_FILE');
+			expect(emptyRes.status).toBe(400);
+			expect(castAsError(emptyRes.body as any).error.code).toBe('EMPTY_FILE');
 
 			// i/import-antennas はファイル内容(DriveFile.url)を実際にHTTPダウンロードするため、
 			// admin/emoji/copy のテストと同様にループバックの一時HTTPサーバーでJSONを配信して検証する。
@@ -7850,8 +7649,8 @@ describe('Endpoints', () => {
 					folderId: null,
 				});
 				const brokenRes = await api('i/import-antennas', { fileId: brokenFile.id }, user);
-				assert.strictEqual(brokenRes.status, 400, JSON.stringify(brokenRes.body));
-				assert.strictEqual(castAsError(brokenRes.body as any).error.code, 'INVALID_ANTENNA_IMPORT_FILE');
+				expect(brokenRes.status, JSON.stringify(brokenRes.body)).toBe(400);
+				expect(castAsError(brokenRes.body as any).error.code).toBe('INVALID_ANTENNA_IMPORT_FILE');
 
 				const antennaFile = await createDriveFileInDatabase(db, {
 					id: genId(),
@@ -7872,8 +7671,8 @@ describe('Endpoints', () => {
 
 				const beforeCount = await countAntennasByUserIdFromDatabase(db, user.id);
 				const okRes = await api('i/import-antennas', { fileId: antennaFile.id }, user);
-				assert.strictEqual(okRes.status, 204);
-				assert.strictEqual(await countAntennasByUserIdFromDatabase(db, user.id), beforeCount + 1);
+				expect(okRes.status).toBe(204);
+				expect(await countAntennasByUserIdFromDatabase(db, user.id)).toBe(beforeCount + 1);
 
 				const zeroLimitRole = await role(
 					alice,
@@ -7885,7 +7684,7 @@ describe('Endpoints', () => {
 					},
 				);
 				const assignZeroLimit = await api('admin/roles/assign', { roleId: zeroLimitRole.id, userId: user.id }, alice);
-				assert.strictEqual(assignZeroLimit.status, 204);
+				expect(assignZeroLimit.status).toBe(204);
 
 				const antennaFile2 = await createDriveFileInDatabase(db, {
 					id: genId(),
@@ -7904,8 +7703,8 @@ describe('Endpoints', () => {
 					folderId: null,
 				});
 				const tooManyRes = await api('i/import-antennas', { fileId: antennaFile2.id }, user);
-				assert.strictEqual(tooManyRes.status, 400);
-				assert.strictEqual(castAsError(tooManyRes.body as any).error.code, 'TOO_MANY_ANTENNAS');
+				expect(tooManyRes.status).toBe(400);
+				expect(castAsError(tooManyRes.body as any).error.code).toBe('TOO_MANY_ANTENNAS');
 			} finally {
 				await new Promise<void>((resolve, reject) => {
 					antennaServer?.close((err) => (err ? reject(err) : resolve()));
@@ -7941,15 +7740,15 @@ describe('Endpoints', () => {
 
 			const wrongScopeToken = await createAppToken(user, ['read:account']);
 			const scopeDenied = await api('notifications/create', { body: 'hello' }, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const created = await api(
 				'notifications/create',
 				{ body: 'hello world', header: 'my header', icon: 'https://example.com/icon.png' },
 				user,
 			);
-			assert.strictEqual(created.status, 204);
+			expect(created.status).toBe(204);
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
 			const notifications = await readNotificationTimeline(config, user.id);
@@ -7957,9 +7756,9 @@ describe('Endpoints', () => {
 			assert.ok(appNotification);
 			// Redis stream 上の生の通知は customBody/customHeader/customIcon で保持され、
 			// body/header/icon への改名は i/notifications の pack 時に行われる。
-			assert.strictEqual(appNotification.customBody, 'hello world');
-			assert.strictEqual(appNotification.customHeader, 'my header');
-			assert.strictEqual(appNotification.customIcon, 'https://example.com/icon.png');
+			expect(appNotification.customBody).toBe('hello world');
+			expect(appNotification.customHeader).toBe('my header');
+			expect(appNotification.customIcon).toBe('https://example.com/icon.png');
 		});
 
 		test('notifications/create は通知設定が never の場合は作成しない', async () => {
@@ -7975,14 +7774,11 @@ describe('Endpoints', () => {
 			});
 
 			const created = await api('notifications/create', { body: 'should be suppressed' }, user);
-			assert.strictEqual(created.status, 204);
+			expect(created.status).toBe(204);
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
 			const notifications = await readNotificationTimeline(config, user.id);
-			assert.strictEqual(
-				notifications.some((n) => n.type === 'app'),
-				false,
-			);
+			expect(notifications.some((n) => n.type === 'app')).toBe(false);
 		});
 
 		test('notifications/test-notification はテスト通知を作成する', async () => {
@@ -7991,7 +7787,7 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hntn${suffix}` });
 
 			const res = await api('notifications/test-notification', {}, user);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
 			const notifications = await readNotificationTimeline(config, user.id);
@@ -8007,7 +7803,7 @@ describe('Endpoints', () => {
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const res = await api('notifications/mark-all-as-read', {}, user);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
 			const redis = createRedisClient(config);
@@ -8036,18 +7832,15 @@ describe('Endpoints', () => {
 				{ notificationId: notification.id },
 				{ token: wrongScopeToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
+			expect(scopeDenied.status).toBe(403);
 
 			const otherDelete = await api('notifications/delete', { notificationId: notification.id }, other);
-			assert.strictEqual(otherDelete.status, 204);
+			expect(otherDelete.status).toBe(204);
 			assert.ok((await readNotificationTimeline(config, user.id)).some((item) => item.id === notification.id));
 
 			const deleted = await api('notifications/delete', { notificationId: notification.id }, user);
-			assert.strictEqual(deleted.status, 204);
-			assert.strictEqual(
-				(await readNotificationTimeline(config, user.id)).some((item) => item.id === notification.id),
-				false,
-			);
+			expect(deleted.status).toBe(204);
+			expect((await readNotificationTimeline(config, user.id)).some((item) => item.id === notification.id)).toBe(false);
 		});
 
 		test('notifications/delete はグルーピングされた通知をまとめて削除する', async () => {
@@ -8074,25 +7867,13 @@ describe('Endpoints', () => {
 				}
 
 				const deleted = await api('notifications/delete', { notificationId: reaction1.id, grouped: true }, user);
-				assert.strictEqual(deleted.status, 204);
+				expect(deleted.status).toBe(204);
 
 				const remaining = await readNotificationTimeline(config, user.id);
-				assert.strictEqual(
-					remaining.some((item) => item.id === reaction1.id),
-					false,
-				);
-				assert.strictEqual(
-					remaining.some((item) => item.id === reaction2.id),
-					false,
-				);
-				assert.strictEqual(
-					remaining.some((item) => item.id === unrelatedBefore.id),
-					true,
-				);
-				assert.strictEqual(
-					remaining.some((item) => item.id === unrelatedAfter.id),
-					true,
-				);
+				expect(remaining.some((item) => item.id === reaction1.id)).toBe(false);
+				expect(remaining.some((item) => item.id === reaction2.id)).toBe(false);
+				expect(remaining.some((item) => item.id === unrelatedBefore.id)).toBe(true);
+				expect(remaining.some((item) => item.id === unrelatedAfter.id)).toBe(true);
 			} finally {
 				await closeRedisConnection(redis);
 			}
@@ -8107,13 +7888,13 @@ describe('Endpoints', () => {
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const res = await api('notifications/flush', {}, user);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
 			const redis = createRedisClient(config);
 			try {
 				const exists = await redis.exists(`notificationTimeline:${user.id}`);
-				assert.strictEqual(exists, 0);
+				expect(exists).toBe(0);
 			} finally {
 				await closeRedisConnection(redis);
 			}
@@ -8128,7 +7909,7 @@ describe('Endpoints', () => {
 				permission: ['read:account'],
 				callbackUrl: null,
 			});
-			assert.strictEqual(app.status, 200);
+			expect(app.status).toBe(200);
 			const appSecret = app.body.secret;
 			if (typeof appSecret !== 'string') {
 				assert.fail('app secret is missing');
@@ -8137,24 +7918,24 @@ describe('Endpoints', () => {
 			const generated = await api('auth/session/generate', {
 				appSecret,
 			});
-			assert.strictEqual(generated.status, 200);
+			expect(generated.status).toBe(200);
 			const sessionToken = generated.body.token;
-			assert.strictEqual(typeof sessionToken, 'string');
+			expect(typeof sessionToken).toBe('string');
 			assert.ok(generated.body.url.endsWith(`/auth/${sessionToken}`));
 
 			const shown = await api('auth/session/show', {
 				token: sessionToken,
 			});
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.token, sessionToken);
-			assert.strictEqual(shown.body.app.id, app.body.id);
+			expect(shown.status).toBe(200);
+			expect(shown.body.token).toBe(sessionToken);
+			expect(shown.body.app.id).toBe(app.body.id);
 
 			const pending = await api('auth/session/userkey', {
 				appSecret,
 				token: sessionToken,
 			});
-			assert.strictEqual(pending.status, 400);
-			assert.strictEqual(castAsError(pending.body as any).error.code, 'PENDING_SESSION');
+			expect(pending.status).toBe(400);
+			expect(castAsError(pending.body as any).error.code).toBe('PENDING_SESSION');
 
 			const accepted = await api(
 				'auth/accept',
@@ -8163,18 +7944,18 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(accepted.status, 204);
+			expect(accepted.status).toBe(204);
 
 			const userkey = await api('auth/session/userkey', {
 				appSecret,
 				token: sessionToken,
 			});
-			assert.strictEqual(userkey.status, 200);
+			expect(userkey.status).toBe(200);
 			const accessToken = userkey.body.accessToken;
 			if (typeof accessToken !== 'string') {
 				assert.fail('access token is missing');
 			}
-			assert.strictEqual(userkey.body.user.id, alice.id);
+			expect(userkey.body.user.id).toBe(alice.id);
 
 			const credential = await api(
 				'i',
@@ -8183,14 +7964,14 @@ describe('Endpoints', () => {
 					token: accessToken,
 				},
 			);
-			assert.strictEqual(credential.status, 200);
-			assert.strictEqual(credential.body.id, alice.id);
+			expect(credential.status).toBe(200);
+			expect(credential.body.id).toBe(alice.id);
 
 			const deleted = await api('auth/session/show', {
 				token: sessionToken,
 			});
-			assert.strictEqual(deleted.status, 400);
-			assert.strictEqual(castAsError(deleted.body as any).error.code, 'NO_SUCH_SESSION');
+			expect(deleted.status).toBe(400);
+			expect(castAsError(deleted.body as any).error.code).toBe('NO_SUCH_SESSION');
 		});
 	});
 
@@ -8205,23 +7986,23 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(issued.status, 200);
-			assert.strictEqual(typeof issued.body.token, 'string');
+			expect(issued.status).toBe(200);
+			expect(typeof issued.body.token).toBe('string');
 
 			const checked = await relativeFetch(`api/miauth/${session}/check`, {
 				method: 'POST',
 			});
-			assert.strictEqual(checked.status, 200);
+			expect(checked.status).toBe(200);
 			const checkedBody = (await checked.json()) as { ok: boolean; token?: string; user?: { id?: string } };
-			assert.strictEqual(checkedBody.ok, true);
-			assert.strictEqual(checkedBody.token, issued.body.token);
-			assert.strictEqual(checkedBody.user?.id, alice.id);
+			expect(checkedBody.ok).toBe(true);
+			expect(checkedBody.token).toBe(issued.body.token);
+			expect(checkedBody.user?.id).toBe(alice.id);
 
 			const checkedAgain = await relativeFetch(`api/miauth/${session}/check`, {
 				method: 'POST',
 			});
-			assert.strictEqual(checkedAgain.status, 200);
-			assert.deepStrictEqual(await checkedAgain.json(), { ok: false });
+			expect(checkedAgain.status).toBe(200);
+			expect(await checkedAgain.json()).toStrictEqual({ ok: false });
 		});
 	});
 
@@ -8240,7 +8021,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 			const appSecret = created.body.secret;
 			if (typeof appSecret !== 'string') {
 				assert.fail('app secret is missing');
@@ -8249,9 +8030,9 @@ describe('Endpoints', () => {
 			const generated = await api('auth/session/generate', {
 				appSecret,
 			});
-			assert.strictEqual(generated.status, 200);
+			expect(generated.status).toBe(200);
 			const sessionToken = generated.body.token;
-			assert.strictEqual(typeof sessionToken, 'string');
+			expect(typeof sessionToken).toBe('string');
 
 			const accepted = await api(
 				'auth/accept',
@@ -8260,13 +8041,13 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(accepted.status, 204);
+			expect(accepted.status).toBe(204);
 
 			const userkey = await api('auth/session/userkey', {
 				appSecret,
 				token: sessionToken,
 			});
-			assert.strictEqual(userkey.status, 200);
+			expect(userkey.status).toBe(200);
 			const accessToken = userkey.body.accessToken;
 			if (typeof accessToken !== 'string') {
 				assert.fail('access token is missing');
@@ -8289,22 +8070,22 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.name, 'test app');
+			expect(created.status).toBe(200);
+			expect(created.body.name).toBe('test app');
 
 			const shown = await api('app/show', { appId: created.body.id });
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, created.body.id);
-			assert.strictEqual(shown.body.name, 'test app');
-			assert.strictEqual(shown.body.callbackUrl, null);
-			assert.strictEqual(shown.body.secret, undefined);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(created.body.id);
+			expect(shown.body.name).toBe('test app');
+			expect(shown.body.callbackUrl).toBe(null);
+			expect(shown.body.secret).toBe(undefined);
 
 			const notFound = await api('app/show', { appId: '0000000000000000' });
-			assert.strictEqual(notFound.status, 400);
-			assert.strictEqual(castAsError(notFound.body as any).error.code, 'NO_SUCH_APP');
+			expect(notFound.status).toBe(400);
+			expect(castAsError(notFound.body as any).error.code).toBe('NO_SUCH_APP');
 
 			const mine = await api('my/apps', { limit: 100 }, alice);
-			assert.strictEqual(mine.status, 200);
+			expect(mine.status).toBe(200);
 			assert.ok(mine.body.some((app) => app.id === created.body.id));
 		});
 
@@ -8313,44 +8094,38 @@ describe('Endpoints', () => {
 			const byTokenId = await createLegacyAppToken(`i apps revoke by tokenId ${Date.now()}`);
 
 			const list = await api('i/apps', { sort: '-createdAt' }, alice);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			const tokenItem = list.body.find((item) => item.name === byToken.app.name);
 			const tokenIdItem = list.body.find((item) => item.name === byTokenId.app.name);
 			assert.ok(tokenItem);
 			assert.ok(tokenIdItem);
-			assert.strictEqual(tokenItem.permission.includes('read:account'), true);
-			assert.strictEqual(tokenItem.description, `${byToken.app.name} description`);
-			assert.strictEqual(typeof tokenItem.createdAt, 'string');
+			expect(tokenItem.permission.includes('read:account')).toBe(true);
+			expect(tokenItem.description).toBe(`${byToken.app.name} description`);
+			expect(typeof tokenItem.createdAt).toBe('string');
 
 			const authorized = await api('i/authorized-apps', { limit: 100, sort: 'desc' }, alice);
-			assert.strictEqual(authorized.status, 200);
+			expect(authorized.status).toBe(200);
 			const authorizedApp = authorized.body.find((app) => app.id === byToken.app.id);
 			assert.ok(authorizedApp);
-			assert.strictEqual(authorizedApp.name, byToken.app.name);
-			assert.strictEqual(authorizedApp.isAuthorized, true);
+			expect(authorizedApp.name).toBe(byToken.app.name);
+			expect(authorizedApp.isAuthorized).toBe(true);
 
 			const denied = await api('i/apps', {}, { token: byToken.accessToken });
-			assert.strictEqual(denied.status, 400);
-			assert.strictEqual(castAsError(denied.body as any).error.code, 'ACCESS_DENIED');
+			expect(denied.status).toBe(400);
+			expect(castAsError(denied.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const revokedByToken = await api('i/revoke-token', { token: byToken.accessToken }, alice);
-			assert.strictEqual(revokedByToken.status, 204);
+			expect(revokedByToken.status).toBe(204);
 			const revokedCredential = await api('i', {}, { token: byToken.accessToken });
-			assert.strictEqual(revokedCredential.status, 401);
-			assert.strictEqual(castAsError(revokedCredential.body as any).error.code, 'AUTHENTICATION_FAILED');
+			expect(revokedCredential.status).toBe(401);
+			expect(castAsError(revokedCredential.body as any).error.code).toBe('AUTHENTICATION_FAILED');
 
 			const revokedByTokenId = await api('i/revoke-token', { tokenId: tokenIdItem.id }, alice);
-			assert.strictEqual(revokedByTokenId.status, 204);
+			expect(revokedByTokenId.status).toBe(204);
 			const afterRevoke = await api('i/authorized-apps', { limit: 100 }, alice);
-			assert.strictEqual(afterRevoke.status, 200);
-			assert.strictEqual(
-				afterRevoke.body.some((app) => app.id === byToken.app.id),
-				false,
-			);
-			assert.strictEqual(
-				afterRevoke.body.some((app) => app.id === byTokenId.app.id),
-				false,
-			);
+			expect(afterRevoke.status).toBe(200);
+			expect(afterRevoke.body.some((app) => app.id === byToken.app.id)).toBe(false);
+			expect(afterRevoke.body.some((app) => app.id === byTokenId.app.id)).toBe(false);
 		});
 	});
 
@@ -8389,31 +8164,31 @@ describe('Endpoints', () => {
 			});
 
 			const unauthorizedList = await api('roles/list', {});
-			assert.strictEqual(unauthorizedList.status, 401);
-			assert.strictEqual(castAsError(unauthorizedList.body as any).error.code, 'CREDENTIAL_REQUIRED');
+			expect(unauthorizedList.status).toBe(401);
+			expect(castAsError(unauthorizedList.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 
 			const list = await api('roles/list', {}, alice);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			const listedRole = list.body.find((item) => item.id === createdRole.id);
 			assert.ok(listedRole);
-			assert.strictEqual(listedRole.name, createdRole.name);
-			assert.strictEqual(listedRole.description, createdRole.description);
-			assert.strictEqual(listedRole.color, createdRole.color);
-			assert.strictEqual(listedRole.isPublic, true);
-			assert.strictEqual(listedRole.isExplorable, true);
-			assert.strictEqual(listedRole.displayOrder, 4242);
-			assert.strictEqual(listedRole.usersCount, 1);
-			assert.strictEqual(getDefined(listedRole.policies['canInvite']).useDefault, true);
+			expect(listedRole.name).toBe(createdRole.name);
+			expect(listedRole.description).toBe(createdRole.description);
+			expect(listedRole.color).toBe(createdRole.color);
+			expect(listedRole.isPublic).toBe(true);
+			expect(listedRole.isExplorable).toBe(true);
+			expect(listedRole.displayOrder).toBe(4242);
+			expect(listedRole.usersCount).toBe(1);
+			expect(getDefined(listedRole.policies['canInvite']).useDefault).toBe(true);
 
 			const shown = await api('roles/show', { roleId: createdRole.id });
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, createdRole.id);
-			assert.strictEqual(shown.body.name, createdRole.name);
-			assert.strictEqual(shown.body.usersCount, 1);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(createdRole.id);
+			expect(shown.body.name).toBe(createdRole.name);
+			expect(shown.body.usersCount).toBe(1);
 
 			const missing = await api('roles/show', { roleId: '000000000000000000000000' });
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ROLE');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_ROLE');
 		});
 
 		test('roles/users は explorable な role のみ users を一覧しUserDetailedを返す', async () => {
@@ -8475,22 +8250,22 @@ describe('Endpoints', () => {
 			});
 
 			const users = await api('roles/users', { roleId: explorableRole.id }, member);
-			assert.strictEqual(users.status, 200);
-			assert.strictEqual(users.body.length, 1);
-			assert.strictEqual(getAt(users.body, 0).user.id, member.id);
-			assert.strictEqual(getAt(users.body, 0).user.username, member.username);
+			expect(users.status).toBe(200);
+			expect(users.body.length).toBe(1);
+			expect(getAt(users.body, 0).user.id).toBe(member.id);
+			expect(getAt(users.body, 0).user.username).toBe(member.username);
 
 			const asSelf = getAt(users.body, 0).user as any;
 			assert.ok('policies' in asSelf);
 
 			const asOthers = await api('roles/users', { roleId: explorableRole.id }, alice);
-			assert.strictEqual(asOthers.status, 200);
-			assert.strictEqual('policies' in (getAt(asOthers.body, 0).user as any), false);
+			expect(asOthers.status).toBe(200);
+			expect('policies' in (getAt(asOthers.body, 0).user as any)).toBe(false);
 
 			const forbidden = await api('roles/users', { roleId: nonExplorableRole.id });
-			assert.strictEqual(forbidden.status, 400);
-			assert.strictEqual(castAsError(forbidden.body as any).error.code, 'NO_SUCH_ROLE');
-			assert.strictEqual(castAsError(forbidden.body as any).error.id, '30aaaee3-4792-48dc-ab0d-cf501a575ac5');
+			expect(forbidden.status).toBe(400);
+			expect(castAsError(forbidden.body as any).error.code).toBe('NO_SUCH_ROLE');
+			expect(castAsError(forbidden.body as any).error.id).toBe('30aaaee3-4792-48dc-ab0d-cf501a575ac5');
 		});
 
 		test('roles/notes はfanoutタイムラインの投稿をpublicのみpackして返す', async () => {
@@ -8540,9 +8315,9 @@ describe('Endpoints', () => {
 				await redis.lpush(`list:roleTimeline:${explorableRole.id}`, followersNoteId, publicNoteId);
 
 				const notes = await api('roles/notes', { roleId: explorableRole.id }, author);
-				assert.strictEqual(notes.status, 200);
-				assert.strictEqual(notes.body.length, 1);
-				assert.strictEqual(getAt(notes.body, 0).id, publicNoteId);
+				expect(notes.status).toBe(200);
+				expect(notes.body.length).toBe(1);
+				expect(getAt(notes.body, 0).id).toBe(publicNoteId);
 			} finally {
 				await redis.del(`list:roleTimeline:${explorableRole.id}`);
 				await closeRedisConnection(redis);
@@ -8553,16 +8328,16 @@ describe('Endpoints', () => {
 	describe('stats', () => {
 		test('stats は集計値を返す', async () => {
 			const res = await api('stats', {});
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(typeof (res.body as any).notesCount, 'number');
-			assert.strictEqual(typeof (res.body as any).originalNotesCount, 'number');
-			assert.strictEqual(typeof (res.body as any).usersCount, 'number');
-			assert.strictEqual(typeof (res.body as any).originalUsersCount, 'number');
-			assert.strictEqual(typeof (res.body as any).reactionsCount, 'number');
-			assert.strictEqual(typeof (res.body as any).instances, 'number');
-			assert.strictEqual((res.body as any).driveUsageLocal, 0);
-			assert.strictEqual((res.body as any).driveUsageRemote, 0);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(typeof (res.body as any).notesCount).toBe('number');
+			expect(typeof (res.body as any).originalNotesCount).toBe('number');
+			expect(typeof (res.body as any).usersCount).toBe('number');
+			expect(typeof (res.body as any).originalUsersCount).toBe('number');
+			expect(typeof (res.body as any).reactionsCount).toBe('number');
+			expect(typeof (res.body as any).instances).toBe('number');
+			expect((res.body as any).driveUsageLocal).toBe(0);
+			expect((res.body as any).driveUsageRemote).toBe(0);
 		});
 	});
 
@@ -8582,14 +8357,14 @@ describe('Endpoints', () => {
 			await api('renote-mute/create', { userId: renoteMutee.id }, me);
 
 			const single = await api('users/relation', { userId: stranger.id }, me);
-			assert.strictEqual(single.status, 200);
+			expect(single.status).toBe(200);
 			assert.ok(Array.isArray(single.body));
-			assert.strictEqual(single.body.length, 1);
-			assert.strictEqual(getAt(single.body, 0).id, stranger.id);
-			assert.strictEqual(getAt(single.body, 0).isFollowing, false);
-			assert.strictEqual(getAt(single.body, 0).isBlocking, false);
-			assert.strictEqual(getAt(single.body, 0).isMuted, false);
-			assert.strictEqual(getAt(single.body, 0).isRenoteMuted, false);
+			expect(single.body.length).toBe(1);
+			expect(getAt(single.body, 0).id).toBe(stranger.id);
+			expect(getAt(single.body, 0).isFollowing).toBe(false);
+			expect(getAt(single.body, 0).isBlocking).toBe(false);
+			expect(getAt(single.body, 0).isMuted).toBe(false);
+			expect(getAt(single.body, 0).isRenoteMuted).toBe(false);
 
 			const batch = await api(
 				'users/relation',
@@ -8598,19 +8373,19 @@ describe('Endpoints', () => {
 				},
 				me,
 			);
-			assert.strictEqual(batch.status, 200);
+			expect(batch.status).toBe(200);
 			assert.ok(Array.isArray(batch.body));
-			assert.strictEqual(batch.body.length, 5);
+			expect(batch.body.length).toBe(5);
 			const byId = new Map(batch.body.map((r: any) => [r.id, r]));
-			assert.strictEqual(byId.get(followee.id).isFollowing, true);
-			assert.strictEqual(byId.get(blockee.id).isBlocking, true);
-			assert.strictEqual(byId.get(mutee.id).isMuted, true);
-			assert.strictEqual(byId.get(renoteMutee.id).isRenoteMuted, true);
-			assert.strictEqual(byId.get(stranger.id).isFollowing, false);
+			expect(byId.get(followee.id).isFollowing).toBe(true);
+			expect(byId.get(blockee.id).isBlocking).toBe(true);
+			expect(byId.get(mutee.id).isMuted).toBe(true);
+			expect(byId.get(renoteMutee.id).isRenoteMuted).toBe(true);
+			expect(byId.get(stranger.id).isFollowing).toBe(false);
 
 			const unauthorized = await api('users/relation', { userId: stranger.id });
-			assert.strictEqual(unauthorized.status, 401);
-			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+			expect(unauthorized.status).toBe(401);
+			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 	});
 
@@ -8620,12 +8395,12 @@ describe('Endpoints', () => {
 			const owner = await signup({ username: `huc${suffix}` });
 
 			const pub = await api('clips/create', { name: `hono users/clips public ${suffix}`, isPublic: true }, owner);
-			assert.strictEqual(pub.status, 200);
+			expect(pub.status).toBe(200);
 			const priv = await api('clips/create', { name: `hono users/clips private ${suffix}`, isPublic: false }, owner);
-			assert.strictEqual(priv.status, 200);
+			expect(priv.status).toBe(200);
 
 			const listed = await api('users/clips', { userId: owner.id, limit: 100 });
-			assert.strictEqual(listed.status, 200);
+			expect(listed.status).toBe(200);
 			assert.ok(listed.body.some((c: any) => c.id === pub.body.id));
 			assert.ok(!listed.body.some((c: any) => c.id === priv.body.id));
 		});
@@ -8645,7 +8420,7 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(pub.status, 200);
+			expect(pub.status).toBe(200);
 			const priv = await api(
 				'flash/create',
 				{
@@ -8657,13 +8432,13 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(priv.status, 200);
+			expect(priv.status).toBe(200);
 
 			const listed = await api('users/flashs', { userId: owner.id, limit: 100 });
-			assert.strictEqual(listed.status, 200);
+			expect(listed.status).toBe(200);
 			assert.ok(listed.body.some((f: any) => f.id === pub.body.id));
 			assert.ok(!listed.body.some((f: any) => f.id === priv.body.id));
-			assert.strictEqual(listed.body.find((f: any) => f.id === pub.body.id)!.isLiked, undefined);
+			expect(listed.body.find((f: any) => f.id === pub.body.id)!.isLiked).toBe(undefined);
 		});
 
 		test('users/gallery/posts はページングして投稿を返す', async () => {
@@ -8695,10 +8470,10 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(post.status, 200);
+			expect(post.status).toBe(200);
 
 			const listed = await api('users/gallery/posts', { userId: owner.id, limit: 100 });
-			assert.strictEqual(listed.status, 200);
+			expect(listed.status).toBe(200);
 			assert.ok(listed.body.some((p: any) => p.id === post.body.id));
 		});
 	});
@@ -8719,42 +8494,42 @@ describe('Endpoints', () => {
 			const muter = await signup({ username: `husm${suffix}` });
 			const muted = await signup({ username: `hussrchmuted${suffix}` });
 			const muteRes = await api('mute/create', { userId: muted.id }, muter);
-			assert.strictEqual(muteRes.status, 204);
+			expect(muteRes.status).toBe(204);
 
 			const byNameResult = await api('users/search', { query: `Hono Search Target ${suffix}` });
-			assert.strictEqual(byNameResult.status, 200);
+			expect(byNameResult.status).toBe(200);
 			assert.ok(byNameResult.body.some((u: any) => u.id === byName.id));
 
 			const byUsernameResult = await api('users/search', { query: `@hussrch${suffix}` });
-			assert.strictEqual(byUsernameResult.status, 200);
+			expect(byUsernameResult.status).toBe(200);
 			assert.ok(byUsernameResult.body.some((u: any) => u.id === byUsername.id));
 
 			const byDescriptionResult = await api('users/search', { query: `hono search description marker ${suffix}` });
-			assert.strictEqual(byDescriptionResult.status, 200);
+			expect(byDescriptionResult.status).toBe(200);
 			assert.ok(byDescriptionResult.body.some((u: any) => u.id === byDescription.id));
 
 			const mutedIncludedForAnon = await api('users/search', { query: `hussrchmuted${suffix}` });
-			assert.strictEqual(mutedIncludedForAnon.status, 200);
+			expect(mutedIncludedForAnon.status).toBe(200);
 			assert.ok(mutedIncludedForAnon.body.some((u: any) => u.id === muted.id));
 
 			const mutedExcludedForMuter = await api('users/search', { query: `hussrchmuted${suffix}` }, muter);
-			assert.strictEqual(mutedExcludedForMuter.status, 200);
+			expect(mutedExcludedForMuter.status).toBe(200);
 			assert.ok(!mutedExcludedForMuter.body.some((u: any) => u.id === muted.id));
 
 			const localOnly = await api('users/search', { query: `hussrch${suffix}`, origin: 'local' });
-			assert.strictEqual(localOnly.status, 200);
+			expect(localOnly.status).toBe(200);
 			assert.ok(localOnly.body.some((u: any) => u.id === byUsername.id));
 
 			const remoteOnly = await api('users/search', { query: `hussrch${suffix}`, origin: 'remote' });
-			assert.strictEqual(remoteOnly.status, 200);
+			expect(remoteOnly.status).toBe(200);
 			assert.ok(!remoteOnly.body.some((u: any) => u.id === byUsername.id));
 
 			const detailed = await api('users/search', { query: `@hussrch${suffix}`, detail: true });
-			assert.strictEqual(detailed.status, 200);
+			expect(detailed.status).toBe(200);
 			assert.ok(Object.prototype.hasOwnProperty.call(detailed.body[0], 'isLocked'));
 
 			const lite = await api('users/search', { query: `@hussrch${suffix}`, detail: false });
-			assert.strictEqual(lite.status, 200);
+			expect(lite.status).toBe(200);
 			assert.ok(!Object.prototype.hasOwnProperty.call(lite.body[0], 'isLocked'));
 		});
 	});
@@ -8788,51 +8563,36 @@ describe('Endpoints', () => {
 			const muter = await signup({ username: `hum${suffix}` });
 			const muted = await signup({ username: `humt${suffix}` });
 			const muteRes = await api('mute/create', { userId: muted.id }, muter);
-			assert.strictEqual(muteRes.status, 204);
+			expect(muteRes.status).toBe(204);
 
 			// フルスイートでは既存のexplorableユーザーが100件を超えるため、新規作成分を確実に上位に出す
 			// sort=+createdAt (id降順) を明示する。
 			const all = await api('users', { limit: 100, sort: '+createdAt' });
-			assert.strictEqual(all.status, 200);
+			expect(all.status).toBe(200);
 			assert.ok(all.body.some((u: any) => u.id === explorable.id));
-			assert.strictEqual(
-				all.body.some((u: any) => u.id === notExplorable.id),
-				false,
-			);
-			assert.strictEqual(
-				all.body.some((u: any) => u.id === remoteUser.id),
-				false,
-			);
+			expect(all.body.some((u: any) => u.id === notExplorable.id)).toBe(false);
+			expect(all.body.some((u: any) => u.id === remoteUser.id)).toBe(false);
 
 			const combined = await api('users', { limit: 100, origin: 'combined', sort: '+createdAt' });
-			assert.strictEqual(combined.status, 200);
+			expect(combined.status).toBe(200);
 			assert.ok(combined.body.some((u: any) => u.id === remoteUser.id));
 
 			const remoteOnly = await api('users', { limit: 100, origin: 'remote', sort: '+createdAt' });
-			assert.strictEqual(remoteOnly.status, 200);
+			expect(remoteOnly.status).toBe(200);
 			assert.ok(remoteOnly.body.some((u: any) => u.id === remoteUser.id));
-			assert.strictEqual(
-				remoteOnly.body.some((u: any) => u.id === explorable.id),
-				false,
-			);
+			expect(remoteOnly.body.some((u: any) => u.id === explorable.id)).toBe(false);
 
 			const byHostname = await api('users', { limit: 100, origin: 'combined', hostname: remoteHost });
-			assert.strictEqual(byHostname.status, 200);
+			expect(byHostname.status).toBe(200);
 			assert.ok(byHostname.body.some((u: any) => u.id === remoteUser.id));
-			assert.strictEqual(
-				byHostname.body.some((u: any) => u.id === explorable.id),
-				false,
-			);
+			expect(byHostname.body.some((u: any) => u.id === explorable.id)).toBe(false);
 
 			const mutedIncludedForAnon = await api('users', { limit: 100, sort: '+createdAt' });
 			assert.ok(mutedIncludedForAnon.body.some((u: any) => u.id === muted.id));
 
 			const mutedExcludedForMuter = await api('users', { limit: 100, sort: '+createdAt' }, muter);
-			assert.strictEqual(mutedExcludedForMuter.status, 200);
-			assert.strictEqual(
-				mutedExcludedForMuter.body.some((u: any) => u.id === muted.id),
-				false,
-			);
+			expect(mutedExcludedForMuter.status).toBe(200);
+			expect(mutedExcludedForMuter.body.some((u: any) => u.id === muted.id)).toBe(false);
 		});
 
 		test('sort=+followerとstate=aliveを維持する', async () => {
@@ -8845,16 +8605,13 @@ describe('Endpoints', () => {
 			await updateUserInDatabase(db, stale.id, { updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10) });
 
 			const sorted = await api('users', { limit: 1, sort: '+follower' });
-			assert.strictEqual(sorted.status, 200);
-			assert.strictEqual(sorted.body[0]?.id, popular.id);
+			expect(sorted.status).toBe(200);
+			expect(sorted.body[0]?.id).toBe(popular.id);
 
 			const alive = await api('users', { limit: 100, state: 'alive', sort: '+createdAt' });
-			assert.strictEqual(alive.status, 200);
+			expect(alive.status).toBe(200);
 			assert.ok(alive.body.some((u: any) => u.id === popular.id));
-			assert.strictEqual(
-				alive.body.some((u: any) => u.id === stale.id),
-				false,
-			);
+			expect(alive.body.some((u: any) => u.id === stale.id)).toBe(false);
 		});
 	});
 
@@ -8882,12 +8639,12 @@ describe('Endpoints', () => {
 			});
 
 			const byUsername = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, limit: 100 });
-			assert.strictEqual(byUsername.status, 200);
+			expect(byUsername.status).toBe(200);
 			assert.ok(byUsername.body.some((u: any) => u.id === target.id));
 			assert.ok(byUsername.body.some((u: any) => u.id === otherPrefixed.id));
 
 			const byHost = await api('users/search-by-username-and-host', { host: remoteHost, limit: 100 });
-			assert.strictEqual(byHost.status, 200);
+			expect(byHost.status).toBe(200);
 			assert.ok(byHost.body.some((u: any) => u.id === remoteUser.id));
 
 			await api('following/create', { userId: target.id }, searcher);
@@ -8896,19 +8653,19 @@ describe('Endpoints', () => {
 				{ username: `hsbuh${suffix}`, limit: 1 },
 				searcher,
 			);
-			assert.strictEqual(followedFirst.status, 200);
-			assert.strictEqual(getAt(followedFirst.body, 0).id, target.id);
+			expect(followedFirst.status).toBe(200);
+			expect(getAt(followedFirst.body, 0).id).toBe(target.id);
 
 			// @ts-expect-error params must include username or host
 			const missingBoth = await api('users/search-by-username-and-host', { limit: 10 });
-			assert.strictEqual(missingBoth.status, 400);
+			expect(missingBoth.status).toBe(400);
 
 			const detailed = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: true });
-			assert.strictEqual(detailed.status, 200);
+			expect(detailed.status).toBe(200);
 			assert.ok(Object.prototype.hasOwnProperty.call(getAt(detailed.body, 0), 'isLocked'));
 
 			const lite = await api('users/search-by-username-and-host', { username: `hsbuh${suffix}`, detail: false });
-			assert.strictEqual(lite.status, 200);
+			expect(lite.status).toBe(200);
 			assert.ok(!Object.prototype.hasOwnProperty.call(getAt(lite.body, 0), 'isLocked'));
 		});
 	});
@@ -8935,10 +8692,10 @@ describe('Endpoints', () => {
 				},
 				me,
 			);
-			assert.strictEqual(single.status, 200);
-			assert.strictEqual(single.body.length, 1);
-			assert.strictEqual(getAt(single.body, 0).id, followee1.id);
-			assert.strictEqual(getAt(single.body, 0).user.id, followee1.id);
+			expect(single.status).toBe(200);
+			expect(single.body.length).toBe(1);
+			expect(getAt(single.body, 0).id).toBe(followee1.id);
+			expect(getAt(single.body, 0).user.id).toBe(followee1.id);
 
 			const range = await api(
 				'users/get-following-users-by-birthday',
@@ -8947,16 +8704,13 @@ describe('Endpoints', () => {
 				},
 				me,
 			);
-			assert.strictEqual(range.status, 200);
-			assert.deepStrictEqual(
-				range.body.map((u: any) => u.id),
-				[followee1.id, followee2.id],
-			);
+			expect(range.status).toBe(200);
+			expect(range.body.map((u: any) => u.id)).toStrictEqual([followee1.id, followee2.id]);
 			assert.ok(!range.body.some((u: any) => u.id === notFollowed.id));
 
 			const unauthorized = await api('users/get-following-users-by-birthday', { birthday: { month: 6, day: 15 } });
-			assert.strictEqual(unauthorized.status, 401);
-			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+			expect(unauthorized.status).toBe(401);
+			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 	});
 
@@ -8996,7 +8750,7 @@ describe('Endpoints', () => {
 			});
 
 			const res = await api('users/recommendation', { limit: 100 }, me);
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const ids = res.body.map((u: any) => u.id);
 			assert.ok(ids.includes(candidate.id));
 			assert.ok(!ids.includes(lockedUser.id));
@@ -9008,8 +8762,8 @@ describe('Endpoints', () => {
 			assert.ok(!ids.includes(me.id));
 
 			const unauthorized = await api('users/recommendation', {});
-			assert.strictEqual(unauthorized.status, 401);
-			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+			expect(unauthorized.status).toBe(401);
+			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 	});
 
@@ -9030,18 +8784,18 @@ describe('Endpoints', () => {
 			await post(author, { text: 'reply 3', replyId: rareNote.id });
 
 			const res = await api('users/get-frequently-replied-users', { userId: author.id, limit: 100 });
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const byUserId = new Map(res.body.map((r: any) => [r.user.id, r.weight]));
-			assert.strictEqual(byUserId.get(frequentTarget.id), 1);
-			assert.strictEqual(byUserId.get(rareTarget.id), 0.5);
+			expect(byUserId.get(frequentTarget.id)).toBe(1);
+			expect(byUserId.get(rareTarget.id)).toBe(0.5);
 
 			const empty = await api('users/get-frequently-replied-users', { userId: neverReplied.id });
-			assert.strictEqual(empty.status, 200);
-			assert.deepStrictEqual(empty.body, []);
+			expect(empty.status).toBe(200);
+			expect(empty.body).toStrictEqual([]);
 
 			const noSuchUser = await api('users/get-frequently-replied-users', { userId: genId() });
-			assert.strictEqual(noSuchUser.status, 400);
-			assert.strictEqual(castAsError(noSuchUser.body as any).error.code, 'NO_SUCH_USER');
+			expect(noSuchUser.status).toBe(400);
+			expect(castAsError(noSuchUser.body as any).error.code).toBe('NO_SUCH_USER');
 		});
 	});
 
@@ -9053,23 +8807,23 @@ describe('Endpoints', () => {
 			const noteAuthor = await signup({ username: `hurxn${suffix}` });
 			const note = await post(noteAuthor, { text: 'hono users/reactions target' });
 			const reacted = await api('notes/reactions/create', { noteId: note.id, reaction: '🚀' }, owner);
-			assert.strictEqual(reacted.status, 204);
+			expect(reacted.status).toBe(204);
 
 			const strangerSeesPublic = await api('users/reactions', { userId: owner.id }, stranger);
-			assert.strictEqual(strangerSeesPublic.status, 200);
-			assert.strictEqual(strangerSeesPublic.body.length, 1);
-			assert.strictEqual(getAt(strangerSeesPublic.body, 0).note.id, note.id);
-			assert.strictEqual(getAt(strangerSeesPublic.body, 0).user.id, owner.id);
+			expect(strangerSeesPublic.status).toBe(200);
+			expect(strangerSeesPublic.body.length).toBe(1);
+			expect(getAt(strangerSeesPublic.body, 0).note.id).toBe(note.id);
+			expect(getAt(strangerSeesPublic.body, 0).user.id).toBe(owner.id);
 
 			await api('i/update', { publicReactions: false }, owner);
 
 			const strangerDenied = await api('users/reactions', { userId: owner.id }, stranger);
-			assert.strictEqual(strangerDenied.status, 400);
-			assert.strictEqual(castAsError(strangerDenied.body as any).error.code, 'REACTIONS_NOT_PUBLIC');
+			expect(strangerDenied.status).toBe(400);
+			expect(castAsError(strangerDenied.body as any).error.code).toBe('REACTIONS_NOT_PUBLIC');
 
 			const ownerSeesSelf = await api('users/reactions', { userId: owner.id }, owner);
-			assert.strictEqual(ownerSeesSelf.status, 200);
-			assert.strictEqual(ownerSeesSelf.body.length, 1);
+			expect(ownerSeesSelf.status).toBe(200);
+			expect(ownerSeesSelf.body.length).toBe(1);
 
 			const moderatorRole = await role(alice, { name: `hono users/reactions moderator ${suffix}`, isModerator: true });
 			await createRoleAssignmentInDatabase(db, {
@@ -9079,8 +8833,8 @@ describe('Endpoints', () => {
 				expiresAt: null,
 			});
 			const moderatorSees = await api('users/reactions', { userId: owner.id }, stranger);
-			assert.strictEqual(moderatorSees.status, 200);
-			assert.strictEqual(moderatorSees.body.length, 1);
+			expect(moderatorSees.status).toBe(200);
+			expect(moderatorSees.body.length).toBe(1);
 
 			const remoteHost = `hono-reactions-${suffix}.example`;
 			const remoteId = genId();
@@ -9101,21 +8855,21 @@ describe('Endpoints', () => {
 			});
 			const nonModeratorRemote = await signup({ username: `hurxnm${suffix}` });
 			const remoteDenied = await api('users/reactions', { userId: remoteId }, nonModeratorRemote);
-			assert.strictEqual(remoteDenied.status, 400);
-			assert.strictEqual(castAsError(remoteDenied.body as any).error.code, 'IS_REMOTE_USER');
+			expect(remoteDenied.status).toBe(400);
+			expect(castAsError(remoteDenied.body as any).error.code).toBe('IS_REMOTE_USER');
 
 			const blocker = await signup({ username: `hurxb${suffix}` });
 			await api('i/update', { publicReactions: true }, blocker);
 			const blockerReacted = await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, blocker);
-			assert.strictEqual(blockerReacted.status, 204);
+			expect(blockerReacted.status).toBe(204);
 			const blockedViewer = await signup({ username: `hurxbv${suffix}` });
 			const nonBlockedView = await api('users/reactions', { userId: blocker.id }, blockedViewer);
-			assert.strictEqual(nonBlockedView.status, 200);
-			assert.strictEqual(nonBlockedView.body.length, 1);
+			expect(nonBlockedView.status).toBe(200);
+			expect(nonBlockedView.body.length).toBe(1);
 			await api('blocking/create', { userId: blockedViewer.id }, blocker);
 			const blockedResult = await api('users/reactions', { userId: blocker.id }, blockedViewer);
-			assert.strictEqual(blockedResult.status, 200);
-			assert.deepStrictEqual(blockedResult.body, []);
+			expect(blockedResult.status).toBe(200);
+			expect(blockedResult.body).toStrictEqual([]);
 		});
 	});
 
@@ -9143,14 +8897,14 @@ describe('Endpoints', () => {
 				await redis.zadd(key, 3, noteNew.id);
 
 				const res = await api('users/featured-notes', { userId: owner.id, limit: 100 });
-				assert.strictEqual(res.status, 200);
+				expect(res.status).toBe(200);
 				const ids = res.body.map((n: any) => n.id);
 				assert.ok(ids.includes(noteOld.id));
 				assert.ok(ids.includes(noteNew.id));
 				assert.ok(ids.indexOf(noteNew.id) < ids.indexOf(noteOld.id));
 
 				const untilFiltered = await api('users/featured-notes', { userId: owner.id, untilId: noteNew.id, limit: 100 });
-				assert.strictEqual(untilFiltered.status, 200);
+				expect(untilFiltered.status).toBe(200);
 				assert.ok(!untilFiltered.body.some((n: any) => n.id === noteNew.id));
 
 				const blocker = await signup({ username: `hufnb${suffix}` });
@@ -9160,8 +8914,8 @@ describe('Endpoints', () => {
 				const blockedViewer = await signup({ username: `hufnbv${suffix}` });
 				await api('blocking/create', { userId: blockedViewer.id }, blocker);
 				const blockedResult = await api('users/featured-notes', { userId: blocker.id }, blockedViewer);
-				assert.strictEqual(blockedResult.status, 200);
-				assert.deepStrictEqual(blockedResult.body, []);
+				expect(blockedResult.status).toBe(200);
+				expect(blockedResult.body).toStrictEqual([]);
 			} finally {
 				await closeRedisConnection(redis);
 			}
@@ -9182,16 +8936,16 @@ describe('Endpoints', () => {
 
 			// deeplAuthKeyがテスト環境では未設定のため、可視な公開ノートに対してもUNAVAILABLEになる
 			const unavailableNoKey = await api('notes/translate', { noteId: publicNote.id, targetLang: 'en' }, viewer);
-			assert.strictEqual(unavailableNoKey.status, 400);
-			assert.strictEqual(castAsError(unavailableNoKey.body as any).error.code, 'UNAVAILABLE');
+			expect(unavailableNoKey.status).toBe(400);
+			expect(castAsError(unavailableNoKey.body as any).error.code).toBe('UNAVAILABLE');
 
 			const noSuchNote = await api('notes/translate', { noteId: genId(), targetLang: 'en' }, viewer);
-			assert.strictEqual(noSuchNote.status, 400);
-			assert.strictEqual(castAsError(noSuchNote.body as any).error.code, 'NO_SUCH_NOTE');
+			expect(noSuchNote.status).toBe(400);
+			expect(castAsError(noSuchNote.body as any).error.code).toBe('NO_SUCH_NOTE');
 
 			const invisible = await api('notes/translate', { noteId: specifiedNote.id, targetLang: 'en' }, viewer);
-			assert.strictEqual(invisible.status, 400);
-			assert.strictEqual(castAsError(invisible.body as any).error.code, 'CANNOT_TRANSLATE_INVISIBLE_NOTE');
+			expect(invisible.status).toBe(400);
+			expect(castAsError(invisible.body as any).error.code).toBe('CANNOT_TRANSLATE_INVISIBLE_NOTE');
 
 			const noTranslatorRole = await role(
 				alice,
@@ -9203,11 +8957,11 @@ describe('Endpoints', () => {
 				},
 			);
 			const assignDenied = await api('admin/roles/assign', { roleId: noTranslatorRole.id, userId: viewer.id }, alice);
-			assert.strictEqual(assignDenied.status, 204);
+			expect(assignDenied.status).toBe(204);
 
 			const roleDenied = await api('notes/translate', { noteId: publicNote.id, targetLang: 'en' }, viewer);
-			assert.strictEqual(roleDenied.status, 400);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'UNAVAILABLE');
+			expect(roleDenied.status).toBe(400);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('UNAVAILABLE');
 		});
 
 		test('本文が無いノートは204(本文無し)を返す', async () => {
@@ -9215,11 +8969,11 @@ describe('Endpoints', () => {
 			const author = await signup({ username: `hntn${suffix}` });
 			const file = await uploadFile(author);
 			const textlessNote = await post(author, { fileIds: [file.body!.id], visibility: 'public' });
-			assert.strictEqual(textlessNote.text, null);
+			expect(textlessNote.text).toBe(null);
 
 			const res = await api('notes/translate', { noteId: textlessNote.id, targetLang: 'en' }, author);
-			assert.strictEqual(res.status, 204);
-			assert.strictEqual(res.body, null);
+			expect(res.status).toBe(204);
+			expect(res.body).toBe(null);
 		});
 	});
 
@@ -9234,26 +8988,26 @@ describe('Endpoints', () => {
 				{ userId: target.id, comment: `hono report abuse ${suffix}` },
 				reporter,
 			);
-			assert.strictEqual(reported.status, 204);
+			expect(reported.status).toBe(204);
 
 			const listed = await api('admin/abuse-user-reports', { limit: 100 }, alice);
-			assert.strictEqual(listed.status, 200);
+			expect(listed.status).toBe(200);
 			const found = listed.body.find((r: any) => r.reporterId === reporter.id && r.targetUserId === target.id);
 			assert.ok(found);
-			assert.strictEqual(found.comment, `hono report abuse ${suffix}`);
-			assert.strictEqual(found.resolved, false);
+			expect(found.comment).toBe(`hono report abuse ${suffix}`);
+			expect(found.resolved).toBe(false);
 
 			const reportSelf = await api('users/report-abuse', { userId: reporter.id, comment: 'self report' }, reporter);
-			assert.strictEqual(reportSelf.status, 400);
-			assert.strictEqual(castAsError(reportSelf.body as any).error.code, 'CANNOT_REPORT_YOURSELF');
+			expect(reportSelf.status).toBe(400);
+			expect(castAsError(reportSelf.body as any).error.code).toBe('CANNOT_REPORT_YOURSELF');
 
 			const reportAdmin = await api('users/report-abuse', { userId: alice.id, comment: 'admin report' }, reporter);
-			assert.strictEqual(reportAdmin.status, 400);
-			assert.strictEqual(castAsError(reportAdmin.body as any).error.code, 'CANNOT_REPORT_THE_ADMIN');
+			expect(reportAdmin.status).toBe(400);
+			expect(castAsError(reportAdmin.body as any).error.code).toBe('CANNOT_REPORT_THE_ADMIN');
 
 			const reportMissing = await api('users/report-abuse', { userId: genId(), comment: 'no such user' }, reporter);
-			assert.strictEqual(reportMissing.status, 400);
-			assert.strictEqual(castAsError(reportMissing.body as any).error.code, 'NO_SUCH_USER');
+			expect(reportMissing.status).toBe(400);
+			expect(castAsError(reportMissing.body as any).error.code).toBe('NO_SUCH_USER');
 		});
 
 		test('通報時にmoderatorのadminStreamへnewAbuseUserReportイベントを配信する', async () => {
@@ -9293,12 +9047,12 @@ describe('Endpoints', () => {
 					{ userId: target.id, comment: `hono adminStream ${suffix}` },
 					reporter,
 				);
-				assert.strictEqual(reported.status, 204);
+				expect(reported.status).toBe(204);
 
 				const event = await received;
-				assert.strictEqual(event.message.body.targetUserId, target.id);
-				assert.strictEqual(event.message.body.reporterId, reporter.id);
-				assert.strictEqual(event.message.body.comment, `hono adminStream ${suffix}`);
+				expect(event.message.body.targetUserId).toBe(target.id);
+				expect(event.message.body.reporterId).toBe(reporter.id);
+				expect(event.message.body.comment).toBe(`hono adminStream ${suffix}`);
 			} finally {
 				await closeRedisConnection(sub);
 			}
@@ -9338,24 +9092,24 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.title, `Hono gallery post ${suffix}`);
-			assert.strictEqual(created.body.userId, owner.id);
-			assert.strictEqual(created.body.user.id, owner.id);
-			assert.strictEqual(created.body.fileIds!.length, 1);
-			assert.strictEqual(created.body.files!.length, 1);
-			assert.strictEqual(created.body.files![0]!.id, file.id);
-			assert.strictEqual(created.body.likedCount, 0);
-			assert.strictEqual(created.body.isSensitive, false);
+			expect(created.status).toBe(200);
+			expect(created.body.title).toBe(`Hono gallery post ${suffix}`);
+			expect(created.body.userId).toBe(owner.id);
+			expect(created.body.user.id).toBe(owner.id);
+			expect(created.body.fileIds!.length).toBe(1);
+			expect(created.body.files!.length).toBe(1);
+			expect(created.body.files![0]!.id).toBe(file.id);
+			expect(created.body.likedCount).toBe(0);
+			expect(created.body.isSensitive).toBe(false);
 
 			const shown = await api('gallery/posts/show', { postId: created.body.id }, stranger);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, created.body.id);
-			assert.strictEqual(shown.body.isLiked, false);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(created.body.id);
+			expect(shown.body.isLiked).toBe(false);
 
 			const missing = await api('gallery/posts/show', { postId: genId() });
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_POST');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_POST');
 
 			const updated = await api(
 				'gallery/posts/update',
@@ -9366,22 +9120,22 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(updated.status, 200);
-			assert.strictEqual(updated.body.title, `${created.body.title} updated`);
-			assert.strictEqual(updated.body.isSensitive, true);
+			expect(updated.status).toBe(200);
+			expect(updated.body.title).toBe(`${created.body.title} updated`);
+			expect(updated.body.isSensitive).toBe(true);
 
 			const deleteDenied = await api('gallery/posts/delete', { postId: created.body.id }, stranger);
-			assert.strictEqual(deleteDenied.status, 400);
-			assert.strictEqual(castAsError(deleteDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(deleteDenied.status).toBe(400);
+			expect(castAsError(deleteDenied.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const deletedByMod = await api('gallery/posts/delete', { postId: created.body.id }, alice);
-			assert.strictEqual(deletedByMod.status, 204);
-			assert.strictEqual(await fetchGalleryPostByIdFromDatabase(db, created.body.id), null);
+			expect(deletedByMod.status).toBe(204);
+			expect(await fetchGalleryPostByIdFromDatabase(db, created.body.id)).toBe(null);
 
 			const logs = await listModerationLogsFromDatabase(db, { limit: 100, order: 'desc' });
 			const log = logs.find((l) => l.type === 'deleteGalleryPost' && (l.info as any).postId === created.body.id);
 			assert.ok(log);
-			assert.strictEqual((log!.info as any).postUserId, owner.id);
+			expect((log!.info as any).postUserId).toBe(owner.id);
 		});
 
 		test('gallery/posts/{like,unlike} はカウント、ランキング、二重操作エラーを維持する', async () => {
@@ -9414,34 +9168,34 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(post.status, 200);
+			expect(post.status).toBe(200);
 
 			const selfLikeDenied = await api('gallery/posts/like', { postId: post.body.id }, owner);
-			assert.strictEqual(selfLikeDenied.status, 400);
-			assert.strictEqual(castAsError(selfLikeDenied.body as any).error.code, 'YOUR_POST');
+			expect(selfLikeDenied.status).toBe(400);
+			expect(castAsError(selfLikeDenied.body as any).error.code).toBe('YOUR_POST');
 
 			const unlikeNotLiked = await api('gallery/posts/unlike', { postId: post.body.id }, liker);
-			assert.strictEqual(unlikeNotLiked.status, 400);
-			assert.strictEqual(castAsError(unlikeNotLiked.body as any).error.code, 'NOT_LIKED');
+			expect(unlikeNotLiked.status).toBe(400);
+			expect(castAsError(unlikeNotLiked.body as any).error.code).toBe('NOT_LIKED');
 
 			const liked = await api('gallery/posts/like', { postId: post.body.id }, liker);
-			assert.strictEqual(liked.status, 204);
+			expect(liked.status).toBe(204);
 
 			const alreadyLiked = await api('gallery/posts/like', { postId: post.body.id }, liker);
-			assert.strictEqual(alreadyLiked.status, 400);
-			assert.strictEqual(castAsError(alreadyLiked.body as any).error.code, 'ALREADY_LIKED');
+			expect(alreadyLiked.status).toBe(400);
+			expect(castAsError(alreadyLiked.body as any).error.code).toBe('ALREADY_LIKED');
 
 			const afterLike = await fetchGalleryPostByIdFromDatabase(db, post.body.id);
-			assert.strictEqual(afterLike?.likedCount, 1);
+			expect(afterLike?.likedCount).toBe(1);
 
 			const shownAsLiker = await api('gallery/posts/show', { postId: post.body.id }, liker);
-			assert.strictEqual(shownAsLiker.body.isLiked, true);
+			expect(shownAsLiker.body.isLiked).toBe(true);
 
 			const unliked = await api('gallery/posts/unlike', { postId: post.body.id }, liker);
-			assert.strictEqual(unliked.status, 204);
+			expect(unliked.status).toBe(204);
 
 			const afterUnlike = await fetchGalleryPostByIdFromDatabase(db, post.body.id);
-			assert.strictEqual(afterUnlike?.likedCount, 0);
+			expect(afterUnlike?.likedCount).toBe(0);
 		});
 
 		test('gallery/posts と gallery/popular はページングして投稿を返す', async () => {
@@ -9473,17 +9227,17 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(post.status, 200);
+			expect(post.status).toBe(200);
 
 			const list = await api('gallery/posts', { limit: 100 });
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			assert.ok(list.body.some((p: any) => p.id === post.body.id));
 
 			const liker = await signup({ username: `hgpl${suffix}` });
 			await api('gallery/posts/like', { postId: post.body.id }, liker);
 
 			const popular = await api('gallery/popular', {});
-			assert.strictEqual(popular.status, 200);
+			expect(popular.status).toBe(200);
 			assert.ok(popular.body.some((p: any) => p.id === post.body.id));
 		});
 
@@ -9517,7 +9271,7 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(post.status, 200);
+			expect(post.status).toBe(200);
 
 			const otherFileMd5 = createHash('md5').update(`hono-i-gallery-posts-other-${suffix}`).digest('hex');
 			const otherFile = await createDriveFileInDatabase(db, {
@@ -9544,16 +9298,16 @@ describe('Endpoints', () => {
 				},
 				other,
 			);
-			assert.strictEqual(otherPost.status, 200);
+			expect(otherPost.status).toBe(200);
 
 			const mine = await api('i/gallery/posts', { limit: 100 }, owner);
-			assert.strictEqual(mine.status, 200);
+			expect(mine.status).toBe(200);
 			assert.ok(mine.body.some((p: any) => p.id === post.body.id));
 			assert.ok(!mine.body.some((p: any) => p.id === otherPost.body.id));
 
 			const unauthorized = await api('i/gallery/posts', {});
-			assert.strictEqual(unauthorized.status, 401);
-			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+			expect(unauthorized.status).toBe(401);
+			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 
 		test('i/gallery/likes はいいねした投稿一覧を返す', async () => {
@@ -9586,23 +9340,23 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(post.status, 200);
+			expect(post.status).toBe(200);
 
 			const empty = await api('i/gallery/likes', {}, liker);
-			assert.strictEqual(empty.status, 200);
-			assert.deepStrictEqual(empty.body, []);
+			expect(empty.status).toBe(200);
+			expect(empty.body).toStrictEqual([]);
 
 			const liked = await api('gallery/posts/like', { postId: post.body.id }, liker);
-			assert.strictEqual(liked.status, 204);
+			expect(liked.status).toBe(204);
 
 			const likes = await api('i/gallery/likes', {}, liker);
-			assert.strictEqual(likes.status, 200);
-			assert.strictEqual(likes.body.length, 1);
-			assert.strictEqual(getAt(likes.body, 0).post.id, post.body.id);
+			expect(likes.status).toBe(200);
+			expect(likes.body.length).toBe(1);
+			expect(getAt(likes.body, 0).post.id).toBe(post.body.id);
 
 			const unauthorized = await api('i/gallery/likes', {});
-			assert.strictEqual(unauthorized.status, 401);
-			assert.strictEqual(castAsError(unauthorized.body as any).error.code, 'CREDENTIAL_REQUIRED');
+			expect(unauthorized.status).toBe(401);
+			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 	});
 
@@ -9617,23 +9371,23 @@ describe('Endpoints', () => {
 				{ name: `Hono clip ${suffix}`, isPublic: false, description: 'desc' },
 				owner,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.name, `Hono clip ${suffix}`);
-			assert.strictEqual(created.body.isPublic, false);
-			assert.strictEqual(created.body.userId, owner.id);
-			assert.strictEqual(created.body.favoritedCount, 0);
-			assert.strictEqual(created.body.notesCount, 0);
+			expect(created.status).toBe(200);
+			expect(created.body.name).toBe(`Hono clip ${suffix}`);
+			expect(created.body.isPublic).toBe(false);
+			expect(created.body.userId).toBe(owner.id);
+			expect(created.body.favoritedCount).toBe(0);
+			expect(created.body.notesCount).toBe(0);
 
 			const hiddenFromStranger = await api('clips/show', { clipId: created.body.id }, stranger);
-			assert.strictEqual(hiddenFromStranger.status, 400);
-			assert.strictEqual(castAsError(hiddenFromStranger.body as any).error.code, 'NO_SUCH_CLIP');
+			expect(hiddenFromStranger.status).toBe(400);
+			expect(castAsError(hiddenFromStranger.body as any).error.code).toBe('NO_SUCH_CLIP');
 
 			const visibleToOwner = await api('clips/show', { clipId: created.body.id }, owner);
-			assert.strictEqual(visibleToOwner.status, 200);
-			assert.strictEqual(visibleToOwner.body.notesCount, 0);
+			expect(visibleToOwner.status).toBe(200);
+			expect(visibleToOwner.body.notesCount).toBe(0);
 
 			const list = await api('clips/list', {}, owner);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			assert.ok(list.body.some((c: any) => c.id === created.body.id));
 
 			const updated = await api(
@@ -9641,27 +9395,27 @@ describe('Endpoints', () => {
 				{ clipId: created.body.id, isPublic: true, name: `${created.body.name} updated` },
 				owner,
 			);
-			assert.strictEqual(updated.status, 200);
-			assert.strictEqual(updated.body.isPublic, true);
-			assert.strictEqual(updated.body.name, `${created.body.name} updated`);
+			expect(updated.status).toBe(200);
+			expect(updated.body.isPublic).toBe(true);
+			expect(updated.body.name).toBe(`${created.body.name} updated`);
 
 			const nowVisible = await api('clips/show', { clipId: created.body.id }, stranger);
-			assert.strictEqual(nowVisible.status, 200);
-			assert.strictEqual(nowVisible.body.notesCount, undefined);
+			expect(nowVisible.status).toBe(200);
+			expect(nowVisible.body.notesCount).toBe(undefined);
 
 			const updateDenied = await api('clips/update', { clipId: created.body.id, name: 'nope' }, stranger);
-			assert.strictEqual(updateDenied.status, 400);
-			assert.strictEqual(castAsError(updateDenied.body as any).error.code, 'NO_SUCH_CLIP');
+			expect(updateDenied.status).toBe(400);
+			expect(castAsError(updateDenied.body as any).error.code).toBe('NO_SUCH_CLIP');
 
 			const deleteDenied = await api('clips/delete', { clipId: created.body.id }, stranger);
-			assert.strictEqual(deleteDenied.status, 400);
-			assert.strictEqual(castAsError(deleteDenied.body as any).error.code, 'NO_SUCH_CLIP');
+			expect(deleteDenied.status).toBe(400);
+			expect(castAsError(deleteDenied.body as any).error.code).toBe('NO_SUCH_CLIP');
 
 			const deleted = await api('clips/delete', { clipId: created.body.id }, owner);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			const afterDelete = await api('clips/show', { clipId: created.body.id });
-			assert.strictEqual(afterDelete.status, 400);
+			expect(afterDelete.status).toBe(400);
 		});
 
 		test('clips/{add-note,remove-note} はNOTEカウント、重複、404を維持する', async () => {
@@ -9677,32 +9431,32 @@ describe('Endpoints', () => {
 				visibility: 'public',
 			});
 			const clip = await api('clips/create', { name: `Hono clip notes ${suffix}` }, owner);
-			assert.strictEqual(clip.status, 200);
+			expect(clip.status).toBe(200);
 
 			const missingClip = await api('clips/add-note', { clipId: genId(), noteId }, owner);
-			assert.strictEqual(missingClip.status, 400);
-			assert.strictEqual(castAsError(missingClip.body as any).error.code, 'NO_SUCH_CLIP');
+			expect(missingClip.status).toBe(400);
+			expect(castAsError(missingClip.body as any).error.code).toBe('NO_SUCH_CLIP');
 
 			const missingNote = await api('clips/add-note', { clipId: clip.body.id, noteId: genId() }, owner);
-			assert.strictEqual(missingNote.status, 400);
-			assert.strictEqual(castAsError(missingNote.body as any).error.code, 'NO_SUCH_NOTE');
+			expect(missingNote.status).toBe(400);
+			expect(castAsError(missingNote.body as any).error.code).toBe('NO_SUCH_NOTE');
 
 			const added = await api('clips/add-note', { clipId: clip.body.id, noteId }, owner);
-			assert.strictEqual(added.status, 204);
+			expect(added.status).toBe(204);
 
 			const duplicate = await api('clips/add-note', { clipId: clip.body.id, noteId }, owner);
-			assert.strictEqual(duplicate.status, 400);
-			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_CLIPPED');
+			expect(duplicate.status).toBe(400);
+			expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_CLIPPED');
 
 			const shownAfterAdd = await api('clips/show', { clipId: clip.body.id }, owner);
-			assert.strictEqual(shownAfterAdd.body.notesCount, 1);
+			expect(shownAfterAdd.body.notesCount).toBe(1);
 			assert.ok(shownAfterAdd.body.lastClippedAt);
 
 			const removed = await api('clips/remove-note', { clipId: clip.body.id, noteId }, owner);
-			assert.strictEqual(removed.status, 204);
+			expect(removed.status).toBe(204);
 
 			const shownAfterRemove = await api('clips/show', { clipId: clip.body.id }, owner);
-			assert.strictEqual(shownAfterRemove.body.notesCount, 0);
+			expect(shownAfterRemove.body.notesCount).toBe(0);
 		});
 
 		test('clips/my-favorites はfavoriteしたclipを一覧する', async () => {
@@ -9710,17 +9464,17 @@ describe('Endpoints', () => {
 			const owner = await signup({ username: `hcf${suffix}` });
 			const favoriter = await signup({ username: `hcff${suffix}` });
 			const clip = await api('clips/create', { name: `Hono clip fav ${suffix}`, isPublic: true }, owner);
-			assert.strictEqual(clip.status, 200);
+			expect(clip.status).toBe(200);
 
 			const favorited = await api('clips/favorite', { clipId: clip.body.id }, favoriter);
-			assert.strictEqual(favorited.status, 204);
-			assert.strictEqual(await clipFavoriteExistsInDatabase(db, favoriter.id, clip.body.id), true);
+			expect(favorited.status).toBe(204);
+			expect(await clipFavoriteExistsInDatabase(db, favoriter.id, clip.body.id)).toBe(true);
 
 			const myFavorites = await api('clips/my-favorites', {}, favoriter);
-			assert.strictEqual(myFavorites.status, 200);
-			assert.strictEqual(myFavorites.body.length, 1);
-			assert.strictEqual(getAt(myFavorites.body, 0).id, clip.body.id);
-			assert.strictEqual(getAt(myFavorites.body, 0).isFavorited, true);
+			expect(myFavorites.status).toBe(200);
+			expect(myFavorites.body.length).toBe(1);
+			expect(getAt(myFavorites.body, 0).id).toBe(clip.body.id);
+			expect(getAt(myFavorites.body, 0).isFavorited).toBe(true);
 		});
 
 		test('clips/notes は可視性とNO_SUCH_CLIPを維持する', async () => {
@@ -9741,27 +9495,27 @@ describe('Endpoints', () => {
 				{ name: `Hono clip notes private ${suffix}`, isPublic: false },
 				owner,
 			);
-			assert.strictEqual(privateClip.status, 200);
+			expect(privateClip.status).toBe(200);
 			await api('clips/add-note', { clipId: privateClip.body.id, noteId }, owner);
 
 			const deniedForStranger = await api('clips/notes', { clipId: privateClip.body.id }, stranger);
-			assert.strictEqual(deniedForStranger.status, 400);
-			assert.strictEqual(castAsError(deniedForStranger.body as any).error.code, 'NO_SUCH_CLIP');
+			expect(deniedForStranger.status).toBe(400);
+			expect(castAsError(deniedForStranger.body as any).error.code).toBe('NO_SUCH_CLIP');
 
 			const visibleForOwner = await api('clips/notes', { clipId: privateClip.body.id }, owner);
-			assert.strictEqual(visibleForOwner.status, 200);
-			assert.strictEqual(visibleForOwner.body.length, 1);
-			assert.strictEqual(getAt(visibleForOwner.body, 0).id, noteId);
+			expect(visibleForOwner.status).toBe(200);
+			expect(visibleForOwner.body.length).toBe(1);
+			expect(getAt(visibleForOwner.body, 0).id).toBe(noteId);
 
 			const publicClip = await api('clips/create', { name: `Hono clip notes public ${suffix}`, isPublic: true }, owner);
 			await api('clips/add-note', { clipId: publicClip.body.id, noteId }, owner);
 			const visibleForAnyone = await api('clips/notes', { clipId: publicClip.body.id });
-			assert.strictEqual(visibleForAnyone.status, 200);
-			assert.strictEqual(visibleForAnyone.body.length, 1);
+			expect(visibleForAnyone.status).toBe(200);
+			expect(visibleForAnyone.body.length).toBe(1);
 
 			const missingClip = await api('clips/notes', { clipId: genId() });
-			assert.strictEqual(missingClip.status, 400);
-			assert.strictEqual(castAsError(missingClip.body as any).error.code, 'NO_SUCH_CLIP');
+			expect(missingClip.status).toBe(400);
+			expect(castAsError(missingClip.body as any).error.code).toBe('NO_SUCH_CLIP');
 		});
 	});
 
@@ -9832,32 +9586,32 @@ describe('Endpoints', () => {
 			});
 
 			const shown = await api('notes/show', { noteId: mainNoteId });
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, mainNoteId);
-			assert.strictEqual(shown.body.text, 'hono notes/show main note');
-			assert.strictEqual(shown.body.userId, author.id);
-			assert.strictEqual(shown.body.user.id, author.id);
-			assert.strictEqual(shown.body.replyId, replyTargetId);
-			assert.strictEqual(shown.body.reply?.id, replyTargetId);
-			assert.strictEqual(shown.body.renoteId, renoteTargetId);
-			assert.strictEqual(shown.body.renote?.id, renoteTargetId);
-			assert.strictEqual(shown.body.reactions?.['👍'], 2);
-			assert.strictEqual(shown.body.reactionCount, 2);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(mainNoteId);
+			expect(shown.body.text).toBe('hono notes/show main note');
+			expect(shown.body.userId).toBe(author.id);
+			expect(shown.body.user.id).toBe(author.id);
+			expect(shown.body.replyId).toBe(replyTargetId);
+			expect(shown.body.reply?.id).toBe(replyTargetId);
+			expect(shown.body.renoteId).toBe(renoteTargetId);
+			expect(shown.body.renote?.id).toBe(renoteTargetId);
+			expect(shown.body.reactions?.['👍']).toBe(2);
+			expect(shown.body.reactionCount).toBe(2);
 
 			const pollShown = await api('notes/show', { noteId: pollNoteId }, author);
-			assert.strictEqual(pollShown.status, 200);
-			assert.strictEqual(pollShown.body.poll?.multiple, false);
-			assert.strictEqual(pollShown.body.poll?.choices.length, 2);
-			assert.strictEqual(pollShown.body.poll?.choices.find((c: any) => c.text === 'A')?.votes, 3);
-			assert.strictEqual(pollShown.body.poll?.choices.find((c: any) => c.text === 'B')?.votes, 5);
+			expect(pollShown.status).toBe(200);
+			expect(pollShown.body.poll?.multiple).toBe(false);
+			expect(pollShown.body.poll?.choices.length).toBe(2);
+			expect(pollShown.body.poll?.choices.find((c: any) => c.text === 'A')?.votes).toBe(3);
+			expect(pollShown.body.poll?.choices.find((c: any) => c.text === 'B')?.votes).toBe(5);
 
 			const reactedAsReactor = await api('notes/show', { noteId: mainNoteId }, reactor);
-			assert.strictEqual(reactedAsReactor.body.myReaction, '👍');
+			expect(reactedAsReactor.body.myReaction).toBe('👍');
 
 			const missing = await api('notes/show', { noteId: genId() });
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
-			assert.strictEqual(castAsError(missing.body as any).error.id, '24fcbfc6-2e37-42b6-8388-c29b3861a08d');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_NOTE');
+			expect(castAsError(missing.body as any).error.id).toBe('24fcbfc6-2e37-42b6-8388-c29b3861a08d');
 		});
 
 		test('可視性(specified/followers)とrequireSigninToViewContentsを維持する', async () => {
@@ -9880,14 +9634,14 @@ describe('Endpoints', () => {
 			});
 
 			const hiddenFromStranger = await api('notes/show', { noteId: specifiedNoteId }, stranger);
-			assert.strictEqual(hiddenFromStranger.status, 200);
-			assert.strictEqual(hiddenFromStranger.body.isHidden, true);
-			assert.strictEqual(hiddenFromStranger.body.text, null);
+			expect(hiddenFromStranger.status).toBe(200);
+			expect(hiddenFromStranger.body.isHidden).toBe(true);
+			expect(hiddenFromStranger.body.text).toBe(null);
 
 			const visibleToAddressee = await api('notes/show', { noteId: specifiedNoteId }, addressee);
-			assert.strictEqual(visibleToAddressee.status, 200);
-			assert.strictEqual(visibleToAddressee.body.isHidden, undefined);
-			assert.strictEqual(visibleToAddressee.body.text, 'specified note');
+			expect(visibleToAddressee.status).toBe(200);
+			expect(visibleToAddressee.body.isHidden).toBe(undefined);
+			expect(visibleToAddressee.body.text).toBe('specified note');
 
 			const followersNoteId = genId();
 			await createNoteInDatabase(db, {
@@ -9899,11 +9653,11 @@ describe('Endpoints', () => {
 			});
 
 			const hiddenFromNonFollower = await api('notes/show', { noteId: followersNoteId }, stranger);
-			assert.strictEqual(hiddenFromNonFollower.body.isHidden, true);
+			expect(hiddenFromNonFollower.body.isHidden).toBe(true);
 
 			const visibleToFollower = await api('notes/show', { noteId: followersNoteId }, follower);
-			assert.strictEqual(visibleToFollower.body.isHidden, undefined);
-			assert.strictEqual(visibleToFollower.body.text, 'followers only note');
+			expect(visibleToFollower.body.isHidden).toBe(undefined);
+			expect(visibleToFollower.body.text).toBe('followers only note');
 
 			await updateUserInDatabase(db, author.id, { requireSigninToViewContents: true });
 			const publicNoteId = genId();
@@ -9916,12 +9670,12 @@ describe('Endpoints', () => {
 			});
 
 			const restrictedAnonymous = await api('notes/show', { noteId: publicNoteId });
-			assert.strictEqual(restrictedAnonymous.status, 400);
-			assert.strictEqual(castAsError(restrictedAnonymous.body as any).error.code, 'CONTENT_RESTRICTED_BY_USER');
+			expect(restrictedAnonymous.status).toBe(400);
+			expect(castAsError(restrictedAnonymous.body as any).error.code).toBe('CONTENT_RESTRICTED_BY_USER');
 
 			const allowedSignedIn = await api('notes/show', { noteId: publicNoteId }, stranger);
-			assert.strictEqual(allowedSignedIn.status, 200);
-			assert.strictEqual(allowedSignedIn.body.text, 'public but restricted');
+			expect(allowedSignedIn.status).toBe(200);
+			expect(allowedSignedIn.body.text).toBe('public but restricted');
 		});
 	});
 
@@ -9979,48 +9733,42 @@ describe('Endpoints', () => {
 			});
 
 			const children = await api('notes/children', { noteId: rootId });
-			assert.strictEqual(children.status, 200);
+			expect(children.status).toBe(200);
 			const childIds = children.body.map((n: any) => n.id).sort();
 			// 純リノート (text/ファイル/投票なし) は children に含まれず、引用のみ含まれる。
-			assert.deepStrictEqual(childIds, [replyId]);
+			expect(childIds).toStrictEqual([replyId]);
 
 			const replies = await api('notes/replies', { noteId: rootId });
-			assert.strictEqual(replies.status, 200);
-			assert.strictEqual(replies.body.length, 1);
-			assert.strictEqual(getAt(replies.body, 0).id, replyId);
+			expect(replies.status).toBe(200);
+			expect(replies.body.length).toBe(1);
+			expect(getAt(replies.body, 0).id).toBe(replyId);
 
 			const renotes = await api('notes/renotes', { noteId: rootId });
-			assert.strictEqual(renotes.status, 200);
-			assert.strictEqual(renotes.body.length, 1);
-			assert.strictEqual(getAt(renotes.body, 0).id, renoteId);
+			expect(renotes.status).toBe(200);
+			expect(renotes.body.length).toBe(1);
+			expect(getAt(renotes.body, 0).id).toBe(renoteId);
 
 			const missingRenotes = await api('notes/renotes', { noteId: genId() });
-			assert.strictEqual(missingRenotes.status, 400);
-			assert.strictEqual(castAsError(missingRenotes.body as any).error.code, 'NO_SUCH_NOTE');
+			expect(missingRenotes.status).toBe(400);
+			expect(castAsError(missingRenotes.body as any).error.code).toBe('NO_SUCH_NOTE');
 
 			const conversation = await api('notes/conversation', { noteId: grandReplyId });
-			assert.strictEqual(conversation.status, 200);
+			expect(conversation.status).toBe(200);
 			const conversationIds = conversation.body.map((n: any) => n.id).sort();
-			assert.deepStrictEqual(conversationIds, [rootId, replyId].sort());
+			expect(conversationIds).toStrictEqual([rootId, replyId].sort());
 
 			const missingConversation = await api('notes/conversation', { noteId: genId() });
-			assert.strictEqual(missingConversation.status, 400);
-			assert.strictEqual(castAsError(missingConversation.body as any).error.code, 'NO_SUCH_NOTE');
+			expect(missingConversation.status).toBe(400);
+			expect(castAsError(missingConversation.body as any).error.code).toBe('NO_SUCH_NOTE');
 
 			const mentions = await api('notes/mentions', {}, mentioned);
-			assert.strictEqual(mentions.status, 200);
+			expect(mentions.status).toBe(200);
 			assert.ok(mentions.body.some((n: any) => n.id === mentionNoteId));
-			assert.strictEqual(
-				mentions.body.some((n: any) => n.id === rootId),
-				false,
-			);
+			expect(mentions.body.some((n: any) => n.id === rootId)).toBe(false);
 
 			const noMentionsForStranger = await api('notes/mentions', {}, stranger);
-			assert.strictEqual(noMentionsForStranger.status, 200);
-			assert.strictEqual(
-				noMentionsForStranger.body.some((n: any) => n.id === mentionNoteId),
-				false,
-			);
+			expect(noMentionsForStranger.status).toBe(200);
+			expect(noMentionsForStranger.body.some((n: any) => n.id === mentionNoteId)).toBe(false);
 		});
 	});
 
@@ -10040,32 +9788,32 @@ describe('Endpoints', () => {
 			});
 
 			const stateBefore = await api('notes/state', { noteId }, favoriter);
-			assert.strictEqual(stateBefore.status, 200);
-			assert.strictEqual(stateBefore.body.isFavorited, false);
-			assert.strictEqual(stateBefore.body.isMutedThread, false);
+			expect(stateBefore.status).toBe(200);
+			expect(stateBefore.body.isFavorited).toBe(false);
+			expect(stateBefore.body.isMutedThread).toBe(false);
 
 			const missingFavorite = await api('notes/favorites/delete', { noteId }, favoriter);
-			assert.strictEqual(missingFavorite.status, 400);
-			assert.strictEqual(castAsError(missingFavorite.body as any).error.code, 'NOT_FAVORITED');
+			expect(missingFavorite.status).toBe(400);
+			expect(castAsError(missingFavorite.body as any).error.code).toBe('NOT_FAVORITED');
 
 			const favorited = await api('notes/favorites/create', { noteId }, favoriter);
-			assert.strictEqual(favorited.status, 204);
+			expect(favorited.status).toBe(204);
 
 			const duplicateFavorite = await api('notes/favorites/create', { noteId }, favoriter);
-			assert.strictEqual(duplicateFavorite.status, 400);
-			assert.strictEqual(castAsError(duplicateFavorite.body as any).error.code, 'ALREADY_FAVORITED');
+			expect(duplicateFavorite.status).toBe(400);
+			expect(castAsError(duplicateFavorite.body as any).error.code).toBe('ALREADY_FAVORITED');
 
 			const stateAfter = await api('notes/state', { noteId }, favoriter);
-			assert.strictEqual(stateAfter.body.isFavorited, true);
+			expect(stateAfter.body.isFavorited).toBe(true);
 
 			const authorProfile = await fetchUserProfileByUserIdOrFailFromDatabase(db, author.id);
 			assert.ok(authorProfile.achievements.some((a) => a.name === 'myNoteFavorited1'));
 
 			const unfavorited = await api('notes/favorites/delete', { noteId }, favoriter);
-			assert.strictEqual(unfavorited.status, 204);
+			expect(unfavorited.status).toBe(204);
 
 			const stateFinal = await api('notes/state', { noteId }, favoriter);
-			assert.strictEqual(stateFinal.body.isFavorited, false);
+			expect(stateFinal.body.isFavorited).toBe(false);
 		});
 
 		test('notes/thread-muting/{create,delete}はミュート状態を維持する', async () => {
@@ -10083,25 +9831,25 @@ describe('Endpoints', () => {
 			});
 
 			const muted = await api('notes/thread-muting/create', { noteId }, muter);
-			assert.strictEqual(muted.status, 204);
+			expect(muted.status).toBe(204);
 
 			const stateAfterMute = await api('notes/state', { noteId }, muter);
-			assert.strictEqual(stateAfterMute.body.isMutedThread, true);
+			expect(stateAfterMute.body.isMutedThread).toBe(true);
 
 			// (userId, threadId) は unique なので、二重ミュートは 500 ではなく明示的なエラーになる
 			const duplicate = await api('notes/thread-muting/create', { noteId }, muter);
-			assert.strictEqual(duplicate.status, 400);
-			assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_MUTING');
+			expect(duplicate.status).toBe(400);
+			expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_MUTING');
 
 			const unmuted = await api('notes/thread-muting/delete', { noteId }, muter);
-			assert.strictEqual(unmuted.status, 204);
+			expect(unmuted.status).toBe(204);
 
 			const stateAfterUnmute = await api('notes/state', { noteId }, muter);
-			assert.strictEqual(stateAfterUnmute.body.isMutedThread, false);
+			expect(stateAfterUnmute.body.isMutedThread).toBe(false);
 
 			const missingNote = await api('notes/thread-muting/create', { noteId: genId() }, muter);
-			assert.strictEqual(missingNote.status, 400);
-			assert.strictEqual(castAsError(missingNote.body as any).error.code, 'NO_SUCH_NOTE');
+			expect(missingNote.status).toBe(400);
+			expect(castAsError(missingNote.body as any).error.code).toBe('NO_SUCH_NOTE');
 		});
 	});
 
@@ -10117,20 +9865,14 @@ describe('Endpoints', () => {
 			).id;
 
 			const global = await api('notes/global-timeline', { limit: 100 });
-			assert.strictEqual(global.status, 200);
+			expect(global.status).toBe(200);
 			assert.ok(global.body.some((n: any) => n.id === publicNoteId));
-			assert.strictEqual(
-				global.body.some((n: any) => n.id === homeNoteId),
-				false,
-			);
+			expect(global.body.some((n: any) => n.id === homeNoteId)).toBe(false);
 
 			const local = await api('notes/local-timeline', { limit: 100 });
-			assert.strictEqual(local.status, 200);
+			expect(local.status).toBe(200);
 			assert.ok(local.body.some((n: any) => n.id === publicNoteId));
-			assert.strictEqual(
-				local.body.some((n: any) => n.id === homeNoteId),
-				false,
-			);
+			expect(local.body.some((n: any) => n.id === homeNoteId)).toBe(false);
 		});
 
 		test('hybrid-timeline はfolloweeの投稿のみ含む', async () => {
@@ -10146,12 +9888,9 @@ describe('Endpoints', () => {
 			).id;
 
 			const hybrid = await api('notes/hybrid-timeline', { limit: 100 }, viewer);
-			assert.strictEqual(hybrid.status, 200);
+			expect(hybrid.status).toBe(200);
 			assert.ok(hybrid.body.some((n: any) => n.id === followeeNoteId));
-			assert.strictEqual(
-				hybrid.body.some((n: any) => n.id === strangerNoteId),
-				false,
-			);
+			expect(hybrid.body.some((n: any) => n.id === strangerNoteId)).toBe(false);
 		});
 
 		test('notes/featured はランキング、mute/blockフィルタを維持する', async () => {
@@ -10182,19 +9921,16 @@ describe('Endpoints', () => {
 				await redis.zadd(windowKey, 1, noteId, 1, mutedNoteId);
 
 				const featured = await api('notes/featured', { limit: 100 });
-				assert.strictEqual(featured.status, 200);
+				expect(featured.status).toBe(200);
 				assert.ok(featured.body.some((n: any) => n.id === noteId));
 
 				await api('mute/create', { userId: author.id }, viewer);
 				const featuredAsViewer = await api('notes/featured', { limit: 100 }, viewer);
-				assert.strictEqual(featuredAsViewer.status, 200);
-				assert.strictEqual(
-					featuredAsViewer.body.some((n: any) => n.id === noteId),
-					false,
-				);
+				expect(featuredAsViewer.status).toBe(200);
+				expect(featuredAsViewer.body.some((n: any) => n.id === noteId)).toBe(false);
 
 				const getFeatured = await relativeFetch(`api/notes/featured?limit=100`);
-				assert.strictEqual(getFeatured.status, 200);
+				expect(getFeatured.status).toBe(200);
 				const getFeaturedBody = (await getFeatured.json()) as { id?: unknown }[];
 				assert.ok(getFeaturedBody.some((n) => n.id === noteId));
 			} finally {
@@ -10237,16 +9973,10 @@ describe('Endpoints', () => {
 			});
 
 			const res = await api('notes', { limit: 100 });
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			assert.ok(res.body.some((n: any) => n.id === publicNoteId));
-			assert.strictEqual(
-				res.body.some((n: any) => n.id === homeNoteId),
-				false,
-			);
-			assert.strictEqual(
-				res.body.some((n: any) => n.id === localOnlyNoteId),
-				false,
-			);
+			expect(res.body.some((n: any) => n.id === homeNoteId)).toBe(false);
+			expect(res.body.some((n: any) => n.id === localOnlyNoteId)).toBe(false);
 		});
 
 		test('local/reply/renote/withFiles/pollフィルタを維持する', async () => {
@@ -10304,36 +10034,24 @@ describe('Endpoints', () => {
 			});
 
 			const local = await api('notes', { local: true, limit: 100 });
-			assert.strictEqual(local.status, 200);
+			expect(local.status).toBe(200);
 			assert.ok(local.body.some((n: any) => n.id === localNoteId));
-			assert.strictEqual(
-				local.body.some((n: any) => n.id === remoteNoteId),
-				false,
-			);
+			expect(local.body.some((n: any) => n.id === remoteNoteId)).toBe(false);
 
 			const replies = await api('notes', { reply: true, limit: 100 });
-			assert.strictEqual(replies.status, 200);
+			expect(replies.status).toBe(200);
 			assert.ok(replies.body.some((n: any) => n.id === replyNoteId));
-			assert.strictEqual(
-				replies.body.some((n: any) => n.id === localNoteId),
-				false,
-			);
+			expect(replies.body.some((n: any) => n.id === localNoteId)).toBe(false);
 
 			const renotes = await api('notes', { renote: true, limit: 100 });
-			assert.strictEqual(renotes.status, 200);
+			expect(renotes.status).toBe(200);
 			assert.ok(renotes.body.some((n: any) => n.id === renoteNoteId));
-			assert.strictEqual(
-				renotes.body.some((n: any) => n.id === localNoteId),
-				false,
-			);
+			expect(renotes.body.some((n: any) => n.id === localNoteId)).toBe(false);
 
 			const withFiles = await api('notes', { withFiles: true, limit: 100 });
-			assert.strictEqual(withFiles.status, 200);
+			expect(withFiles.status).toBe(200);
 			assert.ok(withFiles.body.some((n: any) => n.id === fileNoteId));
-			assert.strictEqual(
-				withFiles.body.some((n: any) => n.id === localNoteId),
-				false,
-			);
+			expect(withFiles.body.some((n: any) => n.id === localNoteId)).toBe(false);
 
 			const pollNoteId = genId();
 			await createNoteInDatabase(db, {
@@ -10356,12 +10074,9 @@ describe('Endpoints', () => {
 			});
 
 			const polls = await api('notes', { poll: true, limit: 100 });
-			assert.strictEqual(polls.status, 200);
+			expect(polls.status).toBe(200);
 			assert.ok(polls.body.some((n: any) => n.id === pollNoteId));
-			assert.strictEqual(
-				polls.body.some((n: any) => n.id === localNoteId),
-				false,
-			);
+			expect(polls.body.some((n: any) => n.id === localNoteId)).toBe(false);
 		});
 
 		test('認証済みで呼んでもmeを渡さず常に匿名としてパックする(元実装がpackMany(notes)をme無しで呼ぶため)', async () => {
@@ -10379,13 +10094,13 @@ describe('Endpoints', () => {
 				visibility: 'public',
 			});
 			const reacted = await api('notes/reactions/create', { noteId, reaction: '👍' }, reactor);
-			assert.strictEqual(reacted.status, 204);
+			expect(reacted.status).toBe(204);
 
 			const asReactor = await api('notes', { limit: 100 }, reactor);
-			assert.strictEqual(asReactor.status, 200);
+			expect(asReactor.status).toBe(200);
 			const packed = asReactor.body.find((n: any) => n.id === noteId);
 			assert.ok(packed);
-			assert.strictEqual(packed.myReaction, undefined);
+			expect(packed.myReaction).toBe(undefined);
 		});
 
 		test('sinceId/untilIdによるページネーションを維持する', async () => {
@@ -10411,20 +10126,14 @@ describe('Endpoints', () => {
 			});
 
 			const afterOld = await api('notes', { sinceId: oldNoteId, limit: 100 });
-			assert.strictEqual(afterOld.status, 200);
+			expect(afterOld.status).toBe(200);
 			assert.ok(afterOld.body.some((n: any) => n.id === newNoteId));
-			assert.strictEqual(
-				afterOld.body.some((n: any) => n.id === oldNoteId),
-				false,
-			);
+			expect(afterOld.body.some((n: any) => n.id === oldNoteId)).toBe(false);
 
 			const beforeNew = await api('notes', { untilId: newNoteId, limit: 100 });
-			assert.strictEqual(beforeNew.status, 200);
+			expect(beforeNew.status).toBe(200);
 			assert.ok(beforeNew.body.some((n: any) => n.id === oldNoteId));
-			assert.strictEqual(
-				beforeNew.body.some((n: any) => n.id === newNoteId),
-				false,
-			);
+			expect(beforeNew.body.some((n: any) => n.id === newNoteId)).toBe(false);
 		});
 	});
 
@@ -10455,15 +10164,12 @@ describe('Endpoints', () => {
 			});
 
 			const asAnon = await api('users/notes', { userId: author.id, limit: 100 });
-			assert.strictEqual(asAnon.status, 200);
+			expect(asAnon.status).toBe(200);
 			assert.ok(asAnon.body.some((n: any) => n.id === publicNoteId));
-			assert.strictEqual(
-				asAnon.body.some((n: any) => n.id === specifiedNoteId),
-				false,
-			);
+			expect(asAnon.body.some((n: any) => n.id === specifiedNoteId)).toBe(false);
 
 			const asVisibleUser = await api('users/notes', { userId: author.id, limit: 100 }, stranger);
-			assert.strictEqual(asVisibleUser.status, 200);
+			expect(asVisibleUser.status).toBe(200);
 			assert.ok(asVisibleUser.body.some((n: any) => n.id === specifiedNoteId));
 
 			const fileNoteId = genId();
@@ -10476,12 +10182,9 @@ describe('Endpoints', () => {
 				fileIds: [file.body!.id],
 			});
 			const withFiles = await api('users/notes', { userId: author.id, withFiles: true, limit: 100 });
-			assert.strictEqual(withFiles.status, 200);
+			expect(withFiles.status).toBe(200);
 			assert.ok(withFiles.body.some((n: any) => n.id === fileNoteId));
-			assert.strictEqual(
-				withFiles.body.some((n: any) => n.id === publicNoteId),
-				false,
-			);
+			expect(withFiles.body.some((n: any) => n.id === publicNoteId)).toBe(false);
 
 			const pureRenoteId = genId();
 			await createNoteInDatabase(db, {
@@ -10493,11 +10196,8 @@ describe('Endpoints', () => {
 				renoteId: publicNoteId,
 			});
 			const withoutRenotes = await api('users/notes', { userId: author.id, withRenotes: false, limit: 100 });
-			assert.strictEqual(withoutRenotes.status, 200);
-			assert.strictEqual(
-				withoutRenotes.body.some((n: any) => n.id === pureRenoteId),
-				false,
-			);
+			expect(withoutRenotes.status).toBe(200);
+			expect(withoutRenotes.body.some((n: any) => n.id === pureRenoteId)).toBe(false);
 			assert.ok(withoutRenotes.body.some((n: any) => n.id === publicNoteId));
 		});
 
@@ -10523,14 +10223,11 @@ describe('Endpoints', () => {
 			});
 
 			const withoutChannelNotes = await api('users/notes', { userId: author.id, limit: 100 });
-			assert.strictEqual(withoutChannelNotes.status, 200);
-			assert.strictEqual(
-				withoutChannelNotes.body.some((n: any) => n.id === channelNoteId),
-				false,
-			);
+			expect(withoutChannelNotes.status).toBe(200);
+			expect(withoutChannelNotes.body.some((n: any) => n.id === channelNoteId)).toBe(false);
 
 			const withChannelNotes = await api('users/notes', { userId: author.id, withChannelNotes: true, limit: 100 });
-			assert.strictEqual(withChannelNotes.status, 200);
+			expect(withChannelNotes.status).toBe(200);
 			assert.ok(withChannelNotes.body.some((n: any) => n.id === channelNoteId));
 
 			await createChannelMutingInDatabase(db, {
@@ -10544,11 +10241,8 @@ describe('Endpoints', () => {
 				{ userId: author.id, withChannelNotes: true, limit: 100 },
 				viewer,
 			);
-			assert.strictEqual(asMutingViewer.status, 200);
-			assert.strictEqual(
-				asMutingViewer.body.some((n: any) => n.id === channelNoteId),
-				false,
-			);
+			expect(asMutingViewer.status).toBe(200);
+			expect(asMutingViewer.body.some((n: any) => n.id === channelNoteId)).toBe(false);
 		});
 
 		test('BOTH_WITH_REPLIES_AND_WITH_FILESと、対象からブロックされている場合は空配列を維持する', async () => {
@@ -10557,14 +10251,14 @@ describe('Endpoints', () => {
 			const blockedViewer = await signup({ username: `hunbv${suffix}` });
 
 			const bothError = await api('users/notes', { userId: author.id, withReplies: true, withFiles: true });
-			assert.strictEqual(bothError.status, 400);
-			assert.strictEqual(castAsError(bothError.body as any).error.code, 'BOTH_WITH_REPLIES_AND_WITH_FILES');
-			assert.strictEqual(castAsError(bothError.body as any).error.id, '91c8cb9f-36ed-46e7-9ca2-7df96ed6e222');
+			expect(bothError.status).toBe(400);
+			expect(castAsError(bothError.body as any).error.code).toBe('BOTH_WITH_REPLIES_AND_WITH_FILES');
+			expect(castAsError(bothError.body as any).error.id).toBe('91c8cb9f-36ed-46e7-9ca2-7df96ed6e222');
 
 			await api('blocking/create', { userId: blockedViewer.id }, author);
 			const asBlockedViewer = await api('users/notes', { userId: author.id, limit: 100 }, blockedViewer);
-			assert.strictEqual(asBlockedViewer.status, 200);
-			assert.deepStrictEqual(asBlockedViewer.body, []);
+			expect(asBlockedViewer.status).toBe(200);
+			expect(asBlockedViewer.body).toStrictEqual([]);
 		});
 
 		test('sinceId/untilIdによるページネーションを維持する', async () => {
@@ -10590,20 +10284,14 @@ describe('Endpoints', () => {
 			});
 
 			const afterOld = await api('users/notes', { userId: author.id, sinceId: oldNoteId, limit: 100 });
-			assert.strictEqual(afterOld.status, 200);
+			expect(afterOld.status).toBe(200);
 			assert.ok(afterOld.body.some((n: any) => n.id === newNoteId));
-			assert.strictEqual(
-				afterOld.body.some((n: any) => n.id === oldNoteId),
-				false,
-			);
+			expect(afterOld.body.some((n: any) => n.id === oldNoteId)).toBe(false);
 
 			const beforeNew = await api('users/notes', { userId: author.id, untilId: newNoteId, limit: 100 });
-			assert.strictEqual(beforeNew.status, 200);
+			expect(beforeNew.status).toBe(200);
 			assert.ok(beforeNew.body.some((n: any) => n.id === oldNoteId));
-			assert.strictEqual(
-				beforeNew.body.some((n: any) => n.id === newNoteId),
-				false,
-			);
+			expect(beforeNew.body.some((n: any) => n.id === newNoteId)).toBe(false);
 		});
 
 		test('withReplies指定に応じて他人へのリプライの包含が切り替わる', async () => {
@@ -10619,15 +10307,12 @@ describe('Endpoints', () => {
 			).id;
 
 			const withRepliesFalse = await api('users/notes', { userId: author.id, withReplies: false, limit: 100 });
-			assert.strictEqual(withRepliesFalse.status, 200);
+			expect(withRepliesFalse.status).toBe(200);
 			assert.ok(withRepliesFalse.body.some((n: any) => n.id === normalNoteId));
-			assert.strictEqual(
-				withRepliesFalse.body.some((n: any) => n.id === replyNoteId),
-				false,
-			);
+			expect(withRepliesFalse.body.some((n: any) => n.id === replyNoteId)).toBe(false);
 
 			const withRepliesTrue = await api('users/notes', { userId: author.id, withReplies: true, limit: 100 });
-			assert.strictEqual(withRepliesTrue.status, 200);
+			expect(withRepliesTrue.status).toBe(200);
 			assert.ok(withRepliesTrue.body.some((n: any) => n.id === replyNoteId));
 		});
 	});
@@ -10659,13 +10344,13 @@ describe('Endpoints', () => {
 			await api('clips/add-note', { clipId: privateClip.body.id, noteId }, owner);
 
 			const clips = await api('notes/clips', { noteId });
-			assert.strictEqual(clips.status, 200);
-			assert.strictEqual(clips.body.length, 1);
-			assert.strictEqual(getAt(clips.body, 0).id, publicClip.body.id);
+			expect(clips.status).toBe(200);
+			expect(clips.body.length).toBe(1);
+			expect(getAt(clips.body, 0).id).toBe(publicClip.body.id);
 
 			const missing = await api('notes/clips', { noteId: genId() });
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_NOTE');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_NOTE');
 		});
 
 		test('notes/search-by-tag はtagで検索する', async () => {
@@ -10692,12 +10377,9 @@ describe('Endpoints', () => {
 			});
 
 			const res = await api('notes/search-by-tag', { tag });
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			assert.ok(res.body.some((n: any) => n.id === taggedNoteId));
-			assert.strictEqual(
-				res.body.some((n: any) => n.id === untaggedNoteId),
-				false,
-			);
+			expect(res.body.some((n: any) => n.id === untaggedNoteId)).toBe(false);
 		});
 
 		test('notes/show-partial-bulk はreactionsとreactionEmojisを返す', async () => {
@@ -10715,10 +10397,10 @@ describe('Endpoints', () => {
 			});
 
 			const res = await api('notes/show-partial-bulk', { noteIds: [noteId] });
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).id, noteId);
-			assert.strictEqual(getAt(res.body, 0).reactions['👍'], 3);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).id).toBe(noteId);
+			expect(getAt(res.body, 0).reactions['👍']).toBe(3);
 		});
 
 		test('notes/show-partial-bulk は閲覧できないノートを返さない', async () => {
@@ -10734,11 +10416,8 @@ describe('Endpoints', () => {
 
 			for (const user of [undefined, viewer]) {
 				const res = await api('notes/show-partial-bulk', { noteIds: [publicNote.id, specifiedNote.id] }, user);
-				assert.strictEqual(res.status, 200);
-				assert.deepStrictEqual(
-					res.body.map((note) => note.id),
-					[publicNote.id],
-				);
+				expect(res.status).toBe(200);
+				expect(res.body.map((note) => note.id)).toStrictEqual([publicNote.id]);
 			}
 		});
 
@@ -10765,11 +10444,8 @@ describe('Endpoints', () => {
 				},
 				viewer,
 			);
-			assert.strictEqual(res.status, 200);
-			assert.deepStrictEqual(
-				res.body.map((note) => note.id),
-				[followeeNote.id],
-			);
+			expect(res.status).toBe(200);
+			expect(res.body.map((note) => note.id)).toStrictEqual([followeeNote.id]);
 		});
 
 		test('notes/timeline はfolloweeの投稿のみ含む', async () => {
@@ -10798,12 +10474,9 @@ describe('Endpoints', () => {
 			});
 
 			const timeline = await api('notes/timeline', { limit: 100 }, viewer);
-			assert.strictEqual(timeline.status, 200);
+			expect(timeline.status).toBe(200);
 			assert.ok(timeline.body.some((n: any) => n.id === followeeNoteId));
-			assert.strictEqual(
-				timeline.body.some((n: any) => n.id === strangerNoteId),
-				false,
-			);
+			expect(timeline.body.some((n: any) => n.id === strangerNoteId)).toBe(false);
 		});
 
 		test('notes/user-list-timeline はリストメンバーの投稿のみ含みNO_SUCH_LISTを維持する', async () => {
@@ -10842,16 +10515,13 @@ describe('Endpoints', () => {
 			});
 
 			const timeline = await api('notes/user-list-timeline', { listId: list.id, limit: 100 }, owner);
-			assert.strictEqual(timeline.status, 200);
+			expect(timeline.status).toBe(200);
 			assert.ok(timeline.body.some((n: any) => n.id === memberNoteId));
-			assert.strictEqual(
-				timeline.body.some((n: any) => n.id === nonMemberNoteId),
-				false,
-			);
+			expect(timeline.body.some((n: any) => n.id === nonMemberNoteId)).toBe(false);
 
 			const missingList = await api('notes/user-list-timeline', { listId: genId() }, owner);
-			assert.strictEqual(missingList.status, 400);
-			assert.strictEqual(castAsError(missingList.body as any).error.code, 'NO_SUCH_LIST');
+			expect(missingList.status).toBe(400);
+			expect(castAsError(missingList.body as any).error.code).toBe('NO_SUCH_LIST');
 		});
 
 		test('notes/polls/recommendation は未投票のpublic pollのみ返す', async () => {
@@ -10882,7 +10552,7 @@ describe('Endpoints', () => {
 			});
 
 			const recommendation = await api('notes/polls/recommendation', { limit: 100 }, voter);
-			assert.strictEqual(recommendation.status, 200);
+			expect(recommendation.status).toBe(200);
 			assert.ok(recommendation.body.some((n: any) => n.id === unvotedNoteId));
 		});
 
@@ -10905,7 +10575,7 @@ describe('Endpoints', () => {
 			await api('admin/roles/assign', { userId: author.id, roleId: searchRole.id }, alice);
 
 			const searched = await api('notes/search', { query: uniqueText }, author);
-			assert.strictEqual(searched.status, 200);
+			expect(searched.status).toBe(200);
 			assert.ok(searched.body.some((n: any) => n.id === searchNoteId));
 		});
 
@@ -10933,21 +10603,21 @@ describe('Endpoints', () => {
 
 			const searchIds = async (params: Record<string, unknown>) => {
 				const result = await api('notes/search', { query, limit: 100, ...params }, author);
-				assert.strictEqual(result.status, 200);
+				expect(result.status).toBe(200);
 				return new Set(result.body.map((note) => note.id));
 			};
 
-			assert.deepStrictEqual(await searchIds({ withReplies: true }), new Set([reply.id]));
-			assert.deepStrictEqual(await searchIds({ withQuotes: true }), new Set([quote.id]));
-			assert.deepStrictEqual(await searchIds({ withCw: true }), new Set([cw.id]));
-			assert.deepStrictEqual(await searchIds({ withFiles: true }), new Set([regularFile.id, sensitiveFile.id]));
-			assert.deepStrictEqual(await searchIds({ withSensitiveFiles: true }), new Set([sensitiveFile.id]));
-			assert.deepStrictEqual(await searchIds({ visibility: 'followers' }), new Set([followers.id]));
+			expect(await searchIds({ withReplies: true })).toStrictEqual(new Set([reply.id]));
+			expect(await searchIds({ withQuotes: true })).toStrictEqual(new Set([quote.id]));
+			expect(await searchIds({ withCw: true })).toStrictEqual(new Set([cw.id]));
+			expect(await searchIds({ withFiles: true })).toStrictEqual(new Set([regularFile.id, sensitiveFile.id]));
+			expect(await searchIds({ withSensitiveFiles: true })).toStrictEqual(new Set([sensitiveFile.id]));
+			expect(await searchIds({ visibility: 'followers' })).toStrictEqual(new Set([followers.id]));
 
 			const withoutFiles = await searchIds({ withFiles: false });
-			assert.strictEqual(withoutFiles.has(regularFile.id), false);
-			assert.strictEqual(withoutFiles.has(sensitiveFile.id), false);
-			assert.strictEqual(withoutFiles.has(original.id), true);
+			expect(withoutFiles.has(regularFile.id)).toBe(false);
+			expect(withoutFiles.has(sensitiveFile.id)).toBe(false);
+			expect(withoutFiles.has(original.id)).toBe(true);
 		});
 	});
 
@@ -10976,16 +10646,16 @@ describe('Endpoints', () => {
 
 			const appToken = await createAppToken(pusher, ['write:account']);
 			const secureDenied = await api('page-push', { pageId: page.id, event: 'ping' }, { token: appToken });
-			assert.strictEqual(secureDenied.status, 400);
-			assert.strictEqual(castAsError(secureDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(secureDenied.status).toBe(400);
+			expect(castAsError(secureDenied.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const missing = await api('page-push', { pageId: genId(), event: 'ping' }, pusher);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_PAGE');
-			assert.strictEqual(castAsError(missing.body as any).error.id, '4a13ad31-6729-46b4-b9af-e86b265c2e74');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_PAGE');
+			expect(castAsError(missing.body as any).error.id).toBe('4a13ad31-6729-46b4-b9af-e86b265c2e74');
 
 			const pushed = await api('page-push', { pageId: page.id, event: 'ping', var: { hello: 'world' } }, pusher);
-			assert.strictEqual(pushed.status, 204);
+			expect(pushed.status).toBe(204);
 		});
 	});
 
@@ -11017,30 +10687,30 @@ describe('Endpoints', () => {
 			};
 
 			const created = await api('admin/roles/create', createPayload, alice);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.name, createPayload.name);
-			assert.strictEqual(created.body.description, createPayload.description);
-			assert.strictEqual(created.body.color, createPayload.color);
-			assert.strictEqual(created.body.isPublic, true);
-			assert.strictEqual(created.body.isExplorable, true);
-			assert.strictEqual(created.body.preserveAssignmentOnMoveAccount, true);
-			assert.strictEqual(created.body.displayOrder, createPayload.displayOrder);
-			assert.strictEqual(created.body.usersCount, 0);
-			assert.strictEqual(getDefined(created.body.policies['canInvite']).useDefault, false);
-			assert.strictEqual(getDefined(created.body.policies['canInvite']).value, true);
+			expect(created.status).toBe(200);
+			expect(created.body.name).toBe(createPayload.name);
+			expect(created.body.description).toBe(createPayload.description);
+			expect(created.body.color).toBe(createPayload.color);
+			expect(created.body.isPublic).toBe(true);
+			expect(created.body.isExplorable).toBe(true);
+			expect(created.body.preserveAssignmentOnMoveAccount).toBe(true);
+			expect(created.body.displayOrder).toBe(createPayload.displayOrder);
+			expect(created.body.usersCount).toBe(0);
+			expect(getDefined(created.body.policies['canInvite']).useDefault).toBe(false);
+			expect(getDefined(created.body.policies['canInvite']).value).toBe(true);
 
 			const list = await api('admin/roles/list', {}, alice);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			const listedRole = list.body.find((item) => item.id === created.body.id);
 			assert.ok(listedRole);
-			assert.strictEqual(listedRole.name, createPayload.name);
-			assert.strictEqual(listedRole.usersCount, 0);
+			expect(listedRole.name).toBe(createPayload.name);
+			expect(listedRole.usersCount).toBe(0);
 
 			const shown = await api('admin/roles/show', { roleId: created.body.id }, alice);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, created.body.id);
-			assert.strictEqual(shown.body.name, createPayload.name);
-			assert.strictEqual(getDefined(shown.body.policies['canInvite']).value, true);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(created.body.id);
+			expect(shown.body.name).toBe(createPayload.name);
+			expect(getDefined(shown.body.policies['canInvite']).value).toBe(true);
 
 			const updated = await api(
 				'admin/roles/update',
@@ -11058,24 +10728,24 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 204);
+			expect(updated.status).toBe(204);
 
 			const afterUpdate = await api('admin/roles/show', { roleId: created.body.id }, alice);
-			assert.strictEqual(afterUpdate.status, 200);
-			assert.strictEqual(afterUpdate.body.name, `Hono admin role updated ${now}`);
-			assert.strictEqual(afterUpdate.body.description, 'updated role description');
-			assert.strictEqual(afterUpdate.body.color, null);
-			assert.strictEqual(afterUpdate.body.isPublic, false);
-			assert.strictEqual(afterUpdate.body.displayOrder, 314);
-			assert.strictEqual(getDefined(afterUpdate.body.policies['canInvite']).value, false);
+			expect(afterUpdate.status).toBe(200);
+			expect(afterUpdate.body.name).toBe(`Hono admin role updated ${now}`);
+			expect(afterUpdate.body.description).toBe('updated role description');
+			expect(afterUpdate.body.color).toBe(null);
+			expect(afterUpdate.body.isPublic).toBe(false);
+			expect(afterUpdate.body.displayOrder).toBe(314);
+			expect(getDefined(afterUpdate.body.policies['canInvite']).value).toBe(false);
 
 			const missingUpdate = await api('admin/roles/update', { roleId: '000000000000000000000000' }, alice);
-			assert.strictEqual(missingUpdate.status, 400);
-			assert.strictEqual(castAsError(missingUpdate.body as any).error.code, 'NO_SUCH_ROLE');
+			expect(missingUpdate.status).toBe(400);
+			expect(castAsError(missingUpdate.body as any).error.code).toBe('NO_SUCH_ROLE');
 
 			const missing = await api('admin/roles/show', { roleId: '000000000000000000000000' }, alice);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ROLE');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_ROLE');
 
 			const readToken = await createAppToken(alice, ['read:admin:roles']);
 			await createRoleAssignmentInDatabase(db, {
@@ -11098,16 +10768,16 @@ describe('Endpoints', () => {
 				},
 				{ token: readToken },
 			);
-			assert.strictEqual(users.status, 200);
-			assert.strictEqual(users.body.length, 1);
-			assert.strictEqual(getAt(users.body, 0).id, carolRoleAssignment.id);
-			assert.strictEqual(getAt(users.body, 0).user.id, carol.id);
-			assert.strictEqual(getAt(users.body, 0).user.username, carol.username);
-			assert.strictEqual(getAt(users.body, 0).expiresAt, new Date(now + 60 * 1000).toISOString());
+			expect(users.status).toBe(200);
+			expect(users.body.length).toBe(1);
+			expect(getAt(users.body, 0).id).toBe(carolRoleAssignment.id);
+			expect(getAt(users.body, 0).user.id).toBe(carol.id);
+			expect(getAt(users.body, 0).user.username).toBe(carol.username);
+			expect(getAt(users.body, 0).expiresAt).toBe(new Date(now + 60 * 1000).toISOString());
 
 			const missingUsersRole = await api('admin/roles/users', { roleId: '000000000000000000000000' }, alice);
-			assert.strictEqual(missingUsersRole.status, 400);
-			assert.strictEqual(castAsError(missingUsersRole.body as any).error.code, 'NO_SUCH_ROLE');
+			expect(missingUsersRole.status).toBe(400);
+			expect(castAsError(missingUsersRole.body as any).error.code).toBe('NO_SUCH_ROLE');
 
 			const assignTarget = await signup({ username: `hrolasg${now.toString(36)}` });
 			const assignableRole = await api(
@@ -11120,7 +10790,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(assignableRole.status, 200);
+			expect(assignableRole.status).toBe(200);
 
 			const scopeDenied = await api(
 				'admin/roles/create',
@@ -11130,8 +10800,8 @@ describe('Endpoints', () => {
 				},
 				{ token: readToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 			const assignScopeDenied = await api(
 				'admin/roles/assign',
 				{
@@ -11140,8 +10810,8 @@ describe('Endpoints', () => {
 				},
 				{ token: readToken },
 			);
-			assert.strictEqual(assignScopeDenied.status, 403);
-			assert.strictEqual(castAsError(assignScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(assignScopeDenied.status).toBe(403);
+			expect(castAsError(assignScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const assignExpiresAt = now + 60 * 60 * 1000;
 			const assigned = await api(
@@ -11153,14 +10823,14 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(assigned.status, 204, JSON.stringify(assigned.body));
+			expect(assigned.status, JSON.stringify(assigned.body)).toBe(204);
 			const assignment = await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(
 				db,
 				assignTarget.id,
 				assignableRole.body.id,
 			);
 			assert.ok(assignment);
-			assert.strictEqual(assignment.expiresAt?.toISOString(), new Date(assignExpiresAt).toISOString());
+			expect(assignment.expiresAt?.toISOString()).toBe(new Date(assignExpiresAt).toISOString());
 
 			const redis = createRedisClient(config);
 			try {
@@ -11180,18 +10850,18 @@ describe('Endpoints', () => {
 
 			const normalUser = await signup({ username: `honorole${now.toString(36)}` });
 			const roleDenied = await api('admin/roles/list', {}, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			const usersRoleDenied = await api('admin/roles/users', { roleId: created.body.id }, normalUser);
-			assert.strictEqual(usersRoleDenied.status, 403);
-			assert.strictEqual(castAsError(usersRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(usersRoleDenied.status).toBe(403);
+			expect(castAsError(usersRoleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			const assignRoleDenied = await api(
 				'admin/roles/assign',
 				{ roleId: assignableRole.body.id, userId: assignTarget.id },
 				normalUser,
 			);
-			assert.strictEqual(assignRoleDenied.status, 403);
-			assert.strictEqual(castAsError(assignRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(assignRoleDenied.status).toBe(403);
+			expect(castAsError(assignRoleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const moderatorRole = await createRoleInDatabase(db, {
 				id: genId(now + 2000),
@@ -11230,8 +10900,8 @@ describe('Endpoints', () => {
 				},
 				normalUser,
 			);
-			assert.strictEqual(accessDenied.status, 400);
-			assert.strictEqual(castAsError(accessDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(accessDenied.status).toBe(400);
+			expect(castAsError(accessDenied.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const unassigned = await api(
 				'admin/roles/unassign',
@@ -11241,11 +10911,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(unassigned.status, 204);
-			assert.strictEqual(
-				await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id),
-				null,
-			);
+			expect(unassigned.status).toBe(204);
+			expect(await fetchRoleAssignmentByUserIdAndRoleIdFromDatabase(db, assignTarget.id, assignableRole.body.id)).toBe(null);
 
 			const unassignedAgain = await api(
 				'admin/roles/unassign',
@@ -11255,8 +10922,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(unassignedAgain.status, 400);
-			assert.strictEqual(castAsError(unassignedAgain.body as any).error.code, 'NOT_ASSIGNED');
+			expect(unassignedAgain.status).toBe(400);
+			expect(castAsError(unassignedAgain.body as any).error.code).toBe('NOT_ASSIGNED');
 
 			const missingAssignUser = await api(
 				'admin/roles/assign',
@@ -11266,8 +10933,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingAssignUser.status, 400);
-			assert.strictEqual(castAsError(missingAssignUser.body as any).error.code, 'NO_SUCH_USER');
+			expect(missingAssignUser.status).toBe(400);
+			expect(castAsError(missingAssignUser.body as any).error.code).toBe('NO_SUCH_USER');
 			const missingUnassignRole = await api(
 				'admin/roles/unassign',
 				{
@@ -11276,8 +10943,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingUnassignRole.status, 400);
-			assert.strictEqual(castAsError(missingUnassignRole.body as any).error.code, 'NO_SUCH_ROLE');
+			expect(missingUnassignRole.status).toBe(400);
+			expect(castAsError(missingUnassignRole.body as any).error.code).toBe('NO_SUCH_ROLE');
 
 			const defaultPolicyUser = await signup({ username: `honorolepol${now.toString(36)}` });
 			const beforeMeta = await fetchMetaFromDatabase(db);
@@ -11295,15 +10962,15 @@ describe('Endpoints', () => {
 					},
 					alice,
 				);
-				assert.strictEqual(updatedDefaultPolicies.status, 204);
+				expect(updatedDefaultPolicies.status).toBe(204);
 
 				const afterMeta = await fetchMetaFromDatabase(db);
-				assert.strictEqual(afterMeta.policies.canInvite, true);
-				assert.strictEqual(afterMeta.policies.inviteLimit, 2);
+				expect(afterMeta.policies.canInvite).toBe(true);
+				expect(afterMeta.policies.inviteLimit).toBe(2);
 
 				const inviteLimit = await api('invite/limit', {}, defaultPolicyUser);
-				assert.strictEqual(inviteLimit.status, 200);
-				assert.strictEqual(inviteLimit.body.remaining, 2);
+				expect(inviteLimit.status).toBe(200);
+				expect(inviteLimit.body.remaining).toBe(2);
 
 				const updateDefaultScopeDenied = await api(
 					'admin/roles/update-default-policies',
@@ -11312,8 +10979,8 @@ describe('Endpoints', () => {
 					},
 					{ token: readToken },
 				);
-				assert.strictEqual(updateDefaultScopeDenied.status, 403);
-				assert.strictEqual(castAsError(updateDefaultScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(updateDefaultScopeDenied.status).toBe(403);
+				expect(castAsError(updateDefaultScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 10,
@@ -11342,21 +11009,21 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.deepStrictEqual([...assignmentLogged].sort(), [...assignmentLogTypes].sort());
+			expect([...assignmentLogged].sort()).toStrictEqual([...assignmentLogTypes].sort());
 
 			const deletedAssignableRole = await api('admin/roles/delete', { roleId: assignableRole.body.id }, alice);
-			assert.strictEqual(deletedAssignableRole.status, 204);
+			expect(deletedAssignableRole.status).toBe(204);
 
 			const deleted = await api('admin/roles/delete', { roleId: created.body.id }, alice);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			const afterDelete = await api('admin/roles/show', { roleId: created.body.id }, alice);
-			assert.strictEqual(afterDelete.status, 400);
-			assert.strictEqual(castAsError(afterDelete.body as any).error.code, 'NO_SUCH_ROLE');
+			expect(afterDelete.status).toBe(400);
+			expect(castAsError(afterDelete.body as any).error.code).toBe('NO_SUCH_ROLE');
 
 			const missingDelete = await api('admin/roles/delete', { roleId: '000000000000000000000000' }, alice);
-			assert.strictEqual(missingDelete.status, 400);
-			assert.strictEqual(castAsError(missingDelete.body as any).error.code, 'NO_SUCH_ROLE');
+			expect(missingDelete.status).toBe(400);
+			expect(castAsError(missingDelete.body as any).error.code).toBe('NO_SUCH_ROLE');
 
 			const logTypes = ['createRole', 'updateRole', 'deleteRole'] as const;
 			const logged = new Set<string>();
@@ -11374,7 +11041,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
 	});
 
@@ -11410,12 +11077,12 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.isActive, true);
-			assert.strictEqual(created.body.name, name);
-			assert.deepStrictEqual(created.body.on, ['abuseReport']);
-			assert.strictEqual(created.body.url, 'https://example.test/system-webhook');
-			assert.strictEqual(created.body.secret, '');
+			expect(created.status).toBe(200);
+			expect(created.body.isActive).toBe(true);
+			expect(created.body.name).toBe(name);
+			expect(created.body.on).toStrictEqual(['abuseReport']);
+			expect(created.body.url).toBe('https://example.test/system-webhook');
+			expect(created.body.secret).toBe('');
 
 			const createdInactive = await api(
 				'admin/system-webhook/create',
@@ -11428,34 +11095,25 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(createdInactive.status, 200);
+			expect(createdInactive.status).toBe(200);
 
 			const listed = await api('admin/system-webhook/list', { on: ['abuseReport'] }, alice);
-			assert.strictEqual(listed.status, 200);
-			assert.strictEqual(
-				listed.body.some((webhook) => webhook.id === created.body.id),
-				true,
-			);
-			assert.strictEqual(
-				listed.body.some((webhook) => webhook.id === createdInactive.body.id),
-				false,
-			);
+			expect(listed.status).toBe(200);
+			expect(listed.body.some((webhook) => webhook.id === created.body.id)).toBe(true);
+			expect(listed.body.some((webhook) => webhook.id === createdInactive.body.id)).toBe(false);
 
 			const listedInactive = await api('admin/system-webhook/list', { isActive: false }, alice);
-			assert.strictEqual(listedInactive.status, 200);
-			assert.strictEqual(
-				listedInactive.body.some((webhook) => webhook.id === createdInactive.body.id),
-				true,
-			);
+			expect(listedInactive.status).toBe(200);
+			expect(listedInactive.body.some((webhook) => webhook.id === createdInactive.body.id)).toBe(true);
 
 			const shown = await api('admin/system-webhook/show', { id: created.body.id }, alice);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, created.body.id);
-			assert.strictEqual(shown.body.name, name);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(created.body.id);
+			expect(shown.body.name).toBe(name);
 
 			const missing = await api('admin/system-webhook/show', { id: '000000000000000000000000' }, alice);
-			assert.strictEqual(missing.status, 404);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_SYSTEM_WEBHOOK');
+			expect(missing.status).toBe(404);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_SYSTEM_WEBHOOK');
 
 			const updated = await api(
 				'admin/system-webhook/update',
@@ -11469,12 +11127,12 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 200);
-			assert.strictEqual(updated.body.id, created.body.id);
-			assert.strictEqual(updated.body.isActive, false);
-			assert.strictEqual(updated.body.name, `${name} updated`);
-			assert.deepStrictEqual(updated.body.on, ['userCreated']);
-			assert.strictEqual(updated.body.secret, 'updated-secret');
+			expect(updated.status).toBe(200);
+			expect(updated.body.id).toBe(created.body.id);
+			expect(updated.body.isActive).toBe(false);
+			expect(updated.body.name).toBe(`${name} updated`);
+			expect(updated.body.on).toStrictEqual(['userCreated']);
+			expect(updated.body.secret).toBe('updated-secret');
 
 			const overrideUrl = 'https://example.test/system-webhook-test';
 			const tested = await api(
@@ -11489,11 +11147,11 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(tested.status, 204);
+			expect(tested.status).toBe(204);
 			const testJob = await findSystemWebhookDeliverJob(created.body.id, 'userCreated', overrideUrl);
-			assert.strictEqual(testJob.opts.attempts, 1);
-			assert.strictEqual(testJob.data.secret, 'override-secret');
-			assert.strictEqual((testJob.data.content as any).id, 'dummy-user-1');
+			expect(testJob.opts.attempts).toBe(1);
+			expect(testJob.data.secret).toBe('override-secret');
+			expect((testJob.data.content as any).id).toBe('dummy-user-1');
 			await testJob.remove();
 
 			const missingTest = await api(
@@ -11504,25 +11162,25 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingTest.status, 400);
-			assert.strictEqual(castAsError(missingTest.body as any).error.code, 'NO_SUCH_WEBHOOK');
+			expect(missingTest.status).toBe(400);
+			expect(castAsError(missingTest.body as any).error.code).toBe('NO_SUCH_WEBHOOK');
 
 			const appToken = await createAppToken(alice, ['write:admin:roles']);
 			const secureDenied = await api('admin/system-webhook/list', {}, { token: appToken });
-			assert.strictEqual(secureDenied.status, 400);
-			assert.strictEqual(castAsError(secureDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(secureDenied.status).toBe(400);
+			expect(castAsError(secureDenied.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const normalUser = await signup({ username: `hswh${now.toString(36)}` });
 			const roleDenied = await api('admin/system-webhook/list', {}, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const deleted = await api('admin/system-webhook/delete', { id: created.body.id }, alice);
-			assert.strictEqual(deleted.status, 204);
-			assert.strictEqual(await fetchSystemWebhookByIdFromDatabase(db, created.body.id), null);
+			expect(deleted.status).toBe(204);
+			expect(await fetchSystemWebhookByIdFromDatabase(db, created.body.id)).toBe(null);
 
 			const deletedInactive = await api('admin/system-webhook/delete', { id: createdInactive.body.id }, alice);
-			assert.strictEqual(deletedInactive.status, 204);
+			expect(deletedInactive.status).toBe(204);
 
 			const logTypes = ['createSystemWebhook', 'updateSystemWebhook', 'deleteSystemWebhook'] as const;
 			const logged = new Set<string>();
@@ -11540,7 +11198,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
 	});
 
@@ -11566,7 +11224,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
 			const webhook = await api(
 				'admin/system-webhook/create',
@@ -11578,7 +11236,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(webhook.status, 200);
+			expect(webhook.status).toBe(200);
 
 			const createdWebhookRecipient = await api(
 				'admin/abuse-report/notification-recipient/create',
@@ -11590,13 +11248,13 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(createdWebhookRecipient.status, 200);
-			assert.strictEqual(createdWebhookRecipient.body.isActive, true);
-			assert.strictEqual(createdWebhookRecipient.body.name, name);
-			assert.strictEqual(createdWebhookRecipient.body.method, 'webhook');
-			assert.strictEqual(createdWebhookRecipient.body.systemWebhookId, webhook.body.id);
+			expect(createdWebhookRecipient.status).toBe(200);
+			expect(createdWebhookRecipient.body.isActive).toBe(true);
+			expect(createdWebhookRecipient.body.name).toBe(name);
+			expect(createdWebhookRecipient.body.method).toBe('webhook');
+			expect(createdWebhookRecipient.body.systemWebhookId).toBe(webhook.body.id);
 			assert.ok(createdWebhookRecipient.body.systemWebhook);
-			assert.strictEqual(createdWebhookRecipient.body.systemWebhook.id, webhook.body.id);
+			expect(createdWebhookRecipient.body.systemWebhook.id).toBe(webhook.body.id);
 
 			const createdEmailRecipient = await api(
 				'admin/abuse-report/notification-recipient/create',
@@ -11608,47 +11266,38 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(createdEmailRecipient.status, 200);
-			assert.strictEqual(createdEmailRecipient.body.method, 'email');
-			assert.strictEqual(createdEmailRecipient.body.userId, emailUser.id);
+			expect(createdEmailRecipient.status).toBe(200);
+			expect(createdEmailRecipient.body.method).toBe('email');
+			expect(createdEmailRecipient.body.userId).toBe(emailUser.id);
 			assert.ok(createdEmailRecipient.body.user);
-			assert.strictEqual(createdEmailRecipient.body.user.id, emailUser.id);
+			expect(createdEmailRecipient.body.user.id).toBe(emailUser.id);
 
 			const listedWebhook = await api('admin/abuse-report/notification-recipient/list', { method: ['webhook'] }, alice);
-			assert.strictEqual(listedWebhook.status, 200);
-			assert.strictEqual(
-				listedWebhook.body.some((recipient) => recipient.id === createdWebhookRecipient.body.id),
-				true,
-			);
-			assert.strictEqual(
-				listedWebhook.body.some((recipient) => recipient.id === createdEmailRecipient.body.id),
-				false,
-			);
+			expect(listedWebhook.status).toBe(200);
+			expect(listedWebhook.body.some((recipient) => recipient.id === createdWebhookRecipient.body.id)).toBe(true);
+			expect(listedWebhook.body.some((recipient) => recipient.id === createdEmailRecipient.body.id)).toBe(false);
 
 			const listedEmail = await api('admin/abuse-report/notification-recipient/list', { method: ['email'] }, alice);
-			assert.strictEqual(listedEmail.status, 200);
-			assert.strictEqual(
-				listedEmail.body.some((recipient) => recipient.id === createdEmailRecipient.body.id),
-				true,
-			);
+			expect(listedEmail.status).toBe(200);
+			expect(listedEmail.body.some((recipient) => recipient.id === createdEmailRecipient.body.id)).toBe(true);
 
 			const shown = await api(
 				'admin/abuse-report/notification-recipient/show',
 				{ id: createdWebhookRecipient.body.id },
 				alice,
 			);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, createdWebhookRecipient.body.id);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(createdWebhookRecipient.body.id);
 			assert.ok(shown.body.systemWebhook);
-			assert.strictEqual(shown.body.systemWebhook.id, webhook.body.id);
+			expect(shown.body.systemWebhook.id).toBe(webhook.body.id);
 
 			const missing = await api(
 				'admin/abuse-report/notification-recipient/show',
 				{ id: '000000000000000000000000' },
 				alice,
 			);
-			assert.strictEqual(missing.status, 404);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_RECIPIENT');
+			expect(missing.status).toBe(404);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_RECIPIENT');
 
 			const updated = await api(
 				'admin/abuse-report/notification-recipient/update',
@@ -11661,13 +11310,13 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 200);
-			assert.strictEqual(updated.body.id, createdWebhookRecipient.body.id);
-			assert.strictEqual(updated.body.isActive, false);
-			assert.strictEqual(updated.body.name, `${name} updated`);
-			assert.strictEqual(updated.body.method, 'email');
-			assert.strictEqual(updated.body.userId, emailUser.id);
-			assert.strictEqual(updated.body.systemWebhookId, undefined);
+			expect(updated.status).toBe(200);
+			expect(updated.body.id).toBe(createdWebhookRecipient.body.id);
+			expect(updated.body.isActive).toBe(false);
+			expect(updated.body.name).toBe(`${name} updated`);
+			expect(updated.body.method).toBe('email');
+			expect(updated.body.userId).toBe(emailUser.id);
+			expect(updated.body.systemWebhookId).toBe(undefined);
 
 			const missingEmailUser = await api(
 				'admin/abuse-report/notification-recipient/create',
@@ -11678,8 +11327,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingEmailUser.status, 400);
-			assert.strictEqual(castAsError(missingEmailUser.body as any).error.code, 'CORRELATION_CHECK_EMAIL');
+			expect(missingEmailUser.status).toBe(400);
+			expect(castAsError(missingEmailUser.body as any).error.code).toBe('CORRELATION_CHECK_EMAIL');
 
 			const unverifiedUser = await signup({ username: `hanu${suffix}` });
 			const unverifiedEmailUser = await api(
@@ -11692,8 +11341,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(unverifiedEmailUser.status, 400);
-			assert.strictEqual(castAsError(unverifiedEmailUser.body as any).error.code, 'EMAIL_ADDRESS_NOT_SET');
+			expect(unverifiedEmailUser.status).toBe(400);
+			expect(castAsError(unverifiedEmailUser.body as any).error.code).toBe('EMAIL_ADDRESS_NOT_SET');
 
 			const missingWebhook = await api(
 				'admin/abuse-report/notification-recipient/create',
@@ -11704,42 +11353,42 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingWebhook.status, 400);
-			assert.strictEqual(castAsError(missingWebhook.body as any).error.code, 'CORRELATION_CHECK_WEBHOOK');
+			expect(missingWebhook.status).toBe(400);
+			expect(castAsError(missingWebhook.body as any).error.code).toBe('CORRELATION_CHECK_WEBHOOK');
 
 			const appToken = await createAppToken(alice, ['write:admin:roles']);
 			const secureDenied = await api('admin/abuse-report/notification-recipient/list', {}, { token: appToken });
-			assert.strictEqual(secureDenied.status, 400);
-			assert.strictEqual(castAsError(secureDenied.body as any).error.code, 'ACCESS_DENIED');
+			expect(secureDenied.status).toBe(400);
+			expect(castAsError(secureDenied.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const normalUser = await signup({ username: `hanr${suffix}` });
 			const roleDenied = await api('admin/abuse-report/notification-recipient/list', {}, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const deletedUpdated = await api(
 				'admin/abuse-report/notification-recipient/delete',
 				{ id: createdWebhookRecipient.body.id },
 				alice,
 			);
-			assert.strictEqual(deletedUpdated.status, 204);
+			expect(deletedUpdated.status).toBe(204);
 			const deletedEmail = await api(
 				'admin/abuse-report/notification-recipient/delete',
 				{ id: createdEmailRecipient.body.id },
 				alice,
 			);
-			assert.strictEqual(deletedEmail.status, 204);
+			expect(deletedEmail.status).toBe(204);
 
 			const shownDeleted = await api(
 				'admin/abuse-report/notification-recipient/show',
 				{ id: createdWebhookRecipient.body.id },
 				alice,
 			);
-			assert.strictEqual(shownDeleted.status, 404);
-			assert.strictEqual(castAsError(shownDeleted.body as any).error.code, 'NO_SUCH_RECIPIENT');
+			expect(shownDeleted.status).toBe(404);
+			expect(castAsError(shownDeleted.body as any).error.code).toBe('NO_SUCH_RECIPIENT');
 
 			const deletedWebhook = await api('admin/system-webhook/delete', { id: webhook.body.id }, alice);
-			assert.strictEqual(deletedWebhook.status, 204);
+			expect(deletedWebhook.status).toBe(204);
 
 			const logTypes = [
 				'createAbuseReportNotificationRecipient',
@@ -11761,7 +11410,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
 	});
 
@@ -11843,24 +11492,21 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(listed.status, 200);
+			expect(listed.status).toBe(200);
 			const listedReports = listed.body as any[];
-			assert.deepStrictEqual(
-				listedReports.slice(0, 3).map((report) => report.id),
-				[unresolved.id, resolved.id, remoteReporter.id],
-			);
+			expect(listedReports.slice(0, 3).map((report) => report.id)).toStrictEqual([unresolved.id, resolved.id, remoteReporter.id]);
 			const packedResolved = listedReports.find((report) => report.id === resolved.id);
-			assert.strictEqual(packedResolved.comment, `Hono abuse report list resolved ${suffix}`);
-			assert.strictEqual(packedResolved.resolved, true);
-			assert.strictEqual(packedResolved.resolvedAs, 'reject');
-			assert.strictEqual(packedResolved.moderationNote, `resolved note ${suffix}`);
-			assert.strictEqual(packedResolved.reporterId, carol.id);
-			assert.strictEqual(packedResolved.targetUserId, bob.id);
-			assert.strictEqual(packedResolved.assigneeId, alice.id);
-			assert.strictEqual(packedResolved.reporter.id, carol.id);
-			assert.strictEqual(packedResolved.targetUser.id, bob.id);
-			assert.strictEqual(packedResolved.assignee.id, alice.id);
-			assert.strictEqual(typeof packedResolved.createdAt, 'string');
+			expect(packedResolved.comment).toBe(`Hono abuse report list resolved ${suffix}`);
+			expect(packedResolved.resolved).toBe(true);
+			expect(packedResolved.resolvedAs).toBe('reject');
+			expect(packedResolved.moderationNote).toBe(`resolved note ${suffix}`);
+			expect(packedResolved.reporterId).toBe(carol.id);
+			expect(packedResolved.targetUserId).toBe(bob.id);
+			expect(packedResolved.assigneeId).toBe(alice.id);
+			expect(packedResolved.reporter.id).toBe(carol.id);
+			expect(packedResolved.targetUser.id).toBe(bob.id);
+			expect(packedResolved.assignee.id).toBe(alice.id);
+			expect(typeof packedResolved.createdAt).toBe('string');
 
 			const unresolvedOnly = await api(
 				'admin/abuse-user-reports',
@@ -11871,15 +11517,9 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(unresolvedOnly.status, 200);
-			assert.strictEqual(
-				(unresolvedOnly.body as any[]).some((report) => report.id === unresolved.id),
-				true,
-			);
-			assert.strictEqual(
-				(unresolvedOnly.body as any[]).some((report) => report.id === resolved.id),
-				false,
-			);
+			expect(unresolvedOnly.status).toBe(200);
+			expect((unresolvedOnly.body as any[]).some((report) => report.id === unresolved.id)).toBe(true);
+			expect((unresolvedOnly.body as any[]).some((report) => report.id === resolved.id)).toBe(false);
 
 			const resolvedOnly = await api(
 				'admin/abuse-user-reports',
@@ -11890,15 +11530,9 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(resolvedOnly.status, 200);
-			assert.strictEqual(
-				(resolvedOnly.body as any[]).some((report) => report.id === resolved.id),
-				true,
-			);
-			assert.strictEqual(
-				(resolvedOnly.body as any[]).some((report) => report.id === unresolved.id),
-				false,
-			);
+			expect(resolvedOnly.status).toBe(200);
+			expect((resolvedOnly.body as any[]).some((report) => report.id === resolved.id)).toBe(true);
+			expect((resolvedOnly.body as any[]).some((report) => report.id === unresolved.id)).toBe(false);
 
 			const remoteReporters = await api(
 				'admin/abuse-user-reports',
@@ -11909,11 +11543,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(remoteReporters.status, 200);
-			assert.deepStrictEqual(
-				(remoteReporters.body as any[]).map((report) => report.id),
-				[remoteReporter.id],
-			);
+			expect(remoteReporters.status).toBe(200);
+			expect((remoteReporters.body as any[]).map((report) => report.id)).toStrictEqual([remoteReporter.id]);
 
 			const token = await createAppToken(alice, ['read:admin:abuse-user-reports']);
 			const listedByToken = await api(
@@ -11925,21 +11556,18 @@ describe('Endpoints', () => {
 				},
 				{ token },
 			);
-			assert.strictEqual(listedByToken.status, 200);
-			assert.strictEqual(
-				(listedByToken.body as any[]).some((report) => report.id === resolved.id),
-				true,
-			);
+			expect(listedByToken.status).toBe(200);
+			expect((listedByToken.body as any[]).some((report) => report.id === resolved.id)).toBe(true);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api('admin/abuse-user-reports', {}, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hal${suffix}` });
 			const roleDenied = await api('admin/abuse-user-reports', {}, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 
 		test('admin/resolve-abuse-user-report は解決状態、token scope、role、ログ、404を維持する', async () => {
@@ -11956,7 +11584,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(webhook.status, 200);
+			expect(webhook.status).toBe(200);
 
 			const resolved = await api(
 				'admin/resolve-abuse-user-report',
@@ -11966,23 +11594,23 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(resolved.status, 204);
+			expect(resolved.status).toBe(204);
 
 			let after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
-			assert.strictEqual(after.resolved, true);
-			assert.strictEqual(after.assigneeId, alice.id);
-			assert.strictEqual(after.resolvedAs, 'accept');
+			expect(after.resolved).toBe(true);
+			expect(after.assigneeId).toBe(alice.id);
+			expect(after.resolvedAs).toBe('accept');
 
 			const webhookJob = await findSystemWebhookDeliverJob(webhook.body.id, 'abuseReportResolved');
-			assert.strictEqual((webhookJob.data.content as any).id, report.id);
-			assert.strictEqual((webhookJob.data.content as any).targetUserId, bob.id);
-			assert.strictEqual((webhookJob.data.content as any).reporterId, carol.id);
-			assert.strictEqual((webhookJob.data.content as any).assigneeId, alice.id);
-			assert.strictEqual((webhookJob.data.content as any).resolved, true);
-			assert.strictEqual((webhookJob.data.content as any).resolvedAs, 'accept');
+			expect((webhookJob.data.content as any).id).toBe(report.id);
+			expect((webhookJob.data.content as any).targetUserId).toBe(bob.id);
+			expect((webhookJob.data.content as any).reporterId).toBe(carol.id);
+			expect((webhookJob.data.content as any).assigneeId).toBe(alice.id);
+			expect((webhookJob.data.content as any).resolved).toBe(true);
+			expect((webhookJob.data.content as any).resolvedAs).toBe('accept');
 			await webhookJob.remove();
 			const deletedWebhook = await api('admin/system-webhook/delete', { id: webhook.body.id }, alice);
-			assert.strictEqual(deletedWebhook.status, 204);
+			expect(deletedWebhook.status).toBe(204);
 
 			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
 			const tokenReport = await createReport(`${suffix}token`);
@@ -11993,12 +11621,12 @@ describe('Endpoints', () => {
 				},
 				{ token },
 			);
-			assert.strictEqual(resolvedByToken.status, 204);
+			expect(resolvedByToken.status).toBe(204);
 
 			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, tokenReport.id);
-			assert.strictEqual(after.resolved, true);
-			assert.strictEqual(after.assigneeId, alice.id);
-			assert.strictEqual(after.resolvedAs, null);
+			expect(after.resolved).toBe(true);
+			expect(after.assigneeId).toBe(alice.id);
+			expect(after.resolvedAs).toBe(null);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api(
@@ -12008,8 +11636,8 @@ describe('Endpoints', () => {
 				},
 				{ token: wrongScopeToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `har${suffix}` });
 			const roleDenied = await api(
@@ -12019,8 +11647,8 @@ describe('Endpoints', () => {
 				},
 				normalUser,
 			);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const missing = await api(
 				'admin/resolve-abuse-user-report',
@@ -12029,9 +11657,9 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missing.status, 404);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
-			assert.strictEqual(castAsError(missing.body as any).error.id, 'ac3794dd-2ce4-d878-e546-73c60c06b398');
+			expect(missing.status).toBe(404);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_ABUSE_REPORT');
+			expect(castAsError(missing.body as any).error.id).toBe('ac3794dd-2ce4-d878-e546-73c60c06b398');
 
 			for (let i = 0; i < 10; i++) {
 				const logs = await listModerationLogsFromDatabase(db, {
@@ -12041,10 +11669,7 @@ describe('Endpoints', () => {
 					search: report.id,
 				});
 				if (logs.length > 0) {
-					assert.strictEqual(
-						logs.some((log) => (log.info as any).reportId === report.id && (log.info as any).resolvedAs === 'accept'),
-						true,
-					);
+					expect(logs.some((log) => (log.info as any).reportId === report.id && (log.info as any).resolvedAs === 'accept')).toBe(true);
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
@@ -12088,23 +11713,20 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(forwarded.status, 204);
+			expect(forwarded.status).toBe(204);
 
 			const after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
-			assert.strictEqual(after.forwarded, true);
+			expect(after.forwarded).toBe(true);
 
 			const deliverJob = await findDeliverJob(targetInbox, 'Flag');
-			assert.strictEqual(deliverJob.data.to, targetInbox);
-			assert.strictEqual(deliverJob.data.isSharedInbox, false);
-			assert.strictEqual(
-				deliverJob.data.digest,
-				`SHA-256=${createHash('sha256').update(deliverJob.data.content).digest('base64')}`,
-			);
+			expect(deliverJob.data.to).toBe(targetInbox);
+			expect(deliverJob.data.isSharedInbox).toBe(false);
+			expect(deliverJob.data.digest).toBe(`SHA-256=${createHash('sha256').update(deliverJob.data.content).digest('base64')}`);
 			const flag = JSON.parse(deliverJob.data.content) as any;
-			assert.strictEqual(flag.type, 'Flag');
-			assert.strictEqual(flag.actor.startsWith(`${origin}/users/`), true);
-			assert.strictEqual(flag.object, targetUri);
-			assert.strictEqual(flag.content, `Hono abuse report forward ${suffix}`);
+			expect(flag.type).toBe('Flag');
+			expect(flag.actor.startsWith(`${origin}/users/`)).toBe(true);
+			expect(flag.object).toBe(targetUri);
+			expect(flag.content).toBe(`Hono abuse report forward ${suffix}`);
 			assert.ok(flag.id.startsWith(`${origin}/`));
 			assert.ok(flag['@context']);
 			await deliverJob.remove();
@@ -12123,10 +11745,10 @@ describe('Endpoints', () => {
 				},
 				{ token },
 			);
-			assert.strictEqual(forwardedByToken.status, 204);
+			expect(forwardedByToken.status).toBe(204);
 
 			const afterToken = await fetchAbuseUserReportByIdOrFailFromDatabase(db, tokenReport.id);
-			assert.strictEqual(afterToken.forwarded, true);
+			expect(afterToken.forwarded).toBe(true);
 			const tokenDeliverJob = await findDeliverJob(targetInbox, 'Flag');
 			await tokenDeliverJob.remove();
 
@@ -12138,8 +11760,8 @@ describe('Endpoints', () => {
 				},
 				{ token: wrongScopeToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hafr${suffix}` });
 			const roleDenied = await api(
@@ -12149,8 +11771,8 @@ describe('Endpoints', () => {
 				},
 				normalUser,
 			);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const missing = await api(
 				'admin/forward-abuse-user-report',
@@ -12159,9 +11781,9 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missing.status, 404);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
-			assert.strictEqual(castAsError(missing.body as any).error.id, '8763e21b-d9bc-40be-acf6-54c1a6986493');
+			expect(missing.status).toBe(404);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_ABUSE_REPORT');
+			expect(castAsError(missing.body as any).error.id).toBe('8763e21b-d9bc-40be-acf6-54c1a6986493');
 
 			for (let i = 0; i < 10; i++) {
 				const logs = await listModerationLogsFromDatabase(db, {
@@ -12171,10 +11793,7 @@ describe('Endpoints', () => {
 					search: report.id,
 				});
 				if (logs.length > 0) {
-					assert.strictEqual(
-						logs.some((log) => (log.info as any).reportId === report.id),
-						true,
-					);
+					expect(logs.some((log) => (log.info as any).reportId === report.id)).toBe(true);
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
@@ -12196,10 +11815,10 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 204);
+			expect(updated.status).toBe(204);
 
 			let after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
-			assert.strictEqual(after.moderationNote, moderationNote);
+			expect(after.moderationNote).toBe(moderationNote);
 
 			const token = await createAppToken(alice, ['write:admin:resolve-abuse-user-report']);
 			const updatedByToken = await api(
@@ -12210,10 +11829,10 @@ describe('Endpoints', () => {
 				},
 				{ token },
 			);
-			assert.strictEqual(updatedByToken.status, 204);
+			expect(updatedByToken.status).toBe(204);
 
 			after = await fetchAbuseUserReportByIdOrFailFromDatabase(db, report.id);
-			assert.strictEqual(after.moderationNote, `${moderationNote} by token`);
+			expect(after.moderationNote).toBe(`${moderationNote} by token`);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api(
@@ -12224,8 +11843,8 @@ describe('Endpoints', () => {
 				},
 				{ token: wrongScopeToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `haur${suffix}` });
 			const roleDenied = await api(
@@ -12236,8 +11855,8 @@ describe('Endpoints', () => {
 				},
 				normalUser,
 			);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const missing = await api(
 				'admin/update-abuse-user-report',
@@ -12247,9 +11866,9 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missing.status, 404);
-			assert.strictEqual(castAsError(missing.body as any).error.code, 'NO_SUCH_ABUSE_REPORT');
-			assert.strictEqual(castAsError(missing.body as any).error.id, '15f51cf5-46d1-4b1d-a618-b35bcbed0662');
+			expect(missing.status).toBe(404);
+			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_ABUSE_REPORT');
+			expect(castAsError(missing.body as any).error.id).toBe('15f51cf5-46d1-4b1d-a618-b35bcbed0662');
 
 			for (let i = 0; i < 10; i++) {
 				const logs = await listModerationLogsFromDatabase(db, {
@@ -12259,15 +11878,12 @@ describe('Endpoints', () => {
 					search: report.id,
 				});
 				if (logs.length > 0) {
-					assert.strictEqual(
-						logs.some(
+					expect(logs.some(
 							(log) =>
 								(log.info as any).reportId === report.id &&
 								(log.info as any).before === report.moderationNote &&
 								(log.info as any).after === moderationNote,
-						),
-						true,
-					);
+						)).toBe(true);
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
@@ -12286,8 +11902,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(firstPage.status, 200);
-			assert.strictEqual(firstPage.body.length, 3);
+			expect(firstPage.status).toBe(200);
+			expect(firstPage.body.length).toBe(3);
 
 			const listed = await api(
 				'admin/show-users',
@@ -12299,11 +11915,8 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(listed.status, 200);
-			assert.deepStrictEqual(
-				listed.body.map((user) => user.id),
-				[firstPage.body[1]!.id],
-			);
+			expect(listed.status).toBe(200);
+			expect(listed.body.map((user) => user.id)).toStrictEqual([firstPage.body[1]!.id]);
 		});
 
 		test('admin/show-user と admin/show-users は詳細、filter、token scope、roleを維持する', async () => {
@@ -12383,18 +11996,18 @@ describe('Endpoints', () => {
 			});
 
 			const shown = await api('admin/show-user', { userId: target.id }, alice);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.email, `hashow-${suffix}@example.test`);
-			assert.strictEqual(shown.body.emailVerified, true);
-			assert.strictEqual(shown.body.followedMessage, `followed ${suffix}`);
-			assert.strictEqual(shown.body.moderationNote, `moderation ${suffix}`);
-			assert.deepStrictEqual(shown.body.mutedInstances, [`muted-${suffix}.example`]);
-			assert.strictEqual(shown.body.isModerator, true);
-			assert.strictEqual(shown.body.isSilenced, true);
-			assert.strictEqual(shown.body.isSuspended, true);
-			assert.strictEqual(shown.body.isHibernated, true);
-			assert.strictEqual(shown.body.lastActiveDate, new Date(now - 1234).toISOString());
-			assert.strictEqual(shown.body.policies.canPublicNote, false);
+			expect(shown.status).toBe(200);
+			expect(shown.body.email).toBe(`hashow-${suffix}@example.test`);
+			expect(shown.body.emailVerified).toBe(true);
+			expect(shown.body.followedMessage).toBe(`followed ${suffix}`);
+			expect(shown.body.moderationNote).toBe(`moderation ${suffix}`);
+			expect(shown.body.mutedInstances).toStrictEqual([`muted-${suffix}.example`]);
+			expect(shown.body.isModerator).toBe(true);
+			expect(shown.body.isSilenced).toBe(true);
+			expect(shown.body.isSuspended).toBe(true);
+			expect(shown.body.isHibernated).toBe(true);
+			expect(shown.body.lastActiveDate).toBe(new Date(now - 1234).toISOString());
+			expect(shown.body.policies.canPublicNote).toBe(false);
 			assert.ok(
 				shown.body.roles.some(
 					(item) => item.id === showRole.id && item.name === showRole.name && item.usersCount === 1,
@@ -12422,28 +12035,28 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(listed.status, 200);
+			expect(listed.status).toBe(200);
 			const listedTarget = listed.body.find((item) => item.id === target.id);
 			assert.ok(listedTarget);
-			assert.strictEqual(listedTarget.username, target.username);
-			assert.strictEqual(listedTarget.moderationNote, `moderation ${suffix}`);
-			assert.strictEqual(listedTarget.isSilenced, true);
+			expect(listedTarget.username).toBe(target.username);
+			expect(listedTarget.moderationNote).toBe(`moderation ${suffix}`);
+			expect(listedTarget.isSilenced).toBe(true);
 			assert.ok(listedTarget.roles.some((item) => item.id === showRole.id && item.displayOrder === 4242));
 
 			const token = await createAppToken(alice, ['read:admin:show-user']);
 			const shownByToken = await api('admin/show-user', { userId: target.id }, { token });
-			assert.strictEqual(shownByToken.status, 200);
-			assert.strictEqual(shownByToken.body.email, `hashow-${suffix}@example.test`);
+			expect(shownByToken.status).toBe(200);
+			expect(shownByToken.body.email).toBe(`hashow-${suffix}@example.test`);
 
 			const wrongScopeToken = await createAppToken(alice, ['read:admin:user-ips']);
 			const scopeDenied = await api('admin/show-users', {}, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hashown${suffix}` });
 			const roleDenied = await api('admin/show-user', { userId: target.id }, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
 
@@ -12501,19 +12114,19 @@ describe('Endpoints', () => {
 
 			try {
 				const resetRootByAdministrator = await api('admin/reset-password', { userId: alice.id }, administrator);
-				assert.strictEqual(resetRootByAdministrator.status, 400);
-				assert.strictEqual(castAsError(resetRootByAdministrator.body as any).error.code, 'ACCESS_DENIED');
+				expect(resetRootByAdministrator.status).toBe(400);
+				expect(castAsError(resetRootByAdministrator.body as any).error.code).toBe('ACCESS_DENIED');
 				const unsetRootMfaByAdministrator = await api('admin/unset-mfa', { userId: alice.id }, administrator);
-				assert.strictEqual(unsetRootMfaByAdministrator.status, 400);
-				assert.strictEqual(castAsError(unsetRootMfaByAdministrator.body as any).error.code, 'ACCESS_DENIED');
+				expect(unsetRootMfaByAdministrator.status).toBe(400);
+				expect(castAsError(unsetRootMfaByAdministrator.body as any).error.code).toBe('ACCESS_DENIED');
 				const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, alice.id);
-				assert.strictEqual(profile.password, rootPassword);
-				assert.strictEqual(profile.twoFactorEnabled, true);
+				expect(profile.password).toBe(rootPassword);
+				expect(profile.twoFactorEnabled).toBe(true);
 
 				// 本人の操作は乗っ取りにならないので通す
 				const resetRootBySelf = await api('admin/reset-password', { userId: alice.id }, alice);
-				assert.strictEqual(resetRootBySelf.status, 200);
-				assert.strictEqual(resetRootBySelf.body.password.length, 8);
+				expect(resetRootBySelf.status).toBe(200);
+				expect(resetRootBySelf.body.password.length).toBe(8);
 			} finally {
 				await updateUserProfileInDatabase(db, alice.id, {
 					password: originalRootProfile.password,
@@ -12525,37 +12138,34 @@ describe('Endpoints', () => {
 			}
 
 			const resetAdminByModerator = await api('admin/reset-password', { userId: adminTarget.id }, moderator);
-			assert.strictEqual(resetAdminByModerator.status, 400);
-			assert.strictEqual(castAsError(resetAdminByModerator.body as any).error.code, 'ACCESS_DENIED');
+			expect(resetAdminByModerator.status).toBe(400);
+			expect(castAsError(resetAdminByModerator.body as any).error.code).toBe('ACCESS_DENIED');
 			const unsetAdminMfaByModerator = await api('admin/unset-mfa', { userId: adminTarget.id }, moderator);
-			assert.strictEqual(unsetAdminMfaByModerator.status, 400);
-			assert.strictEqual(castAsError(unsetAdminMfaByModerator.body as any).error.code, 'ACCESS_DENIED');
+			expect(unsetAdminMfaByModerator.status).toBe(400);
+			expect(castAsError(unsetAdminMfaByModerator.body as any).error.code).toBe('ACCESS_DENIED');
 			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, adminTarget.id);
-			assert.strictEqual(profile.password, adminPassword);
-			assert.strictEqual(profile.twoFactorEnabled, true);
+			expect(profile.password).toBe(adminPassword);
+			expect(profile.twoFactorEnabled).toBe(true);
 
 			const resetOrdinaryByModerator = await api('admin/reset-password', { userId: ordinaryTarget.id }, moderator);
-			assert.strictEqual(resetOrdinaryByModerator.status, 200);
-			assert.strictEqual(resetOrdinaryByModerator.body.password.length, 8);
+			expect(resetOrdinaryByModerator.status).toBe(200);
+			expect(resetOrdinaryByModerator.body.password.length).toBe(8);
 			const unsetOrdinaryMfaByModerator = await api('admin/unset-mfa', { userId: ordinaryTarget.id }, moderator);
-			assert.strictEqual(unsetOrdinaryMfaByModerator.status, 204);
+			expect(unsetOrdinaryMfaByModerator.status).toBe(204);
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, ordinaryTarget.id);
-			assert.strictEqual(
-				await bunPassword.verify(resetOrdinaryByModerator.body.password, profile.password!, 'bcrypt'),
-				true,
-			);
-			assert.strictEqual(profile.twoFactorEnabled, false);
+			expect(await bunPassword.verify(resetOrdinaryByModerator.body.password, profile.password!, 'bcrypt')).toBe(true);
+			expect(profile.twoFactorEnabled).toBe(false);
 
 			// 管理者どうしでも横取りはできない
 			const resetAdminByAdministrator = await api('admin/reset-password', { userId: adminTarget.id }, administrator);
-			assert.strictEqual(resetAdminByAdministrator.status, 400);
-			assert.strictEqual(castAsError(resetAdminByAdministrator.body as any).error.code, 'ACCESS_DENIED');
+			expect(resetAdminByAdministrator.status).toBe(400);
+			expect(castAsError(resetAdminByAdministrator.body as any).error.code).toBe('ACCESS_DENIED');
 			const unsetAdminMfaByAdministrator = await api('admin/unset-mfa', { userId: adminTarget.id }, administrator);
-			assert.strictEqual(unsetAdminMfaByAdministrator.status, 400);
-			assert.strictEqual(castAsError(unsetAdminMfaByAdministrator.body as any).error.code, 'ACCESS_DENIED');
+			expect(unsetAdminMfaByAdministrator.status).toBe(400);
+			expect(castAsError(unsetAdminMfaByAdministrator.body as any).error.code).toBe('ACCESS_DENIED');
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, adminTarget.id);
-			assert.strictEqual(profile.password, adminPassword);
-			assert.strictEqual(profile.twoFactorEnabled, true);
+			expect(profile.password).toBe(adminPassword);
+			expect(profile.twoFactorEnabled).toBe(true);
 		});
 
 		test('admin/reset-password と unset 系 endpoint は DB 更新、token scope、role、ログを維持する', async () => {
@@ -12605,63 +12215,63 @@ describe('Endpoints', () => {
 			});
 
 			const reset = await api('admin/reset-password', { userId: target.id }, alice);
-			assert.strictEqual(reset.status, 200);
-			assert.strictEqual(reset.body.password.length, 8);
+			expect(reset.status).toBe(200);
+			expect(reset.body.password.length).toBe(8);
 			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(await bunPassword.verify(reset.body.password, profile.password!, 'bcrypt'), true);
+			expect(await bunPassword.verify(reset.body.password, profile.password!, 'bcrypt')).toBe(true);
 
 			const resetToken = await createAppToken(alice, ['write:admin:reset-password']);
 			const resetByToken = await api('admin/reset-password', { userId: target.id }, { token: resetToken });
-			assert.strictEqual(resetByToken.status, 200);
-			assert.strictEqual(resetByToken.body.password.length, 8);
+			expect(resetByToken.status).toBe(200);
+			expect(resetByToken.body.password.length).toBe(8);
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(await bunPassword.verify(resetByToken.body.password, profile.password!, 'bcrypt'), true);
+			expect(await bunPassword.verify(resetByToken.body.password, profile.password!, 'bcrypt')).toBe(true);
 
 			const noSuchReset = await api('admin/reset-password', { userId: '000000000000000000000000' }, alice);
-			assert.strictEqual(noSuchReset.status, 400);
-			assert.strictEqual(castAsError(noSuchReset.body as any).error.code, 'NO_SUCH_USER');
+			expect(noSuchReset.status).toBe(400);
+			expect(castAsError(noSuchReset.body as any).error.code).toBe('NO_SUCH_USER');
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:unset-mfa']);
 			const scopeDenied = await api('admin/reset-password', { userId: target.id }, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hanm${suffix}` });
 			const roleDenied = await api('admin/reset-password', { userId: target.id }, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const unsetMfa = await api('admin/unset-mfa', { userId: target.id }, alice);
-			assert.strictEqual(unsetMfa.status, 204);
+			expect(unsetMfa.status).toBe(204);
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(profile.twoFactorSecret, null);
-			assert.strictEqual(profile.twoFactorBackupSecret, null);
-			assert.strictEqual(profile.twoFactorEnabled, false);
-			assert.strictEqual(profile.usePasswordLessLogin, false);
+			expect(profile.twoFactorSecret).toBe(null);
+			expect(profile.twoFactorBackupSecret).toBe(null);
+			expect(profile.twoFactorEnabled).toBe(false);
+			expect(profile.usePasswordLessLogin).toBe(false);
 
 			const noSuchUnsetMfa = await api('admin/unset-mfa', { userId: '000000000000000000000000' }, alice);
-			assert.strictEqual(noSuchUnsetMfa.status, 400);
-			assert.strictEqual(castAsError(noSuchUnsetMfa.body as any).error.code, 'NO_SUCH_USER');
+			expect(noSuchUnsetMfa.status).toBe(400);
+			expect(castAsError(noSuchUnsetMfa.body as any).error.code).toBe('NO_SUCH_USER');
 
 			const unsetAvatar = await api('admin/unset-user-avatar', { userId: target.id }, alice);
-			assert.strictEqual(unsetAvatar.status, 204);
+			expect(unsetAvatar.status).toBe(204);
 			let user = await fetchUserByIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(user.avatarId, null);
-			assert.strictEqual(user.avatarUrl, null);
-			assert.strictEqual(user.avatarBlurhash, null);
+			expect(user.avatarId).toBe(null);
+			expect(user.avatarUrl).toBe(null);
+			expect(user.avatarBlurhash).toBe(null);
 
 			const unsetAvatarAgain = await api('admin/unset-user-avatar', { userId: target.id }, alice);
-			assert.strictEqual(unsetAvatarAgain.status, 204);
+			expect(unsetAvatarAgain.status).toBe(204);
 
 			const unsetBanner = await api('admin/unset-user-banner', { userId: target.id }, alice);
-			assert.strictEqual(unsetBanner.status, 204);
+			expect(unsetBanner.status).toBe(204);
 			user = await fetchUserByIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(user.bannerId, null);
-			assert.strictEqual(user.bannerUrl, null);
-			assert.strictEqual(user.bannerBlurhash, null);
+			expect(user.bannerId).toBe(null);
+			expect(user.bannerUrl).toBe(null);
+			expect(user.bannerBlurhash).toBe(null);
 
 			const unsetBannerAgain = await api('admin/unset-user-banner', { userId: target.id }, alice);
-			assert.strictEqual(unsetBannerAgain.status, 204);
+			expect(unsetBannerAgain.status).toBe(204);
 
 			const logTypes = ['resetPassword', 'unsetMfa', 'unsetUserAvatar', 'unsetUserBanner'] as const;
 			const logged = new Set<string>();
@@ -12679,7 +12289,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
 
 		test('admin/update-user-note は moderationNote 更新、token scope、role、ログを維持する', async () => {
@@ -12699,10 +12309,10 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 204);
+			expect(updated.status).toBe(204);
 
 			let profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(profile.moderationNote, text);
+			expect(profile.moderationNote).toBe(text);
 
 			const token = await createAppToken(alice, ['write:admin:user-note']);
 			const updatedByToken = await api(
@@ -12713,10 +12323,10 @@ describe('Endpoints', () => {
 				},
 				{ token },
 			);
-			assert.strictEqual(updatedByToken.status, 204);
+			expect(updatedByToken.status).toBe(204);
 
 			profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(profile.moderationNote, `${text} by token`);
+			expect(profile.moderationNote).toBe(`${text} by token`);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:reset-password']);
 			const scopeDenied = await api(
@@ -12727,8 +12337,8 @@ describe('Endpoints', () => {
 				},
 				{ token: wrongScopeToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hunn${suffix}` });
 			const roleDenied = await api(
@@ -12739,8 +12349,8 @@ describe('Endpoints', () => {
 				},
 				normalUser,
 			);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			for (let i = 0; i < 10; i++) {
 				const logs = await listModerationLogsFromDatabase(db, {
@@ -12750,10 +12360,7 @@ describe('Endpoints', () => {
 					search: target.id,
 				});
 				if (logs.length > 0) {
-					assert.strictEqual(
-						logs.some((log) => (log.info as any).before === 'before note' && (log.info as any).after === text),
-						true,
-					);
+					expect(logs.some((log) => (log.info as any).before === 'before note' && (log.info as any).after === text)).toBe(true);
 					break;
 				}
 				await new Promise((resolve) => setTimeout(resolve, 100));
@@ -12771,21 +12378,21 @@ describe('Endpoints', () => {
 			};
 
 			const sent = await api('admin/send-email', payload, alice);
-			assert.strictEqual(sent.status, 204);
+			expect(sent.status).toBe(204);
 
 			const token = await createAppToken(alice, ['write:admin:send-email']);
 			const sentByToken = await api('admin/send-email', payload, { token });
-			assert.strictEqual(sentByToken.status, 204);
+			expect(sentByToken.status).toBe(204);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const scopeDenied = await api('admin/send-email', payload, { token: wrongScopeToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hse${suffix}` });
 			const roleDenied = await api('admin/send-email', payload, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const invalidPayload: Record<string, unknown> = {
 				to: payload.to,
@@ -12796,8 +12403,8 @@ describe('Endpoints', () => {
 				invalidPayload as misskey.Endpoints['admin/send-email']['req'],
 				alice,
 			);
-			assert.strictEqual(invalid.status, 400);
-			assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAM');
+			expect(invalid.status).toBe(400);
+			expect(castAsError(invalid.body as any).error.code).toBe('INVALID_PARAM');
 		});
 
 		test('admin/suspend-user と admin/unsuspend-user は状態更新、queue、token scope、role、ログを維持する', async () => {
@@ -12815,10 +12422,10 @@ describe('Endpoints', () => {
 			});
 
 			const suspended = await api('admin/suspend-user', { userId: target.id }, alice);
-			assert.strictEqual(suspended.status, 204);
+			expect(suspended.status).toBe(204);
 
 			let targetUser = await fetchUserByIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(targetUser.isSuspended, true);
+			expect(targetUser.isSuspended).toBe(true);
 
 			for (let i = 0; i < 10; i++) {
 				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
@@ -12844,35 +12451,35 @@ describe('Endpoints', () => {
 				{ userId: suspendTokenTarget.id },
 				{ token: suspendToken },
 			);
-			assert.strictEqual(suspendedByToken.status, 204);
+			expect(suspendedByToken.status).toBe(204);
 
 			const wrongScopeToken = await createAppToken(alice, ['write:admin:user-note']);
 			const suspendScopeDenied = await api('admin/suspend-user', { userId: target.id }, { token: wrongScopeToken });
-			assert.strictEqual(suspendScopeDenied.status, 403);
-			assert.strictEqual(castAsError(suspendScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(suspendScopeDenied.status).toBe(403);
+			expect(castAsError(suspendScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `hsnr${suffix}` });
 			const suspendRoleDenied = await api('admin/suspend-user', { userId: target.id }, normalUser);
-			assert.strictEqual(suspendRoleDenied.status, 403);
-			assert.strictEqual(castAsError(suspendRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(suspendRoleDenied.status).toBe(403);
+			expect(castAsError(suspendRoleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const unsuspended = await api('admin/unsuspend-user', { userId: target.id }, alice);
-			assert.strictEqual(unsuspended.status, 204);
+			expect(unsuspended.status).toBe(204);
 
 			targetUser = await fetchUserByIdOrFailFromDatabase(db, target.id);
-			assert.strictEqual(targetUser.isSuspended, false);
+			expect(targetUser.isSuspended).toBe(false);
 
 			const unsuspendToken = await createAppToken(alice, ['write:admin:unsuspend-user']);
 			const unsuspendedByToken = await api('admin/unsuspend-user', { userId: target.id }, { token: unsuspendToken });
-			assert.strictEqual(unsuspendedByToken.status, 204);
+			expect(unsuspendedByToken.status).toBe(204);
 
 			const unsuspendScopeDenied = await api('admin/unsuspend-user', { userId: target.id }, { token: wrongScopeToken });
-			assert.strictEqual(unsuspendScopeDenied.status, 403);
-			assert.strictEqual(castAsError(unsuspendScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(unsuspendScopeDenied.status).toBe(403);
+			expect(castAsError(unsuspendScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const unsuspendRoleDenied = await api('admin/unsuspend-user', { userId: target.id }, normalUser);
-			assert.strictEqual(unsuspendRoleDenied.status, 403);
-			assert.strictEqual(castAsError(unsuspendRoleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(unsuspendRoleDenied.status).toBe(403);
+			expect(castAsError(unsuspendRoleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const logged = new Set<string>();
 			for (let i = 0; i < 10; i++) {
@@ -12889,7 +12496,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.deepStrictEqual([...logged].sort(), ['suspend', 'unsuspend']);
+			expect([...logged].sort()).toStrictEqual(['suspend', 'unsuspend']);
 		});
 	});
 
@@ -12920,8 +12527,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(listed.status, 200);
-			assert.deepStrictEqual(listed.body, expected);
+			expect(listed.status).toBe(200);
+			expect(listed.body).toStrictEqual(expected);
 
 			const readToken = await createAppToken(alice, ['read:admin:user-ips']);
 			const listedWithApp = await api(
@@ -12931,8 +12538,8 @@ describe('Endpoints', () => {
 				},
 				{ token: readToken },
 			);
-			assert.strictEqual(listedWithApp.status, 200);
-			assert.deepStrictEqual(listedWithApp.body, expected);
+			expect(listedWithApp.status).toBe(200);
+			expect(listedWithApp.body).toStrictEqual(expected);
 
 			const deniedToken = await createAppToken(alice, ['read:admin:roles']);
 			const scopeDenied = await api(
@@ -12942,8 +12549,8 @@ describe('Endpoints', () => {
 				},
 				{ token: deniedToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honoips${now.toString(36)}` });
 			const roleDenied = await api(
@@ -12953,45 +12560,45 @@ describe('Endpoints', () => {
 				},
 				normalUser,
 			);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
 
 	describe('admin/server-info', () => {
 		function assertAdminServerInfoBody(body: any): void {
-			assert.strictEqual(typeof body.machine, 'string');
-			assert.strictEqual(typeof body.os, 'string');
-			assert.strictEqual(typeof body.node, 'string');
-			assert.strictEqual(typeof body.psql, 'string');
-			assert.strictEqual(typeof body.redis, 'string');
-			assert.strictEqual(typeof body.cpu.model, 'string');
-			assert.strictEqual(typeof body.cpu.cores, 'number');
-			assert.strictEqual(typeof body.mem.total, 'number');
-			assert.strictEqual(typeof body.fs.total, 'number');
-			assert.strictEqual(typeof body.fs.used, 'number');
-			assert.strictEqual(typeof body.net.interface, 'string');
+			expect(typeof body.machine).toBe('string');
+			expect(typeof body.os).toBe('string');
+			expect(typeof body.node).toBe('string');
+			expect(typeof body.psql).toBe('string');
+			expect(typeof body.redis).toBe('string');
+			expect(typeof body.cpu.model).toBe('string');
+			expect(typeof body.cpu.cores).toBe('number');
+			expect(typeof body.mem.total).toBe('number');
+			expect(typeof body.fs.total).toBe('number');
+			expect(typeof body.fs.used).toBe('number');
+			expect(typeof body.net.interface).toBe('string');
 		}
 
 		test('admin/server-info はサーバ情報、moderator権限、token scopeを維持する', async () => {
 			const listed = await api('admin/server-info', {}, alice);
-			assert.strictEqual(listed.status, 200);
+			expect(listed.status).toBe(200);
 			assertAdminServerInfoBody(listed.body);
 
 			const readToken = await createAppToken(alice, ['read:admin:server-info']);
 			const listedWithApp = await api('admin/server-info', {}, { token: readToken });
-			assert.strictEqual(listedWithApp.status, 200);
+			expect(listedWithApp.status).toBe(200);
 			assertAdminServerInfoBody(listedWithApp.body);
 
 			const deniedToken = await createAppToken(alice, ['read:admin:user-ips']);
 			const scopeDenied = await api('admin/server-info', {}, { token: deniedToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honosi${Date.now().toString(36)}` });
 			const roleDenied = await api('admin/server-info', {}, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
 
@@ -13038,33 +12645,27 @@ describe('Endpoints', () => {
 				.sort((a, b) => a.id.localeCompare(b.id));
 
 			const listed = await api('admin/relays/list', {}, alice);
-			assert.strictEqual(listed.status, 200);
-			assert.deepStrictEqual(
-				listed.body
+			expect(listed.status).toBe(200);
+			expect(listed.body
 					.filter((relay) => expected.some((expectedRelay) => expectedRelay.id === relay.id))
-					.sort((a, b) => a.id.localeCompare(b.id)),
-				expected,
-			);
+					.sort((a, b) => a.id.localeCompare(b.id))).toStrictEqual(expected);
 
 			const readToken = await createAppToken(alice, ['read:admin:relays']);
 			const listedWithApp = await api('admin/relays/list', {}, { token: readToken });
-			assert.strictEqual(listedWithApp.status, 200);
-			assert.deepStrictEqual(
-				listedWithApp.body
+			expect(listedWithApp.status).toBe(200);
+			expect(listedWithApp.body
 					.filter((relay) => expected.some((expectedRelay) => expectedRelay.id === relay.id))
-					.sort((a, b) => a.id.localeCompare(b.id)),
-				expected,
-			);
+					.sort((a, b) => a.id.localeCompare(b.id))).toStrictEqual(expected);
 
 			const deniedToken = await createAppToken(alice, ['read:admin:user-ips']);
 			const scopeDenied = await api('admin/relays/list', {}, { token: deniedToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honorelay${now.toString(36)}` });
 			const roleDenied = await api('admin/relays/list', {}, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 
 		test('admin/relays/add と admin/relays/remove はDB、deliver queue、権限を維持する', async () => {
@@ -13072,35 +12673,32 @@ describe('Endpoints', () => {
 			const inbox = `https://relay-write-${now}.example/inbox`;
 
 			const added = await api('admin/relays/add', { inbox }, alice);
-			assert.strictEqual(added.status, 200);
-			assert.strictEqual(added.body.inbox, inbox);
-			assert.strictEqual(added.body.status, 'requesting');
-			assert.strictEqual(typeof added.body.id, 'string');
+			expect(added.status).toBe(200);
+			expect(added.body.inbox).toBe(inbox);
+			expect(added.body.status).toBe('requesting');
+			expect(typeof added.body.id).toBe('string');
 
 			const row = await fetchRelayByInboxFromDatabase(db, inbox);
 			assert.ok(row);
-			assert.strictEqual(row.id, added.body.id);
+			expect(row.id).toBe(added.body.id);
 
 			const followJob = await findDeliverJob(inbox, 'Follow');
-			assert.strictEqual(followJob.data.to, inbox);
-			assert.strictEqual(followJob.data.isSharedInbox, false);
-			assert.strictEqual(
-				followJob.data.digest,
-				`SHA-256=${createHash('sha256').update(followJob.data.content).digest('base64')}`,
-			);
+			expect(followJob.data.to).toBe(inbox);
+			expect(followJob.data.isSharedInbox).toBe(false);
+			expect(followJob.data.digest).toBe(`SHA-256=${createHash('sha256').update(followJob.data.content).digest('base64')}`);
 
 			const follow = JSON.parse(followJob.data.content) as any;
-			assert.strictEqual(follow.type, 'Follow');
-			assert.strictEqual(follow.id, `${origin}/activities/follow-relay/${added.body.id}`);
-			assert.strictEqual(follow.actor.startsWith(`${origin}/users/`), true);
-			assert.strictEqual(follow.object, 'https://www.w3.org/ns/activitystreams#Public');
+			expect(follow.type).toBe('Follow');
+			expect(follow.id).toBe(`${origin}/activities/follow-relay/${added.body.id}`);
+			expect(follow.actor.startsWith(`${origin}/users/`)).toBe(true);
+			expect(follow.object).toBe('https://www.w3.org/ns/activitystreams#Public');
 			assert.ok(follow['@context']);
 			await followJob.remove();
 
 			const invalidUrl = await api('admin/relays/add', { inbox: 'http://relay-invalid.example/inbox' }, alice);
-			assert.strictEqual(invalidUrl.status, 400);
-			assert.strictEqual(castAsError(invalidUrl.body as any).error.code, 'INVALID_URL');
-			assert.strictEqual(castAsError(invalidUrl.body as any).error.id, 'fb8c92d3-d4e5-44e7-b3d4-800d5cef8b2c');
+			expect(invalidUrl.status).toBe(400);
+			expect(castAsError(invalidUrl.body as any).error.code).toBe('INVALID_URL');
+			expect(castAsError(invalidUrl.body as any).error.id).toBe('fb8c92d3-d4e5-44e7-b3d4-800d5cef8b2c');
 
 			const readToken = await createAppToken(alice, ['read:admin:relays']);
 			const scopeDenied = await api(
@@ -13108,8 +12706,8 @@ describe('Endpoints', () => {
 				{ inbox: `https://relay-denied-${now}.example/inbox` },
 				{ token: readToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honorelayw${now.toString(36)}` });
 			const roleDenied = await api(
@@ -13117,28 +12715,25 @@ describe('Endpoints', () => {
 				{ inbox: `https://relay-role-denied-${now}.example/inbox` },
 				normalUser,
 			);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const removed = await api('admin/relays/remove', { inbox }, alice);
-			assert.strictEqual(removed.status, 204);
-			assert.strictEqual(await fetchRelayByInboxFromDatabase(db, inbox), null);
+			expect(removed.status).toBe(204);
+			expect(await fetchRelayByInboxFromDatabase(db, inbox)).toBe(null);
 
 			const undoJob = await findDeliverJob(inbox, 'Undo');
-			assert.strictEqual(undoJob.data.to, inbox);
-			assert.strictEqual(undoJob.data.isSharedInbox, false);
-			assert.strictEqual(
-				undoJob.data.digest,
-				`SHA-256=${createHash('sha256').update(undoJob.data.content).digest('base64')}`,
-			);
+			expect(undoJob.data.to).toBe(inbox);
+			expect(undoJob.data.isSharedInbox).toBe(false);
+			expect(undoJob.data.digest).toBe(`SHA-256=${createHash('sha256').update(undoJob.data.content).digest('base64')}`);
 
 			const undo = JSON.parse(undoJob.data.content) as any;
-			assert.strictEqual(undo.type, 'Undo');
-			assert.strictEqual(undo.id, `${origin}/activities/follow-relay/${added.body.id}/undo`);
-			assert.strictEqual(undo.actor.startsWith(`${origin}/users/`), true);
-			assert.strictEqual(undo.object.type, 'Follow');
-			assert.strictEqual(undo.object.id, `${origin}/activities/follow-relay/${added.body.id}`);
-			assert.strictEqual(typeof undo.published, 'string');
+			expect(undo.type).toBe('Undo');
+			expect(undo.id).toBe(`${origin}/activities/follow-relay/${added.body.id}/undo`);
+			expect(undo.actor.startsWith(`${origin}/users/`)).toBe(true);
+			expect(undo.object.type).toBe('Follow');
+			expect(undo.object.id).toBe(`${origin}/activities/follow-relay/${added.body.id}`);
+			expect(typeof undo.published).toBe('string');
 			assert.ok(undo['@context']);
 			await undoJob.remove();
 		});
@@ -13194,68 +12789,68 @@ describe('Endpoints', () => {
 				assert.ok(waitingJob.id);
 
 				const queues = await api('admin/queue/queues', {}, alice);
-				assert.strictEqual(queues.status, 200);
+				expect(queues.status).toBe(200);
 				const deliverQueueInfo = queues.body.find((queue) => queue.name === 'deliver');
 				assert.ok(deliverQueueInfo);
-				assert.strictEqual(typeof deliverQueueInfo.isPaused, 'boolean');
-				assert.strictEqual(typeof deliverQueueInfo.counts, 'object');
-				assert.strictEqual(typeof deliverQueueInfo.metrics.completed.count, 'number');
+				expect(typeof deliverQueueInfo.isPaused).toBe('boolean');
+				expect(typeof deliverQueueInfo.counts).toBe('object');
+				expect(typeof deliverQueueInfo.metrics.completed.count).toBe('number');
 
 				const queueStats = await api('admin/queue/queue-stats', { queue: 'deliver' }, alice);
-				assert.strictEqual(queueStats.status, 200);
-				assert.strictEqual(queueStats.body.name, 'deliver');
-				assert.strictEqual(typeof queueStats.body.qualifiedName, 'string');
-				assert.strictEqual(typeof queueStats.body.db.version, 'string');
+				expect(queueStats.status).toBe(200);
+				expect(queueStats.body.name).toBe('deliver');
+				expect(typeof queueStats.body.qualifiedName).toBe('string');
+				expect(typeof queueStats.body.db.version).toBe('string');
 
 				const queueScopeToken = await createAppToken(alice, ['read:admin:queue']);
 				const legacyStats = await api('admin/queue/stats', {}, { token: queueScopeToken });
-				assert.strictEqual(legacyStats.status, 200);
-				assert.strictEqual(typeof legacyStats.body.deliver, 'object');
-				assert.strictEqual(typeof legacyStats.body.inbox, 'object');
-				assert.strictEqual(typeof legacyStats.body.db, 'object');
-				assert.strictEqual(typeof legacyStats.body.objectStorage, 'object');
+				expect(legacyStats.status).toBe(200);
+				expect(typeof legacyStats.body.deliver).toBe('object');
+				expect(typeof legacyStats.body.inbox).toBe('object');
+				expect(typeof legacyStats.body.db).toBe('object');
+				expect(typeof legacyStats.body.objectStorage).toBe('object');
 
 				// キューの情報なので、他の admin スコープしか持たないトークンでは読めてはいけない
 				const emojiScopeToken = await createAppToken(alice, ['read:admin:emoji']);
 				const deniedStats = await api('admin/queue/stats', {}, { token: emojiScopeToken });
-				assert.strictEqual(deniedStats.status, 403);
-				assert.strictEqual(castAsError(deniedStats.body as any).error.code, 'PERMISSION_DENIED');
+				expect(deniedStats.status).toBe(403);
+				expect(castAsError(deniedStats.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const deliverDelayed = await api('admin/queue/deliver-delayed', {}, alice);
-				assert.strictEqual(deliverDelayed.status, 200);
+				expect(deliverDelayed.status).toBe(200);
 				assert.ok(deliverDelayed.body.some(([host, count]) => host === delayedDeliverHost && count >= 1));
 
 				const inboxDelayed = await api('admin/queue/inbox-delayed', {}, alice);
-				assert.strictEqual(inboxDelayed.status, 200);
+				expect(inboxDelayed.status).toBe(200);
 				assert.ok(inboxDelayed.body.some(([host, count]) => host === delayedInboxHost && count >= 1));
 
 				const jobs = await api('admin/queue/jobs', { queue: 'deliver', state: ['wait'], search: waitingName }, alice);
-				assert.strictEqual(jobs.status, 200);
+				expect(jobs.status).toBe(200);
 				assert.ok(jobs.body.some((job) => job.id === waitingJob.id && job.name === waitingName));
 
 				const shown = await api('admin/queue/show-job', { queue: 'deliver', jobId: waitingJob.id }, alice);
-				assert.strictEqual(shown.status, 200);
-				assert.strictEqual(shown.body.id, waitingJob.id);
-				assert.strictEqual(shown.body.name, waitingName);
-				assert.strictEqual(shown.body.data['to'], waitingInbox);
+				expect(shown.status).toBe(200);
+				expect(shown.body.id).toBe(waitingJob.id);
+				expect(shown.body.name).toBe(waitingName);
+				expect(shown.body.data['to']).toBe(waitingInbox);
 
 				const logs = await api('admin/queue/show-job-logs', { queue: 'deliver', jobId: waitingJob.id }, alice);
-				assert.strictEqual(logs.status, 200);
+				expect(logs.status).toBe(200);
 				assert.ok(logs.body.includes(`hono queue log ${now}`));
 
 				const readQueueToken = await createAppToken(alice, ['read:admin:queue']);
 				const queuesWithToken = await api('admin/queue/queues', {}, { token: readQueueToken });
-				assert.strictEqual(queuesWithToken.status, 200);
+				expect(queuesWithToken.status).toBe(200);
 
 				const deniedToken = await createAppToken(alice, ['read:admin:relays']);
 				const scopeDenied = await api('admin/queue/queues', {}, { token: deniedToken });
-				assert.strictEqual(scopeDenied.status, 403);
-				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(scopeDenied.status).toBe(403);
+				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const normalUser = await signup({ username: `honoqueue${now.toString(36)}` });
 				const roleDenied = await api('admin/queue/queues', {}, normalUser);
-				assert.strictEqual(roleDenied.status, 403);
-				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDenied.status).toBe(403);
+				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await waitingJob.remove().catch(() => undefined);
 				await delayedDeliverJob.remove().catch(() => undefined);
@@ -13321,18 +12916,18 @@ describe('Endpoints', () => {
 				assert.ok(clearJob.id);
 
 				const paused = await api('admin/queue/pause', { queue: 'deliver' }, alice);
-				assert.strictEqual(paused.status, 204);
-				assert.strictEqual(await deliverQueue!.isPaused(), true);
+				expect(paused.status).toBe(204);
+				expect(await deliverQueue!.isPaused()).toBe(true);
 				await expectModerationLog('pauseQueue');
 
 				const resumed = await api('admin/queue/resume', { queue: 'deliver' }, alice);
-				assert.strictEqual(resumed.status, 204);
-				assert.strictEqual(await deliverQueue!.isPaused(), false);
+				expect(resumed.status).toBe(204);
+				expect(await deliverQueue!.isPaused()).toBe(false);
 				await expectModerationLog('resumeQueue');
 
 				const promoted = await api('admin/queue/promote-jobs', { queue: 'deliver' }, alice);
-				assert.strictEqual(promoted.status, 204);
-				assert.notStrictEqual(await promoteJob.getState(), 'delayed');
+				expect(promoted.status).toBe(204);
+				expect(await promoteJob.getState()).not.toBe('delayed');
 				await expectModerationLog('promoteQueue');
 
 				retryJob = await deliverQueue!.add(
@@ -13345,32 +12940,32 @@ describe('Endpoints', () => {
 				);
 				assert.ok(retryJob.id);
 				const retried = await api('admin/queue/retry-job', { queue: 'deliver', jobId: retryJob.id }, alice);
-				assert.strictEqual(retried.status, 204);
-				assert.notStrictEqual(await retryJob.getState(), 'delayed');
+				expect(retried.status).toBe(204);
+				expect(await retryJob.getState()).not.toBe('delayed');
 
 				const removed = await api('admin/queue/remove-job', { queue: 'deliver', jobId: removeJob.id }, alice);
-				assert.strictEqual(removed.status, 204);
-				assert.strictEqual(await deliverQueue!.getJob(removeJob.id), undefined);
+				expect(removed.status).toBe(204);
+				expect(await deliverQueue!.getJob(removeJob.id)).toBe(undefined);
 
 				const cleared = await api('admin/queue/clear', { queue: 'deliver', state: 'wait' }, alice);
-				assert.strictEqual(cleared.status, 204);
-				assert.strictEqual(await deliverQueue!.getJob(clearJob.id), undefined);
+				expect(cleared.status).toBe(204);
+				expect(await deliverQueue!.getJob(clearJob.id)).toBe(undefined);
 				await expectModerationLog('clearQueue');
 
 				const writeToken = await createAppToken(alice, ['write:admin:queue']);
 				const pausedWithToken = await api('admin/queue/pause', { queue: 'deliver' }, { token: writeToken });
-				assert.strictEqual(pausedWithToken.status, 204);
+				expect(pausedWithToken.status).toBe(204);
 				await api('admin/queue/resume', { queue: 'deliver' }, alice);
 
 				const deniedToken = await createAppToken(alice, ['read:admin:queue']);
 				const scopeDenied = await api('admin/queue/pause', { queue: 'deliver' }, { token: deniedToken });
-				assert.strictEqual(scopeDenied.status, 403);
-				assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(scopeDenied.status).toBe(403);
+				expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const normalUser = await signup({ username: `honoqueuew${now.toString(36)}` });
 				const roleDenied = await api('admin/queue/pause', { queue: 'deliver' }, normalUser);
-				assert.strictEqual(roleDenied.status, 403);
-				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDenied.status).toBe(403);
+				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await deliverQueue!.resume().catch(() => undefined);
 				await promoteJob.remove().catch(() => undefined);
@@ -13429,25 +13024,25 @@ describe('Endpoints', () => {
 				]);
 
 				const listed = await api('admin/queue/outbox-dead-letters', {}, alice);
-				assert.strictEqual(listed.status, 200);
+				expect(listed.status).toBe(200);
 				const listedDeliver = listed.body.find((row) => row.id === deliverOutboxId);
 				assert.ok(listedDeliver);
-				assert.strictEqual(listedDeliver.queue, 'deliver');
-				assert.strictEqual(listedDeliver.name, 'deliver');
-				assert.strictEqual(listedDeliver.deadLetterReason, 'deliveryFailed');
-				assert.strictEqual(listedDeliver.externalJobId, `outbox-${deliverOutboxId}`);
-				assert.strictEqual(listedDeliver.revision, 3);
-				assert.strictEqual((listedDeliver.lastError as { message: string } | null)?.message, `deliver failed ${now}`);
+				expect(listedDeliver.queue).toBe('deliver');
+				expect(listedDeliver.name).toBe('deliver');
+				expect(listedDeliver.deadLetterReason).toBe('deliveryFailed');
+				expect(listedDeliver.externalJobId).toBe(`outbox-${deliverOutboxId}`);
+				expect(listedDeliver.revision).toBe(3);
+				expect((listedDeliver.lastError as { message: string } | null)?.message).toBe(`deliver failed ${now}`);
 				assert.ok(listed.body.some((row) => row.id === dbOutboxId && row.deadLetterReason === 'invalidPayload'));
 
 				// 新しいデッドレターで先頭が埋まっても古いものへ到達できるよう、id 降順 + untilId で辿れること
 				const listedIds = listed.body.map((row) => row.id);
 				assert.ok(listedIds.indexOf(dbOutboxId) < listedIds.indexOf(deliverOutboxId));
 				const firstPage = await api('admin/queue/outbox-dead-letters', { limit: 1 }, alice);
-				assert.strictEqual(firstPage.status, 200);
-				assert.strictEqual(firstPage.body.length, 1);
+				expect(firstPage.status).toBe(200);
+				expect(firstPage.body.length).toBe(1);
 				const nextPage = await api('admin/queue/outbox-dead-letters', { untilId: dbOutboxId }, alice);
-				assert.strictEqual(nextPage.status, 200);
+				expect(nextPage.status).toBe(200);
 				assert.ok(!nextPage.body.some((row) => row.id === dbOutboxId));
 				assert.ok(nextPage.body.some((row) => row.id === deliverOutboxId));
 
@@ -13457,28 +13052,28 @@ describe('Endpoints', () => {
 					{ outboxId: deliverOutboxId, revision: 2 },
 					alice,
 				);
-				assert.strictEqual(staleRetry.status, 409);
-				assert.strictEqual(castAsError(staleRetry.body as any).error.code, 'QUEUE_OUTBOX_STATE_CHANGED');
+				expect(staleRetry.status).toBe(409);
+				expect(castAsError(staleRetry.body as any).error.code).toBe('QUEUE_OUTBOX_STATE_CHANGED');
 				const staleAbandon = await api(
 					'admin/queue/abandon-outbox-dead-letter',
 					{ outboxId: dbOutboxId, revision: 1 },
 					alice,
 				);
-				assert.strictEqual(staleAbandon.status, 409);
-				assert.strictEqual(castAsError(staleAbandon.body as any).error.code, 'QUEUE_OUTBOX_STATE_CHANGED');
-				assert.strictEqual((await fetchQueueOutboxByIdFromDatabase(db, deliverOutboxId))?.state, 'deadLetter');
-				assert.strictEqual((await fetchQueueOutboxByIdFromDatabase(db, dbOutboxId))?.state, 'deadLetter');
+				expect(staleAbandon.status).toBe(409);
+				expect(castAsError(staleAbandon.body as any).error.code).toBe('QUEUE_OUTBOX_STATE_CHANGED');
+				expect((await fetchQueueOutboxByIdFromDatabase(db, deliverOutboxId))?.state).toBe('deadLetter');
+				expect((await fetchQueueOutboxByIdFromDatabase(db, dbOutboxId))?.state).toBe('deadLetter');
 
 				const missing = await api(
 					'admin/queue/retry-outbox-dead-letter',
 					{ outboxId: genId(now + 2), revision: 0 },
 					alice,
 				);
-				assert.strictEqual(missing.status, 409);
-				assert.strictEqual(castAsError(missing.body as any).error.code, 'QUEUE_OUTBOX_STATE_CHANGED');
+				expect(missing.status).toBe(409);
+				expect(castAsError(missing.body as any).error.code).toBe('QUEUE_OUTBOX_STATE_CHANGED');
 
 				const statsBefore = await api('admin/queue/queue-stats', { queue: 'db' }, alice);
-				assert.strictEqual(statsBefore.status, 200);
+				expect(statsBefore.status).toBe(200);
 				assert.ok(statsBefore.body.outbox);
 				assert.ok(statsBefore.body.outbox.deadLetter >= 2);
 				assert.ok(statsBefore.body.outbox.deliveryFailed >= 1);
@@ -13489,57 +13084,57 @@ describe('Endpoints', () => {
 					{ outboxId: deliverOutboxId, revision: 3 },
 					alice,
 				);
-				assert.strictEqual(retried.status, 204);
+				expect(retried.status).toBe(204);
 				const retriedRow = await fetchQueueOutboxByIdFromDatabase(db, deliverOutboxId);
 				assert.ok(retriedRow);
-				assert.strictEqual(retriedRow.state, 'ready');
-				assert.strictEqual(retriedRow.deadLetterReason, null);
-				assert.strictEqual(retriedRow.lastError, null);
-				assert.strictEqual(retriedRow.leaseToken, null);
-				assert.strictEqual(retriedRow.leaseExpiresAt, null);
-				assert.strictEqual(retriedRow.revision, 4);
+				expect(retriedRow.state).toBe('ready');
+				expect(retriedRow.deadLetterReason).toBe(null);
+				expect(retriedRow.lastError).toBe(null);
+				expect(retriedRow.leaseToken).toBe(null);
+				expect(retriedRow.leaseExpiresAt).toBe(null);
+				expect(retriedRow.revision).toBe(4);
 				// 再試行で改めて publish されるので、古い BullMQ ジョブは残していると二重配送になる
-				assert.strictEqual(await deliverQueue!.getJob(`outbox-${deliverOutboxId}`), undefined);
+				expect(await deliverQueue!.getJob(`outbox-${deliverOutboxId}`)).toBe(undefined);
 
 				const abandoned = await api(
 					'admin/queue/abandon-outbox-dead-letter',
 					{ outboxId: dbOutboxId, revision: 0 },
 					alice,
 				);
-				assert.strictEqual(abandoned.status, 204);
-				assert.strictEqual(await fetchQueueOutboxByIdFromDatabase(db, dbOutboxId), null);
+				expect(abandoned.status).toBe(204);
+				expect(await fetchQueueOutboxByIdFromDatabase(db, dbOutboxId)).toBe(null);
 
 				const afterList = await api('admin/queue/outbox-dead-letters', {}, alice);
-				assert.strictEqual(afterList.status, 200);
+				expect(afterList.status).toBe(200);
 				assert.ok(!afterList.body.some((row) => row.id === deliverOutboxId || row.id === dbOutboxId));
 
 				const readToken = await createAppToken(alice, ['read:admin:queue']);
 				const listedWithToken = await api('admin/queue/outbox-dead-letters', {}, { token: readToken });
-				assert.strictEqual(listedWithToken.status, 200);
+				expect(listedWithToken.status).toBe(200);
 				const writeScopeDenied = await api(
 					'admin/queue/retry-outbox-dead-letter',
 					{ outboxId: deliverOutboxId, revision: 4 },
 					{ token: readToken },
 				);
-				assert.strictEqual(writeScopeDenied.status, 403);
-				assert.strictEqual(castAsError(writeScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(writeScopeDenied.status).toBe(403);
+				expect(castAsError(writeScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const writeToken = await createAppToken(alice, ['write:admin:queue']);
 				const readScopeDenied = await api('admin/queue/outbox-dead-letters', {}, { token: writeToken });
-				assert.strictEqual(readScopeDenied.status, 403);
-				assert.strictEqual(castAsError(readScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+				expect(readScopeDenied.status).toBe(403);
+				expect(castAsError(readScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 				const normalUser = await signup({ username: `honooutbox${now.toString(36)}` });
 				const roleDenied = await api('admin/queue/outbox-dead-letters', {}, normalUser);
-				assert.strictEqual(roleDenied.status, 403);
-				assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDenied.status).toBe(403);
+				expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 				const roleDeniedWrite = await api(
 					'admin/queue/abandon-outbox-dead-letter',
 					{ outboxId: deliverOutboxId, revision: 4 },
 					normalUser,
 				);
-				assert.strictEqual(roleDeniedWrite.status, 403);
-				assert.strictEqual(castAsError(roleDeniedWrite.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+				expect(roleDeniedWrite.status).toBe(403);
+				expect(castAsError(roleDeniedWrite.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 			} finally {
 				await deliverJob.remove().catch(() => undefined);
 				await deliverQueue!
@@ -13614,18 +13209,18 @@ describe('Endpoints', () => {
 			});
 
 			const allowed = await api('invite/limit', {}, inviter);
-			assert.strictEqual(allowed.status, 200);
-			assert.strictEqual(allowed.body.remaining, 1);
+			expect(allowed.status).toBe(200);
+			expect(allowed.body.remaining).toBe(1);
 
 			const roleDenied = await api('invite/limit', {}, deniedUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
-			assert.strictEqual(castAsError(roleDenied.body as any).error.id, 'c3d38592-54c0-429d-be96-5636b0431a61');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
+			expect(castAsError(roleDenied.body as any).error.id).toBe('c3d38592-54c0-429d-be96-5636b0431a61');
 
 			const readAccountToken = await createAppToken(inviter, ['read:account']);
 			const scopeDenied = await api('invite/limit', {}, { token: readAccountToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 		});
 
 		test('invite/create したコードを invite/list で取得でき、invite/delete で削除できる', async () => {
@@ -13674,61 +13269,61 @@ describe('Endpoints', () => {
 			});
 
 			const created = await api('invite/create', {}, bob);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.used, false);
-			assert.strictEqual(created.body.usedAt, null);
-			assert.strictEqual(created.body.createdBy?.id, bob.id);
+			expect(created.status).toBe(200);
+			expect(created.body.used).toBe(false);
+			expect(created.body.usedAt).toBe(null);
+			expect(created.body.createdBy?.id).toBe(bob.id);
 
 			const limit = await api('invite/limit', {}, bob);
-			assert.strictEqual(limit.status, 200);
-			assert.strictEqual(limit.body.remaining, null);
+			expect(limit.status).toBe(200);
+			expect(limit.body.remaining).toBe(null);
 
 			const list = await api('invite/list', {}, bob);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			assert.ok(list.body.some((ticket) => ticket.id === created.body.id));
 
 			const deletedByStranger = await api('invite/delete', { inviteId: created.body.id }, carol);
-			assert.strictEqual(deletedByStranger.status, 400);
-			assert.strictEqual(castAsError(deletedByStranger.body as any).error.code, 'ACCESS_DENIED');
+			expect(deletedByStranger.status).toBe(400);
+			expect(castAsError(deletedByStranger.body as any).error.code).toBe('ACCESS_DENIED');
 
 			const deleted = await api('invite/delete', { inviteId: created.body.id }, bob);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			const listAfterDelete = await api('invite/list', {}, bob);
-			assert.strictEqual(listAfterDelete.status, 200);
+			expect(listAfterDelete.status).toBe(200);
 			assert.ok(!listAfterDelete.body.some((ticket) => ticket.id === created.body.id));
 		});
 
 		test('admin/invite/create したコードを admin/invite/list で取得できる', async () => {
 			const expiresAt = new Date(Date.now() + 1000 * 60 * 60).toISOString();
 			const created = await api('admin/invite/create', { count: 2, expiresAt }, alice);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.length, 2);
-			assert.strictEqual(getAt(created.body, 0).createdBy?.id, alice.id);
-			assert.strictEqual(getAt(created.body, 0).used, false);
-			assert.strictEqual(getAt(created.body, 0).usedAt, null);
-			assert.strictEqual(getAt(created.body, 0).expiresAt, expiresAt);
+			expect(created.status).toBe(200);
+			expect(created.body.length).toBe(2);
+			expect(getAt(created.body, 0).createdBy?.id).toBe(alice.id);
+			expect(getAt(created.body, 0).used).toBe(false);
+			expect(getAt(created.body, 0).usedAt).toBe(null);
+			expect(getAt(created.body, 0).expiresAt).toBe(expiresAt);
 
 			const list = await api('admin/invite/list', { type: 'unused' }, alice);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			for (const ticket of created.body) {
 				assert.ok(list.body.some((x) => x.id === ticket.id));
 			}
 
 			const invalidDate = await api('admin/invite/create', { expiresAt: 'invalid-date' }, alice);
-			assert.strictEqual(invalidDate.status, 400);
-			assert.strictEqual(castAsError(invalidDate.body as any).error.code, 'INVALID_DATE_TIME');
-			assert.strictEqual(castAsError(invalidDate.body as any).error.id, 'f1380b15-3760-4c6c-a1db-5c3aaf1cbd49');
+			expect(invalidDate.status).toBe(400);
+			expect(castAsError(invalidDate.body as any).error.code).toBe('INVALID_DATE_TIME');
+			expect(castAsError(invalidDate.body as any).error.id).toBe('f1380b15-3760-4c6c-a1db-5c3aaf1cbd49');
 
 			const readAdminInviteToken = await createAppToken(alice, ['read:admin:invite-codes']);
 			const scopeDenied = await api('admin/invite/create', {}, { token: readAdminInviteToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honoadmininv${Date.now().toString(36)}` });
 			const moderatorDenied = await api('admin/invite/list', {}, normalUser);
-			assert.strictEqual(moderatorDenied.status, 403);
-			assert.strictEqual(castAsError(moderatorDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(moderatorDenied.status).toBe(403);
+			expect(castAsError(moderatorDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			let logged = false;
 			for (let i = 0; i < 10; i++) {
@@ -13775,33 +13370,33 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(list.status, 200);
-			assert.strictEqual(list.body.length, 1);
-			assert.strictEqual(getAt(list.body, 0).id, id);
-			assert.strictEqual(getAt(list.body, 0).createdAt, new Date(now).toISOString());
-			assert.strictEqual(getAt(list.body, 0).type, 'updateUserNote');
-			assert.strictEqual(getAt(list.body, 0).info['after'], marker);
-			assert.strictEqual(getAt(list.body, 0).userId, alice.id);
-			assert.strictEqual(getAt(list.body, 0).user.id, alice.id);
-			assert.strictEqual(getAt(list.body, 0).user.username, alice.username);
+			expect(list.status).toBe(200);
+			expect(list.body.length).toBe(1);
+			expect(getAt(list.body, 0).id).toBe(id);
+			expect(getAt(list.body, 0).createdAt).toBe(new Date(now).toISOString());
+			expect(getAt(list.body, 0).type).toBe('updateUserNote');
+			expect(getAt(list.body, 0).info['after']).toBe(marker);
+			expect(getAt(list.body, 0).userId).toBe(alice.id);
+			expect(getAt(list.body, 0).user.id).toBe(alice.id);
+			expect(getAt(list.body, 0).user.username).toBe(alice.username);
 
 			const scopeDeniedToken = await createAppToken(alice, ['read:admin:server-info']);
 			const scopeDenied = await api('admin/show-moderation-logs', {}, { token: scopeDeniedToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honomodlog${now.toString(36)}` });
 			const adminDenied = await api('admin/show-moderation-logs', {}, normalUser);
-			assert.strictEqual(adminDenied.status, 403);
-			assert.strictEqual(castAsError(adminDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(adminDenied.status).toBe(403);
+			expect(castAsError(adminDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
 
 	describe('admin/captcha', () => {
 		test('admin/captcha/current と admin/captcha/save は設定取得、保存、scope、権限を維持する', async () => {
 			const initial = await api('admin/captcha/current', {}, alice);
-			assert.strictEqual(initial.status, 200);
-			assert.strictEqual(typeof initial.body.provider, 'string');
+			expect(initial.status).toBe(200);
+			expect(typeof initial.body.provider).toBe('string');
 			assert.ok(initial.body.hcaptcha);
 			assert.ok(initial.body.mcaptcha);
 			assert.ok(initial.body.recaptcha);
@@ -13815,9 +13410,9 @@ describe('Endpoints', () => {
 					},
 					alice,
 				);
-				assert.strictEqual(invalid.status, 400);
-				assert.strictEqual(castAsError(invalid.body as any).error.code, 'INVALID_PARAMETERS');
-				assert.strictEqual(castAsError(invalid.body as any).error.message, 'Invalid parameters.');
+				expect(invalid.status).toBe(400);
+				expect(castAsError(invalid.body as any).error.code).toBe('INVALID_PARAMETERS');
+				expect(castAsError(invalid.body as any).error.message).toBe('Invalid parameters.');
 
 				const saved = await api(
 					'admin/captcha/save',
@@ -13827,24 +13422,24 @@ describe('Endpoints', () => {
 					},
 					alice,
 				);
-				assert.strictEqual(saved.status, 204);
+				expect(saved.status).toBe(204);
 
 				const current = await api('admin/captcha/current', {}, alice);
-				assert.strictEqual(current.status, 200);
-				assert.strictEqual(current.body.provider, 'testcaptcha');
+				expect(current.status).toBe(200);
+				expect(current.body.provider).toBe('testcaptcha');
 			} finally {
 				await api('admin/captcha/save', { provider: 'none' }, alice);
 			}
 
 			const readToken = await createAppToken(alice, ['read:admin:meta']);
 			const scopeDenied = await api('admin/captcha/save', { provider: 'none' }, { token: readToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honocaptcha${Date.now().toString(36)}` });
 			const roleDenied = await api('admin/captcha/current', {}, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
 
@@ -13866,18 +13461,18 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.title, title);
-			assert.strictEqual(created.body.imageUrl, null);
-			assert.strictEqual((created.body as any).needConfirmationToRead, true);
+			expect(created.status).toBe(200);
+			expect(created.body.title).toBe(title);
+			expect(created.body.imageUrl).toBe(null);
+			expect((created.body as any).needConfirmationToRead).toBe(true);
 
 			const list = await api('admin/announcements/list', { limit: 20, status: 'active' }, alice);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			const listed = list.body.find((announcement) => announcement.id === created.body.id);
 			assert.ok(listed);
-			assert.strictEqual(listed.title, title);
-			assert.strictEqual(listed.reads, 0);
-			assert.strictEqual(listed.isActive, true);
+			expect(listed.title).toBe(title);
+			expect(listed.reads).toBe(0);
+			expect(listed.isActive).toBe(true);
 
 			const updated = await api(
 				'admin/announcements/update',
@@ -13890,16 +13485,16 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 204);
+			expect(updated.status).toBe(204);
 
 			const updatedList = await api('admin/announcements/list', { limit: 20, status: 'all' }, alice);
-			assert.strictEqual(updatedList.status, 200);
+			expect(updatedList.status).toBe(200);
 			const updatedAnnouncement = updatedList.body.find((announcement) => announcement.id === created.body.id);
 			assert.ok(updatedAnnouncement);
-			assert.strictEqual(updatedAnnouncement.title, `${title}-updated`);
-			assert.strictEqual(updatedAnnouncement.text, 'updated body');
-			assert.strictEqual(updatedAnnouncement.imageUrl, null);
-			assert.strictEqual(updatedAnnouncement.isActive, false);
+			expect(updatedAnnouncement.title).toBe(`${title}-updated`);
+			expect(updatedAnnouncement.text).toBe('updated body');
+			expect(updatedAnnouncement.imageUrl).toBe(null);
+			expect(updatedAnnouncement.isActive).toBe(false);
 
 			const noSuch = await api(
 				'admin/announcements/update',
@@ -13909,8 +13504,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_ANNOUNCEMENT');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_ANNOUNCEMENT');
 
 			const readToken = await createAppToken(alice, ['read:admin:announcements']);
 			const scopeDenied = await api(
@@ -13922,19 +13517,19 @@ describe('Endpoints', () => {
 				},
 				{ token: readToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honoannounce${now.toString(36)}` });
 			const roleDenied = await api('admin/announcements/list', {}, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const deleted = await api('admin/announcements/delete', { id: created.body.id }, alice);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			const afterDelete = await api('admin/announcements/list', { limit: 20, status: 'all' }, alice);
-			assert.strictEqual(afterDelete.status, 200);
+			expect(afterDelete.status).toBe(200);
 			assert.ok(!afterDelete.body.some((announcement) => announcement.id === created.body.id));
 
 			const logTypes = ['createGlobalAnnouncement', 'updateGlobalAnnouncement', 'deleteGlobalAnnouncement'] as const;
@@ -13953,7 +13548,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
 	});
 
@@ -14005,13 +13600,13 @@ describe('Endpoints', () => {
 				},
 				manager,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.name, `hono-avatar-${now}`);
-			assert.strictEqual(created.body.category, 'hono');
-			assert.deepStrictEqual(created.body.roleIdsThatCanBeUsedThisDecoration, [managerRole.id]);
+			expect(created.status).toBe(200);
+			expect(created.body.name).toBe(`hono-avatar-${now}`);
+			expect(created.body.category).toBe('hono');
+			expect(created.body.roleIdsThatCanBeUsedThisDecoration).toStrictEqual([managerRole.id]);
 
 			const list = await api('admin/avatar-decorations/list', {}, manager);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			assert.ok(list.body.some((decoration) => decoration.id === created.body.id));
 
 			const updated = await api(
@@ -14024,15 +13619,15 @@ describe('Endpoints', () => {
 				},
 				manager,
 			);
-			assert.strictEqual(updated.status, 204);
+			expect(updated.status).toBe(204);
 
 			const updatedList = await api('admin/avatar-decorations/list', {}, manager);
-			assert.strictEqual(updatedList.status, 200);
+			expect(updatedList.status).toBe(200);
 			const updatedDecoration = updatedList.body.find((decoration) => decoration.id === created.body.id);
 			assert.ok(updatedDecoration);
-			assert.strictEqual(updatedDecoration.name, `hono-avatar-${now}-updated`);
-			assert.strictEqual(updatedDecoration.description, 'updated body');
-			assert.strictEqual(updatedDecoration.category, null);
+			expect(updatedDecoration.name).toBe(`hono-avatar-${now}-updated`);
+			expect(updatedDecoration.description).toBe('updated body');
+			expect(updatedDecoration.category).toBe(null);
 
 			const readToken = await createAppToken(manager, ['read:admin:avatar-decorations']);
 			const scopeDenied = await api(
@@ -14044,19 +13639,19 @@ describe('Endpoints', () => {
 				},
 				{ token: readToken },
 			);
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const policyDeniedUser = await signup({ username: `honoavden${now.toString(36)}` });
 			const policyDenied = await api('admin/avatar-decorations/list', {}, policyDeniedUser);
-			assert.strictEqual(policyDenied.status, 403);
-			assert.strictEqual(castAsError(policyDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(policyDenied.status).toBe(403);
+			expect(castAsError(policyDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const deleted = await api('admin/avatar-decorations/delete', { id: created.body.id }, manager);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			const afterDelete = await api('admin/avatar-decorations/list', {}, manager);
-			assert.strictEqual(afterDelete.status, 200);
+			expect(afterDelete.status).toBe(200);
 			assert.ok(!afterDelete.body.some((decoration) => decoration.id === created.body.id));
 
 			const logTypes = ['createAvatarDecoration', 'updateAvatarDecoration', 'deleteAvatarDecoration'] as const;
@@ -14075,7 +13670,7 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
 	});
 
@@ -14096,12 +13691,12 @@ describe('Endpoints', () => {
 			};
 
 			const created = await api('admin/ad/create', createPayload, alice);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.memo, createPayload.memo);
-			assert.strictEqual(created.body.isSensitive, true);
+			expect(created.status).toBe(200);
+			expect(created.body.memo).toBe(createPayload.memo);
+			expect(created.body.isSensitive).toBe(true);
 
 			const list = await api('admin/ad/list', { limit: 20 }, alice);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			assert.ok(list.body.some((ad) => ad.id === created.body.id));
 
 			const updated = await api(
@@ -14114,15 +13709,15 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updated.status, 204);
+			expect(updated.status).toBe(204);
 
 			const updatedList = await api('admin/ad/list', { limit: 20 }, alice);
-			assert.strictEqual(updatedList.status, 200);
+			expect(updatedList.status).toBe(200);
 			const updatedAd = updatedList.body.find((ad) => ad.id === created.body.id);
 			assert.ok(updatedAd);
-			assert.strictEqual(updatedAd.memo, `${createPayload.memo}-updated`);
-			assert.strictEqual(updatedAd.ratio, 3);
-			assert.strictEqual(updatedAd.isSensitive, false);
+			expect(updatedAd.memo).toBe(`${createPayload.memo}-updated`);
+			expect(updatedAd.ratio).toBe(3);
+			expect(updatedAd.isSensitive).toBe(false);
 
 			const noSuch = await api(
 				'admin/ad/update',
@@ -14132,24 +13727,24 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(noSuch.status, 400);
-			assert.strictEqual(castAsError(noSuch.body as any).error.code, 'NO_SUCH_AD');
+			expect(noSuch.status).toBe(400);
+			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_AD');
 
 			const readToken = await createAppToken(alice, ['read:admin:ad']);
 			const scopeDenied = await api('admin/ad/create', createPayload, { token: readToken });
-			assert.strictEqual(scopeDenied.status, 403);
-			assert.strictEqual(castAsError(scopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(scopeDenied.status).toBe(403);
+			expect(castAsError(scopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honoad${now.toString(36)}` });
 			const roleDenied = await api('admin/ad/list', {}, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const deleted = await api('admin/ad/delete', { id: created.body.id }, alice);
-			assert.strictEqual(deleted.status, 204);
+			expect(deleted.status).toBe(204);
 
 			const afterDelete = await api('admin/ad/list', { limit: 20 }, alice);
-			assert.strictEqual(afterDelete.status, 200);
+			expect(afterDelete.status).toBe(200);
 			assert.ok(!afterDelete.body.some((ad) => ad.id === created.body.id));
 
 			const logTypes = ['createAd', 'updateAd', 'deleteAd'] as const;
@@ -14168,19 +13763,19 @@ describe('Endpoints', () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
-			assert.deepStrictEqual([...logged].sort(), [...logTypes].sort());
+			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
 	});
 
 	describe('admin database stats', () => {
 		test('admin/get-index-stats と admin/get-table-stats はDB統計を返し、scopeを維持する', async () => {
 			const indexes = await api('admin/get-index-stats', {}, alice);
-			assert.strictEqual(indexes.status, 200);
+			expect(indexes.status).toBe(200);
 			assert.ok(Array.isArray(indexes.body));
 			assert.ok(indexes.body.some((row) => typeof row.tablename === 'string' && typeof row.indexname === 'string'));
 
 			const tables = await api('admin/get-table-stats', {}, alice);
-			assert.strictEqual(tables.status, 200);
+			expect(tables.status).toBe(200);
 			assert.ok(Object.keys(tables.body).length > 0);
 			assert.ok(
 				Object.values(tables.body).some((row) => typeof row.count === 'number' && typeof row.size === 'number'),
@@ -14188,13 +13783,13 @@ describe('Endpoints', () => {
 
 			const indexToken = await createAppToken(alice, ['read:admin:index-stats']);
 			const tableScopeDenied = await api('admin/get-table-stats', {}, { token: indexToken });
-			assert.strictEqual(tableScopeDenied.status, 403);
-			assert.strictEqual(castAsError(tableScopeDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(tableScopeDenied.status).toBe(403);
+			expect(castAsError(tableScopeDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const normalUser = await signup({ username: `honostats${Date.now().toString(36)}` });
 			const roleDenied = await api('admin/get-table-stats', {}, normalUser);
-			assert.strictEqual(roleDenied.status, 403);
-			assert.strictEqual(castAsError(roleDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
+			expect(roleDenied.status).toBe(403);
+			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
 
@@ -14214,11 +13809,11 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.name, myName);
-			assert.strictEqual(res.body.location, myLocation);
-			assert.strictEqual(res.body.birthday, myBirthday);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.name).toBe(myName);
+			expect(res.body.location).toBe(myLocation);
+			expect(res.body.birthday).toBe(myBirthday);
 		});
 
 		test('名前を空白のみにした場合nullになる', async () => {
@@ -14229,8 +13824,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.name, null);
+			expect(res.status).toBe(200);
+			expect(res.body.name).toBe(null);
 		});
 
 		test('名前の前後に空白（ホワイトスペース）を入れてもトリムされる', async () => {
@@ -14242,8 +13837,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.name, 'あ い う');
+			expect(res.status).toBe(200);
+			expect(res.body.name).toBe('あ い う');
 		});
 
 		test('誕生日の設定を削除できる', async () => {
@@ -14263,9 +13858,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.birthday, null);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.birthday).toBe(null);
 		});
 
 		test('不正な誕生日の形式で怒られる', async () => {
@@ -14276,7 +13871,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 	});
 
@@ -14290,23 +13885,23 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual((res.body as unknown as { id: string }).id, alice.id);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect((res.body as unknown as { id: string }).id).toBe(alice.id);
 		});
 
 		test('ユーザーが存在しなかったら怒る', async () => {
 			const res = await api('users/show', {
 				userId: '000000000000000000000000',
 			});
-			assert.strictEqual(res.status, 404);
+			expect(res.status).toBe(404);
 		});
 
 		test('間違ったIDで怒られる', async () => {
 			const res = await api('users/show', {
 				userId: 'kyoppie',
 			});
-			assert.strictEqual(res.status, 404);
+			expect(res.status).toBe(404);
 		});
 	});
 
@@ -14319,15 +13914,15 @@ describe('Endpoints', () => {
 
 			const res = await api('users/followers', { userId: followee.id }, followee);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).followerId, follower.id);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).followerId).toBe(follower.id);
 		});
 
 		test('ユーザーが存在しなかったら怒る', async () => {
 			const res = await api('users/followers', { userId: '000000000000000000000000' });
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.code, 'NO_SUCH_USER');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as unknown as Record<string, unknown>).error.code).toBe('NO_SUCH_USER');
 		});
 	});
 
@@ -14340,9 +13935,9 @@ describe('Endpoints', () => {
 
 			const res = await api('users/following', { userId: follower.id }, follower);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).followeeId, followee.id);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).followeeId).toBe(followee.id);
 		});
 
 		test('不正なbirthday形式で怒られる', async () => {
@@ -14351,7 +13946,7 @@ describe('Endpoints', () => {
 
 			const res = await api('users/following', { userId: follower.id, birthday: 'not-a-date' });
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('birthdayでフォロー中ユーザーを絞り込める', async () => {
@@ -14367,15 +13962,15 @@ describe('Endpoints', () => {
 
 			const res = await api('users/following', { userId: follower.id, birthday: '2024-06-15' }, follower);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).followeeId, matchingFollowee.id);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).followeeId).toBe(matchingFollowee.id);
 		});
 
 		test('ユーザーが存在しなかったら怒る', async () => {
 			const res = await api('users/following', { userId: '000000000000000000000000' });
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.code, 'NO_SUCH_USER');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as unknown as Record<string, unknown>).error.code).toBe('NO_SUCH_USER');
 		});
 	});
 
@@ -14386,9 +13981,9 @@ describe('Endpoints', () => {
 
 			const res = await api('users/lists/create', { name: 'my list' }, user);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.name, 'my list');
-			assert.deepStrictEqual(res.body.userIds, []);
+			expect(res.status).toBe(200);
+			expect(res.body.name).toBe('my list');
+			expect(res.body.userIds).toStrictEqual([]);
 		});
 
 		test('空文字列の名前で怒られる', async () => {
@@ -14397,7 +13992,7 @@ describe('Endpoints', () => {
 
 			const res = await api('users/lists/create', { name: '' }, user);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 	});
 
@@ -14409,10 +14004,10 @@ describe('Endpoints', () => {
 
 			const res = await api('i/pin', { noteId: note.id }, user);
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const pinings = await listUserNotePiningsByUserIdFromDatabase(db, user.id);
-			assert.strictEqual(pinings.length, 1);
-			assert.strictEqual(getAt(pinings, 0).noteId, note.id);
+			expect(pinings.length).toBe(1);
+			expect(getAt(pinings, 0).noteId).toBe(note.id);
 		});
 
 		test('同じノートを二重にピン留めできない', async () => {
@@ -14423,8 +14018,8 @@ describe('Endpoints', () => {
 
 			const res = await api('i/pin', { noteId: note.id }, user);
 
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body).error.code, 'ALREADY_PINNED');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body).error.code).toBe('ALREADY_PINNED');
 		});
 
 		test('存在しないノートはピン留めできない', async () => {
@@ -14433,8 +14028,8 @@ describe('Endpoints', () => {
 
 			const res = await api('i/pin', { noteId: '000000000000000000000000' }, user);
 
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_NOTE');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body).error.code).toBe('NO_SUCH_NOTE');
 		});
 
 		test('ピン留めを解除できる', async () => {
@@ -14445,9 +14040,9 @@ describe('Endpoints', () => {
 
 			const res = await api('i/unpin', { noteId: note.id }, user);
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const pinings = await listUserNotePiningsByUserIdFromDatabase(db, user.id);
-			assert.strictEqual(pinings.length, 0);
+			expect(pinings.length).toBe(0);
 		});
 	});
 
@@ -14461,9 +14056,9 @@ describe('Endpoints', () => {
 
 			const res = await api('i/notifications', { includeTypes: ['follow'] }, followee);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).type, 'follow');
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).type).toBe('follow');
 		});
 
 		test('excludeTypesで指定したtypeの通知が除外される', async () => {
@@ -14475,8 +14070,8 @@ describe('Endpoints', () => {
 
 			const res = await api('i/notifications', { excludeTypes: ['follow'] }, followee);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 0);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(0);
 		});
 
 		test('includeTypesが空配列の場合、空配列が返る', async () => {
@@ -14488,8 +14083,8 @@ describe('Endpoints', () => {
 
 			const res = await api('i/notifications', { includeTypes: [] }, followee);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 0);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(0);
 		});
 	});
 
@@ -14506,10 +14101,10 @@ describe('Endpoints', () => {
 
 			const res = await api('i/notifications-grouped', {}, author);
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const grouped = res.body.filter((n: any) => n.type === 'reaction:grouped') as any[];
-			assert.strictEqual(grouped.length, 1);
-			assert.strictEqual(grouped[0].reactions.length, 2);
+			expect(grouped.length).toBe(1);
+			expect(grouped[0].reactions.length).toBe(2);
 			const userIds = grouped[0].reactions.map((r: any) => r.user.id);
 			assert.ok(userIds.includes(reactor1.id));
 			assert.ok(userIds.includes(reactor2.id));
@@ -14527,10 +14122,10 @@ describe('Endpoints', () => {
 
 			const res = await api('i/notifications-grouped', {}, author);
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			const grouped = res.body.filter((n: any) => n.type === 'renote:grouped') as any[];
-			assert.strictEqual(grouped.length, 1);
-			assert.strictEqual(grouped[0].users.length, 2);
+			expect(grouped.length).toBe(1);
+			expect(grouped[0].users.length).toBe(2);
 			const userIds = grouped[0].users.map((u: any) => u.id);
 			assert.ok(userIds.includes(renoter1.id));
 			assert.ok(userIds.includes(renoter2.id));
@@ -14546,10 +14141,10 @@ describe('Endpoints', () => {
 
 			const res = await api('i/favorites', {}, user);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).noteId, note.id);
-			assert.strictEqual(getAt(res.body, 0).note.id, note.id);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).noteId).toBe(note.id);
+			expect(getAt(res.body, 0).note.id).toBe(note.id);
 		});
 
 		test('お気に入りがない場合は空配列が返る', async () => {
@@ -14558,8 +14153,8 @@ describe('Endpoints', () => {
 
 			const res = await api('i/favorites', {}, user);
 
-			assert.strictEqual(res.status, 200);
-			assert.deepStrictEqual(res.body, []);
+			expect(res.status).toBe(200);
+			expect(res.body).toStrictEqual([]);
 		});
 	});
 
@@ -14569,7 +14164,7 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hncp${suffix}`, password: 'oldpassword' });
 
 			const res = await api('i/change-password', { currentPassword: 'oldpassword', newPassword: 'newpassword' }, user);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const relogged = await api('signin-flow', {
 				username: user.username,
@@ -14577,8 +14172,8 @@ describe('Endpoints', () => {
 				'g-recaptcha-response': null,
 				'hcaptcha-response': null,
 			});
-			assert.strictEqual(relogged.status, 200);
-			assert.strictEqual(relogged.body.finished, true);
+			expect(relogged.status).toBe(200);
+			expect(relogged.body.finished).toBe(true);
 		});
 
 		test('現在のパスワードが間違っていると失敗する', async () => {
@@ -14590,7 +14185,7 @@ describe('Endpoints', () => {
 				{ currentPassword: 'wrongpassword', newPassword: 'newpassword' },
 				user,
 			);
-			assert.notStrictEqual(res.status, 204);
+			expect(res.status).not.toBe(204);
 		});
 	});
 
@@ -14601,12 +14196,12 @@ describe('Endpoints', () => {
 			const before = await api('i', {}, user);
 
 			const res = await api('i/regenerate-token', { password: 'password' }, user);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const withOldToken = await api('i', {}, user);
-			assert.strictEqual(withOldToken.status, 401);
+			expect(withOldToken.status).toBe(401);
 
-			assert.strictEqual(before.status, 200);
+			expect(before.status).toBe(200);
 		});
 	});
 
@@ -14617,9 +14212,9 @@ describe('Endpoints', () => {
 
 			const res = await api('i/update-email', { password: 'password', email: `hnue${suffix}@example.com` }, user);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.email, `hnue${suffix}@example.com`);
-			assert.strictEqual(res.body.emailVerified, false);
+			expect(res.status).toBe(200);
+			expect(res.body.email).toBe(`hnue${suffix}@example.com`);
+			expect(res.body.emailVerified).toBe(false);
 		});
 
 		test('パスワードが間違っていると失敗する', async () => {
@@ -14628,8 +14223,8 @@ describe('Endpoints', () => {
 
 			const res = await api('i/update-email', { password: 'wrongpassword', email: `hnue2${suffix}@example.com` }, user);
 
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body).error.code, 'INCORRECT_PASSWORD');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body).error.code).toBe('INCORRECT_PASSWORD');
 		});
 	});
 
@@ -14639,10 +14234,10 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hnda${suffix}`, password: 'password' });
 
 			const res = await api('i/delete-account', { password: 'password' }, user);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const deletedUser = await fetchUserByIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(deletedUser.isDeleted, true);
+			expect(deletedUser.isDeleted).toBe(true);
 		});
 
 		test('パスワードが間違っていると失敗する', async () => {
@@ -14650,10 +14245,10 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hnda2${suffix}`, password: 'password' });
 
 			const res = await api('i/delete-account', { password: 'wrongpassword' }, user);
-			assert.notStrictEqual(res.status, 204);
+			expect(res.status).not.toBe(204);
 
 			const notDeletedUser = await fetchUserByIdOrFailFromDatabase(db, user.id);
-			assert.strictEqual(notDeletedUser.isDeleted, false);
+			expect(notDeletedUser.isDeleted).toBe(false);
 		});
 	});
 
@@ -14673,10 +14268,10 @@ describe('Endpoints', () => {
 				user,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.title, 'test flash');
-			assert.strictEqual(res.body.userId, user.id);
-			assert.strictEqual(res.body.visibility, 'public');
+			expect(res.status).toBe(200);
+			expect(res.body.title).toBe('test flash');
+			expect(res.body.userId).toBe(user.id);
+			expect(res.body.visibility).toBe('public');
 		});
 
 		test('作成したFlashを取得できる', async () => {
@@ -14695,14 +14290,14 @@ describe('Endpoints', () => {
 
 			const res = await api('flash/show', { flashId: created.body.id }, user);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.id, created.body.id);
+			expect(res.status).toBe(200);
+			expect(res.body.id).toBe(created.body.id);
 		});
 
 		test('存在しないFlashの取得は怒られる', async () => {
 			const res = await api('flash/show', { flashId: '000000000000000000000000' });
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_FLASH');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body).error.code).toBe('NO_SUCH_FLASH');
 		});
 
 		test('自分のFlash一覧が取得できる', async () => {
@@ -14721,8 +14316,8 @@ describe('Endpoints', () => {
 
 			const res = await api('flash/my', {}, user);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 1);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(1);
 		});
 
 		test('削除できる', async () => {
@@ -14740,10 +14335,10 @@ describe('Endpoints', () => {
 			);
 
 			const res = await api('flash/delete', { flashId: created.body.id }, user);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const shown = await api('flash/show', { flashId: created.body.id });
-			assert.strictEqual(shown.status, 400);
+			expect(shown.status).toBe(400);
 		});
 
 		test('他人のFlashは削除できない', async () => {
@@ -14762,8 +14357,8 @@ describe('Endpoints', () => {
 			);
 
 			const res = await api('flash/delete', { flashId: created.body.id }, other);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.code, 'ACCESS_DENIED');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as unknown as Record<string, unknown>).error.code).toBe('ACCESS_DENIED');
 		});
 
 		test('タイトルでキーワード検索できる', async () => {
@@ -14782,8 +14377,8 @@ describe('Endpoints', () => {
 
 			const res = await api('flash/search', { query: `findme-${suffix}` });
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 1);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(1);
 		});
 
 		test('いいねしたFlash一覧を取得できる', async () => {
@@ -14804,10 +14399,10 @@ describe('Endpoints', () => {
 
 			const res = await api('flash/my-likes', {}, liker);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).flash.id, created.body.id);
-			assert.strictEqual(getAt(res.body, 0).flash.isLiked, true);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).flash.id).toBe(created.body.id);
+			expect(getAt(res.body, 0).flash.isLiked).toBe(true);
 		});
 
 		test('モデレータは他人のFlashを削除でき、モデレーションログが記録される', async () => {
@@ -14834,17 +14429,17 @@ describe('Endpoints', () => {
 			});
 
 			const res = await api('flash/delete', { flashId: created.body.id }, moderator);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const shown = await api('flash/show', { flashId: created.body.id });
-			assert.strictEqual(shown.status, 400);
+			expect(shown.status).toBe(400);
 
 			const logs = await listModerationLogsFromDatabase(db, { limit: 100, order: 'desc' });
 			const log = logs.find(
 				(l) => l.userId === moderator.id && l.type === 'deleteFlash' && (l.info as any).flashId === created.body.id,
 			);
 			assert.ok(log);
-			assert.strictEqual((log!.info as any).flashUserId, owner.id);
+			expect((log!.info as any).flashUserId).toBe(owner.id);
 		});
 
 		test('sinceId/untilIdで自分のFlash一覧を絞り込める', async () => {
@@ -14873,9 +14468,9 @@ describe('Endpoints', () => {
 
 			const res = await api('flash/my', { sinceId: first.body.id }, user);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).id, second.body.id);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).id).toBe(second.body.id);
 		});
 
 		test('非公開のFlashは検索結果に出ない', async () => {
@@ -14895,8 +14490,8 @@ describe('Endpoints', () => {
 
 			const res = await api('flash/search', { query: `private-${suffix}` });
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.length, 0);
+			expect(res.status).toBe(200);
+			expect(res.body.length).toBe(0);
 		});
 
 		test('人気のFlash一覧を取得できる', async () => {
@@ -14913,13 +14508,13 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 			const liked = await api('flash/like', { flashId: created.body.id }, liker);
-			assert.strictEqual(liked.status, 204);
+			expect(liked.status).toBe(204);
 
 			const res = await api('flash/featured', {});
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 			assert.ok(
 				res.body.some((f: any) => f.id === created.body.id),
 				`flash ${created.body.id} not in featured: ${JSON.stringify(res.body.map((f: any) => ({ id: f.id, likedCount: f.likedCount, updatedAt: f.updatedAt })))}`,
@@ -14941,65 +14536,65 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.id, myPost.id);
-			assert.strictEqual(res.body.text, myPost.text);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.id).toBe(myPost.id);
+			expect(res.body.text).toBe(myPost.text);
 		});
 
 		test('投稿が存在しなかったら怒る', async () => {
 			const res = await api('notes/show', {
 				noteId: '000000000000000000000000',
 			});
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('間違ったIDで怒られる', async () => {
 			const res = await api('notes/show', {
 				noteId: 'kyoppie',
 			});
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 	});
 
 	describe('notes/create', () => {
 		test('テキストのみで投稿できる', async () => {
 			const res = await api('notes/create', { text: 'hello hono' }, alice);
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.createdNote.text, 'hello hono');
-			assert.strictEqual(res.body.createdNote.userId, alice.id);
-			assert.strictEqual(res.body.createdNote.visibility, 'public');
+			expect(res.status).toBe(200);
+			expect(res.body.createdNote.text).toBe('hello hono');
+			expect(res.body.createdNote.userId).toBe(alice.id);
+			expect(res.body.createdNote.visibility).toBe('public');
 		});
 
 		test('テキストもファイルもRenoteもPollも無いと怒られる', async () => {
 			const res = await api('notes/create', {}, alice);
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('返信を作成できる', async () => {
 			const parent = await api('notes/create', { text: 'parent' }, alice);
 			const res = await api('notes/create', { text: 'child', replyId: parent.body.createdNote.id }, bob);
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.createdNote.replyId, parent.body.createdNote.id);
+			expect(res.status).toBe(200);
+			expect(res.body.createdNote.replyId).toBe(parent.body.createdNote.id);
 
 			const noSuchReply = await api('notes/create', { text: 'x', replyId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
-			assert.strictEqual(noSuchReply.status, 400);
-			assert.strictEqual(castAsError(noSuchReply.body as any).error.id, '749ee0f6-d3da-459a-bf02-282e2da4292c');
+			expect(noSuchReply.status).toBe(400);
+			expect(castAsError(noSuchReply.body as any).error.id).toBe('749ee0f6-d3da-459a-bf02-282e2da4292c');
 		});
 
 		test('Renoteを作成できる', async () => {
 			const target = await api('notes/create', { text: 'to be renoted' }, alice);
 			const res = await api('notes/create', { renoteId: target.body.createdNote.id }, bob);
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.createdNote.renoteId, target.body.createdNote.id);
+			expect(res.status).toBe(200);
+			expect(res.body.createdNote.renoteId).toBe(target.body.createdNote.id);
 
 			const pureRenoteOfRenote = await api('notes/create', { renoteId: res.body.createdNote.id }, alice);
-			assert.strictEqual(pureRenoteOfRenote.status, 400);
-			assert.strictEqual(castAsError(pureRenoteOfRenote.body as any).error.id, 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a');
+			expect(pureRenoteOfRenote.status).toBe(400);
+			expect(castAsError(pureRenoteOfRenote.body as any).error.id).toBe('fd4cc33e-2a37-48dd-99cc-9b806eb2031a');
 
 			const noSuchRenote = await api('notes/create', { renoteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
-			assert.strictEqual(noSuchRenote.status, 400);
-			assert.strictEqual(castAsError(noSuchRenote.body as any).error.id, 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4');
+			expect(noSuchRenote.status).toBe(400);
+			expect(castAsError(noSuchRenote.body as any).error.id).toBe('b5c90186-4ab0-49c8-9bba-a1f76c282ba4');
 		});
 
 		test('投票を作成できる', async () => {
@@ -15011,8 +14606,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.createdNote.poll!.choices.length, 2);
+			expect(res.status).toBe(200);
+			expect(res.body.createdNote.poll!.choices.length).toBe(2);
 
 			const expired = await api(
 				'notes/create',
@@ -15022,8 +14617,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(expired.status, 400);
-			assert.strictEqual(castAsError(expired.body as any).error.id, '04da457d-b083-4055-9082-955525eda5a5');
+			expect(expired.status).toBe(400);
+			expect(castAsError(expired.body as any).error.id).toBe('04da457d-b083-4055-9082-955525eda5a5');
 		});
 
 		test('visibility: specified で visibleUserIds を保存できる', async () => {
@@ -15036,59 +14631,59 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.createdNote.visibility, 'specified');
-			assert.deepStrictEqual(res.body.createdNote.visibleUserIds, [bob.id]);
+			expect(res.status).toBe(200);
+			expect(res.body.createdNote.visibility).toBe('specified');
+			expect(res.body.createdNote.visibleUserIds).toStrictEqual([bob.id]);
 		});
 	});
 
 	describe('notes/delete', () => {
 		test('自分の投稿を削除できる', async () => {
 			const created = await api('notes/create', { text: 'to be deleted' }, alice);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const res = await api('notes/delete', { noteId: created.body.createdNote.id }, alice);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const shown = await api('notes/show', { noteId: created.body.createdNote.id }, alice);
-			assert.strictEqual(shown.status, 400);
+			expect(shown.status).toBe(400);
 		});
 
 		test('他人の投稿は削除できない', async () => {
 			const created = await api('notes/create', { text: 'not yours' }, alice);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const res = await api('notes/delete', { noteId: created.body.createdNote.id }, bob);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, 'fe8d7103-0ea8-4ec3-814d-f8b401dc69e9');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('fe8d7103-0ea8-4ec3-814d-f8b401dc69e9');
 		});
 
 		test('存在しない投稿の削除で怒られる', async () => {
 			const res = await api('notes/delete', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, '490be23f-8c1f-4796-819f-94cb4f9d1630');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('490be23f-8c1f-4796-819f-94cb4f9d1630');
 		});
 	});
 
 	describe('notes/unrenote', () => {
 		test('自分のRenoteを取り消せる', async () => {
 			const target = await api('notes/create', { text: 'to be unrenoted' }, alice);
-			assert.strictEqual(target.status, 200);
+			expect(target.status).toBe(200);
 
 			const renote = await api('notes/create', { renoteId: target.body.createdNote.id }, bob);
-			assert.strictEqual(renote.status, 200);
+			expect(renote.status).toBe(200);
 
 			const res = await api('notes/unrenote', { noteId: target.body.createdNote.id }, bob);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const shown = await api('notes/show', { noteId: renote.body.createdNote.id }, bob);
-			assert.strictEqual(shown.status, 400);
+			expect(shown.status).toBe(400);
 		});
 
 		test('存在しない投稿のunrenoteで怒られる', async () => {
 			const res = await api('notes/unrenote', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, 'efd4a259-2442-496b-8dd7-b255aa1a160f');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('efd4a259-2442-496b-8dd7-b255aa1a160f');
 		});
 	});
 
@@ -15105,7 +14700,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const resNote = await api(
 				'notes/show',
@@ -15115,8 +14710,8 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(resNote.status, 200);
-			assert.strictEqual(resNote.body.reactions['🚀'], 1);
+			expect(resNote.status).toBe(200);
+			expect(resNote.body.reactions['🚀']).toBe(1);
 		});
 
 		test('自分の投稿にもリアクションできる', async () => {
@@ -15131,7 +14726,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 		});
 
 		test('二重にリアクションすると上書きされる', async () => {
@@ -15155,7 +14750,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const resNote = await api(
 				'notes/show',
@@ -15165,31 +14760,31 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(resNote.status, 200);
-			assert.deepStrictEqual(resNote.body.reactions, { '🚀': 1 });
+			expect(resNote.status).toBe(200);
+			expect(resNote.body.reactions).toStrictEqual({ '🚀': 1 });
 		});
 
 		test('同じリアクションを二重にすると怒られる', async () => {
 			const bobPost = await post(bob, { text: 'hi' });
 
 			const first = await api('notes/reactions/create', { noteId: bobPost.id, reaction: '🚀' }, alice);
-			assert.strictEqual(first.status, 204);
+			expect(first.status).toBe(204);
 
 			const second = await api('notes/reactions/create', { noteId: bobPost.id, reaction: '🚀' }, alice);
-			assert.strictEqual(second.status, 400);
-			assert.strictEqual(castAsError(second.body as any).error.id, '71efcf98-86d6-4e2b-b2ad-9d032369366b');
+			expect(second.status).toBe(400);
+			expect(castAsError(second.body as any).error.id).toBe('71efcf98-86d6-4e2b-b2ad-9d032369366b');
 		});
 
 		test('ブロックされているとリアクションできない', async () => {
 			const bobPost = await post(bob, { text: 'hi' });
 
 			const block = await api('blocking/create', { userId: alice.id }, bob);
-			assert.strictEqual(block.status, 200);
+			expect(block.status).toBe(200);
 
 			try {
 				const res = await api('notes/reactions/create', { noteId: bobPost.id, reaction: '🚀' }, alice);
-				assert.strictEqual(res.status, 400);
-				assert.strictEqual(castAsError(res.body as any).error.id, '20ef5475-9f38-4e4c-bd33-de6d979498ec');
+				expect(res.status).toBe(400);
+				expect(castAsError(res.body as any).error.id).toBe('20ef5475-9f38-4e4c-bd33-de6d979498ec');
 			} finally {
 				await api('blocking/delete', { userId: alice.id }, bob);
 			}
@@ -15205,7 +14800,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('リノートにリアクションできない', async () => {
@@ -15221,9 +14816,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 			assert.ok(res.body);
-			assert.strictEqual(castAsError(res.body).error.code, 'CANNOT_REACT_TO_RENOTE');
+			expect(castAsError(res.body).error.code).toBe('CANNOT_REACT_TO_RENOTE');
 		});
 
 		test('引用にリアクションできる', async () => {
@@ -15239,7 +14834,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 		});
 
 		test('空文字列のリアクションは\u2764にフォールバックされる', async () => {
@@ -15254,14 +14849,14 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const reaction = await api('notes/reactions', {
 				noteId: bobNote.id,
 			});
 
-			assert.strictEqual(reaction.body.length, 1);
-			assert.strictEqual(getAt(reaction.body, 0).type, '\u2764');
+			expect(reaction.body.length).toBe(1);
+			expect(getAt(reaction.body, 0).type).toBe('\u2764');
 		});
 
 		test('絵文字ではない文字列のリアクションは\u2764にフォールバックされる', async () => {
@@ -15276,21 +14871,21 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const reaction = await api('notes/reactions', {
 				noteId: bobNote.id,
 			});
 
-			assert.strictEqual(reaction.body.length, 1);
-			assert.strictEqual(getAt(reaction.body, 0).type, '\u2764');
+			expect(reaction.body.length).toBe(1);
+			expect(getAt(reaction.body, 0).type).toBe('\u2764');
 		});
 
 		test('空のパラメータで怒られる', async () => {
 			// @ts-expect-error param must not be empty
 			const res = await api('notes/reactions/create', {}, alice);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('間違ったIDで怒られる', async () => {
@@ -15303,7 +14898,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 	});
 
@@ -15318,15 +14913,12 @@ describe('Endpoints', () => {
 			];
 
 			for (const note of notes) {
-				assert.strictEqual(
-					(await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, author)).status,
-					204,
-				);
+				expect((await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, author)).status).toBe(204);
 				for (const user of [undefined, viewer]) {
 					const res = await api('notes/reactions', { noteId: note.id }, user);
-					assert.strictEqual(res.status, 400);
-					assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_NOTE');
-					assert.strictEqual(castAsError(res.body as any).error.id, '263fff3d-d0e1-4af4-bea7-8408059b451a');
+					expect(res.status).toBe(400);
+					expect(castAsError(res.body as any).error.code).toBe('NO_SUCH_NOTE');
+					expect(castAsError(res.body as any).error.id).toBe('263fff3d-d0e1-4af4-bea7-8408059b451a');
 				}
 			}
 		});
@@ -15337,27 +14929,27 @@ describe('Endpoints', () => {
 			const bobNote = await post(bob, { text: 'hi' });
 
 			const created = await api('notes/reactions/create', { noteId: bobNote.id, reaction: '🚀' }, alice);
-			assert.strictEqual(created.status, 204);
+			expect(created.status).toBe(204);
 
 			const res = await api('notes/reactions/delete', { noteId: bobNote.id }, alice);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const reactions = await api('notes/reactions', { noteId: bobNote.id });
-			assert.strictEqual(reactions.body.length, 0);
+			expect(reactions.body.length).toBe(0);
 		});
 
 		test('リアクションしていないと怒られる', async () => {
 			const bobNote = await post(bob, { text: 'hi' });
 
 			const res = await api('notes/reactions/delete', { noteId: bobNote.id }, alice);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, '92f4426d-4196-4125-aa5b-02943e2ec8fc');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('92f4426d-4196-4125-aa5b-02943e2ec8fc');
 		});
 
 		test('存在しない投稿で怒られる', async () => {
 			const res = await api('notes/reactions/delete', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' }, alice);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, '764d9fce-f9f2-4a0e-92b1-6ceac9a7ad37');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('764d9fce-f9f2-4a0e-92b1-6ceac9a7ad37');
 		});
 	});
 
@@ -15371,15 +14963,15 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 
 			const shown = await api('notes/show', { noteId: created.body.createdNote.id }, alice);
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.poll!.choices[0]!.votes, 1);
-			assert.strictEqual(shown.body.poll!.choices[0]!.isVoted, true);
+			expect(shown.status).toBe(200);
+			expect(shown.body.poll!.choices[0]!.votes).toBe(1);
+			expect(shown.body.poll!.choices[0]!.isVoted).toBe(true);
 		});
 
 		test('複数投票可能な場合は複数選べる', async () => {
@@ -15391,16 +14983,16 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const first = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
-			assert.strictEqual(first.status, 204);
+			expect(first.status).toBe(204);
 			const second = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 1 }, alice);
-			assert.strictEqual(second.status, 204);
+			expect(second.status).toBe(204);
 
 			const dup = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
-			assert.strictEqual(dup.status, 400);
-			assert.strictEqual(castAsError(dup.body as any).error.id, '0963fc77-efac-419b-9424-b391608dc6d8');
+			expect(dup.status).toBe(400);
+			expect(castAsError(dup.body as any).error.id).toBe('0963fc77-efac-419b-9424-b391608dc6d8');
 		});
 
 		test('複数投票不可の場合は二重投票できない', async () => {
@@ -15412,14 +15004,14 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const first = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
-			assert.strictEqual(first.status, 204);
+			expect(first.status).toBe(204);
 
 			const second = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 1 }, alice);
-			assert.strictEqual(second.status, 400);
-			assert.strictEqual(castAsError(second.body as any).error.id, '0963fc77-efac-419b-9424-b391608dc6d8');
+			expect(second.status).toBe(400);
+			expect(castAsError(second.body as any).error.id).toBe('0963fc77-efac-419b-9424-b391608dc6d8');
 		});
 
 		test('複数投票不可の場合は並行投票の一方だけ成功する', async () => {
@@ -15431,23 +15023,20 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 			const noteId = created.body.createdNote.id;
 
 			const results = await Promise.all([
 				api('notes/polls/vote', { noteId, choice: 0 }, alice),
 				api('notes/polls/vote', { noteId, choice: 1 }, alice),
 			]);
-			assert.deepStrictEqual(results.map((result) => result.status).sort(), [204, 400]);
+			expect(results.map((result) => result.status).sort()).toStrictEqual([204, 400]);
 
 			const votes = await listPollVotesByNoteAndUserFromDatabase(db, noteId, alice.id);
 			const poll = await fetchPollByNoteIdOrFailFromDatabase(db, noteId);
-			assert.strictEqual(votes.length, 1);
-			assert.strictEqual(
-				poll.votes.reduce((sum, count) => sum + count, 0),
-				1,
-			);
-			assert.strictEqual(poll.votes[votes[0]!.choice], 1);
+			expect(votes.length).toBe(1);
+			expect(poll.votes.reduce((sum, count) => sum + count, 0)).toBe(1);
+			expect(poll.votes[votes[0]!.choice]).toBe(1);
 		});
 
 		test('閲覧できないpollには投票できない', async () => {
@@ -15461,11 +15050,11 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_NOTE');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('NO_SUCH_NOTE');
 		});
 
 		test('無効な選択肢では怒られる', async () => {
@@ -15477,20 +15066,20 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 5 }, alice);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, 'e0cc9a04-f2e8-41e4-a5f1-4127293260cc');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('e0cc9a04-f2e8-41e4-a5f1-4127293260cc');
 		});
 
 		test('投票が無い投稿には投票できない', async () => {
 			const created = await api('notes/create', { text: 'no poll here' }, bob);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, '5f979967-52d9-4314-a911-1c673727f92f');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('5f979967-52d9-4314-a911-1c673727f92f');
 		});
 
 		test('期限切れの投票には投票できない', async () => {
@@ -15502,19 +15091,19 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			await new Promise((resolve) => setTimeout(resolve, 300));
 
 			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, '1022a357-b085-4054-9083-8f8de358337e');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('1022a357-b085-4054-9083-8f8de358337e');
 		});
 
 		test('存在しない投稿には投票できない', async () => {
 			const res = await api('notes/polls/vote', { noteId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz', choice: 0 }, alice);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, 'ecafbd2e-c283-4d6d-aecb-1a0a33b75396');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('ecafbd2e-c283-4d6d-aecb-1a0a33b75396');
 		});
 
 		test('ブロックされていると投票できない', async () => {
@@ -15526,15 +15115,15 @@ describe('Endpoints', () => {
 				},
 				bob,
 			);
-			assert.strictEqual(created.status, 200);
+			expect(created.status).toBe(200);
 
 			const block = await api('blocking/create', { userId: alice.id }, bob);
-			assert.strictEqual(block.status, 200);
+			expect(block.status).toBe(200);
 
 			try {
 				const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);
-				assert.strictEqual(res.status, 400);
-				assert.strictEqual(castAsError(res.body as any).error.id, '85a5377e-b1e9-4617-b0b9-5bea73331e49');
+				expect(res.status).toBe(400);
+				expect(castAsError(res.body as any).error.id).toBe('85a5377e-b1e9-4617-b0b9-5bea73331e49');
 			} finally {
 				await api('blocking/delete', { userId: alice.id }, bob);
 			}
@@ -15551,14 +15140,14 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 
 			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
-			assert.strictEqual(newBob.followersCount, 0);
-			assert.strictEqual(newBob.followingCount, 1);
+			expect(newBob.followersCount).toBe(0);
+			expect(newBob.followingCount).toBe(1);
 			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
-			assert.strictEqual(newAlice.followersCount, 1);
-			assert.strictEqual(newAlice.followingCount, 0);
+			expect(newAlice.followersCount).toBe(1);
+			expect(newAlice.followingCount).toBe(0);
 		});
 
 		test('既にフォローしている場合は怒る', async () => {
@@ -15570,7 +15159,7 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('存在しないユーザーはフォローできない', async () => {
@@ -15582,7 +15171,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('自分自身はフォローできない', async () => {
@@ -15594,14 +15183,14 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('空のパラメータで怒られる', async () => {
 			// @ts-expect-error params must not be empty
 			const res = await api('following/create', {}, alice);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('間違ったIDで怒られる', async () => {
@@ -15613,7 +15202,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 	});
 
@@ -15635,14 +15224,14 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 
 			const newBob = await fetchUserByIdOrFailFromDatabase(db, bob.id);
-			assert.strictEqual(newBob.followersCount, 0);
-			assert.strictEqual(newBob.followingCount, 0);
+			expect(newBob.followersCount).toBe(0);
+			expect(newBob.followingCount).toBe(0);
 			const newAlice = await fetchUserByIdOrFailFromDatabase(db, alice.id);
-			assert.strictEqual(newAlice.followersCount, 0);
-			assert.strictEqual(newAlice.followingCount, 0);
+			expect(newAlice.followersCount).toBe(0);
+			expect(newAlice.followingCount).toBe(0);
 		});
 
 		test('フォローしていない場合は怒る', async () => {
@@ -15654,7 +15243,7 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('存在しないユーザーはフォロー解除できない', async () => {
@@ -15666,7 +15255,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('自分自身はフォロー解除できない', async () => {
@@ -15678,14 +15267,14 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('空のパラメータで怒られる', async () => {
 			// @ts-expect-error params must not be empty
 			const res = await api('following/delete', {}, alice);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('間違ったIDで怒られる', async () => {
@@ -15697,7 +15286,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 	});
 
@@ -15744,48 +15333,36 @@ describe('Endpoints', () => {
 			});
 
 			const featuredAnonymous = await api('channels/featured', {});
-			assert.strictEqual(featuredAnonymous.status, 200);
+			expect(featuredAnonymous.status).toBe(200);
 			const anonymousFeatured = (featuredAnonymous.body as any[]).find((channel) => channel.id === followed.id);
 			assert.ok(anonymousFeatured);
-			assert.strictEqual(Object.hasOwn(anonymousFeatured, 'isFollowing'), false);
-			assert.strictEqual(
-				(featuredAnonymous.body as any[]).some((channel) => channel.id === archived.id),
-				false,
-			);
+			expect(Object.hasOwn(anonymousFeatured, 'isFollowing')).toBe(false);
+			expect((featuredAnonymous.body as any[]).some((channel) => channel.id === archived.id)).toBe(false);
 
 			const featured = await api('channels/featured', {}, alice);
-			assert.strictEqual(featured.status, 200);
+			expect(featured.status).toBe(200);
 			const featuredFollowed = (featured.body as any[]).find((channel) => channel.id === followed.id);
 			assert.ok(featuredFollowed);
-			assert.strictEqual(featuredFollowed.isFollowing, true);
-			assert.strictEqual(featuredFollowed.isFavorited, true);
-			assert.strictEqual(featuredFollowed.isMuting, true);
+			expect(featuredFollowed.isFollowing).toBe(true);
+			expect(featuredFollowed.isFavorited).toBe(true);
+			expect(featuredFollowed.isMuting).toBe(true);
 
 			const ownedList = await api('channels/owned', { limit: 20 }, alice);
-			assert.strictEqual(ownedList.status, 200);
-			assert.strictEqual(
-				(ownedList.body as any[]).some((channel) => channel.id === owned.id),
-				true,
-			);
-			assert.strictEqual(
-				(ownedList.body as any[]).some((channel) => channel.id === archived.id),
-				false,
-			);
+			expect(ownedList.status).toBe(200);
+			expect((ownedList.body as any[]).some((channel) => channel.id === owned.id)).toBe(true);
+			expect((ownedList.body as any[]).some((channel) => channel.id === archived.id)).toBe(false);
 
 			const followedList = await api('channels/followed', { limit: 20 }, alice);
-			assert.strictEqual(followedList.status, 200);
-			assert.deepStrictEqual(
-				(followedList.body as any[])
+			expect(followedList.status).toBe(200);
+			expect((followedList.body as any[])
 					.filter((channel) => channel.id === followed.id)
-					.map((channel) => channel.isFollowing),
-				[true],
-			);
+					.map((channel) => channel.isFollowing)).toStrictEqual([true]);
 
 			const favorites = await api('channels/my-favorites', {}, alice);
-			assert.strictEqual(favorites.status, 200);
+			expect(favorites.status).toBe(200);
 			const favorite = (favorites.body as any[]).find((channel) => channel.id === followed.id);
 			assert.ok(favorite);
-			assert.strictEqual(favorite.isFavorited, true);
+			expect(favorite.isFavorited).toBe(true);
 		});
 
 		test('channel account read endpoints require read:channels app token permission', async () => {
@@ -15797,8 +15374,8 @@ describe('Endpoints', () => {
 				['channels/my-favorites', {}],
 			] as const) {
 				const denied = await api(endpoint, params, { token: readAccountToken });
-				assert.strictEqual(denied.status, 403, endpoint);
-				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+				expect(denied.status, endpoint).toBe(403);
+				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
 			}
 		});
 	});
@@ -15835,16 +15412,16 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(created.status, 200);
-			assert.strictEqual(created.body.userId, owner.id);
-			assert.strictEqual(created.body.description, 'hono channel create target');
-			assert.strictEqual(created.body.bannerId, createdBanner.id);
-			assert.strictEqual(created.body.color, '#123456');
-			assert.strictEqual(created.body.isSensitive, true);
-			assert.strictEqual(created.body.allowRenoteToExternal, false);
-			assert.strictEqual(created.body.isFollowing, false);
-			assert.strictEqual(created.body.isFavorited, false);
-			assert.strictEqual(created.body.isMuting, false);
+			expect(created.status).toBe(200);
+			expect(created.body.userId).toBe(owner.id);
+			expect(created.body.description).toBe('hono channel create target');
+			expect(created.body.bannerId).toBe(createdBanner.id);
+			expect(created.body.color).toBe('#123456');
+			expect(created.body.isSensitive).toBe(true);
+			expect(created.body.allowRenoteToExternal).toBe(false);
+			expect(created.body.isFollowing).toBe(false);
+			expect(created.body.isFavorited).toBe(false);
+			expect(created.body.isMuting).toBe(false);
 
 			const updatedBanner = await createOwnedDriveFile(owner.id, `hono-channel-update-${Date.now()}`);
 			const pinnedNoteId = '000000000000000000000001';
@@ -15863,16 +15440,16 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(updated.status, 200);
-			assert.strictEqual(updated.body.id, created.body.id);
-			assert.strictEqual(updated.body.name, 'hono channel updated');
-			assert.strictEqual(updated.body.description, null);
-			assert.strictEqual(updated.body.bannerId, updatedBanner.id);
-			assert.strictEqual(updated.body.isArchived, true);
-			assert.deepStrictEqual(updated.body.pinnedNoteIds, [pinnedNoteId]);
-			assert.strictEqual(updated.body.color, '#654321');
-			assert.strictEqual(updated.body.isSensitive, false);
-			assert.strictEqual(updated.body.allowRenoteToExternal, true);
+			expect(updated.status).toBe(200);
+			expect(updated.body.id).toBe(created.body.id);
+			expect(updated.body.name).toBe('hono channel updated');
+			expect(updated.body.description).toBe(null);
+			expect(updated.body.bannerId).toBe(updatedBanner.id);
+			expect(updated.body.isArchived).toBe(true);
+			expect(updated.body.pinnedNoteIds).toStrictEqual([pinnedNoteId]);
+			expect(updated.body.color).toBe('#654321');
+			expect(updated.body.isSensitive).toBe(false);
+			expect(updated.body.allowRenoteToExternal).toBe(true);
 		});
 
 		test('keeps legacy channel create validation, policy, and moved-account errors', async () => {
@@ -15924,9 +15501,9 @@ describe('Endpoints', () => {
 				},
 				deniedUser,
 			);
-			assert.strictEqual(policyDenied.status, 403);
-			assert.strictEqual(castAsError(policyDenied.body as any).error.code, 'ROLE_PERMISSION_DENIED');
-			assert.strictEqual(castAsError(policyDenied.body as any).error.id, 'c3d38592-54c0-429d-be96-5636b0431a61');
+			expect(policyDenied.status).toBe(403);
+			expect(castAsError(policyDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
+			expect(castAsError(policyDenied.body as any).error.id).toBe('c3d38592-54c0-429d-be96-5636b0431a61');
 
 			const otherFile = await createOwnedDriveFile(fileOwner.id, `hono-channel-other-file-${now}`);
 			const missingFile = await api(
@@ -15937,8 +15514,8 @@ describe('Endpoints', () => {
 				},
 				requester,
 			);
-			assert.strictEqual(missingFile.status, 400);
-			assert.strictEqual(castAsError(missingFile.body as any).error.id, 'cd1e9f3e-5a12-4ab4-96f6-5d0a2cc32050');
+			expect(missingFile.status).toBe(400);
+			expect(castAsError(missingFile.body as any).error.id).toBe('cd1e9f3e-5a12-4ab4-96f6-5d0a2cc32050');
 
 			const readToken = await createAppToken(requester, ['read:channels']);
 			const permissionDenied = await api(
@@ -15948,8 +15525,8 @@ describe('Endpoints', () => {
 				},
 				{ token: readToken },
 			);
-			assert.strictEqual(permissionDenied.status, 403);
-			assert.strictEqual(castAsError(permissionDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(permissionDenied.status).toBe(403);
+			expect(castAsError(permissionDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const movedUser = await signup({ username: `honochmoved${now.toString(36)}` });
 			await updateUserInDatabase(db, movedUser.id, {
@@ -15962,8 +15539,8 @@ describe('Endpoints', () => {
 				},
 				movedUser,
 			);
-			assert.strictEqual(movedDenied.status, 403);
-			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
+			expect(movedDenied.status).toBe(403);
+			expect(castAsError(movedDenied.body as any).error.code).toBe('YOUR_ACCOUNT_MOVED');
 		});
 
 		test('keeps legacy channel update authorization and file errors', async () => {
@@ -15986,8 +15563,8 @@ describe('Endpoints', () => {
 				},
 				intruder,
 			);
-			assert.strictEqual(missing.status, 400);
-			assert.strictEqual(castAsError(missing.body as any).error.id, 'f9c5467f-d492-4c3c-9a8d-a70dacc86512');
+			expect(missing.status).toBe(400);
+			expect(castAsError(missing.body as any).error.id).toBe('f9c5467f-d492-4c3c-9a8d-a70dacc86512');
 
 			const denied = await api(
 				'channels/update',
@@ -15997,8 +15574,8 @@ describe('Endpoints', () => {
 				},
 				intruder,
 			);
-			assert.strictEqual(denied.status, 400);
-			assert.strictEqual(castAsError(denied.body as any).error.id, '1fb7cb09-d46a-4fdf-b8df-057788cce513');
+			expect(denied.status).toBe(400);
+			expect(castAsError(denied.body as any).error.id).toBe('1fb7cb09-d46a-4fdf-b8df-057788cce513');
 
 			const intruderFile = await createOwnedDriveFile(intruder.id, `hono-channel-intruder-file-${now}`);
 			const missingFile = await api(
@@ -16009,8 +15586,8 @@ describe('Endpoints', () => {
 				},
 				owner,
 			);
-			assert.strictEqual(missingFile.status, 400);
-			assert.strictEqual(castAsError(missingFile.body as any).error.id, 'e86c14a4-0da2-4032-8df3-e737a04c7f3b');
+			expect(missingFile.status).toBe(400);
+			expect(castAsError(missingFile.body as any).error.id).toBe('e86c14a4-0da2-4032-8df3-e737a04c7f3b');
 
 			const readToken = await createAppToken(owner, ['read:channels']);
 			const permissionDenied = await api(
@@ -16021,8 +15598,8 @@ describe('Endpoints', () => {
 				},
 				{ token: readToken },
 			);
-			assert.strictEqual(permissionDenied.status, 403);
-			assert.strictEqual(castAsError(permissionDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(permissionDenied.status).toBe(403);
+			expect(castAsError(permissionDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const moderator = await signup({ username: `honomod${now.toString(36)}` });
 			const moderatorRole = await createRoleInDatabase(db, {
@@ -16063,9 +15640,9 @@ describe('Endpoints', () => {
 				},
 				moderator,
 			);
-			assert.strictEqual(moderatorUpdate.status, 200);
-			assert.strictEqual(moderatorUpdate.body.id, target.id);
-			assert.strictEqual(moderatorUpdate.body.name, 'moderator updated channel');
+			expect(moderatorUpdate.status).toBe(200);
+			expect(moderatorUpdate.body.id).toBe(target.id);
+			expect(moderatorUpdate.body.name).toBe('moderator updated channel');
 		});
 	});
 
@@ -16086,8 +15663,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followed.status, 204);
-			assert.strictEqual(await channelFollowingExistsInDatabase(db, alice.id, target.id), true);
+			expect(followed.status).toBe(204);
+			expect(await channelFollowingExistsInDatabase(db, alice.id, target.id)).toBe(true);
 
 			// (followerId, followeeId) は unique なので、二重フォローは 500 ではなく明示的なエラーになる
 			const followedAgain = await api(
@@ -16097,8 +15674,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(followedAgain.status, 400);
-			assert.strictEqual(castAsError(followedAgain.body as any).error.code, 'ALREADY_FOLLOWING');
+			expect(followedAgain.status).toBe(400);
+			expect(castAsError(followedAgain.body as any).error.code).toBe('ALREADY_FOLLOWING');
 
 			const unfollowed = await api(
 				'channels/unfollow',
@@ -16107,8 +15684,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(unfollowed.status, 204);
-			assert.strictEqual(await channelFollowingExistsInDatabase(db, alice.id, target.id), false);
+			expect(unfollowed.status).toBe(204);
+			expect(await channelFollowingExistsInDatabase(db, alice.id, target.id)).toBe(false);
 
 			const unfollowedAgain = await api(
 				'channels/unfollow',
@@ -16117,7 +15694,7 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(unfollowedAgain.status, 204);
+			expect(unfollowedAgain.status).toBe(204);
 		});
 
 		test('keeps legacy validation, permission, and moved-account errors', async () => {
@@ -16136,8 +15713,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingFollow.status, 400);
-			assert.strictEqual(castAsError(missingFollow.body as any).error.id, 'c0031718-d573-4e85-928e-10039f1fbb68');
+			expect(missingFollow.status).toBe(400);
+			expect(castAsError(missingFollow.body as any).error.id).toBe('c0031718-d573-4e85-928e-10039f1fbb68');
 
 			const missingUnfollow = await api(
 				'channels/unfollow',
@@ -16146,14 +15723,14 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingUnfollow.status, 400);
-			assert.strictEqual(castAsError(missingUnfollow.body as any).error.id, '19959ee9-0153-4c51-bbd9-a98c49dc59d6');
+			expect(missingUnfollow.status).toBe(400);
+			expect(castAsError(missingUnfollow.body as any).error.id).toBe('19959ee9-0153-4c51-bbd9-a98c49dc59d6');
 
 			const readToken = await createAppToken(alice, ['read:channels']);
 			for (const endpoint of ['channels/follow', 'channels/unfollow'] as const) {
 				const denied = await api(endpoint, { channelId: target.id }, { token: readToken });
-				assert.strictEqual(denied.status, 403, endpoint);
-				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+				expect(denied.status, endpoint).toBe(403);
+				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
 			}
 
 			const movedUser = await signup({ username: `honofollow${Date.now().toString(36)}` });
@@ -16167,9 +15744,9 @@ describe('Endpoints', () => {
 				},
 				movedUser,
 			);
-			assert.strictEqual(movedDenied.status, 403);
-			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
-			assert.strictEqual(await channelFollowingExistsInDatabase(db, movedUser.id, target.id), false);
+			expect(movedDenied.status).toBe(403);
+			expect(castAsError(movedDenied.body as any).error.code).toBe('YOUR_ACCOUNT_MOVED');
+			expect(await channelFollowingExistsInDatabase(db, movedUser.id, target.id)).toBe(false);
 		});
 	});
 
@@ -16206,8 +15783,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(created.status, 204);
-			assert.strictEqual(await channelMutingExistsInDatabase(db, alice.id, target.id), true);
+			expect(created.status).toBe(204);
+			expect(await channelMutingExistsInDatabase(db, alice.id, target.id)).toBe(true);
 
 			const duplicate = await api(
 				'channels/mute/create',
@@ -16216,8 +15793,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(duplicate.status, 400);
-			assert.strictEqual(castAsError(duplicate.body as any).error.id, '5a251978-769a-da44-3e89-3931e43bb592');
+			expect(duplicate.status).toBe(400);
+			expect(castAsError(duplicate.body as any).error.id).toBe('5a251978-769a-da44-3e89-3931e43bb592');
 
 			const expiredDuplicate = await api(
 				'channels/mute/create',
@@ -16226,19 +15803,16 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(expiredDuplicate.status, 400);
-			assert.strictEqual(castAsError(expiredDuplicate.body as any).error.id, '5a251978-769a-da44-3e89-3931e43bb592');
+			expect(expiredDuplicate.status).toBe(400);
+			expect(castAsError(expiredDuplicate.body as any).error.id).toBe('5a251978-769a-da44-3e89-3931e43bb592');
 
 			const list = await api('channels/mute/list', {}, alice);
-			assert.strictEqual(list.status, 200);
+			expect(list.status).toBe(200);
 			const mutedChannels = list.body as any[];
 			const muted = mutedChannels.find((channel) => channel.id === target.id);
 			assert.ok(muted);
-			assert.strictEqual(muted.isMuting, true);
-			assert.strictEqual(
-				mutedChannels.some((channel) => channel.id === expiredTarget.id),
-				false,
-			);
+			expect(muted.isMuting).toBe(true);
+			expect(mutedChannels.some((channel) => channel.id === expiredTarget.id)).toBe(false);
 
 			const deleted = await api(
 				'channels/mute/delete',
@@ -16247,8 +15821,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(deleted.status, 204);
-			assert.strictEqual(await channelMutingExistsInDatabase(db, alice.id, target.id), false);
+			expect(deleted.status).toBe(204);
+			expect(await channelMutingExistsInDatabase(db, alice.id, target.id)).toBe(false);
 
 			const missingDelete = await api(
 				'channels/mute/delete',
@@ -16257,8 +15831,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingDelete.status, 400);
-			assert.strictEqual(castAsError(missingDelete.body as any).error.id, '14d55962-6ea8-d990-1333-d6bef78dc2ab');
+			expect(missingDelete.status).toBe(400);
+			expect(castAsError(missingDelete.body as any).error.id).toBe('14d55962-6ea8-d990-1333-d6bef78dc2ab');
 		});
 
 		test('keeps legacy validation, permission, and moved-account errors', async () => {
@@ -16277,8 +15851,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingCreate.status, 400);
-			assert.strictEqual(castAsError(missingCreate.body as any).error.id, '7174361e-d58f-31d6-2e7c-6fb830786a3f');
+			expect(missingCreate.status).toBe(400);
+			expect(castAsError(missingCreate.body as any).error.id).toBe('7174361e-d58f-31d6-2e7c-6fb830786a3f');
 
 			const missingDelete = await api(
 				'channels/mute/delete',
@@ -16287,8 +15861,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(missingDelete.status, 400);
-			assert.strictEqual(castAsError(missingDelete.body as any).error.id, 'e7998769-6e94-d9c2-6b8f-94a527314aba');
+			expect(missingDelete.status).toBe(400);
+			expect(castAsError(missingDelete.body as any).error.id).toBe('e7998769-6e94-d9c2-6b8f-94a527314aba');
 
 			const pastExpiration = await api(
 				'channels/mute/create',
@@ -16298,20 +15872,20 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(pastExpiration.status, 400);
-			assert.strictEqual(castAsError(pastExpiration.body as any).error.id, '42b32236-df2c-a45f-fdbf-def67268f749');
+			expect(pastExpiration.status).toBe(400);
+			expect(castAsError(pastExpiration.body as any).error.id).toBe('42b32236-df2c-a45f-fdbf-def67268f749');
 
 			const readToken = await createAppToken(alice, ['read:channels']);
 			const writeToken = await createAppToken(alice, ['write:channels']);
 			for (const endpoint of ['channels/mute/create', 'channels/mute/delete'] as const) {
 				const denied = await api(endpoint, { channelId: target.id }, { token: readToken });
-				assert.strictEqual(denied.status, 403, endpoint);
-				assert.strictEqual(castAsError(denied.body as any).error.code, 'PERMISSION_DENIED', endpoint);
+				expect(denied.status, endpoint).toBe(403);
+				expect(castAsError(denied.body as any).error.code, endpoint).toBe('PERMISSION_DENIED');
 			}
 
 			const listDenied = await api('channels/mute/list', {}, { token: writeToken });
-			assert.strictEqual(listDenied.status, 403);
-			assert.strictEqual(castAsError(listDenied.body as any).error.code, 'PERMISSION_DENIED');
+			expect(listDenied.status).toBe(403);
+			expect(castAsError(listDenied.body as any).error.code).toBe('PERMISSION_DENIED');
 
 			const movedUser = await signup({ username: `honomute${Date.now().toString(36)}` });
 			await updateUserInDatabase(db, movedUser.id, {
@@ -16324,9 +15898,9 @@ describe('Endpoints', () => {
 				},
 				movedUser,
 			);
-			assert.strictEqual(movedDenied.status, 403);
-			assert.strictEqual(castAsError(movedDenied.body as any).error.code, 'YOUR_ACCOUNT_MOVED');
-			assert.strictEqual(await channelMutingExistsInDatabase(db, movedUser.id, target.id), false);
+			expect(movedDenied.status).toBe(403);
+			expect(castAsError(movedDenied.body as any).error.code).toBe('YOUR_ACCOUNT_MOVED');
+			expect(await channelMutingExistsInDatabase(db, movedUser.id, target.id)).toBe(false);
 		});
 	});
 
@@ -16383,12 +15957,12 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
 			const ids = (res.body as any[]).map((channel) => channel.id);
-			assert.strictEqual(ids.includes(fixture.aaa.id), true);
-			assert.strictEqual(ids.includes(fixture.ccc1.id), true);
-			assert.strictEqual(ids.includes(fixture.ccc2.id), true);
+			expect(ids.includes(fixture.aaa.id)).toBe(true);
+			expect(ids.includes(fixture.ccc1.id)).toBe(true);
+			expect(ids.includes(fixture.ccc2.id)).toBe(true);
 		});
 		test('名前のみの検索で名前を検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -16401,10 +15975,10 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).id, fixture.aaa.id);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).id).toBe(fixture.aaa.id);
 		});
 		test('名前のみの検索で名前を複数検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -16417,9 +15991,9 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 2);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
+			expect(res.body.length).toBe(2);
 		});
 		test('名前のみの検索で説明は検索できない', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -16432,9 +16006,9 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 0);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
+			expect(res.body.length).toBe(0);
 		});
 		test('名前と説明の検索で名前を検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -16446,10 +16020,10 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).id, fixture.ccc1.id);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).id).toBe(fixture.ccc1.id);
 		});
 		test('名前と説明での検索で説明を検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -16461,10 +16035,10 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).id, fixture.ccc1.id);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).id).toBe(fixture.ccc1.id);
 		});
 		test('名前と説明の検索で名前を複数検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -16476,9 +16050,9 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 2);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
+			expect(res.body.length).toBe(2);
 		});
 		test('名前と説明での検索で説明を複数検索できる', async () => {
 			const fixture = await ensureChannelSearchFixture();
@@ -16490,9 +16064,9 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 2);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && Array.isArray(res.body)).toBe(true);
+			expect(res.body.length).toBe(2);
 		});
 	});
 
@@ -16519,34 +16093,34 @@ describe('Endpoints', () => {
 			await updateChannelInDatabase(db, channel.id, { pinnedNoteIds: [pinnedNoteId] });
 
 			const shown = await api('channels/show', { channelId: channel.id });
-			assert.strictEqual(shown.status, 200);
-			assert.strictEqual(shown.body.id, channel.id);
-			assert.strictEqual(shown.body.pinnedNoteIds?.[0], pinnedNoteId);
-			assert.strictEqual(shown.body.pinnedNotes?.[0]?.id, pinnedNoteId);
+			expect(shown.status).toBe(200);
+			expect(shown.body.id).toBe(channel.id);
+			expect(shown.body.pinnedNoteIds?.[0]).toBe(pinnedNoteId);
+			expect(shown.body.pinnedNotes?.[0]?.id).toBe(pinnedNoteId);
 
 			const missingChannel = await api('channels/show', { channelId: genId() });
-			assert.strictEqual(missingChannel.status, 400);
-			assert.strictEqual(castAsError(missingChannel.body as any).error.code, 'NO_SUCH_CHANNEL');
+			expect(missingChannel.status).toBe(400);
+			expect(castAsError(missingChannel.body as any).error.code).toBe('NO_SUCH_CHANNEL');
 
 			const timeline = await api('channels/timeline', { channelId: channel.id });
-			assert.strictEqual(timeline.status, 200);
-			assert.strictEqual(timeline.body.length, 1);
-			assert.strictEqual(getAt(timeline.body, 0).id, pinnedNoteId);
-			assert.strictEqual(getAt(timeline.body, 0).channelId, channel.id);
+			expect(timeline.status).toBe(200);
+			expect(timeline.body.length).toBe(1);
+			expect(getAt(timeline.body, 0).id).toBe(pinnedNoteId);
+			expect(getAt(timeline.body, 0).channelId).toBe(channel.id);
 
 			const missingTimeline = await api('channels/timeline', { channelId: genId() });
-			assert.strictEqual(missingTimeline.status, 400);
-			assert.strictEqual(castAsError(missingTimeline.body as any).error.code, 'NO_SUCH_CHANNEL');
+			expect(missingTimeline.status).toBe(400);
+			expect(castAsError(missingTimeline.body as any).error.code).toBe('NO_SUCH_CHANNEL');
 		});
 	});
 
 	describe('drive', () => {
 		test('ドライブ情報を取得できる', async () => {
 			const res = await api('drive', {}, alice);
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
 			// alice は他のテストでも共有されアップロードが行われるため、0固定ではなく非負の数値であることのみ検証する
-			assert.strictEqual(typeof res.body.usage, 'number');
+			expect(typeof res.body.usage).toBe('number');
 			assert.ok(res.body.usage >= 0);
 		});
 
@@ -16555,16 +16129,16 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hdrv${suffix}` });
 
 			const before = await api('drive', {}, user);
-			assert.strictEqual(before.status, 200);
-			assert.strictEqual(before.body.usage, 0);
-			assert.strictEqual(before.body.capacity, 1024 * 1024 * DEFAULT_POLICIES.driveCapacityMb);
+			expect(before.status).toBe(200);
+			expect(before.body.usage).toBe(0);
+			expect(before.body.capacity).toBe(1024 * 1024 * DEFAULT_POLICIES.driveCapacityMb);
 
 			const uploaded = await uploadFile(user);
-			assert.strictEqual(uploaded.status, 200);
+			expect(uploaded.status).toBe(200);
 
 			const after = await api('drive', {}, user);
-			assert.strictEqual(after.status, 200);
-			assert.strictEqual(after.body.usage, uploaded.body!.size);
+			expect(after.status).toBe(200);
+			expect(after.body.usage).toBe(uploaded.body!.size);
 		});
 	});
 
@@ -16581,7 +16155,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
 			return createdRole;
 		};
@@ -16608,56 +16182,53 @@ describe('Endpoints', () => {
 		test('ファイルを作成できる', async () => {
 			const res = await uploadFile(alice);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body!.name, '192.jpg');
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body!.name).toBe('192.jpg');
 		});
 
 		test('ファイルに名前を付けられる', async () => {
 			const res = await uploadFile(alice, { name: 'Belmond.jpg' });
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body!.name, 'Belmond.jpg');
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body!.name).toBe('Belmond.jpg');
 		});
 
 		test('ファイルに名前を付けられるが、拡張子は正しいものになる', async () => {
 			const res = await uploadFile(alice, { name: 'Belmond.png' });
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body!.name, 'Belmond.png.jpg');
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body!.name).toBe('Belmond.png.jpg');
 		});
 
 		test('ファイル無しで怒られる', async () => {
 			// @ts-expect-error params must not be empty
 			const res = await api('drive/files/create', {}, alice);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 			assert.ok(res.body);
-			assert.strictEqual(castAsError(res.body).error.code, 'INVALID_PARAM');
-			assert.strictEqual(castAsError(res.body).error.kind, 'client');
+			expect(castAsError(res.body).error.code).toBe('INVALID_PARAM');
+			expect(castAsError(res.body).error.kind).toBe('client');
 		});
 
 		test('存在しないフォルダーにはファイルを作成できない', async () => {
 			const res = await uploadFile(alice, { folderId: 'zzzzzzzzzzzzzzzzzzzzzzzzzz' });
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 			assert.ok(res.body);
-			assert.strictEqual(castAsError(res.body as unknown as Record<string, unknown>).error.code, 'NO_SUCH_FOLDER');
-			assert.strictEqual(
-				castAsError(res.body as unknown as Record<string, unknown>).error.id,
-				'12e7caa8-224f-471d-978a-653a81cf4c90',
-			);
+			expect(castAsError(res.body as unknown as Record<string, unknown>).error.code).toBe('NO_SUCH_FOLDER');
+			expect(castAsError(res.body as unknown as Record<string, unknown>).error.id).toBe('12e7caa8-224f-471d-978a-653a81cf4c90');
 		});
 
 		test('SVGファイルを作成できる', async () => {
 			const res = await uploadFile(alice, { path: 'image.svg' });
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body!.name, 'image.svg');
-			assert.strictEqual(res.body!.type, 'image/svg+xml');
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body!.name).toBe('image.svg');
+			expect(res.body!.type).toBe('image/svg+xml');
 		});
 
 		for (const type of ['webp', 'avif']) {
@@ -16670,7 +16241,7 @@ describe('Endpoints', () => {
 					fileIds: [fileId],
 				});
 				const apRes = await simpleGet(`notes/${res.id}`, 'application/activity+json');
-				assert.strictEqual(apRes.status, 200);
+				expect(apRes.status).toBe(200);
 				assert.ok(Array.isArray(apRes.body.attachment));
 				return apRes.body.attachment[0].mediaType;
 			};
@@ -16679,23 +16250,23 @@ describe('Endpoints', () => {
 				const path = `with-alpha.${type}`;
 				const res = await uploadFile(alice, { path });
 
-				assert.strictEqual(res.status, 200);
-				assert.strictEqual(res.body!.name, path);
-				assert.strictEqual(res.body!.type, mediaType);
+				expect(res.status).toBe(200);
+				expect(res.body!.name).toBe(path);
+				expect(res.body!.type).toBe(mediaType);
 
 				const webpublicType = await getWebpublicType(alice, res.body!.id);
-				assert.strictEqual(webpublicType, 'image/webp');
+				expect(webpublicType).toBe('image/webp');
 			});
 
 			test(`透明じゃない${type}ファイルを作成できる`, async () => {
 				const path = `without-alpha.${type}`;
 				const res = await uploadFile(alice, { path });
-				assert.strictEqual(res.status, 200);
-				assert.strictEqual(res.body!.name, path);
-				assert.strictEqual(res.body!.type, mediaType);
+				expect(res.status).toBe(200);
+				expect(res.body!.name).toBe(path);
+				expect(res.body!.type).toBe(mediaType);
 
 				const webpublicType = await getWebpublicType(alice, res.body!.id);
-				assert.strictEqual(webpublicType, 'image/webp');
+				expect(webpublicType).toBe('image/webp');
 			});
 		}
 
@@ -16713,7 +16284,7 @@ describe('Endpoints', () => {
 					blob: new Blob([new Uint8Array(10)]),
 				});
 
-				assert.strictEqual(res.status, 200);
+				expect(res.status).toBe(200);
 			} finally {
 				await cleanupRole(bob.id, createdRole.id);
 			}
@@ -16731,9 +16302,9 @@ describe('Endpoints', () => {
 			try {
 				const res = await uploadFile(bob, { path: '192.jpg' });
 
-				assert.strictEqual(res.status, 400);
+				expect(res.status).toBe(400);
 				assert.ok(res.body);
-				assert.strictEqual(castAsError(res.body).error.code, 'UNALLOWED_FILE_TYPE');
+				expect(castAsError(res.body).error.code).toBe('UNALLOWED_FILE_TYPE');
 			} finally {
 				await cleanupRole(bob.id, createdRole.id);
 			}
@@ -16760,7 +16331,7 @@ describe('Endpoints', () => {
 					blob: new Blob([new Uint8Array(10)]),
 				});
 
-				assert.strictEqual(res.status, 200);
+				expect(res.status).toBe(200);
 			} finally {
 				await cleanupRole(bob.id, tinyAttachmentRole.id);
 				await cleanupRole(bob.id, allowAllTypesRole.id);
@@ -16788,9 +16359,9 @@ describe('Endpoints', () => {
 					blob: new Blob([new Uint8Array(11)]),
 				});
 
-				assert.strictEqual(res.status, 413);
+				expect(res.status).toBe(413);
 				assert.ok(res.body);
-				assert.strictEqual(castAsError(res.body).error.code, 'MAX_FILE_SIZE_EXCEEDED');
+				expect(castAsError(res.body).error.code).toBe('MAX_FILE_SIZE_EXCEEDED');
 			} finally {
 				await cleanupRole(bob.id, tinyAttachmentRole.id);
 				await cleanupRole(bob.id, allowAllTypesRole.id);
@@ -16812,9 +16383,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.name, newName);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.name).toBe(newName);
 		});
 
 		test('他人のファイルは更新できない', async () => {
@@ -16829,7 +16400,7 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('親フォルダを更新できる', async () => {
@@ -16853,9 +16424,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.folderId, folder.id);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.folderId).toBe(folder.id);
 		});
 
 		test('親フォルダを無しにできる', async () => {
@@ -16889,9 +16460,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.folderId, null);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.folderId).toBe(null);
 		});
 
 		test('他人のフォルダには入れられない', async () => {
@@ -16915,7 +16486,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('存在しないフォルダで怒られる', async () => {
@@ -16930,7 +16501,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('不正なフォルダIDで怒られる', async () => {
@@ -16945,7 +16516,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('ファイルが存在しなかったら怒る', async () => {
@@ -16958,7 +16529,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('不正なファイル名で怒られる', async () => {
@@ -16974,7 +16545,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('間違ったIDで怒られる', async () => {
@@ -16987,7 +16558,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 	});
 
@@ -17001,9 +16572,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.name, 'test');
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.name).toBe('test');
 		});
 	});
 
@@ -17025,8 +16596,8 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 204);
-			assert.strictEqual(await fetchDriveFolderByIdFromDatabase(db, folder.id), null);
+			expect(res.status).toBe(204);
+			expect(await fetchDriveFolderByIdFromDatabase(db, folder.id)).toBe(null);
 		});
 
 		test('他人のフォルダを削除できない', async () => {
@@ -17046,9 +16617,9 @@ describe('Endpoints', () => {
 				bob,
 			);
 
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, '1069098f-c281-440f-b085-f9932edbe091');
-			assert.notStrictEqual(await fetchDriveFolderByIdFromDatabase(db, folder.id), null);
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('1069098f-c281-440f-b085-f9932edbe091');
+			expect(await fetchDriveFolderByIdFromDatabase(db, folder.id)).not.toBe(null);
 		});
 
 		test('子フォルダがあるフォルダを削除できない', async () => {
@@ -17074,9 +16645,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, 'b0fc8a17-963c-405d-bfbc-859a487295e1');
-			assert.notStrictEqual(await fetchDriveFolderByIdFromDatabase(db, parent.id), null);
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('b0fc8a17-963c-405d-bfbc-859a487295e1');
+			expect(await fetchDriveFolderByIdFromDatabase(db, parent.id)).not.toBe(null);
 		});
 
 		test('子ファイルがあるフォルダを削除できない', async () => {
@@ -17108,9 +16679,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.id, 'b0fc8a17-963c-405d-bfbc-859a487295e1');
-			assert.notStrictEqual(await fetchDriveFolderByIdFromDatabase(db, parent.id), null);
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.id).toBe('b0fc8a17-963c-405d-bfbc-859a487295e1');
+			expect(await fetchDriveFolderByIdFromDatabase(db, parent.id)).not.toBe(null);
 		});
 	});
 
@@ -17135,9 +16706,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.name, 'new name');
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.name).toBe('new name');
 		});
 
 		test('他人のフォルダを更新できない', async () => {
@@ -17160,7 +16731,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('親フォルダを更新できる', async () => {
@@ -17192,9 +16763,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.parentId, parentFolder.id);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.parentId).toBe(parentFolder.id);
 		});
 
 		test('親フォルダを無しに更新できる', async () => {
@@ -17234,9 +16805,9 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.parentId, null);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.parentId).toBe(null);
 		});
 
 		test('他人のフォルダを親フォルダに設定できない', async () => {
@@ -17268,7 +16839,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('フォルダが循環するような構造にできない', async () => {
@@ -17308,7 +16879,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('フォルダが循環するような構造にできない(再帰的)', async () => {
@@ -17365,7 +16936,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('フォルダが循環するような構造にできない(自身)', async () => {
@@ -17388,7 +16959,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('存在しない親フォルダを設定できない', async () => {
@@ -17411,7 +16982,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('不正な親フォルダIDで怒られる', async () => {
@@ -17434,7 +17005,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('存在しないフォルダを更新できない', async () => {
@@ -17446,7 +17017,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('不正なフォルダIDで怒られる', async () => {
@@ -17458,7 +17029,7 @@ describe('Endpoints', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 	});
 
@@ -17483,9 +17054,9 @@ describe('Endpoints', () => {
 				carol,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 0);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
+			expect(res.body.length).toBe(0);
 		});
 	});
 
@@ -17506,18 +17077,18 @@ describe('Endpoints', () => {
 
 			const res = await api('notes/timeline', {}, dave);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
-			assert.strictEqual(res.body.length, 1);
-			assert.strictEqual(getAt(res.body, 0).id, carolPost.id);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
+			expect(res.body.length).toBe(1);
+			expect(getAt(res.body, 0).id).toBe(carolPost.id);
 		});
 	});
 
 	describe('URL preview', () => {
 		test('Error from summaly becomes HTTP 422', async () => {
 			const res = await simpleGet('/url?url=https://e:xample.com');
-			assert.strictEqual(res.status, 422);
-			assert.strictEqual(res.body.error.code, 'URL_PREVIEW_FAILED');
+			expect(res.status).toBe(422);
+			expect(res.body.error.code).toBe('URL_PREVIEW_FAILED');
 		});
 	});
 
@@ -17541,8 +17112,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res1.status, 204);
-			assert.strictEqual((res2.body as unknown as { memo: string })?.memo, memo);
+			expect(res1.status).toBe(204);
+			expect((res2.body as unknown as { memo: string })?.memo).toBe(memo);
 		});
 
 		test('自分に関するメモを更新できる', async () => {
@@ -17564,8 +17135,8 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res1.status, 204);
-			assert.strictEqual((res2.body as unknown as { memo: string })?.memo, memo);
+			expect(res1.status).toBe(204);
+			expect((res2.body as unknown as { memo: string })?.memo).toBe(memo);
 		});
 
 		test('メモを削除できる', async () => {
@@ -17598,7 +17169,7 @@ describe('Endpoints', () => {
 			);
 
 			// memoには常に文字列かnullが入っている(5cac151)
-			assert.strictEqual((res.body as unknown as { memo: string | null }).memo, null);
+			expect((res.body as unknown as { memo: string | null }).memo).toBe(null);
 		});
 
 		test('メモは個人ごとに独立して保存される', async () => {
@@ -17641,8 +17212,8 @@ describe('Endpoints', () => {
 				),
 			]);
 
-			assert.strictEqual((resAlice.body as unknown as { memo: string }).memo, memoAliceToBob);
-			assert.strictEqual((resCarol.body as unknown as { memo: string }).memo, memoCarolToBob);
+			expect((resAlice.body as unknown as { memo: string }).memo).toBe(memoAliceToBob);
+			expect((resCarol.body as unknown as { memo: string }).memo).toBe(memoCarolToBob);
 		});
 
 		test('存在しないユーザーに対してはNO_SUCH_USERを維持する', async () => {
@@ -17654,9 +17225,9 @@ describe('Endpoints', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_USER');
-			assert.strictEqual(castAsError(res.body as any).error.id, '6fef56f3-e765-4957-88e5-c6f65329b8a5');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body as any).error.code).toBe('NO_SUCH_USER');
+			expect(castAsError(res.body as any).error.id).toBe('6fef56f3-e765-4957-88e5-c6f65329b8a5');
 		});
 	});
 });
