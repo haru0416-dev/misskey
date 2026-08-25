@@ -79,7 +79,11 @@ export type FrontendTelemetryConfig = {
 	propagateTraceHeaderCorsUrls?: string[];
 };
 
-export type RuntimeValkeyConnection = RedisOptions & {
+// ioredis 6 の Redis は ReplyMapping をクラスの型引数に取り、コンストラクタは
+// `RedisOptions & { replyMapping?: ReplyMapping }` (既定 "legacy") を要求する。
+// RedisOptions.replyMapping は "legacy" | "resp3" なので、この型の変数をそのまま
+// 渡すと型引数を推論できず全 overload が外れる。設定側では指定しないので型から除く。
+export type RuntimeValkeyConnection = Omit<RedisOptions, 'replyMapping'> & {
 	host: string;
 	port: number;
 	prefix: string;

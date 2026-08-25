@@ -78,8 +78,8 @@ async function getGalleryPostsRanking(deps: HonoApiGalleryDependencies, threshol
 	const previousWindow = currentWindow - 1;
 
 	const redisPipeline = deps.redis.pipeline();
-	redisPipeline.zrange(`featuredGalleryPostsRanking:${currentWindow}`, 0, threshold, 'REV', 'WITHSCORES');
-	redisPipeline.zrange(`featuredGalleryPostsRanking:${previousWindow}`, 0, threshold, 'REV', 'WITHSCORES');
+	redisPipeline.zrange(`featuredGalleryPostsRanking:${currentWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
+	redisPipeline.zrange(`featuredGalleryPostsRanking:${previousWindow}`, 0, String(threshold), 'REV', 'WITHSCORES');
 	const [currentRankingResult = [], previousRankingResult = []] = await redisPipeline
 		.exec()
 		.then((result) => (result ? result.map((r) => (r[1] ?? []) as string[]) : []));
