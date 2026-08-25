@@ -45,29 +45,12 @@ export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): v
 		}),
 	);
 
-	app.post('/channels/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:channels');
-			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canCreateChannel'))) {
-				throw rolePermissionDeniedError();
-			}
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'channels/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 10,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiChannelsCreate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/channels/create',
+		endpointHandler(deps, 'channels/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiChannelsCreate(deps, auth.user, body)),
+		),
+	);
 
 	app.on(
 		['POST', 'QUERY'],

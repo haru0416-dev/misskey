@@ -71,180 +71,113 @@ export function registerEmojisRoutes(app: Hono, deps: ApiShellDependencies): voi
 		),
 	);
 
-	app.on(['POST', 'QUERY'], '/admin/emoji/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
+	app.on(
+		['POST', 'QUERY'],
+		'/admin/emoji/list',
+		endpointHandler(deps, 'admin/emoji/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAdminEmojiList(deps, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiAdminEmojiList(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/v2/admin/emoji/list',
+		endpointHandler(deps, 'v2/admin/emoji/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiV2AdminEmojiList(deps, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/v2/admin/emoji/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
+	app.on(
+		['POST', 'QUERY'],
+		'/admin/emoji/list-remote',
+		endpointHandler(deps, 'admin/emoji/list-remote', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAdminEmojiListRemote(deps, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiV2AdminEmojiList(deps, body));
-		});
-	});
+	app.post(
+		'/admin/emoji/add',
+		endpointHandler(deps, 'admin/emoji/add', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAdminEmojiAdd(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/admin/emoji/list-remote', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
+	app.post(
+		'/admin/emoji/copy',
+		endpointHandler(deps, 'admin/emoji/copy', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAdminEmojiCopy(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiAdminEmojiListRemote(deps, body));
-		});
-	});
-
-	app.post('/admin/emoji/add', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
-			return jsonResponse(c, await handleHonoApiAdminEmojiAdd(deps, auth.user, body));
-		});
-	});
-
-	app.post('/admin/emoji/copy', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
-			return jsonResponse(c, await handleHonoApiAdminEmojiCopy(deps, auth.user, body));
-		});
-	});
-
-	app.post('/admin/emoji/add-aliases-bulk', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
+	app.post(
+		'/admin/emoji/add-aliases-bulk',
+		endpointHandler(deps, 'admin/emoji/add-aliases-bulk', async ({ body, auth, c }) => {
 			await handleHonoApiAdminEmojiAddAliasesBulk(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/emoji/remove-aliases-bulk', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
+	app.post(
+		'/admin/emoji/remove-aliases-bulk',
+		endpointHandler(deps, 'admin/emoji/remove-aliases-bulk', async ({ body, auth, c }) => {
 			await handleHonoApiAdminEmojiRemoveAliasesBulk(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/emoji/set-aliases-bulk', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
+	app.post(
+		'/admin/emoji/set-aliases-bulk',
+		endpointHandler(deps, 'admin/emoji/set-aliases-bulk', async ({ body, auth, c }) => {
 			await handleHonoApiAdminEmojiSetAliasesBulk(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/emoji/set-category-bulk', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
+	app.post(
+		'/admin/emoji/set-category-bulk',
+		endpointHandler(deps, 'admin/emoji/set-category-bulk', async ({ body, auth, c }) => {
 			await handleHonoApiAdminEmojiSetCategoryBulk(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/emoji/set-license-bulk', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
+	app.post(
+		'/admin/emoji/set-license-bulk',
+		endpointHandler(deps, 'admin/emoji/set-license-bulk', async ({ body, auth, c }) => {
 			await handleHonoApiAdminEmojiSetLicenseBulk(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/emoji/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
+	app.post(
+		'/admin/emoji/delete',
+		endpointHandler(deps, 'admin/emoji/delete', async ({ body, auth, c }) => {
 			await handleHonoApiAdminEmojiDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/emoji/delete-bulk', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
+	app.post(
+		'/admin/emoji/delete-bulk',
+		endpointHandler(deps, 'admin/emoji/delete-bulk', async ({ body, auth, c }) => {
 			await handleHonoApiAdminEmojiDeleteBulk(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/emoji/import-zip', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
+	app.post(
+		'/admin/emoji/import-zip',
+		endpointHandler(deps, 'admin/emoji/import-zip', async ({ body, auth, c }) => {
 			await handleHonoApiAdminEmojiImportZip(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/emoji/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:emoji');
-			await assertHonoApiCanManageCustomEmojis(deps, auth);
-
+	app.post(
+		'/admin/emoji/update',
+		endpointHandler(deps, 'admin/emoji/update', async ({ body, auth, c }) => {
 			await handleHonoApiAdminEmojiUpdate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 }
