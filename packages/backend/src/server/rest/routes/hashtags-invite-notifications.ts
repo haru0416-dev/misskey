@@ -43,7 +43,7 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 	app.on(
 		['POST', 'QUERY'],
 		'/hashtags/list',
-		endpointHandler(deps, 'hashtags/list', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'hashtags/list', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiHashtagsList(deps, body)),
 		),
 	);
@@ -51,7 +51,7 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 	app.on(
 		['POST', 'QUERY'],
 		'/hashtags/search',
-		endpointHandler(deps, 'hashtags/search', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'hashtags/search', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiHashtagsSearch(deps, body)),
 		),
 	);
@@ -59,14 +59,14 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 	app.on(
 		['POST', 'QUERY'],
 		'/hashtags/show',
-		endpointHandler(deps, 'hashtags/show', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'hashtags/show', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiHashtagsShow(deps, body)),
 		),
 	);
 
 	app.get(
 		'/hashtags/trend',
-		endpointHandler(deps, 'hashtags/trend', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'hashtags/trend', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiHashtagsTrend(deps, c.req.query()), 200, {
 				'Cache-Control': 'public, max-age=60',
 			}),
@@ -76,7 +76,7 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 	app.on(
 		['POST', 'QUERY'],
 		'/hashtags/trend',
-		endpointHandler(deps, 'hashtags/trend', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'hashtags/trend', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiHashtagsTrend(deps, body), 200, {
 				'Cache-Control': 'public, max-age=60',
 			}),

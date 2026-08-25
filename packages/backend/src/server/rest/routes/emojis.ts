@@ -32,12 +32,12 @@ import {
 	assertHonoApiCanManageCustomEmojis,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { endpointHandler } from '../endpoint-handlers.js';
+import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerEmojisRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.get(
 		'/emoji',
-		endpointHandler(deps, 'emoji', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'emoji', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiEmoji(deps, c.req.query()), 200, {
 				'Cache-Control': 'public, max-age=3600',
 			}),
@@ -46,7 +46,7 @@ export function registerEmojisRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.post(
 		'/emoji',
-		endpointHandler(deps, 'emoji', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'emoji', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiEmoji(deps, body), 200, {
 				'Cache-Control': 'public, max-age=3600',
 			}),
@@ -55,7 +55,7 @@ export function registerEmojisRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.get(
 		'/emojis',
-		endpointHandler(deps, 'emojis', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'emojis', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
 				'Cache-Control': 'public, max-age=3600',
 			}),
@@ -64,7 +64,7 @@ export function registerEmojisRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.post(
 		'/emojis',
-		endpointHandler(deps, 'emojis', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'emojis', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
 				'Cache-Control': 'public, max-age=3600',
 			}),

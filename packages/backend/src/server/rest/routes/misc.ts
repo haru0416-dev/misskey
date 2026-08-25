@@ -54,7 +54,9 @@ import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.
 export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post(
 		'/meta',
-		endpointHandler(deps, 'meta', async ({ body, auth, c }) => jsonResponse(c, await handleHonoApiMeta(deps, body))),
+		endpointHandlerAnonymous(deps, 'meta', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiMeta(deps, body)),
+		),
 	);
 
 	app.post(
@@ -129,7 +131,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 
 	app.get(
 		'/retention',
-		endpointHandler(deps, 'retention', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'retention', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiRetention(deps, {}), 200, {
 				'Cache-Control': 'public, max-age=3600',
 			}),
@@ -138,7 +140,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 
 	app.post(
 		'/retention',
-		endpointHandler(deps, 'retention', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'retention', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiRetention(deps, body), 200, {
 				'Cache-Control': 'public, max-age=3600',
 			}),
@@ -147,7 +149,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 
 	app.post(
 		'/request-reset-password',
-		endpointHandler(deps, 'request-reset-password', async ({ body, auth, c }) => {
+		endpointHandlerAnonymous(deps, 'request-reset-password', async ({ body, auth, c }) => {
 			await handleHonoApiRequestResetPassword(deps, body, getRequestIp(c, deps.config));
 			return emptyResponse(c);
 		}),
@@ -155,7 +157,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 
 	app.post(
 		'/reset-password',
-		endpointHandler(deps, 'reset-password', async ({ body, auth, c }) => {
+		endpointHandlerAnonymous(deps, 'reset-password', async ({ body, auth, c }) => {
 			await handleHonoApiResetPassword(deps, body);
 			return emptyResponse(c);
 		}),
@@ -163,7 +165,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 
 	app.post(
 		'/reset-db',
-		endpointHandler(deps, 'reset-db', async ({ body, auth, c }) => {
+		endpointHandlerAnonymous(deps, 'reset-db', async ({ body, auth, c }) => {
 			await handleHonoApiResetDb(deps, body);
 			return emptyResponse(c);
 		}),
@@ -180,7 +182,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 	app.on(
 		['POST', 'QUERY'],
 		'/roles/show',
-		endpointHandler(deps, 'roles/show', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'roles/show', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiRolesShow(deps, body)),
 		),
 	);
@@ -203,7 +205,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 
 	app.get(
 		'/server-info',
-		endpointHandler(deps, 'server-info', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'server-info', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
 				'Cache-Control': 'public, max-age=60',
 			}),
@@ -212,7 +214,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 
 	app.post(
 		'/server-info',
-		endpointHandler(deps, 'server-info', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'server-info', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
 				'Cache-Control': 'public, max-age=60',
 			}),
@@ -257,7 +259,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 
 	app.get(
 		'/get-online-users-count',
-		endpointHandler(deps, 'get-online-users-count', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'get-online-users-count', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiGetOnlineUsersCount(deps), 200, {
 				'Cache-Control': 'public, max-age=60',
 			}),
@@ -266,7 +268,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 
 	app.post(
 		'/get-online-users-count',
-		endpointHandler(deps, 'get-online-users-count', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'get-online-users-count', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiGetOnlineUsersCount(deps), 200, {
 				'Cache-Control': 'public, max-age=60',
 			}),
@@ -276,7 +278,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 	app.on(
 		['POST', 'QUERY'],
 		'/get-avatar-decorations',
-		endpointHandler(deps, 'get-avatar-decorations', async ({ body, auth, c }) =>
+		endpointHandlerAnonymous(deps, 'get-avatar-decorations', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiGetAvatarDecorations(deps, body)),
 		),
 	);
