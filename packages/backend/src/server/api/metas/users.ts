@@ -99,6 +99,7 @@ export const endpointMetas = {
 	},
 	'users/featured-notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
