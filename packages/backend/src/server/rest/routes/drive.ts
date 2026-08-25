@@ -43,29 +43,24 @@ import {
 	runApiEndpoint,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.on(['POST', 'QUERY'], '/drive/files', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/files',
+		endpointHandler(deps, 'drive/files', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFilesList(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiDriveFilesList(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/drive/stream', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
-
-			return jsonResponse(c, await handleHonoApiDriveStream(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/stream',
+		endpointHandler(deps, 'drive/stream', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveStream(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/drive/files/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -124,60 +119,45 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/drive/files/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/files/show',
+		endpointHandler(deps, 'drive/files/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFilesShow(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiDriveFilesShow(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/files/find',
+		endpointHandler(deps, 'drive/files/find', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFilesFind(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/drive/files/find', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/files/find-by-hash',
+		endpointHandler(deps, 'drive/files/find-by-hash', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFilesFindByHash(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiDriveFilesFind(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/files/attached-notes',
+		endpointHandler(deps, 'drive/files/attached-notes', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFilesAttachedNotes(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/drive/files/find-by-hash', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
-
-			return jsonResponse(c, await handleHonoApiDriveFilesFindByHash(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/drive/files/attached-notes', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
-
-			return jsonResponse(c, await handleHonoApiDriveFilesAttachedNotes(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/drive/files/attached-chat-messages', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
-
-			return jsonResponse(c, await handleHonoApiDriveFilesAttachedChatMessages(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/files/attached-chat-messages',
+		endpointHandler(deps, 'drive/files/attached-chat-messages', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFilesAttachedChatMessages(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/drive/files/delete', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -191,16 +171,12 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/files/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:drive');
-
-			return jsonResponse(c, await handleHonoApiDriveFilesUpdate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/drive/files/update',
+		endpointHandler(deps, 'drive/files/update', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFilesUpdate(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/drive/files/move-bulk', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -214,38 +190,28 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
+	app.post(
+		'/drive',
+		endpointHandler(deps, 'drive', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDrive(deps, auth.user)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiDrive(deps, auth.user));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/files/check-existence',
+		endpointHandler(deps, 'drive/files/check-existence', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFilesCheckExistence(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/drive/files/check-existence', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
-
-			return jsonResponse(c, await handleHonoApiDriveFilesCheckExistence(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/drive/folders', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
-
-			return jsonResponse(c, await handleHonoApiDriveFolders(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/folders',
+		endpointHandler(deps, 'drive/folders', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFolders(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/drive/folders/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -279,36 +245,26 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/drive/folders/find', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/folders/find',
+		endpointHandler(deps, 'drive/folders/find', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFoldersFind(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiDriveFoldersFind(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/drive/folders/show',
+		endpointHandler(deps, 'drive/folders/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFoldersShow(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/drive/folders/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:drive');
-
-			return jsonResponse(c, await handleHonoApiDriveFoldersShow(deps, auth.user, body));
-		});
-	});
-
-	app.post('/drive/folders/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:drive');
-
-			return jsonResponse(c, await handleHonoApiDriveFoldersUpdate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/drive/folders/update',
+		endpointHandler(deps, 'drive/folders/update', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiDriveFoldersUpdate(deps, auth.user, body)),
+		),
+	);
 }

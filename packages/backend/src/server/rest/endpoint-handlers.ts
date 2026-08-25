@@ -10,6 +10,7 @@ import { endpointMetas } from '@/server/api/endpoint-metas.js';
 import {
 	assertCredential,
 	assertOptionalCredential,
+	assertProhibitMoved,
 	assertSecureCredential,
 	assertTokenPermission,
 	authenticateHonoApiToken,
@@ -48,6 +49,7 @@ export async function withEndpointGuards<T>(
 		requireModerator?: boolean;
 		requireAdmin?: boolean;
 		secure?: boolean;
+		prohibitMoved?: boolean;
 		kind?: string;
 	};
 
@@ -66,6 +68,10 @@ export async function withEndpointGuards<T>(
 
 	if (meta.kind != null && meta.kind !== 'server') {
 		assertTokenPermission(auth, meta.kind);
+	}
+
+	if (meta.prohibitMoved === true) {
+		assertProhibitMoved((auth as AuthedCredential).user);
 	}
 
 	if (meta.requireAdmin === true) {

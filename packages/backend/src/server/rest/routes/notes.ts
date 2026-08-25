@@ -63,6 +63,7 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post('/notes/create', async (c) => {
@@ -179,72 +180,61 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/notes/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/show',
+		endpointHandlerAnonymous(deps, 'notes/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesShow(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiNotesShow(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/children',
+		endpointHandlerAnonymous(deps, 'notes/children', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesChildren(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/notes/children', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/conversation',
+		endpointHandlerAnonymous(deps, 'notes/conversation', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesConversation(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiNotesChildren(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/mentions',
+		endpointHandler(deps, 'notes/mentions', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesMentions(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/notes/conversation', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/replies',
+		endpointHandlerAnonymous(deps, 'notes/replies', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesReplies(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiNotesConversation(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/renotes',
+		endpointHandlerAnonymous(deps, 'notes/renotes', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesRenotes(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/notes/mentions', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:account');
-
-			return jsonResponse(c, await handleHonoApiNotesMentions(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/notes/replies', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiNotesReplies(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/notes/renotes', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiNotesRenotes(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/notes/state', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:account');
-
-			return jsonResponse(c, await handleHonoApiNotesState(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/state',
+		endpointHandler(deps, 'notes/state', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesState(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/notes/favorites/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -313,43 +303,36 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			await authenticateOptionalRequest(deps, c, body);
+	app.post(
+		'/notes',
+		endpointHandlerAnonymous(deps, 'notes', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotes(deps, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiNotes(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/global-timeline',
+		endpointHandlerAnonymous(deps, 'notes/global-timeline', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesGlobalTimeline(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/notes/global-timeline', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/local-timeline',
+		endpointHandlerAnonymous(deps, 'notes/local-timeline', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesLocalTimeline(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiNotesGlobalTimeline(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/notes/local-timeline', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiNotesLocalTimeline(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/notes/hybrid-timeline', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:account');
-
-			return jsonResponse(c, await handleHonoApiNotesHybridTimeline(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/hybrid-timeline',
+		endpointHandler(deps, 'notes/hybrid-timeline', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesHybridTimeline(deps, auth.user, body)),
+		),
+	);
 
 	app.get('/notes/featured', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -420,81 +403,67 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/users/notes', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/users/notes',
+		endpointHandlerAnonymous(deps, 'users/notes', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiUsersNotes(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiUsersNotes(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/clips',
+		endpointHandlerAnonymous(deps, 'notes/clips', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesClips(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/notes/clips', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/search',
+		endpointHandlerAnonymous(deps, 'notes/search', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesSearch(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiNotesClips(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/search-by-tag',
+		endpointHandlerAnonymous(deps, 'notes/search-by-tag', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesSearchByTag(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/notes/search', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/show-partial-bulk',
+		endpointHandlerAnonymous(deps, 'notes/show-partial-bulk', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesShowPartialBulk(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiNotesSearch(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/timeline',
+		endpointHandler(deps, 'notes/timeline', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesTimeline(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/notes/search-by-tag', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/user-list-timeline',
+		endpointHandler(deps, 'notes/user-list-timeline', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesUserListTimeline(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiNotesSearchByTag(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/notes/show-partial-bulk', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiNotesShowPartialBulk(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/notes/timeline', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:account');
-
-			return jsonResponse(c, await handleHonoApiNotesTimeline(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/notes/user-list-timeline', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:account');
-
-			return jsonResponse(c, await handleHonoApiNotesUserListTimeline(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/notes/polls/recommendation', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:account');
-
-			return jsonResponse(c, await handleHonoApiNotesPollsRecommendation(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/notes/polls/recommendation',
+		endpointHandler(deps, 'notes/polls/recommendation', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesPollsRecommendation(deps, auth.user, body)),
+		),
+	);
 }
