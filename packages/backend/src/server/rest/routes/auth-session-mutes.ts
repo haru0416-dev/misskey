@@ -40,34 +40,30 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/auth/session/generate', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			await authenticateOptionalRequest(deps, c, body);
+	app.post(
+		'/auth/session/generate',
+		endpointHandlerAnonymous(deps, 'auth/session/generate', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAuthSessionGenerate(deps, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiAuthSessionGenerate(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/auth/session/show',
+		endpointHandlerAnonymous(deps, 'auth/session/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAuthSessionShow(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/auth/session/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiAuthSessionShow(deps, auth.user, body));
-		});
-	});
-
-	app.post('/auth/session/userkey', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiAuthSessionUserkey(deps, body));
-		});
-	});
+	app.post(
+		'/auth/session/userkey',
+		endpointHandlerAnonymous(deps, 'auth/session/userkey', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAuthSessionUserkey(deps, body)),
+		),
+	);
 
 	app.post('/auth/accept', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -121,16 +117,13 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/blocking/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:blocks');
-
-			return jsonResponse(c, await handleHonoApiBlockingList(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/blocking/list',
+		endpointHandler(deps, 'blocking/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiBlockingList(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/mute/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -166,16 +159,13 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/mute/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:mutes');
-
-			return jsonResponse(c, await handleHonoApiMuteList(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/mute/list',
+		endpointHandler(deps, 'mute/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiMuteList(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/renote-mute/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -211,14 +201,11 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/renote-mute/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:mutes');
-
-			return jsonResponse(c, await handleHonoApiRenoteMuteList(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/renote-mute/list',
+		endpointHandler(deps, 'renote-mute/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiRenoteMuteList(deps, auth.user, body)),
+		),
+	);
 }

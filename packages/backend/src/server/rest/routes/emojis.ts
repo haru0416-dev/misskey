@@ -32,41 +32,44 @@ import {
 	assertHonoApiCanManageCustomEmojis,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerEmojisRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.get('/emoji', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			return jsonResponse(c, await handleHonoApiEmoji(deps, c.req.query()), 200, {
+	app.get(
+		'/emoji',
+		endpointHandler(deps, 'emoji', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiEmoji(deps, c.req.query()), 200, {
 				'Cache-Control': 'public, max-age=3600',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.post('/emoji', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiEmoji(deps, body), 200, {
+	app.post(
+		'/emoji',
+		endpointHandler(deps, 'emoji', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiEmoji(deps, body), 200, {
 				'Cache-Control': 'public, max-age=3600',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.get('/emojis', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			return jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
+	app.get(
+		'/emojis',
+		endpointHandler(deps, 'emojis', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
 				'Cache-Control': 'public, max-age=3600',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.post('/emojis', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
+	app.post(
+		'/emojis',
+		endpointHandler(deps, 'emojis', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiEmojis(deps), 200, {
 				'Cache-Control': 'public, max-age=3600',
-			});
-		});
-	});
+			}),
+		),
+	);
 
 	app.on(['POST', 'QUERY'], '/admin/emoji/list', async (c) => {
 		return await runApiEndpoint(c, async () => {

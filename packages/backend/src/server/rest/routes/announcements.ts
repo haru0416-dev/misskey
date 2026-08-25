@@ -29,25 +29,23 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/announcements', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.post(
+		'/announcements',
+		endpointHandlerAnonymous(deps, 'announcements', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAnnouncements(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiAnnouncements(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/announcements/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiAnnouncementShow(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/announcements/show',
+		endpointHandlerAnonymous(deps, 'announcements/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAnnouncementShow(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/i/read-announcement', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -74,14 +72,13 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/pinned-users', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiPinnedUsers(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/pinned-users',
+		endpointHandlerAnonymous(deps, 'pinned-users', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiPinnedUsers(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/page-push', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -95,10 +92,11 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/email-address/available', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiEmailAddressAvailable(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/email-address/available',
+		endpointHandler(deps, 'email-address/available', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiEmailAddressAvailable(deps, body)),
+		),
+	);
 }

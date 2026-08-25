@@ -28,6 +28,7 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.get('/charts/active-users', async (c) => {
@@ -366,12 +367,10 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/stats', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiStats(deps));
-		});
-	});
+	app.post(
+		'/stats',
+		endpointHandlerAnonymous(deps, 'stats', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiStats(deps)),
+		),
+	);
 }

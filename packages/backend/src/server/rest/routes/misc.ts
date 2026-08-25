@@ -49,14 +49,13 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/meta', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiMeta(deps, body));
-		});
-	});
+	app.post(
+		'/meta',
+		endpointHandler(deps, 'meta', async ({ body, auth, c }) => jsonResponse(c, await handleHonoApiMeta(deps, body))),
+	);
 
 	app.post('/pages/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -113,23 +112,21 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/pages/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/pages/show',
+		endpointHandlerAnonymous(deps, 'pages/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiPagesShow(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiPagesShow(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/pages/featured', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiPagesFeatured(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/pages/featured',
+		endpointHandlerAnonymous(deps, 'pages/featured', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiPagesFeatured(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/pages/like', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -176,22 +173,23 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.get('/retention', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			return jsonResponse(c, await handleHonoApiRetention(deps, {}), 200, {
+	app.get(
+		'/retention',
+		endpointHandler(deps, 'retention', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiRetention(deps, {}), 200, {
 				'Cache-Control': 'public, max-age=3600',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.post('/retention', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiRetention(deps, body), 200, {
+	app.post(
+		'/retention',
+		endpointHandler(deps, 'retention', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiRetention(deps, body), 200, {
 				'Cache-Control': 'public, max-age=3600',
-			});
-		});
-	});
+			}),
+		),
+	);
 
 	app.post('/request-reset-password', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -217,82 +215,69 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/roles/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:account');
+	app.on(
+		['POST', 'QUERY'],
+		'/roles/list',
+		endpointHandler(deps, 'roles/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiRolesList(deps, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiRolesList(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/roles/show',
+		endpointHandler(deps, 'roles/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiRolesShow(deps, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/roles/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiRolesShow(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/roles/users',
+		endpointHandlerAnonymous(deps, 'roles/users', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiRolesUsers(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/roles/users', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/roles/notes',
+		endpointHandler(deps, 'roles/notes', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiRolesNotes(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiRolesUsers(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/roles/notes', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:account');
-
-			return jsonResponse(c, await handleHonoApiRolesNotes(deps, auth.user, body));
-		});
-	});
-
-	app.get('/server-info', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			return jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
+	app.get(
+		'/server-info',
+		endpointHandler(deps, 'server-info', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
 				'Cache-Control': 'public, max-age=60',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.post('/server-info', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
+	app.post(
+		'/server-info',
+		endpointHandler(deps, 'server-info', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiServerInfo(deps.meta), 200, {
 				'Cache-Control': 'public, max-age=60',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.post('/sw/register', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
+	app.post(
+		'/sw/register',
+		endpointHandler(deps, 'sw/register', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiSwRegister(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiSwRegister(deps, auth.user, body));
-		});
-	});
-
-	app.post('/sw/show-registration', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
-			return jsonResponse(c, await handleHonoApiSwShowRegistration(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/sw/show-registration',
+		endpointHandler(deps, 'sw/show-registration', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiSwShowRegistration(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/sw/unregister', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -304,16 +289,12 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/sw/update-registration', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
-			return jsonResponse(c, await handleHonoApiSwUpdateRegistration(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/sw/update-registration',
+		endpointHandler(deps, 'sw/update-registration', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiSwUpdateRegistration(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/test', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -322,27 +303,29 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.get('/get-online-users-count', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			return jsonResponse(c, await handleHonoApiGetOnlineUsersCount(deps), 200, {
+	app.get(
+		'/get-online-users-count',
+		endpointHandler(deps, 'get-online-users-count', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiGetOnlineUsersCount(deps), 200, {
 				'Cache-Control': 'public, max-age=60',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.post('/get-online-users-count', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiGetOnlineUsersCount(deps), 200, {
+	app.post(
+		'/get-online-users-count',
+		endpointHandler(deps, 'get-online-users-count', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiGetOnlineUsersCount(deps), 200, {
 				'Cache-Control': 'public, max-age=60',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/get-avatar-decorations', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiGetAvatarDecorations(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/get-avatar-decorations',
+		endpointHandler(deps, 'get-avatar-decorations', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiGetAvatarDecorations(deps, body)),
+		),
+	);
 }

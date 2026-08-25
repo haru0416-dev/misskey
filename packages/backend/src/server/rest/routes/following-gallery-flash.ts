@@ -52,6 +52,7 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post('/following/create', async (c) => {
@@ -75,16 +76,13 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/following/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:following');
-
-			return jsonResponse(c, await handleHonoApiFollowingList(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/following/list',
+		endpointHandler(deps, 'following/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFollowingList(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/following/delete', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -158,27 +156,20 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/following/requests/cancel', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:following');
+	app.post(
+		'/following/requests/cancel',
+		endpointHandler(deps, 'following/requests/cancel', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFollowingRequestsCancel(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiFollowingRequestsCancel(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/following/requests/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:following');
-
-			return jsonResponse(c, await handleHonoApiFollowingRequestsList(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/following/requests/list',
+		endpointHandler(deps, 'following/requests/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFollowingRequestsList(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/following/requests/reject', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -192,52 +183,45 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/following/requests/sent', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:following');
+	app.on(
+		['POST', 'QUERY'],
+		'/following/requests/sent',
+		endpointHandler(deps, 'following/requests/sent', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFollowingRequestsSent(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiFollowingRequestsSent(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/gallery/featured',
+		endpointHandlerAnonymous(deps, 'gallery/featured', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiGalleryFeatured(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/gallery/featured', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/gallery/popular',
+		endpointHandlerAnonymous(deps, 'gallery/popular', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiGalleryPopular(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiGalleryFeatured(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/gallery/posts',
+		endpointHandlerAnonymous(deps, 'gallery/posts', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiGalleryPosts(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/gallery/popular', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiGalleryPopular(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/gallery/posts', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiGalleryPosts(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/gallery/posts/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiGalleryPostsShow(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/gallery/posts/show',
+		endpointHandlerAnonymous(deps, 'gallery/posts/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiGalleryPostsShow(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/gallery/posts/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -319,27 +303,21 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/i/gallery/posts', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:gallery');
+	app.on(
+		['POST', 'QUERY'],
+		'/i/gallery/posts',
+		endpointHandler(deps, 'i/gallery/posts', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiIGalleryPosts(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiIGalleryPosts(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/i/gallery/likes', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:gallery-likes');
-
-			return jsonResponse(c, await handleHonoApiIGalleryLikes(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/i/gallery/likes',
+		endpointHandler(deps, 'i/gallery/likes', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiIGalleryLikes(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/flash/like', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -422,54 +400,45 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/flash/featured', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
+	app.on(
+		['POST', 'QUERY'],
+		'/flash/featured',
+		endpointHandlerAnonymous(deps, 'flash/featured', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFlashFeatured(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiFlashFeatured(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/flash/my',
+		endpointHandler(deps, 'flash/my', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFlashMy(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/flash/my', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:flash');
+	app.on(
+		['POST', 'QUERY'],
+		'/flash/my-likes',
+		endpointHandler(deps, 'flash/my-likes', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFlashMyLikes(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiFlashMy(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/flash/search',
+		endpointHandlerAnonymous(deps, 'flash/search', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFlashSearch(deps, auth.user, body)),
+		),
+	);
 
-	app.on(['POST', 'QUERY'], '/flash/my-likes', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:flash-likes');
-
-			return jsonResponse(c, await handleHonoApiFlashMyLikes(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/flash/search', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiFlashSearch(deps, auth.user, body));
-		});
-	});
-
-	app.on(['POST', 'QUERY'], '/flash/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiFlashShow(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/flash/show',
+		endpointHandlerAnonymous(deps, 'flash/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiFlashShow(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/following/update-all', async (c) => {
 		return await runApiEndpoint(c, async () => {
