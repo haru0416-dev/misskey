@@ -23,7 +23,11 @@ import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { concat } from '@/misc/prelude/array.js';
 import type { Config } from '@/config.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { enqueueInlineDbJobsInOutbox, runInlineDbOutboxJob } from '@/core/QueueOutboxStore.js';
+import {
+	completeInlineDbOutboxJobs,
+	enqueueInlineDbJobsInOutbox,
+	releaseInlineDbOutboxJobs,
+} from '@/core/QueueOutboxStore.js';
 import type { InlineDbOutboxJob } from '@/core/QueueOutboxStore.js';
 import type { MiMeta } from '@/models/_.js';
 import type { IPoll } from '@/models/Poll.js';
@@ -772,8 +776,9 @@ export type CreateNoteData = {
 	url?: string | null;
 };
 
+// outbox に載せるステージ。全て冪等であること (途中で落ちると全ステージが再実行される)。
+// analytics は加算処理で冪等でないため含めない。
 const notePostCreateStages = [
-	'analytics',
 	'fanout',
 	'antennas',
 	'followerNotifications',
@@ -970,10 +975,9 @@ async function insertNoteForHonoApi(
 			}
 
 			const note = { ...insert, reply: data.reply ?? null, renote: data.renote ?? null } as unknown as MiNote;
-			const jobDataList: DbNotePostCreateJobData[] = [];
-			for (const stage of notePostCreateStages) {
-				if (isNoopPostCreateStage(stage, data, user, silent, mentionedUsers)) continue;
-				const jobData: DbNotePostCreateJobData = {
+			const jobDataList: DbNotePostCreateJobData[] = notePostCreateStages
+				.filter((stage) => !isNoopPostCreateStage(stage, data, user, silent, mentionedUsers))
+				.map((stage) => ({
 					noteId: note.id,
 					mentionedUserIds: mentionedUsers.map((u) => u.id),
 					reply:
@@ -996,9 +1000,7 @@ async function insertNoteForHonoApi(
 								},
 					silent,
 					stage,
-				};
-				jobDataList.push(jobData);
-			}
+				}));
 			const enqueued = await enqueueInlineDbJobsInOutbox(tx, 'notePostCreate', jobDataList, {
 				attempts: 12,
 				backoff: { type: 'exponential', delay: 1000 },
@@ -1628,54 +1630,72 @@ export async function createNoteForHonoApi(
 	const persisted = await persist((db) =>
 		insertNoteForHonoApi(deps, user, data, tags, emojis, finalMentionedUsers, silent, db),
 	);
-	const runOutboxJob = async (outboxJob: (typeof persisted.outboxJobs)[number]): Promise<void> => {
-		try {
-			await runInlineDbOutboxJob(deps.db, outboxJob, async (db) => {
+	// 行はステージ毎に独立しているが、成功経路では claim もステージ毎のトランザクションも
+	// 張らず、完了した行をまとめて1本の DELETE で消す。落ちた場合は未完了の行が残り、
+	// リース失効後にキューワーカーが該当ステージだけを再実行する。
+	const runStages = async (jobs: PersistedNote['outboxJobs']): Promise<void> => {
+		const done: PersistedNote['outboxJobs'] = [];
+		for (const job of jobs) {
+			try {
 				await postNoteCreatedForHonoApi(
-					{ ...deps, db },
+					deps,
 					persisted.note,
 					user,
 					data,
 					tags,
 					finalMentionedUsers,
 					silent,
-					outboxJob.data.stage,
+					job.data.stage,
 				);
-			});
+				done.push(job);
+			} catch (error) {
+				console.error(`Failed to complete post-create stage ${job.data.stage} for note ${persisted.note.id}`, error);
+				await completeInlineDbOutboxJobs(deps.db, done);
+				await releaseInlineDbOutboxJobs(
+					deps.db,
+					jobs.filter((rest) => !done.includes(rest)),
+					error,
+				);
+				return;
+			}
+		}
+		await completeInlineDbOutboxJobs(deps.db, done);
+	};
+
+	// analytics は再実行で二重計上するため outbox に載せない (中身はチャートへの加算で、
+	// 行を持っても完了は保証されていない)。ただし実行はドレインチェーン内に留める。
+	// 投げっぱなしにすると裏の書き込みが応答後も無制限に並行し、DB プールを奪う。
+	const runAnalytics = async (): Promise<void> => {
+		try {
+			await postNoteCreatedForHonoApi(deps, persisted.note, user, data, tags, finalMentionedUsers, silent, 'analytics');
 		} catch (error) {
-			console.error(
-				`Failed to complete post-create stage ${outboxJob.data.stage} for note ${persisted.note.id}`,
-				error,
-			);
+			console.error(`Failed to run analytics stage for note ${persisted.note.id}`, error);
 		}
 	};
 
 	if (options.deferPostPersistStages) {
 		// fanout は read-your-writes (作成直後の自TL 参照)、antennas は「作成時点に存在する
-		// アンテナと照合する」順序を守るため、応答前に完了させる。どちらもインメモリ+Redis
-		// 主体で軽い。
+		// アンテナと照合する」順序を守るため、応答前に完了させる。どちらもインメモリ+Redis 主体で軽い。
 		const awaitedStages: DbNotePostCreateStage[] = ['fanout', 'antennas'];
-		for (const outboxJob of persisted.outboxJobs) {
-			if (awaitedStages.includes(outboxJob.data.stage)) await runOutboxJob(outboxJob);
-		}
-		// 残りは応答後にドレイン。outbox 行はコミット済みなので、未実行のままプロセスが
-		// 死んでもリース失効後にキューワーカーが回収する。プロセス全体で直列化するのは、
-		// 並行ドレインの束が DB プールを奪って foreground の p99 を悪化させるため。
+		const awaited = persisted.outboxJobs.filter((job) => awaitedStages.includes(job.data.stage));
+		const deferred = persisted.outboxJobs.filter((job) => !awaitedStages.includes(job.data.stage));
+		await runStages(awaited);
+		// プロセス全体で直列化するのは、並行ドレインの束が DB プールを奪って
+		// foreground の p99 を悪化させるため。
 		deferredStageDrainChain = deferredStageDrainChain
 			.then(async () => {
-				for (const outboxJob of persisted.outboxJobs) {
-					if (!awaitedStages.includes(outboxJob.data.stage)) await runOutboxJob(outboxJob);
-				}
+				await runAnalytics();
+				await runStages(deferred);
 			})
 			.catch((error) => {
 				console.error(`Failed to drain post-create stages for note ${persisted.note.id}`, error);
 			});
 	} else {
 		// キュー経路は await 自体がバックプレッシャーなので同期のまま。
-		for (const outboxJob of persisted.outboxJobs) {
-			await runOutboxJob(outboxJob);
-		}
+		await runAnalytics();
+		await runStages(persisted.outboxJobs);
 	}
+
 	return persisted.note;
 }
 

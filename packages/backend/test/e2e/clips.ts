@@ -416,7 +416,7 @@ describe('クリップ', () => {
 
 	test('のID指定取得は他人のPrivateなクリップは取得できない', async () => {
 		const clip = await create({ isPublic: false }, { user: bob });
-		failedApiCall(
+		await failedApiCall(
 			{
 				endpoint: 'clips/show',
 				parameters: { clipId: clip.id },
