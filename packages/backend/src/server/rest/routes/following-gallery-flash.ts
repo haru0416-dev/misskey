@@ -144,17 +144,13 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/following/requests/accept', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:following');
-
+	app.post(
+		'/following/requests/accept',
+		endpointHandler(deps, 'following/requests/accept', async ({ body, auth, c }) => {
 			await handleHonoApiFollowingRequestsAccept(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/following/requests/cancel',
@@ -171,17 +167,13 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		),
 	);
 
-	app.post('/following/requests/reject', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:following');
-
+	app.post(
+		'/following/requests/reject',
+		endpointHandler(deps, 'following/requests/reject', async ({ body, auth, c }) => {
 			await handleHonoApiFollowingRequestsReject(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -265,43 +257,29 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/gallery/posts/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:gallery');
-
+	app.post(
+		'/gallery/posts/delete',
+		endpointHandler(deps, 'gallery/posts/delete', async ({ body, auth, c }) => {
 			await handleHonoApiGalleryPostsDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/gallery/posts/like', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:gallery-likes');
-
+	app.post(
+		'/gallery/posts/like',
+		endpointHandler(deps, 'gallery/posts/like', async ({ body, auth, c }) => {
 			await handleHonoApiGalleryPostsLike(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/gallery/posts/unlike', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:gallery-likes');
-
+	app.post(
+		'/gallery/posts/unlike',
+		endpointHandler(deps, 'gallery/posts/unlike', async ({ body, auth, c }) => {
 			await handleHonoApiGalleryPostsUnlike(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -319,31 +297,21 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		),
 	);
 
-	app.post('/flash/like', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:flash-likes');
-
+	app.post(
+		'/flash/like',
+		endpointHandler(deps, 'flash/like', async ({ body, auth, c }) => {
 			await handleHonoApiFlashLike(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/flash/unlike', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:flash-likes');
-
+	app.post(
+		'/flash/unlike',
+		endpointHandler(deps, 'flash/unlike', async ({ body, auth, c }) => {
 			await handleHonoApiFlashUnlike(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/flash/update', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -388,17 +356,13 @@ export function registerFollowingGalleryFlashRoutes(app: Hono, deps: ApiShellDep
 		});
 	});
 
-	app.post('/flash/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:flash');
-
+	app.post(
+		'/flash/delete',
+		endpointHandler(deps, 'flash/delete', async ({ body, auth, c }) => {
 			await handleHonoApiFlashDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],

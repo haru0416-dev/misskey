@@ -65,17 +65,13 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		),
 	);
 
-	app.post('/auth/accept', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
+	app.post(
+		'/auth/accept',
+		endpointHandler(deps, 'auth/accept', async ({ body, auth, c }) => {
 			await handleHonoApiAuthAccept(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/blocking/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -147,17 +143,13 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		});
 	});
 
-	app.post('/mute/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:mutes');
-
+	app.post(
+		'/mute/delete',
+		endpointHandler(deps, 'mute/delete', async ({ body, auth, c }) => {
 			await handleHonoApiMuteDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -189,17 +181,13 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		});
 	});
 
-	app.post('/renote-mute/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:mutes');
-
+	app.post(
+		'/renote-mute/delete',
+		endpointHandler(deps, 'renote-mute/delete', async ({ body, auth, c }) => {
 			await handleHonoApiRenoteMuteDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],

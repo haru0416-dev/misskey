@@ -30,31 +30,21 @@ import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/clips/favorite', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:clip-favorite');
-
+	app.post(
+		'/clips/favorite',
+		endpointHandler(deps, 'clips/favorite', async ({ body, auth, c }) => {
 			await handleHonoApiClipsFavorite(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/clips/unfavorite', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:clip-favorite');
-
+	app.post(
+		'/clips/unfavorite',
+		endpointHandler(deps, 'clips/unfavorite', async ({ body, auth, c }) => {
 			await handleHonoApiClipsUnfavorite(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -102,17 +92,13 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/clips/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/clips/delete',
+		endpointHandler(deps, 'clips/delete', async ({ body, auth, c }) => {
 			await handleHonoApiClipsDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/clips/add-note', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -136,16 +122,11 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/clips/remove-note', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/clips/remove-note',
+		endpointHandler(deps, 'clips/remove-note', async ({ body, auth, c }) => {
 			await handleHonoApiClipsRemoveNote(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 }

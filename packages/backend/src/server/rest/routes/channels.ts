@@ -37,18 +37,13 @@ import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/channels/favorite', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:channels');
-
+	app.post(
+		'/channels/favorite',
+		endpointHandler(deps, 'channels/favorite', async ({ body, auth, c }) => {
 			await handleHonoApiChannelsFavorite(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/channels/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -98,18 +93,13 @@ export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.post('/channels/follow', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:channels');
-
+	app.post(
+		'/channels/follow',
+		endpointHandler(deps, 'channels/follow', async ({ body, auth, c }) => {
 			await handleHonoApiChannelsFollow(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -127,31 +117,21 @@ export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.post('/channels/mute/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:channels');
-
+	app.post(
+		'/channels/mute/create',
+		endpointHandler(deps, 'channels/mute/create', async ({ body, auth, c }) => {
 			await handleHonoApiChannelsMuteCreate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/channels/mute/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:channels');
-
+	app.post(
+		'/channels/mute/delete',
+		endpointHandler(deps, 'channels/mute/delete', async ({ body, auth, c }) => {
 			await handleHonoApiChannelsMuteDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -177,31 +157,21 @@ export function registerChannelsRoutes(app: Hono, deps: ApiShellDependencies): v
 		),
 	);
 
-	app.post('/channels/unfavorite', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:channels');
-
+	app.post(
+		'/channels/unfavorite',
+		endpointHandler(deps, 'channels/unfavorite', async ({ body, auth, c }) => {
 			await handleHonoApiChannelsUnfavorite(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/channels/unfollow', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:channels');
-
+	app.post(
+		'/channels/unfollow',
+		endpointHandler(deps, 'channels/unfollow', async ({ body, auth, c }) => {
 			await handleHonoApiChannelsUnfollow(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/channels/update',

@@ -113,18 +113,13 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/reactions/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:reactions');
-
+	app.post(
+		'/notes/reactions/create',
+		endpointHandler(deps, 'notes/reactions/create', async ({ body, auth, c }) => {
 			await handleHonoApiNotesReactionsCreate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/notes/reactions/delete', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -167,18 +162,13 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/polls/vote', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:votes');
-
+	app.post(
+		'/notes/polls/vote',
+		endpointHandler(deps, 'notes/polls/vote', async ({ body, auth, c }) => {
 			await handleHonoApiNotesPollsVote(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -258,17 +248,13 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/favorites/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:favorites');
-
+	app.post(
+		'/notes/favorites/delete',
+		endpointHandler(deps, 'notes/favorites/delete', async ({ body, auth, c }) => {
 			await handleHonoApiNotesFavoritesDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/notes/thread-muting/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -291,17 +277,13 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/thread-muting/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/notes/thread-muting/delete',
+		endpointHandler(deps, 'notes/thread-muting/delete', async ({ body, auth, c }) => {
 			await handleHonoApiNotesThreadMutingDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/notes',

@@ -159,17 +159,13 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/drive/files/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:drive');
-
+	app.post(
+		'/drive/files/delete',
+		endpointHandler(deps, 'drive/files/delete', async ({ body, auth, c }) => {
 			await handleHonoApiDriveFilesDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/drive/files/update',
@@ -178,17 +174,13 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/drive/files/move-bulk', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:drive');
-
+	app.post(
+		'/drive/files/move-bulk',
+		endpointHandler(deps, 'drive/files/move-bulk', async ({ body, auth, c }) => {
 			await handleHonoApiDriveFilesMoveBulk(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/drive',
@@ -233,17 +225,13 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/drive/folders/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:drive');
-
+	app.post(
+		'/drive/folders/delete',
+		endpointHandler(deps, 'drive/folders/delete', async ({ body, auth, c }) => {
 			await handleHonoApiDriveFoldersDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
