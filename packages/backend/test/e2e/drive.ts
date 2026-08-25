@@ -6,7 +6,11 @@
 process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
-import { describe, beforeAll, test } from 'vitest';
+import { readFile } from 'node:fs/promises';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { fileURLToPath } from 'node:url';
+import { afterAll, describe, beforeAll, test } from 'vitest';
 import { api, makeStreamCatcher, parseUploadedDriveFile, post, signup, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -14,20 +18,37 @@ describe('Drive', () => {
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 
+	// upload-from-url は URL からの取得そのものが検査対象なので、配信元をループバックに置く。
+	// 外部ホストに置くと、ネットワーク断や配信元の移動でこのテストだけが落ちる。
+	let imageServer: Server;
+	let imageUrl: string;
+
 	beforeAll(
 		async () => {
 			alice = await signup({ username: 'alice' });
 			bob = await signup({ username: 'bob' });
+
+			const jpeg = await readFile(fileURLToPath(new URL('../resources/192.jpg', import.meta.url)));
+			await new Promise<void>((resolve) => {
+				imageServer = createServer((_req, res) => {
+					res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Content-Length': jpeg.byteLength });
+					res.end(jpeg);
+				});
+				imageServer.listen(0, '127.0.0.1', () => resolve());
+			});
+			imageUrl = `http://127.0.0.1:${(imageServer.address() as AddressInfo).port}/192.jpg`;
 		},
 		1000 * 60 * 2,
 	);
+
+	afterAll(async () => {
+		await new Promise<void>((resolve) => imageServer.close(() => resolve()));
+	});
 
 	test('ファイルURLからアップロードできる', async () => {
 		// utils.js uploadUrl の処理だがAPIレスポンスも見るためここで同様の処理を書いている
 
 		const marker = Math.random().toString();
-
-		const url = 'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg';
 
 		const catcher = makeStreamCatcher(
 			alice,
@@ -40,7 +61,7 @@ describe('Drive', () => {
 		const res = await api(
 			'drive/files/upload-from-url',
 			{
-				url,
+				url: imageUrl,
 				marker,
 				force: true,
 			},
