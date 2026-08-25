@@ -8,6 +8,7 @@ Misskey backend のテスト構成、`.config/test.yml` の前提、e2e テス�
 - [テスト種別と実行コマンド](#テスト種別と実行コマンド)
 - [e2e テストの配置](#e2e-テストの配置)
 - [共通 setup](#共通-setup)
+- [アサーション](#アサーション)
 - [`api()` ヘルパー](#api-ヘルパー)
 - [`signup()` / `post()` / `uploadFile()` 等](#signup--post--uploadfile-等)
 - [ローカル DB / Redis](#ローカル-db--redis)
@@ -102,8 +103,7 @@ block.ts / mute.ts / antennas.ts / clips.ts / move.ts / nodeinfo.ts / ...
 `packages/backend/test/setup.e2e.ts` (vitest の `setupFiles`) が各テストファイル共通の `beforeAll` (テスト DB 初期化 + 環境リセット) を登録する。テストサーバーの起動/停止は別途 vitest の `globalSetup` (`test-server/entry.ts` の `setup()` / `teardown()`) が担う。各テストファイルでは自前の `beforeAll` でユーザーを用意する:
 
 ```ts
-import { describe, test, beforeAll, afterAll } from 'vitest';
-import * as assert from 'node:assert';
+import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import { api, signup, post, role, uploadFile } from '../utils.js';
 import type { UserToken } from '../utils.js';
 
@@ -116,9 +116,36 @@ describe('機能名', () => {
 
 	test('正常系', async () => {
 		const res = await api('<category>/<name>', { /* params */ }, alice);
-		assert.strictEqual(res.status, 200);
+		expect(res.status).toBe(200);
 	});
 });
+```
+
+## アサーション
+
+**`expect` を使う。** `node:assert` は失敗時に差分が出ず、`assert.strictEqual(res.status, 200, inspect(res.body))`
+のように第3引数へ手で状況を詰める必要があった。
+
+```ts
+expect(res.status).toBe(200);
+expect(res.body).toStrictEqual({ id, name });
+expect(res.body).toMatchObject({ name: 'テスト画像.jpg', type: 'image/jpeg' });
+expect(res.status, inspect(res.body)).toBe(200); // 第2引数は失敗時に添えるメッセージ
+```
+
+「長さを見てから要素を見る」形は書かない。配列そのものを比較すれば失敗時に全体の差分が出る:
+
+```ts
+expect(user.alsoKnownAs).toStrictEqual([`${url.origin}/users/${alice.id}`]);
+```
+
+**例外: 型を絞りたいときだけ `node:assert` を使う。** `expect` の matcher は `asserts` 述語を持たないため、
+判別可能ユニオンの判別子を検査しても後続のプロパティアクセスが型エラーになる。`assert.ok` / `assert.strictEqual`
+は `asserts` を持つのでその場で絞れる。
+
+```ts
+assert.ok(res.body); // 以降 res.body は非 null
+assert.strictEqual(signinResponse.body.finished, false); // 以降 body.next が読める
 ```
 
 ## `api()` ヘルパー
@@ -139,8 +166,8 @@ const res = await api('<category>/<name>', params, me?);
 ```ts
 test('存在しないノートで怒られる', async () => {
 	const res = await api('notes/show', { noteId: '0000000000000000' }, alice);
-	assert.strictEqual(res.status, 400);
-	assert.strictEqual(castAsError(res.body as any).error.code, 'NO_SUCH_NOTE');
+	expect(res.status).toBe(400);
+	expect(castAsError(res.body as any).error.code).toBe('NO_SUCH_NOTE');
 });
 ```
 

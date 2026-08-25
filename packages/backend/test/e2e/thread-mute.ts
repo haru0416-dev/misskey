@@ -54,8 +54,12 @@ describe('Note thread mute', () => {
 
 		expect(res.status).toBe(200);
 		expect(Array.isArray(res.body)).toBe(true);
-		expect(res.body.some((notification) => 'note' in notification && notification.note.id === carolReply.id)).toBe(false);
-		expect(res.body.some((notification) => 'note' in notification && notification.note.id === carolReplyWithoutMention.id)).toBe(false);
+		expect(res.body.some((notification) => 'note' in notification && notification.note.id === carolReply.id)).toBe(
+			false,
+		);
+		expect(
+			res.body.some((notification) => 'note' in notification && notification.note.id === carolReplyWithoutMention.id),
+		).toBe(false);
 
 		// NOTE: bobの投稿はスレッドミュート前に行われたため通知に含まれていてもよい
 	});

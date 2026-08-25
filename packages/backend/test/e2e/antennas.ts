@@ -895,7 +895,9 @@ describe('アンテナ', () => {
 			);
 
 			const response = await waitForAntennaNotes(alice, antenna.id, expected.length);
-			expect(response.map(({ userId, id, text }) => ({ userId, id, text }))).toStrictEqual(expected.map(({ userId, id, text }) => ({ userId, id, text })));
+			expect(response.map(({ userId, id, text }) => ({ userId, id, text }))).toStrictEqual(
+				expected.map(({ userId, id, text }) => ({ userId, id, text })),
+			);
 			expect(response).toStrictEqual(expected);
 		});
 

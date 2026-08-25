@@ -725,7 +725,9 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 				actual.push(...last);
 				last = await fetchEntities(rangeToParam(omitUndefined({ limit, until: last.at(-1) })));
 			}
-			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(expected.map(({ id, createdAt }) => id + ':' + createdAt));
+			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(
+				expected.map(({ id, createdAt }) => id + ':' + createdAt),
+			);
 		}
 
 		// 4. offset指定+limitで取得してつなぎ合わせた結果が期待通りになっていること
@@ -738,7 +740,9 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 				last = await fetchEntities(omitUndefined({ limit, offset }));
 				offset += limit ?? 10;
 			}
-			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(expected.map(({ id, createdAt }) => id + ':' + createdAt));
+			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(
+				expected.map(({ id, createdAt }) => id + ':' + createdAt),
+			);
 		}
 	}
 }

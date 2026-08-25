@@ -4,7 +4,6 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import * as assert from 'assert';
 import httpSignature from '@peertube/http-signature';
 
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
@@ -69,7 +68,7 @@ describe('ap-request', () => {
 	});
 
 	test('rejects non matching domain', () => {
-		assert.doesNotThrow(
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.example.com/abc',
@@ -78,8 +77,8 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.Strict,
 				),
 			'validation should pass base case',
-		);
-		assert.throws(
+		).not.toThrow();
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.example.com/abc',
@@ -88,9 +87,9 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.Any,
 				),
 			'validation should fail no matter what if the response URL is inconsistent with the object ID',
-		);
+		).toThrow();
 
-		assert.doesNotThrow(
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.example.com/abc#test',
@@ -99,22 +98,22 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.Strict,
 				),
 			'validation should pass with hash in request URL',
-		);
+		).not.toThrow();
 
 		// www サブドメインを含む URL の組合せを検証する。
 		// https://github.com/misskey-dev/misskey/issues/15039
 		const withOrWithoutWWW = ['https://alice.example.com/abc', 'https://www.alice.example.com/abc'];
 
 		cartesianProduct(cartesianProduct(withOrWithoutWWW, withOrWithoutWWW), withOrWithoutWWW).forEach(([[a, b], c]) => {
-			assert.doesNotThrow(
+			expect(
 				() => assertActivityMatchesUrl(a, { id: b } as IObject, c, FetchAllowSoftFailMask.Strict),
 				'validation should pass with or without www. subdomain',
-			);
+			).not.toThrow();
 		});
 	});
 
 	test('cross origin lookup', () => {
-		assert.doesNotThrow(
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.example.com/abc',
@@ -123,8 +122,8 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.CrossOrigin | FetchAllowSoftFailMask.NonCanonicalId,
 				),
 			'validation should pass if the response is otherwise consistent and cross-origin is allowed',
-		);
-		assert.throws(
+		).not.toThrow();
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.example.com/abc',
@@ -133,11 +132,11 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.Strict,
 				),
 			'validation should fail if the response is otherwise consistent and cross-origin is not allowed',
-		);
+		).toThrow();
 	});
 
 	test('rejects non-canonical ID', () => {
-		assert.throws(
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.example.com/@alice',
@@ -146,8 +145,8 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.Strict,
 				),
 			'throws if the response ID did not exactly match the expected ID',
-		);
-		assert.doesNotThrow(
+		).toThrow();
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.example.com/@alice',
@@ -156,11 +155,11 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.NonCanonicalId,
 				),
 			'does not throw if non-canonical ID is allowed',
-		);
+		).not.toThrow();
 	});
 
 	test('origin relaxed alignment', () => {
-		assert.doesNotThrow(
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.example.com/abc',
@@ -169,8 +168,8 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.MisalignedOrigin | FetchAllowSoftFailMask.NonCanonicalId,
 				),
 			'validation should pass if response is a subdomain of the expected origin',
-		);
-		assert.throws(
+		).not.toThrow();
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.multi-tenant.example.com/abc',
@@ -179,8 +178,8 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.MisalignedOrigin | FetchAllowSoftFailMask.NonCanonicalId,
 				),
 			'validation should fail if response is a disjoint domain of the expected origin',
-		);
-		assert.throws(
+		).toThrow();
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.example.com/abc',
@@ -189,11 +188,11 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.Strict,
 				),
 			'throws if relaxed origin is forbidden',
-		);
+		).toThrow();
 	});
 
 	test('resist HTTP downgrade', () => {
-		assert.throws(
+		expect(
 			() =>
 				assertActivityMatchesUrl(
 					'https://alice.example.com/abc',
@@ -202,6 +201,6 @@ describe('ap-request', () => {
 					FetchAllowSoftFailMask.Strict,
 				),
 			'throws if HTTP downgrade is detected',
-		);
+		).toThrow();
 	});
 });

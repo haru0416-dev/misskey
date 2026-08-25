@@ -33,7 +33,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
  * 後続のプロパティアクセスが型エラーになる。
  */
 
-
 describe('2要素認証', () => {
 	let alice: misskey.entities.SignupResponse;
 	let database: TestDatabase;
@@ -258,9 +257,9 @@ describe('2要素認証', () => {
 			alice,
 		);
 		expect(registerResponse.status).toBe(200);
-		assert.notEqual(registerResponse.body.qr, undefined);
-		assert.notEqual(registerResponse.body.url, undefined);
-		assert.notEqual(registerResponse.body.secret, undefined);
+		expect(registerResponse.body.qr).toEqual(expect.anything());
+		expect(registerResponse.body.url).toEqual(expect.anything());
+		expect(registerResponse.body.secret).toEqual(expect.anything());
 		expect(registerResponse.body.label).toBe(username);
 		expect(registerResponse.body.issuer).toBe(config.runtime.host);
 
@@ -288,7 +287,7 @@ describe('2要素認証', () => {
 		});
 		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, true);
-		assert.notEqual(signinResponse.body.i, undefined);
+		expect(signinResponse.body.i).toEqual(expect.anything());
 
 		// 後片付け
 		await api(
@@ -329,8 +328,8 @@ describe('2要素認証', () => {
 			alice,
 		);
 		expect(registerKeyResponse.status).toBe(200);
-		assert.notEqual(registerKeyResponse.body.rp, undefined);
-		assert.notEqual(registerKeyResponse.body.challenge, undefined);
+		expect(registerKeyResponse.body.rp).toEqual(expect.anything());
+		expect(registerKeyResponse.body.challenge).toEqual(expect.anything());
 
 		const keyName = 'example-key';
 		const credentialId = crypto.randomBytes(0x41);
@@ -354,9 +353,11 @@ describe('2要素認証', () => {
 		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, false);
 		assert.strictEqual(signinResponse.body.next, 'passkey');
-		assert.notEqual(signinResponse.body.authRequest.challenge, undefined);
-		assert.notEqual(signinResponse.body.authRequest.allowCredentials, undefined);
-		expect(signinResponse.body.authRequest.allowCredentials && signinResponse.body.authRequest.allowCredentials[0]?.id).toBe(credentialId.toString('base64url'));
+		expect(signinResponse.body.authRequest.challenge).toEqual(expect.anything());
+		expect(signinResponse.body.authRequest.allowCredentials).toEqual(expect.anything());
+		expect(
+			signinResponse.body.authRequest.allowCredentials && signinResponse.body.authRequest.allowCredentials[0]?.id,
+		).toBe(credentialId.toString('base64url'));
 
 		const signinResponse2 = await api(
 			'signin-flow',
@@ -368,7 +369,7 @@ describe('2要素認証', () => {
 		);
 		expect(signinResponse2.status).toBe(200);
 		assert.strictEqual(signinResponse2.body.finished, true);
-		assert.notEqual(signinResponse2.body.i, undefined);
+		expect(signinResponse2.body.i).toEqual(expect.anything());
 
 		// 後片付け
 		await api(
@@ -444,8 +445,8 @@ describe('2要素認証', () => {
 		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, false);
 		assert.strictEqual(signinResponse.body.next, 'passkey');
-		assert.notEqual(signinResponse.body.authRequest.challenge, undefined);
-		assert.notEqual(signinResponse.body.authRequest.allowCredentials, undefined);
+		expect(signinResponse.body.authRequest.challenge).toEqual(expect.anything());
+		expect(signinResponse.body.authRequest.allowCredentials).toEqual(expect.anything());
 
 		const signinResponse2 = await api('signin-flow', {
 			...signinWithSecurityKeyParam({
@@ -457,7 +458,7 @@ describe('2要素認証', () => {
 		});
 		expect(signinResponse2.status).toBe(200);
 		assert.strictEqual(signinResponse2.body.finished, true);
-		assert.notEqual(signinResponse2.body.i, undefined);
+		expect(signinResponse2.body.i).toEqual(expect.anything());
 
 		// 後片付け
 		await api(
@@ -560,7 +561,7 @@ describe('2要素認証', () => {
 			expect(completed.status).toBe(200);
 			const completedBody = completed.body as unknown as misskey.entities.SigninWithPasskeyResponse;
 			expect(completedBody.signinResponse.finished).toBe(true);
-			assert.notEqual(completedBody.signinResponse.i, undefined);
+			expect(completedBody.signinResponse.i).toEqual(expect.anything());
 		} finally {
 			await updateUserInDatabase(database, passkeyUser.id, { isSuspended: false });
 			await updateUserProfileInDatabase(database, passkeyUser.id, { usePasswordLessLogin: false });
@@ -639,7 +640,7 @@ describe('2要素認証', () => {
 		const securityKey = securityKeys[0];
 		assert.ok(securityKey);
 		expect(securityKey.name).toBe(renamedKey);
-		assert.notEqual(securityKey.lastUsed, undefined);
+		expect(securityKey.lastUsed).toEqual(expect.anything());
 
 		// 後片付け
 		await api(
@@ -722,7 +723,7 @@ describe('2要素認証', () => {
 		});
 		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, true);
-		assert.notEqual(signinResponse.body.i, undefined);
+		expect(signinResponse.body.i).toEqual(expect.anything());
 
 		// 後片付け
 		await api(
@@ -773,7 +774,7 @@ describe('2要素認証', () => {
 		});
 		expect(signinResponse.status).toBe(200);
 		assert.strictEqual(signinResponse.body.finished, true);
-		assert.notEqual(signinResponse.body.i, undefined);
+		expect(signinResponse.body.i).toEqual(expect.anything());
 
 		// 後片付け
 		await api(
