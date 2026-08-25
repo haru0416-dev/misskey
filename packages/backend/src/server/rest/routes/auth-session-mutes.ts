@@ -73,45 +73,19 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		}),
 	);
 
-	app.post('/blocking/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:blocks');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'blocking/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 20,
-				},
-				auth.user,
-			);
+	app.post(
+		'/blocking/create',
+		endpointHandler(deps, 'blocking/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiBlockingCreate(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiBlockingCreate(deps, auth.user, body));
-		});
-	});
-
-	app.post('/blocking/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:blocks');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'blocking/delete',
-				{
-					duration: 60 * 60 * 1000,
-					max: 100,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiBlockingDelete(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/blocking/delete',
+		endpointHandler(deps, 'blocking/delete', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiBlockingDelete(deps, auth.user, body)),
+		),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -121,27 +95,13 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		),
 	);
 
-	app.post('/mute/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:mutes');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'mute/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 20,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/mute/create',
+		endpointHandler(deps, 'mute/create', async ({ body, auth, c }) => {
 			await handleHonoApiMuteCreate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/mute/delete',
@@ -159,27 +119,13 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		),
 	);
 
-	app.post('/renote-mute/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:mutes');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'renote-mute/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 20,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/renote-mute/create',
+		endpointHandler(deps, 'renote-mute/create', async ({ body, auth, c }) => {
 			await handleHonoApiRenoteMuteCreate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/renote-mute/delete',

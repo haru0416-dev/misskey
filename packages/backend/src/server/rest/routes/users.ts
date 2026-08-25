@@ -121,47 +121,19 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		),
 	);
 
-	app.post('/notes/drafts/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'notes/drafts/create',
-				{
-					duration: 60 * 60 * 1000,
-					max: 300,
-				},
-				auth.user,
-			);
+	app.post(
+		'/notes/drafts/create',
+		endpointHandler(deps, 'notes/drafts/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesDraftsCreate(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiNotesDraftsCreate(deps, auth.user, body));
-		});
-	});
-
-	app.post('/notes/drafts/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'notes/drafts/update',
-				{
-					duration: 60 * 60 * 1000,
-					max: 300,
-				},
-				auth.user,
-			);
-
-			return jsonResponse(c, await handleHonoApiNotesDraftsUpdate(deps, auth.user, body));
-		});
-	});
+	app.post(
+		'/notes/drafts/update',
+		endpointHandler(deps, 'notes/drafts/update', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiNotesDraftsUpdate(deps, auth.user, body)),
+		),
+	);
 
 	app.post(
 		'/notes/drafts/delete',
@@ -393,27 +365,13 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		}),
 	);
 
-	app.post('/users/lists/push', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'users/lists/push',
-				{
-					duration: 60 * 60 * 1000,
-					max: 30,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/users/lists/push',
+		endpointHandler(deps, 'users/lists/push', async ({ body, auth, c }) => {
 			await handleHonoApiUsersListsPush(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
