@@ -47,30 +47,21 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		),
 	);
 
-	app.post('/i/read-announcement', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/i/read-announcement',
+		endpointHandler(deps, 'i/read-announcement', async ({ body, auth, c }) => {
 			await handleHonoApiIReadAnnouncement(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/i/claim-achievement', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/i/claim-achievement',
+		endpointHandler(deps, 'i/claim-achievement', async ({ body, auth, c }) => {
 			await handleHonoApiIClaimAchievement(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -80,17 +71,13 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		),
 	);
 
-	app.post('/page-push', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-
+	app.post(
+		'/page-push',
+		endpointHandler(deps, 'page-push', async ({ body, auth, c }) => {
 			await handleHonoApiPagePush(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],

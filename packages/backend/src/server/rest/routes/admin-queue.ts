@@ -97,31 +97,25 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		),
 	);
 
-	app.post('/admin/queue/retry-outbox-dead-letter', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:queue');
+	app.post(
+		'/admin/queue/retry-outbox-dead-letter',
+		endpointHandler(deps, 'admin/queue/retry-outbox-dead-letter', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminQueueRetryOutboxDeadLetter(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/queue/abandon-outbox-dead-letter', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:queue');
+	app.post(
+		'/admin/queue/abandon-outbox-dead-letter',
+		endpointHandler(deps, 'admin/queue/abandon-outbox-dead-letter', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminQueueAbandonOutboxDeadLetter(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -139,83 +133,65 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		),
 	);
 
-	app.post('/admin/queue/clear', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:queue');
+	app.post(
+		'/admin/queue/clear',
+		endpointHandler(deps, 'admin/queue/clear', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminQueueClear(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/queue/pause', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:queue');
+	app.post(
+		'/admin/queue/pause',
+		endpointHandler(deps, 'admin/queue/pause', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminQueuePause(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/queue/resume', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:queue');
+	app.post(
+		'/admin/queue/resume',
+		endpointHandler(deps, 'admin/queue/resume', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminQueueResume(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/queue/promote-jobs', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:queue');
+	app.post(
+		'/admin/queue/promote-jobs',
+		endpointHandler(deps, 'admin/queue/promote-jobs', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminQueuePromoteJobs(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/queue/retry-job', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:queue');
+	app.post(
+		'/admin/queue/retry-job',
+		endpointHandler(deps, 'admin/queue/retry-job', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminQueueRetryJob(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/admin/queue/remove-job', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:queue');
+	app.post(
+		'/admin/queue/remove-job',
+		endpointHandler(deps, 'admin/queue/remove-job', async ({ body, auth, c }) => {
 			await assertHonoApiModerator(deps, auth);
 
 			await handleHonoApiAdminQueueRemoveJob(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(['POST', 'QUERY'], '/admin/get-index-stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -253,16 +229,14 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		),
 	);
 
-	app.post('/admin/captcha/save', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
+	app.post(
+		'/admin/captcha/save',
+		endpointHandler(deps, 'admin/captcha/save', async ({ body, auth, c }) => {
 			await assertHonoApiAdmin(deps, auth);
 			assertTokenPermission(auth, 'write:admin:meta');
 
 			await handleHonoApiAdminCaptchaSave(deps, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 }

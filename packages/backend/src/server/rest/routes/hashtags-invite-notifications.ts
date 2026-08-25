@@ -106,21 +106,13 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.post('/invite/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:invite-codes');
-			const policies = await getHonoApiRolePolicies(deps, auth.user);
-			if (!policies.canInvite && deps.meta.rootUserId !== auth.user.id) {
-				throw rolePermissionDeniedError();
-			}
-
+	app.post(
+		'/invite/delete',
+		endpointHandler(deps, 'invite/delete', async ({ body, auth, c }) => {
 			await handleHonoApiInviteDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(['POST', 'QUERY'], '/invite/limit', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -137,20 +129,13 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.on(['POST', 'QUERY'], '/invite/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:invite-codes');
-			const policies = await getHonoApiRolePolicies(deps, auth.user);
-			if (!policies.canInvite && deps.meta.rootUserId !== auth.user.id) {
-				throw rolePermissionDeniedError();
-			}
-
-			return jsonResponse(c, await handleHonoApiInviteList(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/invite/list',
+		endpointHandler(deps, 'invite/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiInviteList(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/notifications/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -185,17 +170,13 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.post('/notifications/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:notifications');
-
+	app.post(
+		'/notifications/delete',
+		endpointHandler(deps, 'notifications/delete', async ({ body, auth, c }) => {
 			await handleHonoApiNotificationsDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/notifications/mark-all-as-read', async (c) => {
 		return await runApiEndpoint(c, async () => {

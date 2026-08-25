@@ -109,17 +109,13 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 		),
 	);
 
-	app.post('/antennas/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/antennas/delete',
+		endpointHandler(deps, 'antennas/delete', async ({ body, auth, c }) => {
 			await handleHonoApiAntennasDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.on(
 		['POST', 'QUERY'],
@@ -137,18 +133,13 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 		),
 	);
 
-	app.post('/antennas/remove-note', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertProhibitMoved(auth.user);
-			assertTokenPermission(auth, 'write:account');
-
+	app.post(
+		'/antennas/remove-note',
+		endpointHandler(deps, 'antennas/remove-note', async ({ body, auth, c }) => {
 			await handleHonoApiAntennasRemoveNote(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/antennas/notes',
