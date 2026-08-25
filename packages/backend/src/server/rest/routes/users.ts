@@ -108,7 +108,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/my/apps', async (c) => {
+	app.on(['POST', 'QUERY'], '/my/apps', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -119,7 +119,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/drafts/count', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/drafts/count', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -186,7 +186,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/drafts/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/drafts/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -208,7 +208,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/relation', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/relation', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -252,7 +252,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/reactions', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/reactions', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -273,7 +273,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/get-frequently-replied-users', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/get-frequently-replied-users', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -282,7 +282,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/search-by-username-and-host', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/search-by-username-and-host', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -291,7 +291,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/followers', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/followers', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -300,7 +300,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/following', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/following', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -309,7 +309,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/recommendation', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/recommendation', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -320,7 +320,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/get-following-users-by-birthday', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/get-following-users-by-birthday', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -331,21 +331,21 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/achievements', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/achievements', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiUsersAchievements(deps, body));
 		});
 	});
 
-	app.post('/users/pages', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/pages', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiUsersPages(deps, body));
 		});
 	});
 
-	app.post('/users/clips', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/clips', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -354,7 +354,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/flashs', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/flashs', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 
@@ -362,7 +362,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/gallery/posts', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/gallery/posts', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -520,7 +520,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/username/available', async (c) => {
+	app.on(['POST', 'QUERY'], '/username/available', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiUsernameAvailable(deps, body));

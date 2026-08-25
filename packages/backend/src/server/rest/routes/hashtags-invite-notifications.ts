@@ -118,7 +118,7 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.post('/invite/limit', async (c) => {
+	app.on(['POST', 'QUERY'], '/invite/limit', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -133,7 +133,7 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.post('/invite/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/invite/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

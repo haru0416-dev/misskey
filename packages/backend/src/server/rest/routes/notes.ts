@@ -197,7 +197,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/conversation', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/conversation', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -206,7 +206,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/mentions', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/mentions', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -226,7 +226,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/renotes', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/renotes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -235,7 +235,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/state', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/state', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -322,7 +322,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/global-timeline', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/global-timeline', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -331,7 +331,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/local-timeline', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/local-timeline', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -340,7 +340,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/hybrid-timeline', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/hybrid-timeline', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -379,7 +379,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/translate', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/translate', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -420,7 +420,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/users/notes', async (c) => {
+	app.on(['POST', 'QUERY'], '/users/notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -429,7 +429,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/clips', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/clips', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -447,7 +447,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/search-by-tag', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/search-by-tag', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -456,7 +456,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/show-partial-bulk', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/show-partial-bulk', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -465,7 +465,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/timeline', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/timeline', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -476,7 +476,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/user-list-timeline', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/user-list-timeline', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -487,7 +487,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		});
 	});
 
-	app.post('/notes/polls/recommendation', async (c) => {
+	app.on(['POST', 'QUERY'], '/notes/polls/recommendation', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

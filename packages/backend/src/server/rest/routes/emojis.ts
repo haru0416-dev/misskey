@@ -68,7 +68,7 @@ export function registerEmojisRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/admin/emoji/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/emoji/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -80,7 +80,7 @@ export function registerEmojisRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/v2/admin/emoji/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/v2/admin/emoji/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -92,7 +92,7 @@ export function registerEmojisRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/admin/emoji/list-remote', async (c) => {
+	app.on(['POST', 'QUERY'], '/admin/emoji/list-remote', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

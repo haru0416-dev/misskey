@@ -74,7 +74,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		});
 	});
 
-	app.post('/federation/show-instance', async (c) => {
+	app.on(['POST', 'QUERY'], '/federation/show-instance', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -120,21 +120,21 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		});
 	});
 
-	app.post('/federation/followers', async (c) => {
+	app.on(['POST', 'QUERY'], '/federation/followers', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiFederationFollowers(deps, body));
 		});
 	});
 
-	app.post('/federation/following', async (c) => {
+	app.on(['POST', 'QUERY'], '/federation/following', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiFederationFollowing(deps, body));
 		});
 	});
 
-	app.post('/ap/get', async (c) => {
+	app.on(['POST', 'QUERY'], '/ap/get', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));

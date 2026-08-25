@@ -131,6 +131,7 @@ export const endpointMetas = {
 	},
 	'clips/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['clips', 'account'],
 
 			requireCredential: true,
@@ -153,6 +154,7 @@ export const endpointMetas = {
 	},
 	'clips/my-favorites': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'clip'],
 
 			requireCredential: true,

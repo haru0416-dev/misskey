@@ -59,6 +59,7 @@ import { z } from 'zod';
 export const endpointMetas = {
 	'admin/abuse-user-reports': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -232,6 +233,7 @@ export const endpointMetas = {
 	},
 	'admin/accounts/find-by-email': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -290,6 +292,7 @@ export const endpointMetas = {
 	},
 	'admin/ad/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -399,6 +402,7 @@ export const endpointMetas = {
 	},
 	'admin/announcements/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -594,6 +598,7 @@ export const endpointMetas = {
 	},
 	'admin/avatar-decorations/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -679,6 +684,7 @@ export const endpointMetas = {
 	},
 	'admin/captcha/current': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin', 'captcha'],
 
 			requireCredential: true,
@@ -819,6 +825,7 @@ export const endpointMetas = {
 	},
 	'admin/drive/files': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -841,6 +848,7 @@ export const endpointMetas = {
 	},
 	'admin/drive/show-file': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -1101,6 +1109,7 @@ export const endpointMetas = {
 	},
 	'admin/get-index-stats': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			requireAdmin: true,
 			kind: 'read:admin:index-stats',
@@ -1121,6 +1130,7 @@ export const endpointMetas = {
 	},
 	'admin/get-table-stats': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			requireAdmin: true,
 			kind: 'read:admin:table-stats',
@@ -1155,6 +1165,7 @@ export const endpointMetas = {
 	},
 	'admin/get-user-ips': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -1214,6 +1225,7 @@ export const endpointMetas = {
 	},
 	'admin/invite/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -1236,6 +1248,7 @@ export const endpointMetas = {
 	},
 	'admin/meta': {
 		meta: {
+			allowQuery: true,
 			tags: ['meta'],
 
 			requireCredential: true,
@@ -2076,6 +2089,7 @@ export const endpointMetas = {
 	},
 	'admin/relays/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -2196,6 +2210,7 @@ export const endpointMetas = {
 	},
 	'admin/server-info': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'read:admin:server-info',
@@ -2303,6 +2318,7 @@ export const endpointMetas = {
 	},
 	'admin/show-moderation-logs': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -2360,6 +2376,7 @@ export const endpointMetas = {
 	},
 	'admin/show-user': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -2561,6 +2578,7 @@ export const endpointMetas = {
 	},
 	'admin/show-users': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,

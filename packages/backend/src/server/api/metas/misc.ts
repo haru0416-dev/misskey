@@ -88,6 +88,7 @@ export const endpointMetas = {
 	},
 	'ap/get': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireAdmin: true,
@@ -209,6 +210,7 @@ export const endpointMetas = {
 	},
 	'app/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['app'],
 
 			errors: {
@@ -457,6 +459,7 @@ export const endpointMetas = {
 	},
 	'blocking/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['account'],
 
 			requireCredential: true,
@@ -479,6 +482,7 @@ export const endpointMetas = {
 	},
 	'email-address/available': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -879,6 +883,7 @@ export const endpointMetas = {
 	},
 	'get-avatar-decorations': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -1014,6 +1019,7 @@ export const endpointMetas = {
 	},
 	'invite/limit': {
 		meta: {
+			allowQuery: true,
 			tags: ['meta'],
 
 			requireCredential: true,
@@ -1037,6 +1043,7 @@ export const endpointMetas = {
 	},
 	'invite/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['meta'],
 
 			requireCredential: true,
@@ -1164,6 +1171,7 @@ export const endpointMetas = {
 	},
 	'mute/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['account'],
 
 			requireCredential: true,
@@ -1186,6 +1194,7 @@ export const endpointMetas = {
 	},
 	'my/apps': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'app'],
 
 			requireCredential: true,
@@ -1305,6 +1314,7 @@ export const endpointMetas = {
 	},
 	'pinned-users': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -1408,6 +1418,7 @@ export const endpointMetas = {
 	},
 	'renote-mute/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['account'],
 
 			requireCredential: true,
@@ -1516,6 +1527,7 @@ export const endpointMetas = {
 	},
 	'roles/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['role'],
 
 			requireCredential: true,
@@ -1537,6 +1549,7 @@ export const endpointMetas = {
 	},
 	'roles/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['role', 'notes'],
 
 			requireCredential: true,
@@ -1913,6 +1926,7 @@ export const endpointMetas = {
 	},
 	'username/available': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -1950,6 +1964,7 @@ export const endpointMetas = {
 	},
 	'v2/admin/emoji/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,

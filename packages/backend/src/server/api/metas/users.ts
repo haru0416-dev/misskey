@@ -66,6 +66,7 @@ export const endpointMetas = {
 	},
 	'users/achievements': {
 		meta: {
+			allowQuery: true,
 			requireCredential: false,
 
 			res: {
@@ -79,6 +80,7 @@ export const endpointMetas = {
 	},
 	'users/clips': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'clips'],
 
 			description: 'Show all clips this user owns.',
@@ -122,6 +124,7 @@ export const endpointMetas = {
 	},
 	'users/flashs': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'flashs'],
 
 			description: 'Show all flashs this user created.',
@@ -142,6 +145,7 @@ export const endpointMetas = {
 	},
 	'users/followers': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -178,6 +182,7 @@ export const endpointMetas = {
 	},
 	'users/following': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -220,6 +225,7 @@ export const endpointMetas = {
 	},
 	'users/get-following-users-by-birthday': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -261,6 +267,7 @@ export const endpointMetas = {
 	},
 	'users/gallery/posts': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'gallery'],
 
 			description: 'Show all gallery posts by the given user.',
@@ -281,6 +288,7 @@ export const endpointMetas = {
 	},
 	'users/get-frequently-replied-users': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -728,6 +736,7 @@ export const endpointMetas = {
 	},
 	'users/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'notes'],
 
 			res: {
@@ -754,6 +763,7 @@ export const endpointMetas = {
 	},
 	'users/pages': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'pages'],
 
 			description: 'Show all pages this user created.',
@@ -774,6 +784,7 @@ export const endpointMetas = {
 	},
 	'users/reactions': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'reactions'],
 
 			requireCredential: false,
@@ -810,6 +821,7 @@ export const endpointMetas = {
 	},
 	'users/recommendation': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -834,6 +846,7 @@ export const endpointMetas = {
 	},
 	'users/relation': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -1014,6 +1027,7 @@ export const endpointMetas = {
 	},
 	'users/search-by-username-and-host': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,

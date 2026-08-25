@@ -122,6 +122,7 @@ export const endpointMetas = {
 	},
 	'flash/my': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'flash'],
 
 			requireCredential: true,
@@ -144,6 +145,7 @@ export const endpointMetas = {
 	},
 	'flash/my-likes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'flash'],
 
 			requireCredential: true,
