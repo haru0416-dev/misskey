@@ -435,6 +435,7 @@ export const endpointMetas = {
 	},
 	'users/lists/get-memberships': {
 		meta: {
+			allowQuery: true,
 			tags: ['lists', 'account'],
 
 			requireCredential: false,
@@ -482,6 +483,7 @@ export const endpointMetas = {
 	},
 	'users/lists/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['lists', 'account'],
 
 			requireCredential: false,
@@ -602,6 +604,7 @@ export const endpointMetas = {
 	},
 	'users/lists/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['lists', 'account'],
 
 			requireCredential: false,
@@ -986,6 +989,7 @@ export const endpointMetas = {
 	},
 	'users/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,

@@ -113,7 +113,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/pages/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/pages/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -122,7 +122,7 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/pages/featured', async (c) => {
+	app.on(['POST', 'QUERY'], '/pages/featured', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -228,14 +228,14 @@ export function registerMiscRoutes(app: Hono, deps: ApiShellDependencies): void 
 		});
 	});
 
-	app.post('/roles/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/roles/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiRolesShow(deps, body));
 		});
 	});
 
-	app.post('/roles/users', async (c) => {
+	app.on(['POST', 'QUERY'], '/roles/users', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);

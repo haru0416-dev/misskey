@@ -157,6 +157,7 @@ export const endpointMetas = {
 	},
 	'federation/users': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,

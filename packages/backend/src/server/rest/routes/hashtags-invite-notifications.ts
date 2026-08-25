@@ -39,21 +39,21 @@ import {
 import type { ApiShellDependencies } from '../shell.js';
 
 export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/hashtags/list', async (c) => {
+	app.on(['POST', 'QUERY'], '/hashtags/list', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiHashtagsList(deps, body));
 		});
 	});
 
-	app.post('/hashtags/search', async (c) => {
+	app.on(['POST', 'QUERY'], '/hashtags/search', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiHashtagsSearch(deps, body));
 		});
 	});
 
-	app.post('/hashtags/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/hashtags/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			return jsonResponse(c, await handleHonoApiHashtagsShow(deps, body));
@@ -68,7 +68,7 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.post('/hashtags/trend', async (c) => {
+	app.on(['POST', 'QUERY'], '/hashtags/trend', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			// meta の cacheSec: 60 は GET/POST 双方に掛かる (他の cacheSec 宣言と同様)
@@ -78,7 +78,7 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.post('/hashtags/users', async (c) => {
+	app.on(['POST', 'QUERY'], '/hashtags/users', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);

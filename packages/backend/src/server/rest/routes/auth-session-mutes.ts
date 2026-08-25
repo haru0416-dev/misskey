@@ -51,7 +51,7 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		});
 	});
 
-	app.post('/auth/session/show', async (c) => {
+	app.on(['POST', 'QUERY'], '/auth/session/show', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);

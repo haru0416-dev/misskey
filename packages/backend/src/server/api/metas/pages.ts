@@ -77,6 +77,7 @@ export const endpointMetas = {
 	},
 	'pages/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['pages'],
 
 			requireCredential: false,
@@ -129,6 +130,7 @@ export const endpointMetas = {
 	},
 	'pages/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['pages'],
 
 			requireCredential: false,

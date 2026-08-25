@@ -39,6 +39,14 @@ export function assertApiRouteContract(app: Pick<Hono, 'routes'>): void {
 			errors.push(`Endpoint metadata has no POST route: ${name}`);
 		}
 
+		const hasQueryRoute = routeKeySet.has(`QUERY ${path}`);
+		const allowsQuery = 'allowQuery' in definition.meta && definition.meta.allowQuery === true;
+		if (allowsQuery && !hasQueryRoute) {
+			errors.push(`Endpoint metadata allows QUERY but no QUERY route exists: ${name}`);
+		} else if (!allowsQuery && hasQueryRoute) {
+			errors.push(`QUERY route exists without allowQuery metadata: ${name}`);
+		}
+
 		const hasGetRoute = routeKeySet.has(`GET ${path}`);
 		const allowsGet = 'allowGet' in definition.meta && definition.meta.allowGet === true;
 		if (allowsGet && !hasGetRoute) {
@@ -51,7 +59,7 @@ export function assertApiRouteContract(app: Pick<Hono, 'routes'>): void {
 	for (const route of routes as ApiRoute[]) {
 		const routeKey = `${route.method} ${route.path}`;
 		if (metadataFreeRoutes.has(routeKey)) continue;
-		if (route.method !== 'GET' && route.method !== 'POST') {
+		if (route.method !== 'GET' && route.method !== 'POST' && route.method !== 'QUERY') {
 			errors.push(`Unexpected API route method: ${routeKey}`);
 			continue;
 		}
