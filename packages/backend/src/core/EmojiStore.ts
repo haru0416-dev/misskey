@@ -487,6 +487,79 @@ export async function listRemoteEmojisPageFromDatabase(
  * CustomEmojiService.fetchEmojis 向け。admin向け絵文字検索。
  * 既存検索のセマンティクス(LIKE ANY, aliasesのunnest部分一致, roleIdsのoverlapなど)を完全に再現する。
  */
+type EmojiSearchQuery = NonNullable<NonNullable<Parameters<typeof fetchEmojisFromDatabase>[1]>['query']>;
+
+/** 絵文字検索の絞り込み条件を組み立てる。取得の仕方 (並び・件数・ページ) とは分けて扱う。 */
+function emojiSearchConditions(q: EmojiSearchQuery): SQL[] {
+	const conditions: SQL[] = [];
+
+	if (q.updatedAtFrom) {
+		conditions.push(sql`CAST(${emoji.updatedAt} AS DATE) >= ${q.updatedAtFrom}`);
+	}
+	if (q.updatedAtTo) {
+		conditions.push(sql`CAST(${emoji.updatedAt} AS DATE) <= ${q.updatedAtTo}`);
+	}
+	if (q.name) {
+		conditions.push(likeAnyWords(emoji.name, q.name));
+	}
+
+	switch (true) {
+		case q.hostType === 'local': {
+			conditions.push(isNull(emoji.host));
+			break;
+		}
+		case q.hostType === 'remote': {
+			if (q.host) {
+				conditions.push(likeAnyWords(emoji.host, q.host));
+			} else {
+				conditions.push(isNotNull(emoji.host));
+			}
+			break;
+		}
+	}
+
+	if (q.uri) {
+		conditions.push(likeAnyWords(emoji.uri, q.uri));
+	}
+	if (q.publicUrl) {
+		conditions.push(likeAnyWords(emoji.publicUrl, q.publicUrl));
+	}
+	if (q.type) {
+		conditions.push(likeAnyWords(emoji.type, q.type));
+	}
+	if (q.aliases) {
+		const patterns = multipleWordsToPatterns(q.aliases);
+		conditions.push(
+			sql`EXISTS (SELECT 1 FROM unnest(${emoji.aliases}) AS alias WHERE alias ~~ ANY(ARRAY[${sql.join(
+				patterns.map((p) => sql`${p}`),
+				sql`, `,
+			)}]))`,
+		);
+	}
+	if (q.category) {
+		conditions.push(likeAnyWords(emoji.category, q.category));
+	}
+	if (q.license) {
+		conditions.push(likeAnyWords(emoji.license, q.license));
+	}
+	if (q.isSensitive != null) {
+		conditions.push(eq(emoji.isSensitive, q.isSensitive));
+	}
+	if (q.localOnly != null) {
+		conditions.push(eq(emoji.localOnly, q.localOnly));
+	}
+	if (q.roleIds && q.roleIds.length > 0) {
+		conditions.push(
+			sql`${emoji.roleIdsThatCanBeUsedThisEmojiAsReaction} && ARRAY[${sql.join(
+				q.roleIds.map((r) => sql`${r}`),
+				sql`, `,
+			)}]::varchar[]`,
+		);
+	}
+
+	return conditions;
+}
+
 export async function fetchEmojisFromDatabase(
 	db: MiDrizzleDatabase,
 	params?: {
@@ -515,75 +588,7 @@ export async function fetchEmojisFromDatabase(
 		sortKeys?: readonly string[];
 	},
 ): Promise<{ emojis: MiEmoji[]; allCount: number }> {
-	const conditions: SQL[] = [];
-
-	if (params?.query) {
-		const q = params.query;
-
-		if (q.updatedAtFrom) {
-			conditions.push(sql`CAST(${emoji.updatedAt} AS DATE) >= ${q.updatedAtFrom}`);
-		}
-		if (q.updatedAtTo) {
-			conditions.push(sql`CAST(${emoji.updatedAt} AS DATE) <= ${q.updatedAtTo}`);
-		}
-		if (q.name) {
-			conditions.push(likeAnyWords(emoji.name, q.name));
-		}
-
-		switch (true) {
-			case q.hostType === 'local': {
-				conditions.push(isNull(emoji.host));
-				break;
-			}
-			case q.hostType === 'remote': {
-				if (q.host) {
-					conditions.push(likeAnyWords(emoji.host, q.host));
-				} else {
-					conditions.push(isNotNull(emoji.host));
-				}
-				break;
-			}
-		}
-
-		if (q.uri) {
-			conditions.push(likeAnyWords(emoji.uri, q.uri));
-		}
-		if (q.publicUrl) {
-			conditions.push(likeAnyWords(emoji.publicUrl, q.publicUrl));
-		}
-		if (q.type) {
-			conditions.push(likeAnyWords(emoji.type, q.type));
-		}
-		if (q.aliases) {
-			const patterns = multipleWordsToPatterns(q.aliases);
-			conditions.push(
-				sql`EXISTS (SELECT 1 FROM unnest(${emoji.aliases}) AS alias WHERE alias ~~ ANY(ARRAY[${sql.join(
-					patterns.map((p) => sql`${p}`),
-					sql`, `,
-				)}]))`,
-			);
-		}
-		if (q.category) {
-			conditions.push(likeAnyWords(emoji.category, q.category));
-		}
-		if (q.license) {
-			conditions.push(likeAnyWords(emoji.license, q.license));
-		}
-		if (q.isSensitive != null) {
-			conditions.push(eq(emoji.isSensitive, q.isSensitive));
-		}
-		if (q.localOnly != null) {
-			conditions.push(eq(emoji.localOnly, q.localOnly));
-		}
-		if (q.roleIds && q.roleIds.length > 0) {
-			conditions.push(
-				sql`${emoji.roleIdsThatCanBeUsedThisEmojiAsReaction} && ARRAY[${sql.join(
-					q.roleIds.map((r) => sql`${r}`),
-					sql`, `,
-				)}]::varchar[]`,
-			);
-		}
-	}
+	const conditions: SQL[] = params?.query ? emojiSearchConditions(params.query) : [];
 
 	if (params?.sinceId) {
 		conditions.push(gt(emoji.id, params.sinceId));
