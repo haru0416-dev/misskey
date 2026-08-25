@@ -520,6 +520,7 @@ export const endpointMetas = {
 	},
 	'admin/avatar-decorations/create': {
 		meta: {
+			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -587,6 +588,7 @@ export const endpointMetas = {
 	},
 	'admin/avatar-decorations/delete': {
 		meta: {
+			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -598,6 +600,7 @@ export const endpointMetas = {
 	},
 	'admin/avatar-decorations/list': {
 		meta: {
+			requireRolePolicy: 'canManageAvatarDecorations',
 			allowQuery: true,
 			tags: ['admin'],
 
@@ -672,6 +675,7 @@ export const endpointMetas = {
 	},
 	'admin/avatar-decorations/update': {
 		meta: {
+			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
 
 			requireCredential: true,

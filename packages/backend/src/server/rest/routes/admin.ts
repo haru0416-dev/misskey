@@ -329,55 +329,36 @@ export function registerAdminRoutes(app: Hono, deps: ApiShellDependencies): void
 		}),
 	);
 
-	app.post('/admin/avatar-decorations/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:avatar-decorations');
-			await assertHonoApiCanManageAvatarDecorations(deps, auth);
+	app.post(
+		'/admin/avatar-decorations/create',
+		endpointHandler(deps, 'admin/avatar-decorations/create', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAdminAvatarDecorationsCreate(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiAdminAvatarDecorationsCreate(deps, auth.user, body));
-		});
-	});
-
-	app.post('/admin/avatar-decorations/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:avatar-decorations');
-			await assertHonoApiCanManageAvatarDecorations(deps, auth);
-
+	app.post(
+		'/admin/avatar-decorations/delete',
+		endpointHandler(deps, 'admin/avatar-decorations/delete', async ({ body, auth, c }) => {
 			await handleHonoApiAdminAvatarDecorationsDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.on(['POST', 'QUERY'], '/admin/avatar-decorations/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:admin:avatar-decorations');
-			await assertHonoApiCanManageAvatarDecorations(deps, auth);
+	app.on(
+		['POST', 'QUERY'],
+		'/admin/avatar-decorations/list',
+		endpointHandler(deps, 'admin/avatar-decorations/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiAdminAvatarDecorationsList(deps, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiAdminAvatarDecorationsList(deps, body));
-		});
-	});
-
-	app.post('/admin/avatar-decorations/update', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:admin:avatar-decorations');
-			await assertHonoApiCanManageAvatarDecorations(deps, auth);
-
+	app.post(
+		'/admin/avatar-decorations/update',
+		endpointHandler(deps, 'admin/avatar-decorations/update', async ({ body, auth, c }) => {
 			await handleHonoApiAdminAvatarDecorationsUpdate(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post(
 		'/admin/invite/create',

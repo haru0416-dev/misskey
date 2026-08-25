@@ -1964,6 +1964,7 @@ export const endpointMetas = {
 	},
 	'v2/admin/emoji/list': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
 			allowQuery: true,
 			tags: ['admin'],
 

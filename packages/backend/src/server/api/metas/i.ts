@@ -598,6 +598,7 @@ export const endpointMetas = {
 	},
 	'i/import-antennas': {
 		meta: {
+			requireRolePolicy: 'canImportAntennas',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportAntennas',
@@ -641,6 +642,7 @@ export const endpointMetas = {
 	},
 	'i/import-blocking': {
 		meta: {
+			requireRolePolicy: 'canImportBlocking',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportBlocking',
@@ -675,6 +677,7 @@ export const endpointMetas = {
 	},
 	'i/import-following': {
 		meta: {
+			requireRolePolicy: 'canImportFollowing',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportFollowing',
@@ -708,6 +711,7 @@ export const endpointMetas = {
 	},
 	'i/import-muting': {
 		meta: {
+			requireRolePolicy: 'canImportMuting',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportMuting',
@@ -742,6 +746,7 @@ export const endpointMetas = {
 	},
 	'i/import-user-lists': {
 		meta: {
+			requireRolePolicy: 'canImportUserLists',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportUserLists',
