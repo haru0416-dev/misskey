@@ -24,6 +24,27 @@ function escapeNQuadLiteral(value: string): string {
 	return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
 }
 
+/*
+ * 近道が jsonld.normalize と同じ出力になると確信できる入力だけを通す門。
+ *
+ * jsonld は IRI 中の `<` `>` `"` `\` と制御文字を `\uXXXX` へ退避し、空白を含む IRI や
+ * 相対 IRI は safe mode の検証で例外にする。近道はどちらも行わないので、これらを通すと出力が
+ * 食い違う。creator は検証側ではリモートが送ってくる値で、`>` と改行を混ぜられると N-Quads の
+ * 行そのものを注入できる。
+ *
+ * 退避規則を写し取るのではなく、退避が要らないと分かる部分集合だけ受ける。外れた入力は null を
+ * 返して jsonld.normalize に委ねるので、正しさは落ちず速度だけ諦める。
+ */
+const SAFE_CREATOR_IRI = /^https?:\/\/[^\s<>"{}|^`\\\u0000-\u0020\u007F]+$/u;
+
+/** Date#toISOString と同じ形。自インスタンスもリモートもほぼこの形で送ってくる。 */
+const SAFE_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
+
+/** escapeNQuadLiteral が扱う4文字以外の制御文字は、jsonld と退避のしかたが違う。 */
+function isSafeNQuadLiteral(value: string): boolean {
+	return !/[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F]/u.test(value);
+}
+
 /**
  * RsaSignature2017 の署名オプションを、jsonld.normalize を通さず正規形 (N-Quads) にする。
  *
@@ -41,6 +62,10 @@ export function canonicalizeSignatureOptions(options: Record<string, unknown>): 
 	if (typeof creator !== 'string' || typeof nonce !== 'string' || typeof created !== 'string') return null;
 	if (domain !== undefined && typeof domain !== 'string') return null;
 	if (Object.keys(rest).length > 0) return null;
+	if (!SAFE_CREATOR_IRI.test(creator)) return null;
+	if (!SAFE_DATE_TIME.test(created)) return null;
+	if (!isSafeNQuadLiteral(nonce)) return null;
+	if (domain !== undefined && !isSafeNQuadLiteral(domain)) return null;
 
 	const lines = [
 		`_:c14n0 <http://purl.org/dc/terms/created> "${escapeNQuadLiteral(created)}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .`,
