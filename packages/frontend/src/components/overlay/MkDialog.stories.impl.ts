@@ -147,7 +147,8 @@ export const DialogWithInput = {
 		await expect(canvasElement).toHaveTextContent(i18n.tsx._dialog.charactersBelow({ current: 0, min: 2 }));
 		const okButton = canvas.getByRole('button', { name: i18n.ts.ok });
 		await expect(okButton).toBeDisabled();
-		const input = canvas.getByRole<HTMLInputElement>('combobox');
+		// 入力欄は汎用の text input なので role は combobox ではなく textbox。
+		const input = canvas.getByRole<HTMLInputElement>('textbox');
 		await waitFor(() => userEvent.hover(input));
 		await waitFor(() => userEvent.click(input));
 		await waitFor(() => userEvent.type(input, 'M'));
