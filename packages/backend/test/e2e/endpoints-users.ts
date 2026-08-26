@@ -151,10 +151,13 @@ describe('Endpoints', () => {
 	let postScheduledNoteQueue: Bull.Queue<PostScheduledNoteJobData> | undefined;
 	let context: EndpointsContext;
 
-	beforeAll(async () => {
-		context = await createEndpointsContext();
-		({ alice, bob, carol, dave, db, postScheduledNoteQueue } = context);
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			context = await createEndpointsContext();
+			({ alice, bob, carol, dave, db, postScheduledNoteQueue } = context);
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await context.close();
@@ -1817,7 +1820,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('i/claim-achievement', () => {
 		test('達成を記録しachievementEarned通知を作成、二重取得しない', async () => {
 			const config = fixtureConfig;
@@ -1850,7 +1852,6 @@ describe('Endpoints', () => {
 			expect(profileAfter.achievements.filter((a) => a.name === 'notes1').length).toBe(1);
 		});
 	});
-
 
 	describe('i/webhooks/create', () => {
 		test('webhookを作成しTOO_MANY_WEBHOOKSでscope保護される', async () => {
@@ -1885,7 +1886,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('i/webhooks/test', () => {
 		test('自分のwebhookに各イベント種別をテスト送信でき、他人のwebhookはNO_SUCH_WEBHOOKになる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -1918,7 +1918,6 @@ describe('Endpoints', () => {
 			expect(castAsError(noSuch.body as any).error.code).toBe('NO_SUCH_WEBHOOK');
 		});
 	});
-
 
 	describe('i/import-blocking, i/import-following, i/import-muting, i/import-user-lists', () => {
 		async function grantImportPolicy(userId: string, suffix: string, policyKey: string) {
@@ -2142,7 +2141,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('users/relation', () => {
 		test('単一userIdは1要素配列、配列userIdは対応する配列で各種関係フラグを返す', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -2190,7 +2188,6 @@ describe('Endpoints', () => {
 			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 	});
-
 
 	describe('users/clips, users/flashs, users/gallery/posts', () => {
 		test('users/clips は公開clipのみをページングして返す', async () => {
@@ -2281,7 +2278,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('users/search', () => {
 		test('users/search はname/username/description一致、origin絞り込み、mute除外、detailスキーマを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -2337,7 +2333,6 @@ describe('Endpoints', () => {
 			assert.ok(!Object.prototype.hasOwnProperty.call(lite.body[0], 'isLocked'));
 		});
 	});
-
 
 	describe('users (bare, explorableユーザー一覧)', () => {
 		test('isExplorable/isSuspended、origin、hostname、mute除外を維持する', async () => {
@@ -2420,7 +2415,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('users/search-by-username-and-host', () => {
 		test('username/hostによる前方一致検索、ログイン時のフォロー優先、detailスキーマを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -2476,7 +2470,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('users/get-following-users-by-birthday', () => {
 		test('単一birthday指定と範囲指定でフォロー中ユーザーを誕生日順に返す', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -2520,7 +2513,6 @@ describe('Endpoints', () => {
 			expect(castAsError(unauthorized.body as any).error.code).toBe('CREDENTIAL_REQUIRED');
 		});
 	});
-
 
 	describe('users/recommendation', () => {
 		test('鍵垢/非表示/凍結済み/削除済み/フォロー済み/リモート/自分自身を除外したおすすめユーザーを返す', async () => {
@@ -2575,7 +2567,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('users/get-frequently-replied-users', () => {
 		test('返信頻度に応じたweightでユーザーを返し、返信が無い場合は空配列、存在しないユーザーはNO_SUCH_USERになる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -2607,7 +2598,6 @@ describe('Endpoints', () => {
 			expect(castAsError(noSuchUser.body as any).error.code).toBe('NO_SUCH_USER');
 		});
 	});
-
 
 	describe('users/reactions', () => {
 		test('公開範囲、リモートユーザー、ブロック、moderatorバイパスを維持する', async () => {
@@ -2683,7 +2673,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('users/featured-notes', () => {
 		const FEATURED_EPOCH = new Date('2023-01-01T00:00:00Z').getTime();
 		const PER_USER_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 7;
@@ -2732,7 +2721,6 @@ describe('Endpoints', () => {
 			}
 		});
 	});
-
 
 	describe('users/notes', () => {
 		test('可視性フィルタとwithFiles/withRenotesフィルタを維持する', async () => {
@@ -2914,7 +2902,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('i/update', () => {
 		test('アカウント設定を更新できる', async () => {
 			const myName = '大室櫻子';
@@ -2997,7 +2984,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('users/show', () => {
 		test('ユーザーが取得できる', async () => {
 			const res = await api(
@@ -3028,7 +3014,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('users/followers', () => {
 		test('フォロワーが取得できる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -3049,7 +3034,6 @@ describe('Endpoints', () => {
 			expect(castAsError(res.body as unknown as Record<string, unknown>).error.code).toBe('NO_SUCH_USER');
 		});
 	});
-
 
 	describe('users/following', () => {
 		test('フォロー中のユーザーが取得できる', async () => {
@@ -3099,7 +3083,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('users/lists/create', () => {
 		test('リストが作成できる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -3121,7 +3104,6 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 		});
 	});
-
 
 	describe('i/pin, i/unpin', () => {
 		test('ノートをピン留めできる', async () => {
@@ -3172,7 +3154,6 @@ describe('Endpoints', () => {
 			expect(pinings.length).toBe(0);
 		});
 	});
-
 
 	describe('i/notifications', () => {
 		test('includeTypesで指定したtypeの通知のみ返る', async () => {
@@ -3225,7 +3206,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('i/notifications-grouped', () => {
 		test('同じノートへの複数のリアクション通知がまとめられる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -3272,7 +3252,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('i/favorites', () => {
 		test('お気に入りに登録したノートが取得できる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -3298,7 +3277,6 @@ describe('Endpoints', () => {
 			expect(res.body).toStrictEqual([]);
 		});
 	});
-
 
 	describe('i/change-password', () => {
 		test('パスワードを変更できる', async () => {
@@ -3331,7 +3309,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('i/regenerate-token', () => {
 		test('トークンを再生成できる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -3347,7 +3324,6 @@ describe('Endpoints', () => {
 			expect(before.status).toBe(200);
 		});
 	});
-
 
 	describe('i/update-email', () => {
 		test('メールアドレスを更新できる', async () => {
@@ -3372,7 +3348,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('i/delete-account', () => {
 		test('アカウントを削除できる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -3396,5 +3371,4 @@ describe('Endpoints', () => {
 			expect(notDeletedUser.isDeleted).toBe(false);
 		});
 	});
-
 });

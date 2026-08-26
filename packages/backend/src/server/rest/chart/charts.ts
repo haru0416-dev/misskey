@@ -6,16 +6,10 @@
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import Chart, { type KVs } from '@/core/chart/core.js';
-import {
-	name as activeUsersChartName,
-	schema as activeUsersChartSchema,
-} from '@/core/chart/entities/active-users.js';
+import { name as activeUsersChartName, schema as activeUsersChartSchema } from '@/core/chart/entities/active-users.js';
 import { name as apRequestChartName, schema as apRequestChartSchema } from '@/core/chart/entities/ap-request.js';
 import { name as driveChartName, schema as driveChartSchema } from '@/core/chart/entities/drive.js';
-import {
-	name as federationChartName,
-	schema as federationChartSchema,
-} from '@/core/chart/entities/federation.js';
+import { name as federationChartName, schema as federationChartSchema } from '@/core/chart/entities/federation.js';
 import { name as instanceChartName, schema as instanceChartSchema } from '@/core/chart/entities/instance.js';
 import { name as notesChartName, schema as notesChartSchema } from '@/core/chart/entities/notes.js';
 import {
@@ -30,10 +24,7 @@ import {
 	name as perUserNotesChartName,
 	schema as perUserNotesChartSchema,
 } from '@/core/chart/entities/per-user-notes.js';
-import {
-	name as perUserPvChartName,
-	schema as perUserPvChartSchema,
-} from '@/core/chart/entities/per-user-pv.js';
+import { name as perUserPvChartName, schema as perUserPvChartSchema } from '@/core/chart/entities/per-user-pv.js';
 import {
 	name as perUserReactionsChartName,
 	schema as perUserReactionsChartSchema,

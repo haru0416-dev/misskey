@@ -148,10 +148,13 @@ describe('Endpoints', () => {
 	let dbQueue: Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
 	let context: EndpointsContext;
 
-	beforeAll(async () => {
-		context = await createEndpointsContext();
-		({ alice, bob, db, dbQueue } = context);
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			context = await createEndpointsContext();
+			({ alice, bob, db, dbQueue } = context);
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await context.close();
@@ -218,7 +221,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('avatar decoration endpoints', () => {
 		test('get-avatar-decorations filters unavailable role ids', async () => {
 			const config = fixtureConfig;
@@ -266,7 +268,6 @@ describe('Endpoints', () => {
 			expect(listed.category).toBe(decoration.category);
 		});
 	});
-
 
 	describe('admin/emoji', () => {
 		test('admin/emoji/list と list-remote は filter、pagination、packing、scope、role policyを維持する', async () => {
@@ -1302,5 +1303,4 @@ describe('Endpoints', () => {
 			}
 		});
 	});
-
 });

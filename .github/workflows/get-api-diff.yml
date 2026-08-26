@@ -12,6 +12,10 @@ on:
 jobs:
   get-from-misskey:
     runs-on: ubuntu-latest
+    env:
+      # example.yml は setupPassword を環境変数から読む。CI はサーバーを起動するだけなので固定値でよい
+      EREBIA_SETUP_PASSWORD: ci-generate-api-json
+      DATABASE_PASSWORD: ci-generate-api-json
     permissions:
       contents: read
 
@@ -59,6 +63,10 @@ jobs:
 
   save-pr-number:
     runs-on: ubuntu-latest
+    env:
+      # example.yml は setupPassword を環境変数から読む。CI はサーバーを起動するだけなので固定値でよい
+      EREBIA_SETUP_PASSWORD: ci-generate-api-json
+      DATABASE_PASSWORD: ci-generate-api-json
     steps:
       - name: Save PR number
         env:

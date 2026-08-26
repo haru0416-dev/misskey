@@ -11,7 +11,10 @@ import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/user/UserIpStore.js';
 import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/antenna/AntennaStore.js';
 import { createRoleInDatabase } from '@/core/role/RoleStore.js';
-import { createRoleAssignmentInDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
+import {
+	createRoleAssignmentInDatabase,
+	listRoleAssignmentsByUserIdFromDatabase,
+} from '@/core/role/RoleAssignmentStore.js';
 import {
 	createRetentionAggregationInDatabase,
 	listRetentionAggregationsCreatedAfter,

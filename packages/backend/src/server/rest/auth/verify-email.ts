@@ -5,7 +5,10 @@
 
 import { z } from 'zod';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
-import { fetchUserProfileByEmailVerifyCodeFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
+import {
+	fetchUserProfileByEmailVerifyCodeFromDatabase,
+	updateUserProfileInDatabase,
+} from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { HonoApiError } from '../error.js';
 import type { HonoApiMainStreamPublisher } from '../notification/notification.js';

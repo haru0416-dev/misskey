@@ -162,7 +162,7 @@ const parseKeyCode = (input?: string | null) => {
 const getValueByKey = <
 	T extends Record<keyof any, unknown>,
 	K extends keyof T | keyof any,
-	R extends K extends keyof T ? T[K] : T[keyof T] | undefined,
+	R extends (K extends keyof T ? T[K] : T[keyof T] | undefined),
 >(
 	obj: T,
 	key: K,

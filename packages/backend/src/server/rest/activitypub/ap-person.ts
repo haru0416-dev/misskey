@@ -40,7 +40,10 @@ import {
 } from '@/core/user/UserStore.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
-import { fetchUserPublickeyByUserIdFromDatabase, updateUserPublickeyInDatabase } from '@/core/user/UserPublickeyStore.js';
+import {
+	fetchUserPublickeyByUserIdFromDatabase,
+	updateUserPublickeyInDatabase,
+} from '@/core/user/UserPublickeyStore.js';
 import { updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
 import { updateFollowingsByFollowerIdInDatabase } from '@/core/user/FollowingStore.js';
 import {
@@ -69,7 +72,10 @@ import {
 } from './ap-resolve.js';
 import { HonoApiError } from '../error.js';
 import { postMoveProcessForHonoApi, type HonoApiAccountMoveDependencies } from '../account/account-move.js';
-import { uploadDriveFileFromUrlForHonoApi, type HonoApiDriveFileUploadDependencies } from '../drive/drive-file-upload.js';
+import {
+	uploadDriveFileFromUrlForHonoApi,
+	type HonoApiDriveFileUploadDependencies,
+} from '../drive/drive-file-upload.js';
 import { updateUsertagsForHonoApi } from '../account/account-update.js';
 import { getHonoApiRolePolicies } from '../role/role-policy.js';
 import { parseHonoApiParams } from '../validation.js';
@@ -452,17 +458,16 @@ export async function updatePersonForHonoApi(
 		[
 			isPublicCollectionForHonoApi(deps, person.following, history),
 			isPublicCollectionForHonoApi(deps, person.followers, history),
-		].map(
-			(p): Promise<'public' | 'private' | undefined> =>
-				p
-					.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private')
-					.catch((err) => {
-						if (!(err instanceof StatusError) || err.isRetryable) {
-							// 一時的なエラーでは既存の公開設定を保持する (更新しない)
-							return undefined;
-						}
-						return 'private';
-					}),
+		].map((p): Promise<'public' | 'private' | undefined> =>
+			p
+				.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private')
+				.catch((err) => {
+					if (!(err instanceof StatusError) || err.isRetryable) {
+						// 一時的なエラーでは既存の公開設定を保持する (更新しない)
+						return undefined;
+					}
+					return 'private';
+				}),
 		),
 	);
 
@@ -609,9 +614,8 @@ export async function createPersonForHonoApi(
 		[
 			isPublicCollectionForHonoApi(deps, person.following, history),
 			isPublicCollectionForHonoApi(deps, person.followers, history),
-		].map(
-			(p): Promise<'public' | 'private'> =>
-				p.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private').catch(() => 'private' as const),
+		].map((p): Promise<'public' | 'private'> =>
+			p.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private').catch(() => 'private' as const),
 		),
 	);
 

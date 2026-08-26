@@ -147,10 +147,13 @@ describe('Endpoints', () => {
 	let relationshipQueue: Bull.Queue<RelationshipJobData> | undefined;
 	let context: EndpointsContext;
 
-	beforeAll(async () => {
-		context = await createEndpointsContext();
-		({ alice, db, relationshipQueue } = context);
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			context = await createEndpointsContext();
+			({ alice, db, relationshipQueue } = context);
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await context.close();
@@ -495,7 +498,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('ap/get', () => {
 		test('管理者かつread:federationスコープでのみ呼べ、ローカルNote/UserをActivityPubオブジェクトとして解決できる', async () => {
 			const config = fixtureConfig;
@@ -612,7 +614,6 @@ describe('Endpoints', () => {
 			expect(followRes.body['object']).toBe(remoteFollowee.uri);
 		});
 	});
-
 
 	describe('federation/update-remote-user', () => {
 		test('リモートアクターを再フェッチしてプロフィールを更新する', async () => {
@@ -733,7 +734,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('ap/show', () => {
 		test('ローカルのユーザー/ノートをtype付きで返す', async () => {
 			const config = fixtureConfig;
@@ -846,7 +846,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('fetch-external-resources endpoint', () => {
 		let resourceServer: Server | undefined;
 		let resourceUrl: string;
@@ -942,7 +941,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('URL preview', () => {
 		test('Error from summaly becomes HTTP 422', async () => {
 			const res = await simpleGet('/url?url=https://e:xample.com');
@@ -950,5 +948,4 @@ describe('Endpoints', () => {
 			expect(res.body.error.code).toBe('URL_PREVIEW_FAILED');
 		});
 	});
-
 });

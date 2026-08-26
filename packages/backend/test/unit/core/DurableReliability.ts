@@ -34,7 +34,11 @@ import { createNoteForHonoApi, type HonoApiNotesCreateDependencies } from '@/ser
 import { handleHonoQueueDeliver } from '@/queue/handlers/deliver.js';
 import { handleHonoQueueRelationshipUnfollow } from '@/queue/handlers/relationship.js';
 import type { DeliverJobData, RelationshipJobData } from '@/queue/types.js';
-import { resolveNotificationStreamId, toXListId, xaddHonoApiNotification } from '@/server/rest/notification/notification.js';
+import {
+	resolveNotificationStreamId,
+	toXListId,
+	xaddHonoApiNotification,
+} from '@/server/rest/notification/notification.js';
 
 describe('durable reliability boundaries', () => {
 	let runtime: RuntimeDependencies;

@@ -5,7 +5,12 @@
 
 import type { Hono } from 'hono';
 import { listActiveInstanceHostsFromDatabase } from '@/core/instance/InstanceStore.js';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
+import {
+	assertCredential,
+	assertProhibitMoved,
+	assertTokenPermission,
+	authenticateHonoApiToken,
+} from '../auth/auth.js';
 import {
 	handleHonoApiAntennasCreate,
 	handleHonoApiAntennasDelete,

@@ -12,7 +12,10 @@ import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type 
 import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
 import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/webhook/WebhookStore.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
-import { createSystemWebhookInDatabase, fetchSystemWebhookByIdOrFailFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
+import {
+	createSystemWebhookInDatabase,
+	fetchSystemWebhookByIdOrFailFromDatabase,
+} from '@/core/webhook/SystemWebhookStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleHonoQueueSystemWebhookDeliver,

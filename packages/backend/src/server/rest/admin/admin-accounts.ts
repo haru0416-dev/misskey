@@ -22,7 +22,12 @@ import { HonoApiError } from '../error.js';
 import type { HonoApiAuthenticated } from '../auth/auth.js';
 import type { HonoApiInternalEventPublisher } from '../events.js';
 import { isHonoApiAdministrator } from '../role/role-policy.js';
-import { createLocalSignupAccount, packSignupUser, type SignupDependencies, type SignupResponse } from '../auth/signup.js';
+import {
+	createLocalSignupAccount,
+	packSignupUser,
+	type SignupDependencies,
+	type SignupResponse,
+} from '../auth/signup.js';
 import {
 	packMeDetailedForHonoApi,
 	packUserDetailedNotMeForHonoApi,

@@ -46,11 +46,17 @@ import { adminRelaysListParamDef, adminRelaysWriteParamDef } from '@/server/rest
 import { adminServerInfoParamDef } from '@/server/rest/admin/admin-server-info.js';
 import { adminStatsParamDef } from '@/server/rest/admin/admin-stats.js';
 import { adminGetUserIpsParamDef } from '@/server/rest/admin/admin-user-ips.js';
-import { adminUpdateUserNoteParamDef, adminUserMaintenanceParamDef } from '@/server/rest/admin/admin-user-maintenance.js';
+import {
+	adminUpdateUserNoteParamDef,
+	adminUserMaintenanceParamDef,
+} from '@/server/rest/admin/admin-user-maintenance.js';
 import { adminUserSuspensionParamDef } from '@/server/rest/admin/admin-user-suspension.js';
 import { adminShowUserParamDef, adminShowUsersParamDef } from '@/server/rest/admin/admin-users.js';
 import { captchaCurrentParamDef, captchaSaveParamDef } from '@/server/rest/captcha/captcha.js';
-import { adminFederationHostParamDef, adminFederationUpdateInstanceParamDef } from '@/server/rest/activitypub/federation.js';
+import {
+	adminFederationHostParamDef,
+	adminFederationUpdateInstanceParamDef,
+} from '@/server/rest/activitypub/federation.js';
 import { adminInviteCreateParamDef, adminInviteListParamDef } from '@/server/rest/invite/invite.js';
 import { adminShowModerationLogsParamDef } from '@/server/rest/admin/moderation-log.js';
 import { adminPromoCreateParamDef } from '@/server/rest/note/promo.js';

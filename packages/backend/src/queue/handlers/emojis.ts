@@ -9,7 +9,10 @@ import mime from 'mime-types';
 import { ZipArchive } from 'archiver';
 import { ZipReader } from 'slacc';
 import type * as Bull from 'bullmq';
-import { deleteEmojiByNameAndHostFromDatabase, listLocalEmojisOrderedByIdFromDatabase } from '@/core/emoji/EmojiStore.js';
+import {
+	deleteEmojiByNameAndHostFromDatabase,
+	listLocalEmojisOrderedByIdFromDatabase,
+} from '@/core/emoji/EmojiStore.js';
 import { fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { createTemp, createTempDir } from '@/misc/create-temp.js';

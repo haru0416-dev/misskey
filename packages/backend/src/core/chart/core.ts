@@ -54,9 +54,9 @@ type Columns<S extends Schema> = {
 };
 
 type TempColumnsForUnique<S extends Schema> = {
-	[K in keyof S as `${typeof UNIQUE_TEMP_COLUMN_PREFIX}${KeyToColumnName<string & K>}`]: S[K]['uniqueIncrement'] extends true
-		? string[]
-		: never;
+	[
+		K in keyof S as `${typeof UNIQUE_TEMP_COLUMN_PREFIX}${KeyToColumnName<string & K>}`
+	]: S[K]['uniqueIncrement'] extends true ? string[] : never;
 };
 
 type RawRecord<S extends Schema> = {

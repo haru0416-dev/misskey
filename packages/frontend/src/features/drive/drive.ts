@@ -325,7 +325,7 @@ type SelectFileOptions<M extends boolean> = {
 
 export async function selectFile<
 	M extends boolean,
-	MR extends M extends true ? Misskey.entities.DriveFile[] : Misskey.entities.DriveFile,
+	MR extends (M extends true ? Misskey.entities.DriveFile[] : Misskey.entities.DriveFile),
 >(opts: SelectFileOptions<M>): Promise<MR> {
 	const files = await select(opts.anchorElement, opts.label ?? null, opts.multiple ?? false, opts.features);
 	return opts.multiple ? (files as MR) : (files[0]! as MR);

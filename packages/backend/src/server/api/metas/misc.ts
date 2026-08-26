@@ -33,8 +33,17 @@ import { requestResetPasswordParamDef, resetPasswordParamDef } from '@/server/re
 import { promoReadParamDef } from '@/server/rest/note/promo.js';
 import { resetDbParamDef } from '@/server/rest/admin/reset-db.js';
 import { retentionParamDef } from '@/server/rest/retention/retention.js';
-import { rolesListParamDef, rolesNotesParamDef, rolesShowParamDef, rolesUsersParamDef } from '@/server/rest/role/roles.js';
-import { swRegisterParamDef, swShowRegistrationParamDef, swUpdateRegistrationParamDef } from '@/server/rest/notification/sw.js';
+import {
+	rolesListParamDef,
+	rolesNotesParamDef,
+	rolesShowParamDef,
+	rolesUsersParamDef,
+} from '@/server/rest/role/roles.js';
+import {
+	swRegisterParamDef,
+	swShowRegistrationParamDef,
+	swUpdateRegistrationParamDef,
+} from '@/server/rest/notification/sw.js';
 import { pinnedUsersParamDef } from '@/server/rest/user/user.js';
 import { verifyEmailParamDef } from '@/server/rest/auth/verify-email.js';
 import { z } from 'zod';

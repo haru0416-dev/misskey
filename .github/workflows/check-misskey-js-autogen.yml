@@ -21,6 +21,10 @@ jobs:
   # persist-credentials を無効にし、各ステップで secret を公開しない。
   generate-misskey-js:
     runs-on: ubuntu-latest
+    env:
+      # example.yml は setupPassword を環境変数から読む。CI はサーバーを起動するだけなので固定値でよい
+      EREBIA_SETUP_PASSWORD: ci-generate-api-json
+      DATABASE_PASSWORD: ci-generate-api-json
     permissions:
       contents: read
     if: ${{ github.event.pull_request.mergeable == null || github.event.pull_request.mergeable == true }}
@@ -69,6 +73,10 @@ jobs:
   # pull_request_target の安全性確保のため、権限を読み取り専用にし、ユーザーコードを実行しない。
   get-actual-misskey-js:
     runs-on: ubuntu-latest
+    env:
+      # example.yml は setupPassword を環境変数から読む。CI はサーバーを起動するだけなので固定値でよい
+      EREBIA_SETUP_PASSWORD: ci-generate-api-json
+      DATABASE_PASSWORD: ci-generate-api-json
     permissions:
       contents: read
     if: ${{ github.event.pull_request.mergeable == null || github.event.pull_request.mergeable == true }}
@@ -89,6 +97,10 @@ jobs:
   # pull_request_target の安全性確保のため、リポジトリを clone しない。
   comment-misskey-js-autogen:
     runs-on: ubuntu-latest
+    env:
+      # example.yml は setupPassword を環境変数から読む。CI はサーバーを起動するだけなので固定値でよい
+      EREBIA_SETUP_PASSWORD: ci-generate-api-json
+      DATABASE_PASSWORD: ci-generate-api-json
     needs: [generate-misskey-js, get-actual-misskey-js]
     permissions:
       pull-requests: write

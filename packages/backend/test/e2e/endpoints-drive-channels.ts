@@ -135,10 +135,13 @@ describe('Endpoints', () => {
 	let db: TestDatabase;
 	let context: EndpointsContext;
 
-	beforeAll(async () => {
-		context = await createEndpointsContext();
-		({ alice, bob, db } = context);
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			context = await createEndpointsContext();
+			({ alice, bob, db } = context);
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await context.close();
@@ -235,7 +238,6 @@ describe('Endpoints', () => {
 			}
 		});
 	});
-
 
 	describe('Hono channel write endpoints', () => {
 		const createOwnedDriveFile = async (userId: string, seed: string) => {
@@ -503,7 +505,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('Hono channel follow endpoints', () => {
 		test('follow and unfollow update the channel following row', async () => {
 			const config = fixtureConfig;
@@ -607,7 +608,6 @@ describe('Endpoints', () => {
 			expect(await channelFollowingExistsInDatabase(db, movedUser.id, target.id)).toBe(false);
 		});
 	});
-
 
 	describe('Hono channel mute endpoints', () => {
 		test('create, list, and delete preserve channel mute behavior', async () => {
@@ -762,7 +762,6 @@ describe('Endpoints', () => {
 			expect(await channelMutingExistsInDatabase(db, movedUser.id, target.id)).toBe(false);
 		});
 	});
-
 
 	describe('channels/search', () => {
 		let channelSearchFixture: {
@@ -930,7 +929,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('channels/show and channels/timeline', () => {
 		test('channels/show はpinnedNotesを含み、channels/timelineはNO_SUCH_CHANNELと投稿一覧を維持する', async () => {
 			const config = fixtureConfig;
@@ -975,7 +973,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('drive', () => {
 		test('ドライブ情報を取得できる', async () => {
 			const res = await api('drive', {}, alice);
@@ -1003,7 +1000,6 @@ describe('Endpoints', () => {
 			expect(after.body.usage).toBe(uploaded.body!.size);
 		});
 	});
-
 
 	describe('drive/files/create', () => {
 		const assignRole = async (userId: string, policies: Record<string, unknown>) => {
@@ -1234,7 +1230,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('drive/files/update', () => {
 		test('名前を更新できる', async () => {
 			const file = (await uploadFile(alice)).body;
@@ -1428,7 +1423,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('drive/folders/create', () => {
 		test('フォルダを作成できる', async () => {
 			const res = await api(
@@ -1444,7 +1438,6 @@ describe('Endpoints', () => {
 			expect(res.body.name).toBe('test');
 		});
 	});
-
 
 	describe('drive/folders/delete', () => {
 		test('空フォルダを削除できる', async () => {
@@ -1552,7 +1545,6 @@ describe('Endpoints', () => {
 			expect(await fetchDriveFolderByIdFromDatabase(db, parent.id)).not.toBe(null);
 		});
 	});
-
 
 	describe('drive/folders/update', () => {
 		test('名前を更新できる', async () => {
@@ -1901,5 +1893,4 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 		});
 	});
-
 });

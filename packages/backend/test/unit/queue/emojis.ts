@@ -18,7 +18,10 @@ import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { emoji } from '@/db/schema/emoji.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
-import { createDriveFileInDatabase, listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
+import {
+	createDriveFileInDatabase,
+	listDriveFilesByUserIdWithPaginationFromDatabase,
+} from '@/core/drive/DriveFileStore.js';
 import { insertEmojiInDatabase, fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
 import { createRoleInDatabase } from '@/core/role/RoleStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';

@@ -115,7 +115,10 @@ import {
 	relayRejectedForHonoApi,
 	type HonoApiAdminRelaysDependencies,
 } from '@/server/rest/admin/admin-relays.js';
-import { reportAbuseForHonoApi, type HonoApiUsersReportAbuseDependencies } from '@/server/rest/admin/admin-abuse-reports.js';
+import {
+	reportAbuseForHonoApi,
+	type HonoApiUsersReportAbuseDependencies,
+} from '@/server/rest/admin/admin-abuse-reports.js';
 import type {
 	HonoApiInternalEventPublisher,
 	HonoApiNotesStreamPublisher,
