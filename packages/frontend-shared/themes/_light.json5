@@ -9,7 +9,7 @@
 	kind: 'light',
 
 	props: {
-		accent: 'oklch(0.555 0.178 276.7)',
+		accent: '#5c62d8',
 		accentedBg: ':alpha<0.15<@accent',
 		love: '#dd2e44',
 		focus: ':alpha<0.3<@accent',
@@ -63,7 +63,7 @@
 		inputBorderHover: 'rgba(0, 0, 0, 0.2)',
 		badge: '#31b1ce',
 		messageBg: '@bg',
-		success: 'oklch(0.616 0.134 154.9)',
+		success: '#2e9c60',
 		error: '#ec4137',
 		warn: '#ecb637',
 		codeString: '#b98710',
