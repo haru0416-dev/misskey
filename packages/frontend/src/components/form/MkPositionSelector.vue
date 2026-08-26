@@ -20,7 +20,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { } from 'vue';
 
 const x = defineModel<string>('x', { default: 'center' });
 const y = defineModel<string>('y', { default: 'center' });

@@ -3,7 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { followingCreateParamDef, followingListParamDef, followingRequestsListParamDef, followingUpdateAllParamDef, followingUpdateParamDef, followingUserIdParamDef } from '@/server/rest/following.js';
+import {
+	followingCreateParamDef,
+	followingListParamDef,
+	followingRequestsListParamDef,
+	followingUpdateAllParamDef,
+	followingUpdateParamDef,
+	followingUserIdParamDef,
+} from '@/server/rest/user/following.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -56,7 +63,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserLite',
 			},
 		} as const,
@@ -97,7 +105,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserLite',
 			},
 		} as const,
@@ -138,7 +147,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserLite',
 			},
 		} as const,
@@ -146,6 +156,7 @@ export const endpointMetas = {
 	},
 	'following/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -154,10 +165,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Following',
 				},
 			},
@@ -211,7 +224,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserLite',
 			},
 		} as const,
@@ -219,6 +233,7 @@ export const endpointMetas = {
 	},
 	'following/requests/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['following', 'account'],
 
 			requireCredential: true,
@@ -227,24 +242,29 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						follower: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'UserLite',
 						},
 						followee: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'UserLite',
 						},
 					},
@@ -273,6 +293,7 @@ export const endpointMetas = {
 	},
 	'following/requests/sent': {
 		meta: {
+			allowQuery: true,
 			tags: ['following', 'account'],
 
 			requireCredential: true,
@@ -281,24 +302,29 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						follower: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'UserLite',
 						},
 						followee: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'UserLite',
 						},
 					},
@@ -342,7 +368,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserLite',
 			},
 		} as const,

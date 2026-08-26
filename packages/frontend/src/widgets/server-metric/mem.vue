@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div class="zlxnikvl">
 	<XPie class="pie" :value="usage"/>
 	<div>
-		<p><i class="ti ti-section"></i>RAM</p>
+		<p><i class="ti ti-section" aria-hidden="true"></i>RAM</p>
 		<p>Total: {{ bytes(total, 1) }}</p>
 		<p>Used: {{ bytes(used, 1) }}</p>
 		<p>Free: {{ bytes(free, 1) }}</p>
@@ -16,7 +16,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import XPie from './pie.vue';
 import bytes from '@/filters/bytes.js';
@@ -27,15 +27,13 @@ const props = defineProps<{
 }>();
 
 const usage = ref<number>(0);
-const total = ref<number>(0);
+const total = computed(() => props.meta.mem.total);
 const used = ref<number>(0);
-const free = ref<number>(0);
+const free = computed(() => total.value - used.value);
 
 function onStats(stats: Misskey.entities.ServerStats) {
 	usage.value = stats.mem.active / props.meta.mem.total;
-	total.value = props.meta.mem.total;
 	used.value = stats.mem.active;
-	free.value = total.value - used.value;
 }
 
 onMounted(() => {
@@ -48,32 +46,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" scoped>
+@use './pie-metric';
+
 .zlxnikvl {
-	display: flex;
-	padding: 16px;
-
-	> .pie {
-		height: 82px;
-		flex-shrink: 0;
-		margin-right: 16px;
-	}
-
-	> div {
-		flex: 1;
-
-		> p {
-			margin: 0;
-			font-size: 0.8em;
-
-			&:first-child {
-				font-weight: bold;
-				margin-bottom: 4px;
-
-				> i {
-					margin-right: 4px;
-				}
-			}
-		}
-	}
+	@include pie-metric.root;
 }
 </style>

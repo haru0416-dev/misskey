@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template #header>
 		<button class="_button" @click="choose">
 			<span>{{ headerTitle }}</span>
-			<i :class="menuOpened ? 'ti ti-chevron-up' : 'ti ti-chevron-down'" style="margin-left: 8px;"></i>
+			<i :class="menuOpened ? 'ti ti-chevron-up' : 'ti ti-chevron-down'" style="margin-left: var(--MI-space-sm);" aria-hidden="true"></i>
 		</button>
 	</template>
 
@@ -107,11 +107,17 @@ const setSrc = (src: TlSrc) => {
 };
 
 const choose = async (ev: PointerEvent) => {
-	menuOpened.value = true;
-	const [antennas, lists] = await Promise.all([
-		misskeyApi('antennas/list'),
-		misskeyApi('users/lists/list'),
-	]);
+	let antennas: Misskey.entities.Antenna[];
+	let lists: Misskey.entities.UserList[];
+	try {
+		[antennas, lists] = await Promise.all([
+			misskeyApi('antennas/list'),
+			misskeyApi('users/lists/list'),
+		]);
+	} catch {
+		menuOpened.value = false;
+		return;
+	}
 	const antennaItems = antennas.map(antenna => ({
 		text: antenna.name,
 		icon: 'ti ti-antenna',
@@ -147,6 +153,7 @@ const choose = async (ev: PointerEvent) => {
 		menuItems.push(...listItems);
 	}
 
+	menuOpened.value = true;
 	os.popupMenu(menuItems, ev.currentTarget ?? ev.target).then(() => {
 		menuOpened.value = false;
 	});

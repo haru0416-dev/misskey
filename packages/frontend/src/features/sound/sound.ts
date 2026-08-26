@@ -87,7 +87,6 @@ export type OperationType = (typeof operationTypes)[number];
  * @param options `useCache`: デフォルトは`true` 一度再生した音声はキャッシュする
  */
 export async function loadAudio(url: string, options?: { useCache?: boolean }) {
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (ctx == null) {
 		ctx = new AudioContext();
 
@@ -185,22 +184,6 @@ async function playMisskeySfxFileInternal(soundStore: SoundStore): Promise<boole
 	return true;
 }
 
-export async function playUrl(
-	url: string,
-	opts: {
-		volume?: number;
-		pan?: number;
-		playbackRate?: number;
-	},
-) {
-	if (opts.volume === 0) {
-		return;
-	}
-	const buffer = await loadAudio(url);
-	if (!buffer) return;
-	createSourceNode(buffer, opts).soundSource.start();
-}
-
 export function createSourceNode(
 	buffer: AudioBuffer,
 	opts: {
@@ -261,7 +244,7 @@ export async function getSoundDuration(file: string): Promise<number> {
 /**
  * ミュートすべきかどうかを判断する
  */
-export function isMute(): boolean {
+function isMute(): boolean {
 	if (prefer['sound.notUseSound']) {
 		// サウンドを出力しない
 		return true;

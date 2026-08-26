@@ -8,7 +8,7 @@ import { createFilter, dataToEsm } from '@rollup/pluginutils';
 import type { Plugin } from 'vite';
 import type { RollupJsonOptions } from '@rollup/plugin-json';
 
-// json5 extends SyntaxError with additional fields (without subclassing)
+// json5 は SyntaxError を継承せず、追加プロパティを持つエラーを返す。
 // https://github.com/json5/json5/blob/de344f0619bda1465a6e25c76f1c0c3dda8108d9/lib/parse.js#L1111-L1112
 interface Json5SyntaxError extends SyntaxError {
 	lineNumber: number;
@@ -22,7 +22,6 @@ export default function json5(options: RollupJsonOptions = {}): Plugin {
 	return {
 		name: 'json5',
 
-		// eslint-disable-next-line no-shadow
 		transform(json, id) {
 			if (id.slice(-6) !== '.json5' || !filter(id)) return null;
 

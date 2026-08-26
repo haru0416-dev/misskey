@@ -31,7 +31,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-// SPECIFICATION: https://misskey-hub.net/docs/for-users/features/share-form/
+// https://misskey-hub.net/docs/for-users/features/share-form/
 
 import { ref, computed } from 'vue';
 import * as Misskey from 'misskey-js';
@@ -78,29 +78,11 @@ async function init() {
 
 	if (url) {
 		try {
-			// Normalize the URL to URL-encoded and puny-coded from with the URL constructor.
-			//
-			// It's common to use unicode characters in the URL for better visibility of URL
-			//     like: https://ja.wikipedia.org/wiki/ミスキー
-			//  or like: https://藍.moe/
-			// However, in the MFM, the unicode characters must be URL-encoded to be parsed as `url` node
-			//     like: https://ja.wikipedia.org/wiki/%E3%83%9F%E3%82%B9%E3%82%AD%E3%83%BC
-			//  or like: https://xn--931a.moe/
-			// Therefore, we need to normalize the URL to URL-encoded form.
-			//
-			// The URL constructor will parse the URL and normalize unicode characters
-			//   in the host to punycode and in the path component to URL-encoded form.
-			//   (see url.spec.whatwg.org)
-			//
-			// In addition, the current MFM renderer decodes the URL-encoded path and / punycode encoded host name so
-			//   this normalization doesn't make the visible URL ugly.
-			//   (see MkUrl.vue)
+			// URLコンストラクターで正規化しないと、MFMのurlノードとして解釈できないUnicode文字を含むURLがある。
+			// ホストはpunycode、パスはURLエンコード形式になるが、表示時にはMkUrl.vueが元の表記へ戻す。
 
 			noteText += new URL(url).href;
 		} catch {
-			// fallback to original URL if the URL is invalid.
-			// note that this is extremely rare since the `url` parameter is designed to share a URL and
-			// the URL constructor will throw TypeError only if failure, which means the URL is not valid.
 			noteText += url;
 		}
 	}
@@ -114,7 +96,6 @@ async function init() {
 				...(visibleUserIds ? visibleUserIds.split(',').map(userId => ({ userId })) : []),
 				...(visibleAccts ? visibleAccts.split(',').map(Misskey.acct.parse) : []),
 			]
-			// @ts-expect-error payloadの引数側の型が正常に解決されない
 				.map(q => misskeyApi('users/show', q)
 					.then(user => {
 						visibleUsers.value.push(user);

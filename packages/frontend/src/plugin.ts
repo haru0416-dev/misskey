@@ -46,7 +46,7 @@ async function getParser(): Promise<Parser> {
 	return _parser;
 }
 
-export function isSupportedAiScriptVersion(version: string): boolean {
+function isSupportedAiScriptVersion(version: string): boolean {
 	try {
 		return compareVersions(version, '0.12.0') >= 0;
 	} catch (_) {
@@ -102,7 +102,7 @@ export async function parsePluginMeta(code: string): Promise<AiScriptPluginMeta>
 	};
 }
 
-export async function authorizePlugin(plugin: Plugin) {
+async function authorizePlugin(plugin: Plugin) {
 	if (plugin.permissions == null || plugin.permissions.length === 0) return;
 	if (Object.hasOwn(store.pluginTokens, plugin.installId)) return;
 
@@ -274,7 +274,7 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 	const plugin = prefer.plugins.find((x) => x.installId === id);
 	if (!plugin) return;
 
-	// 後方互換性のため
+	// 旧保存形式ではプラグインのソースが保存されていない。
 	if (plugin.src == null) return;
 
 	pluginLogs.value.set(plugin.installId, []);
@@ -316,7 +316,7 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 					message: `${err}`,
 					isError: true,
 				});
-				throw err; // install時のtry-catchに反応させる
+				throw err; // インストール側の try-catch で処理する。
 			},
 		},
 	);
@@ -337,7 +337,7 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 	);
 }
 
-export function abortPlugin(plugin: Plugin): void {
+function abortPlugin(plugin: Plugin): void {
 	const pluginContext = pluginContexts.get(plugin.installId);
 	if (!pluginContext) return;
 
@@ -398,10 +398,7 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 
 	const config = new Map<string, values.Value>();
 	for (const [k, v] of Object.entries(opts.plugin.config ?? {})) {
-		config.set(
-			k,
-			utils.jsToVal(typeof opts.plugin.configData[k] !== 'undefined' ? opts.plugin.configData[k] : v.default),
-		);
+		config.set(k, utils.jsToVal(opts.plugin.configData[k] !== undefined ? opts.plugin.configData[k] : v.default));
 	}
 
 	function withContext<T>(fn: (ctx: Interpreter) => T): T {
@@ -502,7 +499,7 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 		'Plugin:config': values.OBJ(config),
 	};
 
-	// 後方互換性のため
+	// 旧形式のプラグイン API 名を維持する。
 	const compatibilityAliases = [
 		['Plugin:register_post_form_action', 'Plugin:register:post_form_action'],
 		['Plugin:register_user_action', 'Plugin:register:user_action'],

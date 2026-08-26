@@ -6,6 +6,9 @@
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 
-export function isReply(note: Pick<MiNote, 'replyId' | 'replyUserId' | 'userId'>, viewerId?: MiUser['id'] | undefined | null): boolean {
+export function isReply(
+	note: Pick<MiNote, 'replyId' | 'replyUserId' | 'userId'>,
+	viewerId?: MiUser['id'] | undefined | null,
+): boolean {
 	return note.replyId != null && note.replyUserId !== note.userId && note.replyUserId !== viewerId;
 }

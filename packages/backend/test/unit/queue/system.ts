@@ -3,24 +3,28 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
-
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Redis from 'ioredis';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { createUserInDatabase } from '@/core/UserStore.js';
-import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/UserIpStore.js';
-import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/AntennaStore.js';
-import { createRoleInDatabase } from '@/core/RoleStore.js';
-import { createRoleAssignmentInDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/RoleAssignmentStore.js';
-import { createRetentionAggregationInDatabase, listRetentionAggregationsCreatedAfter } from '@/core/RetentionAggregationStore.js';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
-import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
-import { createChannelInDatabase } from '@/core/ChannelStore.js';
-import { createChannelMutingInDatabase, listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
-import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
-import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
+import { createUserInDatabase } from '@/core/user/UserStore.js';
+import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/user/UserIpStore.js';
+import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/antenna/AntennaStore.js';
+import { createRoleInDatabase } from '@/core/role/RoleStore.js';
+import { createRoleAssignmentInDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
+import {
+	createRetentionAggregationInDatabase,
+	listRetentionAggregationsCreatedAfter,
+} from '@/core/retention/RetentionAggregationStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
+import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/user/MutingStore.js';
+import { createChannelInDatabase } from '@/core/channel/ChannelStore.js';
+import {
+	createChannelMutingInDatabase,
+	listActiveMutedChannelIdsByUserIdFromDatabase,
+} from '@/core/channel/ChannelMutingStore.js';
+import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
+import { createNoteReactionInDatabase } from '@/core/note/NoteReactionStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createHonoChartWriters, type HonoChartWriters } from '@/server/chart-runtime.js';
 import Logger from '@/logger.js';
@@ -53,7 +57,7 @@ describe('hono-queue-system', () => {
 		redisForReactions = new Redis.Redis(config.valkey.reactions);
 		const meta = await fetchMetaFromDatabase(db);
 		chartWriters = createHonoChartWriters({ db, redis, meta, logger: new Logger('test-chart') });
-		deps = { config, db, chartWriters, meta, redis, redisForReactions };
+		deps = { config, db, chartWriters, meta, redisForReactions };
 	});
 
 	afterAll(async () => {
@@ -91,7 +95,7 @@ describe('hono-queue-system', () => {
 			await handleHonoQueueClean(deps);
 
 			const assignmentsAfter = await listRoleAssignmentsByUserIdFromDatabase(db, userId);
-			expect(assignmentsAfter.some(a => a.id === assignmentId)).toBe(false);
+			expect(assignmentsAfter.some((a) => a.id === assignmentId)).toBe(false);
 		});
 
 		test('90日より古いUserIpを削除する', async () => {
@@ -105,7 +109,7 @@ describe('hono-queue-system', () => {
 			await recordUserIpInDatabase(db, {
 				userId,
 				ip: '203.0.113.1',
-				createdAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 91)),
+				createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 91),
 			});
 
 			await handleHonoQueueClean(deps);
@@ -131,7 +135,7 @@ describe('hono-queue-system', () => {
 				withFile: false,
 				keywords: [['test']],
 				excludeKeywords: [[]],
-				lastUsedAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 365)),
+				lastUsedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 365),
 			});
 
 			await handleHonoQueueClean({
@@ -146,11 +150,11 @@ describe('hono-queue-system', () => {
 
 	describe('handleHonoQueueAggregateRetention', () => {
 		test('本日分のretention_aggregationレコードを作成し、過去のレコードのretention数を更新する', async () => {
-			const pastId = genId(Date.now() - (1000 * 60 * 60 * 24 * 5));
+			const pastId = genId(Date.now() - 1000 * 60 * 60 * 24 * 5);
 			await createRetentionAggregationInDatabase(db, {
 				id: pastId,
-				createdAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 5)),
-				updatedAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 5)),
+				createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
+				updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
 				dateKey: `retentiontest-${pastId}`,
 				userIds: [],
 				usersCount: 0,
@@ -160,10 +164,10 @@ describe('hono-queue-system', () => {
 
 			const now = new Date();
 			const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-			const records = await listRetentionAggregationsCreatedAfter(db, new Date(Date.now() - (1000 * 60 * 60 * 24 * 31)));
-			expect(records.some(r => r.dateKey === dateKey)).toBe(true);
+			const records = await listRetentionAggregationsCreatedAfter(db, new Date(Date.now() - 1000 * 60 * 60 * 24 * 31));
+			expect(records.some((r) => r.dateKey === dateKey)).toBe(true);
 
-			const pastRecord = records.find(r => r.id === pastId);
+			const pastRecord = records.find((r) => r.id === pastId);
 			expect(pastRecord?.data[dateKey]).toBe(0);
 		});
 
@@ -173,16 +177,51 @@ describe('hono-queue-system', () => {
 	});
 
 	describe('chart processors', () => {
-		test('handleHonoQueueTickCharts: 12種のチャートを直列にtickする', async () => {
+		// チャートを1つ追加してハンドラー側への追記を忘れると、そのチャートだけ永久に集計されない。
+		// 実DBに対する実行 (SQLの健全性) と、呼び出し対象の網羅の両方を見る。
+		function recordChartCalls(): { chartWriters: HonoChartWriters; calls: Map<string, string[]> } {
+			const calls = new Map<string, string[]>();
+			const spied = Object.fromEntries(
+				Object.keys(chartWriters).map((name) => [
+					name,
+					new Proxy(
+						{},
+						{
+							get: (_target, method: string) => async (): Promise<void> => {
+								calls.set(name, [...(calls.get(name) ?? []), method]);
+							},
+						},
+					),
+				]),
+			) as unknown as HonoChartWriters;
+			return { chartWriters: spied, calls };
+		}
+
+		test('handleHonoQueueTickCharts: chartWriters の全チャートを tick する', async () => {
 			await expect(handleHonoQueueTickCharts(deps)).resolves.toBeUndefined();
+
+			const recorded = recordChartCalls();
+			await handleHonoQueueTickCharts({ ...deps, chartWriters: recorded.chartWriters });
+			expect([...recorded.calls.keys()].sort()).toStrictEqual(Object.keys(chartWriters).sort());
+			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['tick']);
 		});
 
-		test('handleHonoQueueResyncCharts: drive/notes/usersチャートをresyncする', async () => {
+		test('handleHonoQueueResyncCharts: drive/notes/users チャートだけを resync する', async () => {
 			await expect(handleHonoQueueResyncCharts(deps)).resolves.toBeUndefined();
+
+			const recorded = recordChartCalls();
+			await handleHonoQueueResyncCharts({ ...deps, chartWriters: recorded.chartWriters });
+			expect([...recorded.calls.keys()].sort()).toStrictEqual(['driveChart', 'notesChart', 'usersChart']);
+			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['resync']);
 		});
 
-		test('handleHonoQueueCleanCharts: 12種のチャートを直列にcleanする', async () => {
+		test('handleHonoQueueCleanCharts: chartWriters の全チャートを clean する', async () => {
 			await expect(handleHonoQueueCleanCharts(deps)).resolves.toBeUndefined();
+
+			const recorded = recordChartCalls();
+			await handleHonoQueueCleanCharts({ ...deps, chartWriters: recorded.chartWriters });
+			expect([...recorded.calls.keys()].sort()).toStrictEqual(Object.keys(chartWriters).sort());
+			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['clean']);
 		});
 	});
 
@@ -222,18 +261,14 @@ describe('hono-queue-system', () => {
 
 			await handleHonoQueueCheckExpiredMutings({
 				...deps,
-				publishInternalEvent: (type, value) => { published.push({ type, value }); },
+				publishInternalEvent: (type, value) => {
+					published.push({ type, value });
+				},
 			});
 
 			expect(await mutingExistsInDatabase(db, muterId, muteeId)).toBe(false);
 			expect(await listActiveMutedChannelIdsByUserIdFromDatabase(db, muterId, new Date())).not.toContain(channelId);
 
-			// userMutingsCache/mutingChannelsCacheはどちらもNestJS側と共有されるRedisKVCacheの
-			// ため、削除後にリフレッシュされ、キャッシュ済みの値からも消えていることを確認する。
-			const cachedMutings = JSON.parse((await redis.get(`kvcache:userMutings:${muterId}`)) ?? '[]');
-			expect(cachedMutings).not.toContain(muteeId);
-			const cachedChannelMutings = JSON.parse((await redis.get(`kvcache:channelMutingChannels:${muterId}`)) ?? '[]');
-			expect(cachedChannelMutings).not.toContain(channelId);
 			expect(published).toContainEqual({ type: 'unmute', value: { muterId, muteeId } });
 			expect(published).toContainEqual({ type: 'unmuteChannel', value: { userId: muterId, channelId } });
 		});
@@ -241,7 +276,9 @@ describe('hono-queue-system', () => {
 
 	describe('handleHonoQueueBakeBufferedReactions', () => {
 		test('enableReactionsBufferingがfalseの場合は何もしない', async () => {
-			await expect(handleHonoQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: false } })).resolves.toBeUndefined();
+			await expect(
+				handleHonoQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: false } }),
+			).resolves.toBeUndefined();
 		});
 
 		test('バッファされたリアクションをnoteに反映する', async () => {

@@ -6,7 +6,7 @@
 import * as fs from 'node:fs';
 import { FILE_TYPE_BROWSERSAFE } from '@/const.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
-import type { IImageStreamable } from '@/core/ImageProcessingService.js';
+import type { IImageStreamable } from '@/core/drive/ImageProcessingService.js';
 import type { FileServerReply } from './FileServerTypes.js';
 
 export type RangeStream = {
@@ -18,8 +18,8 @@ export type RangeStream = {
 
 export function createRangeStream(rangeHeader: string, size: number, path: string): RangeStream {
 	const parts = rangeHeader.replace(/bytes=/, '').split('-');
-	const start = parseInt(parts[0] ?? '', 10);
-	let end = parts[1] ? parseInt(parts[1], 10) : size - 1;
+	const start = Number.parseInt(parts[0] ?? '', 10);
+	let end = parts[1] ? Number.parseInt(parts[1], 10) : size - 1;
 	if (end > size) {
 		end = size - 1;
 	}
@@ -74,10 +74,7 @@ export type FileResponseOptions = {
 	cacheControl?: string;
 };
 
-export function setFileResponseHeaders(
-	reply: FileServerReply,
-	options: FileResponseOptions,
-): void {
+export function setFileResponseHeaders(reply: FileServerReply, options: FileResponseOptions): void {
 	reply.header('Content-Type', getSafeContentType(options.mime));
 	reply.header('Cache-Control', options.cacheControl ?? 'max-age=31536000, immutable');
 	reply.header('Content-Disposition', contentDisposition('inline', options.filename));
@@ -86,6 +83,8 @@ export function setFileResponseHeaders(
 	}
 }
 
-export function needsCleanup<T extends { kind?: string; cleanup?: () => void }>(file: T): file is T & { cleanup: () => void } {
+export function needsCleanup<T extends { kind?: string; cleanup?: () => void }>(
+	file: T,
+): file is T & { cleanup: () => void } {
 	return 'cleanup' in file && typeof file.cleanup === 'function';
 }

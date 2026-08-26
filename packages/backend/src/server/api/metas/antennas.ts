@@ -3,7 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { antennasCreateParamDef, antennasDeleteParamDef, antennasListParamDef, antennasNotesParamDef, antennasRemoveNoteParamDef, antennasShowParamDef, antennasUpdateParamDef } from '@/server/rest/antennas.js';
+import {
+	antennasCreateParamDef,
+	antennasDeleteParamDef,
+	antennasListParamDef,
+	antennasNotesParamDef,
+	antennasRemoveNoteParamDef,
+	antennasShowParamDef,
+	antennasUpdateParamDef,
+} from '@/server/rest/antenna/antennas.js';
 
 export const endpointMetas = {
 	'antennas/create': {
@@ -38,7 +46,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Antenna',
 			},
 		} as const,
@@ -64,6 +73,7 @@ export const endpointMetas = {
 	},
 	'antennas/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['antennas', 'account'],
 
 			requireCredential: true,
@@ -72,10 +82,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Antenna',
 				},
 			},
@@ -100,10 +112,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -132,6 +146,7 @@ export const endpointMetas = {
 	},
 	'antennas/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['antennas', 'account'],
 
 			requireCredential: true,
@@ -148,7 +163,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Antenna',
 			},
 		} as const,
@@ -186,7 +202,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Antenna',
 			},
 		} as const,

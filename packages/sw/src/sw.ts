@@ -33,7 +33,7 @@ async function respondToNavigation(request: Request): Promise<Response> {
 		globalThis.clearTimeout(timeout);
 	}
 
-	// Only show offline page when network request actually fails
+	// fetchの失敗・timeout・5xx応答時にoffline pageへフォールバックする。
 	const html = await offlineContentHTML();
 	return new Response(html, {
 		status: 200,
@@ -69,7 +69,7 @@ globalThis.addEventListener('install', (ev) => {
 		ev.addRoutes({
 			condition: {
 				// doc: https://developer.mozilla.org/ja/docs/Web/API/URLPattern
-				// @ts-expect-error 実験的なAPIなので型定義がない
+				// @ts-ignore 実験的なAPIなので実行環境と型定義の対応状況が一致しない
 				urlPattern: new URLPattern({}),
 			},
 			source: 'fetch-event',
@@ -90,21 +90,16 @@ globalThis.addEventListener('activate', ev => {
 });
 
 globalThis.addEventListener('fetch', ev => {
-	let isHTMLRequest = false;
-	if (ev.request.headers.get('sec-fetch-dest') === 'document') {
-		isHTMLRequest = true;
-	} else if (ev.request.headers.get('accept')?.includes('/html')) {
-		isHTMLRequest = true;
-	} else if (ev.request.url.endsWith('/')) {
-		isHTMLRequest = true;
-	}
+	const isHTMLRequest =
+		ev.request.headers.get('sec-fetch-dest') === 'document' ||
+		(ev.request.headers.get('accept')?.includes('/html') ?? false) ||
+		ev.request.url.endsWith('/');
 
 	if (!isHTMLRequest) return;
 	ev.respondWith(respondToNavigation(ev.request));
 });
 
 globalThis.addEventListener('push', ev => {
-	// クライアント取得
 	ev.waitUntil(globalThis.clients.matchAll({
 		includeUncontrolled: true,
 		type: 'window',
@@ -215,10 +210,15 @@ globalThis.addEventListener('notificationclick', (ev: ServiceWorkerGlobalScopeEv
 				}
 		}
 
-		if (client) {
-			client.focus();
+		try {
+			if (client) {
+				await client.focus();
+			}
+		} catch (error) {
+			if (_DEV_) console.warn('notification client focus failed', error);
+		} finally {
+			notification.close();
 		}
-		notification.close();
 	})());
 });
 
@@ -232,16 +232,15 @@ globalThis.addEventListener('message', (ev: ServiceWorkerGlobalScopeEventMap['me
 							.filter(name => name.startsWith(MISSKEY_CACHE_PREFIX))
 							.map(name => caches.delete(name)),
 					));
-				return; // TODO
+				return;
 		}
 
-		if (typeof ev.data === 'object') {
-			// E.g. '[object Array]' → 'array'
+		if (typeof ev.data === 'object' && ev.data !== null) {
 			const otype = Object.prototype.toString.call(ev.data).slice(8, -1).toLowerCase();
 
 			if (otype === 'object') {
-				if (ev.data.msg === 'initialize') {
-					swLang.setLang(ev.data.lang);
+				if (ev.data.msg === 'initialize' && typeof ev.data.lang === 'string' && ev.data.lang.length > 0) {
+					await swLang.setLang(ev.data.lang);
 				}
 			}
 		}

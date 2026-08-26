@@ -1,26 +1,18 @@
-# misskey.js
-**Strongly-typed official Misskey SDK for browsers/Node.js.**
+# misskey-js
 
-[![Test](https://github.com/misskey-dev/misskey.js/actions/workflows/test.yml/badge.svg)](https://github.com/misskey-dev/misskey.js/actions/workflows/test.yml)
-[![codecov](https://codecov.io/gh/misskey-dev/misskey.js/branch/develop/graph/badge.svg?token=PbrTtk3nVD)](https://codecov.io/gh/misskey-dev/misskey.js)
+TypeScript 用の Misskey SDK。ブラウザ / Node.js / Bun 上で動作する。
 
-[![NPM](https://nodei.co/npm/misskey-js.png?downloads=true&downloadRank=true&stars=true)](https://www.npmjs.com/package/misskey-js)
+このリポジトリではワークスペース内のパッケージとして扱っており、npm には公開していない
+(`npm i misskey-js` で入るのは upstream の misskey-dev/misskey.js であり、このパッケージではない)。
+バックエンドの API 定義から `src/autogen/` を生成しているため、バックエンドの API を変更したら
+ルートで `bun run build-misskey-js-with-types` を実行する。開発時の決まりごとは [CONTRIBUTING.md](./CONTRIBUTING.md) を参照。
 
-JavaScript(TypeScript)用の公式MisskeySDKです。ブラウザ/Node.js上で動作します。
-
-以下が提供されています:
+以下が提供されている:
 - ユーザー認証
 - APIリクエスト
 - ストリーミング
 - ユーティリティ関数
-- Misskeyの各種型定義
-
-対応するMisskeyのバージョンは12以上です。
-
-## Install
-```
-npm i misskey-js
-```
+- 各種型定義
 
 # Usage
 インポートは以下のようにまとめて行うと便利です。

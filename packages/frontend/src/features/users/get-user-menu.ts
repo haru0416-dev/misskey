@@ -4,7 +4,7 @@
  */
 
 import { toUnicode } from 'punycode.js';
-import { defineAsyncComponent, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { host, url } from '@shared/utility/config.js';
 import type { Router } from '@/router.js';
@@ -237,7 +237,7 @@ export function getUserMenu(user: Misskey.entities.UserDetailed, router: Router 
 						genEmbedCode('user-timeline', user.id);
 					},
 				},
-			], // TODO: ユーザーカードの埋め込みなど
+			],
 		});
 	}
 

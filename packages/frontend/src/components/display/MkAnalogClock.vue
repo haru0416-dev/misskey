@@ -168,7 +168,7 @@ function tick(): number | null {
 	}
 	hAngle.value = Math.PI * (h.value % (props.twentyfour ? 24 : 12) + (m.value + s.value / 60) / 60) / (props.twentyfour ? 12 : 6);
 	mAngle.value = Math.PI * (m.value + s.value / 60) / 30;
-	if (sOneRound && sLine.value && props.sAnimation !== 'none') { // 秒針が一周した際のアニメーションをよしなに処理する(これが無いと秒が59->0になったときに期待したアニメーションにならない)
+	if (sOneRound && sLine.value && props.sAnimation !== 'none') { // 59 秒から 0 秒への遷移でも秒針の回転方向を維持する。
 		sAngle.value = Math.PI * 60 / 30;
 		sLine.value.addEventListener('transitionend', () => {
 			disableSAnimate.value = true;

@@ -3,11 +3,20 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { antennaExistsForUserFromDatabase } from '@/core/AntennaStore.js';
+import { antennaExistsForUserFromDatabase } from '@/core/antenna/AntennaStore.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { JsonValue } from '@/misc/json-value.js';
-import { filterNoteForStreamingHidingForHonoApi, packNoteForHonoApi, populateMyReactionForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
-import { isNoteMutedOrBlockedForHonoStream, isNoteVisibleForMeForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
+import {
+	filterNoteForStreamingHidingForHonoApi,
+	packNoteForHonoApi,
+	populateMyReactionForHonoApi,
+	type HonoApiNoteDependencies,
+} from '@/server/rest/note/note.js';
+import {
+	isNoteMutedOrBlockedForHonoStream,
+	isNoteVisibleForMeForHonoStream,
+	type HonoStreamChannelDefinition,
+} from '../channel.js';
 
 export const honoStreamChannelAntenna: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
 	shouldShare: false,
@@ -34,11 +43,15 @@ export const honoStreamChannelAntenna: HonoStreamChannelDefinition<HonoApiNoteDe
 
 				if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 					if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-						filtered.renote.myReaction = await populateMyReactionForHonoApi(deps, {
-							id: filtered.renote.id,
-							reactions: filtered.renote.reactions,
-							reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
-						}, user.id);
+						filtered.renote.myReaction = await populateMyReactionForHonoApi(
+							deps,
+							{
+								id: filtered.renote.id,
+								reactions: filtered.renote.reactions,
+								reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
+							},
+							user.id,
+						);
 					}
 				}
 

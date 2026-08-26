@@ -14,10 +14,7 @@ describe('Emoji', () => {
 	let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 	beforeAll(async () => {
-		[alice, bob] = await Promise.all([
-			createAccount('a.test'),
-			createAccount('b.test'),
-		]);
+		[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 		[bobInA, aliceInB] = await Promise.all([
 			resolveRemoteUser('b.test', bob.id, alice),
@@ -66,7 +63,7 @@ describe('Emoji', () => {
 		strictEqual(renewedaliceInB.emojis[emoji.name], emoji.url);
 	});
 
-	test('Local-only custom emoji aren\'t delivered with Note delivery', async () => {
+	test("Local-only custom emoji aren't delivered with Note delivery", async () => {
 		const emoji = await addCustomEmoji('a.test', { localOnly: true });
 		await alice.client.request('notes/create', { text: `I love :${emoji.name}:` });
 		await sleep();
@@ -75,11 +72,10 @@ describe('Emoji', () => {
 		const noteInB = first(notes);
 
 		strictEqual(noteInB.text, `I love \u200b:${emoji.name}:\u200b`);
-		// deepStrictEqual(noteInB.emojis, {}); // TODO: this fails (why?)
 		deepStrictEqual({ ...noteInB.emojis }, {});
 	});
 
-	test('Local-only custom emoji aren\'t delivered with Reaction delivery', async () => {
+	test("Local-only custom emoji aren't delivered with Reaction delivery", async () => {
 		const emoji = await addCustomEmoji('a.test', { localOnly: true });
 		const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 		await sleep();
@@ -92,7 +88,7 @@ describe('Emoji', () => {
 		deepStrictEqual({ ...noteInB.reactionEmojis }, {});
 	});
 
-	test('Local-only custom emoji aren\'t delivered with Profile delivery', async () => {
+	test("Local-only custom emoji aren't delivered with Profile delivery", async () => {
 		const emoji = await addCustomEmoji('a.test', { localOnly: true });
 		const renewedAlice = await alice.client.request('i/update', { name: `:${emoji.name}:` });
 		await sleep();

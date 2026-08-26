@@ -1,8 +1,1 @@
-contact_links:
-  - name: 💬 Misskey official Discord
-    url: https://discord.gg/Wp8gVStHW3
-    about: Chat freely about Misskey
-  # 仮
-  - name: 💬 Start discussion
-    url: https://github.com/misskey-dev/misskey/discussions
-    about: The official forum to join conversation and ask question
+blank_issues_enabled: true

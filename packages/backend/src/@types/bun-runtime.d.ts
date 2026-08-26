@@ -4,8 +4,22 @@
  */
 
 // bun-types パッケージ全体を "types" に追加すると @types/node の Request/Response/WebSocket 等の
-// グローバル宣言と衝突するため、実際に使っている Bun.serve 関連のAPIだけを最小限に手書きしている。
+// グローバル宣言と衝突するため、実際に使っているBun APIだけを最小限に手書きしている。
 declare namespace Bun {
+	interface Subprocess {
+		readonly pid: number;
+		readonly exited: Promise<number>;
+		kill(signal?: number | NodeJS.Signals): void;
+	}
+
+	interface SpawnOptions {
+		cwd?: string;
+		env?: Record<string, string | undefined>;
+		stdout?: 'inherit' | 'ignore' | 'pipe';
+		stderr?: 'inherit' | 'ignore' | 'pipe';
+		windowsVerbatimArguments?: boolean;
+	}
+
 	interface ServerWebSocket<T = undefined> {
 		data: T;
 		readonly readyState: number;
@@ -41,16 +55,46 @@ declare namespace Bun {
 		hostname?: string;
 		unix?: string;
 		maxRequestBodySize?: number;
-		fetch(this: Server, request: Request, server: Server): Response | Promise<Response> | undefined | Promise<Response | undefined>;
+		fetch(
+			this: Server,
+			request: Request,
+			server: Server,
+		): Response | Promise<Response> | undefined | Promise<Response | undefined>;
 		websocket?: WebSocketHandler<T>;
 	}
 }
 
-declare const Bun: {
-	serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
-	password: {
-		hash(password: string, options: { algorithm: 'bcrypt'; cost: number }): Promise<string>;
-		hashSync(password: string, options: { algorithm: 'bcrypt'; cost: number }): string;
-		verify(password: string, hash: string, algorithm?: 'bcrypt'): Promise<boolean>;
-	};
-} | undefined;
+// `drizzle-orm/bun-sql` が型解決に使う 'bun' モジュールも、必要な範囲だけ手書きで宣言する。
+declare module 'bun' {
+	interface SQLQuery extends Promise<unknown[]> {
+		values(): Promise<unknown[][]>;
+	}
+
+	interface SQLOptions {
+		max?: number;
+		idleTimeout?: number;
+		connectionTimeout?: number;
+		prepare?: boolean;
+		ssl?: boolean | Record<string, unknown>;
+	}
+
+	class SQL {
+		constructor(url: string, options?: SQLOptions);
+		unsafe(query: string, params?: unknown[]): SQLQuery;
+		begin<T>(callback: (client: SQL) => Promise<T>): Promise<T>;
+		savepoint<T>(callback: (client: SQL) => Promise<T>): Promise<T>;
+		close(): Promise<void>;
+	}
+}
+
+declare const Bun:
+	| {
+			serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
+			spawn(command: string[], options?: Bun.SpawnOptions): Bun.Subprocess;
+			password: {
+				hash(password: string, options: { algorithm: 'bcrypt'; cost: number }): Promise<string>;
+				hashSync(password: string, options: { algorithm: 'bcrypt'; cost: number }): string;
+				verify(password: string, hash: string, algorithm?: 'bcrypt'): Promise<boolean>;
+			};
+	  }
+	| undefined;

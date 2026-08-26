@@ -4,26 +4,28 @@
  */
 
 import type * as Redis from 'ioredis';
-import { deleteUserIpsOlderThanFromDatabase } from '@/core/UserIpStore.js';
-import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/AntennaStore.js';
-import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/RoleAssignmentStore.js';
+import { deleteUserIpsOlderThanFromDatabase } from '@/core/user/UserIpStore.js';
+import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/antenna/AntennaStore.js';
+import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
 import {
 	createRetentionAggregationInDatabase,
 	listActiveLocalUserIdsAfter,
 	listLocalUserIdsCreatedAfter,
 	listRetentionAggregationsCreatedAfter,
 	updateRetentionAggregationDataInDatabase,
-} from '@/core/RetentionAggregationStore.js';
-import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/MutingStore.js';
-import { deleteChannelMutingsByIdsFromDatabase, listExpiredChannelMutingsFromDatabase, listMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
-import { rebuildNoteReactionsInDatabase } from '@/core/NoteStore.js';
+} from '@/core/retention/RetentionAggregationStore.js';
+import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/user/MutingStore.js';
+import {
+	deleteChannelMutingsByIdsFromDatabase,
+	listExpiredChannelMutingsFromDatabase,
+} from '@/core/channel/ChannelMutingStore.js';
+import { rebuildNoteReactionsInDatabase } from '@/core/note/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { deepClone } from '@/misc/clone.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
-import { refreshUserMutingsCache } from '../../server/rest/account-mutes.js';
 import type { HonoChartWriters } from '../../server/chart-runtime.js';
 import type { HonoApiInternalEventPublisher } from '../../server/rest/events.js';
 
@@ -36,17 +38,11 @@ export type HonoQueueSystemDependencies = {
 	db: MiDrizzleDatabase;
 	chartWriters: HonoChartWriters;
 	meta: Pick<MiMeta, 'enableReactionsBuffering'>;
-	redis: Redis.Redis;
 	redisForReactions: Redis.Redis;
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-async function refreshMutingChannelsCache(deps: Pick<HonoQueueSystemDependencies, 'db' | 'redis'>, userId: string): Promise<void> {
-	const channelIds = await listMutedChannelIdsByUserIdFromDatabase(deps.db, userId);
-	await deps.redis.set(`kvcache:channelMutingChannels:${userId}`, JSON.stringify(channelIds), 'EX', 60 * 30);
-}
-
-/** TickChartsProcessorService.process 相当。DBへの同時接続を避けるため直列に実行する。 */
+/** DBへの同時接続を避けるため直列に実行する。 */
 export async function handleHonoQueueTickCharts(deps: HonoQueueSystemDependencies): Promise<void> {
 	await deps.chartWriters.federationChart.tick(false);
 	await deps.chartWriters.notesChart.tick(false);
@@ -84,10 +80,13 @@ export async function handleHonoQueueCleanCharts(deps: HonoQueueSystemDependenci
 }
 
 export async function handleHonoQueueClean(deps: HonoQueueSystemDependencies): Promise<void> {
-	await deleteUserIpsOlderThanFromDatabase(deps.db, new Date(Date.now() - (1000 * 60 * 60 * 24 * 90)));
+	await deleteUserIpsOlderThanFromDatabase(deps.db, new Date(Date.now() - 1000 * 60 * 60 * 24 * 90));
 
 	if (deps.config.maintenance.antennaInactiveAfterMs > 0) {
-		void deactivateAntennasNotUsedSinceFromDatabase(deps.db, new Date(Date.now() - deps.config.maintenance.antennaInactiveAfterMs));
+		void deactivateAntennasNotUsedSinceFromDatabase(
+			deps.db,
+			new Date(Date.now() - deps.config.maintenance.antennaInactiveAfterMs),
+		);
 	}
 
 	await deleteExpiredRoleAssignmentsFromDatabase(deps.db, new Date());
@@ -97,9 +96,12 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 	const now = new Date();
 	const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
 
-	const pastRecords = await listRetentionAggregationsCreatedAfter(deps.db, new Date(Date.now() - (1000 * 60 * 60 * 24 * 31)));
+	const pastRecords = await listRetentionAggregationsCreatedAfter(
+		deps.db,
+		new Date(Date.now() - 1000 * 60 * 60 * 24 * 31),
+	);
 
-	const targetUserIds = await listLocalUserIdsCreatedAfter(deps.db, genId(Date.now() - (1000 * 60 * 60 * 24)));
+	const targetUserIds = await listLocalUserIdsCreatedAfter(deps.db, genId(Date.now() - 1000 * 60 * 60 * 24));
 
 	try {
 		await createRetentionAggregationInDatabase(deps.db, {
@@ -118,11 +120,11 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 		throw err;
 	}
 
-	const activeUsersIds = await listActiveLocalUserIdsAfter(deps.db, new Date(Date.now() - (1000 * 60 * 60 * 24)));
+	const activeUsersIds = await listActiveLocalUserIdsAfter(deps.db, new Date(Date.now() - 1000 * 60 * 60 * 24));
 	const activeUserIdSet = new Set(activeUsersIds);
 
 	for (const record of pastRecords) {
-		const retention = record.userIds.filter(id => activeUserIdSet.has(id)).length;
+		const retention = record.userIds.filter((id) => activeUserIdSet.has(id)).length;
 
 		const data = deepClone(record.data) as Record<string, number>;
 		data[dateKey] = retention;
@@ -131,22 +133,14 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 	}
 }
 
-/**
- * CheckExpiredMutingsProcessorService.process 相当。
- * UserMutingService.unmute()/ChannelMutingService.eraseExpiredMutings() が更新する
- * userMutingsCache/mutingChannelsCache はどちらもRedisKVCache (kvcache:userMutings:<id>/
- * kvcache:channelMutingChannels:<id>) で、NestJS側プロセスとも共有される実体を持つため、
- * DB削除後に必ずリフレッシュする (単なるインプロセスキャッシュではない)。
- */
 export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDependencies): Promise<void> {
 	const expiredMutings = await listExpiredMutingsFromDatabase(deps.db, new Date());
 	if (expiredMutings.length > 0) {
-		await deleteMutingsByIdsFromDatabase(deps.db, expiredMutings.map(m => m.id));
+		await deleteMutingsByIdsFromDatabase(
+			deps.db,
+			expiredMutings.map((m) => m.id),
+		);
 
-		const muterIds = [...new Set(expiredMutings.map(m => m.muterId))];
-		for (const muterId of muterIds) {
-			await refreshUserMutingsCache(deps, muterId);
-		}
 		for (const muting of expiredMutings) {
 			deps.publishInternalEvent?.('unmute', { muterId: muting.muterId, muteeId: muting.muteeId });
 		}
@@ -154,19 +148,17 @@ export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDe
 
 	const expiredChannelMutings = await listExpiredChannelMutingsFromDatabase(deps.db, new Date());
 	if (expiredChannelMutings.length > 0) {
-		await deleteChannelMutingsByIdsFromDatabase(deps.db, expiredChannelMutings.map(m => m.id));
+		await deleteChannelMutingsByIdsFromDatabase(
+			deps.db,
+			expiredChannelMutings.map((m) => m.id),
+		);
 
-		const userIds = [...new Set(expiredChannelMutings.map(m => m.userId))];
-		for (const userId of userIds) {
-			await refreshMutingChannelsCache(deps, userId);
-		}
 		for (const muting of expiredChannelMutings) {
 			deps.publishInternalEvent?.('unmuteChannel', { userId: muting.userId, channelId: muting.channelId });
 		}
 	}
 }
 
-/** BakeBufferedReactionsProcessorService.process 相当 (ReactionsBufferingService.bake()込み)。 */
 export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystemDependencies): Promise<void> {
 	if (!deps.meta.enableReactionsBuffering) return;
 
@@ -179,7 +171,8 @@ export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystem
 			'MATCH',
 			`${reactionRedisPrefix}:${REACTIONS_BUFFER_DELTA_PREFIX}:*`,
 			'COUNT',
-			'1000');
+			'1000',
+		);
 
 		cursor = result[0];
 		for (const key of result[1]) {
@@ -193,7 +186,8 @@ export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystem
 			'MATCH',
 			`${reactionRedisPrefix}:${REACTIONS_BUFFER_REBUILD_PREFIX}:*`,
 			'COUNT',
-			'1000');
+			'1000',
+		);
 
 		cursor = result[0];
 		for (const key of result[1]) {

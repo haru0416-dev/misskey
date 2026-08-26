@@ -5,10 +5,13 @@
 
 import type * as Bull from 'bullmq';
 import type { DeleteObjectCommandInput } from '@aws-sdk/client-s3';
-import { finishDriveFileDeletionSync } from '@/core/DriveFileDeletionLogic.js';
-import { countRemoteCachedDriveFilesFromDatabase, listRemoteCachedDriveFilesWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
-import type { InternalStorageService } from '@/core/InternalStorageService.js';
-import type { S3Service } from '@/core/S3Service.js';
+import { finishDriveFileDeletionSync } from '@/core/drive/DriveFileDeletionLogic.js';
+import {
+	countRemoteCachedDriveFilesFromDatabase,
+	listRemoteCachedDriveFilesWithPaginationFromDatabase,
+} from '@/core/drive/DriveFileStore.js';
+import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
+import type { S3Service } from '@/core/drive/S3Service.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta } from '@/models/_.js';
@@ -23,9 +26,24 @@ export type HonoQueueObjectStorageDependencies = {
 	internalStorageService: Pick<InternalStorageService, 'del'>;
 	chartWriters: Pick<HonoChartWriters, 'driveChart' | 'perUserDriveChart' | 'instanceChart'>;
 	publishDriveStream?: (userId: MiUser['id'], type: 'fileDeleted', value: MiDriveFile['id']) => void;
+	isModerator?: (user: MiUser) => Promise<boolean>;
+	logDriveFileDeletion?: (
+		db: MiDrizzleDatabase,
+		deleter: MiUser,
+		logId: string,
+		info: {
+			fileId: MiDriveFile['id'];
+			fileUserId: MiDriveFile['userId'];
+			fileUserUsername: MiUser['username'] | null;
+			fileUserHost: MiUser['host'] | null;
+		},
+	) => unknown;
 };
 
-export async function deleteObjectStorageFileForHonoApi(deps: HonoQueueObjectStorageDependencies, key: string): Promise<void> {
+export async function deleteObjectStorageFileForHonoApi(
+	deps: HonoQueueObjectStorageDependencies,
+	key: string,
+): Promise<void> {
 	try {
 		const param = {
 			Bucket: deps.meta.objectStorageBucket,
@@ -43,48 +61,64 @@ export async function deleteObjectStorageFileForHonoApi(deps: HonoQueueObjectSto
 	}
 }
 
-export async function deleteFileSyncForHonoApi(deps: HonoQueueObjectStorageDependencies, file: MiDriveFile, isExpired = false, deleter?: MiUser): Promise<void> {
+export async function deleteFileSyncForHonoApi(
+	deps: HonoQueueObjectStorageDependencies,
+	file: MiDriveFile,
+	isExpired = false,
+	deleter?: MiUser,
+): Promise<void> {
 	if (file.storedInternal) {
-		const promises = [deps.internalStorageService.del(file.accessKey!)];
+		const promises: Promise<void>[] = [];
+		if (file.accessKey != null) promises.push(deps.internalStorageService.del(file.accessKey));
 
-		if (file.thumbnailUrl) {
-			promises.push(deps.internalStorageService.del(file.thumbnailAccessKey!));
+		if (file.thumbnailUrl && file.thumbnailAccessKey != null) {
+			promises.push(deps.internalStorageService.del(file.thumbnailAccessKey));
 		}
 
-		if (file.webpublicUrl) {
-			promises.push(deps.internalStorageService.del(file.webpublicAccessKey!));
+		if (file.webpublicUrl && file.webpublicAccessKey != null) {
+			promises.push(deps.internalStorageService.del(file.webpublicAccessKey));
 		}
 
 		await Promise.all(promises);
 	} else if (!file.isLink) {
-		const promises = [];
+		const promises: Promise<void>[] = [];
 
-		promises.push(deleteObjectStorageFileForHonoApi(deps, file.accessKey!));
+		if (file.accessKey != null) promises.push(deleteObjectStorageFileForHonoApi(deps, file.accessKey));
 
-		if (file.thumbnailUrl) {
-			promises.push(deleteObjectStorageFileForHonoApi(deps, file.thumbnailAccessKey!));
+		if (file.thumbnailUrl && file.thumbnailAccessKey != null) {
+			promises.push(deleteObjectStorageFileForHonoApi(deps, file.thumbnailAccessKey));
 		}
 
-		if (file.webpublicUrl) {
-			promises.push(deleteObjectStorageFileForHonoApi(deps, file.webpublicAccessKey!));
+		if (file.webpublicUrl && file.webpublicAccessKey != null) {
+			promises.push(deleteObjectStorageFileForHonoApi(deps, file.webpublicAccessKey));
 		}
 
 		await Promise.all(promises);
 	}
 
-	await finishDriveFileDeletionSync({
-		db: deps.db,
-		meta: deps.meta,
-		deleteInternalFile: key => deps.internalStorageService.del(key),
-		enqueueDeleteObjectStorageFile: key => deleteObjectStorageFileForHonoApi(deps, key),
-		updateDriveChart: (f, isAdditional) => deps.chartWriters.driveChart.update(f, isAdditional),
-		updatePerUserDriveChart: (f, isAdditional) => deps.chartWriters.perUserDriveChart.update(f, isAdditional),
-		updateInstanceDriveChart: (f, isAdditional) => deps.chartWriters.instanceChart.updateDrive(f, isAdditional),
-		publishDriveStream: (userId, type, value) => deps.publishDriveStream?.(userId, type, value),
-	}, file, isExpired, deleter);
+	await finishDriveFileDeletionSync(
+		{
+			db: deps.db,
+			meta: deps.meta,
+			deleteInternalFile: (key) => deps.internalStorageService.del(key),
+			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFileForHonoApi(deps, key),
+			updateDriveChart: (f, isAdditional) => deps.chartWriters.driveChart.update(f, isAdditional),
+			updatePerUserDriveChart: (f, isAdditional) => deps.chartWriters.perUserDriveChart.update(f, isAdditional),
+			updateInstanceDriveChart: (f, isAdditional) => deps.chartWriters.instanceChart.updateDrive(f, isAdditional),
+			publishDriveStream: (userId, type, value) => deps.publishDriveStream?.(userId, type, value),
+			...(deps.isModerator == null ? {} : { isModerator: deps.isModerator }),
+			...(deps.logDriveFileDeletion == null ? {} : { logDriveFileDeletion: deps.logDriveFileDeletion }),
+		},
+		file,
+		isExpired,
+		deleter,
+	);
 }
 
-export async function handleHonoQueueCleanRemoteFiles(deps: HonoQueueObjectStorageDependencies, job: Bull.Job<Record<string, unknown>>): Promise<void> {
+export async function handleHonoQueueCleanRemoteFiles(
+	deps: HonoQueueObjectStorageDependencies,
+	job: Bull.Job<Record<string, unknown>>,
+): Promise<void> {
 	let deletedCount = 0;
 	let cursor: MiDriveFile['id'] | null = null;
 
@@ -103,15 +137,18 @@ export async function handleHonoQueueCleanRemoteFiles(deps: HonoQueueObjectStora
 
 		cursor = files.at(-1)?.id ?? null;
 
-		await Promise.all(files.map(file => deleteFileSyncForHonoApi(deps, file, true)));
+		await Promise.all(files.map((file) => deleteFileSyncForHonoApi(deps, file, true)));
 
 		deletedCount += 8;
 
-		job.updateProgress(deletedCount * total / 100);
+		job.updateProgress((deletedCount * total) / 100);
 	}
 }
 
-export async function handleHonoQueueDeleteFile(deps: HonoQueueObjectStorageDependencies, job: Bull.Job<ObjectStorageFileJobData>): Promise<string> {
+export async function handleHonoQueueDeleteFile(
+	deps: HonoQueueObjectStorageDependencies,
+	job: Bull.Job<ObjectStorageFileJobData>,
+): Promise<string> {
 	await deleteObjectStorageFileForHonoApi(deps, job.data.key);
 	return 'Success';
 }

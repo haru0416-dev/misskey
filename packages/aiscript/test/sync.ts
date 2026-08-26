@@ -1,4 +1,3 @@
-/* eslint-disable prefer-const */
 
 import * as assert from 'assert';
 import { describe, test } from 'vitest';
@@ -48,6 +47,16 @@ test.concurrent('Closure (counter)', () => {
 	get_count()
 	`);
 	eq(res, NUM(3));
+});
+
+test.each([
+	['fractional', '0.5'],
+	['NaN', '0 / 0'],
+	['positive infinity', 'Math:Infinity'],
+	['negative infinity', '-Math:Infinity'],
+])('rejects %s array indices in sync execution', (_name, index) => {
+	assert.throws(() => exeSync(`[1, 2][${index}]`), AiScriptIndexOutOfRangeError);
+	assert.throws(() => exeSync(`var arr = [1, 2]; arr[${index}] = 3`), AiScriptIndexOutOfRangeError);
 });
 
 describe('extra', () => {

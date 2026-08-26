@@ -6,10 +6,10 @@
 import * as Bull from 'bullmq';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { StatusError } from '@/misc/status-error.js';
-import { updateWebhookInDatabase } from '@/core/WebhookStore.js';
-import { updateSystemWebhookInDatabase } from '@/core/SystemWebhookStore.js';
+import { updateWebhookInDatabase } from '@/core/webhook/WebhookStore.js';
+import { updateSystemWebhookInDatabase } from '@/core/webhook/SystemWebhookStore.js';
 import type { UserWebhookDeliverJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 
 export type HonoQueueWebhookDeliverDependencies = {
@@ -20,7 +20,16 @@ export type HonoQueueWebhookDeliverDependencies = {
 
 async function deliverWebhookForHonoQueue(
 	deps: HonoQueueWebhookDeliverDependencies,
-	data: { webhookId: string; to: string; secret: string; userId?: string; eventId: string; createdAt: number; type: string; content: unknown },
+	data: {
+		webhookId: string;
+		to: string;
+		secret: string;
+		userId?: string;
+		eventId: string;
+		createdAt: number;
+		type: string;
+		content: unknown;
+	},
 	onResult: (status: number) => Promise<void>,
 ): Promise<string> {
 	try {
@@ -66,7 +75,7 @@ export async function handleHonoQueueUserWebhookDeliver(
 	deps: HonoQueueWebhookDeliverDependencies,
 	job: Bull.Job<UserWebhookDeliverJobData>,
 ): Promise<string> {
-	return await deliverWebhookForHonoQueue(deps, job.data, async status => {
+	return await deliverWebhookForHonoQueue(deps, job.data, async (status) => {
 		await updateWebhookInDatabase(deps.db, job.data.webhookId, {
 			latestSentAt: new Date(),
 			latestStatus: status,
@@ -78,7 +87,7 @@ export async function handleHonoQueueSystemWebhookDeliver(
 	deps: HonoQueueWebhookDeliverDependencies,
 	job: Bull.Job<SystemWebhookDeliverJobData>,
 ): Promise<string> {
-	return await deliverWebhookForHonoQueue(deps, job.data, async status => {
+	return await deliverWebhookForHonoQueue(deps, job.data, async (status) => {
 		await updateSystemWebhookInDatabase(deps.db, job.data.webhookId, {
 			latestSentAt: new Date(),
 			latestStatus: status,

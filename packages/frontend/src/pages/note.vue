@@ -127,7 +127,7 @@ function fetchNote() {
 	}).then(res => {
 		note.value = res;
 		const appearNote = getAppearNote(res) ?? res;
-		// 古いノートは被クリップ数をカウントしていないので、2023-10-01以前のものは強制的にnotes/clipsを叩く
+		// 2023-10-01 より前のノートはクリップ数が集計されていないため、notes/clips で再取得する。
 		if ((appearNote.clippedCount ?? 0) > 0 || new Date(appearNote.createdAt).getTime() < new Date('2023-10-01').getTime()) {
 			misskeyApi('notes/clips', {
 				noteId: appearNote.id,

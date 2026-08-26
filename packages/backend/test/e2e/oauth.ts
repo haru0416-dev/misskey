@@ -4,15 +4,12 @@
  */
 
 /**
- * Basic OAuth tests to make sure the library is correctly integrated to Misskey
- * and not regressed by version updates or potential migration to another library.
+ * OAuth ライブラリが Misskey に正しく統合され、依存関係の更新や実装変更で退行しないことを確認する。
  */
-
-process.env['NODE_ENV'] = 'test';
 
 import * as assert from 'assert';
 import { createServer, type Server, type ServerResponse } from 'node:http';
-import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import {
 	AuthorizationCode,
 	type AuthorizationTokenConfig,
@@ -21,14 +18,14 @@ import {
 	ResourceOwnerPassword,
 } from 'simple-oauth2';
 import * as htmlParser from 'node-html-parser';
-import { api, port, sendEnvUpdateRequest, signup } from '../utils.js';
+import { api, oauthClientPort, resolveTargetUrl, sendEnvUpdateRequest, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 import { createS256CodeChallenge } from '@/misc/pkce.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 
-const host = `http://127.0.0.1:${port}`;
+const host = resolveTargetUrl('/').origin;
 
-const clientPort = port + 1;
+const clientPort = oauthClientPort;
 const redirect_uri = `http://127.0.0.1:${clientPort}/redirect`;
 const redirect_uri2 = `http://127.0.0.1:${clientPort}/redirect2`;
 
@@ -91,7 +88,7 @@ async function close(server: Server): Promise<void> {
 	if (!server.listening) return;
 
 	await new Promise<void>((resolve, reject) => {
-		server.close(err => err ? reject(err) : resolve());
+		server.close((err) => (err ? reject(err) : resolve()));
 	});
 }
 
@@ -119,8 +116,8 @@ interface GetTokenError {
 	data: {
 		payload: {
 			error: string;
-		}
-	}
+		};
+	};
 }
 
 const clientConfig: ModuleOptions<'client_id'> = {
@@ -138,7 +135,11 @@ const clientConfig: ModuleOptions<'client_id'> = {
 	},
 };
 
-function getMeta(html: string): { transactionId: string | undefined, clientName: string | undefined, clientLogo: string | undefined } {
+function getMeta(html: string): {
+	transactionId: string | undefined;
+	clientName: string | undefined;
+	clientLogo: string | undefined;
+} {
 	const doc = htmlParser.parse(`<div>${html}</div>`);
 	return {
 		transactionId: doc.querySelector('meta[name="misskey:oauth:transaction-id"]')?.attributes['content'],
@@ -147,7 +148,11 @@ function getMeta(html: string): { transactionId: string | undefined, clientName:
 	};
 }
 
-function fetchDecision(transactionId: string, user: misskey.entities.SignupResponse, { cancel }: { cancel?: boolean } = {}): Promise<Response> {
+function fetchDecision(
+	transactionId: string,
+	user: misskey.entities.SignupResponse,
+	{ cancel }: { cancel?: boolean } = {},
+): Promise<Response> {
 	return fetch(new URL('/oauth/decision', host), {
 		method: 'post',
 		body: new URLSearchParams({
@@ -162,27 +167,37 @@ function fetchDecision(transactionId: string, user: misskey.entities.SignupRespo
 	});
 }
 
-async function fetchDecisionFromResponse(response: Response, user: misskey.entities.SignupResponse, { cancel }: { cancel?: boolean } = {}): Promise<Response> {
+async function fetchDecisionFromResponse(
+	response: Response,
+	user: misskey.entities.SignupResponse,
+	{ cancel }: { cancel?: boolean } = {},
+): Promise<Response> {
 	const { transactionId } = getMeta(await response.text());
 	assert.ok(transactionId);
 
 	return await fetchDecision(transactionId, user, cancel === undefined ? {} : { cancel });
 }
 
-async function fetchAuthorizationCode(user: misskey.entities.SignupResponse, scope: string, code_challenge: string): Promise<{ client: AuthorizationCode, code: string }> {
+async function fetchAuthorizationCode(
+	user: misskey.entities.SignupResponse,
+	scope: string,
+	code_challenge: string,
+): Promise<{ client: AuthorizationCode; code: string }> {
 	const client = new AuthorizationCode(clientConfig);
 
-	const response = await fetch(client.authorizeURL({
-		redirect_uri,
-		scope,
-		state: 'state',
-		code_challenge,
-		code_challenge_method: 'S256',
-	} as AuthorizationParamsExtended));
-	assert.strictEqual(response.status, 200);
+	const response = await fetch(
+		client.authorizeURL({
+			redirect_uri,
+			scope,
+			state: 'state',
+			code_challenge,
+			code_challenge_method: 'S256',
+		} as AuthorizationParamsExtended),
+	);
+	expect(response.status).toBe(200);
 
 	const decisionResponse = await fetchDecisionFromResponse(response, user);
-	assert.strictEqual(decisionResponse.status, 302);
+	expect(decisionResponse.status).toBe(302);
 
 	const locationHeader = decisionResponse.headers.get('location');
 	assert.ok(locationHeader);
@@ -197,25 +212,25 @@ async function fetchAuthorizationCode(user: misskey.entities.SignupResponse, sco
 }
 
 function assertIndirectError(response: Response, error: string): void {
-	assert.strictEqual(response.status, 302);
+	expect(response.status).toBe(302);
 
 	const locationHeader = response.headers.get('location');
 	assert.ok(locationHeader);
 
 	const location = new URL(locationHeader);
-	assert.strictEqual(location.searchParams.get('error'), error);
+	expect(location.searchParams.get('error')).toBe(error);
 
 	// https://datatracker.ietf.org/doc/html/rfc9207#name-response-parameter-iss
-	assert.strictEqual(location.searchParams.get('iss'), 'http://misskey.local');
+	expect(location.searchParams.get('iss')).toBe('http://misskey.local');
 	// https://datatracker.ietf.org/doc/html/rfc6749.html#section-4.1.2.1
 	assert.ok(location.searchParams.has('state'));
 }
 
 async function assertDirectError(response: Response, status: number, error: string): Promise<void> {
-	assert.strictEqual(response.status, status);
+	expect(response.status).toBe(status);
 
-	const data = await response.json() as any;
-	assert.strictEqual(data.error, error);
+	const data = (await response.json()) as any;
+	expect(data.error).toBe(error);
 }
 
 describe('OAuth', () => {
@@ -226,20 +241,23 @@ describe('OAuth', () => {
 
 	let sender: (reply: ClientMetadataReply) => void;
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'alice' });
-		bob = await signup({ username: 'bob' });
+	beforeAll(
+		async () => {
+			alice = await signup({ username: 'alice' });
+			bob = await signup({ username: 'bob' });
 
-		clientServer = createServer((_request, response) => {
-			try {
-				sender(createClientMetadataReply(response));
-			} catch (err) {
-				response.statusCode = 500;
-				response.end(err instanceof Error ? err.message : String(err));
-			}
-		});
-		await listen(clientServer, clientPort);
-	}, 1000 * 60 * 2);
+			clientServer = createServer((_request, response) => {
+				try {
+					sender(createClientMetadataReply(response));
+				} catch (err) {
+					response.statusCode = 500;
+					response.end(err instanceof Error ? err.message : String(err));
+				}
+			});
+			await listen(clientServer, clientPort);
+		},
+		1000 * 60 * 2,
+	);
 
 	beforeEach(async () => {
 		await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_IP_RANGE', value: '' });
@@ -261,33 +279,35 @@ describe('OAuth', () => {
 
 		const client = new AuthorizationCode(clientConfig);
 
-		const response = await fetch(client.authorizeURL({
-			redirect_uri,
-			scope: 'write:notes',
-			state: 'state',
-			code_challenge,
-			code_challenge_method: 'S256',
-		} as AuthorizationParamsExtended));
-		assert.strictEqual(response.status, 200);
+		const response = await fetch(
+			client.authorizeURL({
+				redirect_uri,
+				scope: 'write:notes',
+				state: 'state',
+				code_challenge,
+				code_challenge_method: 'S256',
+			} as AuthorizationParamsExtended),
+		);
+		expect(response.status).toBe(200);
 
 		const meta = getMeta(await response.text());
-		assert.strictEqual(typeof meta.transactionId, 'string');
+		expect(typeof meta.transactionId).toBe('string');
 		assert.ok(meta.transactionId);
-		assert.strictEqual(meta.clientName, 'Misklient');
+		expect(meta.clientName).toBe('Misklient');
 
 		const decisionResponse = await fetchDecision(meta.transactionId, alice);
-		assert.strictEqual(decisionResponse.status, 302);
+		expect(decisionResponse.status).toBe(302);
 		assert.ok(decisionResponse.headers.has('location'));
 
 		const locationHeader = decisionResponse.headers.get('location');
 		assert.ok(locationHeader);
 
 		const location = new URL(locationHeader);
-		assert.strictEqual(location.origin + location.pathname, redirect_uri);
+		expect(location.origin + location.pathname).toBe(redirect_uri);
 		assert.ok(location.searchParams.has('code'));
-		assert.strictEqual(location.searchParams.get('state'), 'state');
+		expect(location.searchParams.get('state')).toBe('state');
 		// https://datatracker.ietf.org/doc/html/rfc9207#name-response-parameter-iss
-		assert.strictEqual(location.searchParams.get('iss'), 'http://misskey.local');
+		expect(location.searchParams.get('iss')).toBe('http://misskey.local');
 
 		const code = new URL(location).searchParams.get('code');
 		assert.ok(code);
@@ -297,18 +317,22 @@ describe('OAuth', () => {
 			redirect_uri,
 			code_verifier,
 		} as AuthorizationTokenConfigExtended);
-		assert.strictEqual(typeof token.token['access_token'], 'string');
-		assert.strictEqual(token.token['token_type'], 'Bearer');
-		assert.strictEqual(token.token['scope'], 'write:notes');
+		expect(typeof token.token['access_token']).toBe('string');
+		expect(token.token['token_type']).toBe('Bearer');
+		expect(token.token['scope']).toBe('write:notes');
 
-		const createResult = await api('notes/create', { text: 'test' }, {
-			token: token.token['access_token'] as string,
-			bearer: true,
-		});
-		assert.strictEqual(createResult.status, 200);
+		const createResult = await api(
+			'notes/create',
+			{ text: 'test' },
+			{
+				token: token.token['access_token'] as string,
+				bearer: true,
+			},
+		);
+		expect(createResult.status).toBe(200);
 
 		const createResultBody = createResult.body as misskey.Endpoints['notes/create']['res'];
-		assert.strictEqual(createResultBody.createdNote.text, 'test');
+		expect(createResultBody.createdNote.text).toBe('test');
 	});
 
 	test('Two concurrent flows', async () => {
@@ -317,29 +341,33 @@ describe('OAuth', () => {
 		const pkceAlice = await pkceChallenge(128);
 		const pkceBob = await pkceChallenge(128);
 
-		const responseAlice = await fetch(client.authorizeURL({
-			redirect_uri,
-			scope: 'write:notes',
-			state: 'state',
-			code_challenge: pkceAlice.code_challenge,
-			code_challenge_method: 'S256',
-		} as AuthorizationParamsExtended));
-		assert.strictEqual(responseAlice.status, 200);
+		const responseAlice = await fetch(
+			client.authorizeURL({
+				redirect_uri,
+				scope: 'write:notes',
+				state: 'state',
+				code_challenge: pkceAlice.code_challenge,
+				code_challenge_method: 'S256',
+			} as AuthorizationParamsExtended),
+		);
+		expect(responseAlice.status).toBe(200);
 
-		const responseBob = await fetch(client.authorizeURL({
-			redirect_uri,
-			scope: 'write:notes',
-			state: 'state',
-			code_challenge: pkceBob.code_challenge,
-			code_challenge_method: 'S256',
-		} as AuthorizationParamsExtended));
-		assert.strictEqual(responseBob.status, 200);
+		const responseBob = await fetch(
+			client.authorizeURL({
+				redirect_uri,
+				scope: 'write:notes',
+				state: 'state',
+				code_challenge: pkceBob.code_challenge,
+				code_challenge_method: 'S256',
+			} as AuthorizationParamsExtended),
+		);
+		expect(responseBob.status).toBe(200);
 
 		const decisionResponseAlice = await fetchDecisionFromResponse(responseAlice, alice);
-		assert.strictEqual(decisionResponseAlice.status, 302);
+		expect(decisionResponseAlice.status).toBe(302);
 
 		const decisionResponseBob = await fetchDecisionFromResponse(responseBob, bob);
-		assert.strictEqual(decisionResponseBob.status, 302);
+		expect(decisionResponseBob.status).toBe(302);
 
 		const locationHeaderAlice = decisionResponseAlice.headers.get('location');
 		assert.ok(locationHeaderAlice);
@@ -366,72 +394,92 @@ describe('OAuth', () => {
 			code_verifier: pkceBob.code_verifier,
 		} as AuthorizationTokenConfigExtended);
 
-		const createResultAlice = await api('notes/create', { text: 'test' }, {
-			token: tokenAlice.token['access_token'] as string,
-			bearer: true,
-		});
-		assert.strictEqual(createResultAlice.status, 200);
+		const createResultAlice = await api(
+			'notes/create',
+			{ text: 'test' },
+			{
+				token: tokenAlice.token['access_token'] as string,
+				bearer: true,
+			},
+		);
+		expect(createResultAlice.status).toBe(200);
 
-		const createResultBob = await api('notes/create', { text: 'test' }, {
-			token: tokenBob.token['access_token'] as string,
-			bearer: true,
-		});
-		assert.strictEqual(createResultAlice.status, 200);
+		const createResultBob = await api(
+			'notes/create',
+			{ text: 'test' },
+			{
+				token: tokenBob.token['access_token'] as string,
+				bearer: true,
+			},
+		);
+		expect(createResultAlice.status).toBe(200);
 
-		const createResultBodyAlice = await createResultAlice.body as misskey.Endpoints['notes/create']['res'];
-		assert.strictEqual(createResultBodyAlice.createdNote.user.username, 'alice');
+		const createResultBodyAlice = (await createResultAlice.body) as misskey.Endpoints['notes/create']['res'];
+		expect(createResultBodyAlice.createdNote.user.username).toBe('alice');
 
-		const createResultBodyBob = await createResultBob.body as misskey.Endpoints['notes/create']['res'];
-		assert.strictEqual(createResultBodyBob.createdNote.user.username, 'bob');
+		const createResultBodyBob = (await createResultBob.body) as misskey.Endpoints['notes/create']['res'];
+		expect(createResultBodyBob.createdNote.user.username).toBe('bob');
 	});
 
 	// https://datatracker.ietf.org/doc/html/rfc7636.html
 	describe('PKCE', () => {
 		// https://datatracker.ietf.org/doc/html/rfc7636.html#section-4.4.1
-		// '... the authorization endpoint MUST return the authorization
-		// error response with the "error" value set to "invalid_request".'
+		// authorization endpoint は error に invalid_request を設定したエラー応答を返す。
 		test('Require PKCE', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
-			// Pattern 1: No PKCE fields at all
-			let response = await fetch(client.authorizeURL({
-				redirect_uri,
-				scope: 'write:notes',
-				state: 'state',
-			}), { redirect: 'manual' });
+			// パターン 1: PKCE フィールドなし
+			let response = await fetch(
+				client.authorizeURL({
+					redirect_uri,
+					scope: 'write:notes',
+					state: 'state',
+				}),
+				{ redirect: 'manual' },
+			);
 			assertIndirectError(response, 'invalid_request');
 
-			// Pattern 2: Only code_challenge
-			response = await fetch(client.authorizeURL({
-				redirect_uri,
-				scope: 'write:notes',
-				state: 'state',
-				code_challenge: 'code',
-			} as AuthorizationParamsExtended), { redirect: 'manual' });
+			// パターン 2: code_challenge のみ
+			response = await fetch(
+				client.authorizeURL({
+					redirect_uri,
+					scope: 'write:notes',
+					state: 'state',
+					code_challenge: 'code',
+				} as AuthorizationParamsExtended),
+				{ redirect: 'manual' },
+			);
 			assertIndirectError(response, 'invalid_request');
 
-			// Pattern 3: Only code_challenge_method
-			response = await fetch(client.authorizeURL({
-				redirect_uri,
-				scope: 'write:notes',
-				state: 'state',
-				code_challenge_method: 'S256',
-			} as AuthorizationParamsExtended), { redirect: 'manual' });
+			// パターン 3: code_challenge_method のみ
+			response = await fetch(
+				client.authorizeURL({
+					redirect_uri,
+					scope: 'write:notes',
+					state: 'state',
+					code_challenge_method: 'S256',
+				} as AuthorizationParamsExtended),
+				{ redirect: 'manual' },
+			);
 			assertIndirectError(response, 'invalid_request');
 
-			// Pattern 4: Unsupported code_challenge_method
-			response = await fetch(client.authorizeURL({
-				redirect_uri,
-				scope: 'write:notes',
-				state: 'state',
-				code_challenge: 'code',
-				code_challenge_method: 'SSSS',
-			} as AuthorizationParamsExtended), { redirect: 'manual' });
+			// パターン 4: 未対応の code_challenge_method
+			response = await fetch(
+				client.authorizeURL({
+					redirect_uri,
+					scope: 'write:notes',
+					state: 'state',
+					code_challenge: 'code',
+					code_challenge_method: 'SSSS',
+				} as AuthorizationParamsExtended),
+				{ redirect: 'manual' },
+			);
 			assertIndirectError(response, 'invalid_request');
 		});
 
-		// Use precomputed challenge/verifier set here for deterministic test
-		const code_challenge = '4w2GDuvaxXlw2l46k5PFIoIcTGHdzw2i3hrn-C_Q6f7u0-nTYKd-beVEYy9XinYsGtAix.Nnvr.GByD3lAii2ibPRsSDrZgIN0YQb.kfevcfR9aDKoTLyOUm4hW4ABhs';
+		// テスト結果を決定的にするため、事前計算した challenge/verifier を使う。
+		const code_challenge =
+			'4w2GDuvaxXlw2l46k5PFIoIcTGHdzw2i3hrn-C_Q6f7u0-nTYKd-beVEYy9XinYsGtAix.Nnvr.GByD3lAii2ibPRsSDrZgIN0YQb.kfevcfR9aDKoTLyOUm4hW4ABhs';
 		const code_verifier = 'Ew8VSBiH59JirLlg7ocFpLQ6NXuFC1W_rn8gmRzBKc8';
 
 		const tests: Record<string, string | undefined> = {
@@ -446,12 +494,14 @@ describe('OAuth', () => {
 				test(title, async () => {
 					const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
-					await assert.rejects(client.getToken({
-						code,
-						redirect_uri,
-						code_verifier: wrong_verifier,
-					} as AuthorizationTokenConfigExtended), (err: GetTokenError) => {
-						assert.strictEqual(err.data.payload.error, 'invalid_grant');
+					await expect(
+						client.getToken({
+							code,
+							redirect_uri,
+							code_verifier: wrong_verifier,
+						} as AuthorizationTokenConfigExtended),
+					).rejects.toSatisfy((err: GetTokenError) => {
+						expect(err.data.payload.error).toBe('invalid_grant');
 						return true;
 					});
 				});
@@ -460,9 +510,7 @@ describe('OAuth', () => {
 	});
 
 	// https://datatracker.ietf.org/doc/html/rfc6749.html#section-4.1.2
-	// "If an authorization code is used more than once, the authorization server
-	// MUST deny the request and SHOULD revoke (when possible) all tokens
-	// previously issued based on that authorization code."
+	// 認可コードが複数回使われた場合、要求を拒否し、可能ならそのコードに基づく発行済みトークンを失効させる。
 	describe('Revoking authorization code', () => {
 		test('On success', async () => {
 			const { code_challenge, code_verifier } = await pkceChallenge(128);
@@ -474,12 +522,14 @@ describe('OAuth', () => {
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
 
-			await assert.rejects(client.getToken({
-				code,
-				redirect_uri,
-				code_verifier,
-			} as AuthorizationTokenConfigExtended), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'invalid_grant');
+			await expect(
+				client.getToken({
+					code,
+					redirect_uri,
+					code_verifier,
+				} as AuthorizationTokenConfigExtended),
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
 				return true;
 			});
 		});
@@ -488,17 +538,19 @@ describe('OAuth', () => {
 			const { code_challenge, code_verifier } = await pkceChallenge(128);
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
-			await assert.rejects(client.getToken({ code, redirect_uri }), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'invalid_grant');
+			await expect(client.getToken({ code, redirect_uri })).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
 				return true;
 			});
 
-			await assert.rejects(client.getToken({
-				code,
-				redirect_uri,
-				code_verifier,
-			} as AuthorizationTokenConfigExtended), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'invalid_grant');
+			await expect(
+				client.getToken({
+					code,
+					redirect_uri,
+					code_verifier,
+				} as AuthorizationTokenConfigExtended),
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
 				return true;
 			});
 		});
@@ -513,51 +565,66 @@ describe('OAuth', () => {
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
 
-			const createResult = await api('notes/create', { text: 'test' }, {
-				token: token.token['access_token'] as string,
-				bearer: true,
-			});
-			assert.strictEqual(createResult.status, 200);
+			const createResult = await api(
+				'notes/create',
+				{ text: 'test' },
+				{
+					token: token.token['access_token'] as string,
+					bearer: true,
+				},
+			);
+			expect(createResult.status).toBe(200);
 
-			await assert.rejects(client.getToken({
-				code,
-				redirect_uri,
-				code_verifier,
-			} as AuthorizationTokenConfigExtended), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'invalid_grant');
+			await expect(
+				client.getToken({
+					code,
+					redirect_uri,
+					code_verifier,
+				} as AuthorizationTokenConfigExtended),
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
 				return true;
 			});
 
-			const createResult2 = await api('notes/create', { text: 'test' }, {
-				token: token.token['access_token'] as string,
-				bearer: true,
-			});
-			assert.strictEqual(createResult2.status, 401);
+			const createResult2 = await api(
+				'notes/create',
+				{ text: 'test' },
+				{
+					token: token.token['access_token'] as string,
+					bearer: true,
+				},
+			);
+			expect(createResult2.status).toBe(401);
 		});
 
 		test('Concurrent exchanges do not leave a usable access token', async () => {
 			const { code_challenge, code_verifier } = await pkceChallenge(128);
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
-			const exchange = () => client.getToken({
-				code,
-				redirect_uri,
-				code_verifier,
-			} as AuthorizationTokenConfigExtended);
+			const exchange = () =>
+				client.getToken({
+					code,
+					redirect_uri,
+					code_verifier,
+				} as AuthorizationTokenConfigExtended);
 
 			const results = await Promise.allSettled([exchange(), exchange()]);
 			const rejected = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
 			assert.ok(rejected.length >= 1);
 			for (const result of rejected) {
-				assert.strictEqual((result.reason as GetTokenError).data.payload.error, 'invalid_grant');
+				expect((result.reason as GetTokenError).data.payload.error).toBe('invalid_grant');
 			}
 
 			for (const result of results) {
 				if (result.status !== 'fulfilled') continue;
-				const createResult = await api('notes/create', { text: 'test' }, {
-					token: result.value.token['access_token'] as string,
-					bearer: true,
-				});
-				assert.strictEqual(createResult.status, 401);
+				const createResult = await api(
+					'notes/create',
+					{ text: 'test' },
+					{
+						token: result.value.token['access_token'] as string,
+						bearer: true,
+					},
+				);
+				expect(createResult.status).toBe(401);
 			}
 		});
 	});
@@ -565,17 +632,19 @@ describe('OAuth', () => {
 	test('Cancellation', async () => {
 		const client = new AuthorizationCode(clientConfig);
 
-		const response = await fetch(client.authorizeURL({
-			redirect_uri,
-			scope: 'write:notes',
-			state: 'state',
-			code_challenge: 'code',
-			code_challenge_method: 'S256',
-		} as AuthorizationParamsExtended));
-		assert.strictEqual(response.status, 200);
+		const response = await fetch(
+			client.authorizeURL({
+				redirect_uri,
+				scope: 'write:notes',
+				state: 'state',
+				code_challenge: 'code',
+				code_challenge_method: 'S256',
+			} as AuthorizationParamsExtended),
+		);
+		expect(response.status).toBe(200);
 
 		const decisionResponse = await fetchDecisionFromResponse(response, alice, { cancel: true });
-		assert.strictEqual(decisionResponse.status, 302);
+		expect(decisionResponse.status).toBe(302);
 
 		const locationHeader = decisionResponse.headers.get('location');
 		assert.ok(locationHeader);
@@ -587,58 +656,59 @@ describe('OAuth', () => {
 
 	// https://datatracker.ietf.org/doc/html/rfc6749.html#section-3.3
 	describe('Scope', () => {
-		// "If the client omits the scope parameter when requesting
-		// authorization, the authorization server MUST either process the
-		// request using a pre-defined default value or fail the request
-		// indicating an invalid scope."
-		// (And Misskey does the latter)
+		// scope が省略された場合、既定値で処理するか invalid_scope を示して失敗させる。
 		test('Missing scope', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
-			const response = await fetch(client.authorizeURL({
-				redirect_uri,
-				state: 'state',
-				code_challenge: 'code',
-				code_challenge_method: 'S256',
-			} as AuthorizationParamsExtended), { redirect: 'manual' });
+			const response = await fetch(
+				client.authorizeURL({
+					redirect_uri,
+					state: 'state',
+					code_challenge: 'code',
+					code_challenge_method: 'S256',
+				} as AuthorizationParamsExtended),
+				{ redirect: 'manual' },
+			);
 			assertIndirectError(response, 'invalid_scope');
 		});
 
 		test('Empty scope', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
-			const response = await fetch(client.authorizeURL({
-				redirect_uri,
-				scope: '',
-				state: 'state',
-				code_challenge: 'code',
-				code_challenge_method: 'S256',
-			} as AuthorizationParamsExtended), { redirect: 'manual' });
+			const response = await fetch(
+				client.authorizeURL({
+					redirect_uri,
+					scope: '',
+					state: 'state',
+					code_challenge: 'code',
+					code_challenge_method: 'S256',
+				} as AuthorizationParamsExtended),
+				{ redirect: 'manual' },
+			);
 			assertIndirectError(response, 'invalid_scope');
 		});
 
 		test('Unknown scopes', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
-			const response = await fetch(client.authorizeURL({
-				redirect_uri,
-				scope: 'test:unknown test:unknown2',
-				state: 'state',
-				code_challenge: 'code',
-				code_challenge_method: 'S256',
-			} as AuthorizationParamsExtended), { redirect: 'manual' });
+			const response = await fetch(
+				client.authorizeURL({
+					redirect_uri,
+					scope: 'test:unknown test:unknown2',
+					state: 'state',
+					code_challenge: 'code',
+					code_challenge_method: 'S256',
+				} as AuthorizationParamsExtended),
+				{ redirect: 'manual' },
+			);
 			assertIndirectError(response, 'invalid_scope');
 		});
 
-		// "If the issued access token scope
-		// is different from the one requested by the client, the authorization
-		// server MUST include the "scope" response parameter to inform the
-		// client of the actual scope granted."
-		// (Although Misskey always return scope, which is also fine)
+		// 要求と異なる scope を認可した場合、実際に付与した scope を response parameter で通知する。
 		test('Partially known scopes', async () => {
 			const { code_challenge, code_verifier } = await pkceChallenge(128);
 
-			// Just get the known scope for this case for backward compatibility
+			// このケースでは既知の scope だけを取得する。
 			const { client, code } = await fetchAuthorizationCode(
 				alice,
 				'write:notes test:unknown test:unknown2',
@@ -651,21 +721,23 @@ describe('OAuth', () => {
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
 
-			assert.strictEqual(token.token['scope'], 'write:notes');
+			expect(token.token['scope']).toBe('write:notes');
 		});
 
 		test('Known scopes', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
-			const response = await fetch(client.authorizeURL({
-				redirect_uri,
-				scope: 'write:notes read:account',
-				state: 'state',
-				code_challenge: 'code',
-				code_challenge_method: 'S256',
-			} as AuthorizationParamsExtended));
+			const response = await fetch(
+				client.authorizeURL({
+					redirect_uri,
+					scope: 'write:notes read:account',
+					state: 'state',
+					code_challenge: 'code',
+					code_challenge_method: 'S256',
+				} as AuthorizationParamsExtended),
+			);
 
-			assert.strictEqual(response.status, 200);
+			expect(response.status).toBe(200);
 		});
 
 		test('Duplicated scopes', async () => {
@@ -682,7 +754,7 @@ describe('OAuth', () => {
 				redirect_uri,
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
-			assert.strictEqual(token.token['scope'], 'write:notes read:account');
+			expect(token.token['scope']).toBe('write:notes read:account');
 		});
 
 		test('Scope check by API', async () => {
@@ -695,58 +767,69 @@ describe('OAuth', () => {
 				redirect_uri,
 				code_verifier,
 			} as AuthorizationTokenConfigExtended);
-			assert.strictEqual(typeof token.token['access_token'], 'string');
+			expect(typeof token.token['access_token']).toBe('string');
 
-			const createResult = await api('notes/create', { text: 'test' }, {
-				token: token.token['access_token'] as string,
-				bearer: true,
-			});
-			assert.strictEqual(createResult.status, 403);
-			assert.ok(createResult.headers.get('WWW-Authenticate')?.startsWith('Bearer realm="Misskey", error="insufficient_scope", error_description'));
+			const createResult = await api(
+				'notes/create',
+				{ text: 'test' },
+				{
+					token: token.token['access_token'] as string,
+					bearer: true,
+				},
+			);
+			expect(createResult.status).toBe(403);
+			assert.ok(
+				createResult.headers
+					.get('WWW-Authenticate')
+					?.startsWith('Bearer realm="Misskey", error="insufficient_scope", error_description'),
+			);
 		});
 	});
 
 	// https://datatracker.ietf.org/doc/html/rfc6749.html#section-3.1.2.4
-	// "If an authorization request fails validation due to a missing,
-	// invalid, or mismatching redirection URI, the authorization server
-	// SHOULD inform the resource owner of the error and MUST NOT
-	// automatically redirect the user-agent to the invalid redirection URI."
+	// redirection URI がない、無効、または不一致の場合はエラーを通知し、無効な URI へ自動リダイレクトしない。
 	describe('Redirection', () => {
 		test('Invalid redirect_uri at authorization endpoint', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
-			const response = await fetch(client.authorizeURL({
-				redirect_uri: 'http://127.0.0.2/',
-				scope: 'write:notes',
-				state: 'state',
-				code_challenge: 'code',
-				code_challenge_method: 'S256',
-			} as AuthorizationParamsExtended));
+			const response = await fetch(
+				client.authorizeURL({
+					redirect_uri: 'http://127.0.0.2/',
+					scope: 'write:notes',
+					state: 'state',
+					code_challenge: 'code',
+					code_challenge_method: 'S256',
+				} as AuthorizationParamsExtended),
+			);
 			await assertDirectError(response, 400, 'invalid_request');
 		});
 
 		test('Invalid redirect_uri including the valid one at authorization endpoint', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
-			const response = await fetch(client.authorizeURL({
-				redirect_uri: 'http://127.0.0.1/redirection',
-				scope: 'write:notes',
-				state: 'state',
-				code_challenge: 'code',
-				code_challenge_method: 'S256',
-			} as AuthorizationParamsExtended));
+			const response = await fetch(
+				client.authorizeURL({
+					redirect_uri: 'http://127.0.0.1/redirection',
+					scope: 'write:notes',
+					state: 'state',
+					code_challenge: 'code',
+					code_challenge_method: 'S256',
+				} as AuthorizationParamsExtended),
+			);
 			await assertDirectError(response, 400, 'invalid_request');
 		});
 
 		test('No redirect_uri at authorization endpoint', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
-			const response = await fetch(client.authorizeURL({
-				scope: 'write:notes',
-				state: 'state',
-				code_challenge: 'code',
-				code_challenge_method: 'S256',
-			} as AuthorizationParamsExtended));
+			const response = await fetch(
+				client.authorizeURL({
+					scope: 'write:notes',
+					state: 'state',
+					code_challenge: 'code',
+					code_challenge_method: 'S256',
+				} as AuthorizationParamsExtended),
+			);
 			await assertDirectError(response, 400, 'invalid_request');
 		});
 
@@ -755,12 +838,14 @@ describe('OAuth', () => {
 
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
-			await assert.rejects(client.getToken({
-				code,
-				redirect_uri: 'http://127.0.0.2/',
-				code_verifier,
-			} as AuthorizationTokenConfigExtended), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'invalid_grant');
+			await expect(
+				client.getToken({
+					code,
+					redirect_uri: 'http://127.0.0.2/',
+					code_verifier,
+				} as AuthorizationTokenConfigExtended),
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
 				return true;
 			});
 		});
@@ -770,12 +855,14 @@ describe('OAuth', () => {
 
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
-			await assert.rejects(client.getToken({
-				code,
-				redirect_uri: 'http://127.0.0.1/redirection',
-				code_verifier,
-			} as AuthorizationTokenConfigExtended), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'invalid_grant');
+			await expect(
+				client.getToken({
+					code,
+					redirect_uri: 'http://127.0.0.1/redirection',
+					code_verifier,
+				} as AuthorizationTokenConfigExtended),
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
 				return true;
 			});
 		});
@@ -785,11 +872,13 @@ describe('OAuth', () => {
 
 			const { client, code } = await fetchAuthorizationCode(alice, 'write:notes', code_challenge);
 
-			await assert.rejects(client.getToken({
-				code,
-				code_verifier,
-			} as AuthorizationTokenConfigExtended), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'invalid_grant');
+			await expect(
+				client.getToken({
+					code,
+					code_verifier,
+				} as AuthorizationTokenConfigExtended),
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('invalid_grant');
 				return true;
 			});
 		});
@@ -798,21 +887,20 @@ describe('OAuth', () => {
 	// https://datatracker.ietf.org/doc/html/rfc8414
 	test('Server metadata', async () => {
 		const response = await fetch(new URL('.well-known/oauth-authorization-server', host));
-		assert.strictEqual(response.status, 200);
+		expect(response.status).toBe(200);
 
-		const body = await response.json() as any;
-		assert.strictEqual(body.issuer, 'http://misskey.local');
+		const body = (await response.json()) as any;
+		expect(body.issuer).toBe('http://misskey.local');
 		assert.ok(body.scopes_supported.includes('write:notes'));
 	});
 
-	// Any error on decision endpoint is solely on Misskey side and nothing to do with the client.
-	// Do not use indirect error here.
+	// decision endpoint のエラーは Misskey 側のエラーであり、クライアントには依存しないため direct error を使う。
 	describe('Decision endpoint', () => {
 		test('No login token', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
 			const response = await fetch(client.authorizeURL(basicAuthParams));
-			assert.strictEqual(response.status, 200);
+			expect(response.status).toBe(200);
 
 			const { transactionId } = getMeta(await response.text());
 			assert.ok(transactionId);
@@ -860,7 +948,7 @@ describe('OAuth', () => {
 		});
 	});
 
-	// Only authorization code grant is supported
+	// 対応する grant type は authorization code のみ。
 	describe('Grant type', () => {
 		test('Implicit grant is not supported', async () => {
 			const url = new URL('/oauth/authorize', host);
@@ -878,11 +966,13 @@ describe('OAuth', () => {
 				},
 			});
 
-			await assert.rejects(client.getToken({
-				username: 'alice',
-				password: 'test',
-			}), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'unsupported_grant_type');
+			await expect(
+				client.getToken({
+					username: 'alice',
+					password: 'test',
+				}),
+			).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('unsupported_grant_type');
 				return true;
 			});
 		});
@@ -896,8 +986,8 @@ describe('OAuth', () => {
 				},
 			});
 
-			await assert.rejects(client.getToken({}), (err: GetTokenError) => {
-				assert.strictEqual(err.data.payload.error, 'unsupported_grant_type');
+			await expect(client.getToken({})).rejects.toSatisfy((err: GetTokenError) => {
+				expect(err.data.payload.error).toBe('unsupported_grant_type');
 				return true;
 			});
 		});
@@ -922,15 +1012,15 @@ describe('OAuth', () => {
 				}),
 			});
 
-			assert.strictEqual(response.status, 200);
-			const tokenResponse = await response.json() as {
+			expect(response.status).toBe(200);
+			const tokenResponse = (await response.json()) as {
 				access_token: string;
 				token_type: string;
 				scope: string;
 			};
-			assert.strictEqual(typeof tokenResponse.access_token, 'string');
-			assert.strictEqual(tokenResponse.token_type, 'Bearer');
-			assert.strictEqual(tokenResponse.scope, 'write:notes');
+			expect(typeof tokenResponse.access_token).toBe('string');
+			expect(tokenResponse.token_type).toBe('Bearer');
+			expect(tokenResponse.scope).toBe('write:notes');
 		});
 
 		test('Accept x-www-form-urlencoded payload', async () => {
@@ -951,15 +1041,15 @@ describe('OAuth', () => {
 				}),
 			});
 
-			assert.strictEqual(response.status, 200);
-			const tokenResponse = await response.json() as {
+			expect(response.status).toBe(200);
+			const tokenResponse = (await response.json()) as {
 				access_token: string;
 				token_type: string;
 				scope: string;
 			};
-			assert.strictEqual(typeof tokenResponse.access_token, 'string');
-			assert.strictEqual(tokenResponse.token_type, 'Bearer');
-			assert.strictEqual(tokenResponse.scope, 'write:notes');
+			expect(typeof tokenResponse.access_token).toBe('string');
+			expect(tokenResponse.token_type).toBe('Bearer');
+			expect(tokenResponse.scope).toBe('write:notes');
 		});
 	});
 
@@ -980,17 +1070,19 @@ describe('OAuth', () => {
 
 				const client = new AuthorizationCode(clientConfig);
 
-				const response = await fetch(client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
-				assert.strictEqual(response.status, 200);
+				const response = await fetch(
+					client.authorizeURL({
+						redirect_uri,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
+				expect(response.status).toBe(200);
 				const meta = getMeta(await response.text());
-				assert.strictEqual(meta.clientName, 'Misklient JSON');
-				assert.strictEqual(meta.clientLogo, `http://127.0.0.1:${clientPort}/logo.png`);
+				expect(meta.clientName).toBe('Misklient JSON');
+				expect(meta.clientLogo).toBe(`http://127.0.0.1:${clientPort}/logo.png`);
 			});
 
 			test('Merge Link header redirect_uri with JSON redirect_uris', async () => {
@@ -1007,23 +1099,27 @@ describe('OAuth', () => {
 
 				const client = new AuthorizationCode(clientConfig);
 
-				const ok1 = await fetch(client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
-				assert.strictEqual(ok1.status, 200);
+				const ok1 = await fetch(
+					client.authorizeURL({
+						redirect_uri,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
+				expect(ok1.status).toBe(200);
 
-				const ok2 = await fetch(client.authorizeURL({
-					redirect_uri: redirect_uri2,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
-				assert.strictEqual(ok2.status, 200);
+				const ok2 = await fetch(
+					client.authorizeURL({
+						redirect_uri: redirect_uri2,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
+				expect(ok2.status).toBe(200);
 			});
 
 			test('Reject when client_id does not match retrieved URL', async () => {
@@ -1037,13 +1133,15 @@ describe('OAuth', () => {
 				};
 
 				const client = new AuthorizationCode(clientConfig);
-				const response = await fetch(client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
+				const response = await fetch(
+					client.authorizeURL({
+						redirect_uri,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
 				await assertDirectError(response, 400, 'invalid_request');
 			});
 
@@ -1058,13 +1156,15 @@ describe('OAuth', () => {
 				};
 
 				const client = new AuthorizationCode(clientConfig);
-				const response = await fetch(client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
+				const response = await fetch(
+					client.authorizeURL({
+						redirect_uri,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
 				await assertDirectError(response, 400, 'invalid_request');
 			});
 
@@ -1079,13 +1179,15 @@ describe('OAuth', () => {
 				};
 
 				const client = new AuthorizationCode(clientConfig);
-				const response = await fetch(client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
+				const response = await fetch(
+					client.authorizeURL({
+						redirect_uri,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
 				await assertDirectError(response, 400, 'invalid_request');
 			});
 		});
@@ -1094,14 +1196,14 @@ describe('OAuth', () => {
 		describe('HTML link client metadata (12 Feb 2022)', () => {
 			describe('Redirection', () => {
 				const tests: Record<string, (reply: ClientMetadataReply) => void> = {
-					'Read HTTP header': reply => {
+					'Read HTTP header': (reply) => {
 						reply.header('Link', '</redirect>; rel="redirect_uri"');
 						reply.send(`
 							<!DOCTYPE html>
 							<div class="h-app"><a href="/" class="u-url p-name">Misklient
 						`);
 					},
-					'Mixed links': reply => {
+					'Mixed links': (reply) => {
 						reply.header('Link', '</redirect>; rel="redirect_uri"');
 						reply.send(`
 							<!DOCTYPE html>
@@ -1109,14 +1211,14 @@ describe('OAuth', () => {
 							<div class="h-app"><a href="/" class="u-url p-name">Misklient
 						`);
 					},
-					'Multiple items in Link header': reply => {
+					'Multiple items in Link header': (reply) => {
 						reply.header('Link', '</redirect2>; rel="redirect_uri",</redirect>; rel="redirect_uri"');
 						reply.send(`
 							<!DOCTYPE html>
 							<div class="h-app"><a href="/" class="u-url p-name">Misklient
 						`);
 					},
-					'Multiple items in HTML': reply => {
+					'Multiple items in HTML': (reply) => {
 						reply.send(`
 							<!DOCTYPE html>
 							<link rel="redirect_uri" href="/redirect2" />
@@ -1132,14 +1234,16 @@ describe('OAuth', () => {
 
 						const client = new AuthorizationCode(clientConfig);
 
-						const response = await fetch(client.authorizeURL({
-							redirect_uri,
-							scope: 'write:notes',
-							state: 'state',
-							code_challenge: 'code',
-							code_challenge_method: 'S256',
-						} as AuthorizationParamsExtended));
-						assert.strictEqual(response.status, 200);
+						const response = await fetch(
+							client.authorizeURL({
+								redirect_uri,
+								scope: 'write:notes',
+								state: 'state',
+								code_challenge: 'code',
+								code_challenge_method: 'S256',
+							} as AuthorizationParamsExtended),
+						);
+						expect(response.status).toBe(200);
 					});
 				}
 
@@ -1153,31 +1257,34 @@ describe('OAuth', () => {
 
 					const client = new AuthorizationCode(clientConfig);
 
-					const response = await fetch(client.authorizeURL({
-						redirect_uri,
-						scope: 'write:notes',
-						state: 'state',
-						code_challenge: 'code',
-						code_challenge_method: 'S256',
-					} as AuthorizationParamsExtended));
+					const response = await fetch(
+						client.authorizeURL({
+							redirect_uri,
+							scope: 'write:notes',
+							state: 'state',
+							code_challenge: 'code',
+							code_challenge_method: 'S256',
+						} as AuthorizationParamsExtended),
+					);
 
-					// direct error because there's no redirect URI to ping
+					// リダイレクト先がないため direct error を返す。
 					await assertDirectError(response, 400, 'invalid_request');
 				});
 			});
-
 
 			test('Disallow loopback', async () => {
 				await sendEnvUpdateRequest({ key: 'MISSKEY_TEST_CHECK_IP_RANGE', value: '1' });
 
 				const client = new AuthorizationCode(clientConfig);
-				const response = await fetch(client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
+				const response = await fetch(
+					client.authorizeURL({
+						redirect_uri,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
 				await assertDirectError(response, 400, 'invalid_request');
 			});
 
@@ -1189,15 +1296,17 @@ describe('OAuth', () => {
 
 				const client = new AuthorizationCode(clientConfig);
 
-				const response = await fetch(client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
-				assert.strictEqual(response.status, 200);
-				assert.strictEqual(getMeta(await response.text()).clientName, `http://127.0.0.1:${clientPort}/`);
+				const response = await fetch(
+					client.authorizeURL({
+						redirect_uri,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
+				expect(response.status).toBe(200);
+				expect(getMeta(await response.text()).clientName).toBe(`http://127.0.0.1:${clientPort}/`);
 			});
 
 			test('With Logo', async () => {
@@ -1215,17 +1324,19 @@ describe('OAuth', () => {
 
 				const client = new AuthorizationCode(clientConfig);
 
-				const response = await fetch(client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
-				assert.strictEqual(response.status, 200);
+				const response = await fetch(
+					client.authorizeURL({
+						redirect_uri,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
+				expect(response.status).toBe(200);
 				const meta = getMeta(await response.text());
-				assert.strictEqual(meta.clientName, 'Misklient');
-				assert.strictEqual(meta.clientLogo, `http://127.0.0.1:${clientPort}/logo.png`);
+				expect(meta.clientName).toBe('Misklient');
+				expect(meta.clientLogo).toBe(`http://127.0.0.1:${clientPort}/logo.png`);
 			});
 
 			test('Missing Logo', async () => {
@@ -1240,17 +1351,19 @@ describe('OAuth', () => {
 
 				const client = new AuthorizationCode(clientConfig);
 
-				const response = await fetch(client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
-				assert.strictEqual(response.status, 200);
+				const response = await fetch(
+					client.authorizeURL({
+						redirect_uri,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
+				expect(response.status).toBe(200);
 				const meta = getMeta(await response.text());
-				assert.strictEqual(meta.clientName, 'Misklient');
-				assert.strictEqual(meta.clientLogo, undefined);
+				expect(meta.clientName).toBe('Misklient');
+				expect(meta.clientLogo).toBe(undefined);
 			});
 
 			test('Mismatching URL in h-app', async () => {
@@ -1265,29 +1378,31 @@ describe('OAuth', () => {
 
 				const client = new AuthorizationCode(clientConfig);
 
-				const response = await fetch(client.authorizeURL({
-					redirect_uri,
-					scope: 'write:notes',
-					state: 'state',
-					code_challenge: 'code',
-					code_challenge_method: 'S256',
-				} as AuthorizationParamsExtended));
-				assert.strictEqual(response.status, 200);
-				assert.strictEqual(getMeta(await response.text()).clientName, `http://127.0.0.1:${clientPort}/`);
+				const response = await fetch(
+					client.authorizeURL({
+						redirect_uri,
+						scope: 'write:notes',
+						state: 'state',
+						code_challenge: 'code',
+						code_challenge_method: 'S256',
+					} as AuthorizationParamsExtended),
+				);
+				expect(response.status).toBe(200);
+				expect(getMeta(await response.text()).clientName).toBe(`http://127.0.0.1:${clientPort}/`);
 			});
 		});
 	});
 
 	test('Unknown OAuth endpoint', async () => {
 		const response = await fetch(new URL('/oauth/foo', host));
-		assert.strictEqual(response.status, 404);
+		expect(response.status).toBe(404);
 	});
 
 	describe('CORS', () => {
 		test('Token endpoint should support CORS', async () => {
 			const response = await fetch(new URL('/oauth/token', host), { method: 'POST' });
 			assert.ok(!response.ok);
-			assert.strictEqual(response.headers.get('Access-Control-Allow-Origin'), '*');
+			expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
 		});
 
 		test('Authorize endpoint should not support CORS', async () => {

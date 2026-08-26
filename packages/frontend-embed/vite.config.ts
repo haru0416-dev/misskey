@@ -1,8 +1,8 @@
 import path from 'path';
 import pluginVue from '@vitejs/plugin-vue';
 import { defineConfig, type UserConfig } from 'vite';
-import * as yaml from 'js-yaml';
 import { promises as fsp } from 'fs';
+import { parse } from 'yaml';
 
 import locales from 'i18n';
 import meta from '../../package.json';
@@ -11,14 +11,16 @@ import pluginJson5 from '../frontend/lib/vite-plugin-json5.js';
 import { pluginRemoveUnrefI18n } from '../frontend/builder/rollup-plugin-remove-unref-i18n';
 import { Features } from 'lightningcss';
 
-const url = process.env.NODE_ENV === 'development' ? (yaml.load(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url : null;
+const url = process.env.NODE_ENV === 'development'
+	? (parse(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
+	: null;
 const host = url ? (new URL(url)).hostname : undefined;
 
 const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.json', '.json5', '.svg', '.sass', '.scss', '.css', '.vue'];
 
 /**
  * Misskeyのフロントエンドにバンドルせず、CDNなどから別途読み込むリソースを記述する。
- * CDNを使わずにバンドルしたい場合、以下の配列から該当要素を削除orコメントアウトすればOK
+ * CDNを使わずにバンドルしたい場合、以下の配列から該当要素を削除またはコメントアウトする。
  */
 const externalPackages = [
 	// shiki（コードブロックのシンタックスハイライトで使用中）はテーマ・言語の定義の容量が大きいため、それらはCDNから読み込む
@@ -70,19 +72,17 @@ export function getConfig(): UserConfig {
 	return {
 		base: '/embed_vite/',
 
-		// The console is shared with backend, so clearing the console will also clear the backend log.
+		// バックエンドとコンソールを共有するため、コンソールを消去するとバックエンドのログも消える。
 		clearScreen: false,
 
 		server: {
-			// The backend allows access from any addresses, so vite also allows access from any addresses.
+			// バックエンドが任意のアドレスからのアクセスを許可するため、Viteも任意のアドレスからのアクセスを許可する。
 			host: '0.0.0.0',
 			allowedHosts: host ? [host] : undefined,
 			port: 5174,
 			strictPort: true,
 			hmr: {
-				// バックエンド経由での起動時、Viteは5174経由でアセットを参照していると思い込んでいるが実際は3000から配信される
-				// そのため、バックエンドのWSサーバーにHMRのWSリクエストが吸収されてしまい、正しくHMRが機能しない
-				// クライアント側のWSポートをViteサーバーのポートに強制させることで、正しくHMRが機能するようになる
+				// バックエンド経由ではアセットの配信元とViteサーバーのポートが異なるため、HMRの接続先をViteに固定する
 				clientPort: 5174,
 			},
 		},
@@ -153,7 +153,6 @@ export function getConfig(): UserConfig {
 							name: 'vue',
 							test: /node_modules[\\/]vue/,
 						}, {
-							// split i18n related module to distinct module
 							name: 'i18n',
 							includeDependenciesRecursively: false,
 							test: /i18n\.ts|locale\.ts/,

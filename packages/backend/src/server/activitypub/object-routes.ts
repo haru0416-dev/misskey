@@ -8,21 +8,44 @@ import { domainToASCII } from 'node:url';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import type * as Redis from 'ioredis';
-import { listFollowersByFolloweeIdWithPaginationFromDatabase, listFollowingsByFollowerIdWithPaginationFromDatabase } from '@/core/FollowingStore.js';
-import { fetchNoteByIdFromDatabase, listActivityPubOutboxNotesByUserIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase, fetchUserByUsernameAndHostFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
-import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
+import {
+	listFollowersByFolloweeIdWithPaginationFromDatabase,
+	listFollowingsByFollowerIdWithPaginationFromDatabase,
+} from '@/core/user/FollowingStore.js';
+import {
+	fetchNoteByIdFromDatabase,
+	listActivityPubOutboxNotesByUserIdFromDatabase,
+	listNotesByIdsFromDatabase,
+} from '@/core/note/NoteStore.js';
+import {
+	fetchLocalUserByIdFromDatabase,
+	fetchUserByIdFromDatabase,
+	fetchUserByIdOrFailFromDatabase,
+	fetchUserByUsernameAndHostFromDatabase,
+	listUsersByIdsFromDatabase,
+	fetchRemoteUserByIdFromDatabase,
+} from '@/core/user/UserStore.js';
+import { renderEmoji, renderLikeForHonoApi } from '@/server/rest/activitypub/notes-ap.js';
+import { renderFollow } from '@/server/rest/user/following.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
+import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
+import { fetchNoteReactionByIdFromDatabase } from '@/core/note/NoteReactionStore.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { listUserNotePiningsByUserIdFromDatabase } from '@/core/user/UserNotePiningStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import * as Acct from '@/misc/acct.js';
 import { query as urlQuery } from '@/misc/prelude/url.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { getFanoutTimelineNotesForHonoApi } from '../rest/fanout-timeline.js';
-import { renderKeyForHonoApi, renderPersonForHonoApi, type HonoApiAccountUpdateDependencies } from '../rest/account-update.js';
-import { getUserUri, isRemoteUser } from '../rest/following.js';
-import { renderNoteForHonoApi, renderNoteOrRenoteActivityForHonoApi } from '../rest/notes-ap.js';
+import { getFanoutTimelineNotesForHonoApi } from '@/server/rest/note/fanout-timeline.js';
+import {
+	renderKeyForHonoApi,
+	renderPersonForHonoApi,
+	type HonoApiAccountUpdateDependencies,
+} from '@/server/rest/account/account-update.js';
+import { getUserUri, isRemoteUser } from '@/server/rest/user/following.js';
+import { renderNoteForHonoApi, renderNoteOrRenoteActivityForHonoApi } from '@/server/rest/activitypub/notes-ap.js';
 import { isRenote, isQuote } from '@/misc/is-renote.js';
 
 export type ApObjectRoutesDependencies = HonoApiAccountUpdateDependencies & {
@@ -35,10 +58,9 @@ const LD_JSON = 'application/ld+json; profile="https://www.w3.org/ns/activitystr
 const HTML_TYPE = 'text/html';
 
 /**
- * upstream (ActivityPubServerService) の `accepts(request).type(['html', ACTIVITY_JSON, LD_JSON])`
- * によるルート分岐を再現する。以前の正規表現判定は q 値 (q=0 の明示拒否含む) と優先順位を無視して
- * おり、`Accept: text/html, application/activity+json` のような複合ヘッダで upstream (HTML) と
- * 逆の結果 (AP JSON) を返していた。
+ * `accepts(request).type(['html', ACTIVITY_JSON, LD_JSON])` によるルート分岐を実装する。
+ * q 値 (q=0 の明示拒否を含む) と優先順位を評価し、`Accept: text/html, application/activity+json`
+ * のような複合ヘッダでも正しい形式を返す。
  */
 function wantsAp(c: Context): boolean {
 	const preferred = preferredMediaType(c.req.header('accept'), [HTML_TYPE, ACTIVITY_JSON, LD_JSON]);
@@ -53,7 +75,7 @@ function apHeaders(c: Context, cacheControl: string): Record<string, string> {
 	return {
 		'Content-Type': apContentType(c),
 		'Cache-Control': cacheControl,
-		'Vary': 'Accept',
+		Vary: 'Accept',
 		'Access-Control-Allow-Headers': 'Accept',
 		'Access-Control-Allow-Methods': 'GET, OPTIONS',
 		'Access-Control-Allow-Origin': '*',
@@ -66,7 +88,7 @@ function apJson(c: Context, body: Record<string, unknown>, cacheControl = 'publi
 }
 
 function apError(status: number, cacheControl?: string): Response {
-	const headers = new Headers({ 'Vary': 'Accept' });
+	const headers = new Headers({ Vary: 'Accept' });
 	if (cacheControl) headers.set('Cache-Control', cacheControl);
 	return new Response(null, { status, headers });
 }
@@ -76,7 +98,6 @@ function isSelfHost(configHost: string, host: string | null): boolean {
 	return domainToASCII(configHost.toLowerCase()) === domainToASCII(host.toLowerCase());
 }
 
-/** ApRendererService.addContext 相当 (型を緩めたローカル版)。 */
 function withApContext(obj: Record<string, unknown>): Record<string, unknown> {
 	return { '@context': CONTEXT, ...obj };
 }
@@ -84,11 +105,15 @@ function withApContext(obj: Record<string, unknown>): Record<string, unknown> {
 async function packActivity(deps: ApObjectRoutesDependencies, note: MiNote): Promise<Record<string, unknown> | null> {
 	const pureRenote = isRenote(note) && !isQuote(note);
 	const renote = pureRenote ? await fetchNoteByIdFromDatabase(deps.db, note.renoteId!) : null;
-	return await renderNoteOrRenoteActivityForHonoApi(deps, {
-		localOnly: note.localOnly,
-		renote,
-		isQuote: !pureRenote && note.renoteId != null,
-	}, note);
+	return await renderNoteOrRenoteActivityForHonoApi(
+		deps,
+		{
+			localOnly: note.localOnly,
+			renote,
+			isQuote: !pureRenote && note.renoteId != null,
+		},
+		note,
+	);
 }
 
 async function renderUserInfo(deps: ApObjectRoutesDependencies, c: Context, user: MiUser | null): Promise<Response> {
@@ -105,7 +130,6 @@ async function renderUserInfo(deps: ApObjectRoutesDependencies, c: Context, user
 }
 
 /**
- * ActivityPubServerService 相当の ActivityPub オブジェクト GET サーバー。
  * /users/:user, /@:acct, /notes/:note は Accept ヘッダが AP を要求するときのみ応答し、
  * それ以外は next() で後段のクライアントページへフォールスルーする。
  */
@@ -174,28 +198,33 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 				});
 
 			const notes = deps.meta.enableFanoutTimeline
-				? await getFanoutTimelineNotesForHonoApi({ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines }, {
-					sinceId,
-					untilId,
-					limit,
-					allowPartial: false,
-					me: null,
-					redisTimelines: [`userTimeline:${user.id}`, `userTimelineWithReplies:${user.id}`],
-					useDbFallback: true,
-					ignoreAuthorFromMute: true,
-					excludePureRenotes: false,
-					noteFilter: (note) => {
-						if (note.visibility !== 'home' && note.visibility !== 'public') return false;
-						if (note.localOnly) return false;
-						return true;
-					},
-					dbFallback: getFromDb,
-				})
+				? await getFanoutTimelineNotesForHonoApi(
+						{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
+						{
+							sinceId,
+							untilId,
+							limit,
+							allowPartial: false,
+							me: null,
+							redisTimelines: [`userTimeline:${user.id}`, `userTimelineWithReplies:${user.id}`],
+							useDbFallback: true,
+							ignoreAuthorFromMute: true,
+							excludePureRenotes: false,
+							noteFilter: (note) => {
+								if (note.visibility !== 'home' && note.visibility !== 'public') return false;
+								if (note.localOnly) return false;
+								return true;
+							},
+							dbFallback: getFromDb,
+						},
+					)
 				: await getFromDb(untilId, sinceId, limit);
 
 			if (sinceId) notes.reverse();
 
-			const activities = (await Promise.all(notes.map(note => packActivity(deps, note)))).filter((x): x is Record<string, unknown> => x != null);
+			const activities = (await Promise.all(notes.map((note) => packActivity(deps, note)))).filter(
+				(x): x is Record<string, unknown> => x != null,
+			);
 			const rendered: Record<string, unknown> & { prev?: string; next?: string } = {
 				id: `${partOf}?${urlQuery({ page: 'true', since_id: sinceId ?? undefined, until_id: untilId ?? undefined })}`,
 				partOf,
@@ -211,19 +240,19 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			return apJson(c, withApContext(rendered), 'public, max-age=180');
 		}
 
-		return apJson(c, withApContext({
-			id: partOf,
-			type: 'OrderedCollection',
-			totalItems: user.notesCount,
-			first: `${partOf}?page=true`,
-			last: `${partOf}?page=true&since_id=000000000000000000000000`,
-		}));
+		return apJson(
+			c,
+			withApContext({
+				id: partOf,
+				type: 'OrderedCollection',
+				totalItems: user.notesCount,
+				first: `${partOf}?page=true`,
+				last: `${partOf}?page=true&since_id=000000000000000000000000`,
+			}),
+		);
 	});
 
-	const renderFollowRelationCollection = async (
-		c: Context,
-		kind: 'followers' | 'following',
-	): Promise<Response> => {
+	const renderFollowRelationCollection = async (c: Context, kind: 'followers' | 'following'): Promise<Response> => {
 		if (deps.meta.federation === 'none') return apError(403);
 
 		const userId = c.req.param('user') ?? '';
@@ -244,21 +273,34 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		const totalItems = kind === 'followers' ? user.followersCount : user.followingCount;
 
 		if (page) {
-			const followings = kind === 'followers'
-				? await listFollowersByFolloweeIdWithPaginationFromDatabase(deps.db, user.id, { limit: limit + 1, untilId: cursor, order: 'desc' })
-				: await listFollowingsByFollowerIdWithPaginationFromDatabase(deps.db, user.id, { limit: limit + 1, untilId: cursor, order: 'desc' });
+			const followings =
+				kind === 'followers'
+					? await listFollowersByFolloweeIdWithPaginationFromDatabase(deps.db, user.id, {
+							limit: limit + 1,
+							untilId: cursor,
+							order: 'desc',
+						})
+					: await listFollowingsByFollowerIdWithPaginationFromDatabase(deps.db, user.id, {
+							limit: limit + 1,
+							untilId: cursor,
+							order: 'desc',
+						});
 
 			const inStock = followings.length === limit + 1;
 			if (inStock) followings.pop();
 
-			const targetIds = followings.map(following => kind === 'followers' ? following.followerId : following.followeeId);
+			const targetIds = followings.map((following) =>
+				kind === 'followers' ? following.followerId : following.followeeId,
+			);
 			const targets = await listUsersByIdsFromDatabase(deps.db, targetIds, { includeSuspended: true });
-			const targetById = new Map(targets.map(target => [target.id, target]));
-			const missingTargetIds = targetIds.filter(id => !targetById.has(id));
-			for (const target of await Promise.all(missingTargetIds.map(id => fetchUserByIdOrFailFromDatabase(deps.db, id)))) {
+			const targetById = new Map(targets.map((target) => [target.id, target]));
+			const missingTargetIds = targetIds.filter((id) => !targetById.has(id));
+			for (const target of await Promise.all(
+				missingTargetIds.map((id) => fetchUserByIdOrFailFromDatabase(deps.db, id)),
+			)) {
 				targetById.set(target.id, target);
 			}
-			const renderedUsers = targetIds.map(id => getUserUri(deps.config, targetById.get(id)!));
+			const renderedUsers = targetIds.map((id) => getUserUri(deps.config, targetById.get(id)!));
 
 			const rendered: Record<string, unknown> & { next?: string } = {
 				id: `${partOf}?${urlQuery({ page: 'true', cursor: cursor ?? undefined })}`,
@@ -274,12 +316,15 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			return apJson(c, withApContext(rendered), 'public, max-age=180');
 		}
 
-		return apJson(c, withApContext({
-			id: partOf,
-			type: 'OrderedCollection',
-			totalItems,
-			first: `${partOf}?page=true`,
-		}));
+		return apJson(
+			c,
+			withApContext({
+				id: partOf,
+				type: 'OrderedCollection',
+				totalItems,
+				first: `${partOf}?page=true`,
+			}),
+		);
 	};
 
 	app.get('/users/:user/followers', (c) => renderFollowRelationCollection(c, 'followers'));
@@ -292,22 +337,30 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		if (user == null) return apError(404);
 
 		const pinings = await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' });
-		const notes = pinings.length === 0
-			? []
-			: await listNotesByIdsFromDatabase(deps.db, pinings.map(pining => pining.noteId));
-		const noteMap = new Map(notes.map(note => [note.id, note]));
-		const pinnedNotes = pinings.map(pining => noteMap.get(pining.noteId))
+		const notes =
+			pinings.length === 0
+				? []
+				: await listNotesByIdsFromDatabase(
+						deps.db,
+						pinings.map((pining) => pining.noteId),
+					);
+		const noteMap = new Map(notes.map((note) => [note.id, note]));
+		const pinnedNotes = pinings
+			.map((pining) => noteMap.get(pining.noteId))
 			.filter((note): note is MiNote => note != null)
-			.filter(note => !note.localOnly && ['public', 'home'].includes(note.visibility));
+			.filter((note) => !note.localOnly && ['public', 'home'].includes(note.visibility));
 
-		const renderedNotes = await Promise.all(pinnedNotes.map(note => renderNoteForHonoApi(deps, note, true)));
+		const renderedNotes = await Promise.all(pinnedNotes.map((note) => renderNoteForHonoApi(deps, note, true)));
 
-		return apJson(c, withApContext({
-			id: `${deps.config.instance.url}/users/${user.id}/collections/featured`,
-			type: 'OrderedCollection',
-			totalItems: renderedNotes.length,
-			orderedItems: renderedNotes,
-		}));
+		return apJson(
+			c,
+			withApContext({
+				id: `${deps.config.instance.url}/users/${user.id}/collections/featured`,
+				type: 'OrderedCollection',
+				totalItems: renderedNotes.length,
+				orderedItems: renderedNotes,
+			}),
+		);
 	});
 
 	app.get('/users/:user/publickey', async (c) => {
@@ -335,6 +388,62 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 
 	// Hono は /@:acct のようなセグメント内プレフィックス付きパラメータを解釈できないため、
 	// feed.ts と同じくワイルドカード+手動パースで /@acct (サブパスなし) のAP要求のみ処理する。
+	// このルートが無いと SPA フォールバックに落ちて HTML を返し、リモートが uri を解決できなくなる。
+	app.get('/emojis/:emoji', async (c) => {
+		if (deps.meta.federation === 'none') return apError(403);
+
+		const emoji = await fetchEmojiByNameAndHostFromDatabase(deps.db, c.req.param('emoji'), null);
+		if (emoji == null || emoji.localOnly) return apError(404);
+
+		return apJson(c, withApContext(renderEmoji(deps.config, emoji)));
+	});
+
+	app.get('/likes/:like', async (c) => {
+		if (deps.meta.federation === 'none') return apError(403);
+
+		const reaction = await fetchNoteReactionByIdFromDatabase(deps.db, c.req.param('like'));
+		if (reaction == null) return apError(404);
+
+		const note = await fetchNoteByIdFromDatabase(deps.db, reaction.noteId);
+		if (note == null) return apError(404);
+
+		return apJson(c, withApContext(await renderLikeForHonoApi(deps, reaction, note)));
+	});
+
+	// フォロー成立前にも参照されるため、following の存在は確認しない。
+	app.get('/follows/:follower/:followee', async (c) => {
+		if (deps.meta.federation === 'none') return apError(403);
+
+		const [follower, followee] = await Promise.all([
+			fetchLocalUserByIdFromDatabase(deps.db, c.req.param('follower')),
+			fetchRemoteUserByIdFromDatabase(deps.db, c.req.param('followee')),
+		]);
+		if (follower == null || followee == null) return apError(404);
+
+		return apJson(
+			c,
+			withApContext(renderFollow(deps.config, follower, followee) as unknown as Record<string, unknown>),
+		);
+	});
+
+	app.get('/follows/:followRequest', async (c) => {
+		if (deps.meta.federation === 'none') return apError(403);
+
+		const followRequest = await fetchFollowRequestByIdFromDatabase(deps.db, c.req.param('followRequest'));
+		if (followRequest == null) return apError(404);
+
+		const [follower, followee] = await Promise.all([
+			fetchLocalUserByIdFromDatabase(deps.db, followRequest.followerId),
+			fetchRemoteUserByIdFromDatabase(deps.db, followRequest.followeeId),
+		]);
+		if (follower == null || followee == null) return apError(404);
+
+		return apJson(
+			c,
+			withApContext(renderFollow(deps.config, follower, followee) as unknown as Record<string, unknown>),
+		);
+	});
+
 	app.get('*', async (c, next) => {
 		const pathname = new URL(c.req.url).pathname;
 		if (!pathname.startsWith('/@')) {

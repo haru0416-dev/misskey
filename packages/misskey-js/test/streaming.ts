@@ -1,5 +1,6 @@
 import { describe, test, expect, vi } from 'vitest';
 import WS from 'vitest-websocket-mock';
+import { MAX_OFFLINE_MESSAGE_BYTES, MAX_OFFLINE_MESSAGE_COUNT } from '../src/reconnecting-ws.js';
 import Stream from '../src/streaming.js';
 
 describe('Streaming', () => {
@@ -172,11 +173,9 @@ describe('Streaming', () => {
 		expect(first.type).toEqual('connect');
 		expect(first.body.channel).toEqual('main');
 
-		// サーバー側から切断し、同じURLで新しいサーバーを立てる
 		server.close();
 		server = new WS('wss://misskey.test/streaming');
 
-		// 自動再接続して main チャンネルの connect が再送される
 		await server.connected;
 		const resub = JSON.parse(await server.nextMessage as string);
 		expect(resub.type).toEqual('connect');
@@ -188,13 +187,219 @@ describe('Streaming', () => {
 		server.close();
 	});
 
+	test('再接続時は再購読をキュー済みチャンネルメッセージより先に送る', async () => {
+		let server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		const chat = stream.useChannel('chat', { other: 'aaa' });
+		let connectedCount = 0;
+		stream.on('_connected_', () => {
+			connectedCount++;
+			if (connectedCount === 2) chat.send('read', { id: 'from-connected-listener' });
+		});
+
+		try {
+			await server.connected;
+			const initialConnect = await server.nextMessage as { type: string; body: { id: string; }; };
+			server.close();
+
+			stream.send('generic', { order: 1 });
+			chat.send('read', { id: 'queued' });
+			stream.send('generic', { order: 2 });
+
+			server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+			await server.connected;
+
+			expect(await server.nextMessage).toEqual(initialConnect);
+			expect(await server.nextMessage).toEqual({ type: 'generic', body: { order: 1 } });
+			expect(await server.nextMessage).toEqual({
+				type: 'ch',
+				body: { id: initialConnect.body.id, type: 'read', body: { id: 'queued' } },
+			});
+			expect(await server.nextMessage).toEqual({ type: 'generic', body: { order: 2 } });
+			expect(await server.nextMessage).toEqual({
+				type: 'ch',
+				body: { id: initialConnect.body.id, type: 'read', body: { id: 'from-connected-listener' } },
+			});
+		} finally {
+			stream.close();
+			server.close();
+		}
+	});
+
+	test('通常キューの件数上限を超えても複数チャンネルの再購読を破棄しない', async () => {
+		let server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		const channels = [
+			stream.useChannel('chat', { other: 'aaa' }),
+			stream.useChannel('chat', { other: 'bbb' }),
+			stream.useChannel('chat', { other: 'ccc' }),
+		];
+
+		try {
+			await server.connected;
+			const initialConnects = [];
+			while (initialConnects.length < channels.length) {
+				initialConnects.push(await server.nextMessage);
+			}
+			server.close();
+
+			for (let i = 0; i <= MAX_OFFLINE_MESSAGE_COUNT; i++) {
+				stream.send('generic', { index: i });
+			}
+
+			server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+			await server.connected;
+			for (const connect of initialConnects) {
+				expect(await server.nextMessage).toEqual(connect);
+			}
+
+			for (let i = 1; i <= MAX_OFFLINE_MESSAGE_COUNT; i++) {
+				expect(await server.nextMessage).toEqual({ type: 'generic', body: { index: i } });
+			}
+		} finally {
+			stream.close();
+			server.close();
+		}
+	});
+
+	test('通常キューのバイト上限を超えても複数チャンネルの再購読を破棄しない', async () => {
+		let server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		const channels = [
+			stream.useChannel('chat', { other: 'aaa' }),
+			stream.useChannel('chat', { other: 'bbb' }),
+		];
+		const data = 'a'.repeat(MAX_OFFLINE_MESSAGE_BYTES / 2);
+
+		try {
+			await server.connected;
+			const initialConnects = [];
+			while (initialConnects.length < channels.length) {
+				initialConnects.push(await server.nextMessage);
+			}
+			server.close();
+
+			stream.send('generic', { marker: 'old' });
+			stream.send('generic', { marker: 'first', data });
+			stream.send('generic', { marker: 'second', data });
+
+			server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+			await server.connected;
+			for (const connect of initialConnects) {
+				expect(await server.nextMessage).toEqual(connect);
+			}
+			expect(await server.nextMessage).toEqual({ type: 'generic', body: { marker: 'second', data } });
+		} finally {
+			stream.close();
+			server.close();
+		}
+	});
+
+	test('不正な受信メッセージを_error_として通知する', async () => {
+		const server = new WS('wss://misskey.test/streaming');
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		const errors: Error[] = [];
+		stream.on('_error_', error => errors.push(error));
+
+		try {
+			await server.connected;
+			server.send('{');
+			server.send(JSON.stringify([]));
+			server.send(JSON.stringify({ type: 'channel', body: { id: 1, type: 'event' } }));
+
+			expect(errors.map(error => error.message)).toEqual([
+				'Failed to parse streaming message as JSON',
+				'Invalid streaming message envelope',
+				'Invalid streaming channel message',
+			]);
+		} finally {
+			stream.close();
+			server.close();
+		}
+	});
+
+	test('予約済みローカルイベント名をwireから配送しない', async () => {
+		const server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		const errors: Error[] = [];
+		let connected = 0;
+		stream.on('_error_', error => errors.push(error));
+		stream.on('_connected_', () => connected++);
+
+		try {
+			await server.connected;
+			expect(connected).toBe(1);
+
+			server.send({ type: '_error_', body: 'not an Error' });
+			server.send({ type: '_connected_', body: null });
+
+			expect(connected).toBe(1);
+			expect(errors).toHaveLength(2);
+			expect(errors.every(error => error instanceof Error)).toBe(true);
+			expect(errors.map(error => error.message)).toEqual([
+				'Reserved streaming event type received: _error_',
+				'Reserved streaming event type received: _connected_',
+			]);
+		} finally {
+			stream.close();
+			server.close();
+		}
+	});
+
+	test('未知のトップレベルイベントは互換性のため配送する', async () => {
+		const server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		const received: unknown[] = [];
+		const on = stream.on as unknown as (event: string, listener: (payload: unknown) => void) => Stream;
+		on.call(stream, 'futureEvent', payload => received.push(payload));
+
+		try {
+			await server.connected;
+			server.send({ type: 'futureEvent', body: { value: 1 } });
+
+			expect(received).toEqual([{ value: 1 }]);
+		} finally {
+			stream.close();
+			server.close();
+		}
+	});
+
+	test('未知のconnected IDを接続済みとして記録しない', async () => {
+		const server = new WS('wss://misskey.test/streaming', { jsonProtocol: true });
+		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
+		stream.useChannel('main');
+
+		try {
+			await server.connected;
+			await server.nextMessage;
+			server.send({ type: 'connected', body: { id: '2' } });
+
+			const chat = stream.useChannel('chat', { other: 'aaa' });
+			const connect = await server.nextMessage as { type: string; body: { id: string; }; };
+			let ready = false;
+			void chat.ready.then(() => {
+				ready = true;
+			});
+			await Promise.resolve();
+
+			expect(connect.body.id).toBe('2');
+			expect(ready).toBe(false);
+
+			server.send({ type: 'connected', body: { id: '2' } });
+			await chat.ready;
+			expect(ready).toBe(true);
+		} finally {
+			stream.close();
+			server.close();
+		}
+	});
+
 	test('未接続時の send は例外を投げずにキューされる', async () => {
 		const server = new WS('wss://misskey.test/streaming');
 		const stream = new Stream('https://misskey.test', { token: 'TOKEN' });
 		await server.connected;
 		server.close();
 
-		// 切断直後 (再接続前) の送信が例外にならないこと
 		expect(() => stream.heartbeat()).not.toThrow();
 
 		stream.close();

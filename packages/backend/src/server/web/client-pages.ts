@@ -5,24 +5,35 @@
 
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
-import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
-import { fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
-import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
-import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
-import { fetchPageByNameAndUserIdFromDatabase } from '@/core/PageStore.js';
-import { fetchLocalUserByIdFromDatabase, fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/announcement/AnnouncementStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/channel/ChannelStore.js';
+import { fetchClipByIdFromDatabase } from '@/core/clip/ClipStore.js';
+import { fetchFlashByIdFromDatabase } from '@/core/flash/FlashStore.js';
+import { fetchGalleryPostByIdFromDatabase } from '@/core/gallery/GalleryPostStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchPageByNameAndUserIdFromDatabase } from '@/core/page/PageStore.js';
+import {
+	fetchLocalUserByIdFromDatabase,
+	fetchUserByIdFromDatabase,
+	fetchUserByUsernameAndHostFromDatabase,
+} from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import * as Acct from '@/misc/acct.js';
 import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import { packClipForHonoApi, type HonoApiClipDependencies } from '../rest/clips.js';
-import { packFlashForHonoApi, type HonoApiFlashDependencies } from '../rest/flash.js';
-import { packGalleryPostForHonoApi, type HonoApiGalleryDependencies } from '../rest/gallery.js';
-import { packNoteForHonoApi, type HonoApiNoteDependencies } from '../rest/note.js';
-import { packPageForHonoApi, type HonoApiPageDependencies } from '../rest/pages.js';
-import { packUserDetailedNotMeForHonoApi } from '../rest/user.js';
+import { packAnnouncementForHonoApi } from '@/server/rest/admin/admin-announcements.js';
+import { packChannelForSsr, type HonoApiChannelsDependencies } from '@/server/rest/channel/channels.js';
+import { packClipForHonoApi, type HonoApiClipDependencies } from '@/server/rest/clip/clips.js';
+import { packFlashForHonoApi, type HonoApiFlashDependencies } from '@/server/rest/flash/flash.js';
+import { packGalleryPostForHonoApi, type HonoApiGalleryDependencies } from '@/server/rest/gallery/gallery.js';
+import { packNoteForHonoApi, type HonoApiNoteDependencies } from '@/server/rest/note/note.js';
+import { packPageForHonoApi, type HonoApiPageDependencies } from '@/server/rest/page/pages.js';
+import { packUserDetailedNotMeForHonoApi } from '@/server/rest/user/user.js';
 import type { CommonData } from './views/_.js';
+import { AnnouncementPage } from './views/announcement.js';
+import { ChannelPage } from './views/channel.js';
+import { BaseEmbed } from './views/base-embed.js';
 import { ClipPage } from './views/clip.js';
 import { FlashPage } from './views/flash.js';
 import { GalleryPostPage } from './views/gallery-post.js';
@@ -30,13 +41,12 @@ import { NotePage } from './views/note.js';
 import { PagePage } from './views/page.js';
 import { UserPage } from './views/user.js';
 
-export type ClientPagesDependencies =
-	& HonoApiNoteDependencies
-	& HonoApiClipDependencies
-	& HonoApiFlashDependencies
-	& HonoApiGalleryDependencies
-	& HonoApiPageDependencies
-	& {
+export type ClientPagesDependencies = HonoApiNoteDependencies &
+	HonoApiClipDependencies &
+	HonoApiFlashDependencies &
+	HonoApiGalleryDependencies &
+	HonoApiPageDependencies &
+	HonoApiChannelsDependencies & {
 		getCommonData: () => Promise<CommonData>;
 	};
 
@@ -51,21 +61,35 @@ function htmlResponse(html: unknown, headers: Record<string, string>): Response 
 	});
 }
 
+/**
+ * 埋め込みページ用。第三者サイトの iframe から読まれるため、
+ * 通常ページと違い X-Frame-Options を付けてはいけない。
+ */
+function embedHtmlResponse(html: unknown): Response {
+	return new Response(String(html), {
+		status: 200,
+		headers: {
+			'Content-Type': 'text/html; charset=utf-8',
+			'Cache-Control': 'public, max-age=3600',
+		},
+	});
+}
+
 function entityPageHeaders(profile: MiUserProfile, cacheControl = 'public, max-age=15'): Record<string, string> {
 	return {
 		'Cache-Control': cacheControl,
-		'Vary': 'Accept',
+		Vary: 'Accept',
 		...(profile.preventAiLearning ? { 'X-Robots-Tag': 'noimageai, noai' } : {}),
 	};
 }
 
 function isUgcVisibleToVisitor(deps: Pick<ClientPagesDependencies, 'meta'>, userHost: string | null): boolean {
-	return deps.meta.ugcVisibilityForVisitor === 'all' ||
-		(deps.meta.ugcVisibilityForVisitor === 'local' && userHost == null);
+	return (
+		deps.meta.ugcVisibilityForVisitor === 'all' || (deps.meta.ugcVisibilityForVisitor === 'local' && userHost == null)
+	);
 }
 
 /**
- * ClientServerService のエンティティ別SSRページ (ユーザー/ノート/Pages/Play/クリップ/ギャラリー) 相当。
  * 該当エンティティが見つからない・可視でない場合は next() で後段の client-base (汎用ページ) に委ねる。
  */
 export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
@@ -76,7 +100,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		const user = await fetchLocalUserByIdFromDatabase(deps.db, c.req.param('user'));
 
 		if (user == null || user.isSuspended) {
-			return c.body(null, 404, { 'Vary': 'Accept' });
+			return c.body(null, 404, { Vary: 'Accept' });
 		}
 
 		return c.redirect(`/@${user.username}${user.host == null ? '' : '@' + user.host}`, 302);
@@ -84,9 +108,10 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 
 	app.get('/notes/:note', async (c, next) => {
 		const note = await fetchNoteByIdFromDatabase(deps.db, c.req.param('note'));
-		const noteUser = note != null && ['public', 'home'].includes(note.visibility)
-			? await fetchUserByIdFromDatabase(deps.db, note.userId)
-			: null;
+		const noteUser =
+			note != null && ['public', 'home'].includes(note.visibility)
+				? await fetchUserByIdFromDatabase(deps.db, note.userId)
+				: null;
 
 		if (
 			note != null &&
@@ -98,12 +123,15 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			const packedNote = await packNoteForHonoApi(deps, note, null, { detail: true });
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, note.userId);
 
-			return htmlResponse(NotePage({
-				note: packedNote,
-				profile,
-				...(await deps.getCommonData()),
-				clientCtxJson: htmlSafeJsonStringify({ note: packedNote }),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				NotePage({
+					note: packedNote,
+					profile,
+					...(await deps.getCommonData()),
+					clientCtxJson: htmlSafeJsonStringify({ note: packedNote }),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		await next();
@@ -113,17 +141,19 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 	app.get('/play/:id', async (c, next) => {
 		const flash = await fetchFlashByIdFromDatabase(deps.db, c.req.param('id'));
 
-		// 原典 (ClientServerService) は visibility を見ずに描画していたが、非公開 Play の
-		// タイトル等が匿名訪問者へ漏れるため public のみ SSR する (非公開は汎用ページへ)。
-		if (flash != null && flash.visibility === 'public') {
-			const packedFlash = await packFlashForHonoApi(deps, flash, null) as unknown as Packed<'Flash'>;
+		// 非公開 Play のタイトル等が匿名訪問者へ漏れるため、public のみ SSR する (非公開は汎用ページへ)。
+		if (flash?.visibility === 'public') {
+			const packedFlash = (await packFlashForHonoApi(deps, flash, null)) as unknown as Packed<'Flash'>;
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, flash.userId);
 
-			return htmlResponse(FlashPage({
-				flash: packedFlash,
-				profile,
-				...(await deps.getCommonData()),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				FlashPage({
+					flash: packedFlash,
+					profile,
+					...(await deps.getCommonData()),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		await next();
@@ -133,16 +163,19 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 	app.get('/clips/:clip', async (c, next) => {
 		const clip = await fetchClipByIdFromDatabase(deps.db, c.req.param('clip'));
 
-		if (clip != null && clip.isPublic) {
+		if (clip?.isPublic) {
 			const packedClip = await packClipForHonoApi(deps, clip, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, clip.userId);
 
-			return htmlResponse(ClipPage({
-				clip: packedClip,
-				profile,
-				...(await deps.getCommonData()),
-				clientCtxJson: htmlSafeJsonStringify({ clip: packedClip }),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				ClipPage({
+					clip: packedClip,
+					profile,
+					...(await deps.getCommonData()),
+					clientCtxJson: htmlSafeJsonStringify({ clip: packedClip }),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		await next();
@@ -156,11 +189,138 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			const packedPost = await packGalleryPostForHonoApi(deps, post, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, post.userId);
 
-			return htmlResponse(GalleryPostPage({
-				galleryPost: packedPost,
-				profile,
+			return htmlResponse(
+				GalleryPostPage({
+					galleryPost: packedPost,
+					profile,
+					...(await deps.getCommonData()),
+				}),
+				entityPageHeaders(profile),
+			);
+		}
+
+		await next();
+		return;
+	});
+
+	//#region 埋め込みページ (frontend-embed が描画する。X-Frame-Options を外す必要がある)
+	app.get('/embed/user-timeline/:user', async (c, next) => {
+		const user = await fetchUserByIdFromDatabase(deps.db, c.req.param('user'));
+
+		// 通常のユーザーページ (/@:user) と同じ可視性判定にする。
+		// 埋め込みだけ緩いと、非公開設定を迂回する経路になってしまう。
+		if (user == null || user.host != null || user.isSuspended || !isUgcVisibleToVisitor(deps, user.host)) {
+			await next();
+			return;
+		}
+
+		const packedUser = await packUserDetailedNotMeForHonoApi(deps, user, null);
+
+		return embedHtmlResponse(
+			BaseEmbed({
+				title: deps.meta.name ?? 'Misskey',
 				...(await deps.getCommonData()),
-			}), entityPageHeaders(profile));
+				embedCtxJson: htmlSafeJsonStringify({ user: packedUser }),
+			}),
+		);
+	});
+
+	app.get('/embed/notes/:note', async (c, next) => {
+		const note = await fetchNoteByIdFromDatabase(deps.db, c.req.param('note'));
+		const noteUser =
+			note != null && ['public', 'home'].includes(note.visibility)
+				? await fetchUserByIdFromDatabase(deps.db, note.userId)
+				: null;
+
+		// 通常のノートページ (/notes/:note) と同じ可視性判定にする。
+		// requireSigninToViewContents (ユーザー設定) と ugcVisibilityForVisitor
+		// (インスタンス設定) を見ないと、埋め込みが非公開設定の抜け道になる。
+		if (
+			note == null ||
+			noteUser == null ||
+			noteUser.isSuspended ||
+			noteUser.requireSigninToViewContents ||
+			!['public', 'home'].includes(note.visibility) ||
+			!isUgcVisibleToVisitor(deps, note.userHost)
+		) {
+			await next();
+			return;
+		}
+
+		const packedNote = await packNoteForHonoApi(deps, note, null, { detail: true });
+
+		return embedHtmlResponse(
+			BaseEmbed({
+				title: deps.meta.name ?? 'Misskey',
+				...(await deps.getCommonData()),
+				embedCtxJson: htmlSafeJsonStringify({ note: packedNote }),
+			}),
+		);
+	});
+
+	app.get('/embed/clips/:clip', async (c, next) => {
+		const clip = await fetchClipByIdFromDatabase(deps.db, c.req.param('clip'));
+
+		// 通常のクリップページ (/clips/:clip) と同じく公開クリップのみ。
+		// clip はリモートを持たないので isPublic だけ見れば足りる。
+		if (clip == null || !clip.isPublic) {
+			await next();
+			return;
+		}
+
+		const packedClip = await packClipForHonoApi(deps, clip, null);
+
+		return embedHtmlResponse(
+			BaseEmbed({
+				title: deps.meta.name ?? 'Misskey',
+				...(await deps.getCommonData()),
+				embedCtxJson: htmlSafeJsonStringify({ clip: packedClip }),
+			}),
+		);
+	});
+
+	app.get('/embed/*', async (c) => {
+		return embedHtmlResponse(
+			BaseEmbed({
+				title: deps.meta.name ?? 'Misskey',
+				...(await deps.getCommonData()),
+			}),
+		);
+	});
+	//#endregion
+
+	app.get('/channels/:channel', async (c, next) => {
+		const channel = await fetchChannelByIdFromDatabase(deps.db, c.req.param('channel'));
+
+		if (channel != null) {
+			const packedChannel = await packChannelForSsr(deps, channel);
+
+			return htmlResponse(
+				ChannelPage({
+					channel: packedChannel,
+					...(await deps.getCommonData()),
+				}),
+				{ 'Cache-Control': 'public, max-age=15' },
+			);
+		}
+
+		await next();
+		return;
+	});
+
+	app.get('/announcements/:announcement', async (c, next) => {
+		const announcement = await fetchGlobalAnnouncementByIdFromDatabase(deps.db, c.req.param('announcement'));
+
+		if (announcement != null) {
+			const packedAnnouncement = packAnnouncementForHonoApi(deps.config, announcement, null);
+
+			return htmlResponse(
+				AnnouncementPage({
+					announcement: packedAnnouncement,
+					...(await deps.getCommonData()),
+				}),
+				{ 'Cache-Control': 'public, max-age=3600' },
+			);
 		}
 
 		await next();
@@ -176,7 +336,10 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return;
 		}
 
-		const segments = pathname.slice(2).split('/').map(segment => decodeURIComponent(segment));
+		const segments = pathname
+			.slice(2)
+			.split('/')
+			.map((segment) => decodeURIComponent(segment));
 		const acctStr = segments[0] ?? '';
 		if (acctStr === '') {
 			await next();
@@ -194,7 +357,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			}
 
 			const page = await fetchPageByNameAndUserIdFromDatabase(deps.db, segments[2]!, user.id);
-			// 原典は非公開 Page も描画していたが、タイトル等が匿名訪問者へ漏れるため public のみ SSR する。
+			// タイトル等が匿名訪問者へ漏れるため、public のみ SSR する。
 			if (page == null || page.visibility !== 'public') {
 				await next();
 				return;
@@ -203,11 +366,14 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			const packedPage = await packPageForHonoApi(deps, page, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, page.userId);
 
-			return htmlResponse(PagePage({
-				page: packedPage,
-				profile,
-				...(await deps.getCommonData()),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				PagePage({
+					page: packedPage,
+					profile,
+					...(await deps.getCommonData()),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		// /@:user or /@:user/:sub
@@ -216,19 +382,20 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return;
 		}
 
-		if (
-			user != null && !user.isSuspended && isUgcVisibleToVisitor(deps, user.host)
-		) {
+		if (user != null && !user.isSuspended && isUgcVisibleToVisitor(deps, user.host)) {
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-			const packedUser = await packUserDetailedNotMeForHonoApi(deps, user, null) as unknown as Packed<'UserDetailed'>;
+			const packedUser = (await packUserDetailedNotMeForHonoApi(deps, user, null)) as unknown as Packed<'UserDetailed'>;
 
-			return htmlResponse(UserPage({
-				user: packedUser,
-				profile,
-				...(segments[1] === undefined ? {} : { sub: segments[1] }),
-				...(await deps.getCommonData()),
-				clientCtxJson: htmlSafeJsonStringify({ user: packedUser }),
-			}), entityPageHeaders(profile));
+			return htmlResponse(
+				UserPage({
+					user: packedUser,
+					profile,
+					...(segments[1] === undefined ? {} : { sub: segments[1] }),
+					...(await deps.getCommonData()),
+					clientCtxJson: htmlSafeJsonStringify({ user: packedUser }),
+				}),
+				entityPageHeaders(profile),
+			);
 		}
 
 		// リモートユーザー等: モデレータがAPI経由で参照可能にするために404にはせず汎用ページへ

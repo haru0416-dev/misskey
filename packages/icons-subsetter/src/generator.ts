@@ -6,23 +6,23 @@
 import { promises as fsp, existsSync } from 'node:fs';
 import path from 'node:path';
 import { generateSubsettedFont } from './subsetter.js';
+import { runWriteTasks } from './write-tasks.js';
 
 const filesToScan = {
 	frontend: 'packages/frontend/src/**/*.{ts,vue}',
-	//frontendShared: 'packages/frontend-shared/utility/**/*.{ts}',  // 現時点では該当がないのでスキップ。ここをコメントアウトするときは、各フロントエンドにこのチャンクのCSSのimportを追加すること
+	// frontendShared はアイコンの使用箇所がなく、生成 CSS を利用側で読み込む必要もないため対象外。
+	//frontendShared: 'packages/frontend-shared/utility/**/*.{ts}',
 	frontendEmbed: 'packages/frontend-embed/src/**/*.{ts,vue}',
 };
 
 async function main() {
 	const start = performance.now();
 
-	// 1. ビルドディレクトリを削除
 	if (existsSync('./built')) {
 		await fsp.rm('./built', { recursive: true });
 	}
 	await fsp.mkdir('./built');
 
-	// 2. tabler-icons.min.cssから、class名とUnicodeのマッピングを抽出
 	const css = await fsp.readFile('node_modules/@tabler/icons-webfont/dist/tabler-icons.min.css', 'utf-8');
 	const cssRegex = /\.(ti-[a-z0-9-]+)::?before\s*{\n?\s*content:\s*["']\\([a-fA-F0-9]+)["'];?\n?\s*}/g;
 	const rgMap = new Map<string, string>();
@@ -32,15 +32,12 @@ async function main() {
 		if (icon !== undefined && unicode !== undefined) rgMap.set(icon, unicode);
 	}
 
-	// 3. tabler-icons-classes.cssから、.tiのルールを抽出
 	const classTiBaseRule = css.match(/\.ti\s*{[^}]*}/)?.[0];
 	if (classTiBaseRule === undefined) throw new Error('Tabler Icons base CSS rule was not found.');
 
-	// 4. フォールバック用のtabler-icons.woff2をコピー
 	const fontPath = 'node_modules/@tabler/icons-webfont/dist/fonts/';
 	await fsp.copyFile(fontPath + 'tabler-icons.woff2', './built/tabler-icons.woff2');
 
-	// 5. 各チャンクごとにファイルをスキャンして、使用されているアイコンを抽出
 	const unicodeRangeValues = new Map<string, number[]>();
 	for (const [key, dir] of Object.entries(filesToScan)) {
 		console.log(`Scanning ${key}...`);
@@ -62,16 +59,13 @@ async function main() {
 			}
 		}
 
-		// 6. チャンク内で使用されているアイコンのUnicodeの配列を生成
-		const unicodeValues = Array.from(iconsToPack).map((icon) => parseInt(rgMap.get(icon)!, 16));
+		const unicodeValues = Array.from(iconsToPack).map((icon) => Number.parseInt(rgMap.get(icon)!, 16));
 		unicodeRangeValues.set(key, unicodeValues);
 	}
 
-	// 7. Tabler Iconフォントをサブセット化
 	const subsettedFonts = await generateSubsettedFont(fontPath + 'tabler-icons.ttf', unicodeRangeValues);
 
-	// 8. サブセット化したフォント・CSSを書き出し
-	await Promise.allSettled(Array.from(subsettedFonts.entries()).map(async ([key, buffer]) => {
+	await runWriteTasks(Array.from(subsettedFonts.entries()).map(([key, buffer]) => async () => {
 		const unicodeValues = unicodeRangeValues.get(key);
 		if (unicodeValues === undefined) throw new Error(`Unicode values for ${key} were not found.`);
 
@@ -83,12 +77,11 @@ async function main() {
 	src: url("./tabler-icons.woff2") format("woff2");
 }`];
 
-		// サブセット化したフォントの中身がある（＝unicodeRangeValuesの配列が空ではない）場合のみ、サブセットしたものに関する情報を追記
 		if (unicodeValues.length > 0) {
 			await fsp.writeFile(`./built/tabler-icons-${key}.woff2`, buffer);
 
 			const unicodeRangeString = (() => {
-				const values = unicodeValues.sort((a, b) => a - b);
+				const values = unicodeValues.toSorted((a, b) => a - b);
 				const ranges = [];
 
 				for (let i = 0; i < values.length; i++) {
@@ -124,9 +117,8 @@ async function main() {
 
 			cssRules.push(classTiBaseRule);
 
-			// 使用されているアイコンのclassとの対応を追記
 			for (const icon of unicodeValues) {
-				const iconClasses = Array.from(rgMap.entries()).filter(([_, unicode]) => parseInt(unicode, 16) === icon);
+				const iconClasses = Array.from(rgMap.entries()).filter(([_, unicode]) => Number.parseInt(unicode, 16) === icon);
 				if (iconClasses.length > 1) {
 					console.warn(`[WARN] Multiple classes for the same unicode: ${iconClasses.map(([cls]) => cls).join(', ')}. Maybe it's deprecated?`);
 				}

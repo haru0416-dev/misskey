@@ -4,7 +4,6 @@
  */
 
 import * as Misskey from 'misskey-js';
-import { defineAsyncComponent } from 'vue';
 import { selectDriveFolder } from './drive.js';
 import type { MenuItem } from '@/types/menu.js';
 import { i18n } from '@/i18n.js';
@@ -144,6 +143,7 @@ export function getDriveFileMenu(
 			action: () =>
 				os.post({
 					initialFiles: [file],
+					instant: true,
 				}),
 		},
 		{

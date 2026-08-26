@@ -100,9 +100,9 @@ const {
 } = useMkSelect({
 	items: [
 		{ value: 'all', label: i18n.ts._antennaSources.all },
-		//{ value: 'home', label: i18n.ts._antennaSources.homeTimeline },
+		{ value: 'home', label: i18n.ts._antennaSources.homeTimeline },
 		{ value: 'users', label: i18n.ts._antennaSources.users },
-		//{ value: 'list', label: i18n.ts._antennaSources.userList },
+		{ value: 'list', label: i18n.ts._antennaSources.userList },
 		{ value: 'users_blacklist', label: i18n.ts._antennaSources.userBlacklist },
 	],
 	initialValue: initialAntenna.src,
@@ -134,13 +134,24 @@ const withFile = ref<boolean>(initialAntenna.withFile);
 const excludeNotesInSensitiveChannel = ref<boolean>(initialAntenna.excludeNotesInSensitiveChannel);
 const userLists = ref<Misskey.entities.UserList[] | null>(null);
 
+// immediate 必須: 既存の src === 'list' アンテナを開いた場合、src は変化しないので
+// immediate を外すとリスト選択肢が空のまま (現在のリスト名も出ず変更もできない) になる
 watch(() => src.value, async () => {
 	if (src.value === 'list' && userLists.value === null) {
 		userLists.value = await misskeyApi('users/lists/list');
 	}
-});
+}, { immediate: true });
 
 async function saveAntenna() {
+	// リストを持たない src === 'list' のアンテナは何にもマッチしないのでサーバー側でも弾かれる
+	if (src.value === 'list' && userListId.value == null) {
+		os.alert({
+			type: 'error',
+			text: i18n.ts.selectList,
+		});
+		return;
+	}
+
 	const antennaData = {
 		name: name.value,
 		src: src.value,

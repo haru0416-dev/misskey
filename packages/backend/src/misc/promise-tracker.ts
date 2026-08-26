@@ -5,10 +5,7 @@
 
 const promiseRefs: Set<WeakRef<Promise<unknown>>> = new Set();
 
-/**
- * This tracks promises that other modules decided not to wait for,
- * and makes sure they are all settled before fully closing down the server.
- */
+/** 他モジュールが待機しない Promise を追跡し、サーバー終了前にすべて settle させる。 */
 export function trackPromise(promise: Promise<unknown>) {
 	if (process.env['NODE_ENV'] !== 'test') {
 		return;
@@ -19,5 +16,6 @@ export function trackPromise(promise: Promise<unknown>) {
 }
 
 export async function allSettled(): Promise<void> {
-	await Promise.allSettled([...promiseRefs].map(r => r.deref()));
+	// WeakRef.deref() は回収済みなら undefined を返すので、Promise だけを渡す
+	await Promise.allSettled([...promiseRefs].map((r) => r.deref()).filter((p) => p != null));
 }

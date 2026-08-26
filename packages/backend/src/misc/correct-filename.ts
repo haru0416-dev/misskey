@@ -3,17 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-const targetExtsToSkip = new Set([
-	'.gz',
-	'.tar',
-	'.tgz',
-	'.bz2',
-	'.xz',
-	'.zip',
-	'.7z',
-]);
+const targetExtsToSkip = new Set(['.gz', '.tar', '.tgz', '.bz2', '.xz', '.zip', '.7z']);
 
-const extRegExp = /\.[0-9a-zA-Z]+$/i;
+const extRegExp = /\.[0-9a-zA-Z]+$/;
 
 /**
  * 与えられた拡張子とファイル名が一致しているかどうかを確認し、
@@ -22,7 +14,7 @@ const extRegExp = /\.[0-9a-zA-Z]+$/i;
  * extはfile-typeのextを想定
  */
 export function correctFilename(filename: string, ext: string | null) {
-	const dotExt = ext ? ext[0] === '.' ? ext : `.${ext}` : '.unknown';
+	const dotExt = ext ? (ext[0] === '.' ? ext : `.${ext}`) : '.unknown';
 
 	const match = extRegExp.exec(filename);
 	if (!match || !match[0]) {
@@ -33,13 +25,11 @@ export function correctFilename(filename: string, ext: string | null) {
 	if (
 		ext === null ||
 		filenameExt === dotExt ||
-
 		// jpeg, tiffを同一視
-		dotExt === '.jpg' && filenameExt === '.jpeg' ||
-		dotExt === '.tif' && filenameExt === '.tiff' ||
+		(dotExt === '.jpg' && filenameExt === '.jpeg') ||
+		(dotExt === '.tif' && filenameExt === '.tiff') ||
 		// dllもexeもportable executableなので判定が正しく行われない
-		dotExt === '.exe' && filenameExt === '.dll' ||
-
+		(dotExt === '.exe' && filenameExt === '.dll') ||
 		// 圧縮形式っぽければ下手に拡張子を変えない
 		// https://github.com/misskey-dev/misskey/issues/11482
 		targetExtsToSkip.has(dotExt)

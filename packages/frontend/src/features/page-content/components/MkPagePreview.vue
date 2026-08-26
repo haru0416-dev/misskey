@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</header>
 		<p v-if="page.summary" :title="page.summary">{{ page.summary.length > 85 ? page.summary.slice(0, 85) + '…' : page.summary }}</p>
 		<footer>
-			<img v-if="page.user.avatarUrl" class="icon" :src="page.user.avatarUrl"/>
+			<img class="icon" :src="page.user.avatarUrl" alt=""/>
 			<p>{{ userName(page.user) }}</p>
 		</footer>
 	</article>
@@ -28,7 +28,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { } from 'vue';
 import * as Misskey from 'misskey-js';
 import { userName } from '@/filters/user.js';
 import MediaImage from '@/features/media-viewer/components/MkMediaImage.vue';
@@ -57,7 +56,7 @@ const props = defineProps<{
 		color: var(--MI_THEME-accent);
 	}
 
-	&:focus-within {
+	&:focus-visible {
 		outline: none;
 
 		&::after {
@@ -81,40 +80,41 @@ const props = defineProps<{
 
 	> article {
 		background-color: var(--MI_THEME-panel);
-		padding: 16px;
+		padding: var(--MI-space-lg);
 		border-radius: var(--MI-radius);
 
 		> header {
-			margin-bottom: 8px;
+			margin-bottom: var(--MI-space-sm);
 
 			> h1 {
 				margin: 0;
 				font-size: 1em;
-				color: var(--urlPreviewTitle);
+				font-weight: 600;
 			}
 		}
 
 		> p {
 			margin: 0;
-			color: var(--urlPreviewText);
+			color: color-mix(in oklab, var(--MI_THEME-fg) 72%, transparent);
 			font-size: 0.8em;
 		}
 
 		> footer {
-			margin-top: 8px;
+			margin-top: var(--MI-space-sm);
 			height: 16px;
 
 			> img {
 				display: inline-block;
 				width: 16px;
 				height: 16px;
-				margin-right: 4px;
+				margin-right: var(--MI-space-xs);
 				vertical-align: top;
 			}
 
 			> p {
 				display: inline-block;
 				margin: 0;
+				color: color-mix(in oklab, var(--MI_THEME-fg) 72%, transparent);
 				font-size: 0.8em;
 				line-height: 16px;
 				vertical-align: top;
@@ -143,26 +143,24 @@ const props = defineProps<{
 		}
 
 		> article {
-			padding: 12px;
+			padding: var(--MI-space-md);
 		}
 	}
 
 	@media (max-width: 500px) {
-		font-size: 10px;
-
 		> .thumbnail {
 			height: 70px;
 		}
 
 		> article {
-			padding: 8px;
+			padding: var(--MI-space-sm);
 
 			> header {
-				margin-bottom: 4px;
+				margin-bottom: var(--MI-space-xs);
 			}
 
 			> footer {
-				margin-top: 4px;
+				margin-top: var(--MI-space-xs);
 
 				> img {
 					width: 12px;

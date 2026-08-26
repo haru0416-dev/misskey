@@ -5,7 +5,7 @@
 
 import { createCanvas } from '@napi-rs/canvas';
 
-// deterministic PRNG (xmur3 hash + mulberry32), replaces the unmaintained random-seed package
+// xmur3 hash + mulberry32 による決定的 PRNG を使う。
 function createSeededRandom(seed: string): (max: number) => number {
 	let h = 1779033703 ^ seed.length;
 	for (let i = 0; i < seed.length; i++) {
@@ -14,7 +14,7 @@ function createSeededRandom(seed: string): (max: number) => number {
 	}
 	let a = h;
 	return (max: number) => {
-		a = (a + 0x6D2B79F5) | 0;
+		a = (a + 0x6d2b79f5) | 0;
 		let t = Math.imul(a ^ (a >>> 15), 1 | a);
 		t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
 		return Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * max);
@@ -22,8 +22,8 @@ function createSeededRandom(seed: string): (max: number) => number {
 }
 
 const size = 128; // px
-const n = 5; // resolution
-const margin = (size / 4);
+const n = 5;
+const margin = size / 4;
 const colors: readonly (readonly [string, string])[] = [
 	['#FF512F', '#DD2476'],
 	['#FF61D2', '#FE9090'],
@@ -47,7 +47,7 @@ const colors: readonly (readonly [string, string])[] = [
 	['#ffdd6e', '#ff009d'],
 ];
 
-const actualSize = size - (margin * 2);
+const actualSize = size - margin * 2;
 const cellSize = actualSize / n;
 const sideN = Math.floor(n / 2);
 
@@ -91,17 +91,17 @@ export async function genIdenticon(seed: string): Promise<Buffer> {
 
 	for (let x = 0; x < n; x++) {
 		for (let y = 0; y < n; y++) {
-			const isXCenter = x === ((n - 1) / 2);
+			const isXCenter = x === (n - 1) / 2;
 			if (isXCenter && !center[y]) continue;
 
-			const isLeftSide = x < ((n - 1) / 2);
+			const isLeftSide = x < (n - 1) / 2;
 			if (isLeftSide && !side[x]?.[y]) continue;
 
-			const isRightSide = x > ((n - 1) / 2);
+			const isRightSide = x > (n - 1) / 2;
 			if (isRightSide && !side[sideN - (x - sideN)]?.[y]) continue;
 
-			const actualX = margin + (cellSize * x);
-			const actualY = margin + (cellSize * y);
+			const actualX = margin + cellSize * x;
+			const actualY = margin + cellSize * y;
 			ctx.beginPath();
 			ctx.fillRect(actualX, actualY, cellSize, cellSize);
 		}

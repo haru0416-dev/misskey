@@ -12,14 +12,18 @@
 
 ## ファイル配置
 
+`components/` 直下にファイルは置かない (global 登録の entrypoint である `index.ts` のみ)。共通 UI は責務別のサブディレクトリへ置く。
+
 | 配置先 | 用途 | 命名 |
 |---|---|---|
-| `packages/frontend/src/components/Mk<Name>.vue` | 通常の共有 UI コンポーネント | `Mk<Name>.vue` |
-| `packages/frontend/src/components/global/Mk<Name>.vue` | `components/index.ts` で Vue グローバルコンポーネント登録 (`app.component`) され、import 無しで全テンプレートから使える基本部品 (`MkA` / `MkAvatar` / `MkAcct` 等) | `Mk<Name>.vue` (サブディレクトリ内でも `Mk` prefix 必須) |
-| `packages/frontend/src/components/grid/Mk<Name>.vue` | テーブル/グリッド系の部品セット | 同上 |
+| `packages/frontend/src/components/<category>/Mk<Name>.vue` | 機能名を知らなくても使える共通 UI 部品。`<category>` は `form` / `overlay` / `layout` / `display` / `effects` / `grid` | `Mk<Name>.vue` (サブディレクトリ内でも `Mk` prefix 必須) |
+| `packages/frontend/src/components/global/Mk<Name>.vue` | `components/index.ts` で Vue グローバルコンポーネント登録 (`app.component`) され、import 無しで全テンプレートから使える基本部品 (`MkA` / `MkAvatar` / `MkAcct` 等) | 同上 |
+| `packages/frontend/src/features/<feature>/components/Mk<Name>.vue` | 特定のユーザー機能を知っている UI (例: `features/notes/components/MkPoll.vue`) | 同上 |
 | `packages/frontend/src/pages/<Name>.vue` | 単一ページ専用の UI (再利用しない) | `Mk` prefix **不要** |
 
-迷ったら「他の `Mk*.vue` から import される可能性があるか?」で判定する。Yes なら `components/`、No なら `pages/`。
+判定は「その機能の名前を知らなくても使えるか」→ Yes なら `components/<category>/`、特定機能に属するなら `features/<feature>/components/`、
+単一ページからしか使わないなら `pages/`。各 category の責務と依存方向は
+[packages/frontend/src/README.md](../../../../../packages/frontend/src/README.md) が正典。
 
 ストーリーが必要 (= ほぼ常に必要) なら、同階層に `Mk<Name>.stories.impl.ts` も作る → [knowledge/storybook.md](../knowledge/storybook.md)。
 
@@ -47,7 +51,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ## 最小テンプレート
 
-シンプルな表示コンポーネントの最小形を示す**合成例** (特定ファイルの写しではない)。実在する単純コンポーネントの例は [MkInfo.vue](../../../../../packages/frontend/src/components/MkInfo.vue) 等を参照:
+シンプルな表示コンポーネントの最小形を示す**合成例** (特定ファイルの写しではない)。実在する単純コンポーネントの例は [MkInfo.vue](../../../../../packages/frontend/src/components/display/MkInfo.vue) 等を参照:
 
 ```vue
 <!--
@@ -183,11 +187,11 @@ bun run --bun --filter frontend test
 
 ## 参照コード
 
-- [MkInfo.vue](../../../../../packages/frontend/src/components/MkInfo.vue) — simple SFC 例
-- [MkButton.vue](../../../../../packages/frontend/src/components/MkButton.vue) — 汎用ボタン (a11y / `_button` global class)
-- [MkInput.vue](../../../../../packages/frontend/src/components/MkInput.vue) — generic + 2 ブロック script 例
-- [MkSelect.vue](../../../../../packages/frontend/src/components/MkSelect.vue) — `defineModel` + 名前付き slot 例
-- [MkSwitch.vue](../../../../../packages/frontend/src/components/MkSwitch.vue) — a11y 込みカスタム UI
-- [MkButton.stories.impl.ts](../../../../../packages/frontend/src/components/MkButton.stories.impl.ts) — 複数 story Storybook 雛形
+- [MkInfo.vue](../../../../../packages/frontend/src/components/display/MkInfo.vue) — simple SFC 例
+- [MkButton.vue](../../../../../packages/frontend/src/components/form/MkButton.vue) — 汎用ボタン (a11y / `_button` global class)
+- [MkInput.vue](../../../../../packages/frontend/src/components/form/MkInput.vue) — generic + 2 ブロック script 例
+- [MkSelect.vue](../../../../../packages/frontend/src/components/form/MkSelect.vue) — `defineModel` + 名前付き slot 例
+- [MkSwitch.vue](../../../../../packages/frontend/src/components/form/MkSwitch.vue) — a11y 込みカスタム UI
+- [MkButton.stories.impl.ts](../../../../../packages/frontend/src/components/form/MkButton.stories.impl.ts) — 複数 story Storybook 雛形
 - [packages/frontend/src/os.ts](../../../../../packages/frontend/src/os.ts) — UI 操作 API 一覧
 - [packages/frontend/src/i18n.ts](../../../../../packages/frontend/src/i18n.ts) — `i18n.ts` / `i18n.tsx` 実装

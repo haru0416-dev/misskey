@@ -2,7 +2,6 @@
  * SPDX-FileCopyrightText: syuilo and misskey-project
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-import { defineAsyncComponent } from 'vue';
 import { url } from '@shared/utility/config.js';
 import { defaultEmbedParams, embedRouteWithScrollbar } from '@shared/utility/embed-page.js';
 import type { EmbedParams, EmbeddableEntity } from '@shared/utility/embed-page.js';
@@ -45,7 +44,7 @@ export function normalizeEmbedParams(params: EmbedParams): Record<string, string
  * 埋め込みコードを生成（iframe IDの発番もやる）
  */
 export function getEmbedCode(path: string, params?: EmbedParams): string {
-	const iframeId = 'v1_' + genId(); // 将来embed.jsのバージョンが上がったとき用にv1_を付けておく
+	const iframeId = 'v1_' + genId(); // embed.js のバージョン識別用に v1_ を付ける。
 
 	let paramString = '';
 	if (params) {

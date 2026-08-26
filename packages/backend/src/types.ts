@@ -69,19 +69,21 @@ export const notificationTypes = [
 	'test',
 ] as const;
 
-export const groupedNotificationTypes = [
-	...notificationTypes,
-	'reaction:grouped',
-	'renote:grouped',
-] as const;
+const groupedNotificationTypes = [...notificationTypes, 'reaction:grouped', 'renote:grouped'] as const;
 
 export const obsoleteNotificationTypes = ['pollVote', 'groupInvited'] as const;
 
 export const noteVisibilities = ['public', 'home', 'followers', 'specified'] as const;
 
-export const noteReactionAcceptances = ['likeOnly', 'likeOnlyForRemote', 'nonSensitiveOnly', 'nonSensitiveOnlyForLocalLikeOnlyForRemote', null] as const;
+export const noteReactionAcceptances = [
+	'likeOnly',
+	'likeOnlyForRemote',
+	'nonSensitiveOnly',
+	'nonSensitiveOnlyForLocalLikeOnlyForRemote',
+	null,
+] as const;
 
-export const mutedNoteReasons = ['word', 'manual', 'spam', 'other'] as const;
+const mutedNoteReasons = ['word', 'manual', 'spam', 'other'] as const;
 
 export const followingVisibilities = ['public', 'followers', 'private'] as const;
 export const followersVisibilities = ['public', 'followers', 'private'] as const;
@@ -91,14 +93,24 @@ export const followersVisibilities = ['public', 'followers', 'private'] as const
  *
  * （主にエクスポート完了通知で使用するものであり、既存のDBの名称等と必ずしも一致しない）
  */
-export const userExportableEntities = ['antenna', 'blocking', 'clip', 'customEmoji', 'favorite', 'following', 'muting', 'note', 'userList'] as const;
+export const userExportableEntities = [
+	'antenna',
+	'blocking',
+	'clip',
+	'customEmoji',
+	'favorite',
+	'following',
+	'muting',
+	'note',
+	'userList',
+] as const;
 
 /**
  * ユーザーがインポートできるものの種類
  *
  * （主にインポート完了通知で使用するものであり、既存のDBの名称等と必ずしも一致しない）
  */
-export const userImportableEntities = ['antenna', 'blocking', 'customEmoji', 'following', 'muting', 'userList'] as const;
+const userImportableEntities = ['antenna', 'blocking', 'customEmoji', 'following', 'muting', 'userList'] as const;
 
 export type ModerationLogPayloads = {
 	updateServerSettings: {
@@ -371,24 +383,20 @@ export type ModerationLogPayloads = {
 };
 
 export type Serialized<T> = {
-	[K in keyof T]:
-	T[K] extends Date
+	[K in keyof T]: T[K] extends Date
 		? string
-		: T[K] extends (Date | null)
-			? (string | null)
+		: T[K] extends Date | null
+			? string | null
 			: T[K] extends Record<string, any>
 				? Serialized<T[K]>
-				: T[K] extends (Record<string, any> | null)
-					? (Serialized<T[K]> | null)
-					: T[K] extends (Record<string, any> | undefined)
-						? (Serialized<T[K]> | undefined)
+				: T[K] extends Record<string, any> | null
+					? Serialized<T[K]> | null
+					: T[K] extends Record<string, any> | undefined
+						? Serialized<T[K]> | undefined
 						: T[K];
 };
 
-export type FilterUnionByProperty<
-	Union,
-	Property extends string | number | symbol,
-	Condition,
-> = Union extends Record<Property, Condition> ? Union : never;
+type FilterUnionByProperty<Union, Property extends string | number | symbol, Condition> =
+	Union extends Record<Property, Condition> ? Union : never;
 
 export type Awaitable<T> = T | Promise<T>;

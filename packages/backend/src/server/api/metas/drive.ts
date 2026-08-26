@@ -3,14 +3,33 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { driveFilesCreateParamDef, driveFilesUploadFromUrlParamDef } from '@/server/rest/drive-file-upload.js';
-import { driveFilesAttachedChatMessagesParamDef, driveFilesAttachedNotesParamDef, driveFilesDeleteParamDef, driveFilesFindByHashParamDef, driveFilesFindParamDef, driveFilesMoveBulkParamDef, driveFilesParamDef, driveFilesShowParamDef, driveFilesUpdateParamDef, driveStreamParamDef } from '@/server/rest/drive-files.js';
-import { driveFilesCheckExistenceParamDef, driveFoldersCreateParamDef, driveFoldersDeleteParamDef, driveFoldersFindParamDef, driveFoldersParamDef, driveFoldersShowParamDef, driveFoldersUpdateParamDef } from '@/server/rest/drive.js';
+import { driveFilesCreateParamDef, driveFilesUploadFromUrlParamDef } from '@/server/rest/drive/drive-file-upload.js';
+import {
+	driveFilesAttachedChatMessagesParamDef,
+	driveFilesAttachedNotesParamDef,
+	driveFilesDeleteParamDef,
+	driveFilesFindByHashParamDef,
+	driveFilesFindParamDef,
+	driveFilesMoveBulkParamDef,
+	driveFilesParamDef,
+	driveFilesShowParamDef,
+	driveFilesUpdateParamDef,
+	driveStreamParamDef,
+} from '@/server/rest/drive/drive-files.js';
+import {
+	driveFilesCheckExistenceParamDef,
+	driveFoldersCreateParamDef,
+	driveFoldersDeleteParamDef,
+	driveFoldersFindParamDef,
+	driveFoldersParamDef,
+	driveFoldersShowParamDef,
+	driveFoldersUpdateParamDef,
+} from '@/server/rest/drive/drive.js';
 import { z } from 'zod';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
-	'drive': {
+	drive: {
 		meta: {
 			tags: ['drive', 'account'],
 
@@ -20,15 +39,18 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					capacity: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					usage: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -37,6 +59,7 @@ export const endpointMetas = {
 	},
 	'drive/files': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -45,10 +68,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFile',
 				},
 			},
@@ -57,6 +82,7 @@ export const endpointMetas = {
 	},
 	'drive/files/attached-notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive', 'notes'],
 
 			requireCredential: true,
@@ -67,10 +93,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -87,6 +115,7 @@ export const endpointMetas = {
 	},
 	'drive/files/attached-chat-messages': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive', 'chat'],
 
 			requireCredential: true,
@@ -95,10 +124,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatMessage',
 				},
 			},
@@ -115,6 +146,7 @@ export const endpointMetas = {
 	},
 	'drive/files/check-existence': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -125,7 +157,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'boolean',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 			},
 		} as const,
 		paramDef: driveFilesCheckExistenceParamDef,
@@ -151,7 +184,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'DriveFile',
 			},
 
@@ -162,10 +196,10 @@ export const endpointMetas = {
 					id: 'f449b209-0c60-4e51-84d5-29486263bfd4',
 				},
 
-				inappropriate: {
-					message: 'Cannot upload the file because it has been determined that it possibly contains inappropriate content.',
-					code: 'INAPPROPRIATE',
-					id: 'bec5bd69-fba3-43c9-b4fb-2894b66ad5d2',
+				noSuchFolder: {
+					message: 'No such folder.',
+					code: 'NO_SUCH_FOLDER',
+					id: '12e7caa8-224f-471d-978a-653a81cf4c90',
 				},
 
 				noFreeSpace: {
@@ -218,6 +252,7 @@ export const endpointMetas = {
 	},
 	'drive/files/find': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 
 			tags: ['drive'],
@@ -228,10 +263,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFile',
 				},
 			},
@@ -240,6 +277,7 @@ export const endpointMetas = {
 	},
 	'drive/files/find-by-hash': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -250,10 +288,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFile',
 				},
 			},
@@ -262,6 +302,7 @@ export const endpointMetas = {
 	},
 	'drive/files/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -272,7 +313,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'DriveFile',
 			},
 
@@ -335,7 +377,8 @@ export const endpointMetas = {
 			},
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'DriveFile',
 			},
 		} as const,
@@ -350,6 +393,11 @@ export const endpointMetas = {
 			kind: 'write:drive',
 
 			errors: {
+				noSuchFolder: {
+					message: 'No such folder.',
+					code: 'NO_SUCH_FOLDER',
+					id: 'abdd73a9-6225-4140-a3e4-8089c77168bc',
+				},
 			},
 		} as const,
 		paramDef: driveFilesMoveBulkParamDef,
@@ -375,6 +423,7 @@ export const endpointMetas = {
 	},
 	'drive/folders': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -383,10 +432,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFolder',
 				},
 			},
@@ -416,7 +467,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object' as const,
-				optional: false as const, nullable: false as const,
+				optional: false as const,
+				nullable: false as const,
 				ref: 'DriveFolder',
 			},
 		} as const,
@@ -448,6 +500,7 @@ export const endpointMetas = {
 	},
 	'drive/folders/find': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -456,10 +509,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFolder',
 				},
 			},
@@ -468,6 +523,7 @@ export const endpointMetas = {
 	},
 	'drive/folders/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -476,7 +532,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'DriveFolder',
 			},
 
@@ -520,7 +577,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'DriveFolder',
 			},
 		} as const,
@@ -528,6 +586,7 @@ export const endpointMetas = {
 	},
 	'drive/stream': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -536,10 +595,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'DriveFile',
 				},
 			},

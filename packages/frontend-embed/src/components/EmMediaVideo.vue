@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <a :href="href" target="_blank" :class="$style.root">
-	<img v-if="!video.isSensitive && video.thumbnailUrl" :class="$style.thumbnail" :src="video.thumbnailUrl">
+	<img v-if="!video.isSensitive && video.thumbnailUrl" :class="$style.thumbnail" :src="video.thumbnailUrl" alt="">
 	<div :class="$style.videoOverlayPlayButton"><i class="ti ti-player-play-filled"></i></div>
 </a>
 </template>

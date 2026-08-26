@@ -10,9 +10,12 @@ on:
       - packages/mfm-js/**
       - packages/frontend/**
       - packages/frontend-shared/**
-      # for permissions
+      - packages/sw/**
+      - packages/i18n/**
+      - packages/icons-subsetter/**
+      # 権限関連
       - packages/misskey-js/**
-      # for e2e
+      # e2e 関連
       - packages/backend/**
       - tests/e2e/**
       - package.json
@@ -25,9 +28,12 @@ on:
       - packages/mfm-js/**
       - packages/frontend/**
       - packages/frontend-shared/**
-      # for permissions
+      - packages/sw/**
+      - packages/i18n/**
+      - packages/icons-subsetter/**
+      # 権限関連
       - packages/misskey-js/**
-      # for e2e
+      # e2e 関連
       - packages/backend/**
       - tests/e2e/**
       - package.json
@@ -74,6 +80,12 @@ jobs:
         run: bun run --bun --filter '@syuilo/aiscript' test
       - name: Test MFM
         run: bun run --bun --filter mfm-js test
+      - name: Test service worker
+        run: bun run --bun --filter sw test
+      - name: Test i18n
+        run: bun run --bun --filter i18n test
+      - name: Test icons subsetter
+        run: bun run --bun --filter icons-subsetter test
 
   storybook:
     name: Build Storybook

@@ -24,7 +24,9 @@ class EmojiPicker {
 			[emojiPaletteForMain, emojiPalettes],
 			([newId, newPalettes]) => {
 				this.emojisRef.value =
-					newId == null ? (newPalettes[0]?.emojis ?? []) : (newPalettes.find((palette) => palette.id === newId)?.emojis ?? []);
+					newId == null
+						? (newPalettes[0]?.emojis ?? [])
+						: (newPalettes.find((palette) => palette.id === newId)?.emojis ?? []);
 			},
 			{
 				immediate: true,
@@ -35,7 +37,7 @@ class EmojiPicker {
 	public show(anchorElement: HTMLElement, onChosen?: (emoji: string) => void, onClosed?: () => void) {
 		const anchorRef = shallowRef(anchorElement);
 
-		// defineAsyncComponentはiOS等でユーザーアクティベーションが失われてfocusが効かなくなるため使用不可
+		// iOS では defineAsyncComponent によりユーザーアクティベーションが失われ、フォーカスできないため使用しない。
 		const { dispose } = popup(
 			MkEmojiPickerDialog,
 			{

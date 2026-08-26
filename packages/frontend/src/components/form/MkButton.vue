@@ -42,17 +42,14 @@ const props = defineProps<{
 	iconOnly?: boolean;
 	active?: boolean;
 
-	// for type=button
 	name?: string;
 	value?: string;
 	disabled?: boolean;
 
-	// for type=a
 	href?: string;
 	target?: string;
 	rel?: string;
 
-	// for type=routerLink
 	to?: string;
 	linkBehavior?: MkABehavior;
 }>();

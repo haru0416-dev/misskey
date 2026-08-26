@@ -5,7 +5,7 @@
 
 import type { SummalyResult } from '@misskey-dev/summaly';
 import type { Config } from '@/config.js';
-import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { deepClone } from '@/misc/clone.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
@@ -34,21 +34,18 @@ export function createUrlPreviewService(
 ) {
 	const logger = loggerService.getLogger('url-preview');
 	const summalyDefaultUserAgent = `SummalyBot/${_SUMMALY_VERSION_} (${config.instance.url}; +https://github.com/misskey-dev/summaly/blob/master/README.md)`;
-	const summaryCache = new MemoryKVCache<SummalyResult>(1000 * 60 * 60, 100); // 1h, 100 entries
+	const summaryCache = new MemoryKVCache<SummalyResult>(1000 * 60 * 60, 100); // 1時間、最大100件
 
 	function wrap(url?: string | null): string | null {
 		return url != null
 			? `${config.media.proxyUrl}/preview.webp?${query({
-				url,
-				preview: '1',
-			})}`
+					url,
+					preview: '1',
+				})}`
 			: null;
 	}
 
-	async function handle(
-		request: UrlPreviewRequest,
-		reply: UrlPreviewReply,
-	): Promise<object | undefined> {
+	async function handle(request: UrlPreviewRequest, reply: UrlPreviewReply): Promise<object | undefined> {
 		const url = request.query.url;
 		if (typeof url !== 'string') {
 			reply.code(400);
@@ -78,21 +75,29 @@ export function createUrlPreviewService(
 			};
 		}
 
-		logger.info(meta.urlPreviewSummaryProxyUrl
-			? `(Proxy) Getting preview of ${url}@${normalizedLang} ...`
-			: `Getting preview of ${url}@${normalizedLang} ...`);
+		logger.info(
+			meta.urlPreviewSummaryProxyUrl
+				? `(Proxy) Getting preview of ${url}@${normalizedLang} ...`
+				: `Getting preview of ${url}@${normalizedLang} ...`,
+		);
 
 		try {
-			const summary = deepClone(await summaryCache.fetchMaybe(JSON.stringify([url, normalizedLang]), async () => {
-				const result = meta.urlPreviewSummaryProxyUrl
-					? await fetchSummaryFromProxy(url, meta, normalizedLang)
-					: await fetchSummary(url, meta, normalizedLang);
+			const summary = deepClone(
+				await summaryCache.fetchMaybe(JSON.stringify([url, normalizedLang]), async () => {
+					const result = meta.urlPreviewSummaryProxyUrl
+						? await fetchSummaryFromProxy(url, meta, normalizedLang)
+						: await fetchSummary(url, meta, normalizedLang);
 
-				if (!(result.url.startsWith('http://') || result.url.startsWith('https://'))) return undefined;
-				if (result.player.url && !(result.player.url.startsWith('http://') || result.player.url.startsWith('https://'))) return undefined;
+					if (!(result.url.startsWith('http://') || result.url.startsWith('https://'))) return undefined;
+					if (
+						result.player.url &&
+						!(result.player.url.startsWith('http://') || result.player.url.startsWith('https://'))
+					)
+						return undefined;
 
-				return result;
-			}));
+					return result;
+				}),
+			);
 
 			if (summary == null) throw new Error('Invalid summary');
 
@@ -104,7 +109,7 @@ export function createUrlPreviewService(
 				summary.sensitive = isKeywordIncluded(summary.url, meta.urlPreviewSensitiveList);
 			}
 
-			// The summary is cached server-side, but moderation rules must take effect immediately.
+			// 要約はサーバー側でキャッシュするが、モデレーションルールは直ちに反映する。
 			reply.header('Cache-Control', 'private, no-store');
 
 			return summary;

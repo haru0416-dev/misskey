@@ -3,12 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/**
- * Languages Loader
- */
-
 import * as fs from 'node:fs';
-import * as yaml from 'js-yaml';
 import { languages, primaries } from './const.js';
 import type { Locale } from './autogen/locale.js';
 import type { ILocale, ParameterizedString } from './types.js';
@@ -19,7 +14,6 @@ type PrimaryLang = keyof typeof primaries;
 
 type Locales = Record<Language, ILocale>;
 
-const backspaceRegExp = new RegExp(String.fromCodePoint(0x08), 'g');
 const upstreamBrandPaths = new Set([
 	'aboutMisskey',
 	'chooseServerOnMisskeyHub',
@@ -33,9 +27,6 @@ const upstreamBrandPaths = new Set([
 	'_aboutErebia.values',
 ]);
 
-/**
- * オブジェクトを再帰的にマージする
- */
 function merge<T extends ILocale>(...args: (T | ILocale | undefined)[]): T {
 	return args.reduce<ILocale>((a, c) => ({
 		...a,
@@ -49,16 +40,7 @@ function merge<T extends ILocale>(...args: (T | ILocale | undefined)[]): T {
 	}), {} as ILocale) as T;
 }
 
-/**
- * 何故か文字列にバックスペース文字が混入することがあり、YAMLが壊れるので取り除く
- */
-function clean(text: string) {
-	return text.replace(backspaceRegExp, '');
-}
-
-/**
- * 空文字列が入ることがあり、フォールバックが動作しなくなるのでプロパティごと消す
- */
+// 空文字列はフォールバックを無効化するため、プロパティを削除する。
 function removeEmpty<T extends ILocale>(obj: T): T {
 	for (const [k, v] of Object.entries(obj)) {
 		if (v === '') {
@@ -103,12 +85,12 @@ function applyProductBranding<T extends ILocale>(obj: T, parentPath = ''): T {
 }
 
 function build(): Record<Language, Locale> {
-	// vitestの挙動を調整するため、一度ローカル変数化する必要がある
+	// Vitest のモジュール評価を安定させるため、import.meta.url をローカル変数へ退避する。
 	// https://github.com/vitest-dev/vitest/issues/3988#issuecomment-1686599577
 	// https://github.com/misskey-dev/misskey/pull/14057#issuecomment-2192833785
 	const metaUrl = import.meta.url;
 	const locales = languages.reduce<Locales>((a, lang) => {
-		a[lang] = (yaml.load(clean(fs.readFileSync(new URL(`./locales/${lang}.yml`, metaUrl), 'utf-8'))) ?? {}) as ILocale;
+		a[lang] = JSON.parse(fs.readFileSync(new URL(`./locales/${lang}.json`, metaUrl), 'utf-8')) as ILocale;
 		return a;
 	}, {} as Locales);
 
@@ -149,12 +131,7 @@ const locales = build() as {
 	[lang: string]: Locale;
 };
 
-/**
- * フロントエンド用の locale JSON を書き出す
- * Service Worker が HTTP 経由で取得するために必要
- * @param destDir 出力先ディレクトリ（例: built/_frontend_dist_/locales）
- * @param version バージョン文字列（ファイル名とJSON内に埋め込まれる）
- */
+/** Service Worker が HTTP 経由で取得する locale JSON を書き出す。 */
 async function writeFrontendLocalesJson(
 	destDir: string,
 	version: string,

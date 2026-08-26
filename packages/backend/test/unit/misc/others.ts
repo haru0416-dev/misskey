@@ -4,20 +4,26 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { parseQueueDatabaseInfo } from '@/core/QueueAdminLogic.js';
+import { parseQueueDatabaseInfo } from '@/core/queue/QueueAdminLogic.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import { dateUTC } from '@/misc/prelude/time.js';
-import { parseLocalApUri } from '@/server/rest/ap-resolve.js';
+import { parseLocalApUri } from '@/server/rest/activitypub/ap-resolve.js';
 
 describe('misc:content-disposition', () => {
 	test('inline', () => {
-		expect(contentDisposition('inline', 'foo bar')).toMatch(/^inline; filename="?foo_bar"?; filename\*=UTF-8''foo%20bar$/);
+		expect(contentDisposition('inline', 'foo bar')).toMatch(
+			/^inline; filename="?foo_bar"?; filename\*=UTF-8''foo%20bar$/,
+		);
 	});
 	test('attachment', () => {
-		expect(contentDisposition('attachment', 'foo bar')).toMatch(/^attachment; filename="?foo_bar"?; filename\*=UTF-8''foo%20bar$/);
+		expect(contentDisposition('attachment', 'foo bar')).toMatch(
+			/^attachment; filename="?foo_bar"?; filename\*=UTF-8''foo%20bar$/,
+		);
 	});
 	test('non ascii', () => {
-		expect(contentDisposition('attachment', 'ファイル名')).toMatch(/^attachment; filename="?_____"?; filename\*=UTF-8''%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E5%90%8D$/);
+		expect(contentDisposition('attachment', 'ファイル名')).toMatch(
+			/^attachment; filename="?_____"?; filename\*=UTF-8''%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E5%90%8D$/,
+		);
 	});
 });
 

@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { defineAsyncComponent } from 'vue';
 import * as Misskey from 'misskey-js';
 import { apiUrl } from '@shared/utility/config.js';
 import { parseJsonObject } from '@shared/utility/server-context.js';
@@ -46,7 +45,7 @@ export class UploadAbortedError extends Error {
 }
 
 function parseUploadResponse(value: unknown): UploadResponse | null {
-	return typeof value === 'string' ? parseJsonObject(value) as UploadResponse | null : null;
+	return typeof value === 'string' ? (parseJsonObject(value) as UploadResponse | null) : null;
 }
 
 function getUploadError(value: UploadResponse | null): UploadError | null {
@@ -55,9 +54,7 @@ function getUploadError(value: UploadResponse | null): UploadError | null {
 	return value.error as UploadError;
 }
 
-function isDriveFileResponse(
-	value: UploadResponse | null,
-): value is UploadResponse & Misskey.entities.DriveFile {
+function isDriveFileResponse(value: UploadResponse | null): value is UploadResponse & Misskey.entities.DriveFile {
 	return (
 		value != null &&
 		typeof value.id === 'string' &&
@@ -84,7 +81,7 @@ export function uploadFile(
 	const { signal } = abortController;
 
 	const filePromise = new Promise<Misskey.entities.DriveFile>((resolve, reject) => {
-		if ($i == null) return reject();
+		if ($i == null) return reject(new Error('not signed in'));
 
 		// こっち側で検出するMIME typeとサーバーで検出するMIME typeは異なる場合があるため、こっち側ではやらないことにする
 		// https://github.com/misskey-dev/misskey/issues/16091
@@ -95,7 +92,7 @@ export function uploadFile(
 				title: i18n.ts.failedToUpload,
 				text: i18n.ts.cannotUploadBecauseExceedsFileSizeLimit,
 			});
-			return reject();
+			return reject(new Error('file exceeds the size limit'));
 		}
 
 		signal.addEventListener(
@@ -153,7 +150,7 @@ export function uploadFile(
 					});
 				}
 
-				reject();
+				reject(new Error('failed to upload'));
 				return;
 			}
 
@@ -246,7 +243,7 @@ export function chooseDriveFile(
 	});
 }
 
-export function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
+function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
 	return new Promise((res, rej) => {
 		os.inputText({
 			title: i18n.ts.uploadFromUrl,
@@ -257,7 +254,6 @@ export function chooseFileFromUrl(): Promise<Misskey.entities.DriveFile> {
 
 			const marker = genId();
 
-			// TODO: no websocketモード対応
 			const connection = useStream().useChannel('main');
 			connection.on('urlUploadFinished', (urlResponse) => {
 				if (urlResponse.marker === marker) {
@@ -298,10 +294,11 @@ function select(
 				{
 					text: i18n.ts.upload,
 					icon: 'ti ti-upload',
-					action: () => chooseFileFromPcAndUpload({
-						multiple,
-						...(features === undefined ? {} : { features }),
-					}).then((files) => res(files)),
+					action: () =>
+						chooseFileFromPcAndUpload({
+							multiple,
+							...(features === undefined ? {} : { features }),
+						}).then((files) => res(files)),
 				},
 				{
 					text: i18n.ts.fromDrive,
@@ -334,7 +331,7 @@ export async function selectFile<
 	return opts.multiple ? (files as MR) : (files[0]! as MR);
 }
 
-export async function createCroppedImageDriveFileFromImageDriveFile(
+async function createCroppedImageDriveFileFromImageDriveFile(
 	imageDriveFile: Misskey.entities.DriveFile,
 	options: {
 		aspectRatio: number | null;
@@ -352,7 +349,7 @@ export async function createCroppedImageDriveFileFromImageDriveFile(
 			ctx.drawImage(image, 0, 0);
 			canvas.toBlob((blob) => {
 				if (blob == null) {
-					reject();
+					reject(new Error('failed to encode the image'));
 					return;
 				}
 

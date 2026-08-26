@@ -5,7 +5,7 @@
 
 import { secureRndstr } from './secure-rndstr.js';
 
-const CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // [0-9A-Z] w/o [01IO] (32 patterns)
+const CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // 0、1、I、O を除く32文字
 
 export function generateInviteCode(): string {
 	const code = secureRndstr(8, {
@@ -21,5 +21,5 @@ export function generateInviteCode(): string {
 		n = t;
 	}
 
-	return code + uniqueId.reverse().join('');
+	return code + uniqueId.toReversed().join('');
 }

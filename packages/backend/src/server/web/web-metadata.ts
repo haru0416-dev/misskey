@@ -20,22 +20,26 @@ function createManifest(deps: WebMetadataDependencies): Record<string, unknown> 
 		display: 'standalone',
 		background_color: '#191a21',
 		theme_color: deps.meta.themeColor || '#5c62d8',
-		icons: [{
-			src: deps.meta.app192IconUrl || '/client-assets/erebia-icon-192.png',
-			sizes: '192x192',
-			type: 'image/png',
-			purpose: 'maskable',
-		}, {
-			src: deps.meta.app512IconUrl || '/client-assets/erebia-icon.png',
-			sizes: '512x512',
-			type: 'image/png',
-			purpose: 'maskable',
-		}, {
-			src: '/client-assets/erebia-icon.svg',
-			sizes: 'any',
-			type: 'image/svg+xml',
-			purpose: 'any',
-		}],
+		icons: [
+			{
+				src: deps.meta.app192IconUrl || '/client-assets/erebia-icon-192.png',
+				sizes: '192x192',
+				type: 'image/png',
+				purpose: 'maskable',
+			},
+			{
+				src: deps.meta.app512IconUrl || '/client-assets/erebia-icon.png',
+				sizes: '512x512',
+				type: 'image/png',
+				purpose: 'maskable',
+			},
+			{
+				src: '/client-assets/erebia-icon.svg',
+				sizes: 'any',
+				type: 'image/svg+xml',
+				purpose: 'any',
+			},
+		],
 		share_target: {
 			action: '/share/',
 			method: 'GET',
@@ -46,10 +50,12 @@ function createManifest(deps: WebMetadataDependencies): Record<string, unknown> 
 				url: 'url',
 			},
 		},
-		shortcuts: [{
-			name: 'Safemode',
-			url: '/?safemode=true',
-		}],
+		shortcuts: [
+			{
+				name: 'Safemode',
+				url: '/?safemode=true',
+			},
+		],
 	};
 
 	return {
@@ -74,10 +80,7 @@ function createRobotsTxt(meta: MiMeta): string {
 	];
 
 	if (meta.ugcVisibilityForVisitor === 'none') {
-		disallowedPaths.push(
-			'/@',
-			'/notes',
-		);
+		disallowedPaths.push('/@', '/notes');
 	}
 
 	let content = 'User-agent: *\n';
@@ -90,7 +93,8 @@ function createRobotsTxt(meta: MiMeta): string {
 function createOpenSearchXml(deps: WebMetadataDependencies): string {
 	const name = deps.meta.name ?? 'Erebia';
 	let content = '';
-	content += '<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">';
+	content +=
+		'<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">';
 	content += `<ShortName>${name}</ShortName>`;
 	content += `<Description>${name} Search</Description>`;
 	content += '<InputEncoding>UTF-8</InputEncoding>';

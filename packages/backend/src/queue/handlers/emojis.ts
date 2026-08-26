@@ -9,23 +9,31 @@ import mime from 'mime-types';
 import { ZipArchive } from 'archiver';
 import { ZipReader } from 'slacc';
 import type * as Bull from 'bullmq';
-import { deleteEmojiByNameAndHostFromDatabase, listLocalEmojisOrderedByIdFromDatabase } from '@/core/EmojiStore.js';
-import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { deleteEmojiByNameAndHostFromDatabase, listLocalEmojisOrderedByIdFromDatabase } from '@/core/emoji/EmojiStore.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { createTemp, createTempDir } from '@/misc/create-temp.js';
-import type { DownloadService } from '@/core/DownloadService.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
-import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from '../../server/rest/drive-file-upload.js';
-import { addCustomEmojiForHonoApi, type HonoApiEmojiDependencies } from '../../server/rest/emojis.js';
-import { createExportCompletedNotification, type HonoApiNotificationDependencies } from '../../server/rest/notification.js';
+import {
+	addDriveFileForHonoApi,
+	type HonoApiDriveFileUploadDependencies,
+} from '@/server/rest/drive/drive-file-upload.js';
+import { addCustomEmojiForHonoApi, type HonoApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
+import {
+	createExportCompletedNotification,
+	type HonoApiNotificationDependencies,
+} from '@/server/rest/notification/notification.js';
 
-export type HonoQueueEmojisDependencies = HonoApiDriveFileUploadDependencies & HonoApiEmojiDependencies & HonoApiNotificationDependencies & {
-	downloadService: Pick<DownloadService, 'downloadUrl'>;
-};
+export type HonoQueueEmojisDependencies = HonoApiDriveFileUploadDependencies &
+	HonoApiEmojiDependencies &
+	HonoApiNotificationDependencies & {
+		downloadService: Pick<DownloadService, 'downloadUrl'>;
+	};
 
 function writeToFile(stream: fs.WriteStream, content: string): Promise<void> {
 	return new Promise<void>((res, rej) => {
-		stream.write(content, err => {
+		stream.write(content, (err) => {
 			if (err) {
 				rej(err);
 			} else {
@@ -35,7 +43,10 @@ function writeToFile(stream: fs.WriteStream, content: string): Promise<void> {
 	});
 }
 
-export async function handleHonoQueueExportCustomEmojis(deps: HonoQueueEmojisDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+export async function handleHonoQueueExportCustomEmojis(
+	deps: HonoQueueEmojisDependencies,
+	job: Bull.Job<DbJobDataWithUser>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -45,7 +56,10 @@ export async function handleHonoQueueExportCustomEmojis(deps: HonoQueueEmojisDep
 	fs.writeFileSync(metaPath, '', 'utf-8');
 	const metaStream = fs.createWriteStream(metaPath, { flags: 'a' });
 
-	await writeToFile(metaStream, `{"metaVersion":2,"host":"${deps.config.runtime.host}","exportedAt":"${new Date().toString()}","emojis":[`);
+	await writeToFile(
+		metaStream,
+		`{"metaVersion":2,"host":"${deps.config.runtime.host}","exportedAt":"${new Date().toString()}","emojis":[`,
+	);
 
 	const customEmojis = await listLocalEmojisOrderedByIdFromDatabase(deps.db);
 
@@ -63,7 +77,7 @@ export async function handleHonoQueueExportCustomEmojis(deps: HonoQueueEmojisDep
 			await deps.downloadService.downloadUrl(emoji.originalUrl, emojiPath);
 			downloaded = true;
 		} catch {
-			// 元実装同様、ダウンロード失敗した絵文字はdownloaded:falseで記録して継続する
+			// ダウンロードに失敗した絵文字も downloaded:false で記録し、処理を継続する。
 		}
 
 		if (!downloaded) {
@@ -116,7 +130,10 @@ type ExportedEmojiMetaRecord = {
 	};
 };
 
-export async function handleHonoQueueImportCustomEmojis(deps: HonoQueueEmojisDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
+export async function handleHonoQueueImportCustomEmojis(
+	deps: HonoQueueEmojisDependencies,
+	job: Bull.Job<DbUserImportJobData>,
+): Promise<void> {
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
 	if (file == null) return;
 
@@ -140,7 +157,9 @@ export async function handleHonoQueueImportCustomEmojis(deps: HonoQueueEmojisDep
 
 		for (const record of meta.emojis) {
 			if (!record.downloaded) continue;
-			if (!/^[a-zA-Z0-9_]+?([a-zA-Z0-9.]+)?$/.test(record.fileName)) continue;
+			// アップロードされた zip 由来の値なので、バックトラックが二次時間になる形は避ける
+			// (`[a-zA-Z0-9_]+?` と `[a-zA-Z0-9.]+` は英数字が重複するため分割点が曖昧になっていた)
+			if (!/^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9.]*)?$/.test(record.fileName)) continue;
 			const emojiInfo = record.emoji;
 			if (!/^[a-zA-Z0-9_]+$/.test(emojiInfo.name)) continue;
 			const emojiPath = outputPath + '/' + record.fileName;
@@ -167,7 +186,7 @@ export async function handleHonoQueueImportCustomEmojis(deps: HonoQueueEmojisDep
 					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
 				});
 			} catch {
-				// 元実装同様、1件の失敗はログのみで継続する
+				// 1件の失敗でインポート全体を中断しない。
 				continue;
 			}
 		}

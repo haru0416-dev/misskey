@@ -69,6 +69,8 @@ export class MiUser {
 
 	public isSuspended: boolean;
 
+	public suspensionTransitionId: string | null;
+
 	public isLocked: boolean;
 
 	public isBot: boolean;
@@ -128,7 +130,7 @@ export type MiLocalUser = MiUser & {
 	uri: null;
 };
 
-export type MiPartialLocalUser = Partial<MiUser> & {
+type MiPartialLocalUser = Partial<MiUser> & {
 	id: MiUser['id'];
 	host: null;
 	uri: null;
@@ -139,7 +141,7 @@ export type MiRemoteUser = MiUser & {
 	uri: string;
 };
 
-export type MiPartialRemoteUser = Partial<MiUser> & {
+type MiPartialRemoteUser = Partial<MiUser> & {
 	id: MiUser['id'];
 	host: string;
 	uri: string;

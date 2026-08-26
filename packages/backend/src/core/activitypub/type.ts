@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export type Obj = Record<string, unknown>;
+type Obj = Record<string, unknown>;
 export type ApObject = IObject | string | (IObject | string)[];
 
 export interface IObject {
@@ -33,9 +33,7 @@ export interface IObject {
 	// ApNoteService.ts 等の消費側コードは `.url` への緩いアクセスを前提にしている。
 	// このフィールドをより厳密な型に倒すと、それらの消費側 (本タスクの編集対象外) で
 	// 型エラーを誘発するため、意図的に any のまま残す。
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	icon?: any;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	image?: any;
 	mediaType?: string;
 	url?: ApObject | string;
@@ -49,7 +47,7 @@ export interface IObject {
 export function getApIds(value: ApObject | undefined): string[] {
 	if (value == null) return [];
 	const array = Array.isArray(value) ? value : [value];
-	return array.map(x => getApId(x));
+	return array.map((x) => getApId(x));
 }
 
 export function getOneApId(value: ApObject): string {
@@ -160,8 +158,7 @@ export interface ITombstone extends IObject {
 	deleted?: Date;
 }
 
-export const isTombstone = (object: IObject): object is ITombstone =>
-	getApType(object) === 'Tombstone';
+export const isTombstone = (object: IObject): object is ITombstone => getApType(object) === 'Tombstone';
 
 export const validActor = ['Person', 'Service', 'Group', 'Organization', 'Application'];
 
@@ -179,7 +176,7 @@ export interface IActor extends IObject {
 	alsoKnownAs?: string[];
 	discoverable?: boolean;
 	inbox: string;
-	sharedInbox?: string;	// 後方互換性のため
+	sharedInbox?: string; // 後方互換性のため
 	publicKey?: {
 		id: string;
 		publicKeyPem: string;
@@ -197,10 +194,9 @@ export interface IActor extends IObject {
 	isCat?: boolean;
 }
 
-export const isCollection = (object: IObject): object is ICollection =>
-	getApType(object) === 'Collection';
+export const isCollection = (object: IObject): object is ICollection => getApType(object) === 'Collection';
 
-export const isOrderedCollection = (object: IObject): object is IOrderedCollection =>
+const isOrderedCollection = (object: IObject): object is IOrderedCollection =>
 	getApType(object) === 'OrderedCollection';
 
 export const isCollectionOrOrderedCollection = (object: IObject): object is ICollection | IOrderedCollection =>
@@ -226,8 +222,7 @@ export interface IApMention extends IObject {
 }
 
 export const isMention = (object: IObject): object is IApMention =>
-	getApType(object) === 'Mention' &&
-	typeof object.href === 'string';
+	getApType(object) === 'Mention' && typeof object.href === 'string';
 
 export interface IApHashtag extends IObject {
 	type: 'Hashtag';
@@ -235,15 +230,13 @@ export interface IApHashtag extends IObject {
 }
 
 export const isHashtag = (object: IObject): object is IApHashtag =>
-	getApType(object) === 'Hashtag' &&
-	typeof object.name === 'string';
+	getApType(object) === 'Hashtag' && typeof object.name === 'string';
 
 export interface IApEmoji extends IObject {
 	type: 'Emoji';
 	name: string;
 	updated: string;
-	// Misskey拡張。後方互換性のためにoptional。
-	// 将来の拡張性を考慮してobjectにしている
+	// Misskey 拡張。既存の Activity に含まれないため optional とし、値はオブジェクトで受ける。
 	_misskey_license?: {
 		freeText: string | null;
 	};
@@ -252,13 +245,13 @@ export interface IApEmoji extends IObject {
 export const isEmoji = (object: IObject): object is IApEmoji =>
 	getApType(object) === 'Emoji' && !Array.isArray(object.icon) && object.icon?.url != null;
 
-export interface IKey extends IObject {
+interface IKey extends IObject {
 	type: 'Key';
 	owner: string;
 	publicKeyPem: string | Buffer;
 }
 
-export const validDocumentTypes = ['Audio', 'Document', 'Image', 'Page', 'Video'];
+const validDocumentTypes = ['Audio', 'Document', 'Image', 'Page', 'Video'];
 
 export interface IApDocument extends IObject {
 	type: 'Audio' | 'Document' | 'Image' | 'Page' | 'Video';
@@ -269,7 +262,7 @@ export const isDocument = (object: IObject): object is IApDocument => {
 	return type != null && validDocumentTypes.includes(type);
 };
 
-export interface IApImage extends IApDocument {
+interface IApImage extends IApDocument {
 	type: 'Image';
 }
 
@@ -285,7 +278,7 @@ export interface IUpdate extends IActivity {
 	type: 'Update';
 }
 
-export interface IRead extends IActivity {
+interface IRead extends IActivity {
 	type: 'Read';
 }
 
@@ -338,7 +331,7 @@ export interface IMove extends IActivity {
 export const isCreate = (object: IObject): object is ICreate => getApType(object) === 'Create';
 export const isDelete = (object: IObject): object is IDelete => getApType(object) === 'Delete';
 export const isUpdate = (object: IObject): object is IUpdate => getApType(object) === 'Update';
-export const isRead = (object: IObject): object is IRead => getApType(object) === 'Read';
+const isRead = (object: IObject): object is IRead => getApType(object) === 'Read';
 export const isUndo = (object: IObject): object is IUndo => getApType(object) === 'Undo';
 export const isFollow = (object: IObject): object is IFollow => getApType(object) === 'Follow';
 export const isAccept = (object: IObject): object is IAccept => getApType(object) === 'Accept';
@@ -353,4 +346,4 @@ export const isAnnounce = (object: IObject): object is IAnnounce => getApType(ob
 export const isBlock = (object: IObject): object is IBlock => getApType(object) === 'Block';
 export const isFlag = (object: IObject): object is IFlag => getApType(object) === 'Flag';
 export const isMove = (object: IObject): object is IMove => getApType(object) === 'Move';
-export const isNote = (object: IObject): object is IPost => getApType(object) === 'Note';
+const isNote = (object: IObject): object is IPost => getApType(object) === 'Note';

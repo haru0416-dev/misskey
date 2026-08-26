@@ -361,6 +361,10 @@ export interface Locale extends ILocale {
      */
     "importRequested": string;
     /**
+     * インポートが完了しました。
+     */
+    "importCompleted": string;
+    /**
      * リスト
      */
     "lists": string;
@@ -5805,6 +5809,10 @@ export interface Locale extends ILocale {
      * 先頭に追加
      */
     "prepend": string;
+    /**
+     * ピクセルアート拡大モード
+     */
+    "pixelatedZoom": string;
     "_imageEditing": {
         "_vars": {
             /**
@@ -6558,6 +6566,28 @@ export interface Locale extends ILocale {
              */
             "softwareSuspended": string;
         };
+    };
+    "_queueOutbox": {
+        /**
+         * デッドレター
+         */
+        "deadLetters": string;
+        /**
+         * リトライ上限に達したか、内容が壊れていて処理を諦めたジョブです。原因を解消してから再試行するか、破棄してください。どちらも行わない限り、このジョブに紐づく処理 (アカウントの完全削除など) は先に進みません。
+         */
+        "deadLettersDescription": string;
+        /**
+         * デッドレターはありません。
+         */
+        "noDeadLetters": string;
+        /**
+         * このジョブをキューに戻して再試行します。原因が解消していない場合は、再びデッドレターになります。
+         */
+        "retryConfirm": string;
+        /**
+         * このジョブを破棄します。破棄すると再試行できなくなり、このジョブが行うはずだった処理 (リモートサーバーへの配送など) は永久に実行されません。
+         */
+        "abandonConfirm": string;
     };
     "_announcement": {
         /**

@@ -8,12 +8,16 @@ import { Buffer } from 'node:buffer';
 /**
  * リクエストボディを上限バイト数つきで読み切る。上限超過時は makeLimitError() の戻り値を throw する。
  *
- * Fastify 時代は bodyLimit (JSON API は 1 MiB) がグローバルに効いていたが、Hono の
- * `c.req.json()` / `c.req.formData()` は無制限にボディをメモリへ読むため、移行でこの保護が
- * 失われていた。content-length ヘッダは chunked 転送や虚偽申告で回避できるので、事前チェックに
- * 加えて実バイト数を数えながら読み、超過した時点で読み込みを打ち切る。
+ * Hono の `c.req.json()` / `c.req.formData()` は無制限にボディをメモリへ読むため、上限は呼び出し側が
+ * 用途ごとに渡す (JSON API / inbox / OAuth / ドライブアップロードで異なる)。content-length ヘッダは
+ * chunked 転送や虚偽申告で回避できるので、事前チェックに加えて実バイト数を数えながら読み、
+ * 超過した時点で読み込みを打ち切る。
  */
-export async function readRequestBodyWithLimit(request: Request, limit: number, makeLimitError: () => Error): Promise<Uint8Array> {
+export async function readRequestBodyWithLimit(
+	request: Request,
+	limit: number,
+	makeLimitError: () => Error,
+): Promise<Uint8Array> {
 	const hasTransferEncoding = request.headers.has('transfer-encoding');
 	const contentLengthHeader = request.headers.get('content-length');
 	const hasDecimalContentLength = contentLengthHeader != null && /^\d+$/.test(contentLengthHeader);
@@ -26,10 +30,9 @@ export async function readRequestBodyWithLimit(request: Request, limit: number, 
 	const body = request.body;
 	if (body == null) return new Uint8Array(0);
 
-	// Hono's bodyLimit middleware trusts the HTTP framing when Content-Length is present and
-	// Transfer-Encoding is absent. Avoiding per-chunk Web Streams work is important for the
-	// overwhelmingly common fixed-length JSON request. The post-read check preserves correctness
-	// for direct Request callers whose declared and actual sizes differ.
+	// Content-Length があり Transfer-Encoding がない場合、Hono の bodyLimit middleware は HTTP のフレーミングを信頼する。
+	// 固定長 JSON リクエストが大半のため、チャンクごとの Web Streams 処理を避ける。
+	// 事前申告と実際のサイズが異なる Request でも、読み取り後の検査で上限を保証する。
 	if (!hasTransferEncoding && hasSafeContentLength) {
 		const raw = new Uint8Array(await request.arrayBuffer());
 		if (raw.byteLength > limit) throw makeLimitError();

@@ -4,10 +4,11 @@
  */
 
 import { EventEmitter } from 'node:events';
-import { updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
+import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
 import { HonoApiError } from '../rest/error.js';
-import { authenticateHonoApiToken } from '../rest/auth.js';
+import { authenticateHonoApiToken } from '@/server/rest/auth/auth.js';
 import { HonoStreamConnection, refreshHonoStreamConnections } from './connection.js';
+import { emitHonoStreamRedisMessage } from './server.js';
 import type { HonoStreamServerDependencies } from './server.js';
 
 const IDLE_TIMEOUT_MS = 1000 * 60 * 2;
@@ -16,8 +17,6 @@ const LAST_ACTIVE_UPDATE_INTERVAL_MS = 1000 * 60 * 5;
 
 type WsData = {
 	connection: HonoStreamConnection;
-	subscriber: EventEmitter;
-	onMessage: (data: { channel: string; message: unknown }) => void;
 	cleanup?: () => void;
 };
 
@@ -27,7 +26,10 @@ function resolveStreamingToken(authHeader: string | null, url: URL): string | nu
 }
 
 function errorResponse(error: HonoApiError): Response {
-	return new Response(error.message, { status: error.status, headers: { 'Content-Type': 'text/plain', ...error.headers } });
+	return new Response(error.message, {
+		status: error.status,
+		headers: { 'Content-Type': 'text/plain', ...error.headers },
+	});
 }
 
 /**
@@ -35,20 +37,13 @@ function errorResponse(error: HonoApiError): Response {
  * ws パッケージの handleUpgrade パターンだと、同一プロセス内に他のソケット接続 (DB pool や
  * ioredis 等) が1つでもあるとレスポンスがクライアントに届かず永久にハングするバグを踏む
  * (bun 1.3.14 で確認、ws パッケージを完全に迂回した手書き101レスポンスでも再現)。
- * Bun.serve() のネイティブ websocket API はこの経路を通らないため影響を受けない。
- * よって bun 実行時はこちらを使い、Node (テスト実行時) は server.ts の node:http 実装を使う。
+ * 最小再現では bun 1.3.14 がハングし、1.4.0 は成功した。Bun.serve() は compat 層を経由しないため、
+ * Bun 実行時はこちらを使い、Node 実行時は server.ts の node:http 実装を使う。
  */
 export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies, streamingPath = '/streaming') {
 	const globalEv = new EventEmitter();
-	const onRedisMessage = (_channelName: string, data: string) => {
-		let parsed: { channel: string; message: unknown };
-		try {
-			parsed = JSON.parse(data);
-		} catch {
-			return;
-		}
-		globalEv.emit('message', parsed);
-	};
+	globalEv.setMaxListeners(0);
+	const onRedisMessage = (_channelName: string, data: string) => emitHonoStreamRedisMessage(globalEv, data);
 	deps.redisForSub.on('message', onRedisMessage);
 	const activeConnections = new Map<HonoStreamConnection, () => void>();
 	let reconnectRefreshPromise: Promise<void> | undefined;
@@ -61,12 +56,15 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 		reconnectRefreshPromise = (async () => {
 			do {
 				reconnectRefreshQueued = false;
-				// A reconnect observed during refresh requires one complete follow-up snapshot pass.
+				// 更新中に再接続した場合は、更新完了後にスナップショットをもう一度取得する。
 				// eslint-disable-next-line no-await-in-loop
 				await refreshHonoStreamConnections(activeConnections);
 			} while (reconnectRefreshQueued);
-		})().catch(error => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
-			.finally(() => { reconnectRefreshPromise = undefined; });
+		})()
+			.catch((error) => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
+			.finally(() => {
+				reconnectRefreshPromise = undefined;
+			});
 	};
 	deps.redisForSub.on('ready', onRedisReady);
 
@@ -95,34 +93,35 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 		}
 
 		if (authenticated.token != null && !authenticated.token.permission.includes('read:account')) {
-			return errorResponse(new HonoApiError({
-				status: 403,
-				message: 'Your app does not have necessary permissions to use websocket API.',
-				code: 'PERMISSION_DENIED',
-				id: '1370e5b7-d4eb-4566-bb1d-7748ee6a1e3c',
-			}));
+			return errorResponse(
+				new HonoApiError({
+					status: 403,
+					message: 'Your app does not have necessary permissions to use websocket API.',
+					code: 'PERMISSION_DENIED',
+					id: '1370e5b7-d4eb-4566-bb1d-7748ee6a1e3c',
+				}),
+			);
 		}
 		if (authenticated.user?.isSuspended) {
-			return errorResponse(new HonoApiError({ status: 403, message: 'Your account has been suspended.', code: 'YOUR_ACCOUNT_SUSPENDED', id: 'a8c724b3-6e9c-4b46-b1a8-bc3ed57db7f7' }));
+			return errorResponse(
+				new HonoApiError({
+					status: 403,
+					message: 'Your account has been suspended.',
+					code: 'YOUR_ACCOUNT_SUSPENDED',
+					id: 'a8c724b3-6e9c-4b46-b1a8-bc3ed57db7f7',
+				}),
+			);
 		}
-
-		const subscriber = new EventEmitter();
-		const onMessage = (data: { channel: string; message: unknown }) => {
-			subscriber.emit(data.channel, data.message);
-		};
-		globalEv.on('message', onMessage);
 
 		const connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
 		try {
-			await connection.init(subscriber);
-		} catch (error) {
-			globalEv.off('message', onMessage);
-			throw error;
+			await connection.init(globalEv);
+		} catch {
+			return new Response('Stream initialization failed', { status: 503 });
 		}
 
-		const upgraded = server.upgrade<WsData>(request, { data: { connection, subscriber, onMessage } });
+		const upgraded = server.upgrade<WsData>(request, { data: { connection } });
 		if (!upgraded) {
-			globalEv.off('message', onMessage);
 			connection.dispose();
 			return new Response('WebSocket upgrade failed', { status: 400 });
 		}
@@ -131,11 +130,13 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 
 	const websocket: Bun.WebSocketHandler<WsData> = {
 		open(ws) {
-			const { connection, subscriber, onMessage } = ws.data;
+			const { connection } = ws.data;
 			activeConnections.set(connection, () => ws.terminate());
 			connections.set(ws, Date.now());
 
-			connection.listen(subscriber, raw => { ws.send(raw); });
+			connection.listen(globalEv, (raw) => {
+				ws.send(raw);
+			});
 
 			let lastActiveIntervalId: NodeJS.Timeout | undefined;
 			if (connection.user) {
@@ -147,7 +148,6 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 
 			ws.data.cleanup = () => {
 				activeConnections.delete(connection);
-				globalEv.off('message', onMessage);
 				connection.dispose();
 				connections.delete(ws);
 				if (lastActiveIntervalId) clearInterval(lastActiveIntervalId);

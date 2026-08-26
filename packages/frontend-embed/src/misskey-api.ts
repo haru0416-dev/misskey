@@ -7,15 +7,29 @@ import * as Misskey from 'misskey-js';
 import { ref } from 'vue';
 import { apiUrl } from '@shared/utility/config.js';
 
-export const pendingApiRequestsCount = ref(0);
+const pendingApiRequestsCount = ref(0);
 
-type ApiRequestArgs<P> = {} extends P
-	? [data?: P, signal?: AbortSignal]
-	: [data: P, signal?: AbortSignal];
+type ApiRequestArgs<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']> =
+	Misskey.Endpoints[E] extends { reqOptional: true }
+		? [data?: P, signal?: AbortSignal]
+		: [data: P, signal?: AbortSignal];
+type ApiGetRequestArgs<E extends keyof Misskey.Endpoints, P extends Misskey.Endpoints[E]['req']> =
+	Misskey.Endpoints[E] extends { reqOptional: true } ? [data?: P] : [data: P];
+type OptionalEndpoint = {
+	[E in keyof Misskey.Endpoints]: Misskey.Endpoints[E] extends { reqOptional: true } ? E : never;
+}[keyof Misskey.Endpoints];
 
-type ApiGetRequestArgs<P> = {} extends P ? [data?: P] : [data: P];
-
-// Implements Misskey.api.ApiClient.request
+export function misskeyApi<
+	ResT = void,
+	E extends OptionalEndpoint = OptionalEndpoint,
+	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, never> : ResT,
+>(endpoint: E): Promise<_ResT>;
+export function misskeyApi<
+	ResT = void,
+	E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints,
+	P extends Misskey.Endpoints[E]['req'] = Misskey.Endpoints[E]['req'],
+	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
+>(endpoint: E, ...args: ApiRequestArgs<E, P>): Promise<_ResT>;
 export function misskeyApi<
 	ResT = void,
 	E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints,
@@ -23,7 +37,7 @@ export function misskeyApi<
 	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
 >(
 	endpoint: E,
-	...[data, signal]: ApiRequestArgs<P>
+	...[data, signal]: ApiRequestArgs<E, P>
 ): Promise<_ResT> {
 	if (endpoint.includes('://')) throw new Error('invalid endpoint');
 	pendingApiRequestsCount.value++;
@@ -33,7 +47,6 @@ export function misskeyApi<
 	};
 
 	const promise = new Promise<_ResT>((resolve, reject) => {
-		// Send request
 		window.fetch(`${apiUrl}/${endpoint}`, {
 			method: 'POST',
 			body: JSON.stringify(data ?? {}),
@@ -49,7 +62,7 @@ export function misskeyApi<
 			if (res.status === 200) {
 				resolve(body);
 			} else if (res.status === 204) {
-				resolve(undefined as _ResT); // void -> undefined
+				resolve(body);
 			} else {
 				reject(body.error);
 			}
@@ -61,7 +74,17 @@ export function misskeyApi<
 	return promise;
 }
 
-// Implements Misskey.api.ApiClient.request
+export function misskeyApiGet<
+	ResT = void,
+	E extends OptionalEndpoint = OptionalEndpoint,
+	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, never> : ResT,
+>(endpoint: E): Promise<_ResT>;
+export function misskeyApiGet<
+	ResT = void,
+	E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints,
+	P extends Misskey.Endpoints[E]['req'] = Misskey.Endpoints[E]['req'],
+	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
+>(endpoint: E, ...args: ApiGetRequestArgs<E, P>): Promise<_ResT>;
 export function misskeyApiGet<
 	ResT = void,
 	E extends keyof Misskey.Endpoints = keyof Misskey.Endpoints,
@@ -69,7 +92,7 @@ export function misskeyApiGet<
 	_ResT = ResT extends void ? Misskey.api.SwitchCaseResponseType<E, P> : ResT,
 >(
 	endpoint: E,
-	...[data]: ApiGetRequestArgs<P>
+	...[data]: ApiGetRequestArgs<E, P>
 ): Promise<_ResT> {
 	pendingApiRequestsCount.value++;
 
@@ -82,7 +105,6 @@ export function misskeyApiGet<
 	);
 
 	const promise = new Promise<_ResT>((resolve, reject) => {
-		// Send request
 		window.fetch(`${apiUrl}/${endpoint}?${query}`, {
 			method: 'GET',
 			credentials: 'omit',
@@ -93,7 +115,7 @@ export function misskeyApiGet<
 			if (res.status === 200) {
 				resolve(body);
 			} else if (res.status === 204) {
-				resolve(undefined as _ResT); // void -> undefined
+				resolve(body);
 			} else {
 				reject(body.error);
 			}

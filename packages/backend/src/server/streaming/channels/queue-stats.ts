@@ -10,7 +10,6 @@ import type { HonoStreamChannelDefinition } from '../channel.js';
 
 const ev = globalEventBus;
 
-/** QueueStatsChannel 相当。hono-daemon-queue-stats.ts が発行する globalEventBus イベントを購読する。 */
 export const honoStreamChannelQueueStats: HonoStreamChannelDefinition<unknown> = {
 	shouldShare: true,
 	requireCredential: false,
@@ -30,7 +29,7 @@ export const honoStreamChannelQueueStats: HonoStreamChannelDefinition<unknown> =
 					if (!isJsonObject(body)) return;
 					if (typeof body['id'] !== 'string') return;
 					if (typeof body['length'] !== 'number') return;
-					ev.once(`queueStatsLog:${body['id']}`, statsLog => {
+					ev.once(`queueStatsLog:${body['id']}`, (statsLog) => {
 						ctx.send('statsLog', statsLog as JsonValue);
 					});
 					ev.emit('requestQueueStatsLog', { id: body['id'], length: body['length'] });

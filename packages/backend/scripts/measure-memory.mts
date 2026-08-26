@@ -33,18 +33,37 @@ function readBooleanEnv(name, defaultValue) {
 	throw new Error(`${name} must be one of: 1, 0, true, false`);
 }
 
-const SAMPLE_COUNT = readIntegerEnv('MK_MEMORY_SAMPLE_COUNT', 3, 1); // Number of samples to measure
-const STARTUP_TIMEOUT = readIntegerEnv('MK_MEMORY_STARTUP_TIMEOUT_MS', 120000, 1); // Timeout for server startup
-const MEMORY_SETTLE_TIME = readIntegerEnv('MK_MEMORY_SETTLE_TIME_MS', 10000, 0); // Wait after startup for memory to settle
-const IPC_TIMEOUT = readIntegerEnv('MK_MEMORY_IPC_TIMEOUT_MS', 30000, 1); // Timeout for IPC responses
+const SAMPLE_COUNT = readIntegerEnv('MK_MEMORY_SAMPLE_COUNT', 3, 1);
+const STARTUP_TIMEOUT = readIntegerEnv('MK_MEMORY_STARTUP_TIMEOUT_MS', 120000, 1);
+const MEMORY_SETTLE_TIME = readIntegerEnv('MK_MEMORY_SETTLE_TIME_MS', 10000, 0);
+const IPC_TIMEOUT = readIntegerEnv('MK_MEMORY_IPC_TIMEOUT_MS', 30000, 1);
 const REQUEST_COUNT = readIntegerEnv('MK_MEMORY_REQUEST_COUNT', 10, 0);
 const HEAP_SNAPSHOT = readBooleanEnv('MK_MEMORY_HEAP_SNAPSHOT', false);
 const HEAP_SNAPSHOT_TIMEOUT = readIntegerEnv('MK_MEMORY_HEAP_SNAPSHOT_TIMEOUT_MS', 120000, 1);
 const HEAP_SNAPSHOT_BREAKDOWN_TOP_N = readIntegerEnv('MK_MEMORY_HEAP_SNAPSHOT_BREAKDOWN_TOP_N', 6, 1);
 const HEAP_SNAPSHOT_SAVE_PATH = process.env.MK_MEMORY_HEAP_SNAPSHOT_SAVE_PATH;
 
-const procStatusKeys = ['VmPeak', 'VmSize', 'VmHWM', 'VmRSS', 'VmData', 'VmStk', 'VmExe', 'VmLib', 'VmPTE', 'VmSwap'] as const;
-const smapsRollupKeys = ['Pss', 'Shared_Clean', 'Shared_Dirty', 'Private_Clean', 'Private_Dirty', 'Swap', 'SwapPss'] as const;
+const procStatusKeys = [
+	'VmPeak',
+	'VmSize',
+	'VmHWM',
+	'VmRSS',
+	'VmData',
+	'VmStk',
+	'VmExe',
+	'VmLib',
+	'VmPTE',
+	'VmSwap',
+] as const;
+const smapsRollupKeys = [
+	'Pss',
+	'Shared_Clean',
+	'Shared_Dirty',
+	'Private_Clean',
+	'Private_Dirty',
+	'Swap',
+	'SwapPss',
+] as const;
 
 type GcMessage = 'gc ok' | 'gc unavailable';
 type RuntimeMemoryUsageMessage = {
@@ -61,7 +80,12 @@ type HeapSnapshotErrorMessage = {
 };
 type HeapSnapshotResponseMessage = HeapSnapshotMessage | HeapSnapshotErrorMessage;
 
-function parseMemoryFile<KS extends readonly string[]>(content: string, keys: KS, path: string, required: boolean): Record<KS[number], number> {
+function parseMemoryFile<KS extends readonly string[]>(
+	content: string,
+	keys: KS,
+	path: string,
+	required: boolean,
+): Record<KS[number], number> {
 	const result = {} as Record<KS[number], number>;
 	for (const _key of keys) {
 		const key = _key as KS[number];
@@ -80,7 +104,9 @@ function bytesToKiB(value: number) {
 }
 
 function sanitizeHeapSnapshotBreakdownLabel(value, fallback = 'unknown') {
-	const label = String(value ?? '').replace(/\s+/g, ' ').trim();
+	const label = String(value ?? '')
+		.replace(/\s+/g, ' ')
+		.trim();
 	if (label === '') return fallback;
 	if (label.length <= 80) return label;
 	return `${label.slice(0, 77)}...`;
@@ -138,9 +164,7 @@ function collapseHeapSnapshotBreakdown(breakdowns: Record<string, Record<string,
 			.toSorted((a, b) => b[1] - a[1]);
 
 		const topEntries = entries.slice(0, HEAP_SNAPSHOT_BREAKDOWN_TOP_N);
-		const otherValue = entries
-			.slice(HEAP_SNAPSHOT_BREAKDOWN_TOP_N)
-			.reduce((sum, [, value]) => sum + value, 0);
+		const otherValue = entries.slice(HEAP_SNAPSHOT_BREAKDOWN_TOP_N).reduce((sum, [, value]) => sum + value, 0);
 
 		const categoryBreakdown = Object.fromEntries(topEntries);
 		if (otherValue > 0) categoryBreakdown.Other = otherValue;
@@ -150,7 +174,7 @@ function collapseHeapSnapshotBreakdown(breakdowns: Record<string, Record<string,
 	return collapsed;
 }
 
-// Keep these buckets aligned with Chrome DevTools' heap snapshot Statistics view.
+// Chrome DevTools のヒープスナップショット Statistics 表示と分類を一致させる。
 function analyzeHeapSnapshot(snapshot) {
 	const meta = snapshot?.snapshot?.meta;
 	const nodes = snapshot?.nodes;
@@ -185,7 +209,10 @@ function analyzeHeapSnapshot(snapshot) {
 	if (!Array.isArray(edgeTypeNames)) throw new Error('Invalid heap snapshot edge types');
 
 	function createEmptyHeapSnapshotCategoryMap() {
-		return Object.fromEntries(Object.keys(heapSnapshotCategory).map(category => [category, 0])) as Record<keyof typeof heapSnapshotCategory, number>;
+		return Object.fromEntries(Object.keys(heapSnapshotCategory).map((category) => [category, 0])) as Record<
+			keyof typeof heapSnapshotCategory,
+			number
+		>;
 	}
 
 	const nodeFieldCount = nodeFields.length;
@@ -199,13 +226,15 @@ function analyzeHeapSnapshot(snapshot) {
 		nodeTypeNames.indexOf('sliced string'),
 	]);
 	const internalEdgeType = edgeTypeNames.indexOf('internal');
-	const extraNativeBytes = Number.isFinite(snapshot.snapshot.extra_native_bytes) ? snapshot.snapshot.extra_native_bytes : 0;
+	const extraNativeBytes = Number.isFinite(snapshot.snapshot.extra_native_bytes)
+		? snapshot.snapshot.extra_native_bytes
+		: 0;
 	const categories = createEmptyHeapSnapshotCategoryMap();
 	const nodeCounts = createEmptyHeapSnapshotCategoryMap();
 	const breakdowns = Object.fromEntries(
 		(Object.keys(heapSnapshotCategory) as (keyof typeof heapSnapshotCategory)[])
-			.filter(category => category !== 'total')
-			.map(category => [category, {}]),
+			.filter((category) => category !== 'total')
+			.map((category) => [category, {}]),
 	);
 
 	function addValue(map: Record<string, number>, key: string, value: number) {
@@ -226,7 +255,13 @@ function analyzeHeapSnapshot(snapshot) {
 
 	const jsArrayElementNodeIndexes = new Set<number>();
 
-	function addCategoryValue(category: keyof typeof heapSnapshotCategory, value: number, type: string, name: string, nodeIndex: number | null = null) {
+	function addCategoryValue(
+		category: keyof typeof heapSnapshotCategory,
+		value: number,
+		type: string,
+		name: string,
+		nodeIndex: number | null = null,
+	) {
 		if (value <= 0) return;
 		categories[category] += value;
 		addValue(breakdowns[category], classifyHeapSnapshotBreakdown(category, type, name), value);
@@ -349,7 +384,12 @@ function isHeapSnapshotResponseMessage(message: unknown): message is HeapSnapsho
 	return message.type === 'heap snapshot error' && typeof message.message === 'string';
 }
 
-function waitForMessage<T>(serverProcess: ChildProcess, predicate: (message: unknown) => message is T, description: string, timeout = IPC_TIMEOUT) {
+function waitForMessage<T>(
+	serverProcess: ChildProcess,
+	predicate: (message: unknown) => message is T,
+	description: string,
+	timeout = IPC_TIMEOUT,
+) {
 	return new Promise<T>((resolve, reject) => {
 		const timer = globalThis.setTimeout(() => {
 			serverProcess.off('message', onMessage);
@@ -368,11 +408,7 @@ function waitForMessage<T>(serverProcess: ChildProcess, predicate: (message: unk
 }
 
 async function getRuntimeMemoryUsage(serverProcess: ChildProcess) {
-	const response = waitForMessage(
-		serverProcess,
-		isRuntimeMemoryUsageMessage,
-		'memory usage',
-	);
+	const response = waitForMessage(serverProcess, isRuntimeMemoryUsageMessage, 'memory usage');
 
 	serverProcess.send('memory usage');
 
@@ -390,13 +426,11 @@ async function getRuntimeMemoryUsage(serverProcess: ChildProcess) {
 async function getHeapSnapshotStatistics(serverProcess: ChildProcess): Promise<HeapSnapshotData | null> {
 	if (!HEAP_SNAPSHOT) return null;
 
-	const snapshotPath = join(tmpdir(), `misskey-backend-heap-${process.pid}-${serverProcess.pid}-${Date.now()}.heapsnapshot`);
-	const response = waitForMessage(
-		serverProcess,
-		isHeapSnapshotResponseMessage,
-		'heap snapshot',
-		HEAP_SNAPSHOT_TIMEOUT,
+	const snapshotPath = join(
+		tmpdir(),
+		`misskey-backend-heap-${process.pid}-${serverProcess.pid}-${Date.now()}.heapsnapshot`,
 	);
+	const response = waitForMessage(serverProcess, isHeapSnapshotResponseMessage, 'heap snapshot', HEAP_SNAPSHOT_TIMEOUT);
 
 	serverProcess.send({
 		type: 'heap snapshot',
@@ -419,7 +453,7 @@ async function getHeapSnapshotStatistics(serverProcess: ChildProcess): Promise<H
 		const snapshot = JSON.parse(await fs.readFile(writtenPath, 'utf-8'));
 		return analyzeHeapSnapshot(snapshot);
 	} finally {
-		await fs.unlink(writtenPath).catch(err => {
+		await fs.unlink(writtenPath).catch((err) => {
 			process.stderr.write(`Failed to delete heap snapshot ${writtenPath}: ${err.message}\n`);
 		});
 	}
@@ -428,14 +462,14 @@ async function getHeapSnapshotStatistics(serverProcess: ChildProcess): Promise<H
 async function getAllMemoryUsage(serverProcess: ChildProcess) {
 	const pid = serverProcess.pid!;
 	return {
-		...await getMemoryUsage(pid),
-		...await getSmapsRollupMemoryUsage(pid),
-		...await getRuntimeMemoryUsage(serverProcess),
+		...(await getMemoryUsage(pid)),
+		...(await getSmapsRollupMemoryUsage(pid)),
+		...(await getRuntimeMemoryUsage(serverProcess)),
 	};
 }
 
 async function measureMemory() {
-	// Start the Misskey backend server using fork to enable IPC
+	// IPC を使うため、Misskey backend を fork で起動する。
 	const serverProcess = fork(join(__dirname, '../built/entry.js'), [], {
 		cwd: join(__dirname, '..'),
 		env: {
@@ -451,14 +485,12 @@ async function measureMemory() {
 
 	let serverReady = false;
 
-	// Listen for the 'ok' message from the server indicating it's ready
 	serverProcess.on('message', (message) => {
 		if (message === 'ok') {
 			serverReady = true;
 		}
 	});
 
-	// Handle server output
 	serverProcess.stdout?.on('data', (data) => {
 		process.stderr.write(`[server stdout] ${data}`);
 	});
@@ -467,17 +499,12 @@ async function measureMemory() {
 		process.stderr.write(`[server stderr] ${data}`);
 	});
 
-	// Handle server error
 	serverProcess.on('error', (err) => {
 		process.stderr.write(`[server error] ${err}\n`);
 	});
 
 	async function triggerGc() {
-		const ok = waitForMessage(
-			serverProcess,
-			isGcMessage,
-			'GC completion',
-		);
+		const ok = waitForMessage(serverProcess, isGcMessage, 'GC completion');
 
 		serverProcess.send('gc');
 
@@ -509,7 +536,6 @@ async function measureMemory() {
 	//	});
 	//}
 
-	// Wait for server to be ready or timeout
 	const startupStartTime = Date.now();
 	// eslint-disable-next-line no-unmodified-loop-condition -- serverReady is set by the 'message' event handler registered above
 	while (!serverReady) {
@@ -523,7 +549,6 @@ async function measureMemory() {
 	const startupTime = Date.now() - startupStartTime;
 	process.stderr.write(`Server started in ${startupTime}ms\n`);
 
-	// Wait for memory to settle
 	await setTimeout(MEMORY_SETTLE_TIME);
 
 	//const beforeGc = await getAllMemoryUsage(serverProcess);
@@ -543,17 +568,15 @@ async function measureMemory() {
 
 	const heapSnapshotAfterGc = await getHeapSnapshotStatistics(serverProcess);
 
-	// Stop the server
 	serverProcess.kill('SIGTERM');
 
-	// Wait for process to exit
 	let exited = false;
 	await new Promise((resolve) => {
 		serverProcess.on('exit', () => {
 			exited = true;
 			resolve(undefined);
 		});
-		// Force kill after 10 seconds if not exited
+		// 終了イベントが届かない異常時に計測処理が待ち続けないよう、10秒で強制終了する。
 		setTimeout(10000).then(() => {
 			if (!exited) {
 				serverProcess.kill('SIGKILL');
@@ -619,14 +642,15 @@ async function main() {
 		samples: results,
 	};
 
-	// Output as JSON to stdout
 	console.log(JSON.stringify(result, null, 2));
 }
 
 main().catch((err) => {
-	console.error(JSON.stringify({
-		error: err.message,
-		timestamp: new Date().toISOString(),
-	}));
+	console.error(
+		JSON.stringify({
+			error: err.message,
+			timestamp: new Date().toISOString(),
+		}),
+	);
 	process.exit(1);
 });

@@ -49,7 +49,7 @@ export const columnTypes = [
 	'chat',
 ] as const;
 
-export type ColumnType = (typeof columnTypes)[number];
+type ColumnType = (typeof columnTypes)[number];
 
 export type Column = {
 	id: string;
@@ -71,7 +71,7 @@ export type Column = {
 	onlyFiles?: boolean;
 	mediaView?: boolean;
 	soundSetting?: SoundStore;
-	// The cache for the name of the antenna, channel, list, or role
+	// アンテナ・チャンネル・リスト・ロールの名前をキャッシュする。
 	timelineNameCache?: string;
 };
 
@@ -84,7 +84,7 @@ if (prefer['deck.profile'] == null) {
 	addProfile('Main');
 }
 
-export function forceSaveCurrentDeckProfile() {
+function forceSaveCurrentDeckProfile() {
 	const currentProfile = prefer['deck.profiles'].find((p) => p.name === prefer['deck.profile']);
 	if (currentProfile == null) return;
 
@@ -97,7 +97,7 @@ export function forceSaveCurrentDeckProfile() {
 	prefer.commit('deck.profiles', newProfiles);
 }
 
-export const saveCurrentDeckProfile = () => {
+const saveCurrentDeckProfile = () => {
 	forceSaveCurrentDeckProfile();
 };
 
@@ -153,8 +153,8 @@ export function removeColumn(id: Column['id']) {
 }
 
 export function swapColumn(a: Column['id'], b: Column['id']) {
-	const aX = layout.value.findIndex((ids) => ids.indexOf(a) !== -1);
-	const bX = layout.value.findIndex((ids) => ids.indexOf(b) !== -1);
+	const aX = layout.value.findIndex((ids) => ids.includes(a));
+	const bX = layout.value.findIndex((ids) => ids.includes(b));
 	const aRow = layout.value[aX];
 	const bRow = layout.value[bX];
 	if (aRow == null || bRow == null) return;

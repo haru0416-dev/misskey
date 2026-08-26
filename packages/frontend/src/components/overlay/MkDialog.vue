@@ -4,24 +4,25 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkModal ref="modal" :preferType="'dialog'" :zPriority="'high'" @click="done(true)" @closed="emit('closed')" @esc="cancel()">
-	<div :class="$style.root">
-		<div v-if="icon" :class="$style.icon">
+<MkModal ref="modal" :preferType="'dialog'" :zPriority="'high'" @click="onBgClick" @closed="emit('closed')" @esc="cancel()">
+	<div :class="$style.root" :role="(input || select) ? 'dialog' : 'alertdialog'" aria-modal="true" :aria-labelledby="title ? titleId : undefined" :aria-describedby="text ? textId : undefined">
+		<div v-if="icon" :class="$style.icon" aria-hidden="true">
 			<i :class="icon"></i>
 		</div>
 		<div
 			v-else-if="!input && !select"
 			:class="[$style.icon]"
+			aria-hidden="true"
 		>
-			<MkSystemIcon v-if="type === 'success'" :class="$style.iconInner" style="width: 45px;" type="success"/>
-			<MkSystemIcon v-else-if="type === 'error'" :class="$style.iconInner" style="width: 45px;" type="error"/>
-			<MkSystemIcon v-else-if="type === 'warning'" :class="$style.iconInner" style="width: 45px;" type="warn"/>
-			<MkSystemIcon v-else-if="type === 'info'" :class="$style.iconInner" style="width: 45px;" type="info"/>
-			<MkSystemIcon v-else-if="type === 'question'" :class="$style.iconInner" style="width: 45px;" type="question"/>
+			<MkSystemIcon v-if="type === 'success'" :class="[$style.iconInner, $style.systemIcon]" type="success"/>
+			<MkSystemIcon v-else-if="type === 'error'" :class="[$style.iconInner, $style.systemIcon]" type="error"/>
+			<MkSystemIcon v-else-if="type === 'warning'" :class="[$style.iconInner, $style.systemIcon]" type="warn"/>
+			<MkSystemIcon v-else-if="type === 'info'" :class="[$style.iconInner, $style.systemIcon]" type="info"/>
+			<MkSystemIcon v-else-if="type === 'question'" :class="[$style.iconInner, $style.systemIcon]" type="question"/>
 			<MkLoading v-else-if="type === 'waiting'" :class="$style.iconInner" :em="true"/>
 		</div>
-		<header v-if="title" :class="$style.title" class="_selectable"><Mfm :text="title"/></header>
-		<div v-if="text" :class="$style.text" class="_selectable"><Mfm :text="text"/></div>
+		<header v-if="title" :id="titleId" :class="$style.title" class="_selectable"><Mfm :text="title"/></header>
+		<div v-if="text" :id="textId" :class="$style.text" class="_selectable"><Mfm :text="text"/></div>
 		<MkInput v-if="input" v-model="inputValue" v-bind="{ ...(input.placeholder == null ? {} : { placeholder: input.placeholder }), ...(input.autocomplete === undefined ? {} : { autocomplete: input.autocomplete }) }" autofocus :type="input.type || 'text'" @keydown="onInputKeydown">
 			<template v-if="input.type === 'password'" #prefix><i class="ti ti-lock"></i></template>
 			<template #caption>
@@ -47,7 +48,7 @@ export type MkDialogReturnType<T = Result> = { canceled: true, result: undefined
 </script>
 
 <script lang="ts" setup>
-import { ref, useTemplateRef, computed } from 'vue';
+import { ref, useTemplateRef, computed, useId } from 'vue';
 import MkModal from '@/components/overlay/MkModal.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
@@ -103,6 +104,9 @@ const emit = defineEmits<{
 
 const modal = useTemplateRef('modal');
 
+const titleId = useId();
+const textId = useId();
+
 const inputValue = ref<string | number | null>(props.input?.default ?? null);
 
 const okButtonDisabledReason = computed<null | 'charactersExceeded' | 'charactersBelow'>(() => {
@@ -132,9 +136,9 @@ const {
 
 // overload function を使いたいので lint エラーを無視する
 function done(canceled: true): void;
-function done(canceled: false, result: Result): void; // eslint-disable-line no-redeclare
+function done(canceled: false, result: Result): void;
 
-function done(canceled: boolean, result?: Result): void { // eslint-disable-line no-redeclare
+function done(canceled: boolean, result?: Result): void {
 	emit('done', { canceled, result } as MkDialogReturnType);
 	modal.value?.close();
 }
@@ -153,11 +157,10 @@ function cancel() {
 	done(true);
 }
 
-/*
 function onBgClick() {
 	if (props.cancelableByBgClick) cancel();
 }
-*/
+
 function onInputKeydown(evt: KeyboardEvent) {
 	if (evt.key === 'Enter' && okButtonDisabledReason.value === null) {
 		evt.preventDefault();
@@ -171,20 +174,20 @@ function onInputKeydown(evt: KeyboardEvent) {
 .root {
 	position: relative;
 	margin: auto;
-	padding: 32px;
+	padding: var(--MI-space-3xl);
 	min-width: 320px;
 	max-width: 480px;
 	box-sizing: border-box;
 	text-align: center;
 	background: var(--MI_THEME-panel);
-	border-radius: 16px;
+	border-radius: var(--MI-radius);
 }
 
 .icon {
 	font-size: 24px;
 
 	& + .title {
-		margin-top: 8px;
+		margin-top: var(--MI-space-sm);
 	}
 }
 
@@ -193,24 +196,28 @@ function onInputKeydown(evt: KeyboardEvent) {
 	margin: 0 auto;
 }
 
+.systemIcon {
+	width: 45px;
+}
+
 .title {
-	margin: 0 0 8px 0;
+	margin: 0 0 var(--MI-space-sm) 0;
 	font-weight: bold;
 	font-size: 1.1em;
 
 	& + .text {
-		margin-top: 8px;
+		margin-top: var(--MI-space-sm);
 	}
 }
 
 .text {
-	margin: 16px 0 0 0;
+	margin: var(--MI-space-lg) 0 0 0;
 }
 
 .buttons {
-	margin-top: 16px;
+	margin-top: var(--MI-space-lg);
 	display: flex;
-	gap: 8px;
+	gap: var(--MI-space-sm);
 	flex-wrap: wrap;
 	justify-content: center;
 }

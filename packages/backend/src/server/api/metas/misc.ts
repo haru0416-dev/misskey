@@ -3,38 +3,45 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchEmojisHostTypes, fetchEmojisSortKeys } from '@/core/custom-emoji-types.js';
-import { blockingListParamDef, userIdParamDef } from '@/server/rest/account-blocking.js';
-import { muteCreateParamDef, muteListParamDef, userIdParamDef as userIdParamDef_2 } from '@/server/rest/account-mutes.js';
-import { announcementShowParamDef, announcementsParamDef } from '@/server/rest/announcements.js';
-import { apGetParamDef, apShowParamDef } from '@/server/rest/ap.js';
-import { appCreateParamDef, appShowParamDef, myAppsParamDef } from '@/server/rest/app.js';
-import { authSessionGenerateParamDef, authSessionShowParamDef, authSessionUserkeyParamDef } from '@/server/rest/auth-session.js';
-import { emailAddressAvailableParamDef, usernameAvailableParamDef } from '@/server/rest/availability.js';
-import { getAvatarDecorationsParamDef } from '@/server/rest/avatar-decorations.js';
-import { emojiParamDef } from '@/server/rest/emojis.js';
+import { fetchEmojisHostTypes, fetchEmojisSortKeys } from '@/core/emoji/custom-emoji-types.js';
+import { blockingListParamDef, userIdParamDef } from '@/server/rest/account/account-blocking.js';
+import {
+	muteCreateParamDef,
+	muteListParamDef,
+	userIdParamDef as userIdParamDef_2,
+} from '@/server/rest/account/account-mutes.js';
+import { announcementShowParamDef, announcementsParamDef } from '@/server/rest/announcement/announcements.js';
+import { apGetParamDef, apShowParamDef } from '@/server/rest/activitypub/ap.js';
+import { appCreateParamDef, appShowParamDef, myAppsParamDef } from '@/server/rest/auth/app.js';
+import {
+	authSessionGenerateParamDef,
+	authSessionShowParamDef,
+	authSessionUserkeyParamDef,
+} from '@/server/rest/auth/auth-session.js';
+import { emailAddressAvailableParamDef, usernameAvailableParamDef } from '@/server/rest/auth/availability.js';
+import { getAvatarDecorationsParamDef } from '@/server/rest/avatar-decoration/avatar-decorations.js';
+import { emojiParamDef } from '@/server/rest/emoji/emojis.js';
 import { endpointParamDef } from '@/server/rest/endpoint-info.js';
-import { fetchExternalResourcesParamDef } from '@/server/rest/fetch-external-resources.js';
-import { fetchRssParamDef } from '@/server/rest/fetch-rss.js';
-import { emptyParamDef, inviteDeleteParamDef, inviteListParamDef } from '@/server/rest/invite.js';
-import { metaParamDef, testParamDef } from '@/server/rest/meta.js';
-import { miauthGenTokenParamDef } from '@/server/rest/miauth.js';
-import { notificationsCreateParamDef, notificationsDeleteParamDef } from '@/server/rest/notification.js';
-import { pagePushParamDef } from '@/server/rest/page-push.js';
-import { requestResetPasswordParamDef, resetPasswordParamDef } from '@/server/rest/password-reset.js';
-import { promoReadParamDef } from '@/server/rest/promo.js';
-import { resetDbParamDef } from '@/server/rest/reset-db.js';
-import { retentionParamDef } from '@/server/rest/retention.js';
-import { rolesListParamDef, rolesNotesParamDef, rolesShowParamDef, rolesUsersParamDef } from '@/server/rest/roles.js';
-import { swRegisterParamDef, swShowRegistrationParamDef, swUpdateRegistrationParamDef } from '@/server/rest/sw.js';
-import { pinnedUsersParamDef } from '@/server/rest/user.js';
-import { verifyEmailParamDef } from '@/server/rest/verify-email.js';
+import { fetchExternalResourcesParamDef } from '@/server/rest/activitypub/fetch-external-resources.js';
+import { fetchRssParamDef } from '@/server/rest/feed/fetch-rss.js';
+import { emptyParamDef, inviteDeleteParamDef, inviteListParamDef } from '@/server/rest/invite/invite.js';
+import { metaParamDef, testParamDef } from '@/server/rest/meta/meta.js';
+import { miauthGenTokenParamDef } from '@/server/rest/auth/miauth.js';
+import { notificationsCreateParamDef, notificationsDeleteParamDef } from '@/server/rest/notification/notification.js';
+import { pagePushParamDef } from '@/server/rest/page/page-push.js';
+import { requestResetPasswordParamDef, resetPasswordParamDef } from '@/server/rest/auth/password-reset.js';
+import { promoReadParamDef } from '@/server/rest/note/promo.js';
+import { resetDbParamDef } from '@/server/rest/admin/reset-db.js';
+import { retentionParamDef } from '@/server/rest/retention/retention.js';
+import { rolesListParamDef, rolesNotesParamDef, rolesShowParamDef, rolesUsersParamDef } from '@/server/rest/role/roles.js';
+import { swRegisterParamDef, swShowRegistrationParamDef, swUpdateRegistrationParamDef } from '@/server/rest/notification/sw.js';
+import { pinnedUsersParamDef } from '@/server/rest/user/user.js';
+import { verifyEmailParamDef } from '@/server/rest/auth/verify-email.js';
 import { z } from 'zod';
-import * as Redis from 'ioredis';
-import { HOUR } from '@/const.js';
+import { MINUTE, HOUR } from '@/const.js';
 
 export const endpointMetas = {
-	'announcements': {
+	announcements: {
 		meta: {
 			tags: ['meta'],
 
@@ -42,10 +49,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Announcement',
 				},
 			},
@@ -54,13 +63,15 @@ export const endpointMetas = {
 	},
 	'announcements/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['meta'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Announcement',
 			},
 
@@ -69,6 +80,7 @@ export const endpointMetas = {
 					message: 'No such announcement.',
 					code: 'NO_SUCH_ANNOUNCEMENT',
 					id: 'b57b5e1d-4f49-404a-9edb-46b00268f121',
+					httpStatusCode: 404,
 				},
 			},
 		} as const,
@@ -76,6 +88,7 @@ export const endpointMetas = {
 	},
 	'ap/get': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireAdmin: true,
@@ -87,12 +100,12 @@ export const endpointMetas = {
 				max: 30,
 			},
 
-			errors: {
-			},
+			errors: {},
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 			},
 		} as const,
 		paramDef: apGetParamDef,
@@ -138,19 +151,22 @@ export const endpointMetas = {
 			},
 
 			res: {
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				oneOf: [
 					{
 						type: 'object',
 						properties: {
 							type: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								enum: ['User'],
 							},
 							object: {
 								type: 'object',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								ref: 'UserDetailedNotMe',
 							},
 						},
@@ -160,12 +176,14 @@ export const endpointMetas = {
 						properties: {
 							type: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								enum: ['Note'],
 							},
 							object: {
 								type: 'object',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								ref: 'Note',
 							},
 						},
@@ -183,7 +201,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'App',
 			},
 		} as const,
@@ -191,6 +210,7 @@ export const endpointMetas = {
 	},
 	'app/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['app'],
 
 			errors: {
@@ -203,7 +223,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'App',
 			},
 		} as const,
@@ -235,15 +256,18 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					token: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					url: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'url',
 					},
 				},
@@ -261,6 +285,7 @@ export const endpointMetas = {
 	},
 	'auth/session/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['auth'],
 
 			requireCredential: false,
@@ -275,21 +300,25 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					id: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						format: 'id',
 					},
 					app: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'App',
 					},
 					token: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -304,16 +333,19 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					accessToken: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 
 					user: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'UserDetailedNotMe',
 					},
 				},
@@ -376,7 +408,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserDetailedNotMe',
 			},
 		} as const,
@@ -417,7 +450,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserDetailedNotMe',
 			},
 		} as const,
@@ -425,6 +459,7 @@ export const endpointMetas = {
 	},
 	'blocking/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['account'],
 
 			requireCredential: true,
@@ -433,10 +468,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Blocking',
 				},
 			},
@@ -445,28 +482,32 @@ export const endpointMetas = {
 	},
 	'email-address/available': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					available: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					reason: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 				},
 			},
 		} as const,
 		paramDef: emailAddressAvailableParamDef,
 	},
-	'emoji': {
+	emoji: {
 		meta: {
 			tags: ['meta'],
 
@@ -474,15 +515,25 @@ export const endpointMetas = {
 			allowGet: true,
 			cacheSec: 3600,
 
+			errors: {
+				noSuchEmoji: {
+					message: 'No such emoji.',
+					code: 'NO_SUCH_EMOJI',
+					id: 'e2785b66-dca3-4087-9cac-b93c541cc425',
+					httpStatusCode: 404,
+				},
+			},
+
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'EmojiDetailed',
 			},
 		} as const,
 		paramDef: emojiParamDef,
 	},
-	'emojis': {
+	emojis: {
 		meta: {
 			tags: ['meta'],
 
@@ -492,14 +543,17 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					emojis: {
 						type: 'array',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						items: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'EmojiSimple',
 						},
 					},
@@ -508,7 +562,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'endpoint': {
+	endpoint: {
 		meta: {
 			requireCredential: false,
 
@@ -533,7 +587,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: endpointParamDef,
 	},
-	'endpoints': {
+	endpoints: {
 		meta: {
 			requireCredential: false,
 
@@ -541,17 +595,14 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'string',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 				},
-				example: [
-					'admin/abuse-user-reports',
-					'admin/accounts/create',
-					'admin/announcements/create',
-					'...',
-				],
+				example: ['admin/abuse-user-reports', 'admin/accounts/create', 'admin/announcements/create', '...'],
 			},
 		} as const,
 		paramDef: z.object({}),
@@ -613,6 +664,33 @@ export const endpointMetas = {
 			requireCredential: false,
 			allowGet: true,
 			cacheSec: 60 * 3,
+			limit: {
+				duration: MINUTE,
+				max: 30,
+			},
+
+			errors: {
+				invalidUrl: {
+					message: 'Invalid URL.',
+					code: 'INVALID_URL',
+					id: '89b7ee05-ccfc-4bdd-9b13-61172fd1e06c',
+					httpStatusCode: 400,
+				},
+				fetchRssFailed: {
+					message: 'Failed to fetch RSS.',
+					code: 'FETCH_RSS_FAILED',
+					id: '8db5d3d8-31d7-452f-b0cc-ca3b8925de12',
+					kind: 'server',
+					httpStatusCode: 422,
+				},
+				fetchRssUnavailable: {
+					message: 'RSS fetching is temporarily unavailable.',
+					code: 'FETCH_RSS_UNAVAILABLE',
+					id: '91e6ff44-c63f-4725-9ad0-b7a40d7f7655',
+					kind: 'server',
+					httpStatusCode: 503,
+				},
+			},
 
 			res: {
 				type: 'object',
@@ -805,47 +883,57 @@ export const endpointMetas = {
 	},
 	'get-avatar-decorations': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 							example: 'xxxxxxxxxx',
 						},
 						name: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						description: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						url: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						roleIdsThatCanBeUsedThisDecoration: {
 							type: 'array',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							items: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								format: 'id',
 							},
 						},
 						category: {
 							type: 'string',
-							optional: true, nullable: true,
+							optional: true,
+							nullable: true,
 						},
 					},
 				},
@@ -862,7 +950,8 @@ export const endpointMetas = {
 			cacheSec: 60 * 1,
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					count: {
 						type: 'number',
@@ -891,7 +980,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'InviteCode',
 			},
 		} as const,
@@ -913,7 +1003,7 @@ export const endpointMetas = {
 				},
 
 				cantDelete: {
-					message: 'You can\'t delete this invite code.',
+					message: "You can't delete this invite code.",
 					code: 'CAN_NOT_DELETE_INVITE_CODE',
 					id: 'ff17af39-000c-4d4e-abdf-848fa30fc1ce',
 				},
@@ -929,6 +1019,7 @@ export const endpointMetas = {
 	},
 	'invite/limit': {
 		meta: {
+			allowQuery: true,
 			tags: ['meta'],
 
 			requireCredential: true,
@@ -937,11 +1028,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					remaining: {
 						type: 'integer',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 				},
 			},
@@ -950,6 +1043,7 @@ export const endpointMetas = {
 	},
 	'invite/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['meta'],
 
 			requireCredential: true,
@@ -958,17 +1052,19 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'InviteCode',
 				},
 			},
 		} as const,
 		paramDef: inviteListParamDef,
 	},
-	'meta': {
+	meta: {
 		meta: {
 			tags: ['meta'],
 
@@ -994,11 +1090,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					token: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1073,6 +1171,7 @@ export const endpointMetas = {
 	},
 	'mute/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['account'],
 
 			requireCredential: true,
@@ -1081,10 +1180,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Muting',
 				},
 			},
@@ -1093,6 +1194,7 @@ export const endpointMetas = {
 	},
 	'my/apps': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'app'],
 
 			requireCredential: true,
@@ -1100,10 +1202,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'App',
 				},
 			},
@@ -1123,8 +1227,7 @@ export const endpointMetas = {
 				max: 10,
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: notificationsCreateParamDef,
 	},
@@ -1188,7 +1291,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: pagePushParamDef,
 	},
-	'ping': {
+	ping: {
 		meta: {
 			requireCredential: false,
 
@@ -1196,11 +1299,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					pong: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1209,16 +1314,19 @@ export const endpointMetas = {
 	},
 	'pinned-users': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserDetailed',
 				},
 			},
@@ -1310,6 +1418,7 @@ export const endpointMetas = {
 	},
 	'renote-mute/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['account'],
 
 			requireCredential: true,
@@ -1318,10 +1427,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'RenoteMuting',
 				},
 			},
@@ -1341,9 +1452,7 @@ export const endpointMetas = {
 				max: 3,
 			},
 
-			errors: {
-
-			},
+			errors: {},
 		} as const,
 		paramDef: requestResetPasswordParamDef,
 	},
@@ -1353,11 +1462,10 @@ export const endpointMetas = {
 
 			requireCredential: false,
 
-			description: 'Only available when running with <code>NODE_ENV=testing</code>. Reset the database and flush Valkey.',
+			description:
+				'Only available when running with <code>NODE_ENV=testing</code>. Reset the database and flush Valkey.',
 
-			errors: {
-
-			},
+			errors: {},
 		} as const,
 		paramDef: resetDbParamDef,
 	},
@@ -1370,12 +1478,16 @@ export const endpointMetas = {
 			description: 'Complete the password reset that was previously requested.',
 
 			errors: {
-
+				invalidToken: {
+					message: 'Invalid or expired token.',
+					code: 'INVALID_TOKEN',
+					id: 'e04a2320-6ee2-4a11-8ad2-c9ea9e2ab84f',
+				},
 			},
 		} as const,
 		paramDef: resetPasswordParamDef,
 	},
-	'retention': {
+	retention: {
 		meta: {
 			tags: ['users'],
 
@@ -1396,17 +1508,15 @@ export const endpointMetas = {
 						data: {
 							type: 'object',
 							additionalProperties: {
-								anyOf: [{
-									type: 'number',
-								}],
+								anyOf: [
+									{
+										type: 'number',
+									},
+								],
 							},
 						},
 					},
-					required: [
-						'createdAt',
-						'users',
-						'data',
-					],
+					required: ['createdAt', 'users', 'data'],
 				},
 			},
 
@@ -1417,6 +1527,7 @@ export const endpointMetas = {
 	},
 	'roles/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['role'],
 
 			requireCredential: true,
@@ -1424,10 +1535,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Role',
 				},
 			},
@@ -1436,6 +1549,7 @@ export const endpointMetas = {
 	},
 	'roles/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['role', 'notes'],
 
 			requireCredential: true,
@@ -1451,10 +1565,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -1463,6 +1579,7 @@ export const endpointMetas = {
 	},
 	'roles/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['role', 'users'],
 
 			requireCredential: false,
@@ -1477,7 +1594,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Role',
 			},
 		} as const,
@@ -1485,6 +1603,7 @@ export const endpointMetas = {
 	},
 	'roles/users': {
 		meta: {
+			allowQuery: true,
 			tags: ['role', 'users'],
 
 			requireCredential: false,
@@ -1527,7 +1646,8 @@ export const endpointMetas = {
 			tags: ['meta'],
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					machine: {
 						type: 'string',
@@ -1575,7 +1695,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: z.object({}),
 	},
-	'stats': {
+	stats: {
 		meta: {
 			requireCredential: false,
 
@@ -1583,39 +1703,48 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					notesCount: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					originalNotesCount: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					usersCount: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					originalUsersCount: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					reactionsCount: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					instances: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					driveUsageLocal: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					driveUsageRemote: {
 						type: 'number',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1633,28 +1762,34 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					state: {
 						type: 'string',
-						optional: true, nullable: false,
+						optional: true,
+						nullable: false,
 						enum: ['already-subscribed', 'subscribed'],
 					},
 					key: {
 						type: 'string',
-						optional: false, nullable: true,
+						optional: false,
+						nullable: true,
 					},
 					userId: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					endpoint: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					sendReadMessage: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1672,19 +1807,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: true,
+				optional: false,
+				nullable: true,
 				properties: {
 					userId: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					endpoint: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					sendReadMessage: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1712,19 +1851,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					userId: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					endpoint: {
 						type: 'string',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					sendReadMessage: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1738,7 +1881,7 @@ export const endpointMetas = {
 		} as const,
 		paramDef: swUpdateRegistrationParamDef,
 	},
-	'test': {
+	test: {
 		meta: {
 			tags: ['non-productive'],
 
@@ -1752,24 +1895,29 @@ export const endpointMetas = {
 					id: {
 						type: 'string',
 						format: 'misskey:id',
-						optional: true, nullable: false,
+						optional: true,
+						nullable: false,
 					},
 					required: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					string: {
 						type: 'string',
-						optional: true, nullable: false,
+						optional: true,
+						nullable: false,
 					},
 					default: {
 						type: 'string',
-						optional: true, nullable: false,
+						optional: true,
+						nullable: false,
 					},
 					nullableDefault: {
 						type: 'string',
 						default: 'hello',
-						optional: true, nullable: true,
+						optional: true,
+						nullable: true,
 					},
 				},
 			},
@@ -1778,17 +1926,20 @@ export const endpointMetas = {
 	},
 	'username/available': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					available: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1813,6 +1964,8 @@ export const endpointMetas = {
 	},
 	'v2/admin/emoji/list': {
 		meta: {
+			requireRolePolicy: 'canManageCustomEmojis',
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,

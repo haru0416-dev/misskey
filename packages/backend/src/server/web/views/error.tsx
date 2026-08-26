@@ -4,18 +4,13 @@
  */
 
 import { comment } from '@/server/web/views/_.js';
-import type { CommonPropsMinimum } from '@/server/web/views/_.js';
 
-export function ErrorPage(props: {
-	title?: string;
-	code: string;
-	id: string;
-}) {
+export function ErrorPage(props: { title?: string; code: string; id: string }) {
 	return (
 		<>
 			{'<!DOCTYPE html>'}
 			{comment}
-			<html>
+			<html lang="en">
 				<head>
 					<meta charset="UTF-8" />
 					<meta name="application-name" content="Erebia" />
@@ -43,21 +38,27 @@ export function ErrorPage(props: {
 					<h1 data-i18n="title">Failed to initialize Erebia</h1>
 
 					<button class="button-big" onclick="location.reload();">
-						<span class="button-label-big" data-i18n="reload">Reload</span>
+						<span class="button-label-big" data-i18n="reload">
+							Reload
+						</span>
 					</button>
 
 					<p data-i18n="serverError">
-						If reloading after a period of time does not resolve the problem, contact the server administrator with the following ERROR ID.
+						If reloading after a period of time does not resolve the problem, contact the server administrator with the
+						following ERROR ID.
 					</p>
 
 					<div id="errors">
 						<code safe>
-							ERROR CODE: {props.code}<br />
+							ERROR CODE: {props.code}
+							<br />
 							ERROR ID: {props.id}
 						</code>
 					</div>
 
-					<p><b data-i18n="solution">The following actions may solve the problem.</b></p>
+					<p>
+						<b data-i18n="solution">The following actions may solve the problem.</b>
+					</p>
 
 					<p data-i18n="solution1">Update your os and browser</p>
 					<p data-i18n="solution2">Disable an adblocker</p>
@@ -68,17 +69,23 @@ export function ErrorPage(props: {
 						<summary data-i18n="otherOption">Other options</summary>
 						<a href="/flush">
 							<button class="button-small">
-								<span class="button-label-small" data-i18n="otherOption1">Clear preferences and cache</span>
+								<span class="button-label-small" data-i18n="otherOption1">
+									Clear preferences and cache
+								</span>
 							</button>
 						</a>
 						<a href="/cli">
 							<button class="button-small">
-								<span class="button-label-small" data-i18n="otherOption2">Start the simple client</span>
+								<span class="button-label-small" data-i18n="otherOption2">
+									Start the simple client
+								</span>
 							</button>
 						</a>
 						<a href="/bios">
 							<button class="button-small">
-								<span class="button-label-small" data-i18n="otherOption3">Start the repair tool</span>
+								<span class="button-label-small" data-i18n="otherOption3">
+									Start the repair tool
+								</span>
 							</button>
 						</a>
 					</details>

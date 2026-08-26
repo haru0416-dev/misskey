@@ -10,7 +10,7 @@ import { deepClone } from '@/utility/clone.js';
 import { deepEqual } from '@/utility/deep-equal.js';
 import { deepMerge } from '@/utility/merge.js';
 
-export type PersistedStateLocation = 'account' | 'device' | 'deviceAccount';
+type PersistedStateLocation = 'account' | 'device' | 'deviceAccount';
 
 export type PersistedStateDefinition<S extends StateTree> = {
 	namespace: string;
@@ -259,6 +259,7 @@ class PersistedStateController {
 		if (this.pendingWrites.size > 0) this.scheduleFlush();
 	}
 
+	// 同一tickの変更をまとめ、非同期batchをcurrentJobで直列化して古い書き込みの後勝ちを防ぐ。
 	private scheduleFlush(): Promise<void> {
 		if (this.scheduledFlush != null) return this.scheduledFlush;
 

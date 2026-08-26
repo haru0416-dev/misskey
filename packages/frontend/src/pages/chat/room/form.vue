@@ -15,21 +15,22 @@ SPDX-License-Identifier: AGPL-3.0-only
 		:class="$style.textarea"
 		class="_acrylic"
 		:placeholder="i18n.ts.inputMessageHere"
+		:aria-label="i18n.ts.inputMessageHere"
 		:readonly="textareaReadOnly"
 		@keydown="onKeydown"
 		@paste="onPaste"
 	></textarea>
 	<footer :class="$style.footer">
-		<div v-if="file" :class="$style.file" @click="file = null">{{ file.name }}</div>
+		<button v-if="file" type="button" :class="$style.file" :aria-label="`${file.name}（${i18n.ts.remove}）`" @click="file = null">{{ file.name }}</button>
 		<div :class="$style.buttons">
-			<button class="_button" :class="$style.button" @click="chooseFile"><i class="ti ti-photo-plus"></i></button>
-			<button class="_button" :class="$style.button" @click="insertEmoji"><i class="ti ti-mood-happy"></i></button>
-			<button class="_button" :class="[$style.button, $style.send]" :disabled="!canSend || sending" :title="i18n.ts.send" @click="send">
-				<template v-if="!sending"><i class="ti ti-send"></i></template><template v-if="sending"><MkLoading :em="true"/></template>
+			<button class="_button" :class="$style.button" :aria-label="i18n.ts.attachFile" @click="chooseFile"><i class="ti ti-photo-plus" aria-hidden="true"></i></button>
+			<button class="_button" :class="$style.button" :aria-label="i18n.ts.emoji" @click="insertEmoji"><i class="ti ti-mood-happy" aria-hidden="true"></i></button>
+			<button class="_button" :class="[$style.button, $style.send]" :disabled="!canSend || sending" :title="i18n.ts.send" :aria-label="i18n.ts.send" @click="send">
+				<template v-if="!sending"><i class="ti ti-send" aria-hidden="true"></i></template><template v-if="sending"><MkLoading :em="true"/></template>
 			</button>
 		</div>
 	</footer>
-	<input ref="fileEl" style="display: none;" type="file" @change="onChangeFile"/>
+	<input ref="fileEl" style="display: none;" type="file" :aria-label="i18n.ts.attachFile" @change="onChangeFile"/>
 </div>
 </template>
 
@@ -97,7 +98,7 @@ async function onPaste(ev: ClipboardEvent) {
 			if (!pastedFile) return;
 			const lio = pastedFile.name.lastIndexOf('.');
 			const ext = lio >= 0 ? pastedFile.name.slice(lio) : '';
-			const formattedName = formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replace(/{{number}}/g, '1') + ext;
+			const formattedName = formatTimeString(new Date(pastedFile.lastModified), pastedFileName).replaceAll(/{{number}}/g, '1') + ext;
 			const renamedFile = new File([pastedFile], formattedName, { type: pastedFile.type });
 			os.launchUploader([renamedFile], { multiple: false }).then(driveFiles => {
 				const driveFile = driveFiles[0];
@@ -274,8 +275,8 @@ async function insertEmoji(ev: MouseEvent) {
 	// emojiPickerはダイアログが閉じずにtextareaとやりとりするので、
 	// focustrapをかけているとinsertTextAtCursorが効かない
 	// そのため、投稿フォームのテキストに直接注入する
-	// See: https://github.com/misskey-dev/misskey/pull/14282
-	//      https://github.com/misskey-dev/misskey/issues/14274
+	// https://github.com/misskey-dev/misskey/pull/14282
+	// https://github.com/misskey-dev/misskey/issues/14274
 
 	let pos = textareaEl.value?.selectionStart ?? 0;
 	let posEnd = textareaEl.value?.selectionEnd ?? text.value.length;
@@ -323,8 +324,7 @@ onBeforeUnmount(() => {
 <style lang="scss" module>
 .root {
 	position: relative;
-	border-bottom: none;
-	border-radius: 14px 14px 0 0;
+	border-radius: var(--MI-radius-lg) var(--MI-radius-lg) 0 0;
 	overflow: clip;
 }
 
@@ -336,7 +336,7 @@ onBeforeUnmount(() => {
 	max-width: 100%;
 	min-height: 80px;
 	margin: 0;
-	padding: 16px 16px 0 16px;
+	padding: var(--MI-space-lg) var(--MI-space-lg) 0;
 	resize: none;
 	font-size: 1em;
 	font-family: inherit;
@@ -356,7 +356,14 @@ onBeforeUnmount(() => {
 }
 
 .file {
-	padding: 8px;
+	display: block;
+	width: 100%;
+	padding: var(--MI-space-sm);
+	background: none;
+	border: none;
+	font: inherit;
+	color: inherit;
+	text-align: left;
 	cursor: pointer;
 }
 
@@ -365,7 +372,7 @@ onBeforeUnmount(() => {
 }
 
 .button {
-	height: 50px;
+	height: var(--MI-control-lg);
 	aspect-ratio: 1;
 
 	&:hover {

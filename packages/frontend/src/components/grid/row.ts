@@ -18,18 +18,18 @@ export const defaultGridRowSetting: Required<GridRowSetting> = {
 	events: {},
 };
 
-export type GridRowStyleRuleConditionParams = {
+type GridRowStyleRuleConditionParams = {
 	row: GridRow;
 	targetCols: GridColumn[];
 	cells: GridCell[];
 };
 
-export type GridRowStyleRule = {
+type GridRowStyleRule = {
 	condition: (params: GridRowStyleRuleConditionParams) => boolean;
 	applyStyle: AdditionalStyle;
 };
 
-export type GridRowContextMenuFactory = (row: GridRow, context: GridContext) => MenuItem[];
+type GridRowContextMenuFactory = (row: GridRow, context: GridContext) => MenuItem[];
 
 export type GridRowSetting = {
 	showNumber?: boolean;

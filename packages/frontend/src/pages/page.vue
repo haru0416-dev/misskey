@@ -25,6 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 								:forceBlurhash="true"
 							/>
 							<img
+								alt=""
 								v-else-if="instance.backgroundImageUrl || instance.bannerUrl"
 								:class="[$style.pageBannerBg, $style.pageBannerBgFallback1]"
 								:src="getStaticImageUrl(instance.backgroundImageUrl ?? instance.bannerUrl!)"
@@ -149,7 +150,6 @@ function fetchPage() {
 	}).then(async _page => {
 		page.value = _page;
 
-		// plugin
 		const pageViewInterruptors = getPluginHandlers('page_view_interruptor');
 		if (pageViewInterruptors.length > 0) {
 			let result = deepClone(_page);

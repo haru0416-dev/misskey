@@ -52,7 +52,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts">
 import { ref } from 'vue';
 
-// 別々のコンポーネントインスタンス間でD&Dを融通するためにグローバルに状態を持っておく必要がある
+// コンポーネントインスタンス間でドラッグ状態を共有する必要があるため、状態をモジュール単位で保持する。
 const dragging = ref(false);
 let dropCallback: ((targetInstanceId: string) => void) | null = null;
 </script>
@@ -107,9 +107,9 @@ function onDragstart(ev: DragEvent, item: T) {
 		emit('update:modelValue', newValue);
 	};
 
-	// Chromeのバグで、Dragstartハンドラ内ですぐにDOMを変更する(=リアクティブなプロパティを変更する)とDragが終了してしまう
-	// SEE: https://stackoverflow.com/questions/19639969/html5-dragend-event-firing-immediately
-	// SEE: https://issues.chromium.org/issues/41150279
+	// Chrome では dragstart 中の DOM 変更でドラッグが終了するため、状態変更を遅延させる。
+	// https://stackoverflow.com/questions/19639969/html5-dragend-event-firing-immediately
+	// https://issues.chromium.org/issues/41150279
 	window.setTimeout(() => {
 		dragging.value = true;
 	}, 10);
@@ -132,11 +132,10 @@ function onDrop(ev: DragEvent, item: T, backward: boolean) {
 	dropCallback?.(instanceId);
 
 	const fromIndex = props.modelValue.findIndex(x => x.id === dragged.item.id);
-	let toIndex = props.modelValue.findIndex(x => x.id === item.id);
 
 	const newValue = [...props.modelValue];
 	if (fromIndex > -1) newValue.splice(fromIndex, 1);
-	toIndex = newValue.findIndex(x => x.id === item.id);
+	let toIndex = newValue.findIndex(x => x.id === item.id);
 	if (backward) toIndex += 1;
 	newValue.splice(toIndex, 0, dragged.item as T);
 

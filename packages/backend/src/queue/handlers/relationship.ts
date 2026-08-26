@@ -4,16 +4,16 @@
  */
 
 import * as Bull from 'bullmq';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-import { blockingExistsInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { followingExistsInDatabase } from '@/core/FollowingStore.js';
-import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { blockingExistsInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
+import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/user/FollowRequestStore.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
+import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import {
@@ -21,29 +21,27 @@ import {
 	unblockForHonoApi,
 	unfollow,
 	type HonoApiAccountBlockingDependencies,
-} from '../../server/rest/account-blocking.js';
+} from '@/server/rest/account/account-blocking.js';
 import {
 	addActivityContext,
 	createFollowRequestWithSideEffects,
 	insertFollowingWithSideEffects,
 	isLocalUser,
 	isRemoteUser,
-	refreshUserFollowingsCache,
 	renderAccept,
 	renderFollow,
 	renderReject,
 	type HonoApiFollowingDependencies,
-} from '../../server/rest/following.js';
-import { validateAlsoKnownAsForHonoApi, type HonoApiApPersonDependencies } from '../../server/rest/ap-person.js';
+} from '@/server/rest/user/following.js';
+import { validateAlsoKnownAsForHonoApi, type HonoApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
-export type HonoQueueRelationshipDependencies =
-	& HonoApiAccountBlockingDependencies
-	& HonoApiFollowingDependencies
-	& HonoApiApPersonDependencies;
+export type HonoQueueRelationshipDependencies = HonoApiAccountBlockingDependencies &
+	HonoApiFollowingDependencies &
+	HonoApiApPersonDependencies;
 
 function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) return false;
-	return silencedHosts.some(x => `.${host.toLowerCase()}`.endsWith(`.${x}`));
+	return silencedHosts.some((x) => `.${host.toLowerCase()}`.endsWith(`.${x}`));
 }
 
 async function deliverAcceptFollowActivity(
@@ -54,11 +52,13 @@ async function deliverAcceptFollowActivity(
 ): Promise<void> {
 	if (!isRemoteUser(follower) || !isLocalUser(followee)) return;
 
-	const content = addActivityContext(deps.config, renderAccept(deps.config, renderFollow(deps.config, follower, followee, requestId), followee));
+	const content = addActivityContext(
+		deps.config,
+		renderAccept(deps.config, renderFollow(deps.config, follower, followee, requestId), followee),
+	);
 	enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 }
 
-/** UserFollowingService.follow 相当。inbox の Follow アクティビティ受信からも呼ばれる。 */
 export async function followWithSideEffectsForHonoApi(
 	deps: HonoQueueRelationshipDependencies,
 	follower: MiLocalUser | MiRemoteUser,
@@ -78,7 +78,10 @@ export async function followWithSideEffectsForHonoApi(
 
 	if (isRemoteUser(follower) && isLocalUser(followee) && blocked) {
 		// リモートフォローを受けてブロックしていた場合は、エラーにするのではなくRejectを送り返しておしまい。
-		const content = addActivityContext(deps.config, renderReject(deps.config, renderFollow(deps.config, follower, followee, requestId), followee));
+		const content = addActivityContext(
+			deps.config,
+			renderReject(deps.config, renderFollow(deps.config, follower, followee, requestId), followee),
+		);
 		enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 		return 'rejected: blocked';
 	} else if (isRemoteUser(follower) && isLocalUser(followee) && blocking) {
@@ -112,12 +115,14 @@ export async function followWithSideEffectsForHonoApi(
 	if (
 		followee.isLocked ||
 		(followeeProfile.carefulBot && follower.isBot) ||
-		(isLocalUser(follower) && isRemoteUser(followee) && process.env['FORCE_FOLLOW_REMOTE_USER_FOR_TESTING'] !== 'true') ||
+		(isLocalUser(follower) &&
+			isRemoteUser(followee) &&
+			process.env['FORCE_FOLLOW_REMOTE_USER_FOR_TESTING'] !== 'true') ||
 		(isLocalUser(followee) && isRemoteUser(follower) && isSilencedHost(deps.meta.silencedHosts, follower.host))
 	) {
 		let autoAccept = false;
 
-		// 鍵アカウントであっても、既にフォローされていた場合はスルー (この時点で到達不能だが元実装通り残す)
+		// 鍵アカウントでも既存のフォロー関係があれば自動承認する。
 		if (await followingExistsInDatabase(deps.db, follower.id, followee.id)) {
 			autoAccept = true;
 		}
@@ -127,7 +132,7 @@ export async function followWithSideEffectsForHonoApi(
 			autoAccept = await followingExistsInDatabase(deps.db, followee.id, follower.id);
 		}
 
-		// Automatically accept if the follower is an account who has moved and the locked followee had accepted the old account.
+		// フォロワーが移行済みアカウントで、非公開のフォロー先が旧アカウントを承認済みなら自動承認する。
 		if (!autoAccept && followee.isLocked) {
 			autoAccept = !!(await validateAlsoKnownAsForHonoApi(
 				deps,
@@ -144,10 +149,14 @@ export async function followWithSideEffectsForHonoApi(
 	}
 
 	try {
-		await insertFollowingWithSideEffects(deps, follower, followee, omitUndefined({ withReplies, followeeProfile, silent }));
+		await insertFollowingWithSideEffects(
+			deps,
+			follower,
+			followee,
+			omitUndefined({ withReplies, followeeProfile, silent }),
+		);
 	} catch (err) {
 		if (isDuplicateKeyValueError(err) && isRemoteUser(follower) && isLocalUser(followee)) {
-			await refreshUserFollowingsCache(deps, follower.id);
 			if (await followRequestExistsInDatabase(deps.db, follower.id, followee.id)) {
 				await deleteFollowRequestFromDatabase(deps.db, follower.id, followee.id);
 			}
@@ -163,28 +172,38 @@ export async function followWithSideEffectsForHonoApi(
 	return 'ok';
 }
 
-/** UserFollowingService.follow 相当 (RelationshipProcessorService.processFollow から呼ばれる)。 */
 export async function handleHonoQueueRelationshipFollow(
 	deps: HonoQueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
 ): Promise<string> {
-	const [follower, followee] = await Promise.all([
+	const [follower, followee] = (await Promise.all([
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
-	]) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
+	])) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
 
-	return followWithSideEffectsForHonoApi(deps, follower, followee, omitUndefined({
-		requestId: job.data.requestId,
-		silent: job.data.silent,
-		withReplies: job.data.withReplies,
-	}));
+	return followWithSideEffectsForHonoApi(
+		deps,
+		follower,
+		followee,
+		omitUndefined({
+			requestId: job.data.requestId,
+			silent: job.data.silent,
+			withReplies: job.data.withReplies,
+		}),
+	);
 }
 
-/** UserFollowingService.unfollow 相当 (RelationshipProcessorService.processUnfollow から呼ばれる)。 */
 export async function handleHonoQueueRelationshipUnfollow(
 	deps: HonoQueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
 ): Promise<string> {
+	if (job.data.userStateGuard != null) {
+		const guard = job.data.userStateGuard;
+		const guardedUser = await fetchUserByIdOrFailFromDatabase(deps.db, guard.userId);
+		if (guardedUser.isSuspended !== guard.isSuspended || guardedUser.suspensionTransitionId !== guard.transitionId) {
+			return 'skip (stale user state)';
+		}
+	}
 	const [follower, followee] = await Promise.all([
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),

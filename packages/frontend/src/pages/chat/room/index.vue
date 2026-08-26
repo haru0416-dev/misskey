@@ -26,7 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</div>
 
-			<div v-else ref="timelineEl" class="_gaps">
+			<div v-else ref="timelineEl" class="_gaps" role="log" :aria-label="i18n.ts._chat.messages" aria-live="off">
 				<div v-if="canFetchMore">
 					<MkButton :class="$style.more" :wait="moreFetching" primary rounded @click="fetchMore">{{ i18n.ts.loadMore }}</MkButton>
 				</div>
@@ -37,14 +37,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 					:enterFromClass="prefer.animation ? $style.transition_x_enterFrom : ''"
 					:leaveToClass="prefer.animation ? $style.transition_x_leaveTo : ''"
 					:moveClass="prefer.animation ? $style.transition_x_move : ''"
-					tag="div" class="_gaps"
+					tag="div" :class="$style.timeline"
 				>
-					<template v-for="item in timeline.toReversed()" :key="item.id">
-						<MessageItem v-if="item.type === 'item'" :message="item.data"/>
-						<div v-else-if="item.type === 'date'" :class="$style.dateDivider">
-							<span><i class="ti ti-chevron-up"></i> {{ item.nextText }}</span>
-							<span style="height: 1em; width: 1px; background: var(--MI_THEME-divider);"></span>
-							<span>{{ item.prevText }} <i class="ti ti-chevron-down"></i></span>
+					<template v-for="row in rows" :key="row.item.id">
+						<MessageItem v-if="row.item.type === 'item'" :message="row.item.data" :grouped="row.grouped" :class="row.grouped ? $style.timelineRowGrouped : undefined"/>
+						<div v-else-if="row.item.type === 'date'" :class="$style.dateDivider">
+							<span><i class="ti ti-chevron-up" aria-hidden="true"></i> {{ row.item.nextText }}</span>
+							<span :class="$style.dateDividerRule" aria-hidden="true"></span>
+							<span>{{ row.item.prevText }} <i class="ti ti-chevron-down" aria-hidden="true"></i></span>
 						</div>
 					</template>
 				</TransitionGroup>
@@ -73,10 +73,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template #footer>
 		<div v-if="tab === 'chat'" :class="$style.footer">
 			<div class="_gaps">
-				<Transition name="fade">
+				<span :class="$style.srOnlyLive" role="status" aria-live="polite">{{ showIndicator ? i18n.ts._chat.newMessage : '' }}</span>
+				<Transition
+					:enterActiveClass="prefer.animation ? $style.transition_fade_enterActive : ''"
+					:leaveActiveClass="prefer.animation ? $style.transition_fade_leaveActive : ''"
+					:enterFromClass="prefer.animation ? $style.transition_fade_enterFrom : ''"
+					:leaveToClass="prefer.animation ? $style.transition_fade_leaveTo : ''"
+				>
 					<div v-show="showIndicator" :class="$style.new">
 						<button class="_buttonPrimary" :class="$style.newButton" @click="onIndicatorClick">
-							<i class="fas ti-fw fa-arrow-circle-down" :class="$style.newIcon"></i>{{ i18n.ts._chat.newMessage }}
+							<i class="fas ti-fw fa-arrow-circle-down" :class="$style.newIcon" aria-hidden="true"></i>{{ i18n.ts._chat.newMessage }}
 						</button>
 					</div>
 				</Transition>
@@ -138,6 +144,19 @@ const connection = ref<Misskey.IChannelConnection<Misskey.Channels['chatUser']> 
 const showIndicator = ref(false);
 const timelineEl = useTemplateRef('timelineEl');
 const timeline = makeDateSeparatedTimelineComputedRef(messages);
+
+// 表示順 (古い順) に並べ、同一送信者の連続メッセージ (=直前の行も同じ送信者) を grouped として
+// マークする。grouped 行はアバター/送信者名を省略し行間を詰めて、連投を1つの束として見せる
+const rows = computed(() => {
+	const arr = timeline.value.toReversed();
+	return arr.map((item, i) => {
+		const prev = i > 0 ? arr[i - 1] : undefined;
+		return {
+			item,
+			grouped: item.type === 'item' && prev?.type === 'item' && prev.data.fromUserId === item.data.fromUserId,
+		};
+	});
+});
 
 const SCROLL_HEAD_THRESHOLD = 200;
 
@@ -295,9 +314,18 @@ async function fetchMore() {
 function onMessage(message: Misskey.entities.ChatMessageLite) {
 	sound.playMisskeySfx('chatMessage');
 
+	// スクロールが最下部付近から離れているとMutationObserverの追従が行われず新着が視界に入らないため、
+	// 相手からのメッセージならインジケータで知らせる (追従される場合は出さない)
+	if (message.fromUserId !== $i.id && timelineEl.value != null) {
+		const scrollContainer = getScrollContainer(timelineEl.value);
+		// column-reverseなのでscrollTopは負になる
+		if (scrollContainer != null && -scrollContainer.scrollTop >= SCROLL_HEAD_THRESHOLD) {
+			notifyNewMessage();
+		}
+	}
+
 	messages.value.unshift(normalizeMessage(message));
 
-	// TODO: DOM的にバックグラウンドになっていないかどうかも考慮する
 	if (message.fromUserId !== $i.id && !window.document.hidden && isActivated) {
 		connection.value?.send('read', {
 			id: message.id,
@@ -341,6 +369,9 @@ function onUnreact(ctx: Parameters<Misskey.Channels['chatUser']['events']['unrea
 
 function onIndicatorClick() {
 	showIndicator.value = false;
+	// column-reverseなので最下部 = scrollTop 0
+	const scrollContainer = timelineEl.value != null ? getScrollContainer(timelineEl.value) : null;
+	scrollContainer?.scrollTo({ top: 0, behavior: prefer.animation ? 'smooth' : 'instant' });
 }
 
 function notifyNewMessage() {
@@ -349,7 +380,6 @@ function notifyNewMessage() {
 
 function onVisibilitychange() {
 	if (window.document.hidden) return;
-	// TODO
 }
 
 onMounted(() => {
@@ -481,7 +511,7 @@ definePage(computed(() => {
 .transition_x_move,
 .transition_x_enterActive,
 .transition_x_leaveActive {
-	transition: opacity 0.2s cubic-bezier(0,.5,.5,1), transform 0.2s cubic-bezier(0,.5,.5,1) !important;
+	transition: opacity var(--MI-duration-normal) var(--MI-ease-out), transform var(--MI-duration-normal) var(--MI-ease-out) !important;
 }
 .transition_x_enterFrom,
 .transition_x_leaveTo {
@@ -492,55 +522,80 @@ definePage(computed(() => {
 	position: absolute;
 }
 
-.root {
+.transition_fade_enterActive,
+.transition_fade_leaveActive {
+	transition: opacity var(--MI-duration-normal) var(--MI-ease-out);
+}
+.transition_fade_enterFrom,
+.transition_fade_leaveTo {
+	opacity: 0;
 }
 
 .more {
 	margin: 0 auto;
 }
 
+// _gaps の一律 gap の代わりに行間を自前で管理する。
+// 通常の行間は xl、同一送信者の連投 (timelineRowGrouped) は sm に詰めて束として見せる
+.timeline {
+	display: flex;
+	flex-direction: column;
+}
+
+.timeline > * {
+	margin-top: var(--MI-space-xl);
+}
+
+.timeline > *:first-child {
+	margin-top: 0;
+}
+
+.timeline > .timelineRowGrouped {
+	margin-top: var(--MI-space-sm);
+}
+
 .footer {
 	width: 100%;
-	padding-top: 8px;
+	padding-top: var(--MI-space-sm);
 }
 
 .new {
 	width: 100%;
-	padding-bottom: 8px;
+	padding-bottom: var(--MI-space-sm);
 	text-align: center;
 }
 
 .newButton {
 	display: inline-block;
 	margin: 0;
-	padding: 0 12px;
+	padding: 0 var(--MI-space-md);
 	line-height: 32px;
 	font-size: 12px;
-	border-radius: 16px;
+	border-radius: var(--MI-radius-full);
 }
 
 .newIcon {
 	display: inline-block;
-	margin-right: 8px;
+	margin-right: var(--MI-space-sm);
 }
 
-.footer {
-
+.srOnlyLive {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
 }
 
 .form {
 	margin: 0 auto;
 	width: 100%;
 	max-width: 700px;
-}
-
-.fade-enter-active, .fade-leave-active {
-	transition: opacity 0.1s;
-}
-
-.fade-enter-from, .fade-leave-to {
-	transition: opacity 0.5s;
-	opacity: 0;
 }
 
 .dateDivider {
@@ -551,9 +606,15 @@ definePage(computed(() => {
 	gap: 0.5em;
 	opacity: 0.75;
 	border: solid 0.5px var(--MI_THEME-divider);
-	border-radius: 999px;
+	border-radius: var(--MI-radius-full);
 	width: fit-content;
 	padding: 0.5em 1em;
-	margin: 0 auto;
+	margin-inline: auto; // .timeline > * の margin-top を潰さないよう shorthand を避ける
+}
+
+.dateDividerRule {
+	height: 1em;
+	width: 1px;
+	background: var(--MI_THEME-divider);
 }
 </style>

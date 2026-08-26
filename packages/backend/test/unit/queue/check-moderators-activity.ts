@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -12,11 +11,11 @@ process.env['NODE_ENV'] = 'test';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase, updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
-import { createRoleInDatabase } from '@/core/RoleStore.js';
-import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
-import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
-import { listAnnouncementsForAdminFromDatabase } from '@/core/AnnouncementStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
+import { createRoleInDatabase } from '@/core/role/RoleStore.js';
+import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
+import { listAnnouncementsForAdminFromDatabase } from '@/core/announcement/AnnouncementStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleHonoQueueCheckModeratorsActivity,
@@ -24,7 +23,11 @@ import {
 } from '@/queue/handlers/check-moderators-activity.js';
 import type { MiUser } from '@/models/User.js';
 
-async function createModeratorTestUser(runtime: RuntimeDependencies, prefix: string, lastActiveDate: Date): Promise<MiUser> {
+async function createModeratorTestUser(
+	runtime: RuntimeDependencies,
+	prefix: string,
+	lastActiveDate: Date,
+): Promise<MiUser> {
 	const id = genId();
 	const user = await createUserWithProfileAndPublickeyInDatabase(runtime.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },

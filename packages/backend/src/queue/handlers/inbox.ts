@@ -12,7 +12,7 @@ import type { IActivity } from '@/core/activitypub/type.js';
 import { StatusError } from '@/misc/status-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { CollapsedQueue } from '@/misc/collapsed-queue.js';
-import { fetchInstanceMetadataWithSideEffects } from '@/core/FetchInstanceMetadataLogic.js';
+import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInstanceMetadataLogic.js';
 import type { InboxJobData } from '@/queue/types.js';
 import {
 	extractDbHost,
@@ -20,15 +20,15 @@ import {
 	getUserFromApIdForHonoApi,
 	isFederationAllowedHost,
 	type HonoApiAuthUser,
-} from '../../server/rest/ap-resolve.js';
-import { getAuthUserFromApIdForHonoApi, resolvePersonForHonoApi } from '../../server/rest/ap-person.js';
+} from '@/server/rest/activitypub/ap-resolve.js';
+import { getAuthUserFromApIdForHonoApi, resolvePersonForHonoApi } from '@/server/rest/activitypub/ap-person.js';
 import {
 	fetchFederatedInstance,
 	fetchOrRegisterFederatedInstance,
 	tryLockFetchInstanceMetadata,
 	unlockFetchInstanceMetadata,
-	updateFederatedInstanceAndCache,
-} from '../../server/rest/federation.js';
+	updateFederatedInstance,
+} from '@/server/rest/activitypub/federation.js';
 import { performActivityForHonoApi, type HonoApiInboxDependencies } from '../../server/activitypub/inbox-dispatch.js';
 
 export type HonoQueueInboxDependencies = HonoApiInboxDependencies;
@@ -44,14 +44,16 @@ type UpdateInstanceJob = {
 
 function collapseUpdateInstanceJobs(oldJob: UpdateInstanceJob, newJob: UpdateInstanceJob): UpdateInstanceJob {
 	return {
-		latestRequestReceivedAt: oldJob.latestRequestReceivedAt < newJob.latestRequestReceivedAt ? newJob.latestRequestReceivedAt : oldJob.latestRequestReceivedAt,
+		latestRequestReceivedAt:
+			oldJob.latestRequestReceivedAt < newJob.latestRequestReceivedAt
+				? newJob.latestRequestReceivedAt
+				: oldJob.latestRequestReceivedAt,
 		shouldUnsuspend: oldJob.shouldUnsuspend || newJob.shouldUnsuspend,
 	};
 }
 
-// 元実装 (InboxProcessorService) 同様、プロセス内シングルトンの CollapsedQueue で
-// インスタンス更新をまとめて (5分間隔で) 反映する。deps は初回呼び出し時のものに固定されるが、
-// db/redis 等の実体は起動時から不変のため問題ない。
+// インスタンス更新はプロセス内シングルトンの CollapsedQueue でまとめて 5 分間隔で反映する。
+// deps は初回呼び出し時のものに固定されるが、db/redis 等の実体は起動時から不変である。
 let updateInstanceQueue: CollapsedQueue<string, UpdateInstanceJob> | undefined;
 
 function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueue<string, UpdateInstanceJob> {
@@ -61,25 +63,32 @@ function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueu
 			timeout,
 			collapseUpdateInstanceJobs,
 			async (id, job) => {
-				await updateFederatedInstanceAndCache(deps, id, {
+				await updateFederatedInstance(deps, id, {
 					latestRequestReceivedAt: job.latestRequestReceivedAt,
 					isNotResponding: false,
 					// もしサーバーが死んでるために配信が止まっていた場合には自動的に復活させてあげる
 					...(job.shouldUnsuspend ? { suspensionState: 'none' as const } : {}),
 				});
 			},
-			(error, id) => deps.logger.error(`Failed to update federated instance ${id}`, error instanceof Error ? error : new Error(String(error))),
+			(error, id) =>
+				deps.logger.error(
+					`Failed to update federated instance ${id}`,
+					error instanceof Error ? error : new Error(String(error)),
+				),
 		);
 	}
 	return updateInstanceQueue;
 }
 
-/** InboxProcessorService.dispose 相当。テストでの明示的なflush用。 */
+/** テストから更新キューを明示的にflushするために公開する。 */
 export async function flushHonoQueueInboxUpdateInstanceQueue(): Promise<void> {
 	await updateInstanceQueue?.performAllNow();
 }
 
-async function verifyAndResolveAuthUser(deps: HonoQueueInboxDependencies, job: Bull.Job<InboxJobData>): Promise<{ authUser: HonoApiAuthUser; activity: IActivity } | string> {
+async function verifyAndResolveAuthUser(
+	deps: HonoQueueInboxDependencies,
+	job: Bull.Job<InboxJobData>,
+): Promise<{ authUser: HonoApiAuthUser; activity: IActivity } | string> {
 	const signature = job.data.signature;
 	let activity = job.data.activity;
 
@@ -88,7 +97,11 @@ async function verifyAndResolveAuthUser(deps: HonoQueueInboxDependencies, job: B
 
 		// 存在しないActorに対するActorのDeleteアクティビティは無視する。
 		// actorとobjectが同じならばそれはActorに違いない
-		if (isDelete(activity) && typeof activity.object === 'object' && (isActor(activity.object) || getApId(activity.actor) === getApId(activity.object))) {
+		if (
+			isDelete(activity) &&
+			typeof activity.object === 'object' &&
+			(isActor(activity.object) || getApId(activity.actor) === getApId(activity.object))
+		) {
 			userExistenceCheckApId = getApId(activity.object);
 		}
 
@@ -111,7 +124,9 @@ async function verifyAndResolveAuthUser(deps: HonoQueueInboxDependencies, job: B
 			// 対象が4xxならスキップ
 			if (err instanceof StatusError) {
 				if (!err.isRetryable) {
-					throw new Bull.UnrecoverableError(`skip: Ignored deleted actors on both ends ${getApId(activity.actor)} - ${err.statusCode}`);
+					throw new Bull.UnrecoverableError(
+						`skip: Ignored deleted actors on both ends ${getApId(activity.actor)} - ${err.statusCode}`,
+					);
 				}
 				throw new Error(`Error in actor ${getApId(activity.actor)} - ${err.statusCode}`, { cause: err });
 			}
@@ -137,7 +152,9 @@ async function verifyAndResolveAuthUser(deps: HonoQueueInboxDependencies, job: B
 		// 一致しなくても、でもLD-Signatureがありそうならそっちも見る
 		const ldSignature = activity.signature;
 		if (!ldSignature) {
-			throw new Bull.UnrecoverableError(`skip: http-signature verification failed and no LD-Signature. keyId=${signature.keyId}`);
+			throw new Bull.UnrecoverableError(
+				`skip: http-signature verification failed and no LD-Signature. keyId=${signature.keyId}`,
+			);
 		}
 
 		if (ldSignature.type !== 'RsaSignature2017') {
@@ -165,7 +182,7 @@ async function verifyAndResolveAuthUser(deps: HonoQueueInboxDependencies, job: B
 
 		delete activity.signature;
 		try {
-			activity = await jsonLd.compact(activity) as IActivity;
+			activity = (await jsonLd.compact(activity)) as IActivity;
 		} catch (error) {
 			throw new Bull.UnrecoverableError(`skip: failed to compact activity: ${error}`);
 		}
@@ -194,7 +211,9 @@ async function verifyAndResolveAuthUser(deps: HonoQueueInboxDependencies, job: B
 
 		// もう一度actorチェック
 		if (authUser.user.uri !== getApId(activity.actor)) {
-			throw new Bull.UnrecoverableError(`skip: LD-Signature user(${authUser.user.uri}) !== activity.actor(${getApId(activity.actor)})`);
+			throw new Bull.UnrecoverableError(
+				`skip: LD-Signature user(${authUser.user.uri}) !== activity.actor(${getApId(activity.actor)})`,
+			);
 		}
 
 		const ldHost = extractDbHost(authUser.user.uri);
@@ -217,7 +236,10 @@ async function verifyAndResolveAuthUser(deps: HonoQueueInboxDependencies, job: B
 	return { authUser, activity };
 }
 
-export async function handleHonoQueueInbox(deps: HonoQueueInboxDependencies, job: Bull.Job<InboxJobData>): Promise<string> {
+export async function handleHonoQueueInbox(
+	deps: HonoQueueInboxDependencies,
+	job: Bull.Job<InboxJobData>,
+): Promise<string> {
 	const host = toPuny(new URL(job.data.signature.keyId).hostname);
 	if (!isFederationAllowedHost(deps.config, deps.meta, host)) {
 		return `Blocked request: ${host}`;
@@ -251,14 +273,17 @@ export async function handleHonoQueueInbox(deps: HonoQueueInboxDependencies, job
 			void deps.chartWriters.instanceChart.requestReceived(i.host);
 		}
 
-		await fetchInstanceMetadataWithSideEffects({
-			httpRequestService: deps.httpRequestService,
-			logger: { error: () => {}, info: () => {} },
-			tryLock: h => tryLockFetchInstanceMetadata(deps, h),
-			unlock: h => unlockFetchInstanceMetadata(deps, h),
-			fetchOrRegisterInstance: h => fetchOrRegisterFederatedInstance(deps, h),
-			updateInstance: (id, updates) => updateFederatedInstanceAndCache(deps, id, updates).then(() => {}),
-		}, i);
+		await fetchInstanceMetadataWithSideEffects(
+			{
+				httpRequestService: deps.httpRequestService,
+				logger: { error: () => {}, info: () => {} },
+				tryLock: (h) => tryLockFetchInstanceMetadata(deps, h),
+				unlock: (h) => unlockFetchInstanceMetadata(deps, h),
+				fetchOrRegisterInstance: (h) => fetchOrRegisterFederatedInstance(deps, h),
+				updateInstance: (id, updates) => updateFederatedInstance(deps, id, updates).then(() => {}),
+			},
+			i,
+		);
 	});
 
 	// アクティビティを処理

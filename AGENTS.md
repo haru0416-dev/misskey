@@ -16,6 +16,14 @@
 
 ### コード・データ関連
 
+#### コメント規約
+
+- 保守判断のための説明コメントは日本語で書き、制約・不変条件・実測値・非自明な選択の理由だけを残す
+- 処理内容をコードどおりに言い換えるコメントは書かない
+- 概念メタファー (砦・器・天井・目を覚ます等) は書かない。定着した技術用語 (枯渇・空振り等) は使用してよい
+- 変更前の実装や変更経緯はコメントに書かず、現在成立する制約や理由だけを書く
+- SPDX ヘッダー、lint・型検査の指示、仕様上の識別子、コメント構文自体を検証する fixture は説明コメントに含めない
+
 1. **SPDX ヘッダー欠落のまま AGPL 管轄ディレクトリへ新規ファイルを追加しない**
    - 対象: 新規 `.ts` / `.js` / `.cjs` / `.mjs` / `.vue` / `.scss` / `.html` ファイル
    - CI の対象判定は [.github/workflows/check-spdx-license-id.yml](.github/workflows/check-spdx-license-id.yml) の `directories` 配列を参照 (`*.config.{ts,js,cjs,mjs}` と `*eslint*` は除外)
@@ -94,9 +102,14 @@
 
 | 用途 | コマンド |
 | --- | --- |
-| 全体 lint (oxlint + typecheck) | `bun run lint` |
+| 全体 lint (oxlint + oxfmt + typecheck) | `bun run lint` |
+| 整形の自動修正 | `bun run format:ox` |
+| Vue テンプレートの構文検査 | `bun run lint:vue-templates` |
+| 未使用ファイル / export / 依存の検出 | `bun run lint:knip` |
+| コピペ (重複コード) の検出 | `bun run lint:jscpd` |
 | Backend unit test | `bun run --bun --filter backend test` |
 | Backend e2e test | `bun run --bun --filter backend test:e2e` |
+| Backend e2e test (本番と同じ bun ランタイム + Bun.sql) | `bun run --bun --filter backend test:e2e:bun` |
 | Backend federation test | `bun run --bun --filter backend test:fed` |
 | Frontend unit test | `bun run --bun --filter frontend test` |
 | Migration 未適用チェック | `bun run --bun --filter backend check-migrations` |
@@ -107,3 +120,37 @@
 | 開発サーバー (backend + frontend watch) | `bun run dev` |
 
 **注意:** backend テスト (`test` / `test:e2e` / `test:fed`) 実行前に `.config/test.yml` が必要 (`cp .github/misskey/test.yml .config/test.yml` で作成)。
+
+**grep する時の注意:** `.vue` は oxfmt の対象外なので、アロー関数の書式が `.ts` と揃っていない (`.ts` は `(x) =>` に統一済み、`.vue` は `x =>` が 73%)。`packages/` 全体を検索するときは `(x) =>` と `x =>` の両方を試すこと。理由と再検討の手掛かりは [.oxfmtrc.json](.oxfmtrc.json) の `$comment` を参照。
+
+---
+
+## 調査と待ち時間の進め方
+
+このリポジトリは backend / frontend / migration / e2e が独立に大きく、検証も分単位で走る。
+以下は「いつ発火するか」と「何を禁じるか」だけを決めた方針で、手段は任せる。
+
+1. **サブエージェントへの委任は、本当に独立して並列化できる大きな仕事に限る**
+   - 該当例: 複数パッケージにまたがる調査、影響範囲の広い洗い出し
+   - 数回のツール呼び出しで自分で終わる仕事は委任しない。自分の作業の検証・再確認のために委任しない
+   - 1 体で足りるなら 1 体にする。起動数は少なく保つ
+   - `.claude/agents/` の 2 本 (`misskey-api-reviewer` / `vue-component-reviewer`) は PR レビュー専用
+
+2. **長い処理を待つ間、メインループを空転させない**
+   - 該当例: `bun run --bun --filter backend test:e2e` (数分)、`bun run dev` の起動、フルビルド
+   - 待つのは構わないが、待っている間に「その結果に依存しない作業」を進めること
+   - 結果待ちの `sleep` を目分量で延長しない。完了条件が判定できるなら `Monitor` で条件成立を待つ
+
+3. **委任した仕事の完了は自動で通知される。ポーリングしない**
+   - サブエージェントもバックグラウンドのコマンドも、終わればこちらへ通知が来る
+   - 通知を待つためだけに `sleep` を挟むターンを作らない
+
+**Why:** 1 は [Claude Opus 5 のプロンプティングガイド](https://platform.claude.com/docs/ja/build-with-claude/prompt-engineering/prompting-claude-opus-5#controlling-subagent-spawning) の推奨をそのまま採る
+(同モデルは委任に積極的で、小さな仕事に適用するとコストと時間が倍増するため、上限を課す側が正しい)。
+2 と 3 は実測 (2026-08-05、本リポジトリ) による: 結果待ちの `sleep` が 1 セッションで合計 38 分に達し、
+うち 2 件は同じログを目分量で 2 回に分けて待っていた。別のセッションでは通知が届く相手を待つためだけの
+`sleep` が 13 回・248 秒あった。
+
+**未解決:** 上記とは逆に、1,131 ターン 3 時間 21 分のセッションでサブエージェントが 1 度も使われなかった観測がある (n=1)。
+公式ガイドの「積極的に委任する」と食い違うため、1 を委任を促す向きへ変えるのは、
+同種のセッションを複数観測してからにすること。

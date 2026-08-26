@@ -11,7 +11,9 @@ import { watch as chokidarWatch } from 'chokidar';
 import * as esbuild from 'esbuild';
 import { build } from 'esbuild';
 import { generateLocaleInterface } from './scripts/generateLocaleInterface.js';
+import { parseLocaleYaml } from './scripts/parseLocaleYaml.js';
 import { languages } from './src/const.js';
+import type { ILocale } from './src/types.js';
 import type { BuildOptions, BuildResult, Plugin, PluginBuild } from 'esbuild';
 
 const _filename = fileURLToPath(import.meta.url);
@@ -53,7 +55,7 @@ if (args.includes('--watch')) {
 // `/locales` には Crowdin 経由で翻訳進捗70%未満の言語ファイルも同期されてくるが、
 // それらは const.ts の languages に載るまで build() から一切参照されない。
 // 未参照ファイルまでコピーするとビルド毎の無駄なI/Oと成果物肥大化になるので対象を絞る。
-function copyLocales(): void {
+function writeLocales(): void {
 	const srcDir = _localesDir;
 	const destDir = resolve(_dirname, 'built/locales');
 
@@ -61,9 +63,10 @@ function copyLocales(): void {
 
 	const files = languages.map((lang) => `${lang}.yml`).filter((f) => fs.existsSync(resolve(srcDir, f)));
 	for (const file of files) {
-		fs.copyFileSync(resolve(srcDir, file), resolve(destDir, file));
+		const locale = parseLocaleYaml<ILocale>(fs.readFileSync(resolve(srcDir, file), 'utf8'));
+		fs.writeFileSync(resolve(destDir, file.replace(/\.yml$/, '.json')), JSON.stringify(locale), 'utf8');
 	}
-	console.log(`[${_package.name}] locales copied (${files.length} files).`);
+	console.log(`[${_package.name}] locales written (${files.length} files).`);
 }
 
 /**
@@ -71,7 +74,7 @@ function copyLocales(): void {
  * Service Worker が HTTP 経由で取得するために必要
  */
 async function writeFrontendLocalesJson(useCachedLocales = false): Promise<void> {
-	// 動的 import でビルド済みモジュールから読み込み（循環参照回避）
+	// locale生成・コピー後の、今回ビルドしたモジュールを読む必要があるため動的importする。
 	const { locales, writeFrontendLocalesJson: write } = await import('./built/index.js');
 	await write(_frontendLocalesDir, _rootPackage.version, useCachedLocales ? locales : undefined);
 	console.log(`[${_package.name}] frontend locales JSON written to ${_frontendLocalesDir}`);
@@ -91,7 +94,7 @@ async function buildSrc(): Promise<void> {
 			process.exit(1);
 		});
 
-	copyLocales();
+	writeLocales();
 	await writeFrontendLocalesJson(true);
 
 	if (process.env.NODE_ENV === 'production') {
@@ -138,7 +141,7 @@ async function watchSrc(): Promise<void> {
 		if (!localeFiles.has(file)) return;
 		localeBuildQueue = localeBuildQueue.then(async () => {
 			console.log(`[${_package.name}] locales changed: ${event} ${path}`);
-			copyLocales();
+			writeLocales();
 			await writeFrontendLocalesJson();
 			if (file === 'ja-JP.yml') await generateLocaleInterface(_localesDir);
 		}).catch((error) => {

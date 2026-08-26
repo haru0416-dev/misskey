@@ -1,22 +1,17 @@
 import * as fs from 'node:fs/promises';
 import url from 'node:url';
 import path from 'node:path';
-import { execa } from 'execa';
 import locales from 'i18n';
+import { spawnChecked } from '../../scripts/spawn-checked.mjs';
 import { LocaleInliner } from './builder/locale-inliner.js';
 import { createLogger } from './builder/logger';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const outputDir = __dirname + '/../../built/_frontend_vite_';
 
-/**
- * @return {Promise<void>}
- */
 async function viteBuild() {
-	await execa('bun', ['run', '--bun', 'vite', 'build'], {
+	await spawnChecked([process.execPath, 'run', '--bun', 'vite', 'build'], {
 		cwd: __dirname,
-		stdout: process.stdout,
-		stderr: process.stderr,
 	});
 }
 

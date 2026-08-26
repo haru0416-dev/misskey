@@ -4,7 +4,7 @@
  */
 
 export default async function setup() {
-	// DBはUTC（っぽい）ので、テスト側も合わせておく
+	// DB のタイムゾーンに合わせてテスト側も UTC に設定する。
 	process.env['TZ'] = 'UTC';
 	process.env['NODE_ENV'] = 'test';
 

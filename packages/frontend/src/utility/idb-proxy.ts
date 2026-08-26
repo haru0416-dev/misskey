@@ -14,7 +14,7 @@ let idbAvailable =
 	typeof window !== 'undefined' ? !!(window.indexedDB && typeof window.indexedDB.open === 'function') : true;
 
 // iframe.contentWindow.indexedDB.deleteDatabase() がchromeのバグで使用できないため、E2E ではindexedDBを無効化している。
-// see https://github.com/misskey-dev/misskey/issues/13605#issuecomment-2053652123
+// https://github.com/misskey-dev/misskey/issues/13605#issuecomment-2053652123
 if (window.localStorage.getItem('__MISSKEY_E2E_TEST__') === 'true') {
 	idbAvailable = false;
 	console.log('E2E test detected. It will use localStorage.');
@@ -47,13 +47,14 @@ export async function update(key: string, updater: (value: unknown) => unknown) 
 		const value = updater(miLocalStorage.getItemAsJson(storageKey));
 		miLocalStorage.setItemAsJson(storageKey, value);
 	};
+	// Web Locks対応環境ではtab間のread-modify-writeを直列化する。非対応環境ではbest-effortとなり、並行更新が上書きし得る。
 	if (typeof navigator !== 'undefined' && navigator.locks != null) {
 		return navigator.locks.request(storageKey, write);
 	}
 	write();
 }
 
-export async function del(key: string) {
+async function del(key: string) {
 	if (idbAvailable) return idel(key);
 	return miLocalStorage.removeItem(`${PREFIX}${key}`);
 }

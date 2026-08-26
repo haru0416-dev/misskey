@@ -10,22 +10,20 @@ export const MINUTE = 60 * SECOND;
 export const HOUR = 60 * MINUTE;
 export const DAY = 24 * HOUR;
 
-export const USER_ONLINE_THRESHOLD = 1000 * 60 * 10; // 10min
-export const USER_ACTIVE_THRESHOLD = 1000 * 60 * 60 * 24 * 3; // 3days
+export const USER_ONLINE_THRESHOLD = 1000 * 60 * 10;
+const USER_ACTIVE_THRESHOLD = 1000 * 60 * 60 * 24 * 3;
 
 export const PER_NOTE_REACTION_USER_PAIR_CACHE_MAX = 16;
 
-// If you change DB_* values, you must also change the DB schema.
+// DB_* の値は DB スキーマと一致させる。
 
 /**
- * Maximum note text length that can be stored in DB.
- * Surrogate pairs count as one
+ * DB に保存できるノート本文の最大文字数。サロゲートペアは1文字として数える。
  */
 export const DB_MAX_NOTE_TEXT_LENGTH = 8192;
 
 /**
- * Maximum image description length that can be stored in DB.
- * Surrogate pairs count as one
+ * DB に保存できる画像説明文の最大文字数。サロゲートペアは1文字として数える。
  */
 export const DB_MAX_IMAGE_COMMENT_LENGTH = 512;
 
@@ -41,11 +39,19 @@ export const FILE_TYPE_IMAGE = [
 	'image/x-icon',
 ];
 
+// 外部へ送信する User-Agent の製品名。
+export const PRODUCT_NAME = 'Erebia';
+
+// メディアプロキシが自分自身や他のプロキシを経由し続けるのを防ぐため、
+// リクエスト元の User-Agent がこのトークンを含む場合は中継を拒否する。
+// `misskey/` は Misskey 系実装が共通で名乗るので、自分の製品名とは別に残す。
+export const PROXY_LOOP_USER_AGENT_TOKENS = [`${PRODUCT_NAME.toLowerCase()}/`, 'misskey/'];
+
 // ブラウザで直接表示することを許可するファイルの種類のリスト
 // ここに含まれないものは application/octet-stream としてレスポンスされる
 // SVGはXSSを生むので許可しない
 export const FILE_TYPE_BROWSERSAFE = [
-	// Images
+	// 画像
 	'image/png',
 	'image/gif',
 	'image/jpeg',
@@ -79,7 +85,7 @@ export const FILE_TYPE_BROWSERSAFE = [
 
 	'audio/aac',
 
-	// see https://github.com/misskey-dev/misskey/pull/10686
+	// https://github.com/misskey-dev/misskey/pull/10686
 	'audio/flac',
 	'audio/wav',
 ];

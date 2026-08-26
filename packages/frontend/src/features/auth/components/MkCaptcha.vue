@@ -11,17 +11,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-if="mCaptchaIframeUrl != null"
 			ref="mCaptchaIframe"
 			:src="mCaptchaIframeUrl"
+			title="mCaptcha"
 			style="border: none; max-width: 320px; width: 100%; height: 100%; max-height: 80px;"
 		></iframe>
 	</div>
 	<div v-if="props.provider == 'testcaptcha'" style="background: #eee; border: solid 1px #888; padding: 8px; color: #000; max-width: 320px; display: flex; gap: 10px; align-items: center; box-shadow: 2px 2px 6px #0004; border-radius: 4px;">
-		<img src="/client-assets/testcaptcha.png" style="width: 60px; height: 60px; "/>
+		<img src="/client-assets/testcaptcha.png" style="width: 60px; height: 60px; " alt=""/>
 		<div v-if="testcaptchaPassed">
 			<div style="color: green;">Test captcha passed!</div>
 		</div>
 		<div v-else>
 			<div style="font-size: 13px; margin-bottom: 4px;">Type "ai-chan-kawaii" to pass captcha</div>
-			<input v-model="testcaptchaInput" data-cy-testcaptcha-input/>
+			<input v-model="testcaptchaInput" aria-label="captcha" data-cy-testcaptcha-input/>
 			<button type="button" data-cy-testcaptcha-submit @click="testcaptchaSubmit">Submit</button>
 		</div>
 	</div>
@@ -34,10 +35,10 @@ import { ref, useTemplateRef, computed, onMounted, onBeforeUnmount, watch, onUnm
 import type Reciever_typeReferenceOnly from '@mcaptcha/core-glue';
 import { store } from '@/store.js';
 
-// APIs provided by Captcha services
-// see: https://docs.hcaptcha.com/configuration/#javascript-api
-// see: https://developers.google.com/recaptcha/docs/display?hl=ja
-// see: https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicitly-render-the-turnstile-widget
+// 各 CAPTCHA サービスが提供する API。
+// https://docs.hcaptcha.com/configuration/#javascript-api
+// https://developers.google.com/recaptcha/docs/display?hl=ja
+// https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicitly-render-the-turnstile-widget
 export type Captcha = {
 	render(container: string | Node, options: {
 		readonly [_ in 'sitekey' | 'theme' | 'type' | 'size' | 'tabindex' | 'callback' | 'expired' | 'expired-callback' | 'error-callback' | 'endpoint']?: unknown;
@@ -56,13 +57,12 @@ type CaptchaContainer = {
 
 declare global {
 	// Window を拡張してるため、空ではない
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 	interface Window extends CaptchaContainer { }
 }
 
 const props = defineProps<{
 	provider: CaptchaProvider;
-	sitekey: string | null; // null will show error on request
+	sitekey: string | null; // null を指定するとリクエスト時にエラーを表示する。
 	secretKey?: string | null;
 	instanceUrl?: string | null;
 	modelValue?: string | null;

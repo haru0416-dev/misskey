@@ -5,20 +5,25 @@
 
 import type { EventEmitter } from 'node:events';
 import type { GlobalEvents } from '@/core/global-events.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
-import { listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
-import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
-import { listMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/RenoteMutingStore.js';
-import { markAllHonoApiNotificationsAsRead, type HonoApiNotificationDependencies } from '../rest/notification.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
+import { listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/user/FollowingStore.js';
+import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelFollowingStore.js';
+import { listMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelMutingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/user/RenoteMutingStore.js';
+import { markAllHonoApiNotificationsAsRead, type HonoApiNotificationDependencies } from '@/server/rest/notification/notification.js';
 import { isJsonObject, type JsonObject, type JsonValue } from '@/misc/json-value.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiFollowing, MiUserProfile } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
-import type { HonoStreamChannelContext, HonoStreamChannelDefinition, HonoStreamChannelHandle } from './channel.js';
+import type {
+	HonoStreamChannelContext,
+	HonoStreamChannelDefinition,
+	HonoStreamChannelHandle,
+	HonoStreamChannelSubscriber,
+} from './channel.js';
 import { honoStreamChannelAdmin } from './channels/admin.js';
 import { honoStreamChannelDrive } from './channels/drive.js';
 import { honoStreamChannelMain } from './channels/main.js';
@@ -37,23 +42,66 @@ import { honoStreamChannelQueueStats } from './channels/queue-stats.js';
 import { honoStreamChannelServerStats } from './channels/server-stats.js';
 
 const MAX_CHANNELS_PER_CONNECTION = 32;
+const INITIALIZATION_TIMEOUT_MS = 30_000;
 const REFRESH_CONCURRENCY = 8;
 const REFRESH_RETRY_DELAYS_MS = [0, 250, 1000] as const;
 
-export type HonoStreamConnectionDependencies =
-	& HonoApiNotificationDependencies
-	& Parameters<typeof honoStreamChannelMain.init>[0]
-	& Parameters<typeof honoStreamChannelChatRoom.init>[0]
-	& Parameters<typeof honoStreamChannelHashtag.init>[0]
-	& Parameters<typeof honoStreamChannelAntenna.init>[0]
-	& Parameters<typeof honoStreamChannelChannel.init>[0]
-	& Parameters<typeof honoStreamChannelUserList.init>[0]
-	& Parameters<typeof honoStreamChannelRoleTimeline.init>[0]
-	& Parameters<typeof honoStreamChannelLocalTimeline.init>[0]
-	& Parameters<typeof honoStreamChannelGlobalTimeline.init>[0]
-	& Parameters<typeof honoStreamChannelHomeTimeline.init>[0]
-	& Parameters<typeof honoStreamChannelHybridTimeline.init>[0]
-	& {
+class HonoStreamInitializationTimeoutError extends Error {}
+
+async function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+	let timeoutId: NodeJS.Timeout | undefined;
+	try {
+		return await Promise.race([
+			promise,
+			new Promise<never>((_resolve, reject) => {
+				timeoutId = setTimeout(
+					() => reject(new HonoStreamInitializationTimeoutError(message)),
+					INITIALIZATION_TIMEOUT_MS,
+				);
+			}),
+		]);
+	} finally {
+		if (timeoutId != null) clearTimeout(timeoutId);
+	}
+}
+
+class HonoStreamChannelSubscriberScope implements HonoStreamChannelSubscriber {
+	private readonly listeners: { eventName: string | symbol; listener: Parameters<EventEmitter['on']>[1] }[] = [];
+	private disposed = false;
+
+	constructor(private readonly subscriber: EventEmitter) {}
+
+	public on(eventName: string | symbol, listener: Parameters<EventEmitter['on']>[1]): void {
+		if (this.disposed) return;
+		this.subscriber.on(eventName, listener);
+		this.listeners.push({ eventName, listener });
+	}
+
+	public off(eventName: string | symbol, listener: Parameters<EventEmitter['off']>[1]): void {
+		this.subscriber.off(eventName, listener);
+		const index = this.listeners.findLastIndex((entry) => entry.eventName === eventName && entry.listener === listener);
+		if (index !== -1) this.listeners.splice(index, 1);
+	}
+
+	public dispose(): void {
+		this.disposed = true;
+		for (const { eventName, listener } of this.listeners) this.subscriber.off(eventName, listener);
+		this.listeners.length = 0;
+	}
+}
+
+export type HonoStreamConnectionDependencies = HonoApiNotificationDependencies &
+	Parameters<typeof honoStreamChannelMain.init>[0] &
+	Parameters<typeof honoStreamChannelChatRoom.init>[0] &
+	Parameters<typeof honoStreamChannelHashtag.init>[0] &
+	Parameters<typeof honoStreamChannelAntenna.init>[0] &
+	Parameters<typeof honoStreamChannelChannel.init>[0] &
+	Parameters<typeof honoStreamChannelUserList.init>[0] &
+	Parameters<typeof honoStreamChannelRoleTimeline.init>[0] &
+	Parameters<typeof honoStreamChannelLocalTimeline.init>[0] &
+	Parameters<typeof honoStreamChannelGlobalTimeline.init>[0] &
+	Parameters<typeof honoStreamChannelHomeTimeline.init>[0] &
+	Parameters<typeof honoStreamChannelHybridTimeline.init>[0] & {
 		db: MiDrizzleDatabase;
 	};
 
@@ -68,17 +116,21 @@ type ConnectionSnapshot = {
 	userMutedInstances: Set<string>;
 };
 
-/** Connection#fetch 相当。RedisKVCache 経由の読み取りをすべて直接DB読みに置き換えている。 */
-async function fetchStreamConnectionSnapshot(deps: HonoStreamConnectionDependencies, userId: MiUser['id']): Promise<ConnectionSnapshot> {
-	const [userProfile, followees, followingChannelIds, mutedChannelIds, muteeIds, blockerIds, renoteMuteeIds] = await Promise.all([
-		fetchUserProfileByUserIdFromDatabase(deps.db, userId),
-		listFolloweeIdsWithRepliesByFollowerIdFromDatabase(deps.db, userId),
-		listFollowedChannelIdsByUserIdFromDatabase(deps.db, userId),
-		listMutedChannelIdsByUserIdFromDatabase(deps.db, userId),
-		listMuteeIdsByMuterIdFromDatabase(deps.db, userId),
-		listBlockerIdsByBlockeeIdFromDatabase(deps.db, userId),
-		listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, userId),
-	]);
+/** ストリーミング接続で使う関連セットを DB から取得する。 */
+async function fetchStreamConnectionSnapshot(
+	deps: HonoStreamConnectionDependencies,
+	userId: MiUser['id'],
+): Promise<ConnectionSnapshot> {
+	const [userProfile, followees, followingChannelIds, mutedChannelIds, muteeIds, blockerIds, renoteMuteeIds] =
+		await Promise.all([
+			fetchUserProfileByUserIdFromDatabase(deps.db, userId),
+			listFolloweeIdsWithRepliesByFollowerIdFromDatabase(deps.db, userId),
+			listFollowedChannelIdsByUserIdFromDatabase(deps.db, userId),
+			listMutedChannelIdsByUserIdFromDatabase(deps.db, userId),
+			listMuteeIdsByMuterIdFromDatabase(deps.db, userId),
+			listBlockerIdsByBlockeeIdFromDatabase(deps.db, userId),
+			listRenoteMuteeIdsByMuterIdFromDatabase(deps.db, userId),
+		]);
 
 	const following: Record<string, Pick<MiFollowing, 'withReplies'> | undefined> = {};
 	for (const followee of followees) {
@@ -116,13 +168,15 @@ const HONO_STREAM_CHANNELS: Record<string, HonoStreamChannelDefinition<HonoStrea
 	serverStats: honoStreamChannelServerStats,
 };
 
-/** Connection.ts 相当。NestJS のリクエストスコープDIを介さない、コネクション単位のプレーンクラス。 */
+/** ストリーミング接続ごとの状態とチャンネル購読を保持する。 */
 export class HonoStreamConnection {
 	public readonly user?: MiUser;
 	public readonly token?: MiAccessToken;
 	private subscriber?: EventEmitter;
 	private sendToClient?: (raw: string) => void;
 	private readonly channels: Map<string, { channelName: string; handle: HonoStreamChannelHandle }> = new Map();
+	private readonly pendingChannels: Map<string, HonoStreamChannelSubscriberScope> = new Map();
+	private readonly pendingChannelScopes: Set<HonoStreamChannelSubscriberScope> = new Set();
 	private readonly subscribingNotes: Partial<Record<string, number>> = {};
 	private userProfile: MiUserProfile | null = null;
 	private following: Record<string, Pick<MiFollowing, 'withReplies'> | undefined> = {};
@@ -134,6 +188,7 @@ export class HonoStreamConnection {
 	private userMutedInstances: Set<string> = new Set();
 	private pendingInternalEvents: GlobalEvents['internal']['payload'][] | null = null;
 	private refreshPromise: Promise<void> | undefined;
+	private disposed = false;
 	private readonly onBroadcast = (data: { type: string; body: JsonValue }): void => {
 		this.sendMessageToWs(data.type, data.body);
 	};
@@ -204,9 +259,15 @@ export class HonoStreamConnection {
 				break;
 		}
 	}
-	private readonly onNoteStreamMessage = (data: { type: string; body: { id: string; userId: string; visibility: string; visibleUserIds?: string[]; body: JsonValue } }): void => {
+	private readonly onNoteStreamMessage = (data: {
+		type: string;
+		body: { id: string; userId: string; visibility: string; visibleUserIds?: string[]; body: JsonValue };
+	}): void => {
 		if (data.body.userId !== this.user?.id) {
-			if (data.body.visibility === 'specified' && (this.user == null || !(data.body.visibleUserIds ?? []).includes(this.user.id))) {
+			if (
+				data.body.visibility === 'specified' &&
+				(this.user == null || !(data.body.visibleUserIds ?? []).includes(this.user.id))
+			) {
 				return;
 			}
 			if (data.body.visibility === 'followers' && !Object.hasOwn(this.following, data.body.userId)) {
@@ -251,7 +312,7 @@ export class HonoStreamConnection {
 		}
 
 		try {
-			await this.refresh();
+			await withTimeout(this.refresh(), 'Stream connection initialization timed out');
 		} catch (error) {
 			this.dispose();
 			throw error;
@@ -296,12 +357,28 @@ export class HonoStreamConnection {
 		const { type, body } = obj;
 
 		switch (type) {
-			case 'readNotification': this.onReadNotification(); break;
-			case 'subNote': case 's': case 'sr': this.onSubscribeNote(body); break;
-			case 'unsubNote': case 'un': this.onUnsubscribeNote(body); break;
-			case 'connect': this.onChannelConnectRequested(body); break;
-			case 'disconnect': this.onChannelDisconnectRequested(body); break;
-			case 'channel': case 'ch': this.onChannelMessageRequested(body); break;
+			case 'readNotification':
+				this.onReadNotification();
+				break;
+			case 'subNote':
+			case 's':
+			case 'sr':
+				this.onSubscribeNote(body);
+				break;
+			case 'unsubNote':
+			case 'un':
+				this.onUnsubscribeNote(body);
+				break;
+			case 'connect':
+				this.onChannelConnectRequested(body);
+				break;
+			case 'disconnect':
+				this.onChannelDisconnectRequested(body);
+				break;
+			case 'channel':
+			case 'ch':
+				this.onChannelMessageRequested(body);
+				break;
 		}
 	}
 
@@ -340,9 +417,9 @@ export class HonoStreamConnection {
 		const { channel, id, params, pong } = payload;
 		if (typeof id !== 'string') return;
 		if (typeof channel !== 'string') return;
-		if (typeof pong !== 'boolean' && typeof pong !== 'undefined' && pong !== null) return;
-		if (typeof params !== 'undefined' && !isJsonObject(params)) return;
-		void this.connectChannel(id, params, channel, pong ?? undefined);
+		if (typeof pong !== 'boolean' && pong !== undefined && pong !== null) return;
+		if (params !== undefined && !isJsonObject(params)) return;
+		void this.connectChannel(id, params, channel, pong ?? undefined).catch(() => {});
 	}
 
 	private onChannelDisconnectRequested(payload: JsonValue | undefined): void {
@@ -354,7 +431,11 @@ export class HonoStreamConnection {
 		this.sendToClient?.(JSON.stringify({ type, body: payload }));
 	}
 
-	private buildChannelContext(id: string, send: (type: string, body: JsonValue) => void): HonoStreamChannelContext {
+	private buildChannelContext(
+		id: string,
+		subscriber: HonoStreamChannelSubscriber,
+		send: (type: string, body: JsonValue) => void,
+	): HonoStreamChannelContext {
 		return {
 			id,
 			...(this.user !== undefined ? { user: this.user } : {}),
@@ -367,17 +448,21 @@ export class HonoStreamConnection {
 			userIdsWhoMeMutingRenotes: this.userIdsWhoMeMutingRenotes,
 			userIdsWhoBlockingMe: this.userIdsWhoBlockingMe,
 			userMutedInstances: this.userMutedInstances,
-			subscriber: this.subscriber!,
+			subscriber,
 			send,
 		};
 	}
 
-	public async connectChannel(id: string, params: JsonObject | undefined, channelName: string, pong = false): Promise<void> {
-		if (this.channels.has(id)) {
-			this.disconnectChannel(id);
-		}
+	public async connectChannel(
+		id: string,
+		params: JsonObject | undefined,
+		channelName: string,
+		pong = false,
+	): Promise<void> {
+		if (this.disposed) return;
+		this.disconnectChannel(id);
 
-		if (this.channels.size >= MAX_CHANNELS_PER_CONNECTION) {
+		if (this.channels.size + this.pendingChannelScopes.size >= MAX_CHANNELS_PER_CONNECTION) {
 			return;
 		}
 
@@ -390,8 +475,11 @@ export class HonoStreamConnection {
 			return;
 		}
 
-		if (this.token && ((definition.kind && !this.token.permission.some(p => p === definition.kind))
-			|| (!definition.kind && definition.requireCredential))) {
+		if (
+			this.token &&
+			((definition.kind && !this.token.permission.includes(definition.kind)) ||
+				(!definition.kind && definition.requireCredential))
+		) {
 			return;
 		}
 
@@ -407,14 +495,53 @@ export class HonoStreamConnection {
 		const send = (type: string, body: JsonValue) => {
 			this.sendMessageToWs('channel', { id, type, body });
 		};
-		const ctx = this.buildChannelContext(id, send);
+		const subscriber = new HonoStreamChannelSubscriberScope(this.subscriber!);
+		this.pendingChannels.set(id, subscriber);
+		this.pendingChannelScopes.add(subscriber);
+		const ctx = this.buildChannelContext(id, subscriber, send);
+		const initialization = Promise.resolve().then(() => definition.init(this.deps, ctx, params ?? {}));
 
-		const result = await definition.init(this.deps, ctx, params ?? {});
+		let result: HonoStreamChannelHandle | false | void;
+		try {
+			result = await withTimeout(initialization, `Stream channel initialization timed out: ${channelName}`);
+		} catch (error) {
+			subscriber.dispose();
+			if (this.pendingChannels.get(id) === subscriber) this.pendingChannels.delete(id);
+			const cleanupLateResult = initialization.then(
+				(lateResult) => lateResult && lateResult.dispose?.(),
+				() => {},
+			);
+			if (error instanceof HonoStreamInitializationTimeoutError) {
+				void cleanupLateResult.finally(() => this.pendingChannelScopes.delete(subscriber));
+			} else {
+				this.pendingChannelScopes.delete(subscriber);
+			}
+			throw error;
+		}
+		if (this.pendingChannels.get(id) !== subscriber || this.disposed) {
+			subscriber.dispose();
+			this.pendingChannelScopes.delete(subscriber);
+			result && result.dispose?.();
+			return;
+		}
+		this.pendingChannels.delete(id);
+		this.pendingChannelScopes.delete(subscriber);
 		if (result === false) {
+			subscriber.dispose();
 			return;
 		}
 
-		this.channels.set(id, { channelName, handle: result || {} });
+		const handle = result || {};
+		this.channels.set(id, {
+			channelName,
+			handle: {
+				...handle,
+				dispose: () => {
+					handle.dispose?.();
+					subscriber.dispose();
+				},
+			},
+		});
 
 		if (pong) {
 			this.sendMessageToWs('connected', { id });
@@ -422,6 +549,8 @@ export class HonoStreamConnection {
 	}
 
 	public disconnectChannel(id: string): void {
+		this.pendingChannels.get(id)?.dispose();
+		this.pendingChannels.delete(id);
 		const entry = this.channels.get(id);
 		if (entry) {
 			entry.handle.dispose?.();
@@ -433,13 +562,14 @@ export class HonoStreamConnection {
 		if (!isJsonObject(data)) return;
 		if (typeof data['id'] !== 'string') return;
 		if (typeof data['type'] !== 'string') return;
-		if (typeof data['body'] === 'undefined') return;
+		if (data['body'] === undefined) return;
 
 		const entry = this.channels.get(data['id']);
 		entry?.handle.onMessage?.(data['type'], data['body']);
 	}
 
 	public dispose(): void {
+		this.disposed = true;
 		this.subscriber?.off('broadcast', this.onBroadcast);
 		this.subscriber?.off('internal', this.onInternalEvent);
 		for (const noteId of Object.keys(this.subscribingNotes)) {
@@ -448,7 +578,10 @@ export class HonoStreamConnection {
 		for (const entry of this.channels.values()) {
 			entry.handle.dispose?.();
 		}
+		for (const subscriber of this.pendingChannels.values()) subscriber.dispose();
 		this.channels.clear();
+		this.pendingChannels.clear();
+		this.pendingChannelScopes.clear();
 	}
 }
 
@@ -464,9 +597,9 @@ export async function refreshHonoStreamConnections(
 			let lastError: unknown;
 			let refreshed = false;
 			for (const delayMs of REFRESH_RETRY_DELAYS_MS) {
-				// Retries are deliberately serialized to avoid amplifying a recovering database outage.
+				// 復旧中の DB 障害を増幅しないよう、再試行を直列化する。
 				// eslint-disable-next-line no-await-in-loop
-				if (delayMs > 0) await new Promise(resolve => setTimeout(resolve, delayMs));
+				if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
 				try {
 					// eslint-disable-next-line no-await-in-loop
 					await connection.refresh();
@@ -477,7 +610,10 @@ export async function refreshHonoStreamConnections(
 				}
 			}
 			if (!refreshed && connections.has(connection)) {
-				console.error('Failed to refresh a streaming connection after Redis reconnected; terminating the connection.', lastError);
+				console.error(
+					'Failed to refresh a streaming connection after Redis reconnected; terminating the connection.',
+					lastError,
+				);
 				try {
 					terminate();
 				} catch (error) {

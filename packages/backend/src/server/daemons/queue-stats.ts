@@ -5,8 +5,8 @@
 
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import * as Bull from 'bullmq';
-import { QUEUE, baseQueueOptions } from '@/queue/const.js';
-import type { DeliverQueue, InboxQueue } from '@/core/queues.js';
+import { QUEUE, baseQueueEventsOptions } from '@/queue/const.js';
+import type { DeliverQueue, InboxQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
 
 const ev = globalEventBus;
@@ -19,7 +19,6 @@ export type HonoDaemonQueueStatsDependencies = {
 	inboxQueue: InboxQueue;
 };
 
-/** QueueStatsService.start 相当。deliver/inbox キューの稼働状況を定期的にglobalEventBus経由でブロードキャストする。 */
 export function startHonoQueueStatsDaemon(deps: HonoDaemonQueueStatsDependencies): { dispose: () => void } {
 	const log: unknown[] = [];
 
@@ -31,11 +30,15 @@ export function startHonoQueueStatsDaemon(deps: HonoDaemonQueueStatsDependencies
 	let activeDeliverJobs = 0;
 	let activeInboxJobs = 0;
 
-	const deliverQueueEvents = new Bull.QueueEvents(QUEUE.DELIVER, baseQueueOptions(deps.config, QUEUE.DELIVER));
-	const inboxQueueEvents = new Bull.QueueEvents(QUEUE.INBOX, baseQueueOptions(deps.config, QUEUE.INBOX));
+	const deliverQueueEvents = new Bull.QueueEvents(QUEUE.DELIVER, baseQueueEventsOptions(deps.config, QUEUE.DELIVER));
+	const inboxQueueEvents = new Bull.QueueEvents(QUEUE.INBOX, baseQueueEventsOptions(deps.config, QUEUE.INBOX));
 
-	const onDeliverActive = () => { activeDeliverJobs++; };
-	const onInboxActive = () => { activeInboxJobs++; };
+	const onDeliverActive = () => {
+		activeDeliverJobs++;
+	};
+	const onInboxActive = () => {
+		activeInboxJobs++;
+	};
 	deliverQueueEvents.on('active', onDeliverActive);
 	inboxQueueEvents.on('active', onInboxActive);
 

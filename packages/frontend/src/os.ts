@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// TODO: なんでもかんでもos.tsに突っ込むのやめたいのでよしなに分割する
-
 import { markRaw, ref, defineAsyncComponent, nextTick } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { Component } from 'vue';
@@ -97,7 +95,6 @@ export const apiWithDialog = <E extends keyof Misskey.Endpoints>(
 			title = i18n.ts.permissionDeniedError;
 			text = i18n.ts.permissionDeniedErrorDescription;
 		} else if (err.code.startsWith('TOO_MANY')) {
-			// TODO: バックエンドに kind: client/contentsLimitExceeded みたいな感じで送るように統一してもらってそれで判定する
 			title = i18n.ts.youCannotCreateAnymore;
 			text = `${i18n.ts.error}: ${err.id}`;
 		} else if (err.message.startsWith('Unexpected token')) {
@@ -153,7 +150,7 @@ export function promiseDialog<T extends Promise<unknown>>(
 			}
 		});
 
-	// NOTE: dynamic importすると挙動がおかしくなる(showingの変更が伝播しない)
+	// MkWaitingDialog は dynamic import にすると showing の変更が伝播しない。
 	const { dispose } = popup(
 		MkWaitingDialog,
 		{
@@ -190,15 +187,12 @@ export function claimZIndex(priority: keyof typeof zIndexes = 'low'): number {
 	return zIndexes[priority];
 }
 
-// 関数の引数が any[] (もっとも広義なもの) かどうかを判定し、any[] の場合は排除 (never) するヘルパー
 type FilterSpecificFunc<T> = T extends (...args: any[]) => void ? (any[] extends Parameters<T> ? never : T) : T;
 
-// オブジェクトの各プロパティに対して再帰的、あるいは単純に適用する型関数
 type CleanFunctions<T> = {
 	[K in keyof T]: T[K] extends (...args: any[]) => any ? FilterSpecificFunc<T[K]> : T[K];
 };
 
-// emitの関数群をオブジェクト型に変換する（InstanceType<Component>['$emit']はFunctionalComponent = ジェネリックコンポーネントでは使用できない）
 type ComponentEmitsObject<C extends Component, IE = OverloadToUnion<ComponentEmit<C>>> = CleanFunctions<{
 	[K in IE extends (evName: infer U, ...args: any[]) => any ? U & PropertyKey : never]: IE extends (
 		evName: K,
@@ -208,8 +202,8 @@ type ComponentEmitsObject<C extends Component, IE = OverloadToUnion<ComponentEmi
 		: (...args: any[]) => void;
 }>;
 
-// NOTE: ジェネリック型つきのコンポーネントでは、emitsの型推論がうまく働かない（型変数を取り出すことはできないため）
-// NOTE: emitsがOverloadToUnionで対応しているオーバーロードの数を超える場合は、OverloadToUnionの個数を増やせばOK
+// ジェネリックコンポーネントでは型変数を取り出せず、emits の型推論が働かない。
+// OverloadToUnion の対応数を超える場合は、対応するオーバーロード数を増やす。
 export function popup<T extends Component>(
 	component: T,
 	props: ComponentProps<T>,
@@ -288,7 +282,7 @@ export async function pageWindow(path: string): Promise<void> {
 			},
 		);
 	} catch {
-		// popupAsyncWithDialog displays the load error to the user.
+		// 読み込み失敗のダイアログは popupAsyncWithDialog 内で表示済み。
 	}
 }
 
@@ -380,7 +374,7 @@ export function actions<const T extends ActionsAction[]>(props: {
 	});
 }
 
-// default が指定されていたら result は null になり得ないことを保証する overload function
+// default 指定時は result が null にならないことを型で保証する。
 export function inputText(props: {
 	type?: 'text' | 'email' | 'password' | 'url';
 	title?: string;
@@ -391,7 +385,7 @@ export function inputText(props: {
 	minLength?: number;
 	maxLength?: number;
 }): Promise<MkDialogReturnType<string>>;
-// min lengthが指定されてたら result は null になり得ないことを保証する overload function
+// minLength 指定時は result が null にならないことを型で保証する。
 export function inputText(props: {
 	type?: 'text' | 'email' | 'password' | 'url';
 	title?: string;
@@ -447,7 +441,7 @@ export function inputText(props: {
 	});
 }
 
-// default が指定されていたら result は null になり得ないことを保証する overload function
+// default 指定時は result が null にならないことを型で保証する。
 export function inputNumber(props: {
 	title?: string;
 	text?: string;
@@ -612,7 +606,7 @@ export function waiting(options: { text?: string } = {}) {
 		}
 	}
 
-	// NOTE: dynamic importすると挙動がおかしくなる(showingの変更が伝播しない)
+	// MkWaitingDialog は dynamic import にすると showing の変更が伝播しない。
 	const { dispose } = popup(
 		MkWaitingDialog,
 		{
@@ -795,8 +789,12 @@ export async function popupMenu(
 				...(options?.width === undefined ? {} : { width: options.width }),
 				...(options?.align === undefined ? {} : { align: options.align }),
 				returnFocusTo,
-				...(options?.debugDisablePredictionCone === undefined ? {} : { debugDisablePredictionCone: options.debugDisablePredictionCone }),
-				...(options?.debugShowPredictionCone === undefined ? {} : { debugShowPredictionCone: options.debugShowPredictionCone }),
+				...(options?.debugDisablePredictionCone === undefined
+					? {}
+					: { debugDisablePredictionCone: options.debugDisablePredictionCone }),
+				...(options?.debugShowPredictionCone === undefined
+					? {}
+					: { debugShowPredictionCone: options.debugShowPredictionCone }),
 			},
 			{
 				closed: () => {
@@ -842,7 +840,6 @@ export async function contextMenu(items: MenuItem[], ev: PointerEvent): Promise<
 					resolve();
 					dispose();
 
-					// MkModalを通していないのでここでフォーカスを戻す処理を行う
 					if (returnFocusTo != null) {
 						focusParent(returnFocusTo, true, false);
 						returnFocusTo = null;
@@ -854,25 +851,26 @@ export async function contextMenu(items: MenuItem[], ev: PointerEvent): Promise<
 }
 
 export async function post(props: PostFormProps = {}): Promise<void> {
-	const isLoggedIn = await pleaseLogin(props.initialText || props.initialNote ? {
-		openOnRemote: {
-			type: 'share',
-			params: {
-				text: props.initialText ?? props.initialNote?.text ?? '',
-				visibility: props.initialVisibility ?? props.initialNote?.visibility ?? 'public',
-				localOnly: props.initialLocalOnly || props.initialNote?.localOnly ? '1' : '0',
-			},
-		},
-	} : {});
+	const isLoggedIn = await pleaseLogin(
+		props.initialText || props.initialNote
+			? {
+					openOnRemote: {
+						type: 'share',
+						params: {
+							text: props.initialText ?? props.initialNote?.text ?? '',
+							visibility: props.initialVisibility ?? props.initialNote?.visibility ?? 'public',
+							localOnly: props.initialLocalOnly || props.initialNote?.localOnly ? '1' : '0',
+						},
+					},
+				}
+			: {},
+	);
 	if (!isLoggedIn) return;
 
 	showMovedDialog();
 	return new Promise((resolve) => {
-		// NOTE: MkPostFormDialogをdynamic importするとiOSでテキストエリアに自動フォーカスできない
-		// NOTE: ただ、dynamic importしない場合、MkPostFormDialogインスタンスが使いまわされ、
-		//       Vueが渡されたコンポーネントに内部的に__propsというプロパティを生やす影響で、
-		//       複数のpost formを開いたときに場合によってはエラーになる
-		//       もちろん複数のpost formを開けること自体Misskeyサイドのバグなのだが
+		// iOS のテキストエリアへ自動フォーカスするため dynamic import は使わない。
+		// 同一コンポーネントを再利用すると Vue の内部プロパティを共有し、複数のフォームでエラーになるため、呼び出しごとに props を生成する。
 		const dialogProps = {
 			...(props.reply === undefined ? {} : { reply: props.reply }),
 			...(props.renote === undefined ? {} : { renote: props.renote }),
@@ -930,7 +928,7 @@ export function chooseFileFromPc(
 		};
 
 		// https://qiita.com/fukasawah/items/b9dc732d95d99551013d
-		// iOS Safari で正常に動かす為のおまじない
+		// iOS Safari でクリック後も input 要素を参照できるよう window に保持する。
 		Object.assign(window, { __misskey_input_ref__: input });
 
 		input.click();
@@ -946,7 +944,7 @@ export async function launchUploader(
 	},
 ): Promise<Misskey.entities.DriveFile[]> {
 	return new Promise((res, rej) => {
-		if (files.length === 0) return rej();
+		if (files.length === 0) return rej(new Error('no file selected'));
 		let dispose: () => void;
 		popupAsyncWithDialog(
 			import('@/features/drive/components/MkUploaderDialog.vue').then((x) => x.default),
@@ -958,7 +956,7 @@ export async function launchUploader(
 			},
 			{
 				done: (driveFiles) => {
-					if (driveFiles.length === 0) return rej();
+					if (driveFiles.length === 0) return rej(new Error('no file selected'));
 					res(driveFiles);
 				},
 				closed: () => dispose(),

@@ -99,7 +99,6 @@ const MIN_POLLING_INTERVAL = 1000 * 10;
 const POLLING_INTERVAL =
 	prefer.pollingInterval === 1 ? MIN_POLLING_INTERVAL * 1.5 * 1.5 :
 	prefer.pollingInterval === 2 ? MIN_POLLING_INTERVAL * 1.5 :
-	prefer.pollingInterval === 3 ? MIN_POLLING_INTERVAL :
 	MIN_POLLING_INTERVAL;
 
 if (!store.realtimeMode) {
@@ -212,6 +211,9 @@ onMounted(() => {
 
 onUnmounted(() => {
 	if (connection) connection.dispose();
+	if (scrollContainer != null) {
+		scrollContainer.removeEventListener('scroll', onScrollContainerScroll);
+	}
 });
 
 defineExpose({

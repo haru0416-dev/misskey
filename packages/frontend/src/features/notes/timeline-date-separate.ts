@@ -6,13 +6,12 @@
 import { computed } from 'vue';
 import type { Ref, ShallowRef } from 'vue';
 
-export function getDateText(dateInstance: Date) {
+function getDateText(dateInstance: Date) {
 	const date = dateInstance.getDate();
 	const month = dateInstance.getMonth() + 1;
 	return `${month.toString()}/${date.toString()}`;
 }
 
-// TODO: いちいちDateインスタンス作成するのは無駄感あるから文字列のまま解析したい
 export function isSeparatorNeeded(prev: string | null, next: string | null) {
 	if (prev == null || next == null) return false;
 	const prevDate = new Date(prev);
@@ -24,7 +23,6 @@ export function isSeparatorNeeded(prev: string | null, next: string | null) {
 	);
 }
 
-// TODO: いちいちDateインスタンス作成するのは無駄感あるから文字列のまま解析したい
 export function getSeparatorInfo(prev: string | null, next: string | null) {
 	if (prev == null || next == null) return null;
 	const prevDate = new Date(prev);
@@ -108,8 +106,7 @@ export function makeDateGroupedTimelineComputedRef<T extends { id: string; creat
 				currentGroup == null ||
 				(span === 'day' && currentGroup.date.getTime() !== date.getTime()) ||
 				(span === 'month' &&
-					(currentGroup.date.getFullYear() !== date.getFullYear() ||
-						currentGroup.date.getMonth() !== date.getMonth()))
+					(currentGroup.date.getFullYear() !== date.getFullYear() || currentGroup.date.getMonth() !== date.getMonth()))
 			) {
 				tl.push({
 					date,

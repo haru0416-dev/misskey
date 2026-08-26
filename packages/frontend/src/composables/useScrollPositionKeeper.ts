@@ -7,9 +7,8 @@ import { throttle } from 'throttle-debounce';
 import { nextTick, onActivated, onDeactivated, onUnmounted, watch } from 'vue';
 import type { Ref } from 'vue';
 
-// note render skippingがオンだとズレるため、遷移直前にスクロール範囲に表示されているdata-scroll-anchor要素を特定して、復元時に当該要素までスクロールするようにする
-
-// TODO: data-scroll-anchor がひとつも存在しない場合、または手動で useAnchor みたいなフラグをfalseで呼ばれた場合、単純にスクロール位置を使用する処理にフォールバックするようにする
+// note render skipping による高さの変化を避けるため、表示中の anchor を基準に復元する。
+// 復元後も先頭に留まった場合は、保存したscrollTopへフォールバックする。
 
 export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | null | undefined>): void {
 	let anchorId: string | null = null;
@@ -39,7 +38,6 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 
 				const anchorEls = el.querySelectorAll<HTMLElement>('[data-scroll-anchor]');
 				for (let i = anchorEls.length - 1; i > -1; i--) {
-					// 下から見た方が速い
 					const anchorEl = anchorEls[i];
 					if (anchorEl == null) continue;
 					const anchorTop = anchorEl.getBoundingClientRect().top;
@@ -53,13 +51,11 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 				}
 			};
 
-			// ほんとはscrollイベントじゃなくてonBeforeDeactivatedでやりたい
 			// https://github.com/vuejs/vue/issues/9454
 			// https://github.com/vuejs/rfcs/pull/284
 			const throttledCaptureAnchor = throttle(1000, captureAnchor);
 			el.addEventListener('scroll', throttledCaptureAnchor, { passive: true });
-			// スクロール後すぐにクリックするとthrottleによりanchorIdが古いまま残るため、
-			// pointerdownで遷移直前のアンカーを同期的に取得する
+			// スクロール後のクリックでは throttle 前の anchorId が残るため、pointerdown で更新する。
 			el.addEventListener('pointerdown', captureAnchor, { passive: true });
 
 			onCleanup(() => {
@@ -107,7 +103,7 @@ export function useScrollPositionKeeper(scrollContainerRef: Ref<HTMLElement | nu
 				// anchor方式が失敗した場合（anchorIdがnullまたは要素が見つからない場合）の
 				// フォールバック
 				const el = scrollContainerRef.value;
-				if (el && el.scrollTop === 0 && savedScrollTop > 0) {
+				if (el?.scrollTop === 0 && savedScrollTop > 0) {
 					el.scrollTop = savedScrollTop;
 				}
 

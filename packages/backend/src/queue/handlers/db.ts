@@ -9,23 +9,51 @@ import { Writable } from 'node:stream';
 import { domainToASCII } from 'node:url';
 import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import { omitUndefined } from '@/misc/clone.js';
-import { z } from 'zod';
 import type * as Bull from 'bullmq';
-import { createAntennaInDatabase, listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
-import { countDriveFilesByUserIdFromDatabase, listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
-import { listFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
-import { countMutingsByMuterIdFromDatabase, createMutingInDatabase, listMuteeIdsByMuterIdFromDatabase, listPermanentMutingsByMuterIdFromDatabase } from '@/core/MutingStore.js';
-import { countBlockingsByBlockerIdFromDatabase, listBlockingsByBlockerIdFromDatabase } from '@/core/BlockingStore.js';
-import { createUserListInDatabase, fetchUserListByNameAndUserIdFromDatabase, listUserListsByUserIdFromDatabase } from '@/core/UserListStore.js';
-import { listUserListMembershipsByUserListIdFromDatabase, listUserListMembershipUserIdsByUserListIdFromDatabase, userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
-import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
-import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
-import { countNoteFavoritesByUserIdFromDatabase, listNoteFavoritesByUserIdFromDatabase } from '@/core/NoteFavoriteStore.js';
-import { listPollsByNoteIdsFromDatabase } from '@/core/PollStore.js';
-import { countNotesByUserIdFromDatabase, listNotesByUserIdWithPaginationFromDatabase, listVisibleNotesWithUsersByIdsFromDatabase } from '@/core/NoteStore.js';
-import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/ClipStore.js';
-import { listClipNotesByClipIdFromDatabase } from '@/core/ClipNoteStore.js';
-import type { DownloadService } from '@/core/DownloadService.js';
+import { listAntennasByUserIdFromDatabase } from '@/core/antenna/AntennaStore.js';
+import type { ExportedAntenna } from '@/core/antenna/AntennaImport.js';
+import {
+	countDriveFilesByUserIdFromDatabase,
+	fetchDriveFileByIdFromDatabase,
+	listDriveFilesByUserIdWithPaginationFromDatabase,
+} from '@/core/drive/DriveFileStore.js';
+import { finishEnqueuedDriveFileDeletion } from '@/core/drive/DriveFileDeletionLogic.js';
+import { listFollowingsByFollowerIdFromDatabase } from '@/core/user/FollowingStore.js';
+import {
+	countMutingsByMuterIdFromDatabase,
+	createMutingInDatabase,
+	listMuteeIdsByMuterIdFromDatabase,
+	listPermanentMutingsByMuterIdFromDatabase,
+} from '@/core/user/MutingStore.js';
+import { countBlockingsByBlockerIdFromDatabase, listBlockingsByBlockerIdFromDatabase } from '@/core/user/BlockingStore.js';
+import {
+	createUserListInDatabase,
+	fetchUserListByNameAndUserIdFromDatabase,
+	listUserListsByUserIdFromDatabase,
+} from '@/core/user/UserListStore.js';
+import {
+	listUserListMembershipsByUserListIdFromDatabase,
+	listUserListMembershipUserIdsByUserListIdFromDatabase,
+	userListMembershipExistsInDatabase,
+} from '@/core/user/UserListMembershipStore.js';
+import {
+	fetchUserByIdFromDatabase,
+	fetchUserByUsernameAndHostFromDatabase,
+	listUsersByIdsFromDatabase,
+} from '@/core/user/UserStore.js';
+import {
+	countNoteFavoritesByUserIdFromDatabase,
+	listNoteFavoritesByUserIdFromDatabase,
+} from '@/core/note/NoteFavoriteStore.js';
+import { listPollsByNoteIdsFromDatabase } from '@/core/note/PollStore.js';
+import {
+	countNotesByUserIdFromDatabase,
+	listNotesByUserIdWithPaginationFromDatabase,
+	listVisibleNotesWithUsersByIdsFromDatabase,
+} from '@/core/note/NoteStore.js';
+import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/clip/ClipStore.js';
+import { listClipNotesByClipIdFromDatabase } from '@/core/clip/ClipNoteStore.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -38,33 +66,64 @@ import type { MiClipNote } from '@/models/ClipNote.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
-import { addDbJobs, type DbJobBulkInput, type DbQueue, type RelationshipQueue } from '@/core/queues.js';
-import type { DBAntennaImportJobData, DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser, DbUserImportJobData, DbUserImportToDbJobData, RelationshipJobData } from '@/queue/types.js';
+import { addDbJobs, type DbJobBulkInput, type DbQueue, type RelationshipQueue } from '@/core/queue/queues.js';
+import { logModerationEventWithIdInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import type {
+	DBExportAntennasData,
+	DbExportFollowingData,
+	DbDeleteDriveFileJobData,
+	DbJobDataWithUser,
+	DbUserImportJobData,
+	DbUserImportToDbJobData,
+	RelationshipJobData,
+} from '@/queue/types.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from '../../server/rest/drive-file-upload.js';
-import { packDriveFileManyByIdsForHonoApi } from '../../server/rest/drive-file.js';
-import { isSelfHost } from '../../server/rest/ap-resolve.js';
-import { resolveUserForHonoApi, toPunyForHonoApi, type HonoApiApPersonDependencies } from '../../server/rest/ap-person.js';
-import { refreshUserMutingsCache } from '../../server/rest/account-mutes.js';
+import {
+	addDriveFileForHonoApi,
+	type HonoApiDriveFileUploadDependencies,
+} from '@/server/rest/drive/drive-file-upload.js';
+import { packDriveFileManyByIdsForHonoApi } from '@/server/rest/drive/drive-file.js';
+import { isSelfHost } from '@/server/rest/activitypub/ap-resolve.js';
+import {
+	resolveUserForHonoApi,
+	toPunyForHonoApi,
+	type HonoApiApPersonDependencies,
+} from '@/server/rest/activitypub/ap-person.js';
 import type { HonoApiInternalEventPublisher } from '../../server/rest/events.js';
-import { createExportCompletedNotification, type HonoApiNotificationDependencies } from '../../server/rest/notification.js';
-import { addUserListMemberForHonoApi, type HonoApiUsersListsDependencies } from '../../server/rest/users-lists.js';
-import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './object-storage.js';
+import {
+	createExportCompletedNotification,
+	type HonoApiNotificationDependencies,
+} from '@/server/rest/notification/notification.js';
+import { addUserListMemberForHonoApi, type HonoApiUsersListsDependencies } from '@/server/rest/user/users-lists.js';
+import { isHonoApiModerator } from '@/server/rest/role/role-policy.js';
+import {
+	deleteFileSyncForHonoApi,
+	deleteObjectStorageFileForHonoApi,
+	type HonoQueueObjectStorageDependencies,
+} from './object-storage.js';
 
-export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies & HonoApiDriveFileUploadDependencies & HonoApiNotificationDependencies & HonoApiApPersonDependencies & HonoApiUsersListsDependencies & {
-	db: MiDrizzleDatabase;
-	downloadService: Pick<DownloadService, 'downloadTextFile' | 'downloadUrl'>;
-	dbQueue: DbQueue;
-	relationshipQueue: RelationshipQueue;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
-};
+export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies &
+	HonoApiDriveFileUploadDependencies &
+	HonoApiNotificationDependencies &
+	HonoApiApPersonDependencies &
+	HonoApiUsersListsDependencies & {
+		db: MiDrizzleDatabase;
+		downloadService: Pick<DownloadService, 'downloadTextFile' | 'downloadUrl'>;
+		dbQueue: DbQueue;
+		relationshipQueue: RelationshipQueue;
+		publishInternalEvent?: HonoApiInternalEventPublisher;
+	};
 
 const importLineJobOptions = {
 	removeOnComplete: { age: 3600, count: 100_000 },
 	removeOnFail: { age: 3600 * 24 * 7, count: 100 },
 };
 
-function toRelationshipJobForHonoApi(config: Pick<Config, 'queues'>, name: 'follow' | 'unfollow' | 'block' | 'unblock', data: RelationshipJobData) {
+function toRelationshipJobForHonoApi(
+	config: Pick<Config, 'queues'>,
+	name: 'follow' | 'unfollow' | 'block' | 'unblock',
+	data: RelationshipJobData,
+) {
 	return {
 		name,
 		data: omitUndefined({
@@ -88,7 +147,7 @@ function getFullApAccountForHonoApi(config: Pick<Config, 'runtime'>, username: s
 
 function writeLineToStream(stream: fs.WriteStream, content: string): Promise<void> {
 	return new Promise<void>((res, rej) => {
-		stream.write(content + '\n', err => {
+		stream.write(content + '\n', (err) => {
 			if (err) {
 				rej(err);
 			} else {
@@ -100,7 +159,7 @@ function writeLineToStream(stream: fs.WriteStream, content: string): Promise<voi
 
 function writeToStream(stream: fs.WriteStream, content: string): Promise<void> {
 	return new Promise<void>((res, rej) => {
-		stream.write(content, err => {
+		stream.write(content, (err) => {
 			if (err) {
 				rej(err);
 			} else {
@@ -110,28 +169,10 @@ function writeToStream(stream: fs.WriteStream, content: string): Promise<void> {
 	});
 }
 
-export const exportedAntennaZodSchema = z.object({
-	name: z.string().min(1).max(100),
-	src: z.enum(['home', 'all', 'users', 'list', 'users_blacklist']),
-	userListAccts: z.array(z.string()).nullable().optional(),
-	keywords: z.array(z.array(z.string())),
-	excludeKeywords: z.array(z.array(z.string())),
-	users: z.array(z.string()),
-	caseSensitive: z.boolean(),
-	localOnly: z.boolean().optional(),
-	excludeBots: z.boolean().optional(),
-	withReplies: z.boolean(),
-	withFile: z.boolean(),
-	excludeNotesInSensitiveChannel: z.boolean().optional(),
-});
-
-export type ExportedAntenna = z.infer<typeof exportedAntennaZodSchema>;
-
-function validateExportedAntenna(data: unknown): data is ExportedAntenna {
-	return exportedAntennaZodSchema.safeParse(data).success;
-}
-
-export async function handleHonoQueueDeleteDriveFiles(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+export async function handleHonoQueueDeleteDriveFiles(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbJobDataWithUser>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) {
 		return;
@@ -160,11 +201,33 @@ export async function handleHonoQueueDeleteDriveFiles(deps: HonoQueueDbDependenc
 			deletedCount++;
 		}
 
-		job.updateProgress(deletedCount / total * 100);
+		job.updateProgress((deletedCount / total) * 100);
 	}
 }
 
-export async function handleHonoQueueExportMuting(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+export async function handleHonoQueueDeleteDriveFile(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbDeleteDriveFileJobData>,
+): Promise<void> {
+	const deleter = job.data.deleterId == null ? undefined : await fetchUserByIdFromDatabase(deps.db, job.data.deleterId);
+	await finishEnqueuedDriveFileDeletion(
+		{
+			...deps,
+			deleteInternalFile: (key) => deps.internalStorageService.del(key),
+			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFileForHonoApi(deps, key),
+			isModerator: (user) => isHonoApiModerator(deps, user),
+			logDriveFileDeletion: (db, moderator, logId, info) =>
+				logModerationEventWithIdInDatabase({ db }, moderator, 'deleteDriveFile', info, logId),
+		},
+		job.data,
+		deleter ?? undefined,
+	);
+}
+
+export async function handleHonoQueueExportMuting(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbJobDataWithUser>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -190,8 +253,12 @@ export async function handleHonoQueueExportMuting(deps: HonoQueueDbDependencies,
 			}
 
 			cursor = mutes.at(-1)?.id ?? null;
-			const users = await listUsersByIdsFromDatabase(deps.db, mutes.map(mute => mute.muteeId), { includeSuspended: true });
-			const userMap = new Map(users.map(user => [user.id, user]));
+			const users = await listUsersByIdsFromDatabase(
+				deps.db,
+				mutes.map((mute) => mute.muteeId),
+				{ includeSuspended: true },
+			);
+			const userMap = new Map(users.map((user) => [user.id, user]));
 
 			for (const mute of mutes) {
 				const u = userMap.get(mute.muteeId);
@@ -204,7 +271,7 @@ export async function handleHonoQueueExportMuting(deps: HonoQueueDbDependencies,
 				exportedCount++;
 			}
 
-			job.updateProgress(exportedCount / total * 100);
+			job.updateProgress((exportedCount / total) * 100);
 		}
 
 		stream.end();
@@ -218,7 +285,10 @@ export async function handleHonoQueueExportMuting(deps: HonoQueueDbDependencies,
 	}
 }
 
-export async function handleHonoQueueExportBlocking(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+export async function handleHonoQueueExportBlocking(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbJobDataWithUser>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -244,8 +314,12 @@ export async function handleHonoQueueExportBlocking(deps: HonoQueueDbDependencie
 			}
 
 			cursor = blockings.at(-1)?.id ?? null;
-			const users = await listUsersByIdsFromDatabase(deps.db, blockings.map(blocking => blocking.blockeeId), { includeSuspended: true });
-			const userMap = new Map(users.map(user => [user.id, user]));
+			const users = await listUsersByIdsFromDatabase(
+				deps.db,
+				blockings.map((blocking) => blocking.blockeeId),
+				{ includeSuspended: true },
+			);
+			const userMap = new Map(users.map((user) => [user.id, user]));
 
 			for (const block of blockings) {
 				const u = userMap.get(block.blockeeId);
@@ -258,7 +332,7 @@ export async function handleHonoQueueExportBlocking(deps: HonoQueueDbDependencie
 				exportedCount++;
 			}
 
-			job.updateProgress(exportedCount / total * 100);
+			job.updateProgress((exportedCount / total) * 100);
 		}
 
 		stream.end();
@@ -272,7 +346,10 @@ export async function handleHonoQueueExportBlocking(deps: HonoQueueDbDependencie
 	}
 }
 
-export async function handleHonoQueueExportUserLists(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+export async function handleHonoQueueExportUserLists(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbJobDataWithUser>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -285,8 +362,12 @@ export async function handleHonoQueueExportUserLists(deps: HonoQueueDbDependenci
 
 		for (const list of lists) {
 			const memberships = await listUserListMembershipsByUserListIdFromDatabase(deps.db, list.id);
-			const users = await listUsersByIdsFromDatabase(deps.db, memberships.map(m => m.userId), { includeSuspended: true });
-			const usersWithReplies = new Set(memberships.filter(m => m.withReplies).map(m => m.userId));
+			const users = await listUsersByIdsFromDatabase(
+				deps.db,
+				memberships.map((m) => m.userId),
+				{ includeSuspended: true },
+			);
+			const usersWithReplies = new Set(memberships.filter((m) => m.withReplies).map((m) => m.userId));
 
 			for (const u of users) {
 				const acct = getFullApAccountForHonoApi(deps.config, u.username, u.host);
@@ -306,7 +387,10 @@ export async function handleHonoQueueExportUserLists(deps: HonoQueueDbDependenci
 	}
 }
 
-export async function handleHonoQueueExportAntennas(deps: HonoQueueDbDependencies, job: Bull.Job<DBExportAntennasData>): Promise<void> {
+export async function handleHonoQueueExportAntennas(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DBExportAntennasData>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -323,20 +407,24 @@ export async function handleHonoQueueExportAntennas(deps: HonoQueueDbDependencie
 				const memberIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, antenna.userListId);
 				users = await listUsersByIdsFromDatabase(deps.db, memberIds, { includeSuspended: true });
 			}
-			await writeToStream(stream, JSON.stringify({
-				name: antenna.name,
-				src: antenna.src,
-				keywords: antenna.keywords,
-				excludeKeywords: antenna.excludeKeywords,
-				users: antenna.users,
-				userListAccts: users !== undefined ? users.map(u => getFullApAccountForHonoApi(deps.config, u.username, u.host)) : null,
-				caseSensitive: antenna.caseSensitive,
-				localOnly: antenna.localOnly,
-				excludeBots: antenna.excludeBots,
-				withReplies: antenna.withReplies,
-				withFile: antenna.withFile,
-				excludeNotesInSensitiveChannel: antenna.excludeNotesInSensitiveChannel,
-			} satisfies Required<ExportedAntenna>));
+			await writeToStream(
+				stream,
+				JSON.stringify({
+					name: antenna.name,
+					src: antenna.src,
+					keywords: antenna.keywords,
+					excludeKeywords: antenna.excludeKeywords,
+					users: antenna.users,
+					userListAccts:
+						users !== undefined ? users.map((u) => getFullApAccountForHonoApi(deps.config, u.username, u.host)) : null,
+					caseSensitive: antenna.caseSensitive,
+					localOnly: antenna.localOnly,
+					excludeBots: antenna.excludeBots,
+					withReplies: antenna.withReplies,
+					withFile: antenna.withFile,
+					excludeNotesInSensitiveChannel: antenna.excludeNotesInSensitiveChannel,
+				} satisfies Required<ExportedAntenna>),
+			);
 			if (antennas.length - 1 !== index) {
 				await writeToStream(stream, ', ');
 			}
@@ -353,7 +441,10 @@ export async function handleHonoQueueExportAntennas(deps: HonoQueueDbDependencie
 	}
 }
 
-export async function handleHonoQueueExportFollowing(deps: HonoQueueDbDependencies, job: Bull.Job<DbExportFollowingData>): Promise<void> {
+export async function handleHonoQueueExportFollowing(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbExportFollowingData>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -378,8 +469,12 @@ export async function handleHonoQueueExportFollowing(deps: HonoQueueDbDependenci
 			}
 
 			cursor = followings.at(-1)?.id ?? null;
-			const users = await listUsersByIdsFromDatabase(deps.db, followings.map(following => following.followeeId), { includeSuspended: true });
-			const userMap = new Map(users.map(user => [user.id, user]));
+			const users = await listUsersByIdsFromDatabase(
+				deps.db,
+				followings.map((following) => following.followeeId),
+				{ includeSuspended: true },
+			);
+			const userMap = new Map(users.map((user) => [user.id, user]));
 
 			for (const following of followings) {
 				const u = userMap.get(following.followeeId);
@@ -387,7 +482,7 @@ export async function handleHonoQueueExportFollowing(deps: HonoQueueDbDependenci
 					continue;
 				}
 
-				if (job.data.excludeInactive && u.updatedAt && (Date.now() - u.updatedAt.getTime() > (1000 * 60 * 60 * 24 * 90))) {
+				if (job.data.excludeInactive && u.updatedAt && Date.now() - u.updatedAt.getTime() > 1000 * 60 * 60 * 24 * 90) {
 					continue;
 				}
 
@@ -408,44 +503,6 @@ export async function handleHonoQueueExportFollowing(deps: HonoQueueDbDependenci
 }
 
 /**
- * ImportAntennasProcessorService.process 相当。元実装同様、ループ全体をtry/catchし
- * エラーはログのみで再送しない (1件の失敗で残りのアンテナ作成が中断されうる挙動も含めて再現)。
- */
-export async function handleHonoQueueImportAntennas(deps: HonoQueueDbDependencies, job: Bull.Job<DBAntennaImportJobData>): Promise<void> {
-	const now = new Date();
-	try {
-		for (const antenna of job.data.antenna) {
-			if (antenna.keywords.length === 0 || antenna.keywords[0]?.every(x => x === '')) continue;
-			if (!validateExportedAntenna(antenna)) continue;
-
-			const result = await createAntennaInDatabase(deps.db, {
-				id: genId(now.getTime()),
-				lastUsedAt: now,
-				userId: job.data.user.id,
-				name: antenna.name,
-				src: antenna.src === 'list' && antenna.userListAccts ? 'users' : antenna.src,
-				userListId: null,
-				keywords: antenna.keywords,
-				excludeKeywords: antenna.excludeKeywords,
-				users: (antenna.src === 'list' && antenna.userListAccts !== null ? antenna.userListAccts : antenna.users).filter(Boolean),
-				caseSensitive: antenna.caseSensitive,
-				localOnly: antenna.localOnly,
-				excludeBots: antenna.excludeBots,
-				withReplies: antenna.withReplies,
-				withFile: antenna.withFile,
-				excludeNotesInSensitiveChannel: antenna.excludeNotesInSensitiveChannel,
-			});
-
-			deps.publishInternalEvent?.('antennaCreated', result);
-		}
-	} catch {
-		// 元実装同様、ここでのエラーは再送しない
-	}
-}
-
-/**
- * ImportMuting/ImportBlocking/ImportFollowingProcessorService 共通の
- * 「CSV1行(acct)からミュート/ブロック/フォロー対象ユーザーを解決する」ロジック相当。
  * ローカルユーザーの解決に失敗した場合はnullを返す (呼び出し元でスキップする)。
  */
 async function resolveImportTargetUserForHonoApi(
@@ -468,7 +525,10 @@ async function resolveImportTargetUserForHonoApi(
 	return target;
 }
 
-export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
+export async function handleHonoQueueImportMuting(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbUserImportJobData>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -495,15 +555,17 @@ export async function handleHonoQueueImportMuting(deps: HonoQueueDbDependencies,
 				muterId: user.id,
 				muteeId: target.id,
 			});
-			await refreshUserMutingsCache(deps, user.id);
 			deps.publishInternalEvent?.('mute', { muterId: user.id, muteeId: target.id });
 		} catch {
-			// 元実装同様、行単位のエラーはログのみで処理を継続する
+			// 1行の失敗でインポート全体を中断しない。
 		}
 	}
 }
 
-export async function handleHonoQueueImportUserLists(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
+export async function handleHonoQueueImportUserLists(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbUserImportJobData>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -554,7 +616,7 @@ export async function handleHonoQueueImportUserLists(deps: HonoQueueDbDependenci
 
 			await addUserListMemberForHonoApi(deps, target, list, user, { withReplies });
 		} catch {
-			// 元実装同様、行単位のエラーはログのみで処理を継続する
+			// 1行の失敗でインポート全体を中断しない。
 		}
 	}
 }
@@ -584,8 +646,10 @@ async function enqueueImportLines<K extends 'importBlockingToDb' | 'importFollow
 	}
 }
 
-/** ImportBlockingProcessorService.process 相当。CSVの行ごとにimportBlockingToDbジョブを積む。 */
-export async function handleHonoQueueImportBlocking(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
+export async function handleHonoQueueImportBlocking(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbUserImportJobData>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -599,7 +663,10 @@ export async function handleHonoQueueImportBlocking(deps: HonoQueueDbDependencie
 	}));
 }
 
-export async function handleHonoQueueImportBlockingToDb(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportToDbJobData>): Promise<void> {
+export async function handleHonoQueueImportBlockingToDb(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbUserImportToDbJobData>,
+): Promise<void> {
 	const line = job.data.target;
 	const user = job.data.user;
 
@@ -618,12 +685,14 @@ export async function handleHonoQueueImportBlockingToDb(deps: HonoQueueDbDepende
 			toRelationshipJobForHonoApi(deps.config, 'block', { from: { id: user.id }, to: { id: target.id }, silent: true }),
 		]);
 	} catch {
-		// 元実装同様、行単位のエラーはログのみで処理を継続する
+		// 1行の失敗でインポート全体を中断しない。
 	}
 }
 
-/** ImportFollowingProcessorService.process 相当。CSVの行ごとにimportFollowingToDbジョブを積む。 */
-export async function handleHonoQueueImportFollowing(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportJobData>): Promise<void> {
+export async function handleHonoQueueImportFollowing(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbUserImportJobData>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -632,12 +701,19 @@ export async function handleHonoQueueImportFollowing(deps: HonoQueueDbDependenci
 
 	await enqueueImportLines(deps, file.url, (target, index) => ({
 		name: 'importFollowingToDb',
-		data: omitUndefined({ user: { id: user.id }, target, withReplies: job.data.withReplies }) satisfies DbUserImportToDbJobData,
+		data: omitUndefined({
+			user: { id: user.id },
+			target,
+			withReplies: job.data.withReplies,
+		}) satisfies DbUserImportToDbJobData,
 		opts: { ...importLineJobOptions, jobId: `import-following-${job.id}-${index}` },
 	}));
 }
 
-export async function handleHonoQueueImportFollowingToDb(deps: HonoQueueDbDependencies, job: Bull.Job<DbUserImportToDbJobData>): Promise<void> {
+export async function handleHonoQueueImportFollowingToDb(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbUserImportToDbJobData>,
+): Promise<void> {
 	const line = job.data.target;
 	const user = job.data.user;
 
@@ -665,15 +741,19 @@ export async function handleHonoQueueImportFollowingToDb(deps: HonoQueueDbDepend
 		if (target.id === job.data.user.id) return;
 
 		await deps.relationshipQueue.addBulk([
-			toRelationshipJobForHonoApi(deps.config, 'follow', omitUndefined({
-				from: user,
-				to: { id: target.id },
-				silent: true,
-				withReplies: withReplies ?? job.data.withReplies,
-			})),
+			toRelationshipJobForHonoApi(
+				deps.config,
+				'follow',
+				omitUndefined({
+					from: user,
+					to: { id: target.id },
+					silent: true,
+					withReplies: withReplies ?? job.data.withReplies,
+				}),
+			),
 		]);
 	} catch {
-		// 元実装同様、行単位のエラーはログのみで処理を継続する
+		// 1行の失敗でインポート全体を中断しない。
 	}
 }
 
@@ -711,7 +791,10 @@ function serializeFavoriteForHonoApi(
 	};
 }
 
-export async function handleHonoQueueExportFavorites(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+export async function handleHonoQueueExportFavorites(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbJobDataWithUser>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -740,11 +823,14 @@ export async function handleHonoQueueExportFavorites(deps: HonoQueueDbDependenci
 			}
 
 			cursor = favorites.at(-1)?.id ?? null;
-			const noteIds = favorites.map(favorite => favorite.noteId);
+			const noteIds = favorites.map((favorite) => favorite.noteId);
 			const notes = await listVisibleNotesWithUsersByIdsFromDatabase(deps.db, noteIds, { id: user.id });
-			const noteMap = new Map(notes.map(note => [note.id, note]));
-			const polls = await listPollsByNoteIdsFromDatabase(deps.db, notes.filter(note => note.hasPoll).map(note => note.id));
-			const pollMap = new Map(polls.map(poll => [poll.noteId, poll]));
+			const noteMap = new Map(notes.map((note) => [note.id, note]));
+			const polls = await listPollsByNoteIdsFromDatabase(
+				deps.db,
+				notes.filter((note) => note.hasPoll).map((note) => note.id),
+			);
+			const pollMap = new Map(polls.map((poll) => [poll.noteId, poll]));
 
 			for (const favorite of favorites) {
 				const note = noteMap.get(favorite.noteId);
@@ -764,7 +850,7 @@ export async function handleHonoQueueExportFavorites(deps: HonoQueueDbDependenci
 				exportedFavoritesCount++;
 			}
 
-			job.updateProgress(exportedFavoritesCount / total * 100);
+			job.updateProgress((exportedFavoritesCount / total) * 100);
 		}
 
 		await writeToStream(stream, ']');
@@ -803,12 +889,12 @@ function serializeNoteForHonoApi(
 }
 
 /**
- * ExportNotesProcessorService.process 相当。
- * 元実装はWeb Streams API (NoteStream/JsonArrayStream/FileWriterStream) でメモリを
- * 抑えているが、他のexport系ポートと同じ「fs.createWriteStreamへの逐次write」方式でも
- * 同じくノート単位でストリーム書き込みされるため、メモリ特性を維持したまま簡潔に移植した。
+ * ノート単位で fs.createWriteStream へ逐次書き込みし、全件をメモリに保持しない。
  */
-export async function handleHonoQueueExportNotes(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+export async function handleHonoQueueExportNotes(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbJobDataWithUser>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 
@@ -836,15 +922,20 @@ export async function handleHonoQueueExportNotes(deps: HonoQueueDbDependencies, 
 			}
 
 			cursor = notes.at(-1)?.id ?? null;
-			const polls = await listPollsByNoteIdsFromDatabase(deps.db, notes.filter(note => note.hasPoll).map(note => note.id));
-			const pollMap = new Map(polls.map(poll => [poll.noteId, poll]));
-			const fileIds = [...new Set(notes.flatMap(note => note.fileIds))];
+			const polls = await listPollsByNoteIdsFromDatabase(
+				deps.db,
+				notes.filter((note) => note.hasPoll).map((note) => note.id),
+			);
+			const pollMap = new Map(polls.map((poll) => [poll.noteId, poll]));
+			const fileIds = [...new Set(notes.flatMap((note) => note.fileIds))];
 			const packedFiles = await packDriveFileManyByIdsForHonoApi(deps, fileIds);
-			const packedFileMap = new Map(packedFiles.map(file => [file.id, file]));
+			const packedFileMap = new Map(packedFiles.map((file) => [file.id, file]));
 
 			for (const note of notes) {
 				const poll = pollMap.get(note.id) ?? null;
-				const files = note.fileIds.map(fileId => packedFileMap.get(fileId)).filter((file): file is NonNullable<typeof file> => file != null);
+				const files = note.fileIds
+					.map((fileId) => packedFileMap.get(fileId))
+					.filter((file): file is NonNullable<typeof file> => file != null);
 				const content = JSON.stringify(serializeNoteForHonoApi(deps, note, poll, files));
 
 				const isFirst = exportedNotesCount === 0;
@@ -852,7 +943,7 @@ export async function handleHonoQueueExportNotes(deps: HonoQueueDbDependencies, 
 				exportedNotesCount++;
 			}
 
-			job.updateProgress(exportedNotesCount / total * 100);
+			job.updateProgress((exportedNotesCount / total) * 100);
 		}
 
 		await writeToStream(stream, ']');
@@ -929,11 +1020,14 @@ async function processClipNotesForHonoApi(
 		if (clipNotes.length === 0) break;
 
 		cursor = clipNotes.at(-1)?.id ?? null;
-		const noteIds = clipNotes.map(clipNote => clipNote.noteId);
+		const noteIds = clipNotes.map((clipNote) => clipNote.noteId);
 		const notes = await listVisibleNotesWithUsersByIdsFromDatabase(deps.db, noteIds, { id: userId });
-		const noteMap = new Map(notes.map(note => [note.id, note]));
-		const polls = await listPollsByNoteIdsFromDatabase(deps.db, notes.filter(note => note.hasPoll).map(note => note.id));
-		const pollMap = new Map(polls.map(poll => [poll.noteId, poll]));
+		const noteMap = new Map(notes.map((note) => [note.id, note]));
+		const polls = await listPollsByNoteIdsFromDatabase(
+			deps.db,
+			notes.filter((note) => note.hasPoll).map((note) => note.id),
+		);
+		const pollMap = new Map(polls.map((poll) => [poll.noteId, poll]));
 
 		for (const clipNote of clipNotes) {
 			const note = noteMap.get(clipNote.noteId);
@@ -977,7 +1071,7 @@ async function processClipsForHonoApi(
 		cursor = clips.at(-1)?.id ?? null;
 
 		for (const clip of clips) {
-			// Stringify but remove the last `]}`
+			// 文字列化するが、末尾の `]}` は除く。
 			const content = JSON.stringify(serializeClipForHonoApi(clip)).slice(0, -2);
 			const isFirst = exportedClipsCount === 0;
 			await writer.write(isFirst ? content : ',\n' + content);
@@ -988,11 +1082,14 @@ async function processClipsForHonoApi(
 			exportedClipsCount++;
 		}
 
-		job.updateProgress(exportedClipsCount / total * 100);
+		job.updateProgress((exportedClipsCount / total) * 100);
 	}
 }
 
-export async function handleHonoQueueExportClips(deps: HonoQueueDbDependencies, job: Bull.Job<DbJobDataWithUser>): Promise<void> {
+export async function handleHonoQueueExportClips(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbJobDataWithUser>,
+): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
 	if (user == null) return;
 

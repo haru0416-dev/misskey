@@ -3,7 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { adminSystemWebhookCreateParamDef, adminSystemWebhookDeleteParamDef, adminSystemWebhookListParamDef, adminSystemWebhookShowParamDef, adminSystemWebhookTestParamDef, adminSystemWebhookUpdateParamDef } from '@/server/rest/admin-system-webhooks.js';
+import {
+	adminSystemWebhookCreateParamDef,
+	adminSystemWebhookDeleteParamDef,
+	adminSystemWebhookListParamDef,
+	adminSystemWebhookShowParamDef,
+	adminSystemWebhookTestParamDef,
+	adminSystemWebhookUpdateParamDef,
+} from '@/server/rest/admin/admin-system-webhooks.js';
 import { MINUTE } from '@/const.js';
 
 export const endpointMetas = {

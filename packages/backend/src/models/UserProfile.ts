@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { obsoleteNotificationTypes, followingVisibilities, followersVisibilities, notificationTypes } from '@/types.js';
+import { followingVisibilities, followersVisibilities, notificationTypes } from '@/types.js';
 import { MiUser } from './User.js';
 import { MiPage } from './Page.js';
 import { MiUserList } from './UserList.js';
@@ -17,7 +17,7 @@ export class MiUserProfile {
 
 	public location: string | null;
 
-	// Note: There's index named IDX_de22cd2b445eee31ae51cdbe99 for SUBSTR("birthday", 6, 5)
+	// birthday の月日検索では、IDX_USERPROFILE_BIRTHDAY_DATE（get_birthday_date("birthday")）を使用する。
 	public birthday: string | null;
 
 	public description: string | null;
@@ -48,9 +48,9 @@ export class MiUserProfile {
 
 	public publicReactions: boolean;
 
-	public followingVisibility: typeof followingVisibilities[number];
+	public followingVisibility: (typeof followingVisibilities)[number];
 
-	public followersVisibility: typeof followersVisibilities[number];
+	public followersVisibility: (typeof followersVisibilities)[number];
 
 	public twoFactorTempSecret: string | null;
 
@@ -97,28 +97,35 @@ export class MiUserProfile {
 	public mutedInstances: string[];
 
 	public notificationRecieveConfig: {
-		[notificationType in typeof notificationTypes[number]]?: {
-			type: 'all';
-		} | {
-			type: 'never';
-		} | {
-			type: 'following';
-		} | {
-			type: 'follower';
-		} | {
-			type: 'mutualFollow';
-		} | {
-			type: 'followingOrFollower';
-		} | {
-			type: 'list';
-			userListId: MiUserList['id'];
-		};
+		[notificationType in (typeof notificationTypes)[number]]?:
+			| {
+					type: 'all';
+			  }
+			| {
+					type: 'never';
+			  }
+			| {
+					type: 'following';
+			  }
+			| {
+					type: 'follower';
+			  }
+			| {
+					type: 'mutualFollow';
+			  }
+			| {
+					type: 'followingOrFollower';
+			  }
+			| {
+					type: 'list';
+					userListId: MiUserList['id'];
+			  };
 	};
 
 	public loggedInDates: string[];
 
 	public achievements: {
-		name: typeof ACHIEVEMENT_TYPES[number];
+		name: (typeof ACHIEVEMENT_TYPES)[number];
 		unlockedAt: number;
 	}[];
 

@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// NIRAX --- A lightweight router
+// NIRAX --- 軽量ルーター
 
-import { onBeforeUnmount, onMounted, shallowRef } from 'vue';
+import { onBeforeUnmount, shallowRef } from 'vue';
 import { EventEmitter } from 'eventemitter3';
 import type { Component, ShallowRef } from 'vue';
 
@@ -168,7 +168,6 @@ function buildFullPath(args: {
 			const replaceRegex = new RegExp(`:${key}(\\?)?`, 'g');
 			fullPath = fullPath.replace(replaceRegex, value ? encodeURIComponent(value) : '');
 		}
-		// remove any optional parameters that are not provided
 		fullPath = fullPath.replace(/\/:\w+\?(?=\/|$)/g, '');
 	}
 

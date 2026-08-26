@@ -6,10 +6,6 @@
 type EndoRelation<T> = (a: T, b: T) => boolean;
 type Predicate<T> = (x: T) => boolean;
 
-/**
- * Count the number of elements that satisfy the predicate
- */
-
 export function countIf<T>(f: Predicate<T>, xs: T[]): number {
 	let count = 0;
 	for (const x of xs) {
@@ -18,24 +14,14 @@ export function countIf<T>(f: Predicate<T>, xs: T[]): number {
 	return count;
 }
 
-/**
- * Count the number of elements that is equal to the element
- */
-export function count<T>(a: T, xs: T[]): number {
+function count<T>(a: T, xs: T[]): number {
 	return countIf((x) => x === a, xs);
 }
 
-/**
- * Concatenate an array of arrays
- */
 export function concat<T>(xss: T[][]): T[] {
 	return ([] as T[]).concat(...xss);
 }
 
-/**
- * Intersperse the element between the elements of the array
- * @param sep The element to be interspersed
- */
 export function intersperse<T>(sep: T, xs: T[]): T[] {
 	if (xs.length === 0) return [];
 	const result = new Array<T>(xs.length * 2 - 1);
@@ -47,25 +33,15 @@ export function intersperse<T>(sep: T, xs: T[]): T[] {
 	return result;
 }
 
-/**
- * Returns the array of elements that is not equal to the element
- */
 export function erase<T>(a: T, xs: T[]): T[] {
 	return xs.filter((x) => x !== a);
 }
 
-/**
- * Finds the array of all elements in the first array not contained in the second array.
- * The order of result values are determined by the first array.
- */
 export function difference<T>(xs: T[], ys: T[]): T[] {
 	const excluded = new Set(ys);
 	return xs.filter((x) => !excluded.has(x));
 }
 
-/**
- * Remove all but the first element from every group of equivalent elements
- */
 export function unique<T>(xs: T[]): T[] {
 	return [...new Set(xs)];
 }
@@ -93,10 +69,7 @@ export function maximum(xs: number[]): number {
 	return result;
 }
 
-/**
- * Compare two arrays by lexicographical order
- */
-export function lessThan(xs: number[], ys: number[]): boolean {
+function lessThan(xs: number[], ys: number[]): boolean {
 	for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
 		const x = xs[i];
 		const y = ys[i];
@@ -107,10 +80,7 @@ export function lessThan(xs: number[], ys: number[]): boolean {
 	return xs.length < ys.length;
 }
 
-/**
- * Returns the longest prefix of elements that satisfy the predicate
- */
-export function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
+function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
 	const ys: T[] = [];
 	for (const x of xs) {
 		if (f(x)) {
@@ -122,15 +92,15 @@ export function takeWhile<T>(f: Predicate<T>, xs: T[]): T[] {
 	return ys;
 }
 
-export function cumulativeSum(xs: number[]): number[] {
+function cumulativeSum(xs: number[]): number[] {
 	let total = 0;
 	return xs.map((x) => (total += x));
 }
 
-export function toArray<T>(x: T | T[] | undefined): T[] {
+function toArray<T>(x: T | T[] | undefined): T[] {
 	return Array.isArray(x) ? x : x != null ? [x] : [];
 }
 
-export function toSingle<T>(x: T | T[] | undefined): T | undefined {
+function toSingle<T>(x: T | T[] | undefined): T | undefined {
 	return Array.isArray(x) ? x[0] : x;
 }

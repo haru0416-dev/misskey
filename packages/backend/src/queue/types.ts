@@ -3,18 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiNote } from '@/models/Note.js';
 import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import type { SystemWebhookPayload } from '@/core/system-webhook-types.js';
-import type { UserWebhookPayload } from '@/core/user-webhook-types.js';
+import type { SystemWebhookPayload } from '@/core/webhook/system-webhook-types.js';
+import type { UserWebhookPayload } from '@/core/webhook/user-webhook-types.js';
 import type httpSignature from '@peertube/http-signature';
-
-export type Antenna = (MiAntenna & { userListAccts: string[] | null })[];
 
 export type DeliverJobData = {
 	user: ThinUser;
@@ -22,6 +19,7 @@ export type DeliverJobData = {
 	digest: string;
 	to: string;
 	isSharedInbox: boolean;
+	userStateGuard?: UserStateGuard;
 };
 
 export type InboxJobData = {
@@ -35,11 +33,20 @@ export type RelationshipJobData = {
 	silent?: boolean;
 	requestId?: string;
 	withReplies?: boolean;
+	userStateGuard?: UserStateGuard;
+};
+
+type UserStateGuard = {
+	userId: MiUser['id'];
+	isSuspended: boolean;
+	transitionedAt: string;
+	transitionId: string;
 };
 
 export type DbJobData<T extends keyof DbJobMap> = DbJobMap[T];
 
 export type DbJobMap = {
+	deleteDriveFile: DbDeleteDriveFileJobData;
 	deleteDriveFiles: DbJobDataWithUser;
 	exportCustomEmojis: DbJobDataWithUser;
 	exportAntennas: DBExportAntennasData;
@@ -50,7 +57,6 @@ export type DbJobMap = {
 	exportMuting: DbJobDataWithUser;
 	exportBlocking: DbJobDataWithUser;
 	exportUserLists: DbJobDataWithUser;
-	importAntennas: DBAntennaImportJobData;
 	importFollowing: DbUserImportJobData;
 	importFollowingToDb: DbUserImportToDbJobData;
 	importMuting: DbUserImportJobData;
@@ -59,6 +65,8 @@ export type DbJobMap = {
 	importUserLists: DbUserImportJobData;
 	importCustomEmojis: DbUserImportJobData;
 	deleteAccount: DbUserDeleteJobData;
+	userSuspensionPostEffects: DbUserSuspensionPostEffectsJobData;
+	notePostCreate: DbNotePostCreateJobData;
 };
 
 export type DbJobName = keyof DbJobMap;
@@ -74,23 +82,82 @@ export type DbExportFollowingData = {
 };
 
 export type DBExportAntennasData = {
-	user: ThinUser
+	user: ThinUser;
 };
 
 export type DbUserDeleteJobData = {
 	user: ThinUser;
 	soft?: boolean;
+	accountDeleteCoordinatorId?: string;
 };
+
+export type DbDeleteDriveFileJobData = {
+	operationId: string;
+	file: Pick<
+		MiDriveFile,
+		| 'id'
+		| 'userId'
+		| 'userHost'
+		| 'size'
+		| 'uri'
+		| 'storedInternal'
+		| 'isLink'
+		| 'accessKey'
+		| 'thumbnailUrl'
+		| 'thumbnailAccessKey'
+		| 'webpublicUrl'
+		| 'webpublicAccessKey'
+	> & { userUsername: MiUser['username'] | null };
+	isExpired: boolean;
+	replacementKeys?: {
+		accessKey: string;
+		thumbnailAccessKey: string;
+		webpublicAccessKey: string;
+	};
+	deleterId?: MiUser['id'];
+};
+
+export type DbUserSuspensionPostEffectsJobData = {
+	userId: MiUser['id'];
+	isSuspended: boolean;
+	transitionedAt: string;
+	transitionId: string;
+};
+
+export type DbNotePostCreateJobData = {
+	noteId: MiNote['id'];
+	mentionedUserIds: MiUser['id'][];
+	reply: {
+		id: MiNote['id'];
+		userId: MiUser['id'];
+		userHost: MiUser['host'];
+		threadId: MiNote['threadId'];
+	} | null;
+	renote: {
+		id: MiNote['id'];
+		userId: MiUser['id'];
+		userHost: MiUser['host'];
+		uri: MiNote['uri'];
+	} | null;
+	silent: boolean;
+	stage: DbNotePostCreateStage;
+};
+
+export type DbNotePostCreateStage =
+	| 'analytics'
+	| 'fanout'
+	| 'antennas'
+	| 'followerNotifications'
+	| 'poll'
+	| 'streamsAndRole'
+	| 'notifications'
+	| 'webhooks'
+	| 'federation';
 
 export type DbUserImportJobData = {
 	user: ThinUser;
 	fileId: MiDriveFile['id'];
 	withReplies?: boolean;
-};
-
-export type DBAntennaImportJobData = {
-	user: ThinUser,
-	antenna: Antenna
 };
 
 export type DbUserImportToDbJobData = {

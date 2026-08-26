@@ -87,6 +87,7 @@ cancelFollowRequestConfirm: "{name}へのフォロー申請をキャンセルし
 rejectFollowRequestConfirm: "{name}からのフォロー申請を拒否しますか？"
 exportRequested: "エクスポートをリクエストしました。これには時間がかかる場合があります。エクスポートが終わると、「ドライブ」に追加されます。"
 importRequested: "インポートをリクエストしました。これには時間がかかる場合があります。"
+importCompleted: "インポートが完了しました。"
 lists: "リスト"
 noLists: "リストはありません"
 note: "ノート"
@@ -1449,6 +1450,7 @@ addToEmojiPalette: "絵文字パレットに追加"
 emojiPaletteAlreadyAddedConfirm: "この絵文字はすでにこの絵文字パレットに含まれています。追加しなおしますか？"
 append: "末尾に追加"
 prepend: "先頭に追加"
+pixelatedZoom: "ピクセルアート拡大モード"
 
 _imageEditing:
   _vars:
@@ -1659,6 +1661,13 @@ _delivery:
     goneSuspended: "サーバー削除のため停止中"
     autoSuspendedForNotResponding: "サーバー応答なしのため停止中"
     softwareSuspended: "配信停止中のソフトウェアであるため停止中"
+
+_queueOutbox:
+  deadLetters: "デッドレター"
+  deadLettersDescription: "リトライ上限に達したか、内容が壊れていて処理を諦めたジョブです。原因を解消してから再試行するか、破棄してください。どちらも行わない限り、このジョブに紐づく処理 (アカウントの完全削除など) は先に進みません。"
+  noDeadLetters: "デッドレターはありません。"
+  retryConfirm: "このジョブをキューに戻して再試行します。原因が解消していない場合は、再びデッドレターになります。"
+  abandonConfirm: "このジョブを破棄します。破棄すると再試行できなくなり、このジョブが行うはずだった処理 (リモートサーバーへの配送など) は永久に実行されません。"
 
 _announcement:
   forExistingUsers: "既存ユーザーのみ"

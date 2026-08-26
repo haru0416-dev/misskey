@@ -20,16 +20,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div class="_gaps_m">
 				<div v-if="imgUrl != null" :class="$style.imgs">
 					<div style="background: #000;" :class="$style.imgContainer">
-						<img :src="imgUrl" :class="$style.img"/>
+						<img :src="imgUrl" :class="$style.img" :alt="name"/>
 					</div>
 					<div style="background: #222;" :class="$style.imgContainer">
-						<img :src="imgUrl" :class="$style.img"/>
+						<img :src="imgUrl" :class="$style.img" :alt="name"/>
 					</div>
 					<div style="background: #ddd;" :class="$style.imgContainer">
-						<img :src="imgUrl" :class="$style.img"/>
+						<img :src="imgUrl" :class="$style.img" :alt="name"/>
 					</div>
 					<div style="background: #fff;" :class="$style.imgContainer">
-						<img :src="imgUrl" :class="$style.img"/>
+						<img :src="imgUrl" :class="$style.img" :alt="name"/>
 					</div>
 				</div>
 				<MkButton rounded style="margin: 0 auto;" @click="changeImage">{{ i18n.ts.selectFile }}</MkButton>
@@ -115,7 +115,13 @@ const rolesThatCanBeUsedThisEmojiAsReaction = ref<Misskey.entities.Role[]>([]);
 const file = ref<Misskey.entities.DriveFile>();
 
 watch(roleIdsThatCanBeUsedThisEmojiAsReaction, async () => {
-	rolesThatCanBeUsedThisEmojiAsReaction.value = (await Promise.all(roleIdsThatCanBeUsedThisEmojiAsReaction.value.map((id) => misskeyApi('admin/roles/show', { roleId: id }).catch(() => null)))).filter(x => x != null);
+	// ロールIDごとに admin/roles/show を叩くと割り当て数だけリクエストが増える。
+	// admin/roles/list は引数なしで全件返し、要求権限も同一 (read:admin:roles) なので1回で解決できる。
+	const allRoles = await misskeyApi('admin/roles/list').catch(() => null);
+	if (allRoles == null) return;
+	rolesThatCanBeUsedThisEmojiAsReaction.value = roleIdsThatCanBeUsedThisEmojiAsReaction.value
+		.map((id) => allRoles.find((role) => role.id === id))
+		.filter(x => x != null);
 }, { immediate: true });
 
 const imgUrl = computed(() => file.value ? file.value.url : props.emoji ? props.emoji.url : null);
@@ -188,7 +194,7 @@ async function done() {
 
 		const created = await os.apiWithDialog('admin/emoji/add', {
 			...params,
-			fileId: params.fileId, // TSを黙らすため
+			fileId: params.fileId,
 		});
 
 		emit('done', {

@@ -30,7 +30,7 @@ BASE=$(git merge-base origin/develop HEAD)
 加えて以下も同じ baseline で差分対象に含める:
 
 - `packages/backend/src/server/api/endpoint-metas.ts`
-- `packages/backend/test/e2e/**` (とくに `endpoints.ts` と `<area>.ts`)
+- `packages/backend/test/e2e/**` (とくに `endpoints-<領域>.ts` と `<area>.ts`)
 - `packages/misskey-js/src/autogen/**`
 - `CHANGELOG.md`
 
@@ -135,7 +135,7 @@ git diff --name-only "$BASE"...HEAD -- packages/misskey-js/src/autogen/
 
 ### 9. e2e テスト (Major)
 
-[test/e2e/endpoints.ts](../../packages/backend/test/e2e/endpoints.ts) または `test/e2e/<area>.ts` (`note.ts`, `users.ts` 等) 配下に、対応する `api('<category>/<name>', ...)` 呼び出しを含む `test(...)` ケースが追加されているか確認する。複雑な分岐 (権限チェック・エラーケース) の網羅も確認する。
+`test/e2e/endpoints-<領域>.ts` または `test/e2e/<area>.ts` (`note.ts`, `users.ts` 等) 配下に、対応する `api('<category>/<name>', ...)` 呼び出しを含む `test(...)` ケースが追加されているか確認する。複雑な分岐 (権限チェック・エラーケース) の網羅も確認する。
 
 **describe ラベルの形式は問わない**: 既存テストは `describe('Note', () => { test('投稿できる', ...) })` のように人間可読ラベルで構造化されており、`<category>/<name>` 形式の describe は使われていない。describe 名の規約違反としては指摘しない。
 
@@ -178,5 +178,5 @@ git diff --name-only "$BASE"...HEAD -- packages/misskey-js/src/autogen/
 - [endpoint-metas.ts (metas/*.ts の集約)](../../packages/backend/src/server/api/endpoint-metas.ts)
 - [error.ts (HonoApiError)](../../packages/backend/src/server/rest/error.ts)
 - [shell.ts (ルート配線)](../../packages/backend/src/server/rest/shell.ts)
-- [test/e2e/endpoints.ts](../../packages/backend/test/e2e/endpoints.ts)
+- [test/e2e/endpoints-users.ts](../../packages/backend/test/e2e/endpoints-users.ts)
 - [AGENTS.md](../../AGENTS.md) — SPDX / マイグレーション履歴 / CHANGELOG 書式などの最低限ルール (Codex / Copilot と共通)

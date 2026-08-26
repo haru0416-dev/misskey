@@ -6,7 +6,7 @@
 import { setTimeout } from 'node:timers/promises';
 import { sql } from 'drizzle-orm';
 import type * as Bull from 'bullmq';
-import { deleteNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { deleteNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -15,7 +15,12 @@ import type { MiNote } from '@/models/Note.js';
 
 export type HonoQueueCleanRemoteNotesDependencies = {
 	db: MiDrizzleDatabase;
-	meta: Pick<MiMeta, 'enableRemoteNotesCleaning' | 'remoteNotesCleaningMaxProcessingDurationInMinutes' | 'remoteNotesCleaningExpiryDaysForEachNotes'>;
+	meta: Pick<
+		MiMeta,
+		| 'enableRemoteNotesCleaning'
+		| 'remoteNotesCleaningMaxProcessingDurationInMinutes'
+		| 'remoteNotesCleaningExpiryDaysForEachNotes'
+	>;
 };
 
 export type CleanRemoteNotesResult = {
@@ -162,7 +167,7 @@ async function listRemoteRootNoteIdsWindow(
 		LIMIT ${options.limit}
 	`);
 
-	return result.rows.map(row => row.id);
+	return result.rows.map((row) => row.id);
 }
 
 export async function handleHonoQueueCleanRemoteNotes(
@@ -181,7 +186,7 @@ export async function handleHonoQueueCleanRemoteNotes(
 		return {
 			enabled: deps.meta.enableRemoteNotesCleaning,
 			maxDuration: deps.meta.remoteNotesCleaningMaxProcessingDurationInMinutes * 60 * 1000,
-			newestLimit: genId(Date.now() - (1000 * 60 * 60 * 24 * deps.meta.remoteNotesCleaningExpiryDaysForEachNotes)),
+			newestLimit: genId(Date.now() - 1000 * 60 * 60 * 24 * deps.meta.remoteNotesCleaningExpiryDaysForEachNotes),
 		};
 	};
 
@@ -210,7 +215,7 @@ export async function handleHonoQueueCleanRemoteNotes(
 		};
 	}
 
-	// start with a conservative limit and adjust it based on the query duration
+	// 控えめな上限から始め、クエリ時間に応じて調整する。
 	const minimumLimit = 10;
 	let currentLimit = 100;
 	let cursorLeft = '0';
@@ -235,14 +240,18 @@ export async function handleHonoQueueCleanRemoteNotes(
 		const progress = computeProgress(minId, newestLimit, cursorLeft > minId ? cursorLeft : minId);
 
 		if (elapsed >= maxDuration) {
-			job.log(`Reached maximum duration of ${maxDuration}ms, stopping... (last cursor: ${cursorLeft}, final progress ${progress}%)`);
+			job.log(
+				`Reached maximum duration of ${maxDuration}ms, stopping... (last cursor: ${cursorLeft}, final progress ${progress}%)`,
+			);
 			job.updateProgress(100);
 			break;
 		}
 
 		const wallClockUsage = elapsed / maxDuration;
 		if (wallClockUsage > 0.5 && progress < 50 && !lowThroughputWarned) {
-			job.log(`Not projected to finish in time! (wall clock usage ${wallClockUsage * 100}% at ${progress}%, current limit ${currentLimit})`);
+			job.log(
+				`Not projected to finish in time! (wall clock usage ${wallClockUsage * 100}% at ${progress}%, current limit ${currentLimit})`,
+			);
 			lowThroughputWarned = true;
 		}
 		job.updateProgress(progress);
@@ -298,7 +307,7 @@ export async function handleHonoQueueCleanRemoteNotes(
 		}
 		currentLimit = Math.min(Math.max(currentLimit, minimumLimit), 5000);
 
-		const deletableNoteIds = noteIds.filter(result => result.isRemovable).map(result => result.id);
+		const deletableNoteIds = noteIds.filter((result) => result.isRemovable).map((result) => result.id);
 		if (deletableNoteIds.length > 0) {
 			try {
 				await deleteNotesByIdsFromDatabase(deps.db, deletableNoteIds);
@@ -324,7 +333,7 @@ export async function handleHonoQueueCleanRemoteNotes(
 			}
 		}
 
-		cursorLeft = noteIds.filter(result => result.isBase).reduce((max, { id }) => id > max ? id : max, cursorLeft);
+		cursorLeft = noteIds.filter((result) => result.isBase).reduce((max, { id }) => (id > max ? id : max), cursorLeft);
 
 		job.log(`Deleted ${noteIds.length} notes; ${Date.now() - batchBeginAt}ms`);
 

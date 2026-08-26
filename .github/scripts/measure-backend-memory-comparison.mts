@@ -261,7 +261,7 @@ async function main() {
 	for (let round = 1; round <= warmupRounds; round++) {
 		process.stderr.write(`Starting warmup round ${round}/${warmupRounds}\n`);
 		for (const label of ['base', 'head'] as const) {
-			// Measurements must not overlap because they share the database, Valkey, and host memory.
+			// DB、Valkey、ホストメモリを共有するため、計測を重ねない。
 			// eslint-disable-next-line no-await-in-loop
 			await measureRepo(label, reports[label].dir, -round);
 		}
@@ -274,7 +274,7 @@ async function main() {
 		for (const label of order) {
 			const shouldSaveHeadHeapSnapshot = label === 'head';
 			const options = shouldSaveHeadHeapSnapshot ? { heapSnapshotSavePath: headHeapSnapshotPath(round) } : {};
-			// Preserve the alternating order while keeping each measurement isolated.
+			// 各計測を分離したまま、実行順を交互にする。
 			// eslint-disable-next-line no-await-in-loop
 			const sample = await measureRepo(label, reports[label].dir, round, options);
 			reports[label].samples.push({

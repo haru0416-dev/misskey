@@ -2,12 +2,19 @@ import { describe, test, beforeAll } from 'vitest';
 import assert, { rejects, strictEqual } from 'node:assert';
 import { Person } from '@fedify/vocab';
 import * as Misskey from 'misskey-js';
-import { createAccount, deepStrictEqualWithExcludedFields, fetchActivityPubObject, fetchAdmin, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep } from './utils.js';
+import {
+	createAccount,
+	deepStrictEqualWithExcludedFields,
+	fetchActivityPubObject,
+	fetchAdmin,
+	type LoginUser,
+	resolveRemoteNote,
+	resolveRemoteUser,
+	sleep,
+	waitFor,
+} from './utils.js';
 
-const [aAdmin, bAdmin] = await Promise.all([
-	fetchAdmin('a.test'),
-	fetchAdmin('b.test'),
-]);
+const [aAdmin, bAdmin] = await Promise.all([fetchAdmin('a.test'), fetchAdmin('b.test')]);
 
 function getAt<T>(values: readonly T[], index: number): T {
 	const value = values[index];
@@ -24,13 +31,7 @@ describe('User', () => {
 
 			beforeAll(async () => {
 				alice = await createAccount('a.test');
-				[
-					aliceWatcher,
-					aliceWatcherInB,
-				] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[aliceWatcher, aliceWatcherInB] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 			});
 
 			test('Check consistency', async () => {
@@ -81,17 +82,13 @@ describe('User', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),
 					resolveRemoteUser('a.test', alice.id, bob),
 				]);
 
-				// NOTE: follow each other
 				await Promise.all([
 					alice.client.request('following/create', { userId: bobInA.id }),
 					bob.client.request('following/create', { userId: aliceInB.id }),
@@ -109,7 +106,7 @@ describe('User', () => {
 				}
 			});
 
-			/** FIXME: not working */
+			/** 未対応のためスキップする。 */
 			test.skip('Setting private for followersVisibility is federated', async () => {
 				await Promise.all([
 					alice.client.request('i/update', { followersVisibility: 'private' }),
@@ -148,10 +145,7 @@ describe('User', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),
@@ -180,10 +174,7 @@ describe('User', () => {
 			let aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 				aliceInB = await resolveRemoteUser('a.test', alice.id, bob);
 
 				await bob.client.request('following/create', { userId: aliceInB.id });
@@ -235,10 +226,7 @@ describe('User', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -256,13 +244,13 @@ describe('User', () => {
 			test('Check consistency with `users/following` and `users/followers` endpoints', async () => {
 				await Promise.all([
 					strictEqual(
-						(await alice.client.request('users/following', { userId: alice.id }))
-							.some(v => v.followeeId === bobInA.id),
+						(await alice.client.request('users/following', { userId: alice.id })).some(
+							(v) => v.followeeId === bobInA.id,
+						),
 						true,
 					),
 					strictEqual(
-						(await bob.client.request('users/followers', { userId: bob.id }))
-							.some(v => v.followerId === aliceInB.id),
+						(await bob.client.request('users/followers', { userId: bob.id })).some((v) => v.followerId === aliceInB.id),
 						true,
 					),
 				]);
@@ -279,13 +267,13 @@ describe('User', () => {
 			test('Check consistency with `users/following` and `users/followers` endpoints', async () => {
 				await Promise.all([
 					strictEqual(
-						(await alice.client.request('users/following', { userId: alice.id }))
-							.some(v => v.followeeId === bobInA.id),
+						(await alice.client.request('users/following', { userId: alice.id })).some(
+							(v) => v.followeeId === bobInA.id,
+						),
 						false,
 					),
 					strictEqual(
-						(await bob.client.request('users/followers', { userId: bob.id }))
-							.some(v => v.followerId === aliceInB.id),
+						(await bob.client.request('users/followers', { userId: bob.id })).some((v) => v.followerId === aliceInB.id),
 						false,
 					),
 				]);
@@ -298,10 +286,7 @@ describe('User', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -358,7 +343,7 @@ describe('User', () => {
 				);
 			});
 
-			test('Bob doesn\'t follow Alice', async () => {
+			test("Bob doesn't follow Alice", async () => {
 				const following = await bob.client.request('users/following', { userId: bob.id });
 				strictEqual(following.length, 0);
 			});
@@ -388,10 +373,7 @@ describe('User', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),
@@ -404,13 +386,13 @@ describe('User', () => {
 				await sleep();
 
 				const followers = await alice.client.request('users/followers', { userId: alice.id });
-				strictEqual(followers.length, 1); // followed by Bob
+				strictEqual(followers.length, 1);
 
 				await alice.client.request('i/delete-account', { password: alice.password });
-				await sleep();
 
-				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 0); // no following relation
+				// 削除に伴う Delete の配送は outbox のディスパッチャ (1秒周期) を経由するため、
+				// sleep() の既定 250ms では届かない (実測で約1秒)。条件が満たされるまで待つ。
+				await waitFor(async () => (await bob.client.request('users/following', { userId: bob.id })).length === 0);
 
 				await rejects(
 					async () => await bob.client.request('following/create', { userId: aliceInB.id }),
@@ -427,10 +409,7 @@ describe('User', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),
@@ -443,19 +422,15 @@ describe('User', () => {
 				await sleep();
 
 				const followers = await alice.client.request('users/followers', { userId: alice.id });
-				strictEqual(followers.length, 1); // followed by Bob
+				strictEqual(followers.length, 1);
 
 				await bAdmin.client.request('admin/delete-account', { userId: aliceInB.id });
 				await sleep();
 
-				/**
-				 * FIXME: remote account is not deleted!
-				 *        @see https://github.com/misskey-dev/misskey/issues/14728
-				 */
+				/** リモートアカウントが削除されない。@see https://github.com/misskey-dev/misskey/issues/14728 */
 				const deletedAlice = await bob.client.request('users/show', { userId: aliceInB.id });
 				assert(deletedAlice.id, aliceInB.id);
 
-				// TODO: why still following relation?
 				const following = await bob.client.request('users/following', { userId: bob.id });
 				strictEqual(following.length, 1);
 				await rejects(
@@ -472,10 +447,10 @@ describe('User', () => {
 				await sleep();
 
 				const following = await alice.client.request('users/following', { userId: alice.id });
-				strictEqual(following.length, 0); // Not following Bob because B server doesn't return Accept
+				strictEqual(following.length, 0);
 
 				const followers = await bob.client.request('users/followers', { userId: bob.id });
-				strictEqual(followers.length, 0); // Alice's Follow is not processed
+				strictEqual(followers.length, 0);
 			});
 		});
 	});
@@ -486,10 +461,7 @@ describe('User', () => {
 			let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 			beforeAll(async () => {
-				[alice, bob] = await Promise.all([
-					createAccount('a.test'),
-					createAccount('b.test'),
-				]);
+				[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 				[bobInA, aliceInB] = await Promise.all([
 					resolveRemoteUser('b.test', bob.id, alice),
@@ -502,13 +474,13 @@ describe('User', () => {
 				await sleep();
 
 				const followers = await alice.client.request('users/followers', { userId: alice.id });
-				strictEqual(followers.length, 1); // followed by Bob
+				strictEqual(followers.length, 1);
 
 				await aAdmin.client.request('admin/suspend-user', { userId: alice.id });
 				await sleep();
 
 				const following = await bob.client.request('users/following', { userId: bob.id });
-				strictEqual(following.length, 0); // no following relation
+				strictEqual(following.length, 0);
 
 				await rejects(
 					async () => await bob.client.request('following/create', { userId: aliceInB.id }),
@@ -523,7 +495,7 @@ describe('User', () => {
 				await aAdmin.client.request('admin/unsuspend-user', { userId: alice.id });
 				await sleep();
 
-				// upstream 同様、削除済みマークが残った行への following/create は拒否される
+				// 削除済みマークが残った行への following/create は拒否される。
 				await rejects(
 					async () => await bob.client.request('following/create', { userId: aliceInB.id }),
 					(err: any) => {
@@ -532,9 +504,7 @@ describe('User', () => {
 					},
 				);
 
-				// NOTE: upstream は再解決も INTERNAL_ERROR で失敗し続ける既知バグ
-				// (misskey-dev/misskey#13273) を FIXME 付きで期待値にしていたが、
-				// 本ポートでは凍結解除後の再解決に成功し、以後フォローも可能になる
+				// 凍結解除後は再解決に成功し、解決したユーザーへのフォローも可能になる。
 				const resolved = await resolveRemoteUser('a.test', alice.id, bob);
 				strictEqual(resolved.username, aliceInB.username);
 
@@ -545,22 +515,18 @@ describe('User', () => {
 				strictEqual(following.length, 1);
 			});
 
-			/**
-			 * instead of simple unsuspension, let's tell existence by following from Alice
-			 */
+			/** Alice からのフォローでリモートユーザーの存在を再確認する。 */
 			test('Alice can follow Bob', async () => {
 				await alice.client.request('following/create', { userId: bobInA.id });
 				await sleep();
 
 				const bobFollowers = await bob.client.request('users/followers', { userId: bob.id });
-				strictEqual(bobFollowers.length, 1); // followed by Alice
+				strictEqual(bobFollowers.length, 1);
 				const renewedaliceInB = getAt(bobFollowers, 0).follower;
 				assert(renewedaliceInB != null);
 				assert(aliceInB.username === renewedaliceInB.username);
 				assert(aliceInB.host === renewedaliceInB.host);
 
-				// NOTE: upstream は「解決が INTERNAL_ERROR で失敗し続ける」既知バグを期待値にしていたが、
-				// 本ポートでは解決に成功し、生きているalice行と一致する
 				const resolved = await resolveRemoteUser('a.test', alice.id, bob);
 				strictEqual(resolved.id, renewedaliceInB.id);
 			});

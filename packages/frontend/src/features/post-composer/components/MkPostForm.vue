@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.headerLeft">
 			<button v-if="!fixed" :class="$style.cancel" class="_button" @click="cancel"><i class="ti ti-x"></i></button>
 			<button ref="accountMenuEl" v-click-anime v-tooltip="i18n.ts.account" class="_button" @click="openAccountMenu">
-				<img :class="$style.avatar" :src="(postAccount ?? $i).avatarUrl" style="border-radius: 100%;"/>
+				<img :class="$style.avatar" :src="(postAccount ?? $i).avatarUrl" style="border-radius: 100%;" alt=""/>
 			</button>
 		</div>
 		<div :class="$style.headerRight">
@@ -72,7 +72,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</MkInfo>
 	<MkInfo v-if="hasNotSpecifiedMentions" warn :class="$style.hasNotSpecifiedMentions">{{ i18n.ts.notSpecifiedMentionWarning }} - <button class="_textButton" @click="addMissingMention()">{{ i18n.ts.add }}</button></MkInfo>
 	<div v-show="useCw" :class="$style.cwOuter">
-		<input ref="cwInputEl" v-model="cw" :class="$style.cw" :placeholder="i18n.ts.annotation" @keydown="onKeydown" @keyup="onKeyup" @compositionend="onCompositionEnd">
+		<input ref="cwInputEl" v-model="cw" :class="$style.cw" :placeholder="i18n.ts.annotation" :aria-label="i18n.ts.annotation" @keydown="onKeydown" @keyup="onKeyup" @compositionend="onCompositionEnd">
 		<div v-if="maxCwTextLength - cwTextLength < 20" :class="['_acrylic', $style.cwTextCount, { [$style.cwTextOver]: cwTextLength > maxCwTextLength }]">{{ maxCwTextLength - cwTextLength }}</div>
 	</div>
 	<div :class="[$style.textOuter, { [$style.withCw]: useCw }]">
@@ -384,7 +384,7 @@ if ($i.isSilenced && visibility.value === 'public') {
 
 if (targetChannel.value) {
 	visibility.value = 'public';
-	localOnly.value = true; // TODO: チャンネルが連合するようになった折には消す
+	localOnly.value = true; // チャンネル投稿は現時点で連合しないため、ローカル限定にする。
 }
 
 // 公開以外へのリプライ時は元の公開範囲を引き継ぐ
@@ -443,7 +443,9 @@ function checkMissingMention() {
 		const ast = mfm.parse(text.value);
 
 		for (const x of mfm.extractMentions(ast)) {
-			if (!visibleUsers.value.some(u => (u.username === x.username) && (u.host === x.host))) {
+			// ローカルユーザーは宛先では host === null だが、本文では `@user@example.com` と
+			// 自ホスト付きで書かれうる。同一視しないと宛先に居るのに未指定扱いになる
+			if (!visibleUsers.value.some(u => (u.username === x.username) && ((u.host === x.host) || (x.host === host && u.host == null)))) {
 				hasNotSpecifiedMentions.value = true;
 				return;
 			}
@@ -528,7 +530,7 @@ function updateFileName(file: Misskey.entities.DriveFile, name: Misskey.entities
 function setVisibility() {
 	if (targetChannel.value) {
 		visibility.value = 'public';
-		localOnly.value = true; // TODO: チャンネルが連合するようになった折には消す
+		localOnly.value = true; // チャンネル投稿は現時点で連合しないため、ローカル限定にする。
 		return;
 	}
 
@@ -551,7 +553,7 @@ function setVisibility() {
 async function toggleLocalOnly() {
 	if (targetChannel.value) {
 		visibility.value = 'public';
-		localOnly.value = true; // TODO: チャンネルが連合するようになった折には消す
+		localOnly.value = true; // チャンネル投稿は現時点で連合しないため、ローカル限定にする。
 		return;
 	}
 
@@ -759,7 +761,7 @@ async function onPaste(ev: ClipboardEvent) {
 			if (!file) continue;
 			const lio = file.name.lastIndexOf('.');
 			const ext = lio >= 0 ? file.name.slice(lio) : '';
-			const formattedName = `${formatTimeString(new Date(file.lastModified), pastedFileName).replace(/{{number}}/g, `${i + 1}`)}${ext}`;
+			const formattedName = `${formatTimeString(new Date(file.lastModified), pastedFileName).replaceAll(/{{number}}/g, `${i + 1}`)}${ext}`;
 			const renamedFile = new File([file], formattedName, { type: file.type });
 			pastedFiles.push(renamedFile);
 		}
@@ -801,7 +803,7 @@ async function onPaste(ev: ClipboardEvent) {
 			return;
 		}
 
-		const fileName = formatTimeString(new Date(), pastedFileName).replace(/{{number}}/g, '0');
+		const fileName = formatTimeString(new Date(), pastedFileName).replaceAll(/{{number}}/g, '0');
 		const file = new File([paste], `${fileName}.txt`, { type: 'text/plain' });
 		uploader.addFiles([file]);
 	}

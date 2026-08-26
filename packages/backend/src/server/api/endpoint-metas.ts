@@ -4,10 +4,8 @@
  */
 
 /*
- * Consolidated endpoint metadata assembly.
- * Key order below MUST stay sorted by UTF-16 code unit order (the order the
- * legacy `import * as` module-namespace object exposed) — it determines the
- * endpoint ordering of the public /api.json document.
+ * エンドポイントメタデータを統合する。
+ * 公開 `/api.json` のエンドポイント順序に使うため、以下のキーは UTF-16 コード単位順を維持する。
  */
 import { endpointMetas as adminMetas } from './metas/admin.js';
 import { endpointMetas as adminAbuseReportMetas } from './metas/admin-abuse-report.js';
@@ -58,11 +56,16 @@ const endpointMetaGroups = [
 ] as const;
 
 export const endpointMetas = {
-	'admin/abuse-report/notification-recipient/create': adminAbuseReportMetas['admin/abuse-report/notification-recipient/create'],
-	'admin/abuse-report/notification-recipient/delete': adminAbuseReportMetas['admin/abuse-report/notification-recipient/delete'],
-	'admin/abuse-report/notification-recipient/list': adminAbuseReportMetas['admin/abuse-report/notification-recipient/list'],
-	'admin/abuse-report/notification-recipient/show': adminAbuseReportMetas['admin/abuse-report/notification-recipient/show'],
-	'admin/abuse-report/notification-recipient/update': adminAbuseReportMetas['admin/abuse-report/notification-recipient/update'],
+	'admin/abuse-report/notification-recipient/create':
+		adminAbuseReportMetas['admin/abuse-report/notification-recipient/create'],
+	'admin/abuse-report/notification-recipient/delete':
+		adminAbuseReportMetas['admin/abuse-report/notification-recipient/delete'],
+	'admin/abuse-report/notification-recipient/list':
+		adminAbuseReportMetas['admin/abuse-report/notification-recipient/list'],
+	'admin/abuse-report/notification-recipient/show':
+		adminAbuseReportMetas['admin/abuse-report/notification-recipient/show'],
+	'admin/abuse-report/notification-recipient/update':
+		adminAbuseReportMetas['admin/abuse-report/notification-recipient/update'],
 	'admin/abuse-user-reports': adminMetas['admin/abuse-user-reports'],
 	'admin/accounts/create': adminMetas['admin/accounts/create'],
 	'admin/accounts/delete': adminMetas['admin/accounts/delete'],
@@ -112,10 +115,12 @@ export const endpointMetas = {
 	'admin/invite/list': adminMetas['admin/invite/list'],
 	'admin/meta': adminMetas['admin/meta'],
 	'admin/promo/create': adminMetas['admin/promo/create'],
+	'admin/queue/abandon-outbox-dead-letter': adminQueueMetas['admin/queue/abandon-outbox-dead-letter'],
 	'admin/queue/clear': adminQueueMetas['admin/queue/clear'],
 	'admin/queue/deliver-delayed': adminQueueMetas['admin/queue/deliver-delayed'],
 	'admin/queue/inbox-delayed': adminQueueMetas['admin/queue/inbox-delayed'],
 	'admin/queue/jobs': adminQueueMetas['admin/queue/jobs'],
+	'admin/queue/outbox-dead-letters': adminQueueMetas['admin/queue/outbox-dead-letters'],
 	'admin/queue/pause': adminQueueMetas['admin/queue/pause'],
 	'admin/queue/promote-jobs': adminQueueMetas['admin/queue/promote-jobs'],
 	'admin/queue/queue-stats': adminQueueMetas['admin/queue/queue-stats'],
@@ -123,6 +128,7 @@ export const endpointMetas = {
 	'admin/queue/remove-job': adminQueueMetas['admin/queue/remove-job'],
 	'admin/queue/resume': adminQueueMetas['admin/queue/resume'],
 	'admin/queue/retry-job': adminQueueMetas['admin/queue/retry-job'],
+	'admin/queue/retry-outbox-dead-letter': adminQueueMetas['admin/queue/retry-outbox-dead-letter'],
 	'admin/queue/show-job': adminQueueMetas['admin/queue/show-job'],
 	'admin/queue/show-job-logs': adminQueueMetas['admin/queue/show-job-logs'],
 	'admin/queue/stats': adminQueueMetas['admin/queue/stats'],
@@ -160,7 +166,7 @@ export const endpointMetas = {
 	'admin/update-meta': adminMetas['admin/update-meta'],
 	'admin/update-proxy-account': adminMetas['admin/update-proxy-account'],
 	'admin/update-user-note': adminMetas['admin/update-user-note'],
-	'announcements': miscMetas['announcements'],
+	announcements: miscMetas['announcements'],
 	'announcements/show': miscMetas['announcements/show'],
 	'antennas/create': antennasMetas['antennas/create'],
 	'antennas/delete': antennasMetas['antennas/delete'],
@@ -244,7 +250,7 @@ export const endpointMetas = {
 	'clips/show': clipsMetas['clips/show'],
 	'clips/unfavorite': clipsMetas['clips/unfavorite'],
 	'clips/update': clipsMetas['clips/update'],
-	'drive': driveMetas['drive'],
+	drive: driveMetas['drive'],
 	'drive/files': driveMetas['drive/files'],
 	'drive/files/attached-chat-messages': driveMetas['drive/files/attached-chat-messages'],
 	'drive/files/attached-notes': driveMetas['drive/files/attached-notes'],
@@ -265,10 +271,10 @@ export const endpointMetas = {
 	'drive/folders/update': driveMetas['drive/folders/update'],
 	'drive/stream': driveMetas['drive/stream'],
 	'email-address/available': miscMetas['email-address/available'],
-	'emoji': miscMetas['emoji'],
-	'emojis': miscMetas['emojis'],
-	'endpoint': miscMetas['endpoint'],
-	'endpoints': miscMetas['endpoints'],
+	emoji: miscMetas['emoji'],
+	emojis: miscMetas['emojis'],
+	endpoint: miscMetas['endpoint'],
+	endpoints: miscMetas['endpoints'],
 	'export-custom-emojis': miscMetas['export-custom-emojis'],
 	'federation/followers': federationMetas['federation/followers'],
 	'federation/following': federationMetas['federation/following'],
@@ -316,7 +322,7 @@ export const endpointMetas = {
 	'hashtags/show': hashtagsMetas['hashtags/show'],
 	'hashtags/trend': hashtagsMetas['hashtags/trend'],
 	'hashtags/users': hashtagsMetas['hashtags/users'],
-	'i': iMetas['i'],
+	i: iMetas['i'],
 	'i/2fa/done': iMetas['i/2fa/done'],
 	'i/2fa/key-done': iMetas['i/2fa/key-done'],
 	'i/2fa/password-less': iMetas['i/2fa/password-less'],
@@ -377,13 +383,13 @@ export const endpointMetas = {
 	'invite/delete': miscMetas['invite/delete'],
 	'invite/limit': miscMetas['invite/limit'],
 	'invite/list': miscMetas['invite/list'],
-	'meta': miscMetas['meta'],
+	meta: miscMetas['meta'],
 	'miauth/gen-token': miscMetas['miauth/gen-token'],
 	'mute/create': miscMetas['mute/create'],
 	'mute/delete': miscMetas['mute/delete'],
 	'mute/list': miscMetas['mute/list'],
 	'my/apps': miscMetas['my/apps'],
-	'notes': notesMetas['notes'],
+	notes: notesMetas['notes'],
 	'notes/children': notesMetas['notes/children'],
 	'notes/clips': notesMetas['notes/clips'],
 	'notes/conversation': notesMetas['notes/conversation'],
@@ -432,7 +438,7 @@ export const endpointMetas = {
 	'pages/show': pagesMetas['pages/show'],
 	'pages/unlike': pagesMetas['pages/unlike'],
 	'pages/update': pagesMetas['pages/update'],
-	'ping': miscMetas['ping'],
+	ping: miscMetas['ping'],
 	'pinned-users': miscMetas['pinned-users'],
 	'promo/read': miscMetas['promo/read'],
 	'renote-mute/create': miscMetas['renote-mute/create'],
@@ -441,20 +447,20 @@ export const endpointMetas = {
 	'request-reset-password': miscMetas['request-reset-password'],
 	'reset-db': miscMetas['reset-db'],
 	'reset-password': miscMetas['reset-password'],
-	'retention': miscMetas['retention'],
+	retention: miscMetas['retention'],
 	'roles/list': miscMetas['roles/list'],
 	'roles/notes': miscMetas['roles/notes'],
 	'roles/show': miscMetas['roles/show'],
 	'roles/users': miscMetas['roles/users'],
 	'server-info': miscMetas['server-info'],
-	'stats': miscMetas['stats'],
+	stats: miscMetas['stats'],
 	'sw/register': miscMetas['sw/register'],
 	'sw/show-registration': miscMetas['sw/show-registration'],
 	'sw/unregister': miscMetas['sw/unregister'],
 	'sw/update-registration': miscMetas['sw/update-registration'],
-	'test': miscMetas['test'],
+	test: miscMetas['test'],
 	'username/available': miscMetas['username/available'],
-	'users': usersMetas['users'],
+	users: usersMetas['users'],
 	'users/achievements': usersMetas['users/achievements'],
 	'users/clips': usersMetas['users/clips'],
 	'users/featured-notes': usersMetas['users/featured-notes'],
@@ -490,18 +496,28 @@ export const endpointMetas = {
 	'verify-email': miscMetas['verify-email'],
 };
 
-const groupedEndpointNames = endpointMetaGroups.flatMap(group => Object.keys(group));
-const duplicateEndpointNames = groupedEndpointNames.filter((name, index) => groupedEndpointNames.indexOf(name) !== index);
+const groupedEndpointNames = endpointMetaGroups.flatMap((group) => Object.keys(group));
+const duplicateEndpointNames = groupedEndpointNames.filter(
+	(name, index) => groupedEndpointNames.indexOf(name) !== index,
+);
 if (duplicateEndpointNames.length > 0) {
 	throw new Error(`Duplicate endpoint metadata: ${[...new Set(duplicateEndpointNames)].join(', ')}`);
 }
 
 const consolidatedEndpointNames = Object.keys(endpointMetas);
-const omittedEndpointNames = groupedEndpointNames.filter(name => !Object.hasOwn(endpointMetas, name));
-const unknownEndpointNames = consolidatedEndpointNames.filter(name => !groupedEndpointNames.includes(name));
+const omittedEndpointNames = groupedEndpointNames.filter((name) => !Object.hasOwn(endpointMetas, name));
+const unknownEndpointNames = consolidatedEndpointNames.filter((name) => !groupedEndpointNames.includes(name));
 if (omittedEndpointNames.length > 0 || unknownEndpointNames.length > 0) {
-	throw new Error([
-		omittedEndpointNames.length > 0 ? `Endpoint metadata omitted from the consolidated map: ${omittedEndpointNames.join(', ')}` : '',
-		unknownEndpointNames.length > 0 ? `Unknown endpoint metadata in the consolidated map: ${unknownEndpointNames.join(', ')}` : '',
-	].filter(Boolean).join('\n'));
+	throw new Error(
+		[
+			omittedEndpointNames.length > 0
+				? `Endpoint metadata omitted from the consolidated map: ${omittedEndpointNames.join(', ')}`
+				: '',
+			unknownEndpointNames.length > 0
+				? `Unknown endpoint metadata in the consolidated map: ${unknownEndpointNames.join(', ')}`
+				: '',
+		]
+			.filter(Boolean)
+			.join('\n'),
+	);
 }

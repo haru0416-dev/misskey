@@ -6,7 +6,7 @@
 import * as Misskey from 'misskey-js';
 import type { OptionValue } from '@/types/option-value.js';
 
-export type EnumItem =
+type EnumItem =
 	| string
 	| {
 			label: string;
@@ -20,7 +20,7 @@ interface FormItemBase {
 	hidden?: Hidden;
 }
 
-export interface StringFormItem extends FormItemBase {
+interface StringFormItem extends FormItemBase {
 	type: 'string';
 	default?: string | null;
 	description?: string;
@@ -30,7 +30,7 @@ export interface StringFormItem extends FormItemBase {
 	manualSave?: boolean;
 }
 
-export interface NumberFormItem extends FormItemBase {
+interface NumberFormItem extends FormItemBase {
 	type: 'number';
 	default?: number | null;
 	description?: string;
@@ -39,7 +39,7 @@ export interface NumberFormItem extends FormItemBase {
 	manualSave?: boolean;
 }
 
-export interface BooleanFormItem extends FormItemBase {
+interface BooleanFormItem extends FormItemBase {
 	type: 'boolean';
 	default?: boolean | null;
 	description?: string;
@@ -62,7 +62,7 @@ export interface RadioFormItem extends FormItemBase {
 	}[];
 }
 
-export interface RangeFormItem extends FormItemBase {
+interface RangeFormItem extends FormItemBase {
 	type: 'range';
 	default?: number | null;
 	description?: string;
@@ -73,29 +73,29 @@ export interface RangeFormItem extends FormItemBase {
 	textConverter?: (value: number) => string;
 }
 
-export interface ObjectFormItem extends FormItemBase {
+interface ObjectFormItem extends FormItemBase {
 	type: 'object';
 	default?: Record<string, unknown> | null;
 }
 
-export interface ArrayFormItem extends FormItemBase {
+interface ArrayFormItem extends FormItemBase {
 	type: 'array';
 	default?: unknown[] | null;
 }
 
-export interface ButtonFormItem extends FormItemBase {
+interface ButtonFormItem extends FormItemBase {
 	type: 'button';
 	content?: string;
 	action: (ev: PointerEvent, v: any) => void;
 }
 
-export interface DriveFileFormItem extends FormItemBase {
+interface DriveFileFormItem extends FormItemBase {
 	type: 'drive-file';
 	defaultFileId?: string | null;
 	validate?: (v: Misskey.entities.DriveFile) => Promise<boolean>;
 }
 
-export type FormItem =
+type FormItem =
 	| StringFormItem
 	| NumberFormItem
 	| BooleanFormItem
@@ -109,7 +109,7 @@ export type FormItem =
 
 export type Form = Record<string, FormItem>;
 
-export type FormItemWithDefault = FormItem & {
+type FormItemWithDefault = FormItem & {
 	default: unknown;
 };
 
