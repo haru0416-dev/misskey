@@ -4,13 +4,16 @@
  */
 
 import type { StoryObj } from '@/stories/types.js';
-import MkEmojiPicker_section from './MkEmojiPicker.Section.vue';
+import MkEmojiPickerSection from './MkEmojiPicker.Section.vue';
 
 export const Default = {
 	render: (args) => ({
-		components: { MkEmojiPicker_section },
+		components: { MkEmojiPickerSection },
 		setup: () => ({ args }),
-		template: '<MkEmojiPicker_section v-bind="args" />',
+		template: '<MkEmojiPickerSection v-bind="args">セクション</MkEmojiPickerSection>',
 	}),
-	args: {},
-} satisfies StoryObj<typeof MkEmojiPicker_section>;
+	args: {
+		emojis: ['👍', '❤️', '😆', '🎉'],
+		initialShown: true,
+	},
+} satisfies StoryObj<typeof MkEmojiPickerSection>;

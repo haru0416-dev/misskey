@@ -209,6 +209,7 @@ export function federationInstance(): entities.FederationInstance {
 		id: 'someinstanceid',
 		firstRetrievedAt: '2021-01-01T00:00:00.000Z',
 		host: 'misskey-hub.net',
+		faviconUrl: '',
 		usersCount: 10,
 		notesCount: 20,
 		followingCount: 5,
@@ -227,7 +228,6 @@ export function federationInstance(): entities.FederationInstance {
 		maintainerEmail: '',
 		isSilenced: false,
 		iconUrl: 'https://github.com/misskey-dev/misskey/blob/master/packages/frontend/assets/about-icon.png?raw=true',
-		faviconUrl: '',
 		themeColor: '',
 		infoUpdatedAt: '',
 		latestRequestReceivedAt: '',
@@ -456,4 +456,66 @@ export function emoji(
 		roleIdsThatCanBeUsedThisEmojiAsReaction: params?.roleIdsThatCanBeUsedThisEmojiAsReaction ?? [],
 		updatedAt: updatedAt,
 	};
+}
+
+/**
+ * `instance` の初期値。本体は localStorage にキャッシュした meta から `reactive(meta)` を作るため、
+ * 何も入れないと全フィールドが undefined になり、`instance.serverRules.length` のような
+ * 実運用では起きない参照で story が落ちる。実 API の必須フィールドを埋めておく。
+ *
+ * MetaDetailed は項目が多く、ここでは story が触る範囲だけを持つ。
+ */
+export function meta(): entities.MetaDetailed {
+	// 項目を網羅していないので直接は代入できない。story 用に足りる範囲だけ持つ。
+	const partial: Partial<entities.MetaDetailed> = {
+		maintainerName: 'Erebia',
+		maintainerEmail: 'maintainer@example.com',
+		version: '0.1.0',
+		providesTarball: false,
+		name: 'Erebia',
+		shortName: null,
+		uri: 'https://example.com',
+		description: 'story 用のインスタンス',
+		langs: ['ja-JP'],
+		tosUrl: null,
+		repositoryUrl: null,
+		feedbackUrl: null,
+		impressumUrl: null,
+		privacyPolicyUrl: null,
+		inquiryUrl: null,
+		disableRegistration: false,
+		emailRequiredForSignup: false,
+		enableHcaptcha: false,
+		hcaptchaSiteKey: null,
+		enableMcaptcha: false,
+		mcaptchaSiteKey: null,
+		mcaptchaInstanceUrl: null,
+		enableRecaptcha: false,
+		recaptchaSiteKey: null,
+		enableTurnstile: false,
+		turnstileSiteKey: null,
+		swPublickey: null,
+		mascotImageUrl: '/static-assets/mascot.png',
+		bannerUrl: null,
+		serverErrorImageUrl: null,
+		infoImageUrl: null,
+		notFoundImageUrl: null,
+		iconUrl: null,
+		backgroundImageUrl: null,
+		logoImageUrl: null,
+		maxNoteTextLength: 3000,
+		defaultLightTheme: null,
+		defaultDarkTheme: null,
+		serverRules: [],
+		policies: {} as entities.MetaDetailed['policies'],
+		mediaProxy: '/proxy',
+		enableUrlPreview: true,
+		noteSearchableScope: 'global',
+		maxFileSize: 32 * 1024 * 1024,
+		federation: 'all',
+		cacheRemoteFiles: true,
+		cacheRemoteSensitiveFiles: true,
+	};
+
+	return partial as entities.MetaDetailed;
 }

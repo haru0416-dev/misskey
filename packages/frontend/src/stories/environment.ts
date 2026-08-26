@@ -7,7 +7,7 @@ import { setupWorker } from 'msw/browser';
 import type { App } from 'vue';
 import type { SetupWorker } from 'msw/browser';
 import { commonHandlers, onUnhandledRequest } from './mocks.js';
-import { userDetailed } from './fakes.js';
+import { meta, userDetailed } from './fakes.js';
 
 const themeModules = import.meta.glob<Record<string, unknown>>('@shared/themes/*.json5', {
 	eager: true,
@@ -29,7 +29,13 @@ function themeOf(id: string): Record<string, unknown> | undefined {
  */
 export function resetLocalStorage(): void {
 	localStorage.clear();
-	localStorage.setItem('account', JSON.stringify({ ...userDetailed(), policies: {} }));
+	// token が無いと isAccountWithToken を通らず $i が null になり、ログイン前提の
+	// コンポーネントが "signin required" で落ちる。
+	localStorage.setItem('account', JSON.stringify({ ...userDetailed(), token: 'story-token', policies: {} }));
+	// instance は localStorage のキャッシュから作られる。空だと meta の全項目が undefined になり、
+	// 実運用では起きない参照で story が落ちる。
+	localStorage.setItem('instance', JSON.stringify(meta()));
+	localStorage.setItem('instanceCachedAt', Date.now().toString());
 }
 
 /**

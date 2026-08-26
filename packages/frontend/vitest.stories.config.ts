@@ -43,6 +43,7 @@ export default defineConfig({
 	test: {
 		name: 'stories',
 		include: ['test/stories.browser.ts'],
+		setupFiles: ['./test/stories.setup.ts'],
 		browser: {
 			enabled: true,
 			provider: playwright(),
