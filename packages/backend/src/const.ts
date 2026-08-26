@@ -25,6 +25,9 @@ export const DB_MAX_NOTE_TEXT_LENGTH = 8192;
 /**
  * DB に保存できる画像説明文の最大文字数。サロゲートペアは1文字として数える。
  */
+/** note.cw / note_draft.cw の列長 (varchar(512))。超える値は DB が受け付けない。 */
+export const DB_MAX_NOTE_CW_LENGTH = 512;
+
 export const DB_MAX_IMAGE_COMMENT_LENGTH = 512;
 
 export const FILE_TYPE_IMAGE = [

@@ -92,6 +92,13 @@ async function verifyAndResolveAuthUser(
 	const signature = job.data.signature;
 	let activity = job.data.activity;
 
+	// actor はリモートが送ってくる値なので欠けていることがある。ここで弾かないと以降の
+	// getApId() が「cannot determine id」を投げ、UnrecoverableError ではないため
+	// 壊れた activity がジョブとして再試行され続ける。
+	if (activity.actor == null) {
+		throw new Bull.UnrecoverableError('skip: activity has no actor');
+	}
+
 	{
 		let userExistenceCheckApId: string | null = null;
 
