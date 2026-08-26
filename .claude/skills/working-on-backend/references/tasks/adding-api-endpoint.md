@@ -37,12 +37,12 @@ Misskey backend の API endpoint は **1 endpoint = 1 ファイル** ではな�
 
 | 性質 | meta | ルート | ハンドラ |
 |---|---|---|---|
-| 認証不要・パラメータなし・小さなレスポンス | [metas/misc.ts](../../../../../packages/backend/src/server/api/metas/misc.ts) `'ping'` | [routes/misc.ts](../../../../../packages/backend/src/server/rest/routes/misc.ts) `/ping` | [rest/meta.ts](../../../../../packages/backend/src/server/rest/meta.ts) `handleHonoApiPing` |
-| 認証必須・errors あり・レート制限 | [metas/notes.ts](../../../../../packages/backend/src/server/api/metas/notes.ts) `'notes/create'` | [routes/notes.ts](../../../../../packages/backend/src/server/rest/routes/notes.ts) `/notes/create` | [rest/notes-create.ts](../../../../../packages/backend/src/server/rest/notes-create.ts) |
-| ページネーション (sinceId/untilId/limit) | [metas/i.ts](../../../../../packages/backend/src/server/api/metas/i.ts) `'i/signin-history'` | — | [rest/i.ts](../../../../../packages/backend/src/server/rest/i.ts) `iSigninHistoryParamDef` / `handleHonoApiISigninHistory` |
-| ロールポリシー (動的) ベースのアクセス制御 | [metas/notes.ts](../../../../../packages/backend/src/server/api/metas/notes.ts) `'notes/global-timeline'` | [routes/notes.ts](../../../../../packages/backend/src/server/rest/routes/notes.ts) | [rest/notes.ts](../../../../../packages/backend/src/server/rest/notes.ts) — `getHonoApiRolePolicies(deps, me)` |
-| ファイル添付 (`requireFile: true`) | [metas/drive.ts](../../../../../packages/backend/src/server/api/metas/drive.ts) `'drive/files/create'` | [routes/drive.ts](../../../../../packages/backend/src/server/rest/routes/drive.ts) `/drive/files/create` | [rest/drive-file-upload.ts](../../../../../packages/backend/src/server/rest/drive-file-upload.ts) |
-| moderator / admin 専用 | [metas/admin.ts](../../../../../packages/backend/src/server/api/metas/admin.ts) `'admin/suspend-user'` | [routes/admin.ts](../../../../../packages/backend/src/server/rest/routes/admin.ts) `/admin/suspend-user` (`assertHonoApiModerator`) | [rest/admin-user-suspension.ts](../../../../../packages/backend/src/server/rest/admin-user-suspension.ts) |
+| 認証不要・パラメータなし・小さなレスポンス | [metas/misc.ts](../../../../../packages/backend/src/server/api/metas/misc.ts) `'ping'` | [routes/misc.ts](../../../../../packages/backend/src/server/rest/routes/misc.ts) `/ping` | [rest/meta.ts](../../../../../packages/backend/src/server/rest/meta/meta.ts) `handleHonoApiPing` |
+| 認証必須・errors あり・レート制限 | [metas/notes.ts](../../../../../packages/backend/src/server/api/metas/notes.ts) `'notes/create'` | [routes/notes.ts](../../../../../packages/backend/src/server/rest/routes/notes.ts) `/notes/create` | [rest/notes-create.ts](../../../../../packages/backend/src/server/rest/note/notes-create.ts) |
+| ページネーション (sinceId/untilId/limit) | [metas/i.ts](../../../../../packages/backend/src/server/api/metas/i.ts) `'i/signin-history'` | — | [rest/i.ts](../../../../../packages/backend/src/server/rest/account/i.ts) `iSigninHistoryParamDef` / `handleHonoApiISigninHistory` |
+| ロールポリシー (動的) ベースのアクセス制御 | [metas/notes.ts](../../../../../packages/backend/src/server/api/metas/notes.ts) `'notes/global-timeline'` | [routes/notes.ts](../../../../../packages/backend/src/server/rest/routes/notes.ts) | [rest/notes.ts](../../../../../packages/backend/src/server/rest/note/notes.ts) — `getHonoApiRolePolicies(deps, me)` |
+| ファイル添付 (`requireFile: true`) | [metas/drive.ts](../../../../../packages/backend/src/server/api/metas/drive.ts) `'drive/files/create'` | [routes/drive.ts](../../../../../packages/backend/src/server/rest/routes/drive.ts) `/drive/files/create` | [rest/drive-file-upload.ts](../../../../../packages/backend/src/server/rest/drive/drive-file-upload.ts) |
+| moderator / admin 専用 | [metas/admin.ts](../../../../../packages/backend/src/server/api/metas/admin.ts) `'admin/suspend-user'` | [routes/admin.ts](../../../../../packages/backend/src/server/rest/routes/admin.ts) `/admin/suspend-user` (`assertHonoApiModerator`) | [rest/admin-user-suspension.ts](../../../../../packages/backend/src/server/rest/admin/admin-user-suspension.ts) |
 
 `<category>` は機能領域 (例: `notes`, `users`, `admin`)。ファイルは既存に倣う。
 
@@ -256,7 +256,7 @@ PR に `packages/misskey-js/src/autogen/` 配下の差分が含まれていな�
 - [zod-params.ts (misskeyId / uniqueItems)](../../../../../packages/backend/src/misc/zod-params.ts)
 - [shell.ts (ApiShellDependencies / ルート配線)](../../../../../packages/backend/src/server/rest/shell.ts)
 - [metas/misc.ts (`ping` — 最小例)](../../../../../packages/backend/src/server/api/metas/misc.ts)
-- [rest/notes-create.ts (errors の典型)](../../../../../packages/backend/src/server/rest/notes-create.ts)
-- [rest/notes.ts (`notes/global-timeline` 相当 — policies 動的チェック)](../../../../../packages/backend/src/server/rest/notes.ts)
+- [rest/notes-create.ts (errors の典型)](../../../../../packages/backend/src/server/rest/note/notes-create.ts)
+- [rest/notes.ts (`notes/global-timeline` 相当 — policies 動的チェック)](../../../../../packages/backend/src/server/rest/note/notes.ts)
 - [test/e2e/endpoints-users.ts (テスト例)](../../../../../packages/backend/test/e2e/endpoints-users.ts)
 - [test/utils.ts (api/signup/post 等のヘルパー)](../../../../../packages/backend/test/utils.ts)

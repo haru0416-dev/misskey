@@ -10,7 +10,10 @@ import type { EmailService } from '@/core/email/EmailService.js';
 import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
 import type { UserAuthService } from '@/core/account/UserAuthService.js';
 import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/user/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
+import {
+	fetchUserProfileByUserIdOrFailFromDatabase,
+	updateUserProfileInDatabase,
+} from '@/core/user/UserProfileStore.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
 import { omitUndefined } from '@/misc/clone.js';
@@ -21,7 +24,11 @@ import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { HonoApiError } from '../error.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from '../events.js';
-import { packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from '../user/user.js';
+import {
+	packMeDetailedForHonoApi,
+	type MeDetailedHonoApiResponse,
+	type UserPackingDependencies,
+} from '../user/user.js';
 import { parseHonoApiParams } from '../validation.js';
 
 export type HonoApiAccountSecurityDependencies = UserPackingDependencies & {

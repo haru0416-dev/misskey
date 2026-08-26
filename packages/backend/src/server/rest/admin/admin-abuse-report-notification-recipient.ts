@@ -15,7 +15,10 @@ import {
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import { listRoleAssignmentsByRoleIdsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
 import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
-import { fetchSystemWebhookByIdOrFailFromDatabase, listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
+import {
+	fetchSystemWebhookByIdOrFailFromDatabase,
+	listSystemWebhooksFromDatabase,
+} from '@/core/webhook/SystemWebhookStore.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';

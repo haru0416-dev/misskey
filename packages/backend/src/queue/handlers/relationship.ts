@@ -6,7 +6,10 @@
 import * as Bull from 'bullmq';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
-import { blockingExistsInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import {
+	blockingExistsInDatabase,
+	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
+} from '@/core/user/BlockingStore.js';
 import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
 import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/user/FollowRequestStore.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
@@ -33,7 +36,10 @@ import {
 	renderReject,
 	type HonoApiFollowingDependencies,
 } from '@/server/rest/user/following.js';
-import { validateAlsoKnownAsForHonoApi, type HonoApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import {
+	validateAlsoKnownAsForHonoApi,
+	type HonoApiApPersonDependencies,
+} from '@/server/rest/activitypub/ap-person.js';
 
 export type HonoQueueRelationshipDependencies = HonoApiAccountBlockingDependencies &
 	HonoApiFollowingDependencies &
