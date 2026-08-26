@@ -23,7 +23,7 @@ CI で落ちやすい / レビュアーから指摘されやすいポイント�
 - [ ] `locales/` を編集した → **`ja-JP.yml` だけ** を変更しており、他言語 yml の diff は出ていない (`git diff --name-only develop -- 'locales/*.yml' | grep -v '^locales/ja-JP\.yml$'` が空)
 - [ ] ユーザーから見える変更 (機能追加 / 既存挙動変更) → `CHANGELOG.md` の `## Unreleased` 直下の該当サブセクション (General / Client / Server) に 1 行追記した → 詳細書式は [references/tasks/changelog-update.md](references/tasks/changelog-update.md)
 - [ ] backend API endpoint を追加・変更した → Claude Code 等で subagent が使える環境なら [misskey-api-reviewer](../../agents/misskey-api-reviewer.md) を起動する。Codex など subagent 起動が制限される環境では、同等の観点 (endpoint-list 登録 / misskey-js 再生成 / meta・UUID / SPDX) を自分で確認する
-- [ ] frontend の `.vue` を追加・変更した → subagent が使える環境なら [vue-component-reviewer](../../agents/vue-component-reviewer.md) を起動する。使えない環境では、同等の観点 (SPDX 形式 / 命名 / i18n / SCSS 変数 / os.* / a11y / Storybook 併設) を自分で確認する
+- [ ] frontend の `.vue` を追加・変更した → subagent が使える環境なら [vue-component-reviewer](../../agents/vue-component-reviewer.md) を起動する。使えない環境では、同等の観点 (SPDX 形式 / 命名 / i18n / SCSS 変数 / os.* / a11y / コンポーネントカタログ 併設) を自分で確認する
 
 ## 何のためのスキルか
 

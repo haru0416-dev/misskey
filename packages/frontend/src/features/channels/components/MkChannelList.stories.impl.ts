@@ -4,11 +4,11 @@
  */
 
 import { HttpResponse, http } from 'msw';
-import { action } from 'storybook/actions';
-import { channel } from '../../../../.storybook/fakes.js';
-import { commonHandlers } from '../../../../.storybook/mocks.js';
+import { action } from '@/stories/action.js';
+import { channel } from '@/stories/fakes.js';
+import { commonHandlers } from '@/stories/mocks.js';
 import MkChannelList from './MkChannelList.vue';
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 import { Paginator } from '@/utility/paginator.js';
 export const Default = {
 	render(args) {

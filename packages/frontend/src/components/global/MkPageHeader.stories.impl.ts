@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { waitFor } from 'storybook/test';
+import { waitFor } from '@/stories/test.js';
 import MkPageHeader from './MkPageHeader.vue';
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 
 function requireFixture<T>(value: T | undefined, name: string): T {
 	if (value == null) throw new Error(`Missing story fixture: ${name}`);

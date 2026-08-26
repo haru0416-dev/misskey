@@ -391,15 +391,14 @@ _lang_: "日本語"
 
 UI の言語切替プルダウンなどで参照される。**新規キーには使わない**。
 
-### Storybook での挙動
+### コンポーネントカタログでの挙動
 
-Storybook 環境はバンドラが別物なので、本番の i18n パッケージをそのままは使わない。代わりに [packages/frontend/.storybook/preload-locale.ts](../../../../../packages/frontend/.storybook/preload-locale.ts) がビルド時に **ja-JP の locale だけを JSON にダンプして同居 `locale.ts` を生成** する。
+カタログ (`bun run --bun --filter frontend catalog`) と `test:stories` はバックエンドを立てないので、
+本体が読む `/assets/locales/<lang>.<version>.json` を
+[packages/frontend/lib/vite-plugin-serve-locales.ts](../../../../../packages/frontend/lib/vite-plugin-serve-locales.ts)
+が dev サーバーの middleware として配信する (`packages/i18n` の内容をそのまま返す)。
 
-つまり Storybook では:
-
-- **ja-JP の文字列だけが見える** (他言語の検証はできない)
-- ja-JP.yml にキーを追加した直後に Storybook を起動しても、`preload-locale.ts` 実行前なら反映されない。Storybook を再起動するか、`packages/i18n` を一度 build する
-- stories からの呼び方は通常通り: `i18n.tsx._dialog.charactersBelow({ current: 0, min: 2 })`
+つまり `ja-JP.yml` を触ったら `packages/i18n` を build し直せば反映される。
 
 ### backend での i18n 直接参照は基本無し
 

@@ -4,8 +4,8 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { expect, userEvent, waitFor, within } from 'storybook/test';
-import type { StoryObj } from '@storybook/vue3';
+import { expect, userEvent, waitFor, within } from '@/stories/test.js';
+import type { StoryObj } from '@/stories/types.js';
 import { onBeforeUnmount } from 'vue';
 import MkSignupServerRules from './MkSignupDialog.Rules.vue';
 import { i18n } from '@/i18n.js';
@@ -51,7 +51,6 @@ export const Empty = {
 		expect(buttons.at(-1)).toBeEnabled();
 	},
 	args: {
-		// @ts-expect-error serverRules is for test
 		serverRules: [],
 		tosUrl: null,
 	},
@@ -79,7 +78,6 @@ export const ServerRulesOnly = {
 	...Empty,
 	args: {
 		...Empty.args,
-		// @ts-expect-error serverRules is for test
 		serverRules: ['ルール'],
 	},
 } satisfies StoryObj<typeof MkSignupServerRules>;
@@ -87,7 +85,6 @@ export const TOSOnly = {
 	...Empty,
 	args: {
 		...Empty.args,
-		// @ts-expect-error tosUrl is for test
 		tosUrl: 'https://example.com/tos',
 	},
 } satisfies StoryObj<typeof MkSignupServerRules>;
@@ -95,7 +92,6 @@ export const ServerRulesAndTOS = {
 	...Empty,
 	args: {
 		...Empty.args,
-		// @ts-expect-error serverRules is for test
 		serverRules: ServerRulesOnly.args.serverRules,
 		tosUrl: TOSOnly.args.tosUrl,
 	},

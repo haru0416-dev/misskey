@@ -3,5 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { StoryObj } from '@/stories/types.js';
 import MkEmojiPickerDialog from './MkEmojiPickerDialog.vue';
-void MkEmojiPickerDialog;
+
+export const Default = {
+	render: (args) => ({
+		components: { MkEmojiPickerDialog },
+		setup: () => ({ args }),
+		template: '<MkEmojiPickerDialog v-bind="args" />',
+	}),
+	args: {},
+} satisfies StoryObj<typeof MkEmojiPickerDialog>;

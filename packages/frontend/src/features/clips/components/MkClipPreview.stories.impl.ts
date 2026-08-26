@@ -5,8 +5,8 @@
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable import/no-default-export */
-import type { StoryObj } from '@storybook/vue3';
-import { clip } from '../../../../.storybook/fakes.js';
+import type { StoryObj } from '@/stories/types.js';
+import { clip } from '@/stories/fakes.js';
 import MkClipPreview from './MkClipPreview.vue';
 export const Default = {
 	render(args) {

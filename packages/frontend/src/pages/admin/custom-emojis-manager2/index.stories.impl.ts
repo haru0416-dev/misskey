@@ -4,11 +4,11 @@
  */
 
 import { delay, http, HttpResponse } from 'msw';
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 import { entities } from 'misskey-js';
-import { commonHandlers } from '../../../../.storybook/mocks.js';
-import { emoji } from '../../../../.storybook/fakes.js';
-import { fakeId } from '../../../../.storybook/fake-utils.js';
+import { commonHandlers } from '@/stories/mocks.js';
+import { emoji } from '@/stories/fakes.js';
+import { fakeId } from '@/stories/fake-utils.js';
 import custom_emojis_manager2 from './index.vue';
 
 function createRender(params: { emojis: entities.EmojiDetailedAdmin[] }) {

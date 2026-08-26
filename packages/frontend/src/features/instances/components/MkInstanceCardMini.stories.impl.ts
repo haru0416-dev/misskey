@@ -4,11 +4,11 @@
  */
 
 import { HttpResponse, http } from 'msw';
-import { federationInstance } from '../../../../.storybook/fakes.js';
-import { commonHandlers } from '../../../../.storybook/mocks.js';
-import { getChartResolver } from '../../../../.storybook/charts.js';
+import { federationInstance } from '@/stories/fakes.js';
+import { commonHandlers } from '@/stories/mocks.js';
+import { getChartResolver } from '@/stories/charts.js';
 import MkInstanceCardMini from './MkInstanceCardMini.vue';
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 
 export const Default = {
 	render(args) {

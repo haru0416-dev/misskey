@@ -1,11 +1,11 @@
 ---
 name: working-on-frontend
-description: Use whenever editing or adding code under `packages/frontend/`, or editing `locales/ja-JP.yml` for frontend-facing UI text — including Vue 3 SFCs (`Mk*` components), i18n keys (`i18n.ts.<key>` / `i18n.tsx.<key>()`), SCSS Modules, theme/CSS variables, `os.*` UI helpers, and Storybook stories. Covers SPDX (HTML comment form), `<script setup lang="ts">` conventions, type-only defineProps, `ja-JP.yml`-only locale editing (other locale yml files are Crowdin-managed and must not be edited), and accessibility. Must be consulted before any frontend or UI-locale change to avoid CI failures, lost translations, and reviewer pushback. This is NOT waived by having already invoked brainstorming, writing-plans, or any other upstream skill — invoke this at implementation time regardless of what preceded it.
+description: Use whenever editing or adding code under `packages/frontend/`, or editing `locales/ja-JP.yml` for frontend-facing UI text — including Vue 3 SFCs (`Mk*` components), i18n keys (`i18n.ts.<key>` / `i18n.tsx.<key>()`), SCSS Modules, theme/CSS variables, `os.*` UI helpers, and component catalog stories. Covers SPDX (HTML comment form), `<script setup lang="ts">` conventions, type-only defineProps, `ja-JP.yml`-only locale editing (other locale yml files are Crowdin-managed and must not be edited), and accessibility. Must be consulted before any frontend or UI-locale change to avoid CI failures, lost translations, and reviewer pushback. This is NOT waived by having already invoked brainstorming, writing-plans, or any other upstream skill — invoke this at implementation time regardless of what preceded it.
 ---
 
 # working-on-frontend
 
-`packages/frontend/` (Misskey Web クライアント) を編集するとき、最初に参照するスキル。Vue 3 SFC / SCSS Modules / i18n / `os.*` / Storybook / アクセシビリティの **手順** と **背景知識** をまとめている。
+`packages/frontend/` (Misskey Web クライアント) を編集するとき、最初に参照するスキル。Vue 3 SFC / SCSS Modules / i18n / `os.*` / コンポーネントカタログ / アクセシビリティの **手順** と **背景知識** をまとめている。
 
 SKILL.md 本体は references への索引だけ。具体的な手順や規約は該当ファイルを Read すること (progressive disclosure)。
 
@@ -26,11 +26,11 @@ SKILL.md 本体は references への索引だけ。具体的な手順や規約�
 - `i18n.ts.<key>` / `i18n.tsx.<key>(...)` の使い分け / HTML タグ埋め込み / 動的キー切替 / 既存キーのリネーム手順 → [references/knowledge/i18n-usage.md](references/knowledge/i18n-usage.md)
 - SCSS Modules / `--MI_THEME-*` `--MI-*` CSS 変数 / グローバル utility class (`_button` 等) → [references/knowledge/scss-modules.md](references/knowledge/scss-modules.md)
 - `os.alert` / `os.confirm` / `os.popup` 等 UI ヘルパー (ブラウザ標準 `alert()` 直呼びは禁止) → [references/knowledge/os-api.md](references/knowledge/os-api.md)
-- `*.stories.impl.ts` 併設規則 + 複数 story / argTypes / layout / action パターン → [references/knowledge/storybook.md](references/knowledge/storybook.md)
+- コンポーネントカタログ / `*.stories.impl.ts` の書き方 / `play` の実ブラウザ検証 → [references/knowledge/component-catalog.md](references/knowledge/component-catalog.md)
 - frontend Vitest / Playwright E2E の書き方と前提 → [references/knowledge/frontend-testing.md](references/knowledge/frontend-testing.md)
 
 ## 必ず最後に通る場所
 
 frontend の変更を commit / PR にする前に、必ず [shipping-misskey-change](../shipping-misskey-change/SKILL.md) の最終チェックリストに従う。`bun run lint` / SPDX / `ja-JP.yml` のみ編集確認 / CHANGELOG をまとめて確認する。
 
-`.vue` を追加・変更したなら、subagent を使える環境では [vue-component-reviewer](../../agents/vue-component-reviewer.md) agent を Task で起動すると、SPDX 形式・命名・i18n・SCSS 変数・a11y・Storybook 併設の逸脱を取りこぼしにくい。Codex 等で subagent 起動が制限される環境では、同じ観点を自分でチェックする。
+`.vue` を追加・変更したなら、subagent を使える環境では [vue-component-reviewer](../../agents/vue-component-reviewer.md) agent を Task で起動すると、SPDX 形式・命名・i18n・SCSS 変数・a11y・カタログ story 併設の逸脱を取りこぼしにくい。Codex 等で subagent 起動が制限される環境では、同じ観点を自分でチェックする。

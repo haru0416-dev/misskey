@@ -4,10 +4,10 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { expect, userEvent, waitFor, within } from 'storybook/test';
-import type { StoryObj } from '@storybook/vue3';
+import { expect, userEvent, waitFor, within } from '@/stories/test.js';
+import type { StoryObj } from '@/stories/types.js';
 import { HttpResponse, http } from 'msw';
-import { commonHandlers } from '../../../.storybook/mocks.js';
+import { commonHandlers } from '@/stories/mocks.js';
 import MkUrl from './MkUrl.vue';
 export const Default = {
 	render(args) {

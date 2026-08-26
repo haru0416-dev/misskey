@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { userEvent, within } from 'storybook/test';
+import { userEvent, within } from '@/stories/test.js';
 import MkContextMenu from './MkContextMenu.vue';
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 import * as os from '@/os.js';
 export const Empty = {
 	render(args) {

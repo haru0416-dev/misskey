@@ -4,9 +4,9 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { expect, userEvent, waitFor, within } from 'storybook/test';
-import type { StoryObj } from '@storybook/vue3';
-import { galleryPost } from '../../../../.storybook/fakes.js';
+import { expect, userEvent, waitFor, within } from '@/stories/test.js';
+import type { StoryObj } from '@/stories/types.js';
+import { galleryPost } from '@/stories/fakes.js';
 import MkGalleryPostPreview from './MkGalleryPostPreview.vue';
 export const Default = {
 	render(args) {

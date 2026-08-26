@@ -31,20 +31,13 @@
 				"builder/**/*.ts",
 				"lib/**/*.ts",
 				"test/**/*.ts",
-				".storybook/*.{ts,tsx}",
 				"src/**/*.stories.impl.ts",
 				"src/**/*.stories.meta.ts",
-				"src/features/image-editor/effects/*.ts"
+				"src/features/image-editor/effects/*.ts",
+				"src/stories/*.{ts,vue}",
+				"catalog/**/*.{ts,vue}"
 			],
-			"ignoreDependencies": [
-				"frontend-shared",
-				"@misskey-dev/emoji-assets",
-				"react",
-				"react-dom",
-				"vue-tsc",
-				"search-index"
-			],
-			"ignoreBinaries": ["generate.tsx"]
+			"ignoreDependencies": ["frontend-shared", "@misskey-dev/emoji-assets", "vue-tsc", "search-index"]
 		},
 		"packages/frontend-embed": {
 			"entry": ["src/boot.ts", "src/workers/*.ts"],

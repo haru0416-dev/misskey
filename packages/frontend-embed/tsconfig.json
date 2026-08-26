@@ -36,6 +36,5 @@
 		"jsx": "preserve"
 	},
 	"compileOnSave": false,
-	"include": ["./src/**/*.ts", "./src/**/*.vue", "./@types/**/*.ts"],
-	"exclude": [".storybook/**/*"]
+	"include": ["./src/**/*.ts", "./src/**/*.vue", "./@types/**/*.ts"]
 }

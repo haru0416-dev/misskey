@@ -57,7 +57,7 @@ function createBaseState() {
 	};
 }
 
-export type BaseState = ReturnType<typeof createBaseState>;
+type BaseState = ReturnType<typeof createBaseState>;
 
 const basePersistedState = {
 	namespace: 'base',
@@ -88,7 +88,7 @@ const basePersistedState = {
 	},
 } satisfies PersistedStateDefinition<BaseState>;
 
-export const useBaseStore = defineStore('base', {
+const useBaseStore = defineStore('base', {
 	state: createBaseState,
 	persist: basePersistedState,
 	actions: {
