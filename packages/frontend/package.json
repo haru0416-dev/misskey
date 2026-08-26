@@ -11,7 +11,7 @@
 		"chromatic": "chromatic",
 		"test": "vitest --run --globals",
 		"test-and-coverage": "vitest --run --coverage --globals",
-		"typecheck": "bun ../../scripts/vue-tsc-bun.cjs --noEmit && tsgo -p .storybook/tsconfig.json --noEmit",
+		"typecheck": "bun .storybook/preload-locale.ts && bun .storybook/preload-theme.ts && bun ../../scripts/vue-tsc-bun.cjs --noEmit && tsgo -p .storybook/tsconfig.json --noEmit",
 		"lint": "bun run --bun typecheck"
 	},
 	"dependencies": {
