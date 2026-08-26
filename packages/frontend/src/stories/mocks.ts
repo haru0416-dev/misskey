@@ -21,6 +21,12 @@ export const onUnhandledRequest = ((req, print) => {
 }) satisfies SharedOptions['onUnhandledRequest'];
 
 export const commonHandlers = [
+	// ログイン済みで動かすと preferences / persisted-state が起動時にレジストリを読む。
+	http.all('/api/i/registry/get-all', () => HttpResponse.json({})),
+	http.all('/api/i/registry/keys', () => HttpResponse.json([])),
+	http.all('/api/i/registry/get', () => HttpResponse.json({ error: { code: 'NO_SUCH_KEY' } }, { status: 400 })),
+	http.all('/api/i/registry/set', () => new HttpResponse(null, { status: 204 })),
+	http.all(/\/api\/stats/, () => HttpResponse.json({ notesCount: 0, usersCount: 0, instances: 0 })),
 	http.get('/fluent-emoji/:codepoints.png', async ({ params }) => {
 		const { codepoints } = params;
 		const value = await fetch(
@@ -44,3 +50,20 @@ export const commonHandlers = [
 		});
 	}),
 ];
+
+/**
+ * どの story にも拾われなかった API 呼び出しの受け皿。
+ *
+ * 実サーバーへ抜けると 404 の空応答になり、misskeyApi の `res.json()` が未捕捉の
+ * SyntaxError になってテスト全体が落ちる。個別に潰すと story を足すたび同じことが起きるので、
+ * 空の配列で受け止める。モックを書き忘れた呼び出しはコンポーネントの一覧取得が大半で、
+ * `{}` を返すと paginator が `items is not iterable` で落ちるため。
+ * 実データやオブジェクトが要る story は自分で msw ハンドラを書くこと。
+ *
+ * パスは正規表現で書くこと。msw の `/api/*` は 1 セグメントしか一致せず、
+ * `i/registry/keys` のような深いパスを取りこぼす (実測)。
+ *
+ * **commonHandlers には入れないこと。** story は `[...commonHandlers, 独自のハンドラ]` と書くため、
+ * commonHandlers の末尾に置くと独自ハンドラより先に一致してしまう。ハンドラ一覧の最後に置く。
+ */
+export const apiFallbackHandler = http.all(/\/api\//, () => HttpResponse.json([]));
