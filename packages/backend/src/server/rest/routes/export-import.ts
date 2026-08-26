@@ -4,7 +4,12 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertSecureCredential, authenticateHonoApiToken } from '../auth/auth.js';
+import {
+	assertCredential,
+	assertProhibitMoved,
+	assertSecureCredential,
+	authenticateHonoApiToken,
+} from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
 import {
 	handleHonoApiExportCustomEmojis,

@@ -138,10 +138,13 @@ describe('Endpoints', () => {
 	let db: TestDatabase;
 	let context: EndpointsContext;
 
-	beforeAll(async () => {
-		context = await createEndpointsContext();
-		({ alice, bob, carol, dave, db } = context);
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			context = await createEndpointsContext();
+			({ alice, bob, carol, dave, db } = context);
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await context.close();
@@ -246,7 +249,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('signup-pending', () => {
 		test('pending user can complete signup and sign in', async () => {
 			const config = fixtureConfig;
@@ -273,7 +275,6 @@ describe('Endpoints', () => {
 			expect(profile.emailVerified).toBe(true);
 		});
 	});
-
 
 	describe('signin-flow', () => {
 		test('間違ったパスワードでサインインできない', async () => {
@@ -311,7 +312,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('signin-with-passkey', () => {
 		test('パスキーサインインの challenge を開始できる', async () => {
 			const res = await api('signin-with-passkey', {});
@@ -321,7 +321,6 @@ describe('Endpoints', () => {
 			expect(typeof res.body.option.challenge).toBe('string');
 		});
 	});
-
 
 	describe('signin history endpoints', () => {
 		test('i/signin-history returns own signin records', async () => {
@@ -368,7 +367,6 @@ describe('Endpoints', () => {
 			expect(afterOlder.body.some((item) => item.id === older.id)).toBe(false);
 		});
 	});
-
 
 	describe('registry endpoints', () => {
 		test('i/registry endpoints store native and app-token scoped values', async () => {
@@ -521,7 +519,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('sw endpoints', () => {
 		test('sw/show-registration returns own subscription or null', async () => {
 			const endpoint = `https://push.example.test/${genId()}`;
@@ -656,7 +653,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('request-reset-password endpoint', () => {
 		test('request-reset-password silently accepts unknown users and validates params', async () => {
 			const accepted = await api('request-reset-password', {
@@ -673,7 +669,6 @@ describe('Endpoints', () => {
 			expect(castAsError(invalid.body as any).error.code).toBe('INVALID_PARAM');
 		});
 	});
-
 
 	describe('reset-password endpoint', () => {
 		test('reset-password updates password and consumes reset token', async () => {
@@ -731,7 +726,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('verify-email endpoint', () => {
 		test('verify-email verifies matching code and rejects missing code', async () => {
 			const code = `verify-${genId()}`;
@@ -754,7 +748,6 @@ describe('Endpoints', () => {
 			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_CODE');
 		});
 	});
-
 
 	describe('auth/session', () => {
 		test('legacy auth session flow', async () => {
@@ -830,7 +823,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('miauth', () => {
 		test('session check returns issued token once', async () => {
 			const session = 'miauth-session-test';
@@ -861,7 +853,6 @@ describe('Endpoints', () => {
 			expect(await checkedAgain.json()).toStrictEqual({ ok: false });
 		});
 	});
-
 
 	describe('app', () => {
 		async function createLegacyAppToken(name: string): Promise<{
@@ -985,7 +976,6 @@ describe('Endpoints', () => {
 			expect(afterRevoke.body.some((app) => app.id === byTokenId.app.id)).toBe(false);
 		});
 	});
-
 
 	describe('invite', () => {
 		test('invite/limit keeps role policy, token scope, and remaining count semantics', async () => {
@@ -1183,5 +1173,4 @@ describe('Endpoints', () => {
 			assert.ok(logged);
 		});
 	});
-
 });

@@ -5,7 +5,10 @@
 
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { blockingExistsInDatabase, listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase } from '@/core/user/BlockingStore.js';
+import {
+	blockingExistsInDatabase,
+	listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase,
+} from '@/core/user/BlockingStore.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';

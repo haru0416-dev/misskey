@@ -17,7 +17,10 @@ import {
 	fetchEmojiByNameAndHostFromDatabaseCached,
 	fetchEmojisByNamesAndHostsFromDatabaseCached,
 } from '@/core/emoji/EmojiStore.js';
-import { fetchNoteByIdFromDatabase, listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase } from '@/core/note/NoteStore.js';
+import {
+	fetchNoteByIdFromDatabase,
+	listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase,
+} from '@/core/note/NoteStore.js';
 import { fetchPollByNoteIdFromDatabase } from '@/core/note/PollStore.js';
 import { listDriveFilesByIdsFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { listRelaysByStatusFromDatabaseCached } from '@/core/relay/RelayStore.js';
