@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';

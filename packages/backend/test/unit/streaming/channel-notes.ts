@@ -9,7 +9,7 @@
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { EventEmitter } from 'node:events';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
@@ -60,11 +60,7 @@ function channelMessages(raw: string[]): { id: string; type: string; body: unkno
 // notesStream ハンドラは内部で filterNoteForStreamingHidingForHonoApi 等の実DBクエリを await するため、
 // emit() 呼び出し直後の同期チェックでは間に合わない。条件を満たすまで短時間ポーリングする。
 async function waitUntil(condition: () => boolean, timeoutMs = 2000, intervalMs = 20): Promise<void> {
-	const start = Date.now();
-	while (!condition()) {
-		if (Date.now() - start > timeoutMs) return;
-		await new Promise((resolve) => setTimeout(resolve, intervalMs));
-	}
+	await vi.waitFor(() => expect(condition()).toBe(true), { timeout: timeoutMs, interval: intervalMs });
 }
 
 // 「受信されない」ことを検証するテスト用: 非同期処理が(誤って)完了していないか一定時間待ってから確認する。

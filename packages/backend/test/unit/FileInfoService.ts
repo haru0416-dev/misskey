@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { beforeAll, describe, expect, test } from 'vitest';

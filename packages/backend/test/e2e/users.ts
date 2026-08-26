@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import * as assert from 'assert';
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { inspect } from 'node:util';
 import {
 	DEFAULT_POLICIES,
@@ -14,7 +13,7 @@ import {
 	openTestDatabase,
 	type TestDatabase,
 } from '../fixtures.js';
-import { api, post, role, signup, successfulApiCall, testPaginationConsistency, uploadFile } from '../utils.js';
+import { api, POLL, post, role, signup, successfulApiCall, testPaginationConsistency, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 import { omitUndefined as stripUndefined } from '@/misc/clone.js';
 
@@ -991,12 +990,14 @@ describe('ユーザー', () => {
 			.reverse()
 			.map((u) => u.id)
 			.join(',');
-		let expected = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
-		for (let i = 0; i < 30 && expected.map((u) => u.id).join(',') !== orderStabilized; i++) {
-			await new Promise((resolve) => setTimeout(resolve, 100));
-			expected = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
-		}
-		expect(expected.map((u) => u.id).join(',')).toStrictEqual(orderStabilized);
+		const expected = await vi.waitFor(
+			async () => {
+				const found = await successfulApiCall({ endpoint: 'users/search', parameters, user: alice });
+				expect(found.map((u) => u.id).join(',')).toStrictEqual(orderStabilized);
+				return found;
+			},
+			{ ...POLL, timeout: 10_000 },
+		);
 		// users/searchはoffsetのみサポートする
 		await testPaginationConsistency(
 			expected,

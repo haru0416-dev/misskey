@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import * as assert from 'assert';
 import * as crypto from 'node:crypto';
 import { encode as encodeToCbor } from 'cbor2';

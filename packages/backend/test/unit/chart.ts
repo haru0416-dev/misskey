@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Mocked } from 'vitest';
 import * as Redis from 'ioredis';

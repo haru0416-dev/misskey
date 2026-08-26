@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import { createHash, randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import * as Bull from 'bullmq';
-import { describe, beforeAll, afterAll, test, expect } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { toXListId } from '@/server/rest/notification.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { baseQueueOptions, QUEUE } from '@/queue/const.js';
@@ -130,6 +129,7 @@ import {
 	castAsError,
 	createAppToken,
 	origin,
+	POLL,
 	post,
 	relativeFetch,
 	role,
@@ -666,15 +666,14 @@ describe('Endpoints', () => {
 				return jobs.filter((job) => job.name === 'deleteAccount' && job.data.user.id === userId);
 			};
 			const waitDeleteAccountJob = async (userId: string) => {
-				for (let i = 0; i < 10; i++) {
+				return await vi.waitFor(async () => {
 					// outbox のディスパッチャはジョブキュー側プロセスの担当で e2e のサーバーでは動いていないため、
 					// 配送待ちを挟むコーディネータ経由の発行を進めるにはテスト側から回す必要がある
 					await dispatchQueueOutbox(db, dbQueue as unknown as DbQueue, deliverQueue!);
 					const jobs = await getDeleteAccountJobs(userId);
-					if (jobs[0] != null) return jobs[0];
-					await new Promise((resolve) => setTimeout(resolve, 100));
-				}
-				expect.unreachable(`deleteAccount job was not found for ${userId}`);
+					assert.ok(jobs[0], `deleteAccount job was not found for ${userId}`);
+					return jobs[0];
+				}, POLL);
 			};
 			const removeDeleteAccountJobs = async () => {
 				const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
@@ -1517,11 +1516,13 @@ describe('Endpoints', () => {
 
 			// 実ファイルの削除はレスポンスを待たない fire-and-forget のため、DB からの削除が反映されるまでポーリングする
 			let missing;
-			for (let i = 0; i < 20; i++) {
-				missing = await api('drive/files/delete', { fileId: file.id }, alice);
-				if (missing.status === 400) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+			await vi.waitFor(
+				async () => {
+					missing = await api('drive/files/delete', { fileId: file.id }, alice);
+					expect(missing.status).toBe(400);
+				},
+				{ ...POLL, timeout: 10_000 },
+			);
 			expect(missing!.status).toBe(400);
 			expect(castAsError(missing!.body as any).error.id).toBe('908939ec-e52b-4458-b395-1025195cea58');
 		});
@@ -2146,7 +2147,7 @@ describe('Endpoints', () => {
 			expect(after.suspensionState).toBe('manuallySuspended');
 			expect(after.moderationNote).toBe(`updated note ${suffix}`);
 
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				const [suspendLogs, noteLogs] = await Promise.all([
 					listModerationLogsFromDatabase(db, {
 						limit: 10,
@@ -2161,19 +2162,16 @@ describe('Endpoints', () => {
 						search: instance.id,
 					}),
 				]);
-				if (suspendLogs.length > 0 && noteLogs.length > 0) {
-					expect(suspendLogs.some((log) => (log.info as any).host === host)).toBe(true);
-					expect(
-						noteLogs.some(
-							(log) =>
-								(log.info as any).before === 'before update' && (log.info as any).after === `updated note ${suffix}`,
-						),
-					).toBe(true);
-					break;
-				}
-				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) expect.unreachable('remote instance moderation logs were not found');
-			}
+				expect(suspendLogs.length).toBeGreaterThan(0);
+				expect(noteLogs.length).toBeGreaterThan(0);
+				expect(suspendLogs.some((log) => (log.info as any).host === host)).toBe(true);
+				expect(
+					noteLogs.some(
+						(log) =>
+							(log.info as any).before === 'before update' && (log.info as any).after === `updated note ${suffix}`,
+					),
+				).toBe(true);
+			}, POLL);
 
 			const token = await createAppToken(alice, ['write:admin:federation']);
 			const unsuspended = await api(
@@ -2263,7 +2261,7 @@ describe('Endpoints', () => {
 			expect(removed.status).toBe(204);
 
 			let job: Bull.Job<RelationshipJobData> | undefined;
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				job = jobs.find(
 					(job) =>
@@ -2272,9 +2270,8 @@ describe('Endpoints', () => {
 						job.data.to.id === following.followeeId &&
 						job.data.silent === true,
 				);
-				if (job != null) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(job).toBeDefined();
+			}, POLL);
 			assert.ok(job);
 			await job.remove();
 
@@ -2947,12 +2944,11 @@ describe('Endpoints', () => {
 			expect(cleaned.status).toBe(204);
 
 			let job: Bull.Job<ObjectStorageJobData> | undefined;
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				job = jobs.find((job) => job.name === 'cleanRemoteFiles');
-				if (job != null) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(job).toBeDefined();
+			}, POLL);
 			assert.ok(job);
 			await job.remove();
 
@@ -3012,20 +3008,17 @@ describe('Endpoints', () => {
 			const targetIds = [orphan.id, userFile.id, remoteFile.id];
 			const targetKeys = [orphan.accessKey!, userFile.accessKey!, remoteFile.accessKey!];
 			const waitDeleted = async (fileId: string) => {
-				for (let i = 0; i < 10; i++) {
-					if ((await fetchDriveFileByIdFromDatabase(db, fileId)) == null) return;
-					await new Promise((resolve) => setTimeout(resolve, 100));
-				}
-				expect.unreachable(`drive file was not deleted: ${fileId}`);
+				await vi.waitFor(async () => {
+					expect(await fetchDriveFileByIdFromDatabase(db, fileId), `drive file was not deleted: ${fileId}`).toBeNull();
+				}, POLL);
 			};
 			const waitDeleteObjectStorageJob = async (key: string) => {
-				for (let i = 0; i < 10; i++) {
+				return await vi.waitFor(async () => {
 					const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 					const job = jobs.find((job) => job.name === 'deleteFile' && (job.data as { key: string }).key === key);
-					if (job != null) return job;
-					await new Promise((resolve) => setTimeout(resolve, 100));
-				}
-				expect.unreachable(`deleteFile objectStorage job was not found: ${key}`);
+					assert.ok(job, `deleteFile objectStorage job was not found: ${key}`);
+					return job;
+				}, POLL);
 			};
 			const removeObjectStorageJobs = async () => {
 				const jobs = await objectStorageQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
@@ -3992,22 +3985,18 @@ describe('Endpoints', () => {
 				expect(await fetchEmojiByIdFromDatabase(db, bulkFirst.id)).toBe(null);
 				expect(await fetchEmojiByIdFromDatabase(db, bulkSecond.id)).toBe(null);
 
-				for (let i = 0; i < 10; i++) {
+				await vi.waitFor(async () => {
 					const logs = await listModerationLogsFromDatabase(db, {
 						limit: 10,
 						order: 'desc',
 						type: 'deleteCustomEmoji',
 						search: suffix,
 					});
-					if (logs.length >= 3) {
-						expect(logs.some((log) => (log.info as any).emojiId === single.id)).toBe(true);
-						expect(logs.some((log) => (log.info as any).emojiId === bulkFirst.id)).toBe(true);
-						expect(logs.some((log) => (log.info as any).emojiId === bulkSecond.id)).toBe(true);
-						break;
-					}
-					await new Promise((resolve) => setTimeout(resolve, 100));
-					if (i === 9) expect.unreachable('deleteCustomEmoji moderation logs were not found');
-				}
+					expect(logs.length).toBeGreaterThanOrEqual(3);
+					expect(logs.some((log) => (log.info as any).emojiId === single.id)).toBe(true);
+					expect(logs.some((log) => (log.info as any).emojiId === bulkFirst.id)).toBe(true);
+					expect(logs.some((log) => (log.info as any).emojiId === bulkSecond.id)).toBe(true);
+				}, POLL);
 
 				const tokenTarget = await insertEmojiInDatabase(db, {
 					id: genId(now + 1000),
@@ -4102,7 +4091,7 @@ describe('Endpoints', () => {
 				expect(imported.status).toBe(204);
 
 				let job: Bull.Job<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
-				for (let i = 0; i < 10; i++) {
+				await vi.waitFor(async () => {
 					const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 					job = jobs.find(
 						(job) =>
@@ -4110,9 +4099,8 @@ describe('Endpoints', () => {
 							(job.data as DbJobData<'importCustomEmojis'>).fileId === fileId &&
 							job.data.user.id === manager.id,
 					);
-					if (job != null) break;
-					await new Promise((resolve) => setTimeout(resolve, 100));
-				}
+					expect(job).toBeDefined();
+				}, POLL);
 				assert.ok(job);
 				expect(job.data as DbJobData<'importCustomEmojis'>).toStrictEqual({
 					user: { id: manager.id },
@@ -7355,12 +7343,11 @@ describe('Endpoints', () => {
 			return jobs.filter((job) => job.name === jobName && (job.data as any).user?.id === userId);
 		};
 		const waitExportJob = async (jobName: string, userId: string) => {
-			for (let i = 0; i < 10; i++) {
+			return await vi.waitFor(async () => {
 				const jobs = await getExportJobs(jobName, userId);
-				if (jobs[0] != null) return jobs[0];
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
-			expect.unreachable(`${jobName} job was not found for ${userId}`);
+				assert.ok(jobs[0], `${jobName} job was not found for ${userId}`);
+				return jobs[0];
+			}, POLL);
 		};
 
 		test.each([
@@ -11001,7 +10988,7 @@ describe('Endpoints', () => {
 
 			const assignmentLogTypes = ['assignRole', 'unassignRole'] as const;
 			const assignmentLogged = new Set<string>();
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				for (const type of assignmentLogTypes) {
 					const logs = await listModerationLogsFromDatabase(db, {
 						limit: 10,
@@ -11011,9 +10998,8 @@ describe('Endpoints', () => {
 					});
 					if (logs.length > 0) assignmentLogged.add(type);
 				}
-				if (assignmentLogged.size === assignmentLogTypes.length) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(assignmentLogged.size).toBe(assignmentLogTypes.length);
+			}, POLL);
 
 			expect([...assignmentLogged].sort()).toStrictEqual([...assignmentLogTypes].sort());
 
@@ -11033,7 +11019,7 @@ describe('Endpoints', () => {
 
 			const logTypes = ['createRole', 'updateRole', 'deleteRole'] as const;
 			const logged = new Set<string>();
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				for (const type of logTypes) {
 					const logs = await listModerationLogsFromDatabase(db, {
 						limit: 10,
@@ -11043,9 +11029,8 @@ describe('Endpoints', () => {
 					});
 					if (logs.length > 0) logged.add(type);
 				}
-				if (logged.size === logTypes.length) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(logged.size).toBe(logTypes.length);
+			}, POLL);
 
 			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
@@ -11057,17 +11042,15 @@ describe('Endpoints', () => {
 			type: SystemWebhookDeliverJobData['type'],
 			url: string,
 		): Promise<Bull.Job<SystemWebhookDeliverJobData>> {
-			for (let i = 0; i < 10; i++) {
+			return await vi.waitFor(async () => {
 				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				const job = jobs.find(
 					(job) =>
 						job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type && job.data.to === url,
 				);
-				if (job != null) return job;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
-
-			expect.unreachable(`system webhook deliver job was not found: ${webhookId}`);
+				assert.ok(job, `system webhook deliver job was not found: ${webhookId}`);
+				return job;
+			}, POLL);
 		}
 
 		test('admin/system-webhook は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
@@ -11190,7 +11173,7 @@ describe('Endpoints', () => {
 
 			const logTypes = ['createSystemWebhook', 'updateSystemWebhook', 'deleteSystemWebhook'] as const;
 			const logged = new Set<string>();
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				for (const type of logTypes) {
 					const logs = await listModerationLogsFromDatabase(db, {
 						limit: 10,
@@ -11200,9 +11183,8 @@ describe('Endpoints', () => {
 					});
 					if (logs.length > 0) logged.add(type);
 				}
-				if (logged.size === logTypes.length) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(logged.size).toBe(logTypes.length);
+			}, POLL);
 
 			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
@@ -11402,7 +11384,7 @@ describe('Endpoints', () => {
 				'deleteAbuseReportNotificationRecipient',
 			] as const;
 			const logged = new Set<string>();
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				for (const type of logTypes) {
 					const logs = await listModerationLogsFromDatabase(db, {
 						limit: 10,
@@ -11412,9 +11394,8 @@ describe('Endpoints', () => {
 					});
 					if (logs.length > 0) logged.add(type);
 				}
-				if (logged.size === logTypes.length) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(logged.size).toBe(logTypes.length);
+			}, POLL);
 
 			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
@@ -11441,31 +11422,25 @@ describe('Endpoints', () => {
 			webhookId: string,
 			type: SystemWebhookDeliverJobData['type'],
 		): Promise<Bull.Job<SystemWebhookDeliverJobData>> {
-			for (let i = 0; i < 10; i++) {
+			return await vi.waitFor(async () => {
 				const jobs = await systemWebhookDeliverQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				const job = jobs.find(
 					(job) => job.name === webhookId && job.data.webhookId === webhookId && job.data.type === type,
 				);
-				if (job != null) return job;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
-
-			expect.unreachable(`system webhook deliver job was not found: ${webhookId}`);
+				assert.ok(job, `system webhook deliver job was not found: ${webhookId}`);
+				return job;
+			}, POLL);
 		}
 
 		async function findDeliverJob(inbox: string, type: 'Flag'): Promise<Bull.Job<DeliverJobData>> {
-			for (let i = 0; i < 10; i++) {
+			return await vi.waitFor(async () => {
 				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
-				for (const job of jobs) {
-					if (job.data.to !== inbox) continue;
-
-					const content = JSON.parse(job.data.content) as { type?: unknown };
-					if (content.type === type) return job;
-				}
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
-
-			expect.unreachable(`deliver job was not found: ${inbox} ${type}`);
+				const found = jobs.find(
+					(job) => job.data.to === inbox && (JSON.parse(job.data.content) as { type?: unknown }).type === type,
+				);
+				assert.ok(found, `deliver job was not found: ${inbox} ${type}`);
+				return found;
+			}, POLL);
 		}
 
 		test('admin/abuse-user-reports は一覧、filter、token scope、roleを維持する', async () => {
@@ -11671,22 +11646,18 @@ describe('Endpoints', () => {
 			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_ABUSE_REPORT');
 			expect(castAsError(missing.body as any).error.id).toBe('ac3794dd-2ce4-d878-e546-73c60c06b398');
 
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 10,
 					order: 'desc',
 					type: 'resolveAbuseReport',
 					search: report.id,
 				});
-				if (logs.length > 0) {
-					expect(
-						logs.some((log) => (log.info as any).reportId === report.id && (log.info as any).resolvedAs === 'accept'),
-					).toBe(true);
-					break;
-				}
-				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) expect.unreachable('resolveAbuseReport moderation log was not found');
-			}
+				expect(logs.length).toBeGreaterThan(0);
+				expect(
+					logs.some((log) => (log.info as any).reportId === report.id && (log.info as any).resolvedAs === 'accept'),
+				).toBe(true);
+			}, POLL);
 		});
 
 		test('admin/forward-abuse-user-report は配送、forwarded、token scope、role、ログ、404を維持する', async () => {
@@ -11799,20 +11770,16 @@ describe('Endpoints', () => {
 			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_ABUSE_REPORT');
 			expect(castAsError(missing.body as any).error.id).toBe('8763e21b-d9bc-40be-acf6-54c1a6986493');
 
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 10,
 					order: 'desc',
 					type: 'forwardAbuseReport',
 					search: report.id,
 				});
-				if (logs.length > 0) {
-					expect(logs.some((log) => (log.info as any).reportId === report.id)).toBe(true);
-					break;
-				}
-				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) expect.unreachable('forwardAbuseReport moderation log was not found');
-			}
+				expect(logs.length).toBeGreaterThan(0);
+				expect(logs.some((log) => (log.info as any).reportId === report.id)).toBe(true);
+			}, POLL);
 		});
 
 		test('admin/update-abuse-user-report は moderationNote 更新、token scope、role、ログ、404を維持する', async () => {
@@ -11884,27 +11851,23 @@ describe('Endpoints', () => {
 			expect(castAsError(missing.body as any).error.code).toBe('NO_SUCH_ABUSE_REPORT');
 			expect(castAsError(missing.body as any).error.id).toBe('15f51cf5-46d1-4b1d-a618-b35bcbed0662');
 
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 10,
 					order: 'desc',
 					type: 'updateAbuseReportNote',
 					search: report.id,
 				});
-				if (logs.length > 0) {
-					expect(
-						logs.some(
-							(log) =>
-								(log.info as any).reportId === report.id &&
-								(log.info as any).before === report.moderationNote &&
-								(log.info as any).after === moderationNote,
-						),
-					).toBe(true);
-					break;
-				}
-				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) expect.unreachable('updateAbuseReportNote moderation log was not found');
-			}
+				expect(logs.length).toBeGreaterThan(0);
+				expect(
+					logs.some(
+						(log) =>
+							(log.info as any).reportId === report.id &&
+							(log.info as any).before === report.moderationNote &&
+							(log.info as any).after === moderationNote,
+					),
+				).toBe(true);
+			}, POLL);
 		});
 	});
 
@@ -12291,7 +12254,7 @@ describe('Endpoints', () => {
 
 			const logTypes = ['resetPassword', 'unsetMfa', 'unsetUserAvatar', 'unsetUserBanner'] as const;
 			const logged = new Set<string>();
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				for (const type of logTypes) {
 					const logs = await listModerationLogsFromDatabase(db, {
 						limit: 10,
@@ -12301,9 +12264,8 @@ describe('Endpoints', () => {
 					});
 					if (logs.length > 0) logged.add(type);
 				}
-				if (logged.size === logTypes.length) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(logged.size).toBe(logTypes.length);
+			}, POLL);
 
 			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
@@ -12368,22 +12330,18 @@ describe('Endpoints', () => {
 			expect(roleDenied.status).toBe(403);
 			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 10,
 					order: 'desc',
 					type: 'updateUserNote',
 					search: target.id,
 				});
-				if (logs.length > 0) {
-					expect(
-						logs.some((log) => (log.info as any).before === 'before note' && (log.info as any).after === text),
-					).toBe(true);
-					break;
-				}
-				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) expect.unreachable('updateUserNote moderation log was not found');
-			}
+				expect(logs.length).toBeGreaterThan(0);
+				expect(logs.some((log) => (log.info as any).before === 'before note' && (log.info as any).after === text)).toBe(
+					true,
+				);
+			}, POLL);
 		});
 
 		test('admin/send-email は送信要求、token scope、role、validationを維持する', async () => {
@@ -12445,7 +12403,7 @@ describe('Endpoints', () => {
 			let targetUser = await fetchUserByIdOrFailFromDatabase(db, target.id);
 			expect(targetUser.isSuspended).toBe(true);
 
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				const jobs = await relationshipQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 				const job = jobs.find(
 					(job) =>
@@ -12454,13 +12412,9 @@ describe('Endpoints', () => {
 						job.data.to.id === following.followeeId &&
 						job.data.silent === true,
 				);
-				if (job != null) {
-					await job.remove();
-					break;
-				}
-				await new Promise((resolve) => setTimeout(resolve, 100));
-				if (i === 9) expect.unreachable('suspend-user unfollow job was not created');
-			}
+				assert.ok(job, 'suspend-user unfollow job was not created');
+				await job.remove();
+			}, POLL);
 
 			const suspendTokenTarget = await signup({ username: `hstt${suffix}` });
 			const suspendToken = await createAppToken(alice, ['write:admin:suspend-user']);
@@ -12500,7 +12454,7 @@ describe('Endpoints', () => {
 			expect(castAsError(unsuspendRoleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			const logged = new Set<string>();
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				for (const type of ['suspend', 'unsuspend'] as const) {
 					const logs = await listModerationLogsFromDatabase(db, {
 						limit: 10,
@@ -12510,9 +12464,8 @@ describe('Endpoints', () => {
 					});
 					if (logs.length > 0) logged.add(type);
 				}
-				if (logged.size === 2) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(logged.size).toBe(2);
+			}, POLL);
 
 			expect([...logged].sort()).toStrictEqual(['suspend', 'unsuspend']);
 		});
@@ -12622,18 +12575,14 @@ describe('Endpoints', () => {
 
 	describe('admin/relays', () => {
 		async function findDeliverJob(inbox: string, type: 'Follow' | 'Undo'): Promise<Bull.Job<DeliverJobData>> {
-			for (let i = 0; i < 10; i++) {
+			return await vi.waitFor(async () => {
 				const jobs = await deliverQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
-				for (const job of jobs) {
-					if (job.data.to !== inbox) continue;
-
-					const content = JSON.parse(job.data.content) as { type?: unknown };
-					if (content.type === type) return job;
-				}
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
-
-			expect.unreachable(`deliver job was not found: ${inbox} ${type}`);
+				const found = jobs.find(
+					(job) => job.data.to === inbox && (JSON.parse(job.data.content) as { type?: unknown }).type === type,
+				);
+				assert.ok(found, `deliver job was not found: ${inbox} ${type}`);
+				return found;
+			}, POLL);
 		}
 
 		test('admin/relays/list はrelay一覧、moderator権限、token scopeを維持する', async () => {
@@ -12887,18 +12836,15 @@ describe('Endpoints', () => {
 		async function expectModerationLog(
 			type: 'clearQueue' | 'promoteQueue' | 'pauseQueue' | 'resumeQueue',
 		): Promise<void> {
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 20,
 					order: 'desc',
 					type,
 					userId: alice.id,
 				});
-				if (logs.length > 0) return;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
-
-			expect.unreachable(`moderation log was not found: ${type}`);
+				expect(logs.length, `moderation log was not found: ${type}`).toBeGreaterThan(0);
+			}, POLL);
 		}
 
 		test('admin/queue のwrite endpointはqueue操作、moderation log、権限を維持する', async () => {
@@ -13350,7 +13296,7 @@ describe('Endpoints', () => {
 			expect(castAsError(moderatorDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 
 			let logged = false;
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				const logs = await listModerationLogsFromDatabase(db, {
 					limit: 10,
 					order: 'desc',
@@ -13361,9 +13307,8 @@ describe('Endpoints', () => {
 					const info = log.info as { invitations?: { id?: string }[] };
 					return info.invitations?.some((ticket) => ticket.id === getAt(created.body, 0).id) === true;
 				});
-				if (logged) break;
-				await new Promise((resolve) => setTimeout(resolve, 10));
-			}
+				expect(logged).toBe(true);
+			}, POLL);
 			assert.ok(logged);
 		});
 	});
@@ -13558,7 +13503,7 @@ describe('Endpoints', () => {
 
 			const logTypes = ['createGlobalAnnouncement', 'updateGlobalAnnouncement', 'deleteGlobalAnnouncement'] as const;
 			const logged = new Set<string>();
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				for (const type of logTypes) {
 					const logs = await listModerationLogsFromDatabase(db, {
 						limit: 10,
@@ -13568,9 +13513,8 @@ describe('Endpoints', () => {
 					});
 					if (logs.length > 0) logged.add(type);
 				}
-				if (logged.size === logTypes.length) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(logged.size).toBe(logTypes.length);
+			}, POLL);
 
 			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
@@ -13680,7 +13624,7 @@ describe('Endpoints', () => {
 
 			const logTypes = ['createAvatarDecoration', 'updateAvatarDecoration', 'deleteAvatarDecoration'] as const;
 			const logged = new Set<string>();
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				for (const type of logTypes) {
 					const logs = await listModerationLogsFromDatabase(db, {
 						limit: 10,
@@ -13690,9 +13634,8 @@ describe('Endpoints', () => {
 					});
 					if (logs.length > 0) logged.add(type);
 				}
-				if (logged.size === logTypes.length) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(logged.size).toBe(logTypes.length);
+			}, POLL);
 
 			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
@@ -13773,7 +13716,7 @@ describe('Endpoints', () => {
 
 			const logTypes = ['createAd', 'updateAd', 'deleteAd'] as const;
 			const logged = new Set<string>();
-			for (let i = 0; i < 10; i++) {
+			await vi.waitFor(async () => {
 				for (const type of logTypes) {
 					const logs = await listModerationLogsFromDatabase(db, {
 						limit: 10,
@@ -13783,9 +13726,8 @@ describe('Endpoints', () => {
 					});
 					if (logs.length > 0) logged.add(type);
 				}
-				if (logged.size === logTypes.length) break;
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
+				expect(logged.size).toBe(logTypes.length);
+			}, POLL);
 
 			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
