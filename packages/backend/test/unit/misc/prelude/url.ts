@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { query } from '../../src/misc/prelude/url.js';
+import { query } from '@/misc/prelude/url.js';
 
 describe('url', () => {
 	test('query', () => {

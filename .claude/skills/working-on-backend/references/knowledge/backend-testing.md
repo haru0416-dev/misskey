@@ -74,19 +74,26 @@ vitest からは `MISSKEY_E2E_TARGET_MODE=external` で HTTP 越しに叩かせ�
 `packages/backend/test/e2e/` の現状ファイル例:
 
 ```
-note.ts            ノート関連 (作成・renote・visibility・添付ファイル等)
-users.ts           ユーザー関連
-timelines.ts       タイムライン
-drive.ts           ドライブ (アップロード/ダウンロード)
-clips.ts           クリップ
-oauth.ts           OAuth フロー
-streaming.ts       WebSocket
-api.ts             API レイヤ全般 (認証・レート制限など)
-api-visibility.ts  公開範囲チェック
-endpoints.ts       上記カテゴリに収まらない雑多なもの
-2fa.ts             2FA
-block.ts / mute.ts / antennas.ts / clips.ts / move.ts / nodeinfo.ts / ...
+note.ts              ノート関連 (作成・renote・visibility・添付ファイル等)
+users.ts             ユーザー関連
+timelines.ts         タイムライン
+drive.ts             ドライブ (アップロード/ダウンロード)
+clips.ts             クリップ
+oauth.ts             OAuth フロー
+streaming.ts         WebSocket
+api.ts               API レイヤ全般 (認証・レート制限など)
+api-visibility.ts    公開範囲チェック
+endpoints-<領域>.ts  エンドポイントの網羅的な契約テスト (admin / users / notes /
+                     content / drive-channels / admin-emoji / auth / federation)
+scenario/            複数エンドポイントをまたぐシナリオ
+2fa.ts               2FA
+block.ts / mute.ts / antennas.ts / move.ts / nodeinfo.ts / ...
 ```
+
+`endpoints-*.ts` が共有する前準備 (alice 等の作成 + キュー接続) は
+[test/endpoints-context.ts](../../../../../packages/backend/test/endpoints-context.ts) にある。
+e2e の include glob は `test/e2e/**/*.ts` なので、**ヘルパーを `test/e2e/` の中に置くと
+テストファイルとして実行されて落ちる**。共有物は `test/` 直下に置くこと。
 
 **`admin.ts` は存在しない**。admin 系エンドポイントの e2e は `api.ts` (API レイヤ挙動として) または `endpoints.ts` (雑多枠) に置くのが現実的。
 
@@ -240,7 +247,7 @@ OAuth scope (`kind`) のテストに使う。
 ### 既存テスト例
 
 - [test/e2e/note.ts](../../../../../packages/backend/test/e2e/note.ts) — `describe('Note', ...)` で多数の `test(...)` を並べる伝統的なスタイル
-- [test/e2e/endpoints.ts](../../../../../packages/backend/test/e2e/endpoints.ts) — カテゴリ不問の雑多なエンドポイント
+- [test/e2e/endpoints-users.ts](../../../../../packages/backend/test/e2e/endpoints-users.ts) — 領域ごとに割ったエンドポイントの契約テスト
 - [test/e2e/api.ts](../../../../../packages/backend/test/e2e/api.ts) — API レイヤ (認証・レート制限) の挙動
 
 ## ローカル DB / Redis

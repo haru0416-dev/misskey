@@ -126,7 +126,7 @@ bun run --bun --filter backend test:e2e # single-server E2E tests
 ```
 If you want to run a specific test, run as a following command:
 ```sh
-bun run --bun --filter backend test -- packages/backend/test/unit/activitypub.ts
+bun run --bun --filter backend test -- packages/backend/test/unit/misc/cache.ts
 bun run --bun --filter backend test:e2e -- packages/backend/test/e2e/nodeinfo.ts
 ```
 

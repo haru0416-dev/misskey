@@ -11,7 +11,7 @@ import { createFollowingInDatabase } from '@/core/FollowingStore.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { countDatabaseQueries, type QueryCounter } from '../../query-counter.js';
+import { countDatabaseQueries, type QueryCounter } from '../../../query-counter.js';
 import { createApObjectRoutesApp, type ApObjectRoutesDependencies } from '@/server/activitypub/object-routes.js';
 
 describe('ActivityPub object routes', () => {
