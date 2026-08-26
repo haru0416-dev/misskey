@@ -40,6 +40,14 @@ export default defineConfig({
 		__VUE_OPTIONS_API__: true,
 	},
 
+	// `--run` の一回きり実行では HMR が不要。CI では接続に失敗して
+	// `WebSocket closed without opened.` が未捕捉の rejection になり、
+	// テストが全件通っていても exit 1 になる。
+	server: {
+		...base.server,
+		hmr: false,
+	},
+
 	test: {
 		name: 'stories',
 		include: ['test/stories.browser.ts'],
