@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { StoryObj } from '@storybook/vue3';
-import { file } from '../../../../.storybook/fakes.js';
+import type { StoryObj } from '@/stories/types.js';
+import { file } from '@/stories/fakes.js';
 import MkImgPreviewDialog from './MkImgPreviewDialog.vue';
 export const Default = {
 	render(args) {

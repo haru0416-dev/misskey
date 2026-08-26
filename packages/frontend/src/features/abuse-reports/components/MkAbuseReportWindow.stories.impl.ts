@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { action } from 'storybook/actions';
+import { action } from '@/stories/action.js';
 import { HttpResponse, http } from 'msw';
-import { userDetailed } from '../../../../.storybook/fakes.js';
-import { commonHandlers } from '../../../../.storybook/mocks.js';
+import { userDetailed } from '@/stories/fakes.js';
+import { commonHandlers } from '@/stories/mocks.js';
 import MkAbuseReportWindow from './MkAbuseReportWindow.vue';
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 export const Default = {
 	render(args) {
 		return {

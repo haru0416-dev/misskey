@@ -25,7 +25,7 @@
 単一ページからしか使わないなら `pages/`。各 category の責務と依存方向は
 [packages/frontend/src/README.md](../../../../../packages/frontend/src/README.md) が正典。
 
-ストーリーが必要 (= ほぼ常に必要) なら、同階層に `Mk<Name>.stories.impl.ts` も作る → [knowledge/storybook.md](../knowledge/storybook.md)。
+ストーリーが必要 (= ほぼ常に必要) なら、同階層に `Mk<Name>.stories.impl.ts` も作る → [knowledge/component-catalog.md](../knowledge/component-catalog.md)。
 
 ## SPDX ヘッダー
 
@@ -155,9 +155,9 @@ const emit = defineEmits<{
 
 詳細チェックリストと既存例 (`MkButton.vue` / `MkSwitch.vue`) は → [knowledge/component-conventions.md §a11y](../knowledge/component-conventions.md)。
 
-## Storybook 併設
+## カタログ story の併設
 
-共有 `Mk*` コンポーネントには `Mk<Name>.stories.impl.ts` を **同階層** に併設する (サブディレクトリ含む)。詳細は → [knowledge/storybook.md](../knowledge/storybook.md)。
+共有 `Mk*` コンポーネントには `Mk<Name>.stories.impl.ts` を **同階層** に併設する (サブディレクトリ含む)。詳細は → [knowledge/component-catalog.md](../knowledge/component-catalog.md)。
 
 ## 検証フロー
 
@@ -168,8 +168,8 @@ bun run --bun --filter frontend typecheck
 # 全体 lint (oxlint + typecheck)
 bun run lint
 
-# Storybook で目視確認
-bun run --bun --filter frontend storybook-dev    # localhost:6006
+# カタログで目視確認
+bun run --bun --filter frontend catalog          # 127.0.0.1:6006
 
 # Vitest unit test (component spec があれば)
 bun run --bun --filter frontend test
@@ -183,7 +183,7 @@ bun run --bun --filter frontend test
 
 - 似た用途の既存 `Mk*` を 1-2 個読んで、props 命名 (`primary` / `danger` / `small` 等の形容詞、`onClose` ではなく `emit('close')` 等) を揃える
 - グローバル utility class (`_button` / `_panel` / `_selectable` / `_gaps_m`) を使えば独自スタイルを書かずに済む → [knowledge/scss-modules.md](../knowledge/scss-modules.md)
-- 大きな機能なら Storybook で各バリエーション (variant / size / disabled / loading) を網羅する
+- 大きな機能ならカタログで各バリエーション (variant / size / disabled / loading) を網羅する
 
 ## 参照コード
 
@@ -192,6 +192,6 @@ bun run --bun --filter frontend test
 - [MkInput.vue](../../../../../packages/frontend/src/components/form/MkInput.vue) — generic + 2 ブロック script 例
 - [MkSelect.vue](../../../../../packages/frontend/src/components/form/MkSelect.vue) — `defineModel` + 名前付き slot 例
 - [MkSwitch.vue](../../../../../packages/frontend/src/components/form/MkSwitch.vue) — a11y 込みカスタム UI
-- [MkButton.stories.impl.ts](../../../../../packages/frontend/src/components/form/MkButton.stories.impl.ts) — 複数 story Storybook 雛形
+- [MkButton.stories.impl.ts](../../../../../packages/frontend/src/components/form/MkButton.stories.impl.ts) — 複数 story の雛形
 - [packages/frontend/src/os.ts](../../../../../packages/frontend/src/os.ts) — UI 操作 API 一覧
 - [packages/frontend/src/i18n.ts](../../../../../packages/frontend/src/i18n.ts) — `i18n.ts` / `i18n.tsx` 実装

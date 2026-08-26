@@ -4,8 +4,8 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { expect } from 'storybook/test';
-import type { StoryObj } from '@storybook/vue3';
+import { expect } from '@/stories/test.js';
+import type { StoryObj } from '@/stories/types.js';
 import MkTime from './MkTime.vue';
 import { i18n } from '@/i18n.js';
 import { dateTimeFormat } from '@shared/utility/intl-const.js';

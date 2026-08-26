@@ -5,8 +5,8 @@
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable import/no-default-export */
-import type { StoryObj } from '@storybook/vue3';
-import { action } from 'storybook/actions';
+import type { StoryObj } from '@/stories/types.js';
+import { action } from '@/stories/action.js';
 import MkColorInput from './MkColorInput.vue';
 export const Default = {
 	render(args) {

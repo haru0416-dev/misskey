@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { action } from 'storybook/actions';
-import type { StoryObj } from '@storybook/vue3';
+import { action } from '@/stories/action.js';
+import type { StoryObj } from '@/stories/types.js';
 import MkDrive_file from './MkDrive.File.vue';
-import { file } from '../../../../.storybook/fakes.js';
+import { file } from '@/stories/fakes.js';
 export const Default = {
 	render(args) {
 		return {

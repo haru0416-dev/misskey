@@ -4,10 +4,10 @@
  */
 
 import { http, HttpResponse } from 'msw';
-import { action } from 'storybook/actions';
-import { chatMessage } from '../../../../.storybook/fakes';
+import { action } from '@/stories/action.js';
+import { chatMessage } from '@/stories/fakes.js';
 import MkChatHistories from './MkChatHistories.vue';
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 import type * as Misskey from 'misskey-js';
 export const Default = {
 	render(args) {

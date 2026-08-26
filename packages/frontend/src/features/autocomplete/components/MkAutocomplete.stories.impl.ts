@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { action } from 'storybook/actions';
-import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { action } from '@/stories/action.js';
+import { expect, userEvent, waitFor, within } from '@/stories/test.js';
 import { HttpResponse, http } from 'msw';
-import { userDetailed } from '../../../../.storybook/fakes.js';
-import { commonHandlers } from '../../../../.storybook/mocks.js';
+import { userDetailed } from '@/stories/fakes.js';
+import { commonHandlers } from '@/stories/mocks.js';
 import MkAutocomplete from './MkAutocomplete.vue';
 import MkInput from '@/components/form/MkInput.vue';
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 import { tick } from '@/utility/test-utils.js';
 const common = {
 	render(args) {

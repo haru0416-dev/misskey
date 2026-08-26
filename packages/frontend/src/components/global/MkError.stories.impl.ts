@@ -4,9 +4,9 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { action } from 'storybook/actions';
-import { expect, waitFor } from 'storybook/test';
-import type { StoryObj } from '@storybook/vue3';
+import { action } from '@/stories/action.js';
+import { expect, waitFor } from '@/stories/test.js';
+import type { StoryObj } from '@/stories/types.js';
 import MkError from './MkError.vue';
 export const Default = {
 	render(args) {

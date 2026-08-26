@@ -3,6 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
+import type { StoryObj } from '@/stories/types.js';
 import RouterView from './RouterView.vue';
-void RouterView;
+
+export const Default = {
+	render: (args) => ({
+		components: { RouterView },
+		setup: () => ({ args }),
+		template: '<RouterView v-bind="args" />',
+	}),
+	args: {},
+} satisfies StoryObj<typeof RouterView>;

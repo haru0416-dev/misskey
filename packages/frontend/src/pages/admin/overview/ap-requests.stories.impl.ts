@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 import { http, HttpResponse } from 'msw';
-import { action } from 'storybook/actions';
-import { commonHandlers } from '../../../../.storybook/mocks.js';
+import { action } from '@/stories/action.js';
+import { commonHandlers } from '@/stories/mocks.js';
 import overview_ap_requests from './ap-requests.vue';
 export const Default = {
 	render(args) {

@@ -5,10 +5,10 @@
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable import/no-default-export */
-import type { StoryObj } from '@storybook/vue3';
-import { action } from 'storybook/actions';
-import { expect, userEvent, within } from 'storybook/test';
-import { file } from '../../../../.storybook/fakes.js';
+import type { StoryObj } from '@/stories/types.js';
+import { action } from '@/stories/action.js';
+import { expect, userEvent, within } from '@/stories/test.js';
+import { file } from '@/stories/fakes.js';
 import MkCwButton from './MkCwButton.vue';
 import { i18n } from '@/i18n.js';
 

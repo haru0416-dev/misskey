@@ -4,11 +4,11 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { action } from 'storybook/actions';
-import type { StoryObj } from '@storybook/vue3';
+import { action } from '@/stories/action.js';
+import type { StoryObj } from '@/stories/types.js';
 import { HttpResponse, http } from 'msw';
-import { commonHandlers } from '../../../../.storybook/mocks.js';
-import { userDetailed } from '../../../../.storybook/fakes.js';
+import { commonHandlers } from '@/stories/mocks.js';
+import { userDetailed } from '@/stories/fakes.js';
 import MkAccountMoved from './MkAccountMoved.vue';
 export const Default = {
 	render(args) {

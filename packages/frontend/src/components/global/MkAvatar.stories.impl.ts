@@ -4,8 +4,8 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import type { StoryObj } from '@storybook/vue3';
-import { userDetailed } from '../../../.storybook/fakes.js';
+import type { StoryObj } from '@/stories/types.js';
+import { userDetailed } from '@/stories/fakes.js';
 import MkAvatar from './MkAvatar.vue';
 const common = {
 	render(args) {
@@ -45,7 +45,6 @@ export const ProfilePage = {
 	...common,
 	args: {
 		...common.args,
-		// @ts-expect-error size is for test
 		size: 120,
 		indicator: true,
 	},

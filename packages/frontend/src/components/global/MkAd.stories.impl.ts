@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from '@/stories/test.js';
 import MkAd from './MkAd.vue';
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 import { i18n } from '@/i18n.js';
 
 const common = {

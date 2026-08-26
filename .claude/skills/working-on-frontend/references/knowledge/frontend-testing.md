@@ -13,7 +13,7 @@ bun run --bun --filter frontend test-and-coverage   # カバレッジ付き
 
 - 主な配置: `packages/frontend/test/*.test.ts` (例: `i18n.test.ts`, `theme.test.ts`, `is-birthday.test.ts`)
 - ビルドツール周りなど対象コードと隣接させた方が分かりやすいテストは、コードと同じディレクトリに `*.test.ts` として置く (例: [packages/frontend/lib/rollup-plugin-unwind-css-module-class-name.test.ts](../../../../../packages/frontend/lib/rollup-plugin-unwind-css-module-class-name.test.ts))
-- 共有コンポーネント (`MkX.vue`) のユニットテストは現状少なく、`*.spec.ts` / `__tests__/` 形式は採用していない (Storybook + Playwright でカバー)
+- 共有コンポーネント (`MkX.vue`) のユニットテストは現状少なく、`*.spec.ts` / `__tests__/` 形式は採用していない (カタログ + Playwright でカバー)
 
 ## Playwright E2E
 
@@ -41,18 +41,20 @@ bun run pw:open
 - テスト本体は [tests/e2e/specs/](../../../../../tests/e2e/specs/) 配下
 - start コマンドを変えたい場合は `MISSKEY_TEST_START_COMMAND`、接続先を変えたい場合は `MISSKEY_TEST_BASE_URL` を使う
 
-新規 frontend 機能の E2E は Playwright に書くのが基本。ただし対象は主要 UI フロー (login / post / drive etc) に限定し、細かい単位テストは Vitest または Storybook で代替する慣習。
+新規 frontend 機能の E2E は Playwright に書くのが基本。ただし対象は主要 UI フロー (login / post / drive etc) に限定し、細かい単位テストは Vitest またはコンポーネントカタログで代替する慣習。
 
-## Storybook (視覚確認 + Chromatic 視覚回帰)
+## コンポーネントカタログ (視覚確認 + play の実ブラウザ検証)
 
-詳細は → [storybook.md](storybook.md)。
+詳細は → [component-catalog.md](component-catalog.md)。
 
 ```bash
-bun run --bun --filter frontend storybook-dev      # http://localhost:6006
-bun run --bun --filter frontend build-storybook    # 静的ビルド
+bun run --bun --filter frontend catalog       # http://127.0.0.1:6006
+bun run --filter frontend catalog:build       # 静的ビルド (CI が実行)
+bun run --bun --filter frontend test:stories  # play を Chromium で実行
 ```
 
-各コンポーネント横に `*.stories.impl.ts` を併設する慣習 (例: `MkButton.stories.impl.ts`)。Chromatic (`bun run --bun --filter frontend chromatic`) で視覚回帰チェック。
+各コンポーネント横に `*.stories.impl.ts` を併設する慣習 (例: `MkButton.stories.impl.ts`)。
+Storybook と Chromatic は 2026-08-26 に撤去済み。
 
 ## ローカル DB / Redis
 
