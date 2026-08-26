@@ -9,7 +9,9 @@ export const onUnhandledRequest = ((req, print) => {
 	const url = new URL(req.url);
 	if (
 		url.hostname !== 'localhost' ||
-		/^\/(?:client-assets\/|fluent-emoji\/|iframe.html$|node_modules\/|src\/|sb-|static-assets\/|vite\/)/.test(
+		// `@vite/` 等は v2 の initialize() が内部で除外していたぶん。自前で setupWorker を
+		// 起動する以上こちらで持つ必要がある。
+		/^\/(?:@|client-assets\/|fluent-emoji\/|iframe.html$|node_modules\/|src\/|sb-|static-assets\/|virtual:|vite\/)/.test(
 			url.pathname,
 		)
 	) {

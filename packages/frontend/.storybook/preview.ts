@@ -6,7 +6,8 @@
 import { FORCE_RE_RENDER, FORCE_REMOUNT } from 'storybook/internal/core-events';
 import { addons } from 'storybook/preview-api';
 import { type Preview, setup } from '@storybook/vue3';
-import { initialize, mswLoader } from 'msw-storybook-addon';
+import { setupWorker } from 'msw/browser';
+import { mswLoader } from 'msw-storybook-addon/csf3';
 import { userDetailed } from './fakes.js';
 import { commonHandlers, onUnhandledRequest } from './mocks.js';
 import themes from './themes.js';
@@ -58,9 +59,6 @@ function initLocalStorage() {
 	);
 }
 
-initialize({
-	onUnhandledRequest,
-});
 initLocalStorage();
 queueMicrotask(() => {
 	Promise.all([
@@ -137,7 +135,14 @@ const preview = {
 			};
 		},
 	],
-	loaders: [mswLoader],
+	// v3 で initialize() が廃止され、worker の生成と起動は loader へ渡す setup が担う。
+	loaders: [
+		mswLoader(async () => {
+			const worker = setupWorker();
+			await worker.start({ quiet: true, onUnhandledRequest });
+			return worker;
+		}),
+	],
 	parameters: {
 		controls: {
 			exclude: /^__/,
