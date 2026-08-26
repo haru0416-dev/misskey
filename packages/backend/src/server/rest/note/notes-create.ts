@@ -8,7 +8,7 @@ import { domainToASCII } from 'node:url';
 import * as mfm from 'mfm-js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { DB_MAX_NOTE_TEXT_LENGTH, MAX_NOTE_TEXT_LENGTH } from '@/const.js';
+import { DB_MAX_NOTE_CW_LENGTH, DB_MAX_NOTE_TEXT_LENGTH, MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
@@ -1578,6 +1578,12 @@ export async function createNoteForHonoApi(
 		if (data.text === '') data.text = null;
 	} else {
 		data.text = null;
+	}
+
+	// リモートの summary は長さの保証が無く、そのままだと varchar(512) の挿入で落ちて
+	// inbox ジョブが再試行され続ける。text と同じく列長で切る。
+	if (data.cw != null && data.cw.length > DB_MAX_NOTE_CW_LENGTH) {
+		data.cw = data.cw.slice(0, DB_MAX_NOTE_CW_LENGTH);
 	}
 
 	let tags = data.apHashtags;

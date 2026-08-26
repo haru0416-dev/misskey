@@ -220,6 +220,19 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
+	// actor はリモートが送ってくる値で、欠けていても不思議ではない。UnrecoverableError にしないと
+	// 「壊れた activity が再試行され続ける」形になる。
+	test('activity.actor が無い場合は再試行せずスキップする', async () => {
+		const host = `hono-queue-inbox-noactor-${genId()}.example.com`;
+		const { job } = await createSignedInboxJob(host);
+
+		// keyId から引けない状況にして、actor を見に行く経路へ入れる。
+		job.data.signature.keyId = `http://${host}/users/unknown#main-key`;
+		delete (job.data.activity as { actor?: unknown }).actor;
+
+		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+	});
+
 	test('federationでブロックされたホストからのリクエストはBlocked requestを返す', async () => {
 		const host = `hono-queue-inbox-blocked-${genId()}.example.com`;
 		const { job } = await createSignedInboxJob(host);
