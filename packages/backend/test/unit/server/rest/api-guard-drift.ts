@@ -19,7 +19,7 @@ import { endpointMetas } from '@/server/api/endpoint-metas.js';
 const GUARD_CALL =
 	/\b(assertCredential|assertSecureCredential|assertTokenPermission|assertProhibitMoved|hasHonoApiRolePolicyOrIsRoot|assertHonoApiAdmin|isHonoApiAdministrator|assertHonoApiModerator|assertHonoApiRateLimitForUser)\b/g;
 
-const routesDir = join(dirname(fileURLToPath(import.meta.url)), '../../../src/server/rest/routes');
+const routesDir = join(dirname(fileURLToPath(import.meta.url)), '../../../../src/server/rest/routes');
 
 type Registration = {
 	file: string;

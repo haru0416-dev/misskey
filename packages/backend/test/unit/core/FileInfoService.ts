@@ -12,7 +12,7 @@ import { createLoggerService } from '@/core/LoggerService.js';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
-const resources = `${_dirname}/../resources`;
+const resources = `${_dirname}/../../resources`;
 
 describe('FileInfoService', () => {
 	let fileInfoService: FileInfoService;

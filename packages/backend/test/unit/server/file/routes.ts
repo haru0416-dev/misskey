@@ -9,7 +9,7 @@ import * as path from 'node:path';
 import type { Hono } from 'hono';
 import { describe, expect, test, beforeAll, afterAll, afterEach } from 'vitest';
 import sharp from 'sharp';
-import { initTestDb, randomString } from '../../utils.js';
+import { initTestDb, randomString } from '../../../utils.js';
 import type { AiService } from '@/core/AiService.js';
 import { createDownloadService } from '@/core/DownloadService.js';
 import { createFileInfoService } from '@/core/FileInfoService.js';
