@@ -18,7 +18,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
-import isChromatic from '@/utility/is-chromatic.js';
 import MkDataChart, { type DataChartSeries } from '@/features/charts/components/MkDataChart.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { toChartSeries } from '@/features/charts/chart-helpers.js';
@@ -29,7 +28,7 @@ const incoming = ref<DataChartSeries[]>([]);
 const outgoing = ref<DataChartSeries[]>([]);
 
 onMounted(async () => {
-	const now = isChromatic() ? new Date('2024-08-31T10:00:00Z') : new Date();
+	const now = new Date();
 	const raw = await misskeyApi('charts/ap-request', { limit: 50, span: 'day' });
 	incoming.value = [{ name: chartText('incoming'), type: 'bar', data: toChartSeries(now, raw.inboxReceived) }];
 	outgoing.value = [

@@ -9,7 +9,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted, useTemplateRef, watch } from 'vue';
-import isChromatic from '@/utility/is-chromatic.js';
 import vertexShaderSource from './MkAnimBg.vertex.glsl';
 import fragmentShaderSource from './MkAnimBg.fragment.glsl';
 import { initShaderProgram } from '@/utility/webgl.js';
@@ -121,7 +120,6 @@ onMounted(() => {
 	}
 
 	draw(0);
-	if (isChromatic()) return;
 
 	resizeObserver = new ResizeObserver(updateSize);
 	resizeObserver.observe(canvas);

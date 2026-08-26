@@ -32,10 +32,6 @@ export const Default = {
 		fit: 'contain',
 	},
 	parameters: {
-		chromatic: {
-			// NOTE: ロードが終わるまで待つ
-			delay: 3000,
-		},
 		layout: 'centered',
 	},
 } satisfies StoryObj<typeof MkDriveFileThumbnail>;

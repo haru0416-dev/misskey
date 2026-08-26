@@ -56,10 +56,6 @@ export const Default = {
 		await userEvent.click(buttonElement);
 	},
 	parameters: {
-		chromatic: {
-			// NOTE: テストが終わるまで待つ
-			delay: 5000,
-		},
 		layout: 'centered',
 	},
 } satisfies StoryObj<typeof MkCwButton>;

@@ -73,9 +73,5 @@ export const Default = {
 				}),
 			],
 		},
-		chromatic: {
-			// XActivity は Chromatic と互換性がないため、スナップショットを無効化する。
-			disableSnapshot: true,
-		},
 	},
 } satisfies StoryObj<typeof home_>;
