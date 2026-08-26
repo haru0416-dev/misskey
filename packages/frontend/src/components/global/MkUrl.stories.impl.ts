@@ -34,6 +34,10 @@ export const Default = {
 		const canvas = within(canvasElement);
 		const a = canvas.getByRole<HTMLAnchorElement>('link');
 		await expect(a).toHaveAttribute('href', 'https://misskey-hub.net/');
+		// このコンポーネントの仕事は URL を分解して読める形に整えること。href だけ見ても
+		// 表示側の回帰は捕まらない。
+		await expect(a).toHaveTextContent('https://');
+		await expect(a).toHaveTextContent('misskey-hub.net');
 		await waitFor(() => userEvent.hover(a));
 		await waitFor(() => userEvent.unhover(a));
 	},
@@ -64,5 +68,18 @@ export const Default = {
 				}),
 			],
 		},
+	},
+} satisfies StoryObj<typeof MkUrl>;
+// punycode の復元は ASCII ドメインでは何も起きないので、IDN を通す story を別に置く。
+export const Idn = {
+	...Default,
+	async play({ canvasElement }) {
+		const canvas = within(canvasElement);
+		const a = canvas.getByRole<HTMLAnchorElement>('link');
+		await expect(a).toHaveTextContent('日本語.jp');
+	},
+	args: {
+		...Default.args,
+		url: 'https://xn--wgv71a119e.jp/',
 	},
 } satisfies StoryObj<typeof MkUrl>;

@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+// 本体のモジュールより先に評価させるため、この import は必ず先頭に置く。
+import '@/stories/seed-account.js';
 import { createApp } from 'vue';
 import Catalog from './Catalog.vue';
-import { createAppRuntime, resetLocalStorage, startMockServiceWorker } from '@/stories/environment.js';
+import { createAppRuntime, startMockServiceWorker } from '@/stories/environment.js';
 import '@/style.scss';
-
-// 本体のモジュールを読む前に済ませる。account を見て初期化するものがあるため。
-resetLocalStorage();
 
 const [worker, runtime] = await Promise.all([startMockServiceWorker(), createAppRuntime()]);
 

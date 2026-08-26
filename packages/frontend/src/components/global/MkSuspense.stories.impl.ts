@@ -10,7 +10,9 @@ export const Default = {
 	render: (args) => ({
 		components: { MkSuspense },
 		setup: () => ({ args }),
-		template: '<MkSuspense v-bind="args" />',
+		template: '<MkSuspense v-bind="args"><p>読み込み完了</p></MkSuspense>',
 	}),
-	args: {},
+	args: {
+		p: () => Promise.resolve('done'),
+	},
 } satisfies StoryObj<typeof MkSuspense>;
