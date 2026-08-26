@@ -9,7 +9,6 @@ import { basename, dirname } from 'node:path/posix';
 import { fileURLToPath } from 'node:url';
 import { GENERATOR, type State, generate } from 'astring';
 import type * as estree from 'estree';
-import { format } from 'prettier';
 
 interface SatisfiesExpression extends estree.BaseExpression {
 	type: 'SatisfiesExpression';
@@ -132,7 +131,7 @@ declare namespace h.JSX {
 	};
 }
 
-function toStories(component: string): Promise<string> {
+function toStories(component: string): string {
 	const msw = `${component.slice(0, -'.vue'.length)}.msw`;
 	const implStories = `${component.slice(0, -'.vue'.length)}.stories.impl`;
 	const metaStories = `${component.slice(0, -'.vue'.length)}.stories.meta`;
@@ -141,11 +140,7 @@ function toStories(component: string): Promise<string> {
 	const hasMetaStories = existsSync(`${metaStories}.ts`);
 	const implStoriesSource = hasImplStories ? readFileSync(`${implStories}.ts`, 'utf-8') : '';
 	if (/^export default /m.test(implStoriesSource)) {
-		return format(implStoriesSource, {
-			parser: 'babel-ts',
-			singleQuote: true,
-			useTabs: true,
-		});
+		return implStoriesSource;
 	}
 	const base = basename(component);
 	const dir = dirname(component);
@@ -563,19 +558,15 @@ function toStories(component: string): Promise<string> {
 			]}
 		/>
 	) as estree.Program;
-	return format(
+	// 生成物は gitignore 済みの中間生成物で lint 対象外。整形器を別途持たず astring の出力をそのまま使う。
+	return (
 		spdxHeader +
-			'/* eslint-disable @typescript-eslint/explicit-function-return-type */\n' +
-			'/* eslint-disable import/no-default-export */\n' +
-			'/* eslint-disable import/no-duplicates */\n' +
-			'/* eslint-disable import/order */\n' +
-			generate(program, { generator }) +
-			implStoriesSource,
-		{
-			parser: 'babel-ts',
-			singleQuote: true,
-			useTabs: true,
-		},
+		'/* eslint-disable @typescript-eslint/explicit-function-return-type */\n' +
+		'/* eslint-disable import/no-default-export */\n' +
+		'/* eslint-disable import/no-duplicates */\n' +
+		'/* eslint-disable import/order */\n' +
+		generate(program, { generator, indent: '\t' }) +
+		implStoriesSource
 	);
 }
 
@@ -626,7 +617,7 @@ process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 	await Promise.all(
 		components.map(async (component) => {
 			const stories = component.replace(/\.vue$/, '.stories.ts');
-			await writeFile(stories, await toStories(component));
+			await writeFile(stories, toStories(component));
 		}),
 	);
 })();
