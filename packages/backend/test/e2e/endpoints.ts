@@ -7396,15 +7396,16 @@ describe('Endpoints', () => {
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(db, user.id);
 			assert.ok(profile.achievements.some((a) => a.name === 'notes1'));
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
 			const redis = createRedisClient(config);
 			try {
-				const entries = await redis.xrevrange(`notificationTimeline:${user.id}`, '+', '-', 'COUNT', 10);
-				const notifications = entries.map(([, values]) => {
-					const dataIndex = values.findIndex((value) => value === 'data');
-					return JSON.parse(values[dataIndex + 1]!) as { type?: string; achievement?: string };
-				});
-				assert.ok(notifications.some((n) => n.type === 'achievementEarned' && n.achievement === 'notes1'));
+				await vi.waitFor(async () => {
+					const entries = await redis.xrevrange(`notificationTimeline:${user.id}`, '+', '-', 'COUNT', 10);
+					const notifications = entries.map(([, values]) => {
+						const dataIndex = values.findIndex((value) => value === 'data');
+						return JSON.parse(values[dataIndex + 1]!) as { type?: string; achievement?: string };
+					});
+					assert.ok(notifications.some((n) => n.type === 'achievementEarned' && n.achievement === 'notes1'));
+				}, POLL);
 			} finally {
 				await closeRedisConnection(redis);
 			}
@@ -7741,10 +7742,12 @@ describe('Endpoints', () => {
 			);
 			expect(created.status).toBe(204);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
-			const notifications = await readNotificationTimeline(config, user.id);
-			const appNotification = notifications.find((n) => n.type === 'app');
-			assert.ok(appNotification);
+			const appNotification = await vi.waitFor(async () => {
+				const notifications = await readNotificationTimeline(config, user.id);
+				const found = notifications.find((n) => n.type === 'app');
+				assert.ok(found);
+				return found;
+			}, POLL);
 			// Redis stream 上の生の通知は customBody/customHeader/customIcon で保持され、
 			// body/header/icon への改名は i/notifications の pack 時に行われる。
 			expect(appNotification.customBody).toBe('hello world');
@@ -7767,6 +7770,7 @@ describe('Endpoints', () => {
 			const created = await api('notifications/create', { body: 'should be suppressed' }, user);
 			expect(created.status).toBe(204);
 
+			// 「作られないこと」を見るので、作られるだけの猶予を置いてから読む
 			await new Promise((resolve) => setTimeout(resolve, 100));
 			const notifications = await readNotificationTimeline(config, user.id);
 			expect(notifications.some((n) => n.type === 'app')).toBe(false);
@@ -7780,9 +7784,10 @@ describe('Endpoints', () => {
 			const res = await api('notifications/test-notification', {}, user);
 			expect(res.status).toBe(204);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
-			const notifications = await readNotificationTimeline(config, user.id);
-			assert.ok(notifications.some((n) => n.type === 'test'));
+			await vi.waitFor(async () => {
+				const notifications = await readNotificationTimeline(config, user.id);
+				assert.ok(notifications.some((n) => n.type === 'test'));
+			}, POLL);
 		});
 
 		test('notifications/mark-all-as-read は既読状態を更新しreadAllNotificationsを発行する', async () => {
@@ -7791,16 +7796,20 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hnmar${suffix}` });
 
 			await api('notifications/test-notification', {}, user);
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			await vi.waitFor(async () => {
+				const notifications = await readNotificationTimeline(config, user.id);
+				assert.ok(notifications.some((n) => n.type === 'test'));
+			}, POLL);
 
 			const res = await api('notifications/mark-all-as-read', {}, user);
 			expect(res.status).toBe(204);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
 			const redis = createRedisClient(config);
 			try {
-				const latestReadNotificationId = await redis.get(`latestReadNotification:${user.id}`);
-				assert.ok(latestReadNotificationId);
+				await vi.waitFor(async () => {
+					const latestReadNotificationId = await redis.get(`latestReadNotification:${user.id}`);
+					assert.ok(latestReadNotificationId);
+				}, POLL);
 			} finally {
 				await closeRedisConnection(redis);
 			}
@@ -7813,9 +7822,11 @@ describe('Endpoints', () => {
 			const other = await signup({ username: `hndo${suffix}` });
 
 			await api('notifications/test-notification', {}, user);
-			await new Promise((resolve) => setTimeout(resolve, 100));
-			const notification = (await readNotificationTimeline(config, user.id)).find((item) => item.type === 'test');
-			assert.ok(notification);
+			const notification = await vi.waitFor(async () => {
+				const found = (await readNotificationTimeline(config, user.id)).find((item) => item.type === 'test');
+				assert.ok(found);
+				return found;
+			}, POLL);
 
 			const wrongScopeToken = await createAppToken(user, ['read:account']);
 			const scopeDenied = await api(
@@ -7876,16 +7887,19 @@ describe('Endpoints', () => {
 			const user = await signup({ username: `hnf${suffix}` });
 
 			await api('notifications/test-notification', {}, user);
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			await vi.waitFor(async () => {
+				const notifications = await readNotificationTimeline(config, user.id);
+				assert.ok(notifications.some((n) => n.type === 'test'));
+			}, POLL);
 
 			const res = await api('notifications/flush', {}, user);
 			expect(res.status).toBe(204);
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
 			const redis = createRedisClient(config);
 			try {
-				const exists = await redis.exists(`notificationTimeline:${user.id}`);
-				expect(exists).toBe(0);
+				await vi.waitFor(async () => {
+					expect(await redis.exists(`notificationTimeline:${user.id}`)).toBe(0);
+				}, POLL);
 			} finally {
 				await closeRedisConnection(redis);
 			}
@@ -10825,16 +10839,17 @@ describe('Endpoints', () => {
 
 			const redis = createRedisClient(config);
 			try {
-				await new Promise((resolve) => setTimeout(resolve, 100));
-				const entries = await redis.xrevrange(`notificationTimeline:${assignTarget.id}`, '+', '-', 'COUNT', 10);
-				const notifications = entries.map(([, values]) => {
-					const dataIndex = values.findIndex((value) => value === 'data');
-					return JSON.parse(values[dataIndex + 1]!) as { type?: string; roleId?: string };
-				});
-				const roleAssignedNotification = notifications.find(
-					(notification) => notification.type === 'roleAssigned' && notification.roleId === assignableRole.body.id,
-				);
-				assert.ok(roleAssignedNotification);
+				await vi.waitFor(async () => {
+					const entries = await redis.xrevrange(`notificationTimeline:${assignTarget.id}`, '+', '-', 'COUNT', 10);
+					const notifications = entries.map(([, values]) => {
+						const dataIndex = values.findIndex((value) => value === 'data');
+						return JSON.parse(values[dataIndex + 1]!) as { type?: string; roleId?: string };
+					});
+					const roleAssignedNotification = notifications.find(
+						(notification) => notification.type === 'roleAssigned' && notification.roleId === assignableRole.body.id,
+					);
+					assert.ok(roleAssignedNotification);
+				}, POLL);
 			} finally {
 				await closeRedisConnection(redis);
 			}
@@ -14018,12 +14033,13 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hnnfie${suffix}` });
 			const follower = await signup({ username: `hnnfir${suffix}` });
 			await api('following/create', { userId: followee.id }, follower);
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			const res = await vi.waitFor(async () => {
+				const found = await api('i/notifications', { includeTypes: ['follow'] }, followee);
+				expect(found.status).toBe(200);
+				expect(found.body.length).toBe(1);
+				return found;
+			}, POLL);
 
-			const res = await api('i/notifications', { includeTypes: ['follow'] }, followee);
-
-			expect(res.status).toBe(200);
-			expect(res.body.length).toBe(1);
 			expect(getAt(res.body, 0).type).toBe('follow');
 		});
 
@@ -14032,7 +14048,11 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hnnexe${suffix}` });
 			const follower = await signup({ username: `hnnexr${suffix}` });
 			await api('following/create', { userId: followee.id }, follower);
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// 通知が作られる前に読むと、除外されたのか未作成なのか区別できず素通りする
+			await vi.waitFor(async () => {
+				const created = await api('i/notifications', { includeTypes: ['follow'] }, followee);
+				expect(created.body.length).toBe(1);
+			}, POLL);
 
 			const res = await api('i/notifications', { excludeTypes: ['follow'] }, followee);
 
@@ -14045,7 +14065,11 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hnniee${suffix}` });
 			const follower = await signup({ username: `hnnier${suffix}` });
 			await api('following/create', { userId: followee.id }, follower);
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// 通知が作られる前に読むと、空配列指定が効いたのか未作成なのか区別できず素通りする
+			await vi.waitFor(async () => {
+				const created = await api('i/notifications', { includeTypes: ['follow'] }, followee);
+				expect(created.body.length).toBe(1);
+			}, POLL);
 
 			const res = await api('i/notifications', { includeTypes: [] }, followee);
 
@@ -14063,14 +14087,15 @@ describe('Endpoints', () => {
 			const note = await post(author, { text: 'hi' });
 			await api('notes/reactions/create', { noteId: note.id, reaction: '🚀' }, reactor1);
 			await api('notes/reactions/create', { noteId: note.id, reaction: '👍' }, reactor2);
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			const grouped = await vi.waitFor(async () => {
+				const res = await api('i/notifications-grouped', {}, author);
+				expect(res.status).toBe(200);
+				const found = res.body.filter((n: any) => n.type === 'reaction:grouped') as any[];
+				expect(found.length).toBe(1);
+				expect(found[0].reactions.length).toBe(2);
+				return found;
+			}, POLL);
 
-			const res = await api('i/notifications-grouped', {}, author);
-
-			expect(res.status).toBe(200);
-			const grouped = res.body.filter((n: any) => n.type === 'reaction:grouped') as any[];
-			expect(grouped.length).toBe(1);
-			expect(grouped[0].reactions.length).toBe(2);
 			const userIds = grouped[0].reactions.map((r: any) => r.user.id);
 			assert.ok(userIds.includes(reactor1.id));
 			assert.ok(userIds.includes(reactor2.id));
@@ -14084,14 +14109,15 @@ describe('Endpoints', () => {
 			const note = await post(author, { text: 'hi' });
 			await post(renoter1, { renoteId: note.id });
 			await post(renoter2, { renoteId: note.id });
-			await new Promise((resolve) => setTimeout(resolve, 300));
+			const grouped = await vi.waitFor(async () => {
+				const res = await api('i/notifications-grouped', {}, author);
+				expect(res.status).toBe(200);
+				const found = res.body.filter((n: any) => n.type === 'renote:grouped') as any[];
+				expect(found.length).toBe(1);
+				expect(found[0].users.length).toBe(2);
+				return found;
+			}, POLL);
 
-			const res = await api('i/notifications-grouped', {}, author);
-
-			expect(res.status).toBe(200);
-			const grouped = res.body.filter((n: any) => n.type === 'renote:grouped') as any[];
-			expect(grouped.length).toBe(1);
-			expect(grouped[0].users.length).toBe(2);
 			const userIds = grouped[0].users.map((u: any) => u.id);
 			assert.ok(userIds.includes(renoter1.id));
 			assert.ok(userIds.includes(renoter2.id));
@@ -15059,6 +15085,7 @@ describe('Endpoints', () => {
 			);
 			expect(created.status).toBe(200);
 
+			// 投票期限そのものが過ぎるのを待つ (状態の伝播待ちではないので固定で待つ)
 			await new Promise((resolve) => setTimeout(resolve, 300));
 
 			const res = await api('notes/polls/vote', { noteId: created.body.createdNote.id, choice: 0 }, alice);

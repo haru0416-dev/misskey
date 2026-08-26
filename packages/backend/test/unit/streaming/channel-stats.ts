@@ -126,6 +126,7 @@ describe('hono-stream-connection: stats channels', () => {
 		connection.disconnectChannel('conn1');
 
 		testEv.emit('serverStats', { cpu: 0.2, mem: { used: 1, active: 1 }, net: { rx: 0, tx: 0 }, fs: { r: 0, w: 0 } });
+		// 「届かないこと」を見るので、届くだけの猶予を置いてから確認する
 		await new Promise((resolve) => setTimeout(resolve, 100));
 
 		expect(channelMessages(raw).length).toBe(0);
