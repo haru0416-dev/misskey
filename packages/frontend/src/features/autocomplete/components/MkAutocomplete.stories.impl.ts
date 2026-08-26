@@ -69,10 +69,6 @@ const common = {
 			exclude: ['textarea'],
 		},
 		layout: 'centered',
-		chromatic: {
-			// FIXME: flaky
-			disableSnapshot: true,
-		},
 	},
 } satisfies StoryObj<typeof MkAutocomplete>;
 export const User = {

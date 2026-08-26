@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div ref="root" :class="['chromatic-ignore', $style.root, { [$style.cover]: cover }]" :title="title ?? ''" :data-marker="marker ?? undefined" :data-object-fit="cover ? 'cover' : 'contain'">
+<div ref="root" :class="[$style.root, { [$style.cover]: cover }]" :title="title ?? ''" :data-marker="marker ?? undefined" :data-object-fit="cover ? 'cover' : 'contain'">
 	<TransitionGroup
 		v-bind="transitionGroupProps"
 	>

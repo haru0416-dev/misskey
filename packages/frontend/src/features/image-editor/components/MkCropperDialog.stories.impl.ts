@@ -42,10 +42,6 @@ export const Default = {
 		aspectRatio: NaN,
 	},
 	parameters: {
-		chromatic: {
-			// NOTE: ロードが終わるまで待つ
-			delay: 3000,
-		},
 		layout: 'centered',
 		msw: {
 			handlers: [

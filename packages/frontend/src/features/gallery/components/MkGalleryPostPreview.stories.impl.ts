@@ -50,10 +50,6 @@ export const Default = {
 	],
 	parameters: {
 		layout: 'centered',
-		chromatic: {
-			// FIXME: flaky
-			disableSnapshot: true,
-		},
 	},
 } satisfies StoryObj<typeof MkGalleryPostPreview>;
 export const Hover = {

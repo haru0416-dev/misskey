@@ -5,7 +5,6 @@
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import type { StoryObj } from '@/stories/types.js';
-import isChromatic from '@/utility/is-chromatic.js';
 import MkLoading from './MkLoading.vue';
 export const Default = {
 	render(args) {
@@ -29,7 +28,7 @@ export const Default = {
 		};
 	},
 	args: {
-		static: isChromatic(),
+		static: false,
 	},
 	parameters: {
 		layout: 'centered',
@@ -61,5 +60,12 @@ export const Em = {
 	args: {
 		...Default.args,
 		em: true,
+	},
+} satisfies StoryObj<typeof MkLoading>;
+export const Static = {
+	...Default,
+	args: {
+		...Default.args,
+		static: true,
 	},
 } satisfies StoryObj<typeof MkLoading>;

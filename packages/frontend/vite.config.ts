@@ -2,7 +2,6 @@
 import path from 'path';
 import pluginVue from '@vitejs/plugin-vue';
 import pluginGlsl from 'vite-plugin-glsl';
-import { replacePlugin } from 'rolldown/plugins';
 import { visualizer } from 'rollup-plugin-visualizer';
 import type { PluginOption, UserConfig } from 'vite';
 import { defineConfig } from 'vite';
@@ -156,18 +155,6 @@ export function getConfig(): UserConfig {
 			pluginUnwindCssModuleClassName(),
 			pluginJson5(),
 			pluginGlsl({ minify: true }),
-			...(process.env.NODE_ENV === 'production'
-				? [
-						replacePlugin(
-							{
-								'isChromatic()': JSON.stringify(false),
-							},
-							{
-								preventAssignment: true,
-							},
-						),
-					]
-				: []),
 			...getBundleVisualizerPlugin(),
 		],
 
