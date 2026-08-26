@@ -3,9 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { resetLocalStorage } from './environment.js';
+import { resetLocalStorage, startMockServiceWorker } from './environment.js';
 
-// `@/i.ts` は import された瞬間に localStorage の account から $i を組み立てる。
-// 後から localStorage を書いても遅いので、本体のモジュールより先に評価される位置で置く。
-// (ES モジュールは import 文の順に評価されるので、これを最初の import にすること)
+// `@/i.ts` と `@/instance.ts` は import された瞬間に localStorage を読む。
+// 本体のモジュールより先に評価される位置で置く必要がある
+// (ES モジュールは import 文の順に評価されるので、これを最初の import にすること)。
 resetLocalStorage();
+
+// module scope で API を叩くページがあるため、msw も本体を読む前に上げる。
+await startMockServiceWorker();
