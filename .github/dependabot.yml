@@ -7,6 +7,10 @@ updates:
     schedule:
       interval: daily
     open-pull-requests-limit: 5
+    # bunfig.toml の minimumReleaseAge (7日) と揃える。これより新しい版を提案されると
+    # `bun install` が解決を拒否して CI が全滅する。
+    cooldown:
+      default-days: 7
 
   # ワークスペースごとではなく、ルートだけを対象にする。
   # https://github.com/dependabot/dependabot-core/issues/4993#issuecomment-1289133027
@@ -15,6 +19,13 @@ updates:
     schedule:
       interval: daily
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    ignore:
+      # 3.1085.0 以降はバンドルが起動時に
+      # `ReferenceError: bindGetEndpointFromInstructions is not defined` で落ちる。
+      # rolldown と @smithy/middleware-endpoint の非互換で、解消するまで更新しない。
+      - dependency-name: '@aws-sdk/*'
     # 同じバージョン番号で同時に更新する必要がある依存関係だけを列挙する。
     # @fastify のように所有者が共通するだけの依存関係は対象外とする。
     groups:
