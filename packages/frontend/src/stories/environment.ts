@@ -6,7 +6,7 @@
 import { setupWorker } from 'msw/browser';
 import type { App } from 'vue';
 import type { SetupWorker } from 'msw/browser';
-import { commonHandlers, onUnhandledRequest } from './mocks.js';
+import { apiFallbackHandler, commonHandlers, onUnhandledRequest } from './mocks.js';
 import { meta, userDetailed } from './fakes.js';
 
 const themeModules = import.meta.glob<Record<string, unknown>>('@shared/themes/*.json5', {
@@ -59,17 +59,32 @@ export async function resetIndexedDb(): Promise<void> {
 	}
 }
 
-export async function startMockServiceWorker(): Promise<SetupWorker> {
-	const worker = setupWorker(...commonHandlers);
-	await worker.start({ quiet: true, onUnhandledRequest });
-	return worker;
+let workerPromise: Promise<SetupWorker> | null = null;
+
+/**
+ * msw を起動する。二度目以降は同じ worker を返す。
+ *
+ * **テストファイルより先に呼ぶこと** (setupFile から)。本体には module scope で API を叩く
+ * ページがあり (settings/profiles.vue の `await listCloudBackups()` など)、
+ * worker が上がる前に import されるとモックを素通りして 404 の空応答になり、
+ * `res.json()` が未捕捉の SyntaxError になる。
+ */
+export function startMockServiceWorker(): Promise<SetupWorker> {
+	workerPromise ??= (async () => {
+		const worker = setupWorker(...commonHandlers, apiFallbackHandler);
+		await worker.start({ quiet: true, onUnhandledRequest });
+		return worker;
+	})();
+
+	return workerPromise;
 }
 
 /**
  * `parameters.msw` は配列でも `{ handlers }` でも書かれている。共通ハンドラの上に重ねる。
  */
 export function applyStoryHandlers(worker: SetupWorker, parameter: unknown): void {
-	worker.resetHandlers(...commonHandlers);
+	// fallback は必ず最後。story の独自ハンドラは use() で前に積まれるので先に一致する。
+	worker.resetHandlers(...commonHandlers, apiFallbackHandler);
 	if (parameter == null) return;
 
 	const handlers = Array.isArray(parameter)
