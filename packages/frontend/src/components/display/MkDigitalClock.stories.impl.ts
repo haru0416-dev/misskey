@@ -5,7 +5,7 @@
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import type { StoryObj } from '@storybook/vue3';
-import isChromatic from 'chromatic/isChromatic';
+import isChromatic from '@/utility/is-chromatic.js';
 import MkDigitalClock from './MkDigitalClock.vue';
 export const Default = {
 	render(args) {
