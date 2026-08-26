@@ -7,21 +7,12 @@
 		"packages/frontend/public/**",
 		"**/public/**"
 	],
-	"ignoreBinaries": ["dedupe", "generate.tsx"],
-	"ignoreDependencies": [
-		"@typescript/lib-webworker",
-		"@tabler/icons-webfont",
-		"@misskey-dev/emoji-assets",
-		"react",
-		"react-dom",
-		"vue-tsc",
-		"search-index"
-	],
 	"workspaces": {
 		".": {
 			"entry": ["scripts/*.{mjs,cjs,ts}", ".github/scripts/*.{mjs,cjs,mts,ts}"],
 			"project": ["scripts/**/*.{mjs,cjs,ts}", ".github/scripts/**/*.{mjs,cjs,mts,ts}"],
-			"ignoreDependencies": ["pg", "ioredis"]
+			"ignoreDependencies": ["pg", "ioredis"],
+			"ignoreBinaries": ["dedupe"]
 		},
 		"packages/backend": {
 			"entry": [
@@ -30,7 +21,8 @@
 				"test-server/**/*.ts",
 				"test-federation/**/*.ts",
 				"vitest.config.*.ts"
-			]
+			],
+			"ignoreDependencies": ["@misskey-dev/emoji-assets"]
 		},
 		"packages/frontend": {
 			"entry": [
@@ -44,15 +36,23 @@
 				"src/**/*.stories.meta.ts",
 				"src/features/image-editor/effects/*.ts"
 			],
-			"ignoreDependencies": ["frontend-shared"]
+			"ignoreDependencies": [
+				"frontend-shared",
+				"@misskey-dev/emoji-assets",
+				"react",
+				"react-dom",
+				"vue-tsc",
+				"search-index"
+			],
+			"ignoreBinaries": ["generate.tsx"]
 		},
 		"packages/frontend-embed": {
 			"entry": ["src/boot.ts", "src/workers/*.ts"],
-			"ignoreDependencies": ["frontend-shared", "shiki", "frontend"]
+			"ignoreDependencies": ["frontend-shared", "shiki", "frontend", "@misskey-dev/emoji-assets", "vue-tsc"]
 		},
 		"packages/sw": {
 			"entry": ["src/sw.ts"],
-			"ignoreDependencies": ["frontend-shared"]
+			"ignoreDependencies": ["frontend-shared", "@typescript/lib-webworker"]
 		},
 		"packages/frontend-shared": {
 			"entry": ["utility/**/*.ts", "@types/**/*.ts"],
@@ -67,7 +67,7 @@
 			"entry": ["src/index.ts", "src/const.ts", "scripts/**/*.ts"]
 		},
 		"packages/icons-subsetter": {
-			"ignoreDependencies": ["harfbuzzjs"]
+			"ignoreDependencies": ["harfbuzzjs", "@tabler/icons-webfont"]
 		},
 		"packages/mfm-js": {
 			"ignoreDependencies": ["@microsoft/api-extractor"]
