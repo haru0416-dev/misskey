@@ -241,6 +241,94 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 	});
 
 	// 失敗を握り潰すと、実体の無いオブジェクトを指す DriveFile が DB に残り、API は成功を返すのに URL が 404 になる
+	// リモートユーザーのアバター/バナー取り込みでもこの経路を通る (ap-person)。
+	// これらのストリームを購読するのはローカルのクライアントだけなので、リモート宛は無駄。
+	test('ドライブのストリームはローカルユーザーにだけ流す', async () => {
+		const remoteId = genId();
+		const remoteUser = await createUserWithProfileAndPublickeyInDatabase(db, {
+			user: {
+				id: remoteId,
+				username: `drivestreamremote${remoteId}`,
+				usernameLower: `drivestreamremote${remoteId}`,
+				host: 'remote.example.test',
+				uri: `https://remote.example.test/users/${remoteId}`,
+				isExplorable: false,
+			},
+			profile: { userId: remoteId },
+		});
+
+		const publishMainStream = vi.fn();
+		const publishDriveStream = vi.fn();
+		const update = vi.fn();
+		const buildDeps = (md5: string) =>
+			({
+				config,
+				db,
+				meta,
+				publishMainStream,
+				publishDriveStream,
+				fileInfoService: {
+					getFileInfo: vi.fn(async () => ({
+						size: 16,
+						md5,
+						type: { mime: 'text/plain', ext: 'txt' },
+						width: undefined,
+						height: undefined,
+						orientation: undefined,
+						blurhash: undefined,
+						sensitive: false,
+						porn: false,
+					})),
+				},
+				imageProcessingService: {},
+				videoProcessingService: {},
+				internalStorageService: { del: vi.fn(), saveFromBuffer: vi.fn(), saveFromPath: vi.fn() },
+				// upload の戻り値に Bucket が無いと呼び出し元が中断する。
+				s3Service: {
+					upload: vi.fn(async (_meta: unknown, input: { Key: string }) => ({
+						Bucket: 'test',
+						Key: input.Key,
+						Location: `https://example.test/${input.Key}`,
+					})),
+					delete: vi.fn(async () => ({})),
+				},
+				chartWriters: {
+					driveChart: { update },
+					perUserDriveChart: { update },
+					instanceChart: { updateDrive: update },
+				},
+				logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+			}) as unknown as HonoApiDriveFileUploadDependencies;
+
+		const remotePath = path.join(tempDir, 'stream-remote.bin');
+		const localPath = path.join(tempDir, 'stream-local.bin');
+		await fs.writeFile(remotePath, Buffer.alloc(16));
+		await fs.writeFile(localPath, Buffer.alloc(16));
+
+		try {
+			await addDriveFileForHonoApi(buildDeps('77777777777777777777777777777777'), {
+				user: remoteUser,
+				path: remotePath,
+				force: true,
+			});
+			// publish は fire-and-forget なので、マイクロタスクを回してから見る。
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			expect(publishMainStream, 'リモート宛には流さない').not.toHaveBeenCalled();
+			expect(publishDriveStream, 'リモート宛には流さない').not.toHaveBeenCalled();
+
+			await addDriveFileForHonoApi(buildDeps('88888888888888888888888888888888'), {
+				user,
+				path: localPath,
+				force: true,
+			});
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			expect(publishMainStream).toHaveBeenCalledWith(user.id, 'driveFileCreated', expect.anything());
+			expect(publishDriveStream).toHaveBeenCalledWith(user.id, 'fileCreated', expect.anything());
+		} finally {
+			await deleteUserByIdFromDatabase(db, remoteUser.id);
+		}
+	});
+
 	test('object storage upload failure rejects the request and leaves no drive file behind', async () => {
 		const filePath = path.join(tempDir, 'upload-failure.bin');
 		await fs.writeFile(filePath, Buffer.alloc(1));
