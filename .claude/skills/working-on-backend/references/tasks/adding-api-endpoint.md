@@ -175,7 +175,8 @@ app.post('/foo/show', async (c) => {
 [packages/backend/test/e2e/](../../../../../packages/backend/test/e2e/) の構造は **機能カテゴリごとのファイル分け** (`note.ts` / `users.ts` / `timelines.ts` / `drive.ts` / `clips.ts` / `oauth.ts` 等)。
 
 - 既存のカテゴリファイルがあるなら、そこに `describe('<人間可読ラベル>', () => { test('正常系', ...) })` で追加
-- どのファイルにも合わないなら `test/e2e/endpoints.ts` に追加
+- どのファイルにも合わないなら `test/e2e/endpoints-<領域>.ts` (admin / users / notes / content /
+  drive-channels / admin-emoji / auth / federation) の該当するものに追加
 - `describe` 名は **人間可読 OK**
 
 最小例 (詳細なヘルパー一覧は → [knowledge/backend-testing.md](../knowledge/backend-testing.md)):
@@ -257,5 +258,5 @@ PR に `packages/misskey-js/src/autogen/` 配下の差分が含まれていな�
 - [metas/misc.ts (`ping` — 最小例)](../../../../../packages/backend/src/server/api/metas/misc.ts)
 - [rest/notes-create.ts (errors の典型)](../../../../../packages/backend/src/server/rest/notes-create.ts)
 - [rest/notes.ts (`notes/global-timeline` 相当 — policies 動的チェック)](../../../../../packages/backend/src/server/rest/notes.ts)
-- [test/e2e/endpoints.ts (テスト例)](../../../../../packages/backend/test/e2e/endpoints.ts)
+- [test/e2e/endpoints-users.ts (テスト例)](../../../../../packages/backend/test/e2e/endpoints-users.ts)
 - [test/utils.ts (api/signup/post 等のヘルパー)](../../../../../packages/backend/test/utils.ts)

@@ -20,7 +20,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
 import type { MiUser } from '@/models/User.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { countDatabaseQueries, type QueryCounter } from '../../query-counter.js';
+import { countDatabaseQueries, type QueryCounter } from '../../../query-counter.js';
 import {
 	packChatMessageDetailedForHonoApi,
 	packChatMessagesDetailedForHonoApi,
