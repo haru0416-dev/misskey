@@ -82,7 +82,7 @@
 		"qrcode": "1.5.4",
 		"re2js": "2.8.5",
 		"rss-parser": "3.13.0",
-		"sanitize-html": "2.17.5",
+		"sanitize-html": "2.17.7",
 		"semver": "7.8.5",
 		"sharp": "0.35.2",
 		"slacc": "0.2.0",
