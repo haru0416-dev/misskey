@@ -3,14 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import Chart from '../../core.js';
+import Chart from '@/core/chart/core.js';
 
-export const name = 'test';
+export const name = 'testUnique';
 
 export const schema = {
-	'foo.total': { accumulate: true },
-	'foo.inc': {},
-	'foo.dec': {},
+	foo: { uniqueIncrement: true },
 } as const;
 
 export const entity = Chart.schemaToEntity(name, schema);

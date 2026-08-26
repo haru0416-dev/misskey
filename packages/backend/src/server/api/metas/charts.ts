@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { schema } from '@/core/chart/charts/entities/active-users.js';
-import { schema as schema_2 } from '@/core/chart/charts/entities/ap-request.js';
-import { schema as schema_3 } from '@/core/chart/charts/entities/drive.js';
-import { schema as schema_4 } from '@/core/chart/charts/entities/federation.js';
-import { schema as schema_5 } from '@/core/chart/charts/entities/instance.js';
-import { schema as schema_6 } from '@/core/chart/charts/entities/notes.js';
-import { schema as schema_7 } from '@/core/chart/charts/entities/per-user-drive.js';
-import { schema as schema_8 } from '@/core/chart/charts/entities/per-user-following.js';
-import { schema as schema_9 } from '@/core/chart/charts/entities/per-user-notes.js';
-import { schema as schema_10 } from '@/core/chart/charts/entities/per-user-pv.js';
-import { schema as schema_11 } from '@/core/chart/charts/entities/per-user-reactions.js';
-import { schema as schema_12 } from '@/core/chart/charts/entities/users.js';
+import { schema } from '@/core/chart/entities/active-users.js';
+import { schema as schema_2 } from '@/core/chart/entities/ap-request.js';
+import { schema as schema_3 } from '@/core/chart/entities/drive.js';
+import { schema as schema_4 } from '@/core/chart/entities/federation.js';
+import { schema as schema_5 } from '@/core/chart/entities/instance.js';
+import { schema as schema_6 } from '@/core/chart/entities/notes.js';
+import { schema as schema_7 } from '@/core/chart/entities/per-user-drive.js';
+import { schema as schema_8 } from '@/core/chart/entities/per-user-following.js';
+import { schema as schema_9 } from '@/core/chart/entities/per-user-notes.js';
+import { schema as schema_10 } from '@/core/chart/entities/per-user-pv.js';
+import { schema as schema_11 } from '@/core/chart/entities/per-user-reactions.js';
+import { schema as schema_12 } from '@/core/chart/entities/users.js';
 import { getJsonSchema } from '@/core/chart/core.js';
 import { chartParamDef, instanceChartParamDef, perUserChartParamDef } from '@/server/rest/charts.js';
 
