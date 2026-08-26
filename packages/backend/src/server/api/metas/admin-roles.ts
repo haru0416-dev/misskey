@@ -13,7 +13,7 @@ import {
 	adminRolesUpdateDefaultPoliciesParamDef,
 	adminRolesUpdateParamDef,
 	adminRolesUsersParamDef,
-} from '@/server/rest/admin-roles.js';
+} from '@/server/rest/admin/admin-roles.js';
 
 export const endpointMetas = {
 	'admin/roles/assign': {

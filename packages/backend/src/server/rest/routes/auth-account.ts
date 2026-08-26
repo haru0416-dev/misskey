@@ -5,7 +5,7 @@
 
 import type { Hono } from 'hono';
 import { listActiveInstanceHostsFromDatabase } from '@/core/instance/InstanceStore.js';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
 import {
 	handleHonoApiAntennasCreate,
 	handleHonoApiAntennasDelete,
@@ -14,11 +14,11 @@ import {
 	handleHonoApiAntennasRemoveNote,
 	handleHonoApiAntennasShow,
 	handleHonoApiAntennasUpdate,
-} from '../antennas.js';
-import { handleHonoApiAppCreate, handleHonoApiAppShow } from '../app.js';
-import { handleHonoApiSigninFlow } from '../signin.js';
-import { handleHonoApiSigninWithPasskey } from '../signin-with-passkey.js';
-import { signupPendingWithHonoApi, signupWithHonoApi } from '../signup.js';
+} from '../antenna/antennas.js';
+import { handleHonoApiAppCreate, handleHonoApiAppShow } from '../auth/app.js';
+import { handleHonoApiSigninFlow } from '../auth/signin.js';
+import { handleHonoApiSigninWithPasskey } from '../auth/signin-with-passkey.js';
+import { signupPendingWithHonoApi, signupWithHonoApi } from '../auth/signup.js';
 import { assertHonoApiRateLimit, type HonoApiEndpointRateLimit } from '../rate-limit.js';
 import {
 	jsonResponse,

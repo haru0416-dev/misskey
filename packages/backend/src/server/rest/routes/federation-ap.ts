@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
 import { handleHonoApiEndpoint, handleHonoApiEndpoints } from '../endpoint-info.js';
 import {
@@ -15,12 +15,12 @@ import {
 	handleHonoApiFederationStats,
 	handleHonoApiFederationUsers,
 	normalizeHonoApiFederationQuery,
-} from '../federation.js';
-import { handleHonoApiFetchExternalResources } from '../fetch-external-resources.js';
-import { handleHonoApiApGet, handleHonoApiApShow } from '../ap.js';
-import { handleHonoApiFederationUpdateRemoteUser } from '../ap-person.js';
+} from '../activitypub/federation.js';
+import { handleHonoApiFetchExternalResources } from '../activitypub/fetch-external-resources.js';
+import { handleHonoApiApGet, handleHonoApiApShow } from '../activitypub/ap.js';
+import { handleHonoApiFederationUpdateRemoteUser } from '../activitypub/ap-person.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { isHonoApiAdministrator } from '../role-policy.js';
+import { isHonoApiAdministrator } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,

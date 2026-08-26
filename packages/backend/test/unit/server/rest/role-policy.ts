@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
-import { getHonoApiRolePolicies } from '@/server/rest/role-policy.js';
+import { getHonoApiRolePolicies } from '@/server/rest/role/role-policy.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta, MiRole } from '@/models/_.js';

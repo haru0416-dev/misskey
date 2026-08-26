@@ -9,16 +9,16 @@ import {
 	notesDraftsDeleteParamDef,
 	notesDraftsListParamDef,
 	notesDraftsUpdateParamDef,
-} from '@/server/rest/note-drafts.js';
-import { notesTranslateParamDef } from '@/server/rest/note.js';
-import { notesCreateParamDef } from '@/server/rest/notes-create.js';
-import { notesDeleteParamDef, notesUnrenoteParamDef } from '@/server/rest/notes-delete.js';
-import { notesPollsVoteParamDef } from '@/server/rest/notes-polls-vote.js';
+} from '@/server/rest/note/note-drafts.js';
+import { notesTranslateParamDef } from '@/server/rest/note/note.js';
+import { notesCreateParamDef } from '@/server/rest/note/notes-create.js';
+import { notesDeleteParamDef, notesUnrenoteParamDef } from '@/server/rest/note/notes-delete.js';
+import { notesPollsVoteParamDef } from '@/server/rest/note/notes-polls-vote.js';
 import {
 	notesReactionsParamDef,
 	reactionsCreateParamDef,
 	reactionsDeleteParamDef,
-} from '@/server/rest/notes-reactions.js';
+} from '@/server/rest/note/notes-reactions.js';
 import {
 	noteIdOnlyParamDef,
 	noteIdPaginationParamDef,
@@ -36,7 +36,7 @@ import {
 	notesShowPartialBulkParamDef,
 	notesTimelineParamDef,
 	notesUserListTimelineParamDef,
-} from '@/server/rest/notes.js';
+} from '@/server/rest/note/notes.js';
 import { SECOND, HOUR } from '@/const.js';
 
 export const endpointMetas = {

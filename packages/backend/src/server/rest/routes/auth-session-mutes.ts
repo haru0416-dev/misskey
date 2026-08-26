@@ -10,18 +10,18 @@ import {
 	assertSecureCredential,
 	assertTokenPermission,
 	authenticateHonoApiToken,
-} from '../auth.js';
+} from '../auth/auth.js';
 import {
 	handleHonoApiAuthAccept,
 	handleHonoApiAuthSessionGenerate,
 	handleHonoApiAuthSessionShow,
 	handleHonoApiAuthSessionUserkey,
-} from '../auth-session.js';
+} from '../auth/auth-session.js';
 import {
 	handleHonoApiBlockingCreate,
 	handleHonoApiBlockingDelete,
 	handleHonoApiBlockingList,
-} from '../account-blocking.js';
+} from '../account/account-blocking.js';
 import {
 	handleHonoApiMuteCreate,
 	handleHonoApiMuteDelete,
@@ -29,7 +29,7 @@ import {
 	handleHonoApiRenoteMuteCreate,
 	handleHonoApiRenoteMuteDelete,
 	handleHonoApiRenoteMuteList,
-} from '../account-mutes.js';
+} from '../account/account-mutes.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import {
 	jsonResponse,

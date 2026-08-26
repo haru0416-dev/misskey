@@ -29,12 +29,12 @@ import {
 	handleHonoApiAdminUnsuspendUser,
 	handleHonoQueueUserSuspensionPostEffects,
 	type HonoApiAdminUserSuspensionDependencies,
-} from '@/server/rest/admin-user-suspension.js';
-import { createNoteForHonoApi, type HonoApiNotesCreateDependencies } from '@/server/rest/notes-create.js';
+} from '@/server/rest/admin/admin-user-suspension.js';
+import { createNoteForHonoApi, type HonoApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
 import { handleHonoQueueDeliver } from '@/queue/handlers/deliver.js';
 import { handleHonoQueueRelationshipUnfollow } from '@/queue/handlers/relationship.js';
 import type { DeliverJobData, RelationshipJobData } from '@/queue/types.js';
-import { resolveNotificationStreamId, toXListId, xaddHonoApiNotification } from '@/server/rest/notification.js';
+import { resolveNotificationStreamId, toXListId, xaddHonoApiNotification } from '@/server/rest/notification/notification.js';
 
 describe('durable reliability boundaries', () => {
 	let runtime: RuntimeDependencies;

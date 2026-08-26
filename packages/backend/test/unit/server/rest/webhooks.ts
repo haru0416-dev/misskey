@@ -8,7 +8,7 @@ import type { Config } from '@/config.js';
 import type { UserWebhookDeliverQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { HonoApiWebhookTestDependencies } from '@/server/rest/webhooks.js';
+import type { HonoApiWebhookTestDependencies } from '@/server/rest/webhook/webhooks.js';
 
 const { fetchWebhookMock } = vi.hoisted(() => ({
 	fetchWebhookMock: vi.fn(),
@@ -18,11 +18,11 @@ vi.mock('@/core/webhook/WebhookStore.js', () => ({
 	fetchWebhookByIdAndUserIdFromDatabase: fetchWebhookMock,
 }));
 
-vi.mock('@/server/rest/note.js', () => ({
+vi.mock('@/server/rest/note/note.js', () => ({
 	populateEmojis: vi.fn().mockResolvedValue({}),
 }));
 
-import { handleHonoApiIWebhooksTest } from '@/server/rest/webhooks.js';
+import { handleHonoApiIWebhooksTest } from '@/server/rest/webhook/webhooks.js';
 
 describe('i/webhooks/test REST handler', () => {
 	const me = { id: 'webhook-owner' } as MiLocalUser;

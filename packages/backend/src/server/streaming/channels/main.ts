@@ -6,7 +6,7 @@
 import { isInstanceMuted, isUserFromMutedInstance } from '@/misc/is-instance-muted.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { packNoteForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
+import { packNoteForHonoApi, type HonoApiNoteDependencies } from '@/server/rest/note/note.js';
 import {
 	isNoteMutedOrBlockedForHonoStream,
 	isNoteVisibleForMeForHonoStream,

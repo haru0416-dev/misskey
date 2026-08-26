@@ -8,7 +8,7 @@ import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
 import { rateLimitExceededError } from './error.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role-policy.js';
+import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role/role-policy.js';
 
 export type HonoApiRateLimitDependencies = {
 	config: Config;

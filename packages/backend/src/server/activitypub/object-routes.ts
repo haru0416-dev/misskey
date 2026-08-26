@@ -25,8 +25,8 @@ import {
 	listUsersByIdsFromDatabase,
 	fetchRemoteUserByIdFromDatabase,
 } from '@/core/user/UserStore.js';
-import { renderEmoji, renderLikeForHonoApi } from '../rest/notes-ap.js';
-import { renderFollow } from '../rest/following.js';
+import { renderEmoji, renderLikeForHonoApi } from '@/server/rest/activitypub/notes-ap.js';
+import { renderFollow } from '@/server/rest/user/following.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
 import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
 import { fetchNoteReactionByIdFromDatabase } from '@/core/note/NoteReactionStore.js';
@@ -38,14 +38,14 @@ import * as Acct from '@/misc/acct.js';
 import { query as urlQuery } from '@/misc/prelude/url.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { getFanoutTimelineNotesForHonoApi } from '../rest/fanout-timeline.js';
+import { getFanoutTimelineNotesForHonoApi } from '@/server/rest/note/fanout-timeline.js';
 import {
 	renderKeyForHonoApi,
 	renderPersonForHonoApi,
 	type HonoApiAccountUpdateDependencies,
-} from '../rest/account-update.js';
-import { getUserUri, isRemoteUser } from '../rest/following.js';
-import { renderNoteForHonoApi, renderNoteOrRenoteActivityForHonoApi } from '../rest/notes-ap.js';
+} from '@/server/rest/account/account-update.js';
+import { getUserUri, isRemoteUser } from '@/server/rest/user/following.js';
+import { renderNoteForHonoApi, renderNoteOrRenoteActivityForHonoApi } from '@/server/rest/activitypub/notes-ap.js';
 import { isRenote, isQuote } from '@/misc/is-renote.js';
 
 export type ApObjectRoutesDependencies = HonoApiAccountUpdateDependencies & {

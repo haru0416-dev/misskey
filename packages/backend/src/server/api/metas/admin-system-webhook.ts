@@ -10,7 +10,7 @@ import {
 	adminSystemWebhookShowParamDef,
 	adminSystemWebhookTestParamDef,
 	adminSystemWebhookUpdateParamDef,
-} from '@/server/rest/admin-system-webhooks.js';
+} from '@/server/rest/admin/admin-system-webhooks.js';
 import { MINUTE } from '@/const.js';
 
 export const endpointMetas = {

@@ -16,7 +16,7 @@ import { schema as schema_10 } from '@/core/chart/entities/per-user-pv.js';
 import { schema as schema_11 } from '@/core/chart/entities/per-user-reactions.js';
 import { schema as schema_12 } from '@/core/chart/entities/users.js';
 import { getJsonSchema } from '@/core/chart/core.js';
-import { chartParamDef, instanceChartParamDef, perUserChartParamDef } from '@/server/rest/charts.js';
+import { chartParamDef, instanceChartParamDef, perUserChartParamDef } from '@/server/rest/chart/charts.js';
 
 export const endpointMetas = {
 	'charts/active-users': {

@@ -10,7 +10,7 @@ import {
 	galleryPostsParamDef,
 	galleryPostsPostIdParamDef,
 	galleryPostsUpdateParamDef,
-} from '@/server/rest/gallery.js';
+} from '@/server/rest/gallery/gallery.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {

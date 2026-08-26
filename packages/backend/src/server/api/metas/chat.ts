@@ -28,7 +28,7 @@ import {
 	chatRoomsOwnedParamDef,
 	chatRoomsShowParamDef,
 	chatRoomsUpdateParamDef,
-} from '@/server/rest/chat.js';
+} from '@/server/rest/chat/chat.js';
 import { z } from 'zod';
 import { HOUR, DAY } from '@/const.js';
 

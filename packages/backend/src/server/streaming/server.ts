@@ -10,7 +10,7 @@ import * as WebSocket from 'ws';
 import type * as Redis from 'ioredis';
 import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
 import { HonoApiError } from '../rest/error.js';
-import { authenticateHonoApiToken } from '../rest/auth.js';
+import { authenticateHonoApiToken } from '@/server/rest/auth/auth.js';
 import {
 	HonoStreamConnection,
 	refreshHonoStreamConnections,

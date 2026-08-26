@@ -63,7 +63,7 @@ import { queueOutbox, type QueueOutboxInsert } from '@/db/schema/queue-outbox.js
 import { userIp, type UserIpInsert } from '@/db/schema/user-ip.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase } from '@/drizzle.js';
 import { resetDatabase, runMigrations } from '@/migration-runner.js';
-import { createLocalSignupAccount as createLocalSignupAccountImpl } from '@/server/rest/signup.js';
+import { createLocalSignupAccount as createLocalSignupAccountImpl } from '@/server/rest/auth/signup.js';
 
 const config = loadConfig();
 const testDatabase = Symbol('testDatabase');

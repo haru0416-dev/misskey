@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { antennaUsersIncludes } from '@/server/rest/antennas.js';
+import { antennaUsersIncludes } from '@/server/rest/antenna/antennas.js';
 
 const config = { runtime: { host: 'local.example' } };
 

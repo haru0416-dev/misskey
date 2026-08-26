@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { federationUpdateRemoteUserParamDef } from '@/server/rest/ap-person.js';
+import { federationUpdateRemoteUserParamDef } from '@/server/rest/activitypub/ap-person.js';
 import {
 	federationHostFollowingParamDef,
 	federationInstancesParamDef,
 	federationShowInstanceParamDef,
 	federationStatsParamDef,
 	federationUsersParamDef,
-} from '@/server/rest/federation.js';
+} from '@/server/rest/activitypub/federation.js';
 
 export const endpointMetas = {
 	'federation/followers': {

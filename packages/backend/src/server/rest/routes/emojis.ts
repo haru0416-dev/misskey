@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertSecureCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
 import {
 	handleHonoApiAdminEmojiAdd,
 	handleHonoApiAdminEmojiAddAliasesBulk,
@@ -22,7 +22,7 @@ import {
 	handleHonoApiEmoji,
 	handleHonoApiEmojis,
 	handleHonoApiV2AdminEmojiList,
-} from '../emojis.js';
+} from '../emoji/emojis.js';
 import {
 	jsonResponse,
 	emptyResponse,

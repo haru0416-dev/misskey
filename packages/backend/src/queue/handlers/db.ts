@@ -81,21 +81,21 @@ import { queueRetentionOptions } from '@/queue/const.js';
 import {
 	addDriveFileForHonoApi,
 	type HonoApiDriveFileUploadDependencies,
-} from '../../server/rest/drive-file-upload.js';
-import { packDriveFileManyByIdsForHonoApi } from '../../server/rest/drive-file.js';
-import { isSelfHost } from '../../server/rest/ap-resolve.js';
+} from '@/server/rest/drive/drive-file-upload.js';
+import { packDriveFileManyByIdsForHonoApi } from '@/server/rest/drive/drive-file.js';
+import { isSelfHost } from '@/server/rest/activitypub/ap-resolve.js';
 import {
 	resolveUserForHonoApi,
 	toPunyForHonoApi,
 	type HonoApiApPersonDependencies,
-} from '../../server/rest/ap-person.js';
+} from '@/server/rest/activitypub/ap-person.js';
 import type { HonoApiInternalEventPublisher } from '../../server/rest/events.js';
 import {
 	createExportCompletedNotification,
 	type HonoApiNotificationDependencies,
-} from '../../server/rest/notification.js';
-import { addUserListMemberForHonoApi, type HonoApiUsersListsDependencies } from '../../server/rest/users-lists.js';
-import { isHonoApiModerator } from '../../server/rest/role-policy.js';
+} from '@/server/rest/notification/notification.js';
+import { addUserListMemberForHonoApi, type HonoApiUsersListsDependencies } from '@/server/rest/user/users-lists.js';
+import { isHonoApiModerator } from '@/server/rest/role/role-policy.js';
 import {
 	deleteFileSyncForHonoApi,
 	deleteObjectStorageFileForHonoApi,

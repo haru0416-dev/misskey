@@ -20,15 +20,15 @@ import {
 	getUserFromApIdForHonoApi,
 	isFederationAllowedHost,
 	type HonoApiAuthUser,
-} from '../../server/rest/ap-resolve.js';
-import { getAuthUserFromApIdForHonoApi, resolvePersonForHonoApi } from '../../server/rest/ap-person.js';
+} from '@/server/rest/activitypub/ap-resolve.js';
+import { getAuthUserFromApIdForHonoApi, resolvePersonForHonoApi } from '@/server/rest/activitypub/ap-person.js';
 import {
 	fetchFederatedInstance,
 	fetchOrRegisterFederatedInstance,
 	tryLockFetchInstanceMetadata,
 	unlockFetchInstanceMetadata,
 	updateFederatedInstance,
-} from '../../server/rest/federation.js';
+} from '@/server/rest/activitypub/federation.js';
 import { performActivityForHonoApi, type HonoApiInboxDependencies } from '../../server/activitypub/inbox-dispatch.js';
 
 export type HonoQueueInboxDependencies = HonoApiInboxDependencies;

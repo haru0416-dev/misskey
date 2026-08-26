@@ -4,8 +4,8 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
-import { handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite } from '../favorites.js';
+import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
+import { handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite } from '../favorite/favorites.js';
 import {
 	handleHonoApiClipsAddNote,
 	handleHonoApiClipsCreate,
@@ -16,7 +16,7 @@ import {
 	handleHonoApiClipsRemoveNote,
 	handleHonoApiClipsShow,
 	handleHonoApiClipsUpdate,
-} from '../clips.js';
+} from '../clip/clips.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import {
 	jsonResponse,

@@ -21,7 +21,7 @@ import { createUserListMembershipInDatabase } from '@/core/user/UserListMembersh
 import { createAntennaInDatabase } from '@/core/antenna/AntennaStore.js';
 import { createRoleInDatabase } from '@/core/role/RoleStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { packNoteForHonoApi } from '@/server/rest/note.js';
+import { packNoteForHonoApi } from '@/server/rest/note/note.js';
 import { HonoStreamConnection, type HonoStreamConnectionDependencies } from '@/server/streaming/connection.js';
 import type { MiUser } from '@/models/User.js';
 

@@ -56,7 +56,7 @@ vi.mock('@/core/user/RenoteMutingStore.js', () => ({
 	listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase: listRenoteMuteesMock,
 }));
 
-import { handleHonoApiUsersRelation } from '@/server/rest/user.js';
+import { handleHonoApiUsersRelation } from '@/server/rest/user/user.js';
 
 const ids = Array.from({ length: 9 }, (_, index) => `019f587c6bc4785ead8d511d603959f${index}`);
 const [

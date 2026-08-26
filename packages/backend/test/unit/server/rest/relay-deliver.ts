@@ -15,7 +15,7 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
-import { attachLdSignatureForHonoApi, deliverToRelaysForHonoApi } from '@/server/rest/notes-ap.js';
+import { attachLdSignatureForHonoApi, deliverToRelaysForHonoApi } from '@/server/rest/activitypub/notes-ap.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
