@@ -10,6 +10,7 @@ import {
 	login,
 	registerUser,
 	resetState,
+	seedE2eLocalStorage,
 	type TestUser,
 	waitForPageCarryoverGuard,
 } from '../support/helpers';
@@ -181,9 +182,7 @@ async function setupUsers(page: Page): Promise<{ admin: TestUser; alice: TestUse
 async function loginAs(browser: Browser, username: string, password: string): Promise<Page> {
 	const context = await browser.newContext({ locale: 'ja-JP' });
 	try {
-		await context.addInitScript(() => {
-			window.localStorage.setItem('__MISSKEY_E2E_TEST__', 'true');
-		});
+		await context.addInitScript(seedE2eLocalStorage);
 		const page = await context.newPage();
 		await login(page, username, password);
 		await closeInitialUserSetup(page);
