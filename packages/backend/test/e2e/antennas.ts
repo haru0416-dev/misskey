@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
 	api,
 	failedApiCall,
+	POLL,
 	post,
 	role,
 	signup,
@@ -463,17 +463,25 @@ describe('アンテナ', () => {
 	});
 
 	describe('のノート', () => {
-		// アンテナへの振り分けは note 作成時に await されない副作用のため、期待件数に達するまで
-		// 有界ポーリングで待つ (期待0件の場合は短い猶予後に読む)。
+		// アンテナへの振り分けは note 作成時に await されない副作用のため、期待件数が揃うまで待つ
+		// (期待0件の場合は「流れ込まないこと」を見るので、短い猶予を置いてから読む)。
 		const waitForAntennaNotes = async (user: typeof alice, antennaId: string, expectedCount: number) => {
 			if (expectedCount === 0) {
 				await new Promise((resolve) => setTimeout(resolve, 300));
 			} else {
-				for (let i = 0; i < 30; i++) {
-					const response = await successfulApiCall({ endpoint: 'antennas/notes', parameters: { antennaId }, user });
-					if (response.length >= expectedCount) return response;
-					await new Promise((resolve) => setTimeout(resolve, 100));
-				}
+				// antennas/notes の既定 limit は 10。期待件数がそれを超えるときは数えるぶんだけ明示して取る
+				// (元の実装は件数に届かないまま打ち切って続行しており、待ちが空振りしていた)。
+				await vi.waitFor(
+					async () => {
+						const counted = await successfulApiCall({
+							endpoint: 'antennas/notes',
+							parameters: { antennaId, limit: Math.max(expectedCount, 10) },
+							user,
+						});
+						expect(counted.length).toBeGreaterThanOrEqual(expectedCount);
+					},
+					{ ...POLL, timeout: 10_000 },
+				);
 			}
 			return await successfulApiCall({ endpoint: 'antennas/notes', parameters: { antennaId }, user });
 		};
@@ -980,21 +988,18 @@ describe('アンテナ', () => {
 
 			await successfulApiCall({ endpoint: 'antennas/notes', parameters: { antennaId: antenna.id }, user: alice });
 
-			// isActive の書き戻しは await されないため有界ポーリングで確認する
-			let shown = await successfulApiCall({
-				endpoint: 'antennas/show',
-				parameters: { antennaId: antenna.id },
-				user: alice,
-			});
-			for (let i = 0; i < 30 && !shown.isActive; i++) {
-				await new Promise((resolve) => setTimeout(resolve, 100));
-				shown = await successfulApiCall({
-					endpoint: 'antennas/show',
-					parameters: { antennaId: antenna.id },
-					user: alice,
-				});
-			}
-			expect(shown.isActive).toBe(true);
+			// isActive の書き戻しは await されないため、反映されるまで待つ
+			await vi.waitFor(
+				async () => {
+					const shown = await successfulApiCall({
+						endpoint: 'antennas/show',
+						parameters: { antennaId: antenna.id },
+						user: alice,
+					});
+					expect(shown.isActive).toBe(true);
+				},
+				{ ...POLL, timeout: 10_000 },
+			);
 		});
 	});
 });

@@ -9,7 +9,7 @@
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { EventEmitter } from 'node:events';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
@@ -33,11 +33,7 @@ function channelMessages(raw: string[]): { id: string; type: string; body: unkno
 const testEv = globalEventBus;
 
 async function waitUntil(condition: () => boolean, timeoutMs = 2000, intervalMs = 20): Promise<void> {
-	const start = Date.now();
-	while (!condition()) {
-		if (Date.now() - start > timeoutMs) return;
-		await new Promise((resolve) => setTimeout(resolve, intervalMs));
-	}
+	await vi.waitFor(() => expect(condition()).toBe(true), { timeout: timeoutMs, interval: intervalMs });
 }
 
 describe('hono-stream-connection: stats channels', () => {

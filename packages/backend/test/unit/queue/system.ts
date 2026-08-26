@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Redis from 'ioredis';
 import { loadConfig } from '@/config.js';

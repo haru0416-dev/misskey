@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
@@ -99,13 +98,16 @@ describe('hono-queue-ended-poll-notification', () => {
 		publishedNotifications.length = 0;
 		await handleHonoQueueEndedPollNotification(deps, fakeJob({ noteId }));
 
-		// trackPromise による fire-and-forget のため、publishMainStream の呼び出し完了をポーリングで待つ。
-		for (let i = 0; i < 20 && publishedNotifications.length < 2; i++) {
-			await new Promise((resolve) => setTimeout(resolve, 100));
-		}
-
-		expect(publishedNotifications.filter((n) => n.userId === authorId && n.type === 'notification')).toHaveLength(1);
-		expect(publishedNotifications.filter((n) => n.userId === voterId && n.type === 'notification')).toHaveLength(1);
+		// trackPromise による fire-and-forget のため、publishMainStream の呼び出し完了を待つ。
+		await vi.waitFor(
+			() => {
+				expect(publishedNotifications.filter((n) => n.userId === authorId && n.type === 'notification')).toHaveLength(
+					1,
+				);
+				expect(publishedNotifications.filter((n) => n.userId === voterId && n.type === 'notification')).toHaveLength(1);
+			},
+			{ timeout: 5_000, interval: 100 },
+		);
 	});
 
 	test('hasPollがfalseのノートは何もしない', async () => {

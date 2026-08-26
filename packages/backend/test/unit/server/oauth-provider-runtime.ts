@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import * as htmlParser from 'node-html-parser';
 import { describe, expect, test } from 'vitest';
 import { createS256CodeChallenge } from '@/misc/pkce.js';

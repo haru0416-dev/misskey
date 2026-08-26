@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import * as assert from 'assert';
 import { describe, expect, test } from 'vitest';
 import { relativeFetch } from '../utils.js';

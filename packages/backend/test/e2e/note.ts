@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import * as assert from 'assert';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
