@@ -34,7 +34,10 @@ import {
 	updateChannelInDatabase,
 } from '@/core/channel/ChannelStore.js';
 import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/drive/DriveFileStore.js';
+import {
+	fetchDriveFileByIdAndUserIdFromDatabase,
+	listDriveFilesByIdsFromDatabase,
+} from '@/core/drive/DriveFileStore.js';
 import { listChannelTimelineNotesFromDatabase, listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

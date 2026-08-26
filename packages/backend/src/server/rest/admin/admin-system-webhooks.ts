@@ -10,7 +10,10 @@ import {
 	updateSystemWebhookWithSideEffects,
 } from '@/core/webhook/SystemWebhookLogic.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
-import { fetchSystemWebhookByIdFromDatabase, listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
+import {
+	fetchSystemWebhookByIdFromDatabase,
+	listSystemWebhooksFromDatabase,
+} from '@/core/webhook/SystemWebhookStore.js';
 import { NoSuchSystemWebhookForTestError, testSystemWebhookWithQueue } from '@/core/webhook/SystemWebhookTestLogic.js';
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { Config } from '@/config.js';

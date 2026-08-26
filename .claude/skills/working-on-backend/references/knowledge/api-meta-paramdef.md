@@ -52,11 +52,11 @@
 | 管理者必須 | (省略) | (省略) | `true` | **必須** (例: `'write:admin:emoji'`) |
 | Misskey 本体専用 (`secure: true`) | 任意 | 任意 | 任意 | **不要** (型 union で除外) |
 
-ルート側でモデレーター/管理者判定を行うには [role-policy.ts](../../../../../packages/backend/src/server/rest/role-policy.ts) の `isHonoApiModerator(deps, user)` / `isHonoApiAdministrator(deps, user)` を呼ぶ (root ユーザーは常に true を返す)。
+ルート側でモデレーター/管理者判定を行うには [role-policy.ts](../../../../../packages/backend/src/server/rest/role/role-policy.ts) の `isHonoApiModerator(deps, user)` / `isHonoApiAdministrator(deps, user)` を呼ぶ (root ユーザーは常に true を返す)。
 
 加えて以下も使える:
 
-- **`requiredRolePolicy: 'canCreateChannel'`** — 特定のロールポリシーが許可されているユーザーだけに絞る。ルート側では [role-policy.ts](../../../../../packages/backend/src/server/rest/role-policy.ts) の `getHonoApiRolePolicies(deps, user)` を呼んで `policies.<policyName>` を判定する ([server/rest/notes.ts](../../../../../packages/backend/src/server/rest/notes.ts) の `notes/global-timeline` 相当処理が `policies.gtlAvailable` をこの方法でチェックしている)。匿名ユーザーにも判定したい場合は `user` に `null` を渡せる (`getHonoApiRolePolicies` は `user: MiUser | null` を受け付ける)。ロールポリシーの型一覧は [`role-policies.ts`](../../../../../packages/backend/src/core/role-policies.ts) の `RolePolicies` を参照
+- **`requiredRolePolicy: 'canCreateChannel'`** — 特定のロールポリシーが許可されているユーザーだけに絞る。ルート側では [role-policy.ts](../../../../../packages/backend/src/server/rest/role/role-policy.ts) の `getHonoApiRolePolicies(deps, user)` を呼んで `policies.<policyName>` を判定する ([server/rest/notes.ts](../../../../../packages/backend/src/server/rest/note/notes.ts) の `notes/global-timeline` 相当処理が `policies.gtlAvailable` をこの方法でチェックしている)。匿名ユーザーにも判定したい場合は `user` に `null` を渡せる (`getHonoApiRolePolicies` は `user: MiUser | null` を受け付ける)。ロールポリシーの型一覧は [`role-policies.ts`](../../../../../packages/backend/src/core/role/role-policies.ts) の `RolePolicies` を参照
 - **`secure: true`** — Misskey 本体フロントエンドからしか叩けないようにする (OAuth トークンで叩けなくなる)。上記の通り `kind` は不要
 
 ## `kind` の値
@@ -170,7 +170,7 @@ export const notesShowParamDef = z.object({
 
 ### ページネーション (sinceId / untilId / limit)
 
-[server/rest/i.ts](../../../../../packages/backend/src/server/rest/i.ts) の `iSigninHistoryParamDef`:
+[server/rest/i.ts](../../../../../packages/backend/src/server/rest/account/i.ts) の `iSigninHistoryParamDef`:
 
 ```ts
 export const iSigninHistoryParamDef = z.object({
@@ -353,7 +353,7 @@ PR レビューで頻発するミスを「**症状 → 原因 → 修正**」で
 
 - **症状**: API を匿名で叩くと 500 + `TypeError: Cannot read properties of null (reading 'id')`
 - **原因**: ハンドラが `user.id` を非null前提でアクセスしているのに、ルート側で `assertCredential` を呼んでいない
-- **修正**: 静的に必須ポリシーを宣言するなら `requireCredential: true` + ルートで `assertCredential` を必ず併用する。匿名ユーザーにも違うポリシーセットを適用したいなら、`getHonoApiRolePolicies(deps, user)` の `user` に `null` を渡して判定する ([server/rest/notes.ts](../../../../../packages/backend/src/server/rest/notes.ts) の `notes/global-timeline` 相当パターン)
+- **修正**: 静的に必須ポリシーを宣言するなら `requireCredential: true` + ルートで `assertCredential` を必ず併用する。匿名ユーザーにも違うポリシーセットを適用したいなら、`getHonoApiRolePolicies(deps, user)` の `user` に `null` を渡して判定する ([server/rest/notes.ts](../../../../../packages/backend/src/server/rest/note/notes.ts) の `notes/global-timeline` 相当パターン)
 
 ### 13. e2e テストが起動しない
 

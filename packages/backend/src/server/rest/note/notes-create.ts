@@ -109,9 +109,16 @@ import {
 } from './note.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiNotification } from '@/models/Notification.js';
-import { getHonoApiRolePolicies, getHonoApiUserRoles, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
+import {
+	getHonoApiRolePolicies,
+	getHonoApiUserRoles,
+	type HonoApiRolePolicyDependencies,
+} from '../role/role-policy.js';
 import { pushSwNotificationForHonoApi } from '../notification/push-notification.js';
-import { packNotificationForHonoApi, type HonoApiNotificationsListDependencies } from '../notification/notifications-list.js';
+import {
+	packNotificationForHonoApi,
+	type HonoApiNotificationsListDependencies,
+} from '../notification/notifications-list.js';
 import { xaddHonoApiNotifications, type HonoApiNotificationDependencies } from '../notification/notification.js';
 import { packUserLiteForHonoApi } from '../user/user.js';
 import type {
