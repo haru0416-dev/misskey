@@ -4,9 +4,9 @@
  */
 
 import { z } from 'zod';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
-import { listSigninHistoryFromDatabase, type SigninHistoryOrder } from '@/core/SigninStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
+import { listSigninHistoryFromDatabase, type SigninHistoryOrder } from '@/core/account/SigninStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';

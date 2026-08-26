@@ -7,7 +7,7 @@ import { ReplyError, type Redis } from 'ioredis';
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import { fetchUserProfileByUserIdFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';

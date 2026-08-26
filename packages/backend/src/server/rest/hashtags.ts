@@ -10,13 +10,13 @@ import {
 	listHashtagsFromDatabase,
 	searchHashtagNamesFromDatabase,
 	type HashtagSort,
-} from '@/core/HashtagStore.js';
+} from '@/core/hashtag/HashtagStore.js';
 import {
 	listUsersByTagFromDatabase,
 	type UserListOrigin,
 	type UserListSort,
 	type UserListState,
-} from '@/core/UserStore.js';
+} from '@/core/user/UserStore.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
 import type { Packed } from '@/misc/json-schema.js';

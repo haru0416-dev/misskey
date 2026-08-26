@@ -4,14 +4,14 @@
  */
 
 import type * as Redis from 'ioredis';
-import { listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
-import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { listChannelsByIdsFromDatabase } from '@/core/channel/ChannelStore.js';
+import { listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
 import {
 	fanoutViewerRelationKinds,
 	fetchViewerRelationSnapshotFromDatabase,
 	viewerRelationSnapshotCovers,
-} from '@/core/ViewerRelationStore.js';
+} from '@/core/user/ViewerRelationStore.js';
 import { isChannelRelated } from '@/misc/is-channel-related.js';
 import { isInstanceMuted } from '@/misc/is-instance-muted.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
@@ -22,7 +22,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
-import type { ViewerRelationSnapshot } from '@/core/ViewerRelationStore.js';
+import type { ViewerRelationSnapshot } from '@/core/user/ViewerRelationStore.js';
 
 export type FanoutTimelineReadDependencies = {
 	db: MiDrizzleDatabase;

@@ -4,12 +4,12 @@
  */
 
 import { z } from 'zod';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
-import { listVisibleNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { listNoteReactionsByUserIdFromDatabase, resolveNoteReactionPagination } from '@/core/NoteReactionStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
+import { listVisibleNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+import { listNoteReactionsByUserIdFromDatabase, resolveNoteReactionPagination } from '@/core/note/NoteReactionStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isUserRelated } from '@/misc/is-user-related.js';

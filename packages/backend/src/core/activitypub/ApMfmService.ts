@@ -4,7 +4,7 @@
  */
 
 import * as mfm from 'mfm-js';
-import { MfmService } from '@/core/MfmService.js';
+import { MfmService } from '@/core/mfm/MfmService.js';
 import type { MiNote } from '@/models/Note.js';
 import { extractApHashtagObjects } from './models/tag.js';
 import type { IObject } from './type.js';

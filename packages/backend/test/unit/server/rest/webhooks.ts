@@ -5,7 +5,7 @@
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Config } from '@/config.js';
-import type { UserWebhookDeliverQueue } from '@/core/queues.js';
+import type { UserWebhookDeliverQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiWebhookTestDependencies } from '@/server/rest/webhooks.js';
@@ -14,7 +14,7 @@ const { fetchWebhookMock } = vi.hoisted(() => ({
 	fetchWebhookMock: vi.fn(),
 }));
 
-vi.mock('@/core/WebhookStore.js', () => ({
+vi.mock('@/core/webhook/WebhookStore.js', () => ({
 	fetchWebhookByIdAndUserIdFromDatabase: fetchWebhookMock,
 }));
 

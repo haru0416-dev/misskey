@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { startDriveFileDeletion, type DriveFileDeletionDependencies } from '@/core/DriveFileDeletionLogic.js';
+import { startDriveFileDeletion, type DriveFileDeletionDependencies } from '@/core/drive/DriveFileDeletionLogic.js';
 import {
 	fetchDriveFileByIdFromDatabase,
 	fetchDriveFileByUrlFromDatabase,
@@ -15,15 +15,15 @@ import {
 	updateDriveFileInDatabase,
 	updateDriveFilesFolderByIdsAndUserIdInDatabase,
 	type DriveFileUpdate,
-} from '@/core/DriveFileStore.js';
-import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/DriveFolderStore.js';
-import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } from '@/core/ChatMessageStore.js';
-import type { InternalStorageService } from '@/core/InternalStorageService.js';
-import { logModerationEventInDatabase, logModerationEventWithIdInDatabase } from '@/core/ModerationLogLogic.js';
-import { listNotesByAttachedFileIdFromDatabase } from '@/core/NoteStore.js';
-import type { DbQueue, ObjectStorageQueue } from '@/core/queues.js';
+} from '@/core/drive/DriveFileStore.js';
+import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/drive/DriveFolderStore.js';
+import { listChatMessagesByFileIdFromDatabase, resolveChatMessagePagination } from '@/core/chat/ChatMessageStore.js';
+import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
+import { logModerationEventInDatabase, logModerationEventWithIdInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { listNotesByAttachedFileIdFromDatabase } from '@/core/note/NoteStore.js';
+import type { DbQueue, ObjectStorageQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';

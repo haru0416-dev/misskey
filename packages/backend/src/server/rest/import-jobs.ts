@@ -5,14 +5,14 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { addDbJob, type DbQueue } from '@/core/queues.js';
+import { addDbJob, type DbQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import type { DownloadService } from '@/core/DownloadService.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { countAntennasByUserIdFromDatabase, createAntennasWithinLimitInDatabase } from '@/core/AntennaStore.js';
-import { exportedAntennasSchema, importedAntennaToCreateValues } from '@/core/AntennaImport.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
-import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { countAntennasByUserIdFromDatabase, createAntennasWithinLimitInDatabase } from '@/core/antenna/AntennaStore.js';
+import { exportedAntennasSchema, importedAntennaToCreateValues } from '@/core/antenna/AntennaImport.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiLocalUser } from '@/models/User.js';

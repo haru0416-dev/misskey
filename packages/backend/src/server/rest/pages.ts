@@ -5,15 +5,15 @@
 
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import { adjustNotesPageCountInDatabase } from '@/core/NoteStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { adjustNotesPageCountInDatabase } from '@/core/note/NoteStore.js';
 import {
 	fetchPageLikeByIdOrFailFromDatabase,
 	listLikedPageIdsByUserIdAndPageIdsFromDatabase,
 	listPageLikesByUserIdFromDatabase,
 	pageLikeExistsInDatabase,
-} from '@/core/PageLikeStore.js';
+} from '@/core/page/PageLikeStore.js';
 import {
 	createPageInDatabase,
 	deletePageInDatabase,
@@ -27,8 +27,8 @@ import {
 	resolvePagePagination,
 	updatePageContentInDatabase,
 	updatePageInDatabase,
-} from '@/core/PageStore.js';
-import { fetchLocalUserByUsernameFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+} from '@/core/page/PageStore.js';
+import { fetchLocalUserByUsernameFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';

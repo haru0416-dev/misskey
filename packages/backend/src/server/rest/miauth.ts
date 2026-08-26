@@ -8,9 +8,9 @@ import {
 	createAccessTokenInDatabase,
 	fetchAccessTokenBySessionFromDatabase,
 	markAccessTokenFetchedInDatabase,
-} from '@/core/AccessTokenStore.js';
+} from '@/core/app/AccessTokenStore.js';
 import type { Config } from '@/config.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';

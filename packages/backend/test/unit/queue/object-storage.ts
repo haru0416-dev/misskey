@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
+import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	deleteFileSyncForHonoApi,

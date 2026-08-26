@@ -9,8 +9,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type * as Redis from 'ioredis';
-import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
-import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
+import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
+import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
 import {
 	createFollowRequestInDatabase,
 	deleteFollowRequestByIdFromDatabase,
@@ -20,7 +20,7 @@ import {
 	listAllFollowRequestsByFolloweeIdFromDatabase,
 	listFollowRequestsByFolloweeIdFromDatabase,
 	listFollowRequestsByFollowerIdFromDatabase,
-} from '@/core/FollowRequestStore.js';
+} from '@/core/user/FollowRequestStore.js';
 import type { FollowRequestRow } from '@/db/schema/follow-request.js';
 import {
 	countNonMovedFolloweesByFollowerIdFromDatabase,
@@ -35,13 +35,13 @@ import {
 	listFollowingsByFollowerIdWithPaginationFromDatabase,
 	updateFollowingByIdInDatabase,
 	updateFollowingsByFollowerIdInDatabase,
-} from '@/core/FollowingStore.js';
+} from '@/core/user/FollowingStore.js';
 import {
 	adjustInstanceFollowersCountFromDatabase,
 	adjustInstanceFollowingCountFromDatabase,
-} from '@/core/InstanceStore.js';
-import { mutingExistsInDatabase } from '@/core/MutingStore.js';
-import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
+} from '@/core/instance/InstanceStore.js';
+import { mutingExistsInDatabase } from '@/core/user/MutingStore.js';
+import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queue/queues.js';
 import {
 	adjustUserFollowersCountInDatabase,
 	adjustUserFollowingCountInDatabase,
@@ -50,15 +50,15 @@ import {
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
 	updateUserInDatabase,
-} from '@/core/UserStore.js';
+} from '@/core/user/UserStore.js';
 import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	listFollowingUsersByBirthdayDateFromDatabase,
-} from '@/core/UserProfileStore.js';
+} from '@/core/user/UserProfileStore.js';
 import { isHonoApiModerator } from './role-policy.js';
 import { fetchOrRegisterFederatedInstance } from './federation.js';
-import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
-import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
+import { userListMembershipExistsInDatabase } from '@/core/user/UserListMembershipStore.js';
+import { listWebhooksFromDatabase } from '@/core/webhook/WebhookStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import type { IAccept, IActivity, IFollow, IObject, IReject, IUndo } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';

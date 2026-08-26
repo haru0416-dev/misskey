@@ -4,12 +4,12 @@
  */
 
 import { z } from 'zod';
-import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
-import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
+import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
+import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/channel/ChannelStore.js';
 import {
 	listDriveFilesByIdsFromDatabase,
 	listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase,
-} from '@/core/DriveFileStore.js';
+} from '@/core/drive/DriveFileStore.js';
 import {
 	countNoteDraftsByUserIdFromDatabase,
 	createNoteDraftInDatabase,
@@ -18,11 +18,11 @@ import {
 	listNoteDraftsByUserIdFromDatabase,
 	resolveNoteDraftPagination,
 	updateNoteDraftInDatabase,
-} from '@/core/NoteDraftStore.js';
-import { fetchNoteByIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import type { PostScheduledNoteQueue } from '@/core/queues.js';
+} from '@/core/note/NoteDraftStore.js';
+import { fetchNoteByIdFromDatabase, listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+import type { PostScheduledNoteQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { genId } from '@/misc/id/gen-id.js';

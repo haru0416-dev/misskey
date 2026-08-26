@@ -7,19 +7,19 @@ import { domainToASCII } from 'node:url';
 import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import {
 	createSignupAccountInDatabase,
 	DuplicatedUsernameError,
 	RootUserAlreadyAssignedError,
 	UsedUsernameError,
-} from '@/core/SignupStore.js';
+} from '@/core/account/SignupStore.js';
 import {
 	fetchRegistrationTicketByPendingUserIdFromDatabase,
 	updateRegistrationTicketInDatabase,
-} from '@/core/RegistrationTicketStore.js';
-import { deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/UserPendingStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+} from '@/core/invite/RegistrationTicketStore.js';
+import { deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/account/UserPendingStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -28,9 +28,9 @@ import { generateNativeUserToken } from '@/misc/token.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { HonoApiInternalEventPublisher } from './events.js';
-import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
-import { listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
-import type { SystemWebhookDeliverQueue } from '@/core/queues.js';
+import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
+import { listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
+import type { SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
 import { HonoApiError, signupValidationError } from './error.js';
 import {
 	completeHonoApiSignin,

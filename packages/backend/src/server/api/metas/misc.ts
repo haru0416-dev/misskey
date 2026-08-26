@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchEmojisHostTypes, fetchEmojisSortKeys } from '@/core/custom-emoji-types.js';
+import { fetchEmojisHostTypes, fetchEmojisSortKeys } from '@/core/emoji/custom-emoji-types.js';
 import { blockingListParamDef, userIdParamDef } from '@/server/rest/account-blocking.js';
 import {
 	muteCreateParamDef,

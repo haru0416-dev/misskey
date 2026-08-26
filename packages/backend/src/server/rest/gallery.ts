@@ -6,7 +6,7 @@
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/DriveFileStore.js';
+import { listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase } from '@/core/drive/DriveFileStore.js';
 import {
 	createGalleryLikeInDatabase,
 	deleteGalleryLikeByIdFromDatabase,
@@ -14,7 +14,7 @@ import {
 	galleryLikeExistsInDatabase,
 	listGalleryLikesByUserIdFromDatabase,
 	listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase,
-} from '@/core/GalleryLikeStore.js';
+} from '@/core/gallery/GalleryLikeStore.js';
 import {
 	createGalleryPostInDatabase,
 	decrementGalleryPostLikedCountInDatabase,
@@ -27,9 +27,9 @@ import {
 	listPopularGalleryPostsFromDatabase,
 	resolveGalleryPostPagination,
 	updateGalleryPostByIdAndUserIdInDatabase,
-} from '@/core/GalleryPostStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+} from '@/core/gallery/GalleryPostStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';

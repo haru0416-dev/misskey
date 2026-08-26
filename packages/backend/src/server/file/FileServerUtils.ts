@@ -6,7 +6,7 @@
 import * as fs from 'node:fs';
 import { FILE_TYPE_BROWSERSAFE } from '@/const.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
-import type { IImageStreamable } from '@/core/ImageProcessingService.js';
+import type { IImageStreamable } from '@/core/drive/ImageProcessingService.js';
 import type { FileServerReply } from './FileServerTypes.js';
 
 export type RangeStream = {

@@ -6,8 +6,8 @@
 import { randomUUID } from 'node:crypto';
 import type * as Misskey from 'misskey-js';
 import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-import { fetchLocalUserByIdFromDatabase } from '@/core/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { fetchLocalUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { getIpHash } from '@/misc/get-ip-hash.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiUser } from '@/models/User.js';

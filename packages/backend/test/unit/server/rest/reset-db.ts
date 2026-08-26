@@ -15,7 +15,7 @@ const { fetchMetaFromDatabaseMock, resetDbMock } = vi.hoisted(() => ({
 	resetDbMock: vi.fn(),
 }));
 
-vi.mock('@/core/MetaStore.js', () => ({
+vi.mock('@/core/meta/MetaStore.js', () => ({
 	fetchMetaFromDatabase: fetchMetaFromDatabaseMock,
 }));
 

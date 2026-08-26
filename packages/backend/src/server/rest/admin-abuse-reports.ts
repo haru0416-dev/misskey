@@ -8,7 +8,7 @@ import { z } from 'zod';
 import {
 	deleteAbuseReportNotificationRecipientsFromDatabase,
 	listAbuseReportNotificationRecipientsFromDatabase,
-} from '@/core/AbuseReportNotificationRecipientStore.js';
+} from '@/core/abuse/AbuseReportNotificationRecipientStore.js';
 import {
 	createAbuseUserReportInDatabase,
 	fetchAbuseUserReportByIdFromDatabase,
@@ -17,20 +17,20 @@ import {
 	resolveAbuseUserReportInDatabase,
 	resolveAbuseUserReportPagination,
 	updateAbuseUserReportModerationNoteInDatabase,
-} from '@/core/AbuseUserReportStore.js';
-import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import { listRoleAssignmentsByRoleIdsFromDatabase } from '@/core/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/RoleStore.js';
-import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
-import { listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
-import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
-import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+} from '@/core/abuse/AbuseUserReportStore.js';
+import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { listRoleAssignmentsByRoleIdsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
+import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
+import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
+import { listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
+import { fetchOrCreateSystemAccount } from '@/core/system-account/system-account-runtime.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import type { IActivity, IFlag, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
-import type { DeliverQueue, SystemWebhookDeliverQueue } from '@/core/queues.js';
-import type { EmailService } from '@/core/EmailService.js';
-import type { SystemWebhookPayload } from '@/core/system-webhook-types.js';
+import type { DeliverQueue, SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
+import type { EmailService } from '@/core/email/EmailService.js';
+import type { SystemWebhookPayload } from '@/core/webhook/system-webhook-types.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';

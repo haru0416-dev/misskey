@@ -4,8 +4,8 @@
  */
 
 import { z } from 'zod';
-import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
-import { listRolesFromDatabase } from '@/core/RoleStore.js';
+import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/AvatarDecorationStore.js';
+import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseHonoApiParams } from './validation.js';
 

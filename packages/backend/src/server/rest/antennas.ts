@@ -17,19 +17,19 @@ import {
 	listAntennasByIdsFromDatabase,
 	listAntennasByUserIdFromDatabase,
 	updateAntennaInDatabase,
-} from '@/core/AntennaStore.js';
-import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
+} from '@/core/antenna/AntennaStore.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelMutingStore.js';
 import {
 	followingExistsInDatabase,
 	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
-} from '@/core/FollowingStore.js';
-import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+} from '@/core/user/FollowingStore.js';
+import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import {
 	listUserListIdsContainingUserFromDatabase,
 	userListMembershipExistsInDatabase,
-} from '@/core/UserListMembershipStore.js';
-import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+} from '@/core/user/UserListMembershipStore.js';
+import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import * as Acct from '@/misc/acct.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';

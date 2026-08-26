@@ -4,22 +4,22 @@
  */
 
 import type * as Redis from 'ioredis';
-import { deleteUserIpsOlderThanFromDatabase } from '@/core/UserIpStore.js';
-import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/AntennaStore.js';
-import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/RoleAssignmentStore.js';
+import { deleteUserIpsOlderThanFromDatabase } from '@/core/user/UserIpStore.js';
+import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/antenna/AntennaStore.js';
+import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
 import {
 	createRetentionAggregationInDatabase,
 	listActiveLocalUserIdsAfter,
 	listLocalUserIdsCreatedAfter,
 	listRetentionAggregationsCreatedAfter,
 	updateRetentionAggregationDataInDatabase,
-} from '@/core/RetentionAggregationStore.js';
-import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/MutingStore.js';
+} from '@/core/retention/RetentionAggregationStore.js';
+import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/user/MutingStore.js';
 import {
 	deleteChannelMutingsByIdsFromDatabase,
 	listExpiredChannelMutingsFromDatabase,
-} from '@/core/ChannelMutingStore.js';
-import { rebuildNoteReactionsInDatabase } from '@/core/NoteStore.js';
+} from '@/core/channel/ChannelMutingStore.js';
+import { rebuildNoteReactionsInDatabase } from '@/core/note/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { deepClone } from '@/misc/clone.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';

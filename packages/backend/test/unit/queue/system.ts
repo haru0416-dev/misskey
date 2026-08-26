@@ -7,24 +7,24 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Redis from 'ioredis';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { createUserInDatabase } from '@/core/UserStore.js';
-import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/UserIpStore.js';
-import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/AntennaStore.js';
-import { createRoleInDatabase } from '@/core/RoleStore.js';
-import { createRoleAssignmentInDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/RoleAssignmentStore.js';
+import { createUserInDatabase } from '@/core/user/UserStore.js';
+import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/user/UserIpStore.js';
+import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/antenna/AntennaStore.js';
+import { createRoleInDatabase } from '@/core/role/RoleStore.js';
+import { createRoleAssignmentInDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
 import {
 	createRetentionAggregationInDatabase,
 	listRetentionAggregationsCreatedAfter,
-} from '@/core/RetentionAggregationStore.js';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
-import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
-import { createChannelInDatabase } from '@/core/ChannelStore.js';
+} from '@/core/retention/RetentionAggregationStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
+import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/user/MutingStore.js';
+import { createChannelInDatabase } from '@/core/channel/ChannelStore.js';
 import {
 	createChannelMutingInDatabase,
 	listActiveMutedChannelIdsByUserIdFromDatabase,
-} from '@/core/ChannelMutingStore.js';
-import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
-import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
+} from '@/core/channel/ChannelMutingStore.js';
+import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
+import { createNoteReactionInDatabase } from '@/core/note/NoteReactionStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createHonoChartWriters, type HonoChartWriters } from '@/server/chart-runtime.js';
 import Logger from '@/logger.js';

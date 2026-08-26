@@ -12,13 +12,13 @@ import {
 	fetchWebhookByIdAndUserIdFromDatabase,
 	listWebhooksByUserIdFromDatabase,
 	updateWebhookInDatabase,
-} from '@/core/WebhookStore.js';
+} from '@/core/webhook/WebhookStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import type { UserWebhookDeliverQueue } from '@/core/queues.js';
+import type { UserWebhookDeliverQueue } from '@/core/queue/queues.js';
 import type { UserWebhookDeliverJobData } from '@/queue/types.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { MiNote } from '@/models/Note.js';

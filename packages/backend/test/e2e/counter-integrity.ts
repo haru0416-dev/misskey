@@ -6,7 +6,7 @@
 import * as assert from 'node:assert';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { api, initTestDb, post, signup } from '../utils.js';
 import type * as Misskey from 'misskey-js';

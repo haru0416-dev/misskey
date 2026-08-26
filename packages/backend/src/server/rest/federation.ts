@@ -8,10 +8,10 @@ import type * as Redis from 'ioredis';
 import semver from 'semver';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { fetchInstanceMetadataWithSideEffects } from '@/core/FetchInstanceMetadataLogic.js';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import type { RelationshipQueue } from '@/core/queues.js';
+import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInstanceMetadataLogic.js';
+import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import type { RelationshipQueue } from '@/core/queue/queues.js';
 import {
 	createInstanceInDatabase,
 	fetchInstanceByHostFromDatabase,
@@ -20,16 +20,16 @@ import {
 	listInstancesOrderByFollowingCountDescFromDatabase,
 	updateInstanceInDatabase,
 	type FederationInstancesSort,
-} from '@/core/InstanceStore.js';
-import { listAllDriveFilesByUserHostFromDatabase } from '@/core/DriveFileStore.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+} from '@/core/instance/InstanceStore.js';
+import { listAllDriveFilesByUserHostFromDatabase } from '@/core/drive/DriveFileStore.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import {
 	countFollowingsWithRemoteFolloweeHostFromDatabase,
 	countFollowingsWithRemoteFollowerHostFromDatabase,
 	listFollowingsByFollowerHostFromDatabase,
 	listFollowingsByHostWithPaginationFromDatabase,
-} from '@/core/FollowingStore.js';
-import { listUsersByHostWithPaginationFromDatabase } from '@/core/UserStore.js';
+} from '@/core/user/FollowingStore.js';
+import { listUsersByHostWithPaginationFromDatabase } from '@/core/user/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

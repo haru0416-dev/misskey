@@ -4,10 +4,10 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { createAiService } from '@/core/AiService.js';
-import type { AiService as AiServiceType, Prediction } from '@/core/AiService.js';
+import { createAiService } from '@/core/ai/AiService.js';
+import type { AiService as AiServiceType, Prediction } from '@/core/ai/AiService.js';
 import type { MiMeta } from '@/models/_.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import type { LoggerService } from '@/core/LoggerService.js';
 
 // AiService は HttpRequestService.send() 経由で外部サービスへ送信する (SSRF/proxy/size 制限は send 側に一元化)。

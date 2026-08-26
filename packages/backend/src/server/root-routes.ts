@@ -4,8 +4,8 @@
  */
 
 import { Hono, type Context } from 'hono';
-import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
-import { fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
+import { fetchUserByUsernameAndHostFromDatabase } from '@/core/user/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
@@ -13,7 +13,7 @@ import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiUser } from '@/models/User.js';
 import * as Acct from '@/misc/acct.js';
 import { genIdenticon } from '@/misc/gen-identicon.js';
-import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
+import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
 
 type RootRouteStores = {
 	fetchEmojiByNameAndHost: (

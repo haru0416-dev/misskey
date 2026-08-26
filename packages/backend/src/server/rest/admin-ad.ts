@@ -11,8 +11,8 @@ import {
 	fetchAdByIdFromDatabase,
 	listAdsFromDatabase,
 	updateAdInDatabase,
-} from '@/core/AdStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+} from '@/core/ad/AdStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

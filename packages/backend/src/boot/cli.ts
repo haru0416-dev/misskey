@@ -6,7 +6,7 @@
 import * as Redis from 'ioredis';
 import { createRedactedConfig, loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
-import { updateMetaInDatabase } from '@/core/MetaStore.js';
+import { updateMetaInDatabase } from '@/core/meta/MetaStore.js';
 import { createRedisForPub } from '@/runtime-dependencies.js';
 import { createHonoEventPublishers } from '@/server/rest/events.js';
 

@@ -28,34 +28,34 @@ import {
 	completeInlineDbOutboxJobs,
 	enqueueInlineDbJobsInOutbox,
 	releaseInlineDbOutboxJobs,
-} from '@/core/QueueOutboxStore.js';
-import type { InlineDbOutboxJob } from '@/core/QueueOutboxStore.js';
+} from '@/core/queue/QueueOutboxStore.js';
+import type { InlineDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
 import type { MiMeta } from '@/models/_.js';
 import type { IPoll } from '@/models/Poll.js';
 import type { IMentionedRemoteUsers, MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiChannel } from '@/models/Channel.js';
-import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
+import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
 import {
 	fetchChannelByIdFromDatabase,
 	incrementChannelNotesCountAndUpdateLastNotedAtInDatabase,
 	incrementChannelUsersCountInDatabase,
-} from '@/core/ChannelStore.js';
-import { listFollowerUserIdsByChannelIdFromDatabase } from '@/core/ChannelFollowingStore.js';
-import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
+} from '@/core/channel/ChannelStore.js';
+import { listFollowerUserIdsByChannelIdFromDatabase } from '@/core/channel/ChannelFollowingStore.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/drive/DriveFileStore.js';
 import {
 	listActiveLocalFollowerFollowingsByFolloweeIdFromDatabase,
 	listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
 	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
 	listNotificationFollowerIdsByFolloweeIdFromDatabase,
-} from '@/core/FollowingStore.js';
-import { recordHashtagUsagesInDatabase } from '@/core/HashtagStore.js';
+} from '@/core/user/FollowingStore.js';
+import { recordHashtagUsagesInDatabase } from '@/core/hashtag/HashtagStore.js';
 import {
 	adjustInstanceNotesCountFromDatabase,
 	createInstanceIfNotExistsInDatabase,
 	fetchInstanceByHostFromDatabase,
-} from '@/core/InstanceStore.js';
+} from '@/core/instance/InstanceStore.js';
 import {
 	countNotesByUserIdAndChannelIdFromDatabase,
 	createNoteInDatabase,
@@ -64,30 +64,30 @@ import {
 	incrementNoteRenoteCountInDatabase,
 	incrementNoteRepliesCountInDatabase,
 	listNotesByIdsFromDatabase,
-} from '@/core/NoteStore.js';
+} from '@/core/note/NoteStore.js';
 import {
 	listNoteThreadMutedUserIdsFromDatabase,
 	noteThreadMutingExistsInDatabase,
-} from '@/core/NoteThreadMutingStore.js';
+} from '@/core/note/NoteThreadMutingStore.js';
 import {
 	listUserListIdsContainingUserFromDatabase,
 	listUserListMembershipsForFanoutByUserIdFromDatabase,
-} from '@/core/UserListMembershipStore.js';
-import { listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
+} from '@/core/user/UserListMembershipStore.js';
+import { listUserProfilesByUserIdsFromDatabase } from '@/core/user/UserProfileStore.js';
 import {
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	incrementUserNotesCountAndUpdatedAtInDatabase,
 	listUsersByIdsFromDatabase,
 	listUsersByUsernamesAndHostsFromDatabase,
-} from '@/core/UserStore.js';
-import { listMuterIdsByMuteeIdAndMuterIdsFromDatabase } from '@/core/MutingStore.js';
-import { listRenoteMuterIdsByMuteeIdFromDatabase } from '@/core/RenoteMutingStore.js';
-import type { DbQueue, EndedPollNotificationQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
+} from '@/core/user/UserStore.js';
+import { listMuterIdsByMuteeIdAndMuterIdsFromDatabase } from '@/core/user/MutingStore.js';
+import { listRenoteMuterIdsByMuteeIdFromDatabase } from '@/core/user/RenoteMutingStore.js';
+import type { DbQueue, EndedPollNotificationQueue, UserWebhookDeliverQueue } from '@/core/queue/queues.js';
 import type { DbNotePostCreateJobData, DbNotePostCreateStage, UserWebhookDeliverJobData } from '@/queue/types.js';
 import type * as Bull from 'bullmq';
-import { fetchPollByNoteIdFromDatabase } from '@/core/PollStore.js';
-import { listWebhooksFromDatabase } from '@/core/WebhookStore.js';
+import { fetchPollByNoteIdFromDatabase } from '@/core/note/PollStore.js';
+import { listWebhooksFromDatabase } from '@/core/webhook/WebhookStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { addNoteToAntennasForHonoApi } from './antennas.js';
 import { HonoApiError } from './error.js';

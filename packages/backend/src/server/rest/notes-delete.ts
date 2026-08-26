@@ -5,14 +5,14 @@
 
 import { SECOND, HOUR } from '@/const.js';
 import { z } from 'zod';
-import { adjustInstanceNotesCountFromDatabase } from '@/core/InstanceStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import { adjustInstanceNotesCountFromDatabase } from '@/core/instance/InstanceStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import {
 	deleteNoteAndDecrementParentRepliesCountInDatabase,
 	fetchNoteByIdFromDatabase,
 	listNotesByUserIdAndRenoteIdFromDatabase,
-} from '@/core/NoteStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+} from '@/core/note/NoteStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';

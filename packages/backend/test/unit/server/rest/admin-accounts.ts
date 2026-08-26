@@ -5,7 +5,7 @@
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Config } from '@/config.js';
-import { RootUserAlreadyAssignedError } from '@/core/SignupStore.js';
+import { RootUserAlreadyAssignedError } from '@/core/account/SignupStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiRole } from '@/models/Role.js';
@@ -32,15 +32,15 @@ const {
 	packSignupUserMock: vi.fn(),
 }));
 
-vi.mock('@/core/MetaStore.js', () => ({
+vi.mock('@/core/meta/MetaStore.js', () => ({
 	fetchMetaFromDatabase: fetchMetaFromDatabaseMock,
 }));
 
-vi.mock('@/core/RoleStore.js', () => ({
+vi.mock('@/core/role/RoleStore.js', () => ({
 	listRolesFromDatabase: listRolesFromDatabaseMock,
 }));
 
-vi.mock('@/core/RoleAssignmentStore.js', () => ({
+vi.mock('@/core/role/RoleAssignmentStore.js', () => ({
 	listRoleAssignmentsByUserIdFromDatabase: listRoleAssignmentsByUserIdFromDatabaseMock,
 }));
 

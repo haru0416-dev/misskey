@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { fetchPageByIdFromDatabase } from '@/core/PageStore.js';
+import { fetchPageByIdFromDatabase } from '@/core/page/PageStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { HonoApiMainStreamPublisher } from './events.js';

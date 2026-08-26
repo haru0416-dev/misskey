@@ -6,12 +6,12 @@
 import * as os from 'node:os';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { Config } from '@/config.js';
-import { packMetaDetailed, packMetaLite } from '@/core/MetaEntityPacker.js';
-import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
-import { DEFAULT_POLICIES } from '@/core/role-policies.js';
-import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
+import { packMetaDetailed, packMetaLite } from '@/core/meta/MetaEntityPacker.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
+import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
+import { fetchOrCreateSystemAccount } from '@/core/system-account/system-account-runtime.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';

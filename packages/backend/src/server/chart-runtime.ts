@@ -43,8 +43,8 @@ import { name as usersChartName, schema as usersChartSchema } from '@/core/chart
 import {
 	countFollowingsByFolloweeIdAndFollowerHostStateFromDatabase,
 	countFollowingsByFollowerIdAndFolloweeHostStateFromDatabase,
-} from '@/core/FollowingStore.js';
-import { countUsersByHostFromDatabase, countUsersByHostNotNullFromDatabase } from '@/core/UserStore.js';
+} from '@/core/user/FollowingStore.js';
+import { countUsersByHostFromDatabase, countUsersByHostNotNullFromDatabase } from '@/core/user/UserStore.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type Logger from '@/logger.js';

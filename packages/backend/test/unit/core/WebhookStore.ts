@@ -6,7 +6,7 @@
 import type { PoolClient } from 'pg';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { countWebhooksByUserIdFromDatabase, createWebhookWithinLimitInDatabase } from '@/core/WebhookStore.js';
+import { countWebhooksByUserIdFromDatabase, createWebhookWithinLimitInDatabase } from '@/core/webhook/WebhookStore.js';
 import { user } from '@/db/schema/user.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 

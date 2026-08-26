@@ -10,8 +10,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createRelayInDatabase, deleteRelayFromDatabase } from '@/core/RelayStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import { createRelayInDatabase, deleteRelayFromDatabase } from '@/core/relay/RelayStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';

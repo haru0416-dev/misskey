@@ -11,11 +11,11 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase, updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
-import { createRoleInDatabase } from '@/core/RoleStore.js';
-import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
-import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
-import { listAnnouncementsForAdminFromDatabase } from '@/core/AnnouncementStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
+import { createRoleInDatabase } from '@/core/role/RoleStore.js';
+import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
+import { listAnnouncementsForAdminFromDatabase } from '@/core/announcement/AnnouncementStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleHonoQueueCheckModeratorsActivity,

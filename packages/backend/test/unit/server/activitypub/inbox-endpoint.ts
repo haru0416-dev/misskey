@@ -13,7 +13,7 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';

@@ -10,9 +10,9 @@ import {
 	updateAvatarDecorationWithSideEffects,
 	type AvatarDecorationCreateOptions,
 	type AvatarDecorationUpdateOptions,
-} from '@/core/AvatarDecorationLogic.js';
-import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+} from '@/core/avatar-decoration/AvatarDecorationLogic.js';
+import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/AvatarDecorationStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

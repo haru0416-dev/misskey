@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { JsonLd, canonicalizeSignatureOptions } from '@/core/activitypub/json-ld.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import fc from 'fast-check';
 
 // 署名オプションの正規化は jsonld.normalize を通さない近道を持つ。近道が本物と1バイトでも

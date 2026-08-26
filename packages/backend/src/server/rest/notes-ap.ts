@@ -9,27 +9,27 @@ import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { JsonLd } from '@/core/activitypub/json-ld.js';
-import { createDeliverJob, enqueueDeliverJob } from '@/core/DeliverQueue.js';
+import { createDeliverJob, enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import type { DeliverQueue } from '@/core/queues.js';
-import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
+import type { DeliverQueue } from '@/core/queue/queues.js';
+import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
 import {
 	fetchEmojiByNameAndHostFromDatabaseCached,
 	fetchEmojisByNamesAndHostsFromDatabaseCached,
-} from '@/core/EmojiStore.js';
-import { fetchNoteByIdFromDatabase, listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase } from '@/core/NoteStore.js';
-import { fetchPollByNoteIdFromDatabase } from '@/core/PollStore.js';
-import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
-import { listRelaysByStatusFromDatabaseCached } from '@/core/RelayStore.js';
+} from '@/core/emoji/EmojiStore.js';
+import { fetchNoteByIdFromDatabase, listRemoteUsersWhoRenotedOrRepliedNoteFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchPollByNoteIdFromDatabase } from '@/core/note/PollStore.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { listRelaysByStatusFromDatabaseCached } from '@/core/relay/RelayStore.js';
 import {
 	fetchUserByIdFromDatabase,
 	listUsersByIdsFromDatabase,
 	listUsersByUrisOrIdsFromDatabase,
-} from '@/core/UserStore.js';
-import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
-import { listFollowerInboxesByFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
-import { createMfmService } from '@/core/MfmService.js';
+} from '@/core/user/UserStore.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
+import { listFollowerInboxesByFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createMfmService } from '@/core/mfm/MfmService.js';
 import type { Config } from '@/config.js';
 import { deepClone } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';

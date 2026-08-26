@@ -4,8 +4,8 @@
  */
 
 import { z } from 'zod';
-import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
-import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/ChatApprovalStore.js';
+import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
+import { createChatApprovalInDatabase, listChatApprovalsBetweenUsers } from '@/core/chat/ChatApprovalStore.js';
 import {
 	addChatMessageReactionInDatabase,
 	createChatMessageInDatabase,
@@ -20,7 +20,7 @@ import {
 	removeChatMessageReactionInDatabase,
 	resolveChatMessagePagination,
 	searchChatMessagesFromDatabase,
-} from '@/core/ChatMessageStore.js';
+} from '@/core/chat/ChatMessageStore.js';
 import {
 	ChatRoomCapacityExceededError,
 	ChatRoomInvitationConflictError,
@@ -50,21 +50,21 @@ import {
 	updateChatRoomInDatabase,
 	updateChatRoomInvitationIgnoredFromDatabase,
 	updateChatRoomMembershipMuteFromDatabase,
-} from '@/core/ChatRoomStore.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/DriveFileStore.js';
+} from '@/core/chat/ChatRoomStore.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { emojiRegex } from '@/misc/emoji-regex.js';
-import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
-import { followingExistsInDatabase } from '@/core/FollowingStore.js';
+import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
+import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
-import { countMutualFollowingsBetweenUsersFromDatabase } from '@/core/FollowingStore.js';
-import { mutingExistsInDatabase } from '@/core/MutingStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+import { countMutualFollowingsBetweenUsersFromDatabase } from '@/core/user/FollowingStore.js';
+import { mutingExistsInDatabase } from '@/core/user/MutingStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import {
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	listUsersByIdsFromDatabase,
-} from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
+} from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';

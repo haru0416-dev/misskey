@@ -16,7 +16,7 @@ import type { PutObjectCommandInput } from '@aws-sdk/client-s3';
 import type { Context } from 'hono';
 import { DB_MAX_IMAGE_COMMENT_LENGTH, FILE_TYPE_BROWSERSAFE } from '@/const.js';
 import type { Config } from '@/config.js';
-import type { DownloadService } from '@/core/DownloadService.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
 import {
 	createDriveFileInDatabase,
 	fetchDriveFileByMd5AndUserIdFromDatabase,
@@ -25,21 +25,21 @@ import {
 	listDriveFilesByIdsFromDatabase,
 	sumDriveFileSizeByUserIdFromDatabase,
 	updateDriveFileInDatabase,
-} from '@/core/DriveFileStore.js';
-import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/DriveFolderStore.js';
+} from '@/core/drive/DriveFileStore.js';
+import { fetchDriveFolderByIdAndUserIdFromDatabase } from '@/core/drive/DriveFolderStore.js';
 import {
 	enqueueDriveFileDeletion,
 	publishEnqueuedDriveFileDeletion,
 	startDriveFileDeletion,
-} from '@/core/DriveFileDeletionLogic.js';
-import type { FileInfoService } from '@/core/FileInfoService.js';
-import type { IImage } from '@/core/ImageProcessingService.js';
-import type { ImageProcessingService } from '@/core/ImageProcessingService.js';
-import type { InternalStorageService } from '@/core/InternalStorageService.js';
-import type { S3Service } from '@/core/S3Service.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
-import type { VideoProcessingService } from '@/core/VideoProcessingService.js';
+} from '@/core/drive/DriveFileDeletionLogic.js';
+import type { FileInfoService } from '@/core/drive/FileInfoService.js';
+import type { IImage } from '@/core/drive/ImageProcessingService.js';
+import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
+import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
+import type { S3Service } from '@/core/drive/S3Service.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
+import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import { correctFilename } from '@/misc/correct-filename.js';
 import { createTemp } from '@/misc/create-temp.js';

@@ -6,7 +6,7 @@
 import { sql } from 'drizzle-orm';
 import { bigint, boolean, integer, jsonb, pgEnum, pgTable, varchar } from 'drizzle-orm/pg-core';
 import type { SoftwareSuspension } from '@/models/Meta.js';
-import type { RolePolicies } from '@/core/role-policies.js';
+import type { RolePolicies } from '@/core/role/role-policies.js';
 import { user } from './user.js';
 
 type ClientOptions = {

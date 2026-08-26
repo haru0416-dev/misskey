@@ -7,8 +7,8 @@ import { domainToASCII } from 'node:url';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { FILE_TYPE_IMAGE } from '@/const.js';
-import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
-import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/DriveFileUploadLogic.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { uploadSystemDriveFileFromUrl, type DriveFileUploadDependencies } from '@/core/drive/DriveFileUploadLogic.js';
 import {
 	addAliasesToEmojisByIdsInDatabase,
 	deleteEmojiByIdFromDatabase,
@@ -27,11 +27,11 @@ import {
 	removeAliasesFromEmojisByIdsInDatabase,
 	updateEmojiInDatabase,
 	updateEmojisByIdsReturningFromDatabase,
-} from '@/core/EmojiStore.js';
-import { logModerationEventInDatabase, logModerationEventsInDatabase } from '@/core/ModerationLogLogic.js';
-import { addDbJob, type DbQueue } from '@/core/queues.js';
+} from '@/core/emoji/EmojiStore.js';
+import { logModerationEventInDatabase, logModerationEventsInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { addDbJob, type DbQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/RoleStore.js';
+import { listRoleSummariesByIdsFromDatabase, type RoleSummary } from '@/core/role/RoleStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

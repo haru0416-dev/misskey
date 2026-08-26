@@ -12,15 +12,15 @@ import {
 	unassignRoleWithSideEffects,
 	type RoleCreateOptions,
 	type RoleUpdateOptions,
-} from '@/core/RoleLogic.js';
+} from '@/core/role/RoleLogic.js';
 import {
 	listActiveRoleAssignmentsByRoleIdFromDatabase,
 	resolveRoleAssignmentPagination,
-} from '@/core/RoleAssignmentStore.js';
-import { fetchRoleByIdFromDatabase, listRolesOrderByLastUsedAtDescFromDatabase } from '@/core/RoleStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+} from '@/core/role/RoleAssignmentStore.js';
+import { fetchRoleByIdFromDatabase, listRolesOrderByLastUsedAtDescFromDatabase } from '@/core/role/RoleStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

@@ -10,50 +10,50 @@ import { domainToASCII } from 'node:url';
 import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type * as Bull from 'bullmq';
-import { listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
-import type { ExportedAntenna } from '@/core/AntennaImport.js';
+import { listAntennasByUserIdFromDatabase } from '@/core/antenna/AntennaStore.js';
+import type { ExportedAntenna } from '@/core/antenna/AntennaImport.js';
 import {
 	countDriveFilesByUserIdFromDatabase,
 	fetchDriveFileByIdFromDatabase,
 	listDriveFilesByUserIdWithPaginationFromDatabase,
-} from '@/core/DriveFileStore.js';
-import { finishEnqueuedDriveFileDeletion } from '@/core/DriveFileDeletionLogic.js';
-import { listFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
+} from '@/core/drive/DriveFileStore.js';
+import { finishEnqueuedDriveFileDeletion } from '@/core/drive/DriveFileDeletionLogic.js';
+import { listFollowingsByFollowerIdFromDatabase } from '@/core/user/FollowingStore.js';
 import {
 	countMutingsByMuterIdFromDatabase,
 	createMutingInDatabase,
 	listMuteeIdsByMuterIdFromDatabase,
 	listPermanentMutingsByMuterIdFromDatabase,
-} from '@/core/MutingStore.js';
-import { countBlockingsByBlockerIdFromDatabase, listBlockingsByBlockerIdFromDatabase } from '@/core/BlockingStore.js';
+} from '@/core/user/MutingStore.js';
+import { countBlockingsByBlockerIdFromDatabase, listBlockingsByBlockerIdFromDatabase } from '@/core/user/BlockingStore.js';
 import {
 	createUserListInDatabase,
 	fetchUserListByNameAndUserIdFromDatabase,
 	listUserListsByUserIdFromDatabase,
-} from '@/core/UserListStore.js';
+} from '@/core/user/UserListStore.js';
 import {
 	listUserListMembershipsByUserListIdFromDatabase,
 	listUserListMembershipUserIdsByUserListIdFromDatabase,
 	userListMembershipExistsInDatabase,
-} from '@/core/UserListMembershipStore.js';
+} from '@/core/user/UserListMembershipStore.js';
 import {
 	fetchUserByIdFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
-} from '@/core/UserStore.js';
+} from '@/core/user/UserStore.js';
 import {
 	countNoteFavoritesByUserIdFromDatabase,
 	listNoteFavoritesByUserIdFromDatabase,
-} from '@/core/NoteFavoriteStore.js';
-import { listPollsByNoteIdsFromDatabase } from '@/core/PollStore.js';
+} from '@/core/note/NoteFavoriteStore.js';
+import { listPollsByNoteIdsFromDatabase } from '@/core/note/PollStore.js';
 import {
 	countNotesByUserIdFromDatabase,
 	listNotesByUserIdWithPaginationFromDatabase,
 	listVisibleNotesWithUsersByIdsFromDatabase,
-} from '@/core/NoteStore.js';
-import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/ClipStore.js';
-import { listClipNotesByClipIdFromDatabase } from '@/core/ClipNoteStore.js';
-import type { DownloadService } from '@/core/DownloadService.js';
+} from '@/core/note/NoteStore.js';
+import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/clip/ClipStore.js';
+import { listClipNotesByClipIdFromDatabase } from '@/core/clip/ClipNoteStore.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -66,8 +66,8 @@ import type { MiClipNote } from '@/models/ClipNote.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
-import { addDbJobs, type DbJobBulkInput, type DbQueue, type RelationshipQueue } from '@/core/queues.js';
-import { logModerationEventWithIdInDatabase } from '@/core/ModerationLogLogic.js';
+import { addDbJobs, type DbJobBulkInput, type DbQueue, type RelationshipQueue } from '@/core/queue/queues.js';
+import { logModerationEventWithIdInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type {
 	DBExportAntennasData,
 	DbExportFollowingData,

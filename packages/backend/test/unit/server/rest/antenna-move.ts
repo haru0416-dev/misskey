@@ -11,8 +11,8 @@ import {
 	createAntennaInDatabase,
 	deleteAntennaFromDatabase,
 	fetchAntennaByIdOrFailFromDatabase,
-} from '@/core/AntennaStore.js';
-import { createUserInDatabase } from '@/core/UserStore.js';
+} from '@/core/antenna/AntennaStore.js';
+import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { onMoveAccountForHonoApi } from '@/server/rest/antennas.js';
 import type { MiUser } from '@/models/User.js';

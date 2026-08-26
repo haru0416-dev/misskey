@@ -29,44 +29,44 @@ const {
 	enqueueDeliverMock: vi.fn(),
 }));
 
-vi.mock('@/core/DeliverQueue.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/DeliverQueue.js')>()),
+vi.mock('@/core/queue/DeliverQueue.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/queue/DeliverQueue.js')>()),
 	enqueueDeliverJob: enqueueDeliverMock,
 }));
 
-vi.mock('@/core/FollowRequestStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/FollowRequestStore.js')>()),
+vi.mock('@/core/user/FollowRequestStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/user/FollowRequestStore.js')>()),
 	fetchFollowRequestFromDatabase: fetchRequestMock,
 	followRequestExistsInDatabase: vi.fn().mockResolvedValue(false),
 	listAllFollowRequestsByFolloweeIdFromDatabase: listRequestsMock,
 }));
 
-vi.mock('@/core/FollowingStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/FollowingStore.js')>()),
+vi.mock('@/core/user/FollowingStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/user/FollowingStore.js')>()),
 	createFollowingInDatabase: createFollowingMock,
 	listFolloweeIdsWithRepliesByFollowerIdFromDatabase: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('@/core/UserStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/UserStore.js')>()),
+vi.mock('@/core/user/UserStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/user/UserStore.js')>()),
 	adjustUserFollowersCountInDatabase: vi.fn().mockResolvedValue(undefined),
 	adjustUserFollowingCountInDatabase: vi.fn().mockResolvedValue(undefined),
 	fetchUserByIdOrFailFromDatabase: fetchUserMock,
 	listUsersByIdsFromDatabase: listUsersMock,
 }));
 
-vi.mock('@/core/UserProfileStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/UserProfileStore.js')>()),
+vi.mock('@/core/user/UserProfileStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/user/UserProfileStore.js')>()),
 	fetchUserProfileByUserIdOrFailFromDatabase: fetchProfileMock,
 }));
 
-vi.mock('@/core/MutingStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/MutingStore.js')>()),
+vi.mock('@/core/user/MutingStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/user/MutingStore.js')>()),
 	mutingExistsInDatabase: vi.fn().mockResolvedValue(false),
 }));
 
-vi.mock('@/core/WebhookStore.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/core/WebhookStore.js')>()),
+vi.mock('@/core/webhook/WebhookStore.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/core/webhook/WebhookStore.js')>()),
 	listWebhooksFromDatabase: vi.fn().mockResolvedValue([]),
 }));
 

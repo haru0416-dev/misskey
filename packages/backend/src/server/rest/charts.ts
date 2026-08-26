@@ -40,8 +40,8 @@ import {
 } from '@/core/chart/entities/per-user-reactions.js';
 import { name as usersChartName, schema as usersChartSchema } from '@/core/chart/entities/users.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
-import { countNoteReactionsFromDatabase } from '@/core/NoteReactionStore.js';
-import { countInstancesFromDatabase } from '@/core/InstanceStore.js';
+import { countNoteReactionsFromDatabase } from '@/core/note/NoteReactionStore.js';
+import { countInstancesFromDatabase } from '@/core/instance/InstanceStore.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import type Logger from '@/logger.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
