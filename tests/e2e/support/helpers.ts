@@ -20,6 +20,19 @@ async function expectOk(response: APIResponse): Promise<void> {
 	}
 }
 
+/**
+ * ブラウザコンテキストごとに一度だけ入れる localStorage の初期値。
+ *
+ * `modifiedVersionMustProminentlyOfferInAgplV3Section13Read` を立てないと、
+ * ログインのたびに AGPL §13 のソース提供告知ポップアップ (MkSourceCodeAvailablePopup) が出る。
+ * このフォークは repositoryUrl を upstream から変えているため表示条件が常に真で、
+ * ポップアップが `_panel _shadow` としてクリックを遮り続ける。
+ */
+export function seedE2eLocalStorage(): void {
+	window.localStorage.setItem('__MISSKEY_E2E_TEST__', 'true');
+	window.localStorage.setItem('modifiedVersionMustProminentlyOfferInAgplV3Section13Read', 'true');
+}
+
 export async function visitHome(page: Page): Promise<void> {
 	await page.goto('/');
 	await expect(page.locator('button').first()).toBeVisible({ timeout: 30_000 });

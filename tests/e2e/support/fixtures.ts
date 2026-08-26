@@ -4,12 +4,11 @@
  */
 
 import { test as base, expect } from '@playwright/test';
+import { seedE2eLocalStorage } from './helpers.js';
 
 export const test = base.extend({
 	page: async ({ page }, use) => {
-		await page.addInitScript(() => {
-			window.localStorage.setItem('__MISSKEY_E2E_TEST__', 'true');
-		});
+		await page.addInitScript(seedE2eLocalStorage);
 
 		await use(page);
 	},

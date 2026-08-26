@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
+import { expect, test } from '../support/fixtures.js';
 import {
 	closeInitialUserSetup,
 	login,
@@ -15,6 +15,8 @@ import {
 import type { TestUser } from '../support/helpers.js';
 
 test.describe('Virtualized note list', () => {
+	test.describe.configure({ timeout: 120_000 });
+
 	let admin: TestUser;
 
 	test.beforeEach(async ({ page }) => {
@@ -57,13 +59,7 @@ test.describe('Virtualized note list', () => {
 		}
 		await scrollTimeline(list, 1);
 
-		await expect
-			.poll(async () => {
-				return await list
-					.locator('[data-index]')
-					.evaluateAll((rows) => Math.max(...rows.map((row) => Number((row as HTMLElement).dataset['index']))));
-			})
-			.toBeGreaterThanOrEqual(60);
+		await expect.poll(async () => await maxRenderedIndex(list)).toBeGreaterThanOrEqual(60);
 
 		const state = await list.locator('[data-index]').evaluateAll((rows) => {
 			const elements = (rows as HTMLElement[])
@@ -138,23 +134,20 @@ test.describe('Virtualized note list', () => {
 		const list = timeline.locator('[data-cy-streaming-notes]');
 		await expect(list.locator('[data-index]').first()).toBeVisible();
 
-		for (let i = 0; i < 2; i++) {
-			const previousTotalHeight = await list.evaluate((element) => element.getBoundingClientRect().height);
-			await scrollTimeline(list, 1);
-			await expect
-				.poll(async () => {
-					return await list.evaluate((element) => element.getBoundingClientRect().height);
-				})
-				.toBeGreaterThan(previousTotalHeight + 2000);
-		}
-		await scrollTimeline(list, 1);
-
+		// 読み込みの進捗はコンテナの高さではなく描画済みの最大 index で見る。仮想リストは
+		// スクロール中に行を貼り替えるので高さは一時的に縮むことがあり (実測: 9557 → 9379)、
+		// 高さの増分を待つと 1/3 程度の頻度で空振りする。
+		// 末尾へのスクロールを繰り返しながら、必要な件数まで読み込まれるのを待つ。
 		await expect
-			.poll(async () => {
-				return await list
-					.locator('[data-index]')
-					.evaluateAll((rows) => Math.max(...rows.map((row) => Number((row as HTMLElement).dataset['index']))));
-			})
+			.poll(
+				async () => {
+					await scrollTimeline(list, 1);
+					return await maxRenderedIndex(list);
+				},
+				// 60件に届くには数ページ分の取得が要る。既定の 30 秒だと、
+				// 直列実行の最後 (このテストは24本目) でまれに間に合わない。
+				{ timeout: 60_000, intervals: [500] },
+			)
 			.toBeGreaterThanOrEqual(60);
 
 		const pagedState = await inspectVirtualRows(list);
@@ -231,6 +224,12 @@ async function createNote(page: Page, token: string, text: string): Promise<{ id
 	expect(response.ok()).toBe(true);
 	const body = (await response.json()) as { createdNote: { id: string } };
 	return body.createdNote;
+}
+
+async function maxRenderedIndex(list: Locator): Promise<number> {
+	return await list
+		.locator('[data-index]')
+		.evaluateAll((rows) => Math.max(...rows.map((row) => Number((row as HTMLElement).dataset['index']))));
 }
 
 async function scrollTimeline(list: Locator, fraction: number): Promise<void> {
