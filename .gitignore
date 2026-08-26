@@ -71,6 +71,7 @@ tsdoc-metadata.json
 
 # Storybook generated files
 /packages/frontend/storybook-static/
+/packages/frontend/stats.json
 /packages/frontend/.storybook/changes.js
 /packages/frontend/.storybook/generate.js
 /packages/frontend/.storybook/locale.ts
