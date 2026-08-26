@@ -4,10 +4,10 @@
  */
 
 import * as assert from 'assert';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { fetchNoteByIdFromDatabase, openTestDatabase, type TestDatabase } from '../fixtures.js';
-import { api, castAsError, initTestDb, post, role, signup, uploadFile } from '../utils.js';
+import { api, castAsError, initTestDb, POLL, post, role, signup, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Note', () => {
@@ -933,6 +933,7 @@ describe('Note', () => {
 				alice,
 			);
 
+			// 投票期限そのものが過ぎるのを待つ (状態の伝播待ちではないので固定で待つ)
 			await new Promise((x) => setTimeout(x, 2));
 
 			const res = await api(
@@ -958,6 +959,7 @@ describe('Note', () => {
 
 			expect(sensitive.status).toBe(204);
 
+			// meta の伝播待ち。成功する呼び出しはノートを作るので、投げ直さず固定で待つ。
 			await new Promise((x) => setTimeout(x, 2));
 
 			const note1 = await api(
@@ -1029,18 +1031,20 @@ describe('Note', () => {
 
 			expect(prohibited.status).toBe(204);
 
-			await new Promise((x) => setTimeout(x, 2));
+			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
+			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			await vi.waitFor(async () => {
+				const rejected = await api(
+					'notes/create',
+					{
+						text: 'hogetesthuge',
+					},
+					alice,
+				);
 
-			const note1 = await api(
-				'notes/create',
-				{
-					text: 'hogetesthuge',
-				},
-				alice,
-			);
-
-			expect(note1.status).toBe(400);
-			expect(castAsError(note1.body).error.code).toBe('CONTAINS_PROHIBITED_WORDS');
+				expect(rejected.status).toBe(400);
+				expect(castAsError(rejected.body).error.code).toBe('CONTAINS_PROHIBITED_WORDS');
+			}, POLL);
 		});
 
 		test('禁止ワードを含む投稿はエラーになる (正規表現)', async () => {
@@ -1100,17 +1104,19 @@ describe('Note', () => {
 
 			expect(prohibited.status).toBe(204);
 
-			await new Promise((x) => setTimeout(x, 2));
+			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
+			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			await vi.waitFor(async () => {
+				const rejected = await api(
+					'notes/create',
+					{
+						text: 'hogetesthuge',
+					},
+					tom,
+				);
 
-			const note1 = await api(
-				'notes/create',
-				{
-					text: 'hogetesthuge',
-				},
-				tom,
-			);
-
-			expect(note1.status).toBe(400);
+				expect(rejected.status).toBe(400);
+			}, POLL);
 		});
 
 		test('メンションの数が上限を超えるとエラーになる', async () => {
@@ -1143,6 +1149,7 @@ describe('Note', () => {
 
 			expect(res.status).toBe(200);
 
+			// ロール作成の伝播待ち。assign は投げ直すと二重割り当てになるので固定で待つ。
 			await new Promise((x) => setTimeout(x, 2));
 
 			const assign = await api(
@@ -1156,18 +1163,20 @@ describe('Note', () => {
 
 			expect(assign.status).toBe(204);
 
-			await new Promise((x) => setTimeout(x, 2));
+			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
+			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			await vi.waitFor(async () => {
+				const rejected = await api(
+					'notes/create',
+					{
+						text: '@bob potentially annoying text',
+					},
+					alice,
+				);
 
-			const note = await api(
-				'notes/create',
-				{
-					text: '@bob potentially annoying text',
-				},
-				alice,
-			);
-
-			expect(note.status).toBe(400);
-			expect(castAsError(note.body).error.code).toBe('CONTAINS_TOO_MANY_MENTIONS');
+				expect(rejected.status).toBe(400);
+				expect(castAsError(rejected.body).error.code).toBe('CONTAINS_TOO_MANY_MENTIONS');
+			}, POLL);
 
 			await api(
 				'admin/roles/unassign',
@@ -1217,6 +1226,7 @@ describe('Note', () => {
 
 			expect(res.status).toBe(200);
 
+			// ロール作成の伝播待ち。assign は投げ直すと二重割り当てになるので固定で待つ。
 			await new Promise((x) => setTimeout(x, 2));
 
 			const assign = await api(
@@ -1230,20 +1240,22 @@ describe('Note', () => {
 
 			expect(assign.status).toBe(204);
 
-			await new Promise((x) => setTimeout(x, 2));
+			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
+			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			await vi.waitFor(async () => {
+				const rejected = await api(
+					'notes/create',
+					{
+						text: 'potentially annoying text',
+						visibility: 'specified',
+						visibleUserIds: [bob.id],
+					},
+					alice,
+				);
 
-			const note = await api(
-				'notes/create',
-				{
-					text: 'potentially annoying text',
-					visibility: 'specified',
-					visibleUserIds: [bob.id],
-				},
-				alice,
-			);
-
-			expect(note.status).toBe(400);
-			expect(castAsError(note.body).error.code).toBe('CONTAINS_TOO_MANY_MENTIONS');
+				expect(rejected.status).toBe(400);
+				expect(castAsError(rejected.body).error.code).toBe('CONTAINS_TOO_MANY_MENTIONS');
+			}, POLL);
 
 			await api(
 				'admin/roles/unassign',
@@ -1293,6 +1305,7 @@ describe('Note', () => {
 
 			expect(res.status).toBe(200);
 
+			// ロール作成の伝播待ち。assign は投げ直すと二重割り当てになるので固定で待つ。
 			await new Promise((x) => setTimeout(x, 2));
 
 			const assign = await api(
@@ -1306,6 +1319,7 @@ describe('Note', () => {
 
 			expect(assign.status).toBe(204);
 
+			// ロール割り当ての伝播待ち。成功する呼び出しはノートを作るので、投げ直さず固定で待つ。
 			await new Promise((x) => setTimeout(x, 2));
 
 			const note = await api(
