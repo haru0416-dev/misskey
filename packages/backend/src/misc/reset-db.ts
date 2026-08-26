@@ -11,16 +11,16 @@ export async function resetDb(pool: MiDrizzlePool) {
 		try {
 			await client.query('BEGIN');
 
-			// migrations (適用済みマイグレーションの記帳) は消さない — スキーマ自体は残るため、
-			// 記帳だけ消えると次回起動時のマイグレーションが「relation already exists」で失敗する
+			// drizzle スキーマ (適用済みマイグレーションの記帳) は消さない。テーブルや enum は
+			// 残るので、記帳だけ空にすると次回起動時のマイグレーションが
+			// 「type ... already exists」で失敗し、以後スキーマを作り直すまで起動できなくなる
 			const { rows: tables } = await client.query<{
 				schema: string;
 				table: string;
 			}>(`SELECT quote_ident(N.nspname) AS "schema", quote_ident(C.relname) AS "table"
 			FROM pg_class C LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
-			WHERE nspname NOT IN ('pg_catalog', 'information_schema')
+			WHERE nspname NOT IN ('pg_catalog', 'information_schema', 'drizzle')
 				AND C.relkind = 'r'
-				AND C.relname <> 'migrations'
 				AND nspname !~ '^pg_toast';`);
 
 			if (tables.length !== 0) {
