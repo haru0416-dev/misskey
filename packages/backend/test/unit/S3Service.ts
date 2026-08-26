@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import * as http from 'node:http';
 import * as https from 'node:https';
 import { beforeAll, beforeEach, describe, test, expect } from 'vitest';

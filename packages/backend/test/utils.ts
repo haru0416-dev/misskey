@@ -53,6 +53,13 @@ export type ApiRequest<
 	user: UserToken | undefined;
 };
 
+/**
+ * ポーリングの既定値。元は「N 回ループして毎回 100ms 眠る」形だったので実質の上限は
+ * N × (100ms + 1回分の問い合わせ時間) で、時間ベースへ移すにあたり問い合わせ時間ぶんの
+ * 余裕を含めてある。待ちが長い対象は timeout だけ上書きする。
+ */
+export const POLL = { timeout: 5_000, interval: 100 } as const;
+
 export const successfulApiCall = async <E extends keyof misskey.Endpoints, P extends misskey.Endpoints[E]['req']>(
 	request: ApiRequest<E, P>,
 	assertion: {

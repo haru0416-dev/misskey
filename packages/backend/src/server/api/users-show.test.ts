@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import { describe, test, expect } from 'vitest';
 import { getValidator } from '../../../test/prelude/get-api-validator.js';
 import { endpointMetas } from './endpoint-metas.js';

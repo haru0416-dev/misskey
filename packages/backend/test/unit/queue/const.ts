@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import { describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { baseQueueEventsOptions, baseQueueOptions, baseWorkerOptions, QUEUE } from '@/queue/const.js';

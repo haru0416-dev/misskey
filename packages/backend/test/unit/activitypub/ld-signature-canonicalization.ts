@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import { describe, expect, test } from 'vitest';
 import { JsonLd, canonicalizeSignatureOptions } from '@/core/activitypub/json-ld.js';
 import type { HttpRequestService } from '@/core/HttpRequestService.js';

@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 import { beforeAll, describe, expect, test } from 'vitest';
 import { api, post, signup, waitFire } from '../utils.js';
 import type * as misskey from 'misskey-js';
