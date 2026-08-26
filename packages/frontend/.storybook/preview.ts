@@ -6,7 +6,6 @@
 import { FORCE_RE_RENDER, FORCE_REMOUNT } from 'storybook/internal/core-events';
 import { addons } from 'storybook/preview-api';
 import { type Preview, setup } from '@storybook/vue3';
-import isChromatic from 'chromatic/isChromatic';
 import { initialize, mswLoader } from 'msw-storybook-addon';
 import { userDetailed } from './fakes.js';
 import { commonHandlers, onUnhandledRequest } from './mocks.js';
@@ -69,27 +68,21 @@ queueMicrotask(() => {
 		import('../src/directives/index.js'),
 		import('../src/widgets/index.js'),
 		import('../src/theme.js'),
-		import('../src/preferences.js'),
 		import('../src/os.js'),
-	]).then(
-		([{ default: components }, { default: directives }, { default: widgets }, { applyTheme }, { prefer }, os]) => {
-			setup((app) => {
-				moduleInitialized = true;
-				if (app[appInitialized]) {
-					return;
-				}
-				app[appInitialized] = true;
-				loadTheme(applyTheme);
-				components(app);
-				directives(app);
-				widgets(app);
-				misskeyOS = os;
-				if (isChromatic()) {
-					prefer.commit('animation', false);
-				}
-			});
-		},
-	);
+	]).then(([{ default: components }, { default: directives }, { default: widgets }, { applyTheme }, os]) => {
+		setup((app) => {
+			moduleInitialized = true;
+			if (app[appInitialized]) {
+				return;
+			}
+			app[appInitialized] = true;
+			loadTheme(applyTheme);
+			components(app);
+			directives(app);
+			widgets(app);
+			misskeyOS = os;
+		});
+	});
 });
 
 const preview = {

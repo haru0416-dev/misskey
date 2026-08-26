@@ -8,7 +8,6 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { StorybookConfig } from '@storybook/vue3-vite';
 import { type Plugin, type PluginOption, mergeConfig } from 'vite';
-import turbosnap from 'vite-plugin-turbosnap';
 
 const require = createRequire(import.meta.url);
 const storybookDir = dirname(fileURLToPath(import.meta.url));
@@ -53,13 +52,6 @@ const config = {
 						const match = /(?:^|\/)\.storybook\/(charts|fake-utils|fakes|mocks)(?:\.js)?$/.exec(source);
 						return match?.[1] ? join(storybookDir, `${match[1]}.ts`) : null;
 					},
-				},
-				{
-					// XXX: https://github.com/IanVS/vite-plugin-turbosnap/issues/8
-					...(turbosnap as any as (typeof turbosnap)['default'])({
-						rootDir: viteConfig.root ?? process.cwd(),
-					}),
-					name: 'fake-turbosnap',
 				},
 			],
 		});
