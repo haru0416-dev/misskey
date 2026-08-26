@@ -22,7 +22,11 @@ import {
 	type HonoApiRelayDeliverDependencies,
 } from '../activitypub/notes-ap.js';
 import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from '../user/user.js';
+import {
+	packMeDetailedForHonoApi,
+	type MeDetailedHonoApiResponse,
+	type UserPackingDependencies,
+} from '../user/user.js';
 import { parseHonoApiParams } from '../validation.js';
 
 export type HonoApiAccountPinDependencies = HonoApiRolePolicyDependencies &

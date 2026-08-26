@@ -12,7 +12,10 @@ import { listMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelM
 import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/user/RenoteMutingStore.js';
-import { markAllHonoApiNotificationsAsRead, type HonoApiNotificationDependencies } from '@/server/rest/notification/notification.js';
+import {
+	markAllHonoApiNotificationsAsRead,
+	type HonoApiNotificationDependencies,
+} from '@/server/rest/notification/notification.js';
 import { isJsonObject, type JsonObject, type JsonValue } from '@/misc/json-value.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';

@@ -60,7 +60,11 @@ import {
 	type HonoApiApPersonDependencies,
 } from './ap-person.js';
 import { deliverQuestionUpdateForHonoApi } from './notes-ap.js';
-import { createNoteForHonoApi, type CreateNoteData, type HonoApiNotesCreateDependencies } from '../note/notes-create.js';
+import {
+	createNoteForHonoApi,
+	type CreateNoteData,
+	type HonoApiNotesCreateDependencies,
+} from '../note/notes-create.js';
 import type { HonoApiNoteStreamPublisher } from '../events.js';
 
 export type HonoApiApNoteDependencies = HonoApiApPersonDependencies &
