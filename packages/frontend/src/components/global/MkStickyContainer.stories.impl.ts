@@ -3,6 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
+import type { StoryObj } from '@/stories/types.js';
 import MkStickyContainer from './MkStickyContainer.vue';
-void MkStickyContainer;
+
+export const Default = {
+	render: (args) => ({
+		components: { MkStickyContainer },
+		setup: () => ({ args }),
+		template: '<MkStickyContainer v-bind="args" />',
+	}),
+	args: {},
+} satisfies StoryObj<typeof MkStickyContainer>;

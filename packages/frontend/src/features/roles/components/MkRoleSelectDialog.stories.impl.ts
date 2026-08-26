@@ -4,10 +4,10 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 import { http, HttpResponse } from 'msw';
-import { role } from '../../../../.storybook/fakes.js';
-import { commonHandlers } from '../../../../.storybook/mocks.js';
+import { role } from '@/stories/fakes.js';
+import { commonHandlers } from '@/stories/mocks.js';
 import MkRoleSelectDialog from '@/features/roles/components/MkRoleSelectDialog.vue';
 
 const roles = [

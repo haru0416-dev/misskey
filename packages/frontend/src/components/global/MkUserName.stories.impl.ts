@@ -4,9 +4,9 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { expect } from 'storybook/test';
-import type { StoryObj } from '@storybook/vue3';
-import { userDetailed } from '../../../.storybook/fakes.js';
+import { expect } from '@/stories/test.js';
+import type { StoryObj } from '@/stories/types.js';
+import { userDetailed } from '@/stories/fakes.js';
 import MkUserName from './MkUserName.vue';
 export const Default = {
 	render(args) {

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { action } from 'storybook/actions';
-import type { StoryObj } from '@storybook/vue3';
+import { action } from '@/stories/action.js';
+import type { StoryObj } from '@/stories/types.js';
 import { onBeforeUnmount } from 'vue';
 import MkDonation from './MkDonation.vue';
 import { instance } from '@/instance.js';
@@ -35,7 +35,6 @@ export const Default = {
 		};
 	},
 	args: {
-		// @ts-expect-error name is used for mocking instance
 		name: 'Misskey Hub',
 	},
 	decorators: [

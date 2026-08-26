@@ -4,10 +4,10 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 import { HttpResponse, http } from 'msw';
-import { userDetailed } from '../../../.storybook/fakes.js';
-import { commonHandlers } from '../../../.storybook/mocks.js';
+import { userDetailed } from '@/stories/fakes.js';
+import { commonHandlers } from '@/stories/mocks.js';
 import home_ from './home.vue';
 export const Default = {
 	render(args) {

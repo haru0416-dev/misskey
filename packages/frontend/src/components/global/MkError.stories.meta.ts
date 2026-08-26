@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Meta } from '@storybook/vue3';
+import type { Meta } from '@/stories/types.js';
 import MkError from './MkError.vue';
 
 export const argTypes = {

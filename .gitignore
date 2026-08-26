@@ -66,21 +66,13 @@ src-js/
 api-docs.json
 tsdoc-metadata.json
 /packages/frontend/build/
-/packages/frontend/src/**/*.stories.ts
+/packages/frontend/catalog-dist/
+/packages/frontend/.vitest-attachments/
+/packages/frontend/test/__screenshots__/
 /packages/misskey-js/generator/api.json
 
 # Storybook generated files
-/packages/frontend/storybook-static/
 /packages/frontend/stats.json
-/packages/frontend/.storybook/changes.js
-/packages/frontend/.storybook/generate.js
-/packages/frontend/.storybook/locale.ts
-/packages/frontend/.storybook/main.js
-/packages/frontend/.storybook/preload-locale.js
-/packages/frontend/.storybook/preload-theme.js
-/packages/frontend/.storybook/themes.ts
-/packages/frontend-embed/storybook-static/
-/packages/frontend-shared/storybook-static/
 
 # Tool temporary files
 npm-debug.log

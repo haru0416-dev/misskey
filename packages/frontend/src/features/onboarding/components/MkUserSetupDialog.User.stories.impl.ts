@@ -4,8 +4,8 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import type { StoryObj } from '@storybook/vue3';
-import { userDetailed } from '../../../../.storybook/fakes.js';
+import type { StoryObj } from '@/stories/types.js';
+import { userDetailed } from '@/stories/fakes.js';
 import MkUserSetupDialog_User from './MkUserSetupDialog.User.vue';
 export const Default = {
 	render(args) {

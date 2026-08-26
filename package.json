@@ -32,7 +32,6 @@
 		"build:frontend-deps": "bun run --bun --parallel --filter '@syuilo/aiscript' --filter mfm-js --filter i18n --filter icons-subsetter --filter misskey-js build",
 		"build:backend-deps": "bun run --bun --parallel --filter mfm-js --filter i18n --filter misskey-js build",
 		"build": "bun run build-pre && bun run --bun --filter '*' --if-present build && bun run build-assets",
-		"build-storybook": "bun run build:frontend-deps && bun run --bun --filter frontend build-storybook",
 		"build-misskey-js-with-types": "bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build && bun run --bun --filter backend generate-api-json --no-build && cp packages/backend/built/api.json packages/misskey-js/generator/api.json && bun run --bun --filter misskey-js update-autogen-code && bun run --bun --filter misskey-js build && bun run --bun --filter misskey-js api",
 		"start": "cd packages/backend && bun run compile-config && bun ./built/entry.js",
 		"start:inspect": "cd packages/backend && bun run compile-config && bun --inspect ./built/entry.js",

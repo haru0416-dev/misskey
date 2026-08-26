@@ -87,8 +87,8 @@ jobs:
       - name: Test icons subsetter
         run: bun run --bun --filter icons-subsetter test
 
-  storybook:
-    name: Build Storybook
+  catalog:
+    name: Build component catalog
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -110,8 +110,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
-      - name: Build Storybook
-        run: bun run build-storybook
+      - name: Build component catalog
+        run: bun run --filter frontend catalog:build
 
   e2e:
     name: E2E tests (frontend)

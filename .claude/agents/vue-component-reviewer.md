@@ -1,6 +1,6 @@
 ---
 name: vue-component-reviewer
-description: Misskey frontend の Vue 3 SFC (packages/frontend/src/components/ / pages/ の *.vue) 変更を機械レビューする。SPDX (HTML コメント)・Mk* 命名・i18n.ts/tsx・SCSS 変数・os.* 経由・a11y・Storybook 併設 (*.stories.impl.ts) を検査。frontend の .vue を変更した PR レビューで呼ぶ。
+description: Misskey frontend の Vue 3 SFC (packages/frontend/src/components/ / pages/ の *.vue) 変更を機械レビューする。SPDX (HTML コメント)・Mk* 命名・i18n.ts/tsx・SCSS 変数・os.* 経由・a11y・カタログ story 併設 (*.stories.impl.ts) を検査。frontend の .vue を変更した PR レビューで呼ぶ。
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -10,7 +10,7 @@ Misskey フロントエンド (`packages/frontend`) の Vue 3 SFC 変更を機�
 
 ## 役割
 
-`packages/frontend/src/components/` および `packages/frontend/src/pages/` 配下の `.vue` 変更を対象に、命名・i18n・スタイル・アクセシビリティ・Storybook 併設の規約逸脱を抽出する。良い点には触れず、改善が必要な箇所のみ報告する。
+`packages/frontend/src/components/` および `packages/frontend/src/pages/` 配下の `.vue` 変更を対象に、命名・i18n・スタイル・アクセシビリティ・コンポーネントカタログ 併設の規約逸脱を抽出する。良い点には触れず、改善が必要な箇所のみ報告する。
 
 ## レビュー対象の特定
 
@@ -25,7 +25,7 @@ BASE=$(git merge-base origin/develop HEAD)
 
 `origin/develop` が無い環境では `develop` または `master` にフォールバックする。
 
-`.ts` を一律で含めると本エージェントの守備範囲外 (composable / store / service 層) まで巻き込んで誤検知が増えるため、対象は `.vue` のみとし、Storybook 併設チェックのために以下を **別リスト** として追加する:
+`.ts` を一律で含めると本エージェントの守備範囲外 (composable / store / service 層) まで巻き込んで誤検知が増えるため、対象は `.vue` のみとし、コンポーネントカタログ 併設チェックのために以下を **別リスト** として追加する:
 
 - `locales/*.yml` (とくに `ja-JP.yml` 以外の変更は即 Critical)
 - `packages/frontend/src/components/**/*.stories.impl.ts`
@@ -114,7 +114,7 @@ git diff "$BASE"...HEAD -- 'packages/frontend/src/**/*.vue' \
 - フォーム要素には対応する `<label>` または `aria-label` を付ける。
 - `:disabled` バインドや `aria-disabled` の整合性を確認する。
 
-### 8. Storybook 併設 (Major)
+### 8. コンポーネントカタログ 併設 (Major)
 
 - 共有 `Mk*` コンポーネントを新規追加した場合、`Mk<Name>.stories.impl.ts` が同階層に併設されているか (サブディレクトリ含む。例: `components/global/MkAvatar.stories.impl.ts`, `components/grid/MkGrid.stories.impl.ts`)。
 - **ファイル名は `.stories.impl.ts` 固定** (`.stories.ts` は生成物なので手編集・コミット不可)。
@@ -174,5 +174,5 @@ git diff --name-only --diff-filter=A "$BASE"...HEAD -- \
 - [os.ts](../../packages/frontend/src/os.ts) — UI 操作 API
 - [MkButton.vue](../../packages/frontend/src/components/form/MkButton.vue)
 - [MkInput.vue](../../packages/frontend/src/components/form/MkInput.vue) — generic SFC 例
-- [MkButton.stories.impl.ts](../../packages/frontend/src/components/form/MkButton.stories.impl.ts) — Storybook 雛形
+- [MkButton.stories.impl.ts](../../packages/frontend/src/components/form/MkButton.stories.impl.ts) — コンポーネントカタログ 雛形
 - [AGENTS.md](../../AGENTS.md) — SPDX / locales 編集制限 / CHANGELOG 書式などの最低限ルール (Codex / Copilot と共通)

@@ -4,10 +4,10 @@
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 import { HttpResponse, http } from 'msw';
-import { userDetailed, inviteCode } from '../../../../.storybook/fakes.js';
-import { commonHandlers } from '../../../../.storybook/mocks.js';
+import { userDetailed, inviteCode } from '@/stories/fakes.js';
+import { commonHandlers } from '@/stories/mocks.js';
 import MkInviteCode from './MkInviteCode.vue';
 
 export const Default = {

@@ -4,7 +4,7 @@
  */
 
 import MkResult from './MkResult.vue';
-import type { StoryObj } from '@storybook/vue3';
+import type { StoryObj } from '@/stories/types.js';
 export const Default = {
 	render(args) {
 		return {

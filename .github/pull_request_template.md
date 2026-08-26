@@ -18,6 +18,6 @@ Thank you for your PR! Before creating a PR, please check the contribution guide
 ## Checklist
 - [ ] Read the [contribution guide](/CONTRIBUTING.md)
 - [ ] Test working in a local environment
-- [ ] (If needed) Add story of storybook
+- [ ] (If needed) Add story to the component catalog
 - [ ] (If needed) Update CHANGELOG.md
 - [ ] (If possible) Add tests

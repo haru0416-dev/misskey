@@ -3,6 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
+import type { StoryObj } from '@/stories/types.js';
 import MkPageHeader_tabs from './MkPageHeader.tabs.vue';
-void MkPageHeader_tabs;
+
+export const Default = {
+	render: (args) => ({
+		components: { MkPageHeader_tabs },
+		setup: () => ({ args }),
+		template: '<MkPageHeader_tabs v-bind="args" />',
+	}),
+	args: {},
+} satisfies StoryObj<typeof MkPageHeader_tabs>;

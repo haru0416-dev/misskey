@@ -52,7 +52,7 @@ jobs:
             "packages/backend/migration"
             "packages/backend/src"
             "packages/backend/test"
-            "packages/frontend/.storybook"
+            "packages/frontend/catalog"
             "packages/frontend/@types"
             "packages/frontend/builder"
             "packages/frontend/lib"
