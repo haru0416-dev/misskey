@@ -35,7 +35,8 @@ export const Default = {
 		// FIXME: 通るけどその後落ちるのでコメントアウト
 		// await expect(a.href).toMatch(/^https?:\/\/.*#test$/);
 		await userEvent.pointer({ keys: '[MouseRight]', target: a });
-		const menu = canvas.getByRole('menu');
+		// os.contextMenu は MkContextMenu を動的 import してから popup するので同期では取れない。
+		const menu = await canvas.findByRole('menu');
 		await expect(menu).toBeInTheDocument();
 		await userEvent.click(a);
 		a.blur();

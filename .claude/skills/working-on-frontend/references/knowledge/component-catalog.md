@@ -53,8 +53,16 @@ async play({ canvasElement }) {
 `document.body` を直接探さないこと。story 間で popup が残ると `getByRole` が複数一致して
 落ちるため、ハーネスが story ごとに `popups` を空にしている。
 
-## 既知の未達
+## `play` を書くときの罠 (実測)
 
-`test:stories` は 62 件中 41 件が通る。残り 21 件 (MkA / MkAd / MkTime / MkDialog /
-MkSignupDialog.Rules / MkAutocomplete / MkGalleryPostPreview) は Storybook 時代に一度も
-実行されておらず、主張が現状と合っているか未確認。**この 21 件はまだ CI に載せていない。**
+- **`os.confirm` / `os.contextMenu` を挟む操作は答えるまで進まない。** 同意スイッチ等は
+  クリックしただけでは値が立たない。確認ダイアログの OK (`i18n.ts.ok`) を押すこと
+- **開いた直後のダイアログは `pointer-events: none`。** フェードイン中なので
+  `await waitFor(() => userEvent.click(ok))` で押せるまで待つ
+- **`os.contextMenu` は component を動的 import する。** `getByRole('menu')` では取れないので
+  `findByRole` を使う
+- **装飾画像 (`alt=""`) は `getByRole('img')` で引けない。** role は `presentation` になる。
+  リンクの唯一の中身が装飾画像だとリンク名が無くなるので、その場合はコンポーネント側が誤り
+- **汎用の `MkInput` は `textbox`。** autocomplete を付けても `combobox` にはならない
+- **時刻に依存する story は `origin` を明示する。** 相対表示は基準時刻を渡さないと実時刻になり、
+  書いた当時は未来だった日付が過去になって落ちる

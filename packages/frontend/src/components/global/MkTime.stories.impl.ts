@@ -80,6 +80,8 @@ export const DetailFuture = {
 	args: {
 		...Empty.args,
 		time: future,
+		// RelativeFuture.play を流用するので、相対表示の基準時刻も揃える必要がある。
+		origin: now,
 		mode: 'detail',
 	},
 } satisfies StoryObj<typeof MkTime>;

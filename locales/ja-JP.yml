@@ -2231,6 +2231,7 @@ _accountDelete:
   inProgress: "削除が進行中"
 
 _ad:
+  label: "広告"
   back: "戻る"
   reduceFrequencyOfThisAd: "この広告の表示頻度を下げる"
   hide: "表示しない"

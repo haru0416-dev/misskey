@@ -35,7 +35,9 @@ export const Default = {
 		expect(links).toHaveLength(2);
 		expect(links[0]).toHaveAttribute('href', `/gallery/${galleryPost().id}`);
 		expect(links[1]).toHaveAttribute('href', `/@${galleryPost().user.username}@${galleryPost().user.host}`);
-		const images = canvas.getAllByRole<HTMLImageElement>('img');
+		// サムネイルはリンクのタイトルと重複する装飾扱い (alt="") なので role からは引けない。
+		const images = [...canvasElement.querySelectorAll('img')];
+		expect(images.length).toBeGreaterThan(0);
 		await waitFor(() => expect(Promise.all(images.map((image) => image.decode()))).resolves.toBeDefined());
 	},
 	args: {

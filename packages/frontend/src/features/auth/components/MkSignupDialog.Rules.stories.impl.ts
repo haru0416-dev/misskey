@@ -46,7 +46,12 @@ export const Empty = {
 		const labels = await canvas.findAllByText(i18n.ts.agree);
 		for (const label of labels) {
 			expect(buttons.at(-1)).toBeDisabled();
-			await waitFor(() => userEvent.click(label));
+			await userEvent.click(label);
+			// 同意の切り替えは os.confirm を挟む。確認ダイアログに答えないと値が立たない。
+			// 開いた直後はフェードインで pointer-events: none なので、押せるまで待つ。
+			const ok = await canvas.findByRole('button', { name: i18n.ts.ok });
+			await waitFor(() => userEvent.click(ok));
+			await waitFor(() => expect(ok).not.toBeInTheDocument());
 		}
 		expect(buttons.at(-1)).toBeEnabled();
 	},
