@@ -4,37 +4,70 @@
  */
 
 import { webhookEventTypes } from '@/models/Webhook.js';
-import { iMoveParamDef } from '@/server/rest/account-move.js';
-import { iPinOrUnpinParamDef } from '@/server/rest/account-pin.js';
-import { changePasswordParamDef, deleteAccountParamDef, regenerateTokenParamDef, updateEmailParamDef } from '@/server/rest/account-security.js';
-import { iUpdateParamDef } from '@/server/rest/account-update.js';
-import { readAnnouncementParamDef } from '@/server/rest/announcements.js';
-import { iAppsParamDef, iAuthorizedAppsParamDef, iRevokeTokenParamDef } from '@/server/rest/app.js';
-import { exportFollowingParamDef } from '@/server/rest/export-jobs.js';
-import { iFavoritesParamDef } from '@/server/rest/favorites.js';
-import { iGalleryLikesParamDef, iGalleryPostsParamDef } from '@/server/rest/gallery.js';
-import { i2faDoneParamDef, i2faKeyDoneParamDef, i2faPasswordLessParamDef, i2faRegisterKeyParamDef, i2faRegisterParamDef, i2faRemoveKeyParamDef, i2faUnregisterParamDef, i2faUpdateKeyParamDef } from '@/server/rest/i-2fa.js';
-import { iSigninHistoryParamDef } from '@/server/rest/i.js';
-import { importAntennasParamDef, importBlockingParamDef, importFollowingParamDef, importMutingParamDef, importUserListsParamDef } from '@/server/rest/import-jobs.js';
-import { claimAchievementParamDef } from '@/server/rest/notification.js';
-import { notificationsParamDef } from '@/server/rest/notifications-list.js';
-import { iPageLikesParamDef, iPagesParamDef } from '@/server/rest/pages.js';
-import { registryGetParamDef, registryScopeParamDef, registryScopesWithDomainParamDef, registrySetParamDef } from '@/server/rest/registry.js';
-import { webhooksCreateParamDef, webhooksDeleteParamDef, webhooksListParamDef, webhooksShowParamDef, webhooksTestParamDef, webhooksUpdateParamDef } from '@/server/rest/webhooks.js';
+import { iMoveParamDef } from '@/server/rest/account/account-move.js';
+import { iPinOrUnpinParamDef } from '@/server/rest/account/account-pin.js';
+import {
+	changePasswordParamDef,
+	deleteAccountParamDef,
+	regenerateTokenParamDef,
+	updateEmailParamDef,
+} from '@/server/rest/account/account-security.js';
+import { iUpdateParamDef } from '@/server/rest/account/account-update.js';
+import { readAnnouncementParamDef } from '@/server/rest/announcement/announcements.js';
+import { iAppsParamDef, iAuthorizedAppsParamDef, iRevokeTokenParamDef } from '@/server/rest/auth/app.js';
+import { exportFollowingParamDef } from '@/server/rest/job/export-jobs.js';
+import { iFavoritesParamDef } from '@/server/rest/favorite/favorites.js';
+import { iGalleryLikesParamDef, iGalleryPostsParamDef } from '@/server/rest/gallery/gallery.js';
+import {
+	i2faDoneParamDef,
+	i2faKeyDoneParamDef,
+	i2faPasswordLessParamDef,
+	i2faRegisterKeyParamDef,
+	i2faRegisterParamDef,
+	i2faRemoveKeyParamDef,
+	i2faUnregisterParamDef,
+	i2faUpdateKeyParamDef,
+} from '@/server/rest/account/i-2fa.js';
+import { iSigninHistoryParamDef } from '@/server/rest/account/i.js';
+import {
+	importAntennasParamDef,
+	importBlockingParamDef,
+	importFollowingParamDef,
+	importMutingParamDef,
+	importUserListsParamDef,
+} from '@/server/rest/job/import-jobs.js';
+import { claimAchievementParamDef } from '@/server/rest/notification/notification.js';
+import { notificationsParamDef } from '@/server/rest/notification/notifications-list.js';
+import { iPageLikesParamDef, iPagesParamDef } from '@/server/rest/page/pages.js';
+import {
+	registryGetParamDef,
+	registryScopeParamDef,
+	registryScopesWithDomainParamDef,
+	registrySetParamDef,
+} from '@/server/rest/registry/registry.js';
+import {
+	webhooksCreateParamDef,
+	webhooksDeleteParamDef,
+	webhooksListParamDef,
+	webhooksShowParamDef,
+	webhooksTestParamDef,
+	webhooksUpdateParamDef,
+} from '@/server/rest/webhook/webhooks.js';
 import { z } from 'zod';
-import { MINUTE, HOUR, DAY } from '@/const.js';
+import { SECOND, MINUTE, HOUR, DAY } from '@/const.js';
 
 export const endpointMetas = {
-	'i': {
+	i: {
 		meta: {
 			tags: ['account'],
 
 			requireCredential: true,
-			kind: "read:account",
+			kind: 'read:account',
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'MeDetailed',
 			},
 
@@ -43,6 +76,7 @@ export const endpointMetas = {
 					message: 'User is deleted.',
 					code: 'USER_IS_DELETED',
 					id: 'e5b3b9f0-2b8f-4b9f-9c1f-8c5c1b2e1b1a',
+					httpStatusCode: 403,
 					kind: 'permission',
 				},
 			},
@@ -185,6 +219,10 @@ export const endpointMetas = {
 
 			secure: true,
 
+			res: {
+				type: 'object',
+			},
+
 			errors: {
 				incorrectPassword: {
 					message: 'Incorrect password.',
@@ -217,6 +255,10 @@ export const endpointMetas = {
 
 			secure: true,
 
+			res: {
+				type: 'object',
+			},
+
 			errors: {
 				noSuchKey: {
 					message: 'No such key.',
@@ -235,6 +277,7 @@ export const endpointMetas = {
 	},
 	'i/apps': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 
 			secure: true,
@@ -273,11 +316,13 @@ export const endpointMetas = {
 						},
 						iconUrl: {
 							type: 'string',
-							optional: true, nullable: true,
+							optional: true,
+							nullable: true,
 						},
 						description: {
 							type: 'string',
-							optional: true, nullable: true,
+							optional: true,
+							nullable: true,
 						},
 					},
 				},
@@ -287,6 +332,7 @@ export const endpointMetas = {
 	},
 	'i/authorized-apps': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 
 			secure: true,
@@ -307,7 +353,8 @@ export const endpointMetas = {
 						},
 						callbackUrl: {
 							type: 'string',
-							optional: false, nullable: true,
+							optional: false,
+							nullable: true,
 						},
 						permission: {
 							type: 'array',
@@ -332,6 +379,20 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			secure: true,
+
+			errors: {
+				incorrectPassword: {
+					message: 'Incorrect password.',
+					code: 'INCORRECT_PASSWORD',
+					id: 'b31b9d69-a1cc-47d9-a494-750046029bef',
+				},
+
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: '540239bb-cf8b-4870-8ca7-3a7f2bf8d0a1',
+				},
+			},
 		} as const,
 		paramDef: changePasswordParamDef,
 	},
@@ -348,6 +409,20 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			secure: true,
+
+			errors: {
+				incorrectPassword: {
+					message: 'Incorrect password.',
+					code: 'INCORRECT_PASSWORD',
+					id: 'e7a9051d-adf7-454d-bfa7-95b3e5e2f5ac',
+				},
+
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: '05b2bab3-0825-4a3e-a13d-8793701af4de',
+				},
+			},
 		} as const,
 		paramDef: deleteAccountParamDef,
 	},
@@ -441,6 +516,7 @@ export const endpointMetas = {
 	},
 	'i/favorites': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notes', 'favorites'],
 
 			requireCredential: true,
@@ -449,10 +525,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'NoteFavorite',
 				},
 			},
@@ -461,6 +539,7 @@ export const endpointMetas = {
 	},
 	'i/gallery/likes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'gallery'],
 
 			requireCredential: true,
@@ -469,19 +548,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						post: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'GalleryPost',
 						},
 					},
@@ -492,6 +575,7 @@ export const endpointMetas = {
 	},
 	'i/gallery/posts': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'gallery'],
 
 			requireCredential: true,
@@ -500,10 +584,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'GalleryPost',
 				},
 			},
@@ -512,14 +598,17 @@ export const endpointMetas = {
 	},
 	'i/import-antennas': {
 		meta: {
+			requireRolePolicy: 'canImportAntennas',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportAntennas',
 			prohibitMoved: true,
 
+			// duration/max はファイル検証を通ったリクエストだけが消費する (実装は routes/export-import.ts)
 			limit: {
 				duration: HOUR,
 				max: 1,
+				minInterval: 5 * SECOND,
 			},
 			errors: {
 				noSuchFile: {
@@ -542,12 +631,18 @@ export const endpointMetas = {
 					code: 'TOO_MANY_ANTENNAS',
 					id: '600917d4-a4cb-4cc5-8ba8-7ac8ea3c7779',
 				},
+				invalidImportFile: {
+					message: 'The antenna import file is invalid.',
+					code: 'INVALID_ANTENNA_IMPORT_FILE',
+					id: 'f9755af1-12aa-44af-a75f-80a729a9e845',
+				},
 			},
 		} as const,
 		paramDef: importAntennasParamDef,
 	},
 	'i/import-blocking': {
 		meta: {
+			requireRolePolicy: 'canImportBlocking',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportBlocking',
@@ -563,12 +658,6 @@ export const endpointMetas = {
 					message: 'No such file.',
 					code: 'NO_SUCH_FILE',
 					id: 'ebb53e5f-6574-9c0c-0b92-7ca6def56d7e',
-				},
-
-				unexpectedFileType: {
-					message: 'We need csv file.',
-					code: 'UNEXPECTED_FILE_TYPE',
-					id: 'b6fab7d6-d945-d67c-dfdb-32da1cd12cfe',
 				},
 
 				tooBigFile: {
@@ -588,6 +677,7 @@ export const endpointMetas = {
 	},
 	'i/import-following': {
 		meta: {
+			requireRolePolicy: 'canImportFollowing',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportFollowing',
@@ -602,12 +692,6 @@ export const endpointMetas = {
 					message: 'No such file.',
 					code: 'NO_SUCH_FILE',
 					id: 'b98644cf-a5ac-4277-a502-0b8054a709a3',
-				},
-
-				unexpectedFileType: {
-					message: 'We need csv file.',
-					code: 'UNEXPECTED_FILE_TYPE',
-					id: '660f3599-bce0-4f95-9dde-311fd841c183',
 				},
 
 				tooBigFile: {
@@ -627,6 +711,7 @@ export const endpointMetas = {
 	},
 	'i/import-muting': {
 		meta: {
+			requireRolePolicy: 'canImportMuting',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportMuting',
@@ -642,12 +727,6 @@ export const endpointMetas = {
 					message: 'No such file.',
 					code: 'NO_SUCH_FILE',
 					id: 'e674141e-bd2a-ba85-e616-aefb187c9c2a',
-				},
-
-				unexpectedFileType: {
-					message: 'We need csv file.',
-					code: 'UNEXPECTED_FILE_TYPE',
-					id: '568c6e42-c86c-ba09-c004-517f83f9f1a8',
 				},
 
 				tooBigFile: {
@@ -667,6 +746,7 @@ export const endpointMetas = {
 	},
 	'i/import-user-lists': {
 		meta: {
+			requireRolePolicy: 'canImportUserLists',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportUserLists',
@@ -681,12 +761,6 @@ export const endpointMetas = {
 					message: 'No such file.',
 					code: 'NO_SUCH_FILE',
 					id: 'ea9cc34f-c415-4bc6-a6fe-28ac40357049',
-				},
-
-				unexpectedFileType: {
-					message: 'We need csv file.',
-					code: 'UNEXPECTED_FILE_TYPE',
-					id: 'a3c9edda-dd9b-4596-be6a-150ef813745c',
 				},
 
 				tooBigFile: {
@@ -718,13 +792,12 @@ export const endpointMetas = {
 
 			errors: {
 				destinationAccountForbids: {
-					message:
-						'Destination account doesn\'t have proper \'Known As\' alias, or has already moved.',
+					message: "Destination account doesn't have proper 'Known As' alias, or has already moved.",
 					code: 'DESTINATION_ACCOUNT_FORBIDS',
 					id: 'b5c90186-4ab0-49c8-9bba-a1f766282ba4',
 				},
 				rootForbidden: {
-					message: 'The root can\'t migrate.',
+					message: "The root can't migrate.",
 					code: 'NOT_ROOT_FORBIDDEN',
 					id: '4362e8dc-731f-4ad8-a694-be2a88922a24',
 				},
@@ -737,11 +810,6 @@ export const endpointMetas = {
 					message: 'User ActivityPup URI is null.',
 					code: 'URI_NULL',
 					id: 'bf326f31-d430-4f97-9933-5d61e4d48a23',
-				},
-				localUriNull: {
-					message: 'Local User ActivityPup URI is null.',
-					code: 'URI_NULL',
-					id: '95ba11b9-90e8-43a5-ba16-7acc1ab32e71',
 				},
 				alreadyMoved: {
 					message: 'Account was already moved to another account.',
@@ -758,6 +826,7 @@ export const endpointMetas = {
 	},
 	'i/notifications': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notifications'],
 
 			requireCredential: true,
@@ -771,10 +840,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Notification',
 				},
 			},
@@ -783,6 +854,7 @@ export const endpointMetas = {
 	},
 	'i/notifications-grouped': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notifications'],
 
 			requireCredential: true,
@@ -796,10 +868,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Notification',
 				},
 			},
@@ -808,6 +882,7 @@ export const endpointMetas = {
 	},
 	'i/page-likes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'pages'],
 
 			requireCredential: true,
@@ -816,18 +891,21 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						page: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'Page',
 						},
 					},
@@ -838,6 +916,7 @@ export const endpointMetas = {
 	},
 	'i/pages': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'pages'],
 
 			requireCredential: true,
@@ -846,10 +925,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Page',
 				},
 			},
@@ -887,7 +968,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'MeDetailed',
 			},
 		} as const,
@@ -901,8 +983,7 @@ export const endpointMetas = {
 
 			kind: 'write:account',
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: readAnnouncementParamDef,
 	},
@@ -911,11 +992,20 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			secure: true,
+
+			errors: {
+				incorrectPassword: {
+					message: 'Incorrect password.',
+					code: 'INCORRECT_PASSWORD',
+					id: '0fef3578-b802-47b5-abb6-38d737baaf03',
+				},
+			},
 		} as const,
 		paramDef: regenerateTokenParamDef,
 	},
 	'i/registry/get': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -929,12 +1019,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-			}
+			},
 		} as const,
 		paramDef: registryGetParamDef,
 	},
 	'i/registry/get-all': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -946,6 +1037,7 @@ export const endpointMetas = {
 	},
 	'i/registry/get-detail': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -974,6 +1066,7 @@ export const endpointMetas = {
 	},
 	'i/registry/keys': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -988,6 +1081,7 @@ export const endpointMetas = {
 	},
 	'i/registry/keys-with-type': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1004,19 +1098,12 @@ export const endpointMetas = {
 		meta: {
 			requireCredential: true,
 			kind: 'write:account',
-
-			errors: {
-				noSuchKey: {
-					message: 'No such key.',
-					code: 'NO_SUCH_KEY',
-					id: '1fac4e8a-a6cd-4e39-a4a5-3a7e11f1b019',
-				},
-			},
 		} as const,
 		paramDef: registryGetParamDef,
 	},
 	'i/registry/scopes-with-domain': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			secure: true,
 
@@ -1031,8 +1118,8 @@ export const endpointMetas = {
 								type: 'array',
 								items: {
 									type: 'string',
-								}
-							}
+								},
+							},
 						},
 						domain: {
 							type: 'string',
@@ -1040,7 +1127,7 @@ export const endpointMetas = {
 						},
 					},
 				},
-			}
+			},
 		} as const,
 		paramDef: registryScopesWithDomainParamDef,
 	},
@@ -1061,15 +1148,18 @@ export const endpointMetas = {
 	},
 	'i/signin-history': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			secure: true,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Signin',
 				},
 			},
@@ -1094,7 +1184,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'MeDetailed',
 			},
 		} as const,
@@ -1169,7 +1260,7 @@ export const endpointMetas = {
 				},
 
 				forbiddenToSetYourself: {
-					message: 'You can\'t set yourself as your own alias.',
+					message: "You can't set yourself as your own alias.",
 					code: 'FORBIDDEN_TO_SET_YOURSELF',
 					id: '25c90186-4ab0-49c8-9bba-a1fa6c202ba4',
 				},
@@ -1186,11 +1277,20 @@ export const endpointMetas = {
 					id: '0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191',
 					httpStatusCode: 422,
 				},
+
+				yourAccountMoved: {
+					message: 'You have moved your account.',
+					code: 'YOUR_ACCOUNT_MOVED',
+					id: '56f20ec9-fd06-4fa5-841b-edd6d7d4fa31',
+					httpStatusCode: 403,
+					kind: 'permission',
+				},
 			},
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'MeDetailed',
 			},
 		} as const,
@@ -1224,6 +1324,12 @@ export const endpointMetas = {
 					message: 'Email address is required.',
 					code: 'EMAIL_REQUIRED',
 					id: '324c7a88-59f2-492f-903f-89134f93e47e',
+				},
+
+				twoFactorAuthenticationFailed: {
+					message: 'Two-factor authentication failed.',
+					code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
+					id: '624fde07-67a7-4da7-b27d-086e529666b6',
 				},
 			},
 
@@ -1299,6 +1405,7 @@ export const endpointMetas = {
 	},
 	'i/webhooks/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['webhooks', 'account'],
 
 			requireCredential: true,
@@ -1317,6 +1424,7 @@ export const endpointMetas = {
 	},
 	'i/webhooks/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['webhooks'],
 
 			requireCredential: true,
@@ -1376,7 +1484,6 @@ export const endpointMetas = {
 					id: 'fb0fea69-da18-45b1-828d-bd4fd1612518',
 				},
 			},
-
 		} as const,
 		paramDef: webhooksUpdateParamDef,
 	},

@@ -3,22 +3,31 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { federationUpdateRemoteUserParamDef } from '@/server/rest/ap-person.js';
-import { federationHostFollowingParamDef, federationInstancesParamDef, federationShowInstanceParamDef, federationStatsParamDef, federationUsersParamDef } from '@/server/rest/federation.js';
+import { federationUpdateRemoteUserParamDef } from '@/server/rest/activitypub/ap-person.js';
+import {
+	federationHostFollowingParamDef,
+	federationInstancesParamDef,
+	federationShowInstanceParamDef,
+	federationStatsParamDef,
+	federationUsersParamDef,
+} from '@/server/rest/activitypub/federation.js';
 
 export const endpointMetas = {
 	'federation/followers': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Following',
 				},
 			},
@@ -27,16 +36,19 @@ export const endpointMetas = {
 	},
 	'federation/following': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Following',
 				},
 			},
@@ -45,6 +57,7 @@ export const endpointMetas = {
 	},
 	'federation/instances': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
@@ -53,10 +66,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'FederationInstance',
 				},
 			},
@@ -65,13 +80,15 @@ export const endpointMetas = {
 	},
 	'federation/show-instance': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'object',
-				optional: false, nullable: true,
+				optional: false,
+				nullable: true,
 				ref: 'FederationInstance',
 			},
 		} as const,
@@ -125,21 +142,38 @@ export const endpointMetas = {
 			tags: ['federation'],
 
 			requireCredential: false,
+
+			errors: {
+				noSuchUser: {
+					message: 'No such user.',
+					code: 'NO_SUCH_USER',
+					id: '15348ddd-432d-49c2-8a5a-8069753becff',
+				},
+
+				notRemoteUser: {
+					message: 'User is not a remote user.',
+					code: 'NOT_REMOTE_USER',
+					id: 'e3ad347a-2493-4f8f-bac0-f91c88daa754',
+				},
+			},
 		} as const,
 		paramDef: federationUpdateRemoteUserParamDef,
 	},
 	'federation/users': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserDetailedNotMe',
 				},
 			},

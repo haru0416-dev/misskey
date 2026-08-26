@@ -21,7 +21,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</Transition>
 	</template>
 	<template v-else-if="display === 'oneByOne'">
-		<!-- TODO -->
 	</template>
 </span>
 </template>
@@ -32,6 +31,7 @@ import * as Misskey from 'misskey-js';
 import { useInterval } from '@shared/utility/use-interval.js';
 import MkMarqueeText from '@/components/display/MkMarqueeText.vue';
 import { shuffle } from '@/utility/shuffle.js';
+import { filterSafeRssItems } from '@/widgets/use-rss-feed.js';
 
 const props = defineProps<{
 	url: string;
@@ -53,7 +53,7 @@ const tick = () => {
 			if (props.shuffle) {
 				shuffle(feed.items);
 			}
-			items.value = feed.items;
+			items.value = filterSafeRssItems(feed.items);
 			fetching.value = false;
 			key.value++;
 		});

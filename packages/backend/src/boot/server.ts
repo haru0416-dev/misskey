@@ -59,7 +59,7 @@ async function closeServer(server: Server): Promise<void> {
 	if (!server.listening) return;
 
 	await new Promise<void>((resolve, reject) => {
-		server.close(err => err ? reject(err) : resolve());
+		server.close((err) => (err ? reject(err) : resolve()));
 	});
 }
 
@@ -70,7 +70,7 @@ async function disposeServerRuntime(disposers: RuntimeDisposer[]): Promise<void>
 	let firstError: unknown;
 	for (const dispose of pending) {
 		try {
-			// Cleanup order is significant, but every disposer must still be attempted.
+			// 解放順序は重要だが、各 disposer の実行は省略しない。
 			// eslint-disable-next-line no-await-in-loop
 			await dispose();
 		} catch (error) {
@@ -84,11 +84,12 @@ export async function launchHonoServer(
 	config: Config,
 	logger = new Logger('hono', 'cyan'),
 	dependencies?: RuntimeDependencies,
+	options?: { daemons?: boolean },
 ): Promise<HonoServerRuntime> {
-	const deps = dependencies ?? await createRuntimeDependencies(config);
+	const deps = dependencies ?? (await createRuntimeDependencies(config));
 	const disposers: RuntimeDisposer[] = dependencies == null ? [() => deps.dispose()] : [];
 	try {
-		return await launchHonoServerWithDependencies(config, logger, deps, disposers);
+		return await launchHonoServerWithDependencies(config, logger, deps, disposers, options?.daemons ?? false);
 	} catch (error) {
 		try {
 			await disposeServerRuntime(disposers);
@@ -104,6 +105,7 @@ async function launchHonoServerWithDependencies(
 	logger: Logger,
 	deps: Awaited<ReturnType<typeof createRuntimeDependencies>>,
 	disposers: RuntimeDisposer[],
+	daemons: boolean,
 ): Promise<HonoServerRuntime> {
 	const eventPublishers = createHonoEventPublishers({
 		config,
@@ -262,7 +264,9 @@ async function launchHonoServerWithDependencies(
 		publishMainStream: eventPublishers.publishMainStream,
 	} satisfies HonoStreamServerDependencies;
 
-	if (!envOption.noDaemons) {
+	// デーモンはホスト全体で1プロセスだけが持つ (master が cluster-roles.ts で割り当てる)。
+	// 複数プロセスで動かすと同じ統計がプロセス数ぶん重複して全ストリームへ配信されてしまう。
+	if (daemons && !envOption.noDaemons) {
 		const queueStatsDaemon = startHonoQueueStatsDaemon({
 			config,
 			deliverQueue: deps.deliverQueue,
@@ -273,10 +277,8 @@ async function launchHonoServerWithDependencies(
 		disposers.push(() => serverStatsDaemon.dispose());
 	}
 
-	// bun ランタイムの node:http compat 層は 'upgrade' イベントで生ソケットに書き込むパターンだと
-	// 同一プロセス内に他のソケット接続 (DB pool / ioredis 等) があるとレスポンスがクライアントに
-	// 届かず永久にハングするバグがある (bun 1.3.14 で確認済み)。Bun.serve() のネイティブ websocket
-	// API はこの経路を通らないため、bun 実行時のみこちらを使う。詳細は streaming/bun-native.ts 参照。
+	// Bun 1.3.14 の node:http compat 層では、DB pool など別のソケット接続がある状態の
+	// WebSocket upgrade が永久にハングした。Bun.serve() は compat 層を経由しないため採用する。
 	if (typeof Bun !== 'undefined') {
 		const streamRuntime = createBunNativeStreamRuntime(streamDeps);
 		disposers.push(() => streamRuntime.dispose());
@@ -297,6 +299,9 @@ async function launchHonoServerWithDependencies(
 					}
 				}
 
+				// CPUプロファイル上は requestIP() が全体の 6.4% を占めるが、これを遅延化 (server を env で
+				// 渡し getRequestIp() 側で解決) しても rps / CPU per req はどちらも変わらなかった。
+				// 実コストは Bun の HTTP 層側にあり、ここを外しても消えない。
 				const remoteAddress = bunServerInstance.requestIP(request)?.address;
 				if (remoteAddress != null) {
 					request.headers.set('x-misskey-remote-address', remoteAddress);
@@ -310,9 +315,11 @@ async function launchHonoServerWithDependencies(
 		if ('unixSocket' in listen && listen.unixSocket.permissions) {
 			fs.chmodSync(listen.unixSocket.path, listen.unixSocket.permissions);
 		}
-		logger.info('unixSocket' in listen
-			? `Listening on ${listen.unixSocket.path}`
-			: `Listening on ${listen.tcp.address}:${listen.tcp.port}`);
+		logger.info(
+			'unixSocket' in listen
+				? `Listening on ${listen.unixSocket.path}`
+				: `Listening on ${listen.tcp.address}:${listen.tcp.port}`,
+		);
 
 		return {
 			server: bunServer,

@@ -9,7 +9,6 @@ declare const _ENV_: string;
 declare const _DEV_: boolean;
 declare const _PERF_PREFIX_: string;
 
-// for dev-mode
 declare const _LANGS_FULL_: string[][];
 
 // TagCanvas

@@ -15,10 +15,13 @@ import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiUser } from '@/models/User.js';
 import type { Awaitable } from '@/types.js';
 
+export type HonoStreamChannelSubscriber = {
+	on: (eventName: string | symbol, listener: Parameters<EventEmitter['on']>[1]) => void;
+	off: (eventName: string | symbol, listener: Parameters<EventEmitter['off']>[1]) => void;
+};
+
 /**
- * Connection.ts が持っていた「フォロー/ミュート/ブロック関係のスナップショット」を
- * プレーンオブジェクトとして channel 初期化関数に渡すための型。Channel 基底クラスの
- * protected getter 群 (user/userProfile/following/...) 相当。
+ * channel 初期化時点のフォロー・ミュート・ブロック関係を保持するスナップショット。
  */
 export type HonoStreamChannelContext = {
 	id: string;
@@ -32,7 +35,7 @@ export type HonoStreamChannelContext = {
 	userIdsWhoMeMutingRenotes: Set<string>;
 	userIdsWhoBlockingMe: Set<string>;
 	userMutedInstances: Set<string>;
-	subscriber: EventEmitter;
+	subscriber: HonoStreamChannelSubscriber;
 	send: (type: string, body: JsonValue) => void;
 };
 
@@ -42,14 +45,14 @@ export function isNoteVisibleForMeForHonoStream(ctx: HonoStreamChannelContext, n
 	if (note.visibility === 'specified') {
 		if (meId == null) return false;
 		if (meId === note.userId) return true;
-		return note.visibleUserIds?.some(id => meId === id) ?? false;
+		return note.visibleUserIds?.includes(meId) ?? false;
 	}
 
 	if (note.visibility === 'followers') {
 		if (meId == null) return false;
 		if (meId === note.userId) return true;
 		if (note.reply && meId === note.reply.userId) return true;
-		if (note.mentions && note.mentions.some(id => meId === id)) return true;
+		if (note.mentions && note.mentions.includes(meId)) return true;
 		return Object.hasOwn(ctx.following, note.userId);
 	}
 
@@ -71,12 +74,15 @@ export type HonoStreamChannelHandle = {
 };
 
 /**
- * Channel クラス + そのサブクラスの静的プロパティ (chName/shouldShare/requireCredential/kind) 相当。
  * `init` が `false` を返す/初期化不可の場合は接続を拒否する。
  */
 export type HonoStreamChannelDefinition<Deps> = {
 	shouldShare: boolean;
 	requireCredential: boolean;
 	kind: string | null;
-	init: (deps: Deps, ctx: HonoStreamChannelContext, params: JsonObject) => Awaitable<HonoStreamChannelHandle | false | void>;
+	init: (
+		deps: Deps,
+		ctx: HonoStreamChannelContext,
+		params: JsonObject,
+	) => Awaitable<HonoStreamChannelHandle | false | void>;
 };

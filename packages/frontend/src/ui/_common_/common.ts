@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { defineAsyncComponent } from 'vue';
 import { host } from '@shared/utility/config.js';
 import type { MenuItem } from '@/types/menu.js';
 import * as os from '@/os.js';
@@ -178,15 +177,18 @@ export function openInstanceMenu(ev: PointerEvent) {
 		});
 	}
 
-	menuItems.push({
-		type: 'link',
-		text: i18n.ts.aboutErebia,
-		to: '/about-erebia',
-	}, {
-		type: 'link',
-		text: i18n.ts.aboutMisskey,
-		to: '/about-misskey',
-	});
+	menuItems.push(
+		{
+			type: 'link',
+			text: i18n.ts.aboutErebia,
+			to: '/about-erebia',
+		},
+		{
+			type: 'link',
+			text: i18n.ts.aboutMisskey,
+			to: '/about-misskey',
+		},
+	);
 
 	os.popupMenu(menuItems, ev.currentTarget ?? ev.target, {
 		align: 'left',

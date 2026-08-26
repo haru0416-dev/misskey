@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-
 export class MiAd {
 	public id: string;
 
@@ -13,7 +12,6 @@ export class MiAd {
 
 	public place: string;
 
-	// 今は使われていないが将来的に活用される可能性はある
 	public priority: string;
 
 	public ratio: number;

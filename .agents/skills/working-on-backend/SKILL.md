@@ -1,6 +1,6 @@
 ---
 name: working-on-backend
-description: Use whenever editing or adding code under `packages/backend/`, including REST API endpoints, NestJS services/modules, TypeORM entities, migrations, backend tests, misskey-js generation, or backend validation commands.
+description: Use whenever editing or adding code under `packages/backend/`, including REST API endpoints, Hono routes, `createXxx()` service factories, drizzle-orm schema definitions, migrations, backend tests, misskey-js generation, or backend validation commands.
 ---
 
 # working-on-backend

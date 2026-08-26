@@ -5,44 +5,44 @@
 import type { IObject } from '../type.js';
 
 export enum FetchAllowSoftFailMask {
-	// Allow no softfail flags
+	// softfail フラグを許可しない。
 	Strict = 0,
-	// The values in tuple (requestUrl, finalUrl, objectId) are not all identical
+	// requestUrl・finalUrl・objectId の値がすべて一致しない場合を許可する。
 	//
-	// This condition is common for user-initiated lookups but should not be allowed in federation loop
+	// ユーザー起点の検索では一般的だが、連合処理では許可しない。
 	//
-	// Allow variations:
-	//   good example: https://alice.example.com/@user -> https://alice.example.com/user/:userId
-	//   problematic example: https://alice.example.com/redirect?url=https://bad.example.com/ -> https://bad.example.com/ -> https://alice.example.com/somethingElse
+	// 許可される例:
+	//   正常: https://alice.example.com/@user -> https://alice.example.com/user/:userId
+	//   問題のある例: https://alice.example.com/redirect?url=https://bad.example.com/ -> https://bad.example.com/ -> https://alice.example.com/somethingElse
 	NonCanonicalId = 1 << 0,
-	// Allow the final object to be at most one subdomain deeper than the request URL, similar to SPF relaxed alignment
+	// 最終オブジェクトのサブドメイン階層を、リクエスト URL より1階層深い範囲まで許可する。
 	//
-	// Currently no code path allows this flag to be set, but is kept in case of future use as some niche deployments do this, and we provide a pre-reviewed mechanism to opt-in.
+	// このフラグを有効にする呼び出し元は存在しない。限定的な構成で必要になった場合に、事前確認済みの選択肢として使えるよう残す。
 	//
-	// Allow variations:
-	//   good example: https://example.com/@user -> https://activitypub.example.com/@user { id: 'https://activitypub.example.com/@user' }
-	//   problematic example: https://example.com/@user -> https://untrusted.example.com/@user { id: 'https://untrusted.example.com/@user' }
+	// 許可される例:
+	//   正常: https://example.com/@user -> https://activitypub.example.com/@user { id: 'https://activitypub.example.com/@user' }
+	//   問題のある例: https://example.com/@user -> https://untrusted.example.com/@user { id: 'https://untrusted.example.com/@user' }
 	MisalignedOrigin = 1 << 1,
-	// The requested URL has a different host than the returned object ID, although the final URL is still consistent with the object ID
+	// リクエスト URL と返された object ID のホストが異なるが、最終 URL と object ID は一致する場合を許可する。
 	//
-	// This condition is common for user-initiated lookups using an intermediate host but should not be allowed in federation loops
+	// 中間ホストを使うユーザー起点の検索では一般的だが、連合処理では許可しない。
 	//
-	// Allow variations:
-	//   good example: https://alice.example.com/@user@bob.example.com -> https://bob.example.com/@user { id: 'https://bob.example.com/@user' }
-	//   problematic example: https://alice.example.com/definitelyAlice -> https://bob.example.com/@somebodyElse { id: 'https://bob.example.com/@somebodyElse' }
-	CrossOrigin = 1 << 2 | MisalignedOrigin,
-	// Allow all softfail flags
+	// 許可される例:
+	//   正常: https://alice.example.com/@user@bob.example.com -> https://bob.example.com/@user { id: 'https://bob.example.com/@user' }
+	//   問題のある例: https://alice.example.com/definitelyAlice -> https://bob.example.com/@somebodyElse { id: 'https://bob.example.com/@somebodyElse' }
+	CrossOrigin = (1 << 2) | MisalignedOrigin,
+	// すべての softfail フラグを許可する。
 	//
-	// do not use this flag on released code
+	// リリース用コードでは使用しない。
 	Any = ~0,
 }
 
 /**
- * Fuzz match on whether the candidate host has authority over the request host
+ * candidate host が request host の管理下にあるかを緩やかに判定する。
  *
- * @param requestHost The host of the requested resources
- * @param candidateHost The host of final response
- * @returns Whether the candidate host has authority over the request host, or if a soft fail is required for a match
+ * @param requestHost リクエスト対象リソースのホスト
+ * @param candidateHost 最終レスポンスのホスト
+ * @returns candidate host が request host を管理しているか、または一致に softfail が必要な場合のフラグ
  */
 function hostFuzzyMatch(requestHost: string, candidateHost: string): FetchAllowSoftFailMask {
 	const requestFqdn = requestHost.endsWith('.') ? requestHost : `${requestHost}.`;
@@ -52,11 +52,11 @@ function hostFuzzyMatch(requestHost: string, candidateHost: string): FetchAllowS
 		return FetchAllowSoftFailMask.Strict;
 	}
 
-	// allow only one case where candidateHost is a first-level subdomain of requestHost
+	// candidateHost が requestHost の1階層下にある場合だけ許可する。
 	const requestDnsDepth = requestFqdn.split('.').length;
 	const candidateDnsDepth = candidateFqdn.split('.').length;
 
-	if ((candidateDnsDepth - requestDnsDepth) !== 1) {
+	if (candidateDnsDepth - requestDnsDepth !== 1) {
 		return FetchAllowSoftFailMask.CrossOrigin;
 	}
 
@@ -67,7 +67,7 @@ function hostFuzzyMatch(requestHost: string, candidateHost: string): FetchAllowS
 	return FetchAllowSoftFailMask.CrossOrigin;
 }
 
-// normalize host names by removing www. prefix
+// www. 接頭辞を除いて同一視できるホスト名へ正規化する。
 function normalizeSynonymousSubdomain(url: URL | string): URL {
 	const urlParsed = url instanceof URL ? url : new URL(url);
 	const host = urlParsed.host;
@@ -75,15 +75,20 @@ function normalizeSynonymousSubdomain(url: URL | string): URL {
 	return new URL(urlParsed.toString().replace(host, normalizedHost));
 }
 
-export function assertActivityMatchesUrl(requestUrl: string | URL, activity: IObject, finalUrl: string | URL, allowSoftfail: FetchAllowSoftFailMask): FetchAllowSoftFailMask {
-	// must have a unique identifier to verify authority
+export function assertActivityMatchesUrl(
+	requestUrl: string | URL,
+	activity: IObject,
+	finalUrl: string | URL,
+	allowSoftfail: FetchAllowSoftFailMask,
+): FetchAllowSoftFailMask {
+	// 管理権限を検証するため、Activity ID は必須とする。
 	if (!activity.id) {
 		throw new Error('bad Activity: missing id field');
 	}
 
 	let softfail = 0;
 
-	// if the flag is allowed, set the flag on return otherwise throw
+	// 許可されたフラグなら戻り値へ設定し、許可されていなければ例外にする。
 	const requireSoftfail = (needed: FetchAllowSoftFailMask, message: string) => {
 		if ((allowSoftfail & needed) !== needed) {
 			throw new Error(message);
@@ -97,9 +102,7 @@ export function assertActivityMatchesUrl(requestUrl: string | URL, activity: IOb
 
 	const finalUrlParsed = normalizeSynonymousSubdomain(finalUrl);
 
-	// mastodon sends activities with hash in the URL
-	// currently it only happens with likes, deletes etc.
-	// but object ID never has hash
+	// Mastodon は URL にハッシュを含む Activity を送ることがあるが、object ID にはハッシュを含めない。
 	requestUrlParsed.hash = '';
 	finalUrlParsed.hash = '';
 
@@ -109,24 +112,33 @@ export function assertActivityMatchesUrl(requestUrl: string | URL, activity: IOb
 		throw new Error(`bad Activity: id(${activity.id}) is not allowed to have http:// in the url`);
 	}
 
-	// Compare final URL to the ID
+	// 最終 URL と ID を比較する。
 	if (finalUrlParsed.href !== idParsed.href) {
-		requireSoftfail(FetchAllowSoftFailMask.NonCanonicalId, `bad Activity: id(${activity.id}) does not match response url(${finalUrlParsed.toString()})`);
+		requireSoftfail(
+			FetchAllowSoftFailMask.NonCanonicalId,
+			`bad Activity: id(${activity.id}) does not match response url(${finalUrlParsed.toString()})`,
+		);
 
-		// at lease host need to match exactly (ActivityPub requirement)
+		// ActivityPub の要件により、ホストは完全一致させる。
 		if (idParsed.host !== finalUrlParsed.host) {
 			throw new Error(`bad Activity: id(${activity.id}) does not match response host(${finalUrlParsed.host})`);
 		}
 	}
 
-	// Compare request URL to the ID
+	// リクエスト URL と ID を比較する。
 	if (requestUrlParsed.href !== idParsed.href) {
-		requireSoftfail(FetchAllowSoftFailMask.NonCanonicalId, `bad Activity: id(${activity.id}) does not match request url(${requestUrlParsed.toString()})`);
+		requireSoftfail(
+			FetchAllowSoftFailMask.NonCanonicalId,
+			`bad Activity: id(${activity.id}) does not match request url(${requestUrlParsed.toString()})`,
+		);
 
-		// if cross-origin lookup is allowed, we can accept some variation between the original request URL to the final object ID (but not between the final URL and the object ID)
+		// cross-origin 検索を許可した場合は、最終 URL と ID の一致を保ったまま、リクエスト URL と最終 object ID の差異を許可する。
 		const hostResult = hostFuzzyMatch(requestUrlParsed.host, idParsed.host);
 
-		requireSoftfail(hostResult, `bad Activity: id(${activity.id}) is valid but is not the same origin as request url(${requestUrlParsed.toString()})`);
+		requireSoftfail(
+			hostResult,
+			`bad Activity: id(${activity.id}) is valid but is not the same origin as request url(${requestUrlParsed.toString()})`,
+		);
 	}
 
 	return softfail;

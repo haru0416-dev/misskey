@@ -31,11 +31,7 @@ import { packedChannelSchema } from '@/models/json-schema/channel.js';
 import { packedAntennaSchema } from '@/models/json-schema/antenna.js';
 import { packedClipSchema } from '@/models/json-schema/clip.js';
 import { packedFederationInstanceSchema } from '@/models/json-schema/federation-instance.js';
-import {
-	packedQueueCountSchema,
-	packedQueueMetricsSchema,
-	packedQueueJobSchema,
-} from '@/models/json-schema/queue.js';
+import { packedQueueCountSchema, packedQueueMetricsSchema, packedQueueJobSchema } from '@/models/json-schema/queue.js';
 import { packedGalleryPostSchema } from '@/models/json-schema/gallery-post.js';
 import {
 	packedEmojiDetailedAdminSchema,
@@ -68,7 +64,12 @@ import {
 import { packedUserWebhookSchema } from '@/models/json-schema/user-webhook.js';
 import { packedSystemWebhookSchema } from '@/models/json-schema/system-webhook.js';
 import { packedAbuseReportNotificationRecipientSchema } from '@/models/json-schema/abuse-report-notification-recipient.js';
-import { packedChatMessageSchema, packedChatMessageLiteSchema, packedChatMessageLiteForRoomSchema, packedChatMessageLiteFor1on1Schema } from '@/models/json-schema/chat-message.js';
+import {
+	packedChatMessageSchema,
+	packedChatMessageLiteSchema,
+	packedChatMessageLiteForRoomSchema,
+	packedChatMessageLiteFor1on1Schema,
+} from '@/models/json-schema/chat-message.js';
 import { packedChatRoomSchema } from '@/models/json-schema/chat-room.js';
 import { packedChatRoomInvitationSchema } from '@/models/json-schema/chat-room-invitation.js';
 import { packedChatRoomMembershipSchema } from '@/models/json-schema/chat-room-membership.js';
@@ -146,22 +147,27 @@ export const refs = {
 	ChatRoomMembership: packedChatRoomMembershipSchema,
 };
 
-export type Packed<x extends keyof typeof refs> = SchemaType<typeof refs[x]>;
+export type Packed<x extends keyof typeof refs> = SchemaType<(typeof refs)[x]>;
 
-export type KeyOf<x extends keyof typeof refs> = PropertiesToUnion<typeof refs[x]>;
+export type KeyOf<x extends keyof typeof refs> = PropertiesToUnion<(typeof refs)[x]>;
 type PropertiesToUnion<p extends Schema> = p['properties'] extends NonNullable<Obj> ? keyof p['properties'] : never;
 
 type TypeStringef = 'null' | 'boolean' | 'integer' | 'number' | 'string' | 'array' | 'object' | 'any';
-type StringDefToType<T extends TypeStringef> =
-	T extends 'null' ? null :
-	T extends 'boolean' ? boolean :
-	T extends 'integer' ? number :
-	T extends 'number' ? number :
-	T extends 'string' ? string | Date :
-	T extends 'array' ? ReadonlyArray<unknown> :
-	T extends 'object' ? Record<string, unknown> :
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	any;
+type StringDefToType<T extends TypeStringef> = T extends 'null'
+	? null
+	: T extends 'boolean'
+		? boolean
+		: T extends 'integer'
+			? number
+			: T extends 'number'
+				? number
+				: T extends 'string'
+					? string | Date
+					: T extends 'array'
+						? ReadonlyArray<unknown>
+						: T extends 'object'
+							? Record<string, unknown>
+							: any;
 
 // https://swagger.io/specification/?sbsearch=optional#schema-object
 type OfSchema = {
@@ -195,25 +201,22 @@ export interface Schema extends OfSchema {
 }
 
 type RequiredPropertyNames<s extends Obj> = {
-	[K in keyof s]:
-	// K is not optional
-	s[K]['optional'] extends false ? K :
-	// K has default value
-	s[K]['default'] extends null | string | number | boolean | Record<string, unknown> ? K :
-	never
+	[K in keyof s]: s[K]['optional'] extends false
+		? K
+		: s[K]['default'] extends null | string | number | boolean | Record<string, unknown>
+			? K
+			: never;
 }[keyof s];
 
-export type Obj = Record<string, Schema>;
+type Obj = Record<string, Schema>;
 
 // https://github.com/misskey-dev/misskey/issues/8535
-// To avoid excessive stack depth error,
-// deceive TypeScript with UnionToIntersection (or more precisely, `infer` expression within it).
-export type ObjType<s extends Obj, RequiredProps extends ReadonlyArray<keyof s>> =
-	UnionToIntersection<
-		{ -readonly [R in RequiredPropertyNames<s>]-?: SchemaType<s[R]> } &
-		{ -readonly [R in RequiredProps[number]]-?: SchemaType<s[R]> } &
-		{ -readonly [P in keyof s]?: SchemaType<s[P]> }
-	>;
+// TypeScript のスタック深度超過を避けるため、UnionToIntersection (正確には内部の `infer` 式) で型推論させる。
+type ObjType<s extends Obj, RequiredProps extends ReadonlyArray<keyof s>> = UnionToIntersection<
+	{ -readonly [R in RequiredPropertyNames<s>]-?: SchemaType<s[R]> } & {
+		-readonly [R in RequiredProps[number]]-?: SchemaType<s[R]>;
+	} & { -readonly [P in keyof s]?: SchemaType<s[P]> }
+>;
 
 type NullOrUndefined<p extends Schema, T> =
 	| (p['nullable'] extends true ? null : never)
@@ -221,88 +224,102 @@ type NullOrUndefined<p extends Schema, T> =
 	| T;
 
 // https://stackoverflow.com/questions/54938141/typescript-convert-union-to-intersection
-// Get intersection from union
-// NOTE: `U extends unknown` (not `any`) is the standard any-free idiom to force
-// distribution over the union U while inferring the intersection.
-type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
+// Union から intersection を得る。
+// `U extends unknown` (`any` ではない) は、U の union 分配と intersection の推論を両立する any-free の定石。
+type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
 
-type ArrayToIntersection<T extends ReadonlyArray<Schema>> =
-	T extends readonly [infer Head, ...infer Tail]
-		? Head extends Schema
-			? Tail extends ReadonlyArray<Schema>
-				? Tail extends []
-					? SchemaType<Head>
-					: SchemaType<Head> & ArrayToIntersection<Tail>
-				: never
+type ArrayToIntersection<T extends ReadonlyArray<Schema>> = T extends readonly [infer Head, ...infer Tail]
+	? Head extends Schema
+		? Tail extends ReadonlyArray<Schema>
+			? Tail extends []
+				? SchemaType<Head>
+				: SchemaType<Head> & ArrayToIntersection<Tail>
 			: never
-		: never;
+		: never
+	: never;
 
 // https://github.com/misskey-dev/misskey/pull/8144#discussion_r785287552
-// To get union, we use `Foo extends any ? Hoge<Foo> : never`
-// NOTE: `a`'s `any[]` bound is load-bearing here: `a[number]` feeds the default
-// value of X (constrained to Schema / ReadonlyArray<keyof s>), and narrowing it
-// to `unknown[]` breaks that constraint check. Kept as `any[]` deliberately.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type UnionSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends unknown ? SchemaType<X> : never;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type UnionObjType<s extends Obj, a extends readonly any[], X extends ReadonlyArray<keyof s> = a[number]> = X extends unknown ? ObjType<s, X> : never;
+// Union を得るために `Foo extends any ? Hoge<Foo> : never` の分配を使う。
+// `a[number]` が X の既定値 (Schema / ReadonlyArray<keyof s> に制約) になるため、`a` は `any[]` のままにする。
+// `unknown[]` に狭めるとこの制約検査が壊れる。
+type UnionSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends unknown
+	? SchemaType<X>
+	: never;
+type UnionObjType<
+	s extends Obj,
+	a extends readonly any[],
+	X extends ReadonlyArray<keyof s> = a[number],
+> = X extends unknown ? ObjType<s, X> : never;
 type ArrayUnion<T> = T extends unknown ? Array<T> : never;
 type ArrayToTuple<X extends ReadonlyArray<Schema>> = { [K in keyof X]: SchemaType<X[K]> };
 
-type ObjectSchemaTypeDef<p extends Schema> =
-	p['ref'] extends keyof typeof refs ? Packed<p['ref']> :
-	p['properties'] extends NonNullable<Obj> ?
-		p['anyOf'] extends ReadonlyArray<Schema> ? p['anyOf'][number]['required'] extends ReadonlyArray<keyof p['properties']> ?
-			UnionObjType<p['properties'], NonNullable<p['anyOf'][number]['required']>> & ObjType<p['properties'], NonNullable<p['required']>>
-			: never
-		: ObjType<p['properties'], NonNullable<p['required']>>
-		:
-		p['anyOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<p['anyOf']> :
-		p['allOf'] extends ReadonlyArray<Schema> ? ArrayToIntersection<p['allOf']> :
-		// NOTE: consumers (e.g. MetaEntityPacker.ts) assign concrete third-party option
-		// configuration objects into fields typed via this branch;
-		// narrowing to Record<string, unknown> breaks that structural assignment. Kept as any.
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		p['additionalProperties'] extends true ? Record<string, any> :
-		p['additionalProperties'] extends Schema ?
-			p['additionalProperties'] extends infer AdditionalProperties ?
-				AdditionalProperties extends Schema ?
-					Record<string, SchemaType<AdditionalProperties>> :
-					never :
-				never :
-			any;
+type ObjectSchemaTypeDef<p extends Schema> = p['ref'] extends keyof typeof refs
+	? Packed<p['ref']>
+	: p['properties'] extends NonNullable<Obj>
+		? p['anyOf'] extends ReadonlyArray<Schema>
+			? p['anyOf'][number]['required'] extends ReadonlyArray<keyof p['properties']>
+				? UnionObjType<p['properties'], NonNullable<p['anyOf'][number]['required']>> &
+						ObjType<p['properties'], NonNullable<p['required']>>
+				: never
+			: ObjType<p['properties'], NonNullable<p['required']>>
+		: p['anyOf'] extends ReadonlyArray<Schema>
+			? UnionSchemaType<p['anyOf']>
+			: p['allOf'] extends ReadonlyArray<Schema>
+				? ArrayToIntersection<p['allOf']>
+				: // この分岐の型を持つフィールドには、外部ライブラリの具体的な設定オブジェクトを代入する。
+					// Record<string, unknown> に狭めると構造的代入が壊れるため、any を使用する。
+					p['additionalProperties'] extends true
+					? Record<string, any>
+					: p['additionalProperties'] extends Schema
+						? p['additionalProperties'] extends infer AdditionalProperties
+							? AdditionalProperties extends Schema
+								? Record<string, SchemaType<AdditionalProperties>>
+								: never
+							: never
+						: any;
 
-export type SchemaTypeDef<p extends Schema> =
-	p['type'] extends 'null' ? null :
-	p['type'] extends 'integer' ? number :
-	p['type'] extends 'number' ? number :
-	p['type'] extends 'string' ? (
-		p['enum'] extends readonly (string | null)[] ?
-			p['enum'][number] :
-			p['format'] extends 'date-time' ? string : // Dateにする？？
-			string
-	) :
-		p['type'] extends 'boolean' ? boolean :
-		p['type'] extends 'object' ? ObjectSchemaTypeDef<p> :
-		p['type'] extends 'array' ? (
-			p['items'] extends OfSchema ? (
-				p['items']['anyOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<NonNullable<p['items']['anyOf']>>[] :
-				p['items']['oneOf'] extends ReadonlyArray<Schema> ? ArrayUnion<UnionSchemaType<NonNullable<p['items']['oneOf']>>> :
-				p['items']['allOf'] extends ReadonlyArray<Schema> ? UnionToIntersection<UnionSchemaType<NonNullable<p['items']['allOf']>>>[] :
-				never
-			) :
-				p['prefixItems'] extends ReadonlyArray<Schema> ? (
-					p['items'] extends NonNullable<Schema> ? [...ArrayToTuple<p['prefixItems']>, ...SchemaType<p['items']>[]] :
-					p['items'] extends false ? ArrayToTuple<p['prefixItems']> :
-					p['unevaluatedItems'] extends false ? ArrayToTuple<p['prefixItems']> :
-					[...ArrayToTuple<p['prefixItems']>, ...unknown[]]
-				) :
-					p['items'] extends NonNullable<Schema> ? SchemaType<p['items']>[] :
-					any[]
-		) :
-			p['anyOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<p['anyOf']> :
-			p['allOf'] extends ReadonlyArray<Schema> ? ArrayToIntersection<p['allOf']> :
-			p['oneOf'] extends ReadonlyArray<Schema> ? UnionSchemaType<p['oneOf']> :
-			any;
+type SchemaTypeDef<p extends Schema> = p['type'] extends 'null'
+	? null
+	: p['type'] extends 'integer'
+		? number
+		: p['type'] extends 'number'
+			? number
+			: p['type'] extends 'string'
+				? p['enum'] extends readonly (string | null)[]
+					? p['enum'][number]
+					: p['format'] extends 'date-time'
+						? string // Dateにする？？
+						: string
+				: p['type'] extends 'boolean'
+					? boolean
+					: p['type'] extends 'object'
+						? ObjectSchemaTypeDef<p>
+						: p['type'] extends 'array'
+							? p['items'] extends OfSchema
+								? p['items']['anyOf'] extends ReadonlyArray<Schema>
+									? UnionSchemaType<NonNullable<p['items']['anyOf']>>[]
+									: p['items']['oneOf'] extends ReadonlyArray<Schema>
+										? ArrayUnion<UnionSchemaType<NonNullable<p['items']['oneOf']>>>
+										: p['items']['allOf'] extends ReadonlyArray<Schema>
+											? UnionToIntersection<UnionSchemaType<NonNullable<p['items']['allOf']>>>[]
+											: never
+								: p['prefixItems'] extends ReadonlyArray<Schema>
+									? p['items'] extends NonNullable<Schema>
+										? [...ArrayToTuple<p['prefixItems']>, ...SchemaType<p['items']>[]]
+										: p['items'] extends false
+											? ArrayToTuple<p['prefixItems']>
+											: p['unevaluatedItems'] extends false
+												? ArrayToTuple<p['prefixItems']>
+												: [...ArrayToTuple<p['prefixItems']>, ...unknown[]]
+									: p['items'] extends NonNullable<Schema>
+										? SchemaType<p['items']>[]
+										: any[]
+							: p['anyOf'] extends ReadonlyArray<Schema>
+								? UnionSchemaType<p['anyOf']>
+								: p['allOf'] extends ReadonlyArray<Schema>
+									? ArrayToIntersection<p['allOf']>
+									: p['oneOf'] extends ReadonlyArray<Schema>
+										? UnionSchemaType<p['oneOf']>
+										: any;
 
-export type SchemaType<p extends Schema> = NullOrUndefined<p, SchemaTypeDef<p>>;
+type SchemaType<p extends Schema> = NullOrUndefined<p, SchemaTypeDef<p>>;

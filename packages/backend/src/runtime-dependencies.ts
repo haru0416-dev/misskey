@@ -5,25 +5,26 @@
 
 import * as Redis from 'ioredis';
 import { Meilisearch } from 'meilisearch';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import { allSettled } from '@/misc/promise-tracker.js';
 import type { GlobalEvents } from '@/core/global-events.js';
-import { createAiService } from '@/core/AiService.js';
-import { createDownloadService, type DownloadService } from '@/core/DownloadService.js';
-import { createFileInfoService, type FileInfoService } from '@/core/FileInfoService.js';
-import { createHttpRequestService, type HttpRequestService } from '@/core/HttpRequestService.js';
-import { createImageProcessingService, type ImageProcessingService } from '@/core/ImageProcessingService.js';
-import { createInternalStorageService, type InternalStorageService } from '@/core/InternalStorageService.js';
+import { createAiService } from '@/core/ai/AiService.js';
+import { createDownloadService, type DownloadService } from '@/core/net/DownloadService.js';
+import { createFileInfoService, type FileInfoService } from '@/core/drive/FileInfoService.js';
+import { createHttpRequestService, type HttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createImageProcessingService, type ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
+import { createInternalStorageService, type InternalStorageService } from '@/core/drive/InternalStorageService.js';
 import { createLoggerService, type LoggerService } from '@/core/LoggerService.js';
-import { createS3Service, type S3Service } from '@/core/S3Service.js';
-import { createEmailService, type EmailService } from '@/core/EmailService.js';
-import { createUserAuthService, type UserAuthService } from '@/core/UserAuthService.js';
-import { createUtilityService } from '@/core/UtilityService.js';
-import { createWebAuthnService, type WebAuthnService } from '@/core/WebAuthnService.js';
+import { createS3Service, type S3Service } from '@/core/drive/S3Service.js';
+import { createEmailService, type EmailService } from '@/core/email/EmailService.js';
+import { createUserAuthService, type UserAuthService } from '@/core/account/UserAuthService.js';
+import { createUtilityService } from '@/core/net/UtilityService.js';
+import { createWebAuthnService, type WebAuthnService } from '@/core/account/WebAuthnService.js';
 import {
 	createDbQueue,
 	createDeliverQueue,
@@ -45,10 +46,15 @@ import {
 	type SystemQueue,
 	type SystemWebhookDeliverQueue,
 	type UserWebhookDeliverQueue,
-} from '@/core/queues.js';
-import { createVideoProcessingService, type VideoProcessingService } from '@/core/VideoProcessingService.js';
+} from '@/core/queue/queues.js';
+import { createVideoProcessingService, type VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import { createUrlPreviewService, type UrlPreviewService } from '@/server/web/UrlPreviewService.js';
-import { createHonoChartWriters, saveHonoChartWriters, startHonoChartWriterSaveInterval, type HonoChartWriters } from '@/server/chart-runtime.js';
+import {
+	createHonoChartWriters,
+	saveHonoChartWriters,
+	startHonoChartWriterSaveInterval,
+	type HonoChartWriters,
+} from '@/server/chart-runtime.js';
 
 export type RuntimeDependencies = {
 	config: Config;
@@ -87,8 +93,9 @@ export type RuntimeDependencies = {
 	dispose: () => Promise<void>;
 };
 
-export type RuntimeResources = {
+type RuntimeResources = {
 	drizzlePool?: MiDrizzlePool;
+	bunSqlClose?: () => Promise<void>;
 	redis?: Redis.Redis;
 	redisForPub?: Redis.Redis;
 	redisForSub?: Redis.Redis;
@@ -107,7 +114,7 @@ export type RuntimeResources = {
 	urlPreviewService?: UrlPreviewService;
 };
 
-export function createMeilisearchClient(config: Config): Meilisearch | null {
+function createMeilisearchClient(config: Config): Meilisearch | null {
 	if (config.search.provider !== 'meilisearch') {
 		return null;
 	}
@@ -130,7 +137,7 @@ export function createRedisForPub(config: Config): Redis.Redis {
 	return new Redis.Redis(config.valkey.pubsub);
 }
 
-export async function createRedisForSub(config: Config): Promise<Redis.Redis> {
+async function createRedisForSub(config: Config): Promise<Redis.Redis> {
 	const redis = new Redis.Redis(config.valkey.pubsub);
 	try {
 		await redis.subscribe(config.runtime.host);
@@ -141,15 +148,15 @@ export async function createRedisForSub(config: Config): Promise<Redis.Redis> {
 	}
 }
 
-export function createRedisForTimelines(config: Config): Redis.Redis {
+function createRedisForTimelines(config: Config): Redis.Redis {
 	return new Redis.Redis(config.valkey.timelines);
 }
 
-export function createRedisForReactions(config: Config): Redis.Redis {
+function createRedisForReactions(config: Config): Redis.Redis {
 	return new Redis.Redis(config.valkey.reactions);
 }
 
-export async function fetchReactiveMeta(db: MiDrizzleDatabase, redisForSub: Redis.Redis): Promise<MiMeta> {
+async function fetchReactiveMeta(db: MiDrizzleDatabase, redisForSub: Redis.Redis): Promise<MiMeta> {
 	const meta = await fetchMetaFromDatabase(db);
 
 	async function onMessage(_: string, data: string): Promise<void> {
@@ -184,7 +191,7 @@ export async function closeRedisConnection(redis: Redis.Redis): Promise<void> {
 	}
 }
 
-export async function disposeRuntimeResources(resources: RuntimeResources): Promise<void> {
+async function disposeRuntimeResources(resources: RuntimeResources): Promise<void> {
 	resources.urlPreviewService?.dispose();
 	await allSettled();
 	await Promise.all([
@@ -199,6 +206,7 @@ export async function disposeRuntimeResources(resources: RuntimeResources): Prom
 		resources.userWebhookDeliverQueue?.close(),
 		resources.systemWebhookDeliverQueue?.close(),
 		resources.drizzlePool?.end(),
+		resources.bunSqlClose?.(),
 		resources.redis ? closeRedisConnection(resources.redis) : undefined,
 		resources.redisForPub ? closeRedisConnection(resources.redisForPub) : undefined,
 		resources.redisForSub ? closeRedisConnection(resources.redisForSub) : undefined,
@@ -207,26 +215,58 @@ export async function disposeRuntimeResources(resources: RuntimeResources): Prom
 	]);
 }
 
+/**
+ * 本番は bun で起動するため、DBドライバの既定は Bun.sql (node-postgres 比で実エンドポイントの
+ * p50 −5〜−18% / rps +4〜+23%)。node で動く経路 (unit / e2e のローカルモード) は Bun.sql を
+ * 持たないので自動的に node-postgres へ落ちる。`MK_DB_DRIVER=pg` で明示的に固定できる。
+ */
+function shouldUseBunSql(): boolean {
+	const driver = process.env['MK_DB_DRIVER'];
+	if (driver != null && driver !== '' && driver !== 'pg' && driver !== 'bun-sql') {
+		throw new Error(`Unknown MK_DB_DRIVER: ${driver} (expected 'pg' or 'bun-sql')`);
+	}
+	if (driver === 'pg') return false;
+	if (typeof Bun === 'undefined') {
+		if (driver === 'bun-sql') throw new Error('MK_DB_DRIVER=bun-sql requires the bun runtime');
+		return false;
+	}
+	return true;
+}
+
 export async function createRuntimeDependencies(config: Config): Promise<RuntimeDependencies> {
 	const resources: RuntimeResources = {};
 	try {
-		const drizzlePool = resources.drizzlePool = createDrizzlePool(config);
-		const db = createDrizzleDatabase(drizzlePool, config);
-		const redis = resources.redis = createRedisClient(config);
-		const redisForPub = resources.redisForPub = createRedisForPub(config);
-		const redisForSub = resources.redisForSub = await createRedisForSub(config);
-		const redisForTimelines = resources.redisForTimelines = createRedisForTimelines(config);
-		const redisForReactions = resources.redisForReactions = createRedisForReactions(config);
-		const systemQueue = resources.systemQueue = createSystemQueue(config);
-		const endedPollNotificationQueue = resources.endedPollNotificationQueue = createEndedPollNotificationQueue(config);
-		const postScheduledNoteQueue = resources.postScheduledNoteQueue = createPostScheduledNoteQueue(config);
-		const deliverQueue = resources.deliverQueue = createDeliverQueue(config);
-		const inboxQueue = resources.inboxQueue = createInboxQueue(config);
-		const dbQueue = resources.dbQueue = createDbQueue(config);
-		const relationshipQueue = resources.relationshipQueue = createRelationshipQueue(config);
-		const objectStorageQueue = resources.objectStorageQueue = createObjectStorageQueue(config);
-		const userWebhookDeliverQueue = resources.userWebhookDeliverQueue = createUserWebhookDeliverQueue(config);
-		const systemWebhookDeliverQueue = resources.systemWebhookDeliverQueue = createSystemWebhookDeliverQueue(config);
+		// Bun.sql 経路でもプールは作る。`reset-db` (テスト専用エンドポイント) が pg の Pool を要求するため。
+		// minimumConnections の既定は0で、クエリを流さない限り接続は張られない。
+		const drizzlePool = (resources.drizzlePool = createDrizzlePool(config));
+		// bun 限定モジュールなので、node で動くテスト経路から読まれないよう動的 import にしている。
+		// Bun 1.3.14 のtransaction接続リークを避けるには通常クエリ用とtransaction用の
+		// 2 poolが必要。接続予算1では分離できないため、その構成だけpgへフォールバックする。
+		const db =
+			shouldUseBunSql() && resolveDatabasePoolSize(config) >= 2
+				? await (async () => {
+						const { createBunSqlRuntime } = await import('@/db/bun-sql.js');
+						const runtime = createBunSqlRuntime(config);
+						resources.bunSqlClose = runtime.close;
+						return runtime.db;
+					})()
+				: createDrizzleDatabase(drizzlePool, config);
+		const redis = (resources.redis = createRedisClient(config));
+		const redisForPub = (resources.redisForPub = createRedisForPub(config));
+		const redisForSub = (resources.redisForSub = await createRedisForSub(config));
+		const redisForTimelines = (resources.redisForTimelines = createRedisForTimelines(config));
+		const redisForReactions = (resources.redisForReactions = createRedisForReactions(config));
+		const systemQueue = (resources.systemQueue = createSystemQueue(config));
+		const endedPollNotificationQueue = (resources.endedPollNotificationQueue =
+			createEndedPollNotificationQueue(config));
+		const postScheduledNoteQueue = (resources.postScheduledNoteQueue = createPostScheduledNoteQueue(config));
+		const deliverQueue = (resources.deliverQueue = createDeliverQueue(config));
+		const inboxQueue = (resources.inboxQueue = createInboxQueue(config));
+		const dbQueue = (resources.dbQueue = createDbQueue(config));
+		const relationshipQueue = (resources.relationshipQueue = createRelationshipQueue(config));
+		const objectStorageQueue = (resources.objectStorageQueue = createObjectStorageQueue(config));
+		const userWebhookDeliverQueue = (resources.userWebhookDeliverQueue = createUserWebhookDeliverQueue(config));
+		const systemWebhookDeliverQueue = (resources.systemWebhookDeliverQueue = createSystemWebhookDeliverQueue(config));
 		const meilisearch = createMeilisearchClient(config);
 		const meta = await fetchReactiveMeta(db, redisForSub);
 		const loggerService = createLoggerService();
@@ -234,7 +274,12 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		const aiService = createAiService(meta, httpRequestService, loggerService);
 		const fileInfoService = createFileInfoService(aiService, loggerService);
 		const downloadService = createDownloadService(config, httpRequestService, loggerService);
-		const urlPreviewService = resources.urlPreviewService = createUrlPreviewService(config, meta, httpRequestService, loggerService);
+		const urlPreviewService = (resources.urlPreviewService = createUrlPreviewService(
+			config,
+			meta,
+			httpRequestService,
+			loggerService,
+		));
 		const imageProcessingService = createImageProcessingService();
 		const videoProcessingService = createVideoProcessingService(config, imageProcessingService);
 		const internalStorageService = createInternalStorageService(config);
@@ -248,51 +293,51 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		let disposed = false;
 
 		return {
-		config,
-		drizzlePool,
-		db,
-		meta,
-		meilisearch,
-		downloadService,
-		emailService,
-		fileInfoService,
-		httpRequestService,
-		imageProcessingService,
-		internalStorageService,
-		loggerService,
-		s3Service,
-		userAuthService,
-		urlPreviewService,
-		videoProcessingService,
-		webAuthnService,
-		systemQueue,
-		endedPollNotificationQueue,
-		postScheduledNoteQueue,
-		deliverQueue,
-		inboxQueue,
-		dbQueue,
-		relationshipQueue,
-		objectStorageQueue,
-		userWebhookDeliverQueue,
-		systemWebhookDeliverQueue,
-		redis,
-		redisForPub,
-		redisForSub,
-		redisForTimelines,
-		redisForReactions,
-		chartWriters,
-		dispose: async () => {
-			if (disposed) return;
-			disposed = true;
-			clearInterval(chartWriterSaveIntervalId);
-			try {
-				if (process.env['NODE_ENV'] !== 'test') {
-					await saveHonoChartWriters(chartWriters);
+			config,
+			drizzlePool,
+			db,
+			meta,
+			meilisearch,
+			downloadService,
+			emailService,
+			fileInfoService,
+			httpRequestService,
+			imageProcessingService,
+			internalStorageService,
+			loggerService,
+			s3Service,
+			userAuthService,
+			urlPreviewService,
+			videoProcessingService,
+			webAuthnService,
+			systemQueue,
+			endedPollNotificationQueue,
+			postScheduledNoteQueue,
+			deliverQueue,
+			inboxQueue,
+			dbQueue,
+			relationshipQueue,
+			objectStorageQueue,
+			userWebhookDeliverQueue,
+			systemWebhookDeliverQueue,
+			redis,
+			redisForPub,
+			redisForSub,
+			redisForTimelines,
+			redisForReactions,
+			chartWriters,
+			dispose: async () => {
+				if (disposed) return;
+				disposed = true;
+				clearInterval(chartWriterSaveIntervalId);
+				try {
+					if (process.env['NODE_ENV'] !== 'test') {
+						await saveHonoChartWriters(chartWriters);
+					}
+				} finally {
+					await disposeRuntimeResources(resources);
 				}
-			} finally {
-				await disposeRuntimeResources(resources);
-			}
-		},
+			},
 		};
 	} catch (error) {
 		await disposeRuntimeResources(resources);

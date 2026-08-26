@@ -16,14 +16,18 @@ export type WebUtilityDependencies = {
 	meta: MiMeta;
 };
 
-function htmlResponse(c: Context, html: unknown, options: {
-	status?: number;
-	xFrameOptions?: 'DENY' | null;
-	headers?: Record<string, string>;
-} = {}): Response {
+function htmlResponse(
+	c: Context,
+	html: unknown,
+	options: {
+		status?: number;
+		xFrameOptions?: 'DENY' | null;
+		headers?: Record<string, string>;
+	} = {},
+): Response {
 	const headers = new Headers({
 		'Content-Type': 'text/html; charset=utf-8',
-		...(options.headers ?? {}),
+		...options.headers,
 	});
 
 	if (options.xFrameOptions !== null) {
@@ -54,21 +58,37 @@ export function createWebUtilityApp(deps: WebUtilityDependencies): Hono {
 	const app = new Hono();
 	const configUrl = new URL(deps.config.instance.url);
 
-	app.get('/_info_card_', (c) => htmlResponse(c, InfoCardPage({
-		version: deps.config.runtime.version,
-		config: deps.config,
-		meta: deps.meta,
-	}), {
-		xFrameOptions: null,
-	}));
+	app.get('/_info_card_', (c) =>
+		htmlResponse(
+			c,
+			InfoCardPage({
+				version: deps.config.runtime.version,
+				config: deps.config,
+				meta: deps.meta,
+			}),
+			{
+				xFrameOptions: null,
+			},
+		),
+	);
 
-	app.get('/bios', (c) => htmlResponse(c, BiosPage({
-		version: deps.config.runtime.version,
-	})));
+	app.get('/bios', (c) =>
+		htmlResponse(
+			c,
+			BiosPage({
+				version: deps.config.runtime.version,
+			}),
+		),
+	);
 
-	app.get('/cli', (c) => htmlResponse(c, CliPage({
-		version: deps.config.runtime.version,
-	})));
+	app.get('/cli', (c) =>
+		htmlResponse(
+			c,
+			CliPage({
+				version: deps.config.runtime.version,
+			}),
+		),
+	);
 
 	app.get('/flush', (c) => {
 		const headers: Record<string, string> = {

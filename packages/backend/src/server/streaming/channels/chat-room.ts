@@ -3,9 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchChatRoomByIdFromDatabase } from '@/core/ChatRoomStore.js';
+import { fetchChatRoomByIdFromDatabase } from '@/core/chat/ChatRoomStore.js';
 import type { JsonValue } from '@/misc/json-value.js';
-import { hasPermissionToViewRoomTimelineForHonoApi, readRoomChatMessageForHonoApi, type HonoApiChatDependencies } from '../../rest/chat.js';
+import {
+	hasPermissionToViewRoomTimelineForHonoApi,
+	readRoomChatMessageForHonoApi,
+	type HonoApiChatDependencies,
+} from '@/server/rest/chat/chat.js';
 import type { HonoStreamChannelDefinition } from '../channel.js';
 
 export const honoStreamChannelChatRoom: HonoStreamChannelDefinition<HonoApiChatDependencies> = {

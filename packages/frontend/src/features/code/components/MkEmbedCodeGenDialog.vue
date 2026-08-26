@@ -35,6 +35,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 								<iframe
 									ref="iframeEl"
 									:src="embedPreviewUrl"
+									:title="i18n.ts.preview"
 									:class="$style.embedCodeGenPreviewIframe"
 									:style="{ height: `${iframeHeight}px` }"
 									@load="iframeOnLoad"
@@ -146,7 +147,7 @@ const paramsForPreview = ref<EmbedParams>(props.params ?? {});
 const embedPreviewUrl = computed(() => {
 	const paramClass = new URLSearchParams(normalizeEmbedParams(paramsForPreview.value));
 	if (paramClass.has('maxHeight')) {
-		const maxHeight = parseInt(paramClass.get('maxHeight')!);
+		const maxHeight = Number.parseInt(paramClass.get('maxHeight')!);
 		paramClass.set('maxHeight', maxHeight === 0 ? '500' : Math.min(maxHeight, 700).toString()); // プレビューであまりにも縮小されると見づらいため、700pxまでに制限
 	}
 	return `${url}/embed/${props.entity}/${props.id}${paramClass.toString() ? '?' + paramClass.toString() : ''}`;

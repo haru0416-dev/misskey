@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import { recordException } from '@/telemetry.js';
 import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import type { MiMeta } from '@/models/_.js';
+import { ErrorPage } from '@/server/web/views/error.js';
 import { createApiShellApp, type ApiShellDependencies } from './rest/shell.js';
 import { createClientBaseApp, type ClientBaseDependencies } from './web/client-base.js';
 import { createFeedApp, type FeedDependencies } from './web/feed.js';
@@ -26,7 +28,7 @@ import { createInboxApp, type InboxEndpointDependencies } from './activitypub/in
 import { createApObjectRoutesApp, type ApObjectRoutesDependencies } from './activitypub/object-routes.js';
 import { createClientPagesApp, type ClientPagesDependencies } from './web/client-pages.js';
 
-export type HttpMiddlewareDependencies = {
+type HttpMiddlewareDependencies = {
 	config: Config;
 	meta: MiMeta;
 	logger?: Logger;
@@ -56,7 +58,8 @@ export type MisskeyHonoAppDependencies = {
 const maybeApLookupRegex = /application\/activity\+json|application\/ld\+json.+activitystreams/i;
 
 function isInternalActivityPubRedirect(location: string, config: Config): boolean {
-	const effectiveLocation = process.env['NODE_ENV'] === 'production' ? location : location.replace(/^http:\/\//, 'https://');
+	const effectiveLocation =
+		process.env['NODE_ENV'] === 'production' ? location : location.replace(/^http:\/\//, 'https://');
 	return effectiveLocation.startsWith(`https://${config.runtime.host}/`);
 }
 
@@ -66,14 +69,17 @@ function activityPubRedirectRefusal(location: string, headers: Headers): Respons
 	nextHeaders.set('content-type', 'text/plain; charset=utf-8');
 	nextHeaders.set('link', `<${encodeURI(location)}>; rel="canonical"`);
 
-	return new Response([
-		'Refusing to relay remote ActivityPub object lookup.',
-		'',
-		`Please remove 'application/activity+json' and 'application/ld+json' from the Accept header or fetch using the authoritative URL at ${location}.`,
-	].join('\n'), {
-		status: 406,
-		headers: nextHeaders,
-	});
+	return new Response(
+		[
+			'Refusing to relay remote ActivityPub object lookup.',
+			'',
+			`Please remove 'application/activity+json' and 'application/ld+json' from the Accept header or fetch using the authoritative URL at ${location}.`,
+		].join('\n'),
+		{
+			status: 406,
+			headers: nextHeaders,
+		},
+	);
 }
 
 // これを超えたリクエストを endpoint + 所要時間つきで警告ログに出す (チューニング対象の発見用)。
@@ -122,11 +128,25 @@ export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
 	// well-known / oauth 等) の未捕捉例外は Hono デフォルトだとログ無しの 500 テキストになる。
 	// サーバーログに残るように onError で明示的にハンドリングする。
 	app.onError((err, c) => {
+		const errId = randomUUID();
 		recordException(err);
-		deps.http.logger?.error(err instanceof Error ? err : new Error(String(err)), { path: c.req.path });
-		return new Response('Internal Server Error', {
+		deps.http.logger?.error(err instanceof Error ? err : new Error(String(err)), { path: c.req.path, id: errId });
+
+		// API 以外 (web SSR / file / well-known 等) は人が直接見る画面なので、
+		// 問い合わせに使えるエラー ID 付きの HTML を返す。
+		if (c.req.path.startsWith('/api/')) {
+			return new Response('Internal Server Error', {
+				status: 500,
+				headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+			});
+		}
+
+		return new Response(String(ErrorPage({ code: err.name, id: errId })), {
 			status: 500,
-			headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+			headers: {
+				'Content-Type': 'text/html; charset=utf-8',
+				'Cache-Control': 'max-age=10, must-revalidate',
+			},
 		});
 	});
 

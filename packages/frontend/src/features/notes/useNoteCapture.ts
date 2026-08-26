@@ -75,9 +75,7 @@ const POLLING_INTERVAL =
 		? MIN_POLLING_INTERVAL * 1.5 * 1.5
 		: prefer.pollingInterval === 2
 			? MIN_POLLING_INTERVAL * 1.5
-			: prefer.pollingInterval === 3
-				? MIN_POLLING_INTERVAL
-				: MIN_POLLING_INTERVAL;
+			: MIN_POLLING_INTERVAL;
 
 const pollingScheduler = new PollingScheduler(async () => {
 	const ids = [...pollingQueue.entries()]
@@ -236,7 +234,7 @@ export function useNoteCapture(props: {
 		emoji?: { name: string; url: string } | null;
 	}): void {
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
-		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
+		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replaceAll(/\ufe0f/g, '');
 		if (reactionUserMap.get(ctx.userId) === normalizedName) return;
 		reactionUserMap.set(ctx.userId, normalizedName);
 
@@ -260,7 +258,7 @@ export function useNoteCapture(props: {
 		emoji?: { name: string; url: string } | null;
 	}): void {
 		let normalizedName = ctx.reaction.replace(/^:(\w+):$/, ':$1@.:');
-		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
+		normalizedName = normalizedName.includes('\u200d') ? normalizedName : normalizedName.replaceAll(/\ufe0f/g, '');
 
 		// 確実に一度リアクションされて取り消されている場合のみ処理をとめる（APIで初回読み込み→Streamでアップデート等の場合、reactionUserMapに情報がないため）
 		if (reactionUserMap.get(ctx.userId) === noReaction) return;
@@ -324,10 +322,8 @@ export function useNoteCapture(props: {
 
 	// 投稿からある程度経過している(=タイムラインを遡って表示した)ノートは、イベントが発生する可能性が低いためそもそも購読しない
 	// ただし「リノートされたばかりの過去のノート」(= parentNoteが存在し、かつparentNoteの投稿日時が最近)はイベント発生が考えられるため購読する
-	// TODO: デバイスとサーバーの時計がズレていると不具合の元になるため、ズレを検知して警告を表示するなどのケアが必要かもしれない
 	if (parentNote == null) {
 		if (Date.now() - new Date(note.createdAt).getTime() > 1000 * 60 * 5) {
-			// 5min
 			// リノートで表示されているノートでもないし、投稿からある程度経過しているので自動で購読しない
 			return {
 				$note,

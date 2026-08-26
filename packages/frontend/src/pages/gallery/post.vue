@@ -11,26 +11,26 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div v-if="post" class="rkxwuolj">
 					<div class="files">
 						<div v-for="file in post.files" :key="file.id" class="file">
-							<img :src="file.url"/>
+							<img :src="file.url" :alt="file.comment ?? file.name"/>
 						</div>
 					</div>
 					<div class="body">
 						<div class="title">{{ post.title }}</div>
 						<div class="description"><Mfm v-if="post.description != null" :text="post.description"/></div>
 						<div class="info">
-							<i class="ti ti-clock"></i> <MkTime :time="post.createdAt" mode="detail"/>
+							<i class="ti ti-clock" aria-hidden="true"></i> <MkTime :time="post.createdAt" mode="detail"/>
 						</div>
 						<div class="actions">
 							<div class="like">
-								<MkButton v-if="post.isLiked" v-tooltip="i18n.ts._gallery.unlike" class="button" primary @click="unlike()"><i class="ti ti-heart-off"></i><span v-if="post.likedCount > 0" class="count">{{ post.likedCount }}</span></MkButton>
-								<MkButton v-else v-tooltip="i18n.ts._gallery.like" class="button" @click="like()"><i class="ti ti-heart"></i><span v-if="post.likedCount > 0" class="count">{{ post.likedCount }}</span></MkButton>
+								<MkButton v-if="post.isLiked" v-tooltip="i18n.ts._gallery.unlike" class="button" primary :aria-label="i18n.ts._gallery.unlike" @click="unlike()"><i class="ti ti-heart-off" aria-hidden="true"></i><span v-if="post.likedCount > 0" class="count">{{ post.likedCount }}</span></MkButton>
+								<MkButton v-else v-tooltip="i18n.ts._gallery.like" class="button" :aria-label="i18n.ts._gallery.like" @click="like()"><i class="ti ti-heart" aria-hidden="true"></i><span v-if="post.likedCount > 0" class="count">{{ post.likedCount }}</span></MkButton>
 							</div>
 							<div class="other">
-								<button v-if="$i && $i.id === post.user.id" v-tooltip="i18n.ts.edit" v-click-anime class="_button" @click="edit"><i class="ti ti-pencil ti-fw"></i></button>
-								<button v-tooltip="i18n.ts.shareWithNote" v-click-anime class="_button" @click="shareWithNote"><i class="ti ti-repeat ti-fw"></i></button>
-								<button v-tooltip="i18n.ts.copyLink" v-click-anime class="_button" @click="copyLink"><i class="ti ti-link ti-fw"></i></button>
-								<button v-if="isSupportShare()" v-tooltip="i18n.ts.share" v-click-anime class="_button" @click="share"><i class="ti ti-share ti-fw"></i></button>
-								<button v-if="$i && $i.id !== post.user.id" v-click-anime class="_button" @click="showMenu"><i class="ti ti-dots ti-fw"></i></button>
+								<button v-if="$i && $i.id === post.user.id" v-tooltip="i18n.ts.edit" v-click-anime class="_button" :aria-label="i18n.ts.edit" @click="edit"><i class="ti ti-pencil ti-fw" aria-hidden="true"></i></button>
+								<button v-tooltip="i18n.ts.shareWithNote" v-click-anime class="_button" :aria-label="i18n.ts.shareWithNote" @click="shareWithNote"><i class="ti ti-repeat ti-fw" aria-hidden="true"></i></button>
+								<button v-tooltip="i18n.ts.copyLink" v-click-anime class="_button" :aria-label="i18n.ts.copyLink" @click="copyLink"><i class="ti ti-link ti-fw" aria-hidden="true"></i></button>
+								<button v-if="isSupportShare()" v-tooltip="i18n.ts.share" v-click-anime class="_button" :aria-label="i18n.ts.share" @click="share"><i class="ti ti-share ti-fw" aria-hidden="true"></i></button>
+								<button v-if="$i && $i.id !== post.user.id" v-tooltip="i18n.ts.menu" v-click-anime class="_button" :aria-label="i18n.ts.menu" @click="showMenu"><i class="ti ti-dots ti-fw" aria-hidden="true"></i></button>
 							</div>
 						</div>
 						<div class="user">
@@ -39,12 +39,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 								<MkUserName :user="post.user" style="display: block;"/>
 								<MkAcct :user="post.user"/>
 							</div>
-							<!--<MkFollowButton v-if="!$i || $i.id != post.user.id" v-model:user="post.user" :inline="true" :transparent="false" :full="true" large class="koudoku"/>-->
 						</div>
 					</div>
 					<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
 					<MkContainer :max-height="300" :foldable="true" class="other">
-						<template #icon><i class="ti ti-clock"></i></template>
+						<template #icon><i class="ti ti-clock" aria-hidden="true"></i></template>
 						<template #header>{{ i18n.ts.recentPosts }}</template>
 						<MkPagination v-slot="{items}" :paginator="otherPostsPaginator">
 							<div class="sdrarzaf">
@@ -72,7 +71,6 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import MkGalleryPostPreview from '@/features/gallery/components/MkGalleryPostPreview.vue';
-import MkFollowButton from '@/features/users/components/MkFollowButton.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { prefer } from '@/preferences.js';
@@ -126,6 +124,7 @@ function shareWithNote() {
 	if (!post.value) return;
 	os.post({
 		initialText: `${post.value.title} ${url}/gallery/${post.value.id}`,
+		instant: true,
 	});
 }
 
@@ -226,7 +225,7 @@ definePage(() => ({
 <style lang="scss" scoped>
 .fade-enter-active,
 .fade-leave-active {
-	transition: opacity 0.125s ease;
+	transition: opacity var(--MI-duration-fast) var(--MI-ease-out);
 }
 .fade-enter-from,
 .fade-leave-to {
@@ -237,7 +236,7 @@ definePage(() => ({
 	> .files {
 		display: flex;
 		flex-direction: column;
-		gap: 16px;
+		gap: var(--MI-space-lg);
 
 		> .file {
 			> img {
@@ -250,16 +249,16 @@ definePage(() => ({
 	}
 
 	> .body {
-		padding: 32px;
+		padding: var(--MI-space-3xl);
 
 		> .title {
 			font-weight: bold;
 			font-size: 1.2em;
-			margin-bottom: 16px;
+			margin-bottom: var(--MI-space-lg);
 		}
 
 		> .info {
-			margin-top: 16px;
+			margin-top: var(--MI-space-lg);
 			font-size: 90%;
 			opacity: 0.7;
 		}
@@ -267,17 +266,16 @@ definePage(() => ({
 		> .actions {
 			display: flex;
 			align-items: center;
-			margin-top: 16px;
-			padding: 16px 0 0 0;
+			margin-top: var(--MI-space-lg);
+			padding: var(--MI-space-lg) 0 0 0;
 			border-top: solid 0.5px var(--MI_THEME-divider);
 
 			> .like {
 				> .button {
-					--MI_THEME-accent: rgb(241 97 132);
-					--MI_THEME-X8: rgb(241 92 128);
-					--MI_THEME-buttonBg: rgb(216 71 106 / 5%);
-					--MI_THEME-buttonHoverBg: rgb(216 71 106 / 10%);
-					color: #ff002f;
+					--MI_THEME-accent: var(--MI_THEME-love);
+					--MI_THEME-buttonBg: color(from var(--MI_THEME-love) srgb r g b / 0.05);
+					--MI_THEME-buttonHoverBg: color(from var(--MI_THEME-love) srgb r g b / 0.1);
+					color: var(--MI_THEME-love);
 
 					::v-deep(.count) {
 						margin-left: 0.5em;
@@ -289,8 +287,8 @@ definePage(() => ({
 				margin-left: auto;
 
 				> button {
-					padding: 8px;
-					margin: 0 8px;
+					padding: var(--MI-space-sm);
+					margin: 0 var(--MI-space-sm);
 
 					&:hover {
 						color: var(--MI_THEME-fgHighlighted);
@@ -300,8 +298,8 @@ definePage(() => ({
 		}
 
 		> .user {
-			margin-top: 16px;
-			padding: 16px 0 0 0;
+			margin-top: var(--MI-space-lg);
+			padding: var(--MI-space-lg) 0 0 0;
 			border-top: solid 0.5px var(--MI_THEME-divider);
 			display: flex;
 			align-items: center;
@@ -313,12 +311,8 @@ definePage(() => ({
 			}
 
 			> .name {
-				margin: 0 0 0 12px;
+				margin: 0 0 0 var(--MI-space-md);
 				font-size: 90%;
-			}
-
-			> .koudoku {
-				margin-left: auto;
 			}
 		}
 	}
@@ -327,11 +321,7 @@ definePage(() => ({
 .sdrarzaf {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-	gap: 12px;
+	gap: var(--MI-space-md);
 	margin: var(--MI-margin);
-
-	> .post {
-
-	}
 }
 </style>

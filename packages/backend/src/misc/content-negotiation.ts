@@ -5,8 +5,7 @@
 
 /**
  * Accept ヘッダのコンテンツネゴシエーション (RFC 7231 §5.3.2)。
- * 旧依存 `accepts` ライブラリの `.type(candidates)` 相当の必要最小限:
- * q 値・ワイルドカード (type/* と *slash*)・specificity を解釈し、
+ * q 値・ワイルドカード (type/* と *slash*)・specificity だけを解釈し、
  * 候補のうちクライアントの品質値が最大のもの (同点はサーバー優先順 = candidates の先頭側)
  * を返す。どれも受理されない (q=0 含む) 場合は null。
  * Accept ヘッダ自体が無い場合は全て受理とみなし candidates の先頭を返す。
@@ -45,10 +44,7 @@ function parseAcceptHeader(header: string): AcceptRange[] {
 			break; // q 以降は accept-ext (media type のパラメータではない)
 		}
 
-		const specificity =
-			type === '*' ? 0 :
-			subtype === '*' ? 1 :
-			2;
+		const specificity = type === '*' ? 0 : subtype === '*' ? 1 : 2;
 
 		ranges.push({ type, subtype, q, specificity, headerIndex });
 	}
@@ -106,7 +102,10 @@ function matchRange(ranges: AcceptRange[], candidate: string): AcceptRange | nul
 	return best;
 }
 
-export function preferredMediaType<T extends string>(acceptHeader: string | undefined | null, candidates: readonly T[]): T | null {
+export function preferredMediaType<T extends string>(
+	acceptHeader: string | undefined | null,
+	candidates: readonly T[],
+): T | null {
 	if (acceptHeader == null || acceptHeader.trim() === '') {
 		return candidates[0] ?? null;
 	}
@@ -114,7 +113,7 @@ export function preferredMediaType<T extends string>(acceptHeader: string | unde
 	const ranges = parseAcceptHeader(acceptHeader);
 	if (ranges.length === 0) return candidates[0] ?? null;
 
-	// negotiator (旧 accepts ライブラリの実体) と同じ優先順で比較する:
+	// q 値と specificity を優先し、同点ならヘッダ内の出現順と candidates の順で比較する:
 	// q 値 → マッチした range の specificity (exact > type/* > */*) → Accept ヘッダ内の出現順 →
 	// candidates の順 (サーバー優先順)。specificity を無視すると
 	// `Accept: application/activity+json, */*` で */* 経由の先頭候補が同点勝ちしてしまう。
@@ -127,7 +126,9 @@ export function preferredMediaType<T extends string>(acceptHeader: string | unde
 			bestRange == null ||
 			range.q > bestRange.q ||
 			(range.q === bestRange.q && range.specificity > bestRange.specificity) ||
-			(range.q === bestRange.q && range.specificity === bestRange.specificity && range.headerIndex < bestRange.headerIndex)
+			(range.q === bestRange.q &&
+				range.specificity === bestRange.specificity &&
+				range.headerIndex < bestRange.headerIndex)
 		) {
 			best = candidate;
 			bestRange = range;

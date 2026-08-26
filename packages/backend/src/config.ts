@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import type { RedisOptions } from 'ioredis';
 import type { InstrumentationConfigMap } from '@opentelemetry/auto-instrumentations-node';
+import { PRODUCT_NAME } from '@/const.js';
+import { optionalProperty } from '@/misc/optional-property.js';
 import {
 	compiledConfigEnvelopeSchema,
 	parseByteSize,
@@ -78,7 +80,11 @@ export type FrontendTelemetryConfig = {
 	propagateTraceHeaderCorsUrls?: string[];
 };
 
-export type RuntimeValkeyConnection = RedisOptions & {
+// ioredis 6 の Redis は ReplyMapping をクラスの型引数に取り、コンストラクタは
+// `RedisOptions & { replyMapping?: ReplyMapping }` (既定 "legacy") を要求する。
+// RedisOptions.replyMapping は "legacy" | "resp3" なので、この型の変数をそのまま
+// 渡すと型引数を推論できず全 overload が外れる。設定側では指定しないので型から除く。
+export type RuntimeValkeyConnection = Omit<RedisOptions, 'replyMapping'> & {
 	host: string;
 	port: number;
 	prefix: string;
@@ -108,7 +114,8 @@ export type Config = {
 			ipRateLimit: boolean;
 		};
 		process: {
-			workers: number;
+			httpWorkers: number;
+			queueWorkers: number;
 			computationThreadsPerWorker: number;
 			pidFile: string;
 		};
@@ -124,7 +131,7 @@ export type Config = {
 		};
 		pool: {
 			minimumConnections: number;
-			maximumConnections: number;
+			maximumConnectionsPerHost: number;
 			connectionTimeoutMs: number;
 			idleConnectionTimeoutMs: number;
 			statementTimeoutMs: number;
@@ -240,11 +247,7 @@ function normalizeUrl(value: string): string {
 	return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
-function resolveValkeyConnection(
-	config: CompiledConfigV2,
-	name: string,
-	host: string,
-): RuntimeValkeyConnection {
+function resolveValkeyConnection(config: CompiledConfigV2, name: string, host: string): RuntimeValkeyConnection {
 	const source = config.valkey.connections[name];
 	if (source == null) throw new Error(`Unknown Valkey connection: ${name}`);
 	const prefix = source.keyPrefix ?? host;
@@ -252,7 +255,8 @@ function resolveValkeyConnection(
 		host: source.host,
 		port: source.port,
 		username: source.username,
-		password: source.password == null ? undefined : resolveSecret(source.password, `valkey.connections.${name}.password`),
+		password:
+			source.password == null ? undefined : resolveSecret(source.password, `valkey.connections.${name}.password`),
 		db: source.database,
 		prefix,
 		keyPrefix: `${prefix}:`,
@@ -263,39 +267,106 @@ function resolveValkeyConnection(
 	};
 }
 
-function resolveTelemetry(config: CompiledConfigV2): Config['observability']['telemetry'] {
-	const backend = config.observability.telemetry.backend;
-	const disabledInstrumentations = backend?.disabledInstrumentations?.map((name, index) => {
+function resolveTelemetryInstrumentations(
+	names: readonly string[] | undefined,
+): TelemetryInstrumentationName[] | undefined {
+	return names?.map((name, index) => {
 		if (!TELEMETRY_INSTRUMENTATION_NAMES.has(name)) {
 			throw new Error(`observability.telemetry.backend.disabledInstrumentations[${index}] is not supported.`);
 		}
 		return name as TelemetryInstrumentationName;
 	});
-	const resolvedBackend = backend == null ? undefined : {
-		endpoint: backend.endpoint,
-		...(backend.serviceName == null ? {} : { serviceName: backend.serviceName }),
-		...(backend.tracesSampleRatio == null ? {} : { tracesSampleRatio: backend.tracesSampleRatio }),
-		...(backend.tracePropagationTargets == null ? {} : { tracePropagationTargets: backend.tracePropagationTargets }),
-		...(backend.headers == null ? {} : {
-			headers: Object.fromEntries(
-				Object.entries(backend.headers).map(([name, value]) => [
-					name,
-					resolveSecret(value, `observability.telemetry.backend.headers.${name}`),
-				]),
-			),
-		}),
-		...(disabledInstrumentations == null ? {} : { disabledInstrumentations }),
-	};
-	const frontend = config.observability.telemetry.frontend;
-	const resolvedFrontend = frontend == null ? undefined : {
-		endpoint: frontend.endpoint,
-		...(frontend.serviceName == null ? {} : { serviceName: frontend.serviceName }),
-		...(frontend.tracesSampleRatio == null ? {} : { tracesSampleRatio: frontend.tracesSampleRatio }),
-		...(frontend.propagateTraceHeaderCorsUrls == null ? {} : { propagateTraceHeaderCorsUrls: frontend.propagateTraceHeaderCorsUrls }),
-	};
+}
+
+function resolveTelemetryBackend(
+	backend: CompiledConfigV2['observability']['telemetry']['backend'],
+): Config['observability']['telemetry']['backend'] {
+	if (backend == null) return undefined;
 	return {
-		...(resolvedBackend == null ? {} : { backend: resolvedBackend }),
-		...(resolvedFrontend == null ? {} : { frontend: resolvedFrontend }),
+		endpoint: backend.endpoint,
+		...optionalProperty('serviceName', backend.serviceName),
+		...optionalProperty('tracesSampleRatio', backend.tracesSampleRatio),
+		...optionalProperty('tracePropagationTargets', backend.tracePropagationTargets),
+		...optionalProperty(
+			'headers',
+			backend.headers == null
+				? undefined
+				: Object.fromEntries(
+						Object.entries(backend.headers).map(([name, value]) => [
+							name,
+							resolveSecret(value, `observability.telemetry.backend.headers.${name}`),
+						]),
+					),
+		),
+		...optionalProperty('disabledInstrumentations', resolveTelemetryInstrumentations(backend.disabledInstrumentations)),
+	};
+}
+
+function resolveTelemetryFrontend(
+	frontend: CompiledConfigV2['observability']['telemetry']['frontend'],
+): Config['observability']['telemetry']['frontend'] {
+	if (frontend == null) return undefined;
+	return {
+		endpoint: frontend.endpoint,
+		...optionalProperty('serviceName', frontend.serviceName),
+		...optionalProperty('tracesSampleRatio', frontend.tracesSampleRatio),
+		...optionalProperty('propagateTraceHeaderCorsUrls', frontend.propagateTraceHeaderCorsUrls),
+	};
+}
+
+function resolveTelemetry(config: CompiledConfigV2): Config['observability']['telemetry'] {
+	return {
+		...optionalProperty('backend', resolveTelemetryBackend(config.observability.telemetry.backend)),
+		...optionalProperty('frontend', resolveTelemetryFrontend(config.observability.telemetry.frontend)),
+	};
+}
+
+/** キュー既定値の穴埋め。未指定の起動レートと再試行回数はキューごとに異なる。 */
+function resolveQueues(queues: CompiledConfigV2['queues']): Config['queues'] {
+	const withDefaults = <K extends keyof CompiledConfigV2['queues']>(
+		name: K,
+		startsPerSecond: number,
+		attempts?: number,
+	) => {
+		const queue = queues[name] as QueueConfig;
+		return {
+			...queue,
+			maximumStartsPerSecond: queue.maximumStartsPerSecond ?? startsPerSecond,
+			...(attempts == null ? {} : { maximumAttempts: queue.maximumAttempts ?? attempts }),
+		};
+	};
+
+	return {
+		deliver: withDefaults('deliver', 128, 12),
+		inbox: withDefaults('inbox', 32, 8),
+		relationships: withDefaults('relationships', 64),
+		database: queues.database,
+		system: queues.system,
+		objectStorage: queues.objectStorage,
+		// webhook 系は既定の起動レートを持たず、ワーカーあたりの同時実行数をそのまま上限にする
+		userWebhooks: withDefaults('userWebhooks', queues.userWebhooks.concurrencyPerWorker),
+		systemWebhooks: withDefaults('systemWebhooks', queues.systemWebhooks.concurrencyPerWorker),
+		backoff: {
+			initialDelayMs: parseDuration(queues.backoff.initialDelay),
+			maximumDelayMs: parseDuration(queues.backoff.maximumDelay),
+			jitterRatio: queues.backoff.jitterRatio,
+		},
+		retention: {
+			completedMaximumAgeSeconds: parseDuration(queues.retention.completedMaximumAge) / 1000,
+			completedMaximumCount: queues.retention.completedMaximumCount,
+			failedMaximumAgeSeconds: parseDuration(queues.retention.failedMaximumAge) / 1000,
+			failedMaximumCount: queues.retention.failedMaximumCount,
+		},
+	} as Config['queues'];
+}
+
+function resolveListen(listen: CompiledConfigV2['server']['listen']): Config['server']['listen'] {
+	if ('tcp' in listen) return listen;
+	return {
+		unixSocket: {
+			path: listen.unixSocket.path,
+			...optionalProperty('permissions', listen.unixSocket.permissions),
+		},
 	};
 }
 
@@ -305,35 +376,35 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 	const maximumRequestBodySizeBytes = parseByteSize(source.server.http.maximumRequestBodySize);
 	const maximumFileSizeBytes = parseByteSize(source.limits.maximumFileSize);
 	if (maximumRequestBodySizeBytes < maximumFileSizeBytes + 1024 * 1024) {
-		throw new Error('server.http.maximumRequestBodySize must allow maximumFileSize plus at least 1MiB of multipart overhead.');
+		throw new Error(
+			'server.http.maximumRequestBodySize must allow maximumFileSize plus at least 1MiB of multipart overhead.',
+		);
 	}
 	const internalMediaProxy = `${url}/proxy`;
 	const externalMediaProxy = source.media.externalProxyUrl == null ? null : normalizeUrl(source.media.externalProxyUrl);
 	const connections = source.valkey.assignments;
 	const primary = resolveValkeyConnection(source, 'primary', instanceUrl.host);
-	const meilisearch = source.search.provider === 'meilisearch'
-		? {
-			endpoint: normalizeUrl(source.search.meilisearch.endpoint),
-			apiKey: resolveSecret(source.search.meilisearch.apiKey, 'search.meilisearch.apiKey'),
-			index: source.search.meilisearch.index,
-			scope: source.search.meilisearch.scope,
-		}
-		: undefined;
+	const meilisearch =
+		source.search.provider === 'meilisearch'
+			? {
+					endpoint: normalizeUrl(source.search.meilisearch.endpoint),
+					apiKey: resolveSecret(source.search.meilisearch.apiKey, 'search.meilisearch.apiKey'),
+					index: source.search.meilisearch.index,
+					scope: source.search.meilisearch.scope,
+				}
+			: undefined;
 
 	return {
 		configVersion: 2,
 		instance: {
 			url,
-			...(source.instance.setupPassword == null ? {} : { setupPassword: resolveSecret(source.instance.setupPassword, 'instance.setupPassword') }),
+			...(source.instance.setupPassword == null
+				? {}
+				: { setupPassword: resolveSecret(source.instance.setupPassword, 'instance.setupPassword') }),
 			publishSourceTarball: source.instance.publishSourceTarball,
 		},
 		server: {
-			listen: 'tcp' in source.server.listen ? source.server.listen : {
-				unixSocket: {
-					path: source.server.listen.unixSocket.path,
-					...(source.server.listen.unixSocket.permissions == null ? {} : { permissions: source.server.listen.unixSocket.permissions }),
-				},
-			},
+			listen: resolveListen(source.server.listen),
 			reverseProxy: source.server.reverseProxy,
 			http: {
 				maximumRequestBodySizeBytes,
@@ -350,11 +421,11 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 				name: source.database.primary.name,
 				user: source.database.primary.user,
 				password: resolveSecret(source.database.primary.password, 'database.primary.password'),
-				...(source.database.primary.ssl == null ? {} : { ssl: source.database.primary.ssl }),
+				...optionalProperty('ssl', source.database.primary.ssl),
 			},
 			pool: {
 				minimumConnections: source.database.pool.minimumConnections,
-				maximumConnections: source.database.pool.maximumConnections,
+				maximumConnectionsPerHost: source.database.pool.maximumConnectionsPerHost,
 				connectionTimeoutMs: parseDuration(source.database.pool.connectionTimeout),
 				idleConnectionTimeoutMs: parseDuration(source.database.pool.idleConnectionTimeout),
 				statementTimeoutMs: parseDuration(source.database.pool.statementTimeout),
@@ -362,21 +433,33 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 		},
 		valkey: {
 			primary,
-			pubsub: connections.pubsub === 'primary' ? primary : resolveValkeyConnection(source, connections.pubsub, instanceUrl.host),
-			jobQueue: connections.jobQueue === 'primary' ? primary : resolveValkeyConnection(source, connections.jobQueue, instanceUrl.host),
-			timelines: connections.timelines === 'primary' ? primary : resolveValkeyConnection(source, connections.timelines, instanceUrl.host),
-			reactions: connections.reactions === 'primary' ? primary : resolveValkeyConnection(source, connections.reactions, instanceUrl.host),
+			pubsub:
+				connections.pubsub === 'primary'
+					? primary
+					: resolveValkeyConnection(source, connections.pubsub, instanceUrl.host),
+			jobQueue:
+				connections.jobQueue === 'primary'
+					? primary
+					: resolveValkeyConnection(source, connections.jobQueue, instanceUrl.host),
+			timelines:
+				connections.timelines === 'primary'
+					? primary
+					: resolveValkeyConnection(source, connections.timelines, instanceUrl.host),
+			reactions:
+				connections.reactions === 'primary'
+					? primary
+					: resolveValkeyConnection(source, connections.reactions, instanceUrl.host),
 		},
 		search: {
 			provider: source.search.provider,
-			...(meilisearch == null ? {} : { meilisearch }),
+			...optionalProperty('meilisearch', meilisearch),
 		},
 		outboundNetwork: {
-			...(source.outboundNetwork.bindAddress == null ? {} : { bindAddress: source.outboundNetwork.bindAddress }),
+			...optionalProperty('bindAddress', source.outboundNetwork.bindAddress),
 			addressFamily: source.outboundNetwork.addressFamily,
 			proxy: {
-				...(source.outboundNetwork.proxy.url == null ? {} : { url: source.outboundNetwork.proxy.url }),
-				...(source.outboundNetwork.proxy.smtpUrl == null ? {} : { smtpUrl: source.outboundNetwork.proxy.smtpUrl }),
+				...optionalProperty('url', source.outboundNetwork.proxy.url),
+				...optionalProperty('smtpUrl', source.outboundNetwork.proxy.smtpUrl),
 				bypassHosts: source.outboundNetwork.proxy.bypassHosts,
 			},
 			http: {
@@ -397,7 +480,8 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 		media: {
 			proxyUrl: externalMediaProxy ?? internalMediaProxy,
 			externalProxyEnabled: externalMediaProxy != null && externalMediaProxy !== internalMediaProxy,
-			videoThumbnailGeneratorUrl: source.media.videoThumbnailGeneratorUrl == null ? null : normalizeUrl(source.media.videoThumbnailGeneratorUrl),
+			videoThumbnailGeneratorUrl:
+				source.media.videoThumbnailGeneratorUrl == null ? null : normalizeUrl(source.media.videoThumbnailGeneratorUrl),
 		},
 		limits: {
 			maximumFileSizeBytes,
@@ -405,44 +489,7 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 			userNotifications: source.limits.userNotifications,
 		},
 		maintenance: { antennaInactiveAfterMs: parseDuration(source.maintenance.antennaInactiveAfter) },
-		queues: {
-			deliver: {
-				...source.queues.deliver,
-				maximumStartsPerSecond: source.queues.deliver.maximumStartsPerSecond ?? 128,
-				maximumAttempts: source.queues.deliver.maximumAttempts ?? 12,
-			},
-			inbox: {
-				...source.queues.inbox,
-				maximumStartsPerSecond: source.queues.inbox.maximumStartsPerSecond ?? 32,
-				maximumAttempts: source.queues.inbox.maximumAttempts ?? 8,
-			},
-			relationships: {
-				...source.queues.relationships,
-				maximumStartsPerSecond: source.queues.relationships.maximumStartsPerSecond ?? 64,
-			},
-			database: source.queues.database,
-			system: source.queues.system,
-			objectStorage: source.queues.objectStorage,
-			userWebhooks: {
-				...source.queues.userWebhooks,
-				maximumStartsPerSecond: source.queues.userWebhooks.maximumStartsPerSecond ?? source.queues.userWebhooks.concurrencyPerWorker,
-			},
-			systemWebhooks: {
-				...source.queues.systemWebhooks,
-				maximumStartsPerSecond: source.queues.systemWebhooks.maximumStartsPerSecond ?? source.queues.systemWebhooks.concurrencyPerWorker,
-			},
-			backoff: {
-				initialDelayMs: parseDuration(source.queues.backoff.initialDelay),
-				maximumDelayMs: parseDuration(source.queues.backoff.maximumDelay),
-				jitterRatio: source.queues.backoff.jitterRatio,
-			},
-			retention: {
-				completedMaximumAgeSeconds: parseDuration(source.queues.retention.completedMaximumAge) / 1000,
-				completedMaximumCount: source.queues.retention.completedMaximumCount,
-				failedMaximumAgeSeconds: parseDuration(source.queues.retention.failedMaximumAge) / 1000,
-				failedMaximumCount: source.queues.retention.failedMaximumCount,
-			},
-		},
+		queues: resolveQueues(source.queues),
 		observability: {
 			logging: source.observability.logging,
 			telemetry: resolveTelemetry(source),
@@ -453,7 +500,7 @@ export function materializeConfig(source: CompiledConfigV2, meta: { version: str
 			hostname: instanceUrl.hostname,
 			apiUrl: `${url}/api`,
 			authUrl: `${url}/auth`,
-			userAgent: `Misskey/${meta.version} (${url})`,
+			userAgent: `${PRODUCT_NAME}/${meta.version} (${url})`,
 			frontendManifestExists: fs.existsSync(resolve(projectBuiltDir, '_frontend_vite_/manifest.json')),
 			frontendEmbedManifestExists: fs.existsSync(resolve(projectBuiltDir, '_frontend_embed_vite_/manifest.json')),
 			rootDir,
@@ -470,30 +517,63 @@ export function loadConfig(): Config {
 	return materializeConfig(envelope.config, meta);
 }
 
-export function createRedactedConfig(config: Config): object {
-	const redactUrlSecrets = (value: string | undefined): string | undefined => {
-		if (value == null) return undefined;
-		const url = new URL(value);
-		if (url.username !== '' || url.password !== '') {
-			url.username = '***';
-			url.password = '***';
-		}
-		if (url.search !== '') url.search = '?***';
-		return url.toString();
-	};
+const REDACTED = '***';
 
+/** URL に埋め込まれた資格情報とクエリ文字列を伏せる。 */
+function redactUrlSecrets(value: string | undefined): string | undefined {
+	if (value == null) return undefined;
+	const url = new URL(value);
+	if (url.username !== '' || url.password !== '') {
+		url.username = REDACTED;
+		url.password = REDACTED;
+	}
+	if (url.search !== '') url.search = `?${REDACTED}`;
+	return url.toString();
+}
+
+function redactValkey(valkey: Config['valkey']): Config['valkey'] {
+	return Object.fromEntries(
+		Object.entries(valkey).map(([name, connection]) => [
+			name,
+			{ ...connection, ...optionalProperty('password', connection.password == null ? undefined : REDACTED) },
+		]),
+	) as Config['valkey'];
+}
+
+function redactSearch(search: Config['search']): Config['search'] {
+	if (search.meilisearch == null) return search;
+	return { ...search, meilisearch: { ...search.meilisearch, apiKey: REDACTED } };
+}
+
+function redactTelemetryBackend(
+	backend: Config['observability']['telemetry']['backend'],
+): Config['observability']['telemetry']['backend'] {
+	if (backend == null) return undefined;
+	return {
+		...backend,
+		endpoint: redactUrlSecrets(backend.endpoint)!,
+		...optionalProperty(
+			'tracePropagationTargets',
+			backend.tracePropagationTargets?.map((t) => redactUrlSecrets(t)!),
+		),
+		...optionalProperty(
+			'headers',
+			backend.headers == null ? undefined : Object.fromEntries(Object.keys(backend.headers).map((n) => [n, REDACTED])),
+		),
+	};
+}
+
+/** 設定を外部へ見せる用に、資格情報を伏せた複製を作る。 */
+export function createRedactedConfig(config: Config): object {
 	return {
 		...config,
-		instance: { ...config.instance, setupPassword: config.instance.setupPassword == null ? undefined : '***' },
-		database: { ...config.database, primary: { ...config.database.primary, password: '***' } },
-		valkey: Object.fromEntries(Object.entries(config.valkey).map(([name, value]) => [
-			name,
-			{ ...value, password: value.password == null ? undefined : '***' },
-		])),
-		search: config.search.meilisearch == null ? config.search : {
-			...config.search,
-			meilisearch: { ...config.search.meilisearch, apiKey: '***' },
+		instance: {
+			...config.instance,
+			...optionalProperty('setupPassword', config.instance.setupPassword == null ? undefined : REDACTED),
 		},
+		database: { ...config.database, primary: { ...config.database.primary, password: REDACTED } },
+		valkey: redactValkey(config.valkey),
+		search: redactSearch(config.search),
 		outboundNetwork: {
 			...config.outboundNetwork,
 			proxy: {
@@ -511,14 +591,7 @@ export function createRedactedConfig(config: Config): object {
 			...config.observability,
 			telemetry: {
 				...config.observability.telemetry,
-				backend: config.observability.telemetry.backend == null ? undefined : {
-					...config.observability.telemetry.backend,
-					endpoint: redactUrlSecrets(config.observability.telemetry.backend.endpoint),
-					tracePropagationTargets: config.observability.telemetry.backend.tracePropagationTargets?.map(target => redactUrlSecrets(target)!),
-					headers: config.observability.telemetry.backend.headers == null ? undefined : Object.fromEntries(
-						Object.keys(config.observability.telemetry.backend.headers).map(name => [name, '***']),
-					),
-				},
+				backend: redactTelemetryBackend(config.observability.telemetry.backend),
 			},
 		},
 	};

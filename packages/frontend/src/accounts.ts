@@ -10,7 +10,7 @@ import type { MenuItem } from '@/types/menu.js';
 import { showSuspendedDialog } from '@/features/users/show-suspended-dialog.js';
 import { i18n } from '@/i18n.js';
 import { miLocalStorage } from '@/local-storage.js';
-import { waiting, popup, popupMenu, success, alert } from '@/os.js';
+import { popup, success, alert } from '@/os.js';
 import { unisonReload, reloadChannel } from '@/utility/unison-reload.js';
 import { prefer } from '@/preferences.js';
 import { store } from '@/store.js';
@@ -95,8 +95,7 @@ function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Pr
 				(res) =>
 					new Promise<Misskey.entities.MeDetailed | ApiErrorResponse>((done2, fail2) => {
 						if (res.status >= 500 && res.status < 600) {
-							// サーバーエラー(5xx)の場合をrejectとする
-							// （認証エラーなど4xxはresolve）
+							// 5xx は reject とし、認証エラーなど 4xx は API 応答として処理する。
 							return fail2(res);
 						}
 						res.json().then(done2, fail2);
@@ -111,7 +110,6 @@ function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Pr
 						}
 					} else if (res.error.id === 'e5b3b9f0-2b8f-4b9f-9c1f-8c5c1b2e1b1a') {
 						// USER_IS_DELETED
-						// アカウントが削除されている
 						if (forceShowDialog || ($i && (token === $i.token || id === $i.id))) {
 							await alert({
 								type: 'error',
@@ -146,7 +144,7 @@ function fetchAccount(token: string, id?: string, forceShowDialog?: boolean): Pr
 	});
 }
 
-export function updateCurrentAccount(accountData: Misskey.entities.MeDetailed) {
+function updateCurrentAccount(accountData: Misskey.entities.MeDetailed) {
 	if (!$i) return;
 	const token = $i.token;
 	for (const key of Object.keys($i)) {
@@ -220,9 +218,7 @@ export async function login(token: AccountWithToken['token'], redirect?: string)
 	await addAccount(host, me, token);
 
 	if (redirect) {
-		// 他のタブは再読み込みするだけ
 		reloadChannel.postMessage(null);
-		// このページはredirectで指定された先に移動
 		window.location.href = redirect;
 		return;
 	}
@@ -298,7 +294,7 @@ export async function getAccountMenu(opts: {
 				},
 			};
 		} else {
-			// プロファイルを復元した場合などはアカウントのトークンや詳細情報はstoreにキャッシュされていない
+			// プロファイルにトークンや詳細情報がない場合は、ここでサインインを要求する。
 			return {
 				type: 'button' as const,
 				text: username,
@@ -333,7 +329,6 @@ export async function getAccountMenu(opts: {
 
 	const menuItems: MenuItem[] = [];
 
-	// TODO: $iのホストも比較したいけど通常null
 	const accountItems = (await getAccounts().then((accounts) => accounts.filter((x) => x.id !== me.id))).map((a) =>
 		createItem(a.host, a.id, a.username, a.user, a.token),
 	);

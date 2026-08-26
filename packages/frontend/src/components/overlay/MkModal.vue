@@ -91,7 +91,7 @@ const emit = defineEmits<{
 	(ev: 'opened'): void;
 	(ev: 'click'): void;
 	(ev: 'esc'): void;
-	(ev: 'close'): void; // TODO: (refactor) closing に改名する
+	(ev: 'close'): void;
 	(ev: 'closed'): void;
 }>();
 
@@ -193,7 +193,6 @@ const align = () => {
 	if (props.anchor.x === 'center') {
 		left = x + (props.anchorElement.offsetWidth / 2) - (width / 2);
 	} else if (props.anchor.x === 'left') {
-		// TODO
 	} else if (props.anchor.x === 'right') {
 		left = x + props.anchorElement.offsetWidth;
 	}
@@ -201,7 +200,6 @@ const align = () => {
 	if (props.anchor.y === 'center') {
 		top = (y - (height / 2));
 	} else if (props.anchor.y === 'top') {
-		// TODO
 	} else if (props.anchor.y === 'bottom') {
 		top = y + props.anchorElement.offsetHeight;
 	}
@@ -288,12 +286,10 @@ const align = () => {
 const onOpened = () => {
 	emit('opened');
 
-	// contentの子要素にアクセスするためレンダリングの完了を待つ必要がある（nextTickが必要）
 	nextTick(() => {
-		// NOTE: Chromatic テストの際に undefined になる場合がある
 		if (content.value == null) return;
 
-		// モーダルコンテンツにマウスボタンが押され、コンテンツ外でマウスボタンが離されたときにモーダルバックグラウンドクリックと判定させないためにマウスイベントを監視しフラグ管理する
+		// コンテンツ内で押下して外側で離した場合を背景クリックと判定しない。
 		const el = content.value.children[0];
 		if (el == null) return;
 		el.addEventListener('mousedown', ev => {
@@ -343,7 +339,7 @@ onMounted(() => {
 	}, { immediate: true });
 
 	nextTick(() => {
-		alignObserver.observe(content.value!);
+		if (content.value) alignObserver.observe(content.value);
 	});
 });
 

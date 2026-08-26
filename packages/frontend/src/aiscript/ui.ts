@@ -18,7 +18,7 @@ type Align = (typeof ALIGNS)[number];
 type Font = (typeof FONTS)[number];
 type BorderStyle = (typeof BORDER_STYLES)[number];
 
-export type AsUiComponentBase = {
+type AsUiComponentBase = {
 	id: string;
 	hidden?: boolean;
 	children?: AsUiComponent['id'][];
@@ -28,7 +28,7 @@ export type AsUiRoot = AsUiComponentBase & {
 	type: 'root';
 };
 
-export type AsUiContainer = AsUiComponentBase & {
+type AsUiContainer = AsUiComponentBase & {
 	type: 'container';
 	align?: Align;
 	bgColor?: string;
@@ -120,7 +120,7 @@ export type AsUiSelect = AsUiComponentBase & {
 	caption?: string;
 };
 
-export type AsUiFolder = AsUiComponentBase & {
+type AsUiFolder = AsUiComponentBase & {
 	type: 'folder';
 	title?: string;
 	opened?: boolean;
@@ -141,7 +141,7 @@ export type AsUiPostFormButton = AsUiComponentBase & {
 	form?: PostFormPropsForAsUi;
 };
 
-export type AsUiPostForm = AsUiComponentBase & {
+type AsUiPostForm = AsUiComponentBase & {
 	type: 'postForm';
 	form?: PostFormPropsForAsUi;
 };
@@ -170,13 +170,7 @@ type Options<T extends AsUiComponent> = T extends AsUiButtons
 	? WithExplicitUndefined<Omit<T, 'id' | 'type' | 'buttons'>> & { buttons: Options<AsUiButton>[] }
 	: WithExplicitUndefined<Omit<T, 'id' | 'type'>>;
 
-export function patch(
-	id: string,
-	def: values.Value,
-	call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>,
-) {
-	// TODO
-}
+function patch(id: string, def: values.Value, call: (fn: values.VFn, args: values.Value[]) => Promise<values.Value>) {}
 
 function getRootOptions(def: values.Value | undefined): Options<AsUiRoot> {
 	utils.assertObject(def);
@@ -538,9 +532,10 @@ function getPostFormProps(form: values.VObj): PostFormPropsForAsUi {
 	if (visibility) utils.assertString(visibility);
 	const localOnly = form.value.get('localOnly');
 	if (localOnly) utils.assertBoolean(localOnly);
-	const validatedVisibility = visibility?.value && (Misskey.noteVisibilities as readonly string[]).includes(visibility.value)
-		? visibility.value as (typeof Misskey.noteVisibilities)[number]
-		: undefined;
+	const validatedVisibility =
+		visibility?.value && (Misskey.noteVisibilities as readonly string[]).includes(visibility.value)
+			? (visibility.value as (typeof Misskey.noteVisibilities)[number])
+			: undefined;
 
 	return {
 		text: text.value,
@@ -651,7 +646,6 @@ export function registerAsUiLib(components: Ref<AsUiComponent>[], done: (root: R
 		'Ui:patch': values.FN_NATIVE(([id, val], opts) => {
 			utils.assertString(id);
 			utils.assertArray(val);
-			// patch(id.value, val.value, opts.call); // TODO
 		}),
 
 		'Ui:get': values.FN_NATIVE(([id], opts) => {
@@ -664,7 +658,6 @@ export function registerAsUiLib(components: Ref<AsUiComponent>[], done: (root: R
 			}
 		}),
 
-		// Ui:root.update({ children: [...] }) の糖衣構文
 		'Ui:render': values.FN_NATIVE(([children], opts) => {
 			utils.assertArray(children);
 

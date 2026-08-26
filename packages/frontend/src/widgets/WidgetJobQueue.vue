@@ -178,7 +178,7 @@ defineExpose<WidgetComponentExpose>({
 	font-size: 0.9em;
 
 	> div {
-		padding: 16px;
+		padding: var(--MI-space-lg);
 
 		&:not(:first-child) {
 			border-top: solid 0.5px var(--MI_THEME-divider);
@@ -191,6 +191,10 @@ defineExpose<WidgetComponentExpose>({
 				color: var(--MI_THEME-warn);
 				margin-left: auto;
 				animation: warnBlink 1s infinite;
+
+				@media (prefers-reduced-motion: reduce) {
+					animation: none;
+				}
 			}
 		}
 

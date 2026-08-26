@@ -177,7 +177,7 @@ import { chooseDriveFile } from '@/features/drive/drive.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { ensureSignin } from '@/i.js';
-import { langmap } from '@/utility/langmap.js';
+import { langmap } from 'misskey-js/langmap.js';
 import { definePage } from '@/page.js';
 import { claimAchievement } from '@/features/achievements/claim-achievement.js';
 import { store } from '@/store.js';
@@ -237,18 +237,12 @@ function saveFields() {
 
 function save() {
 	os.apiWithDialog('i/update', {
-		// 空文字列をnullにしたいので??は使うな
-		// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+		// 空文字列を null に変換するため、?? ではなく || を使う。
 		name: profile.name || null,
-		// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 		description: profile.description || null,
-		// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 		followedMessage: profile.followedMessage || null,
-		// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 		location: profile.location || null,
-		// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 		birthday: profile.birthday || null,
-		// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 		lang: profile.lang || null,
 		isBot: !!profile.isBot,
 		isCat: !!profile.isCat,
@@ -459,7 +453,7 @@ definePage(() => ({
 	align-items: flex-end;
 	border-radius: 6px;
 
-	/* (drag button) 32px + (drag button margin) 8px + (input width) 200px * 2 + (input gap) 12px = 452px */
+	/* ドラッグボタン32px + 右余白8px + 入力欄200px×2 + 入力欄間12px = 452px */
 	@container (max-width: 452px) {
 		align-items: center;
 	}

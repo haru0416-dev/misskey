@@ -31,15 +31,10 @@ export function collectModifications(
 
 	const modifications: TextModification[] = [];
 
-	// first
-	// 1) replace all `scripts/` path literals with locale code
-	// 2) replace all `localStorage.getItem("lang")` with `localeName` variable
-	// 3) replace all `await window.fetch(`/assets/locales/${d}.${x}.json`).then(u=>u.json())` with `localeJson` variable
 	walk(programNode, {
 		enter(this, node) {
 			if (node.type === 'Literal' && typeof node.value === 'string' && node.raw) {
 				if (node.raw.substring(1).startsWith(inliner.scriptsDir)) {
-					// we find `scripts/\w+\.js` literal and replace 'scripts' part with locale code
 					fileLogger.debug(`${lineCol(sourceCode, node)}: found ${inliner.scriptsDir}/ path literal ${node.raw}`);
 					modifications.push({
 						type: 'locale-name',
@@ -50,8 +45,7 @@ export function collectModifications(
 					});
 				}
 				if (node.raw.substring(1, node.raw.length - 1) === `${inliner.scriptsDir}/${inliner.i18nFileName}`) {
-					// we find `scripts/i18n.ts` literal.
-					// This is tipically in depmap and replace with this file name to avoid unnecessary loading i18n script
+					// depmap 内の i18n エントリを現在のチャンク名に置換し、追加読み込みを避ける。
 					fileLogger.debug(`${lineCol(sourceCode, node)}: found ${inliner.i18nFileName} path literal ${node.raw}`);
 					modifications.push({
 						type: 'replace',
@@ -75,7 +69,6 @@ export function collectModifications(
 			}
 
 			if (isAwaitFetchLocaleThenJson(node)) {
-				// await window.fetch(`/assets/locales/${d}.${x}.json`).then(u=>u.json(), () => null)
 				fileLogger.debug(
 					`${lineCol(sourceCode, node)}: found await window.fetch(\`/assets/locales/\${d}.\${x}.json\`).then(u=>u.json()) call`,
 				);
@@ -114,8 +107,7 @@ export function collectModifications(
 
 	fileLogger.debug(`imports ${inliner.i18nSymbol} /*i18n*/ as ${localI18nIdentifier}`);
 
-	// In case of substitution failure, we will preserve the import statement
-	// otherwise we will remove it.
+	// 直接参照や名前衝突で置換できない場合は、生成コードの参照先を失わないよう import を残す。
 	let preserveI18nImport = false;
 
 	const codeModifications: TextModification[] = [];
@@ -125,23 +117,21 @@ export function collectModifications(
 	walk(programNode, {
 		enter(this, node, parent, ctx) {
 			if (toSkip.has(node)) {
-				// This is the import specifier, skip processing it
 				this.skip();
 				return;
 			}
 
 			const property = ctx.key;
 
-			// We don't care original name part of the import declaration
 			if (node.type === 'ImportDeclaration') this.skip();
 
 			if (node.type === 'Identifier') {
 				if (parent == null) throw new Error();
-				if (parent.type === 'Property' && !parent.computed && property === 'key') return; // we don't care 'id' part of { id: expr }
-				if (parent.type === 'MemberExpression' && !parent.computed && property === 'property') return; // we don't care 'id' part of { id: expr }
-				if (parent.type === 'ExportSpecifier' && property === 'exported') return; // we don't care 'id' part of { id: expr }
+				if (parent.type === 'Property' && !parent.computed && property === 'key') return;
+				if (parent.type === 'MemberExpression' && !parent.computed && property === 'property') return;
+				if (parent.type === 'ExportSpecifier' && property === 'exported') return;
 				if (node.name === localI18nIdentifier) {
-					// the use of identifier is either direct reference to i18n, or unsupported conflict of the identifier, which should report error.
+					// i18n の識別子を直接参照するか、未対応の名前衝突がある場合は import を保持する。
 					fileLogger.error(
 						`${lineCol(sourceCode, node)}: Using i18n identifier "${localI18nIdentifier}" directly. Skipping inlining.`,
 					);
@@ -150,56 +140,50 @@ export function collectModifications(
 			} else if (node.type === 'MemberExpression') {
 				const i18nPath = parseI18nPropertyAccess(node);
 				if (i18nPath != null && i18nPath.length >= 2 && i18nPath[0] === 'ts') {
-					if (parent != null && parent.type === 'CallExpression' && property === 'callee') return; // we don't want to process `i18n.ts.property.stringBuiltinMethod()`
+					if (parent != null && parent.type === 'CallExpression' && property === 'callee') return;
 					if (i18nPath.at(-1)?.startsWith('_'))
 						fileLogger.debug(`found i18n grouped property access ${i18nPath.join('.')}`);
 					else fileLogger.debug(`${lineCol(sourceCode, node)}: found i18n property access ${i18nPath.join('.')}`);
-					// it's i18n.ts.propertyAccess
-					// i18n.ts.* will always be resolved to string or object containing strings
+					// i18n.ts.* は文字列または文字列を含むオブジェクトへ解決される。
 					codeModifications.push({
 						type: 'localized',
 						begin: node.start,
 						end: node.end,
-						localizationKey: i18nPath.slice(1), // remove 'ts' prefix
+						localizationKey: i18nPath.slice(1),
 						localizedOnly: true,
 					});
 					this.skip();
 				} else if (i18nPath != null && i18nPath.length >= 2 && i18nPath[0] === 'tsx') {
-					// it's parameterized locale substitution (`i18n.tsx.property(parameters)`)
-					// we expect the parameter to be an object literal
+					// パラメーター化されたロケール置換では引数にオブジェクトリテラルを要求する。
 					fileLogger.debug(`${lineCol(sourceCode, node)}: found i18n function access (object) ${i18nPath.join('.')}`);
 					codeModifications.push({
 						type: 'parameterized-function',
 						begin: node.start,
 						end: node.end,
-						localizationKey: i18nPath.slice(1), // remove 'tsx' prefix
+						localizationKey: i18nPath.slice(1),
 						localizedOnly: true,
 					});
 					this.skip();
 				}
 			}
 
-			// Scope check
 			if (
 				node.type === 'FunctionDeclaration' ||
 				node.type === 'FunctionExpression' ||
 				node.type === 'ArrowFunctionExpression'
 			) {
-				// if i18n is introduced as the Named Function Expression, interior of the function does not matter
+				// 関数名・引数・関数スコープの宣言で i18n が隠れる場合は子要素を処理しない。
 				if (node.id?.name === localI18nIdentifier) this.skip();
-				// If there is 'i18n' in the parameters, we care interior of the function
 				if (node.params.flatMap((param) => declsOfPattern(param)).includes(localI18nIdentifier)) this.skip();
 
-				// We find var declation inside the function and if there are
 				if (findFunctionScopeDecls(node).includes(localI18nIdentifier)) this.skip();
 			}
 
 			if (node.type === 'BlockStatement') {
-				// We find block-scope declaration inside the block, or from parent node if the block is part of for statement or catch clause
+				// ブロック内の宣言で i18n が隠れる場合は子要素を処理しない。
 				if (findBlockScopeDecls(node).includes(localI18nIdentifier)) this.skip();
 			}
 
-			// statements and clauses introduces new variables in variable scope
 			if (node.type === 'CatchClause') {
 				if (node.param != null) {
 					if (declsOfPattern(node.param).includes(localI18nIdentifier)) this.skip();
@@ -218,7 +202,6 @@ export function collectModifications(
 		},
 	});
 
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (!preserveI18nImport) {
 		fileLogger.debug('removing i18n import specifier');
 		const i18nImportSpecifier = importSpecifierResult.importSpecifier;
@@ -248,12 +231,11 @@ export function collectModifications(
 	}
 
 	function parseI18nPropertyAccess(node: ESTree.Expression | ESTree.Super): string[] | null {
-		if (node.type === 'Identifier' && node.name === localI18nIdentifier) return []; // i18n itself
+		if (node.type === 'Identifier' && node.name === localI18nIdentifier) return [];
 		if (node.type !== 'MemberExpression') return null;
-		// super.*
 		if (node.object.type === 'Super') return null;
 
-		// i18n?.property is not supported
+		// オプショナルチェーンは置換対象外とする。
 		if (node.optional) return null;
 
 		let id: string | null = null;
@@ -269,7 +251,7 @@ export function collectModifications(
 				id = node.property.name;
 			}
 		}
-		// non-constant property access
+		// 動的なプロパティアクセスは置換対象外とする。
 		if (id == null) return null;
 
 		const parentAccess = parseI18nPropertyAccess(node.object);
@@ -316,7 +298,7 @@ function declsOfPattern(
 		case 'TSSatisfiesExpression':
 		case 'TSTypeAssertion':
 		case 'TSNonNullExpression':
-			return []; // not introducing new symbol
+			return [];
 		case 'TSParameterProperty':
 			throw new Error();
 		default:
@@ -328,7 +310,7 @@ function lineCol(sourceCode: string, node: ESTree.Node): string {
 	const leading = sourceCode.slice(0, node.start);
 	const lines = leading.split('\n');
 	const line = lines.length;
-	const col = (lines.at(-1)?.length ?? 0) + 1; // +1 for 1-based index
+	const col = (lines.at(-1)?.length ?? 0) + 1; // 列番号は 1 始まり。
 	return `(${line}:${col})`;
 }
 
@@ -337,8 +319,7 @@ function findFunctionScopeDecls(fn: ESTree.Function | ESTree.ArrowFunctionExpres
 	const decls: string[] = [];
 	walk(fn.body, {
 		enter(node) {
-			// The only function-scoped symbol declaration in strict mode is 'var'
-			// If it's non-strict mode, function declaration will also in function scope.
+			// strict mode では var、非 strict mode では関数宣言も関数スコープに属する。
 			if (node.type === 'VariableDeclaration' && node.kind === 'var') {
 				decls.push(...node.declarations.flatMap((x) => declsOfPattern(x.id)));
 			}
@@ -348,7 +329,7 @@ function findFunctionScopeDecls(fn: ESTree.Function | ESTree.ArrowFunctionExpres
 				node.type === 'FunctionExpression' ||
 				node.type === 'ArrowFunctionExpression'
 			) {
-				// The function makes new inner scope
+				// ネストした関数のスコープは調べない。
 				this.skip();
 			}
 		},
@@ -380,7 +361,7 @@ function findBlockScopeDecls(block: ESTree.BlockStatement): string[] {
 					node.type === 'ForInStatement' ||
 					node.type === 'ForOfStatement'
 				) {
-					// The function makes new inner scope
+					// ネストした関数やブロックのスコープは調べない。
 					this.skip();
 				}
 			},
@@ -389,9 +370,8 @@ function findBlockScopeDecls(block: ESTree.BlockStatement): string[] {
 	return decls;
 }
 
-//region checker functions
+//region チェッカー関数
 
-// localStorage.getItem("lang")
 function isLocalStorageGetItemLang(getItemCall: ESTree.Node): boolean {
 	if (getItemCall.type !== 'CallExpression') return false;
 	if (getItemCall.arguments.length !== 1) return false;
@@ -409,7 +389,6 @@ function isLocalStorageGetItemLang(getItemCall: ESTree.Node): boolean {
 	return true;
 }
 
-// await window.fetch(`/assets/locales/${d}.${x}.json`).then(u => u.json(), ....)
 function isAwaitFetchLocaleThenJson(awaitNode: ESTree.Node): boolean {
 	if (awaitNode.type !== 'AwaitExpression') return false;
 
@@ -434,7 +413,6 @@ function isAwaitFetchLocaleThenJson(awaitNode: ESTree.Node): boolean {
 	if (fetchCall.type !== 'CallExpression') return false;
 	if (fetchCall.arguments.length < 1 || fetchCall.arguments.length > 2) return false;
 
-	// `/assets/locales/${d}.${x}.json`
 	const assetLocaleTemplate = fetchCall.arguments[0];
 	if (assetLocaleTemplate?.type !== 'TemplateLiteral') return false;
 	if (assetLocaleTemplate.quasis.length !== 3) return false;
@@ -483,7 +461,6 @@ function findImportSpecifier(programNode: ESTree.Program, i18nFileName: string, 
 	return { type: 'specifier', localI18nIdentifier, importNode, importSpecifier: i18nImportSpecifier };
 }
 
-// checker helpers
 function isMemberExpression(node: ESTree.Node, property: string): node is ESTree.MemberExpression {
 	return (
 		node.type === 'MemberExpression' &&

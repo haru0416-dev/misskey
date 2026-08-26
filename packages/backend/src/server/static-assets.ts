@@ -44,7 +44,12 @@ function safeResolve(root: string, path: string): string | null {
 	return fullPath;
 }
 
-async function serveFile(c: Context, filePath: string, cacheControl: string, extraHeaders?: Record<string, string>): Promise<Response> {
+async function serveFile(
+	c: Context,
+	filePath: string,
+	cacheControl: string,
+	extraHeaders?: Record<string, string>,
+): Promise<Response> {
 	const fileStat = await stat(filePath).catch(() => null);
 	if (fileStat == null || !fileStat.isFile()) {
 		return c.body(null, 404);
@@ -54,7 +59,7 @@ async function serveFile(c: Context, filePath: string, cacheControl: string, ext
 		'Cache-Control': cacheControl,
 		'Content-Length': String(fileStat.size),
 		'Last-Modified': fileStat.mtime.toUTCString(),
-		...(extraHeaders ?? {}),
+		...extraHeaders,
 	});
 	const contentType = mime.lookup(filePath);
 	if (contentType) {
@@ -88,8 +93,7 @@ function registerStaticMount(app: Hono, mount: StaticMount): void {
 }
 
 /**
- * frontend の vite ビルド成果物が無い開発時は、vite dev サーバーへ HTTP プロキシする
- * (上流 Misskey の ClientServerService が dev 時に登録していた fastify-http-proxy 相当)。
+ * frontend の vite ビルド成果物が無い開発時は、vite dev サーバーへ HTTP プロキシする。
  * HMR の WebSocket は vite.config.ts の `hmr.clientPort: 5173` によりクライアントが
  * vite サーバーへ直接張るため、ここでは HTTP のみ転送すればよい。
  */
@@ -125,7 +129,7 @@ function emojiPath(c: Context, prefix: string): string {
 
 function emojiSecurityHeaders(): Record<string, string> {
 	return {
-		'Content-Security-Policy': 'default-src \'none\'; style-src \'unsafe-inline\'',
+		'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
 	};
 }
 
@@ -176,10 +180,24 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 		cacheControl: 'public, max-age=2592000, immutable',
 	});
 
-	app.get('/favicon.ico', async (c) => await serveFile(c, resolve(staticAssets, 'favicon.ico'), 'public, max-age=604800'));
-	app.on('HEAD', '/favicon.ico', async (c) => await serveFile(c, resolve(staticAssets, 'favicon.ico'), 'public, max-age=604800'));
-	app.get('/apple-touch-icon.png', async (c) => await serveFile(c, resolve(staticAssets, 'apple-touch-icon.png'), 'public, max-age=604800'));
-	app.on('HEAD', '/apple-touch-icon.png', async (c) => await serveFile(c, resolve(staticAssets, 'apple-touch-icon.png'), 'public, max-age=604800'));
+	app.get(
+		'/favicon.ico',
+		async (c) => await serveFile(c, resolve(staticAssets, 'favicon.ico'), 'public, max-age=604800'),
+	);
+	app.on(
+		'HEAD',
+		'/favicon.ico',
+		async (c) => await serveFile(c, resolve(staticAssets, 'favicon.ico'), 'public, max-age=604800'),
+	);
+	app.get(
+		'/apple-touch-icon.png',
+		async (c) => await serveFile(c, resolve(staticAssets, 'apple-touch-icon.png'), 'public, max-age=604800'),
+	);
+	app.on(
+		'HEAD',
+		'/apple-touch-icon.png',
+		async (c) => await serveFile(c, resolve(staticAssets, 'apple-touch-icon.png'), 'public, max-age=604800'),
+	);
 	app.get('/fluent-emoji/*', async (c) => {
 		const path = emojiPath(c, '/fluent-emoji/');
 		if (!path.match(/^[0-9a-f-]+\.png$/)) return c.body(null, 404);
@@ -204,10 +222,7 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 		const path = emojiPath(c, '/twemoji-badge/');
 		if (!path.match(/^[0-9a-f-]+\.png$/)) return c.body(null, 404);
 
-		const mask = await sharp(
-			resolve(twemojiDir, `${path.replace('.png', '')}.svg`),
-			{ density: 1000 },
-		)
+		const mask = await sharp(resolve(twemojiDir, `${path.replace('.png', '')}.svg`), { density: 1000 })
 			.resize(488, 488)
 			.greyscale()
 			.normalise()
@@ -243,10 +258,23 @@ export function createStaticAssetsApp(deps: StaticAssetsDependencies): Hono {
 			},
 		});
 	});
-	app.get('/sw.js', async (c) => await serveFile(c, resolve(deps.config.runtime.rootDir, 'built/_sw_dist_/sw.js'), 'public, max-age=600'));
-	app.on('HEAD', '/sw.js', async (c) => await serveFile(c, resolve(deps.config.runtime.rootDir, 'built/_sw_dist_/sw.js'), 'public, max-age=600'));
+	app.get(
+		'/sw.js',
+		async (c) =>
+			await serveFile(c, resolve(deps.config.runtime.rootDir, 'built/_sw_dist_/sw.js'), 'public, max-age=600'),
+	);
+	app.on(
+		'HEAD',
+		'/sw.js',
+		async (c) =>
+			await serveFile(c, resolve(deps.config.runtime.rootDir, 'built/_sw_dist_/sw.js'), 'public, max-age=600'),
+	);
 	app.get('/embed.js', async (c) => await serveFile(c, resolve(staticAssets, 'embed.js'), 'public, max-age=86400'));
-	app.on('HEAD', '/embed.js', async (c) => await serveFile(c, resolve(staticAssets, 'embed.js'), 'public, max-age=86400'));
+	app.on(
+		'HEAD',
+		'/embed.js',
+		async (c) => await serveFile(c, resolve(staticAssets, 'embed.js'), 'public, max-age=86400'),
+	);
 
 	return app;
 }

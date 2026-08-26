@@ -15,7 +15,7 @@ async function generateBaseTypes(
 ) {
 	const lines: string[] = [];
 
-	// NOTE: Align `operationId` of GET and POST to avoid duplication of type definitions
+	// GETとPOSTでoperationIdを揃え、型定義の重複を防ぐ。
 	const openApi = JSON.parse(await readFile(openApiJsonPath, 'utf8')) as OpenAPI3;
 	for (const [key, item] of Object.entries(openApi.paths!)) {
 		assert('post' in item);
@@ -84,7 +84,7 @@ async function generateEndpoints(
 	const endpointReqMediaTypes: EndpointReqMediaType[] = [];
 	const endpointReqMediaTypesSet = new Set<string>();
 
-	// misskey-jsはPOST固定で送っているので、こちらも決め打ちする。別メソッドに対応することがあればこちらも直す必要あり
+	// misskey-jsはPOSTだけを送信するため、POSTの定義だけを生成する。
 	const paths = openApiDocs.paths ?? {};
 	const postPathItems = Object.keys(paths)
 		.map(it => ({
@@ -103,12 +103,13 @@ async function generateEndpoints(
 			const reqContent = operation.requestBody.content;
 			const supportMediaTypes = Object.keys(reqContent);
 			if (supportMediaTypes.length > 0) {
-				// いまのところ複数のメディアタイプをとるエンドポイントは無いので決め打ちする
+				// 複数のメディアタイプに対応する選択規則がないため、先頭の1件を採用する。
 				const req = new OperationTypeAlias(
 					operationId,
 					path,
 					supportMediaTypes[0],
 					OperationsAliasType.REQUEST,
+					operation.requestBody.required !== true,
 				);
 				endpoint.request = req;
 
@@ -124,12 +125,14 @@ async function generateEndpoints(
 			const resContent = operation.responses['200'].content;
 			const supportMediaTypes = Object.keys(resContent);
 			if (supportMediaTypes.length > 0) {
-				// いまのところ複数のメディアタイプを返すエンドポイントは無いので決め打ちする
+				// 複数のメディアタイプに対応する選択規則がないため、先頭の1件を採用する。
 				endpoint.response = new OperationTypeAlias(
 					operationId,
 					path,
 					supportMediaTypes[0],
 					OperationsAliasType.RESPONSE,
+					false,
+					isResponseObject(operation.responses['204']),
 				);
 			}
 		}
@@ -173,8 +176,8 @@ async function generateEndpoints(
 	}
 
 	endpointOutputLine.push(`/**
- * NOTE: The content-type for all endpoints not listed here is application/json.
- */`);
+	 * Request Content-Type defaults to application/json for endpoints not listed here.
+	 */`);
 	endpointOutputLine.push('export const endpointReqTypes = {');
 
 	endpointOutputLine.push(
@@ -199,7 +202,7 @@ async function generateApiClientJSDoc(
 		description: string;
 	}[] = [];
 
-	// misskey-jsはPOST固定で送っているので、こちらも決め打ちする。別メソッドに対応することがあればこちらも直す必要あり
+	// misskey-jsはPOSTだけを送信するため、POSTの定義だけを生成する。
 	const paths = openApiDocs.paths ?? {};
 	const postPathItems = Object.keys(paths)
 		.map(it => ({
@@ -235,10 +238,11 @@ async function generateApiClientJSDoc(
 			'    /**',
 			`     * ${endpoint.description.split('\n').join('\n     * ')}`,
 			'     */',
-			`    request<E extends '${endpoint.path}', P extends Endpoints[E][\'req\']>(`,
+			`    request<E extends '${endpoint.path}', P extends Endpoints[E][\'req\'] = Endpoints[E][\'req\']>(`,
 			'      endpoint: E,',
-			'      params: P,',
-			'      credential?: string | null,',
+			'      ...args: Endpoints[E] extends { reqOptional: true }',
+			'        ? [params?: P, credential?: string | null]',
+			'        : [params: P, credential?: string | null]',
 			'    ): Promise<SwitchCaseResponseType<E, P>>;',
 		);
 
@@ -286,6 +290,7 @@ enum OperationsAliasType {
 
 interface IOperationTypeAlias {
 	readonly type: OperationsAliasType
+	readonly requestBodyOptional: boolean
 
 	generateName(): string
 
@@ -297,17 +302,23 @@ class OperationTypeAlias implements IOperationTypeAlias {
 	public readonly path: string;
 	public readonly mediaType: string;
 	public readonly type: OperationsAliasType;
+	public readonly requestBodyOptional: boolean;
+	public readonly responseCanBeNoContent: boolean;
 
 	constructor(
 		operationId: string,
 		path: string,
 		mediaType: string,
 		type: OperationsAliasType,
+		requestBodyOptional = false,
+		responseCanBeNoContent = false,
 	) {
 		this.operationId = operationId;
 		this.path = path;
 		this.mediaType = mediaType;
 		this.type = type;
+		this.requestBodyOptional = requestBodyOptional;
+		this.responseCanBeNoContent = responseCanBeNoContent;
 	}
 
 	generateName(): string {
@@ -317,17 +328,22 @@ class OperationTypeAlias implements IOperationTypeAlias {
 
 	toLine(): string {
 		const name = this.generateName();
-		return (this.type === OperationsAliasType.REQUEST)
-			? `export type ${name} = operations['${this.operationId}']['requestBody']['content']['${this.mediaType}'];`
-			: `export type ${name} = operations['${this.operationId}']['responses']['200']['content']['${this.mediaType}'];`;
+		if (this.type === OperationsAliasType.RESPONSE) {
+			return `export type ${name} = operations['${this.operationId}']['responses']['200']['content']['${this.mediaType}']${this.responseCanBeNoContent ? ' | null' : ''};`;
+		}
+
+		const requestBody = `NonNullable<operations['${this.operationId}']['requestBody']>`;
+		return `export type ${name} = ${requestBody}['content']['${this.mediaType}'];`;
 	}
 }
 
 class EmptyTypeAlias implements IOperationTypeAlias {
 	readonly type: OperationsAliasType;
+	readonly requestBodyOptional: boolean;
 
 	constructor(type: OperationsAliasType) {
 		this.type = type;
+		this.requestBodyOptional = type === OperationsAliasType.REQUEST;
 	}
 
 	generateName(): string {
@@ -336,7 +352,9 @@ class EmptyTypeAlias implements IOperationTypeAlias {
 
 	toLine(): string {
 		const name = this.generateName();
-		return `export type ${name} = Record<string, unknown> | undefined;`;
+		return this.type === OperationsAliasType.REQUEST
+			? `export type ${name} = Record<string, unknown>;`
+			: `export type ${name} = null;`;
 	}
 }
 
@@ -355,8 +373,9 @@ class Endpoint {
 	toLine(): string {
 		const reqName = this.request?.generateName() ?? emptyRequest.generateName();
 		const resName = this.response?.generateName() ?? emptyResponse.generateName();
+		const reqOptional = this.request?.requestBodyOptional ?? true;
 
-		return `'${this.path}': { req: ${reqName}; res: ${resName} };`;
+		return `'${this.path}': { req: ${reqName}; res: ${resName}${reqOptional ? '; reqOptional: true' : ''} };`;
 	}
 }
 

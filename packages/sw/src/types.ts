@@ -15,7 +15,7 @@ export type SwMessage = {
 	[x: string]: unknown;
 };
 
-// Defined also @/core/PushNotificationService.ts#L12
+// packages/backend/src/server/rest/push-notification.tsのPushNotificationsTypesと同期する。
 type PushNotificationDataSourceMap = {
 	notification: Misskey.entities.Notification;
 	unreadAntennaNote: {
@@ -26,7 +26,7 @@ type PushNotificationDataSourceMap = {
 	newChatMessage: Misskey.entities.ChatMessage;
 };
 
-export type PushNotificationData<K extends keyof PushNotificationDataSourceMap> = {
+type PushNotificationData<K extends keyof PushNotificationDataSourceMap> = {
 	type: K;
 	body: PushNotificationDataSourceMap[K];
 	userId: string;

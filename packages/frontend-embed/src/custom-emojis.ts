@@ -25,7 +25,7 @@ function set(key: string, value: unknown): void {
 
 const storageCache = get('emojis');
 if (storageCache !== null && !isEmojiSimpleArray(storageCache)) localStorage.removeItem('emojis');
-export const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(isEmojiSimpleArray(storageCache) ? storageCache : []);
+const customEmojis = shallowRef<Misskey.entities.EmojiSimple[]>(isEmojiSimpleArray(storageCache) ? storageCache : []);
 
 export const customEmojisMap = new Map<string, Misskey.entities.EmojiSimple>();
 watch(

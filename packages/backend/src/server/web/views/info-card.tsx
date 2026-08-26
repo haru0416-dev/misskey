@@ -6,9 +6,11 @@
 import { comment, CommonPropsMinimum } from '@/server/web/views/_.js';
 import type { MiMeta } from '@/models/Meta.js';
 
-export function InfoCardPage(props: CommonPropsMinimum<{
-	meta: MiMeta;
-}>) {
+export function InfoCardPage(
+	props: CommonPropsMinimum<{
+		meta: MiMeta;
+	}>,
+) {
 	// 変数名をsafeで始めることでエラーをスキップ
 	const safeDescription = props.meta.description;
 
@@ -16,7 +18,7 @@ export function InfoCardPage(props: CommonPropsMinimum<{
 		<>
 			{'<!DOCTYPE html>'}
 			{comment}
-			<html>
+			<html lang="en">
 				<head>
 					<meta charset="UTF-8" />
 					<meta name="application-name" content="Erebia" />
@@ -26,8 +28,13 @@ export function InfoCardPage(props: CommonPropsMinimum<{
 				</head>
 				<body>
 					<a id="a" href={props.config.instance.url} target="_blank" rel="noopener noreferrer">
-						<header id="banner" style={props.meta.bannerUrl != null ? `background-image: url(${props.meta.bannerUrl});` : ''}>
-							<div id="title" safe>{props.meta.name ?? props.config.instance.url}</div>
+						<header
+							id="banner"
+							style={props.meta.bannerUrl != null ? `background-image: url(${props.meta.bannerUrl});` : ''}
+						>
+							<div id="title" safe>
+								{props.meta.name ?? props.config.instance.url}
+							</div>
 						</header>
 					</a>
 					<div id="content">

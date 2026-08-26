@@ -4,8 +4,8 @@
  */
 
 import { Hono, type Context } from 'hono';
-import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
-import { fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
+import { fetchUserByUsernameAndHostFromDatabase } from '@/core/user/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
@@ -13,9 +13,14 @@ import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiUser } from '@/models/User.js';
 import * as Acct from '@/misc/acct.js';
 import { genIdenticon } from '@/misc/gen-identicon.js';
+import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
 
-export type RootRouteStores = {
-	fetchEmojiByNameAndHost: (db: MiDrizzleDatabase, name: MiEmoji['name'], host: MiEmoji['host']) => Promise<MiEmoji | null>;
+type RootRouteStores = {
+	fetchEmojiByNameAndHost: (
+		db: MiDrizzleDatabase,
+		name: MiEmoji['name'],
+		host: MiEmoji['host'],
+	) => Promise<MiEmoji | null>;
 	fetchUserByUsernameAndHost: (db: MiDrizzleDatabase, username: string, host: MiUser['host']) => Promise<MiUser | null>;
 };
 
@@ -38,14 +43,6 @@ function pathAfter(requestUrl: string, prefix: string): string {
 
 function queryHas(requestUrl: string, key: string): boolean {
 	return new URL(requestUrl).searchParams.has(key);
-}
-
-function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
-	if ((user.host == null || user.host === config.runtime.host) && user.username.includes('.') && meta.iconUrl) {
-		return meta.iconUrl;
-	}
-
-	return `${config.instance.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.runtime.host}`;
 }
 
 function cacheHeaders(): Record<string, string> {
@@ -83,10 +80,10 @@ export function createRootRoutes(deps: RootRouteDependencies): Hono {
 		const emoji = await stores.fetchEmojiByNameAndHost(
 			deps.db,
 			name!,
-			(host === undefined || host === '.') ? null : host,
+			host === undefined || host === '.' ? null : host,
 		);
 
-		headers['Content-Security-Policy'] = 'default-src \'none\'; style-src \'unsafe-inline\'';
+		headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'";
 		c.header('Content-Security-Policy', headers['Content-Security-Policy']);
 
 		if (emoji == null) {
@@ -125,11 +122,13 @@ export function createRootRoutes(deps: RootRouteDependencies): Hono {
 		const user = await stores.fetchUserByUsernameAndHost(
 			deps.db,
 			username,
-			(host == null) || (host === deps.config.runtime.host) ? null : host,
+			host == null || host === deps.config.runtime.host ? null : host,
 		);
 
 		if (user && !user.isSuspended) {
-			return c.redirect((user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user));
+			return c.redirect(
+				(user.avatarId == null ? null : user.avatarUrl) ?? getIdenticonUrl(deps.config, deps.meta, user),
+			);
 		}
 
 		return c.redirect('/static-assets/user-unknown.png');

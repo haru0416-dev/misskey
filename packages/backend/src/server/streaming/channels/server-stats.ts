@@ -10,7 +10,6 @@ import type { HonoStreamChannelDefinition } from '../channel.js';
 
 const ev = globalEventBus;
 
-/** ServerStatsChannel 相当。hono-daemon-server-stats.ts が発行する globalEventBus イベントを購読する。 */
 export const honoStreamChannelServerStats: HonoStreamChannelDefinition<unknown> = {
 	shouldShare: true,
 	requireCredential: false,
@@ -28,7 +27,7 @@ export const honoStreamChannelServerStats: HonoStreamChannelDefinition<unknown> 
 			onMessage: (type: string, body: JsonValue) => {
 				if (type === 'requestLog') {
 					if (!isJsonObject(body)) return;
-					ev.once(`serverStatsLog:${body['id']}`, statsLog => {
+					ev.once(`serverStatsLog:${body['id']}`, (statsLog) => {
 						ctx.send('statsLog', statsLog as JsonValue);
 					});
 					ev.emit('requestServerStatsLog', { id: body['id'], length: body['length'] });

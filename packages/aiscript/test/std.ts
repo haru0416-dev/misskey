@@ -46,6 +46,16 @@ describe('Core', () => {
 	});
 });
 
+describe('Util', () => {
+	test.concurrent('uuid', async () => {
+		const result = await exe('<: Util:uuid()');
+		assert.equal(result.type, 'str');
+		if (result.type === 'str') {
+			assert.match(result.value, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+		}
+	});
+});
+
 describe('Arr', () => {
 	test.concurrent('create', async () => {
 		eq(await exe("<: Arr:create(0)"), ARR([]));
@@ -98,7 +108,7 @@ describe('Math', () => {
 		eq(await exe("<: Math:max(-2, -3)"), NUM(-2));
 	});
 	
-	/* flaky
+	/*
 	test.concurrent('rnd', async () => {
 		const steps = 512;
 
@@ -139,7 +149,6 @@ describe('Math', () => {
 	});
 
 	test.concurrent('gen_rng', async () => {
-		// 2つのシード値から1~maxの乱数をn回生成して一致率を見る
 		const res = await exe(`
 		@test(seed1, seed2) {
 			let n = 100

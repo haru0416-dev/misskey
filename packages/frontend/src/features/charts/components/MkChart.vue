@@ -77,8 +77,7 @@ const props = withDefaults(defineProps<{
 	bar?: boolean;
 	aspectRatio?: number | null;
 	/**
-	 * @desc Overwrites current date to fix background lines of chart.
-	 * @ignore Only used for Chromatic. Don't use this for production.
+	 * Chromatic でチャートの背景線を固定するための現在時刻。本番では指定しない。
 	 * @see https://github.com/misskey-dev/misskey/pull/13830#issuecomment-2155886151
 	 */
 	nowForChromatic?: number;
@@ -103,7 +102,6 @@ const colors = {
 	lime: '#bde800',
 	cyan: '#00e0e0',
 };
-// eslint-disable-next-line vue/no-setup-props-reactivity-loss
 const now = props.nowForChromatic != null ? new Date(props.nowForChromatic) : new Date();
 type ChartData = {
 	series: DataChartSeries[];

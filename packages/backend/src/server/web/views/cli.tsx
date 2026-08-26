@@ -3,13 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export function CliPage(props: {
-	version: string;
-}) {
+export function CliPage(props: { version: string }) {
 	return (
 		<>
 			{'<!DOCTYPE html>'}
-			<html>
+			<html lang="en">
 				<head>
 					<meta charset="UTF-8" />
 					<meta name="application-name" content="Erebia" />

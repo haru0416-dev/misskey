@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { SystemQueue } from '@/core/queues.js';
+import type { SystemQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 
@@ -19,23 +19,31 @@ export const systemJobSchedulers = [
 	{ name: 'cleanRemoteNotes', pattern: '0 4 * * *' },
 ] as const;
 
-export type SystemJobName = typeof systemJobSchedulers[number]['name'];
+export type SystemJobName = (typeof systemJobSchedulers)[number]['name'];
 
-const schedulerKeys = new Set<string>(systemJobSchedulers.map(scheduler => scheduler.name));
+const schedulerKeys = new Set<string>(systemJobSchedulers.map((scheduler) => scheduler.name));
 
 export async function syncSystemJobSchedulers(systemQueue: SystemQueue, config: Pick<Config, 'queues'>): Promise<void> {
-	await Promise.all(systemJobSchedulers.map(scheduler => systemQueue.upsertJobScheduler(scheduler.name, {
-		pattern: scheduler.pattern,
-		immediately: false,
-	}, {
-		name: scheduler.name,
-		opts: queueRetentionOptions(config),
-	})));
+	await Promise.all(
+		systemJobSchedulers.map((scheduler) =>
+			systemQueue.upsertJobScheduler(
+				scheduler.name,
+				{
+					pattern: scheduler.pattern,
+					immediately: false,
+				},
+				{
+					name: scheduler.name,
+					opts: queueRetentionOptions(config),
+				},
+			),
+		),
+	);
 
 	const registeredSchedulers = await systemQueue.getJobSchedulers();
 	const obsoleteSchedulerKeys = registeredSchedulers
-		.map(scheduler => scheduler.key)
-		.filter(key => !schedulerKeys.has(key));
+		.map((scheduler) => scheduler.key)
+		.filter((key) => !schedulerKeys.has(key));
 
-	await Promise.all(obsoleteSchedulerKeys.map(key => systemQueue.removeJobScheduler(key)));
+	await Promise.all(obsoleteSchedulerKeys.map((key) => systemQueue.removeJobScheduler(key)));
 }

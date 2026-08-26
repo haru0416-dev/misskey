@@ -9,9 +9,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template #header>{{ i18n.ts._widgets.aiscript }}</template>
 
 	<div class="uylguesu _monospace">
-		<textarea v-model="widgetProps.script" placeholder="(1 + 1)"></textarea>
+		<textarea v-model="widgetProps.script" placeholder="(1 + 1)" aria-label="AiScript"></textarea>
 		<button class="_buttonPrimary" @click="run">RUN</button>
-		<div class="logs">
+		<div class="logs" role="log" aria-live="polite">
 			<div v-for="log in logs" :key="log.id" class="log" :class="{ print: log.print }">{{ log.text }}</div>
 		</div>
 	</div>
@@ -130,7 +130,7 @@ defineExpose<WidgetComponentExpose>({
 		width: 100%;
 		max-width: 100%;
 		min-width: 100%;
-		padding: 16px;
+		padding: var(--MI-space-lg);
 		color: var(--MI_THEME-fg);
 		background: transparent;
 		border: none;
@@ -140,17 +140,18 @@ defineExpose<WidgetComponentExpose>({
 		font: inherit;
 
 		&:focus-visible {
-			outline: none;
+			outline: 2px solid var(--MI_THEME-focus);
+			outline-offset: -2px;
 		}
 	}
 
 	> button {
 		display: inline-block;
-		margin: 8px;
+		margin: var(--MI-space-sm);
 		padding: 0 10px;
 		height: 28px;
 		outline: none;
-		border-radius: 4px;
+		border-radius: var(--MI-radius-sm);
 
 		&:disabled {
 			opacity: 0.7;
@@ -161,10 +162,11 @@ defineExpose<WidgetComponentExpose>({
 	> .logs {
 		border-top: solid 0.5px var(--MI_THEME-divider);
 		text-align: left;
-		padding: 16px;
+		padding: var(--MI-space-lg);
 
 		&:empty {
-			display: none;
+			padding: 0;
+			border-top: none;
 		}
 
 		> .log {

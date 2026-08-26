@@ -5,12 +5,17 @@
 
 import { basename, extname } from 'node:path';
 import type { Config } from '@/config.js';
-import type { IImageStreamable } from '@/core/ImageProcessingService.js';
+import type { IImageStreamable } from '@/core/drive/ImageProcessingService.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import { correctFilename } from '@/misc/correct-filename.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
-import { VideoProcessingService } from '@/core/VideoProcessingService.js';
-import { attachStreamCleanup, handleRangeRequest, setFileResponseHeaders, getSafeContentType } from './FileServerUtils.js';
+import { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
+import {
+	attachStreamCleanup,
+	handleRangeRequest,
+	setFileResponseHeaders,
+	getSafeContentType,
+} from './FileServerUtils.js';
 import type { FileServerFileResolver } from './FileServerFileResolver.js';
 import { getFileServerHeader, type FileServerReply, type FileServerRequest } from './FileServerTypes.js';
 
@@ -86,12 +91,7 @@ export class FileServerDriveHandler {
 				reply.header('Content-Type', getSafeContentType(image.type));
 				reply.header('Content-Length', file.file.size);
 				reply.header('Cache-Control', 'max-age=31536000, immutable');
-				reply.header('Content-Disposition',
-					contentDisposition(
-						'inline',
-						correctFilename(file.filename, image.ext),
-					),
-				);
+				reply.header('Content-Disposition', contentDisposition('inline', correctFilename(file.filename, image.ext)));
 				return image.data;
 			}
 

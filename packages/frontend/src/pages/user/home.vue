@@ -8,9 +8,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div class="_spacer" :style="{ '--MI_SPACER-w': narrow ? '800px' : '1100px' }">
 		<div ref="rootEl" class="ftskorzw" :class="{ wide: !narrow }" style="container-type: inline-size;">
 			<div class="main _gaps">
-				<!-- TODO -->
-				<!-- <div class="punished" v-if="user.isSuspended"><i class="ti ti-alert-triangle" style="margin-right: 8px;"></i> {{ i18n.ts.userSuspended }}</div> -->
-				<!-- <div class="punished" v-if="user.isSilenced"><i class="ti ti-alert-triangle" style="margin-right: 8px;"></i> {{ i18n.ts.userSilenced }}</div> -->
 
 				<div class="profile _gaps">
 					<MkAccountMoved v-if="user.movedTo" :movedTo="user.movedTo"/>
@@ -48,7 +45,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</div>
 						</div>
 						<div v-if="user.followedMessage != null" class="followedMessage">
-							<MkFukidashi class="fukidashi" :tail="narrow ? 'none' : 'left'" negativeMargin>
+							<MkFukidashi class="fukidashi" :tail="narrow ? 'none' : 'left'">
 								<div class="messageHeader">{{ i18n.ts.messageToFollower }}</div>
 								<div><MkSparkle><Mfm :plain="true" :text="user.followedMessage" :author="user" class="_selectable"/></MkSparkle></div>
 							</MkFukidashi>
@@ -56,7 +53,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<div v-if="user.roles.length > 0" class="roles">
 							<span v-for="role in user.roles" :key="role.id" v-tooltip="role.description" class="role" :style="{ '--color': role.color ?? '' }">
 								<MkA v-adaptive-bg :to="`/roles/${role.id}`">
-									<img v-if="role.iconUrl" style="height: 1.3em; vertical-align: -22%;" :src="role.iconUrl"/>
+									<img v-if="role.iconUrl" style="height: 1.3em; vertical-align: -22%;" :src="role.iconUrl" alt=""/>
 									{{ role.name }}
 								</MkA>
 							</span>
@@ -210,7 +207,7 @@ const XTimeline = defineAsyncComponent(() => import('./index/timeline.vue'));
 
 const props = withDefaults(defineProps<{
 	user: Misskey.entities.UserDetailed;
-	/** Test only; MkNotesTimeline currently causes problems in vitest */
+	/** Vitest では MkNotesTimeline が正常に動作しないため、テスト時だけ無効化する。 */
 	disableNotes?: boolean;
 }>(), {
 	disableNotes: false,
@@ -250,7 +247,7 @@ const style = computed(() => {
 });
 
 const age = computed(() => {
-	return props.user.birthday ? calcAge(props.user.birthday) : NaN;
+	return props.user.birthday ? calcAge(props.user.birthday) : Number.NaN;
 });
 
 function menu(ev: PointerEvent) {
@@ -284,7 +281,6 @@ watch([props.user], () => {
 });
 
 async function reload() {
-	// TODO
 }
 
 let bannerParallaxResizeObserver: ResizeObserver | null = null;
@@ -534,7 +530,6 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 					> .fukidashi {
 						display: block;
 						--fukidashi-bg: color-mix(in srgb, var(--MI_THEME-accent), var(--MI_THEME-panel) 85%);
-						--fukidashi-radius: var(--MI-radius-lg);
 						font-size: 0.9em;
 
 						.messageHeader {

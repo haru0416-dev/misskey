@@ -28,7 +28,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkChannelList :key="key" :paginator="channelPaginator"/>
 			</MkFoldableSection>
 		</div>
-		<div v-if="tab === 'featured'">
+		<div v-else-if="tab === 'featured'">
 			<MkPagination v-slot="{items}" :paginator="featuredPaginator">
 				<div :class="$style.root">
 					<MkChannelPreview v-for="channel in items" :key="channel.id" :channel="channel"/>
@@ -72,11 +72,8 @@ import MkButton from '@/components/form/MkButton.vue';
 import MkFoldableSection from '@/components/layout/MkFoldableSection.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
-import { useRouter } from '@/router.js';
 import { Paginator } from '@/utility/paginator.js';
 import { $i } from '@/i.js';
-
-const router = useRouter();
 
 type SearchType = 'nameAndDescription' | 'nameOnly';
 

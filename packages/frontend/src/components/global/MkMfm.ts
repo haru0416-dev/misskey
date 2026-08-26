@@ -59,7 +59,6 @@ type MfmEvents = {
 	clickEv(id: string): void;
 };
 
-// eslint-disable-next-line import/no-default-export
 export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEvents>['emit'] }) {
 	// こうしたいところだけど functional component 内では provide は使えない
 	//provide('linkNavigationBehavior', props.linkNavigationBehavior);
@@ -67,7 +66,6 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 	const isNote = props.isNote ?? true;
 	const shouldNyaize = props.nyaize ? (props.nyaize === 'respect' ? props.author?.isCat : false) : false;
 
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (props.text == null || props.text === '') return;
 
 	const rootAst = props.parsedNodes ?? (props.plain ? mfm.parseSimple : mfm.parse)(props.text);
@@ -87,12 +85,6 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 	let vnodeKey = 0;
 	const nextKey = () => vnodeKey++;
 
-	/**
-	 * Gen Vue Elements from MFM AST
-	 * @param ast MFM AST
-	 * @param scale How times large the text is
-	 * @param disableNyaize Whether nyaize is disabled or not
-	 */
 	const genEl = (ast: mfm.MfmNode[], scale: number, disableNyaize = false) =>
 		ast
 			.map((token): VNode | string | (VNode | string)[] => {
@@ -112,7 +104,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							res.shift();
 							return res;
 						} else {
-							return [text.replace(/\n/g, ' ')];
+							return [text.replaceAll(/\n/g, ' ')];
 						}
 					}
 
@@ -358,15 +350,12 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									if (!disableNyaize && shouldNyaize) {
 										text = Misskey.nyaize(text);
 									}
-									return h('ruby', {}, [
-										...genEl(token.children.slice(0, token.children.length - 1), scale),
-										h('rt', text.trim()),
-									]);
+									return h('ruby', {}, [...genEl(token.children.slice(0, -1), scale), h('rt', text.trim())]);
 								}
 							}
 							case 'unixtime': {
 								const child = token.children[0];
-								const unixtime = parseInt(child?.type === 'text' ? child.props.text : '');
+								const unixtime = Number.parseInt(child?.type === 'text' ? child.props.text : '');
 								return h(
 									'span',
 									{
@@ -444,7 +433,9 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								key: nextKey(),
 								url: token.props.url,
 								rel: 'nofollow noopener',
-								...(props.linkNavigationBehavior === undefined ? {} : { navigationBehavior: props.linkNavigationBehavior }),
+								...(props.linkNavigationBehavior === undefined
+									? {}
+									: { navigationBehavior: props.linkNavigationBehavior }),
 							}),
 						];
 					}
@@ -457,7 +448,9 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									key: nextKey(),
 									url: token.props.url,
 									rel: 'nofollow noopener',
-									...(props.linkNavigationBehavior === undefined ? {} : { navigationBehavior: props.linkNavigationBehavior }),
+									...(props.linkNavigationBehavior === undefined
+										? {}
+										: { navigationBehavior: props.linkNavigationBehavior }),
 								},
 								{ default: () => genEl(token.children, scale, true) },
 							),
@@ -471,9 +464,11 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 								host:
 									(token.props.host == null && props.author && props.author.host != null
 										? props.author.host
-									: token.props.host) ?? host,
+										: token.props.host) ?? host,
 								username: token.props.username,
-								...(props.linkNavigationBehavior === undefined ? {} : { navigationBehavior: props.linkNavigationBehavior }),
+								...(props.linkNavigationBehavior === undefined
+									? {}
+									: { navigationBehavior: props.linkNavigationBehavior }),
 							}),
 						];
 					}
@@ -481,14 +476,14 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'hashtag': {
 						return [
 							h(
-							MkA,
-							{
-								key: nextKey(),
-								to: isNote
-								? `/tags/${encodeURIComponent(token.props.hashtag)}`
-								: `/user-tags/${encodeURIComponent(token.props.hashtag)}`,
-							style: 'color:var(--MI_THEME-hashtag);',
-							...(props.linkNavigationBehavior === undefined ? {} : { behavior: props.linkNavigationBehavior }),
+								MkA,
+								{
+									key: nextKey(),
+									to: isNote
+										? `/tags/${encodeURIComponent(token.props.hashtag)}`
+										: `/user-tags/${encodeURIComponent(token.props.hashtag)}`,
+									style: 'color:var(--MI_THEME-hashtag);',
+									...(props.linkNavigationBehavior === undefined ? {} : { behavior: props.linkNavigationBehavior }),
 								},
 								{ default: () => `#${token.props.hashtag}` },
 							),
@@ -498,10 +493,10 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					case 'blockCode': {
 						return [
 							h(MkCode, {
-							key: nextKey(),
-							code: token.props.code,
-							...(token.props.lang == null ? {} : { lang: token.props.lang }),
-						}),
+								key: nextKey(),
+								code: token.props.code,
+								...(token.props.lang == null ? {} : { lang: token.props.lang }),
+							}),
 						];
 					}
 
@@ -548,12 +543,13 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									host: null,
 									useOriginalSize: scale >= 2.5,
 									...(props.enableEmojiMenu === undefined ? {} : { menu: props.enableEmojiMenu }),
-									...(props.enableEmojiMenuReaction === undefined ? {} : { menuReaction: props.enableEmojiMenuReaction }),
+									...(props.enableEmojiMenuReaction === undefined
+										? {}
+										: { menuReaction: props.enableEmojiMenuReaction }),
 									fallbackToImage: false,
 								}),
 							];
 						} else {
-							// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 							if (props.emojiUrls && props.emojiUrls[token.props.name] == null) {
 								return [h('span', `:${token.props.name}:`)];
 							} else {
@@ -561,11 +557,13 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 									h(MkCustomEmoji, {
 										key: nextKey(),
 										name: token.props.name,
-									...(props.emojiUrls?.[token.props.name] === undefined ? {} : { url: props.emojiUrls[token.props.name] }),
-									...(props.plain === undefined ? {} : { normal: props.plain }),
+										...(props.emojiUrls?.[token.props.name] === undefined
+											? {}
+											: { url: props.emojiUrls[token.props.name] }),
+										...(props.plain === undefined ? {} : { normal: props.plain }),
 										host: props.author.host,
 										useOriginalSize: scale >= 2.5,
-									...(props.enableEmojiMenu === undefined ? {} : { menu: props.enableEmojiMenu }),
+										...(props.enableEmojiMenu === undefined ? {} : { menu: props.enableEmojiMenu }),
 										menuReaction: false,
 									}),
 								];

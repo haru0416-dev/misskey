@@ -3,22 +3,48 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { usersReportAbuseParamDef } from '@/server/rest/admin-abuse-reports.js';
-import { usersClipsParamDef } from '@/server/rest/clips.js';
-import { userListParamDef } from '@/server/rest/favorites.js';
-import { usersFlashsParamDef } from '@/server/rest/flash.js';
-import { usersFollowersOrFollowingParamDef, usersFollowingParamDef, usersGetFollowingUsersByBirthdayDocsParamDef } from '@/server/rest/following.js';
-import { usersGalleryPostsParamDef } from '@/server/rest/gallery.js';
-import { usersFeaturedNotesParamDef, usersNotesParamDef } from '@/server/rest/note.js';
-import { usersPagesParamDef } from '@/server/rest/pages.js';
-import { usersReactionsParamDef } from '@/server/rest/user-reactions.js';
-import { usersGetFrequentlyRepliedUsersParamDef, usersParamDef, usersRecommendationParamDef, usersRelationParamDef, usersSearchByUsernameAndHostParamDef, usersSearchParamDef, usersShowParamDef, usersUpdateMemoParamDef } from '@/server/rest/user.js';
-import { createFromPublicParamDef, createParamDef, getMembershipsParamDef, pullParamDef, pushParamDef, updateMembershipParamDef } from '@/server/rest/users-lists.js';
-import { usersAchievementsParamDef, usersListsDeleteParamDef, usersListsListParamDef, usersListsShowParamDef, usersListsUpdateParamDef } from '@/server/rest/users.js';
+import { usersReportAbuseParamDef } from '@/server/rest/admin/admin-abuse-reports.js';
+import { usersClipsParamDef } from '@/server/rest/clip/clips.js';
+import { userListParamDef } from '@/server/rest/favorite/favorites.js';
+import { usersFlashsParamDef } from '@/server/rest/flash/flash.js';
+import {
+	usersFollowersOrFollowingParamDef,
+	usersFollowingParamDef,
+	usersGetFollowingUsersByBirthdayDocsParamDef,
+} from '@/server/rest/user/following.js';
+import { usersGalleryPostsParamDef } from '@/server/rest/gallery/gallery.js';
+import { usersFeaturedNotesParamDef, usersNotesParamDef } from '@/server/rest/note/note.js';
+import { usersPagesParamDef } from '@/server/rest/page/pages.js';
+import { usersReactionsParamDef } from '@/server/rest/user/user-reactions.js';
+import {
+	usersGetFrequentlyRepliedUsersParamDef,
+	usersParamDef,
+	usersRecommendationParamDef,
+	usersRelationParamDef,
+	usersSearchByUsernameAndHostParamDef,
+	usersSearchParamDef,
+	usersShowParamDef,
+	usersUpdateMemoParamDef,
+} from '@/server/rest/user/user.js';
+import {
+	createFromPublicParamDef,
+	createParamDef,
+	getMembershipsParamDef,
+	pullParamDef,
+	pushParamDef,
+	updateMembershipParamDef,
+} from '@/server/rest/user/users-lists.js';
+import {
+	usersAchievementsParamDef,
+	usersListsDeleteParamDef,
+	usersListsListParamDef,
+	usersListsShowParamDef,
+	usersListsUpdateParamDef,
+} from '@/server/rest/user/users.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
-	'users': {
+	users: {
 		meta: {
 			tags: ['users'],
 
@@ -26,10 +52,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserDetailed',
 				},
 			},
@@ -38,6 +66,7 @@ export const endpointMetas = {
 	},
 	'users/achievements': {
 		meta: {
+			allowQuery: true,
 			requireCredential: false,
 
 			res: {
@@ -51,16 +80,19 @@ export const endpointMetas = {
 	},
 	'users/clips': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'clips'],
 
 			description: 'Show all clips this user owns.',
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Clip',
 				},
 			},
@@ -69,6 +101,7 @@ export const endpointMetas = {
 	},
 	'users/featured-notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
@@ -77,10 +110,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -89,16 +124,19 @@ export const endpointMetas = {
 	},
 	'users/flashs': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'flashs'],
 
 			description: 'Show all flashs this user created.',
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Flash',
 				},
 			},
@@ -107,6 +145,7 @@ export const endpointMetas = {
 	},
 	'users/followers': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -115,10 +154,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Following',
 				},
 			},
@@ -141,6 +182,7 @@ export const endpointMetas = {
 	},
 	'users/following': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -149,10 +191,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Following',
 				},
 			},
@@ -181,6 +225,7 @@ export const endpointMetas = {
 	},
 	'users/get-following-users-by-birthday': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -190,23 +235,28 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'misskey:id',
 						},
 						birthday: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						user: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'UserLite',
 						},
 					},
@@ -217,16 +267,19 @@ export const endpointMetas = {
 	},
 	'users/gallery/posts': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'gallery'],
 
 			description: 'Show all gallery posts by the given user.',
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'GalleryPost',
 				},
 			},
@@ -235,6 +288,7 @@ export const endpointMetas = {
 	},
 	'users/get-frequently-replied-users': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -243,19 +297,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						user: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'UserDetailed',
 						},
 						weight: {
 							type: 'number',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 					},
 				},
@@ -285,7 +343,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserList',
 			},
 
@@ -306,7 +365,8 @@ export const endpointMetas = {
 			kind: 'write:account',
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserList',
 			},
 
@@ -325,12 +385,6 @@ export const endpointMetas = {
 					message: 'No such user.',
 					code: 'NO_SUCH_USER',
 					id: '13c457db-a8cb-4d88-b70a-211ceeeabb5f',
-				},
-
-				alreadyAdded: {
-					message: 'That user has already been added to that list.',
-					code: 'ALREADY_ADDED',
-					id: 'c3ad6fdb-692b-47ee-a455-7bd12c7af615',
 				},
 
 				youHaveBeenBlocked: {
@@ -390,6 +444,7 @@ export const endpointMetas = {
 	},
 	'users/lists/get-memberships': {
 		meta: {
+			allowQuery: true,
 			tags: ['lists', 'account'],
 
 			requireCredential: false,
@@ -437,6 +492,7 @@ export const endpointMetas = {
 	},
 	'users/lists/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['lists', 'account'],
 
 			requireCredential: false,
@@ -447,10 +503,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserList',
 				},
 			},
@@ -461,7 +519,7 @@ export const endpointMetas = {
 					id: 'a8af4a82-0980-4cc4-a6af-8b0ffd54465e',
 				},
 				remoteUser: {
-					message: 'Not allowed to load the remote user\'s list',
+					message: "Not allowed to load the remote user's list",
 					code: 'REMOTE_USER_NOT_ALLOWED',
 					id: '53858f1b-3315-4a01-81b7-db9b48d4b79a',
 				},
@@ -555,6 +613,7 @@ export const endpointMetas = {
 	},
 	'users/lists/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['lists', 'account'],
 
 			requireCredential: false,
@@ -565,7 +624,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				allOf: [
 					{
 						type: 'object',
@@ -573,15 +633,18 @@ export const endpointMetas = {
 					},
 					{
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						properties: {
 							likedCount: {
 								type: 'number',
-								optional: true, nullable: false,
+								optional: true,
+								nullable: false,
 							},
 							isLiked: {
 								type: 'boolean',
-								optional: true, nullable: false,
+								optional: true,
+								nullable: false,
 							},
 						},
 					},
@@ -630,7 +693,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'UserList',
 			},
 
@@ -672,35 +736,26 @@ export const endpointMetas = {
 	},
 	'users/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'notes'],
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
 
 			errors: {
-				noSuchUser: {
-					message: 'No such user.',
-					code: 'NO_SUCH_USER',
-					id: '27e494ba-2ac2-48e8-893b-10d4d8c2387b',
-				},
-
 				bothWithRepliesAndWithFiles: {
 					message: 'Specifying both withReplies and withFiles is not supported',
 					code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
 					id: '91c8cb9f-36ed-46e7-9ca2-7df96ed6e222',
-				},
-
-				signinRequired: {
-					message: 'Signin required.',
-					code: 'SIGNIN_REQUIRED',
-					id: 'd1588a9e-4b4d-4c07-807f-16f1486577a2',
 				},
 			},
 		} as const,
@@ -708,16 +763,19 @@ export const endpointMetas = {
 	},
 	'users/pages': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'pages'],
 
 			description: 'Show all pages this user created.',
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Page',
 				},
 			},
@@ -726,6 +784,7 @@ export const endpointMetas = {
 	},
 	'users/reactions': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'reactions'],
 
 			requireCredential: false,
@@ -734,10 +793,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'NoteReactionWithNote',
 				},
 			},
@@ -749,7 +810,8 @@ export const endpointMetas = {
 					id: '673a7dd2-6924-1093-e0c0-e68456ceae5c',
 				},
 				isRemoteUser: {
-					message: 'Currently unavailable to display reactions of remote users. See https://github.com/misskey-dev/misskey/issues/12964',
+					message:
+						'Currently unavailable to display reactions of remote users. See https://github.com/misskey-dev/misskey/issues/12964',
 					code: 'IS_REMOTE_USER',
 					id: '6b95fa98-8cf9-2350-e284-f0ffdb54a805',
 				},
@@ -759,6 +821,7 @@ export const endpointMetas = {
 	},
 	'users/recommendation': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -769,10 +832,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserDetailed',
 				},
 			},
@@ -781,6 +846,7 @@ export const endpointMetas = {
 	},
 	'users/relation': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -789,47 +855,57 @@ export const endpointMetas = {
 			description: 'Show the different kinds of relations between the authenticated user and the specified user(s).',
 
 			res: {
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				oneOf: [
 					{
 						type: 'object',
 						properties: {
 							id: {
 								type: 'string',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 								format: 'id',
 							},
 							isFollowing: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							hasPendingFollowRequestFromYou: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							hasPendingFollowRequestToYou: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							isFollowed: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							isBlocking: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							isBlocked: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							isMuted: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 							isRenoteMuted: {
 								type: 'boolean',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 						},
 					},
@@ -837,44 +913,54 @@ export const endpointMetas = {
 						type: 'array',
 						items: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							properties: {
 								id: {
 									type: 'string',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 									format: 'id',
 								},
 								isFollowing: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								hasPendingFollowRequestFromYou: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								hasPendingFollowRequestToYou: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								isFollowed: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								isBlocking: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								isBlocked: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								isMuted: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 								isRenoteMuted: {
 									type: 'boolean',
-									optional: false, nullable: false,
+									optional: false,
+									nullable: false,
 								},
 							},
 						},
@@ -917,6 +1003,7 @@ export const endpointMetas = {
 	},
 	'users/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -926,10 +1013,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'User',
 				},
 			},
@@ -938,6 +1027,7 @@ export const endpointMetas = {
 	},
 	'users/search-by-username-and-host': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -946,10 +1036,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'User',
 				},
 			},
@@ -965,7 +1057,8 @@ export const endpointMetas = {
 			description: 'Show the properties of a user.',
 
 			res: {
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				oneOf: [
 					{
 						type: 'object',
@@ -986,6 +1079,7 @@ export const endpointMetas = {
 					message: 'Failed to resolve remote user.',
 					code: 'FAILED_TO_RESOLVE_REMOTE_USER',
 					id: 'ef7b9be4-9cba-4e6f-ab41-90ed171c7d3c',
+					httpStatusCode: 500,
 					kind: 'server',
 				},
 

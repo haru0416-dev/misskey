@@ -8,10 +8,14 @@ import type { IncomingMessage, Server } from 'node:http';
 import type { Socket } from 'node:net';
 import * as WebSocket from 'ws';
 import type * as Redis from 'ioredis';
-import { updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
+import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
 import { HonoApiError } from '../rest/error.js';
-import { authenticateHonoApiToken } from '../rest/auth.js';
-import { HonoStreamConnection, refreshHonoStreamConnections, type HonoStreamConnectionDependencies } from './connection.js';
+import { authenticateHonoApiToken } from '@/server/rest/auth/auth.js';
+import {
+	HonoStreamConnection,
+	refreshHonoStreamConnections,
+	type HonoStreamConnectionDependencies,
+} from './connection.js';
 
 export type HonoStreamServerDependencies = HonoStreamConnectionDependencies & {
 	redisForSub: Redis.Redis;
@@ -33,7 +37,13 @@ async function authenticateStreamingRequest(
 	deps: HonoStreamServerDependencies,
 	request: IncomingMessage,
 	url: URL,
-): Promise<{ user: Awaited<ReturnType<typeof authenticateHonoApiToken>>['user']; token: Awaited<ReturnType<typeof authenticateHonoApiToken>>['token'] } | HonoApiError> {
+): Promise<
+	| {
+			user: Awaited<ReturnType<typeof authenticateHonoApiToken>>['user'];
+			token: Awaited<ReturnType<typeof authenticateHonoApiToken>>['token'];
+	  }
+	| HonoApiError
+> {
 	const authHeader = request.headers.authorization;
 	const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : url.searchParams.get('i');
 
@@ -42,7 +52,12 @@ async function authenticateStreamingRequest(
 		authenticated = await authenticateHonoApiToken(deps, token);
 	} catch (err) {
 		if (err instanceof HonoApiError) return err;
-		return new HonoApiError({ status: 500, message: 'Internal error', code: 'INTERNAL_ERROR', id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac' });
+		return new HonoApiError({
+			status: 500,
+			message: 'Internal error',
+			code: 'INTERNAL_ERROR',
+			id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
+		});
 	}
 
 	if (authenticated.token != null && !authenticated.token.permission.includes('read:account')) {
@@ -55,26 +70,49 @@ async function authenticateStreamingRequest(
 	}
 
 	if (authenticated.user?.isSuspended) {
-		return new HonoApiError({ status: 403, message: 'Your account has been suspended.', code: 'YOUR_ACCOUNT_SUSPENDED', id: 'a8c724b3-6e9c-4b46-b1a8-bc3ed57db7f7' });
+		return new HonoApiError({
+			status: 403,
+			message: 'Your account has been suspended.',
+			code: 'YOUR_ACCOUNT_SUSPENDED',
+			id: 'a8c724b3-6e9c-4b46-b1a8-bc3ed57db7f7',
+		});
 	}
 
 	return authenticated;
 }
 
-/** StreamingApiServerService 相当。`server.on('upgrade', ...)` を直接フックし、Hono の fetch パイプラインは経由しない。 */
-export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDependencies, streamingPath = '/streaming'): { detach: () => Promise<void> } {
+/**
+ * Redis pub/sub の payload はプロセス外から来るので、形が壊れている前提で扱う。
+ * この関数は ioredis の 'message' リスナーとして同期的に呼ばれるため、ここで例外を投げると
+ * 誰も捕捉できずストリーミングサーバーのプロセスごと落ちる。
+ * また EventEmitter は listener の無い 'error' を emit すると throw するので、チャンネル名としては通さない。
+ */
+export function emitHonoStreamRedisMessage(globalEv: EventEmitter, data: string): void {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(data);
+	} catch {
+		return;
+	}
+	if (typeof parsed !== 'object' || parsed === null) return;
+
+	const { channel, message } = parsed as { channel?: unknown; message?: unknown };
+	if (typeof channel !== 'string' || channel === '' || channel === 'error') return;
+
+	globalEv.emit(channel, message);
+}
+
+/** WebSocket upgrade は `server.on('upgrade', ...)` で処理し、Hono の fetch パイプラインを経由しない。 */
+export function attachHonoStreamServer(
+	server: Server,
+	deps: HonoStreamServerDependencies,
+	streamingPath = '/streaming',
+): { detach: () => Promise<void> } {
 	const wss = new WebSocket.WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
 	const globalEv = new EventEmitter();
+	globalEv.setMaxListeners(0);
 
-	const onRedisMessage = (_channelName: string, data: string) => {
-		let parsed: { channel: string; message: unknown };
-		try {
-			parsed = JSON.parse(data);
-		} catch {
-			return;
-		}
-		globalEv.emit('message', parsed);
-	};
+	const onRedisMessage = (_channelName: string, data: string) => emitHonoStreamRedisMessage(globalEv, data);
 	deps.redisForSub.on('message', onRedisMessage);
 	const activeConnections = new Map<HonoStreamConnection, () => void>();
 	let reconnectRefreshPromise: Promise<void> | undefined;
@@ -87,18 +125,27 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 		reconnectRefreshPromise = (async () => {
 			do {
 				reconnectRefreshQueued = false;
-				// A reconnect observed during refresh requires one complete follow-up snapshot pass.
+				// 更新中に再接続した場合は、更新完了後にスナップショットをもう一度取得する。
 				// eslint-disable-next-line no-await-in-loop
 				await refreshHonoStreamConnections(activeConnections);
 			} while (reconnectRefreshQueued);
-		})().catch(error => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
-			.finally(() => { reconnectRefreshPromise = undefined; });
+		})()
+			.catch((error) => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
+			.finally(() => {
+				reconnectRefreshPromise = undefined;
+			});
 	};
 	deps.redisForSub.on('ready', onRedisReady);
 
 	const connections = new Map<WebSocket.WebSocket, number>();
 
 	const upgradeHandler = async (request: IncomingMessage, socket: Socket, head: Buffer) => {
+		let connection: HonoStreamConnection | undefined;
+		let socketClosed = false;
+		socket.once('close', () => {
+			socketClosed = true;
+			connection?.dispose();
+		});
 		if (request.url == null) {
 			socket.destroy();
 			return;
@@ -108,38 +155,41 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 		if (url.pathname !== streamingPath) return;
 
 		const authenticated = await authenticateStreamingRequest(deps, request, url);
+		if (socketClosed) return;
 		if (authenticated instanceof HonoApiError) {
 			writeRawHttpError(socket, authenticated);
 			return;
 		}
 
-		const ev = new EventEmitter();
-		const onMessage = (data: { channel: string; message: unknown }) => {
-			ev.emit(data.channel, data.message);
-		};
-		globalEv.on('message', onMessage);
-
-		const connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
+		connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
 		try {
-			await connection.init(ev);
-		} catch (error) {
-			globalEv.off('message', onMessage);
-			throw error;
+			await connection.init(globalEv);
+		} catch {
+			socket.destroy();
+			return;
 		}
 
-		wss.handleUpgrade(request, socket, head, ws => {
-			wss.emit('connection', ws, request, connection, ev, onMessage);
+		// init 中に切断された場合、close ハンドラの dispose は初期化途中の状態に対して走っている。
+		// そのまま upgrade すると閉じたソケットに対するコネクションが残るので、ここで作り直させる
+		if (socketClosed) {
+			connection.dispose();
+			socket.destroy();
+			return;
+		}
+
+		wss.handleUpgrade(request, socket, head, (ws) => {
+			wss.emit('connection', ws, request, connection);
 		});
 	};
 	server.on('upgrade', (request, socket, head) => {
 		void upgradeHandler(request, socket as Socket, head);
 	});
 
-	wss.on('connection', (ws: WebSocket.WebSocket, _request: IncomingMessage, connection: HonoStreamConnection, ev: EventEmitter, onMessage: (data: { channel: string; message: unknown }) => void) => {
+	wss.on('connection', (ws: WebSocket.WebSocket, _request: IncomingMessage, connection: HonoStreamConnection) => {
 		activeConnections.set(connection, () => ws.terminate());
 		connections.set(ws, Date.now());
 
-		connection.listen(ev, raw => ws.send(raw));
+		connection.listen(globalEv, (raw) => ws.send(raw));
 
 		ws.on('message', (data: WebSocket.RawData) => connection.handleClientMessage(data.toString()));
 
@@ -153,7 +203,6 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 
 		ws.on('close', () => {
 			activeConnections.delete(connection);
-			globalEv.off('message', onMessage);
 			connection.dispose();
 			connections.delete(ws);
 			if (lastActiveIntervalId) clearInterval(lastActiveIntervalId);
@@ -182,7 +231,7 @@ export function attachHonoStreamServer(server: Server, deps: HonoStreamServerDep
 			deps.redisForSub.off('ready', onRedisReady);
 			for (const ws of connections.keys()) ws.terminate();
 			await new Promise<void>((resolve, reject) => {
-				wss.close(err => err ? reject(err) : resolve());
+				wss.close((err) => (err ? reject(err) : resolve()));
 			});
 		},
 	};

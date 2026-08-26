@@ -6,6 +6,8 @@
 export function extractAvgColorFromBlurhash(hash: string) {
 	return typeof hash === 'string'
 		? '#' +
+				// hash.slice() は文字列なので、.map() するには文字配列への展開が必要
+				// (SonarJS S7747 は配列のコピーと誤判定する)
 				[...hash.slice(2, 6)]
 					.map((x) => '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~'.indexOf(x))
 					.reduce((a, c) => a * 83 + c, 0)

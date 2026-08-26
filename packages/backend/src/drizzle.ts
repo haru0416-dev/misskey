@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// Keep int8 values as numbers for compatibility with existing query code.
+// 既存のクエリコードとの互換性のため、int8 を number として扱う。
 import pg, { type Pool, type PoolConfig } from 'pg';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger as DrizzleLogger } from 'drizzle-orm/logger';
 import type { Config } from '@/config.js';
+import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import MisskeyLogger from '@/logger.js';
 
 pg.types.setTypeParser(20, Number);
@@ -36,8 +37,7 @@ function stringifyParameter(param: unknown): unknown {
 }
 
 class MyDrizzleLogger implements DrizzleLogger {
-	constructor(private props: LoggerProps) {
-	}
+	constructor(private props: LoggerProps) {}
 
 	private transformQueryLog(sql: string): string {
 		return truncateSql(sql, this.props.maximumQueryLength);
@@ -65,7 +65,7 @@ export function createDrizzlePool(config: Config): MiDrizzlePool {
 		database: config.database.primary.name,
 		...(config.database.primary.ssl == null ? {} : { ssl: config.database.primary.ssl }),
 		min: config.database.pool.minimumConnections,
-		max: config.database.pool.maximumConnections,
+		max: resolveDatabasePoolSize(config),
 		connectionTimeoutMillis: config.database.pool.connectionTimeoutMs,
 		idleTimeoutMillis: config.database.pool.idleConnectionTimeoutMs,
 		statement_timeout: config.database.pool.statementTimeoutMs,
@@ -74,13 +74,17 @@ export function createDrizzlePool(config: Config): MiDrizzlePool {
 	return new pg.Pool(poolConfig);
 }
 
-export function createDrizzleDatabase(pool: MiDrizzlePool, config: Config): MiDrizzleDatabase {
-	const logger = config.observability.logging.sql.enabled
+export function createDrizzleQueryLogger(config: Config): DrizzleLogger | undefined {
+	return config.observability.logging.sql.enabled
 		? new MyDrizzleLogger({
-			maximumQueryLength: config.observability.logging.sql.maximumQueryLength,
-			logParameters: config.observability.logging.sql.logParameters,
-		})
+				maximumQueryLength: config.observability.logging.sql.maximumQueryLength,
+				logParameters: config.observability.logging.sql.logParameters,
+			})
 		: undefined;
+}
+
+export function createDrizzleDatabase(pool: MiDrizzlePool, config: Config): MiDrizzleDatabase {
+	const logger = createDrizzleQueryLogger(config);
 	return drizzle({
 		client: pool,
 		...(logger === undefined ? {} : { logger }),

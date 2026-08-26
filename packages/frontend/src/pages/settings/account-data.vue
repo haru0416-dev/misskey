@@ -189,6 +189,13 @@ const onImportSuccess = () => {
 	});
 };
 
+const onImportCompleted = () => {
+	os.alert({
+		type: 'success',
+		text: i18n.ts.importCompleted,
+	});
+};
+
 const onError = (ev: Error) => {
 	os.alert({
 		type: 'error',
@@ -272,7 +279,7 @@ const importAntennas = async (ev: PointerEvent) => {
 		anchorElement: ev.currentTarget ?? ev.target,
 		multiple: false,
 	});
-	misskeyApi('i/import-antennas', { fileId: file.id }).then(onImportSuccess).catch(onError);
+	misskeyApi('i/import-antennas', { fileId: file.id }).then(onImportCompleted).catch(onError);
 };
 
 const headerActions = computed(() => []);

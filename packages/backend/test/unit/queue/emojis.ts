@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -18,14 +17,18 @@ import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { emoji } from '@/db/schema/emoji.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import { createDriveFileInDatabase, listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
-import { insertEmojiInDatabase, fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
-import { createRoleInDatabase } from '@/core/RoleStore.js';
-import { createRoleAssignmentInDatabase } from '@/core/RoleAssignmentStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createDriveFileInDatabase, listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { insertEmojiInDatabase, fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
+import { createRoleInDatabase } from '@/core/role/RoleStore.js';
+import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueExportCustomEmojis, handleHonoQueueImportCustomEmojis, type HonoQueueEmojisDependencies } from '@/queue/handlers/emojis.js';
+import {
+	handleHonoQueueExportCustomEmojis,
+	handleHonoQueueImportCustomEmojis,
+	type HonoQueueEmojisDependencies,
+} from '@/queue/handlers/emojis.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
 import type { RuntimeDependencies as RuntimeDeps } from '@/runtime-dependencies.js';
 import type { MiUser } from '@/models/User.js';
@@ -36,7 +39,6 @@ function fakeJob<T>(data: T): Bull.Job<T> {
 
 // カスタム絵文字export/importはDriveService.addFileのuploadableFileTypesチェックに
 // application/zipが含まれないため、モデレーターでない限り常に失敗する
-// (元実装のDriveService.addFileも同一のチェックを持つ — 絵文字管理自体が管理者限定機能であることに由来する)。
 // そのためテストユーザーには明示的にモデレーターロールを付与する。
 async function createModeratorTestUser(runtime: RuntimeDeps, prefix: string): Promise<MiUser> {
 	const id = genId();
@@ -116,11 +118,13 @@ describe('hono-queue-emojis', () => {
 		await handleHonoQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: user.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
-		expect(files.some(f => f.name.startsWith('custom-emojis-') && f.name.endsWith('.zip'))).toBe(true);
+		expect(files.some((f) => f.name.startsWith('custom-emojis-') && f.name.endsWith('.zip'))).toBe(true);
 	});
 
 	test('存在しないuserIdは何もしない (export)', async () => {
-		await expect(handleHonoQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: genId() } }))).resolves.toBeUndefined();
+		await expect(
+			handleHonoQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: genId() } })),
+		).resolves.toBeUndefined();
 	});
 
 	test('handleHonoQueueImportCustomEmojis: zipから絵文字をインポートする', async () => {
@@ -139,18 +143,20 @@ describe('hono-queue-emojis', () => {
 				metaVersion: 2,
 				host: null,
 				exportedAt: new Date().toString(),
-				emojis: [{
-					fileName: `${emojiName}.png`,
-					downloaded: true,
-					emoji: {
-						name: emojiName,
-						category: null,
-						aliases: [],
-						license: null,
-						isSensitive: false,
-						localOnly: false,
+				emojis: [
+					{
+						fileName: `${emojiName}.png`,
+						downloaded: true,
+						emoji: {
+							name: emojiName,
+							category: null,
+							aliases: [],
+							license: null,
+							isSensitive: false,
+							localOnly: false,
+						},
 					},
-				}],
+				],
 			};
 
 			archive.append(JSON.stringify(meta), { name: 'meta.json' });
@@ -189,6 +195,8 @@ describe('hono-queue-emojis', () => {
 
 	test('存在しないfileIdは何もしない (import)', async () => {
 		const id = genId();
-		await expect(handleHonoQueueImportCustomEmojis(deps, fakeJob<DbUserImportJobData>({ user: { id }, fileId: genId() }))).resolves.toBeUndefined();
+		await expect(
+			handleHonoQueueImportCustomEmojis(deps, fakeJob<DbUserImportJobData>({ user: { id }, fileId: genId() })),
+		).resolves.toBeUndefined();
 	});
 });

@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// NOTE: lib/vite-plugin-create-search-index.ts の SearchIndexItem と同じ形。
-// lib/ は tsconfig.json の include 対象外 (Node/Vite設定側) のため、この型は独立して保持している。
+// lib/ は tsconfig.json の include 対象外であるため、生成元と同じ型をここにも定義する。
 type XGeneratedSearchIndexItem = {
 	id: string;
 	parentId?: string;

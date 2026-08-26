@@ -24,6 +24,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 				<a :href="url" :class="$style.instanceIconLink" target="_blank" rel="noopener noreferrer">
 					<img
+						alt=""
 						:class="$style.instanceIcon"
 						:src="serverMetadata.iconUrl || '/favicon.ico'"
 					/>
@@ -88,7 +89,6 @@ if (assertServerContext(serverContext, 'user')) {
 }
 
 if (user.value?.host != null) {
-	// リモートサーバーのユーザーは弾く
 	prohibited.value = true;
 }
 

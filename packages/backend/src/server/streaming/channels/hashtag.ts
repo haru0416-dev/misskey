@@ -6,8 +6,16 @@
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { filterNoteForStreamingHidingForHonoApi, populateMyReactionForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
-import { isNoteMutedOrBlockedForHonoStream, isNoteVisibleForMeForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
+import {
+	filterNoteForStreamingHidingForHonoApi,
+	populateMyReactionForHonoApi,
+	type HonoApiNoteDependencies,
+} from '@/server/rest/note/note.js';
+import {
+	isNoteMutedOrBlockedForHonoStream,
+	isNoteVisibleForMeForHonoStream,
+	type HonoStreamChannelDefinition,
+} from '../channel.js';
 
 export const honoStreamChannelHashtag: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
 	shouldShare: false,
@@ -16,22 +24,30 @@ export const honoStreamChannelHashtag: HonoStreamChannelDefinition<HonoApiNoteDe
 	init: async (deps, ctx, params) => {
 		const query = params['q'];
 		if (!Array.isArray(query)) return false;
-		if (!query.every((x): x is string[] => (
-			Array.isArray(x) &&
-			x.length >= 1 &&
-			x.every(y => typeof y === 'string')
-		))) return false;
+		if (!query.every((x): x is string[] => Array.isArray(x) && x.length >= 1 && x.every((y) => typeof y === 'string')))
+			return false;
 		const q = query;
 
 		const handler = async (note: Packed<'Note'>) => {
 			const noteTags = note.tags ? note.tags.map((t: string) => t.toLowerCase()) : [];
-			const matched = q.some(tags => tags.every(tag => noteTags.includes(normalizeForSearch(tag))));
+			const matched = q.some((tags) => tags.every((tag) => noteTags.includes(normalizeForSearch(tag))));
 			if (!matched) return;
 
 			if (!isNoteVisibleForMeForHonoStream(ctx, note)) return;
-			if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) return;
-			if (note.renote && (note.renote.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) return;
-			if (note.reply && (note.reply.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) return;
+			if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null)
+				return;
+			if (
+				note.renote &&
+				(note.renote.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents &&
+				ctx.user == null
+			)
+				return;
+			if (
+				note.reply &&
+				(note.reply.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents &&
+				ctx.user == null
+			)
+				return;
 			if (isNoteMutedOrBlockedForHonoStream(ctx, note)) return;
 
 			const filtered = await filterNoteForStreamingHidingForHonoApi(deps, note, ctx.user?.id ?? null);
@@ -40,11 +56,15 @@ export const honoStreamChannelHashtag: HonoStreamChannelDefinition<HonoApiNoteDe
 			if (ctx.user) {
 				if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 					if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-						filtered.renote.myReaction = await populateMyReactionForHonoApi(deps, {
-							id: filtered.renote.id,
-							reactions: filtered.renote.reactions,
-							reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
-						}, ctx.user.id);
+						filtered.renote.myReaction = await populateMyReactionForHonoApi(
+							deps,
+							{
+								id: filtered.renote.id,
+								reactions: filtered.renote.reactions,
+								reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
+							},
+							ctx.user.id,
+						);
 					}
 				}
 			}

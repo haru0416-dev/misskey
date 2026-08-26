@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { computed, reactive } from 'vue';
+import { reactive } from 'vue';
 import * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { miLocalStorage } from '@/local-storage.js';
@@ -11,8 +11,6 @@ import { $i } from '@/i.js';
 import { queryClient } from '@/query/client.js';
 import { queryKeys } from '@/query/keys.js';
 import { resolveInitialInstanceMeta } from '@/features/instances/instance-cache.js';
-
-// TODO: 他のタブと永続化されたstateを同期
 
 //#region loader
 const providedMetaEl = window.document.getElementById('misskey_meta');
@@ -32,8 +30,6 @@ if (initialMeta.cacheAction === 'store') {
 const cachedMeta = initialMeta.meta as Misskey.entities.MetaDetailed | null;
 const cachedAt = initialMeta.cachedAt;
 //#endregion
-
-// TODO: instanceをリアクティブにするかは再考の余地あり
 
 export const instance = reactive(cachedMeta ?? {}) as Misskey.entities.MetaDetailed;
 

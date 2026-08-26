@@ -7,7 +7,7 @@ import cluster from 'node:cluster';
 import { EventEmitter } from 'node:events';
 
 /**
- * クラスタ全プロセス横断のイベントバス。旧依存 `xev` の内製置き換えで、意味論は同一:
+ * クラスタ全プロセス横断のイベントバス。
  *
  * - master での emit → master ローカル配信 + (mount 済みなら) 全 worker へ送信
  * - worker での emit → master へ process.send し、master が自分自身と全 worker (送信元含む)
@@ -37,7 +37,7 @@ class GlobalEventBus extends EventEmitter {
 
 		// worker では master からブリッジされた envelope が親プロセス経由で届く。
 		// (master は通常親を持たないためこのリスナーは発火しない)
-		process.on('message', message => {
+		process.on('message', (message) => {
 			if (isBusEnvelope(message)) this.deliverLocally(message);
 		});
 	}

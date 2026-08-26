@@ -3,25 +3,24 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
-
-import * as assert from 'assert';
-import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
-import { loadConfig } from '@/config.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import { createDrizzleDatabase, createDrizzlePool, type MiDrizzlePool } from '@/drizzle.js';
-import { genId } from '@/misc/id/gen-id.js';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import {
+	createUserWithProfileAndPublickeyInDatabase,
+	genId,
+	openTestDatabase,
+	type TestDatabase,
+} from '../fixtures.js';
 import { api, channel, clip, galleryPost, page, play, post, signup, simpleGet, uploadFile } from '../utils.js';
 import type { SimpleGetResponse } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
-// Request Accept in lowercase
+// Accept ヘッダーを小文字で送信する。
 const ONLY_AP = 'application/activity+json';
 const PREFER_AP = 'application/activity+json, */*';
 const PREFER_HTML = 'text/html, */*';
 const UNSPECIFIED = '*/*';
 
-// Response Content-Type in lowercase
+// Content-Type ヘッダーを小文字で返す。
 const AP = 'application/activity+json; charset=utf-8';
 const HTML = 'text/html; charset=utf-8';
 const JSON_UTF8 = 'application/json; charset=utf-8';
@@ -38,39 +37,43 @@ describe('Webリソース', () => {
 
 	let bob: misskey.entities.SignupResponse;
 
-	let pool: MiDrizzlePool | undefined;
+	let database: TestDatabase;
 	// DBに直接用意したリモートユーザー (連合の実サーバーは立てない)
 	let remoteUserAcct: string;
 	let remoteUserUri: string;
 
 	type Request = {
-		path: string,
-		accept?: string,
-		cookie?: string,
+		path: string;
+		accept?: string;
+		cookie?: string;
 	};
-	const ok = async (param: Request & {
-		type?: string,
-	}):Promise<SimpleGetResponse> => {
+	const ok = async (
+		param: Request & {
+			type?: string;
+		},
+	): Promise<SimpleGetResponse> => {
 		const { path, accept, cookie, type } = param;
 		const res = await simpleGet(path, accept, cookie);
-		assert.strictEqual(res.status, 200);
-		// Header values are case-insensitive
-		assert.strictEqual(res.type?.toLowerCase(), (type ?? HTML).toLowerCase());
+		expect(res.status).toBe(200);
+		// ヘッダー値は大文字小文字を区別しない。
+		expect(res.type?.toLowerCase()).toBe((type ?? HTML).toLowerCase());
 		return res;
 	};
 
-	const notOk = async (param: Request & {
-		status?: number,
-		code?: string,
-	}): Promise<SimpleGetResponse> => {
+	const notOk = async (
+		param: Request & {
+			status?: number;
+			code?: string;
+		},
+	): Promise<SimpleGetResponse> => {
 		const { path, accept, cookie, status, code } = param;
 		const res = await simpleGet(path, accept, cookie);
-		assert.notStrictEqual(res.status, 200);
+		expect(res.status).not.toBe(200);
 		if (status != null) {
-			assert.strictEqual(res.status, status);
+			expect(res.status).toBe(status);
 		}
 		if (code != null) {
-			assert.strictEqual(res.body.error.code, code);
+			expect(res.body.error.code).toBe(code);
 		}
 		return res;
 	};
@@ -86,50 +89,51 @@ describe('Webリソース', () => {
 		return res.body.querySelector('meta[' + superkey + '="' + key + '"]')?.attributes.content;
 	};
 
-	beforeAll(async () => {
-		alice = await signup({ username: 'alice' });
-		await api('admin/update-meta', { federation: 'all' }, alice as misskey.entities.SignupResponse);
-		aliceUploadedFile = (await uploadFile(alice)).body;
-		alicesPost = await post(alice, {
-			text: 'test',
-		});
-		alicePage = await page(alice, {});
-		alicePlay = await play(alice, {});
-		aliceClip = await clip(alice, {});
-		aliceGalleryPost = await galleryPost(alice, {
-			fileIds: [aliceUploadedFile!.id],
-		});
-		aliceChannel = await channel(alice, {});
+	beforeAll(
+		async () => {
+			alice = await signup({ username: 'alice' });
+			await api('admin/update-meta', { federation: 'all' }, alice as misskey.entities.SignupResponse);
+			aliceUploadedFile = (await uploadFile(alice)).body;
+			alicesPost = await post(alice, {
+				text: 'test',
+			});
+			alicePage = await page(alice, {});
+			alicePlay = await play(alice, {});
+			aliceClip = await clip(alice, {});
+			aliceGalleryPost = await galleryPost(alice, {
+				fileIds: [aliceUploadedFile!.id],
+			});
+			aliceChannel = await channel(alice, {});
 
-		bob = await signup({ username: 'bob' });
+			bob = await signup({ username: 'bob' });
 
-		const config = loadConfig();
-		pool = createDrizzlePool(config);
-		const db = createDrizzleDatabase(pool, config);
-		const suffix = Date.now().toString(36).slice(-8);
-		const remoteHost = `fetch-remote-${suffix}.example`;
-		const remoteUserId = genId();
-		remoteUserAcct = `fetchremote${suffix}@${remoteHost}`;
-		remoteUserUri = `https://${remoteHost}/users/${remoteUserId}`;
-		await createUserWithProfileAndPublickeyInDatabase(db, {
-			user: {
-				id: remoteUserId,
-				username: `fetchremote${suffix}`,
-				usernameLower: `fetchremote${suffix}`,
-				host: remoteHost,
-				inbox: `https://${remoteHost}/inbox`,
-				uri: remoteUserUri,
-				isExplorable: false,
-			},
-			profile: {
-				userId: remoteUserId,
-				userHost: remoteHost,
-			},
-		});
-	}, 1000 * 60 * 2);
+			database = openTestDatabase();
+			const suffix = Date.now().toString(36).slice(-8);
+			const remoteHost = `fetch-remote-${suffix}.example`;
+			const remoteUserId = genId();
+			remoteUserAcct = `fetchremote${suffix}@${remoteHost}`;
+			remoteUserUri = `https://${remoteHost}/users/${remoteUserId}`;
+			await createUserWithProfileAndPublickeyInDatabase(database, {
+				user: {
+					id: remoteUserId,
+					username: `fetchremote${suffix}`,
+					usernameLower: `fetchremote${suffix}`,
+					host: remoteHost,
+					inbox: `https://${remoteHost}/inbox`,
+					uri: remoteUserUri,
+					isExplorable: false,
+				},
+				profile: {
+					userId: remoteUserId,
+					userHost: remoteHost,
+				},
+			});
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
-		await pool?.end();
+		await database.close();
 	});
 
 	describe.each([
@@ -178,20 +182,23 @@ describe('Webリソース', () => {
 	])('/@:username.$ext', ({ ext, type }) => {
 		const path = (username: string): string => `/@${username}.${ext}`;
 
-		test('がGETできる。', async () => await ok({
-			path: path(alice.username),
-			type,
-		}));
+		test('がGETできる。', async () =>
+			await ok({
+				path: path(alice.username),
+				type,
+			}));
 
-		test('がGETできる。(ノートが存在しない場合でも。)', async () => await ok({
-			path: path(bob.username),
-			type,
-		}));
+		test('がGETできる。(ノートが存在しない場合でも。)', async () =>
+			await ok({
+				path: path(bob.username),
+				type,
+			}));
 
-		test('は存在しないユーザーはGETできない。', async () => await notOk({
-			path: path('nonexisting'),
-			status: 404,
-		}));
+		test('は存在しないユーザーはGETできない。', async () =>
+			await notOk({
+				path: path('nonexisting'),
+				status: 404,
+			}));
 
 		describe(' has entry such ', () => {
 			beforeEach(() => {
@@ -199,89 +206,87 @@ describe('Webリソース', () => {
 			});
 
 			test('MFMを含まない。', async () => {
-				const content = await simpleGet(path(alice.username), '*/*', undefined, res => res.text());
+				const content = await simpleGet(path(alice.username), '*/*', undefined, (res) => res.text());
 				const _body: unknown = content.body;
 				// JSONフィードのときは改めて文字列化する
-				const body: string = typeof (_body) === 'object' ? JSON.stringify(_body) : _body as string;
+				const body: string = typeof _body === 'object' ? JSON.stringify(_body) : (_body as string);
 
 				if (body.includes('**a**')) {
-					throw new Error('MFM shouldn\'t be included');
+					throw new Error("MFM shouldn't be included");
 				}
 			});
 		});
 	});
 
 	describe.each([{ path: '/api/foo' }])('$path', ({ path }) => {
-		test('はGETできない。', async () => await notOk({
-			path,
-			status: 404,
-			code: 'UNKNOWN_API_ENDPOINT',
-		}));
+		test('はGETできない。', async () =>
+			await notOk({
+				path,
+				status: 404,
+				code: 'UNKNOWN_API_ENDPOINT',
+			}));
 	});
 
 	describe.each([{ path: '/streaming' }])('$path', ({ path }) => {
-		test('はGETできない。', async () => await notOk({
-			path,
-			status: 503,
-		}));
+		test('はGETできない。', async () =>
+			await notOk({
+				path,
+				status: 503,
+			}));
 	});
 
 	describe('/@:username', () => {
 		const path = (username: string): string => `/@${username}`;
 
-		describe.each([
-			{ accept: PREFER_HTML },
-			{ accept: UNSPECIFIED },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: PREFER_HTML }, { accept: UNSPECIFIED }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はHTMLとしてGETできる。', async () => {
 				const res = await ok({
 					path: path(alice.username),
 					accept,
 					type: HTML,
 				});
-				assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-				assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
+				expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+				expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 
 				// TODO ogタグの検証
 				// TODO profile.noCrawleの検証
 				// TODO twitter:creatorの検証
 				// TODO <link rel="me" ...>の検証
 			});
-			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () => await ok({
-				path: path('xxxxxxxxxx'),
-				type: HTML,
-			}));
+			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () =>
+				await ok({
+					path: path('xxxxxxxxxx'),
+					type: HTML,
+				}));
 			test('はHTMLとしてGETできる。(リモートユーザーでもリダイレクトせず)', async () => {
 				const res = await ok({
 					path: path(remoteUserAcct),
 					accept,
 					type: HTML,
 				});
-				assert.strictEqual(res.location, null);
+				expect(res.location).toBe(null);
 			});
 		});
 
-		describe.each([
-			{ accept: ONLY_AP },
-			{ accept: PREFER_AP },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: ONLY_AP }, { accept: PREFER_AP }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はActivityPubとしてGETできる。', async () => {
 				const res = await ok({
 					path: path(alice.username),
 					accept,
 					type: AP,
 				});
-				assert.strictEqual(res.body.type, 'Person');
+				expect(res.body.type).toBe('Person');
 			});
 
-			test('は存在しないIDのときActivityPubとしてGETできない。', async () => await notFound({
-				path: path('xxxxxxxxxx'),
-				accept,
-			}));
+			test('は存在しないIDのときActivityPubとしてGETできない。', async () =>
+				await notFound({
+					path: path('xxxxxxxxxx'),
+					accept,
+				}));
 			test('はオリジナルにリダイレクトされる。(リモートユーザー)', async () => {
 				const res = await simpleGet(path(remoteUserAcct), accept);
-				assert.strictEqual(res.status, 301);
-				assert.strictEqual(res.location, remoteUserUri);
+				expect(res.status).toBe(301);
+				expect(res.location).toBe(remoteUserUri);
 			});
 		});
 	});
@@ -303,8 +308,8 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(alice.username),
 			});
-			assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-			assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
+			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 		});
 	});
 
@@ -315,63 +320,61 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(alice.username, alicePage.name),
 			});
-			assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-			assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
-			assert.strictEqual(metaTag(res, 'misskey:page-id'), alicePage.id);
+			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
+			expect(metaTag(res, 'misskey:page-id')).toBe(alicePage.id);
 
 			// TODO ogタグの検証
 			// TODO profile.noCrawleの検証
 			// TODO twitter:creatorの検証
 		});
 
-		test('はGETできる。(存在しないIDでも。)', async () => await ok({
-			path: path(alice.username, 'xxxxxxxxxx'),
-		}));
+		test('はGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path(alice.username, 'xxxxxxxxxx'),
+			}));
 	});
 
 	describe('/users/:id', () => {
 		const path = (id: string): string => `/users/${id}`;
 
-		describe.each([
-			{ accept: PREFER_HTML },
-			{ accept: UNSPECIFIED },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: PREFER_HTML }, { accept: UNSPECIFIED }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('は/@:usernameにリダイレクトする', async () => {
 				const res = await simpleGet(path(alice.id), accept);
-				assert.strictEqual(res.status, 302);
-				assert.strictEqual(res.location, `/@${alice.username}`);
+				expect(res.status).toBe(302);
+				expect(res.location).toBe(`/@${alice.username}`);
 			});
 
-			test('は存在しないユーザーはGETできない。', async () => await notFound({
-				path: path('xxxxxxxx'),
-			}));
+			test('は存在しないユーザーはGETできない。', async () =>
+				await notFound({
+					path: path('xxxxxxxx'),
+				}));
 		});
 
-		describe.each([
-			{ accept: ONLY_AP },
-			{ accept: PREFER_AP },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: ONLY_AP }, { accept: PREFER_AP }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はActivityPubとしてGETできる。', async () => {
 				const res = await ok({
 					path: path(alice.id),
 					accept,
 					type: AP,
 				});
-				assert.strictEqual(res.body.type, 'Person');
+				expect(res.body.type).toBe('Person');
 			});
 
-			test('は存在しないIDのときActivityPubとしてGETできない。', async () => await notOk({
-				path: path('xxxxxxxx'),
-				accept,
-				status: 404,
-			}));
+			test('は存在しないIDのときActivityPubとしてGETできない。', async () =>
+				await notOk({
+					path: path('xxxxxxxx'),
+					accept,
+					status: 404,
+				}));
 		});
 	});
 
 	describe('/users/inbox', () => {
-		test('がGETできる。(POST専用だけど4xx/5xxにならずHTMLが返ってくる)', async () => await ok({
-			path: '/inbox',
-		}));
+		test('がGETできる。(POST専用だけど4xx/5xxにならずHTMLが返ってくる)', async () =>
+			await ok({
+				path: '/inbox',
+			}));
 
 		// test.todo('POSTできる？');
 	});
@@ -379,9 +382,10 @@ describe('Webリソース', () => {
 	describe('/users/:id/inbox', () => {
 		const path = (id: string): string => `/users/${id}/inbox`;
 
-		test('がGETできる。(POST専用だけど4xx/5xxにならずHTMLが返ってくる)', async () => await ok({
-			path: path(alice.id),
-		}));
+		test('がGETできる。(POST専用だけど4xx/5xxにならずHTMLが返ってくる)', async () =>
+			await ok({
+				path: path(alice.id),
+			}));
 
 		// test.todo('POSTできる？');
 	});
@@ -394,54 +398,50 @@ describe('Webリソース', () => {
 				path: path(alice.id),
 				type: AP,
 			});
-			assert.strictEqual(res.body.type, 'OrderedCollection');
+			expect(res.body.type).toBe('OrderedCollection');
 		});
 	});
 
 	describe('/notes/:id', () => {
 		const path = (noteId: string): string => `/notes/${noteId}`;
 
-		describe.each([
-			{ accept: PREFER_HTML },
-			{ accept: UNSPECIFIED },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: PREFER_HTML }, { accept: UNSPECIFIED }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はHTMLとしてGETできる。', async () => {
 				const res = await ok({
 					path: path(alicesPost.id),
 					accept,
 					type: HTML,
 				});
-				assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-				assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
-				assert.strictEqual(metaTag(res, 'misskey:note-id'), alicesPost.id);
+				expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+				expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
+				expect(metaTag(res, 'misskey:note-id')).toBe(alicesPost.id);
 
 				// TODO ogタグの検証
 				// TODO profile.noCrawleの検証
 				// TODO twitter:creatorの検証
 			});
 
-			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () => await ok({
-				path: path('xxxxxxxxxx'),
-			}));
+			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () =>
+				await ok({
+					path: path('xxxxxxxxxx'),
+				}));
 		});
 
-		describe.each([
-			{ accept: ONLY_AP },
-			{ accept: PREFER_AP },
-		])('(Acceptヘッダ: $accept)', ({ accept }) => {
+		describe.each([{ accept: ONLY_AP }, { accept: PREFER_AP }])('(Acceptヘッダ: $accept)', ({ accept }) => {
 			test('はActivityPubとしてGETできる。', async () => {
 				const res = await ok({
 					path: path(alicesPost.id),
 					accept,
 					type: AP,
 				});
-				assert.strictEqual(res.body.type, 'Note');
+				expect(res.body.type).toBe('Note');
 			});
 
-			test('は存在しないIDのときActivityPubとしてGETできない。', async () => await notFound({
-				path: path('xxxxxxxxxx'),
-				accept,
-			}));
+			test('は存在しないIDのときActivityPubとしてGETできない。', async () =>
+				await notFound({
+					path: path('xxxxxxxxxx'),
+					accept,
+				}));
 		});
 	});
 
@@ -452,18 +452,19 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(alicePlay.id),
 			});
-			assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-			assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
-			assert.strictEqual(metaTag(res, 'misskey:flash-id'), alicePlay.id);
+			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
+			expect(metaTag(res, 'misskey:flash-id')).toBe(alicePlay.id);
 
 			// TODO ogタグの検証
 			// TODO profile.noCrawleの検証
 			// TODO twitter:creatorの検証
 		});
 
-		test('がGETできる。(存在しないIDでも。)', async () => await ok({
-			path: path('xxxxxxxxxx'),
-		}));
+		test('がGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path('xxxxxxxxxx'),
+			}));
 	});
 
 	describe('/clips/:clip', () => {
@@ -473,17 +474,18 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(aliceClip.id),
 			});
-			assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-			assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
-			assert.strictEqual(metaTag(res, 'misskey:clip-id'), aliceClip.id);
+			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
+			expect(metaTag(res, 'misskey:clip-id')).toBe(aliceClip.id);
 
 			// TODO ogタグの検証
 			// TODO profile.noCrawleの検証
 		});
 
-		test('がGETできる。(存在しないIDでも。)', async () => await ok({
-			path: path('xxxxxxxxxx'),
-		}));
+		test('がGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path('xxxxxxxxxx'),
+			}));
 	});
 
 	describe('/gallery/:post', () => {
@@ -493,17 +495,18 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(aliceGalleryPost.id),
 			});
-			assert.strictEqual(metaTag(res, 'misskey:user-username'), alice.username);
-			assert.strictEqual(metaTag(res, 'misskey:user-id'), alice.id);
+			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
+			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 
 			// FIXME: misskey:gallery-post-idみたいなmetaタグの設定がない
 			// TODO profile.noCrawleの検証
 			// TODO twitter:creatorの検証
 		});
 
-		test('がGETできる。(存在しないIDでも。)', async () => await ok({
-			path: path('xxxxxxxxxx'),
-		}));
+		test('がGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path('xxxxxxxxxx'),
+			}));
 	});
 
 	describe('/channels/:channel', () => {
@@ -518,8 +521,9 @@ describe('Webリソース', () => {
 			// TODO ogタグの検証
 		});
 
-		test('がGETできる。(存在しないIDでも。)', async () => await ok({
-			path: path('xxxxxxxxxx'),
-		}));
+		test('がGETできる。(存在しないIDでも。)', async () =>
+			await ok({
+				path: path('xxxxxxxxxx'),
+			}));
 	});
 });

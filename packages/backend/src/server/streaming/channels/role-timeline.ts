@@ -3,14 +3,21 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchRoleByIdFromDatabase } from '@/core/RoleStore.js';
+import { fetchRoleByIdFromDatabase } from '@/core/role/RoleStore.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { filterNoteForStreamingHidingForHonoApi, populateMyReactionForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
+import {
+	filterNoteForStreamingHidingForHonoApi,
+	populateMyReactionForHonoApi,
+	type HonoApiNoteDependencies,
+} from '@/server/rest/note/note.js';
 import { isNoteMutedOrBlockedForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
 
-async function isRoleExplorableForHonoStream(deps: { db: HonoApiNoteDependencies['db'] }, roleId: string): Promise<boolean> {
+async function isRoleExplorableForHonoStream(
+	deps: { db: HonoApiNoteDependencies['db'] },
+	roleId: string,
+): Promise<boolean> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, roleId);
 	return role?.isExplorable ?? false;
 }
@@ -29,9 +36,20 @@ export const honoStreamChannelRoleTimeline: HonoStreamChannelDefinition<HonoApiN
 
 				if (!(await isRoleExplorableForHonoStream(deps, roleId))) return;
 				if (note.visibility !== 'public') return;
-				if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) return;
-				if (note.renote && (note.renote.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) return;
-				if (note.reply && (note.reply.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null) return;
+				if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null)
+					return;
+				if (
+					note.renote &&
+					(note.renote.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents &&
+					ctx.user == null
+				)
+					return;
+				if (
+					note.reply &&
+					(note.reply.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents &&
+					ctx.user == null
+				)
+					return;
 
 				if (isNoteMutedOrBlockedForHonoStream(ctx, note)) return;
 
@@ -41,11 +59,15 @@ export const honoStreamChannelRoleTimeline: HonoStreamChannelDefinition<HonoApiN
 				if (ctx.user) {
 					if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 						if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-							filtered.renote.myReaction = await populateMyReactionForHonoApi(deps, {
-								id: filtered.renote.id,
-								reactions: filtered.renote.reactions,
-								reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
-							}, ctx.user.id);
+							filtered.renote.myReaction = await populateMyReactionForHonoApi(
+								deps,
+								{
+									id: filtered.renote.id,
+									reactions: filtered.renote.reactions,
+									reactionAndUserPairCache: filtered.renote.reactionAndUserPairCache ?? [],
+								},
+								ctx.user.id,
+							);
 						}
 					}
 				}

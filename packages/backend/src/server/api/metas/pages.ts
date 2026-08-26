@@ -3,8 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { pageParamDef } from '@/server/rest/favorites.js';
-import { pagesCreateParamDef, pagesDeleteParamDef, pagesFeaturedParamDef, pagesShowParamDef, pagesUpdateParamDef } from '@/server/rest/pages.js';
+import { pageParamDef } from '@/server/rest/favorite/favorites.js';
+import {
+	pagesCreateParamDef,
+	pagesDeleteParamDef,
+	pagesFeaturedParamDef,
+	pagesShowParamDef,
+	pagesUpdateParamDef,
+} from '@/server/rest/page/pages.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -25,7 +31,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Page',
 			},
 
@@ -70,16 +77,19 @@ export const endpointMetas = {
 	},
 	'pages/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['pages'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Page',
 				},
 			},
@@ -120,13 +130,15 @@ export const endpointMetas = {
 	},
 	'pages/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['pages'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Page',
 			},
 

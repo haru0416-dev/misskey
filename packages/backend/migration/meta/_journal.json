@@ -43,6 +43,62 @@
       "when": 1784008379416,
       "tag": "0005_cynical_shape",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785301180725,
+      "tag": "0006_deduplicate_registry_items",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785301250632,
+      "tag": "0007_registry_item_logical_key_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785315715236,
+      "tag": "0008_volatile_thing",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785600381422,
+      "tag": "0009_closed_nova",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785908749845,
+      "tag": "0010_sharp_union_jack",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785915395486,
+      "tag": "0011_stormy_xorn",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785940244606,
+      "tag": "0012_soft_tag",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787203076358,
+      "tag": "0013_bizarre_stryfe",
+      "breakpoints": true
     }
   ]
 }

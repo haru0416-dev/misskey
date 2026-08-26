@@ -53,7 +53,7 @@ export async function extractDroppedItems(ev: DragEvent): Promise<DroppedItem[]>
 /**
  * ドラッグ＆ドロップされたファイルのリストからディレクトリ構造とファイルへの参照（{@link File}）を取得する。
  */
-export async function readDataTransferItems(itemList: DataTransferItemList): Promise<DroppedItem[]> {
+async function readDataTransferItems(itemList: DataTransferItemList): Promise<DroppedItem[]> {
 	async function readEntry(entry: FileSystemEntry): Promise<DroppedItem> {
 		if (entry.isFile) {
 			return {

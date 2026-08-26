@@ -5,10 +5,10 @@
 
 import { Hono } from 'hono';
 import type { Config } from '@/config.js';
-import { DEFAULT_POLICIES } from '@/core/role-policies.js';
-import { countNotesByUserHostFromDatabase } from '@/core/NoteStore.js';
-import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
-import { countUsersByHostFromDatabase } from '@/core/UserStore.js';
+import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
+import { countNotesByUserHostFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchOrCreateSystemAccount } from '@/core/system-account/system-account-runtime.js';
+import { countUsersByHostFromDatabase } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { MemorySingleCache } from '@/misc/cache.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
@@ -39,7 +39,10 @@ function jsonResponse(value: unknown, headers: Headers): Response {
 	});
 }
 
-async function createNodeinfoDocument(deps: NodeinfoDependencies, version: '2.0' | '2.1'): Promise<Record<string, unknown>> {
+async function createNodeinfoDocument(
+	deps: NodeinfoDependencies,
+	version: '2.0' | '2.1',
+): Promise<Record<string, unknown>> {
 	const [localPosts, total, proxyAccount] = await Promise.all([
 		countNotesByUserHostFromDatabase(deps.db, null),
 		countUsersByHostFromDatabase(deps.db, null),
@@ -84,10 +87,12 @@ async function createNodeinfoDocument(deps: NodeinfoDependencies, version: '2.0'
 		metadata: {
 			nodeName: meta.name,
 			nodeDescription: meta.description,
-			nodeAdmins: [{
-				name: meta.maintainerName,
-				email: meta.maintainerEmail,
-			}],
+			nodeAdmins: [
+				{
+					name: meta.maintainerName,
+					email: meta.maintainerEmail,
+				},
+			],
 			maintainer: {
 				name: meta.maintainerName,
 				email: meta.maintainerEmail,

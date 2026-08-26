@@ -10,7 +10,6 @@ export type SearchIndexItem = GeneratedSearchIndexItem;
 export function genSearchIndexes(generated: GeneratedSearchIndexItem[]): SearchIndexItem[] {
 	const rootMods = new Map(generated.map((item) => [item.id, item]));
 
-	// link inlining here
 	for (const item of generated) {
 		if (item.inlining) {
 			for (const id of item.inlining) {

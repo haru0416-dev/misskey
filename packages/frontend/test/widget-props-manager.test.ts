@@ -19,7 +19,12 @@ describe('useWidgetPropsManager', () => {
 		let save!: () => void;
 		const Component = defineComponent({
 			setup() {
-				({ save } = useWidgetPropsManager('clock', { value: { type: 'number', default: 1 } }, { widget: undefined }, emit));
+				({ save } = useWidgetPropsManager(
+					'clock',
+					{ value: { type: 'number', default: 1 } },
+					{ widget: undefined },
+					emit,
+				));
 			},
 			template: '<div />',
 		});
@@ -42,10 +47,15 @@ describe('useWidgetPropsManager', () => {
 		let widgetProps!: { value: number; label: string };
 		const Component = defineComponent({
 			setup() {
-				({ widgetProps } = useWidgetPropsManager('clock', {
-					value: { type: 'number', default: 1 },
-					label: { type: 'string', default: 'default' },
-				}, { widget }, vi.fn()));
+				({ widgetProps } = useWidgetPropsManager(
+					'clock',
+					{
+						value: { type: 'number', default: 1 },
+						label: { type: 'string', default: 'default' },
+					},
+					{ widget },
+					vi.fn(),
+				));
 			},
 			template: '<div />',
 		});

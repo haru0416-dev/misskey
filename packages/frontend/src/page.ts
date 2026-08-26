@@ -4,7 +4,7 @@
  */
 
 import * as Misskey from 'misskey-js';
-import { inject, isRef, onActivated, onBeforeUnmount, provide, ref, toValue, watch } from 'vue';
+import { inject, onActivated, onBeforeUnmount, provide, ref, toValue, watch } from 'vue';
 import { DI } from './di.js';
 import type { MaybeRefOrGetter, Ref } from 'vue';
 
@@ -38,10 +38,8 @@ export const definePage = (maybeRefOrGetterMetadata: MaybeRefOrGetter<PageMetada
 	const metadataGetter = () => metadataRef.value;
 	const receiver = getReceiver();
 
-	// setup handler
 	receiver?.(metadataGetter);
 
-	// update handler
 	onBeforeUnmount(
 		watch(
 			() => toValue(maybeRefOrGetterMetadata),

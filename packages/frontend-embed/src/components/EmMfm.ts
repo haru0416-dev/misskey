@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { h, provide } from 'vue';
+import { h } from 'vue';
 import type { CSSProperties, VNode, SetupContext } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
@@ -48,12 +48,10 @@ type MfmEvents = {
 	clickEv(id: string): void;
 };
 
-// eslint-disable-next-line import/no-default-export
 export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEvents>['emit'] }) {
 	const isNote = props.isNote ?? true;
 	const shouldNyaize = props.nyaize ? props.nyaize === 'respect' ? props.author?.isCat : false : false;
 
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 	if (props.text == null || props.text === '') return;
 
 	const rootAst = props.parsedNodes ?? (props.plain ? mfm.parseSimple : mfm.parse)(props.text);
@@ -71,12 +69,6 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 
 	const useAnim = true;
 
-	/**
-	 * Gen Vue Elements from MFM AST
-	 * @param ast MFM AST
-	 * @param scale How times large the text is
-	 * @param disableNyaize Whether nyaize is disabled or not
-	 */
 	const genEl = (ast: mfm.MfmNode[], scale: number, disableNyaize = false) => ast.map((token): VNode | string | (VNode | string)[] => {
 		switch (token.type) {
 			case 'text': {
@@ -94,7 +86,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					res.shift();
 					return res;
 				} else {
-					return [text.replace(/\n/g, ' ')];
+					return [text.replaceAll(/\n/g, ' ')];
 				}
 			}
 
@@ -287,12 +279,12 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 							if (!disableNyaize && shouldNyaize) {
 								text = Misskey.nyaize(text);
 							}
-							return h('ruby', {}, [...genEl(token.children.slice(0, token.children.length - 1), scale), h('rt', text.trim())]);
+							return h('ruby', {}, [...genEl(token.children.slice(0, -1), scale), h('rt', text.trim())]);
 						}
 					}
 					case 'unixtime': {
 						const child = token.children[0];
-						const unixtime = parseInt(child?.type === 'text' ? child.props.text : '');
+						const unixtime = Number.parseInt(child?.type === 'text' ? child.props.text : '');
 						return h('span', {
 							style: 'display: inline-block; font-size: 90%; border: solid 1px var(--MI_THEME-divider); border-radius: 999px; padding: 4px 10px 4px 6px;',
 						}, [
@@ -405,7 +397,6 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 						fallbackToImage: false,
 					})];
 				} else {
-					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 					if (props.emojiUrls && (props.emojiUrls[token.props.name] == null)) {
 						return [h('span', `:${token.props.name}:`)];
 					} else {

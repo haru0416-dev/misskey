@@ -32,10 +32,12 @@ describe('theme oklch support', () => {
 	});
 
 	test('oklch value works as a reference target for theme functions', () => {
-		const compiled = compile(themeWith({
-			accent: 'oklch(0.663 0.159 279.5)',
-			focus: ':alpha<0.3<@accent',
-		}));
+		const compiled = compile(
+			themeWith({
+				accent: 'oklch(0.663 0.159 279.5)',
+				focus: ':alpha<0.3<@accent',
+			}),
+		);
 		expect(compiled['focus']).toBe('rgba(129, 133, 242, 0.3)');
 	});
 

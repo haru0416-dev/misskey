@@ -40,7 +40,7 @@ async function save() {
 
 	changed.value = false;
 
-	// Refresh filtered list to signal to the user how they've been saved
+	// 保存後の正規化結果を表示し、保存内容を利用者に示す。
 	instanceMutes.value = mutes.join('\n');
 }
 

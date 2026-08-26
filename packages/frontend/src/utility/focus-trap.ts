@@ -15,7 +15,7 @@ function containsFocusTrappedElements(el: HTMLElement): boolean {
 }
 
 function getZIndex(el: HTMLElement): number {
-	const zIndex = parseInt(window.getComputedStyle(el).zIndex || '0', 10);
+	const zIndex = Number.parseInt(window.getComputedStyle(el).zIndex || '0', 10);
 	if (isNaN(zIndex)) {
 		return 0;
 	}
@@ -92,8 +92,7 @@ export function focusTrap(
 	const highestZIndex = highestZIndexElement == null ? -Infinity : highestZIndexElement.zIndex;
 	const zIndex = getZIndex(el);
 
-	// If the element has a lower z-index than the highest z-index element, focus trap the highest z-index element instead
-	// Focus trapping for this element will be done in the release function
+	// 最前面の要素より z-index が低い場合は最前面を優先し、この要素のフォーカストラップは release 時に行う。
 	if (!parent && zIndex < highestZIndex) {
 		focusTrapElements.add(el);
 		if (highestZIndexElement) {

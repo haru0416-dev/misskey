@@ -1,7 +1,15 @@
 import { describe, test, beforeAll } from 'vitest';
 import { deepStrictEqual, rejects, strictEqual } from 'node:assert';
 import * as Misskey from 'misskey-js';
-import { assertNotificationReceived, createAccount, type LoginUser, resolveRemoteNote, resolveRemoteUser, sleep, waitFor } from './utils.js';
+import {
+	assertNotificationReceived,
+	createAccount,
+	type LoginUser,
+	resolveRemoteNote,
+	resolveRemoteUser,
+	sleep,
+	waitFor,
+} from './utils.js';
 
 describe('Block', () => {
 	describe('Check follow', () => {
@@ -9,10 +17,7 @@ describe('Block', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -37,15 +42,10 @@ describe('Block', () => {
 			strictEqual(followers.length, 0);
 		});
 
-		// NOTE: upstream では Undo(Block) の連合が機能せず「解除後もブロックされたまま」になる既知バグを
-		// FIXME 付きで固定化していたが、本ポートはブロック解除が正しく連合されるため、
-		// upstream が test.skip で同梱していた本来の期待値 (下の 'Can follow if unblocked') を有効化する
 		test.skip('Cannot follow even if unblocked', async () => {
-			// unblock here
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
 			await sleep();
 
-			// TODO: why still being blocked?
 			await rejects(
 				async () => await bob.client.request('following/create', { userId: aliceInB.id }),
 				(err: any) => {
@@ -69,10 +69,7 @@ describe('Block', () => {
 		});
 
 		test('Remove follower when block them', async () => {
-			const [blocker, follower] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			const [blocker, follower] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 			const [followerInA, blockerInB] = await Promise.all([
 				resolveRemoteUser('b.test', follower.id, blocker),
 				resolveRemoteUser('a.test', blocker.id, follower),
@@ -104,10 +101,7 @@ describe('Block', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -147,10 +141,7 @@ describe('Block', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -173,17 +164,13 @@ describe('Block', () => {
 			);
 		});
 
-		// NOTE: 上の follow と同様、本ポートではブロック解除が正しく連合されるため FIXME ケースを skip し
-		// upstream が test.skip で同梱していた本来の期待値を有効化する
 		test.skip('Cannot reaction even if unblocked', async () => {
-			// unblock here
 			await alice.client.request('blocking/delete', { userId: bobInA.id });
 			await sleep();
 
 			const note = (await alice.client.request('notes/create', { text: 'a' })).createdNote;
 			const resolvedNote = await resolveRemoteNote('a.test', note.id, bob);
 
-			// TODO: why still being blocked?
 			await rejects(
 				async () => await bob.client.request('notes/reactions/create', { noteId: resolvedNote.id, reaction: '😅' }),
 				(err: any) => {
@@ -212,10 +199,7 @@ describe('Block', () => {
 		let bobInA: Misskey.entities.UserDetailedNotMe, aliceInB: Misskey.entities.UserDetailedNotMe;
 
 		beforeAll(async () => {
-			[alice, bob] = await Promise.all([
-				createAccount('a.test'),
-				createAccount('b.test'),
-			]);
+			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 
 			[bobInA, aliceInB] = await Promise.all([
 				resolveRemoteUser('b.test', bob.id, alice),
@@ -223,16 +207,18 @@ describe('Block', () => {
 			]);
 		});
 
-		/** NOTE: You should mute the target to stop receiving notifications */
+		/** 通知の受信を止めるため、対象ユーザーをミュートする。 */
 		test('Can mention and notified even if blocked', async () => {
 			await alice.client.request('blocking/create', { userId: bobInA.id });
 			await sleep();
 
 			const text = `@${alice.username}@a.test plz unblock me!`;
 			await assertNotificationReceived(
-				'a.test', alice,
+				'a.test',
+				alice,
 				async () => await bob.client.request('notes/create', { text }),
-				notification => notification.type === 'mention' && notification.userId === bobInA.id && notification.note.text === text,
+				(notification) =>
+					notification.type === 'mention' && notification.userId === bobInA.id && notification.note.text === text,
 				true,
 			);
 		});

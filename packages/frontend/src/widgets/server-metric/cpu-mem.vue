@@ -8,8 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<svg :viewBox="`0 0 ${ viewBoxX } ${ viewBoxY }`">
 		<defs>
 			<linearGradient :id="cpuGradientId" x1="0" x2="0" y1="1" y2="0">
-				<stop offset="0%" stop-color="hsl(180, 80%, 70%)"></stop>
-				<stop offset="100%" stop-color="hsl(0, 80%, 70%)"></stop>
+				<stop offset="0%" class="safe"></stop>
+				<stop offset="100%" class="danger"></stop>
 			</linearGradient>
 			<mask :id="cpuMaskId" x="0" y="0" :width="viewBoxX" :height="viewBoxY">
 				<polygon
@@ -41,8 +41,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<svg :viewBox="`0 0 ${ viewBoxX } ${ viewBoxY }`">
 		<defs>
 			<linearGradient :id="memGradientId" x1="0" x2="0" y1="1" y2="0">
-				<stop offset="0%" stop-color="hsl(180, 80%, 70%)"></stop>
-				<stop offset="100%" stop-color="hsl(0, 80%, 70%)"></stop>
+				<stop offset="0%" class="safe"></stop>
+				<stop offset="100%" class="danger"></stop>
 			</linearGradient>
 			<mask :id="memMaskId" x="0" y="0" :width="viewBoxX" :height="viewBoxY">
 				<polygon
@@ -75,8 +75,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
+import { useServerStats } from './use-server-stats.js';
 import { genId } from '@/utility/id.js';
 
 const props = defineProps<{
@@ -102,20 +103,6 @@ const memHeadY = ref<number>();
 const cpuP = ref<string>('');
 const memP = ref<string>('');
 
-onMounted(() => {
-	props.connection.on('stats', onStats);
-	props.connection.on('statsLog', onStatsLog);
-	props.connection.send('requestLog', {
-		id: genId(),
-		length: 50,
-	});
-});
-
-onBeforeUnmount(() => {
-	props.connection.off('stats', onStats);
-	props.connection.off('statsLog', onStatsLog);
-});
-
 function onStats(connStats: Misskey.entities.ServerStats) {
 	stats.value.push(connStats);
 	if (stats.value.length > 50) stats.value.shift();
@@ -137,14 +124,18 @@ function onStats(connStats: Misskey.entities.ServerStats) {
 	memP.value = (connStats.mem.active / props.meta.mem.total * 100).toFixed(0);
 }
 
-function onStatsLog(statsLog: Misskey.entities.ServerStatsLog) {
-	for (const revStats of statsLog.toReversed()) {
-		onStats(revStats);
-	}
-}
+useServerStats(props.connection, onStats);
 </script>
 
 <style lang="scss" scoped>
+stop.safe {
+	stop-color: var(--MI_THEME-success);
+}
+
+stop.danger {
+	stop-color: var(--MI_THEME-error);
+}
+
 .lcfyofjk {
 	display: flex;
 

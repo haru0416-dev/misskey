@@ -6,8 +6,8 @@
 import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import * as yaml from 'js-yaml';
 import ts from 'typescript';
+import { parseLocaleYaml } from './parseLocaleYaml.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -62,7 +62,7 @@ function createMembers(record: LocaleRecord): ts.TypeElement[] {
 }
 
 export async function generateLocaleInterface(localesDir: string): Promise<void> {
-	const locale = yaml.load(fs.readFileSync(`${localesDir}/ja-JP.yml`, 'utf-8').toString()) as LocaleRecord;
+	const locale = parseLocaleYaml<LocaleRecord>(fs.readFileSync(`${localesDir}/ja-JP.yml`, 'utf-8'));
 	const members = createMembers(locale);
 
 	const elements: ts.Statement[] = [
@@ -143,12 +143,11 @@ export async function generateLocaleInterface(localesDir: string): Promise<void>
 	const outputPath = `${autogenDir}/locale.ts`;
 	if (fs.existsSync(outputPath) && fs.readFileSync(outputPath, 'utf-8') === printed) return;
 
-	// 一瞬ファイルが存在しなくなって途切れる→不安定になるらしいので、リネームで対処
+	// watcher や並行 reader に未完成のファイルを見せないため、テンポラリファイルから rename で置換する。
 	fs.writeFileSync(`${autogenDir}/_locale.ts`, printed, 'utf-8');
 	fs.renameSync(`${autogenDir}/_locale.ts`, outputPath);
 }
 
-// スクリプトとして直接実行された場合
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
 	await generateLocaleInterface(resolve(__dirname, '../../../locales'));

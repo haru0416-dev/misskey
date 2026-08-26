@@ -8,37 +8,45 @@ export const packedChatRoomSchema = {
 	properties: {
 		id: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		createdAt: {
 			type: 'string',
 			format: 'date-time',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		ownerId: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		owner: {
 			type: 'object',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 			ref: 'UserLite',
 		},
 		name: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		description: {
 			type: 'string',
-			optional: false, nullable: false,
+			optional: false,
+			nullable: false,
 		},
 		isMuted: {
 			type: 'boolean',
-			optional: true, nullable: false,
+			optional: true,
+			nullable: false,
 		},
 		invitationExists: {
 			type: 'boolean',
-			optional: true, nullable: false,
+			optional: true,
+			nullable: false,
 		},
 	},
 } as const;

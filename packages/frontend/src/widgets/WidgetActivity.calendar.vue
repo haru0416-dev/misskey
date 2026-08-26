@@ -30,7 +30,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		rx="1" ry="1"
 		fill="none"
 		stroke-width="0.1"
-		stroke="#f73520"
 	/>
 </svg>
 </template>
@@ -105,8 +104,12 @@ svg {
 
 		&.day {
 			&:hover {
-				fill: rgba(#000, 0.05);
+				fill: color-mix(in srgb, var(--MI_THEME-fg) 8%, transparent);
 			}
+		}
+
+		&.today {
+			stroke: var(--MI_THEME-accent);
 		}
 	}
 }

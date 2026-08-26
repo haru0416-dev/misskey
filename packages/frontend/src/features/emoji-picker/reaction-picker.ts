@@ -19,7 +19,9 @@ class ReactionPicker {
 			[emojiPaletteForReaction, emojiPalettes],
 			([newId, newPalettes]) => {
 				this.reactionsRef.value =
-					newId == null ? (newPalettes[0]?.emojis ?? []) : (newPalettes.find((palette) => palette.id === newId)?.emojis ?? []);
+					newId == null
+						? (newPalettes[0]?.emojis ?? [])
+						: (newPalettes.find((palette) => palette.id === newId)?.emojis ?? []);
 			},
 			{
 				immediate: true,
@@ -36,7 +38,7 @@ class ReactionPicker {
 		const anchorRef = shallowRef(anchorElement);
 		const targetNoteRef = ref(targetNote);
 
-		// defineAsyncComponentはiOS等でユーザーアクティベーションが失われてfocusが効かなくなるため使用不可
+		// iOS では defineAsyncComponent によりユーザーアクティベーションが失われ、フォーカスできないため使用しない。
 		const { dispose } = popup(
 			MkEmojiPickerDialog,
 			{

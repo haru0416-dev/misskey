@@ -20,16 +20,22 @@ export type OpenApiSchemaObject = {
 	[key: string]: unknown;
 };
 
-export function convertSchemaToOpenApiSchema(schema: Schema, type: 'param' | 'res', includeSelfRef: boolean): OpenApiSchemaObject {
+export function convertSchemaToOpenApiSchema(
+	schema: Schema,
+	type: 'param' | 'res',
+	includeSelfRef: boolean,
+): OpenApiSchemaObject {
 	// optional, nullable, refはスキーマ定義に含まれないので分離しておく
 	const { optional, nullable, ref, selfRef, ...res1 } = schema as Schema & Record<string, unknown>;
 	const res = deepClone(res1 as unknown as Cloneable) as OpenApiSchemaObject;
 
 	if (schema.type === 'object' && schema.properties) {
 		if (type === 'res') {
-			const required = Object.entries(schema.properties).filter(([k, v]) => !v.optional).map(([k]) => k);
+			const required = Object.entries(schema.properties)
+				.filter(([k, v]) => !v.optional)
+				.map(([k]) => k);
 			if (required.length > 0) {
-			// 空配列は許可されない
+				// 空配列は許可されない
 				res.required = required;
 			}
 		}
@@ -47,8 +53,7 @@ export function convertSchemaToOpenApiSchema(schema: Schema, type: 'param' | 're
 	}
 
 	for (const o of ['anyOf', 'oneOf', 'allOf'] as const) {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		if (o in schema) res[o] = schema[o]!.map(schema => convertSchemaToOpenApiSchema(schema, type, includeSelfRef));
+		if (o in schema) res[o] = schema[o]!.map((schema) => convertSchemaToOpenApiSchema(schema, type, includeSelfRef));
 	}
 
 	if (type === 'res' && schema.ref && (!schema.selfRef || includeSelfRef)) {
@@ -81,7 +86,7 @@ export function getSchemas(includeSelfRef: boolean) {
 					properties: {
 						code: {
 							type: 'string',
-							description: 'An error code. Unique within the endpoint.',
+							description: 'A stable machine-readable error code.',
 						},
 						message: {
 							type: 'string',
@@ -89,11 +94,18 @@ export function getSchemas(includeSelfRef: boolean) {
 						},
 						id: {
 							type: 'string',
-							format: 'uuid',
-							description: 'An error ID. This ID is static.',
+							description: 'A stable error identifier.',
+						},
+						kind: {
+							type: 'string',
+							enum: ['client', 'server', 'permission'],
+							description: 'The category of the error.',
+						},
+						info: {
+							description: 'Additional structured details about the error.',
 						},
 					},
-					required: ['code', 'id', 'message'],
+					required: ['code', 'id', 'kind', 'message'],
 				},
 			},
 			required: ['error'],

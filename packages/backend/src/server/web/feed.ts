@@ -6,7 +6,7 @@
 import { Hono, type Context, type Next } from 'hono';
 import type { Feed } from 'feed';
 import type { Config } from '@/config.js';
-import { fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByUsernameAndHostFromDatabase } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Acct from '@/misc/acct.js';
 import type { MiMeta } from '@/models/_.js';
@@ -70,9 +70,12 @@ export function createFeedApp(deps: FeedDependencies): Hono {
 		if (feed == null) return c.body(null, 404);
 
 		switch (request.format) {
-			case 'atom': return feedResponse(c, feed.atom1(), 'application/atom+xml; charset=utf-8');
-			case 'rss': return feedResponse(c, feed.rss2(), 'application/rss+xml; charset=utf-8');
-			case 'json': return feedResponse(c, feed.json1(), 'application/json; charset=utf-8');
+			case 'atom':
+				return feedResponse(c, feed.atom1(), 'application/atom+xml; charset=utf-8');
+			case 'rss':
+				return feedResponse(c, feed.rss2(), 'application/rss+xml; charset=utf-8');
+			case 'json':
+				return feedResponse(c, feed.json1(), 'application/json; charset=utf-8');
 		}
 	});
 

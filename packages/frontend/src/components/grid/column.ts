@@ -11,16 +11,16 @@ import type { GridRow } from '@/components/grid/row.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { GridContext } from '@/components/grid/grid-event.js';
 
-export type ColumnType = 'text' | 'number' | 'date' | 'boolean' | 'image' | 'hidden';
+type ColumnType = 'text' | 'number' | 'date' | 'boolean' | 'image' | 'hidden';
 
-export type CustomValueEditor = (
+type CustomValueEditor = (
 	row: GridRow,
 	col: GridColumn,
 	value: CellValue,
 	cellElement: HTMLElement,
 ) => Promise<CellValue>;
-export type CellValueTransformer = (row: GridRow, col: GridColumn, value: CellValue) => CellValue;
-export type GridColumnContextMenuFactory = (col: GridColumn, context: GridContext) => MenuItem[];
+type CellValueTransformer = (row: GridRow, col: GridColumn, value: CellValue) => CellValue;
+type GridColumnContextMenuFactory = (col: GridColumn, context: GridContext) => MenuItem[];
 
 export type GridColumnSetting = {
 	bindTo: string;

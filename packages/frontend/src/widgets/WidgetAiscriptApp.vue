@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <MkContainer :showHeader="widgetProps.showHeader" class="mkw-aiscriptApp">
-	<template #header>App</template>
+	<template #header>{{ i18n.ts._widgets.aiscriptApp }}</template>
 	<div :class="$style.root">
 		<div v-if="isSyntaxError">Syntax error :(</div>
 		<MkAsUi v-else-if="root" :component="root" :components="components" size="small"/>
@@ -77,10 +77,10 @@ async function run() {
 	}, {
 		in: aiScriptReadline,
 		out: (value) => {
-			// nop
+			// ウィジェットでは標準出力を使用しない。
 		},
 		log: (type, params) => {
-			// nop
+			// ウィジェットではログ出力を使用しない。
 		},
 	});
 
@@ -119,6 +119,6 @@ defineExpose<WidgetComponentExpose>({
 
 <style lang="scss" module>
 .root {
-	padding: 16px;
+	padding: var(--MI-space-lg);
 }
 </style>

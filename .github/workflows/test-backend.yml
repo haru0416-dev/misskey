@@ -8,7 +8,7 @@ on:
     paths:
       - packages/backend/**
       - packages/mfm-js/**
-      # for permissions
+      # 権限関連
       - packages/misskey-js/**
       - .github/workflows/test-backend.yml
       - .github/misskey/test.yml
@@ -18,7 +18,7 @@ on:
     paths:
       - packages/backend/**
       - packages/mfm-js/**
-      # for permissions
+      # 権限関連
       - packages/misskey-js/**
       - .github/workflows/test-backend.yml
       - .github/misskey/test.yml
@@ -128,6 +128,51 @@ jobs:
       - name: Test
         # v8 coverage は Node の inspector API 依存で Bun ランタイムでは動かないため、カバレッジ無しで実行する
         run: bun run --bun --filter backend test:e2e
+
+  e2e-bun:
+    name: E2E tests (backend, bun target)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:18
+        ports:
+          - 54312:5432
+        env:
+          POSTGRES_DB: test-misskey
+          POSTGRES_HOST_AUTH_METHOD: trust
+      valkey:
+        image: valkey/valkey:8
+        ports:
+          - 56312:6379
+
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          submodules: true
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - name: Cache bun install cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - name: Check bun.lock
+        run: git diff --exit-code bun.lock
+      - name: Copy Configure
+        run: cp .github/misskey/test.yml .config
+      - name: Build
+        run: bun run build
+      - name: Test
+        # e2e ジョブは vitest と同じ Node.js プロセスにサーバーを立てるため、本番の
+        # bun ランタイム + Bun.sql ドライバの経路が一切通らない。こちらはサーバーだけ
+        # bun の別プロセスとして起動し、本番と同じ構成で e2e を通す
+        run: bun run --bun --filter backend test:e2e:bun
 
   migration:
     name: Migration tests (backend)

@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -16,12 +15,16 @@ import * as Bull from 'bullmq';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/FollowingStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { fetchFollowingByFollowerIdAndFolloweeIdFromDatabase } from '@/core/user/FollowingStore.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
-import { handleHonoQueueInbox, flushHonoQueueInboxUpdateInstanceQueue, type HonoQueueInboxDependencies } from '@/queue/handlers/inbox.js';
+import {
+	handleHonoQueueInbox,
+	flushHonoQueueInboxUpdateInstanceQueue,
+	type HonoQueueInboxDependencies,
+} from '@/queue/handlers/inbox.js';
 import type { InboxJobData } from '@/queue/types.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { MiUser } from '@/models/User.js';
@@ -31,14 +34,18 @@ type CapturedRequest = { method: string; headers: Record<string, string>; body: 
 function captureRequestServer(): Promise<{ server: Server; url: string; capture: () => Promise<CapturedRequest> }> {
 	return new Promise((resolve, reject) => {
 		let resolveCapture: (req: CapturedRequest) => void;
-		const capturePromise = new Promise<CapturedRequest>(r => { resolveCapture = r; });
+		const capturePromise = new Promise<CapturedRequest>((r) => {
+			resolveCapture = r;
+		});
 		const server = createServer((req: IncomingMessage, res: ServerResponse) => {
 			const chunks: Buffer[] = [];
-			req.on('data', chunk => chunks.push(chunk));
+			req.on('data', (chunk) => chunks.push(chunk));
 			req.on('end', () => {
 				resolveCapture({
 					method: req.method ?? 'POST',
-					headers: Object.fromEntries(Object.entries(req.headers).map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : (v ?? '')])),
+					headers: Object.fromEntries(
+						Object.entries(req.headers).map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : (v ?? '')]),
+					),
 					body: Buffer.concat(chunks).toString('utf-8'),
 				});
 				res.writeHead(202);
@@ -73,7 +80,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 
 	afterEach(async () => {
 		await flushHonoQueueInboxUpdateInstanceQueue();
-		await Promise.all(servers.splice(0).map(s => new Promise<void>(resolve => s.close(() => resolve()))));
+		await Promise.all(servers.splice(0).map((s) => new Promise<void>((resolve) => s.close(() => resolve()))));
 	});
 
 	afterAll(async () => {
@@ -86,7 +93,10 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	 * ローカルHTTPフィクスチャへ実際に送信して捕捉することで、httpSignature.verifySignature
 	 * が本物のバイト列に対して動作する状態を再現する (established local HTTP fixture pattern)。
 	 */
-	async function createSignedInboxJob(host: string, activityOverrides: ActivityOverrides = {}): Promise<{ user: MiUser; job: Bull.Job<InboxJobData>; activity: IActivity }> {
+	async function createSignedInboxJob(
+		host: string,
+		activityOverrides: ActivityOverrides = {},
+	): Promise<{ user: MiUser; job: Bull.Job<InboxJobData>; activity: IActivity }> {
 		const { server, url, capture } = await captureRequestServer();
 		servers.push(server);
 
@@ -135,7 +145,10 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 			url: new URL(url).pathname,
 			headers: captured.headers,
 		} as unknown as IncomingMessage;
-		const signature = httpSignature.parseRequest(requestShim, { headers: ['(request-target)', 'host', 'date', 'digest'], authorizationHeaderName: 'signature' });
+		const signature = httpSignature.parseRequest(requestShim, {
+			headers: ['(request-target)', 'host', 'date', 'digest'],
+			authorizationHeaderName: 'signature',
+		});
 
 		const job = { data: { activity, signature } } as unknown as Bull.Job<InboxJobData>;
 		return { user, job, activity };
@@ -160,7 +173,9 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	test('正しい署名のFollowアクティビティはperformActivityForHonoApiまで到達しFollowRequestを作成する', async () => {
 		const host = `hono-queue-inbox-ok-${genId()}.example.com`;
 		const followee = await createTestLocalUser('honoqueueinboxee');
-		const { user: actor, job } = await createSignedInboxJob(host, { object: `${deps.config.instance.url}/users/${followee.id}` });
+		const { user: actor, job } = await createSignedInboxJob(host, {
+			object: `${deps.config.instance.url}/users/${followee.id}`,
+		});
 
 		const result = await handleHonoQueueInbox(deps, job);
 		expect(result).toBe('ok');

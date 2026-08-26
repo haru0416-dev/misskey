@@ -87,8 +87,7 @@ export class LocaleInliner {
 	}
 
 	#detectI18nFacadeChunk() {
-		// For some reason, even with `preserveEntrySignatures: 'allow-extension'`, rolldown may generate facade chunk
-		// This method detects facade chunk and replace i18nFile / i18nFileName with correct file name
+		// preserveEntrySignatures が allow-extension でも facade chunk が生成されるため、実体のファイル名と識別子を解決する。
 		const chunk = this.chunks.find((x) => x.fileName === this.i18nFileName);
 		if (chunk == null) throw new Error(`i18n script file '${this.i18nFile}' not found`);
 		if (chunk.sourceCode == null) throw new Error(`Source code for '${this.i18nFile}' not loaded`);
@@ -118,9 +117,9 @@ export class LocaleInliner {
 	}
 
 	async saveLocale(localeName: string, localeJson: Locale) {
-		// create directory
 		await fs.mkdir(path.join(this.outputDir, localeName), { recursive: true });
-		const localeLogger = localeName === 'ja-JP' ? this.logger : blankLogger; // we want to log for single locale only
+		// 全ロケール分の同一処理によるログ増加を避け、代表として日本語ロケールだけ詳細ログを出力する。
+		const localeLogger = localeName === 'ja-JP' ? this.logger : blankLogger;
 		for (const chunk of this.chunks) {
 			if (chunk.sourceCode == null || !chunk.modifications) {
 				throw new Error(`Source code or modifications for ${chunk.fileName} is not available.`);
@@ -161,7 +160,6 @@ export type TextModification =
 			localizedOnly: boolean;
 	  }
 	| {
-			// can be used later to insert '../scripts' for common files
 			type: 'insert';
 			begin: number;
 			text: string;

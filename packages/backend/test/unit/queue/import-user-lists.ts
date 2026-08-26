@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -15,10 +14,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
-import { fetchUserListByNameAndUserIdFromDatabase } from '@/core/UserListStore.js';
-import { userListMembershipExistsInDatabase } from '@/core/UserListMembershipStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
+import { fetchUserListByNameAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
+import { userListMembershipExistsInDatabase } from '@/core/user/UserListMembershipStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleHonoQueueImportUserLists, type HonoQueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbUserImportJobData } from '@/queue/types.js';
@@ -76,7 +75,9 @@ describe('hono-queue-db (importUserLists)', () => {
 		const member = await createTestUser('honoqueueimpulmember');
 		const listName = `imported-list-${genId()}`;
 
-		const { url, server } = await serveText(`${listName},${member.username}@${runtime.config.runtime.host},withReplies=true\n`);
+		const { url, server } = await serveText(
+			`${listName},${member.username}@${runtime.config.runtime.host},withReplies=true\n`,
+		);
 		servers.push(server);
 
 		const fileId = genId();
@@ -101,6 +102,8 @@ describe('hono-queue-db (importUserLists)', () => {
 
 	test('存在しないfileIdは何もしない', async () => {
 		const owner = await createTestUser('honoqueueimpulnofile');
-		await expect(handleHonoQueueImportUserLists(deps, fakeJob({ user: { id: owner.id }, fileId: genId() }))).resolves.toBeUndefined();
+		await expect(
+			handleHonoQueueImportUserLists(deps, fakeJob({ user: { id: owner.id }, fileId: genId() })),
+		).resolves.toBeUndefined();
 	});
 });

@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkEllipsis/>
 		</div>
 		<div v-else>
-			<Transition :name="$style.change" mode="default" appear>
+			<Transition v-bind="prefer.animation ? { name: $style.change } : {}" mode="default" appear>
 				<MkMarqueeText :key="key" :duration="widgetProps.duration" :reverse="widgetProps.reverse">
 					<span v-for="item in items" :key="item.link" :class="$style.item">
 						<a :href="item.link" rel="nofollow noopener" target="_blank" :title="item.title">{{ item.title }}</a><span :class="$style.divider"></span>
@@ -27,17 +27,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { ref, watch, computed } from 'vue';
-import * as Misskey from 'misskey-js';
+import { computed, ref } from 'vue';
 import { useWidgetPropsManager } from './widget.js';
+import { useRssFeed } from './use-rss-feed.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import MkMarqueeText from '@/components/display/MkMarqueeText.vue';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
 import { shuffle } from '@/utility/shuffle.js';
 import { i18n } from '@/i18n.js';
-import { url as base } from '@shared/utility/config.js';
-import { useInterval } from '@shared/utility/use-interval.js';
+import { prefer } from '@/preferences.js';
 
 const name = 'rssTicker';
 
@@ -104,7 +103,10 @@ const { widgetProps, configure } = useWidgetPropsManager(name,
 	emit,
 );
 
-const rawItems = ref<Misskey.entities.FetchRssResponse['items']>([]);
+const key = ref(0);
+const { rawItems, fetching } = useRssFeed(widgetProps, () => {
+	key.value++;
+});
 const items = computed(() => {
 	const newItems = rawItems.value.slice(0, widgetProps.maxEntries);
 	if (widgetProps.shuffle) {
@@ -112,38 +114,6 @@ const items = computed(() => {
 	}
 	return newItems;
 });
-const fetching = ref(true);
-const fetchEndpoint = computed(() => {
-	const url = new URL('/api/fetch-rss', base);
-	url.searchParams.set('url', widgetProps.url);
-	return url;
-});
-const intervalClear = ref<(() => void) | undefined>();
-
-const key = ref(0);
-
-const tick = () => {
-	if (window.document.visibilityState === 'hidden' && rawItems.value.length !== 0) return;
-
-	window.fetch(fetchEndpoint.value, {})
-		.then(res => res.json())
-		.then((feed: Misskey.entities.FetchRssResponse) => {
-			rawItems.value = feed.items;
-			fetching.value = false;
-			key.value++;
-		});
-};
-
-watch(fetchEndpoint, tick);
-watch(() => widgetProps.refreshIntervalSec, () => {
-	if (intervalClear.value) {
-		intervalClear.value();
-	}
-	intervalClear.value = useInterval(tick, Math.max(10000, widgetProps.refreshIntervalSec * 1000), {
-		immediate: true,
-		afterMounted: true,
-	});
-}, { immediate: true });
 
 defineExpose<WidgetComponentExpose>({
 	name,
@@ -158,7 +128,7 @@ defineExpose<WidgetComponentExpose>({
 	&:global(-leave-active) {
 		position: absolute;
 		top: 0;
-		transition: all 1s ease;
+		transition: opacity var(--MI-duration-slow) var(--MI-ease-out), transform var(--MI-duration-slow) var(--MI-ease-out);
 	}
 	&:global(-enter-from) {
 		opacity: 0;

@@ -3,8 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { flashParamDef } from '@/server/rest/favorites.js';
-import { flashCreateParamDef, flashDeleteParamDef, flashFeaturedParamDef, flashMyLikesParamDef, flashMyParamDef, flashSearchParamDef, flashShowParamDef, flashUpdateParamDef } from '@/server/rest/flash.js';
+import { flashParamDef } from '@/server/rest/favorite/favorites.js';
+import {
+	flashCreateParamDef,
+	flashDeleteParamDef,
+	flashFeaturedParamDef,
+	flashMyLikesParamDef,
+	flashMyParamDef,
+	flashSearchParamDef,
+	flashShowParamDef,
+	flashUpdateParamDef,
+} from '@/server/rest/flash/flash.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -23,12 +32,12 @@ export const endpointMetas = {
 				max: 10,
 			},
 
-			errors: {
-			},
+			errors: {},
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Flash',
 			},
 		} as const,
@@ -60,16 +69,19 @@ export const endpointMetas = {
 	},
 	'flash/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['flash'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Flash',
 				},
 			},
@@ -110,6 +122,7 @@ export const endpointMetas = {
 	},
 	'flash/my': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'flash'],
 
 			requireCredential: true,
@@ -118,10 +131,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Flash',
 				},
 			},
@@ -130,6 +145,7 @@ export const endpointMetas = {
 	},
 	'flash/my-likes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'flash'],
 
 			requireCredential: true,
@@ -138,18 +154,21 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							format: 'id',
 						},
 						flash: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							ref: 'Flash',
 						},
 					},
@@ -160,13 +179,15 @@ export const endpointMetas = {
 	},
 	'flash/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['flashs'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Flash',
 			},
 
@@ -239,16 +260,19 @@ export const endpointMetas = {
 	},
 	'flash/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['flash'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Flash',
 				},
 			},

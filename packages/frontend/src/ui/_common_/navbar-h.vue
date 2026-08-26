@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div :class="$style.body">
 		<div>
 			<button v-click-anime :class="[$style.item, $style.instance]" class="_button" @click="openInstanceMenu">
-				<img :class="$style.instanceIcon" :src="instance.iconUrl ?? '/client-assets/erebia-icon.svg'" draggable="false"/>
+				<img :class="$style.instanceIcon" :src="instance.iconUrl ?? '/client-assets/erebia-icon.svg'" draggable="false" alt=""/>
 			</button>
 			<MkA v-click-anime v-tooltip="i18n.ts.timeline" :class="$style.item" :activeClass="$style.active" to="/" exact>
 				<i :class="$style.itemIcon" class="ti ti-home ti-fw"></i>
@@ -185,7 +185,6 @@ onMounted(() => {
 
 .instance {
 	display: inline-block;
-	position: relative;
 	width: 56px;
 	height: 100%;
 	vertical-align: bottom;

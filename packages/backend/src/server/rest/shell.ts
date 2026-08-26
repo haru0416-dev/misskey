@@ -8,21 +8,31 @@ import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
-import type { DownloadService } from '@/core/DownloadService.js';
-import type { FileInfoService } from '@/core/FileInfoService.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
-import type { ImageProcessingService } from '@/core/ImageProcessingService.js';
-import type { InternalStorageService } from '@/core/InternalStorageService.js';
-import type { S3Service } from '@/core/S3Service.js';
-import type { UserAuthService } from '@/core/UserAuthService.js';
-import type { VideoProcessingService } from '@/core/VideoProcessingService.js';
-import type { WebAuthnService } from '@/core/WebAuthnService.js';
-import type { EmailService } from '@/core/EmailService.js';
-import type { HonoChartWriters } from '../chart-runtime.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
+import type { FileInfoService } from '@/core/drive/FileInfoService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
+import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
+import type { S3Service } from '@/core/drive/S3Service.js';
+import type { UserAuthService } from '@/core/account/UserAuthService.js';
+import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
+import type { WebAuthnService } from '@/core/account/WebAuthnService.js';
+import type { EmailService } from '@/core/email/EmailService.js';
+import type { HonoChartWriters } from '@/server/chart-runtime.js';
 import type Logger from '@/logger.js';
-import type { HonoApiAdminQueueDependencies } from './admin-queue.js';
-import type { HonoApiMainStreamPublisher } from './notification.js';
-import type { HonoApiAdminStreamPublisher, HonoApiBroadcastStreamPublisher, HonoApiChatRoomStreamPublisher, HonoApiChatUserStreamPublisher, HonoApiDriveStreamPublisher, HonoApiInternalEventPublisher, HonoApiNoteStreamPublisher, HonoApiNotesStreamPublisher, HonoApiUserListStreamPublisher } from './events.js';
+import type { HonoApiAdminQueueDependencies } from './admin/admin-queue.js';
+import type { HonoApiMainStreamPublisher } from './notification/notification.js';
+import type {
+	HonoApiAdminStreamPublisher,
+	HonoApiBroadcastStreamPublisher,
+	HonoApiChatRoomStreamPublisher,
+	HonoApiChatUserStreamPublisher,
+	HonoApiDriveStreamPublisher,
+	HonoApiInternalEventPublisher,
+	HonoApiNoteStreamPublisher,
+	HonoApiNotesStreamPublisher,
+	HonoApiUserListStreamPublisher,
+} from './events.js';
 import { jsonResponse, setApiHeaders } from './shell-helpers.js';
 import { registerAuthAccountRoutes } from './routes/auth-account.js';
 import { registerAdminRoutes } from './routes/admin.js';
@@ -57,10 +67,18 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 	httpRequestService: HttpRequestService;
 	imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
 	internalStorageService: Pick<InternalStorageService, 'del' | 'saveFromBuffer' | 'saveFromPath'>;
-	s3Service: Pick<S3Service, 'upload'>;
+	s3Service: Pick<S3Service, 'upload' | 'delete'>;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate' | 'validateOtp'>;
 	videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
-	webAuthnService: Pick<WebAuthnService, 'initiateAuthentication' | 'verifyAuthentication' | 'initiateSignInWithPasskeyAuthentication' | 'verifySignInWithPasskeyAuthentication' | 'initiateRegistration' | 'verifyRegistration'>;
+	webAuthnService: Pick<
+		WebAuthnService,
+		| 'initiateAuthentication'
+		| 'verifyAuthentication'
+		| 'initiateSignInWithPasskeyAuthentication'
+		| 'verifySignInWithPasskeyAuthentication'
+		| 'initiateRegistration'
+		| 'verifyRegistration'
+	>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
 	chartWriters: HonoChartWriters;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;

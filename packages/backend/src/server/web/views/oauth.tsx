@@ -6,16 +6,15 @@
 import type { CommonProps } from '@/server/web/views/_.js';
 import { Layout } from '@/server/web/views/base.js';
 
-export function OAuthPage(props: CommonProps<{
-	transactionId: string;
-	clientName: string;
-	clientLogo?: string;
-	scope: string[];
-}>) {
-
-	//- Should be removed by the page when it loads, so that it won't needlessly
-	//- stay when user navigates away via the navigation bar
-	//- XXX: Remove navigation bar in auth page?
+export function OAuthPage(
+	props: CommonProps<{
+		transactionId: string;
+		clientName: string;
+		clientLogo?: string;
+		scope: string[];
+	}>,
+) {
+	// OAuth ページの読み込み後にメタ要素を削除し、画面遷移後に残さない。
 	function metaBlock() {
 		return (
 			<>
@@ -27,11 +26,5 @@ export function OAuthPage(props: CommonProps<{
 		);
 	}
 
-	return (
-		<Layout
-			{...props}
-			metaSlot={metaBlock()}
-		>
-		</Layout>
-	);
+	return <Layout {...props} metaSlot={metaBlock()}></Layout>;
 }

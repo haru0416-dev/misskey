@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -13,9 +12,9 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import { createNoteInDatabase } from '@/core/NoteStore.js';
-import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createNoteInDatabase } from '@/core/note/NoteStore.js';
+import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleHonoQueueExportNotes, type HonoQueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbJobDataWithUser } from '@/queue/types.js';
@@ -55,7 +54,7 @@ describe('hono-queue-db (exportNotes)', () => {
 		await handleHonoQueueExportNotes(deps, fakeJob({ user: { id: user.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
-		expect(files.some(f => f.name.startsWith('notes-') && f.name.endsWith('.json'))).toBe(true);
+		expect(files.some((f) => f.name.startsWith('notes-') && f.name.endsWith('.json'))).toBe(true);
 	});
 
 	test('存在しないuserIdは何もしない', async () => {

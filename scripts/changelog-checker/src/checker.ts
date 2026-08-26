@@ -24,8 +24,8 @@ export class Result {
 }
 
 /**
- * develop -> masterまたはrelease -> masterを想定したパターン。
- * base側の先頭とhead側で追加された分のリリースより1つ前のバージョンが等価であるかチェックする。
+ * develop -> master または release -> master の差分で、base の最新リリースと
+ * head の追加分直前のリリースが一致することを確認する。
  */
 export function checkNewRelease(base: Release[], head: Release[]): Result {
 	const releaseCountDiff = head.length - base.length;
@@ -44,8 +44,7 @@ export function checkNewRelease(base: Release[], head: Release[]): Result {
 }
 
 /**
- * topic -> developまたはtopic -> masterを想定したパターン。
- * head側の最新リリース配下に書き加えられているかをチェックする。
+ * topic -> develop または topic -> master の差分で、最新リリース配下のカテゴリ数・項目数の変更だけを許可する。
  */
 export function checkNewTopic(base: Release[], head: Release[]): Result {
 	if (head.length !== base.length) {
@@ -57,26 +56,21 @@ export function checkNewTopic(base: Release[], head: Release[]): Result {
 		const baseItem = base[relIdx];
 		const headItem = head[relIdx];
 		if (baseItem.releaseName !== headItem.releaseName) {
-			// リリースの順番が変わってると成立しないのでエラーにする
 			return Result.ofFailed(`Release is different. base:${baseItem.releaseName}, head:${headItem.releaseName}`);
 		}
 
 		if (baseItem.categories.length !== headItem.categories.length) {
-			// カテゴリごと書き加えられたパターン
 			if (headLatest.releaseName !== headItem.releaseName) {
-				// 最新リリース以外に追記されていた場合
 				return Result.ofFailed(
 					`There is an error in the update history. expected additions:${headLatest.releaseName}, actual additions:${headItem.releaseName}`,
 				);
 			}
 		} else {
-			// カテゴリ数の変動はないのでリスト項目の数をチェック
 			for (let catIdx = 0; catIdx < baseItem.categories.length; catIdx++) {
 				const baseCategory = baseItem.categories[catIdx];
 				const headCategory = headItem.categories[catIdx];
 
 				if (baseCategory.categoryName !== headCategory.categoryName) {
-					// カテゴリの順番が変わっていると成立しないのでエラーにする
 					return Result.ofFailed(
 						`Category is different. base:${baseCategory.categoryName}, head:${headCategory.categoryName}`,
 					);
@@ -84,7 +78,6 @@ export function checkNewTopic(base: Release[], head: Release[]): Result {
 
 				if (baseCategory.items.length !== headCategory.items.length) {
 					if (headLatest.releaseName !== headItem.releaseName) {
-						// 最新リリース以外に追記されていた場合
 						return Result.ofFailed(
 							`There is an error in the update history. expected additions:${headLatest.releaseName}, actual additions:${headItem.releaseName}`,
 						);

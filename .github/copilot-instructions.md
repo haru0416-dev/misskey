@@ -10,6 +10,8 @@
 
 ### コード・データ関連
 
+- **説明コメントの規約**: 日本語で、制約・不変条件・実測値・非自明な選択の理由だけを書く。処理内容の言い換え、概念メタファー (砦・器・天井・目を覚ます等)、変更前の実装や変更経緯は残さない。定着した技術用語 (枯渇・空振り等) は使用してよい。SPDX、lint・型検査の指示、仕様識別子、コメント構文を検証する fixture は対象外。
+
 - **SPDX ヘッダー必須**: AGPL-3.0-only 管轄かつ SPDX CI 対象ディレクトリに新規 `.ts` / `.js` / `.cjs` / `.mjs` / `.scss` / `.vue` / `.html` ファイルを追加する場合は冒頭に必ず付ける。詳細な対象判定は `.github/workflows/check-spdx-license-id.yml` を参照。
 
   ```text
@@ -62,13 +64,14 @@
 - 全体 lint / typecheck: `bun run lint`
 - Backend unit test: `bun run --bun --filter backend test`
 - Backend e2e test: `bun run --bun --filter backend test:e2e`
+- Backend e2e test (本番と同じ bun ランタイム + `Bun.sql`): `bun run --bun --filter backend test:e2e:bun`
 - Backend federation test: `bun run --bun --filter backend test:fed`
 - Frontend test: `bun run --bun --filter frontend test`
 - Migration 差分検査: `bun run --bun --filter backend check-migrations`
 - schema.ts差分からmigration自動生成: `bun run --filter backend db:generate`
 - `misskey-js` 再生成 (API 変更後必須): `bun run build-misskey-js-with-types`
 
-**注意:** backend テスト (`test` / `test:e2e` / `test:fed`) 実行前に `.config/test.yml` が必要。未作成の場合は `cp .github/misskey/test.yml .config/test.yml` を実行してから走らせる。各テストスクリプトが内部で `cross-env NODE_ENV=test bun run compile-config` を呼ぶため、コピー済みであれば追加の compile-config は不要。
+**注意:** backend テスト (`test` / `test:e2e` / `test:fed`) 実行前に `.config/test.yml` が必要。未作成の場合は `cp .github/misskey/test.yml .config/test.yml` を実行してから走らせる。各テストスクリプトが内部で `NODE_ENV=test bun run compile-config` を呼ぶため、コピー済みであれば追加の compile-config は不要。
 
 変更範囲に応じて最も近いコマンドから優先して検証し、必要なら全体コマンドに広げること。
 

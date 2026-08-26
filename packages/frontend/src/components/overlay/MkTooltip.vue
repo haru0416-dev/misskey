@@ -131,7 +131,7 @@ onUnmounted(() => {
 .transition_tooltip_leaveActive {
 	opacity: 1;
 	transform: scale(1);
-	transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1), opacity 200ms cubic-bezier(0.23, 1, 0.32, 1);
+	transition: transform var(--MI-duration-normal) var(--MI-ease-out), opacity var(--MI-duration-normal) var(--MI-ease-out);
 }
 .transition_tooltip_enterFrom,
 .transition_tooltip_leaveTo {
@@ -142,10 +142,10 @@ onUnmounted(() => {
 .root {
 	position: absolute;
 	font-size: 0.8em;
-	padding: 8px 12px;
+	padding: var(--MI-space-sm) var(--MI-space-md);
 	box-sizing: border-box;
 	text-align: center;
-	border-radius: 4px;
+	border-radius: var(--MI-radius-sm);
 	border: solid 0.5px var(--MI_THEME-divider);
 	pointer-events: none;
 	transform-origin: center center;

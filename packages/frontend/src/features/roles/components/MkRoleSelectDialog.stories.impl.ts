@@ -78,7 +78,7 @@ export const InitialIds = {
 	...Default,
 	args: {
 		...Default.args,
-		initialRoleIds: [0, 1, 4, 6, 8, 10].map(index => requireRole(index).id),
+		initialRoleIds: [0, 1, 4, 6, 8, 10].map((index) => requireRole(index).id),
 	},
 } satisfies StoryObj<typeof MkRoleSelectDialog>;
 

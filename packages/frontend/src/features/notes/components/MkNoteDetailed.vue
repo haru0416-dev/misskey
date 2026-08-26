@@ -76,7 +76,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<MkAcct :user="appearNote.user"/>
 						</div>
 						<div v-if="appearNote.user.badgeRoles" :class="$style.noteHeaderBadgeRoles">
-							<img v-for="(role, i) in appearNote.user.badgeRoles" :key="i" v-tooltip="role.name" :class="$style.noteHeaderBadgeRole" :src="role.iconUrl!"/>
+							<img v-for="(role, i) in appearNote.user.badgeRoles" :key="i" v-tooltip="role.name" :class="$style.noteHeaderBadgeRole" :src="role.iconUrl!" :alt="role.name"/>
 						</div>
 					</div>
 					<MkInstanceTicker v-if="showTicker" :host="appearNote.user.host" :displayMode="prefer.instanceTickerDisplay" v-bind="appearNote.user.instance === undefined ? {} : { instance: appearNote.user.instance }"/>
@@ -134,7 +134,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div v-if="isEnabledUrlPreview">
 						<MkUrlPreview v-for="url in urls" :key="url" :url="url" :compact="true" :detail="true" style="margin-top: 6px;"/>
 					</div>
-					<div v-if="appearNote.renote" :class="$style.quote"><MkNoteSimple :note="appearNote.renote" :class="$style.quoteNote"/></div>
+					<div v-if="appearNote.renoteId" :class="$style.quote"><MkNoteSimple :note="appearNote.renote ?? null" :class="$style.quoteNote"/></div>
 				</div>
 				<MkA v-if="appearNote.channel && !inChannel" :class="$style.channel" :to="`/channels/${appearNote.channel.id}`"><i class="ti ti-device-tv"></i> {{ appearNote.channel.name }}</MkA>
 			</div>
@@ -308,7 +308,6 @@ const inChannel = inject(DI.inChannel, null);
 
 let note = deepClone(props.note);
 
-// plugin
 const noteViewInterruptors = getPluginHandlers('note_view_interruptor');
 const hideByPlugin = ref(false);
 if (noteViewInterruptors.length > 0) {

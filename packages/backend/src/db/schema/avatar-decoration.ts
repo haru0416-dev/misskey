@@ -15,7 +15,11 @@ export const avatarDecoration = pgTable('avatar_decoration', {
 	url: varchar({ length: 1024 }).notNull(),
 	name: varchar({ length: 256 }).notNull(),
 	description: varchar({ length: 2048 }).notNull(),
-	roleIdsThatCanBeUsedThisDecoration: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull().$type<MiAvatarDecoration['roleIdsThatCanBeUsedThisDecoration']>(),
+	roleIdsThatCanBeUsedThisDecoration: varchar({ length: 128 })
+		.array()
+		.default(emptyVarcharArray)
+		.notNull()
+		.$type<MiAvatarDecoration['roleIdsThatCanBeUsedThisDecoration']>(),
 	category: varchar({ length: 128 }),
 });
 

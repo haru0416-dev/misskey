@@ -151,7 +151,7 @@ const props = withDefaults(defineProps<{
 	maxHeight?: number;
 	asDrawer?: boolean;
 	asWindow?: boolean;
-	asReactionPicker?: boolean; // 今は使われてないが将来的に使いそう
+	asReactionPicker?: boolean;
 	targetNote?: Misskey.entities.Note | null;
 }>(), {
 	showPinned: true,
@@ -227,7 +227,7 @@ watch(q, () => {
 		return;
 	}
 
-	const newQ = q.value.replace(/:/g, '').toLowerCase();
+	const newQ = q.value.replaceAll(/:/g, '').toLowerCase();
 
 	const searchCustom = () => {
 		const max = 100;
@@ -263,7 +263,7 @@ watch(q, () => {
 			if (matches.size >= max) return matches;
 
 			for (const emoji of emojis) {
-				if (emoji.aliases.some(alias => alias === newQ)) {
+				if (emoji.aliases.includes(newQ)) {
 					matches.add(emoji);
 					if (matches.size >= max) break;
 				}
@@ -402,8 +402,7 @@ function getKey(emoji: string | Misskey.entities.EmojiSimple | UnicodeEmojiDef):
 
 function getDef(emoji: string): string | Misskey.entities.EmojiSimple | UnicodeEmojiDef {
 	if (emoji.includes(':')) {
-		// カスタム絵文字が存在する場合はその情報を持つオブジェクトを返し、
-		// サーバの管理画面から削除された等で情報が見つからない場合は名前の文字列をそのまま返しておく（undefinedを返すとエラーになるため）
+		// 情報がないカスタム絵文字は名前を返し、undefined によるエラーを避ける。
 		const name = emoji.replaceAll(':', '');
 		return customEmojisMap.get(name) ?? emoji;
 	} else {
@@ -411,7 +410,6 @@ function getDef(emoji: string): string | Misskey.entities.EmojiSimple | UnicodeE
 	}
 }
 
-/** @see MkEmojiPicker.Section.vue */
 function computeButtonTitle(ev: PointerEvent): void {
 	const elm = ev.target as HTMLElement;
 	const emoji = elm.dataset['emoji'] as string;
@@ -432,7 +430,6 @@ function chosen(emoji: string | Misskey.entities.EmojiSimple | UnicodeEmojiDef, 
 	const key = getKey(emoji);
 	emit('chosen', key);
 
-	// 最近使った絵文字更新
 	if (!pinned.value?.includes(key)) {
 		let recents = store.recentlyUsedEmojis;
 		recents = recents.filter((emoji) => emoji !== key);
@@ -442,9 +439,7 @@ function chosen(emoji: string | Misskey.entities.EmojiSimple | UnicodeEmojiDef, 
 }
 
 function input(): void {
-	// Using custom input event instead of v-model to respond immediately on
-	// Android, where composition happens on all languages
-	// (v-model does not update during composition)
+	// Android では composition 中に v-model が更新されないため、input イベントを直接処理する。
 	q.value = searchEl.value?.value.trim() ?? '';
 }
 
@@ -473,7 +468,7 @@ function done(query?: string): boolean | void {
 	if (query == null) query = q.value;
 	if (query == null || typeof query !== 'string') return;
 
-	const q2 = query.replace(/:/g, '');
+	const q2 = query.replaceAll(/:/g, '');
 	const exactMatchCustom = customEmojisMap.get(q2);
 	if (exactMatchCustom) {
 		chosen(exactMatchCustom);

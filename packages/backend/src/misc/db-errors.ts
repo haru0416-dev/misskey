@@ -28,7 +28,9 @@ export class EntityNotFoundError extends Error {
 	public readonly criteria: unknown;
 
 	constructor(entityClass: unknown, criteria: unknown) {
-		super(`Could not find any entity of type "${stringifyTarget(entityClass)}" matching: ${stringifyCriteria(criteria)}`);
+		super(
+			`Could not find any entity of type "${stringifyTarget(entityClass)}" matching: ${stringifyCriteria(criteria)}`,
+		);
 		this.name = 'EntityNotFoundError';
 		this.entityClass = entityClass;
 		this.criteria = criteria;
@@ -37,12 +39,13 @@ export class EntityNotFoundError extends Error {
 
 export class UpdateValuesMissingError extends Error {
 	constructor() {
-		super('Cannot perform update query because update values are not defined. Call "qb.set(...)" method to specify updated values.');
+		super(
+			'Cannot perform update query because update values are not defined. Call "qb.set(...)" method to specify updated values.',
+		);
 		this.name = 'UpdateValuesMissingError';
 	}
 }
 
 export function isEntityNotFoundError(error: unknown): boolean {
-	return error instanceof EntityNotFoundError
-		|| (error instanceof Error && error.name === 'EntityNotFoundError');
+	return error instanceof EntityNotFoundError || (error instanceof Error && error.name === 'EntityNotFoundError');
 }

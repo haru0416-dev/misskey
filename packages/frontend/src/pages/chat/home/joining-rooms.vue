@@ -37,7 +37,3 @@ onMounted(() => {
 	fetchRooms();
 });
 </script>
-
-<style lang="scss" module>
-
-</style>

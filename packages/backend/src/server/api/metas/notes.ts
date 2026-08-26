@@ -3,26 +3,55 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { countNoteDraftsParamDef, notesDraftsCreateParamDef, notesDraftsDeleteParamDef, notesDraftsListParamDef, notesDraftsUpdateParamDef } from '@/server/rest/note-drafts.js';
-import { notesTranslateParamDef } from '@/server/rest/note.js';
-import { notesCreateParamDef } from '@/server/rest/notes-create.js';
-import { notesDeleteParamDef, notesUnrenoteParamDef } from '@/server/rest/notes-delete.js';
-import { notesPollsVoteParamDef } from '@/server/rest/notes-polls-vote.js';
-import { notesReactionsParamDef, reactionsCreateParamDef, reactionsDeleteParamDef } from '@/server/rest/notes-reactions.js';
-import { noteIdOnlyParamDef, noteIdPaginationParamDef, notesConversationParamDef, notesFeaturedParamDef, notesGlobalTimelineParamDef, notesHybridTimelineParamDef, notesLocalTimelineParamDef, notesMentionsParamDef, notesParamDef, notesPollsRecommendationParamDef, notesSearchByTagDocsParamDef, notesSearchParamDef, notesShowParamDef, notesShowPartialBulkParamDef, notesTimelineParamDef, notesUserListTimelineParamDef } from '@/server/rest/notes.js';
+import {
+	countNoteDraftsParamDef,
+	notesDraftsCreateParamDef,
+	notesDraftsDeleteParamDef,
+	notesDraftsListParamDef,
+	notesDraftsUpdateParamDef,
+} from '@/server/rest/note/note-drafts.js';
+import { notesTranslateParamDef } from '@/server/rest/note/note.js';
+import { notesCreateParamDef } from '@/server/rest/note/notes-create.js';
+import { notesDeleteParamDef, notesUnrenoteParamDef } from '@/server/rest/note/notes-delete.js';
+import { notesPollsVoteParamDef } from '@/server/rest/note/notes-polls-vote.js';
+import {
+	notesReactionsParamDef,
+	reactionsCreateParamDef,
+	reactionsDeleteParamDef,
+} from '@/server/rest/note/notes-reactions.js';
+import {
+	noteIdOnlyParamDef,
+	noteIdPaginationParamDef,
+	notesConversationParamDef,
+	notesFeaturedParamDef,
+	notesGlobalTimelineParamDef,
+	notesHybridTimelineParamDef,
+	notesLocalTimelineParamDef,
+	notesMentionsParamDef,
+	notesParamDef,
+	notesPollsRecommendationParamDef,
+	notesSearchByTagDocsParamDef,
+	notesSearchParamDef,
+	notesShowParamDef,
+	notesShowPartialBulkParamDef,
+	notesTimelineParamDef,
+	notesUserListTimelineParamDef,
+} from '@/server/rest/note/notes.js';
 import { SECOND, HOUR } from '@/const.js';
 
 export const endpointMetas = {
-	'notes': {
+	notes: {
 		meta: {
 			tags: ['notes'],
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -31,16 +60,19 @@ export const endpointMetas = {
 	},
 	'notes/children': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -49,16 +81,19 @@ export const endpointMetas = {
 	},
 	'notes/clips': {
 		meta: {
+			allowQuery: true,
 			tags: ['clips', 'notes'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Clip',
 				},
 			},
@@ -75,16 +110,19 @@ export const endpointMetas = {
 	},
 	'notes/conversation': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -116,11 +154,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					createdNote: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'Note',
 					},
 				},
@@ -246,6 +286,7 @@ export const endpointMetas = {
 	},
 	'notes/drafts/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'drafts'],
 
 			requireCredential: true,
@@ -256,16 +297,17 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'NoteDraft',
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: notesDraftsListParamDef,
 	},
@@ -281,11 +323,13 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					createdDraft: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'NoteDraft',
 					},
 				},
@@ -358,24 +402,6 @@ export const endpointMetas = {
 					id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
 				},
 
-				cannotRenoteOutsideOfChannel: {
-					message: 'Cannot renote outside of channel.',
-					code: 'CANNOT_RENOTE_OUTSIDE_OF_CHANNEL',
-					id: '33510210-8452-094c-6227-4a6c05d99f00',
-				},
-
-				containsProhibitedWords: {
-					message: 'Cannot post because it contains prohibited words.',
-					code: 'CONTAINS_PROHIBITED_WORDS',
-					id: 'aa6e01d3-a85c-669d-758a-76aab43af334',
-				},
-
-				containsTooManyMentions: {
-					message: 'Cannot post because it exceeds the allowed number of mentions.',
-					code: 'CONTAINS_TOO_MANY_MENTIONS',
-					id: '4de0363a-3046-481b-9b0f-feff3e211025',
-				},
-
 				tooManyDrafts: {
 					message: 'You cannot create drafts any more.',
 					code: 'TOO_MANY_DRAFTS',
@@ -430,12 +456,6 @@ export const endpointMetas = {
 					code: 'NO_SUCH_NOTE_DRAFT',
 					id: '49cd6b9d-848e-41ee-b0b9-adaca711a6b1',
 				},
-
-				accessDenied: {
-					message: 'Access denied.',
-					code: 'ACCESS_DENIED',
-					id: '56f35758-7dd5-468b-8439-5d6fb8ec9b8e',
-				},
 			},
 		} as const,
 		paramDef: notesDraftsDeleteParamDef,
@@ -452,39 +472,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					updatedDraft: {
 						type: 'object',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 						ref: 'NoteDraft',
 					},
 				},
 			},
 
 			errors: {
-				noSuchRenoteTarget: {
-					message: 'No such renote target.',
-					code: 'NO_SUCH_RENOTE_TARGET',
-					id: 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4',
-				},
-
-				cannotReRenote: {
-					message: 'You can not Renote a pure Renote.',
-					code: 'CANNOT_RENOTE_TO_A_PURE_RENOTE',
-					id: 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a',
-				},
-
 				cannotRenoteDueToVisibility: {
 					message: 'You can not Renote due to target visibility.',
 					code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY',
 					id: 'be9529e9-fe72-4de0-ae43-0b363c4938af',
-				},
-
-				noSuchReplyTarget: {
-					message: 'No such reply target.',
-					code: 'NO_SUCH_REPLY_TARGET',
-					id: '749ee0f6-d3da-459a-bf02-282e2da4292c',
 				},
 
 				cannotReplyToInvisibleNote: {
@@ -497,12 +501,6 @@ export const endpointMetas = {
 					message: 'You can not reply to a pure Renote.',
 					code: 'CANNOT_REPLY_TO_A_PURE_RENOTE',
 					id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15',
-				},
-
-				cannotReplyToSpecifiedNoteWithExtendedVisibility: {
-					message: 'You cannot reply to a specified visibility note with extended visibility.',
-					code: 'CANNOT_REPLY_TO_SPECIFIED_NOTE_WITH_EXTENDED_VISIBILITY',
-					id: 'ed940410-535c-4d5e-bfa3-af798671e93c',
 				},
 
 				cannotCreateAlreadyExpiredPoll: {
@@ -529,34 +527,10 @@ export const endpointMetas = {
 					id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
 				},
 
-				cannotRenoteOutsideOfChannel: {
-					message: 'Cannot renote outside of channel.',
-					code: 'CANNOT_RENOTE_OUTSIDE_OF_CHANNEL',
-					id: '33510210-8452-094c-6227-4a6c05d99f00',
-				},
-
-				containsProhibitedWords: {
-					message: 'Cannot post because it contains prohibited words.',
-					code: 'CONTAINS_PROHIBITED_WORDS',
-					id: 'aa6e01d3-a85c-669d-758a-76aab43af334',
-				},
-
-				containsTooManyMentions: {
-					message: 'Cannot post because it exceeds the allowed number of mentions.',
-					code: 'CONTAINS_TOO_MANY_MENTIONS',
-					id: '4de0363a-3046-481b-9b0f-feff3e211025',
-				},
-
 				noSuchNoteDraft: {
 					message: 'No such note draft.',
 					code: 'NO_SUCH_NOTE_DRAFT',
 					id: '49cd6b9d-848e-41ee-b0b9-adaca711a6b1',
-				},
-
-				accessDenied: {
-					message: 'Access denied.',
-					code: 'ACCESS_DENIED',
-					id: '56f35758-7dd5-468b-8439-5d6fb8ec9b8e',
 				},
 
 				noSuchRenote: {
@@ -617,6 +591,7 @@ export const endpointMetas = {
 	},
 	'notes/drafts/count': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'drafts'],
 
 			requireCredential: true,
@@ -627,12 +602,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'number',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				description: 'The number of drafts',
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: countNoteDraftsParamDef,
 	},
@@ -692,6 +667,7 @@ export const endpointMetas = {
 	},
 	'notes/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
@@ -700,10 +676,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -712,14 +690,17 @@ export const endpointMetas = {
 	},
 	'notes/global-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -736,6 +717,7 @@ export const endpointMetas = {
 	},
 	'notes/hybrid-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -743,10 +725,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -769,14 +753,17 @@ export const endpointMetas = {
 	},
 	'notes/local-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -799,6 +786,7 @@ export const endpointMetas = {
 	},
 	'notes/mentions': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -806,10 +794,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -818,6 +808,7 @@ export const endpointMetas = {
 	},
 	'notes/polls/recommendation': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -825,10 +816,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -887,6 +880,7 @@ export const endpointMetas = {
 	},
 	'notes/reactions': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'reactions'],
 
 			requireCredential: false,
@@ -896,10 +890,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'NoteReaction',
 				},
 			},
@@ -984,16 +980,19 @@ export const endpointMetas = {
 	},
 	'notes/renotes': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -1010,16 +1009,19 @@ export const endpointMetas = {
 	},
 	'notes/replies': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -1028,16 +1030,19 @@ export const endpointMetas = {
 	},
 	'notes/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -1054,14 +1059,17 @@ export const endpointMetas = {
 	},
 	'notes/search-by-tag': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'hashtags'],
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -1070,13 +1078,15 @@ export const endpointMetas = {
 	},
 	'notes/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Note',
 			},
 
@@ -1104,30 +1114,35 @@ export const endpointMetas = {
 	},
 	'notes/show-partial-bulk': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
 					properties: {
 						id: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						reactions: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							additionalProperties: {
 								type: 'number',
 							},
 						},
 						reactionEmojis: {
 							type: 'object',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							additionalProperties: {
 								type: 'string',
 							},
@@ -1136,13 +1151,13 @@ export const endpointMetas = {
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: notesShowPartialBulkParamDef,
 	},
 	'notes/state': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -1150,15 +1165,18 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				properties: {
 					isFavorited: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 					isMutedThread: {
 						type: 'boolean',
-						optional: false, nullable: false,
+						optional: false,
+						nullable: false,
 					},
 				},
 			},
@@ -1184,6 +1202,11 @@ export const endpointMetas = {
 					code: 'NO_SUCH_NOTE',
 					id: '5ff67ada-ed3b-2e71-8e87-a1a421e177d2',
 				},
+				alreadyMuting: {
+					message: 'You are already muting that thread.',
+					code: 'ALREADY_MUTING',
+					id: 'c146e22d-1141-4b31-b28d-176371014d18',
+				},
 			},
 		} as const,
 		paramDef: noteIdOnlyParamDef,
@@ -1208,6 +1231,7 @@ export const endpointMetas = {
 	},
 	'notes/timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -1215,10 +1239,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -1227,6 +1253,7 @@ export const endpointMetas = {
 	},
 	'notes/translate': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: true,
@@ -1234,7 +1261,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: true, nullable: false,
+				optional: true,
+				nullable: false,
 				properties: {
 					sourceLang: { type: 'string' },
 					text: { type: 'string' },
@@ -1287,6 +1315,7 @@ export const endpointMetas = {
 	},
 	'notes/user-list-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'lists'],
 
 			requireCredential: true,
@@ -1294,10 +1323,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},

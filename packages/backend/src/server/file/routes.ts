@@ -13,11 +13,11 @@ import type { Config } from '@/config.js';
 import type Logger from '@/logger.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { StatusError } from '@/misc/status-error.js';
-import type { DownloadService } from '@/core/DownloadService.js';
-import type { FileInfoService } from '@/core/FileInfoService.js';
-import type { ImageProcessingService } from '@/core/ImageProcessingService.js';
-import type { InternalStorageService } from '@/core/InternalStorageService.js';
-import type { VideoProcessingService } from '@/core/VideoProcessingService.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
+import type { FileInfoService } from '@/core/drive/FileInfoService.js';
+import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
+import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
+import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import { FileServerDriveHandler } from './FileServerDriveHandler.js';
 import { FileServerFileResolver } from './FileServerFileResolver.js';
 import { FileServerProxyHandler } from './FileServerProxyHandler.js';
@@ -42,7 +42,7 @@ export type FileServerDependencies = {
 class HonoFileReply implements FileServerReply {
 	public statusCode = 200;
 	public readonly headers = new Headers({
-		'Content-Security-Policy': 'default-src \'none\'; img-src \'self\'; media-src \'self\'; style-src \'unsafe-inline\'',
+		'Content-Security-Policy': "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
 	});
 
 	constructor() {
@@ -79,10 +79,11 @@ class HonoFileReply implements FileServerReply {
 	}
 }
 
-function createFileServerRequest<
-	Params extends Record<string, string>,
-	Query extends Record<string, unknown>,
->(c: Context, params: Params, query = c.req.query() as Query): FileServerRequest<Params, Query> {
+function createFileServerRequest<Params extends Record<string, string>, Query extends Record<string, unknown>>(
+	c: Context,
+	params: Params,
+	query = c.req.query() as Query,
+): FileServerRequest<Params, Query> {
 	const headers: FileServerHeaders = {};
 
 	c.req.raw.headers.forEach((value, key) => {
@@ -112,7 +113,12 @@ function isFileBody(value: unknown): value is FileBody {
 }
 
 function isReadable(value: unknown): value is NodeJS.ReadableStream {
-	return typeof value === 'object' && value !== null && 'pipe' in value && typeof (value as { pipe?: unknown }).pipe === 'function';
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		'pipe' in value &&
+		typeof (value as { pipe?: unknown }).pipe === 'function'
+	);
 }
 
 async function fileBodyToResponse(body: FileBody, reply: HonoFileReply, method: string): Promise<Response> {
@@ -130,10 +136,13 @@ async function fileBodyToResponse(body: FileBody, reply: HonoFileReply, method: 
 		reply.headers.set('Content-Type', contentType);
 	}
 
-	return new Response(method === 'HEAD' ? null : Readable.toWeb(createReadStream(body.path)) as ReadableStream<Uint8Array>, {
-		status: reply.statusCode,
-		headers: reply.headers,
-	});
+	return new Response(
+		method === 'HEAD' ? null : (Readable.toWeb(createReadStream(body.path)) as ReadableStream<Uint8Array>),
+		{
+			status: reply.statusCode,
+			headers: reply.headers,
+		},
+	);
 }
 
 async function toResponse(body: unknown, reply: HonoFileReply, method: string): Promise<Response> {
@@ -200,27 +209,16 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		deps.downloadService,
 		deps.internalStorageService,
 	);
-	const driveHandler = new FileServerDriveHandler(
-		deps.config,
-		fileResolver,
-		assetsPath,
-		deps.videoProcessingService,
-	);
-	const proxyHandler = new FileServerProxyHandler(
-		deps.config,
-		fileResolver,
-		assetsPath,
-		deps.imageProcessingService,
-	);
+	const driveHandler = new FileServerDriveHandler(deps.config, fileResolver, assetsPath, deps.videoProcessingService);
+	const proxyHandler = new FileServerProxyHandler(deps.config, fileResolver, assetsPath, deps.imageProcessingService);
 
 	app.get('/files/:key', async (c) => {
 		const reply = new HonoFileReply();
 		const redirect = createRedirectToOmitSearch(c, reply);
 		if (redirect) return redirect;
 
-		// app-default.jpg は元々独立した静的ルートだったが、同一セグメント位置での
-		// static ルートと :param ルートの共存は RegExpRouter 非対応で、その1ルートの
-		// せいでアプリ全体が TrieRouter へフォールバックするため、ここに統合した。
+		// static ルートと :param ルートを同じセグメント位置に置くと RegExpRouter 非対応のため、
+		// app-default.jpg をこのルートで処理してアプリ全体の TrieRouter フォールバックを避ける。
 		if (c.req.param('key') === 'app-default.jpg') {
 			reply.header('Content-Type', 'image/jpeg');
 			reply.header('Cache-Control', 'max-age=31536000, immutable');
@@ -228,8 +226,9 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		}
 
 		const request = createFileServerRequest(c, { key: c.req.param('key') });
-		const body = await driveHandler.handle(request, reply)
-			.catch(err => errorHandler(request, reply, assetsPath, deps.logger, err));
+		const body = await driveHandler
+			.handle(request, reply)
+			.catch((err) => errorHandler(request, reply, assetsPath, deps.logger, err));
 		return await toResponse(body, reply, c.req.method);
 	});
 
@@ -242,10 +241,8 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		return await toResponse(null, reply, c.req.method);
 	});
 
-	// NOTE: 以前は `/proxy/:url{.*}` だったが、複数セグメントを跨ぐ正規表現パラメータは
-	// RegExpRouter 非対応で、SmartRouter がこの1ルートのためにアプリ全体 (500超ルート) を
-	// TrieRouter へフォールバックさせていた。ワイルドカードで受けてパスから自前で切り出す
-	// (percent-decode はパラメータ抽出と同じ挙動になるよう自前で行う)。
+	// 複数セグメントを跨ぐ正規表現パラメータは RegExpRouter 非対応のため、ワイルドカードで受けて
+	// パスから URL を切り出す。percent-decode はパラメータ抽出と同じ挙動になるよう自前で行う。
 	app.get('/proxy/*', async (c) => {
 		const reply = new HonoFileReply();
 		const rawUrl = c.req.path.slice('/proxy/'.length);
@@ -253,11 +250,12 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 		try {
 			url = decodeURIComponent(rawUrl);
 		} catch {
-			// 不正なpercent-encodingはデコードせずそのまま扱う (旧パラメータ抽出と同じ寛容さ)
+			// 不正な percent-encoding はデコードせず、そのまま扱う。
 		}
 		const request = createFileServerRequest(c, { url });
-		const body = await proxyHandler.handle(request, reply)
-			.catch(err => errorHandler(request, reply, assetsPath, deps.logger, err));
+		const body = await proxyHandler
+			.handle(request, reply)
+			.catch((err) => errorHandler(request, reply, assetsPath, deps.logger, err));
 		return await toResponse(body, reply, c.req.method);
 	});
 

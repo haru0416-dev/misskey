@@ -5,9 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <MkModal ref="modal" v-slot="{ type }" :preferType="deviceKind === 'smartphone' ? 'drawer' : 'dialog'" @click="onBgClick" @closed="emit('closed')" @esc="emit('esc')">
-	<div ref="rootEl" :class="[$style.root, type === 'drawer' ? $style.asDrawer : null]" :style="{ width: type === 'drawer' ? '' : `${width}px`, height: type === 'drawer' ? '' : `min(${height}px, 100%)` }">
+	<div ref="rootEl" role="dialog" aria-modal="true" :class="[$style.root, type === 'drawer' ? $style.asDrawer : null]" :style="{ width: type === 'drawer' ? '' : `${width}px`, height: type === 'drawer' ? '' : `min(${height}px, 100%)` }">
 		<div :class="$style.header">
-			<button v-if="withCloseButton" :class="$style.headerButton" class="_button" data-cy-modal-window-close @click="emit('close')"><i class="ti ti-x"></i></button>
+			<button v-if="withCloseButton" :class="$style.headerButton" class="_button" :aria-label="i18n.ts.close" data-cy-modal-window-close @click="emit('close')"><i class="ti ti-x" aria-hidden="true"></i></button>
 			<span :class="$style.title">
 				<slot name="header"></slot>
 			</span>
@@ -86,8 +86,8 @@ defineExpose({
 
 	--root-margin: 24px;
 
-	--MI_THEME-headerHeight: 46px;
-	--MI_THEME-headerHeightNarrow: 42px;
+	--headerHeight: 46px;
+	--headerHeightNarrow: 42px;
 
 	@media (max-width: 500px) {
 		--root-margin: 16px;
@@ -116,18 +116,18 @@ defineExpose({
 }
 
 .headerButton {
-	height: var(--MI_THEME-headerHeight);
-	width: var(--MI_THEME-headerHeight);
+	height: var(--headerHeight);
+	width: var(--headerHeight);
 
 	@media (max-width: 500px) {
-		height: var(--MI_THEME-headerHeightNarrow);
-		width: var(--MI_THEME-headerHeightNarrow);
+		height: var(--headerHeightNarrow);
+		width: var(--headerHeightNarrow);
 	}
 }
 
 .title {
 	flex: 1;
-	line-height: var(--MI_THEME-headerHeight);
+	line-height: var(--headerHeight);
 	padding-left: 32px;
 	font-weight: bold;
 	white-space: nowrap;
@@ -136,7 +136,7 @@ defineExpose({
 	pointer-events: none;
 
 	@media (max-width: 500px) {
-		line-height: var(--MI_THEME-headerHeightNarrow);
+		line-height: var(--headerHeightNarrow);
 		padding-left: 16px;
 	}
 }

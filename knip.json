@@ -1,0 +1,76 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"ignore": [
+		"packages/backend/migration/_legacy/**",
+		"packages/backend/assets/**",
+		"packages/frontend/assets/**",
+		"packages/frontend/public/**",
+		"**/public/**"
+	],
+	"ignoreBinaries": ["dedupe", "generate.tsx"],
+	"ignoreDependencies": [
+		"@typescript/lib-webworker",
+		"@tabler/icons-webfont",
+		"@misskey-dev/emoji-assets",
+		"react",
+		"react-dom",
+		"vue-tsc",
+		"search-index"
+	],
+	"workspaces": {
+		".": {
+			"entry": ["scripts/*.{mjs,cjs,ts}", ".github/scripts/*.{mjs,cjs,mts,ts}"],
+			"project": ["scripts/**/*.{mjs,cjs,ts}", ".github/scripts/**/*.{mjs,cjs,mts,ts}"],
+			"ignoreDependencies": ["pg", "ioredis"]
+		},
+		"packages/backend": {
+			"entry": [
+				"scripts/*.{js,mjs,mts,ts}",
+				"test/**/*.ts",
+				"test-server/**/*.ts",
+				"test-federation/**/*.ts",
+				"vitest.config.*.ts"
+			]
+		},
+		"packages/frontend": {
+			"entry": [
+				"src/_boot_.ts",
+				"src/workers/*.ts",
+				"builder/**/*.ts",
+				"lib/**/*.ts",
+				"test/**/*.ts",
+				".storybook/*.{ts,tsx}",
+				"src/**/*.stories.impl.ts",
+				"src/**/*.stories.meta.ts",
+				"src/features/image-editor/effects/*.ts"
+			],
+			"ignoreDependencies": ["frontend-shared"]
+		},
+		"packages/frontend-embed": {
+			"entry": ["src/boot.ts", "src/workers/*.ts"],
+			"ignoreDependencies": ["frontend-shared", "shiki", "frontend"]
+		},
+		"packages/sw": {
+			"entry": ["src/sw.ts"],
+			"ignoreDependencies": ["frontend-shared"]
+		},
+		"packages/frontend-shared": {
+			"entry": ["utility/**/*.ts", "@types/**/*.ts"],
+			"paths": {
+				"@shared/*": ["./*"]
+			}
+		},
+		"packages/misskey-js": {
+			"entry": ["test/**/*.ts", "test-d/**/*.ts"]
+		},
+		"packages/i18n": {
+			"entry": ["src/index.ts", "src/const.ts", "scripts/**/*.ts"]
+		},
+		"packages/icons-subsetter": {
+			"ignoreDependencies": ["harfbuzzjs"]
+		},
+		"packages/mfm-js": {
+			"ignoreDependencies": ["@microsoft/api-extractor"]
+		}
+	}
+}

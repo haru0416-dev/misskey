@@ -7,12 +7,12 @@ import * as fs from 'node:fs';
 import sharp from 'sharp';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import type { Config } from '@/config.js';
-import { FILE_TYPE_BROWSERSAFE } from '@/const.js';
+import { FILE_TYPE_BROWSERSAFE, PROXY_LOOP_USER_AGENT_TOKENS } from '@/const.js';
 import { StatusError } from '@/misc/status-error.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import { correctFilename } from '@/misc/correct-filename.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
-import { IImageStreamable, ImageProcessingService, webpDefault } from '@/core/ImageProcessingService.js';
+import { IImageStreamable, ImageProcessingService, webpDefault } from '@/core/drive/ImageProcessingService.js';
 import { createRangeStream, attachStreamCleanup, needsCleanup } from './FileServerUtils.js';
 import type { DownloadedFileResult, FileResolveResult, FileServerFileResolver } from './FileServerFileResolver.js';
 import { getFileServerHeader, type FileServerReply, type FileServerRequest } from './FileServerTypes.js';
@@ -77,12 +77,7 @@ export class FileServerProxyHandler {
 
 			reply.header('Content-Type', image.type);
 			reply.header('Cache-Control', 'max-age=31536000, immutable');
-			reply.header('Content-Disposition',
-				contentDisposition(
-					'inline',
-					correctFilename(file.filename, image.ext),
-				),
-			);
+			reply.header('Content-Disposition', contentDisposition('inline', correctFilename(file.filename, image.ext)));
 			return image.data;
 		} catch (e) {
 			if (needsCleanup(file)) file.cleanup();
@@ -90,14 +85,11 @@ export class FileServerProxyHandler {
 		}
 	}
 
-	/**
-	 * 外部メディアプロキシにリダイレクトする
-	 */
 	private async redirectToExternalProxy(
 		request: FileServerRequest<{ url: string }, ProxyQuery>,
 		reply: FileServerReply,
 	) {
-		reply.header('Cache-Control', 'public, max-age=259200'); // 3 days
+		reply.header('Cache-Control', 'public, max-age=259200');
 
 		const url = new URL(`${this.config.media.proxyUrl}/${request.params.url || ''}`);
 
@@ -108,22 +100,17 @@ export class FileServerProxyHandler {
 		return reply.redirect(url.toString(), 301);
 	}
 
-	/**
-	 * User-Agent を検証する
-	 */
 	private validateUserAgent(request: FileServerRequest): void {
 		const userAgent = getFileServerHeader(request.headers, 'user-agent');
 		if (!userAgent) {
 			throw new StatusError('User-Agent is required', 400, 'User-Agent is required');
 		}
-		if (userAgent.toLowerCase().indexOf('misskey/') !== -1) {
+		const normalizedUserAgent = userAgent.toLowerCase();
+		if (PROXY_LOOP_USER_AGENT_TOKENS.some((token) => normalizedUserAgent.includes(token))) {
 			throw new StatusError('Refusing to proxy a request from another proxy', 403, 'Proxy is recursive');
 		}
 	}
 
-	/**
-	 * 画像を処理してストリーム可能な形式に変換する
-	 */
 	private async processImage(
 		file: AvailableFile,
 		request: FileServerRequest<{ url: string }, ProxyQuery>,
@@ -131,7 +118,8 @@ export class FileServerProxyHandler {
 	): Promise<IImageStreamable> {
 		const query = request.query;
 
-		const requiresImageConversion = 'emoji' in query || 'avatar' in query || 'static' in query || 'preview' in query || 'badge' in query;
+		const requiresImageConversion =
+			'emoji' in query || 'avatar' in query || 'static' in query || 'preview' in query || 'badge' in query;
 		const isConvertibleImage = isMimeImage(file.mime, 'sharp-convertible-image-with-bmp');
 		if (requiresImageConversion && !isConvertibleImage) {
 			throw new StatusError('Unexpected mime', 404);
@@ -164,9 +152,6 @@ export class FileServerProxyHandler {
 		return this.createDefaultStream(file, request, reply);
 	}
 
-	/**
-	 * 絵文字またはアバター用の画像を処理する
-	 */
 	private async processEmojiOrAvatar(
 		file: AvailableFile,
 		query: Pick<ProxyQuery, 'emoji' | 'avatar' | 'static'>,
@@ -194,9 +179,6 @@ export class FileServerProxyHandler {
 		};
 	}
 
-	/**
-	 * バッジ用の画像を処理する
-	 */
 	private async processBadge(file: AvailableFile): Promise<IImageStreamable> {
 		const mask = (await sharpBmp(file.path, file.mime))
 			.resize(96, 96, {
@@ -206,7 +188,7 @@ export class FileServerProxyHandler {
 			})
 			.greyscale()
 			.normalise()
-			.linear(1.75, -(128 * 1.75) + 128) // 1.75x contrast
+			.linear(1.75, -(128 * 1.75) + 128) // 中間輝度128を維持してコントラストを1.75倍にする。
 			.flatten({ background: '#000' })
 			.toColorspace('b-w');
 
@@ -229,9 +211,6 @@ export class FileServerProxyHandler {
 		};
 	}
 
-	/**
-	 * デフォルトのストリームを作成する（Range リクエスト対応）
-	 */
 	private createDefaultStream(
 		file: AvailableFile,
 		request: FileServerRequest,

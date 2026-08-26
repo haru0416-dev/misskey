@@ -5,43 +5,37 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="oxxrhrto">
-	<svg :viewBox="`0 0 ${ viewBoxX } ${ viewBoxY }`">
+	<svg class="rx" :viewBox="`0 0 ${ viewBoxX } ${ viewBoxY }`">
 		<polygon
 			:points="inPolygonPoints"
-			fill="#94a029"
 			fill-opacity="0.5"
 		/>
 		<polyline
 			:points="inPolylinePoints"
 			fill="none"
-			stroke="#94a029"
 			stroke-width="1"
 		/>
 		<circle
 			:cx="inHeadX"
 			:cy="inHeadY"
 			r="1.5"
-			fill="#94a029"
 		/>
 		<text x="1" y="5">NET rx <tspan>{{ bytes(inRecent) }}</tspan></text>
 	</svg>
-	<svg :viewBox="`0 0 ${ viewBoxX } ${ viewBoxY }`">
+	<svg class="tx" :viewBox="`0 0 ${ viewBoxX } ${ viewBoxY }`">
 		<polygon
 			:points="outPolygonPoints"
-			fill="#ff9156"
 			fill-opacity="0.5"
 		/>
 		<polyline
 			:points="outPolylinePoints"
 			fill="none"
-			stroke="#ff9156"
 			stroke-width="1"
 		/>
 		<circle
 			:cx="outHeadX"
 			:cy="outHeadY"
 			r="1.5"
-			fill="#ff9156"
 		/>
 		<text x="1" y="5">NET tx <tspan>{{ bytes(outRecent) }}</tspan></text>
 	</svg>
@@ -49,10 +43,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { ref } from 'vue';
 import * as Misskey from 'misskey-js';
+import { useServerStats } from './use-server-stats.js';
 import bytes from '@/filters/bytes.js';
-import { genId } from '@/utility/id.js';
 
 const props = defineProps<{
 	connection: Misskey.IChannelConnection<Misskey.Channels['serverStats']>,
@@ -72,20 +66,6 @@ const outHeadX = ref<number>();
 const outHeadY = ref<number>();
 const inRecent = ref<number>(0);
 const outRecent = ref<number>(0);
-
-onMounted(() => {
-	props.connection.on('stats', onStats);
-	props.connection.on('statsLog', onStatsLog);
-	props.connection.send('requestLog', {
-		id: genId(),
-		length: 50,
-	});
-});
-
-onBeforeUnmount(() => {
-	props.connection.off('stats', onStats);
-	props.connection.off('statsLog', onStatsLog);
-});
 
 function onStats(connStats: Misskey.entities.ServerStats) {
 	stats.value.push(connStats);
@@ -111,11 +91,7 @@ function onStats(connStats: Misskey.entities.ServerStats) {
 	outRecent.value = connStats.net.tx;
 }
 
-function onStatsLog(statsLog: Misskey.entities.ServerStatsLog) {
-	for (const revStats of statsLog.toReversed()) {
-		onStats(revStats);
-	}
-}
+useServerStats(props.connection, onStats);
 </script>
 
 <style lang="scss" scoped>
@@ -133,6 +109,26 @@ function onStatsLog(statsLog: Misskey.entities.ServerStatsLog) {
 
 		&:last-child {
 			padding-left: 5px;
+		}
+
+		&.rx {
+			polygon, circle {
+				fill: var(--MI_THEME-success);
+			}
+
+			polyline {
+				stroke: var(--MI_THEME-success);
+			}
+		}
+
+		&.tx {
+			polygon, circle {
+				fill: var(--MI_THEME-warn);
+			}
+
+			polyline {
+				stroke: var(--MI_THEME-warn);
+			}
 		}
 
 		> text {

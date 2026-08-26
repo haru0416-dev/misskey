@@ -3,13 +3,24 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { channelCreateParamDef, channelFollowParamDef, channelMuteCreateParamDef, channelMuteDeleteParamDef, channelShowParamDef, channelUpdateParamDef, channelsListParamDef, channelsSearchParamDef, emptyParamDef } from '@/server/rest/channels.js';
-import { channelParamDef } from '@/server/rest/favorites.js';
+import {
+	channelCreateParamDef,
+	channelFollowParamDef,
+	channelMuteCreateParamDef,
+	channelMuteDeleteParamDef,
+	channelShowParamDef,
+	channelUpdateParamDef,
+	channelsListParamDef,
+	channelsSearchParamDef,
+	emptyParamDef,
+} from '@/server/rest/channel/channels.js';
+import { channelParamDef } from '@/server/rest/favorite/favorites.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'channels/create': {
 		meta: {
+			requireRolePolicy: 'canCreateChannel',
 			tags: ['channels'],
 
 			requireCredential: true,
@@ -27,7 +38,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Channel',
 			},
 
@@ -63,16 +75,19 @@ export const endpointMetas = {
 	},
 	'channels/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},
@@ -95,12 +110,18 @@ export const endpointMetas = {
 					code: 'NO_SUCH_CHANNEL',
 					id: 'c0031718-d573-4e85-928e-10039f1fbb68',
 				},
+				alreadyFollowing: {
+					message: 'You are already following that channel.',
+					code: 'ALREADY_FOLLOWING',
+					id: '7db31665-651e-40c1-8e6e-28e9ad829a2d',
+				},
 			},
 		} as const,
 		paramDef: channelFollowParamDef,
 	},
 	'channels/followed': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels', 'account'],
 
 			requireCredential: true,
@@ -109,10 +130,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},
@@ -121,6 +144,7 @@ export const endpointMetas = {
 	},
 	'channels/my-favorites': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels', 'account'],
 
 			requireCredential: true,
@@ -129,10 +153,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},
@@ -141,6 +167,7 @@ export const endpointMetas = {
 	},
 	'channels/owned': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels', 'account'],
 
 			requireCredential: true,
@@ -149,10 +176,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},
@@ -161,16 +190,19 @@ export const endpointMetas = {
 	},
 	'channels/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},
@@ -179,13 +211,15 @@ export const endpointMetas = {
 	},
 	'channels/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Channel',
 			},
 
@@ -201,16 +235,19 @@ export const endpointMetas = {
 	},
 	'channels/timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes', 'channels'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Note',
 				},
 			},
@@ -286,7 +323,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Channel',
 			},
 
@@ -370,6 +408,7 @@ export const endpointMetas = {
 	},
 	'channels/mute/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['channels', 'mute'],
 
 			requireCredential: true,
@@ -379,10 +418,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Channel',
 				},
 			},

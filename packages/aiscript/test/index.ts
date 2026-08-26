@@ -1,8 +1,3 @@
-/* eslint-disable prefer-const */
-/**
- * Tests!
- */
-
 import * as assert from 'assert';
 import { describe, expect, test } from 'vitest';
 import { Parser, Interpreter, Ast } from '../src';
@@ -197,7 +192,6 @@ describe('Object', () => {
 		])));
 	});
 
-	// see also: test/literals.ts > literal > obj (string key)
 	test.concurrent('string key', async () => {
 		const res = await exe(`
 		let obj = {
@@ -308,6 +302,16 @@ describe('Array', () => {
 			return;
 		}
 		assert.fail();
+	});
+
+	test.each([
+		['fractional', '0.5'],
+		['NaN', '0 / 0'],
+		['positive infinity', 'Math:Infinity'],
+		['negative infinity', '-Math:Infinity'],
+	])('rejects %s array indices for access and assignment', async (_name, index) => {
+		await expect(exe(`<: [1, 2][${index}]`)).rejects.toThrow(AiScriptIndexOutOfRangeError);
+		await expect(exe(`var arr = [1, 2]; arr[${index}] = 3`)).rejects.toThrow(AiScriptIndexOutOfRangeError);
 	});
 });
 
@@ -848,7 +852,6 @@ describe('Attribute', () => {
 		if (node.type !== 'def' || node.dest.type !== 'identifier') assert.fail();
 		assert.equal(node.dest.name, 'onRecieved');
 		assert.equal(node.attr.length, 1);
-		// attribute 1
 		attr = node.attr[0];
 		if (attr.type !== 'attr') assert.fail();
 		assert.equal(attr.name, 'Event');
@@ -873,7 +876,6 @@ describe('Attribute', () => {
 		if (node.type !== 'def' || node.dest.type !== 'identifier') assert.fail();
 		assert.equal(node.dest.name, 'createNote');
 		assert.equal(node.attr.length, 3);
-		// attribute 1
 		attr = node.attr[0];
 		if (attr.type !== 'attr') assert.fail();
 		assert.equal(attr.name, 'Endpoint');
@@ -888,13 +890,11 @@ describe('Attribute', () => {
 				assert.fail();
 			}
 		}
-		// attribute 2
 		attr = node.attr[1];
 		if (attr.type !== 'attr') assert.fail();
 		assert.equal(attr.name, 'Desc');
 		if (attr.value.type !== 'str') assert.fail();
 		assert.equal(attr.value.value, 'Create a note.');
-		// attribute 3
 		attr = node.attr[2];
 		if (attr.type !== 'attr') assert.fail();
 		assert.equal(attr.name, 'Cat');
@@ -948,7 +948,6 @@ describe('Attribute', () => {
 		if (node.type !== 'def' || node.dest.type !== 'identifier') assert.fail();
 		assert.equal(node.dest.name, 'data');
 		assert.equal(node.attr.length, 1);
-		// attribute 1
 		attr = node.attr[0];
 		assert.ok(attr.type === 'attr');
 		assert.equal(attr.name, 'serializable');

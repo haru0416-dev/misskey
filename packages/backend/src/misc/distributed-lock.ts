@@ -13,7 +13,11 @@ end
 return 0
 `;
 
-export async function acquireDistributedLock(
+/**
+ * 自動延長しない固定期限のleaseを取得する。
+ * token付き解放により、期限切れ後の旧ownerが新しいleaseを削除することだけは防ぐ。
+ */
+async function acquireDistributedLock(
 	redis: Redis.Redis,
 	name: string,
 	timeout: number,
@@ -32,23 +36,17 @@ export async function acquireDistributedLock(
 			};
 		}
 
-		await new Promise(resolve => setTimeout(resolve, retryInterval));
+		await new Promise((resolve) => setTimeout(resolve, retryInterval));
 		retries++;
 	}
 
 	throw new Error(`Failed to acquire lock ${name}`);
 }
 
-export function acquireApObjectLock(
-	redis: Redis.Redis,
-	uri: string,
-): Promise<() => Promise<void>> {
+export function acquireApObjectLock(redis: Redis.Redis, uri: string): Promise<() => Promise<void>> {
 	return acquireDistributedLock(redis, `ap-object:${uri}`, 30 * 1000, 50, 100);
 }
 
-export function acquireChartInsertLock(
-	redis: Redis.Redis,
-	name: string,
-): Promise<() => Promise<void>> {
+export function acquireChartInsertLock(redis: Redis.Redis, name: string): Promise<() => Promise<void>> {
 	return acquireDistributedLock(redis, `chart-insert:${name}`, 30 * 1000, 50, 500);
 }

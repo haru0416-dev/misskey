@@ -3,7 +3,32 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { chatHistoryParamDef, chatMessagesCreateToRoomParamDef, chatMessagesCreateToUserParamDef, chatMessagesDeleteParamDef, chatMessagesReactParamDef, chatMessagesRoomTimelineParamDef, chatMessagesSearchParamDef, chatMessagesShowParamDef, chatMessagesUnreactParamDef, chatMessagesUserTimelineParamDef, chatRoomsCreateParamDef, chatRoomsDeleteParamDef, chatRoomsInvitationsCreateParamDef, chatRoomsInvitationsIgnoreParamDef, chatRoomsInvitationsInboxParamDef, chatRoomsInvitationsOutboxParamDef, chatRoomsJoinParamDef, chatRoomsJoiningParamDef, chatRoomsLeaveParamDef, chatRoomsMembersParamDef, chatRoomsMuteParamDef, chatRoomsOwnedParamDef, chatRoomsShowParamDef, chatRoomsUpdateParamDef } from '@/server/rest/chat.js';
+import {
+	chatHistoryParamDef,
+	chatMessagesCreateToRoomParamDef,
+	chatMessagesCreateToUserParamDef,
+	chatMessagesDeleteParamDef,
+	chatMessagesReactParamDef,
+	chatMessagesRoomTimelineParamDef,
+	chatMessagesSearchParamDef,
+	chatMessagesShowParamDef,
+	chatMessagesUnreactParamDef,
+	chatMessagesUserTimelineParamDef,
+	chatRoomsCreateParamDef,
+	chatRoomsDeleteParamDef,
+	chatRoomsInvitationsCreateParamDef,
+	chatRoomsInvitationsIgnoreParamDef,
+	chatRoomsInvitationsInboxParamDef,
+	chatRoomsInvitationsOutboxParamDef,
+	chatRoomsJoinParamDef,
+	chatRoomsJoiningParamDef,
+	chatRoomsLeaveParamDef,
+	chatRoomsMembersParamDef,
+	chatRoomsMuteParamDef,
+	chatRoomsOwnedParamDef,
+	chatRoomsShowParamDef,
+	chatRoomsUpdateParamDef,
+} from '@/server/rest/chat/chat.js';
 import { z } from 'zod';
 import { HOUR, DAY } from '@/const.js';
 
@@ -25,7 +50,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatMessageLiteFor1on1',
 			},
 
@@ -59,6 +85,12 @@ export const endpointMetas = {
 					code: 'YOU_HAVE_BEEN_BLOCKED',
 					id: 'c15a5199-7422-4968-941a-2a462c478f7d',
 				},
+
+				chatNotAvailable: {
+					message: 'Chat is not available with this user.',
+					code: 'CHAT_NOT_AVAILABLE',
+					id: '0b6812b5-f0c3-486b-a99a-4973d22c44b2',
+				},
 			},
 		} as const,
 		paramDef: chatMessagesCreateToUserParamDef,
@@ -80,7 +112,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatMessageLiteForRoom',
 			},
 
@@ -126,6 +159,7 @@ export const endpointMetas = {
 	},
 	'chat/messages/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -134,7 +168,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatMessage',
 			},
 
@@ -162,6 +197,12 @@ export const endpointMetas = {
 					code: 'NO_SUCH_MESSAGE',
 					id: '9b5839b9-0ba0-4351-8c35-37082093d200',
 				},
+
+				tooManyReactions: {
+					message: 'This message has too many reactions.',
+					code: 'TOO_MANY_REACTIONS',
+					id: '86753281-61b8-4dea-9a38-a08c0439f151',
+				},
 			},
 		} as const,
 		paramDef: chatMessagesReactParamDef,
@@ -186,6 +227,7 @@ export const endpointMetas = {
 	},
 	'chat/messages/user-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -194,10 +236,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatMessageLiteFor1on1',
 				},
 			},
@@ -214,6 +258,7 @@ export const endpointMetas = {
 	},
 	'chat/messages/room-timeline': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -222,10 +267,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatMessageLiteForRoom',
 				},
 			},
@@ -242,6 +289,7 @@ export const endpointMetas = {
 	},
 	'chat/messages/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -250,10 +298,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatMessage',
 				},
 			},
@@ -285,12 +335,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatRoom',
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: chatRoomsCreateParamDef,
 	},
@@ -325,6 +375,12 @@ export const endpointMetas = {
 					message: 'No such room.',
 					code: 'NO_SUCH_ROOM',
 					id: '84416476-5ce8-4a2c-b568-9569f1b10733',
+				},
+
+				cannotJoinRoom: {
+					message: 'Cannot join this room.',
+					code: 'CANNOT_JOIN_ROOM',
+					id: 'c5a1e411-996d-46e1-be6e-82a8b996d1a1',
 				},
 			},
 		} as const,
@@ -368,6 +424,7 @@ export const endpointMetas = {
 	},
 	'chat/rooms/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -376,7 +433,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatRoom',
 			},
 
@@ -392,6 +450,7 @@ export const endpointMetas = {
 	},
 	'chat/rooms/owned': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -400,21 +459,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatRoom',
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: chatRoomsOwnedParamDef,
 	},
 	'chat/rooms/joining': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -423,16 +484,17 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatRoomMembership',
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: chatRoomsJoiningParamDef,
 	},
@@ -446,7 +508,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatRoom',
 			},
 
@@ -470,10 +533,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatRoomMembership',
 				},
 			},
@@ -505,7 +570,8 @@ export const endpointMetas = {
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'ChatRoomInvitation',
 			},
 
@@ -514,6 +580,18 @@ export const endpointMetas = {
 					message: 'No such room.',
 					code: 'NO_SUCH_ROOM',
 					id: '916f9507-49ba-4e90-b57f-1fd4deaa47a5',
+				},
+
+				noSuchUser: {
+					message: 'No such user.',
+					code: 'NO_SUCH_USER',
+					id: '0f451b9e-fc21-491a-b2bf-46331103a945',
+				},
+
+				cannotCreateInvitation: {
+					message: 'Cannot create an invitation for this room.',
+					code: 'CANNOT_CREATE_INVITATION',
+					id: 'a3482fe1-78c8-4489-bcbf-a488631e95f4',
 				},
 			},
 		} as const,
@@ -539,6 +617,7 @@ export const endpointMetas = {
 	},
 	'chat/rooms/invitations/inbox': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -547,21 +626,23 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatRoomInvitation',
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: chatRoomsInvitationsInboxParamDef,
 	},
 	'chat/rooms/invitations/outbox': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -570,10 +651,12 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatRoomInvitation',
 				},
 			},
@@ -590,6 +673,7 @@ export const endpointMetas = {
 	},
 	'chat/history': {
 		meta: {
+			allowQuery: true,
 			tags: ['chat'],
 
 			requireCredential: true,
@@ -598,16 +682,17 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'ChatMessage',
 				},
 			},
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: chatHistoryParamDef,
 	},
@@ -619,8 +704,7 @@ export const endpointMetas = {
 
 			kind: 'write:chat',
 
-			errors: {
-			},
+			errors: {},
 		} as const,
 		paramDef: z.object({}),
 	},

@@ -3,21 +3,30 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { hashtagsListParamDef, hashtagsSearchParamDef, hashtagsShowParamDef, hashtagsTrendParamDef, hashtagsUsersParamDef } from '@/server/rest/hashtags.js';
+import {
+	hashtagsListParamDef,
+	hashtagsSearchParamDef,
+	hashtagsShowParamDef,
+	hashtagsTrendParamDef,
+	hashtagsUsersParamDef,
+} from '@/server/rest/hashtag/hashtags.js';
 
 export const endpointMetas = {
 	'hashtags/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['hashtags'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'Hashtag',
 				},
 			},
@@ -26,16 +35,19 @@ export const endpointMetas = {
 	},
 	'hashtags/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['hashtags'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'string',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 				},
 			},
 		} as const,
@@ -43,13 +55,15 @@ export const endpointMetas = {
 	},
 	'hashtags/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['hashtags'],
 
 			requireCredential: false,
 
 			res: {
 				type: 'object',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				ref: 'Hashtag',
 			},
 
@@ -65,6 +79,7 @@ export const endpointMetas = {
 	},
 	'hashtags/trend': {
 		meta: {
+			allowQuery: true,
 			tags: ['hashtags'],
 
 			requireCredential: false,
@@ -73,26 +88,32 @@ export const endpointMetas = {
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					properties: {
 						tag: {
 							type: 'string',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 						chart: {
 							type: 'array',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 							items: {
 								type: 'number',
-								optional: false, nullable: false,
+								optional: false,
+								nullable: false,
 							},
 						},
 						usersCount: {
 							type: 'number',
-							optional: false, nullable: false,
+							optional: false,
+							nullable: false,
 						},
 					},
 				},
@@ -102,16 +123,19 @@ export const endpointMetas = {
 	},
 	'hashtags/users': {
 		meta: {
+			allowQuery: true,
 			requireCredential: false,
 
 			tags: ['hashtags', 'users'],
 
 			res: {
 				type: 'array',
-				optional: false, nullable: false,
+				optional: false,
+				nullable: false,
 				items: {
 					type: 'object',
-					optional: false, nullable: false,
+					optional: false,
+					nullable: false,
 					ref: 'UserDetailed',
 				},
 			},

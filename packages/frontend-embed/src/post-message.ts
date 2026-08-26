@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export const postMessageEventTypes = [
+const postMessageEventTypes = [
 	'misskey:embed:ready',
 	'misskey:embed:changeHeight',
 ] as const;
@@ -17,7 +17,7 @@ export interface PostMessageEventPayload extends Record<PostMessageEventType, un
 	};
 }
 
-export type MiPostMessageEvent<T extends PostMessageEventType = PostMessageEventType> = {
+type MiPostMessageEvent<T extends PostMessageEventType = PostMessageEventType> = {
 	type: T;
 	iframeId?: string;
 	payload?: PostMessageEventPayload[T];
@@ -32,15 +32,13 @@ export function setIframeId(id: string): void {
 	defaultIframeId = id;
 }
 
-/**
- * 親フレームにイベントを送信
- */
 export function postMessageToParentWindow<T extends PostMessageEventType = PostMessageEventType>(type: T, payload?: PostMessageEventPayload[T], iframeId: string | null = null): void {
 	let _iframeId = iframeId;
 	if (_iframeId == null) {
 		_iframeId = defaultIframeId;
 	}
 	if (_DEV_) console.log('postMessageToParentWindow', type, _iframeId, payload);
+	// embed先のoriginは事前に特定できない。機密情報は送らず、受信側がevent.sourceをiframeと照合する。
 	window.parent.postMessage({
 		type,
 		iframeId: _iframeId,

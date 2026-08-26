@@ -1,7 +1,6 @@
 <!-- ℹ お読みください / README
-PRありがとうございます！ PRを作成する前に、コントリビューションガイドをご確認ください:
-Thank you for your PR! Before creating a PR, please check the contribution guide:
-https://github.com/misskey-dev/misskey/blob/develop/CONTRIBUTING.md
+PR を作成する前に、コントリビューションガイド (CONTRIBUTING.md) をご確認ください。
+Thank you for your PR! Before creating a PR, please check the contribution guide (CONTRIBUTING.md).
 -->
 
 ## What
@@ -17,7 +16,7 @@ https://github.com/misskey-dev/misskey/blob/develop/CONTRIBUTING.md
 <!-- Test perspective, etc -->
 
 ## Checklist
-- [ ] Read the [contribution guide](https://github.com/misskey-dev/misskey/blob/develop/CONTRIBUTING.md)
+- [ ] Read the [contribution guide](/CONTRIBUTING.md)
 - [ ] Test working in a local environment
 - [ ] (If needed) Add story of storybook
 - [ ] (If needed) Update CHANGELOG.md

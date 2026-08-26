@@ -4,7 +4,7 @@
  */
 
 // structredCloneが遅いため
-// SEE: http://var.blog.jp/archives/86038606.html
+// 参照: http://var.blog.jp/archives/86038606.html
 
 export type Cloneable = string | number | boolean | null | undefined | { [key: string]: Cloneable } | Cloneable[];
 
@@ -15,7 +15,9 @@ export type OmitUndefinedProperties<T extends object> = {
 };
 
 export function omitUndefined<T extends object>(value: T): OmitUndefinedProperties<T> {
-	return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as OmitUndefinedProperties<T>;
+	return Object.fromEntries(
+		Object.entries(value).filter(([, item]) => item !== undefined),
+	) as OmitUndefinedProperties<T>;
 }
 
 export function deepClone<T extends Cloneable>(x: T): T {

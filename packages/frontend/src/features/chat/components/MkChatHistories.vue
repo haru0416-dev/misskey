@@ -86,7 +86,6 @@ onDeactivated(() => {
 });
 
 useInterval(() => {
-	// TODO: DOM的にバックグラウンドになっていないかどうかも考慮する
 	if (!window.document.hidden && isActivated) {
 		fetchHistory();
 	}
@@ -108,7 +107,7 @@ onMounted(() => {
 .message {
 	position: relative;
 	display: flex;
-	padding: 16px 24px;
+	padding: var(--MI-space-lg) var(--MI-space-2xl);
 
 	&.isRead,
 	&.isMe {
@@ -119,8 +118,8 @@ onMounted(() => {
 		&::before {
 			content: '';
 			position: absolute;
-			top: 8px;
-			right: 8px;
+			top: var(--MI-space-sm);
+			right: var(--MI-space-sm);
 			width: 8px;
 			height: 8px;
 			border-radius: 100%;
@@ -132,21 +131,21 @@ onMounted(() => {
 @container (max-width: 500px) {
 	.message {
 		font-size: 90%;
-		padding: 14px 20px;
+		padding: var(--MI-space-md) var(--MI-space-xl);
 	}
 }
 
 @container (max-width: 450px) {
 	.message {
 		font-size: 80%;
-		padding: 12px 16px;
+		padding: var(--MI-space-md) var(--MI-space-lg);
 	}
 }
 
 .messageAvatar {
 	width: 50px;
 	height: 50px;
-	margin: 0 16px 0 0;
+	margin: 0 var(--MI-space-lg) 0 0;
 }
 
 @container (max-width: 500px) {
@@ -171,7 +170,7 @@ onMounted(() => {
 .messageHeader {
 	display: flex;
 	align-items: center;
-	margin-bottom: 2px;
+	margin-bottom: var(--MI-space-2xs);
 	white-space: nowrap;
 	overflow: clip;
 }
@@ -186,7 +185,7 @@ onMounted(() => {
 }
 
 .messageHeaderUsername {
-	margin: 0 8px;
+	margin: 0 var(--MI-space-sm);
 }
 
 .messageHeaderTime {

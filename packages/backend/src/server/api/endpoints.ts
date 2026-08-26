@@ -17,6 +17,9 @@ interface IEndpointMetaBase {
 			readonly message: string;
 			readonly code: string;
 			readonly id: string;
+			readonly httpStatusCode?: number;
+			readonly kind?: 'client' | 'server' | 'permission';
+			readonly info?: unknown;
 		};
 	};
 
@@ -47,11 +50,16 @@ interface IEndpointMetaBase {
 	readonly prohibitMoved?: boolean;
 
 	/**
+	 * 実行に必要なロールポリシー名。root は常に通る。
+	 * 権限 (kind) とは別軸で、インスタンスがロールで許可を配る種類の制限に使う。
+	 */
+	readonly requireRolePolicy?: string;
+
+	/**
 	 * エンドポイントのリミテーションに関するやつ
 	 * 省略した場合はリミテーションは無いものとして解釈されます。
 	 */
 	readonly limit?: {
-
 		/**
 		 * 複数のエンドポイントでリミットを共有したい場合に指定するキー
 		 */
@@ -99,6 +107,11 @@ interface IEndpointMetaBase {
 	 * GETでのリクエストを許容するか否か
 	 */
 	readonly allowGet?: boolean;
+	/**
+	 * QUERY (RFC 10008) でも受け付けるか。safe かつ idempotent な読み取りにのみ付けること。
+	 * 書き込みに付けると中間プロキシが安全に再送してよいものとして扱う。
+	 */
+	readonly allowQuery?: boolean;
 
 	/**
 	 * 正常応答をキャッシュ (Cache-Control: public) する秒数
@@ -106,29 +119,34 @@ interface IEndpointMetaBase {
 	readonly cacheSec?: number;
 }
 
-export type IEndpointMeta = (Omit<IEndpointMetaBase, 'requireCrential' | 'requireModerator' | 'requireAdmin'> & {
-	requireCredential?: false,
-	requireAdmin?: false,
-	requireModerator?: false,
-}) | (Omit<IEndpointMetaBase, 'secure'> & {
-	secure: true,
-}) | (Omit<IEndpointMetaBase, 'requireCredential' | 'kind'> & {
-	requireCredential: true,
-	kind: (typeof permissions)[number],
-}) | (Omit<IEndpointMetaBase, 'requireModerator' | 'kind'> & {
-	requireModerator: true,
-	kind: (typeof permissions)[number],
-}) | (Omit<IEndpointMetaBase, 'requireAdmin' | 'kind'> & {
-	requireAdmin: true,
-	kind: (typeof permissions)[number],
-});
+export type IEndpointMeta =
+	| (Omit<IEndpointMetaBase, 'requireCrential' | 'requireModerator' | 'requireAdmin'> & {
+			requireCredential?: false;
+			requireAdmin?: false;
+			requireModerator?: false;
+	  })
+	| (Omit<IEndpointMetaBase, 'secure'> & {
+			secure: true;
+	  })
+	| (Omit<IEndpointMetaBase, 'requireCredential' | 'kind'> & {
+			requireCredential: true;
+			kind: (typeof permissions)[number];
+	  })
+	| (Omit<IEndpointMetaBase, 'requireModerator' | 'kind'> & {
+			requireModerator: true;
+			kind: (typeof permissions)[number];
+	  })
+	| (Omit<IEndpointMetaBase, 'requireAdmin' | 'kind'> & {
+			requireAdmin: true;
+			kind: (typeof permissions)[number];
+	  });
 
 export interface IEndpoint {
 	name: string;
 	meta: IEndpointMeta;
 	// 429件中428件の paramDef が z.ZodType 化済み。残り1件 (admin/update-meta の
-	// adminUpdateMetaJsonSchema, AdminUpdateMetaLogic.ts) のみ旧 JSON Schema 形式で、
-	// それが解消されるまで Schema 側の型を残す。
+	// adminUpdateMetaJsonSchema, AdminUpdateMetaLogic.ts) は JSON Schema 形式のため、
+	// Schema 側の型も受け付ける。
 	params: Schema | z.ZodType;
 }
 
@@ -144,5 +162,4 @@ const endpoints: IEndpoint[] = Object.entries(endpointMetas).map(([name, ep]) =>
 	};
 });
 
-// eslint-disable-next-line import/no-default-export
 export default endpoints;

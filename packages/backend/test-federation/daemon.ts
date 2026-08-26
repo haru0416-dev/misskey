@@ -4,23 +4,25 @@ import { Redis } from 'ioredis';
 const TESTER_IP_ADDRESS = '172.20.1.1';
 
 /**
- * This should be same as {@link file://./../src/misc/get-ip-hash.ts}.
+ * {@link file://./../src/misc/get-ip-hash.ts} と同じ計算方法を使う。
  */
 function getIpHash(ip: string) {
-	const prefix = ipaddr.parse(ip).toByteArray()
-		.map(byte => byte.toString(2).padStart(8, '0'))
+	const prefix = ipaddr
+		.parse(ip)
+		.toByteArray()
+		.map((byte) => byte.toString(2).padStart(8, '0'))
 		.join('')
 		.slice(0, 64);
 	return `ip-${BigInt('0b' + prefix).toString(36)}`;
 }
 
 /**
- * This prevents hitting rate limit when login.
+ * サインイン時のレート制限に達しないようにする。
  */
 export async function purgeLimit(host: string, client: Redis) {
 	const ipHash = getIpHash(TESTER_IP_ADDRESS);
 	const key = `${host}:limit:${ipHash}:signin`;
-	const res = await client.zrange(key, 0, -1);
+	const res = await client.zrange(key, 0, '-1');
 	if (res.length !== 0) {
 		console.log(`${key} - ${JSON.stringify(res)}`);
 		await client.del(key);

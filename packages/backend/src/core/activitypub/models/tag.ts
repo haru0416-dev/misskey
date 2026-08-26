@@ -12,10 +12,12 @@ export function extractApHashtags(tags: IObject | IObject[] | null | undefined):
 
 	const hashtags = extractApHashtagObjects(tags);
 
-	return hashtags.map(tag => {
-		const m = tag.name.match(/^#(.+)/);
-		return m ? m[1] : null;
-	}).filter(x => x != null);
+	return hashtags
+		.map((tag) => {
+			const m = tag.name.match(/^#(.+)/);
+			return m ? m[1] : null;
+		})
+		.filter((x) => x != null);
 }
 
 export function extractApHashtagObjects(tags: IObject | IObject[] | null | undefined): IApHashtag[] {

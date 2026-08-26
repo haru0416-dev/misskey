@@ -110,7 +110,9 @@ describe('ImageCompositor', () => {
 
 	test('fails when WebGL does not expose a declared uniform', () => {
 		const gl = createGl();
-		vi.mocked(gl.getUniformLocation).mockImplementation((_program, name) => name === 'u_amount' ? null : {} as WebGLUniformLocation);
+		vi.mocked(gl.getUniformLocation).mockImplementation((_program, name) =>
+			name === 'u_amount' ? null : ({} as WebGLUniformLocation),
+		);
 		const canvas = window.document.createElement('canvas');
 		vi.spyOn(canvas, 'getContext').mockReturnValue(gl);
 		const compositor = new ImageCompositor({

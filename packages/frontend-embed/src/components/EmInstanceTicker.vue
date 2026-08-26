@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root" :style="bg">
-	<img v-if="faviconUrl" :class="$style.icon" :src="faviconUrl"/>
+	<img v-if="faviconUrl" :class="$style.icon" :src="faviconUrl" alt=""/>
 	<div :class="$style.name">{{ instance.name }}</div>
 </div>
 </template>
@@ -26,7 +26,6 @@ const props = defineProps<{
 	}
 }>();
 
-// if no instance data is given, this is for the local instance
 const instance = props.instance ?? {
 	name: serverMetadata.name,
 	themeColor: (window.document.querySelector('meta[name="theme-color-orig"]') as HTMLMetaElement)?.content,

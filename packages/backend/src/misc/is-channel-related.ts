@@ -14,7 +14,11 @@ import { Packed } from '@/misc/json-schema.js';
  * @param channelIds 確認対象のチャンネルID一覧
  * @param ignoreAuthor trueの場合、ノートの所属チャンネルが{@link channelIds}に含まれていても無視します（デフォルトはfalse）
  */
-export function isChannelRelated(note: MiNote | Packed<'Note'>, channelIds: Set<string>, ignoreAuthor = false): boolean {
+export function isChannelRelated(
+	note: MiNote | Packed<'Note'>,
+	channelIds: Set<string>,
+	ignoreAuthor = false,
+): boolean {
 	if (!ignoreAuthor && note.channelId && channelIds.has(note.channelId)) {
 		return true;
 	}
@@ -24,7 +28,7 @@ export function isChannelRelated(note: MiNote | Packed<'Note'>, channelIds: Set<
 		return true;
 	}
 
-	// NOTE: リプライはchannelIdのチェックだけでOKなはずなので見てない(チャンネルのノートにチャンネル外からのリプライまたはその逆はないはずなので）
+	// note作成時にreply先のchannelへ正規化されるため、replyを別途辿らなくてもnote.channelIdで判定できる。
 
 	return false;
 }

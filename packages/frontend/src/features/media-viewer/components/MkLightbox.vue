@@ -25,6 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div v-for="(content, i) in contents" :key="content.url" :class="$style.item" :inert="i !== currentIndex" :aria-hidden="i !== currentIndex">
 					<XItem
 						:ref="comp => { if (comp != null) items.set(i, comp as InstanceType<typeof XItem>); }"
+						v-model:pixelatedZoom="pixelatedZoom"
 						:content="content"
 						:initiallyOpened="i === (defaultIndex ?? 0)"
 						:activated="activatedIndexes.has(i)"
@@ -65,6 +66,8 @@ const showing = ref(true);
 const activatedIndexes = ref(new Set<number>());
 const items = new Map<number, InstanceType<typeof XItem>>();
 const currentIndex = ref(props.defaultIndex ?? 0);
+// 1 回のビューワー操作の間だけ保つ設定なので、各アイテムではなくここで持って全アイテムに配る
+const pixelatedZoom = ref(false);
 const screenWidth = ref(window.innerWidth);
 const contentsOffset = ref(currentIndex.value * -window.innerWidth);
 const enableSlideTransition = ref(false);

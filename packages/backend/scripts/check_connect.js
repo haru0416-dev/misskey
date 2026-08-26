@@ -28,28 +28,23 @@ async function connectToRedis(redisOptions) {
 			showFriendlyErrorStack: true,
 		});
 
-		await Promise.race([
-			new Promise((_, reject) => redis.on('error', e => reject(e))),
-			redis.connect(),
-		]);
+		await Promise.race([new Promise((_, reject) => redis.on('error', (e) => reject(e))), redis.connect()]);
 	} finally {
 		redis.disconnect(false);
 	}
 }
 
-// If not all of these are defined, the default one gets reused.
-// so we use a Set to only try connecting once to each **uniq** redis.
-const promises = Array
-	.from(new Set([
+// 個別設定がない接続先には primary の設定が再利用されるため、Set で重複接続を避ける。
+const promises = Array.from(
+	new Set([
 		config.valkey.primary,
 		config.valkey.pubsub,
 		config.valkey.jobQueue,
 		config.valkey.timelines,
 		config.valkey.reactions,
-	]))
+	]),
+)
 	.map(connectToRedis)
-	.concat([
-		connectToPostgres(),
-	]);
+	.concat([connectToPostgres()]);
 
 await Promise.all(promises);

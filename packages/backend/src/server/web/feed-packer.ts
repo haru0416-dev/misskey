@@ -6,11 +6,12 @@
 import { Feed } from 'feed';
 import { parse as mfmParse } from 'mfm-js';
 import type { Config } from '@/config.js';
-import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
-import { mfmToHtml } from '@/core/MfmToHtml.js';
-import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
-import { listPublicFeedNotesByUserIdFromDatabase } from '@/core/NoteStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
+import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
+import { mfmToHtml } from '@/core/mfm/MfmToHtml.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { listPublicFeedNotesByUserIdFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
@@ -22,18 +23,7 @@ export type FeedPackerDependencies = {
 	meta: MiMeta;
 };
 
-function getIdenticonUrl(config: Config, meta: MiMeta, user: MiUser): string {
-	if ((user.host == null || user.host === config.runtime.host) && user.username.includes('.') && meta.iconUrl) {
-		return meta.iconUrl;
-	}
-
-	return `${config.instance.url}/identicon/${user.username.toLowerCase()}@${user.host ?? config.runtime.host}`;
-}
-
-export async function packFeed(
-	deps: FeedPackerDependencies,
-	user: MiUser,
-): Promise<Feed> {
+export async function packFeed(deps: FeedPackerDependencies, user: MiUser): Promise<Feed> {
 	const author = {
 		link: `${deps.config.instance.url}/@${user.username}`,
 		name: user.name ?? user.username,
@@ -59,13 +49,13 @@ export async function packFeed(
 		copyright: user.name ?? user.username,
 	});
 
-	const allFileIds = [...new Set(notes.flatMap(note => note.fileIds))];
+	const allFileIds = [...new Set(notes.flatMap((note) => note.fileIds))];
 	const allFiles = allFileIds.length > 0 ? await listDriveFilesByIdsFromDatabase(deps.db, allFileIds) : [];
-	const filesById = new Map(allFiles.map(file => [file.id, file]));
+	const filesById = new Map(allFiles.map((file) => [file.id, file]));
 
 	for (const note of notes) {
-		const files = note.fileIds.map(id => filesById.get(id)).filter(file => file != null);
-		const file = files.find(file => file.type.startsWith('image/'));
+		const files = note.fileIds.map((id) => filesById.get(id)).filter((file) => file != null);
+		const file = files.find((file) => file.type.startsWith('image/'));
 		const text = note.text;
 		const content = text ? mfmToHtml(deps.config, mfmParse(text), JSON.parse(note.mentionedRemoteUsers)) : null;
 

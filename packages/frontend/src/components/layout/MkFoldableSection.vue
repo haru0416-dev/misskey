@@ -50,7 +50,6 @@ const props = withDefaults(defineProps<{
 
 const rootEl = useTemplateRef('rootEl');
 const parentBg = ref<string | null>(null);
-// eslint-disable-next-line vue/no-setup-props-reactivity-loss
 const showBody = ref((props.persistKey && miLocalStorage.getItem(`${miLocalStoragePrefix}${props.persistKey}`)) ? (miLocalStorage.getItem(`${miLocalStoragePrefix}${props.persistKey}`) === 't') : props.expanded);
 
 watch(showBody, () => {
@@ -93,7 +92,6 @@ onBeforeUnmount(() => {
 
 .header {
 	display: flex;
-	position: relative;
 	z-index: 10;
 	position: sticky;
 	top: var(--MI-stickyTop, 0px);

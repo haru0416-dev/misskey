@@ -15,10 +15,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-if="!fetching && player?.url != null" class="player">
 			<iframe
 				:src="transformPlayerUrl(player.url)"
-				frameborder="0"
+				:title="title ?? player.url"
 				:allow="player.allow.join('; ')"
 				allowfullscreen
-				:style="{ opacity: iframeLoaded ? 1 : 0, transition: 'opacity 0.3s' }"
+				:style="{ border: 0, opacity: iframeLoaded ? 1 : 0, transition: 'opacity 0.3s' }"
 				@load="onFrameLoad"
 			></iframe>
 		</div>
@@ -58,7 +58,6 @@ async function ytFetch() {
 	if (typeof props.urlOrSummalyResult === 'string') {
 		const requestUrl = new URL(props.urlOrSummalyResult, window.location.href);
 		if (requestUrl.protocol !== 'http:' && requestUrl.protocol !== 'https:') {
-			// Invalid URL
 			fetching.value = false;
 			return;
 		}
