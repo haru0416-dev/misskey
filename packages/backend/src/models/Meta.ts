@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { RolePolicies } from '@/core/role-policies.js';
+import type { RolePolicies } from '@/core/role/role-policies.js';
 import { MiUser } from './User.js';
 
 export class MiMeta {

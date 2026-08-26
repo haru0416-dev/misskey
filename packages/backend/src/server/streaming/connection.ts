@@ -5,13 +5,13 @@
 
 import type { EventEmitter } from 'node:events';
 import type { GlobalEvents } from '@/core/global-events.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
-import { listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
-import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
-import { listMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/RenoteMutingStore.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
+import { listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/user/FollowingStore.js';
+import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelFollowingStore.js';
+import { listMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelMutingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/user/RenoteMutingStore.js';
 import { markAllHonoApiNotificationsAsRead, type HonoApiNotificationDependencies } from '../rest/notification.js';
 import { isJsonObject, type JsonObject, type JsonValue } from '@/misc/json-value.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

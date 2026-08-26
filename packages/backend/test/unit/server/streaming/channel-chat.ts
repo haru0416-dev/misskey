@@ -12,7 +12,7 @@ import { EventEmitter } from 'node:events';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { createChatRoomForHonoApi } from '@/server/rest/chat.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { HonoStreamConnection, type HonoStreamConnectionDependencies } from '@/server/streaming/connection.js';

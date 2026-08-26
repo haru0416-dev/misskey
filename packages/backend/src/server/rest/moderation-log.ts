@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
+import { listModerationLogsFromDatabase } from '@/core/moderation/ModerationLogStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId } from '@/misc/zod-params.js';

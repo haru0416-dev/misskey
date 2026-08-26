@@ -12,9 +12,9 @@ import {
 	fetchEmojiByIdOrFailFromDatabase,
 	fetchEmojiByNameAndHostFromDatabaseCached,
 	insertEmojiInDatabase,
-} from '@/core/EmojiStore.js';
-import { listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+} from '@/core/emoji/EmojiStore.js';
+import { listModerationLogsFromDatabase } from '@/core/moderation/ModerationLogStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser } from '@/models/User.js';

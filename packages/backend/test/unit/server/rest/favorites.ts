@@ -25,25 +25,25 @@ const {
 	userListFavoriteExistsMock: vi.fn(),
 }));
 
-vi.mock('@/core/ClipFavoriteStore.js', () => ({
+vi.mock('@/core/clip/ClipFavoriteStore.js', () => ({
 	clipFavoriteExistsInDatabase: clipFavoriteExistsMock,
 	createClipFavoriteInDatabase: createClipFavoriteMock,
 	deleteClipFavoriteByIdFromDatabase: vi.fn(),
 	fetchClipFavoriteFromDatabase: vi.fn(),
 }));
 
-vi.mock('@/core/ClipStore.js', () => ({
+vi.mock('@/core/clip/ClipStore.js', () => ({
 	fetchClipByIdFromDatabase: fetchClipMock,
 }));
 
-vi.mock('@/core/UserListFavoriteStore.js', () => ({
+vi.mock('@/core/user/UserListFavoriteStore.js', () => ({
 	createUserListFavoriteInDatabase: createUserListFavoriteMock,
 	deleteUserListFavoriteByIdFromDatabase: vi.fn(),
 	fetchUserListFavoriteFromDatabase: vi.fn(),
 	userListFavoriteExistsInDatabase: userListFavoriteExistsMock,
 }));
 
-vi.mock('@/core/UserListStore.js', () => ({
+vi.mock('@/core/user/UserListStore.js', () => ({
 	userListExistsByIdAndPublicFromDatabase: userListExistsMock,
 }));
 

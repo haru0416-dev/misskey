@@ -4,15 +4,15 @@
  */
 
 import { z } from 'zod';
-import { deleteAccountWithSideEffects } from '@/core/DeleteAccountLogic.js';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import type { DbQueue, DeliverQueue } from '@/core/queues.js';
-import { RootUserAlreadyAssignedError } from '@/core/SignupStore.js';
-import { fetchOrCreateSystemAccount } from '@/core/system-account-runtime.js';
-import { updateSystemAccountUserInDatabase } from '@/core/SystemAccountStore.js';
-import { fetchUserProfileByEmailFromDatabase } from '@/core/UserProfileStore.js';
-import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { deleteAccountWithSideEffects } from '@/core/account/DeleteAccountLogic.js';
+import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
+import { RootUserAlreadyAssignedError } from '@/core/account/SignupStore.js';
+import { fetchOrCreateSystemAccount } from '@/core/system-account/system-account-runtime.js';
+import { updateSystemAccountUserInDatabase } from '@/core/system-account/SystemAccountStore.js';
+import { fetchUserProfileByEmailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { descriptionSchema, localUsernameSchema, passwordSchema } from '@/models/User.js';

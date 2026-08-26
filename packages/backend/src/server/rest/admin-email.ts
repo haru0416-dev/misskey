@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import type { EmailService } from '@/core/EmailService.js';
+import type { EmailService } from '@/core/email/EmailService.js';
 import { parseHonoApiParams } from './validation.js';
 
 export type HonoApiAdminEmailDependencies = {

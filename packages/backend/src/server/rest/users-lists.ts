@@ -5,10 +5,10 @@
 
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
-import { blockingExistsInDatabase, listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase } from '@/core/BlockingStore.js';
-import type { RelationshipQueue } from '@/core/queues.js';
+import { blockingExistsInDatabase, listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase } from '@/core/user/BlockingStore.js';
+import type { RelationshipQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
 import {
 	createUserListMembershipWithinLimitInDatabase,
 	deleteUserListMembershipInDatabase,
@@ -18,7 +18,7 @@ import {
 	resolveUserListMembershipPagination,
 	updateUserListMembershipWithRepliesInDatabase,
 	userListMembershipExistsInDatabase,
-} from '@/core/UserListMembershipStore.js';
+} from '@/core/user/UserListMembershipStore.js';
 import {
 	createUserListWithinLimitInDatabase,
 	createUserListWithMembershipsWithinLimitsInDatabase,
@@ -27,8 +27,8 @@ import {
 	fetchPublicUserListByIdFromDatabase,
 	fetchUserListByIdAndUserIdFromDatabase,
 	lockUserListOwnerForCreationInDatabase,
-} from '@/core/UserListStore.js';
-import { fetchUserByIdFromDatabase, listUsersByIdsForKeyShareFromDatabase } from '@/core/UserStore.js';
+} from '@/core/user/UserListStore.js';
+import { fetchUserByIdFromDatabase, listUsersByIdsForKeyShareFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';

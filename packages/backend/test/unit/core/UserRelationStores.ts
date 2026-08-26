@@ -11,24 +11,24 @@ import {
 	createBlockingInDatabase,
 	listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase,
 	listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase,
-} from '@/core/BlockingStore.js';
+} from '@/core/user/BlockingStore.js';
 import {
 	createFollowRequestInDatabase,
 	listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
 	listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
-} from '@/core/FollowRequestStore.js';
+} from '@/core/user/FollowRequestStore.js';
 import {
 	createFollowingInDatabase,
 	deleteFollowingAndUpdateUserCountsByIdInDatabase,
 	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
 	listFollowingsByFollowerIdAndFolloweeIdsFromDatabase,
-} from '@/core/FollowingStore.js';
-import { createMutingInDatabase, listMuteeIdsByMuterIdAndMuteeIdsFromDatabase } from '@/core/MutingStore.js';
+} from '@/core/user/FollowingStore.js';
+import { createMutingInDatabase, listMuteeIdsByMuterIdAndMuteeIdsFromDatabase } from '@/core/user/MutingStore.js';
 import {
 	createRenoteMutingInDatabase,
 	listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase,
-} from '@/core/RenoteMutingStore.js';
-import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+} from '@/core/user/RenoteMutingStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { unfollow, type HonoApiAccountBlockingDependencies } from '@/server/rest/account-blocking.js';

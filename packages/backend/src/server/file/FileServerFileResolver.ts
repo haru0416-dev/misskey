@@ -6,11 +6,11 @@
 import * as fs from 'node:fs';
 import type { MiDriveFile } from '@/models/_.js';
 import { createTemp } from '@/misc/create-temp.js';
-import type { DownloadService } from '@/core/DownloadService.js';
-import type { FileInfoService } from '@/core/FileInfoService.js';
-import type { InternalStorageService } from '@/core/InternalStorageService.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
+import type { FileInfoService } from '@/core/drive/FileInfoService.js';
+import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { fetchDriveFileByAccessKeyFromDatabase } from '@/core/DriveFileStore.js';
+import { fetchDriveFileByAccessKeyFromDatabase } from '@/core/drive/DriveFileStore.js';
 
 export type DownloadedFileResult = {
 	kind: 'downloaded';

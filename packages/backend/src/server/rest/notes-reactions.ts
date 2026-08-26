@@ -14,21 +14,21 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
-import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/EmojiStore.js';
+import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
+import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
 import {
 	fetchNoteByIdFromDatabase,
 	decrementNoteReactionInDatabase,
 	incrementNoteReactionInDatabase,
-} from '@/core/NoteStore.js';
+} from '@/core/note/NoteStore.js';
 import {
 	createNoteReactionInDatabase,
 	deleteNoteReactionByIdFromDatabase,
 	fetchNoteReactionByUserAndNoteFromDatabase,
 	fetchNoteReactionByUserAndNoteOrFailFromDatabase,
 	listNoteReactionsByNoteIdFromDatabase,
-} from '@/core/NoteReactionStore.js';
-import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+} from '@/core/note/NoteReactionStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';

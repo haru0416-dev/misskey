@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test, vi } from 'vitest';
-import type { SystemQueue } from '@/core/queues.js';
+import type { SystemQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
 import { syncSystemJobSchedulers, systemJobSchedulers } from '@/queue/system-job-schedulers.js';
 

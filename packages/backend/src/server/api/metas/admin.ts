@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { supportedCaptchaProviders } from '@/core/CaptchaLogic.js';
+import { supportedCaptchaProviders } from '@/core/captcha/CaptchaLogic.js';
 import { notificationRecieveConfig } from '@/models/json-schema/user.js';
 import { adminUpdateMetaJsonSchema } from '@/server/rest/AdminUpdateMetaLogic.js';
 import {

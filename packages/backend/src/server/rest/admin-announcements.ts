@@ -11,15 +11,15 @@ import {
 	updateAnnouncementWithModerationLog,
 	type AnnouncementCreateValues,
 	type AnnouncementUpdateValues,
-} from '@/core/AnnouncementLogic.js';
-import { countAnnouncementReadsByAnnouncementIdsFromDatabase } from '@/core/AnnouncementReadStore.js';
+} from '@/core/announcement/AnnouncementLogic.js';
+import { countAnnouncementReadsByAnnouncementIdsFromDatabase } from '@/core/announcement/AnnouncementReadStore.js';
 import { omitUndefined } from '@/misc/clone.js';
 import {
 	fetchAnnouncementByIdFromDatabase,
 	listAnnouncementsForAdminFromDatabase,
 	resolveAnnouncementPagination,
-} from '@/core/AnnouncementStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+} from '@/core/announcement/AnnouncementStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';

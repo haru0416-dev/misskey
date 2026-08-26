@@ -5,9 +5,9 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
-import { createPromoNoteInDatabase, isPromoNoteExists } from '@/core/PromoNoteStore.js';
-import { createPromoReadInDatabase, isPromoReadExists } from '@/core/PromoReadStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
+import { createPromoNoteInDatabase, isPromoNoteExists } from '@/core/note/PromoNoteStore.js';
+import { createPromoReadInDatabase, isPromoReadExists } from '@/core/note/PromoReadStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';

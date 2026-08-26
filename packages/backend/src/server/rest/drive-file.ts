@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { getDriveFilePublicUrl, getProxiedUrl } from '@/core/DriveFilePublicUrl.js';
+import { getDriveFilePublicUrl, getProxiedUrl } from '@/core/drive/DriveFilePublicUrl.js';
 import {
 	fetchDriveFileByIdFromDatabase,
 	fetchDriveFileByIdOrFailFromDatabase,
 	listDriveFilesByIdsFromDatabase,
-} from '@/core/DriveFileStore.js';
+} from '@/core/drive/DriveFileStore.js';
 import type { Config } from '@/config.js';
 import { deepClone, omitUndefined } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';

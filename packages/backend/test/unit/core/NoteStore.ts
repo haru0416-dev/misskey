@@ -14,9 +14,9 @@ import {
 	listHybridTimelineNotesFromDatabase,
 	listLocalTimelineNotesFromDatabase,
 	listUserTimelineNotesFromDatabase,
-} from '@/core/NoteStore.js';
-import { createRenoteMutingInDatabase } from '@/core/RenoteMutingStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+} from '@/core/note/NoteStore.js';
+import { createRenoteMutingInDatabase } from '@/core/user/RenoteMutingStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 

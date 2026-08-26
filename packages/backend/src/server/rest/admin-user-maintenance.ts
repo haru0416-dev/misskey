@@ -6,13 +6,13 @@
 import { hashPasswordSync } from '@/misc/password.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { fetchUserByIdFromDatabase, updateUserInDatabase } from '@/core/user/UserStore.js';
 import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	unsetUserMfaInDatabase,
 	updateUserProfileInDatabase,
-} from '@/core/UserProfileStore.js';
+} from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { misskeyId } from '@/misc/zod-params.js';

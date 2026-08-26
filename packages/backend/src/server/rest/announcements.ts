@@ -8,14 +8,14 @@ import {
 	announcementReadExistsInDatabase,
 	createAnnouncementReadInDatabase,
 	listReadAnnouncementIdsByUserIdAndAnnouncementIdsFromDatabase,
-} from '@/core/AnnouncementReadStore.js';
+} from '@/core/announcement/AnnouncementReadStore.js';
 import {
 	fetchAnnouncementByIdFromDatabase,
 	listAnnouncementsForUserFromDatabase,
 	listUnreadAnnouncementsForUserFromDatabase,
 	resolveAnnouncementPagination,
 	updateAnnouncementInDatabase,
-} from '@/core/AnnouncementStore.js';
+} from '@/core/announcement/AnnouncementStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

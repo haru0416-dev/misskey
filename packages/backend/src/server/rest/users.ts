@@ -6,11 +6,11 @@
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
-import { countUserListFavoritesFromDatabase, userListFavoriteExistsInDatabase } from '@/core/UserListFavoriteStore.js';
+import { countUserListFavoritesFromDatabase, userListFavoriteExistsInDatabase } from '@/core/user/UserListFavoriteStore.js';
 import {
 	listUserListMembershipUserIdsByUserListIdFromDatabase,
 	listUserListMembershipUserIdsByUserListIdsFromDatabase,
-} from '@/core/UserListMembershipStore.js';
+} from '@/core/user/UserListMembershipStore.js';
 import {
 	deleteUserListByIdInDatabase,
 	fetchPublicUserListByIdFromDatabase,
@@ -18,9 +18,9 @@ import {
 	fetchUserListByIdOrFailFromDatabase,
 	listUserListsByUserIdFromDatabase,
 	updateUserListInDatabase,
-} from '@/core/UserListStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+} from '@/core/user/UserListStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId } from '@/misc/zod-params.js';

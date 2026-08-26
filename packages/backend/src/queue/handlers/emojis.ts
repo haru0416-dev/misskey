@@ -9,11 +9,11 @@ import mime from 'mime-types';
 import { ZipArchive } from 'archiver';
 import { ZipReader } from 'slacc';
 import type * as Bull from 'bullmq';
-import { deleteEmojiByNameAndHostFromDatabase, listLocalEmojisOrderedByIdFromDatabase } from '@/core/EmojiStore.js';
-import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { deleteEmojiByNameAndHostFromDatabase, listLocalEmojisOrderedByIdFromDatabase } from '@/core/emoji/EmojiStore.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { createTemp, createTempDir } from '@/misc/create-temp.js';
-import type { DownloadService } from '@/core/DownloadService.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
 import {
 	addDriveFileForHonoApi,

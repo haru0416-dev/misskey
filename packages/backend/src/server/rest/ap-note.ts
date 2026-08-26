@@ -32,12 +32,12 @@ import {
 	fetchPollByNoteIdOrFailFromDatabase,
 	incrementPollVoteInDatabase,
 	updatePollVotesInDatabase,
-} from '@/core/PollStore.js';
-import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
-import { fetchNoteByUriFromDatabase } from '@/core/NoteStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+} from '@/core/note/PollStore.js';
+import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/note/PollVoteStore.js';
+import { fetchNoteByUriFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { createMfmService } from '@/core/MfmService.js';
+import { createMfmService } from '@/core/mfm/MfmService.js';
 import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
 import type { Config } from '@/config.js';
 import type { IPoll } from '@/models/Poll.js';

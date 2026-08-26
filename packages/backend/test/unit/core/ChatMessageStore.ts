@@ -11,10 +11,10 @@ import {
 	createChatMessageInDatabase,
 	listRoomChatHistoryFromDatabase,
 	listUserChatHistoryFromDatabase,
-} from '@/core/ChatMessageStore.js';
-import { createChatRoomInDatabase, createChatRoomMembershipInDatabase } from '@/core/ChatRoomStore.js';
-import { createMutingInDatabase } from '@/core/MutingStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+} from '@/core/chat/ChatMessageStore.js';
+import { createChatRoomInDatabase, createChatRoomMembershipInDatabase } from '@/core/chat/ChatRoomStore.js';
+import { createMutingInDatabase } from '@/core/user/MutingStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiUser } from '@/models/User.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';

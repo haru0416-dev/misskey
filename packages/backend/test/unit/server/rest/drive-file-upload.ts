@@ -10,15 +10,15 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { eq, inArray } from 'drizzle-orm';
 import { loadConfig, type Config } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { listAllDriveFilesByUserIdFromDatabase } from '@/core/DriveFileStore.js';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
-import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/UserStore.js';
+import { listAllDriveFilesByUserIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from '@/server/rest/drive-file-upload.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiUser } from '@/models/User.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
-import type { DbQueue } from '@/core/queues.js';
+import type { DbQueue } from '@/core/queue/queues.js';
 
 describe('addDriveFileForHonoApi quota serialization', () => {
 	let config: Config;

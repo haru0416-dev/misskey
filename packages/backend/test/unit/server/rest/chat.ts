@@ -14,8 +14,8 @@ import {
 	createChatRoomInvitationInDatabase,
 	createChatRoomMembershipInDatabase,
 	joinChatRoomFromInvitationInDatabase,
-} from '@/core/ChatRoomStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+} from '@/core/chat/ChatRoomStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
 import type { MiUser } from '@/models/User.js';

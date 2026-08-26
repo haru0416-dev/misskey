@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { SystemQueue } from '@/core/queues.js';
+import type { SystemQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 

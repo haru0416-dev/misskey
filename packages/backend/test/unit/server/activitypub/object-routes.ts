@@ -7,8 +7,8 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
-import { createFollowingInDatabase } from '@/core/FollowingStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { countDatabaseQueries, type QueryCounter } from '../../../query-counter.js';

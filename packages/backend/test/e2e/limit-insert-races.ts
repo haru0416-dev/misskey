@@ -10,22 +10,22 @@ import {
 	countAntennasByUserIdFromDatabase,
 	createAntennasWithinLimitInDatabase,
 	listAntennasByUserIdFromDatabase,
-} from '@/core/AntennaStore.js';
-import { countClipNotesByClipIdFromDatabase, createClipNoteWithinLimitInDatabase } from '@/core/ClipNoteStore.js';
+} from '@/core/antenna/AntennaStore.js';
+import { countClipNotesByClipIdFromDatabase, createClipNoteWithinLimitInDatabase } from '@/core/clip/ClipNoteStore.js';
 import {
 	countClipsByUserIdFromDatabase,
 	createClipInDatabase,
 	createClipWithinLimitInDatabase,
-} from '@/core/ClipStore.js';
-import { fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
+} from '@/core/clip/ClipStore.js';
+import { fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
 import {
 	countRegistrationTicketsCreatedSinceFromDatabase,
 	createRegistrationTicketWithinLimitInDatabase,
-} from '@/core/RegistrationTicketStore.js';
+} from '@/core/invite/RegistrationTicketStore.js';
 import {
 	createUserNotePiningWithinLimitInDatabase,
 	listUserNotePiningsByUserIdFromDatabase,
-} from '@/core/UserNotePiningStore.js';
+} from '@/core/user/UserNotePiningStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { post, signup } from '../utils.js';
 import type * as Misskey from 'misskey-js';

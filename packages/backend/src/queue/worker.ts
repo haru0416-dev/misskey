@@ -79,7 +79,7 @@ import {
 } from './handlers/emojis.js';
 import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies } from './handlers/delete-account.js';
 import type { SystemJobName } from './system-job-schedulers.js';
-import { dispatchQueueOutbox } from '@/core/QueueOutboxStore.js';
+import { dispatchQueueOutbox } from '@/core/queue/QueueOutboxStore.js';
 import type { DbJobData, DbJobName } from '@/queue/types.js';
 import { handleHonoQueueUserSuspensionPostEffects } from '@/server/rest/admin-user-suspension.js';
 import { handleHonoQueueNotePostCreate } from '@/server/rest/notes-create.js';

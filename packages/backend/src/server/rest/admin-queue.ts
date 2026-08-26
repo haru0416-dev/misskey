@@ -27,8 +27,8 @@ import {
 	type AdminQueueDependencies,
 	type QueueClearState,
 	type QueueType,
-} from '@/core/QueueAdminLogic.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+} from '@/core/queue/QueueAdminLogic.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
 import { HonoApiError } from './error.js';

@@ -4,16 +4,16 @@
  */
 
 import * as Bull from 'bullmq';
-import { fetchInstanceMetadataWithSideEffects } from '@/core/FetchInstanceMetadataLogic.js';
-import { listSuspendedInstancesFromDatabase } from '@/core/InstanceStore.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInstanceMetadataLogic.js';
+import { listSuspendedInstancesFromDatabase } from '@/core/instance/InstanceStore.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { MemorySingleCache } from '@/misc/cache.js';
 import { StatusError } from '@/misc/status-error.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { DeliverJobData } from '@/queue/types.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import MisskeyLogger from '@/logger.js';
 import { isFederationAllowedUri, signedPostForHonoApi } from '../../server/rest/ap-resolve.js';
 import {

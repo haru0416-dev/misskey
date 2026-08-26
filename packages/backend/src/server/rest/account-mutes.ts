@@ -11,15 +11,15 @@ import {
 	listMutingsByMuterIdWithPaginationFromDatabase,
 	mutingExistsInDatabase,
 	resolveMutingPagination,
-} from '@/core/MutingStore.js';
+} from '@/core/user/MutingStore.js';
 import {
 	createRenoteMutingInDatabase,
 	deleteRenoteMutingsByIdsFromDatabase,
 	fetchRenoteMutingFromDatabase,
 	listRenoteMutingsByMuterIdFromDatabase,
 	renoteMutingExistsInDatabase,
-} from '@/core/RenoteMutingStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+} from '@/core/user/RenoteMutingStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

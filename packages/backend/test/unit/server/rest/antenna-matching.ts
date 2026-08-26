@@ -21,7 +21,7 @@ const {
 	listUserListIdsContainingUserFromDatabaseMock: vi.fn(),
 }));
 
-vi.mock('@/core/AntennaStore.js', () => ({
+vi.mock('@/core/antenna/AntennaStore.js', () => ({
 	appendUserToAntennasInDatabase: vi.fn(),
 	countAntennasByUserIdFromDatabase: vi.fn(),
 	createAntennaInDatabase: vi.fn(),
@@ -34,12 +34,12 @@ vi.mock('@/core/AntennaStore.js', () => ({
 	updateAntennaInDatabase: vi.fn(),
 }));
 
-vi.mock('@/core/FollowingStore.js', () => ({
+vi.mock('@/core/user/FollowingStore.js', () => ({
 	followingExistsInDatabase: followingExistsInDatabaseMock,
 	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase: listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabaseMock,
 }));
 
-vi.mock('@/core/UserListMembershipStore.js', () => ({
+vi.mock('@/core/user/UserListMembershipStore.js', () => ({
 	listUserListIdsContainingUserFromDatabase: listUserListIdsContainingUserFromDatabaseMock,
 	userListMembershipExistsInDatabase: vi.fn(),
 }));

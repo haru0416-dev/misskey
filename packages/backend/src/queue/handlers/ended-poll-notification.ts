@@ -4,9 +4,9 @@
  */
 
 import type * as Bull from 'bullmq';
-import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
-import { listLocalPollVoterIdsByNoteIdFromDatabase } from '@/core/PollVoteStore.js';
-import { listUserProfilesByUserIdsFromDatabase } from '@/core/UserProfileStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
+import { listLocalPollVoterIdsByNoteIdFromDatabase } from '@/core/note/PollVoteStore.js';
+import { listUserProfilesByUserIdsFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { EndedPollNotificationJobData } from '@/queue/types.js';
 import { createPollEndedNotification, type HonoApiNotificationDependencies } from '../../server/rest/notification.js';

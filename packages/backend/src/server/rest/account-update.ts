@@ -10,24 +10,24 @@ import * as mfm from 'mfm-js';
 import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
 import RE2 from '@/misc/re2.js';
-import { listAvatarDecorationsFromDatabase } from '@/core/AvatarDecorationStore.js';
-import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
-import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase, fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
-import { listLocalEmojisFromDatabase } from '@/core/EmojiStore.js';
-import { recordHashtagUsagesInDatabase } from '@/core/HashtagStore.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
-import { createMfmService } from '@/core/MfmService.js';
-import { fetchPageByIdFromDatabase } from '@/core/PageStore.js';
-import { listRolesFromDatabase } from '@/core/RoleStore.js';
+import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/AvatarDecorationStore.js';
+import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
+import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { listLocalEmojisFromDatabase } from '@/core/emoji/EmojiStore.js';
+import { recordHashtagUsagesInDatabase } from '@/core/hashtag/HashtagStore.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createMfmService } from '@/core/mfm/MfmService.js';
+import { fetchPageByIdFromDatabase } from '@/core/page/PageStore.js';
+import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
 import {
 	appendVerifiedLinkToUserProfileInDatabase,
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	updateUserProfileInDatabase,
 	type UserProfileUpdate,
-} from '@/core/UserProfileStore.js';
-import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase, type UserUpdate } from '@/core/UserStore.js';
-import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
+} from '@/core/user/UserProfileStore.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase, type UserUpdate } from '@/core/user/UserStore.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import * as Acct from '@/misc/acct.js';

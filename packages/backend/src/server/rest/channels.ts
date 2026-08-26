@@ -8,13 +8,13 @@ import type { Config } from '@/config.js';
 import {
 	fetchFavoritedChannelIdsByUserIdAndChannelIdsFromDatabase,
 	listFavoritedChannelIdsByUserIdFromDatabase,
-} from '@/core/ChannelFavoriteStore.js';
+} from '@/core/channel/ChannelFavoriteStore.js';
 import {
 	createChannelFollowingInDatabase,
 	deleteChannelFollowingFromDatabase,
 	fetchFollowedChannelIdsByUserIdAndChannelIdsFromDatabase,
 	listChannelFollowingsByFollowerIdFromDatabase,
-} from '@/core/ChannelFollowingStore.js';
+} from '@/core/channel/ChannelFollowingStore.js';
 import {
 	channelMutingExistsInDatabase,
 	createChannelMutingInDatabase,
@@ -22,7 +22,7 @@ import {
 	listActiveMutedChannelIdsByUserIdFromDatabase,
 	fetchMutedChannelIdsByUserIdAndChannelIdsFromDatabase,
 	updateChannelMutingExpirationInDatabase,
-} from '@/core/ChannelMutingStore.js';
+} from '@/core/channel/ChannelMutingStore.js';
 import {
 	createChannelInDatabase,
 	listChannelsByIdsFromDatabase,
@@ -32,10 +32,10 @@ import {
 	resolveChannelPagination,
 	fetchChannelByIdFromDatabase,
 	updateChannelInDatabase,
-} from '@/core/ChannelStore.js';
-import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
-import { listChannelTimelineNotesFromDatabase, listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+} from '@/core/channel/ChannelStore.js';
+import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
+import { fetchDriveFileByIdAndUserIdFromDatabase, listDriveFilesByIdsFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { listChannelTimelineNotesFromDatabase, listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';

@@ -11,7 +11,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from '@/server/rest/ap-person.js';
 

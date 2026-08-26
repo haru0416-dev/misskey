@@ -4,16 +4,16 @@
  */
 
 import * as Bull from 'bullmq';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-import { blockingExistsInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { followingExistsInDatabase } from '@/core/FollowingStore.js';
-import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { blockingExistsInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
+import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/user/FollowRequestStore.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
+import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import {

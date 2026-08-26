@@ -4,7 +4,7 @@
  */
 
 import { EventEmitter } from 'node:events';
-import { updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
+import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
 import { HonoApiError } from '../rest/error.js';
 import { authenticateHonoApiToken } from '../rest/auth.js';
 import { HonoStreamConnection, refreshHonoStreamConnections } from './connection.js';

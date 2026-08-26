@@ -9,7 +9,7 @@ import {
 	flashLikeExistsInDatabase,
 	listFlashLikesByUserIdFromDatabase,
 	listLikedFlashIdsByUserIdAndFlashIdsFromDatabase,
-} from '@/core/FlashLikeStore.js';
+} from '@/core/flash/FlashLikeStore.js';
 import {
 	createFlashInDatabase,
 	deleteFlashInDatabase,
@@ -19,9 +19,9 @@ import {
 	listFlashesWithPaginationFromDatabase,
 	resolveFlashPagination,
 	updateFlashInDatabase,
-} from '@/core/FlashStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+} from '@/core/flash/FlashStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';

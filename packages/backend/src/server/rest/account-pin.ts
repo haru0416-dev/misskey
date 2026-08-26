@@ -7,8 +7,8 @@ import { z } from 'zod';
 import {
 	createUserNotePiningWithinLimitInDatabase,
 	deleteUserNotePiningFromDatabase,
-} from '@/core/UserNotePiningStore.js';
-import { fetchNoteByIdAndUserIdFromDatabase } from '@/core/NoteStore.js';
+} from '@/core/user/UserNotePiningStore.js';
+import { fetchNoteByIdAndUserIdFromDatabase } from '@/core/note/NoteStore.js';
 import type { Config } from '@/config.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';

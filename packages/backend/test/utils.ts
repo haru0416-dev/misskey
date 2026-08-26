@@ -12,7 +12,7 @@ import { inspect } from 'node:util';
 import WebSocket, { ClientOptions } from 'ws';
 import * as htmlParser from 'node-html-parser';
 import type * as misskey from 'misskey-js';
-import { DEFAULT_POLICIES } from '@/core/role-policies.js';
+import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
 import type { HonoApiErrorBody } from '@/server/rest/error.js';
 import { omitUndefined } from '@/misc/clone.js';

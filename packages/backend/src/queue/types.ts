@@ -9,8 +9,8 @@ import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import type { SystemWebhookPayload } from '@/core/system-webhook-types.js';
-import type { UserWebhookPayload } from '@/core/user-webhook-types.js';
+import type { SystemWebhookPayload } from '@/core/webhook/system-webhook-types.js';
+import type { UserWebhookPayload } from '@/core/webhook/user-webhook-types.js';
 import type httpSignature from '@peertube/http-signature';
 
 export type DeliverJobData = {

@@ -8,15 +8,15 @@ import {
 	countActiveRoleAssignmentsByRoleIdFromDatabase,
 	countActiveRoleAssignmentsByRoleIdsFromDatabase,
 	listActiveRoleAssignmentsByRoleIdFromDatabase,
-} from '@/core/RoleAssignmentStore.js';
-import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
-import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+} from '@/core/role/RoleAssignmentStore.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelMutingStore.js';
+import { listFilteredTimelineNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import {
 	fetchPublicExplorableRoleByIdFromDatabase,
 	fetchPublicRoleByIdFromDatabase,
 	listPublicExplorableRolesFromDatabase,
-} from '@/core/RoleStore.js';
-import { DEFAULT_POLICIES } from '@/core/role-policies.js';
+} from '@/core/role/RoleStore.js';
+import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

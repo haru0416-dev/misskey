@@ -16,9 +16,9 @@ import {
 	listRegistrationTicketsCreatedByFromDatabase,
 	listRegistrationTicketsForAdminFromDatabase,
 	resolveRegistrationTicketPagination,
-} from '@/core/RegistrationTicketStore.js';
-import { createModerationLogInDatabase } from '@/core/ModerationLogStore.js';
-import type { RolePolicies } from '@/core/role-policies.js';
+} from '@/core/invite/RegistrationTicketStore.js';
+import { createModerationLogInDatabase } from '@/core/moderation/ModerationLogStore.js';
+import type { RolePolicies } from '@/core/role/role-policies.js';
 import type { RegistrationTicketRow } from '@/db/schema/registration-ticket.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';

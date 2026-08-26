@@ -6,7 +6,7 @@
 import { Hono } from 'hono';
 import { permissions as kinds } from 'misskey-js';
 import type { Config } from '@/config.js';
-import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdFromDatabase, fetchUserByUsernameAndHostFromDatabase } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import * as Acct from '@/misc/acct.js';
 import { escapeAttribute, escapeValue } from '@/misc/prelude/xml.js';

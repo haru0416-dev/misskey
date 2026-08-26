@@ -6,38 +6,38 @@
 import { domainToASCII, URLSearchParams } from 'node:url';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/ChannelStore.js';
-import { fetchEmojisByNamesAndHostsFromDatabaseCached } from '@/core/EmojiStore.js';
+import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/channel/ChannelStore.js';
+import { fetchEmojisByNamesAndHostsFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
 import {
 	followingExistsInDatabase,
 	listFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
 	listFollowingsByFollowerIdsAndFolloweeIdsFromDatabase,
-} from '@/core/FollowingStore.js';
+} from '@/core/user/FollowingStore.js';
 import {
 	fetchNoteByIdFromDatabase,
 	fetchNoteByIdOrFailFromDatabase,
 	listFeaturedNotesByIdsFromDatabase,
 	listNotesByIdsFromDatabase,
 	listUserTimelineNotesFromDatabase,
-} from '@/core/NoteStore.js';
+} from '@/core/note/NoteStore.js';
 import {
 	fetchNoteReactionByUserAndNoteFromDatabase,
 	listNoteReactionsByNoteIdsAndUserIdsFromDatabase,
 	listNoteReactionsByUserAndNoteIdsFromDatabase,
-} from '@/core/NoteReactionStore.js';
-import { fetchPollByNoteIdOrFailFromDatabase, listPollsByNoteIdsFromDatabase } from '@/core/PollStore.js';
+} from '@/core/note/NoteReactionStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase, listPollsByNoteIdsFromDatabase } from '@/core/note/PollStore.js';
 import {
 	fetchPollVoteByNoteAndUserFromDatabase,
 	listPollVotesByNoteAndUserFromDatabase,
 	listPollVotesByNoteIdsAndUserFromDatabase,
 	listPollVotesByNoteIdsAndUserIdsFromDatabase,
-} from '@/core/PollVoteStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
-import { fanoutViewerRelationKinds, fetchViewerRelationSnapshotFromDatabase } from '@/core/ViewerRelationStore.js';
+} from '@/core/note/PollVoteStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
+import { fanoutViewerRelationKinds, fetchViewerRelationSnapshotFromDatabase } from '@/core/user/ViewerRelationStore.js';
 import type { Config } from '@/config.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { isEntityNotFoundError } from '@/misc/db-errors.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';

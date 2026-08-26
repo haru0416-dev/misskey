@@ -5,31 +5,31 @@
 
 import { domainToASCII } from 'node:url';
 import { z } from 'zod';
-import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
-import { assignRoleWithSideEffects, RoleAlreadyAssignedError } from '@/core/RoleLogic.js';
-import { listRolesFromDatabase } from '@/core/RoleStore.js';
-import { listRoleAssignmentsByUserIdFromDatabase } from '@/core/RoleAssignmentStore.js';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
+import { assignRoleWithSideEffects, RoleAlreadyAssignedError } from '@/core/role/RoleLogic.js';
+import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
+import { listRoleAssignmentsByUserIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
 import {
 	createMutingsInDatabase,
 	listActiveMutingsByMuteeIdFromDatabase,
 	listPermanentMuterIdsByMuteeIdFromDatabase,
-} from '@/core/MutingStore.js';
+} from '@/core/user/MutingStore.js';
 import {
 	createUserListMembershipsInDatabase,
 	listUserListMembershipsByUserIdFromDatabase,
-} from '@/core/UserListMembershipStore.js';
+} from '@/core/user/UserListMembershipStore.js';
 import {
 	decrementUsersFollowersCountInDatabase,
 	decrementUsersFollowingCountInDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	updateUserInDatabase,
-} from '@/core/UserStore.js';
+} from '@/core/user/UserStore.js';
 import {
 	listAllFollowingsByFollowerIdFromDatabase,
 	listLocalFollowerFollowingsByFolloweeIdFromDatabase,
-} from '@/core/FollowingStore.js';
-import type { RelationshipQueue } from '@/core/queues.js';
+} from '@/core/user/FollowingStore.js';
+import type { RelationshipQueue } from '@/core/queue/queues.js';
 import type { RelationshipJobData, ThinUser } from '@/queue/types.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { genId } from '@/misc/id/gen-id.js';

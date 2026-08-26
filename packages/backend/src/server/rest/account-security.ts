@@ -5,12 +5,12 @@
 
 import { z } from 'zod';
 import { hashPassword, comparePassword } from '@/misc/password.js';
-import { deleteAccountWithSideEffects } from '@/core/DeleteAccountLogic.js';
-import type { EmailService } from '@/core/EmailService.js';
-import type { DbQueue, DeliverQueue } from '@/core/queues.js';
-import type { UserAuthService } from '@/core/UserAuthService.js';
-import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+import { deleteAccountWithSideEffects } from '@/core/account/DeleteAccountLogic.js';
+import type { EmailService } from '@/core/email/EmailService.js';
+import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
+import type { UserAuthService } from '@/core/account/UserAuthService.js';
+import { fetchUserByIdOrFailFromDatabase, updateUserInDatabase } from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
 import { omitUndefined } from '@/misc/clone.js';

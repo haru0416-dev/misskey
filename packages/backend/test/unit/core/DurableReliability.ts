@@ -9,18 +9,18 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import type * as Bull from 'bullmq';
 import { eq, inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
-import { deleteNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { createFollowingInDatabase } from '@/core/FollowingStore.js';
-import { listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
+import { deleteNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
+import { listModerationLogsFromDatabase } from '@/core/moderation/ModerationLogStore.js';
 import {
 	createUserWithProfileAndPublickeyInDatabase,
 	deleteUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	updateUserInDatabase,
-} from '@/core/UserStore.js';
+} from '@/core/user/UserStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { genId } from '@/misc/id/gen-id.js';
-import type { DbQueue } from '@/core/queues.js';
+import type { DbQueue } from '@/core/queue/queues.js';
 import type { DbUserSuspensionPostEffectsJobData } from '@/queue/types.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';

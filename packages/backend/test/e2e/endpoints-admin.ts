@@ -8,7 +8,7 @@ import * as assert from 'assert';
 import * as Bull from 'bullmq';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { parseId } from '@/misc/id/parse-id.js';
-import type { DbQueue } from '@/core/queues.js';
+import type { DbQueue } from '@/core/queue/queues.js';
 import type {
 	DbJobData,
 	DeliverJobData,

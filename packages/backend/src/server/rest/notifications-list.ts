@@ -4,13 +4,13 @@
  */
 
 import { z } from 'zod';
-import { listChatRoomInvitationsByIdsFromDatabase } from '@/core/ChatRoomStore.js';
-import { listFollowRequestsByFollowerIdsFromDatabase } from '@/core/FollowRequestStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
-import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { fetchRoleByIdFromDatabase, listRolesByIdsFromDatabase } from '@/core/RoleStore.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
-import { listUsersByIdsFromDatabase } from '@/core/UserStore.js';
+import { listChatRoomInvitationsByIdsFromDatabase } from '@/core/chat/ChatRoomStore.js';
+import { listFollowRequestsByFollowerIdsFromDatabase } from '@/core/user/FollowRequestStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
+import { listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchRoleByIdFromDatabase, listRolesByIdsFromDatabase } from '@/core/role/RoleStore.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
+import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Packed } from '@/misc/json-schema.js';

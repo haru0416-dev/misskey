@@ -7,15 +7,15 @@ import type * as Redis from 'ioredis';
 import { hashPassword } from '@/misc/password.js';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import type { EmailService } from '@/core/EmailService.js';
+import type { EmailService } from '@/core/email/EmailService.js';
 import {
 	consumePasswordResetRequestInDatabase,
 	createPasswordResetRequestInDatabase,
 	fetchPasswordResetRequestByTokenFromDatabase,
 	isPasswordResetRequestExpired,
-} from '@/core/PasswordResetRequestStore.js';
-import { fetchLocalUserByUsernameFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+} from '@/core/account/PasswordResetRequestStore.js';
+import { fetchLocalUserByUsernameFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { getIpHash } from '@/misc/get-ip-hash.js';
