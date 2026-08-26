@@ -10,9 +10,9 @@ import {
 	saveCaptchaSetting,
 	supportedCaptchaProviders,
 	type CaptchaError,
-} from '@/core/CaptchaLogic.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
-import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/MetaStore.js';
+} from '@/core/captcha/CaptchaLogic.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
+import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import { omitUndefined } from '@/misc/clone.js';

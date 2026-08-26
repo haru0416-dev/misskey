@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { addDbJob, type DbQueue } from '@/core/queues.js';
+import { addDbJob, type DbQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import { parseHonoApiParams } from './validation.js';

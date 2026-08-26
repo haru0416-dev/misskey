@@ -11,12 +11,12 @@ import {
 	fetchAbuseReportNotificationRecipientByIdOrFailFromDatabase,
 	listAbuseReportNotificationRecipientsFromDatabase,
 	updateAbuseReportNotificationRecipientInDatabase,
-} from '@/core/AbuseReportNotificationRecipientStore.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
-import { listRoleAssignmentsByRoleIdsFromDatabase } from '@/core/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/RoleStore.js';
-import { fetchSystemWebhookByIdOrFailFromDatabase, listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
+} from '@/core/abuse/AbuseReportNotificationRecipientStore.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import { listRoleAssignmentsByRoleIdsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
+import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
+import { fetchSystemWebhookByIdOrFailFromDatabase, listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';

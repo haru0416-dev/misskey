@@ -12,7 +12,7 @@ import {
 	listRegistryKeysOfScopeFromDatabase,
 	listRegistryScopeAndDomainsFromDatabase,
 	setRegistryItemInDatabase,
-} from '@/core/RegistryItemStore.js';
+} from '@/core/registry/RegistryItemStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';

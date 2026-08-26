@@ -6,7 +6,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import type Logger from '@/logger.js';
 import { resetDb } from '@/misc/reset-db.js';

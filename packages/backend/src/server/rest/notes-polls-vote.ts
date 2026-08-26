@@ -5,11 +5,11 @@
 
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { blockingExistsInDatabase } from '@/core/BlockingStore.js';
-import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
-import { fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase } from '@/core/PollStore.js';
-import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/PollVoteStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase, incrementPollVoteInDatabase } from '@/core/note/PollStore.js';
+import { createPollVoteInDatabase, listPollVotesByNoteAndUserFromDatabase } from '@/core/note/PollVoteStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';

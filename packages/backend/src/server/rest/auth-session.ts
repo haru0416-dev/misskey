@@ -11,16 +11,16 @@ import {
 	createAccessTokenInDatabase,
 	existsAccessTokenByAppIdAndUserIdFromDatabase,
 	fetchAccessTokenByAppIdAndUserIdOrFailFromDatabase,
-} from '@/core/AccessTokenStore.js';
+} from '@/core/app/AccessTokenStore.js';
 import {
 	createAuthSessionInDatabase,
 	deleteAuthSessionByIdFromDatabase,
 	fetchAuthSessionByTokenAndAppIdFromDatabase,
 	fetchAuthSessionByTokenFromDatabase,
 	updateAuthSessionUserIdInDatabase,
-} from '@/core/AuthSessionStore.js';
-import { fetchAppByIdOrFailFromDatabase, fetchAppBySecretFromDatabase } from '@/core/AppStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+} from '@/core/app/AuthSessionStore.js';
+import { fetchAppByIdOrFailFromDatabase, fetchAppBySecretFromDatabase } from '@/core/app/AppStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import type { AuthSessionRow } from '@/db/schema/auth-session.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

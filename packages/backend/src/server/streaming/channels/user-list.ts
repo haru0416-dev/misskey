@@ -5,8 +5,8 @@
 
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
-import { userListExistsByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
+import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/user/UserListMembershipStore.js';
+import { userListExistsByIdAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
 import {
 	filterNoteForStreamingHidingForHonoApi,
 	populateMyReactionForHonoApi,

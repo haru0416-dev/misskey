@@ -14,8 +14,8 @@ import {
 	UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { mockClient } from 'aws-sdk-client-mock';
-import { createS3Service, type S3Service } from '@/core/S3Service.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import { createS3Service, type S3Service } from '@/core/drive/S3Service.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { MiMeta } from '@/models/_.js';
 
 describe('S3Service', () => {

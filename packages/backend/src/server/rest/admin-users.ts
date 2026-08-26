@@ -8,20 +8,20 @@ import {
 	listRoleAssignmentsByRoleIdsFromDatabase,
 	listRoleAssignmentsByUserIdFromDatabase,
 	listRoleAssignmentsByUserIdsFromDatabase,
-} from '@/core/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/RoleStore.js';
-import { listSigninsByUserIdFromDatabase } from '@/core/SigninStore.js';
+} from '@/core/role/RoleAssignmentStore.js';
+import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
+import { listSigninsByUserIdFromDatabase } from '@/core/account/SigninStore.js';
 import {
 	fetchUserProfileByUserIdFromDatabase,
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	listUserProfilesByUserIdsFromDatabase,
-} from '@/core/UserProfileStore.js';
+} from '@/core/user/UserProfileStore.js';
 import {
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	listAdminUsersFromDatabase,
 	listUsersByIdsFromDatabase,
-} from '@/core/UserStore.js';
+} from '@/core/user/UserStore.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';

@@ -6,9 +6,9 @@
 import {
 	fetchAccessTokenByHashOrTokenFromDatabase,
 	updateAccessTokenLastUsedAtInDatabase,
-} from '@/core/AccessTokenStore.js';
-import { fetchAppByIdOrFailFromDatabase } from '@/core/AppStore.js';
-import { fetchLocalUserByIdFromDatabase, fetchLocalUserByNativeTokenFromDatabase } from '@/core/UserStore.js';
+} from '@/core/app/AccessTokenStore.js';
+import { fetchAppByIdOrFailFromDatabase } from '@/core/app/AppStore.js';
+import { fetchLocalUserByIdFromDatabase, fetchLocalUserByNativeTokenFromDatabase } from '@/core/user/UserStore.js';
 import { deserializeAccessToken } from '@/db/schema/access-token.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { isNativeUserToken } from '@/misc/token.js';

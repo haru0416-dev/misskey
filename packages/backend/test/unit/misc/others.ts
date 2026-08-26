@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { parseQueueDatabaseInfo } from '@/core/QueueAdminLogic.js';
+import { parseQueueDatabaseInfo } from '@/core/queue/QueueAdminLogic.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import { dateUTC } from '@/misc/prelude/time.js';
 import { parseLocalApUri } from '@/server/rest/ap-resolve.js';

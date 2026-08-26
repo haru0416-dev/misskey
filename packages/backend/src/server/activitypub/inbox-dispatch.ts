@@ -54,13 +54,13 @@ import {
 	type IUpdate,
 } from '@/core/activitypub/type.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import { followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
-import { followingExistsInDatabase } from '@/core/FollowingStore.js';
-import { fetchNoteByUriAndUserIdFromDatabase } from '@/core/NoteStore.js';
-import { listUsersByIdsFromDatabase, updateUserDeletedStateIfNotDeletedInDatabase } from '@/core/UserStore.js';
+import { followRequestExistsInDatabase } from '@/core/user/FollowRequestStore.js';
+import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
+import { fetchNoteByUriAndUserIdFromDatabase } from '@/core/note/NoteStore.js';
+import { listUsersByIdsFromDatabase, updateUserDeletedStateIfNotDeletedInDatabase } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { type DbQueue } from '@/core/queues.js';
-import { enqueueDbJobInOutbox, publishDbOutboxRowEagerly } from '@/core/QueueOutboxStore.js';
+import { type DbQueue } from '@/core/queue/queues.js';
+import { enqueueDbJobInOutbox, publishDbOutboxRowEagerly } from '@/core/queue/QueueOutboxStore.js';
 import type { Config } from '@/config.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import {

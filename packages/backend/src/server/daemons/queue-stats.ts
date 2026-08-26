@@ -6,7 +6,7 @@
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import * as Bull from 'bullmq';
 import { QUEUE, baseQueueEventsOptions } from '@/queue/const.js';
-import type { DeliverQueue, InboxQueue } from '@/core/queues.js';
+import type { DeliverQueue, InboxQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
 
 const ev = globalEventBus;

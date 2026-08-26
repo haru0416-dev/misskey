@@ -30,14 +30,14 @@ vi.mock('@/server/rest/role-policy.js', () => ({
 	isHonoApiModerator: isHonoApiModeratorMock,
 }));
 
-vi.mock('@/core/UserMemoStore.js', () => ({
+vi.mock('@/core/user/UserMemoStore.js', () => ({
 	deleteUserMemoFromDatabase: vi.fn(),
 	fetchUserMemoTextFromDatabase: vi.fn(async () => null),
 	listUserMemoTextsByUserIdFromDatabase: vi.fn(),
 	upsertUserMemoInDatabase: vi.fn(),
 }));
 
-vi.mock('@/core/UserNotePiningStore.js', () => ({
+vi.mock('@/core/user/UserNotePiningStore.js', () => ({
 	listUserNotePiningsByUserIdFromDatabase: listUserNotePiningsByUserIdFromDatabaseMock,
 	listUserNotePiningsByUserIdsFromDatabase: vi.fn(),
 }));

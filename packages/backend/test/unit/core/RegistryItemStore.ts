@@ -9,8 +9,8 @@ import {
 	fetchRegistryItemFromDatabase,
 	listRegistryItemsOfScopeFromDatabase,
 	setRegistryItemInDatabase,
-} from '@/core/RegistryItemStore.js';
-import { createUserInDatabase } from '@/core/UserStore.js';
+} from '@/core/registry/RegistryItemStore.js';
+import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { exportedAntennasSchema, importedAntennaToCreateValues } from '@/core/AntennaImport.js';
+import { exportedAntennasSchema, importedAntennaToCreateValues } from '@/core/antenna/AntennaImport.js';
 
 const exportedAntenna = {
 	name: 'imported antenna',

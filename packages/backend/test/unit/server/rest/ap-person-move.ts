@@ -17,8 +17,8 @@ import {
 	createUserWithProfileAndPublickeyInDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	fetchUserByUriFromDatabase,
-} from '@/core/UserStore.js';
-import { createFollowingInDatabase } from '@/core/FollowingStore.js';
+} from '@/core/user/UserStore.js';
+import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { updatePersonForHonoApi, type HonoApiUpdatePersonDependencies } from '@/server/rest/ap-person.js';
 import type { MiRemoteUser } from '@/models/User.js';

@@ -10,25 +10,25 @@ import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import * as Acct from '@/misc/acct.js';
 import { maximum } from '@/misc/prelude/array.js';
-import { listFrequentlyRepliedUsersFromDatabase, listHydratedNotesByIdsFromDatabase } from '@/core/NoteStore.js';
-import { listAvatarDecorationsFromDatabaseCached } from '@/core/AvatarDecorationStore.js';
-import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
+import { listFrequentlyRepliedUsersFromDatabase, listHydratedNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
+import { listAvatarDecorationsFromDatabaseCached } from '@/core/avatar-decoration/AvatarDecorationStore.js';
+import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
 import {
 	listUserNotePiningsByUserIdFromDatabase,
 	listUserNotePiningsByUserIdsFromDatabase,
-} from '@/core/UserNotePiningStore.js';
-import { listRoleAssignmentsByUserIdsFromDatabase } from '@/core/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/RoleStore.js';
+} from '@/core/user/UserNotePiningStore.js';
+import { listRoleAssignmentsByUserIdsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
+import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
 import {
 	countUserSecurityKeysByUserIdFromDatabase,
 	listUserIdsWithSecurityKeysFromDatabase,
 	listUserSecurityKeySummariesByUserIdFromDatabase,
-} from '@/core/UserSecurityKeyStore.js';
+} from '@/core/account/UserSecurityKeyStore.js';
 import {
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	listUserProfilesByUserIdsFromDatabase,
-} from '@/core/UserProfileStore.js';
-import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role-policies.js';
+} from '@/core/user/UserProfileStore.js';
+import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role/role-policies.js';
 import {
 	deserializeUser,
 	fetchLocalUserByUsernameFromDatabase,
@@ -40,34 +40,34 @@ import {
 	listUsersByIdsFromDatabase,
 	listUsersByUsernamesAndHostsFromDatabase,
 	listUsersByUrisOrIdsFromDatabase,
-} from '@/core/UserStore.js';
+} from '@/core/user/UserStore.js';
 import {
 	blockingExistsInDatabase,
 	listBlockeeIdsByBlockerIdAndBlockeeIdsFromDatabase,
 	listBlockerIdsByBlockeeIdAndBlockerIdsFromDatabase,
-} from '@/core/BlockingStore.js';
+} from '@/core/user/BlockingStore.js';
 import {
 	followRequestExistsInDatabase,
 	listFollowRequestFolloweeIdsByFollowerIdAndFolloweeIdsFromDatabase,
 	listFollowRequestFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
-} from '@/core/FollowRequestStore.js';
+} from '@/core/user/FollowRequestStore.js';
 import {
 	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
 	followingExistsInDatabase,
 	listFollowerIdsByFolloweeIdAndFollowerIdsFromDatabase,
 	listFollowingsByFollowerIdAndFolloweeIdsFromDatabase,
-} from '@/core/FollowingStore.js';
-import { listMuteeIdsByMuterIdAndMuteeIdsFromDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
+} from '@/core/user/FollowingStore.js';
+import { listMuteeIdsByMuterIdAndMuteeIdsFromDatabase, mutingExistsInDatabase } from '@/core/user/MutingStore.js';
 import {
 	listRenoteMuteeIdsByMuterIdAndMuteeIdsFromDatabase,
 	renoteMutingExistsInDatabase,
-} from '@/core/RenoteMutingStore.js';
+} from '@/core/user/RenoteMutingStore.js';
 import {
 	deleteUserMemoFromDatabase,
 	fetchUserMemoTextFromDatabase,
 	listUserMemoTextsByUserIdFromDatabase,
 	upsertUserMemoInDatabase,
-} from '@/core/UserMemoStore.js';
+} from '@/core/user/UserMemoStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';

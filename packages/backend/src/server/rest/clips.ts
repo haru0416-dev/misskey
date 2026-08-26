@@ -11,13 +11,13 @@ import {
 	countClipFavoritesFromDatabase,
 	listFavoritedClipIdsByUserIdFromDatabase,
 	listFavoritedClipIdsByUserIdAndClipIdsFromDatabase,
-} from '@/core/ClipFavoriteStore.js';
+} from '@/core/clip/ClipFavoriteStore.js';
 import {
 	countClipNotesByClipIdFromDatabase,
 	countClipNotesByClipIdsFromDatabase,
 	createClipNoteWithinLimitInDatabase,
 	deleteClipNoteAndDecrementNoteClippedCountInDatabase,
-} from '@/core/ClipNoteStore.js';
+} from '@/core/clip/ClipNoteStore.js';
 import {
 	createClipWithinLimitInDatabase,
 	deleteClipInDatabase,
@@ -28,8 +28,8 @@ import {
 	listClipsWithPaginationFromDatabase,
 	resolveClipPagination,
 	updateClipInDatabase,
-} from '@/core/ClipStore.js';
-import { fetchNoteByIdFromDatabase, listClipNotesFromDatabase } from '@/core/NoteStore.js';
+} from '@/core/clip/ClipStore.js';
+import { fetchNoteByIdFromDatabase, listClipNotesFromDatabase } from '@/core/note/NoteStore.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';

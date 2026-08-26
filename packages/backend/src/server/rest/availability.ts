@@ -4,9 +4,9 @@
  */
 
 import { z } from 'zod';
-import type { EmailService } from '@/core/EmailService.js';
-import { isUsedUsername } from '@/core/UsedUsernameStore.js';
-import { countUsersActiveAfterFromDatabase, isLocalUsernameTaken } from '@/core/UserStore.js';
+import type { EmailService } from '@/core/email/EmailService.js';
+import { isUsedUsername } from '@/core/account/UsedUsernameStore.js';
+import { countUsersActiveAfterFromDatabase, isLocalUsernameTaken } from '@/core/user/UserStore.js';
 import { USER_ONLINE_THRESHOLD } from '@/const.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { localUsernameSchema } from '@/models/User.js';

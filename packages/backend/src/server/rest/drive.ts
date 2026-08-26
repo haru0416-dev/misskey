@@ -10,7 +10,7 @@ import {
 	countDriveFilesGroupedByFolderIdsFromDatabase,
 	driveFileExistsByMd5AndUserIdFromDatabase,
 	sumDriveFileSizeByUserIdFromDatabase,
-} from '@/core/DriveFileStore.js';
+} from '@/core/drive/DriveFileStore.js';
 import {
 	countChildDriveFoldersGroupedByParentIdsFromDatabase,
 	countDriveFoldersByParentIdFromDatabase,
@@ -23,7 +23,7 @@ import {
 	listDriveFoldersByUserIdFromDatabase,
 	resolveDriveFolderPagination,
 	updateDriveFolderInDatabase,
-} from '@/core/DriveFolderStore.js';
+} from '@/core/drive/DriveFolderStore.js';
 import type { DriveFolderRow } from '@/db/schema/drive-folder.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';

@@ -8,7 +8,7 @@ import { getNoteSummary } from '@/misc/get-note-summary.js';
 import {
 	deleteSwSubscriptionForPushEndpointFromDatabase,
 	listSwSubscriptionsByUserIdFromDatabase,
-} from '@/core/SwSubscriptionStore.js';
+} from '@/core/sw/SwSubscriptionStore.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

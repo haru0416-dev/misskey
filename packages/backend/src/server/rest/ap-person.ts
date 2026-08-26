@@ -12,7 +12,7 @@ import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import { omitUndefined } from '@/misc/clone.js';
-import { createMfmService } from '@/core/MfmService.js';
+import { createMfmService } from '@/core/mfm/MfmService.js';
 import { createApMfmService } from '@/core/activitypub/ApMfmService.js';
 import { extractApHashtags } from '@/core/activitypub/models/tag.js';
 import {
@@ -37,21 +37,21 @@ import {
 	updateUserLastFetchedAtInDatabase,
 	updateUserUriByUsernameAndHostInDatabase,
 	createUserWithProfileAndPublickeyInDatabase,
-} from '@/core/UserStore.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+} from '@/core/user/UserStore.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
-import { fetchUserPublickeyByUserIdFromDatabase, updateUserPublickeyInDatabase } from '@/core/UserPublickeyStore.js';
-import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
-import { updateFollowingsByFollowerIdInDatabase } from '@/core/FollowingStore.js';
+import { fetchUserPublickeyByUserIdFromDatabase, updateUserPublickeyInDatabase } from '@/core/user/UserPublickeyStore.js';
+import { updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
+import { updateFollowingsByFollowerIdInDatabase } from '@/core/user/FollowingStore.js';
 import {
 	listEmojisByHostAndNamesFromDatabase,
 	updateEmojiByHostAndNameInDatabase,
 	insertEmojiInDatabase,
-} from '@/core/EmojiStore.js';
-import { fetchDriveFileByIdOrFailFromDatabase, updateDriveFileInDatabase } from '@/core/DriveFileStore.js';
-import { adjustInstanceUsersCountFromDatabase } from '@/core/InstanceStore.js';
+} from '@/core/emoji/EmojiStore.js';
+import { fetchDriveFileByIdOrFailFromDatabase, updateDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
+import { adjustInstanceUsersCountFromDatabase } from '@/core/instance/InstanceStore.js';
 import { StatusError } from '@/misc/status-error.js';
-import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
+import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
 import { query as urlQuery } from '@/misc/prelude/url.js';
 import type { Config } from '@/config.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
@@ -74,7 +74,7 @@ import { updateUsertagsForHonoApi } from './account-update.js';
 import { getHonoApiRolePolicies } from './role-policy.js';
 import { parseHonoApiParams } from './validation.js';
 import { fetchOrRegisterInstanceForHonoApi } from './notes-create.js';
-import type { RelationshipQueue } from '@/core/queues.js';
+import type { RelationshipQueue } from '@/core/queue/queues.js';
 
 export type HonoApiApPersonDependencies = HonoApiApResolveDependencies &
 	HonoApiDriveFileUploadDependencies & {

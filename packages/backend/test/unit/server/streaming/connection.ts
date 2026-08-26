@@ -12,8 +12,8 @@ import { EventEmitter } from 'node:events';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createChatRoomInDatabase } from '@/core/ChatRoomStore.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import { createChatRoomInDatabase } from '@/core/chat/ChatRoomStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	HonoStreamConnection,

@@ -4,26 +4,26 @@
  */
 
 import { z } from 'zod';
-import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
+import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
 import {
 	createBlockingInDatabase,
 	deleteBlockingByIdFromDatabase,
 	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
 	listBlockingsByBlockerIdWithPaginationFromDatabase,
 	resolveBlockingPagination,
-} from '@/core/BlockingStore.js';
-import { deleteFollowRequestByIdFromDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
+} from '@/core/user/BlockingStore.js';
+import { deleteFollowRequestByIdFromDatabase, fetchFollowRequestFromDatabase } from '@/core/user/FollowRequestStore.js';
 import {
 	deleteFollowingAndUpdateUserCountsByIdInDatabase,
 	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
-} from '@/core/FollowingStore.js';
+} from '@/core/user/FollowingStore.js';
 import {
 	adjustInstanceFollowersCountFromDatabase,
 	adjustInstanceFollowingCountFromDatabase,
-} from '@/core/InstanceStore.js';
-import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queues.js';
-import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase } from '@/core/UserListMembershipStore.js';
+} from '@/core/instance/InstanceStore.js';
+import type { DeliverQueue, UserWebhookDeliverQueue } from '@/core/queue/queues.js';
+import { fetchUserByIdFromDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase } from '@/core/user/UserListMembershipStore.js';
 import type { IActivity, IBlock } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

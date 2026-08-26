@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { listActiveInstanceHostsFromDatabase } from '@/core/InstanceStore.js';
+import { listActiveInstanceHostsFromDatabase } from '@/core/instance/InstanceStore.js';
 import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
 import {
 	handleHonoApiAntennasCreate,

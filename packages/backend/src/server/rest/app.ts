@@ -12,7 +12,7 @@ import {
 	fetchAppByIdOrFailFromDatabase,
 	listAppsByIdsFromDatabase,
 	listAppsByUserIdFromDatabase,
-} from '@/core/AppStore.js';
+} from '@/core/app/AppStore.js';
 import {
 	deleteAccessTokenByIdAndUserIdFromDatabase,
 	deleteAccessTokenByTokenAndUserIdFromDatabase,
@@ -23,7 +23,7 @@ import {
 	listAccessTokensWithAppByUserIdFromDatabase,
 	listAuthorizedAppIdsByUserIdAndAppIdsFromDatabase,
 	type AccessTokenOrderField,
-} from '@/core/AccessTokenStore.js';
+} from '@/core/app/AccessTokenStore.js';
 import type { AppRow } from '@/db/schema/app.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';

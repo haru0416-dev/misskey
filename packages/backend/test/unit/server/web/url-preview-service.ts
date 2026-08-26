@@ -6,7 +6,7 @@
 import type { SummalyResult } from '@misskey-dev/summaly';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Config } from '@/config.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import type { LoggerService } from '@/core/LoggerService.js';
 import type { MiMeta } from '@/models/Meta.js';
 import { createUrlPreviewService } from '@/server/web/UrlPreviewService.js';

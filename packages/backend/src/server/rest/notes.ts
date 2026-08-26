@@ -5,17 +5,17 @@
 
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
-import { listClipNoteClipIdsByNoteIdFromDatabase } from '@/core/ClipNoteStore.js';
-import { listClipsByIdsFromDatabase } from '@/core/ClipStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { listActiveMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelMutingStore.js';
+import { listClipNoteClipIdsByNoteIdFromDatabase } from '@/core/clip/ClipNoteStore.js';
+import { listClipsByIdsFromDatabase } from '@/core/clip/ClipStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
 import {
 	createNoteFavoriteInDatabase,
 	deleteNoteFavoriteByIdFromDatabase,
 	fetchNoteFavoriteFromDatabase,
 	noteFavoriteExistsInDatabase,
-} from '@/core/NoteFavoriteStore.js';
+} from '@/core/note/NoteFavoriteStore.js';
 import {
 	fetchNoteByIdFromDatabase,
 	fetchNoteByIdOrFailFromDatabase,
@@ -33,20 +33,20 @@ import {
 	listReplyNotesFromDatabase,
 	listUserListTimelineNotesFromDatabase,
 	searchNotesByTextFromDatabase,
-} from '@/core/NoteStore.js';
+} from '@/core/note/NoteStore.js';
 import {
 	createNoteThreadMutingInDatabase,
 	deleteNoteThreadMutingFromDatabase,
 	noteThreadMutingExistsInDatabase,
-} from '@/core/NoteThreadMutingStore.js';
-import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/PollStore.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
+} from '@/core/note/NoteThreadMutingStore.js';
+import { listUnvotedPublicPollNoteIdsFromDatabase } from '@/core/note/PollStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserListByIdAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
 import {
 	fanoutViewerRelationKinds,
 	fetchViewerRelationSnapshotFromDatabase,
 	homeTimelineViewerRelationKinds,
-} from '@/core/ViewerRelationStore.js';
+} from '@/core/user/ViewerRelationStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';

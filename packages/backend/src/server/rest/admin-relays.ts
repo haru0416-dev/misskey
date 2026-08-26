@@ -5,19 +5,19 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
-import { addRelayWithSideEffects, removeRelayWithSideEffects } from '@/core/RelayLogic.js';
+import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
+import { addRelayWithSideEffects, removeRelayWithSideEffects } from '@/core/relay/RelayLogic.js';
 import {
 	listRelaysByStatusFromDatabaseCached,
 	listRelaysFromDatabase,
 	updateRelayStatusInDatabase,
-} from '@/core/RelayStore.js';
-import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
+} from '@/core/relay/RelayStore.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiRelay } from '@/models/Relay.js';
 import type { MiMeta } from '@/models/_.js';
-import type { DeliverQueue } from '@/core/queues.js';
+import type { DeliverQueue } from '@/core/queue/queues.js';
 import { HonoApiError } from './error.js';
 import { parseHonoApiParams } from './validation.js';
 

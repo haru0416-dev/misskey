@@ -5,7 +5,7 @@
 
 import type * as Bull from 'bullmq';
 import { eq } from 'drizzle-orm';
-import { fetchNoteDraftWithUserByIdFromDatabase } from '@/core/NoteDraftStore.js';
+import { fetchNoteDraftWithUserByIdFromDatabase } from '@/core/note/NoteDraftStore.js';
 import { noteDraft, type NoteDraftRow } from '@/db/schema/note-draft.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';

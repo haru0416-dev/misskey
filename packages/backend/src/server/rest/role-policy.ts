@@ -4,9 +4,9 @@
  */
 
 import type { Config } from '@/config.js';
-import { listRoleAssignmentsByUserIdFromDatabase } from '@/core/RoleAssignmentStore.js';
-import { listRolesFromDatabase } from '@/core/RoleStore.js';
-import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role-policies.js';
+import { listRoleAssignmentsByUserIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
+import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
+import { DEFAULT_POLICIES, type RolePolicies } from '@/core/role/role-policies.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiMeta, MiRole } from '@/models/_.js';

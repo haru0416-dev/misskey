@@ -5,13 +5,13 @@
 
 import type * as Bull from 'bullmq';
 import type { DeleteObjectCommandInput } from '@aws-sdk/client-s3';
-import { finishDriveFileDeletionSync } from '@/core/DriveFileDeletionLogic.js';
+import { finishDriveFileDeletionSync } from '@/core/drive/DriveFileDeletionLogic.js';
 import {
 	countRemoteCachedDriveFilesFromDatabase,
 	listRemoteCachedDriveFilesWithPaginationFromDatabase,
-} from '@/core/DriveFileStore.js';
-import type { InternalStorageService } from '@/core/InternalStorageService.js';
-import type { S3Service } from '@/core/S3Service.js';
+} from '@/core/drive/DriveFileStore.js';
+import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
+import type { S3Service } from '@/core/drive/S3Service.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta } from '@/models/_.js';

@@ -6,8 +6,8 @@
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { beforeAll, describe, expect, test } from 'vitest';
-import { createFileInfoService, type FileInfo, type FileInfoService } from '@/core/FileInfoService.js';
-import type { AiService } from '@/core/AiService.js';
+import { createFileInfoService, type FileInfo, type FileInfoService } from '@/core/drive/FileInfoService.js';
+import type { AiService } from '@/core/ai/AiService.js';
 import { createLoggerService } from '@/core/LoggerService.js';
 
 const _filename = fileURLToPath(import.meta.url);

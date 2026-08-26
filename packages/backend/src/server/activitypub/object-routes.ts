@@ -11,12 +11,12 @@ import type * as Redis from 'ioredis';
 import {
 	listFollowersByFolloweeIdWithPaginationFromDatabase,
 	listFollowingsByFollowerIdWithPaginationFromDatabase,
-} from '@/core/FollowingStore.js';
+} from '@/core/user/FollowingStore.js';
 import {
 	fetchNoteByIdFromDatabase,
 	listActivityPubOutboxNotesByUserIdFromDatabase,
 	listNotesByIdsFromDatabase,
-} from '@/core/NoteStore.js';
+} from '@/core/note/NoteStore.js';
 import {
 	fetchLocalUserByIdFromDatabase,
 	fetchUserByIdFromDatabase,
@@ -24,15 +24,15 @@ import {
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
 	fetchRemoteUserByIdFromDatabase,
-} from '@/core/UserStore.js';
+} from '@/core/user/UserStore.js';
 import { renderEmoji, renderLikeForHonoApi } from '../rest/notes-ap.js';
 import { renderFollow } from '../rest/following.js';
-import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
-import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
-import { fetchNoteReactionByIdFromDatabase } from '@/core/NoteReactionStore.js';
-import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
+import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
+import { fetchNoteReactionByIdFromDatabase } from '@/core/note/NoteReactionStore.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { listUserNotePiningsByUserIdFromDatabase } from '@/core/user/UserNotePiningStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import * as Acct from '@/misc/acct.js';
 import { query as urlQuery } from '@/misc/prelude/url.js';

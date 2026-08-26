@@ -7,7 +7,7 @@ import { domainToASCII } from 'node:url';
 import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { FetchAllowSoftFailMask, assertActivityMatchesUrl } from '@/core/activitypub/misc/check-against-url.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
@@ -17,24 +17,24 @@ import {
 	type IObject,
 	type IOrderedCollection,
 } from '@/core/activitypub/type.js';
-import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
-import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
+import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
 import {
 	fetchNoteByIdFromDatabase,
 	fetchNoteByIdOrFailFromDatabase,
 	fetchNoteByUriFromDatabase,
-} from '@/core/NoteStore.js';
-import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/NoteReactionStore.js';
-import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/PollStore.js';
+} from '@/core/note/NoteStore.js';
+import { fetchNoteReactionByIdOrFailFromDatabase } from '@/core/note/NoteReactionStore.js';
+import { fetchPollByNoteIdOrFailFromDatabase } from '@/core/note/PollStore.js';
 import {
 	fetchLocalUserByIdFromDatabase,
 	fetchRemoteUserByIdFromDatabase,
 	fetchUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
 	fetchUserByUriFromDatabase,
-} from '@/core/UserStore.js';
-import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
-import { fetchUserPublickeyByKeyIdFromDatabase } from '@/core/UserPublickeyStore.js';
+} from '@/core/user/UserStore.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
+import { fetchUserPublickeyByKeyIdFromDatabase } from '@/core/user/UserPublickeyStore.js';
 import type { MiUserPublickey } from '@/models/UserPublickey.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';

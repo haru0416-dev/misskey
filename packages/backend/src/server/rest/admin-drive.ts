@@ -11,12 +11,12 @@ import {
 	listAllDriveFilesByUserIdFromDatabase,
 	listDriveFilesForAdminFromDatabase,
 	listOrphanDriveFilesFromDatabase,
-} from '@/core/DriveFileStore.js';
-import { startDriveFileDeletion } from '@/core/DriveFileDeletionLogic.js';
-import type { InternalStorageService } from '@/core/InternalStorageService.js';
-import type { ObjectStorageQueue } from '@/core/queues.js';
+} from '@/core/drive/DriveFileStore.js';
+import { startDriveFileDeletion } from '@/core/drive/DriveFileDeletionLogic.js';
+import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
+import type { ObjectStorageQueue } from '@/core/queue/queues.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { omitUndefined } from '@/misc/clone.js';
@@ -37,7 +37,7 @@ import { parseHonoApiParams } from './validation.js';
 export type HonoApiAdminDriveDependencies = HonoApiRolePolicyDependencies & {
 	internalStorageService: Pick<InternalStorageService, 'del'>;
 	objectStorageQueue: ObjectStorageQueue;
-	dbQueue: import('@/core/queues.js').DbQueue;
+	dbQueue: import('@/core/queue/queues.js').DbQueue;
 	publishDriveStream?: HonoApiDriveStreamPublisher;
 };
 

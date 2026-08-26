@@ -8,14 +8,14 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
-import { deleteAccountWithSideEffects, type DeleteAccountDependencies } from '@/core/DeleteAccountLogic.js';
-import { listModerationLogsFromDatabase } from '@/core/ModerationLogStore.js';
-import type { DbQueue, DeliverQueue } from '@/core/queues.js';
+import { deleteAccountWithSideEffects, type DeleteAccountDependencies } from '@/core/account/DeleteAccountLogic.js';
+import { listModerationLogsFromDatabase } from '@/core/moderation/ModerationLogStore.js';
+import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
 import {
 	createUserWithProfileAndPublickeyInDatabase,
 	deleteUserByIdFromDatabase,
 	fetchUserByIdOrFailFromDatabase,
-} from '@/core/UserStore.js';
+} from '@/core/user/UserStore.js';
 import { following } from '@/db/schema/following.js';
 import { queueOutbox, type QueueOutboxRow } from '@/db/schema/queue-outbox.js';
 import { genId } from '@/misc/id/gen-id.js';

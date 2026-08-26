@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { HonoApiError, rateLimitExceededError } from './error.js';
 import { isHonoApiRateLimitedForUser } from './rate-limit.js';

@@ -8,7 +8,7 @@ import { resolve } from 'node:path';
 import { languages } from 'i18n/const';
 import type { Manifest } from 'vite';
 import type { Config } from '@/config.js';
-import { packMetaDetailed } from '@/core/MetaEntityPacker.js';
+import { packMetaDetailed } from '@/core/meta/MetaEntityPacker.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import type { MiMeta } from '@/models/Meta.js';

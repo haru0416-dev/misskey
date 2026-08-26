@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchChatRoomByIdFromDatabase } from '@/core/ChatRoomStore.js';
+import { fetchChatRoomByIdFromDatabase } from '@/core/chat/ChatRoomStore.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import {
 	hasPermissionToViewRoomTimelineForHonoApi,

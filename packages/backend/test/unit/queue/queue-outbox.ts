@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as Bull from 'bullmq';
 import { eq, inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
-import { removeQueueJob, retryQueueJob } from '@/core/QueueAdminLogic.js';
+import { removeQueueJob, retryQueueJob } from '@/core/queue/QueueAdminLogic.js';
 import {
 	dispatchQueueOutbox,
 	enqueueAccountDeleteCoordinatorInOutbox,
@@ -19,7 +19,7 @@ import {
 	getQueueOutboxStats,
 	publishDbOutboxRowEagerly,
 	runInlineDbOutboxJob,
-} from '@/core/QueueOutboxStore.js';
+} from '@/core/queue/QueueOutboxStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';

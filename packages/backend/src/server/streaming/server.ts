@@ -8,7 +8,7 @@ import type { IncomingMessage, Server } from 'node:http';
 import type { Socket } from 'node:net';
 import * as WebSocket from 'ws';
 import type * as Redis from 'ioredis';
-import { updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
+import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
 import { HonoApiError } from '../rest/error.js';
 import { authenticateHonoApiToken } from '../rest/auth.js';
 import {

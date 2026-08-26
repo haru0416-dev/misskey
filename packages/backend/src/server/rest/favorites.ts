@@ -5,46 +5,46 @@
 
 import { z } from 'zod';
 import type { Config } from '@/config.js';
-import { createChannelFavoriteInDatabase, deleteChannelFavoriteFromDatabase } from '@/core/ChannelFavoriteStore.js';
-import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
+import { createChannelFavoriteInDatabase, deleteChannelFavoriteFromDatabase } from '@/core/channel/ChannelFavoriteStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/channel/ChannelStore.js';
 import {
 	clipFavoriteExistsInDatabase,
 	createClipFavoriteInDatabase,
 	deleteClipFavoriteByIdFromDatabase,
 	fetchClipFavoriteFromDatabase,
-} from '@/core/ClipFavoriteStore.js';
-import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
+} from '@/core/clip/ClipFavoriteStore.js';
+import { fetchClipByIdFromDatabase } from '@/core/clip/ClipStore.js';
 import {
 	createFlashLikeInDatabase,
 	deleteFlashLikeByIdFromDatabase,
 	fetchFlashLikeFromDatabase,
 	flashLikeExistsInDatabase,
-} from '@/core/FlashLikeStore.js';
+} from '@/core/flash/FlashLikeStore.js';
 import {
 	decrementFlashLikedCountInDatabase,
 	fetchFlashByIdFromDatabase,
 	incrementFlashLikedCountInDatabase,
-} from '@/core/FlashStore.js';
-import { listNoteFavoritesByUserIdFromDatabase } from '@/core/NoteFavoriteStore.js';
-import { listNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+} from '@/core/flash/FlashStore.js';
+import { listNoteFavoritesByUserIdFromDatabase } from '@/core/note/NoteFavoriteStore.js';
+import { listNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import {
 	createPageLikeInDatabase,
 	deletePageLikeByIdFromDatabase,
 	fetchPageLikeFromDatabase,
 	pageLikeExistsInDatabase,
-} from '@/core/PageLikeStore.js';
+} from '@/core/page/PageLikeStore.js';
 import {
 	decrementPageLikedCountInDatabase,
 	fetchPageByIdFromDatabase,
 	incrementPageLikedCountInDatabase,
-} from '@/core/PageStore.js';
+} from '@/core/page/PageStore.js';
 import {
 	createUserListFavoriteInDatabase,
 	deleteUserListFavoriteByIdFromDatabase,
 	fetchUserListFavoriteFromDatabase,
 	userListFavoriteExistsInDatabase,
-} from '@/core/UserListFavoriteStore.js';
-import { userListExistsByIdAndPublicFromDatabase } from '@/core/UserListStore.js';
+} from '@/core/user/UserListFavoriteStore.js';
+import { userListExistsByIdAndPublicFromDatabase } from '@/core/user/UserListStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';

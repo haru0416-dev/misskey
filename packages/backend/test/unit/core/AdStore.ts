@@ -14,7 +14,7 @@ import {
 	listActiveAdsFromDatabase,
 	listAdsFromDatabase,
 	updateAdInDatabase,
-} from '@/core/AdStore.js';
+} from '@/core/ad/AdStore.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 

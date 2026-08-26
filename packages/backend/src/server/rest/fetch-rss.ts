@@ -5,7 +5,7 @@
 
 import Parser from 'rss-parser';
 import { z } from 'zod';
-import type { HttpRequestService } from '@/core/HttpRequestService.js';
+import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { HonoApiError } from './error.js';
 import { parseHonoApiParams } from './validation.js';
 

@@ -5,19 +5,19 @@
 
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
-import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/AnnouncementStore.js';
-import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
-import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
-import { fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
-import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
-import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
-import { fetchPageByNameAndUserIdFromDatabase } from '@/core/PageStore.js';
+import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/announcement/AnnouncementStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/channel/ChannelStore.js';
+import { fetchClipByIdFromDatabase } from '@/core/clip/ClipStore.js';
+import { fetchFlashByIdFromDatabase } from '@/core/flash/FlashStore.js';
+import { fetchGalleryPostByIdFromDatabase } from '@/core/gallery/GalleryPostStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchPageByNameAndUserIdFromDatabase } from '@/core/page/PageStore.js';
 import {
 	fetchLocalUserByIdFromDatabase,
 	fetchUserByIdFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
-} from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+} from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import * as Acct from '@/misc/acct.js';
 import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import type { Packed } from '@/misc/json-schema.js';

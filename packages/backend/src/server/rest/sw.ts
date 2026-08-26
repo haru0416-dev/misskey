@@ -12,7 +12,7 @@ import {
 	isDuplicateKeyValueDatabaseError,
 	updateSwSubscriptionByUserAndEndpointInDatabase,
 	updateSwSubscriptionInDatabase,
-} from '@/core/SwSubscriptionStore.js';
+} from '@/core/sw/SwSubscriptionStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiMeta } from '@/models/_.js';

@@ -8,13 +8,13 @@ import {
 	createSystemWebhookWithSideEffects,
 	deleteSystemWebhookWithSideEffects,
 	updateSystemWebhookWithSideEffects,
-} from '@/core/SystemWebhookLogic.js';
-import { enqueueSystemWebhookDeliverJob } from '@/core/SystemWebhookQueue.js';
-import { fetchSystemWebhookByIdFromDatabase, listSystemWebhooksFromDatabase } from '@/core/SystemWebhookStore.js';
-import { NoSuchSystemWebhookForTestError, testSystemWebhookWithQueue } from '@/core/SystemWebhookTestLogic.js';
-import { logModerationEventInDatabase } from '@/core/ModerationLogLogic.js';
+} from '@/core/webhook/SystemWebhookLogic.js';
+import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
+import { fetchSystemWebhookByIdFromDatabase, listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
+import { NoSuchSystemWebhookForTestError, testSystemWebhookWithQueue } from '@/core/webhook/SystemWebhookTestLogic.js';
+import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { Config } from '@/config.js';
-import type { SystemWebhookDeliverQueue } from '@/core/queues.js';
+import type { SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { genId } from '@/misc/id/gen-id.js';

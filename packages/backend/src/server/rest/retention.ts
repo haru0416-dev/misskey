@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { listLatestRetentionAggregations } from '@/core/RetentionAggregationStore.js';
+import { listLatestRetentionAggregations } from '@/core/retention/RetentionAggregationStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseHonoApiParams } from './validation.js';
 

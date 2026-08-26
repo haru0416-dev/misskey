@@ -6,19 +6,19 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type * as Bull from 'bullmq';
-import { createDeliverJob } from '@/core/DeliverQueue.js';
-import { enqueueInlineDbJobInOutbox, runInlineDbOutboxJob } from '@/core/QueueOutboxStore.js';
+import { createDeliverJob } from '@/core/queue/DeliverQueue.js';
+import { enqueueInlineDbJobInOutbox, runInlineDbOutboxJob } from '@/core/queue/QueueOutboxStore.js';
 import {
 	deleteFollowRequestsByFolloweeIdFromDatabase,
 	deleteFollowRequestsByFollowerIdFromDatabase,
-} from '@/core/FollowRequestStore.js';
+} from '@/core/user/FollowRequestStore.js';
 import {
 	listFollowingsForUnfollowByFollowerIdFromDatabase,
 	listSharedInboxesFromFollowingsInDatabase,
-} from '@/core/FollowingStore.js';
-import { logModerationEventWithIdInDatabase } from '@/core/ModerationLogLogic.js';
-import type { DbQueue, DeliverQueue, RelationshipQueue } from '@/core/queues.js';
-import { updateUserSuspendedStateInDatabase, fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+} from '@/core/user/FollowingStore.js';
+import { logModerationEventWithIdInDatabase } from '@/core/moderation/ModerationLogLogic.js';
+import type { DbQueue, DeliverQueue, RelationshipQueue } from '@/core/queue/queues.js';
+import { updateUserSuspendedStateInDatabase, fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import type { IActivity, IDelete, IObject } from '@/core/activitypub/type.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';

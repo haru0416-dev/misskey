@@ -5,7 +5,7 @@
 
 import type { SummalyResult } from '@misskey-dev/summaly';
 import type { Config } from '@/config.js';
-import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { deepClone } from '@/misc/clone.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';

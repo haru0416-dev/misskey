@@ -5,14 +5,14 @@
 
 import type { Meilisearch } from 'meilisearch';
 import * as Bull from 'bullmq';
-import type { EmailService } from '@/core/EmailService.js';
-import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/PageStore.js';
-import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
-import { deleteNotesByIdsFromDatabase, listNotesByUserIdWithPaginationFromDatabase } from '@/core/NoteStore.js';
-import { deleteUserByIdFromDatabase, fetchUserByIdFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import type { EmailService } from '@/core/email/EmailService.js';
+import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/page/PageStore.js';
+import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { deleteNotesByIdsFromDatabase, listNotesByUserIdWithPaginationFromDatabase } from '@/core/note/NoteStore.js';
+import { deleteUserByIdFromDatabase, fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { Config } from '@/config.js';
-import type { DbQueue, DeliverQueue } from '@/core/queues.js';
+import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta, MiUser } from '@/models/_.js';

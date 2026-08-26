@@ -14,14 +14,14 @@ import {
 	deleteUserSecurityKeyByIdAndUserIdFromDatabase,
 	fetchUserSecurityKeyByIdFromDatabase,
 	updateUserSecurityKeyNameByIdInDatabase,
-} from '@/core/UserSecurityKeyStore.js';
+} from '@/core/account/UserSecurityKeyStore.js';
 import {
 	fetchUserProfileByUserIdFromDatabase,
 	fetchUserProfileByUserIdOrFailFromDatabase,
 	updateUserProfileInDatabase,
-} from '@/core/UserProfileStore.js';
-import type { UserAuthService } from '@/core/UserAuthService.js';
-import type { WebAuthnService } from '@/core/WebAuthnService.js';
+} from '@/core/user/UserProfileStore.js';
+import type { UserAuthService } from '@/core/account/UserAuthService.js';
+import type { WebAuthnService } from '@/core/account/WebAuthnService.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { HonoApiError } from './error.js';

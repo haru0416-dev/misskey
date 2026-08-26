@@ -11,7 +11,7 @@ import {
 	createUserPendingInDatabase,
 	deleteUserPendingFromDatabase,
 	fetchUserPendingByCodeFromDatabase,
-} from '@/core/UserPendingStore.js';
+} from '@/core/account/UserPendingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 
