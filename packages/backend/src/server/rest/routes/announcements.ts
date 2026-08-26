@@ -10,16 +10,16 @@ import {
 	assertSecureCredential,
 	assertTokenPermission,
 	authenticateHonoApiToken,
-} from '../auth.js';
-import { handleHonoApiEmailAddressAvailable } from '../availability.js';
-import { handleHonoApiPinnedUsers } from '../user.js';
+} from '../auth/auth.js';
+import { handleHonoApiEmailAddressAvailable } from '../auth/availability.js';
+import { handleHonoApiPinnedUsers } from '../user/user.js';
 import {
 	handleHonoApiAnnouncements,
 	handleHonoApiAnnouncementShow,
 	handleHonoApiIReadAnnouncement,
-} from '../announcements.js';
-import { handleHonoApiIClaimAchievement } from '../notification.js';
-import { handleHonoApiPagePush } from '../page-push.js';
+} from '../announcement/announcements.js';
+import { handleHonoApiIClaimAchievement } from '../notification/notification.js';
+import { handleHonoApiPagePush } from '../page/page-push.js';
 import {
 	jsonResponse,
 	emptyResponse,

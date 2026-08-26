@@ -9,7 +9,7 @@ import type { AddressInfo } from 'node:net';
 import * as assert from 'assert';
 import * as Bull from 'bullmq';
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
-import { toXListId } from '@/server/rest/notification.js';
+import { toXListId } from '@/server/rest/notification/notification.js';
 import type {
 	DbJobData,
 	DeliverJobData,

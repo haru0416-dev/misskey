@@ -28,7 +28,7 @@ vi.mock('@/core/user/UserStore.js', () => ({
 	fetchUserByIdOrFailFromDatabase: fetchUserByIdOrFailFromDatabaseMock,
 }));
 
-import { filterVisibleNotesForHonoApi } from '@/server/rest/note.js';
+import { filterVisibleNotesForHonoApi } from '@/server/rest/note/note.js';
 
 const viewerId = '019f587c6bc4785ead8d511d603959f0';
 const followedId = '019f587c6bc4785ead8d511d603959f1';

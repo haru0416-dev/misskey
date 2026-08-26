@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
 import {
 	handleHonoApiGalleryFeatured,
 	handleHonoApiGalleryPopular,
@@ -17,8 +17,8 @@ import {
 	handleHonoApiGalleryPostsUpdate,
 	handleHonoApiIGalleryLikes,
 	handleHonoApiIGalleryPosts,
-} from '../gallery.js';
-import { handleHonoApiFlashLike, handleHonoApiFlashUnlike } from '../favorites.js';
+} from '../gallery/gallery.js';
+import { handleHonoApiFlashLike, handleHonoApiFlashUnlike } from '../favorite/favorites.js';
 import {
 	handleHonoApiFlashCreate,
 	handleHonoApiFlashDelete,
@@ -28,7 +28,7 @@ import {
 	handleHonoApiFlashSearch,
 	handleHonoApiFlashShow,
 	handleHonoApiFlashUpdate,
-} from '../flash.js';
+} from '../flash/flash.js';
 import {
 	handleHonoApiFollowingCreate,
 	handleHonoApiFollowingDelete,
@@ -41,7 +41,7 @@ import {
 	handleHonoApiFollowingRequestsSent,
 	handleHonoApiFollowingUpdate,
 	handleHonoApiFollowingUpdateAll,
-} from '../following.js';
+} from '../user/following.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import {
 	jsonResponse,

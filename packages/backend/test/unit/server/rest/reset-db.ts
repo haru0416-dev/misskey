@@ -8,7 +8,7 @@ import type * as Redis from 'ioredis';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
 import { createApiShellApp, type ApiShellDependencies } from '@/server/rest/shell.js';
-import { handleHonoApiResetDb } from '@/server/rest/reset-db.js';
+import { handleHonoApiResetDb } from '@/server/rest/admin/reset-db.js';
 
 const { fetchMetaFromDatabaseMock, resetDbMock } = vi.hoisted(() => ({
 	fetchMetaFromDatabaseMock: vi.fn(),

@@ -6,7 +6,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import type { MiMeta } from '@/models/Meta.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { translateTextForHonoApi } from '@/server/rest/note.js';
+import { translateTextForHonoApi } from '@/server/rest/note/note.js';
 
 type SendArgs = Parameters<HttpRequestService['send']>;
 

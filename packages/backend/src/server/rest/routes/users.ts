@@ -10,20 +10,20 @@ import {
 	assertSecureCredential,
 	assertTokenPermission,
 	authenticateHonoApiToken,
-} from '../auth.js';
-import { handleHonoApiUsersReportAbuse } from '../admin-abuse-reports.js';
-import { handleHonoApiUsernameAvailable } from '../availability.js';
-import { handleHonoApiMyApps } from '../app.js';
+} from '../auth/auth.js';
+import { handleHonoApiUsersReportAbuse } from '../admin/admin-abuse-reports.js';
+import { handleHonoApiUsernameAvailable } from '../auth/availability.js';
+import { handleHonoApiMyApps } from '../auth/app.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleHonoApiUsersGalleryPosts } from '../gallery.js';
-import { handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from '../favorites.js';
-import { handleHonoApiUsersClips } from '../clips.js';
-import { handleHonoApiUsersFlashs } from '../flash.js';
+import { handleHonoApiUsersGalleryPosts } from '../gallery/gallery.js';
+import { handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from '../favorite/favorites.js';
+import { handleHonoApiUsersClips } from '../clip/clips.js';
+import { handleHonoApiUsersFlashs } from '../flash/flash.js';
 import {
 	handleHonoApiUsersFollowers,
 	handleHonoApiUsersFollowing,
 	handleHonoApiUsersGetFollowingUsersByBirthday,
-} from '../following.js';
+} from '../user/following.js';
 import {
 	handleHonoApiUsers,
 	handleHonoApiUsersGetFrequentlyRepliedUsers,
@@ -33,26 +33,26 @@ import {
 	handleHonoApiUsersSearchByUsernameAndHost,
 	handleHonoApiUsersShow,
 	handleHonoApiUsersUpdateMemo,
-} from '../user.js';
-import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from '../miauth.js';
+} from '../user/user.js';
+import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from '../auth/miauth.js';
 import {
 	handleHonoApiNotesDraftsCount,
 	handleHonoApiNotesDraftsCreate,
 	handleHonoApiNotesDraftsDelete,
 	handleHonoApiNotesDraftsList,
 	handleHonoApiNotesDraftsUpdate,
-} from '../note-drafts.js';
-import { handleHonoApiUsersReactions } from '../user-reactions.js';
-import { handleHonoApiUsersPages } from '../pages.js';
+} from '../note/note-drafts.js';
+import { handleHonoApiUsersReactions } from '../user/user-reactions.js';
+import { handleHonoApiUsersPages } from '../page/pages.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { getHonoApiRolePolicies } from '../role-policy.js';
+import { getHonoApiRolePolicies } from '../role/role-policy.js';
 import {
 	handleHonoApiUsersAchievements,
 	handleHonoApiUsersListsDelete,
 	handleHonoApiUsersListsList,
 	handleHonoApiUsersListsShow,
 	handleHonoApiUsersListsUpdate,
-} from '../users.js';
+} from '../user/users.js';
 import {
 	handleHonoApiUsersListsCreate,
 	handleHonoApiUsersListsCreateFromPublic,
@@ -60,8 +60,8 @@ import {
 	handleHonoApiUsersListsPull,
 	handleHonoApiUsersListsPush,
 	handleHonoApiUsersListsUpdateMembership,
-} from '../users-lists.js';
-import { handleHonoApiVerifyEmail } from '../verify-email.js';
+} from '../user/users-lists.js';
+import { handleHonoApiVerifyEmail } from '../auth/verify-email.js';
 import {
 	jsonResponse,
 	emptyResponse,

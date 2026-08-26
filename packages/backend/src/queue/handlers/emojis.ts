@@ -18,12 +18,12 @@ import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
 import {
 	addDriveFileForHonoApi,
 	type HonoApiDriveFileUploadDependencies,
-} from '../../server/rest/drive-file-upload.js';
-import { addCustomEmojiForHonoApi, type HonoApiEmojiDependencies } from '../../server/rest/emojis.js';
+} from '@/server/rest/drive/drive-file-upload.js';
+import { addCustomEmojiForHonoApi, type HonoApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
 import {
 	createExportCompletedNotification,
 	type HonoApiNotificationDependencies,
-} from '../../server/rest/notification.js';
+} from '@/server/rest/notification/notification.js';
 
 export type HonoQueueEmojisDependencies = HonoApiDriveFileUploadDependencies &
 	HonoApiEmojiDependencies &

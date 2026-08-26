@@ -15,7 +15,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import MisskeyLogger from '@/logger.js';
-import { isFederationAllowedUri, signedPostForHonoApi } from '../../server/rest/ap-resolve.js';
+import { isFederationAllowedUri, signedPostForHonoApi } from '@/server/rest/activitypub/ap-resolve.js';
 import {
 	fetchFederatedInstance,
 	fetchOrRegisterFederatedInstance,
@@ -24,7 +24,7 @@ import {
 	tryLockFetchInstanceMetadata,
 	unlockFetchInstanceMetadata,
 	updateFederatedInstance,
-} from '../../server/rest/federation.js';
+} from '@/server/rest/activitypub/federation.js';
 import type { HonoChartWriters } from '../../server/chart-runtime.js';
 
 export type HonoQueueDeliverDependencies = {

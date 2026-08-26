@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { usersReportAbuseParamDef } from '@/server/rest/admin-abuse-reports.js';
-import { usersClipsParamDef } from '@/server/rest/clips.js';
-import { userListParamDef } from '@/server/rest/favorites.js';
-import { usersFlashsParamDef } from '@/server/rest/flash.js';
+import { usersReportAbuseParamDef } from '@/server/rest/admin/admin-abuse-reports.js';
+import { usersClipsParamDef } from '@/server/rest/clip/clips.js';
+import { userListParamDef } from '@/server/rest/favorite/favorites.js';
+import { usersFlashsParamDef } from '@/server/rest/flash/flash.js';
 import {
 	usersFollowersOrFollowingParamDef,
 	usersFollowingParamDef,
 	usersGetFollowingUsersByBirthdayDocsParamDef,
-} from '@/server/rest/following.js';
-import { usersGalleryPostsParamDef } from '@/server/rest/gallery.js';
-import { usersFeaturedNotesParamDef, usersNotesParamDef } from '@/server/rest/note.js';
-import { usersPagesParamDef } from '@/server/rest/pages.js';
-import { usersReactionsParamDef } from '@/server/rest/user-reactions.js';
+} from '@/server/rest/user/following.js';
+import { usersGalleryPostsParamDef } from '@/server/rest/gallery/gallery.js';
+import { usersFeaturedNotesParamDef, usersNotesParamDef } from '@/server/rest/note/note.js';
+import { usersPagesParamDef } from '@/server/rest/page/pages.js';
+import { usersReactionsParamDef } from '@/server/rest/user/user-reactions.js';
 import {
 	usersGetFrequentlyRepliedUsersParamDef,
 	usersParamDef,
@@ -25,7 +25,7 @@ import {
 	usersSearchParamDef,
 	usersShowParamDef,
 	usersUpdateMemoParamDef,
-} from '@/server/rest/user.js';
+} from '@/server/rest/user/user.js';
 import {
 	createFromPublicParamDef,
 	createParamDef,
@@ -33,14 +33,14 @@ import {
 	pullParamDef,
 	pushParamDef,
 	updateMembershipParamDef,
-} from '@/server/rest/users-lists.js';
+} from '@/server/rest/user/users-lists.js';
 import {
 	usersAchievementsParamDef,
 	usersListsDeleteParamDef,
 	usersListsListParamDef,
 	usersListsShowParamDef,
 	usersListsUpdateParamDef,
-} from '@/server/rest/users.js';
+} from '@/server/rest/user/users.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {

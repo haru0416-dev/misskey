@@ -5,55 +5,55 @@
 
 import { supportedCaptchaProviders } from '@/core/captcha/CaptchaLogic.js';
 import { notificationRecieveConfig } from '@/models/json-schema/user.js';
-import { adminUpdateMetaJsonSchema } from '@/server/rest/AdminUpdateMetaLogic.js';
+import { adminUpdateMetaJsonSchema } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
 import {
 	adminAbuseUserReportsParamDef,
 	adminForwardAbuseUserReportParamDef,
 	adminResolveAbuseUserReportParamDef,
 	adminUpdateAbuseUserReportParamDef,
-} from '@/server/rest/admin-abuse-reports.js';
+} from '@/server/rest/admin/admin-abuse-reports.js';
 import {
 	adminAccountCreateParamDef,
 	adminAccountDeleteParamDef,
 	adminAccountsFindByEmailParamDef,
 	adminUpdateProxyAccountParamDef,
-} from '@/server/rest/admin-accounts.js';
+} from '@/server/rest/admin/admin-accounts.js';
 import {
 	adminAdCreateParamDef,
 	adminAdDeleteParamDef,
 	adminAdListParamDef,
 	adminAdUpdateParamDef,
-} from '@/server/rest/admin-ad.js';
+} from '@/server/rest/admin/admin-ad.js';
 import {
 	adminAnnouncementsCreateParamDef,
 	adminAnnouncementsDeleteParamDef,
 	adminAnnouncementsListParamDef,
 	adminAnnouncementsUpdateParamDef,
-} from '@/server/rest/admin-announcements.js';
+} from '@/server/rest/admin/admin-announcements.js';
 import {
 	adminAvatarDecorationsCreateParamDef,
 	adminAvatarDecorationsDeleteParamDef,
 	adminAvatarDecorationsListParamDef,
 	adminAvatarDecorationsUpdateParamDef,
-} from '@/server/rest/admin-avatar-decorations.js';
+} from '@/server/rest/admin/admin-avatar-decorations.js';
 import {
 	adminDriveFilesParamDef,
 	adminDriveShowFileDocsParamDef,
 	adminDriveUserParamDef,
-} from '@/server/rest/admin-drive.js';
-import { adminSendEmailParamDef } from '@/server/rest/admin-email.js';
-import { adminRelaysListParamDef, adminRelaysWriteParamDef } from '@/server/rest/admin-relays.js';
-import { adminServerInfoParamDef } from '@/server/rest/admin-server-info.js';
-import { adminStatsParamDef } from '@/server/rest/admin-stats.js';
-import { adminGetUserIpsParamDef } from '@/server/rest/admin-user-ips.js';
-import { adminUpdateUserNoteParamDef, adminUserMaintenanceParamDef } from '@/server/rest/admin-user-maintenance.js';
-import { adminUserSuspensionParamDef } from '@/server/rest/admin-user-suspension.js';
-import { adminShowUserParamDef, adminShowUsersParamDef } from '@/server/rest/admin-users.js';
-import { captchaCurrentParamDef, captchaSaveParamDef } from '@/server/rest/captcha.js';
-import { adminFederationHostParamDef, adminFederationUpdateInstanceParamDef } from '@/server/rest/federation.js';
-import { adminInviteCreateParamDef, adminInviteListParamDef } from '@/server/rest/invite.js';
-import { adminShowModerationLogsParamDef } from '@/server/rest/moderation-log.js';
-import { adminPromoCreateParamDef } from '@/server/rest/promo.js';
+} from '@/server/rest/admin/admin-drive.js';
+import { adminSendEmailParamDef } from '@/server/rest/admin/admin-email.js';
+import { adminRelaysListParamDef, adminRelaysWriteParamDef } from '@/server/rest/admin/admin-relays.js';
+import { adminServerInfoParamDef } from '@/server/rest/admin/admin-server-info.js';
+import { adminStatsParamDef } from '@/server/rest/admin/admin-stats.js';
+import { adminGetUserIpsParamDef } from '@/server/rest/admin/admin-user-ips.js';
+import { adminUpdateUserNoteParamDef, adminUserMaintenanceParamDef } from '@/server/rest/admin/admin-user-maintenance.js';
+import { adminUserSuspensionParamDef } from '@/server/rest/admin/admin-user-suspension.js';
+import { adminShowUserParamDef, adminShowUsersParamDef } from '@/server/rest/admin/admin-users.js';
+import { captchaCurrentParamDef, captchaSaveParamDef } from '@/server/rest/captcha/captcha.js';
+import { adminFederationHostParamDef, adminFederationUpdateInstanceParamDef } from '@/server/rest/activitypub/federation.js';
+import { adminInviteCreateParamDef, adminInviteListParamDef } from '@/server/rest/invite/invite.js';
+import { adminShowModerationLogsParamDef } from '@/server/rest/admin/moderation-log.js';
+import { adminPromoCreateParamDef } from '@/server/rest/note/promo.js';
 import { z } from 'zod';
 
 export const endpointMetas = {

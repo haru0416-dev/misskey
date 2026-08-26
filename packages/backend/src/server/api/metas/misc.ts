@@ -4,39 +4,39 @@
  */
 
 import { fetchEmojisHostTypes, fetchEmojisSortKeys } from '@/core/emoji/custom-emoji-types.js';
-import { blockingListParamDef, userIdParamDef } from '@/server/rest/account-blocking.js';
+import { blockingListParamDef, userIdParamDef } from '@/server/rest/account/account-blocking.js';
 import {
 	muteCreateParamDef,
 	muteListParamDef,
 	userIdParamDef as userIdParamDef_2,
-} from '@/server/rest/account-mutes.js';
-import { announcementShowParamDef, announcementsParamDef } from '@/server/rest/announcements.js';
-import { apGetParamDef, apShowParamDef } from '@/server/rest/ap.js';
-import { appCreateParamDef, appShowParamDef, myAppsParamDef } from '@/server/rest/app.js';
+} from '@/server/rest/account/account-mutes.js';
+import { announcementShowParamDef, announcementsParamDef } from '@/server/rest/announcement/announcements.js';
+import { apGetParamDef, apShowParamDef } from '@/server/rest/activitypub/ap.js';
+import { appCreateParamDef, appShowParamDef, myAppsParamDef } from '@/server/rest/auth/app.js';
 import {
 	authSessionGenerateParamDef,
 	authSessionShowParamDef,
 	authSessionUserkeyParamDef,
-} from '@/server/rest/auth-session.js';
-import { emailAddressAvailableParamDef, usernameAvailableParamDef } from '@/server/rest/availability.js';
-import { getAvatarDecorationsParamDef } from '@/server/rest/avatar-decorations.js';
-import { emojiParamDef } from '@/server/rest/emojis.js';
+} from '@/server/rest/auth/auth-session.js';
+import { emailAddressAvailableParamDef, usernameAvailableParamDef } from '@/server/rest/auth/availability.js';
+import { getAvatarDecorationsParamDef } from '@/server/rest/avatar-decoration/avatar-decorations.js';
+import { emojiParamDef } from '@/server/rest/emoji/emojis.js';
 import { endpointParamDef } from '@/server/rest/endpoint-info.js';
-import { fetchExternalResourcesParamDef } from '@/server/rest/fetch-external-resources.js';
-import { fetchRssParamDef } from '@/server/rest/fetch-rss.js';
-import { emptyParamDef, inviteDeleteParamDef, inviteListParamDef } from '@/server/rest/invite.js';
-import { metaParamDef, testParamDef } from '@/server/rest/meta.js';
-import { miauthGenTokenParamDef } from '@/server/rest/miauth.js';
-import { notificationsCreateParamDef, notificationsDeleteParamDef } from '@/server/rest/notification.js';
-import { pagePushParamDef } from '@/server/rest/page-push.js';
-import { requestResetPasswordParamDef, resetPasswordParamDef } from '@/server/rest/password-reset.js';
-import { promoReadParamDef } from '@/server/rest/promo.js';
-import { resetDbParamDef } from '@/server/rest/reset-db.js';
-import { retentionParamDef } from '@/server/rest/retention.js';
-import { rolesListParamDef, rolesNotesParamDef, rolesShowParamDef, rolesUsersParamDef } from '@/server/rest/roles.js';
-import { swRegisterParamDef, swShowRegistrationParamDef, swUpdateRegistrationParamDef } from '@/server/rest/sw.js';
-import { pinnedUsersParamDef } from '@/server/rest/user.js';
-import { verifyEmailParamDef } from '@/server/rest/verify-email.js';
+import { fetchExternalResourcesParamDef } from '@/server/rest/activitypub/fetch-external-resources.js';
+import { fetchRssParamDef } from '@/server/rest/feed/fetch-rss.js';
+import { emptyParamDef, inviteDeleteParamDef, inviteListParamDef } from '@/server/rest/invite/invite.js';
+import { metaParamDef, testParamDef } from '@/server/rest/meta/meta.js';
+import { miauthGenTokenParamDef } from '@/server/rest/auth/miauth.js';
+import { notificationsCreateParamDef, notificationsDeleteParamDef } from '@/server/rest/notification/notification.js';
+import { pagePushParamDef } from '@/server/rest/page/page-push.js';
+import { requestResetPasswordParamDef, resetPasswordParamDef } from '@/server/rest/auth/password-reset.js';
+import { promoReadParamDef } from '@/server/rest/note/promo.js';
+import { resetDbParamDef } from '@/server/rest/admin/reset-db.js';
+import { retentionParamDef } from '@/server/rest/retention/retention.js';
+import { rolesListParamDef, rolesNotesParamDef, rolesShowParamDef, rolesUsersParamDef } from '@/server/rest/role/roles.js';
+import { swRegisterParamDef, swShowRegistrationParamDef, swUpdateRegistrationParamDef } from '@/server/rest/notification/sw.js';
+import { pinnedUsersParamDef } from '@/server/rest/user/user.js';
+import { verifyEmailParamDef } from '@/server/rest/auth/verify-email.js';
 import { z } from 'zod';
 import { MINUTE, HOUR } from '@/const.js';
 

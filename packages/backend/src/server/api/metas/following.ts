@@ -10,7 +10,7 @@ import {
 	followingUpdateAllParamDef,
 	followingUpdateParamDef,
 	followingUserIdParamDef,
-} from '@/server/rest/following.js';
+} from '@/server/rest/user/following.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {

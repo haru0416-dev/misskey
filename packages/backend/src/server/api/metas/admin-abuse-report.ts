@@ -9,7 +9,7 @@ import {
 	adminAbuseReportNotificationRecipientListParamDef,
 	adminAbuseReportNotificationRecipientShowParamDef,
 	adminAbuseReportNotificationRecipientUpdateParamDef,
-} from '@/server/rest/admin-abuse-report-notification-recipient.js';
+} from '@/server/rest/admin/admin-abuse-report-notification-recipient.js';
 
 export const endpointMetas = {
 	'admin/abuse-report/notification-recipient/create': {

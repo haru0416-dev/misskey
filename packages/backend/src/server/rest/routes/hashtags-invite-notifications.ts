@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
 import {
 	handleHonoApiHashtagsList,
@@ -12,22 +12,22 @@ import {
 	handleHonoApiHashtagsShow,
 	handleHonoApiHashtagsTrend,
 	handleHonoApiHashtagsUsers,
-} from '../hashtags.js';
+} from '../hashtag/hashtags.js';
 import {
 	handleHonoApiInviteCreate,
 	handleHonoApiInviteDelete,
 	handleHonoApiInviteLimit,
 	handleHonoApiInviteList,
-} from '../invite.js';
+} from '../invite/invite.js';
 import {
 	handleHonoApiNotificationsCreate,
 	handleHonoApiNotificationsDelete,
 	handleHonoApiNotificationsFlush,
 	handleHonoApiNotificationsMarkAllAsRead,
 	handleHonoApiNotificationsTestNotification,
-} from '../notification.js';
+} from '../notification/notification.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { getHonoApiRolePolicies } from '../role-policy.js';
+import { getHonoApiRolePolicies } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,

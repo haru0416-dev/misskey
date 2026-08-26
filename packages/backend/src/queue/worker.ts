@@ -81,8 +81,8 @@ import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies }
 import type { SystemJobName } from './system-job-schedulers.js';
 import { dispatchQueueOutbox } from '@/core/queue/QueueOutboxStore.js';
 import type { DbJobData, DbJobName } from '@/queue/types.js';
-import { handleHonoQueueUserSuspensionPostEffects } from '@/server/rest/admin-user-suspension.js';
-import { handleHonoQueueNotePostCreate } from '@/server/rest/notes-create.js';
+import { handleHonoQueueUserSuspensionPostEffects } from '@/server/rest/admin/admin-user-suspension.js';
+import { handleHonoQueueNotePostCreate } from '@/server/rest/note/notes-create.js';
 
 export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies &
 	HonoQueueRelationshipDependencies &

@@ -18,10 +18,10 @@ import type { UserAuthService } from '@/core/account/UserAuthService.js';
 import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import type { WebAuthnService } from '@/core/account/WebAuthnService.js';
 import type { EmailService } from '@/core/email/EmailService.js';
-import type { HonoChartWriters } from '../chart-runtime.js';
+import type { HonoChartWriters } from '@/server/chart-runtime.js';
 import type Logger from '@/logger.js';
-import type { HonoApiAdminQueueDependencies } from './admin-queue.js';
-import type { HonoApiMainStreamPublisher } from './notification.js';
+import type { HonoApiAdminQueueDependencies } from './admin/admin-queue.js';
+import type { HonoApiMainStreamPublisher } from './notification/notification.js';
 import type {
 	HonoApiAdminStreamPublisher,
 	HonoApiBroadcastStreamPublisher,

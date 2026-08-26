@@ -47,7 +47,7 @@ vi.mock('@/core/user/UserListStore.js', () => ({
 	userListExistsByIdAndPublicFromDatabase: userListExistsMock,
 }));
 
-import { handleHonoApiClipsFavorite, handleHonoApiUsersListsFavorite } from '@/server/rest/favorites.js';
+import { handleHonoApiClipsFavorite, handleHonoApiUsersListsFavorite } from '@/server/rest/favorite/favorites.js';
 
 describe('favorites REST handlers', () => {
 	const userId = genId();

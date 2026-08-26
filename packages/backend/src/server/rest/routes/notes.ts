@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
 import {
 	handleHonoApiNotes,
 	handleHonoApiNotesChildren,
@@ -30,28 +30,28 @@ import {
 	handleHonoApiNotesTimeline,
 	handleHonoApiNotesUserListTimeline,
 	normalizeHonoApiNotesFeaturedQuery,
-} from '../notes.js';
+} from '../note/notes.js';
 import {
 	handleHonoApiNotesTranslate,
 	handleHonoApiUsersFeaturedNotes,
 	handleHonoApiUsersNotes,
 	normalizeHonoApiUsersFeaturedNotesQuery,
-} from '../note.js';
-import { handleHonoApiNotesCreate } from '../notes-create.js';
+} from '../note/note.js';
+import { handleHonoApiNotesCreate } from '../note/notes-create.js';
 import {
 	handleHonoApiNotesDelete,
 	handleHonoApiNotesUnrenote,
 	notesDeleteRateLimit,
 	notesUnrenoteRateLimit,
-} from '../notes-delete.js';
+} from '../note/notes-delete.js';
 import {
 	handleHonoApiNotesReactions,
 	handleHonoApiNotesReactionsCreate,
 	handleHonoApiNotesReactionsDelete,
 	normalizeHonoApiNotesReactionsQuery,
 	reactionsDeleteRateLimit,
-} from '../notes-reactions.js';
-import { handleHonoApiNotesPollsVote } from '../notes-polls-vote.js';
+} from '../note/notes-reactions.js';
+import { handleHonoApiNotesPollsVote } from '../note/notes-polls-vote.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import {
 	jsonResponse,

@@ -14,7 +14,7 @@ import {
 } from '@/core/antenna/AntennaStore.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { onMoveAccountForHonoApi } from '@/server/rest/antennas.js';
+import { onMoveAccountForHonoApi } from '@/server/rest/antenna/antennas.js';
 import type { MiUser } from '@/models/User.js';
 
 describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => {

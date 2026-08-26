@@ -70,27 +70,27 @@ import {
 	isFederationAllowedUri,
 	resolveApObjectForHonoApi,
 	type HonoApiApResolveDependencies,
-} from '../rest/ap-resolve.js';
+} from '@/server/rest/activitypub/ap-resolve.js';
 import {
 	extractEmojisForHonoApi,
 	updatePersonForHonoApi,
 	type HonoApiApPersonDependencies,
-} from '../rest/ap-person.js';
+} from '@/server/rest/activitypub/ap-person.js';
 import {
 	createNoteFromApForHonoApi,
 	parseAudienceForHonoApi,
 	resolveNoteForHonoApi,
 	updateQuestionFromApForHonoApi,
 	type HonoApiApNoteDependencies,
-} from '../rest/ap-note.js';
-import { createNoteForHonoApi, type CreateNoteData } from '../rest/notes-create.js';
-import { deleteNoteForHonoApi, type HonoApiNotesDeleteDependencies } from '../rest/notes-delete.js';
+} from '@/server/rest/activitypub/ap-note.js';
+import { createNoteForHonoApi, type CreateNoteData } from '@/server/rest/note/notes-create.js';
+import { deleteNoteForHonoApi, type HonoApiNotesDeleteDependencies } from '@/server/rest/note/notes-delete.js';
 import {
 	createNoteReactionForHonoApi,
 	deleteNoteReactionForHonoApi,
 	type HonoApiNotesReactionsDependencies,
-} from '../rest/notes-reactions.js';
-import { isVisibleForMeForHonoApi, packNoteForHonoApi } from '../rest/note.js';
+} from '@/server/rest/note/notes-reactions.js';
+import { isVisibleForMeForHonoApi, packNoteForHonoApi } from '@/server/rest/note/note.js';
 import {
 	blockForHonoApi,
 	cancelFollowRequest,
@@ -98,24 +98,24 @@ import {
 	unblockForHonoApi,
 	unfollow,
 	type HonoApiAccountBlockingDependencies,
-} from '../rest/account-blocking.js';
+} from '@/server/rest/account/account-blocking.js';
 import {
 	followWithSideEffectsForHonoApi,
 	type HonoQueueRelationshipDependencies,
 } from '../../queue/handlers/relationship.js';
-import { acceptFollowRequestForHonoApi, type HonoApiFollowingDependencies } from '../rest/following.js';
+import { acceptFollowRequestForHonoApi, type HonoApiFollowingDependencies } from '@/server/rest/user/following.js';
 import {
 	addPinnedForHonoApi,
 	removePinnedForHonoApi,
 	type HonoApiAccountPinDependencies,
-} from '../rest/account-pin.js';
+} from '@/server/rest/account/account-pin.js';
 import {
 	isRelayActorForHonoApi,
 	relayAcceptedForHonoApi,
 	relayRejectedForHonoApi,
 	type HonoApiAdminRelaysDependencies,
-} from '../rest/admin-relays.js';
-import { reportAbuseForHonoApi, type HonoApiUsersReportAbuseDependencies } from '../rest/admin-abuse-reports.js';
+} from '@/server/rest/admin/admin-relays.js';
+import { reportAbuseForHonoApi, type HonoApiUsersReportAbuseDependencies } from '@/server/rest/admin/admin-abuse-reports.js';
 import type {
 	HonoApiInternalEventPublisher,
 	HonoApiNotesStreamPublisher,

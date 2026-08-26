@@ -13,7 +13,7 @@ import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from '@/server/rest/ap-person.js';
+import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
 describe('resolveUserForHonoApi', () => {
 	let runtime: RuntimeDependencies;

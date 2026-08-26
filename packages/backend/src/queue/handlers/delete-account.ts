@@ -18,7 +18,7 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta, MiUser } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { DbUserDeleteJobData } from '@/queue/types.js';
-import { deletePageForHonoApi, type HonoApiPageDependencies } from '../../server/rest/pages.js';
+import { deletePageForHonoApi, type HonoApiPageDependencies } from '@/server/rest/page/pages.js';
 import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './object-storage.js';
 
 export type HonoQueueDeleteAccountDependencies = HonoQueueObjectStorageDependencies &

@@ -10,50 +10,50 @@ import {
 	assertSecureCredential,
 	assertTokenPermission,
 	authenticateHonoApiToken,
-} from '../auth.js';
+} from '../auth/auth.js';
 import {
 	handleHonoApiAdminAbuseUserReports,
 	handleHonoApiAdminForwardAbuseUserReport,
 	handleHonoApiAdminResolveAbuseUserReport,
 	handleHonoApiAdminUpdateAbuseUserReport,
-} from '../admin-abuse-reports.js';
+} from '../admin/admin-abuse-reports.js';
 import {
 	handleHonoApiAdminAbuseReportNotificationRecipientCreate,
 	handleHonoApiAdminAbuseReportNotificationRecipientDelete,
 	handleHonoApiAdminAbuseReportNotificationRecipientList,
 	handleHonoApiAdminAbuseReportNotificationRecipientShow,
 	handleHonoApiAdminAbuseReportNotificationRecipientUpdate,
-} from '../admin-abuse-report-notification-recipient.js';
+} from '../admin/admin-abuse-report-notification-recipient.js';
 import {
 	handleHonoApiAdminAccountsCreate,
 	handleHonoApiAdminAccountsDelete,
 	handleHonoApiAdminAccountsFindByEmail,
 	handleHonoApiAdminDeleteAccount,
 	handleHonoApiAdminUpdateProxyAccount,
-} from '../admin-accounts.js';
+} from '../admin/admin-accounts.js';
 import {
 	handleHonoApiAdminAdCreate,
 	handleHonoApiAdminAdDelete,
 	handleHonoApiAdminAdList,
 	handleHonoApiAdminAdUpdate,
-} from '../admin-ad.js';
+} from '../admin/admin-ad.js';
 import {
 	handleHonoApiAdminAnnouncementsCreate,
 	handleHonoApiAdminAnnouncementsDelete,
 	handleHonoApiAdminAnnouncementsList,
 	handleHonoApiAdminAnnouncementsUpdate,
-} from '../admin-announcements.js';
+} from '../admin/admin-announcements.js';
 import {
 	handleHonoApiAdminAvatarDecorationsCreate,
 	handleHonoApiAdminAvatarDecorationsDelete,
 	handleHonoApiAdminAvatarDecorationsList,
 	handleHonoApiAdminAvatarDecorationsUpdate,
-} from '../admin-avatar-decorations.js';
+} from '../admin/admin-avatar-decorations.js';
 import {
 	handleHonoApiAdminRelaysAdd,
 	handleHonoApiAdminRelaysList,
 	handleHonoApiAdminRelaysRemove,
-} from '../admin-relays.js';
+} from '../admin/admin-relays.js';
 import {
 	handleHonoApiAdminRolesAssign,
 	handleHonoApiAdminRolesCreate,
@@ -64,9 +64,9 @@ import {
 	handleHonoApiAdminRolesUpdate,
 	handleHonoApiAdminRolesUpdateDefaultPolicies,
 	handleHonoApiAdminRolesUsers,
-} from '../admin-roles.js';
-import { handleHonoApiAdminSendEmail } from '../admin-email.js';
-import { handleHonoApiAdminServerInfo } from '../admin-server-info.js';
+} from '../admin/admin-roles.js';
+import { handleHonoApiAdminSendEmail } from '../admin/admin-email.js';
+import { handleHonoApiAdminServerInfo } from '../admin/admin-server-info.js';
 import {
 	handleHonoApiAdminSystemWebhookCreate,
 	handleHonoApiAdminSystemWebhookDelete,
@@ -74,34 +74,34 @@ import {
 	handleHonoApiAdminSystemWebhookShow,
 	handleHonoApiAdminSystemWebhookTest,
 	handleHonoApiAdminSystemWebhookUpdate,
-} from '../admin-system-webhooks.js';
-import { handleHonoApiAdminGetUserIps } from '../admin-user-ips.js';
+} from '../admin/admin-system-webhooks.js';
+import { handleHonoApiAdminGetUserIps } from '../admin/admin-user-ips.js';
 import {
 	handleHonoApiAdminResetPassword,
 	handleHonoApiAdminUnsetMfa,
 	handleHonoApiAdminUnsetUserAvatar,
 	handleHonoApiAdminUnsetUserBanner,
 	handleHonoApiAdminUpdateUserNote,
-} from '../admin-user-maintenance.js';
-import { handleHonoApiAdminSuspendUser, handleHonoApiAdminUnsuspendUser } from '../admin-user-suspension.js';
-import { handleHonoApiAdminShowUser, handleHonoApiAdminShowUsers } from '../admin-users.js';
+} from '../admin/admin-user-maintenance.js';
+import { handleHonoApiAdminSuspendUser, handleHonoApiAdminUnsuspendUser } from '../admin/admin-user-suspension.js';
+import { handleHonoApiAdminShowUser, handleHonoApiAdminShowUsers } from '../admin/admin-users.js';
 import {
 	handleHonoApiAdminFederationDeleteAllFiles,
 	handleHonoApiAdminFederationRefreshRemoteInstanceMetadata,
 	handleHonoApiAdminFederationRemoveAllFollowing,
 	handleHonoApiAdminFederationUpdateInstance,
-} from '../federation.js';
+} from '../activitypub/federation.js';
 import {
 	handleHonoApiAdminDeleteAllFilesOfAUser,
 	handleHonoApiAdminDriveCleanRemoteFiles,
 	handleHonoApiAdminDriveCleanup,
 	handleHonoApiAdminDriveFiles,
 	handleHonoApiAdminDriveShowFile,
-} from '../admin-drive.js';
-import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList } from '../invite.js';
-import { handleHonoApiAdminMeta, handleHonoApiAdminUpdateMeta } from '../meta.js';
-import { handleHonoApiAdminShowModerationLogs } from '../moderation-log.js';
-import { handleHonoApiAdminPromoCreate } from '../promo.js';
+} from '../admin/admin-drive.js';
+import { handleHonoApiAdminInviteCreate, handleHonoApiAdminInviteList } from '../invite/invite.js';
+import { handleHonoApiAdminMeta, handleHonoApiAdminUpdateMeta } from '../meta/meta.js';
+import { handleHonoApiAdminShowModerationLogs } from '../admin/moderation-log.js';
+import { handleHonoApiAdminPromoCreate } from '../note/promo.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import {
 	jsonResponse,

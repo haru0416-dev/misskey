@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
 import {
 	handleHonoApiDrive,
 	handleHonoApiDriveFilesCheckExistence,
@@ -14,7 +14,7 @@ import {
 	handleHonoApiDriveFoldersFind,
 	handleHonoApiDriveFoldersShow,
 	handleHonoApiDriveFoldersUpdate,
-} from '../drive.js';
+} from '../drive/drive.js';
 import {
 	handleHonoApiDriveFilesAttachedChatMessages,
 	handleHonoApiDriveFilesAttachedNotes,
@@ -26,12 +26,12 @@ import {
 	handleHonoApiDriveFilesShow,
 	handleHonoApiDriveFilesUpdate,
 	handleHonoApiDriveStream,
-} from '../drive-files.js';
+} from '../drive/drive-files.js';
 import {
 	handleHonoApiDriveFilesCreate,
 	handleHonoApiDriveFilesUploadFromUrl,
 	readHonoApiMultipartRequest,
-} from '../drive-file-upload.js';
+} from '../drive/drive-file-upload.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
 import { invalidParamError, payloadTooLargeError } from '../error.js';
 import {

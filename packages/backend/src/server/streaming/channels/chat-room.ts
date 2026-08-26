@@ -9,7 +9,7 @@ import {
 	hasPermissionToViewRoomTimelineForHonoApi,
 	readRoomChatMessageForHonoApi,
 	type HonoApiChatDependencies,
-} from '../../rest/chat.js';
+} from '@/server/rest/chat/chat.js';
 import type { HonoStreamChannelDefinition } from '../channel.js';
 
 export const honoStreamChannelChatRoom: HonoStreamChannelDefinition<HonoApiChatDependencies> = {

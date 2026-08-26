@@ -11,7 +11,7 @@ import {
 	adminQueueOutboxJobParamDef,
 	adminQueueOutboxJobsParamDef,
 	adminQueueSelectParamDef,
-} from '@/server/rest/admin-queue.js';
+} from '@/server/rest/admin/admin-queue.js';
 import { z } from 'zod';
 
 export const endpointMetas = {

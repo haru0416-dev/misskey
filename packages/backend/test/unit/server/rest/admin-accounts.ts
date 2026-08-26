@@ -13,8 +13,8 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import {
 	handleHonoApiAdminAccountsCreate,
 	type HonoApiAdminAccountsDependencies,
-} from '@/server/rest/admin-accounts.js';
-import type { SignupResponse } from '@/server/rest/signup.js';
+} from '@/server/rest/admin/admin-accounts.js';
+import type { SignupResponse } from '@/server/rest/auth/signup.js';
 
 const {
 	createLocalSignupAccountMock,
@@ -48,7 +48,7 @@ vi.mock('@/misc/password.js', () => ({
 	hashPassword: hashPasswordMock,
 }));
 
-vi.mock('@/server/rest/signup.js', () => ({
+vi.mock('@/server/rest/auth/signup.js', () => ({
 	createLocalSignupAccount: createLocalSignupAccountMock,
 	packSignupUser: packSignupUserMock,
 }));
