@@ -773,7 +773,10 @@ export async function addDriveFileForHonoApi(
 		file = persisted.file;
 	}
 
-	if (user != null) {
+	// リモートユーザーのアバター/バナーを取り込むときもここを通る (ap-person)。
+	// これらのストリームを購読するのはローカルのクライアントだけなので、
+	// リモート宛に流しても誰も受け取らず publish が無駄になる。
+	if (user != null && user.host == null) {
 		packDriveFileOrFailForHonoApi(deps, file, { self: true }).then((packedFile) => {
 			deps.publishMainStream?.(user.id, 'driveFileCreated', packedFile);
 			deps.publishDriveStream?.(user.id, 'fileCreated', packedFile);
