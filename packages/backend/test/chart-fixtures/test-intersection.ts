@@ -8,9 +8,9 @@ import * as Redis from 'ioredis';
 import Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
-import Chart from '../core.js';
+import Chart from '@/core/chart/core.js';
 import { name, schema } from './entities/test-intersection.js';
-import type { KVs } from '../core.js';
+import type { KVs } from '@/core/chart/core.js';
 
 export default class TestIntersectionChart extends Chart<typeof schema> {
 	constructor(
