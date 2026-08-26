@@ -120,7 +120,6 @@
       "dependencies": {
         "@analytics/google-analytics": "1.1.0",
         "@mcaptcha/core-glue": "0.1.0-alpha-5",
-        "@misskey-dev/browser-image-resizer": "2024.1.0",
         "@misskey-dev/emoji-data": "17.0.6",
         "@opentelemetry/api": "1.9.0",
         "@opentelemetry/exporter-trace-otlp-http": "0.220.0",
@@ -721,8 +720,6 @@
     "@microsoft/tsdoc": ["@microsoft/tsdoc@0.16.0", "", {}, "sha512-xgAyonlVVS+q7Vc7qLW0UrJU7rSFcETRWsqdXZtjzRU8dF+6CkozTK4V4y1LwOX7j8r/vHphjDeMeGI4tNGeGA=="],
 
     "@microsoft/tsdoc-config": ["@microsoft/tsdoc-config@0.18.1", "", { "dependencies": { "@microsoft/tsdoc": "0.16.0", "ajv": "8.18.0", "jju": "1.4.0", "resolve": "1.22.12" } }, "sha512-9brPoVdfN9k9g0dcWkFeA7IH9bbcttzDJlXvkf8b2OBzd5MueR1V2wkKBL0abn0otvmkHJC6aapBOTJDDeMCZg=="],
-
-    "@misskey-dev/browser-image-resizer": ["@misskey-dev/browser-image-resizer@2024.1.0", "", {}, "sha512-4EnO0zLW5NDtng3Gaz5MuT761uiuoOuplwX18wBqgj8w56LTU5BjLn/vbHwDIIe0j2gwqDYhMb7bDjmr1/Fomg=="],
 
     "@misskey-dev/emoji-assets": ["@misskey-dev/emoji-assets@17.0.6", "", {}, "sha512-OegMVcmQ5PYihWflQYc573GGiht8ZV5RFIEewBiawJXGxvKqdqZ8rpeYOF1UkMPzcsSYhRTRQUONiE+eWj+EmA=="],
 

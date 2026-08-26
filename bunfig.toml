@@ -6,7 +6,6 @@ exact = true
 minimumReleaseAge = 604800
 
 minimumReleaseAgeExcludes = [
-	"@misskey-dev/browser-image-resizer",
 	"@misskey-dev/emoji-assets",
 	"@misskey-dev/emoji-data",
 	"@misskey-dev/sharp-read-bmp",
