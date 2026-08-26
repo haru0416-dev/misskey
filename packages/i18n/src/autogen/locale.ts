@@ -8577,6 +8577,10 @@ export interface Locale extends ILocale {
     };
     "_ad": {
         /**
+         * 広告
+         */
+        "label": string;
+        /**
          * 戻る
          */
         "back": string;

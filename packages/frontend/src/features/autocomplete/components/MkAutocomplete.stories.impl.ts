@@ -83,7 +83,8 @@ export const User = {
 	},
 	async play({ canvasElement }: { canvasElement: HTMLElement }) {
 		const canvas = within(canvasElement);
-		const input = canvas.getByRole('combobox');
+		// MkInput は汎用の text input なので role は combobox ではなく textbox。
+		const input = canvas.getByRole('textbox');
 		await waitFor(() => userEvent.hover(input));
 		await waitFor(() => userEvent.click(input));
 		await waitFor(() => userEvent.type(input, 'm'));
@@ -119,7 +120,7 @@ export const Hashtag = {
 	},
 	async play({ canvasElement }: { canvasElement: HTMLElement }) {
 		const canvas = within(canvasElement);
-		const input = canvas.getByRole('combobox');
+		const input = canvas.getByRole('textbox');
 		await waitFor(() => userEvent.hover(input));
 		await waitFor(() => userEvent.click(input));
 		await waitFor(() => userEvent.type(input, '気象'));
@@ -152,7 +153,7 @@ export const Emoji = {
 	},
 	async play({ canvasElement }) {
 		const canvas = within(canvasElement);
-		const input = canvas.getByRole('combobox');
+		const input = canvas.getByRole('textbox');
 		await waitFor(() => userEvent.hover(input));
 		await waitFor(() => userEvent.click(input));
 		await waitFor(() => userEvent.type(input, 'smile'));
@@ -174,7 +175,7 @@ export const MfmTag = {
 	},
 	async play({ canvasElement }) {
 		const canvas = within(canvasElement);
-		const input = canvas.getByRole('combobox');
+		const input = canvas.getByRole('textbox');
 		await waitFor(() => userEvent.hover(input));
 		await waitFor(() => userEvent.click(input));
 		await waitFor(
