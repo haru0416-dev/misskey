@@ -15,7 +15,7 @@ import {
 	assertTokenPermission,
 	authenticateHonoApiToken,
 	type HonoApiAuthenticated,
-} from './auth.js';
+} from './auth/auth.js';
 import {
 	assertHonoApiAdmin,
 	assertHonoApiModerator,
@@ -25,7 +25,7 @@ import {
 } from './shell-helpers.js';
 import { assertHonoApiRateLimitForUser, type HonoApiEndpointRateLimit } from './rate-limit.js';
 import { rolePermissionDeniedError } from './error.js';
-import { hasHonoApiRolePolicyOrIsRoot } from './role-policy.js';
+import { hasHonoApiRolePolicyOrIsRoot } from './role/role-policy.js';
 
 /** 認証を通した後の資格情報。requireCredential のエンドポイントでは user が非 null。 */
 export type AuthedCredential = { user: MiLocalUser; token: MiAccessToken | null };

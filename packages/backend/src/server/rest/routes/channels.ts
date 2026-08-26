@@ -4,9 +4,9 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite } from '../favorites.js';
+import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite } from '../favorite/favorites.js';
 import {
 	handleHonoApiChannelsCreate,
 	handleHonoApiChannelsFeatured,
@@ -22,9 +22,9 @@ import {
 	handleHonoApiChannelsTimeline,
 	handleHonoApiChannelsUnfollow,
 	handleHonoApiChannelsUpdate,
-} from '../channels.js';
+} from '../channel/channels.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { hasHonoApiRolePolicyOrIsRoot } from '../role-policy.js';
+import { hasHonoApiRolePolicyOrIsRoot } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,

@@ -5,7 +5,7 @@
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { HonoApiFollowingDependencies } from '@/server/rest/following.js';
+import type { HonoApiFollowingDependencies } from '@/server/rest/user/following.js';
 
 const {
 	createFollowingMock,
@@ -70,19 +70,19 @@ vi.mock('@/core/webhook/WebhookStore.js', async (importOriginal) => ({
 	listWebhooksFromDatabase: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('@/server/rest/user.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/server/rest/user.js')>()),
+vi.mock('@/server/rest/user/user.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/server/rest/user/user.js')>()),
 	packMeDetailedForHonoApi: packMeMock,
 	packUserDetailedNotMeForHonoApi: vi.fn(async (_deps, user: MiUser) => ({ id: user.id })),
 	packUserLiteForHonoApi: vi.fn(async (_deps, user: MiUser) => ({ id: user.id })),
 }));
 
-vi.mock('@/server/rest/notification.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@/server/rest/notification.js')>()),
+vi.mock('@/server/rest/notification/notification.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@/server/rest/notification/notification.js')>()),
 	xaddHonoApiNotification: xaddNotificationMock,
 }));
 
-import { acceptAllFollowRequestsForHonoApi } from '@/server/rest/following.js';
+import { acceptAllFollowRequestsForHonoApi } from '@/server/rest/user/following.js';
 
 describe('acceptAllFollowRequestsForHonoApi', () => {
 	const followee = { id: 'followee', host: null, isLocked: false } as MiLocalUser;

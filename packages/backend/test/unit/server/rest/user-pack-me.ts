@@ -22,7 +22,7 @@ const {
 	listUserNotePiningsByUserIdFromDatabaseMock: vi.fn(),
 }));
 
-vi.mock('@/server/rest/role-policy.js', () => ({
+vi.mock('@/server/rest/role/role-policy.js', () => ({
 	computeHonoApiUserRoles: vi.fn(),
 	getHonoApiRolePolicies: getHonoApiRolePoliciesMock,
 	getHonoApiUserRoles: getHonoApiUserRolesMock,
@@ -42,13 +42,13 @@ vi.mock('@/core/user/UserNotePiningStore.js', () => ({
 	listUserNotePiningsByUserIdsFromDatabase: vi.fn(),
 }));
 
-vi.mock('@/server/rest/note.js', () => ({
+vi.mock('@/server/rest/note/note.js', () => ({
 	packNoteManyForHonoApi: vi.fn(async () => []),
 	populateEmojis: vi.fn(async () => ({})),
 	populateEmojisMany: vi.fn(async () => []),
 }));
 
-import { packMeDetailedForHonoApi } from '@/server/rest/user.js';
+import { packMeDetailedForHonoApi } from '@/server/rest/user/user.js';
 
 const userId = '019f587c6bc4785ead8d511d603959f0';
 

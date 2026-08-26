@@ -44,7 +44,7 @@ vi.mock('@/core/user/UserListMembershipStore.js', () => ({
 	userListMembershipExistsInDatabase: vi.fn(),
 }));
 
-import { addNoteToAntennasForHonoApi, checkHitAntennaForHonoApi } from '@/server/rest/antennas.js';
+import { addNoteToAntennasForHonoApi, checkHitAntennaForHonoApi } from '@/server/rest/antenna/antennas.js';
 
 const authorId = '019f587c6bc4785ead8d511d603959f0';
 const followerId = '019f587c6bc4785ead8d511d603959f1';

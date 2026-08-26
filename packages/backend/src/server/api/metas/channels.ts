@@ -13,8 +13,8 @@ import {
 	channelsListParamDef,
 	channelsSearchParamDef,
 	emptyParamDef,
-} from '@/server/rest/channels.js';
-import { channelParamDef } from '@/server/rest/favorites.js';
+} from '@/server/rest/channel/channels.js';
+import { channelParamDef } from '@/server/rest/favorite/favorites.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {

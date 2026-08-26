@@ -11,7 +11,7 @@ import {
 	filterNoteForStreamingHidingForHonoApi,
 	populateMyReactionForHonoApi,
 	type HonoApiNoteDependencies,
-} from '../../rest/note.js';
+} from '@/server/rest/note/note.js';
 import { isNoteMutedOrBlockedForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
 
 async function isRoleExplorableForHonoStream(

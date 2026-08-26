@@ -17,7 +17,7 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { signedPostForHonoApi } from '@/server/rest/ap-resolve.js';
+import { signedPostForHonoApi } from '@/server/rest/activitypub/ap-resolve.js';
 import { handleInboxRequest, type InboxEndpointDependencies } from '@/server/activitypub/inbox-endpoint.js';
 import type { MiUser } from '@/models/User.js';
 

@@ -9,7 +9,7 @@ import {
 	hashtagsShowParamDef,
 	hashtagsTrendParamDef,
 	hashtagsUsersParamDef,
-} from '@/server/rest/hashtags.js';
+} from '@/server/rest/hashtag/hashtags.js';
 
 export const endpointMetas = {
 	'hashtags/list': {

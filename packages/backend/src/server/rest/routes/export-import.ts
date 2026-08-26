@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertSecureCredential, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertProhibitMoved, assertSecureCredential, authenticateHonoApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
 import {
 	handleHonoApiExportCustomEmojis,
@@ -16,17 +16,17 @@ import {
 	handleHonoApiIExportMute,
 	handleHonoApiIExportNotes,
 	handleHonoApiIExportUserLists,
-} from '../export-jobs.js';
+} from '../job/export-jobs.js';
 import {
 	handleHonoApiIImportAntennas,
 	handleHonoApiIImportBlocking,
 	handleHonoApiIImportFollowing,
 	handleHonoApiIImportMuting,
 	handleHonoApiIImportUserLists,
-} from '../import-jobs.js';
-import { handleHonoApiFetchRss } from '../fetch-rss.js';
+} from '../job/import-jobs.js';
+import { handleHonoApiFetchRss } from '../feed/fetch-rss.js';
 import { assertHonoApiRateLimit, assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { hasHonoApiRolePolicyOrIsRoot } from '../role-policy.js';
+import { hasHonoApiRolePolicyOrIsRoot } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,

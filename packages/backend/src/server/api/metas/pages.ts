@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { pageParamDef } from '@/server/rest/favorites.js';
+import { pageParamDef } from '@/server/rest/favorite/favorites.js';
 import {
 	pagesCreateParamDef,
 	pagesDeleteParamDef,
 	pagesFeaturedParamDef,
 	pagesShowParamDef,
 	pagesUpdateParamDef,
-} from '@/server/rest/pages.js';
+} from '@/server/rest/page/pages.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {

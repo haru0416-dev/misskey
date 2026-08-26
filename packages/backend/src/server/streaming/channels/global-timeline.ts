@@ -9,8 +9,8 @@ import {
 	filterNoteForStreamingHidingForHonoApi,
 	populateMyReactionForHonoApi,
 	type HonoApiNoteDependencies,
-} from '../../rest/note.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../../rest/role-policy.js';
+} from '@/server/rest/note/note.js';
+import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '@/server/rest/role/role-policy.js';
 import { isNoteMutedOrBlockedForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
 
 export const honoStreamChannelGlobalTimeline: HonoStreamChannelDefinition<

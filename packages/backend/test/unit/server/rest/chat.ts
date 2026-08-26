@@ -25,7 +25,7 @@ import {
 	packChatMessageDetailedForHonoApi,
 	packChatMessagesDetailedForHonoApi,
 	type HonoApiChatDependencies,
-} from '@/server/rest/chat.js';
+} from '@/server/rest/chat/chat.js';
 
 describe('chat message packing', () => {
 	let runtime: RuntimeDependencies;

@@ -14,7 +14,7 @@ import { listAllDriveFilesByUserIdFromDatabase } from '@/core/drive/DriveFileSto
 import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from '@/server/rest/drive-file-upload.js';
+import { addDriveFileForHonoApi, type HonoApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiUser } from '@/models/User.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';

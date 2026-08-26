@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { driveFilesCreateParamDef, driveFilesUploadFromUrlParamDef } from '@/server/rest/drive-file-upload.js';
+import { driveFilesCreateParamDef, driveFilesUploadFromUrlParamDef } from '@/server/rest/drive/drive-file-upload.js';
 import {
 	driveFilesAttachedChatMessagesParamDef,
 	driveFilesAttachedNotesParamDef,
@@ -15,7 +15,7 @@ import {
 	driveFilesShowParamDef,
 	driveFilesUpdateParamDef,
 	driveStreamParamDef,
-} from '@/server/rest/drive-files.js';
+} from '@/server/rest/drive/drive-files.js';
 import {
 	driveFilesCheckExistenceParamDef,
 	driveFoldersCreateParamDef,
@@ -24,7 +24,7 @@ import {
 	driveFoldersParamDef,
 	driveFoldersShowParamDef,
 	driveFoldersUpdateParamDef,
-} from '@/server/rest/drive.js';
+} from '@/server/rest/drive/drive.js';
 import { z } from 'zod';
 import { HOUR } from '@/const.js';
 

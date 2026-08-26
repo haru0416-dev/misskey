@@ -9,12 +9,12 @@ import Logger from '@/logger.js';
 import { recordException } from '@/telemetry.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
-import { assertOptionalCredential, authenticateHonoApiToken, type HonoApiAuthenticated } from './auth.js';
+import { assertOptionalCredential, authenticateHonoApiToken, type HonoApiAuthenticated } from './auth/auth.js';
 import { HonoApiError, invalidJsonBody, payloadTooLargeError, rolePermissionDeniedError } from './error.js';
-import { readRequestBodyWithLimit } from '../body-limit.js';
-import { hasHonoApiRolePolicyOrIsRoot, isHonoApiAdministrator, isHonoApiModerator } from './role-policy.js';
-import type { HonoApiSigninFlowResult } from './signin.js';
-import type { HonoApiSigninWithPasskeyResult } from './signin-with-passkey.js';
+import { readRequestBodyWithLimit } from '@/server/body-limit.js';
+import { hasHonoApiRolePolicyOrIsRoot, isHonoApiAdministrator, isHonoApiModerator } from './role/role-policy.js';
+import type { HonoApiSigninFlowResult } from './auth/signin.js';
+import type { HonoApiSigninWithPasskeyResult } from './auth/signin-with-passkey.js';
 import type { ApiShellDependencies } from './shell.js';
 import { runInRequestScope } from '@/misc/request-scope.js';
 

@@ -27,7 +27,7 @@ import {
 	handleHonoApiAdminEmojiSetCategoryBulk,
 	handleHonoApiAdminEmojiSetLicenseBulk,
 	type HonoApiEmojiDependencies,
-} from '@/server/rest/emojis.js';
+} from '@/server/rest/emoji/emojis.js';
 
 describe('emoji bulk operations', () => {
 	let runtime: RuntimeDependencies;

@@ -9,7 +9,7 @@ import {
 	filterNoteForStreamingHidingForHonoApi,
 	populateMyReactionForHonoApi,
 	type HonoApiNoteDependencies,
-} from '../../rest/note.js';
+} from '@/server/rest/note/note.js';
 import {
 	isNoteMutedOrBlockedForHonoStream,
 	isNoteVisibleForMeForHonoStream,

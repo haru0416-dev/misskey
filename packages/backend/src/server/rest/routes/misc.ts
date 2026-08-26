@@ -10,35 +10,35 @@ import {
 	assertSecureCredential,
 	assertTokenPermission,
 	authenticateHonoApiToken,
-} from '../auth.js';
-import { handleHonoApiGetAvatarDecorations } from '../avatar-decorations.js';
-import { handleHonoApiGetOnlineUsersCount } from '../availability.js';
-import { handleHonoApiPagesLike, handleHonoApiPagesUnlike } from '../favorites.js';
-import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from '../meta.js';
+} from '../auth/auth.js';
+import { handleHonoApiGetAvatarDecorations } from '../avatar-decoration/avatar-decorations.js';
+import { handleHonoApiGetOnlineUsersCount } from '../auth/availability.js';
+import { handleHonoApiPagesLike, handleHonoApiPagesUnlike } from '../favorite/favorites.js';
+import { handleHonoApiMeta, handleHonoApiPing, handleHonoApiServerInfo, handleHonoApiTest } from '../meta/meta.js';
 import {
 	handleHonoApiPagesCreate,
 	handleHonoApiPagesDelete,
 	handleHonoApiPagesFeatured,
 	handleHonoApiPagesShow,
 	handleHonoApiPagesUpdate,
-} from '../pages.js';
-import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from '../password-reset.js';
-import { handleHonoApiPromoRead } from '../promo.js';
+} from '../page/pages.js';
+import { handleHonoApiRequestResetPassword, handleHonoApiResetPassword } from '../auth/password-reset.js';
+import { handleHonoApiPromoRead } from '../note/promo.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { handleHonoApiResetDb } from '../reset-db.js';
-import { handleHonoApiRetention } from '../retention.js';
+import { handleHonoApiResetDb } from '../admin/reset-db.js';
+import { handleHonoApiRetention } from '../retention/retention.js';
 import {
 	handleHonoApiRolesList,
 	handleHonoApiRolesNotes,
 	handleHonoApiRolesShow,
 	handleHonoApiRolesUsers,
-} from '../roles.js';
+} from '../role/roles.js';
 import {
 	handleHonoApiSwRegister,
 	handleHonoApiSwShowRegistration,
 	handleHonoApiSwUnregister,
 	handleHonoApiSwUpdateRegistration,
-} from '../sw.js';
+} from '../notification/sw.js';
 import {
 	jsonResponse,
 	emptyResponse,

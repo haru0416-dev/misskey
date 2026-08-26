@@ -11,7 +11,7 @@ import {
 	clipsNoteParamDef,
 	clipsUpdateParamDef,
 	emptyParamDef,
-} from '@/server/rest/clips.js';
+} from '@/server/rest/clip/clips.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {

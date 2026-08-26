@@ -21,7 +21,7 @@ import {
 	unblockForHonoApi,
 	unfollow,
 	type HonoApiAccountBlockingDependencies,
-} from '../../server/rest/account-blocking.js';
+} from '@/server/rest/account/account-blocking.js';
 import {
 	addActivityContext,
 	createFollowRequestWithSideEffects,
@@ -32,8 +32,8 @@ import {
 	renderFollow,
 	renderReject,
 	type HonoApiFollowingDependencies,
-} from '../../server/rest/following.js';
-import { validateAlsoKnownAsForHonoApi, type HonoApiApPersonDependencies } from '../../server/rest/ap-person.js';
+} from '@/server/rest/user/following.js';
+import { validateAlsoKnownAsForHonoApi, type HonoApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
 export type HonoQueueRelationshipDependencies = HonoApiAccountBlockingDependencies &
 	HonoApiFollowingDependencies &

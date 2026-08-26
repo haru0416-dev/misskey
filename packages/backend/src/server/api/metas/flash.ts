@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { flashParamDef } from '@/server/rest/favorites.js';
+import { flashParamDef } from '@/server/rest/favorite/favorites.js';
 import {
 	flashCreateParamDef,
 	flashDeleteParamDef,
@@ -13,7 +13,7 @@ import {
 	flashSearchParamDef,
 	flashShowParamDef,
 	flashUpdateParamDef,
-} from '@/server/rest/flash.js';
+} from '@/server/rest/flash/flash.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {

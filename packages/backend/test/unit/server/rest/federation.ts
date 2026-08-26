@@ -5,7 +5,7 @@
 
 import { describe, expect, test, vi } from 'vitest';
 import type * as Redis from 'ioredis';
-import { tryLockFetchInstanceMetadata, unlockFetchInstanceMetadata } from '@/server/rest/federation.js';
+import { tryLockFetchInstanceMetadata, unlockFetchInstanceMetadata } from '@/server/rest/activitypub/federation.js';
 
 describe('federation metadata lock', () => {
 	test('uses only the expiring v2 lock key', async () => {

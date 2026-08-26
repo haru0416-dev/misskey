@@ -11,7 +11,7 @@ import {
 	antennasRemoveNoteParamDef,
 	antennasShowParamDef,
 	antennasUpdateParamDef,
-} from '@/server/rest/antennas.js';
+} from '@/server/rest/antenna/antennas.js';
 
 export const endpointMetas = {
 	'antennas/create': {

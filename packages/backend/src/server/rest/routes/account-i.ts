@@ -10,20 +10,20 @@ import {
 	assertSecureCredential,
 	assertTokenPermission,
 	authenticateHonoApiToken,
-} from '../auth.js';
-import { handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken } from '../app.js';
-import { handleHonoApiIFavorites } from '../favorites.js';
+} from '../auth/auth.js';
+import { handleHonoApiIAuthorizedApps, handleHonoApiIApps, handleHonoApiIRevokeToken } from '../auth/app.js';
+import { handleHonoApiIFavorites } from '../favorite/favorites.js';
 import {
 	handleHonoApiIChangePassword,
 	handleHonoApiIDeleteAccount,
 	handleHonoApiIRegenerateToken,
 	handleHonoApiIUpdateEmail,
-} from '../account-security.js';
-import { handleHonoApiIUpdate } from '../account-update.js';
-import { handleHonoApiIMove } from '../account-move.js';
-import { handleHonoApiIPin, handleHonoApiIUnpin } from '../account-pin.js';
-import { handleHonoApiINotifications, handleHonoApiINotificationsGrouped } from '../notifications-list.js';
-import { handleHonoApiI, handleHonoApiISigninHistory } from '../i.js';
+} from '../account/account-security.js';
+import { handleHonoApiIUpdate } from '../account/account-update.js';
+import { handleHonoApiIMove } from '../account/account-move.js';
+import { handleHonoApiIPin, handleHonoApiIUnpin } from '../account/account-pin.js';
+import { handleHonoApiINotifications, handleHonoApiINotificationsGrouped } from '../notification/notifications-list.js';
+import { handleHonoApiI, handleHonoApiISigninHistory } from '../account/i.js';
 import {
 	handleHonoApiI2faDone,
 	handleHonoApiI2faKeyDone,
@@ -33,10 +33,10 @@ import {
 	handleHonoApiI2faRemoveKey,
 	handleHonoApiI2faUnregister,
 	handleHonoApiI2faUpdateKey,
-} from '../i-2fa.js';
-import { handleHonoApiIPageLikes, handleHonoApiIPages } from '../pages.js';
+} from '../account/i-2fa.js';
+import { handleHonoApiIPageLikes, handleHonoApiIPages } from '../page/pages.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { getHonoApiRolePolicies } from '../role-policy.js';
+import { getHonoApiRolePolicies } from '../role/role-policy.js';
 import {
 	handleHonoApiRegistryGet,
 	handleHonoApiRegistryGetAll,
@@ -46,7 +46,7 @@ import {
 	handleHonoApiRegistryRemove,
 	handleHonoApiRegistryScopesWithDomain,
 	handleHonoApiRegistrySet,
-} from '../registry.js';
+} from '../registry/registry.js';
 import {
 	handleHonoApiIWebhooksCreate,
 	handleHonoApiIWebhooksDelete,
@@ -54,7 +54,7 @@ import {
 	handleHonoApiIWebhooksShow,
 	handleHonoApiIWebhooksTest,
 	handleHonoApiIWebhooksUpdate,
-} from '../webhooks.js';
+} from '../webhook/webhooks.js';
 import { jsonResponse, emptyResponse, jsonBody, tokenFromRequest, runApiEndpoint } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler } from '../endpoint-handlers.js';

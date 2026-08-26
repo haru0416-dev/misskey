@@ -19,7 +19,7 @@ import {
 	handleHonoApiChartsUsers,
 	handleHonoApiStats,
 	normalizeHonoApiChartQuery,
-} from '../charts.js';
+} from '../chart/charts.js';
 import {
 	jsonResponse,
 	publicCacheHeadersWhenAnonymous,

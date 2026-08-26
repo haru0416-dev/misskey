@@ -15,7 +15,7 @@ import {
 	adminEmojiSetCategoryBulkParamDef,
 	adminEmojiSetLicenseBulkParamDef,
 	adminEmojiUpdateDocsParamDef,
-} from '@/server/rest/emojis.js';
+} from '@/server/rest/emoji/emojis.js';
 
 export const endpointMetas = {
 	'admin/emoji/add': {

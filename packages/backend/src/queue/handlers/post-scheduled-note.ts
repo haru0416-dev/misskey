@@ -10,12 +10,12 @@ import { noteDraft, type NoteDraftRow } from '@/db/schema/note-draft.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { PostScheduledNoteJobData } from '@/queue/types.js';
-import { fetchAndCreateNoteForHonoApi, type HonoApiNotesCreateDependencies } from '../../server/rest/notes-create.js';
+import { fetchAndCreateNoteForHonoApi, type HonoApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
 import {
 	createScheduledNotePostFailedNotification,
 	createScheduledNotePostedNotification,
 	type HonoApiNotificationDependencies,
-} from '../../server/rest/notification.js';
+} from '@/server/rest/notification/notification.js';
 
 export type HonoQueuePostScheduledNoteDependencies = HonoApiNotesCreateDependencies & HonoApiNotificationDependencies;
 

@@ -4,10 +4,10 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
-import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from '../admin-stats.js';
+import { assertCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
+import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from '../admin/admin-stats.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleHonoApiAdminCaptchaCurrent, handleHonoApiAdminCaptchaSave } from '../captcha.js';
+import { handleHonoApiAdminCaptchaCurrent, handleHonoApiAdminCaptchaSave } from '../captcha/captcha.js';
 import {
 	handleHonoApiAdminQueueAbandonOutboxDeadLetter,
 	handleHonoApiAdminQueueClear,
@@ -26,8 +26,8 @@ import {
 	handleHonoApiAdminQueueShowJob,
 	handleHonoApiAdminQueueShowJobLogs,
 	handleHonoApiAdminQueueStats,
-} from '../admin-queue.js';
-import { isHonoApiAdministrator } from '../role-policy.js';
+} from '../admin/admin-queue.js';
+import { isHonoApiAdministrator } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,

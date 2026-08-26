@@ -17,8 +17,8 @@ import type { ModeratorInactivityRemainingTime, SystemWebhookPayload } from '@/c
 import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import { createAnnouncementWithSideEffects, type AnnouncementCreateValues } from '@/core/announcement/AnnouncementLogic.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { getModeratorsForHonoApi } from '../../server/rest/admin-users.js';
-import { packAnnouncementForHonoApi } from '../../server/rest/admin-announcements.js';
+import { getModeratorsForHonoApi } from '@/server/rest/admin/admin-users.js';
+import { packAnnouncementForHonoApi } from '@/server/rest/admin/admin-announcements.js';
 import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from '../../server/rest/events.js';
 
 export type HonoQueueCheckModeratorsActivityDependencies = {
