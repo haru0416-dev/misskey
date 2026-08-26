@@ -66,3 +66,20 @@ async play({ canvasElement }) {
 - **汎用の `MkInput` は `textbox`。** autocomplete を付けても `combobox` にはならない
 - **時刻に依存する story は `origin` を明示する。** 相対表示は基準時刻を渡さないと実時刻になり、
   書いた当時は未来だった日付が過去になって落ちる
+
+## バリエーションは story として表に出す
+
+「スナップショット時だけ静止させる」ような隠れた条件分岐は置かない (Chromatic 撤去で
+`isChromatic()` が恒久的に死に、story が実時刻基準になって落ちた前例がある)。
+見せたい状態が複数あるなら **別の story として export する**。
+
+```ts
+export const Default = { /* アニメーションあり */ } satisfies StoryObj<typeof MkLoading>;
+
+export const Static = {
+	...Default,
+	args: { ...Default.args, static: true },
+} satisfies StoryObj<typeof MkLoading>;
+```
+
+時刻に依存するコンポーネントも同様に、実時刻の `Default` と固定時刻の `FixedTime` を並べる。

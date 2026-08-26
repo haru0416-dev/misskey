@@ -35,10 +35,6 @@ export const Default = {
 		paginator: new Paginator('channels/search', {}),
 	},
 	parameters: {
-		chromatic: {
-			// NOTE: ロードが終わるまで待つ
-			delay: 3000,
-		},
 		layout: 'fullscreen',
 		msw: {
 			handlers: [

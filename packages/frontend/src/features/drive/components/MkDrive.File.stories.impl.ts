@@ -39,10 +39,6 @@ export const Default = {
 		file: file(),
 	},
 	parameters: {
-		chromatic: {
-			// NOTE: ロードが終わるまで待つ
-			delay: 3000,
-		},
 		layout: 'centered',
 	},
 } satisfies StoryObj<typeof MkDrive_file>;

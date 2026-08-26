@@ -9,7 +9,6 @@ import { nextTick, ref } from 'vue';
 import { preferReactive, preferState } from './init';
 import MkAnimBg from '@/components/display/MkAnimBg.vue';
 
-vi.mock('chromatic/isChromatic', () => ({ default: () => false }));
 vi.mock('@/utility/webgl.js', () => ({ initShaderProgram: () => ({}) }));
 
 preferState.animation = true;
