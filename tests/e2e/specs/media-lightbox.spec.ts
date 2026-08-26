@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { expect, test, type APIRequestContext } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
+import { expect, test } from '../support/fixtures.js';
 import { registerUser, resetState } from '../support/helpers.js';
 
 type DriveFile = { id: string };
