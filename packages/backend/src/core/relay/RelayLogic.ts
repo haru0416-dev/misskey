@@ -8,7 +8,11 @@ import { domainToASCII } from 'node:url';
 import type { Config } from '@/config.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import type { IActivity, IFollow, IObject, IUndo } from '@/core/activitypub/type.js';
-import { createRelayInDatabase, deleteRelayFromDatabase, fetchRelayByInboxFromDatabase } from '@/core/relay/RelayStore.js';
+import {
+	createRelayInDatabase,
+	deleteRelayFromDatabase,
+	fetchRelayByInboxFromDatabase,
+} from '@/core/relay/RelayStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiRelay } from '@/models/Relay.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';

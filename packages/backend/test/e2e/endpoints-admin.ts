@@ -157,10 +157,24 @@ describe('Endpoints', () => {
 	let systemWebhookDeliverQueue: Bull.Queue<SystemWebhookDeliverJobData> | undefined;
 	let context: EndpointsContext;
 
-	beforeAll(async () => {
-		context = await createEndpointsContext();
-		({ alice, bob, carol, db, dbQueue, deliverQueue, inboxQueue, relationshipQueue, objectStorageQueue, systemWebhookDeliverQueue } = context);
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			context = await createEndpointsContext();
+			({
+				alice,
+				bob,
+				carol,
+				db,
+				dbQueue,
+				deliverQueue,
+				inboxQueue,
+				relationshipQueue,
+				objectStorageQueue,
+				systemWebhookDeliverQueue,
+			} = context);
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await context.close();
@@ -323,7 +337,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/update-proxy-account', () => {
 		test('admin/update-proxy-account は description 更新、scope、権限、ログを維持する', async () => {
 			const description = `hono proxy account ${Date.now().toString(36)}`;
@@ -358,7 +371,6 @@ describe('Endpoints', () => {
 			}
 		});
 	});
-
 
 	describe('admin account deletion', () => {
 		test('存在しないユーザーの削除はNO_SUCH_USERを返す', async () => {
@@ -466,7 +478,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/accounts/create', () => {
 		test('root native token のみアカウント作成でき、external token と非rootは拒否される', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -529,7 +540,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/accounts/find-by-email', () => {
 		test('admin/accounts/find-by-email はemail検索、admin権限、token scopeを維持する', async () => {
 			const now = Date.now();
@@ -566,7 +576,6 @@ describe('Endpoints', () => {
 			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
-
 
 	describe('admin/drive', () => {
 		test('admin/drive/files は filter、pagination、DriveFile packing、token scopeを維持する', async () => {
@@ -970,7 +979,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('パスワード確認を伴うエンドポイント', () => {
 		// パスワード誤入力は利用者の入力ミスであって内部エラーではないので、
 		// 500 INTERNAL_ERROR ではなく INCORRECT_PASSWORD を返し、副作用も起きないこと
@@ -1015,7 +1023,6 @@ describe('Endpoints', () => {
 			expect(after.isDeleted).toBe(false);
 		});
 	});
-
 
 	describe('role endpoints', () => {
 		test('roles/list and roles/show return packed public role data', async () => {
@@ -1213,7 +1220,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('users/report-abuse', () => {
 		test('通報を作成し、自分自身・管理者・存在しないユーザーへの通報を拒否する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -1295,7 +1301,6 @@ describe('Endpoints', () => {
 			}
 		});
 	});
-
 
 	describe('admin/roles', () => {
 		test('admin/roles は作成、一覧、表示、scope、権限、ログを維持する', async () => {
@@ -1684,7 +1689,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/system-webhook', () => {
 		async function findSystemWebhookDeliverJob(
 			webhookId: string,
@@ -1838,7 +1842,6 @@ describe('Endpoints', () => {
 			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
 	});
-
 
 	describe('admin/abuse-report/notification-recipient', () => {
 		test('admin/abuse-report/notification-recipient は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
@@ -2050,7 +2053,6 @@ describe('Endpoints', () => {
 			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
 	});
-
 
 	describe('admin/abuse-user-reports', () => {
 		async function createReport(
@@ -2523,7 +2525,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/show-user', () => {
 		test('admin/show-users は作成日時順のoffsetを維持する', async () => {
 			const firstPage = await api(
@@ -2691,7 +2692,6 @@ describe('Endpoints', () => {
 			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
-
 
 	describe('admin/user-maintenance', () => {
 		test('root と administrator の認証情報を権限階層に従って保護する', async () => {
@@ -3125,7 +3125,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/get-user-ips', () => {
 		test('admin/get-user-ips は最新30件、admin権限、token scopeを維持する', async () => {
 			const now = Date.now();
@@ -3191,7 +3190,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/server-info', () => {
 		function assertAdminServerInfoBody(body: any): void {
 			expect(typeof body.machine).toBe('string');
@@ -3228,7 +3226,6 @@ describe('Endpoints', () => {
 			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
-
 
 	describe('admin/relays', () => {
 		async function findDeliverJob(inbox: string, type: 'Follow' | 'Undo'): Promise<Bull.Job<DeliverJobData>> {
@@ -3369,7 +3366,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/queue read endpoints', () => {
 		test('admin/queue のread endpointはqueue状態、job、権限を維持する', async () => {
 			const now = Date.now();
@@ -3490,7 +3486,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/queue write endpoints', () => {
 		async function expectModerationLog(
 			type: 'clearQueue' | 'promoteQueue' | 'pauseQueue' | 'resumeQueue',
@@ -3604,7 +3599,6 @@ describe('Endpoints', () => {
 			}
 		});
 	});
-
 
 	describe('admin/queue outbox dead letter endpoints', () => {
 		test('デッドレターの一覧・再試行・破棄がrevision競合と権限を維持する', async () => {
@@ -3776,7 +3770,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/show-moderation-logs', () => {
 		test('admin/show-moderation-logs は検索、ユーザー pack、権限を維持する', async () => {
 			const config = fixtureConfig;
@@ -3824,7 +3817,6 @@ describe('Endpoints', () => {
 			expect(castAsError(adminDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
-
 
 	describe('admin/captcha', () => {
 		test('admin/captcha/current と admin/captcha/save は設定取得、保存、scope、権限を維持する', async () => {
@@ -3876,7 +3868,6 @@ describe('Endpoints', () => {
 			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
-
 
 	describe('admin/announcements', () => {
 		test('admin/announcements は作成、一覧、更新、削除、scope、権限、ログを維持する', async () => {
@@ -3985,7 +3976,6 @@ describe('Endpoints', () => {
 			expect([...logged].sort()).toStrictEqual([...logTypes].sort());
 		});
 	});
-
 
 	describe('admin/avatar-decorations', () => {
 		test('admin/avatar-decorations は作成、一覧、更新、削除、scope、ポリシー、ログを維持する', async () => {
@@ -4108,7 +4098,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin/ad', () => {
 		test('admin/ad は作成、一覧、更新、削除、scope、権限、ログを維持する', async () => {
 			const now = Date.now();
@@ -4201,7 +4190,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('admin database stats', () => {
 		test('admin/get-index-stats と admin/get-table-stats はDB統計を返し、scopeを維持する', async () => {
 			const indexes = await api('admin/get-index-stats', {}, alice);
@@ -4227,5 +4215,4 @@ describe('Endpoints', () => {
 			expect(castAsError(roleDenied.body as any).error.code).toBe('ROLE_PERMISSION_DENIED');
 		});
 	});
-
 });

@@ -4,7 +4,12 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
+import {
+	assertCredential,
+	assertProhibitMoved,
+	assertTokenPermission,
+	authenticateHonoApiToken,
+} from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
 import { handleHonoApiChannelsFavorite, handleHonoApiChannelsUnfavorite } from '../favorite/favorites.js';
 import {

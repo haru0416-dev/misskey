@@ -7,16 +7,10 @@ import { domainToASCII } from 'node:url';
 import { sql, type SQL } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
 import Chart, { type KVs } from '@/core/chart/core.js';
-import {
-	name as activeUsersChartName,
-	schema as activeUsersChartSchema,
-} from '@/core/chart/entities/active-users.js';
+import { name as activeUsersChartName, schema as activeUsersChartSchema } from '@/core/chart/entities/active-users.js';
 import { name as apRequestChartName, schema as apRequestChartSchema } from '@/core/chart/entities/ap-request.js';
 import { name as driveChartName, schema as driveChartSchema } from '@/core/chart/entities/drive.js';
-import {
-	name as federationChartName,
-	schema as federationChartSchema,
-} from '@/core/chart/entities/federation.js';
+import { name as federationChartName, schema as federationChartSchema } from '@/core/chart/entities/federation.js';
 import { name as instanceChartName, schema as instanceChartSchema } from '@/core/chart/entities/instance.js';
 import { name as notesChartName, schema as notesChartSchema } from '@/core/chart/entities/notes.js';
 import {
@@ -35,10 +29,7 @@ import {
 	name as perUserReactionsChartName,
 	schema as perUserReactionsChartSchema,
 } from '@/core/chart/entities/per-user-reactions.js';
-import {
-	name as perUserPvChartName,
-	schema as perUserPvChartSchema,
-} from '@/core/chart/entities/per-user-pv.js';
+import { name as perUserPvChartName, schema as perUserPvChartSchema } from '@/core/chart/entities/per-user-pv.js';
 import { name as usersChartName, schema as usersChartSchema } from '@/core/chart/entities/users.js';
 import {
 	countFollowingsByFolloweeIdAndFollowerHostStateFromDatabase,

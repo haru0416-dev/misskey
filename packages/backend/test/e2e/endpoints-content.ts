@@ -151,10 +151,13 @@ describe('Endpoints', () => {
 	let dbQueue: Bull.Queue<DbJobData<'importCustomEmojis' | 'deleteAccount'>> | undefined;
 	let context: EndpointsContext;
 
-	beforeAll(async () => {
-		context = await createEndpointsContext();
-		({ alice, bob, carol, db, dbQueue } = context);
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			context = await createEndpointsContext();
+			({ alice, bob, carol, db, dbQueue } = context);
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await context.close();
@@ -189,7 +192,6 @@ describe('Endpoints', () => {
 			expect(missing.body).toBe(null);
 		});
 	});
-
 
 	describe('basic meta endpoints', () => {
 		test('meta returns lite and detailed metadata', async () => {
@@ -267,7 +269,6 @@ describe('Endpoints', () => {
 			expect(castAsError((await invalid.json()) as Record<string, unknown>).error.code).toBe('INVALID_PARAM');
 		});
 	});
-
 
 	describe('account blocking endpoints', () => {
 		test('blocking はDB、follow cleanup、list membership cleanup、list、delete、scope、エラーを維持する', async () => {
@@ -384,7 +385,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('account mute endpoints', () => {
 		test('mute と renote-mute はDB、list、delete、scope、エラーを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -473,7 +473,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('availability endpoints', () => {
 		test('username availability reflects existing local users', async () => {
 			const available = await api('username/available', {
@@ -521,7 +520,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('retention endpoint', () => {
 		test('retention supports GET and returns latest aggregation data', async () => {
 			const config = fixtureConfig;
@@ -557,7 +555,6 @@ describe('Endpoints', () => {
 			expect(record.data).toStrictEqual(latest.data);
 		});
 	});
-
 
 	describe('announcement endpoints', () => {
 		test('announcements list and show respect user-specific visibility', async () => {
@@ -665,7 +662,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('fetch-rss endpoint', () => {
 		let rssServer: Server | undefined;
 
@@ -728,7 +724,6 @@ describe('Endpoints', () => {
 			expect(getAt(getDefined(getBody.items), 0).title).toBe('First entry');
 		});
 	});
-
 
 	describe('promo/read endpoint', () => {
 		test('admin/promo/create はpromo note作成、重複、権限を維持する', async () => {
@@ -829,7 +824,6 @@ describe('Endpoints', () => {
 			expect(castAsError(denied.body as any).error.code).toBe('PERMISSION_DENIED');
 		});
 	});
-
 
 	describe('favorite and like endpoints', () => {
 		async function createFavoriteFixtures(prefix: string) {
@@ -983,7 +977,6 @@ describe('Endpoints', () => {
 			expect(await pageLikeExistsInDatabase(db, movedUser.id, page.id)).toBe(false);
 		});
 	});
-
 
 	describe('Hono rate limited write endpoints', () => {
 		test('following/create は follow 作成、locked follow request、blocking、scope、エラーを維持する', async () => {
@@ -1494,7 +1487,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('export jobs', () => {
 		const getExportJobs = async (jobName: string, userId: string) => {
 			const jobs = await dbQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
@@ -1541,7 +1533,6 @@ describe('Endpoints', () => {
 			await job.remove();
 		});
 	});
-
 
 	describe('notifications', () => {
 		async function readNotificationTimeline(config: typeof fixtureConfig, userId: string) {
@@ -1744,7 +1735,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('stats', () => {
 		test('stats は集計値を返す', async () => {
 			const res = await api('stats', {});
@@ -1760,7 +1750,6 @@ describe('Endpoints', () => {
 			expect((res.body as any).driveUsageRemote).toBe(0);
 		});
 	});
-
 
 	describe('gallery', () => {
 		test('gallery/posts/{create,show,update,delete} は所有権・moderator・moderation logを維持する', async () => {
@@ -2063,7 +2052,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('clips', () => {
 		test('clips/{create,list,show,update,delete} は所有権とpublic可視性を維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -2222,7 +2210,6 @@ describe('Endpoints', () => {
 			expect(castAsError(missingClip.body as any).error.code).toBe('NO_SUCH_CLIP');
 		});
 	});
-
 
 	describe('flash', () => {
 		test('作成できる', async () => {
@@ -2493,7 +2480,6 @@ describe('Endpoints', () => {
 			);
 		});
 	});
-
 
 	describe('パーソナルメモ機能のテスト', () => {
 		test('他者に関するメモを更新できる', async () => {

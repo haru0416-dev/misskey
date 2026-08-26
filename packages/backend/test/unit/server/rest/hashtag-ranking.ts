@@ -10,7 +10,11 @@ import { loadConfig, type Config } from '@/config.js';
 import { createRedisClient } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { updateHashtagsRankingForHonoApi, updateHashtagsRankingsForHonoApi } from '@/server/rest/note/notes-create.js';
-import { formatHashtagUsersWindow, getCurrentFeaturedWindow, HASHTAG_RANKING_WINDOW } from '@/server/rest/hashtag/hashtags.js';
+import {
+	formatHashtagUsersWindow,
+	getCurrentFeaturedWindow,
+	HASHTAG_RANKING_WINDOW,
+} from '@/server/rest/hashtag/hashtags.js';
 
 describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 相当)', () => {
 	let config: Config;

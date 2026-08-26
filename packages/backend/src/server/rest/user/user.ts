@@ -82,7 +82,12 @@ import type { MiUser } from '@/models/User.js';
 import type { MiUserNotePining } from '@/models/UserNotePining.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { HonoApiError } from '../error.js';
-import { packNoteManyForHonoApi, populateEmojis, populateEmojisMany, type HonoApiNoteDependencies } from '../note/note.js';
+import {
+	packNoteManyForHonoApi,
+	populateEmojis,
+	populateEmojisMany,
+	type HonoApiNoteDependencies,
+} from '../note/note.js';
 import type { HonoChartWriters } from '@/server/chart-runtime.js';
 import {
 	computeHonoApiUserRoles,

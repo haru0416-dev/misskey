@@ -25,7 +25,10 @@ import {
 	listMuteeIdsByMuterIdFromDatabase,
 	listPermanentMutingsByMuterIdFromDatabase,
 } from '@/core/user/MutingStore.js';
-import { countBlockingsByBlockerIdFromDatabase, listBlockingsByBlockerIdFromDatabase } from '@/core/user/BlockingStore.js';
+import {
+	countBlockingsByBlockerIdFromDatabase,
+	listBlockingsByBlockerIdFromDatabase,
+} from '@/core/user/BlockingStore.js';
 import {
 	createUserListInDatabase,
 	fetchUserListByNameAndUserIdFromDatabase,

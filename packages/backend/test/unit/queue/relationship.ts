@@ -18,7 +18,10 @@ import {
 	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
 } from '@/core/user/FollowingStore.js';
 import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/user/FollowRequestStore.js';
-import { createBlockingInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import {
+	createBlockingInDatabase,
+	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
+} from '@/core/user/BlockingStore.js';
 import { updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {

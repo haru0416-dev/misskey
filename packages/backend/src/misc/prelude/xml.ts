@@ -17,7 +17,7 @@ const endOfCDATA = ']]>';
 export function escapeValue(x: string): string {
 	let insideOfCDATA = false;
 	let builder = '';
-	for (let i = 0; i < x.length; ) {
+	for (let i = 0; i < x.length;) {
 		if (insideOfCDATA) {
 			if (x.slice(i, i + beginingOfCDATA.length) === beginingOfCDATA) {
 				insideOfCDATA = true;

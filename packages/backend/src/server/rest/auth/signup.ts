@@ -19,7 +19,10 @@ import {
 	updateRegistrationTicketInDatabase,
 } from '@/core/invite/RegistrationTicketStore.js';
 import { deleteUserPendingFromDatabase, fetchUserPendingByCodeFromDatabase } from '@/core/account/UserPendingStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase, updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
+import {
+	fetchUserProfileByUserIdOrFailFromDatabase,
+	updateUserProfileInDatabase,
+} from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';

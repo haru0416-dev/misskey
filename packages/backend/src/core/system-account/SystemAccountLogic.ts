@@ -6,7 +6,10 @@
 import { randomUUID } from 'node:crypto';
 import { hashPassword } from '@/misc/password.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { createOrFetchSystemAccountInDatabase, fetchSystemAccountUserFromDatabase } from '@/core/system-account/SystemAccountStore.js';
+import {
+	createOrFetchSystemAccountInDatabase,
+	fetchSystemAccountUserFromDatabase,
+} from '@/core/system-account/SystemAccountStore.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';

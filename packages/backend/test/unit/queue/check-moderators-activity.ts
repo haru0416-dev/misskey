@@ -11,7 +11,10 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase, updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
+import {
+	createUserWithProfileAndPublickeyInDatabase,
+	updateUserLastActiveDateInDatabase,
+} from '@/core/user/UserStore.js';
 import { createRoleInDatabase } from '@/core/role/RoleStore.js';
 import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.js';
 import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaStore.js';

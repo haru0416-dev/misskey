@@ -38,7 +38,7 @@ export type MfmService = ReturnType<typeof createMfmService>;
 REST API のハンドラ関数 (`server/rest/*.ts`) は、必要な依存を **1 個の `deps` オブジェクト** の第一引数として受け取る。各ファイルが必要な依存だけを型で宣言し、それらは `ApiShellDependencies` ([server/rest/shell.ts](../../../../../packages/backend/src/server/rest/shell.ts)) に集約される。
 
 ```ts
-// packages/backend/src/server/rest/i.ts
+// packages/backend/src/server/rest/account/i.ts
 export type HonoApiIDependencies = UserPackingDependencies & {
 	db: MiDrizzleDatabase;
 };
@@ -65,7 +65,7 @@ NestJS 時代のような「module の `providers` 配列に登録」は不要�
 
 ## 既存例
 
-- [core/MfmService.ts](../../../../../packages/backend/src/core/MfmService.ts) — `createXxx(config)` ファクトリの典型
-- [core/UserStore.ts](../../../../../packages/backend/src/core/UserStore.ts) — プレーン関数群の典型
-- [server/rest/i.ts](../../../../../packages/backend/src/server/rest/i.ts) — `deps` 経由での依存受け渡しの典型
+- [core/MfmService.ts](../../../../../packages/backend/src/core/mfm/MfmService.ts) — `createXxx(config)` ファクトリの典型
+- [core/UserStore.ts](../../../../../packages/backend/src/core/user/UserStore.ts) — プレーン関数群の典型
+- [server/rest/i.ts](../../../../../packages/backend/src/server/rest/account/i.ts) — `deps` 経由での依存受け渡しの典型
 - [server/rest/shell.ts](../../../../../packages/backend/src/server/rest/shell.ts) — `ApiShellDependencies` の全体像

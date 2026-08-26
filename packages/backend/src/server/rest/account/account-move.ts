@@ -50,7 +50,11 @@ import { onMoveAccountForHonoApi } from '../antenna/antennas.js';
 import { renderPersonForHonoApi, type HonoApiAccountUpdateDependencies } from './account-update.js';
 import { createRoleAssignedNotification, type HonoApiNotificationDependencies } from '../notification/notification.js';
 import type { HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from '../user/user.js';
+import {
+	packMeDetailedForHonoApi,
+	type MeDetailedHonoApiResponse,
+	type UserPackingDependencies,
+} from '../user/user.js';
 import { genLocalUserUri, type HonoApiFollowingDependencies } from '../user/following.js';
 import { parseHonoApiParams } from '../validation.js';
 import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from '../activitypub/ap-person.js';

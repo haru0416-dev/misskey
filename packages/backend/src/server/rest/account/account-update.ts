@@ -13,7 +13,10 @@ import RE2 from '@/misc/re2.js';
 import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/AvatarDecorationStore.js';
 import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
 import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
-import { fetchDriveFileByIdAndUserIdFromDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import {
+	fetchDriveFileByIdAndUserIdFromDatabase,
+	fetchDriveFileByIdFromDatabase,
+} from '@/core/drive/DriveFileStore.js';
 import { listLocalEmojisFromDatabase } from '@/core/emoji/EmojiStore.js';
 import { recordHashtagUsagesInDatabase } from '@/core/hashtag/HashtagStore.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
@@ -45,7 +48,11 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import { acceptAllFollowRequestsForHonoApi, genLocalUserUri, type HonoApiFollowingDependencies } from '../user/following.js';
+import {
+	acceptAllFollowRequestsForHonoApi,
+	genLocalUserUri,
+	type HonoApiFollowingDependencies,
+} from '../user/following.js';
 import { HonoApiError } from '../error.js';
 import {
 	addActivityContext,
@@ -61,7 +68,11 @@ import {
 	isHonoApiModerator,
 	type HonoApiRolePolicyDependencies,
 } from '../role/role-policy.js';
-import { packMeDetailedForHonoApi, type MeDetailedHonoApiResponse, type UserPackingDependencies } from '../user/user.js';
+import {
+	packMeDetailedForHonoApi,
+	type MeDetailedHonoApiResponse,
+	type UserPackingDependencies,
+} from '../user/user.js';
 import { parseHonoApiParams } from '../validation.js';
 import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from '../activitypub/ap-person.js';
 

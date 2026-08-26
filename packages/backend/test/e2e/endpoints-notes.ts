@@ -138,10 +138,13 @@ describe('Endpoints', () => {
 	let db: TestDatabase;
 	let context: EndpointsContext;
 
-	beforeAll(async () => {
-		context = await createEndpointsContext();
-		({ alice, bob, carol, dave, db } = context);
-	}, 1000 * 60 * 2);
+	beforeAll(
+		async () => {
+			context = await createEndpointsContext();
+			({ alice, bob, carol, dave, db } = context);
+		},
+		1000 * 60 * 2,
+	);
 
 	afterAll(async () => {
 		await context.close();
@@ -917,7 +920,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('notes/translate', () => {
 		test('role policy、可視性、DeepL未設定によるUNAVAILABLEを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -972,7 +974,6 @@ describe('Endpoints', () => {
 			expect(res.body).toBe(null);
 		});
 	});
-
 
 	describe('notes/show', () => {
 		test('基本フィールド、reply/renote、poll、reactionを維持する', async () => {
@@ -1134,7 +1135,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('notes relations (children/conversation/mentions/replies/renotes)', () => {
 		test('reply/renoteの親子関係とmentionsを維持する', async () => {
 			const config = fixtureConfig;
@@ -1228,7 +1228,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('notes/state and notes/favorites', () => {
 		test('notes/state、notes/favorites/{create,delete}はfavorite状態とachievementを維持する', async () => {
 			const config = fixtureConfig;
@@ -1309,7 +1308,6 @@ describe('Endpoints', () => {
 			expect(castAsError(missingNote.body as any).error.code).toBe('NO_SUCH_NOTE');
 		});
 	});
-
 
 	describe('notes timelines (global/local/hybrid/featured)', () => {
 		test('global-timeline と local-timeline は可視性・ホスト条件を維持する', async () => {
@@ -1397,7 +1395,6 @@ describe('Endpoints', () => {
 			}
 		});
 	});
-
 
 	describe('notes (bare, インスタンス全体のpublicノート一覧)', () => {
 		test('publicかつlocalOnly=falseなノートのみ返す', async () => {
@@ -1595,7 +1592,6 @@ describe('Endpoints', () => {
 			expect(beforeNew.body.some((n: any) => n.id === newNoteId)).toBe(false);
 		});
 	});
-
 
 	describe('notes/clips, search-by-tag, show-partial-bulk, timeline, user-list-timeline, polls/recommendation', () => {
 		test('notes/clips はpublicなclipのみ返しNO_SUCH_NOTEを維持する', async () => {
@@ -1901,7 +1897,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('page-push', () => {
 		test('page-push はNO_SUCH_PAGEとsecure保護を維持する', async () => {
 			const config = fixtureConfig;
@@ -1940,7 +1935,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('notes/show', () => {
 		test('投稿が取得できる', async () => {
 			const myPost = await post(alice, {
@@ -1975,7 +1969,6 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 		});
 	});
-
 
 	describe('notes/create', () => {
 		test('テキストのみで投稿できる', async () => {
@@ -2057,7 +2050,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('notes/delete', () => {
 		test('自分の投稿を削除できる', async () => {
 			const created = await api('notes/create', { text: 'to be deleted' }, alice);
@@ -2086,7 +2078,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('notes/unrenote', () => {
 		test('自分のRenoteを取り消せる', async () => {
 			const target = await api('notes/create', { text: 'to be unrenoted' }, alice);
@@ -2108,7 +2099,6 @@ describe('Endpoints', () => {
 			expect(castAsError(res.body as any).error.id).toBe('efd4a259-2442-496b-8dd7-b255aa1a160f');
 		});
 	});
-
 
 	describe('notes/reactions/create', () => {
 		test('リアクションできる', async () => {
@@ -2325,7 +2315,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('notes/reactions', () => {
 		test('specified/followersノートの反応を匿名・非受信者へ返さない', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
@@ -2347,7 +2336,6 @@ describe('Endpoints', () => {
 			}
 		});
 	});
-
 
 	describe('notes/reactions/delete', () => {
 		test('リアクションを取り消せる', async () => {
@@ -2377,7 +2365,6 @@ describe('Endpoints', () => {
 			expect(castAsError(res.body as any).error.id).toBe('764d9fce-f9f2-4a0e-92b1-6ceac9a7ad37');
 		});
 	});
-
 
 	describe('notes/polls/vote', () => {
 		test('投票できる', async () => {
@@ -2557,7 +2544,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('following/create', () => {
 		test('フォローできる', async () => {
 			const res = await api(
@@ -2633,7 +2619,6 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(400);
 		});
 	});
-
 
 	describe('following/delete', () => {
 		test('フォロー解除できる', async () => {
@@ -2719,7 +2704,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('notes/replies', () => {
 		test('自分に閲覧権限のない投稿は含まれない', async () => {
 			const alicePost = await post(alice, {
@@ -2747,7 +2731,6 @@ describe('Endpoints', () => {
 		});
 	});
 
-
 	describe('notes/timeline', () => {
 		test('フォロワー限定投稿が含まれる', async () => {
 			await api(
@@ -2771,5 +2754,4 @@ describe('Endpoints', () => {
 			expect(getAt(res.body, 0).id).toBe(carolPost.id);
 		});
 	});
-
 });

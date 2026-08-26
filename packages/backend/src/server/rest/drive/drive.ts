@@ -393,7 +393,7 @@ async function driveFolderWillNestRecursively(
 	targetFolderId: string,
 	parentId: string | null,
 ): Promise<boolean> {
-	for (let currentParentId = parentId; currentParentId != null; ) {
+	for (let currentParentId = parentId; currentParentId != null;) {
 		const parent = await fetchDriveFolderByIdOrFailFromDatabase(deps.db, currentParentId);
 
 		if (parent.id === targetFolderId) {

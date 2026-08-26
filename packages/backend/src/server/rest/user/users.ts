@@ -6,7 +6,10 @@
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Config } from '@/config.js';
-import { countUserListFavoritesFromDatabase, userListFavoriteExistsInDatabase } from '@/core/user/UserListFavoriteStore.js';
+import {
+	countUserListFavoritesFromDatabase,
+	userListFavoriteExistsInDatabase,
+} from '@/core/user/UserListFavoriteStore.js';
 import {
 	listUserListMembershipUserIdsByUserListIdFromDatabase,
 	listUserListMembershipUserIdsByUserListIdsFromDatabase,
