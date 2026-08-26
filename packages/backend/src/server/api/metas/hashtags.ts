@@ -9,11 +9,12 @@ import {
 	hashtagsShowParamDef,
 	hashtagsTrendParamDef,
 	hashtagsUsersParamDef,
-} from '@/server/rest/hashtags.js';
+} from '@/server/rest/hashtag/hashtags.js';
 
 export const endpointMetas = {
 	'hashtags/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['hashtags'],
 
 			requireCredential: false,
@@ -34,6 +35,7 @@ export const endpointMetas = {
 	},
 	'hashtags/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['hashtags'],
 
 			requireCredential: false,
@@ -53,6 +55,7 @@ export const endpointMetas = {
 	},
 	'hashtags/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['hashtags'],
 
 			requireCredential: false,
@@ -76,6 +79,7 @@ export const endpointMetas = {
 	},
 	'hashtags/trend': {
 		meta: {
+			allowQuery: true,
 			tags: ['hashtags'],
 
 			requireCredential: false,
@@ -119,6 +123,7 @@ export const endpointMetas = {
 	},
 	'hashtags/users': {
 		meta: {
+			allowQuery: true,
 			requireCredential: false,
 
 			tags: ['hashtags', 'users'],

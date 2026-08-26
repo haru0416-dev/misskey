@@ -8,8 +8,7 @@ import { MiUser } from './User.js';
 import { MiChannel } from './Channel.js';
 import type { MiDriveFile } from './DriveFile.js';
 
-// Note: When adding an index to an existing column on this large table,
-// prefer a new migration that can create it concurrently when needed.
+// 大規模なテーブルの既存カラムに索引を追加する場合は、必要に応じて同時作成できる新しい migration にする。
 
 export class MiNote {
 	public id: string;
@@ -24,7 +23,6 @@ export class MiNote {
 
 	public threadId: string | null;
 
-	// TODO: varcharにしたい
 	public text: string | null;
 
 	public name: string | null;
@@ -45,8 +43,7 @@ export class MiNote {
 
 	public clippedCount: number;
 
-	// The number of note page blocks referencing this note.
-	// This column is used by Remote Note Cleaning and manually updated rather than automatically with triggers.
+	// このノートを参照する Pages ブロック数。リモートノート削除処理が手動で更新し、trigger では更新しない。
 	public pageCount: number;
 
 	public reactions: Record<string, number>;

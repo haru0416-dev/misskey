@@ -25,7 +25,7 @@ function apiParamTypeLabel(value: unknown): string {
 	}
 
 	// Zod の `.nullable()` は標準 JSON Schema では `anyOf: [{type: X}, {type: 'null'}]` になり、
-	// 直下に `type` を持たない (旧 ajv 版の `{type: X, nullable: true}` とは形が異なる)。
+	// 直下に `type` を持たない (nullable な値は `{ anyOf: [...] }` になる)。
 	// その場合は null 以外の枝から type を拾う。
 	if (
 		value != null &&
@@ -45,8 +45,8 @@ function apiParamTypeLabel(value: unknown): string {
 
 /**
  * paramDef が Zod スキーマの場合は JSON Schema (標準形) に変換して properties を取り出す。
- * union 型 (allOf/anyOf 由来) は `properties` を持たないため空になる — これは旧 ajv 版でも
- * allOf のみで直下に properties を持たない paramDef (例: users/show) では同様だった。
+ * union 型 (allOf/anyOf 由来) は `properties` を持たないため空になる。
+ * allOf のみで直下に properties を持たない paramDef (例: users/show) も同様に扱う。
  */
 function paramProperties(params: unknown): Record<string, unknown> {
 	if (params != null && typeof params === 'object' && 'safeParse' in params) {

@@ -10027,7 +10027,7 @@ export interface operations {
                         | 'objectStorage'
                         | 'userWebhookDeliver'
                         | 'systemWebhookDeliver';
-                    state: ('active' | 'wait' | 'delayed' | 'completed' | 'failed' | 'paused')[];
+                    state: ('active' | 'wait' | 'delayed' | 'completed' | 'failed')[];
                     search?: string;
                 };
             };

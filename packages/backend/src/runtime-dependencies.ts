@@ -5,25 +5,26 @@
 
 import * as Redis from 'ioredis';
 import { Meilisearch } from 'meilisearch';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
+import { resolveDatabasePoolSize } from '@/misc/process-topology.js';
 import { allSettled } from '@/misc/promise-tracker.js';
 import type { GlobalEvents } from '@/core/global-events.js';
-import { createAiService } from '@/core/AiService.js';
-import { createDownloadService, type DownloadService } from '@/core/DownloadService.js';
-import { createFileInfoService, type FileInfoService } from '@/core/FileInfoService.js';
-import { createHttpRequestService, type HttpRequestService } from '@/core/HttpRequestService.js';
-import { createImageProcessingService, type ImageProcessingService } from '@/core/ImageProcessingService.js';
-import { createInternalStorageService, type InternalStorageService } from '@/core/InternalStorageService.js';
+import { createAiService } from '@/core/ai/AiService.js';
+import { createDownloadService, type DownloadService } from '@/core/net/DownloadService.js';
+import { createFileInfoService, type FileInfoService } from '@/core/drive/FileInfoService.js';
+import { createHttpRequestService, type HttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createImageProcessingService, type ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
+import { createInternalStorageService, type InternalStorageService } from '@/core/drive/InternalStorageService.js';
 import { createLoggerService, type LoggerService } from '@/core/LoggerService.js';
-import { createS3Service, type S3Service } from '@/core/S3Service.js';
-import { createEmailService, type EmailService } from '@/core/EmailService.js';
-import { createUserAuthService, type UserAuthService } from '@/core/UserAuthService.js';
-import { createUtilityService } from '@/core/UtilityService.js';
-import { createWebAuthnService, type WebAuthnService } from '@/core/WebAuthnService.js';
+import { createS3Service, type S3Service } from '@/core/drive/S3Service.js';
+import { createEmailService, type EmailService } from '@/core/email/EmailService.js';
+import { createUserAuthService, type UserAuthService } from '@/core/account/UserAuthService.js';
+import { createUtilityService } from '@/core/net/UtilityService.js';
+import { createWebAuthnService, type WebAuthnService } from '@/core/account/WebAuthnService.js';
 import {
 	createDbQueue,
 	createDeliverQueue,
@@ -45,8 +46,8 @@ import {
 	type SystemQueue,
 	type SystemWebhookDeliverQueue,
 	type UserWebhookDeliverQueue,
-} from '@/core/queues.js';
-import { createVideoProcessingService, type VideoProcessingService } from '@/core/VideoProcessingService.js';
+} from '@/core/queue/queues.js';
+import { createVideoProcessingService, type VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import { createUrlPreviewService, type UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import {
 	createHonoChartWriters,
@@ -239,14 +240,17 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		// minimumConnections の既定は0で、クエリを流さない限り接続は張られない。
 		const drizzlePool = (resources.drizzlePool = createDrizzlePool(config));
 		// bun 限定モジュールなので、node で動くテスト経路から読まれないよう動的 import にしている。
-		const db = shouldUseBunSql()
-			? await (async () => {
-					const { createBunSqlRuntime } = await import('@/db/bun-sql.js');
-					const runtime = createBunSqlRuntime(config);
-					resources.bunSqlClose = runtime.close;
-					return runtime.db;
-				})()
-			: createDrizzleDatabase(drizzlePool, config);
+		// Bun 1.3.14 のtransaction接続リークを避けるには通常クエリ用とtransaction用の
+		// 2 poolが必要。接続予算1では分離できないため、その構成だけpgへフォールバックする。
+		const db =
+			shouldUseBunSql() && resolveDatabasePoolSize(config) >= 2
+				? await (async () => {
+						const { createBunSqlRuntime } = await import('@/db/bun-sql.js');
+						const runtime = createBunSqlRuntime(config);
+						resources.bunSqlClose = runtime.close;
+						return runtime.db;
+					})()
+				: createDrizzleDatabase(drizzlePool, config);
 		const redis = (resources.redis = createRedisClient(config));
 		const redisForPub = (resources.redisForPub = createRedisForPub(config));
 		const redisForSub = (resources.redisForSub = await createRedisForSub(config));

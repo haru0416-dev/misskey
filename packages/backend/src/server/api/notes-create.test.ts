@@ -3,13 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
-
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { describe, test, expect } from 'vitest';
-import { getValidator } from '../../../test/prelude/get-api-validator.js';
+import { getValidator } from '../../../test/get-api-validator.js';
 import { endpointMetas } from './endpoint-metas.js';
 
 const paramDef = endpointMetas['notes/create'].paramDef;

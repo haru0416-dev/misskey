@@ -16,7 +16,7 @@ import type { DeckProfile } from '@/deck.js';
 import type { WatermarkPreset } from '@/features/image-editor/watermark/WatermarkRenderer.js';
 import type { ImageFramePreset } from '@/features/image-editor/frame/ImageFrameRenderer.js';
 import { genId } from '@/utility/id.js';
-import { DEFAULT_DEVICE_KIND } from '@/utility/device-kind.js';
+import { deviceKind } from '@/utility/device-kind.js';
 import { deepEqual } from '@/utility/deep-equal.js';
 import type { SearchEngine } from '@/features/search/search-engine.js';
 
@@ -44,9 +44,7 @@ export type StatusbarStore = {
 	type: string | null;
 	size: 'verySmall' | 'small' | 'medium' | 'large' | 'veryLarge';
 	black: boolean;
-	// NOTE: ステータスバーの種類ごとに具体的な形が異なる動的なプロパティ袋。
-	// 個々の設定画面 (pages/settings/statusbar.*.vue) やレンダラー (ui/_common_/statusbars.vue) が
-	// 個別のキーを具体的なプリミティブ型として直接読み書きするため、あえて緩い型のままにしている。
+	// 各設定画面とレンダラーが個別のキーを直接扱うため、props は具体化しない。
 	props: Record<string, any>;
 };
 
@@ -80,7 +78,7 @@ function mergeItemsById<T extends { id: string }>(a: T[], b: T[]): T[] {
 	return mergedItems;
 }
 
-// NOTE: デフォルト値は他の設定の状態に依存してはならない(依存していた場合、ユーザーがその設定項目単体で「初期値にリセット」した場合不具合の原因になる)
+// デフォルト値は他の設定に依存させない。設定単体のリセット時にも同じ値を使う必要がある。
 
 export const PREF_DEF = definePreferences({
 	accounts: {
@@ -127,9 +125,7 @@ export const PREF_DEF = definePreferences({
 				name: string;
 				id: string;
 				place: string | null;
-				// NOTE: ウィジェットの種類ごとに実際のデータ形状が異なる。deepEqual (JsonLike前提) や
-				// widgets/widget.ts でのフォーム値との相互変換を通じて他の設定値のunion型にも波及するため、
-				// あえて緩い型のままにしている。
+				// ウィジェットごとにデータ形状が異なり、フォーム値との相互変換が設定値の union 型にも波及するため、data は具体化しない。
 				data: Record<string, any>;
 			}[],
 	},
@@ -414,7 +410,7 @@ export const PREF_DEF = definePreferences({
 		default: false,
 	},
 	makeEveryTextElementsSelectable: {
-		default: DEFAULT_DEVICE_KIND === 'desktop',
+		default: deviceKind === 'desktop',
 	},
 	showNavbarSubButtons: {
 		default: true,
@@ -429,8 +425,7 @@ export const PREF_DEF = definePreferences({
 		default: false,
 	},
 	plugins: {
-		// NOTE: プラグインごとに実際のconfigスキーマが異なる動的なデータ。plugin.ts / pages/settings/plugin.vue が
-		// Plugin['config'] (FormWithDefault) の形として直接扱うため、あえて緩い型のままにしている。
+		// プラグインごとに config のスキーマが異なり、plugin.ts と設定画面が Plugin['config'] として直接扱うため、config は具体化しない。
 		default: [] as (OmitStrict<Plugin, 'config'> & { config: Record<string, any> })[],
 		mergeStrategy: (a, b) => {
 			const installIds = new Set(a.map((plugin) => plugin.installId));

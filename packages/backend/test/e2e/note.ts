@@ -3,13 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
-
 import * as assert from 'assert';
-import { describe, beforeAll, afterAll, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import { fetchNoteByIdFromDatabase, openTestDatabase, type TestDatabase } from '../fixtures.js';
-import { api, castAsError, initTestDb, post, role, signup, uploadFile, uploadUrl } from '../utils.js';
+import { api, castAsError, initTestDb, POLL, post, role, signup, uploadFile } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
 describe('Note', () => {
@@ -43,9 +41,9 @@ describe('Note', () => {
 
 		const res = await api('notes/create', post, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-		assert.strictEqual(res.body.createdNote.text, post.text);
+		expect(res.status).toBe(200);
+		expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+		expect(res.body.createdNote.text).toBe(post.text);
 	});
 
 	test('お気に入りを作成・取得・削除できる', async () => {
@@ -54,64 +52,58 @@ describe('Note', () => {
 		});
 
 		const initialState = await api('notes/state', { noteId: note.id }, alice);
-		assert.strictEqual(initialState.status, 200);
-		assert.strictEqual(initialState.body.isFavorited, false);
+		expect(initialState.status).toBe(200);
+		expect(initialState.body.isFavorited).toBe(false);
 
 		const create = await api('notes/favorites/create', { noteId: note.id }, alice);
-		assert.strictEqual(create.status, 204);
+		expect(create.status).toBe(204);
 
 		const favoritedState = await api('notes/state', { noteId: note.id }, alice);
-		assert.strictEqual(favoritedState.status, 200);
-		assert.strictEqual(favoritedState.body.isFavorited, true);
+		expect(favoritedState.status).toBe(200);
+		expect(favoritedState.body.isFavorited).toBe(true);
 
 		const duplicate = await api('notes/favorites/create', { noteId: note.id }, alice);
-		assert.strictEqual(duplicate.status, 400);
-		assert.strictEqual(castAsError(duplicate.body as any).error.code, 'ALREADY_FAVORITED');
+		expect(duplicate.status).toBe(400);
+		expect(castAsError(duplicate.body as any).error.code).toBe('ALREADY_FAVORITED');
 
 		const favorites = await api('i/favorites', { limit: 10 }, alice);
-		assert.strictEqual(favorites.status, 200);
+		expect(favorites.status).toBe(200);
 		assert.ok(
 			favorites.body.some((favorite) => favorite.noteId === note.id && favorite.note.text === 'favorite target'),
 		);
 
 		const remove = await api('notes/favorites/delete', { noteId: note.id }, alice);
-		assert.strictEqual(remove.status, 204);
+		expect(remove.status).toBe(204);
 
 		const removedState = await api('notes/state', { noteId: note.id }, alice);
-		assert.strictEqual(removedState.status, 200);
-		assert.strictEqual(removedState.body.isFavorited, false);
+		expect(removedState.status).toBe(200);
+		expect(removedState.body.isFavorited).toBe(false);
 
 		const removedFavorites = await api('i/favorites', { limit: 10 }, alice);
-		assert.strictEqual(removedFavorites.status, 200);
-		assert.strictEqual(
-			removedFavorites.body.some((favorite) => favorite.noteId === note.id),
-			false,
-		);
+		expect(removedFavorites.status).toBe(200);
+		expect(removedFavorites.body.some((favorite) => favorite.noteId === note.id)).toBe(false);
 
 		const duplicateRemove = await api('notes/favorites/delete', { noteId: note.id }, alice);
-		assert.strictEqual(duplicateRemove.status, 400);
-		assert.strictEqual(castAsError(duplicateRemove.body as any).error.code, 'NOT_FAVORITED');
+		expect(duplicateRemove.status).toBe(400);
+		expect(castAsError(duplicateRemove.body as any).error.code).toBe('NOT_FAVORITED');
 	});
 
 	test(
 		'ファイルを添付できる',
 		async () => {
-			const file = await uploadUrl(
-				alice,
-				'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg',
-			);
+			const file = await uploadFile(alice);
 
 			const res = await api(
 				'notes/create',
 				{
-					fileIds: [file.id],
+					fileIds: [file.body!.id],
 				},
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.deepStrictEqual(res.body.createdNote.fileIds, [file.id]);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.createdNote.fileIds).toStrictEqual([file.body!.id]);
 		},
 		1000 * 10,
 	);
@@ -119,23 +111,20 @@ describe('Note', () => {
 	test(
 		'他人のファイルで怒られる',
 		async () => {
-			const file = await uploadUrl(
-				bob,
-				'https://raw.githubusercontent.com/misskey-dev/misskey/develop/packages/backend/test/resources/192.jpg',
-			);
+			const file = await uploadFile(bob);
 
 			const res = await api(
 				'notes/create',
 				{
 					text: 'test',
-					fileIds: [file.id],
+					fileIds: [file.body!.id],
 				},
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
-			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_FILE');
-			assert.strictEqual(castAsError(res.body).error.id, 'b6992544-63e7-67f0-fa7f-32444b1b5306');
+			expect(res.status).toBe(400);
+			expect(castAsError(res.body).error.code).toBe('NO_SUCH_FILE');
+			expect(castAsError(res.body).error.id).toBe('b6992544-63e7-67f0-fa7f-32444b1b5306');
 		},
 		1000 * 10,
 	);
@@ -150,9 +139,9 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(res.status, 400);
-		assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_FILE');
-		assert.strictEqual(castAsError(res.body).error.id, 'b6992544-63e7-67f0-fa7f-32444b1b5306');
+		expect(res.status).toBe(400);
+		expect(castAsError(res.body).error.code).toBe('NO_SUCH_FILE');
+		expect(castAsError(res.body).error.id).toBe('b6992544-63e7-67f0-fa7f-32444b1b5306');
 	});
 
 	test('不正なファイルIDで怒られる', async () => {
@@ -163,9 +152,9 @@ describe('Note', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(res.status, 400);
-		assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_FILE');
-		assert.strictEqual(castAsError(res.body).error.id, 'b6992544-63e7-67f0-fa7f-32444b1b5306');
+		expect(res.status).toBe(400);
+		expect(castAsError(res.body).error.code).toBe('NO_SUCH_FILE');
+		expect(castAsError(res.body).error.id).toBe('b6992544-63e7-67f0-fa7f-32444b1b5306');
 	});
 
 	test('返信できる', async () => {
@@ -180,12 +169,12 @@ describe('Note', () => {
 
 		const res = await api('notes/create', alicePost, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-		assert.strictEqual(res.body.createdNote.text, alicePost.text);
-		assert.strictEqual(res.body.createdNote.replyId, alicePost.replyId);
+		expect(res.status).toBe(200);
+		expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+		expect(res.body.createdNote.text).toBe(alicePost.text);
+		expect(res.body.createdNote.replyId).toBe(alicePost.replyId);
 		assert.ok(res.body.createdNote.reply);
-		assert.strictEqual(res.body.createdNote.reply.text, bobPost.text);
+		expect(res.body.createdNote.reply.text).toBe(bobPost.text);
 	});
 
 	test('renoteできる', async () => {
@@ -199,11 +188,11 @@ describe('Note', () => {
 
 		const res = await api('notes/create', alicePost, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-		assert.strictEqual(res.body.createdNote.renoteId, alicePost.renoteId);
+		expect(res.status).toBe(200);
+		expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+		expect(res.body.createdNote.renoteId).toBe(alicePost.renoteId);
 		assert.ok(res.body.createdNote.renote);
-		assert.strictEqual(res.body.createdNote.renote.text, bobPost.text);
+		expect(res.body.createdNote.renote.text).toBe(bobPost.text);
 	});
 
 	test('引用renoteできる', async () => {
@@ -218,12 +207,12 @@ describe('Note', () => {
 
 		const res = await api('notes/create', alicePost, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-		assert.strictEqual(res.body.createdNote.text, alicePost.text);
-		assert.strictEqual(res.body.createdNote.renoteId, alicePost.renoteId);
+		expect(res.status).toBe(200);
+		expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+		expect(res.body.createdNote.text).toBe(alicePost.text);
+		expect(res.body.createdNote.renoteId).toBe(alicePost.renoteId);
 		assert.ok(res.body.createdNote.renote);
-		assert.strictEqual(res.body.createdNote.renote.text, bobPost.text);
+		expect(res.body.createdNote.renote.text).toBe(bobPost.text);
 	});
 
 	test('引用renoteで空白文字のみで構成されたtextにするとレスポンスがtext: nullになる', async () => {
@@ -239,8 +228,8 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(res.body.createdNote.text, null);
+		expect(res.status).toBe(200);
+		expect(res.body.createdNote.text).toBe(null);
 	});
 
 	test('visibility: followersでrenoteできる', async () => {
@@ -253,7 +242,7 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(createRes.status, 200);
+		expect(createRes.status).toBe(200);
 
 		const renoteId = createRes.body.createdNote.id;
 		const renoteRes = await api(
@@ -265,9 +254,9 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(renoteRes.status, 200);
-		assert.strictEqual(renoteRes.body.createdNote.renoteId, renoteId);
-		assert.strictEqual(renoteRes.body.createdNote.visibility, 'followers');
+		expect(renoteRes.status).toBe(200);
+		expect(renoteRes.body.createdNote.renoteId).toBe(renoteId);
+		expect(renoteRes.body.createdNote.visibility).toBe('followers');
 
 		const deleteRes = await api(
 			'notes/delete',
@@ -277,7 +266,7 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(deleteRes.status, 204);
+		expect(deleteRes.status).toBe(204);
 	});
 
 	test('visibility: followersなノートに対してフォロワーはリプライできる', async () => {
@@ -298,7 +287,7 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(aliceNote.status, 200);
+		expect(aliceNote.status).toBe(200);
 
 		const replyId = aliceNote.body.createdNote.id;
 		const bobReply = await api(
@@ -310,8 +299,8 @@ describe('Note', () => {
 			bob,
 		);
 
-		assert.strictEqual(bobReply.status, 200);
-		assert.strictEqual(bobReply.body.createdNote.replyId, replyId);
+		expect(bobReply.status).toBe(200);
+		expect(bobReply.body.createdNote.replyId).toBe(replyId);
 
 		await api(
 			'following/delete',
@@ -332,7 +321,7 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(aliceNote.status, 200);
+		expect(aliceNote.status).toBe(200);
 
 		const bobReply = await api(
 			'notes/create',
@@ -343,8 +332,8 @@ describe('Note', () => {
 			bob,
 		);
 
-		assert.strictEqual(bobReply.status, 400);
-		assert.strictEqual(castAsError(bobReply.body).error.code, 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE');
+		expect(bobReply.status).toBe(400);
+		expect(castAsError(bobReply.body).error.code).toBe('CANNOT_REPLY_TO_AN_INVISIBLE_NOTE');
 	});
 
 	test('visibility: followersなノートにvisibility: publicで返信すると、返信もfollowersになる', async () => {
@@ -357,7 +346,7 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(aliceNote.status, 200);
+		expect(aliceNote.status).toBe(200);
 
 		// 返信が public のまま通ると、フォロワー限定投稿にぶら下がったスレッドが第三者から見えてしまう
 		const aliceReply = await api(
@@ -370,8 +359,8 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(aliceReply.status, 200);
-		assert.strictEqual(aliceReply.body.createdNote.visibility, 'followers');
+		expect(aliceReply.status).toBe(200);
+		expect(aliceReply.body.createdNote.visibility).toBe('followers');
 	});
 
 	test('visibility: specifiedなノートに対してvisibility: specifiedで返信できる', async () => {
@@ -385,7 +374,7 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(aliceNote.status, 200);
+		expect(aliceNote.status).toBe(200);
 
 		const bobReply = await api(
 			'notes/create',
@@ -398,7 +387,7 @@ describe('Note', () => {
 			bob,
 		);
 
-		assert.strictEqual(bobReply.status, 200);
+		expect(bobReply.status).toBe(200);
 	});
 
 	test('visibility: specifiedなノートに対してvisibility: follwersで返信しようとすると怒られる', async () => {
@@ -412,7 +401,7 @@ describe('Note', () => {
 			alice,
 		);
 
-		assert.strictEqual(aliceNote.status, 200);
+		expect(aliceNote.status).toBe(200);
 
 		const bobReply = await api(
 			'notes/create',
@@ -424,9 +413,8 @@ describe('Note', () => {
 			bob,
 		);
 
-		assert.strictEqual(bobReply.status, 400);
-		assert.strictEqual(
-			castAsError(bobReply.body).error.code,
+		expect(bobReply.status).toBe(400);
+		expect(castAsError(bobReply.body).error.code).toBe(
 			'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
 		);
 	});
@@ -436,7 +424,7 @@ describe('Note', () => {
 			text: '!'.repeat(MAX_NOTE_TEXT_LENGTH), // 3000文字
 		};
 		const res = await api('notes/create', post, alice);
-		assert.strictEqual(res.status, 200);
+		expect(res.status).toBe(200);
 	});
 
 	test('文字数オーバーで怒られる', async () => {
@@ -444,7 +432,7 @@ describe('Note', () => {
 			text: '!'.repeat(MAX_NOTE_TEXT_LENGTH + 1), // 3001文字
 		};
 		const res = await api('notes/create', post, alice);
-		assert.strictEqual(res.status, 400);
+		expect(res.status).toBe(400);
 	});
 
 	test('存在しないリプライ先で怒られる', async () => {
@@ -453,7 +441,7 @@ describe('Note', () => {
 			replyId: '000000000000000000000000',
 		};
 		const res = await api('notes/create', post, alice);
-		assert.strictEqual(res.status, 400);
+		expect(res.status).toBe(400);
 	});
 
 	test('存在しないrenote対象で怒られる', async () => {
@@ -461,7 +449,7 @@ describe('Note', () => {
 			renoteId: '000000000000000000000000',
 		};
 		const res = await api('notes/create', post, alice);
-		assert.strictEqual(res.status, 400);
+		expect(res.status).toBe(400);
 	});
 
 	test('不正なリプライ先IDで怒られる', async () => {
@@ -470,7 +458,7 @@ describe('Note', () => {
 			replyId: 'foo',
 		};
 		const res = await api('notes/create', post, alice);
-		assert.strictEqual(res.status, 400);
+		expect(res.status).toBe(400);
 	});
 
 	test('不正なrenote対象IDで怒られる', async () => {
@@ -478,7 +466,7 @@ describe('Note', () => {
 			renoteId: 'foo',
 		};
 		const res = await api('notes/create', post, alice);
-		assert.strictEqual(res.status, 400);
+		expect(res.status).toBe(400);
 	});
 
 	test('存在しないユーザーにメンションできる', async () => {
@@ -488,9 +476,9 @@ describe('Note', () => {
 
 		const res = await api('notes/create', post, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-		assert.strictEqual(res.body.createdNote.text, post.text);
+		expect(res.status).toBe(200);
+		expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+		expect(res.body.createdNote.text).toBe(post.text);
 	});
 
 	test('同じユーザーに複数メンションしても内部的にまとめられる', async () => {
@@ -500,13 +488,13 @@ describe('Note', () => {
 
 		const res = await api('notes/create', post, alice);
 
-		assert.strictEqual(res.status, 200);
-		assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-		assert.strictEqual(res.body.createdNote.text, post.text);
+		expect(res.status).toBe(200);
+		expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+		expect(res.body.createdNote.text).toBe(post.text);
 
 		const noteDoc = await fetchNoteByIdFromDatabase(database, res.body.createdNote.id);
 		assert.ok(noteDoc);
-		assert.deepStrictEqual(noteDoc.mentions, [bob.id]);
+		expect(noteDoc.mentions).toStrictEqual([bob.id]);
 	});
 
 	describe('添付ファイル情報', () => {
@@ -520,11 +508,11 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
 			assert.ok(res.body.createdNote.files);
-			assert.strictEqual(res.body.createdNote.files.length, 1);
-			assert.strictEqual(res.body.createdNote.files[0]?.id, file.body!.id);
+			expect(res.body.createdNote.files.length).toBe(1);
+			expect(res.body.createdNote.files[0]?.id).toBe(file.body!.id);
 		});
 
 		test('ファイルを添付した場合、タイムラインでファイル情報入りのレスポンスが帰ってくる', async () => {
@@ -537,7 +525,7 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(createdNote.status, 200);
+			expect(createdNote.status).toBe(200);
 
 			const res = await api(
 				'notes',
@@ -547,13 +535,13 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 			const myNote = res.body.find((note) => note.id === createdNote.body.createdNote.id);
 			assert.ok(myNote);
 			assert.ok(myNote.files);
-			assert.strictEqual(myNote.files.length, 1);
-			assert.strictEqual(myNote.files[0]?.id, file.body!.id);
+			expect(myNote.files.length).toBe(1);
+			expect(myNote.files[0]?.id).toBe(file.body!.id);
 		});
 
 		test('ファイルが添付されたノートをリノートした場合、タイムラインでファイル情報入りのレスポンスが帰ってくる', async () => {
@@ -566,7 +554,7 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(createdNote.status, 200);
+			expect(createdNote.status).toBe(200);
 
 			const renoted = await api(
 				'notes/create',
@@ -575,7 +563,7 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(renoted.status, 200);
+			expect(renoted.status).toBe(200);
 
 			const res = await api(
 				'notes',
@@ -585,14 +573,14 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 			const myNote = res.body.find((note: { id: string }) => note.id === renoted.body.createdNote.id);
 			assert.ok(myNote);
 			assert.ok(myNote.renote);
 			assert.ok(myNote.renote.files);
-			assert.strictEqual(myNote.renote.files.length, 1);
-			assert.strictEqual(myNote.renote.files[0]?.id, file.body!.id);
+			expect(myNote.renote.files.length).toBe(1);
+			expect(myNote.renote.files[0]?.id).toBe(file.body!.id);
 		});
 
 		test('ファイルが添付されたノートに返信した場合、タイムラインでファイル情報入りのレスポンスが帰ってくる', async () => {
@@ -605,7 +593,7 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(createdNote.status, 200);
+			expect(createdNote.status).toBe(200);
 
 			const reply = await api(
 				'notes/create',
@@ -615,7 +603,7 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(reply.status, 200);
+			expect(reply.status).toBe(200);
 
 			const res = await api(
 				'notes',
@@ -625,14 +613,14 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 			const myNote = res.body.find((note: { id: string }) => note.id === reply.body.createdNote.id);
 			assert.ok(myNote);
 			assert.ok(myNote.reply);
 			assert.ok(myNote.reply.files);
-			assert.strictEqual(myNote.reply.files.length, 1);
-			assert.strictEqual(myNote.reply.files[0]?.id, file.body!.id);
+			expect(myNote.reply.files.length).toBe(1);
+			expect(myNote.reply.files[0]?.id).toBe(file.body!.id);
 		});
 
 		test('ファイルが添付されたノートへの返信をリノートした場合、タイムラインでファイル情報入りのレスポンスが帰ってくる', async () => {
@@ -645,7 +633,7 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(createdNote.status, 200);
+			expect(createdNote.status).toBe(200);
 
 			const reply = await api(
 				'notes/create',
@@ -655,7 +643,7 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(reply.status, 200);
+			expect(reply.status).toBe(200);
 
 			const renoted = await api(
 				'notes/create',
@@ -664,7 +652,7 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(renoted.status, 200);
+			expect(renoted.status).toBe(200);
 
 			const res = await api(
 				'notes',
@@ -674,15 +662,15 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(Array.isArray(res.body), true);
+			expect(res.status).toBe(200);
+			expect(Array.isArray(res.body)).toBe(true);
 			const myNote = res.body.find((note: { id: string }) => note.id === renoted.body.createdNote.id);
 			assert.ok(myNote);
 			assert.ok(myNote.renote);
 			assert.ok(myNote.renote.reply);
 			assert.ok(myNote.renote.reply.files);
-			assert.strictEqual(myNote.renote.reply.files.length, 1);
-			assert.strictEqual(myNote.renote.reply.files[0]?.id, file.body!.id);
+			expect(myNote.renote.reply.files.length).toBe(1);
+			expect(myNote.renote.reply.files[0]?.id).toBe(file.body!.id);
 		});
 
 		test('NSFWが強制されている場合変更できない', async () => {
@@ -715,7 +703,7 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 
 			const assign = await api(
 				'admin/roles/assign',
@@ -726,13 +714,13 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(assign.status, 204);
-			assert.strictEqual(file.body!.isSensitive, false);
+			expect(assign.status).toBe(204);
+			expect(file.body!.isSensitive).toBe(false);
 
 			const nsfwfile = await uploadFile(alice);
 
-			assert.strictEqual(nsfwfile.status, 200);
-			assert.strictEqual(nsfwfile.body!.isSensitive, true);
+			expect(nsfwfile.status).toBe(200);
+			expect(nsfwfile.body!.isSensitive).toBe(true);
 
 			const liftnsfw = await api(
 				'drive/files/update',
@@ -743,8 +731,8 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(liftnsfw.status, 400);
-			assert.strictEqual(castAsError(liftnsfw.body).error.code, 'RESTRICTED_BY_ROLE');
+			expect(liftnsfw.status).toBe(400);
+			expect(castAsError(liftnsfw.body).error.code).toBe('RESTRICTED_BY_ROLE');
 
 			const oldaddnsfw = await api(
 				'drive/files/update',
@@ -755,7 +743,7 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(oldaddnsfw.status, 200);
+			expect(oldaddnsfw.status).toBe(200);
 
 			await api(
 				'admin/roles/unassign',
@@ -789,9 +777,9 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(typeof res.body === 'object' && !Array.isArray(res.body), true);
-			assert.strictEqual(res.body.createdNote.poll != null, true);
+			expect(res.status).toBe(200);
+			expect(typeof res.body === 'object' && !Array.isArray(res.body)).toBe(true);
+			expect(res.body.createdNote.poll != null).toBe(true);
 		});
 
 		test('投票の選択肢が無くて怒られる', async () => {
@@ -803,7 +791,7 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('投票の選択肢が無くて怒られる (空の配列)', async () => {
@@ -816,7 +804,7 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('投票の選択肢が1つで怒られる', async () => {
@@ -829,7 +817,7 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('投票できる', async () => {
@@ -853,7 +841,7 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 		});
 
 		test('複数投票できない', async () => {
@@ -886,7 +874,7 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('許可されている場合は複数投票できる', async () => {
@@ -929,7 +917,7 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 		});
 
 		test('締め切られている場合は投票できない', async () => {
@@ -945,6 +933,7 @@ describe('Note', () => {
 				alice,
 			);
 
+			// 投票期限そのものが過ぎるのを待つ (状態の伝播待ちではないので固定で待つ)
 			await new Promise((x) => setTimeout(x, 2));
 
 			const res = await api(
@@ -956,7 +945,7 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('センシティブな投稿はhomeになる (単語指定)', async () => {
@@ -968,8 +957,9 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(sensitive.status, 204);
+			expect(sensitive.status).toBe(204);
 
+			// meta の伝播待ち。成功する呼び出しはノートを作るので、投げ直さず固定で待つ。
 			await new Promise((x) => setTimeout(x, 2));
 
 			const note1 = await api(
@@ -980,8 +970,8 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(note1.status, 200);
-			assert.strictEqual(note1.body.createdNote.visibility, 'home');
+			expect(note1.status).toBe(200);
+			expect(note1.body.createdNote.visibility).toBe('home');
 		});
 
 		test('センシティブな投稿はhomeになる (正規表現)', async () => {
@@ -993,7 +983,7 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(sensitive.status, 204);
+			expect(sensitive.status).toBe(204);
 
 			const note2 = await api(
 				'notes/create',
@@ -1003,8 +993,8 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(note2.status, 200);
-			assert.strictEqual(note2.body.createdNote.visibility, 'home');
+			expect(note2.status).toBe(200);
+			expect(note2.body.createdNote.visibility).toBe('home');
 		});
 
 		test('センシティブな投稿はhomeになる (スペースアンド)', async () => {
@@ -1016,7 +1006,7 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(sensitive.status, 204);
+			expect(sensitive.status).toBe(204);
 
 			const note2 = await api(
 				'notes/create',
@@ -1026,8 +1016,8 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(note2.status, 200);
-			assert.strictEqual(note2.body.createdNote.visibility, 'home');
+			expect(note2.status).toBe(200);
+			expect(note2.body.createdNote.visibility).toBe('home');
 		});
 
 		test('禁止ワードを含む投稿はエラーになる (単語指定)', async () => {
@@ -1039,20 +1029,22 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(prohibited.status, 204);
+			expect(prohibited.status).toBe(204);
 
-			await new Promise((x) => setTimeout(x, 2));
+			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
+			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			await vi.waitFor(async () => {
+				const rejected = await api(
+					'notes/create',
+					{
+						text: 'hogetesthuge',
+					},
+					alice,
+				);
 
-			const note1 = await api(
-				'notes/create',
-				{
-					text: 'hogetesthuge',
-				},
-				alice,
-			);
-
-			assert.strictEqual(note1.status, 400);
-			assert.strictEqual(castAsError(note1.body).error.code, 'CONTAINS_PROHIBITED_WORDS');
+				expect(rejected.status).toBe(400);
+				expect(castAsError(rejected.body).error.code).toBe('CONTAINS_PROHIBITED_WORDS');
+			}, POLL);
 		});
 
 		test('禁止ワードを含む投稿はエラーになる (正規表現)', async () => {
@@ -1064,7 +1056,7 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(prohibited.status, 204);
+			expect(prohibited.status).toBe(204);
 
 			const note2 = await api(
 				'notes/create',
@@ -1074,8 +1066,8 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(note2.status, 400);
-			assert.strictEqual(castAsError(note2.body).error.code, 'CONTAINS_PROHIBITED_WORDS');
+			expect(note2.status).toBe(400);
+			expect(castAsError(note2.body).error.code).toBe('CONTAINS_PROHIBITED_WORDS');
 		});
 
 		test('禁止ワードを含む投稿はエラーになる (スペースアンド)', async () => {
@@ -1087,7 +1079,7 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(prohibited.status, 204);
+			expect(prohibited.status).toBe(204);
 
 			const note2 = await api(
 				'notes/create',
@@ -1097,8 +1089,8 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(note2.status, 400);
-			assert.strictEqual(castAsError(note2.body).error.code, 'CONTAINS_PROHIBITED_WORDS');
+			expect(note2.status).toBe(400);
+			expect(castAsError(note2.body).error.code).toBe('CONTAINS_PROHIBITED_WORDS');
 		});
 
 		test('禁止ワードを含んでるリモートノートもエラーになる', async () => {
@@ -1110,19 +1102,21 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(prohibited.status, 204);
+			expect(prohibited.status).toBe(204);
 
-			await new Promise((x) => setTimeout(x, 2));
+			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
+			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			await vi.waitFor(async () => {
+				const rejected = await api(
+					'notes/create',
+					{
+						text: 'hogetesthuge',
+					},
+					tom,
+				);
 
-			const note1 = await api(
-				'notes/create',
-				{
-					text: 'hogetesthuge',
-				},
-				tom,
-			);
-
-			assert.strictEqual(note1.status, 400);
+				expect(rejected.status).toBe(400);
+			}, POLL);
 		});
 
 		test('メンションの数が上限を超えるとエラーになる', async () => {
@@ -1153,8 +1147,9 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 
+			// ロール作成の伝播待ち。assign は投げ直すと二重割り当てになるので固定で待つ。
 			await new Promise((x) => setTimeout(x, 2));
 
 			const assign = await api(
@@ -1166,20 +1161,22 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
-			await new Promise((x) => setTimeout(x, 2));
+			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
+			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			await vi.waitFor(async () => {
+				const rejected = await api(
+					'notes/create',
+					{
+						text: '@bob potentially annoying text',
+					},
+					alice,
+				);
 
-			const note = await api(
-				'notes/create',
-				{
-					text: '@bob potentially annoying text',
-				},
-				alice,
-			);
-
-			assert.strictEqual(note.status, 400);
-			assert.strictEqual(castAsError(note.body).error.code, 'CONTAINS_TOO_MANY_MENTIONS');
+				expect(rejected.status).toBe(400);
+				expect(castAsError(rejected.body).error.code).toBe('CONTAINS_TOO_MANY_MENTIONS');
+			}, POLL);
 
 			await api(
 				'admin/roles/unassign',
@@ -1227,8 +1224,9 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 
+			// ロール作成の伝播待ち。assign は投げ直すと二重割り当てになるので固定で待つ。
 			await new Promise((x) => setTimeout(x, 2));
 
 			const assign = await api(
@@ -1240,22 +1238,24 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
-			await new Promise((x) => setTimeout(x, 2));
+			// reactive meta / ロールの伝播は Redis pub/sub 経由で、外から観測できる口が無い。
+			// 却下される呼び出しはノートを作らないので、効くまで投げ直して待つ。
+			await vi.waitFor(async () => {
+				const rejected = await api(
+					'notes/create',
+					{
+						text: 'potentially annoying text',
+						visibility: 'specified',
+						visibleUserIds: [bob.id],
+					},
+					alice,
+				);
 
-			const note = await api(
-				'notes/create',
-				{
-					text: 'potentially annoying text',
-					visibility: 'specified',
-					visibleUserIds: [bob.id],
-				},
-				alice,
-			);
-
-			assert.strictEqual(note.status, 400);
-			assert.strictEqual(castAsError(note.body).error.code, 'CONTAINS_TOO_MANY_MENTIONS');
+				expect(rejected.status).toBe(400);
+				expect(castAsError(rejected.body).error.code).toBe('CONTAINS_TOO_MANY_MENTIONS');
+			}, POLL);
 
 			await api(
 				'admin/roles/unassign',
@@ -1303,8 +1303,9 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 
+			// ロール作成の伝播待ち。assign は投げ直すと二重割り当てになるので固定で待つ。
 			await new Promise((x) => setTimeout(x, 2));
 
 			const assign = await api(
@@ -1316,8 +1317,9 @@ describe('Note', () => {
 				root,
 			);
 
-			assert.strictEqual(assign.status, 204);
+			expect(assign.status).toBe(204);
 
+			// ロール割り当ての伝播待ち。成功する呼び出しはノートを作るので、投げ直さず固定で待つ。
 			await new Promise((x) => setTimeout(x, 2));
 
 			const note = await api(
@@ -1330,7 +1332,7 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(note.status, 200);
+			expect(note.status).toBe(200);
 
 			await api(
 				'admin/roles/unassign',
@@ -1385,10 +1387,10 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(deleteOneRes.status, 204);
+			expect(deleteOneRes.status).toBe(204);
 			let mainNote = await fetchNoteByIdFromDatabase(database, mainNoteRes.body.createdNote.id);
 			assert.ok(mainNote);
-			assert.strictEqual(mainNote.repliesCount, 1);
+			expect(mainNote.repliesCount).toBe(1);
 
 			const deleteTwoRes = await api(
 				'notes/delete',
@@ -1398,10 +1400,10 @@ describe('Note', () => {
 				alice,
 			);
 
-			assert.strictEqual(deleteTwoRes.status, 204);
+			expect(deleteTwoRes.status).toBe(204);
 			mainNote = await fetchNoteByIdFromDatabase(database, mainNoteRes.body.createdNote.id);
 			assert.ok(mainNote);
-			assert.strictEqual(mainNote.repliesCount, 0);
+			expect(mainNote.repliesCount).toBe(0);
 		});
 	});
 
@@ -1429,9 +1431,9 @@ describe('Note', () => {
 					alice,
 				);
 
-				assert.strictEqual(res.status, 400);
+				expect(res.status).toBe(400);
 				assert.ok(res.body);
-				assert.strictEqual(castAsError(res.body).error.code, 'UNAVAILABLE');
+				expect(castAsError(res.body).error.code).toBe('UNAVAILABLE');
 			});
 
 			afterAll(async () => {
@@ -1442,25 +1444,25 @@ describe('Note', () => {
 		test('存在しないノートは翻訳できない', async () => {
 			const res = await api('notes/translate', { noteId: 'foo', targetLang: 'ja' }, alice);
 
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 			assert.ok(res.body);
-			assert.strictEqual(castAsError(res.body).error.code, 'NO_SUCH_NOTE');
+			expect(castAsError(res.body).error.code).toBe('NO_SUCH_NOTE');
 		});
 
 		test('不可視なノートは翻訳できない', async () => {
 			const aliceNote = await post(alice, { visibility: 'followers', text: 'Hello' });
 			const bobTranslateAttempt = await api('notes/translate', { noteId: aliceNote.id, targetLang: 'ja' }, bob);
 
-			assert.strictEqual(bobTranslateAttempt.status, 400);
+			expect(bobTranslateAttempt.status).toBe(400);
 			assert.ok(bobTranslateAttempt.body);
-			assert.strictEqual(castAsError(bobTranslateAttempt.body).error.code, 'CANNOT_TRANSLATE_INVISIBLE_NOTE');
+			expect(castAsError(bobTranslateAttempt.body).error.code).toBe('CANNOT_TRANSLATE_INVISIBLE_NOTE');
 		});
 
 		test('text: null なノートを翻訳すると空のレスポンスが返ってくる', async () => {
 			const aliceNote = await post(alice, { text: null, poll: { choices: ['kinoko', 'takenoko'] } });
 			const res = await api('notes/translate', { noteId: aliceNote.id, targetLang: 'ja' }, alice);
 
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 		});
 
 		test('サーバーに DeepL 認証キーが登録されていない場合翻訳できない', async () => {
@@ -1468,16 +1470,16 @@ describe('Note', () => {
 			const res = await api('notes/translate', { noteId: aliceNote.id, targetLang: 'ja' }, alice);
 
 			// NOTE: デフォルトでは登録されていないので落ちる
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 			assert.ok(res.body);
-			assert.strictEqual(castAsError(res.body).error.code, 'UNAVAILABLE');
+			expect(castAsError(res.body).error.code).toBe('UNAVAILABLE');
 		});
 	});
 
 	describe('notes/drafts', () => {
 		test('下書きの作成、更新、一覧、件数、削除ができる', async () => {
 			const beforeCount = await api('notes/drafts/count', {}, alice);
-			assert.strictEqual(beforeCount.status, 200);
+			expect(beforeCount.status).toBe(200);
 
 			const createRes = await api(
 				'notes/drafts/create',
@@ -1486,14 +1488,14 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(createRes.status, 200);
-			assert.strictEqual(createRes.body.createdDraft.text, 'draft body');
+			expect(createRes.status).toBe(200);
+			expect(createRes.body.createdDraft.text).toBe('draft body');
 
 			const draftId = createRes.body.createdDraft.id;
 
 			const countAfterCreate = await api('notes/drafts/count', {}, alice);
-			assert.strictEqual(countAfterCreate.status, 200);
-			assert.strictEqual(countAfterCreate.body, beforeCount.body + 1);
+			expect(countAfterCreate.status).toBe(200);
+			expect(countAfterCreate.body).toBe(beforeCount.body + 1);
 
 			const listRes = await api(
 				'notes/drafts/list',
@@ -1503,7 +1505,7 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(listRes.status, 200);
+			expect(listRes.status).toBe(200);
 			assert.ok(listRes.body.some((draft) => draft.id === draftId && draft.text === 'draft body'));
 
 			const updateRes = await api(
@@ -1514,9 +1516,9 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(updateRes.status, 200);
-			assert.strictEqual(updateRes.body.updatedDraft.id, draftId);
-			assert.strictEqual(updateRes.body.updatedDraft.text, 'updated draft body');
+			expect(updateRes.status).toBe(200);
+			expect(updateRes.body.updatedDraft.id).toBe(draftId);
+			expect(updateRes.body.updatedDraft.text).toBe('updated draft body');
 
 			const deleteRes = await api(
 				'notes/drafts/delete',
@@ -1525,11 +1527,11 @@ describe('Note', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(deleteRes.status, 204);
+			expect(deleteRes.status).toBe(204);
 
 			const countAfterDelete = await api('notes/drafts/count', {}, alice);
-			assert.strictEqual(countAfterDelete.status, 200);
-			assert.strictEqual(countAfterDelete.body, beforeCount.body);
+			expect(countAfterDelete.status).toBe(200);
+			expect(countAfterDelete.body).toBe(beforeCount.body);
 		});
 	});
 });

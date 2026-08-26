@@ -319,7 +319,7 @@ const searchParams = computed<SearchParams | null>(() => {
 		if (trimmedHost.startsWith('https://') || trimmedHost.startsWith('http://')) {
 			try {
 				trimmedHost = new URL(trimmedHost).host;
-			} catch (err) { /* empty */ }
+			} catch (err) { /* URL として解釈できない場合は入力値をそのまま扱う。 */ }
 		}
 		return {
 			query: trimmedQuery,

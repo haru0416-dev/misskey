@@ -100,8 +100,8 @@ export function calcPopupPosition(
 	};
 
 	const calcPosWhenRight = (): [number, number] => {
-		let left = 0; // TSを黙らすためとりあえず初期値を0に
-		let top = 0; // TSを黙らすためとりあえず初期値を0に
+		let left = 0;
+		let top = 0;
 
 		if (props.anchorElement) {
 			left = rect.left + props.anchorElement.offsetWidth + window.scrollX + props.innerMargin;
@@ -110,9 +110,7 @@ export function calcPopupPosition(
 				top = rect.top + window.scrollY;
 				if (props.alignOffset != null) top += props.alignOffset;
 			} else if (props.align === 'bottom') {
-				// TODO: アンカーの下端に揃える位置を計算する
 			} else {
-				// center
 				top = rect.top + window.scrollY + props.anchorElement.offsetHeight / 2;
 				top -= el.offsetHeight / 2;
 			}
@@ -142,7 +140,6 @@ export function calcPopupPosition(
 			case 'top': {
 				const [left, top] = calcPosWhenTop();
 
-				// ツールチップを上に向かって表示するスペースがなければ下に向かって出す
 				if (top - window.scrollY < 0) {
 					const [left, top] = calcPosWhenBottom();
 					return { left, top, transformOrigin: 'center top' };
@@ -153,14 +150,12 @@ export function calcPopupPosition(
 
 			case 'bottom': {
 				const [left, top] = calcPosWhenBottom();
-				// TODO: ツールチップを下に向かって表示するスペースがなければ上に向かって出す
 				return { left, top, transformOrigin: 'center top' };
 			}
 
 			case 'left': {
 				const [left, top] = calcPosWhenLeft();
 
-				// ツールチップを左に向かって表示するスペースがなければ右に向かって出す
 				if (left - window.scrollX < 0) {
 					const [left, top] = calcPosWhenRight();
 					return { left, top, transformOrigin: 'left center' };
@@ -171,7 +166,6 @@ export function calcPopupPosition(
 
 			case 'right': {
 				const [left, top] = calcPosWhenRight();
-				// TODO: ツールチップを右に向かって表示するスペースがなければ左に向かって出す
 				return { left, top, transformOrigin: 'left center' };
 			}
 		}

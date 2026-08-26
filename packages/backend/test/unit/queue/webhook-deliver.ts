@@ -3,18 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
-
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { createHttpRequestService } from '@/core/HttpRequestService.js';
-import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/WebhookStore.js';
-import { createUserInDatabase } from '@/core/UserStore.js';
-import { createSystemWebhookInDatabase, fetchSystemWebhookByIdOrFailFromDatabase } from '@/core/SystemWebhookStore.js';
+import { createHttpRequestService } from '@/core/net/HttpRequestService.js';
+import { createWebhookInDatabase, fetchWebhookByIdAndUserIdFromDatabase } from '@/core/webhook/WebhookStore.js';
+import { createUserInDatabase } from '@/core/user/UserStore.js';
+import { createSystemWebhookInDatabase, fetchSystemWebhookByIdOrFailFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleHonoQueueSystemWebhookDeliver,

@@ -201,10 +201,9 @@ export interface Schema extends OfSchema {
 }
 
 type RequiredPropertyNames<s extends Obj> = {
-	[K in keyof s]: s[K]['optional'] extends false // K is not optional
+	[K in keyof s]: s[K]['optional'] extends false
 		? K
-		: // K has default value
-			s[K]['default'] extends null | string | number | boolean | Record<string, unknown>
+		: s[K]['default'] extends null | string | number | boolean | Record<string, unknown>
 			? K
 			: never;
 }[keyof s];
@@ -212,8 +211,7 @@ type RequiredPropertyNames<s extends Obj> = {
 type Obj = Record<string, Schema>;
 
 // https://github.com/misskey-dev/misskey/issues/8535
-// To avoid excessive stack depth error,
-// deceive TypeScript with UnionToIntersection (or more precisely, `infer` expression within it).
+// TypeScript のスタック深度超過を避けるため、UnionToIntersection (正確には内部の `infer` 式) で型推論させる。
 type ObjType<s extends Obj, RequiredProps extends ReadonlyArray<keyof s>> = UnionToIntersection<
 	{ -readonly [R in RequiredPropertyNames<s>]-?: SchemaType<s[R]> } & {
 		-readonly [R in RequiredProps[number]]-?: SchemaType<s[R]>;
@@ -226,9 +224,8 @@ type NullOrUndefined<p extends Schema, T> =
 	| T;
 
 // https://stackoverflow.com/questions/54938141/typescript-convert-union-to-intersection
-// Get intersection from union
-// NOTE: `U extends unknown` (not `any`) is the standard any-free idiom to force
-// distribution over the union U while inferring the intersection.
+// Union から intersection を得る。
+// `U extends unknown` (`any` ではない) は、U の union 分配と intersection の推論を両立する any-free の定石。
 type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
 
 type ArrayToIntersection<T extends ReadonlyArray<Schema>> = T extends readonly [infer Head, ...infer Tail]
@@ -242,10 +239,9 @@ type ArrayToIntersection<T extends ReadonlyArray<Schema>> = T extends readonly [
 	: never;
 
 // https://github.com/misskey-dev/misskey/pull/8144#discussion_r785287552
-// To get union, we use `Foo extends any ? Hoge<Foo> : never`
-// NOTE: `a`'s `any[]` bound is load-bearing here: `a[number]` feeds the default
-// value of X (constrained to Schema / ReadonlyArray<keyof s>), and narrowing it
-// to `unknown[]` breaks that constraint check. Kept as `any[]` deliberately.
+// Union を得るために `Foo extends any ? Hoge<Foo> : never` の分配を使う。
+// `a[number]` が X の既定値 (Schema / ReadonlyArray<keyof s> に制約) になるため、`a` は `any[]` のままにする。
+// `unknown[]` に狭めるとこの制約検査が壊れる。
 type UnionSchemaType<a extends readonly any[], X extends Schema = a[number]> = X extends unknown
 	? SchemaType<X>
 	: never;
@@ -270,9 +266,8 @@ type ObjectSchemaTypeDef<p extends Schema> = p['ref'] extends keyof typeof refs
 			? UnionSchemaType<p['anyOf']>
 			: p['allOf'] extends ReadonlyArray<Schema>
 				? ArrayToIntersection<p['allOf']>
-				: // NOTE: consumers (e.g. MetaEntityPacker.ts) assign concrete third-party option
-					// configuration objects into fields typed via this branch;
-					// narrowing to Record<string, unknown> breaks that structural assignment. Kept as any.
+				: // この分岐の型を持つフィールドには、外部ライブラリの具体的な設定オブジェクトを代入する。
+					// Record<string, unknown> に狭めると構造的代入が壊れるため、any を使用する。
 					p['additionalProperties'] extends true
 					? Record<string, any>
 					: p['additionalProperties'] extends Schema

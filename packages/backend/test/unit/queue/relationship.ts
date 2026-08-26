@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -13,14 +12,14 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import {
 	createFollowingInDatabase,
 	fetchFollowingByFollowerIdAndFolloweeIdFromDatabase,
-} from '@/core/FollowingStore.js';
-import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/FollowRequestStore.js';
-import { createBlockingInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { updateUserProfileInDatabase } from '@/core/UserProfileStore.js';
+} from '@/core/user/FollowingStore.js';
+import { createFollowRequestInDatabase, fetchFollowRequestFromDatabase } from '@/core/user/FollowRequestStore.js';
+import { createBlockingInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleHonoQueueRelationshipBlock,

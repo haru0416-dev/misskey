@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertProhibitMoved, assertSecureCredential, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertProhibitMoved, assertSecureCredential, authenticateHonoApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
 import {
 	handleHonoApiExportCustomEmojis,
@@ -16,17 +16,17 @@ import {
 	handleHonoApiIExportMute,
 	handleHonoApiIExportNotes,
 	handleHonoApiIExportUserLists,
-} from '../export-jobs.js';
+} from '../job/export-jobs.js';
 import {
 	handleHonoApiIImportAntennas,
 	handleHonoApiIImportBlocking,
 	handleHonoApiIImportFollowing,
 	handleHonoApiIImportMuting,
 	handleHonoApiIImportUserLists,
-} from '../import-jobs.js';
-import { handleHonoApiFetchRss } from '../fetch-rss.js';
+} from '../job/import-jobs.js';
+import { handleHonoApiFetchRss } from '../feed/fetch-rss.js';
 import { assertHonoApiRateLimit, assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { hasHonoApiRolePolicyOrIsRoot } from '../role-policy.js';
+import { hasHonoApiRolePolicyOrIsRoot } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -36,6 +36,7 @@ import {
 	runApiEndpoint,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler } from '../endpoint-handlers.js';
 
 export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post('/export-custom-emojis', async (c) => {
@@ -206,128 +207,41 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 		});
 	});
 
-	app.post('/i/import-blocking', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			assertProhibitMoved(auth.user);
-			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportBlocking'))) {
-				throw rolePermissionDeniedError();
-			}
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/import-blocking',
-				{
-					duration: 60 * 60 * 1000,
-					max: 1,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/i/import-blocking',
+		endpointHandler(deps, 'i/import-blocking', async ({ body, auth, c }) => {
 			await handleHonoApiIImportBlocking(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/i/import-following', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			assertProhibitMoved(auth.user);
-			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportFollowing'))) {
-				throw rolePermissionDeniedError();
-			}
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/import-following',
-				{
-					duration: 60 * 60 * 1000,
-					max: 1,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/i/import-following',
+		endpointHandler(deps, 'i/import-following', async ({ body, auth, c }) => {
 			await handleHonoApiIImportFollowing(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/i/import-muting', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			assertProhibitMoved(auth.user);
-			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportMuting'))) {
-				throw rolePermissionDeniedError();
-			}
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/import-muting',
-				{
-					duration: 60 * 60 * 1000,
-					max: 1,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/i/import-muting',
+		endpointHandler(deps, 'i/import-muting', async ({ body, auth, c }) => {
 			await handleHonoApiIImportMuting(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/i/import-user-lists', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			assertProhibitMoved(auth.user);
-			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportUserLists'))) {
-				throw rolePermissionDeniedError();
-			}
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/import-user-lists',
-				{
-					duration: 60 * 60 * 1000,
-					max: 1,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/i/import-user-lists',
+		endpointHandler(deps, 'i/import-user-lists', async ({ body, auth, c }) => {
 			await handleHonoApiIImportUserLists(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/i/import-antennas', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertSecureCredential(auth);
-			assertProhibitMoved(auth.user);
-			if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canImportAntennas'))) {
-				throw rolePermissionDeniedError();
-			}
-			// 連打自体はここで抑え、時間あたりの実行枠はファイル検証を通ってから消費する
-			// (壊れたファイル1回で1時間ロックアウトされないように)。
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'i/import-antennas',
-				{
-					key: 'i/import-antennas:attempt',
-					minInterval: 5 * 1000,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/i/import-antennas',
+		endpointHandler(deps, 'i/import-antennas', async ({ body, auth, c }) => {
 			await handleHonoApiIImportAntennas(deps, auth.user, body, () =>
 				assertHonoApiRateLimitForUser(
 					deps,
@@ -340,8 +254,8 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 				),
 			);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/i/export-antennas', async (c) => {
 		return await runApiEndpoint(c, async () => {

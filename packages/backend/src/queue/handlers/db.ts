@@ -10,49 +10,50 @@ import { domainToASCII } from 'node:url';
 import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type * as Bull from 'bullmq';
-import { listAntennasByUserIdFromDatabase } from '@/core/AntennaStore.js';
-import type { ExportedAntenna } from '@/core/AntennaImport.js';
+import { listAntennasByUserIdFromDatabase } from '@/core/antenna/AntennaStore.js';
+import type { ExportedAntenna } from '@/core/antenna/AntennaImport.js';
 import {
 	countDriveFilesByUserIdFromDatabase,
+	fetchDriveFileByIdFromDatabase,
 	listDriveFilesByUserIdWithPaginationFromDatabase,
-} from '@/core/DriveFileStore.js';
-import { listFollowingsByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
+} from '@/core/drive/DriveFileStore.js';
+import { finishEnqueuedDriveFileDeletion } from '@/core/drive/DriveFileDeletionLogic.js';
+import { listFollowingsByFollowerIdFromDatabase } from '@/core/user/FollowingStore.js';
 import {
 	countMutingsByMuterIdFromDatabase,
 	createMutingInDatabase,
 	listMuteeIdsByMuterIdFromDatabase,
 	listPermanentMutingsByMuterIdFromDatabase,
-} from '@/core/MutingStore.js';
-import { countBlockingsByBlockerIdFromDatabase, listBlockingsByBlockerIdFromDatabase } from '@/core/BlockingStore.js';
+} from '@/core/user/MutingStore.js';
+import { countBlockingsByBlockerIdFromDatabase, listBlockingsByBlockerIdFromDatabase } from '@/core/user/BlockingStore.js';
 import {
 	createUserListInDatabase,
 	fetchUserListByNameAndUserIdFromDatabase,
 	listUserListsByUserIdFromDatabase,
-} from '@/core/UserListStore.js';
+} from '@/core/user/UserListStore.js';
 import {
 	listUserListMembershipsByUserListIdFromDatabase,
 	listUserListMembershipUserIdsByUserListIdFromDatabase,
 	userListMembershipExistsInDatabase,
-} from '@/core/UserListMembershipStore.js';
+} from '@/core/user/UserListMembershipStore.js';
 import {
 	fetchUserByIdFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
-} from '@/core/UserStore.js';
-import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
+} from '@/core/user/UserStore.js';
 import {
 	countNoteFavoritesByUserIdFromDatabase,
 	listNoteFavoritesByUserIdFromDatabase,
-} from '@/core/NoteFavoriteStore.js';
-import { listPollsByNoteIdsFromDatabase } from '@/core/PollStore.js';
+} from '@/core/note/NoteFavoriteStore.js';
+import { listPollsByNoteIdsFromDatabase } from '@/core/note/PollStore.js';
 import {
 	countNotesByUserIdFromDatabase,
 	listNotesByUserIdWithPaginationFromDatabase,
 	listVisibleNotesWithUsersByIdsFromDatabase,
-} from '@/core/NoteStore.js';
-import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/ClipStore.js';
-import { listClipNotesByClipIdFromDatabase } from '@/core/ClipNoteStore.js';
-import type { DownloadService } from '@/core/DownloadService.js';
+} from '@/core/note/NoteStore.js';
+import { countClipsByUserIdFromDatabase, listClipsByUserIdFromDatabase } from '@/core/clip/ClipStore.js';
+import { listClipNotesByClipIdFromDatabase } from '@/core/clip/ClipNoteStore.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
@@ -65,10 +66,12 @@ import type { MiClipNote } from '@/models/ClipNote.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { Config } from '@/config.js';
-import { addDbJobs, type DbJobBulkInput, type DbQueue, type RelationshipQueue } from '@/core/queues.js';
+import { addDbJobs, type DbJobBulkInput, type DbQueue, type RelationshipQueue } from '@/core/queue/queues.js';
+import { logModerationEventWithIdInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type {
 	DBExportAntennasData,
 	DbExportFollowingData,
+	DbDeleteDriveFileJobData,
 	DbJobDataWithUser,
 	DbUserImportJobData,
 	DbUserImportToDbJobData,
@@ -78,21 +81,26 @@ import { queueRetentionOptions } from '@/queue/const.js';
 import {
 	addDriveFileForHonoApi,
 	type HonoApiDriveFileUploadDependencies,
-} from '../../server/rest/drive-file-upload.js';
-import { packDriveFileManyByIdsForHonoApi } from '../../server/rest/drive-file.js';
-import { isSelfHost } from '../../server/rest/ap-resolve.js';
+} from '@/server/rest/drive/drive-file-upload.js';
+import { packDriveFileManyByIdsForHonoApi } from '@/server/rest/drive/drive-file.js';
+import { isSelfHost } from '@/server/rest/activitypub/ap-resolve.js';
 import {
 	resolveUserForHonoApi,
 	toPunyForHonoApi,
 	type HonoApiApPersonDependencies,
-} from '../../server/rest/ap-person.js';
+} from '@/server/rest/activitypub/ap-person.js';
 import type { HonoApiInternalEventPublisher } from '../../server/rest/events.js';
 import {
 	createExportCompletedNotification,
 	type HonoApiNotificationDependencies,
-} from '../../server/rest/notification.js';
-import { addUserListMemberForHonoApi, type HonoApiUsersListsDependencies } from '../../server/rest/users-lists.js';
-import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './object-storage.js';
+} from '@/server/rest/notification/notification.js';
+import { addUserListMemberForHonoApi, type HonoApiUsersListsDependencies } from '@/server/rest/user/users-lists.js';
+import { isHonoApiModerator } from '@/server/rest/role/role-policy.js';
+import {
+	deleteFileSyncForHonoApi,
+	deleteObjectStorageFileForHonoApi,
+	type HonoQueueObjectStorageDependencies,
+} from './object-storage.js';
 
 export type HonoQueueDbDependencies = HonoQueueObjectStorageDependencies &
 	HonoApiDriveFileUploadDependencies &
@@ -195,6 +203,25 @@ export async function handleHonoQueueDeleteDriveFiles(
 
 		job.updateProgress((deletedCount / total) * 100);
 	}
+}
+
+export async function handleHonoQueueDeleteDriveFile(
+	deps: HonoQueueDbDependencies,
+	job: Bull.Job<DbDeleteDriveFileJobData>,
+): Promise<void> {
+	const deleter = job.data.deleterId == null ? undefined : await fetchUserByIdFromDatabase(deps.db, job.data.deleterId);
+	await finishEnqueuedDriveFileDeletion(
+		{
+			...deps,
+			deleteInternalFile: (key) => deps.internalStorageService.del(key),
+			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFileForHonoApi(deps, key),
+			isModerator: (user) => isHonoApiModerator(deps, user),
+			logDriveFileDeletion: (db, moderator, logId, info) =>
+				logModerationEventWithIdInDatabase({ db }, moderator, 'deleteDriveFile', info, logId),
+		},
+		job.data,
+		deleter ?? undefined,
+	);
 }
 
 export async function handleHonoQueueExportMuting(
@@ -476,8 +503,6 @@ export async function handleHonoQueueExportFollowing(
 }
 
 /**
- * ImportMuting/ImportBlocking/ImportFollowingProcessorService 共通の
- * 「CSV1行(acct)からミュート/ブロック/フォロー対象ユーザーを解決する」ロジック相当。
  * ローカルユーザーの解決に失敗した場合はnullを返す (呼び出し元でスキップする)。
  */
 async function resolveImportTargetUserForHonoApi(
@@ -532,7 +557,7 @@ export async function handleHonoQueueImportMuting(
 			});
 			deps.publishInternalEvent?.('mute', { muterId: user.id, muteeId: target.id });
 		} catch {
-			// 元実装同様、行単位のエラーはログのみで処理を継続する
+			// 1行の失敗でインポート全体を中断しない。
 		}
 	}
 }
@@ -591,7 +616,7 @@ export async function handleHonoQueueImportUserLists(
 
 			await addUserListMemberForHonoApi(deps, target, list, user, { withReplies });
 		} catch {
-			// 元実装同様、行単位のエラーはログのみで処理を継続する
+			// 1行の失敗でインポート全体を中断しない。
 		}
 	}
 }
@@ -621,7 +646,6 @@ async function enqueueImportLines<K extends 'importBlockingToDb' | 'importFollow
 	}
 }
 
-/** ImportBlockingProcessorService.process 相当。CSVの行ごとにimportBlockingToDbジョブを積む。 */
 export async function handleHonoQueueImportBlocking(
 	deps: HonoQueueDbDependencies,
 	job: Bull.Job<DbUserImportJobData>,
@@ -661,11 +685,10 @@ export async function handleHonoQueueImportBlockingToDb(
 			toRelationshipJobForHonoApi(deps.config, 'block', { from: { id: user.id }, to: { id: target.id }, silent: true }),
 		]);
 	} catch {
-		// 元実装同様、行単位のエラーはログのみで処理を継続する
+		// 1行の失敗でインポート全体を中断しない。
 	}
 }
 
-/** ImportFollowingProcessorService.process 相当。CSVの行ごとにimportFollowingToDbジョブを積む。 */
 export async function handleHonoQueueImportFollowing(
 	deps: HonoQueueDbDependencies,
 	job: Bull.Job<DbUserImportJobData>,
@@ -730,7 +753,7 @@ export async function handleHonoQueueImportFollowingToDb(
 			),
 		]);
 	} catch {
-		// 元実装同様、行単位のエラーはログのみで処理を継続する
+		// 1行の失敗でインポート全体を中断しない。
 	}
 }
 
@@ -866,10 +889,7 @@ function serializeNoteForHonoApi(
 }
 
 /**
- * ExportNotesProcessorService.process 相当。
- * 元実装はWeb Streams API (NoteStream/JsonArrayStream/FileWriterStream) でメモリを
- * 抑えているが、他のexport系ポートと同じ「fs.createWriteStreamへの逐次write」方式でも
- * 同じくノート単位でストリーム書き込みされるため、メモリ特性を維持したまま簡潔に移植した。
+ * ノート単位で fs.createWriteStream へ逐次書き込みし、全件をメモリに保持しない。
  */
 export async function handleHonoQueueExportNotes(
 	deps: HonoQueueDbDependencies,
@@ -1051,7 +1071,7 @@ async function processClipsForHonoApi(
 		cursor = clips.at(-1)?.id ?? null;
 
 		for (const clip of clips) {
-			// Stringify but remove the last `]}`
+			// 文字列化するが、末尾の `]}` は除く。
 			const content = JSON.stringify(serializeClipForHonoApi(clip)).slice(0, -2);
 			const isFirst = exportedClipsCount === 0;
 			await writer.write(isFirst ? content : ',\n' + content);

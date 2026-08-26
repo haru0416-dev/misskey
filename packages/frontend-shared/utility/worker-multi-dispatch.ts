@@ -41,10 +41,9 @@ export class WorkerMultiDispatch<POST = unknown, RETURN = unknown> {
 		workerNumber = Math.abs(Math.round(workerNumber)) % this.workers.length;
 		const worker = this.workers[workerNumber];
 		if (worker === undefined) throw new Error('Worker selection failed');
-		// if (_DEV_) console.log('WorkerMultiDispatch: Posting message to worker', workerNumber, useWorkerNumber);
 		this.prevWorkerNumber = workerNumber;
 
-		// 不毛だがunionをoverloadに突っ込めない
+		// union型をオーバーロードの引数型に直接渡せないため分岐する。
 		// https://stackoverflow.com/questions/66507585/overload-signatures-union-types-and-no-overload-matches-this-call-error
 		// https://github.com/microsoft/TypeScript/issues/14107
 		if (Array.isArray(options)) {

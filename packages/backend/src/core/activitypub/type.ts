@@ -236,8 +236,7 @@ export interface IApEmoji extends IObject {
 	type: 'Emoji';
 	name: string;
 	updated: string;
-	// Misskey拡張。後方互換性のためにoptional。
-	// 将来の拡張性を考慮してobjectにしている
+	// Misskey 拡張。既存の Activity に含まれないため optional とし、値はオブジェクトで受ける。
 	_misskey_license?: {
 		freeText: string | null;
 	};

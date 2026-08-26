@@ -1,4 +1,4 @@
-# this name is used in report-backend-memory.yml so be careful when change name
+# この名前は report-backend-memory.yml から参照されるため、変更時は参照先も更新する。
 name: Get backend memory usage
 
 on:

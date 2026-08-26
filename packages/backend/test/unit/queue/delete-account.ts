@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -13,11 +12,11 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/UserStore.js';
-import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
-import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
-import { createPageInDatabase, fetchPageByIdFromDatabase } from '@/core/PageStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
+import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { createPageInDatabase, fetchPageByIdFromDatabase } from '@/core/page/PageStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleHonoQueueDeleteAccount,

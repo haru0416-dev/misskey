@@ -5,7 +5,7 @@
 
 import type { SummalyResult } from '@misskey-dev/summaly';
 import type { Config } from '@/config.js';
-import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { deepClone } from '@/misc/clone.js';
 import { MemoryKVCache } from '@/misc/cache.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
@@ -34,7 +34,7 @@ export function createUrlPreviewService(
 ) {
 	const logger = loggerService.getLogger('url-preview');
 	const summalyDefaultUserAgent = `SummalyBot/${_SUMMALY_VERSION_} (${config.instance.url}; +https://github.com/misskey-dev/summaly/blob/master/README.md)`;
-	const summaryCache = new MemoryKVCache<SummalyResult>(1000 * 60 * 60, 100); // 1h, 100 entries
+	const summaryCache = new MemoryKVCache<SummalyResult>(1000 * 60 * 60, 100); // 1時間、最大100件
 
 	function wrap(url?: string | null): string | null {
 		return url != null
@@ -109,7 +109,7 @@ export function createUrlPreviewService(
 				summary.sensitive = isKeywordIncluded(summary.url, meta.urlPreviewSensitiveList);
 			}
 
-			// The summary is cached server-side, but moderation rules must take effect immediately.
+			// 要約はサーバー側でキャッシュするが、モデレーションルールは直ちに反映する。
 			reply.header('Cache-Control', 'private, no-store');
 
 			return summary;

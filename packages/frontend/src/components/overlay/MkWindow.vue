@@ -273,7 +273,7 @@ function onHeaderPointerdown(evt: PointerEvent) {
 
 	const clickX = getPositionX(evt);
 	const clickY = getPositionY(evt);
-	const moveBaseX = beforeMaximized ? Number.parseInt(unResizedWidth, 10) / 2 : clickX - position.left; // TODO: parseIntやめる
+	const moveBaseX = beforeMaximized ? Number.parseInt(unResizedWidth, 10) / 2 : clickX - position.left;
 	const moveBaseY = beforeMaximized ? 20 : clickY - position.top;
 	const browserWidth = window.innerWidth;
 	const browserHeight = window.innerHeight;

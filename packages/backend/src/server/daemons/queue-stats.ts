@@ -6,7 +6,7 @@
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import * as Bull from 'bullmq';
 import { QUEUE, baseQueueEventsOptions } from '@/queue/const.js';
-import type { DeliverQueue, InboxQueue } from '@/core/queues.js';
+import type { DeliverQueue, InboxQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
 
 const ev = globalEventBus;
@@ -19,7 +19,6 @@ export type HonoDaemonQueueStatsDependencies = {
 	inboxQueue: InboxQueue;
 };
 
-/** QueueStatsService.start 相当。deliver/inbox キューの稼働状況を定期的にglobalEventBus経由でブロードキャストする。 */
 export function startHonoQueueStatsDaemon(deps: HonoDaemonQueueStatsDependencies): { dispose: () => void } {
 	const log: unknown[] = [];
 

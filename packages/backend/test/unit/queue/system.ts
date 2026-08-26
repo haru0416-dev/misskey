@@ -3,30 +3,28 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
-
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Redis from 'ioredis';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { createUserInDatabase } from '@/core/UserStore.js';
-import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/UserIpStore.js';
-import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/AntennaStore.js';
-import { createRoleInDatabase } from '@/core/RoleStore.js';
-import { createRoleAssignmentInDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/RoleAssignmentStore.js';
+import { createUserInDatabase } from '@/core/user/UserStore.js';
+import { recordUserIpInDatabase, listUserIpsFromDatabase } from '@/core/user/UserIpStore.js';
+import { createAntennaInDatabase, fetchAntennaByIdFromDatabase } from '@/core/antenna/AntennaStore.js';
+import { createRoleInDatabase } from '@/core/role/RoleStore.js';
+import { createRoleAssignmentInDatabase, listRoleAssignmentsByUserIdFromDatabase } from '@/core/role/RoleAssignmentStore.js';
 import {
 	createRetentionAggregationInDatabase,
 	listRetentionAggregationsCreatedAfter,
-} from '@/core/RetentionAggregationStore.js';
-import { fetchMetaFromDatabase } from '@/core/MetaStore.js';
-import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/MutingStore.js';
-import { createChannelInDatabase } from '@/core/ChannelStore.js';
+} from '@/core/retention/RetentionAggregationStore.js';
+import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
+import { createMutingInDatabase, mutingExistsInDatabase } from '@/core/user/MutingStore.js';
+import { createChannelInDatabase } from '@/core/channel/ChannelStore.js';
 import {
 	createChannelMutingInDatabase,
 	listActiveMutedChannelIdsByUserIdFromDatabase,
-} from '@/core/ChannelMutingStore.js';
-import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/NoteStore.js';
-import { createNoteReactionInDatabase } from '@/core/NoteReactionStore.js';
+} from '@/core/channel/ChannelMutingStore.js';
+import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
+import { createNoteReactionInDatabase } from '@/core/note/NoteReactionStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createHonoChartWriters, type HonoChartWriters } from '@/server/chart-runtime.js';
 import Logger from '@/logger.js';
@@ -179,16 +177,51 @@ describe('hono-queue-system', () => {
 	});
 
 	describe('chart processors', () => {
-		test('handleHonoQueueTickCharts: 12種のチャートを直列にtickする', async () => {
+		// チャートを1つ追加してハンドラー側への追記を忘れると、そのチャートだけ永久に集計されない。
+		// 実DBに対する実行 (SQLの健全性) と、呼び出し対象の網羅の両方を見る。
+		function recordChartCalls(): { chartWriters: HonoChartWriters; calls: Map<string, string[]> } {
+			const calls = new Map<string, string[]>();
+			const spied = Object.fromEntries(
+				Object.keys(chartWriters).map((name) => [
+					name,
+					new Proxy(
+						{},
+						{
+							get: (_target, method: string) => async (): Promise<void> => {
+								calls.set(name, [...(calls.get(name) ?? []), method]);
+							},
+						},
+					),
+				]),
+			) as unknown as HonoChartWriters;
+			return { chartWriters: spied, calls };
+		}
+
+		test('handleHonoQueueTickCharts: chartWriters の全チャートを tick する', async () => {
 			await expect(handleHonoQueueTickCharts(deps)).resolves.toBeUndefined();
+
+			const recorded = recordChartCalls();
+			await handleHonoQueueTickCharts({ ...deps, chartWriters: recorded.chartWriters });
+			expect([...recorded.calls.keys()].sort()).toStrictEqual(Object.keys(chartWriters).sort());
+			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['tick']);
 		});
 
-		test('handleHonoQueueResyncCharts: drive/notes/usersチャートをresyncする', async () => {
+		test('handleHonoQueueResyncCharts: drive/notes/users チャートだけを resync する', async () => {
 			await expect(handleHonoQueueResyncCharts(deps)).resolves.toBeUndefined();
+
+			const recorded = recordChartCalls();
+			await handleHonoQueueResyncCharts({ ...deps, chartWriters: recorded.chartWriters });
+			expect([...recorded.calls.keys()].sort()).toStrictEqual(['driveChart', 'notesChart', 'usersChart']);
+			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['resync']);
 		});
 
-		test('handleHonoQueueCleanCharts: 12種のチャートを直列にcleanする', async () => {
+		test('handleHonoQueueCleanCharts: chartWriters の全チャートを clean する', async () => {
 			await expect(handleHonoQueueCleanCharts(deps)).resolves.toBeUndefined();
+
+			const recorded = recordChartCalls();
+			await handleHonoQueueCleanCharts({ ...deps, chartWriters: recorded.chartWriters });
+			expect([...recorded.calls.keys()].sort()).toStrictEqual(Object.keys(chartWriters).sort());
+			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['clean']);
 		});
 	});
 

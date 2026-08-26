@@ -4,9 +4,9 @@
  */
 
 import { EventEmitter } from 'node:events';
-import { updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
+import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
 import { HonoApiError } from '../rest/error.js';
-import { authenticateHonoApiToken } from '../rest/auth.js';
+import { authenticateHonoApiToken } from '@/server/rest/auth/auth.js';
 import { HonoStreamConnection, refreshHonoStreamConnections } from './connection.js';
 import { emitHonoStreamRedisMessage } from './server.js';
 import type { HonoStreamServerDependencies } from './server.js';
@@ -37,8 +37,8 @@ function errorResponse(error: HonoApiError): Response {
  * ws パッケージの handleUpgrade パターンだと、同一プロセス内に他のソケット接続 (DB pool や
  * ioredis 等) が1つでもあるとレスポンスがクライアントに届かず永久にハングするバグを踏む
  * (bun 1.3.14 で確認、ws パッケージを完全に迂回した手書き101レスポンスでも再現)。
- * Bun.serve() のネイティブ websocket API はこの経路を通らないため影響を受けない。
- * よって bun 実行時はこちらを使い、Node (テスト実行時) は server.ts の node:http 実装を使う。
+ * 最小再現では bun 1.3.14 がハングし、1.4.0 は成功した。Bun.serve() は compat 層を経由しないため、
+ * Bun 実行時はこちらを使い、Node 実行時は server.ts の node:http 実装を使う。
  */
 export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies, streamingPath = '/streaming') {
 	const globalEv = new EventEmitter();
@@ -56,7 +56,7 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 		reconnectRefreshPromise = (async () => {
 			do {
 				reconnectRefreshQueued = false;
-				// A reconnect observed during refresh requires one complete follow-up snapshot pass.
+				// 更新中に再接続した場合は、更新完了後にスナップショットをもう一度取得する。
 				// eslint-disable-next-line no-await-in-loop
 				await refreshHonoStreamConnections(activeConnections);
 			} while (reconnectRefreshQueued);

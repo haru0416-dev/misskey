@@ -54,13 +54,13 @@ import {
 	type IUpdate,
 } from '@/core/activitypub/type.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import { followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
-import { followingExistsInDatabase } from '@/core/FollowingStore.js';
-import { fetchNoteByUriAndUserIdFromDatabase } from '@/core/NoteStore.js';
-import { listUsersByIdsFromDatabase, updateUserDeletedStateIfNotDeletedInDatabase } from '@/core/UserStore.js';
+import { followRequestExistsInDatabase } from '@/core/user/FollowRequestStore.js';
+import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
+import { fetchNoteByUriAndUserIdFromDatabase } from '@/core/note/NoteStore.js';
+import { listUsersByIdsFromDatabase, updateUserDeletedStateIfNotDeletedInDatabase } from '@/core/user/UserStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { type DbQueue } from '@/core/queues.js';
-import { enqueueDbJobInOutbox, publishDbOutboxRowEagerly } from '@/core/QueueOutboxStore.js';
+import { type DbQueue } from '@/core/queue/queues.js';
+import { enqueueDbJobInOutbox, publishDbOutboxRowEagerly } from '@/core/queue/QueueOutboxStore.js';
 import type { Config } from '@/config.js';
 import type { MiRemoteUser } from '@/models/User.js';
 import {
@@ -70,27 +70,27 @@ import {
 	isFederationAllowedUri,
 	resolveApObjectForHonoApi,
 	type HonoApiApResolveDependencies,
-} from '../rest/ap-resolve.js';
+} from '@/server/rest/activitypub/ap-resolve.js';
 import {
 	extractEmojisForHonoApi,
 	updatePersonForHonoApi,
 	type HonoApiApPersonDependencies,
-} from '../rest/ap-person.js';
+} from '@/server/rest/activitypub/ap-person.js';
 import {
 	createNoteFromApForHonoApi,
 	parseAudienceForHonoApi,
 	resolveNoteForHonoApi,
 	updateQuestionFromApForHonoApi,
 	type HonoApiApNoteDependencies,
-} from '../rest/ap-note.js';
-import { createNoteForHonoApi, type CreateNoteData } from '../rest/notes-create.js';
-import { deleteNoteForHonoApi, type HonoApiNotesDeleteDependencies } from '../rest/notes-delete.js';
+} from '@/server/rest/activitypub/ap-note.js';
+import { createNoteForHonoApi, type CreateNoteData } from '@/server/rest/note/notes-create.js';
+import { deleteNoteForHonoApi, type HonoApiNotesDeleteDependencies } from '@/server/rest/note/notes-delete.js';
 import {
 	createNoteReactionForHonoApi,
 	deleteNoteReactionForHonoApi,
 	type HonoApiNotesReactionsDependencies,
-} from '../rest/notes-reactions.js';
-import { isVisibleForMeForHonoApi, packNoteForHonoApi } from '../rest/note.js';
+} from '@/server/rest/note/notes-reactions.js';
+import { isVisibleForMeForHonoApi, packNoteForHonoApi } from '@/server/rest/note/note.js';
 import {
 	blockForHonoApi,
 	cancelFollowRequest,
@@ -98,24 +98,24 @@ import {
 	unblockForHonoApi,
 	unfollow,
 	type HonoApiAccountBlockingDependencies,
-} from '../rest/account-blocking.js';
+} from '@/server/rest/account/account-blocking.js';
 import {
 	followWithSideEffectsForHonoApi,
 	type HonoQueueRelationshipDependencies,
 } from '../../queue/handlers/relationship.js';
-import { acceptFollowRequestForHonoApi, type HonoApiFollowingDependencies } from '../rest/following.js';
+import { acceptFollowRequestForHonoApi, type HonoApiFollowingDependencies } from '@/server/rest/user/following.js';
 import {
 	addPinnedForHonoApi,
 	removePinnedForHonoApi,
 	type HonoApiAccountPinDependencies,
-} from '../rest/account-pin.js';
+} from '@/server/rest/account/account-pin.js';
 import {
 	isRelayActorForHonoApi,
 	relayAcceptedForHonoApi,
 	relayRejectedForHonoApi,
 	type HonoApiAdminRelaysDependencies,
-} from '../rest/admin-relays.js';
-import { reportAbuseForHonoApi, type HonoApiUsersReportAbuseDependencies } from '../rest/admin-abuse-reports.js';
+} from '@/server/rest/admin/admin-relays.js';
+import { reportAbuseForHonoApi, type HonoApiUsersReportAbuseDependencies } from '@/server/rest/admin/admin-abuse-reports.js';
 import type {
 	HonoApiInternalEventPublisher,
 	HonoApiNotesStreamPublisher,
@@ -144,7 +144,6 @@ export type HonoApiInboxDependencies = HonoApiApResolveDependencies &
 		publishNotesStream?: HonoApiNotesStreamPublisher;
 	};
 
-/** ApInboxService.performActivity 相当。Collection/OrderedCollection をファンアウトし、各アクティビティを処理する。 */
 export async function performActivityForHonoApi(
 	deps: HonoApiInboxDependencies,
 	actor: MiRemoteUser,
@@ -226,7 +225,7 @@ async function followFromApForHonoApi(
 	if (followee == null) return 'skip: followee not found';
 	if (followee.host != null) return 'skip: フォローしようとしているユーザーはローカルユーザーではありません';
 
-	// don't queue because the sender may attempt again when timeout
+	// タイムアウト時に送信元が再試行する可能性があるため、キューへ積まない。
 	await followWithSideEffectsForHonoApi(
 		deps,
 		actor,
@@ -441,7 +440,7 @@ async function createFromApForHonoApi(
 	const targetUri = getApId(activity.object);
 	if (targetUri.startsWith('bear:')) return 'skip: bearcaps url not supported.';
 
-	// copy audiences between activity <=> object.
+	// Activity と object の audience を相互にコピーする。
 	if (typeof activity.object === 'object') {
 		const to = unique(concat([toArray(activity.to), toArray(activity.object.to)]));
 		const cc = unique(concat([toArray(activity.cc), toArray(activity.object.cc)]));
@@ -452,7 +451,7 @@ async function createFromApForHonoApi(
 		activity.object.cc = cc;
 	}
 
-	// If there is no attributedTo, use Activity actor.
+	// attributedTo がなければ Activity の actor を使う。
 	if (typeof activity.object === 'object' && !activity.object.attributedTo) {
 		activity.object.attributedTo = activity.actor;
 	}
@@ -465,7 +464,6 @@ async function createFromApForHonoApi(
 	return `Unknown type: ${getApType(object)}`;
 }
 
-/** ApInboxService.createNote 相当。ロック取得・重複チェックの外殻。 */
 async function createNoteWithLockFromApForHonoApi(
 	deps: HonoApiInboxDependencies,
 	actor: MiRemoteUser,
@@ -614,8 +612,7 @@ async function flagFromApForHonoApi(
 	return 'ok';
 }
 
-/** ApInboxService.move 相当。移行カスケードは updatePersonForHonoApi 内の processRemoteMoveForHonoApi
- * (movedToUri の新規出現/変更検知で postMoveProcessForHonoApi を呼ぶ) 経由で実行される。 */
+/** 移行カスケードは updatePersonForHonoApi が movedToUri の新規出現・変更を検知したときに実行する。 */
 async function moveFromApForHonoApi(
 	deps: HonoApiInboxDependencies,
 	actor: MiRemoteUser,
@@ -689,8 +686,8 @@ async function updateFromApForHonoApi(
 	const object = await resolveApObjectForHonoApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
 	if (isActor(object)) {
-		// 解決済みオブジェクトをhintとして渡す (原典と同じ)。再フェッチすると中間キャッシュ
-		// (nginx等、Cache-Control: max-age=180) の古いPersonを掴んで更新が反映されない
+		// 解決済みオブジェクトを使う。再フェッチすると中間キャッシュ (nginx 等、Cache-Control: max-age=180)
+		// の古い Person を取得して更新を反映できない。
 		await updatePersonForHonoApi(deps, actor.uri, actor, [], object);
 		return 'ok: Person updated';
 	} else if (getApType(object) === 'Question') {
@@ -709,7 +706,7 @@ async function undoFromApForHonoApi(
 ): Promise<string> {
 	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
 
-	// don't queue because the sender may attempt again when timeout
+	// タイムアウト時に送信元が再試行する可能性があるため、キューへ積まない。
 	const object = await resolveApObjectForHonoApi(deps, activity.object, FetchAllowSoftFailMask.Strict, history);
 
 	if (isFollow(object)) return await undoFollowFromApForHonoApi(deps, actor, object);

@@ -12,7 +12,7 @@ import type { IActivity } from '@/core/activitypub/type.js';
 import { StatusError } from '@/misc/status-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { CollapsedQueue } from '@/misc/collapsed-queue.js';
-import { fetchInstanceMetadataWithSideEffects } from '@/core/FetchInstanceMetadataLogic.js';
+import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInstanceMetadataLogic.js';
 import type { InboxJobData } from '@/queue/types.js';
 import {
 	extractDbHost,
@@ -20,15 +20,15 @@ import {
 	getUserFromApIdForHonoApi,
 	isFederationAllowedHost,
 	type HonoApiAuthUser,
-} from '../../server/rest/ap-resolve.js';
-import { getAuthUserFromApIdForHonoApi, resolvePersonForHonoApi } from '../../server/rest/ap-person.js';
+} from '@/server/rest/activitypub/ap-resolve.js';
+import { getAuthUserFromApIdForHonoApi, resolvePersonForHonoApi } from '@/server/rest/activitypub/ap-person.js';
 import {
 	fetchFederatedInstance,
 	fetchOrRegisterFederatedInstance,
 	tryLockFetchInstanceMetadata,
 	unlockFetchInstanceMetadata,
 	updateFederatedInstance,
-} from '../../server/rest/federation.js';
+} from '@/server/rest/activitypub/federation.js';
 import { performActivityForHonoApi, type HonoApiInboxDependencies } from '../../server/activitypub/inbox-dispatch.js';
 
 export type HonoQueueInboxDependencies = HonoApiInboxDependencies;
@@ -52,9 +52,8 @@ function collapseUpdateInstanceJobs(oldJob: UpdateInstanceJob, newJob: UpdateIns
 	};
 }
 
-// 元実装 (InboxProcessorService) 同様、プロセス内シングルトンの CollapsedQueue で
-// インスタンス更新をまとめて (5分間隔で) 反映する。deps は初回呼び出し時のものに固定されるが、
-// db/redis 等の実体は起動時から不変のため問題ない。
+// インスタンス更新はプロセス内シングルトンの CollapsedQueue でまとめて 5 分間隔で反映する。
+// deps は初回呼び出し時のものに固定されるが、db/redis 等の実体は起動時から不変である。
 let updateInstanceQueue: CollapsedQueue<string, UpdateInstanceJob> | undefined;
 
 function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueue<string, UpdateInstanceJob> {
@@ -81,7 +80,7 @@ function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueu
 	return updateInstanceQueue;
 }
 
-/** InboxProcessorService.dispose 相当。テストでの明示的なflush用。 */
+/** テストから更新キューを明示的にflushするために公開する。 */
 export async function flushHonoQueueInboxUpdateInstanceQueue(): Promise<void> {
 	await updateInstanceQueue?.performAllNow();
 }

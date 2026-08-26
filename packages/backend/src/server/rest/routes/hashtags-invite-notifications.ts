@@ -4,7 +4,7 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth.js';
+import { assertCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
 import {
 	handleHonoApiHashtagsList,
@@ -12,22 +12,22 @@ import {
 	handleHonoApiHashtagsShow,
 	handleHonoApiHashtagsTrend,
 	handleHonoApiHashtagsUsers,
-} from '../hashtags.js';
+} from '../hashtag/hashtags.js';
 import {
 	handleHonoApiInviteCreate,
 	handleHonoApiInviteDelete,
 	handleHonoApiInviteLimit,
 	handleHonoApiInviteList,
-} from '../invite.js';
+} from '../invite/invite.js';
 import {
 	handleHonoApiNotificationsCreate,
 	handleHonoApiNotificationsDelete,
 	handleHonoApiNotificationsFlush,
 	handleHonoApiNotificationsMarkAllAsRead,
 	handleHonoApiNotificationsTestNotification,
-} from '../notification.js';
+} from '../notification/notification.js';
 import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { getHonoApiRolePolicies } from '../role-policy.js';
+import { getHonoApiRolePolicies } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -37,55 +37,59 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiShellDependencies): void {
-	app.post('/hashtags/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiHashtagsList(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/hashtags/list',
+		endpointHandlerAnonymous(deps, 'hashtags/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsList(deps, body)),
+		),
+	);
 
-	app.post('/hashtags/search', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiHashtagsSearch(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/hashtags/search',
+		endpointHandlerAnonymous(deps, 'hashtags/search', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsSearch(deps, body)),
+		),
+	);
 
-	app.post('/hashtags/show', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiHashtagsShow(deps, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/hashtags/show',
+		endpointHandlerAnonymous(deps, 'hashtags/show', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsShow(deps, body)),
+		),
+	);
 
-	app.get('/hashtags/trend', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			return jsonResponse(c, await handleHonoApiHashtagsTrend(deps, c.req.query()), 200, {
+	app.get(
+		'/hashtags/trend',
+		endpointHandlerAnonymous(deps, 'hashtags/trend', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsTrend(deps, c.req.query()), 200, {
 				'Cache-Control': 'public, max-age=60',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.post('/hashtags/trend', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			// meta の cacheSec: 60 は GET/POST 双方に掛かる (他の cacheSec 宣言と同様)
-			return jsonResponse(c, await handleHonoApiHashtagsTrend(deps, body), 200, {
+	app.on(
+		['POST', 'QUERY'],
+		'/hashtags/trend',
+		endpointHandlerAnonymous(deps, 'hashtags/trend', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsTrend(deps, body), 200, {
 				'Cache-Control': 'public, max-age=60',
-			});
-		});
-	});
+			}),
+		),
+	);
 
-	app.post('/hashtags/users', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiHashtagsUsers(deps, auth.user, body));
-		});
-	});
+	app.on(
+		['POST', 'QUERY'],
+		'/hashtags/users',
+		endpointHandlerAnonymous(deps, 'hashtags/users', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiHashtagsUsers(deps, auth.user, body)),
+		),
+	);
 
 	app.post('/invite/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -102,23 +106,15 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.post('/invite/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:invite-codes');
-			const policies = await getHonoApiRolePolicies(deps, auth.user);
-			if (!policies.canInvite && deps.meta.rootUserId !== auth.user.id) {
-				throw rolePermissionDeniedError();
-			}
-
+	app.post(
+		'/invite/delete',
+		endpointHandler(deps, 'invite/delete', async ({ body, auth, c }) => {
 			await handleHonoApiInviteDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
-	app.post('/invite/limit', async (c) => {
+	app.on(['POST', 'QUERY'], '/invite/limit', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
@@ -133,41 +129,21 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.post('/invite/list', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'read:invite-codes');
-			const policies = await getHonoApiRolePolicies(deps, auth.user);
-			if (!policies.canInvite && deps.meta.rootUserId !== auth.user.id) {
-				throw rolePermissionDeniedError();
-			}
+	app.on(
+		['POST', 'QUERY'],
+		'/invite/list',
+		endpointHandler(deps, 'invite/list', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiInviteList(deps, auth.user, body)),
+		),
+	);
 
-			return jsonResponse(c, await handleHonoApiInviteList(deps, auth.user, body));
-		});
-	});
-
-	app.post('/notifications/create', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:notifications');
-			await assertHonoApiRateLimitForUser(
-				deps,
-				'notifications/create',
-				{
-					duration: 1000 * 60,
-					max: 10,
-				},
-				auth.user,
-			);
-
+	app.post(
+		'/notifications/create',
+		endpointHandler(deps, 'notifications/create', async ({ body, auth, c }) => {
 			await handleHonoApiNotificationsCreate(deps, auth.user, auth.token, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/notifications/flush', async (c) => {
 		return await runApiEndpoint(c, async () => {
@@ -181,17 +157,13 @@ export function registerHashtagsInviteNotificationsRoutes(app: Hono, deps: ApiSh
 		});
 	});
 
-	app.post('/notifications/delete', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
-			assertCredential(auth);
-			assertTokenPermission(auth, 'write:notifications');
-
+	app.post(
+		'/notifications/delete',
+		endpointHandler(deps, 'notifications/delete', async ({ body, auth, c }) => {
 			await handleHonoApiNotificationsDelete(deps, auth.user, body);
 			return emptyResponse(c);
-		});
-	});
+		}),
+	);
 
 	app.post('/notifications/mark-all-as-read', async (c) => {
 		return await runApiEndpoint(c, async () => {

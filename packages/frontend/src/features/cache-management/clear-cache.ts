@@ -17,7 +17,7 @@ export async function clearCache() {
 	miLocalStorage.removeItem('instanceCachedAt');
 	clearAppliedThemeCache();
 	await misskeyApiGet('clear-browser-cache', {}).catch(() => {
-		// ignore
+		// API の失敗は後続の再取得を妨げない。
 	});
 	await fetchInstance(true);
 	await fetchCustomEmojis(true);

@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
-
 import * as assert from 'assert';
-import { describe, beforeAll, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import * as http from 'node:http';
 import * as https from 'node:https';
 import type { IncomingMessage } from 'node:http';
@@ -71,7 +69,7 @@ describe('API', () => {
 				// @ts-expect-error string must be string
 				string: 42,
 			});
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('missing require param', async () => {
@@ -79,7 +77,7 @@ describe('API', () => {
 			const res = await api('test', {
 				string: 'a',
 			});
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('invalid misskey:id (empty string)', async () => {
@@ -87,7 +85,7 @@ describe('API', () => {
 				required: true,
 				id: '',
 			});
-			assert.strictEqual(res.status, 400);
+			expect(res.status).toBe(400);
 		});
 
 		test('valid misskey:id', async () => {
@@ -95,7 +93,7 @@ describe('API', () => {
 				required: true,
 				id: '8wvhjghbxu',
 			});
-			assert.strictEqual(res.status, 200);
+			expect(res.status).toBe(200);
 		});
 
 		test('default value', async () => {
@@ -103,8 +101,8 @@ describe('API', () => {
 				required: true,
 				string: 'a',
 			});
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.default, 'hello');
+			expect(res.status).toBe(200);
+			expect(res.body.default).toBe('hello');
 		});
 
 		test('can set null even if it has default value', async () => {
@@ -112,16 +110,16 @@ describe('API', () => {
 				required: true,
 				nullableDefault: null,
 			});
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.nullableDefault, null);
+			expect(res.status).toBe(200);
+			expect(res.body.nullableDefault).toBe(null);
 		});
 
 		test('cannot set undefined if it has default value', async () => {
 			const params = { required: true };
 			Object.defineProperty(params, 'nullableDefault', { value: undefined, enumerable: true });
 			const res = await api('test', params);
-			assert.strictEqual(res.status, 200);
-			assert.strictEqual(res.body.nullableDefault, 'hello');
+			expect(res.status).toBe(200);
+			expect(res.body.nullableDefault).toBe('hello');
 		});
 	});
 
@@ -243,7 +241,7 @@ describe('API', () => {
 				token: alice.token,
 				bearer: true,
 			});
-			assert.strictEqual(result.status, 200);
+			expect(result.status).toBe(200);
 		});
 
 		test('streaming', async () => {
@@ -256,7 +254,7 @@ describe('API', () => {
 				() => api('notes/create', { text: 'foo' }, alice),
 				(msg) => msg.type === 'note' && msg.body['text'] === 'foo',
 			);
-			assert.strictEqual(fired, true);
+			expect(fired).toBe(true);
 		});
 	});
 
@@ -271,7 +269,7 @@ describe('API', () => {
 						bearer: true,
 					},
 				);
-				assert.strictEqual(result.status, 401);
+				expect(result.status).toBe(401);
 				assert.ok(
 					result.headers
 						.get('WWW-Authenticate')
@@ -284,7 +282,7 @@ describe('API', () => {
 					token: 'syuilo',
 					bearer: true,
 				});
-				assert.strictEqual(result.status, 401);
+				expect(result.status).toBe(401);
 				assert.ok(
 					result.headers
 						.get('WWW-Authenticate')
@@ -297,7 +295,7 @@ describe('API', () => {
 				// connectStreamの失敗経由では401応答を観測できない (Promiseが永久に未解決になる)。
 				// アップグレード要求への拒否応答はnode:httpで直接検証する
 				const res = await requestStreamingUpgrade({ Authorization: 'Bearer syuilo' });
-				assert.strictEqual(res.statusCode, 401);
+				expect(res.statusCode).toBe(401);
 				assert.ok(
 					res.headers['www-authenticate']?.startsWith(
 						'Bearer realm="Misskey", error="invalid_token", error_description',
@@ -309,14 +307,14 @@ describe('API', () => {
 		describe('tokenがないとrealmだけおくる', () => {
 			test('一般リクエスト', async () => {
 				const result = await api('admin/get-index-stats', {});
-				assert.strictEqual(result.status, 401);
-				assert.strictEqual(result.headers.get('WWW-Authenticate'), 'Bearer realm="Misskey"');
+				expect(result.status).toBe(401);
+				expect(result.headers.get('WWW-Authenticate')).toBe('Bearer realm="Misskey"');
 			});
 
 			test('multipartリクエスト', async () => {
 				const result = await uploadFile();
-				assert.strictEqual(result.status, 401);
-				assert.strictEqual(result.headers.get('WWW-Authenticate'), 'Bearer realm="Misskey"');
+				expect(result.status).toBe(401);
+				expect(result.headers.get('WWW-Authenticate')).toBe('Bearer realm="Misskey"');
 			});
 		});
 
@@ -330,7 +328,7 @@ describe('API', () => {
 					bearer: true,
 				},
 			);
-			assert.strictEqual(result.status, 400);
+			expect(result.status).toBe(400);
 			assert.ok(
 				result.headers
 					.get('WWW-Authenticate')
@@ -348,7 +346,7 @@ describe('API', () => {
 					},
 					body: JSON.stringify({ text: 'test' }),
 				});
-				assert.strictEqual(result.status, 401);
+				expect(result.status).toBe(401);
 			});
 
 			test('Lowercase bearer', async () => {
@@ -360,7 +358,7 @@ describe('API', () => {
 					},
 					body: JSON.stringify({ text: 'test' }),
 				});
-				assert.strictEqual(result.status, 401);
+				expect(result.status).toBe(401);
 			});
 
 			test('No space after bearer', async () => {
@@ -372,7 +370,7 @@ describe('API', () => {
 					},
 					body: JSON.stringify({ text: 'test' }),
 				});
-				assert.strictEqual(result.status, 401);
+				expect(result.status).toBe(401);
 			});
 		});
 	});

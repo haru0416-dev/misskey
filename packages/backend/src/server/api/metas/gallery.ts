@@ -10,12 +10,13 @@ import {
 	galleryPostsParamDef,
 	galleryPostsPostIdParamDef,
 	galleryPostsUpdateParamDef,
-} from '@/server/rest/gallery.js';
+} from '@/server/rest/gallery/gallery.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
 	'gallery/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['gallery'],
 
 			requireCredential: false,
@@ -36,6 +37,7 @@ export const endpointMetas = {
 	},
 	'gallery/popular': {
 		meta: {
+			allowQuery: true,
 			tags: ['gallery'],
 
 			requireCredential: false,
@@ -56,6 +58,7 @@ export const endpointMetas = {
 	},
 	'gallery/posts': {
 		meta: {
+			allowQuery: true,
 			tags: ['gallery'],
 
 			res: {
@@ -156,6 +159,7 @@ export const endpointMetas = {
 	},
 	'gallery/posts/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['gallery'],
 
 			requireCredential: false,

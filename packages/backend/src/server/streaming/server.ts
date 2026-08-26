@@ -8,9 +8,9 @@ import type { IncomingMessage, Server } from 'node:http';
 import type { Socket } from 'node:net';
 import * as WebSocket from 'ws';
 import type * as Redis from 'ioredis';
-import { updateUserLastActiveDateInDatabase } from '@/core/UserStore.js';
+import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
 import { HonoApiError } from '../rest/error.js';
-import { authenticateHonoApiToken } from '../rest/auth.js';
+import { authenticateHonoApiToken } from '@/server/rest/auth/auth.js';
 import {
 	HonoStreamConnection,
 	refreshHonoStreamConnections,
@@ -102,7 +102,7 @@ export function emitHonoStreamRedisMessage(globalEv: EventEmitter, data: string)
 	globalEv.emit(channel, message);
 }
 
-/** StreamingApiServerService 相当。`server.on('upgrade', ...)` を直接フックし、Hono の fetch パイプラインは経由しない。 */
+/** WebSocket upgrade は `server.on('upgrade', ...)` で処理し、Hono の fetch パイプラインを経由しない。 */
 export function attachHonoStreamServer(
 	server: Server,
 	deps: HonoStreamServerDependencies,
@@ -125,7 +125,7 @@ export function attachHonoStreamServer(
 		reconnectRefreshPromise = (async () => {
 			do {
 				reconnectRefreshQueued = false;
-				// A reconnect observed during refresh requires one complete follow-up snapshot pass.
+				// 更新中に再接続した場合は、更新完了後にスナップショットをもう一度取得する。
 				// eslint-disable-next-line no-await-in-loop
 				await refreshHonoStreamConnections(activeConnections);
 			} while (reconnectRefreshQueued);

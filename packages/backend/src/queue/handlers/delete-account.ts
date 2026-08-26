@@ -5,20 +5,20 @@
 
 import type { Meilisearch } from 'meilisearch';
 import * as Bull from 'bullmq';
-import type { EmailService } from '@/core/EmailService.js';
-import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/PageStore.js';
-import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
-import { deleteNotesByIdsFromDatabase, listNotesByUserIdWithPaginationFromDatabase } from '@/core/NoteStore.js';
-import { deleteUserByIdFromDatabase, fetchUserByIdFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import type { EmailService } from '@/core/email/EmailService.js';
+import { listPagesByUserIdWithPaginationFromDatabase } from '@/core/page/PageStore.js';
+import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { deleteNotesByIdsFromDatabase, listNotesByUserIdWithPaginationFromDatabase } from '@/core/note/NoteStore.js';
+import { deleteUserByIdFromDatabase, fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { Config } from '@/config.js';
-import type { DbQueue, DeliverQueue } from '@/core/queues.js';
+import type { DbQueue, DeliverQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta, MiUser } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { DbUserDeleteJobData } from '@/queue/types.js';
-import { deletePageForHonoApi, type HonoApiPageDependencies } from '../../server/rest/pages.js';
+import { deletePageForHonoApi, type HonoApiPageDependencies } from '@/server/rest/page/pages.js';
 import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './object-storage.js';
 
 export type HonoQueueDeleteAccountDependencies = HonoQueueObjectStorageDependencies &
@@ -58,7 +58,6 @@ export async function handleHonoQueueDeleteAccount(
 	}
 
 	{
-		// Delete notes
 		let cursor: MiNote['id'] | null = null;
 
 		for (;;) {
@@ -83,7 +82,6 @@ export async function handleHonoQueueDeleteAccount(
 	}
 
 	{
-		// Delete files
 		let cursor: MiDriveFile['id'] | null = null;
 
 		for (;;) {
@@ -103,8 +101,8 @@ export async function handleHonoQueueDeleteAccount(
 	}
 
 	{
-		// delete pages. Necessary for decrementing pageCount of notes.
-		// NOTE: 元実装同様カーソルを使わない — 削除自体が次イテレーションの取得ウィンドウを進める。
+		// ページ削除はノートの pageCount を減らすために必要。
+		// 削除で取得ウィンドウが進むため、カーソルを使わず先頭から再取得する。
 		for (;;) {
 			const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, user.id, {
 				limit: 100,
@@ -123,10 +121,9 @@ export async function handleHonoQueueDeleteAccount(
 	}
 
 	{
-		// Send email notification
+		// アカウント削除通知は送信完了を待たない。
 		const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 		if (profile.email && profile.emailVerified) {
-			// 元実装同様、送信完了を待たない
 			void deps.emailService.sendEmail(
 				profile.email,
 				'Account deleted',

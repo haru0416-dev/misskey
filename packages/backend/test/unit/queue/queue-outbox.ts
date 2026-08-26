@@ -3,22 +3,23 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as Bull from 'bullmq';
 import { eq, inArray } from 'drizzle-orm';
 import { loadConfig } from '@/config.js';
-import { removeQueueJob, retryQueueJob } from '@/core/QueueAdminLogic.js';
+import { removeQueueJob, retryQueueJob } from '@/core/queue/QueueAdminLogic.js';
 import {
 	dispatchQueueOutbox,
 	enqueueAccountDeleteCoordinatorInOutbox,
 	enqueueDbJobInOutbox,
 	enqueueDeliverJobInOutbox,
+	enqueueInlineDbJobInOutbox,
 	getQueueOutboxStats,
 	publishDbOutboxRowEagerly,
-} from '@/core/QueueOutboxStore.js';
+	runInlineDbOutboxJob,
+} from '@/core/queue/QueueOutboxStore.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
@@ -80,6 +81,38 @@ describe('queue outbox', () => {
 			oldestPendingAgeMs: null,
 		});
 		await job?.remove();
+	});
+
+	test('does not dispatch a DB row while its inline owner holds the lease', async () => {
+		const inlineJob = await enqueueInlineDbJobInOutbox(
+			runtime.db,
+			'deleteAccount',
+			{ user: { id: 'queue-outbox-inline-user' }, soft: true },
+			{ removeOnComplete: true },
+		);
+		await runtime.db
+			.update(queueOutbox)
+			.set({ leaseExpiresAt: new Date(0) })
+			.where(eq(queueOutbox.id, inlineJob.outboxId));
+		let finishTask!: () => void;
+		const taskFinished = new Promise<void>((resolve) => {
+			finishTask = resolve;
+		});
+		let taskStarted!: () => void;
+		const started = new Promise<void>((resolve) => {
+			taskStarted = resolve;
+		});
+		const running = runInlineDbOutboxJob(runtime.db, inlineJob, async () => {
+			taskStarted();
+			await taskFinished;
+		});
+
+		await started;
+		expect(await dispatchQueueOutbox(runtime.db, runtime.dbQueue, runtime.deliverQueue)).toBe(0);
+		expect(await runtime.dbQueue.getJob(`outbox-${inlineJob.outboxId}`)).toBeUndefined();
+		finishTask();
+		await expect(running).resolves.toBe(true);
+		expect(await runtime.db.select().from(queueOutbox).where(eq(queueOutbox.id, inlineJob.outboxId))).toHaveLength(0);
 	});
 
 	test('publishes delivery outside the claim transaction and keeps its row', async () => {

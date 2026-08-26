@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -13,8 +12,8 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createInstanceInDatabase } from '@/core/InstanceStore.js';
-import { fetchOrCreateSystemAccountInDatabase } from '@/core/SystemAccountLogic.js';
+import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/core/instance/InstanceStore.js';
+import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { StatusError } from '@/misc/status-error.js';
 import { handleHonoQueueDeliver, type HonoQueueDeliverDependencies } from '@/queue/handlers/deliver.js';
@@ -157,5 +156,12 @@ describe('hono-queue-deliver', () => {
 				}),
 			),
 		).rejects.toBeInstanceOf(Bull.UnrecoverableError);
+
+		// インスタンス情報更新は非同期なので、DB破棄前に isNotResponding=true の書き込み完了を待つ。
+		await expect
+			.poll(async () => (await fetchInstanceByHostFromDatabase(runtime.db, host))?.isNotResponding, {
+				timeout: 10000,
+			})
+			.toBe(true);
 	});
 });

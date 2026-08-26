@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { antennaExistsForUserFromDatabase } from '@/core/AntennaStore.js';
+import { antennaExistsForUserFromDatabase } from '@/core/antenna/AntennaStore.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import {
@@ -11,7 +11,7 @@ import {
 	packNoteForHonoApi,
 	populateMyReactionForHonoApi,
 	type HonoApiNoteDependencies,
-} from '../../rest/note.js';
+} from '@/server/rest/note/note.js';
 import {
 	isNoteMutedOrBlockedForHonoStream,
 	isNoteVisibleForMeForHonoStream,

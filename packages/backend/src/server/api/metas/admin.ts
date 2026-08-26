@@ -3,62 +3,63 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { supportedCaptchaProviders } from '@/core/CaptchaLogic.js';
+import { supportedCaptchaProviders } from '@/core/captcha/CaptchaLogic.js';
 import { notificationRecieveConfig } from '@/models/json-schema/user.js';
-import { adminUpdateMetaJsonSchema } from '@/server/rest/AdminUpdateMetaLogic.js';
+import { adminUpdateMetaJsonSchema } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
 import {
 	adminAbuseUserReportsParamDef,
 	adminForwardAbuseUserReportParamDef,
 	adminResolveAbuseUserReportParamDef,
 	adminUpdateAbuseUserReportParamDef,
-} from '@/server/rest/admin-abuse-reports.js';
+} from '@/server/rest/admin/admin-abuse-reports.js';
 import {
 	adminAccountCreateParamDef,
 	adminAccountDeleteParamDef,
 	adminAccountsFindByEmailParamDef,
 	adminUpdateProxyAccountParamDef,
-} from '@/server/rest/admin-accounts.js';
+} from '@/server/rest/admin/admin-accounts.js';
 import {
 	adminAdCreateParamDef,
 	adminAdDeleteParamDef,
 	adminAdListParamDef,
 	adminAdUpdateParamDef,
-} from '@/server/rest/admin-ad.js';
+} from '@/server/rest/admin/admin-ad.js';
 import {
 	adminAnnouncementsCreateParamDef,
 	adminAnnouncementsDeleteParamDef,
 	adminAnnouncementsListParamDef,
 	adminAnnouncementsUpdateParamDef,
-} from '@/server/rest/admin-announcements.js';
+} from '@/server/rest/admin/admin-announcements.js';
 import {
 	adminAvatarDecorationsCreateParamDef,
 	adminAvatarDecorationsDeleteParamDef,
 	adminAvatarDecorationsListParamDef,
 	adminAvatarDecorationsUpdateParamDef,
-} from '@/server/rest/admin-avatar-decorations.js';
+} from '@/server/rest/admin/admin-avatar-decorations.js';
 import {
 	adminDriveFilesParamDef,
 	adminDriveShowFileDocsParamDef,
 	adminDriveUserParamDef,
-} from '@/server/rest/admin-drive.js';
-import { adminSendEmailParamDef } from '@/server/rest/admin-email.js';
-import { adminRelaysListParamDef, adminRelaysWriteParamDef } from '@/server/rest/admin-relays.js';
-import { adminServerInfoParamDef } from '@/server/rest/admin-server-info.js';
-import { adminStatsParamDef } from '@/server/rest/admin-stats.js';
-import { adminGetUserIpsParamDef } from '@/server/rest/admin-user-ips.js';
-import { adminUpdateUserNoteParamDef, adminUserMaintenanceParamDef } from '@/server/rest/admin-user-maintenance.js';
-import { adminUserSuspensionParamDef } from '@/server/rest/admin-user-suspension.js';
-import { adminShowUserParamDef, adminShowUsersParamDef } from '@/server/rest/admin-users.js';
-import { captchaCurrentParamDef, captchaSaveParamDef } from '@/server/rest/captcha.js';
-import { adminFederationHostParamDef, adminFederationUpdateInstanceParamDef } from '@/server/rest/federation.js';
-import { adminInviteCreateParamDef, adminInviteListParamDef } from '@/server/rest/invite.js';
-import { adminShowModerationLogsParamDef } from '@/server/rest/moderation-log.js';
-import { adminPromoCreateParamDef } from '@/server/rest/promo.js';
+} from '@/server/rest/admin/admin-drive.js';
+import { adminSendEmailParamDef } from '@/server/rest/admin/admin-email.js';
+import { adminRelaysListParamDef, adminRelaysWriteParamDef } from '@/server/rest/admin/admin-relays.js';
+import { adminServerInfoParamDef } from '@/server/rest/admin/admin-server-info.js';
+import { adminStatsParamDef } from '@/server/rest/admin/admin-stats.js';
+import { adminGetUserIpsParamDef } from '@/server/rest/admin/admin-user-ips.js';
+import { adminUpdateUserNoteParamDef, adminUserMaintenanceParamDef } from '@/server/rest/admin/admin-user-maintenance.js';
+import { adminUserSuspensionParamDef } from '@/server/rest/admin/admin-user-suspension.js';
+import { adminShowUserParamDef, adminShowUsersParamDef } from '@/server/rest/admin/admin-users.js';
+import { captchaCurrentParamDef, captchaSaveParamDef } from '@/server/rest/captcha/captcha.js';
+import { adminFederationHostParamDef, adminFederationUpdateInstanceParamDef } from '@/server/rest/activitypub/federation.js';
+import { adminInviteCreateParamDef, adminInviteListParamDef } from '@/server/rest/invite/invite.js';
+import { adminShowModerationLogsParamDef } from '@/server/rest/admin/moderation-log.js';
+import { adminPromoCreateParamDef } from '@/server/rest/note/promo.js';
 import { z } from 'zod';
 
 export const endpointMetas = {
 	'admin/abuse-user-reports': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -232,6 +233,7 @@ export const endpointMetas = {
 	},
 	'admin/accounts/find-by-email': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -290,6 +292,7 @@ export const endpointMetas = {
 	},
 	'admin/ad/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -399,6 +402,7 @@ export const endpointMetas = {
 	},
 	'admin/announcements/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -516,6 +520,7 @@ export const endpointMetas = {
 	},
 	'admin/avatar-decorations/create': {
 		meta: {
+			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -583,6 +588,7 @@ export const endpointMetas = {
 	},
 	'admin/avatar-decorations/delete': {
 		meta: {
+			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -594,6 +600,8 @@ export const endpointMetas = {
 	},
 	'admin/avatar-decorations/list': {
 		meta: {
+			requireRolePolicy: 'canManageAvatarDecorations',
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -667,6 +675,7 @@ export const endpointMetas = {
 	},
 	'admin/avatar-decorations/update': {
 		meta: {
+			requireRolePolicy: 'canManageAvatarDecorations',
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -679,6 +688,7 @@ export const endpointMetas = {
 	},
 	'admin/captcha/current': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin', 'captcha'],
 
 			requireCredential: true,
@@ -819,6 +829,7 @@ export const endpointMetas = {
 	},
 	'admin/drive/files': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -841,6 +852,7 @@ export const endpointMetas = {
 	},
 	'admin/drive/show-file': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -1101,6 +1113,7 @@ export const endpointMetas = {
 	},
 	'admin/get-index-stats': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			requireAdmin: true,
 			kind: 'read:admin:index-stats',
@@ -1121,6 +1134,7 @@ export const endpointMetas = {
 	},
 	'admin/get-table-stats': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			requireAdmin: true,
 			kind: 'read:admin:table-stats',
@@ -1155,6 +1169,7 @@ export const endpointMetas = {
 	},
 	'admin/get-user-ips': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -1214,6 +1229,7 @@ export const endpointMetas = {
 	},
 	'admin/invite/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -1236,6 +1252,7 @@ export const endpointMetas = {
 	},
 	'admin/meta': {
 		meta: {
+			allowQuery: true,
 			tags: ['meta'],
 
 			requireCredential: true,
@@ -2076,6 +2093,7 @@ export const endpointMetas = {
 	},
 	'admin/relays/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -2196,6 +2214,7 @@ export const endpointMetas = {
 	},
 	'admin/server-info': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			requireModerator: true,
 			kind: 'read:admin:server-info',
@@ -2303,6 +2322,7 @@ export const endpointMetas = {
 	},
 	'admin/show-moderation-logs': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -2360,6 +2380,7 @@ export const endpointMetas = {
 	},
 	'admin/show-user': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,
@@ -2561,6 +2582,7 @@ export const endpointMetas = {
 	},
 	'admin/show-users': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin'],
 
 			requireCredential: true,

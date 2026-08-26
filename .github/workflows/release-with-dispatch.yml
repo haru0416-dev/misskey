@@ -3,7 +3,6 @@ name: 'Release Manager [Dispatch]'
 on:
   workflow_dispatch:
     inputs:
-      ## Specify the type of the next release.
       #version_increment_type:
       #  type: choice
       #  description: 'VERSION INCREMENT TYPE'
@@ -53,8 +52,8 @@ jobs:
       pr_number: ${{ needs.get-pr.outputs.pr_number }}
       user: 'github-actions[bot]'
       package_jsons_to_rewrite: ${{ vars.PACKAGE_JSONS_TO_REWRITE }}
-      # Text to prepend to the changelog
-      # The first line must be `## Unreleased`
+      # CHANGELOG.md の先頭に追加する内容
+      # 先頭行は `## Unreleased` にする
       changes_template: |
         ## Unreleased
 
@@ -97,10 +96,9 @@ jobs:
     if: ${{ needs.get-pr.outputs.pr_number == '' }}
     with:
       user: 'github-actions[bot]'
-      # The script for version increment.
-      # process.env.CURRENT_VERSION: The current version.
+      # process.env.CURRENT_VERSION: 現在のバージョン。
       #
-      # Misskey calender versioning (yyyy.MM.patch) example
+      # Misskey のカレンダーバージョニング (yyyy.MM.patch) の例
       version_increment_script: |
         const now = new Date();
         const year = now.toLocaleDateString('en-US', { year: 'numeric', timeZone: 'Asia/Tokyo' });
@@ -116,7 +114,7 @@ jobs:
         } else {
           return `${major}.${minor}.${patch + 1}`;
         }
-      ##Semver example
+      ## SemVer の例
       #version_increment_script: |
       #  const [major, minor, patch] = process.env.CURRENT_VERSION.split('.');
       #  if ("${{ inputs.version_increment_type }}" === "major") {

@@ -164,12 +164,10 @@ async function reveal() {
 	hide.value = false;
 }
 
-// Menu
 const menuShowing = ref(false);
 
 function showMenu(ev: MouseEvent) {
 	const menu: MenuItem[] = [
-		// TODO: 再生キューに追加
 		{
 			type: 'switch',
 			text: i18n.ts._mediaControls.loop,
@@ -217,7 +215,6 @@ function showMenu(ev: MouseEvent) {
 	});
 }
 
-// MediaControl: Common State
 const isReady = ref(false);
 const isPlaying = ref(false);
 const elapsedTimeMs = ref(0);
@@ -235,14 +232,13 @@ const rangePercent = computed({
 });
 const volume = ref(.25);
 const speed = ref(1);
-const loop = ref(false); // TODO: ドライブファイルのフラグに置き換える
+const loop = ref(false);
 const bufferedEnd = ref(0);
 const bufferedDataRatio = computed(() => {
 	if (!audioEl.value || !Number.isFinite(audioEl.value.duration) || audioEl.value.duration <= 0) return 0;
 	return bufferedEnd.value / audioEl.value.duration;
 });
 
-// MediaControl Events
 function togglePlayPause() {
 	if (!isReady.value || !audioEl.value) return;
 

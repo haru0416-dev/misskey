@@ -3,18 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { federationUpdateRemoteUserParamDef } from '@/server/rest/ap-person.js';
+import { federationUpdateRemoteUserParamDef } from '@/server/rest/activitypub/ap-person.js';
 import {
 	federationHostFollowingParamDef,
 	federationInstancesParamDef,
 	federationShowInstanceParamDef,
 	federationStatsParamDef,
 	federationUsersParamDef,
-} from '@/server/rest/federation.js';
+} from '@/server/rest/activitypub/federation.js';
 
 export const endpointMetas = {
 	'federation/followers': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
@@ -35,6 +36,7 @@ export const endpointMetas = {
 	},
 	'federation/following': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
@@ -55,6 +57,7 @@ export const endpointMetas = {
 	},
 	'federation/instances': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
@@ -77,6 +80,7 @@ export const endpointMetas = {
 	},
 	'federation/show-instance': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,
@@ -157,6 +161,7 @@ export const endpointMetas = {
 	},
 	'federation/users': {
 		meta: {
+			allowQuery: true,
 			tags: ['federation'],
 
 			requireCredential: false,

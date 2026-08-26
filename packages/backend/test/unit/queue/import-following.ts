@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -15,8 +14,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import { createDriveFileInDatabase } from '@/core/DriveFileStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleHonoQueueImportFollowing,
@@ -110,12 +109,8 @@ describe('hono-queue-db (importFollowing)', () => {
 		const follower = await createTestUser('honoqueueimpfollowdbme');
 		const followee = await createTestUser('honoqueueimpfollowdbtarget');
 
-		// NOTE: 元実装のImportFollowingProcessorService.processDbは `parts.slice(2)` で
-		// key=value行を読んでいるが、following importの行フォーマットは
-		// `acct,withReplies=true` の2カラムしかなく、withReplies自体はindex 1にあるため
-		// このループは実質デッドコードで、行ごとのwithReplies指定は常に無視され、
-		// job.data.withReplies (ジョブ全体で1つ) だけが使われる。元実装のバグをそのまま
-		// 忠実に再現しており、修正はしていない。
+		// following import の行は `acct,withReplies=true` の2カラムで、withReplies は index 1 にある。
+		// 処理では job.data.withReplies (ジョブ全体で1つ) のみを使うため、行ごとの指定は反映されない。
 		await handleHonoQueueImportFollowingToDb(
 			deps,
 			fakeJob<DbUserImportToDbJobData>({

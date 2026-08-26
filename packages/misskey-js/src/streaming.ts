@@ -14,9 +14,12 @@ export function urlQuery(obj: Record<string, string | number | boolean | undefin
 
 type AnyOf<T extends Record<PropertyKey, unknown>> = T[keyof T];
 
+const RESERVED_STREAM_EVENT_TYPES = new Set(['_connected_', '_disconnected_', '_error_']);
+
 export type StreamEvents = {
 	_connected_: void;
 	_disconnected_: void;
+	_error_: (error: Error) => void;
 } & BroadcastEvents;
 
 export interface IStream extends EventEmitter<StreamEvents> {
@@ -35,9 +38,6 @@ export interface IStream extends EventEmitter<StreamEvents> {
 	close(): void;
 }
 
-/**
- * Misskey stream connection
- */
 export default class Stream extends EventEmitter<StreamEvents> implements IStream {
 	private stream: ReconnectingWebSocket;
 	public state: 'initializing' | 'reconnecting' | 'connected' = 'initializing';
@@ -74,7 +74,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		const query = urlQuery({
 			i: user?.token,
 
-			// To prevent cache of an HTML such as error screen
+			// エラー画面などのHTMLがキャッシュされるのを防ぐ。
 			_t: Date.now(),
 		});
 
@@ -85,7 +85,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 			WebSocket: options.WebSocket,
 		});
 		// reconnecting-websocket のデフォルト binaryType は 'blob' だが、Bun の ws 互換実装は
-		// 'blob' への代入で例外を投げ、RWS の _connect() がリスナ登録前に静かに死ぬ
+		// 'blob' への代入で例外を投げ、RWS の _connect() が例外終了してリスナ登録に到達しない
 		// (接続は開くがイベントが一切届かなくなる)。Misskey のストリーミングはテキスト (JSON)
 		// のみで binaryType は実質未使用のため、全ランタイムで受理される 'arraybuffer' を既定にする。
 		this.stream.binaryType = options.binaryType ?? 'arraybuffer';
@@ -161,25 +161,22 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		this.connectedChannelIds.delete(connection.id);
 	}
 
-	/**
-	 * Callback of when open connection
-	 */
 	private onOpen(): void {
 		const isReconnect = this.state === 'reconnecting';
 
 		this.state = 'connected';
-		this.emit('_connected_');
 
-		// チャンネル再接続
 		if (isReconnect) {
 			for (const p of this.sharedConnectionPools) p.connect();
 			for (const c of this.nonSharedConnections) c.connect();
 		}
+
+		// _connected_ はオフラインキューの flush 完了後に通知する。
+		queueMicrotask(() => {
+			if (this.state === 'connected') this.emit('_connected_');
+		});
 	}
 
-	/**
-	 * Callback of when close connection
-	 */
 	private onClose(): void {
 		if (this.state === 'connected') {
 			this.state = 'reconnecting';
@@ -188,37 +185,60 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		}
 	}
 
-	/**
-	 * Callback of when received a message from connection
-	 */
 	private onMessage(message: { data: string; }): void {
-		const { type, body } = JSON.parse(message.data);
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(message.data);
+		} catch (error) {
+			this.emit('_error_', new Error('Failed to parse streaming message as JSON', { cause: error }));
+			return;
+		}
+
+		if (!isRecord(parsed) || typeof parsed['type'] !== 'string') {
+			this.emit('_error_', new Error('Invalid streaming message envelope'));
+			return;
+		}
+
+		const type = parsed['type'];
+		const body = parsed['body'];
 
 		if (type === 'channel') {
-			const connections = this.connectionsById.get(body.id);
+			if (!isRecord(body) || typeof body['id'] !== 'string' || typeof body['type'] !== 'string') {
+				this.emit('_error_', new Error('Invalid streaming channel message'));
+				return;
+			}
+			const id = body['id'];
+			const channelType = body['type'];
+			const channelBody = body['body'];
+			const connections = this.connectionsById.get(id);
 
 			if (connections) {
 				for (const c of connections) {
-					c.emit(body.type, body.body);
+					const emit = c.emit as unknown as (event: string, payload: unknown) => boolean;
+					emit.call(c, channelType, channelBody);
 					c.inCount++;
 				}
 			}
 		} else if (type === 'connected') {
-			const connections = this.connectionsById.get(body.id);
-			this.connectedChannelIds.add(body.id);
+			if (!isRecord(body) || typeof body['id'] !== 'string') {
+				this.emit('_error_', new Error('Invalid streaming connected message'));
+				return;
+			}
+			const id = body['id'];
+			const connections = this.connectionsById.get(id);
 
 			if (connections) {
+				this.connectedChannelIds.add(id);
 				for (const c of connections) c.markConnected();
 			}
+		} else if (RESERVED_STREAM_EVENT_TYPES.has(type)) {
+			this.emit('_error_', new Error(`Reserved streaming event type received: ${type}`));
 		} else {
-			this.emit(type, body);
+			this.emit(type as keyof BroadcastEvents, body as never);
 		}
 	}
 
-	/**
-	 * Send a message to connection
-	 * ! ストリーム上のやり取りはすべてJSONで行われます !
-	 */
+	/** ストリーム上の送受信データはJSON形式。 */
 	public send(typeOrPayload: string): void;
 	public send(typeOrPayload: string, payload: unknown): void;
 	public send(typeOrPayload: Record<string, unknown> | unknown[]): void;
@@ -242,16 +262,15 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		this.stream.send('h');
 	}
 
-	/**
-	 * Close this connection
-	 */
 	public close(): void {
 		this.stream.close();
 	}
 }
 
-// TODO: これらのクラスを Stream クラスの内部クラスにすれば余計なメンバをpublicにしないで済むかも？
-// もしくは @internal を使う？ https://www.typescriptlang.org/tsconfig#stripInternal
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 class Pool {
 	public channel: string;
 	public id: string;
@@ -285,7 +304,6 @@ class Pool {
 
 		this.users++;
 
-		// タイマー解除
 		if (this.disposeTimerId) {
 			clearTimeout(this.disposeTimerId);
 			this.disposeTimerId = null;
@@ -295,10 +313,8 @@ class Pool {
 	public dec(): void {
 		this.users--;
 
-		// そのコネクションの利用者が誰もいなくなったら
 		if (this.users === 0) {
-			// また直ぐに再利用される可能性があるので、一定時間待ち、
-			// 新たな利用者が現れなければコネクションを切断する
+			// 直後の再利用を許容するため、3秒間利用者が戻らなければ切断する。
 			this.disposeTimerId = setTimeout(() => {
 				this.disconnect();
 			}, 3000);
@@ -340,9 +356,9 @@ export abstract class Connection<Channel extends AnyOf<Channels> = AnyOf<Channel
 	private disposed = false;
 	public abstract id: string;
 
-	public name?: string; // for debug
-	public inCount = 0; // for debug
-	public outCount = 0; // for debug
+	public name?: string;
+	public inCount = 0;
+	public outCount = 0;
 	public readonly ready: Promise<void>;
 	private resolveReady!: () => void;
 

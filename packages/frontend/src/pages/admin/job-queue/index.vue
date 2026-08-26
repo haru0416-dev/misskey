@@ -180,10 +180,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 							key: 'wait',
 							title: 'Waiting',
 							icon: 'ti ti-hourglass-high',
-						}, {
-							key: 'paused',
-							title: 'Paused',
-							icon: 'ti ti-player-pause',
 						}]"
 					/>
 				</template>
@@ -269,7 +265,7 @@ type QueueJob = Omit<Misskey.entities.QueueJob, 'opts'> & {
 };
 
 const tab = ref<typeof Misskey.queueTypes[number] | '-' | 'outbox'>('-');
-const jobState = ref<'all' | 'latest' | 'completed' | 'failed' | 'active' | 'delayed' | 'wait' | 'paused'>('all');
+const jobState = ref<'all' | 'latest' | 'completed' | 'failed' | 'active' | 'delayed' | 'wait'>('all');
 const jobs = ref<QueueJob[]>([]);
 const jobsFetching = ref(true);
 const queueInfos = ref<QueueInfo[]>([]);

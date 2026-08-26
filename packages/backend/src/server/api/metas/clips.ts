@@ -11,7 +11,7 @@ import {
 	clipsNoteParamDef,
 	clipsUpdateParamDef,
 	emptyParamDef,
-} from '@/server/rest/clips.js';
+} from '@/server/rest/clip/clips.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -131,6 +131,7 @@ export const endpointMetas = {
 	},
 	'clips/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['clips', 'account'],
 
 			requireCredential: true,
@@ -153,6 +154,7 @@ export const endpointMetas = {
 	},
 	'clips/my-favorites': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'clip'],
 
 			requireCredential: true,
@@ -175,6 +177,7 @@ export const endpointMetas = {
 	},
 	'clips/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notes', 'clips'],
 
 			requireCredential: false,
@@ -231,6 +234,7 @@ export const endpointMetas = {
 	},
 	'clips/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['clips', 'account'],
 
 			requireCredential: false,

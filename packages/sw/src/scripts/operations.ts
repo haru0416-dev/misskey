@@ -3,15 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-/*
- * Operations
- * 各種操作
- */
 import { APIClient } from 'misskey-js/api.js';
 import type * as Misskey from 'misskey-js';
 import type { SwMessage, SwMessageOrderType } from '@/types.js';
 import { getAccountFromId } from '@/scripts/get-account-from-id.js';
 import { getUrlWithLoginId } from '@/scripts/login-id.js';
+
+const CLIENT_ACCOUNT_RESPONSE_TIMEOUT_MS = 250;
 
 export const cli = new APIClient({ origin, fetch: (...args): Promise<Response> => fetch(...args) });
 
@@ -52,17 +50,14 @@ export function sendMarkAllAsRead(userId: string): Promise<null | undefined | vo
 	});
 }
 
-// rendered acctからユーザーを開く
 export function openUser(acct: string, loginId?: string): ReturnType<typeof openClient> {
 	return openClient('push', `/@${acct}`, loginId, { acct });
 }
 
-// noteIdからノートを開く
 export function openNote(noteId: string, loginId?: string): ReturnType<typeof openClient> {
 	return openClient('push', `/notes/${noteId}`, loginId, { noteId });
 }
 
-// antennaIdからアンテナタイムラインを開く
 export function openAntenna(antennaId: string, loginId: string): ReturnType<typeof openClient> {
 	return openClient('push', `/timeline/antenna/${antennaId}`, loginId, { antennaId });
 }
@@ -75,9 +70,7 @@ export function openChat(body: Misskey.entities.ChatMessage, loginId: string): R
 	}
 }
 
-// post-formのオプションから投稿フォームを開く
 export async function openPost(options: { initialText?: string; reply?: Misskey.entities.Note; renote?: Misskey.entities.Note }, loginId?: string): ReturnType<typeof openClient> {
-	// クエリを作成しておく
 	const url = '/share';
 	const query = new URLSearchParams();
 	if (options.initialText) query.set('text', options.initialText);
@@ -88,19 +81,55 @@ export async function openPost(options: { initialText?: string; reply?: Misskey.
 }
 
 export async function openClient(order: SwMessageOrderType, url: string, loginId?: string, query: Record<string, SwMessage[string]> = {}): Promise<WindowClient | null> {
-	const client = await findClient();
+	const client = await findClient(loginId);
 
 	if (client) {
-		client.postMessage({ type: 'order', ...query, order, ...(loginId === undefined ? {} : { loginId }), url } satisfies SwMessage);
-		return client;
+		try {
+			client.postMessage({ type: 'order', ...query, order, ...(loginId === undefined ? {} : { loginId }), url } satisfies SwMessage);
+			return client;
+		} catch {
+			// matchAll() の完了後に閉じられたクライアントは再利用できない。
+		}
 	}
 
 	return globalThis.clients.openWindow(loginId ? getUrlWithLoginId(url, loginId) : url);
 }
 
-async function findClient(): Promise<WindowClient | null> {
+async function findClient(loginId?: string): Promise<WindowClient | null> {
 	const clients = await globalThis.clients.matchAll({
+		includeUncontrolled: false,
 		type: 'window',
 	});
-	return clients.find(c => !(new URL(c.url)).searchParams.has('zen')) ?? null;
+	const availableClients = clients.filter(client => !(new URL(client.url)).searchParams.has('zen'));
+
+	if (loginId === undefined) return availableClients[0] ?? null;
+
+	const clientLoginIds = await Promise.all(availableClients.map(getClientLoginId));
+	const clientIndex = clientLoginIds.findIndex(clientLoginId => clientLoginId === loginId);
+	return availableClients[clientIndex] ?? null;
+}
+
+function getClientLoginId(client: WindowClient): Promise<string | null> {
+	return new Promise(resolve => {
+		const channel = new MessageChannel();
+		const finish = (loginId: string | null) => {
+			globalThis.clearTimeout(timeout);
+			channel.port1.close();
+			resolve(loginId);
+		};
+		const timeout = globalThis.setTimeout(() => finish(null), CLIENT_ACCOUNT_RESPONSE_TIMEOUT_MS);
+
+		channel.port1.onmessage = (event: MessageEvent<unknown>) => {
+			const data = event.data;
+			if (typeof data !== 'object' || data === null || !('loginId' in data)) return finish(null);
+			const { loginId } = data;
+			finish(typeof loginId === 'string' ? loginId : null);
+		};
+		try {
+			client.postMessage({ type: 'requestClientAccount' }, [channel.port2]);
+		} catch {
+			channel.port2.close();
+			finish(null);
+		}
+	});
 }

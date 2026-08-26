@@ -8,9 +8,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div class="_spacer" :style="{ '--MI_SPACER-w': narrow ? '800px' : '1100px' }">
 		<div ref="rootEl" class="ftskorzw" :class="{ wide: !narrow }" style="container-type: inline-size;">
 			<div class="main _gaps">
-				<!-- TODO: アカウント停止・サイレンス状態の警告表示を復元する -->
-				<!-- <div class="punished" v-if="user.isSuspended"><i class="ti ti-alert-triangle" style="margin-right: 8px;"></i> {{ i18n.ts.userSuspended }}</div> -->
-				<!-- <div class="punished" v-if="user.isSilenced"><i class="ti ti-alert-triangle" style="margin-right: 8px;"></i> {{ i18n.ts.userSilenced }}</div> -->
 
 				<div class="profile _gaps">
 					<MkAccountMoved v-if="user.movedTo" :movedTo="user.movedTo"/>
@@ -210,7 +207,7 @@ const XTimeline = defineAsyncComponent(() => import('./index/timeline.vue'));
 
 const props = withDefaults(defineProps<{
 	user: Misskey.entities.UserDetailed;
-	/** Test only; MkNotesTimeline currently causes problems in vitest */
+	/** Vitest では MkNotesTimeline が正常に動作しないため、テスト時だけ無効化する。 */
 	disableNotes?: boolean;
 }>(), {
 	disableNotes: false,
@@ -284,7 +281,6 @@ watch([props.user], () => {
 });
 
 async function reload() {
-	// TODO: Pull-to-refresh時に表示内容を再取得する
 }
 
 let bannerParallaxResizeObserver: ResizeObserver | null = null;

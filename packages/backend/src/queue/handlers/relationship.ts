@@ -4,16 +4,16 @@
  */
 
 import * as Bull from 'bullmq';
-import { fetchUserByIdOrFailFromDatabase } from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-import { blockingExistsInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { followingExistsInDatabase } from '@/core/FollowingStore.js';
-import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/FollowRequestStore.js';
+import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { blockingExistsInDatabase, fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { followingExistsInDatabase } from '@/core/user/FollowingStore.js';
+import { deleteFollowRequestFromDatabase, followRequestExistsInDatabase } from '@/core/user/FollowRequestStore.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { IActivity } from '@/core/activitypub/type.js';
-import { enqueueDeliverJob } from '@/core/DeliverQueue.js';
+import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import {
@@ -21,7 +21,7 @@ import {
 	unblockForHonoApi,
 	unfollow,
 	type HonoApiAccountBlockingDependencies,
-} from '../../server/rest/account-blocking.js';
+} from '@/server/rest/account/account-blocking.js';
 import {
 	addActivityContext,
 	createFollowRequestWithSideEffects,
@@ -32,8 +32,8 @@ import {
 	renderFollow,
 	renderReject,
 	type HonoApiFollowingDependencies,
-} from '../../server/rest/following.js';
-import { validateAlsoKnownAsForHonoApi, type HonoApiApPersonDependencies } from '../../server/rest/ap-person.js';
+} from '@/server/rest/user/following.js';
+import { validateAlsoKnownAsForHonoApi, type HonoApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
 export type HonoQueueRelationshipDependencies = HonoApiAccountBlockingDependencies &
 	HonoApiFollowingDependencies &
@@ -59,7 +59,6 @@ async function deliverAcceptFollowActivity(
 	enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 }
 
-/** UserFollowingService.follow 相当。inbox の Follow アクティビティ受信からも呼ばれる。 */
 export async function followWithSideEffectsForHonoApi(
 	deps: HonoQueueRelationshipDependencies,
 	follower: MiLocalUser | MiRemoteUser,
@@ -123,7 +122,7 @@ export async function followWithSideEffectsForHonoApi(
 	) {
 		let autoAccept = false;
 
-		// 鍵アカウントであっても、既にフォローされていた場合はスルー (この時点で到達不能だが元実装通り残す)
+		// 鍵アカウントでも既存のフォロー関係があれば自動承認する。
 		if (await followingExistsInDatabase(deps.db, follower.id, followee.id)) {
 			autoAccept = true;
 		}
@@ -133,7 +132,7 @@ export async function followWithSideEffectsForHonoApi(
 			autoAccept = await followingExistsInDatabase(deps.db, followee.id, follower.id);
 		}
 
-		// Automatically accept if the follower is an account who has moved and the locked followee had accepted the old account.
+		// フォロワーが移行済みアカウントで、非公開のフォロー先が旧アカウントを承認済みなら自動承認する。
 		if (!autoAccept && followee.isLocked) {
 			autoAccept = !!(await validateAlsoKnownAsForHonoApi(
 				deps,
@@ -173,7 +172,6 @@ export async function followWithSideEffectsForHonoApi(
 	return 'ok';
 }
 
-/** UserFollowingService.follow 相当 (RelationshipProcessorService.processFollow から呼ばれる)。 */
 export async function handleHonoQueueRelationshipFollow(
 	deps: HonoQueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
@@ -195,11 +193,17 @@ export async function handleHonoQueueRelationshipFollow(
 	);
 }
 
-/** UserFollowingService.unfollow 相当 (RelationshipProcessorService.processUnfollow から呼ばれる)。 */
 export async function handleHonoQueueRelationshipUnfollow(
 	deps: HonoQueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
 ): Promise<string> {
+	if (job.data.userStateGuard != null) {
+		const guard = job.data.userStateGuard;
+		const guardedUser = await fetchUserByIdOrFailFromDatabase(deps.db, guard.userId);
+		if (guardedUser.isSuspended !== guard.isSuspended || guardedUser.suspensionTransitionId !== guard.transitionId) {
+			return 'skip (stale user state)';
+		}
+	}
 	const [follower, followee] = await Promise.all([
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.from.id),
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),

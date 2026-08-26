@@ -35,13 +35,16 @@ export function tryParseUrl(url: string | URL, base?: string | URL): URL | null 
 	}
 }
 
+export function isSameOrigin(url: string | URL, base: string | URL): boolean {
+	return new URL(url, base).origin === new URL(base).origin;
+}
+
 export function maybeMakeRelative(urlStr: string, baseStr: string): string {
 	try {
 		const baseObj = new URL(baseStr);
 		const urlObj = new URL(urlStr);
-		/* in all places where maybeMakeRelative is used, baseStr is the
-		 * instance's public URL, which can't have path components, so the
-		 * relative URL will always have the whole path from the urlStr
+		/* maybeMakeRelativeの呼び出し元ではbaseStrがインスタンスの公開URLであり、
+		 * パス成分を持たないため、相対URLにはurlStrのパス全体を含める。
 		 */
 		if (urlObj.origin === baseObj.origin) {
 			return urlObj.pathname + urlObj.search + urlObj.hash;

@@ -5,14 +5,14 @@
 
 import type { EventEmitter } from 'node:events';
 import type { GlobalEvents } from '@/core/global-events.js';
-import { fetchUserProfileByUserIdFromDatabase } from '@/core/UserProfileStore.js';
-import { listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/FollowingStore.js';
-import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/ChannelFollowingStore.js';
-import { listMutedChannelIdsByUserIdFromDatabase } from '@/core/ChannelMutingStore.js';
-import { listMuteeIdsByMuterIdFromDatabase } from '@/core/MutingStore.js';
-import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/BlockingStore.js';
-import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/RenoteMutingStore.js';
-import { markAllHonoApiNotificationsAsRead, type HonoApiNotificationDependencies } from '../rest/notification.js';
+import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
+import { listFolloweeIdsWithRepliesByFollowerIdFromDatabase } from '@/core/user/FollowingStore.js';
+import { listFollowedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelFollowingStore.js';
+import { listMutedChannelIdsByUserIdFromDatabase } from '@/core/channel/ChannelMutingStore.js';
+import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
+import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
+import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/user/RenoteMutingStore.js';
+import { markAllHonoApiNotificationsAsRead, type HonoApiNotificationDependencies } from '@/server/rest/notification/notification.js';
 import { isJsonObject, type JsonObject, type JsonValue } from '@/misc/json-value.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
@@ -116,7 +116,7 @@ type ConnectionSnapshot = {
 	userMutedInstances: Set<string>;
 };
 
-/** Connection#fetch 相当。原典が Redis キャッシュ経由で読んでいた関連セットは直接DB読みに置き換えている。 */
+/** ストリーミング接続で使う関連セットを DB から取得する。 */
 async function fetchStreamConnectionSnapshot(
 	deps: HonoStreamConnectionDependencies,
 	userId: MiUser['id'],
@@ -597,7 +597,7 @@ export async function refreshHonoStreamConnections(
 			let lastError: unknown;
 			let refreshed = false;
 			for (const delayMs of REFRESH_RETRY_DELAYS_MS) {
-				// Retries are deliberately serialized to avoid amplifying a recovering database outage.
+				// 復旧中の DB 障害を増幅しないよう、再試行を直列化する。
 				// eslint-disable-next-line no-await-in-loop
 				if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
 				try {

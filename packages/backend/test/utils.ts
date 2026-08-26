@@ -12,11 +12,12 @@ import { inspect } from 'node:util';
 import WebSocket, { ClientOptions } from 'ws';
 import * as htmlParser from 'node-html-parser';
 import type * as misskey from 'misskey-js';
-import { DEFAULT_POLICIES } from '@/core/role-policies.js';
+import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
 import type { HonoApiErrorBody } from '@/server/rest/error.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { resolveStreamingUrl, resolveTargetUrl, startJobQueue, testTarget } from './target.js';
+import { expect } from 'vitest';
 
 export { resolveStreamingUrl, resolveTargetUrl, startJobQueue } from './target.js';
 export type { TestJobQueueRuntime } from './target.js';
@@ -52,6 +53,13 @@ export type ApiRequest<
 	user: UserToken | undefined;
 };
 
+/**
+ * ポーリングの既定値。元は「N 回ループして毎回 100ms 眠る」形だったので実質の上限は
+ * N × (100ms + 1回分の問い合わせ時間) で、時間ベースへ移すにあたり問い合わせ時間ぶんの
+ * 余裕を含めてある。待ちが長い対象は timeout だけ上書きする。
+ */
+export const POLL = { timeout: 5_000, interval: 100 } as const;
+
 export const successfulApiCall = async <E extends keyof misskey.Endpoints, P extends misskey.Endpoints[E]['req']>(
 	request: ApiRequest<E, P>,
 	assertion: {
@@ -61,7 +69,7 @@ export const successfulApiCall = async <E extends keyof misskey.Endpoints, P ext
 	const { endpoint, parameters, user } = request;
 	const res = await api(endpoint, parameters, user);
 	const status = assertion.status ?? (res.body == null ? 204 : 200);
-	assert.strictEqual(res.status, status, inspect(res.body, { depth: 5, colors: true }));
+	expect(res.status, inspect(res.body, { depth: 5, colors: true })).toBe(status);
 
 	return res.body as misskey.api.SwitchCaseResponseType<E, P>;
 };
@@ -77,10 +85,10 @@ export const failedApiCall = async <E extends keyof misskey.Endpoints, P extends
 	const { endpoint, parameters, user } = request;
 	const { status, code, id } = assertion;
 	const res = await api(endpoint, parameters, user);
-	assert.strictEqual(res.status, status, inspect(res.body));
+	expect(res.status, inspect(res.body)).toBe(status);
 	assert.ok(res.body);
-	assert.strictEqual(castAsError(res.body as any).error.code, code, inspect(res.body));
-	assert.strictEqual(castAsError(res.body as any).error.id, id, inspect(res.body));
+	expect(castAsError(res.body as any).error.code, inspect(res.body)).toBe(code);
+	expect(castAsError(res.body as any).error.id, inspect(res.body)).toBe(id);
 };
 
 export const api = async <E extends keyof misskey.Endpoints, P extends misskey.Endpoints[E]['req']>(
@@ -118,7 +126,7 @@ export const api = async <E extends keyof misskey.Endpoints, P extends misskey.E
 	return {
 		status: res.status,
 		headers: res.headers,
-		// FIXME: removing this non-null assertion: requires better typing around empty response.
+		// 空レスポンスの型を表現できるようになるまで non-null assertion を使う。
 		body: body!,
 	};
 };
@@ -175,7 +183,7 @@ export const post = async (
 
 	const res = await api('notes/create', q, user);
 
-	// FIXME: the return type should reflect this fact.
+	// このヘルパーは成功レスポンスを前提とするため、API 型で null 許容の createdNote に非 null アサーションが必要。
 	return (res.body ? res.body.createdNote : null)!;
 };
 
@@ -357,7 +365,7 @@ export const role = async (
 			name: 'New Role',
 			target: 'manual',
 			policies: {
-				// spread するのは配列ではなくオブジェクト (以前は 0,1,2... の数値キーになっていた)
+				// API の policies は配列ではなくオブジェクトとして展開する。
 				...Object.fromEntries(
 					Object.entries(DEFAULT_POLICIES).map(([k, v]) => [
 						k,
@@ -378,20 +386,12 @@ export const role = async (
 };
 
 interface UploadOptions {
-	/** Optional, absolute path or relative from ./resources/ */
 	path?: string | URL;
-	/** The name to be used for the file upload */
 	name?: string;
-	/** The drive folder to upload into. */
 	folderId?: string;
-	/** A Blob can be provided instead of path */
 	blob?: Blob;
 }
 
-/**
- * Upload file
- * @param user User
- */
 export const uploadFile = async (
 	user?: UserToken,
 	{ path, name, folderId, blob }: UploadOptions = {},
@@ -708,9 +708,7 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 				last = await fetchEntities(rangeToParam({ limit, until: last.at(-1), since: end }));
 			}
 			actual.push(end);
-			assert.deepStrictEqual(
-				actual.map(({ id, createdAt }) => id + ':' + createdAt),
-				expected.map(({ id, createdAt }) => id + ':' + createdAt));
+			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(expected.map(({ id, createdAt }) => id + ':' + createdAt));
 		}
 
 		// 2. sinceId/Date指定+limitで取得してつなぎ合わせた結果が期待通りになっていること
@@ -722,9 +720,7 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 				actual.push(...last);
 				last = await fetchEntities(rangeToParam({ limit, since: last.at(-1) }));
 			}
-			assert.deepStrictEqual(
-				actual.map(({ id, createdAt }) => id + ':' + createdAt),
-				expected.map(({ id, createdAt }) => id + ':' + createdAt));
+			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(expected.map(({ id, createdAt }) => id + ':' + createdAt));
 		}
 		*/
 
@@ -736,8 +732,7 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 				actual.push(...last);
 				last = await fetchEntities(rangeToParam(omitUndefined({ limit, until: last.at(-1) })));
 			}
-			assert.deepStrictEqual(
-				actual.map(({ id, createdAt }) => id + ':' + createdAt),
+			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(
 				expected.map(({ id, createdAt }) => id + ':' + createdAt),
 			);
 		}
@@ -752,8 +747,7 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 				last = await fetchEntities(omitUndefined({ limit, offset }));
 				offset += limit ?? 10;
 			}
-			assert.deepStrictEqual(
-				actual.map(({ id, createdAt }) => id + ':' + createdAt),
+			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(
 				expected.map(({ id, createdAt }) => id + ':' + createdAt),
 			);
 		}

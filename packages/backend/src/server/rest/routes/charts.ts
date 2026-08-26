@@ -19,7 +19,7 @@ import {
 	handleHonoApiChartsUsers,
 	handleHonoApiStats,
 	normalizeHonoApiChartQuery,
-} from '../charts.js';
+} from '../chart/charts.js';
 import {
 	jsonResponse,
 	publicCacheHeadersWhenAnonymous,
@@ -28,6 +28,7 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.get('/charts/active-users', async (c) => {
@@ -44,7 +45,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/active-users', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/active-users', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -72,7 +73,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/ap-request', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/ap-request', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -100,7 +101,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/drive', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/drive', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -128,7 +129,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/federation', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/federation', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -156,7 +157,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/instance', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/instance', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -184,7 +185,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/notes', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -212,7 +213,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/users', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/users', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -240,7 +241,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/user/drive', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/user/drive', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -268,7 +269,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/user/following', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/user/following', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -296,7 +297,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/user/notes', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/user/notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -324,7 +325,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/user/pv', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/user/pv', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -352,7 +353,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/charts/user/reactions', async (c) => {
+	app.on(['POST', 'QUERY'], '/charts/user/reactions', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
@@ -366,12 +367,10 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 		});
 	});
 
-	app.post('/stats', async (c) => {
-		return await runApiEndpoint(c, async () => {
-			const body = await jsonBody(c);
-			await authenticateOptionalRequest(deps, c, body);
-
-			return jsonResponse(c, await handleHonoApiStats(deps));
-		});
-	});
+	app.post(
+		'/stats',
+		endpointHandlerAnonymous(deps, 'stats', async ({ body, auth, c }) =>
+			jsonResponse(c, await handleHonoApiStats(deps)),
+		),
+	);
 }

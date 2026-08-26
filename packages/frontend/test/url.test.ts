@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { tryParseUrl } from '@shared/utility/url.js';
+import { isSameOrigin, tryParseUrl } from '@shared/utility/url.js';
 
 describe('tryParseUrl', () => {
 	test('絶対URLをそのまま解釈する', () => {
@@ -17,5 +17,13 @@ describe('tryParseUrl', () => {
 
 	test('解釈できない文字列はnullを返す', () => {
 		expect(tryParseUrl('https://[invalid')).toBeNull();
+	});
+});
+
+describe('isSameOrigin', () => {
+	test('compares parsed origins instead of string prefixes', () => {
+		expect(isSameOrigin('https://example.com/notes/1', 'https://example.com')).toBe(true);
+		expect(isSameOrigin('https://example.com.evil/notes/1', 'https://example.com')).toBe(false);
+		expect(isSameOrigin('https://example.com:8443/notes/1', 'https://example.com')).toBe(false);
 	});
 });

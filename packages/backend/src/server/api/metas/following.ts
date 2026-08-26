@@ -10,7 +10,7 @@ import {
 	followingUpdateAllParamDef,
 	followingUpdateParamDef,
 	followingUserIdParamDef,
-} from '@/server/rest/following.js';
+} from '@/server/rest/user/following.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -156,6 +156,7 @@ export const endpointMetas = {
 	},
 	'following/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -232,6 +233,7 @@ export const endpointMetas = {
 	},
 	'following/requests/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['following', 'account'],
 
 			requireCredential: true,
@@ -291,6 +293,7 @@ export const endpointMetas = {
 	},
 	'following/requests/sent': {
 		meta: {
+			allowQuery: true,
 			tags: ['following', 'account'],
 
 			requireCredential: true,

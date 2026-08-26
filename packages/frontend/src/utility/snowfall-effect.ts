@@ -172,7 +172,7 @@ export class SnowfallEffect {
 		easing: 0.0005,
 	};
 	/**
-	 * @throws {Error} - Thrown when it fails to get WebGL context for the canvas
+	 * @throws {Error} canvas の WebGL コンテキストを取得できない場合。
 	 */
 	constructor(options: { sakura?: boolean }) {
 		if (options.sakura) {

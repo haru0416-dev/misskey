@@ -10,41 +10,41 @@ import Chart, { type KVs } from '@/core/chart/core.js';
 import {
 	name as activeUsersChartName,
 	schema as activeUsersChartSchema,
-} from '@/core/chart/charts/entities/active-users.js';
-import { name as apRequestChartName, schema as apRequestChartSchema } from '@/core/chart/charts/entities/ap-request.js';
-import { name as driveChartName, schema as driveChartSchema } from '@/core/chart/charts/entities/drive.js';
+} from '@/core/chart/entities/active-users.js';
+import { name as apRequestChartName, schema as apRequestChartSchema } from '@/core/chart/entities/ap-request.js';
+import { name as driveChartName, schema as driveChartSchema } from '@/core/chart/entities/drive.js';
 import {
 	name as federationChartName,
 	schema as federationChartSchema,
-} from '@/core/chart/charts/entities/federation.js';
-import { name as instanceChartName, schema as instanceChartSchema } from '@/core/chart/charts/entities/instance.js';
-import { name as notesChartName, schema as notesChartSchema } from '@/core/chart/charts/entities/notes.js';
+} from '@/core/chart/entities/federation.js';
+import { name as instanceChartName, schema as instanceChartSchema } from '@/core/chart/entities/instance.js';
+import { name as notesChartName, schema as notesChartSchema } from '@/core/chart/entities/notes.js';
 import {
 	name as perUserDriveChartName,
 	schema as perUserDriveChartSchema,
-} from '@/core/chart/charts/entities/per-user-drive.js';
+} from '@/core/chart/entities/per-user-drive.js';
 import {
 	name as perUserFollowingChartName,
 	schema as perUserFollowingChartSchema,
-} from '@/core/chart/charts/entities/per-user-following.js';
+} from '@/core/chart/entities/per-user-following.js';
 import {
 	name as perUserNotesChartName,
 	schema as perUserNotesChartSchema,
-} from '@/core/chart/charts/entities/per-user-notes.js';
+} from '@/core/chart/entities/per-user-notes.js';
 import {
 	name as perUserReactionsChartName,
 	schema as perUserReactionsChartSchema,
-} from '@/core/chart/charts/entities/per-user-reactions.js';
+} from '@/core/chart/entities/per-user-reactions.js';
 import {
 	name as perUserPvChartName,
 	schema as perUserPvChartSchema,
-} from '@/core/chart/charts/entities/per-user-pv.js';
-import { name as usersChartName, schema as usersChartSchema } from '@/core/chart/charts/entities/users.js';
+} from '@/core/chart/entities/per-user-pv.js';
+import { name as usersChartName, schema as usersChartSchema } from '@/core/chart/entities/users.js';
 import {
 	countFollowingsByFolloweeIdAndFollowerHostStateFromDatabase,
 	countFollowingsByFollowerIdAndFolloweeHostStateFromDatabase,
-} from '@/core/FollowingStore.js';
-import { countUsersByHostFromDatabase, countUsersByHostNotNullFromDatabase } from '@/core/UserStore.js';
+} from '@/core/user/FollowingStore.js';
+import { countUsersByHostFromDatabase, countUsersByHostNotNullFromDatabase } from '@/core/user/UserStore.js';
 import { acquireChartInsertLock } from '@/misc/distributed-lock.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type Logger from '@/logger.js';
@@ -54,10 +54,8 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 
-// Chart.commit() only ever buffers in-memory diffs; Chart.save() (called on a 20-minute
-// interval) is what actually persists them. These writer instances are constructed once
-// at boot (see createRuntimeDependencies) and shared across requests via deps, not recreated
-// per-request.
+// Chart.commit() はメモリ上の差分だけを保持し、20 分間隔で呼ぶ Chart.save() が永続化する。
+// writer は起動時に1回だけ生成し、deps 経由でリクエスト間で共有する。
 type HonoChartWriterDependencies = {
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
@@ -77,7 +75,7 @@ class HonoDriveChartWriter extends Chart<typeof driveChartSchema> {
 		return {};
 	}
 
-	public async update(file: MiDriveFile, isAdditional: boolean): Promise<void> {
+	public async update(file: Pick<MiDriveFile, 'userHost' | 'size'>, isAdditional: boolean): Promise<void> {
 		const fileSizeKb = file.size / 1000;
 		this.commit(
 			file.userHost === null
@@ -106,7 +104,7 @@ class HonoPerUserDriveChartWriter extends Chart<typeof perUserDriveChartSchema> 
 		return {};
 	}
 
-	public async update(file: MiDriveFile, isAdditional: boolean): Promise<void> {
+	public async update(file: Pick<MiDriveFile, 'userId' | 'size'>, isAdditional: boolean): Promise<void> {
 		if (file.userId == null) return;
 		const fileSizeKb = file.size / 1000;
 		this.commit(
@@ -132,7 +130,7 @@ class HonoInstanceChartWriter extends Chart<typeof instanceChartSchema> {
 		return {};
 	}
 
-	public async updateDrive(file: MiDriveFile, isAdditional: boolean): Promise<void> {
+	public async updateDrive(file: Pick<MiDriveFile, 'userHost' | 'size'>, isAdditional: boolean): Promise<void> {
 		const fileSizeKb = file.size / 1000;
 		this.commit(
 			{
@@ -464,9 +462,8 @@ class HonoFederationChartWriter extends Chart<typeof federationChartSchema> {
 	}
 
 	private notBlockedHost(column: SQL, blocked: string[]): SQL {
-		// 生のJS配列を ${blocked} で渡すと drizzle が ($1, $2, ...) の record に展開してしまい
-		// `op ANY/ALL (array) requires array on right side` の実行時エラーになる (blockedHosts
-		// 非空のインスタンスで tickMinor が毎回失敗していた)。sql.param で単一の配列パラメータにする。
+		// 生の JS 配列は drizzle により record へ展開され、ANY/ALL の右辺に必要な配列にならない。
+		// sql.param で単一の配列パラメータとして渡す。
 		return blocked.length === 0 ? sql`TRUE` : sql`${column} NOT ILIKE ALL(${sql.param(blocked)})`;
 	}
 

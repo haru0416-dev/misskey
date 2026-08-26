@@ -150,7 +150,7 @@ describe('error handler', () => {
 				};
 			}),
 		}, {
-			err(e) { /*console.log(e.toString());*/ errCount++ },
+			err(e) { errCount++ },
 		});
 		await aiscript.exec(Parser.parse(`
 		genOutsideCaller(emitError)
@@ -169,6 +169,53 @@ describe('error handler', () => {
 		Core:range(1,5).map(@(){ hoge })
 		`));
 		assert.strictEqual(errCount, 1);
+	});
+});
+
+describe('Async timers', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	test.each([
+		['interval callback', 'Async:interval(100, @() { mark(); Core:abort("failure") })', 100],
+		['immediate interval callback', 'Async:interval(100, @() { mark(); Core:abort("failure") }, true)', 0],
+		['timeout callback', 'Async:timeout(100, @() { mark(); Core:abort("failure") })', 100],
+	])('consumes rejection from %s', async (_name, source, delay) => {
+		const mark = vi.fn();
+		const interpreter = new Interpreter({
+			mark: FN_NATIVE(mark),
+		});
+
+		await interpreter.exec(Parser.parse(source));
+		await vi.advanceTimersByTimeAsync(delay);
+		interpreter.abort();
+
+		expect(mark).toHaveBeenCalledOnce();
+	});
+
+	test.each([
+		['interval', 'Async:interval(100, @() { count() })'],
+		['timeout', 'Async:timeout(100, @() { count() })'],
+	])('does not restart a paused %s after abort', async (_name, source) => {
+		const count = vi.fn();
+		const interpreter = new Interpreter({
+			count: FN_NATIVE(count),
+		});
+
+		await interpreter.exec(Parser.parse(source));
+		expect(vi.getTimerCount()).toBe(1);
+		interpreter.pause();
+		expect(vi.getTimerCount()).toBe(0);
+		interpreter.abort();
+		interpreter.unpause();
+		expect(vi.getTimerCount()).toBe(0);
+		await vi.advanceTimersByTimeAsync(500);
+		expect(count).not.toHaveBeenCalled();
 	});
 });
 
@@ -278,7 +325,7 @@ describe('IRQ', () => {
 			let count = 0;
 			const interpreter = new Interpreter({}, {
 				irqRate,
-				// It's safe only when no massive loop occurs
+				// 大規模なループを実行しないテストでのみ安全に使える。
 				irqSleep: async () => count++,
 			});
 			await interpreter.exec(Parser.parse(`
@@ -313,7 +360,7 @@ describe('IRQ', () => {
 	});
 
 	describe('irqSleep is number', () => {
-		// This function does IRQ 10 times so takes 10 * irqSleep milliseconds in sum when executed.
+		// この関数はIRQを10回実行するため、合計で10 * irqSleepミリ秒かかる。
 		async function countSleeps(irqSleep: number): Promise<void> {
 			const interpreter = new Interpreter({}, {
 				irqRate: 1,
@@ -370,7 +417,7 @@ describe('pause', () => {
 			count: values.FN_NATIVE(() => { count++; }),
 		}, {});
 
-		// await to catch errors
+		// await で非同期実行時のエラーを捕捉する。
 		await interpreter.exec(Parser.parse(
 			`Async:interval(100, @() { count() })`
 		));

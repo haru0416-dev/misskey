@@ -8,7 +8,7 @@ import { bindThis } from '@/decorators.js';
 export class MemoryKVCache<T> {
 	private readonly cache = new Map<string, { date: number; value: T }>();
 	private readonly pendingFetches = new Map<string, Promise<T | undefined>>();
-	private readonly gcIntervalHandle = setInterval(() => this.gc(), 1000 * 60 * 3); // 3m
+	private readonly gcIntervalHandle = setInterval(() => this.gc(), 1000 * 60 * 3);
 	private readonly limit: number;
 
 	constructor(
@@ -23,7 +23,6 @@ export class MemoryKVCache<T> {
 
 	@bindThis
 	/**
-	 * Mapにキャッシュをセットします
 	 * @deprecated これを直接呼び出すべきではない。InternalEventなどで変更を全てのプロセス/マシンに通知するべき
 	 */
 	public set(key: string, value: T): void {
@@ -168,8 +167,7 @@ export class MemorySingleCache<T> {
 	}
 
 	/**
-	 * キャッシュがあればそれを返し、無ければfetcherを呼び出して結果をキャッシュ&返します
-	 * optional: キャッシュが存在してもvalidatorでfalseを返すとキャッシュ無効扱いにします
+	 * validatorがfalseを返した既存値は再利用しない。
 	 */
 	@bindThis
 	public async fetch(fetcher: () => Promise<T>, validator?: (cachedValue: T) => boolean): Promise<T> {
@@ -190,8 +188,7 @@ export class MemorySingleCache<T> {
 	}
 
 	/**
-	 * キャッシュがあればそれを返し、無ければfetcherを呼び出して結果をキャッシュ&返します
-	 * optional: キャッシュが存在してもvalidatorでfalseを返すとキャッシュ無効扱いにします
+	 * validatorがfalseを返した既存値は再利用しない。
 	 */
 	@bindThis
 	public async fetchMaybe(

@@ -195,8 +195,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </div>
 <div v-else>
 	<!--
-		MkDateSeparatedList uses TransitionGroup which requires single element in the child elements
-		so MkNote create empty div instead of no elements
+		MkDateSeparatedList の TransitionGroup は子要素を 1 つ必要とするため、空要素を返す。
 	-->
 </div>
 </template>
@@ -291,7 +290,6 @@ const currentAntenna = inject<Ref<Misskey.entities.Antenna | null> | null>('curr
 
 let note = deepClone(props.note);
 
-// plugin
 const noteViewInterruptors = getPluginHandlers('note_view_interruptor');
 const hideByPlugin = ref(false);
 if (noteViewInterruptors.length > 0) {
@@ -340,7 +338,7 @@ const showTicker = (prefer.instanceTicker === 'always') || (prefer.instanceTicke
 const canRenote = computed(() => ['public', 'home'].includes(appearNote.visibility) || (appearNote.visibility === 'followers' && appearNote.userId === $i?.id));
 const renoteCollapsed = ref(
 	prefer.collapseRenotes && isRenote && (
-		($i && ($i.id === note.userId || $i.id === appearNote.userId)) || // `||` must be `||`! See https://github.com/misskey-dev/misskey/issues/13131
+		($i && ($i.id === note.userId || $i.id === appearNote.userId)) || // 自分のリノートまたは反応済みのリノートを折りたたむため、OR 条件を維持する。
 		($appearNote.myReaction != null)
 	),
 );
@@ -861,8 +859,6 @@ function emitUpdReaction(emoji: string, delta: number) {
 }
 
 .skipRender {
-	// TODO: これが有効だとTransitionGroupでnoteを追加するときに一瞬がくっとなってしまうのをどうにかしたい
-	// Transitionが完了するのを待ってからskipRenderを付与すれば解決しそうだけどパフォーマンス的な影響が不明
 	content-visibility: auto;
 	contain-intrinsic-size: 0 150px;
 }

@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
-
 import * as assert from 'assert';
-import { beforeAll, describe, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { api, host, origin, relativeFetch, signup } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -24,10 +22,10 @@ describe('.well-known', () => {
 	test('nodeinfo', async () => {
 		const res = await relativeFetch('.well-known/nodeinfo');
 		assert.ok(res.ok);
-		assert.strictEqual(res.headers.get('Access-Control-Allow-Origin'), '*');
+		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
 
 		const nodeInfo = await res.json();
-		assert.deepStrictEqual(nodeInfo, {
+		expect(nodeInfo).toStrictEqual({
 			links: [
 				{
 					rel: 'http://nodeinfo.diaspora.software/ns/schema/2.1',
@@ -50,17 +48,17 @@ describe('.well-known', () => {
 			},
 		});
 		assert.ok(preflight.ok);
-		assert.strictEqual(preflight.headers.get('Access-Control-Allow-Headers'), 'Accept');
+		expect(preflight.headers.get('Access-Control-Allow-Headers')).toBe('Accept');
 
 		const res = await relativeFetch(`.well-known/webfinger?resource=acct:alice@${host}`);
 		assert.ok(res.ok);
-		assert.strictEqual(res.headers.get('Access-Control-Allow-Origin'), '*');
-		assert.strictEqual(res.headers.get('Access-Control-Expose-Headers'), 'Vary');
-		assert.strictEqual(res.headers.get('Vary'), 'Accept');
+		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+		expect(res.headers.get('Access-Control-Expose-Headers')).toBe('Vary');
+		expect(res.headers.get('Vary')).toBe('Accept');
 
 		const webfinger = await res.json();
 
-		assert.deepStrictEqual(webfinger, {
+		expect(webfinger).toStrictEqual({
 			subject: `acct:alice@${host}`,
 			links: [
 				{
@@ -80,16 +78,16 @@ describe('.well-known', () => {
 	test('host-meta', async () => {
 		const res = await relativeFetch('.well-known/host-meta');
 		assert.ok(res.ok);
-		assert.strictEqual(res.headers.get('Access-Control-Allow-Origin'), '*');
+		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
 	});
 
 	test('host-meta.json', async () => {
 		const res = await relativeFetch('.well-known/host-meta.json');
 		assert.ok(res.ok);
-		assert.strictEqual(res.headers.get('Access-Control-Allow-Origin'), '*');
+		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
 
 		const hostMeta = await res.json();
-		assert.deepStrictEqual(hostMeta, {
+		expect(hostMeta).toStrictEqual({
 			links: [
 				{
 					rel: 'lrdd',
@@ -103,11 +101,11 @@ describe('.well-known', () => {
 	test('oauth-authorization-server', async () => {
 		const res = await relativeFetch('.well-known/oauth-authorization-server');
 		assert.ok(res.ok);
-		assert.strictEqual(res.headers.get('Access-Control-Allow-Origin'), '*');
+		expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
 
 		const serverInfo = (await res.json()) as any;
-		assert.strictEqual(serverInfo.issuer, origin);
-		assert.strictEqual(serverInfo.authorization_endpoint, `${origin}/oauth/authorize`);
-		assert.strictEqual(serverInfo.token_endpoint, `${origin}/oauth/token`);
+		expect(serverInfo.issuer).toBe(origin);
+		expect(serverInfo.authorization_endpoint).toBe(`${origin}/oauth/authorize`);
+		expect(serverInfo.token_endpoint).toBe(`${origin}/oauth/token`);
 	});
 });

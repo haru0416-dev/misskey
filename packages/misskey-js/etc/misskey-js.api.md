@@ -3403,6 +3403,7 @@ export class Stream extends EventEmitter<StreamEvents> implements IStream {
 export type StreamEvents = {
     _connected_: void;
     _disconnected_: void;
+    _error_: (error: Error) => void;
 } & BroadcastEvents;
 
 // Warning: (ae-forgotten-export) The symbol "SwitchCase" needs to be exported by the entry point index.d.ts

@@ -4,20 +4,20 @@
  */
 
 import { webhookEventTypes } from '@/models/Webhook.js';
-import { iMoveParamDef } from '@/server/rest/account-move.js';
-import { iPinOrUnpinParamDef } from '@/server/rest/account-pin.js';
+import { iMoveParamDef } from '@/server/rest/account/account-move.js';
+import { iPinOrUnpinParamDef } from '@/server/rest/account/account-pin.js';
 import {
 	changePasswordParamDef,
 	deleteAccountParamDef,
 	regenerateTokenParamDef,
 	updateEmailParamDef,
-} from '@/server/rest/account-security.js';
-import { iUpdateParamDef } from '@/server/rest/account-update.js';
-import { readAnnouncementParamDef } from '@/server/rest/announcements.js';
-import { iAppsParamDef, iAuthorizedAppsParamDef, iRevokeTokenParamDef } from '@/server/rest/app.js';
-import { exportFollowingParamDef } from '@/server/rest/export-jobs.js';
-import { iFavoritesParamDef } from '@/server/rest/favorites.js';
-import { iGalleryLikesParamDef, iGalleryPostsParamDef } from '@/server/rest/gallery.js';
+} from '@/server/rest/account/account-security.js';
+import { iUpdateParamDef } from '@/server/rest/account/account-update.js';
+import { readAnnouncementParamDef } from '@/server/rest/announcement/announcements.js';
+import { iAppsParamDef, iAuthorizedAppsParamDef, iRevokeTokenParamDef } from '@/server/rest/auth/app.js';
+import { exportFollowingParamDef } from '@/server/rest/job/export-jobs.js';
+import { iFavoritesParamDef } from '@/server/rest/favorite/favorites.js';
+import { iGalleryLikesParamDef, iGalleryPostsParamDef } from '@/server/rest/gallery/gallery.js';
 import {
 	i2faDoneParamDef,
 	i2faKeyDoneParamDef,
@@ -27,24 +27,24 @@ import {
 	i2faRemoveKeyParamDef,
 	i2faUnregisterParamDef,
 	i2faUpdateKeyParamDef,
-} from '@/server/rest/i-2fa.js';
-import { iSigninHistoryParamDef } from '@/server/rest/i.js';
+} from '@/server/rest/account/i-2fa.js';
+import { iSigninHistoryParamDef } from '@/server/rest/account/i.js';
 import {
 	importAntennasParamDef,
 	importBlockingParamDef,
 	importFollowingParamDef,
 	importMutingParamDef,
 	importUserListsParamDef,
-} from '@/server/rest/import-jobs.js';
-import { claimAchievementParamDef } from '@/server/rest/notification.js';
-import { notificationsParamDef } from '@/server/rest/notifications-list.js';
-import { iPageLikesParamDef, iPagesParamDef } from '@/server/rest/pages.js';
+} from '@/server/rest/job/import-jobs.js';
+import { claimAchievementParamDef } from '@/server/rest/notification/notification.js';
+import { notificationsParamDef } from '@/server/rest/notification/notifications-list.js';
+import { iPageLikesParamDef, iPagesParamDef } from '@/server/rest/page/pages.js';
 import {
 	registryGetParamDef,
 	registryScopeParamDef,
 	registryScopesWithDomainParamDef,
 	registrySetParamDef,
-} from '@/server/rest/registry.js';
+} from '@/server/rest/registry/registry.js';
 import {
 	webhooksCreateParamDef,
 	webhooksDeleteParamDef,
@@ -52,7 +52,7 @@ import {
 	webhooksShowParamDef,
 	webhooksTestParamDef,
 	webhooksUpdateParamDef,
-} from '@/server/rest/webhooks.js';
+} from '@/server/rest/webhook/webhooks.js';
 import { z } from 'zod';
 import { SECOND, MINUTE, HOUR, DAY } from '@/const.js';
 
@@ -277,6 +277,7 @@ export const endpointMetas = {
 	},
 	'i/apps': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 
 			secure: true,
@@ -331,6 +332,7 @@ export const endpointMetas = {
 	},
 	'i/authorized-apps': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 
 			secure: true,
@@ -514,6 +516,7 @@ export const endpointMetas = {
 	},
 	'i/favorites': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notes', 'favorites'],
 
 			requireCredential: true,
@@ -536,6 +539,7 @@ export const endpointMetas = {
 	},
 	'i/gallery/likes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'gallery'],
 
 			requireCredential: true,
@@ -571,6 +575,7 @@ export const endpointMetas = {
 	},
 	'i/gallery/posts': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'gallery'],
 
 			requireCredential: true,
@@ -593,6 +598,7 @@ export const endpointMetas = {
 	},
 	'i/import-antennas': {
 		meta: {
+			requireRolePolicy: 'canImportAntennas',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportAntennas',
@@ -636,6 +642,7 @@ export const endpointMetas = {
 	},
 	'i/import-blocking': {
 		meta: {
+			requireRolePolicy: 'canImportBlocking',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportBlocking',
@@ -670,6 +677,7 @@ export const endpointMetas = {
 	},
 	'i/import-following': {
 		meta: {
+			requireRolePolicy: 'canImportFollowing',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportFollowing',
@@ -703,6 +711,7 @@ export const endpointMetas = {
 	},
 	'i/import-muting': {
 		meta: {
+			requireRolePolicy: 'canImportMuting',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportMuting',
@@ -737,6 +746,7 @@ export const endpointMetas = {
 	},
 	'i/import-user-lists': {
 		meta: {
+			requireRolePolicy: 'canImportUserLists',
 			secure: true,
 			requireCredential: true,
 			requiredRolePolicy: 'canImportUserLists',
@@ -816,6 +826,7 @@ export const endpointMetas = {
 	},
 	'i/notifications': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notifications'],
 
 			requireCredential: true,
@@ -843,6 +854,7 @@ export const endpointMetas = {
 	},
 	'i/notifications-grouped': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'notifications'],
 
 			requireCredential: true,
@@ -870,6 +882,7 @@ export const endpointMetas = {
 	},
 	'i/page-likes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'pages'],
 
 			requireCredential: true,
@@ -903,6 +916,7 @@ export const endpointMetas = {
 	},
 	'i/pages': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'pages'],
 
 			requireCredential: true,
@@ -991,6 +1005,7 @@ export const endpointMetas = {
 	},
 	'i/registry/get': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1010,6 +1025,7 @@ export const endpointMetas = {
 	},
 	'i/registry/get-all': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1021,6 +1037,7 @@ export const endpointMetas = {
 	},
 	'i/registry/get-detail': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1049,6 +1066,7 @@ export const endpointMetas = {
 	},
 	'i/registry/keys': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1063,6 +1081,7 @@ export const endpointMetas = {
 	},
 	'i/registry/keys-with-type': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			kind: 'read:account',
 
@@ -1084,6 +1103,7 @@ export const endpointMetas = {
 	},
 	'i/registry/scopes-with-domain': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			secure: true,
 
@@ -1128,6 +1148,7 @@ export const endpointMetas = {
 	},
 	'i/signin-history': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 			secure: true,
 
@@ -1384,6 +1405,7 @@ export const endpointMetas = {
 	},
 	'i/webhooks/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['webhooks', 'account'],
 
 			requireCredential: true,
@@ -1402,6 +1424,7 @@ export const endpointMetas = {
 	},
 	'i/webhooks/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['webhooks'],
 
 			requireCredential: true,

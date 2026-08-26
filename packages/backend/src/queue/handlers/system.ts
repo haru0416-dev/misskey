@@ -4,22 +4,22 @@
  */
 
 import type * as Redis from 'ioredis';
-import { deleteUserIpsOlderThanFromDatabase } from '@/core/UserIpStore.js';
-import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/AntennaStore.js';
-import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/RoleAssignmentStore.js';
+import { deleteUserIpsOlderThanFromDatabase } from '@/core/user/UserIpStore.js';
+import { deactivateAntennasNotUsedSinceFromDatabase } from '@/core/antenna/AntennaStore.js';
+import { deleteExpiredRoleAssignmentsFromDatabase } from '@/core/role/RoleAssignmentStore.js';
 import {
 	createRetentionAggregationInDatabase,
 	listActiveLocalUserIdsAfter,
 	listLocalUserIdsCreatedAfter,
 	listRetentionAggregationsCreatedAfter,
 	updateRetentionAggregationDataInDatabase,
-} from '@/core/RetentionAggregationStore.js';
-import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/MutingStore.js';
+} from '@/core/retention/RetentionAggregationStore.js';
+import { deleteMutingsByIdsFromDatabase, listExpiredMutingsFromDatabase } from '@/core/user/MutingStore.js';
 import {
 	deleteChannelMutingsByIdsFromDatabase,
 	listExpiredChannelMutingsFromDatabase,
-} from '@/core/ChannelMutingStore.js';
-import { rebuildNoteReactionsInDatabase } from '@/core/NoteStore.js';
+} from '@/core/channel/ChannelMutingStore.js';
+import { rebuildNoteReactionsInDatabase } from '@/core/note/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { deepClone } from '@/misc/clone.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
@@ -42,7 +42,7 @@ export type HonoQueueSystemDependencies = {
 	publishInternalEvent?: HonoApiInternalEventPublisher;
 };
 
-/** TickChartsProcessorService.process 相当。DBへの同時接続を避けるため直列に実行する。 */
+/** DBへの同時接続を避けるため直列に実行する。 */
 export async function handleHonoQueueTickCharts(deps: HonoQueueSystemDependencies): Promise<void> {
 	await deps.chartWriters.federationChart.tick(false);
 	await deps.chartWriters.notesChart.tick(false);
@@ -133,7 +133,6 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 	}
 }
 
-/** CheckExpiredMutingsProcessorService.process 相当。 */
 export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDependencies): Promise<void> {
 	const expiredMutings = await listExpiredMutingsFromDatabase(deps.db, new Date());
 	if (expiredMutings.length > 0) {
@@ -160,7 +159,6 @@ export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDe
 	}
 }
 
-/** BakeBufferedReactionsProcessorService.process 相当 (ReactionsBufferingService.bake()込み)。 */
 export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystemDependencies): Promise<void> {
 	if (!deps.meta.enableReactionsBuffering) return;
 

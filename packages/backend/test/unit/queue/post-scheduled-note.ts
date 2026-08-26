@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -13,8 +12,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserInDatabase } from '@/core/UserStore.js';
-import { createNoteDraftInDatabase, fetchNoteDraftByIdFromDatabase } from '@/core/NoteDraftStore.js';
+import { createUserInDatabase } from '@/core/user/UserStore.js';
+import { createNoteDraftInDatabase, fetchNoteDraftByIdFromDatabase } from '@/core/note/NoteDraftStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { handleHonoQueuePostScheduledNote } from '@/queue/handlers/post-scheduled-note.js';
 import type { PostScheduledNoteJobData } from '@/queue/types.js';

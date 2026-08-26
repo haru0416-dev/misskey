@@ -11,12 +11,12 @@ import type * as Redis from 'ioredis';
 import {
 	listFollowersByFolloweeIdWithPaginationFromDatabase,
 	listFollowingsByFollowerIdWithPaginationFromDatabase,
-} from '@/core/FollowingStore.js';
+} from '@/core/user/FollowingStore.js';
 import {
 	fetchNoteByIdFromDatabase,
 	listActivityPubOutboxNotesByUserIdFromDatabase,
 	listNotesByIdsFromDatabase,
-} from '@/core/NoteStore.js';
+} from '@/core/note/NoteStore.js';
 import {
 	fetchLocalUserByIdFromDatabase,
 	fetchUserByIdFromDatabase,
@@ -24,28 +24,28 @@ import {
 	fetchUserByUsernameAndHostFromDatabase,
 	listUsersByIdsFromDatabase,
 	fetchRemoteUserByIdFromDatabase,
-} from '@/core/UserStore.js';
-import { renderEmoji, renderLikeForHonoApi } from '../rest/notes-ap.js';
-import { renderFollow } from '../rest/following.js';
-import { fetchEmojiByNameAndHostFromDatabase } from '@/core/EmojiStore.js';
-import { fetchFollowRequestByIdFromDatabase } from '@/core/FollowRequestStore.js';
-import { fetchNoteReactionByIdFromDatabase } from '@/core/NoteReactionStore.js';
-import { fetchUserKeypairFromDatabaseCached } from '@/core/UserKeypairStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
-import { listUserNotePiningsByUserIdFromDatabase } from '@/core/UserNotePiningStore.js';
+} from '@/core/user/UserStore.js';
+import { renderEmoji, renderLikeForHonoApi } from '@/server/rest/activitypub/notes-ap.js';
+import { renderFollow } from '@/server/rest/user/following.js';
+import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
+import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
+import { fetchNoteReactionByIdFromDatabase } from '@/core/note/NoteReactionStore.js';
+import { fetchUserKeypairFromDatabaseCached } from '@/core/user/UserKeypairStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
+import { listUserNotePiningsByUserIdFromDatabase } from '@/core/user/UserNotePiningStore.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import * as Acct from '@/misc/acct.js';
 import { query as urlQuery } from '@/misc/prelude/url.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { getFanoutTimelineNotesForHonoApi } from '../rest/fanout-timeline.js';
+import { getFanoutTimelineNotesForHonoApi } from '@/server/rest/note/fanout-timeline.js';
 import {
 	renderKeyForHonoApi,
 	renderPersonForHonoApi,
 	type HonoApiAccountUpdateDependencies,
-} from '../rest/account-update.js';
-import { getUserUri, isRemoteUser } from '../rest/following.js';
-import { renderNoteForHonoApi, renderNoteOrRenoteActivityForHonoApi } from '../rest/notes-ap.js';
+} from '@/server/rest/account/account-update.js';
+import { getUserUri, isRemoteUser } from '@/server/rest/user/following.js';
+import { renderNoteForHonoApi, renderNoteOrRenoteActivityForHonoApi } from '@/server/rest/activitypub/notes-ap.js';
 import { isRenote, isQuote } from '@/misc/is-renote.js';
 
 export type ApObjectRoutesDependencies = HonoApiAccountUpdateDependencies & {
@@ -58,10 +58,9 @@ const LD_JSON = 'application/ld+json; profile="https://www.w3.org/ns/activitystr
 const HTML_TYPE = 'text/html';
 
 /**
- * upstream (ActivityPubServerService) の `accepts(request).type(['html', ACTIVITY_JSON, LD_JSON])`
- * によるルート分岐を再現する。以前の正規表現判定は q 値 (q=0 の明示拒否含む) と優先順位を無視して
- * おり、`Accept: text/html, application/activity+json` のような複合ヘッダで upstream (HTML) と
- * 逆の結果 (AP JSON) を返していた。
+ * `accepts(request).type(['html', ACTIVITY_JSON, LD_JSON])` によるルート分岐を実装する。
+ * q 値 (q=0 の明示拒否を含む) と優先順位を評価し、`Accept: text/html, application/activity+json`
+ * のような複合ヘッダでも正しい形式を返す。
  */
 function wantsAp(c: Context): boolean {
 	const preferred = preferredMediaType(c.req.header('accept'), [HTML_TYPE, ACTIVITY_JSON, LD_JSON]);
@@ -99,7 +98,6 @@ function isSelfHost(configHost: string, host: string | null): boolean {
 	return domainToASCII(configHost.toLowerCase()) === domainToASCII(host.toLowerCase());
 }
 
-/** ApRendererService.addContext 相当 (型を緩めたローカル版)。 */
 function withApContext(obj: Record<string, unknown>): Record<string, unknown> {
 	return { '@context': CONTEXT, ...obj };
 }
@@ -132,7 +130,6 @@ async function renderUserInfo(deps: ApObjectRoutesDependencies, c: Context, user
 }
 
 /**
- * ActivityPubServerService 相当の ActivityPub オブジェクト GET サーバー。
  * /users/:user, /@:acct, /notes/:note は Accept ヘッダが AP を要求するときのみ応答し、
  * それ以外は next() で後段のクライアントページへフォールスルーする。
  */
@@ -413,7 +410,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		return apJson(c, withApContext(await renderLikeForHonoApi(deps, reaction, note)));
 	});
 
-	// フォローが成立する前にも参照されうるので、following の存在は確認しない (旧実装と同じ)
+	// フォロー成立前にも参照されるため、following の存在は確認しない。
 	app.get('/follows/:follower/:followee', async (c) => {
 		if (deps.meta.federation === 'none') return apError(403);
 

@@ -5,31 +5,31 @@
 
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
-import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/AnnouncementStore.js';
-import { fetchChannelByIdFromDatabase } from '@/core/ChannelStore.js';
-import { fetchClipByIdFromDatabase } from '@/core/ClipStore.js';
-import { fetchFlashByIdFromDatabase } from '@/core/FlashStore.js';
-import { fetchGalleryPostByIdFromDatabase } from '@/core/GalleryPostStore.js';
-import { fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
-import { fetchPageByNameAndUserIdFromDatabase } from '@/core/PageStore.js';
+import { fetchGlobalAnnouncementByIdFromDatabase } from '@/core/announcement/AnnouncementStore.js';
+import { fetchChannelByIdFromDatabase } from '@/core/channel/ChannelStore.js';
+import { fetchClipByIdFromDatabase } from '@/core/clip/ClipStore.js';
+import { fetchFlashByIdFromDatabase } from '@/core/flash/FlashStore.js';
+import { fetchGalleryPostByIdFromDatabase } from '@/core/gallery/GalleryPostStore.js';
+import { fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchPageByNameAndUserIdFromDatabase } from '@/core/page/PageStore.js';
 import {
 	fetchLocalUserByIdFromDatabase,
 	fetchUserByIdFromDatabase,
 	fetchUserByUsernameAndHostFromDatabase,
-} from '@/core/UserStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+} from '@/core/user/UserStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import * as Acct from '@/misc/acct.js';
 import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import { packAnnouncementForHonoApi } from '../rest/admin-announcements.js';
-import { packChannelForSsr, type HonoApiChannelsDependencies } from '../rest/channels.js';
-import { packClipForHonoApi, type HonoApiClipDependencies } from '../rest/clips.js';
-import { packFlashForHonoApi, type HonoApiFlashDependencies } from '../rest/flash.js';
-import { packGalleryPostForHonoApi, type HonoApiGalleryDependencies } from '../rest/gallery.js';
-import { packNoteForHonoApi, type HonoApiNoteDependencies } from '../rest/note.js';
-import { packPageForHonoApi, type HonoApiPageDependencies } from '../rest/pages.js';
-import { packUserDetailedNotMeForHonoApi } from '../rest/user.js';
+import { packAnnouncementForHonoApi } from '@/server/rest/admin/admin-announcements.js';
+import { packChannelForSsr, type HonoApiChannelsDependencies } from '@/server/rest/channel/channels.js';
+import { packClipForHonoApi, type HonoApiClipDependencies } from '@/server/rest/clip/clips.js';
+import { packFlashForHonoApi, type HonoApiFlashDependencies } from '@/server/rest/flash/flash.js';
+import { packGalleryPostForHonoApi, type HonoApiGalleryDependencies } from '@/server/rest/gallery/gallery.js';
+import { packNoteForHonoApi, type HonoApiNoteDependencies } from '@/server/rest/note/note.js';
+import { packPageForHonoApi, type HonoApiPageDependencies } from '@/server/rest/page/pages.js';
+import { packUserDetailedNotMeForHonoApi } from '@/server/rest/user/user.js';
 import type { CommonData } from './views/_.js';
 import { AnnouncementPage } from './views/announcement.js';
 import { ChannelPage } from './views/channel.js';
@@ -90,7 +90,6 @@ function isUgcVisibleToVisitor(deps: Pick<ClientPagesDependencies, 'meta'>, user
 }
 
 /**
- * ClientServerService のエンティティ別SSRページ (ユーザー/ノート/Pages/Play/クリップ/ギャラリー) 相当。
  * 該当エンティティが見つからない・可視でない場合は next() で後段の client-base (汎用ページ) に委ねる。
  */
 export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
@@ -142,8 +141,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 	app.get('/play/:id', async (c, next) => {
 		const flash = await fetchFlashByIdFromDatabase(deps.db, c.req.param('id'));
 
-		// 原典 (ClientServerService) は visibility を見ずに描画していたが、非公開 Play の
-		// タイトル等が匿名訪問者へ漏れるため public のみ SSR する (非公開は汎用ページへ)。
+		// 非公開 Play のタイトル等が匿名訪問者へ漏れるため、public のみ SSR する (非公開は汎用ページへ)。
 		if (flash?.visibility === 'public') {
 			const packedFlash = (await packFlashForHonoApi(deps, flash, null)) as unknown as Packed<'Flash'>;
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, flash.userId);
@@ -359,7 +357,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			}
 
 			const page = await fetchPageByNameAndUserIdFromDatabase(deps.db, segments[2]!, user.id);
-			// 原典は非公開 Page も描画していたが、タイトル等が匿名訪問者へ漏れるため public のみ SSR する。
+			// タイトル等が匿名訪問者へ漏れるため、public のみ SSR する。
 			if (page == null || page.visibility !== 'public') {
 				await next();
 				return;

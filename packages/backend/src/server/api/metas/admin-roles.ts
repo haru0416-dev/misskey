@@ -13,7 +13,7 @@ import {
 	adminRolesUpdateDefaultPoliciesParamDef,
 	adminRolesUpdateParamDef,
 	adminRolesUsersParamDef,
-} from '@/server/rest/admin-roles.js';
+} from '@/server/rest/admin/admin-roles.js';
 
 export const endpointMetas = {
 	'admin/roles/assign': {
@@ -83,6 +83,7 @@ export const endpointMetas = {
 	},
 	'admin/roles/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin', 'role'],
 
 			requireCredential: true,
@@ -105,6 +106,7 @@ export const endpointMetas = {
 	},
 	'admin/roles/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin', 'role'],
 
 			requireCredential: true,
@@ -194,6 +196,7 @@ export const endpointMetas = {
 	},
 	'admin/roles/users': {
 		meta: {
+			allowQuery: true,
 			tags: ['admin', 'role', 'users'],
 
 			requireCredential: true,

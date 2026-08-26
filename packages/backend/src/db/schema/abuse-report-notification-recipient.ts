@@ -33,7 +33,7 @@ export const abuseReportNotificationRecipient = pgTable(
 		index('IDX_abuse_report_notification_recipient_method').on(table.method),
 		index('IDX_abuse_report_notification_recipient_userId').on(table.userId),
 		index('IDX_abuse_report_notification_recipient_systemWebhookId').on(table.systemWebhookId),
-		// userIdは user.id と user_profile.userId の両方にFKを持つ(旧migrationのFK_..._userId1/2を再現)
+		// userId は user.id と user_profile.userId の両方を参照する。
 		foreignKey({
 			columns: [table.userId],
 			foreignColumns: [userProfile.userId],

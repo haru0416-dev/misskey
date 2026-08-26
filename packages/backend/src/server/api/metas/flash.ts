@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { flashParamDef } from '@/server/rest/favorites.js';
+import { flashParamDef } from '@/server/rest/favorite/favorites.js';
 import {
 	flashCreateParamDef,
 	flashDeleteParamDef,
@@ -13,7 +13,7 @@ import {
 	flashSearchParamDef,
 	flashShowParamDef,
 	flashUpdateParamDef,
-} from '@/server/rest/flash.js';
+} from '@/server/rest/flash/flash.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -69,6 +69,7 @@ export const endpointMetas = {
 	},
 	'flash/featured': {
 		meta: {
+			allowQuery: true,
 			tags: ['flash'],
 
 			requireCredential: false,
@@ -121,6 +122,7 @@ export const endpointMetas = {
 	},
 	'flash/my': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'flash'],
 
 			requireCredential: true,
@@ -143,6 +145,7 @@ export const endpointMetas = {
 	},
 	'flash/my-likes': {
 		meta: {
+			allowQuery: true,
 			tags: ['account', 'flash'],
 
 			requireCredential: true,
@@ -176,6 +179,7 @@ export const endpointMetas = {
 	},
 	'flash/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['flashs'],
 
 			requireCredential: false,
@@ -256,6 +260,7 @@ export const endpointMetas = {
 	},
 	'flash/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['flash'],
 
 			requireCredential: false,

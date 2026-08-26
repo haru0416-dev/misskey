@@ -169,10 +169,10 @@ async function del(announcement: (typeof announcements)['value'][number]) {
 
 async function archive(announcement: (typeof announcements)['value'][number]) {
 	if (announcement.id == null) return;
-	const { _id, ...data } = announcement; // _idを消す
+	const { _id, ...data } = announcement;
 	await os.apiWithDialog('admin/announcements/update', {
 		...data,
-		id: announcement.id, // TSを黙らすため
+		id: announcement.id,
 		isActive: false,
 	});
 	refresh();
@@ -180,24 +180,24 @@ async function archive(announcement: (typeof announcements)['value'][number]) {
 
 async function unarchive(announcement: (typeof announcements)['value'][number]) {
 	if (announcement.id == null) return;
-	const { _id, ...data } = announcement; // _idを消す
+	const { _id, ...data } = announcement;
 	await os.apiWithDialog('admin/announcements/update', {
 		...data,
-		id: announcement.id, // TSを黙らすため
+		id: announcement.id,
 		isActive: true,
 	});
 	refresh();
 }
 
 async function save(announcement: (typeof announcements)['value'][number]) {
-	const { _id, ...data } = announcement; // _idを消す
+	const { _id, ...data } = announcement;
 	if (announcement.id == null) {
 		await os.apiWithDialog('admin/announcements/create', data);
 		refresh();
 	} else {
 		os.apiWithDialog('admin/announcements/update', {
 			...data,
-			id: announcement.id, // TSを黙らすため
+			id: announcement.id,
 		});
 	}
 }

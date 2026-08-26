@@ -6,12 +6,10 @@
 import * as crypto from 'node:crypto';
 import { URL } from 'node:url';
 import { promisify } from 'node:util';
-import { Signer } from 'slacc';
-import type { SignatureAlgorithmIdentifier } from 'slacc';
+import { getCachedSigner } from './signer-cache.js';
 
 // slacc の SignatureAlgorithmIdentifier は ambient const enum のため isolatedModules 下では値として import できない。
 // 値自体は enum メンバー名と同じ文字列なので、型だけ import してリテラルをそのまま渡す。
-const RSA_2048_8192 = 'Rsa2048_8192' as SignatureAlgorithmIdentifier;
 
 type Request = {
 	url: string;
@@ -32,26 +30,6 @@ type PrivateKey = {
 };
 
 // PEM の ASN.1 パースは配送先ホスト毎に発生する deliver ジョブの数だけ繰り返されるとCPUコストが無視できないため、
-// 鍵素材 (privateKeyPem) をキーにパース済み Signer をキャッシュする。Signer 自体は鍵の保持のみで署名対象文字列に
-// 依存しないため使い回して問題ない。ローカルユーザー数程度のカーディナリティを想定し上限付きMapで運用する。
-const MAX_SIGNER_CACHE_SIZE = 1000;
-const signerCache = new Map<string, Signer>();
-
-function getCachedSigner(privateKeyPem: string): Signer {
-	const cached = signerCache.get(privateKeyPem);
-	if (cached) return cached;
-
-	const signer = Signer.fromPkcs8Pem(RSA_2048_8192, privateKeyPem);
-
-	if (signerCache.size >= MAX_SIGNER_CACHE_SIZE) {
-		const oldestKey = signerCache.keys().next().value;
-		if (oldestKey !== undefined) signerCache.delete(oldestKey);
-	}
-	signerCache.set(privateKeyPem, signer);
-
-	return signer;
-}
-
 export class ApRequestCreator {
 	static async createSignedPost(args: {
 		key: PrivateKey;
@@ -131,7 +109,7 @@ export class ApRequestCreator {
 		request.headers = this.#objectAssignWithLcKey(request.headers, {
 			Signature: signatureHeader,
 		});
-		// node-fetch will generate this for us. if we keep 'Host', it won't change with redirects!
+		// node-fetch が付与するため、'Host' を残すとリダイレクト後も変わらない。
 		delete request.headers['host'];
 
 		return {

@@ -6,8 +6,8 @@ import { replacePlugin } from 'rolldown/plugins';
 import { visualizer } from 'rollup-plugin-visualizer';
 import type { PluginOption, UserConfig } from 'vite';
 import { defineConfig } from 'vite';
-import * as yaml from 'js-yaml';
 import { promises as fsp } from 'fs';
+import { parse } from 'yaml';
 
 import locales from 'i18n';
 import meta from '../../package.json';
@@ -22,7 +22,7 @@ import { Features } from 'lightningcss';
 
 const url =
 	process.env.NODE_ENV === 'development'
-		? (yaml.load(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
+		? (parse(await fsp.readFile('../../.config/default.yml', 'utf-8')) as any).instance.url
 		: null;
 const host = url ? new URL(url).hostname : undefined;
 
@@ -128,11 +128,11 @@ export function getConfig(): UserConfig {
 	return {
 		base: '/vite/',
 
-		// The console is shared with backend, so clearing the console will also clear the backend log.
+		// Vite のログ出力はバックエンドと共有されるため、コンソールをクリアしない。
 		clearScreen: false,
 
 		server: {
-			// The backend allows access from any addresses, so vite also allows access from any addresses.
+			// バックエンドが任意のアドレスからの接続を受け付けるため、Vite も全アドレスで待ち受ける。
 			host: '0.0.0.0',
 			allowedHosts: host ? [host] : undefined,
 			port: 5173,
@@ -144,7 +144,6 @@ export function getConfig(): UserConfig {
 				clientPort: 5173,
 			},
 			headers: {
-				// なんか効かない
 				'X-Frame-Options': 'DENY',
 			},
 		},
@@ -238,7 +237,7 @@ export function getConfig(): UserConfig {
 								test: /node_modules[\\/](echarts|zrender)[\\/]/,
 							},
 							{
-								// split i18n related module to distinct module
+								// ロケール変更時もアプリ本体のキャッシュを再利用できるよう、i18n 関連モジュールを分離する。
 								name: 'i18n',
 								includeDependenciesRecursively: false,
 								test: /i18n\.ts|locale\.ts/,

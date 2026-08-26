@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // jobQueue() が呼ぶ createRuntimeDependencies() は UrlPreviewService を構築する。同サービスは
 // rolldown の `define` で注入される _SUMMALY_VERSION_ を参照するが、このファイルは jobQueue() を
 // (test-server 経由でなく) vitest プロセス内で直接呼ぶため、ビルド時injectionが効かない。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import * as assert from 'assert';
-import { afterAll, beforeAll, beforeEach, describe, test } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
 	fetchBlockingByBlockerIdAndBlockeeIdFromDatabase,
 	openTestDatabase,
@@ -19,14 +18,15 @@ import {
 } from '../fixtures.js';
 import {
 	api,
+	POLL,
 	post,
 	relativeFetch,
 	resolveTargetUrl,
 	role,
 	signup,
 	startJobQueue,
-	uploadFile,
 	type TestJobQueueRuntime,
+	uploadFile,
 } from '../utils.js';
 import type * as misskey from 'misskey-js';
 
@@ -36,30 +36,26 @@ describe('export-clips', () => {
 	let alice: misskey.entities.SignupResponse;
 	let bob: misskey.entities.SignupResponse;
 
-	// XXX: Any better way to get the result?
 	async function pollFirstDriveFile(): Promise<any> {
-		const deadline = Date.now() + 30_000;
-		while (Date.now() < deadline) {
-			const filesResponse = await api('drive/files', {}, alice);
-			assert.strictEqual(filesResponse.status, 200);
-			const files = filesResponse.body;
-			if (!files.length) {
-				await new Promise((r) => setTimeout(r, 100));
-				continue;
-			}
-			if (files.length > 1) {
-				throw new Error('Too many files?');
-			}
-			const file = files[0];
-			assert.ok(file);
-			const fileResponse = await api('drive/files/show', { fileId: file.id }, alice);
-			assert.strictEqual(fileResponse.status, 200);
-			const shownFile = fileResponse.body;
-			const res = await relativeFetch(new URL(shownFile.url).pathname);
-			assert.strictEqual(res.status, 200);
-			return await res.json();
-		}
-		assert.fail('Timed out waiting for exported drive file');
+		// エクスポートはジョブ側でドライブへ書き出すため、ファイルが現れるまで待つ。
+		const file = await vi.waitFor(
+			async () => {
+				const filesResponse = await api('drive/files', {}, alice);
+				expect(filesResponse.status).toBe(200);
+				const files = filesResponse.body;
+				expect(files).toHaveLength(1);
+				const found = files[0];
+				assert.ok(found);
+				return found;
+			},
+			{ ...POLL, timeout: 30_000 },
+		);
+
+		const fileResponse = await api('drive/files/show', { fileId: file.id }, alice);
+		expect(fileResponse.status).toBe(200);
+		const res = await relativeFetch(new URL(fileResponse.body.url).pathname);
+		expect(res.status).toBe(200);
+		return await res.json();
 	}
 
 	beforeAll(
@@ -78,7 +74,6 @@ describe('export-clips', () => {
 	});
 
 	beforeEach(async () => {
-		// Clean all clips and files of alice
 		const clips = (await api('clips/list', {}, alice)).body;
 		await Promise.all(
 			clips.map(async (clip) => {
@@ -108,15 +103,15 @@ describe('export-clips', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(res1.status, 200);
+		expect(res1.status).toBe(200);
 
 		const res2 = await api('i/export-clips', {}, alice);
-		assert.strictEqual(res2.status, 204);
+		expect(res2.status).toBe(204);
 
 		const exported = await pollFirstDriveFile();
-		assert.strictEqual(exported[0].name, 'foo');
-		assert.strictEqual(exported[0].description, 'bar');
-		assert.strictEqual(exported[0].clipNotes.length, 0);
+		expect(exported[0].name).toBe('foo');
+		expect(exported[0].description).toBe('bar');
+		expect(exported[0].clipNotes.length).toBe(0);
 	});
 
 	test('export with notes', async () => {
@@ -128,7 +123,7 @@ describe('export-clips', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(res.status, 200);
+		expect(res.status).toBe(200);
 		const clip = res.body;
 
 		const note1 = await post(alice, {
@@ -151,19 +146,19 @@ describe('export-clips', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res2.status, 204);
+			expect(res2.status).toBe(204);
 		}
 
 		const res3 = await api('i/export-clips', {}, alice);
-		assert.strictEqual(res3.status, 204);
+		expect(res3.status).toBe(204);
 
 		const exported = await pollFirstDriveFile();
-		assert.strictEqual(exported[0].name, 'foo');
-		assert.strictEqual(exported[0].description, 'bar');
-		assert.strictEqual(exported[0].clipNotes.length, 2);
-		assert.strictEqual(exported[0].clipNotes[0].note.text, 'baz1');
-		assert.strictEqual(exported[0].clipNotes[1].note.text, 'baz2');
-		assert.deepStrictEqual(exported[0].clipNotes[1].note.poll.choices[0], 'sakura');
+		expect(exported[0].name).toBe('foo');
+		expect(exported[0].description).toBe('bar');
+		expect(exported[0].clipNotes.length).toBe(2);
+		expect(exported[0].clipNotes[0].note.text).toBe('baz1');
+		expect(exported[0].clipNotes[1].note.text).toBe('baz2');
+		expect(exported[0].clipNotes[1].note.poll.choices[0]).toStrictEqual('sakura');
 	});
 
 	test('multiple clips', async () => {
@@ -175,7 +170,7 @@ describe('export-clips', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(res1.status, 200);
+		expect(res1.status).toBe(200);
 		const clip1 = res1.body;
 
 		const res2 = await api(
@@ -186,7 +181,7 @@ describe('export-clips', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(res2.status, 200);
+		expect(res2.status).toBe(200);
 		const clip2 = res2.body;
 
 		const note1 = await post(alice, {
@@ -206,7 +201,7 @@ describe('export-clips', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 		}
 
 		{
@@ -218,21 +213,21 @@ describe('export-clips', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 		}
 
 		{
 			const res = await api('i/export-clips', {}, alice);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 		}
 
 		const exported = await pollFirstDriveFile();
-		assert.strictEqual(exported[0].name, 'kawaii');
-		assert.strictEqual(exported[0].clipNotes.length, 1);
-		assert.strictEqual(exported[0].clipNotes[0].note.text, 'baz1');
-		assert.strictEqual(exported[1].name, 'yuri');
-		assert.strictEqual(exported[1].clipNotes.length, 1);
-		assert.strictEqual(exported[1].clipNotes[0].note.text, 'baz2');
+		expect(exported[0].name).toBe('kawaii');
+		expect(exported[0].clipNotes.length).toBe(1);
+		expect(exported[0].clipNotes[0].note.text).toBe('baz1');
+		expect(exported[1].name).toBe('yuri');
+		expect(exported[1].clipNotes.length).toBe(1);
+		expect(exported[1].clipNotes[0].note.text).toBe('baz2');
 	});
 
 	test("Clipping other user's note (followers only notes are excluded when not following)", async () => {
@@ -244,7 +239,7 @@ describe('export-clips', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(res.status, 200);
+		expect(res.status).toBe(200);
 		const clip = res.body;
 
 		const note = await post(bob, {
@@ -260,17 +255,16 @@ describe('export-clips', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(res2.status, 204);
+		expect(res2.status).toBe(204);
 
 		const res3 = await api('i/export-clips', {}, alice);
-		assert.strictEqual(res3.status, 204);
+		expect(res3.status).toBe(204);
 
 		const exported = await pollFirstDriveFile();
-		assert.strictEqual(exported[0].clipNotes.length, 0);
+		expect(exported[0].clipNotes.length).toBe(0);
 	});
 
 	test("Clipping other user's note (followers only notes are included when following)", async () => {
-		// Alice follows Bob
 		await api('following/create', { userId: bob.id }, alice);
 
 		const res = await api(
@@ -281,7 +275,7 @@ describe('export-clips', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(res.status, 200);
+		expect(res.status).toBe(200);
 		const clip = res.body;
 
 		const note = await post(bob, {
@@ -297,16 +291,16 @@ describe('export-clips', () => {
 			},
 			alice,
 		);
-		assert.strictEqual(res2.status, 204);
+		expect(res2.status).toBe(204);
 
 		const res3 = await api('i/export-clips', {}, alice);
-		assert.strictEqual(res3.status, 204);
+		expect(res3.status).toBe(204);
 
 		const exported = await pollFirstDriveFile();
-		assert.strictEqual(exported[0].name, 'kawaii');
-		assert.strictEqual(exported[0].clipNotes.length, 1);
-		assert.strictEqual(exported[0].clipNotes[0].note.text, 'baz');
-		assert.strictEqual(exported[0].clipNotes[0].note.user.username, 'bob');
+		expect(exported[0].name).toBe('kawaii');
+		expect(exported[0].clipNotes.length).toBe(1);
+		expect(exported[0].clipNotes[0].note.text).toBe('baz');
+		expect(exported[0].clipNotes[0].note.user.username).toBe('bob');
 	});
 
 	test('export favorites with notes', async () => {
@@ -329,17 +323,17 @@ describe('export-clips', () => {
 				},
 				alice,
 			);
-			assert.strictEqual(res.status, 204);
+			expect(res.status).toBe(204);
 		}
 
 		const exportRes = await api('i/export-favorites', {}, alice);
-		assert.strictEqual(exportRes.status, 204);
+		expect(exportRes.status).toBe(204);
 
 		const exported = await pollFirstDriveFile();
-		assert.strictEqual(exported.length, 2);
-		assert.strictEqual(exported[0].note.text, 'favorite1');
-		assert.strictEqual(exported[1].note.text, 'favorite2');
-		assert.deepStrictEqual(exported[1].note.poll.choices[0], 'sakura');
+		expect(exported.length).toBe(2);
+		expect(exported[0].note.text).toBe('favorite1');
+		expect(exported[1].note.text).toBe('favorite2');
+		expect(exported[1].note.poll.choices[0]).toStrictEqual('sakura');
 	});
 
 	test("export notes includes only the requesting user's notes", async () => {
@@ -348,7 +342,7 @@ describe('export-clips', () => {
 		const bobNote = await post(bob, { text: 'must-not-be-exported' });
 
 		const exportRes = await api('i/export-notes', {}, alice);
-		assert.strictEqual(exportRes.status, 204);
+		expect(exportRes.status).toBe(204);
 
 		const exported = await pollFirstDriveFile();
 		assert.ok(Array.isArray(exported));
@@ -369,7 +363,7 @@ describe('export-clips', () => {
 			},
 		);
 		const assignRes = await api('admin/roles/assign', { roleId: importRole.id, userId: importer.id }, alice);
-		assert.strictEqual(assignRes.status, 204);
+		expect(assignRes.status).toBe(204);
 
 		const csv = ['not a valid acct', `${importer.username}@misskey.local`, `${target.username}@misskey.local`].join(
 			'\n',
@@ -378,32 +372,28 @@ describe('export-clips', () => {
 			name: `blocking-${suffix}.csv`,
 			blob: new Blob([csv], { type: 'text/csv' }),
 		});
-		assert.strictEqual(uploaded.status, 200);
+		expect(uploaded.status).toBe(200);
 		assert.ok(uploaded.body);
 		const uploadedPath = new URL(uploaded.body.url).pathname;
 		await updateDriveFileInDatabase(db, uploaded.body.id, {
 			url: resolveTargetUrl(uploadedPath).toString(),
 		});
 		const uploadedContent = await relativeFetch(uploadedPath);
-		assert.strictEqual(uploadedContent.status, 200);
-		assert.strictEqual(await uploadedContent.text(), csv);
+		expect(uploadedContent.status).toBe(200);
+		expect(await uploadedContent.text()).toBe(csv);
 
 		const importRes = await api('i/import-blocking', { fileId: uploaded.body.id }, importer);
-		assert.strictEqual(importRes.status, 204);
+		expect(importRes.status).toBe(204);
 
-		const deadline = Date.now() + 30_000;
-		while (true) {
-			const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, importer.id, target.id);
-			if (blocking != null) {
-				assert.strictEqual(blocking.blockerId, importer.id);
-				assert.strictEqual(blocking.blockeeId, target.id);
-				assert.strictEqual(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, importer.id, importer.id), null);
-				break;
-			}
-			if (Date.now() >= deadline) {
-				assert.fail('Timed out waiting for imported blocking relationship');
-			}
-			await new Promise((resolve) => setTimeout(resolve, 250));
-		}
+		await vi.waitFor(
+			async () => {
+				const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, importer.id, target.id);
+				assert.ok(blocking);
+				expect(blocking.blockerId).toBe(importer.id);
+				expect(blocking.blockeeId).toBe(target.id);
+				expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(db, importer.id, importer.id)).toBe(null);
+			},
+			{ timeout: 30_000, interval: 250 },
+		);
 	}, 60_000);
 });

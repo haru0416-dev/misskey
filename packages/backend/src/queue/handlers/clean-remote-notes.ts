@@ -6,7 +6,7 @@
 import { setTimeout } from 'node:timers/promises';
 import { sql } from 'drizzle-orm';
 import type * as Bull from 'bullmq';
-import { deleteNotesByIdsFromDatabase } from '@/core/NoteStore.js';
+import { deleteNotesByIdsFromDatabase } from '@/core/note/NoteStore.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -215,7 +215,7 @@ export async function handleHonoQueueCleanRemoteNotes(
 		};
 	}
 
-	// start with a conservative limit and adjust it based on the query duration
+	// 控えめな上限から始め、クエリ時間に応じて調整する。
 	const minimumLimit = 10;
 	let currentLimit = 100;
 	let cursorLeft = '0';

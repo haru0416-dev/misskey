@@ -150,7 +150,6 @@ function fetchPage() {
 	}).then(async _page => {
 		page.value = _page;
 
-		// plugin
 		const pageViewInterruptors = getPluginHandlers('page_view_interruptor');
 		if (pageViewInterruptors.length > 0) {
 			let result = deepClone(_page);

@@ -54,7 +54,7 @@ describe('Note', () => {
 			deepStrictEqualWithExcludedFields(note, resolvedNote, [
 				'id',
 				'emojis',
-				/** Consistency of files is checked at {@link file://./drive.test.ts}, so let's skip. */
+				/** ファイルの整合性は {@link file://./drive.test.ts} で確認するため除外する。 */
 				'fileIds',
 				'files',
 				/** @see https://github.com/misskey-dev/misskey/issues/12409 */
@@ -91,7 +91,7 @@ describe('Note', () => {
 				})
 			).createdNote;
 			await sleep();
-			// NOTE: the repliedCount is incremented, so fetch again
+			// repliedCount が非同期に増加するため、再取得する。
 			const replyedNote = await alice.client.request('notes/show', { noteId: _replyedNote.id });
 			strictEqual(replyedNote.repliesCount, 1);
 
@@ -109,13 +109,13 @@ describe('Note', () => {
 			assert(resolvedNote.reply != null);
 			deepStrictEqualWithExcludedFields(replyedNote, resolvedNote.reply, [
 				'id',
-				// TODO: why clippedCount loses consistency?
+				// clippedCount は連合先と整合しないため除外する。
 				'clippedCount',
 				'emojis',
 				'userId',
 				'user',
 				'uri',
-				// flaky because this is parallelly incremented, so let's check it below
+				// 並行して増加するため、後で個別に確認する。
 				'repliesCount',
 			]);
 			strictEqual(aliceInB.id, resolvedNote.userId);
@@ -131,7 +131,7 @@ describe('Note', () => {
 		});
 
 		test('Consistency of Renote', async () => {
-			// NOTE: the renoteCount is not incremented, so no need to fetch again
+			// renoteCount は増加しないため、再取得しない。
 			const renotedNote = (
 				await alice.client.request('notes/create', {
 					text: 'a',
@@ -306,10 +306,7 @@ describe('Note', () => {
 				});
 			});
 
-			/**
-			 * FIXME: not delivered
-			 * @see https://github.com/misskey-dev/misskey/issues/15548
-			 */
+			// 現在の実装では配信されないため、テストを実行しない。
 			describe('To only resolved and not followed user', () => {
 				test.skip('Check', async () => {
 					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
@@ -348,7 +345,7 @@ describe('Note', () => {
 			});
 
 			/**
-			 * FIXME: implement soft deletion as well as user?
+			 * FIXME: ユーザーと同様にソフト削除も実装する必要があるか？
 			 *        @see https://github.com/misskey-dev/misskey/issues/11437
 			 */
 			test.skip('Not found even if resolve again', async () => {
@@ -417,10 +414,7 @@ describe('Note', () => {
 				strictEqual(getAt(reactions, 0).type, '❤');
 			});
 
-			/**
-			 * TODO: this may be unexpected behavior?
-			 *       @see https://github.com/misskey-dev/misskey/issues/12409
-			 */
+			// nonSensitiveOnly の制約がリモート由来の絵文字リアクションには適用されない現在の挙動を検証する。
 			test('Even if nonSensitiveOnly, remote users can react with sensitive emoji, and it is not converted', async () => {
 				const note = (await alice.client.request('notes/create', { text: 'a', reactionAcceptance: 'nonSensitiveOnly' }))
 					.createdNote;
@@ -469,7 +463,6 @@ describe('Note', () => {
 
 			test("A vote in Bob's server is delivered to Bob's remote followers", async () => {
 				const note = (await bob.client.request('notes/create', { poll: { choices: ['inu', 'neko'] } })).createdNote;
-				// NOTE: resolve before voting
 				const noteInA = await resolveRemoteNote('b.test', note.id, bobRemoteFollower);
 				await localVoter.client.request('notes/polls/vote', { noteId: note.id, choice: 0 });
 				await sleep();

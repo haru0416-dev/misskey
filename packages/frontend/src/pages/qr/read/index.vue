@@ -90,9 +90,9 @@ const scannerInstance = shallowRef<QrScanner | null>(null);
 
 const tab = ref<'users' | 'notes' | 'all'>('users');
 
-// higher is recent
+// 先頭ほど新しい結果。
 const results = ref(new Set<string>());
-// lower is recent
+// 末尾ほど新しい URI。
 const uris = ref<string[]>([]);
 const sources = new Map<string, ApShowResponse | null>();
 const users = ref<(misskey.entities.UserDetailed)[]>([]);
@@ -162,7 +162,6 @@ async function processResult(result: QrScanner.ScanResult) {
 	}
 
 	if (sources.has(trimmed)) return;
-	// Start fetching user info
 	sources.set(trimmed, null);
 
 	await misskeyApi('ap/show', { uri: trimmed })

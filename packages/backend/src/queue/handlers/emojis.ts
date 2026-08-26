@@ -9,21 +9,21 @@ import mime from 'mime-types';
 import { ZipArchive } from 'archiver';
 import { ZipReader } from 'slacc';
 import type * as Bull from 'bullmq';
-import { deleteEmojiByNameAndHostFromDatabase, listLocalEmojisOrderedByIdFromDatabase } from '@/core/EmojiStore.js';
-import { fetchDriveFileByIdFromDatabase } from '@/core/DriveFileStore.js';
-import { fetchUserByIdFromDatabase } from '@/core/UserStore.js';
+import { deleteEmojiByNameAndHostFromDatabase, listLocalEmojisOrderedByIdFromDatabase } from '@/core/emoji/EmojiStore.js';
+import { fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { createTemp, createTempDir } from '@/misc/create-temp.js';
-import type { DownloadService } from '@/core/DownloadService.js';
+import type { DownloadService } from '@/core/net/DownloadService.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
 import {
 	addDriveFileForHonoApi,
 	type HonoApiDriveFileUploadDependencies,
-} from '../../server/rest/drive-file-upload.js';
-import { addCustomEmojiForHonoApi, type HonoApiEmojiDependencies } from '../../server/rest/emojis.js';
+} from '@/server/rest/drive/drive-file-upload.js';
+import { addCustomEmojiForHonoApi, type HonoApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
 import {
 	createExportCompletedNotification,
 	type HonoApiNotificationDependencies,
-} from '../../server/rest/notification.js';
+} from '@/server/rest/notification/notification.js';
 
 export type HonoQueueEmojisDependencies = HonoApiDriveFileUploadDependencies &
 	HonoApiEmojiDependencies &
@@ -77,7 +77,7 @@ export async function handleHonoQueueExportCustomEmojis(
 			await deps.downloadService.downloadUrl(emoji.originalUrl, emojiPath);
 			downloaded = true;
 		} catch {
-			// 元実装同様、ダウンロード失敗した絵文字はdownloaded:falseで記録して継続する
+			// ダウンロードに失敗した絵文字も downloaded:false で記録し、処理を継続する。
 		}
 
 		if (!downloaded) {
@@ -186,7 +186,7 @@ export async function handleHonoQueueImportCustomEmojis(
 					roleIdsThatCanBeUsedThisEmojiAsReaction: [],
 				});
 			} catch {
-				// 元実装同様、1件の失敗はログのみで継続する
+				// 1件の失敗でインポート全体を中断しない。
 				continue;
 			}
 		}

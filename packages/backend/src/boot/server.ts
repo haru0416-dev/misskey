@@ -70,7 +70,7 @@ async function disposeServerRuntime(disposers: RuntimeDisposer[]): Promise<void>
 	let firstError: unknown;
 	for (const dispose of pending) {
 		try {
-			// Cleanup order is significant, but every disposer must still be attempted.
+			// 解放順序は重要だが、各 disposer の実行は省略しない。
 			// eslint-disable-next-line no-await-in-loop
 			await dispose();
 		} catch (error) {
@@ -277,10 +277,8 @@ async function launchHonoServerWithDependencies(
 		disposers.push(() => serverStatsDaemon.dispose());
 	}
 
-	// bun ランタイムの node:http compat 層は 'upgrade' イベントで生ソケットに書き込むパターンだと
-	// 同一プロセス内に他のソケット接続 (DB pool / ioredis 等) があるとレスポンスがクライアントに
-	// 届かず永久にハングするバグがある (bun 1.3.14 で確認済み)。Bun.serve() のネイティブ websocket
-	// API はこの経路を通らないため、bun 実行時のみこちらを使う。詳細は streaming/bun-native.ts 参照。
+	// Bun 1.3.14 の node:http compat 層では、DB pool など別のソケット接続がある状態の
+	// WebSocket upgrade が永久にハングした。Bun.serve() は compat 層を経由しないため採用する。
 	if (typeof Bun !== 'undefined') {
 		const streamRuntime = createBunNativeStreamRuntime(streamDeps);
 		disposers.push(() => streamRuntime.dispose());

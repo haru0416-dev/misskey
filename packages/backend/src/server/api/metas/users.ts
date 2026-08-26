@@ -3,19 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { usersReportAbuseParamDef } from '@/server/rest/admin-abuse-reports.js';
-import { usersClipsParamDef } from '@/server/rest/clips.js';
-import { userListParamDef } from '@/server/rest/favorites.js';
-import { usersFlashsParamDef } from '@/server/rest/flash.js';
+import { usersReportAbuseParamDef } from '@/server/rest/admin/admin-abuse-reports.js';
+import { usersClipsParamDef } from '@/server/rest/clip/clips.js';
+import { userListParamDef } from '@/server/rest/favorite/favorites.js';
+import { usersFlashsParamDef } from '@/server/rest/flash/flash.js';
 import {
 	usersFollowersOrFollowingParamDef,
 	usersFollowingParamDef,
 	usersGetFollowingUsersByBirthdayDocsParamDef,
-} from '@/server/rest/following.js';
-import { usersGalleryPostsParamDef } from '@/server/rest/gallery.js';
-import { usersFeaturedNotesParamDef, usersNotesParamDef } from '@/server/rest/note.js';
-import { usersPagesParamDef } from '@/server/rest/pages.js';
-import { usersReactionsParamDef } from '@/server/rest/user-reactions.js';
+} from '@/server/rest/user/following.js';
+import { usersGalleryPostsParamDef } from '@/server/rest/gallery/gallery.js';
+import { usersFeaturedNotesParamDef, usersNotesParamDef } from '@/server/rest/note/note.js';
+import { usersPagesParamDef } from '@/server/rest/page/pages.js';
+import { usersReactionsParamDef } from '@/server/rest/user/user-reactions.js';
 import {
 	usersGetFrequentlyRepliedUsersParamDef,
 	usersParamDef,
@@ -25,7 +25,7 @@ import {
 	usersSearchParamDef,
 	usersShowParamDef,
 	usersUpdateMemoParamDef,
-} from '@/server/rest/user.js';
+} from '@/server/rest/user/user.js';
 import {
 	createFromPublicParamDef,
 	createParamDef,
@@ -33,14 +33,14 @@ import {
 	pullParamDef,
 	pushParamDef,
 	updateMembershipParamDef,
-} from '@/server/rest/users-lists.js';
+} from '@/server/rest/user/users-lists.js';
 import {
 	usersAchievementsParamDef,
 	usersListsDeleteParamDef,
 	usersListsListParamDef,
 	usersListsShowParamDef,
 	usersListsUpdateParamDef,
-} from '@/server/rest/users.js';
+} from '@/server/rest/user/users.js';
 import { HOUR } from '@/const.js';
 
 export const endpointMetas = {
@@ -66,6 +66,7 @@ export const endpointMetas = {
 	},
 	'users/achievements': {
 		meta: {
+			allowQuery: true,
 			requireCredential: false,
 
 			res: {
@@ -79,6 +80,7 @@ export const endpointMetas = {
 	},
 	'users/clips': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'clips'],
 
 			description: 'Show all clips this user owns.',
@@ -99,6 +101,7 @@ export const endpointMetas = {
 	},
 	'users/featured-notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['notes'],
 
 			requireCredential: false,
@@ -121,6 +124,7 @@ export const endpointMetas = {
 	},
 	'users/flashs': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'flashs'],
 
 			description: 'Show all flashs this user created.',
@@ -141,6 +145,7 @@ export const endpointMetas = {
 	},
 	'users/followers': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -177,6 +182,7 @@ export const endpointMetas = {
 	},
 	'users/following': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -219,6 +225,7 @@ export const endpointMetas = {
 	},
 	'users/get-following-users-by-birthday': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -260,6 +267,7 @@ export const endpointMetas = {
 	},
 	'users/gallery/posts': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'gallery'],
 
 			description: 'Show all gallery posts by the given user.',
@@ -280,6 +288,7 @@ export const endpointMetas = {
 	},
 	'users/get-frequently-replied-users': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -435,6 +444,7 @@ export const endpointMetas = {
 	},
 	'users/lists/get-memberships': {
 		meta: {
+			allowQuery: true,
 			tags: ['lists', 'account'],
 
 			requireCredential: false,
@@ -482,6 +492,7 @@ export const endpointMetas = {
 	},
 	'users/lists/list': {
 		meta: {
+			allowQuery: true,
 			tags: ['lists', 'account'],
 
 			requireCredential: false,
@@ -602,6 +613,7 @@ export const endpointMetas = {
 	},
 	'users/lists/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['lists', 'account'],
 
 			requireCredential: false,
@@ -724,6 +736,7 @@ export const endpointMetas = {
 	},
 	'users/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'notes'],
 
 			res: {
@@ -750,6 +763,7 @@ export const endpointMetas = {
 	},
 	'users/pages': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'pages'],
 
 			description: 'Show all pages this user created.',
@@ -770,6 +784,7 @@ export const endpointMetas = {
 	},
 	'users/reactions': {
 		meta: {
+			allowQuery: true,
 			tags: ['users', 'reactions'],
 
 			requireCredential: false,
@@ -806,6 +821,7 @@ export const endpointMetas = {
 	},
 	'users/recommendation': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -830,6 +846,7 @@ export const endpointMetas = {
 	},
 	'users/relation': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: true,
@@ -986,6 +1003,7 @@ export const endpointMetas = {
 	},
 	'users/search': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,
@@ -1009,6 +1027,7 @@ export const endpointMetas = {
 	},
 	'users/search-by-username-and-host': {
 		meta: {
+			allowQuery: true,
 			tags: ['users'],
 
 			requireCredential: false,

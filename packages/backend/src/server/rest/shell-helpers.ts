@@ -9,13 +9,14 @@ import Logger from '@/logger.js';
 import { recordException } from '@/telemetry.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
-import { assertOptionalCredential, authenticateHonoApiToken, type HonoApiAuthenticated } from './auth.js';
+import { assertOptionalCredential, authenticateHonoApiToken, type HonoApiAuthenticated } from './auth/auth.js';
 import { HonoApiError, invalidJsonBody, payloadTooLargeError, rolePermissionDeniedError } from './error.js';
-import { readRequestBodyWithLimit } from '../body-limit.js';
-import { hasHonoApiRolePolicyOrIsRoot, isHonoApiAdministrator, isHonoApiModerator } from './role-policy.js';
-import type { HonoApiSigninFlowResult } from './signin.js';
-import type { HonoApiSigninWithPasskeyResult } from './signin-with-passkey.js';
+import { readRequestBodyWithLimit } from '@/server/body-limit.js';
+import { hasHonoApiRolePolicyOrIsRoot, isHonoApiAdministrator, isHonoApiModerator } from './role/role-policy.js';
+import type { HonoApiSigninFlowResult } from './auth/signin.js';
+import type { HonoApiSigninWithPasskeyResult } from './auth/signin-with-passkey.js';
 import type { ApiShellDependencies } from './shell.js';
+import { runInRequestScope } from '@/misc/request-scope.js';
 
 export function setApiHeaders(c: Context): void {
 	c.header('Access-Control-Allow-Origin', '*');
@@ -105,8 +106,8 @@ export function publicCacheHeadersWhenAnonymous(auth: HonoApiAuthenticated, seco
 function apiErrorResponse(c: Context, err: HonoApiError): Response {
 	setApiHeaders(c);
 
-	// ApiCallService.#sendApiError 相当: 401以外のclient系エラーには invalid_request の
-	// WWW-Authenticate を付ける (401系/permission系は error.ts のファクトリが個別に設定済み)。
+	// 401以外のclient系エラーには invalid_request の WWW-Authenticate を付ける。
+	// 401系・permission系は error.ts のファクトリが個別に設定する。
 	const extraHeaders: Record<string, string> = {};
 	if (
 		err.kind === 'client' &&
@@ -148,7 +149,7 @@ export async function jsonBody(c: Context): Promise<Record<string, unknown>> {
 export function tokenFromRequest(c: Context, body: Record<string, unknown>): string | null {
 	const authorization = c.req.header('authorization');
 	if (authorization != null) {
-		// 原典 (ApiCallService) 同様、スキーム名は大文字小文字を区別する ('bearer' は不可)
+		// スキーム名は大文字小文字を区別するため、'bearer' は受け付けない。
 		const match = authorization.match(/^Bearer (.+)$/);
 		if (match?.[1] != null) return match[1];
 	}
@@ -193,7 +194,8 @@ const apiLogger = new Logger('api', 'gray');
 
 export async function runApiEndpoint(c: Context, handler: () => Promise<Response>): Promise<Response> {
 	try {
-		return await handler();
+		// リクエスト内 memo のスコープ。同じ問い合わせを1リクエストで何度も投げている箇所を畳む。
+		return await runInRequestScope(handler);
 	} catch (err) {
 		if (err instanceof HonoApiError) {
 			return apiErrorResponse(c, err);

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { driveFilesCreateParamDef, driveFilesUploadFromUrlParamDef } from '@/server/rest/drive-file-upload.js';
+import { driveFilesCreateParamDef, driveFilesUploadFromUrlParamDef } from '@/server/rest/drive/drive-file-upload.js';
 import {
 	driveFilesAttachedChatMessagesParamDef,
 	driveFilesAttachedNotesParamDef,
@@ -15,7 +15,7 @@ import {
 	driveFilesShowParamDef,
 	driveFilesUpdateParamDef,
 	driveStreamParamDef,
-} from '@/server/rest/drive-files.js';
+} from '@/server/rest/drive/drive-files.js';
 import {
 	driveFilesCheckExistenceParamDef,
 	driveFoldersCreateParamDef,
@@ -24,7 +24,7 @@ import {
 	driveFoldersParamDef,
 	driveFoldersShowParamDef,
 	driveFoldersUpdateParamDef,
-} from '@/server/rest/drive.js';
+} from '@/server/rest/drive/drive.js';
 import { z } from 'zod';
 import { HOUR } from '@/const.js';
 
@@ -59,6 +59,7 @@ export const endpointMetas = {
 	},
 	'drive/files': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -81,6 +82,7 @@ export const endpointMetas = {
 	},
 	'drive/files/attached-notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive', 'notes'],
 
 			requireCredential: true,
@@ -113,6 +115,7 @@ export const endpointMetas = {
 	},
 	'drive/files/attached-chat-messages': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive', 'chat'],
 
 			requireCredential: true,
@@ -143,6 +146,7 @@ export const endpointMetas = {
 	},
 	'drive/files/check-existence': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -248,6 +252,7 @@ export const endpointMetas = {
 	},
 	'drive/files/find': {
 		meta: {
+			allowQuery: true,
 			requireCredential: true,
 
 			tags: ['drive'],
@@ -272,6 +277,7 @@ export const endpointMetas = {
 	},
 	'drive/files/find-by-hash': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -296,6 +302,7 @@ export const endpointMetas = {
 	},
 	'drive/files/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -416,6 +423,7 @@ export const endpointMetas = {
 	},
 	'drive/folders': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -492,6 +500,7 @@ export const endpointMetas = {
 	},
 	'drive/folders/find': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -514,6 +523,7 @@ export const endpointMetas = {
 	},
 	'drive/folders/show': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,
@@ -576,6 +586,7 @@ export const endpointMetas = {
 	},
 	'drive/stream': {
 		meta: {
+			allowQuery: true,
 			tags: ['drive'],
 
 			requireCredential: true,

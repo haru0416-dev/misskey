@@ -18,10 +18,8 @@ describe('Move', () => {
 			[alice, bob] = await Promise.all([createAccount('a.test'), createAccount('b.test')]);
 			carol = await createAccount('a.test');
 
-			// Follow @carol@a.test ==> @alice@a.test
 			await carol.client.request('following/create', { userId: alice.id });
 
-			// Move @alice@a.test ==> @bob@b.test
 			await bob.client.request('i/update', { alsoKnownAs: [`@${alice.username}@a.test`] });
 			await alice.client.request('i/move', { moveToAccount: `@${bob.username}@b.test` });
 

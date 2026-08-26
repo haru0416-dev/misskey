@@ -4,7 +4,7 @@
  */
 
 import type { JsonValue } from '@/misc/json-value.js';
-import { readUserChatMessageForHonoApi, type HonoApiChatDependencies } from '../../rest/chat.js';
+import { readUserChatMessageForHonoApi, type HonoApiChatDependencies } from '@/server/rest/chat/chat.js';
 import type { HonoStreamChannelDefinition } from '../channel.js';
 
 export const honoStreamChannelChatUser: HonoStreamChannelDefinition<HonoApiChatDependencies> = {

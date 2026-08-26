@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
 // 未定義になる。テスト用にダミー値を注入しておく。
@@ -13,14 +12,14 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createUserWithProfileAndPublickeyInDatabase } from '@/core/UserStore.js';
-import { createMutingInDatabase } from '@/core/MutingStore.js';
-import { createBlockingInDatabase } from '@/core/BlockingStore.js';
-import { createUserListInDatabase } from '@/core/UserListStore.js';
-import { createUserListMembershipInDatabase } from '@/core/UserListMembershipStore.js';
-import { createAntennaInDatabase } from '@/core/AntennaStore.js';
-import { createFollowingInDatabase } from '@/core/FollowingStore.js';
-import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/DriveFileStore.js';
+import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
+import { createMutingInDatabase } from '@/core/user/MutingStore.js';
+import { createBlockingInDatabase } from '@/core/user/BlockingStore.js';
+import { createUserListInDatabase } from '@/core/user/UserListStore.js';
+import { createUserListMembershipInDatabase } from '@/core/user/UserListMembershipStore.js';
+import { createAntennaInDatabase } from '@/core/antenna/AntennaStore.js';
+import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
+import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleHonoQueueExportAntennas,

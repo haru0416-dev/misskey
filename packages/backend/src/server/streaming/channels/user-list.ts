@@ -5,13 +5,13 @@
 
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/UserListMembershipStore.js';
-import { userListExistsByIdAndUserIdFromDatabase } from '@/core/UserListStore.js';
+import { listUserListMembershipUserIdsByUserListIdFromDatabase } from '@/core/user/UserListMembershipStore.js';
+import { userListExistsByIdAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
 import {
 	filterNoteForStreamingHidingForHonoApi,
 	populateMyReactionForHonoApi,
 	type HonoApiNoteDependencies,
-} from '../../rest/note.js';
+} from '@/server/rest/note/note.js';
 import {
 	isNoteMutedOrBlockedForHonoStream,
 	isNoteVisibleForMeForHonoStream,
@@ -19,8 +19,7 @@ import {
 } from '../channel.js';
 
 type MembershipCacheEntry = {
-	// NOTE: 既存実装は withReplies を取得していなかったため、値は常に undefined
-	// になっていた(既存挙動を保持するため踏襲)。
+	// メンバーシップ取得クエリは withReplies を選択しないため、常に undefined になる。
 	withReplies: boolean | undefined;
 };
 
@@ -34,7 +33,7 @@ export const honoStreamChannelUserList: HonoStreamChannelDefinition<HonoApiNoteD
 		const withFiles = !!(params['withFiles'] ?? false);
 		const withRenotes = !!(params['withRenotes'] ?? true);
 
-		// NOTE: 元実装同様 requireCredential=false だが内部では this.user を前提としている (未ログイン時は例外)
+		// requireCredential=false だが内部では ctx.user を前提とするため、未ログイン時は例外になる。
 		const user = ctx.user!;
 
 		const listExist = await userListExistsByIdAndUserIdFromDatabase(deps.db, listId, user.id);

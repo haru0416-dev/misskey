@@ -6,7 +6,7 @@
 import { isInstanceMuted, isUserFromMutedInstance } from '@/misc/is-instance-muted.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { packNoteForHonoApi, type HonoApiNoteDependencies } from '../../rest/note.js';
+import { packNoteForHonoApi, type HonoApiNoteDependencies } from '@/server/rest/note/note.js';
 import {
 	isNoteMutedOrBlockedForHonoStream,
 	isNoteVisibleForMeForHonoStream,
@@ -30,7 +30,7 @@ export const honoStreamChannelMain: HonoStreamChannelDefinition<HonoApiNoteDepen
 			switch (data.type) {
 				case 'notification': {
 					const body = data.body as MainStreamNotificationBody;
-					// Ignore notifications from instances the user has muted
+					// ユーザーがミュートしたインスタンスの通知を無視する。
 					if (isUserFromMutedInstance(body as Packed<'Notification'>, ctx.userMutedInstances)) return;
 					if (body.userId && ctx.userIdsWhoMeMuting.has(body.userId)) return;
 

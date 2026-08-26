@@ -3,24 +3,25 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { schema } from '@/core/chart/charts/entities/active-users.js';
-import { schema as schema_2 } from '@/core/chart/charts/entities/ap-request.js';
-import { schema as schema_3 } from '@/core/chart/charts/entities/drive.js';
-import { schema as schema_4 } from '@/core/chart/charts/entities/federation.js';
-import { schema as schema_5 } from '@/core/chart/charts/entities/instance.js';
-import { schema as schema_6 } from '@/core/chart/charts/entities/notes.js';
-import { schema as schema_7 } from '@/core/chart/charts/entities/per-user-drive.js';
-import { schema as schema_8 } from '@/core/chart/charts/entities/per-user-following.js';
-import { schema as schema_9 } from '@/core/chart/charts/entities/per-user-notes.js';
-import { schema as schema_10 } from '@/core/chart/charts/entities/per-user-pv.js';
-import { schema as schema_11 } from '@/core/chart/charts/entities/per-user-reactions.js';
-import { schema as schema_12 } from '@/core/chart/charts/entities/users.js';
+import { schema } from '@/core/chart/entities/active-users.js';
+import { schema as schema_2 } from '@/core/chart/entities/ap-request.js';
+import { schema as schema_3 } from '@/core/chart/entities/drive.js';
+import { schema as schema_4 } from '@/core/chart/entities/federation.js';
+import { schema as schema_5 } from '@/core/chart/entities/instance.js';
+import { schema as schema_6 } from '@/core/chart/entities/notes.js';
+import { schema as schema_7 } from '@/core/chart/entities/per-user-drive.js';
+import { schema as schema_8 } from '@/core/chart/entities/per-user-following.js';
+import { schema as schema_9 } from '@/core/chart/entities/per-user-notes.js';
+import { schema as schema_10 } from '@/core/chart/entities/per-user-pv.js';
+import { schema as schema_11 } from '@/core/chart/entities/per-user-reactions.js';
+import { schema as schema_12 } from '@/core/chart/entities/users.js';
 import { getJsonSchema } from '@/core/chart/core.js';
-import { chartParamDef, instanceChartParamDef, perUserChartParamDef } from '@/server/rest/charts.js';
+import { chartParamDef, instanceChartParamDef, perUserChartParamDef } from '@/server/rest/chart/charts.js';
 
 export const endpointMetas = {
 	'charts/active-users': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users'],
 
 			res: getJsonSchema(schema),
@@ -32,6 +33,7 @@ export const endpointMetas = {
 	},
 	'charts/ap-request': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts'],
 
 			res: getJsonSchema(schema_2),
@@ -43,6 +45,7 @@ export const endpointMetas = {
 	},
 	'charts/drive': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'drive'],
 
 			res: getJsonSchema(schema_3),
@@ -54,6 +57,7 @@ export const endpointMetas = {
 	},
 	'charts/federation': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts'],
 
 			res: getJsonSchema(schema_4),
@@ -65,6 +69,7 @@ export const endpointMetas = {
 	},
 	'charts/instance': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts'],
 
 			res: getJsonSchema(schema_5),
@@ -76,6 +81,7 @@ export const endpointMetas = {
 	},
 	'charts/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'notes'],
 
 			res: getJsonSchema(schema_6),
@@ -87,6 +93,7 @@ export const endpointMetas = {
 	},
 	'charts/user/drive': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'drive', 'users'],
 
 			res: getJsonSchema(schema_7),
@@ -98,6 +105,7 @@ export const endpointMetas = {
 	},
 	'charts/user/following': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users', 'following'],
 
 			res: getJsonSchema(schema_8),
@@ -109,6 +117,7 @@ export const endpointMetas = {
 	},
 	'charts/user/notes': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users', 'notes'],
 
 			res: getJsonSchema(schema_9),
@@ -120,6 +129,7 @@ export const endpointMetas = {
 	},
 	'charts/user/pv': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users'],
 
 			res: getJsonSchema(schema_10),
@@ -131,6 +141,7 @@ export const endpointMetas = {
 	},
 	'charts/user/reactions': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users', 'reactions'],
 
 			res: getJsonSchema(schema_11),
@@ -142,6 +153,7 @@ export const endpointMetas = {
 	},
 	'charts/users': {
 		meta: {
+			allowQuery: true,
 			tags: ['charts', 'users'],
 
 			res: getJsonSchema(schema_12),

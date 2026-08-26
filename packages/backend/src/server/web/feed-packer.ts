@@ -6,12 +6,12 @@
 import { Feed } from 'feed';
 import { parse as mfmParse } from 'mfm-js';
 import type { Config } from '@/config.js';
-import { getDriveFilePublicUrl } from '@/core/DriveFilePublicUrl.js';
-import { getIdenticonUrl } from '@/core/IdenticonUrl.js';
-import { mfmToHtml } from '@/core/MfmToHtml.js';
-import { listDriveFilesByIdsFromDatabase } from '@/core/DriveFileStore.js';
-import { listPublicFeedNotesByUserIdFromDatabase } from '@/core/NoteStore.js';
-import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/UserProfileStore.js';
+import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
+import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
+import { mfmToHtml } from '@/core/mfm/MfmToHtml.js';
+import { listDriveFilesByIdsFromDatabase } from '@/core/drive/DriveFileStore.js';
+import { listPublicFeedNotesByUserIdFromDatabase } from '@/core/note/NoteStore.js';
+import { fetchUserProfileByUserIdOrFailFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';

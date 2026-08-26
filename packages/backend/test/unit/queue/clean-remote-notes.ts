@@ -3,14 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-process.env['NODE_ENV'] = 'test';
-
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type * as Bull from 'bullmq';
 import { loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type MiDrizzlePool } from '@/drizzle.js';
-import { createUserInDatabase } from '@/core/UserStore.js';
-import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/NoteStore.js';
+import { createUserInDatabase } from '@/core/user/UserStore.js';
+import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
 	handleHonoQueueCleanRemoteNotes,

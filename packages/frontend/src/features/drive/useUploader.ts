@@ -17,6 +17,7 @@ import { isWebpSupported } from '@/utility/is-webp-supported.js';
 import { uploadFile, UploadAbortedError } from '@/features/drive/drive.js';
 import * as os from '@/os.js';
 import { ensureSignin } from '@/i.js';
+import { renderCanvasToBlob } from '@/utility/canvas-to-blob.js';
 
 export type UploaderFeatures = {
 	imageEditing?: boolean;
@@ -27,12 +28,7 @@ const THUMBNAIL_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'ima
 
 const IMAGE_EDITING_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-const VIDEO_COMPRESSION_SUPPORTED_TYPES = [
-	// TODO
-	'video/mp4',
-	'video/quicktime',
-	'video/x-matroska',
-];
+const VIDEO_COMPRESSION_SUPPORTED_TYPES = ['video/mp4', 'video/quicktime', 'video/x-matroska'];
 
 const IMAGE_PREPROCESS_NEEDED_TYPES = [...IMAGE_EDITING_SUPPORTED_TYPES];
 
@@ -112,13 +108,13 @@ function getCompressionSettings(level: 0 | 1 | 2 | 3) {
 		};
 	} else if (level === 2) {
 		return {
-			maxWidth: 2000 * 0.75, // =1500
-			maxHeight: 2000 * 0.75, // =1500
+			maxWidth: 2000 * 0.75,
+			maxHeight: 2000 * 0.75,
 		};
 	} else if (level === 3) {
 		return {
-			maxWidth: 2000 * 0.75 * 0.75, // =1125
-			maxHeight: 2000 * 0.75 * 0.75, // =1125
+			maxWidth: 2000 * 0.75 * 0.75,
+			maxHeight: 2000 * 0.75 * 0.75,
 		};
 	} else {
 		return null;
@@ -315,7 +311,6 @@ export function useUploader(
 					icon: 'ti ti-resize',
 					text: i18n.ts.resize,
 					action: async () => {
-						// TODO
 					},
 				},*/ {
 						icon: 'ti ti-sparkles',
@@ -753,17 +748,12 @@ export function useUploader(
 				image: imageBitmap,
 			});
 
-			await renderer.render(item.watermarkLayers);
-
-			preprocessedFile = await new Promise<Blob>((resolve) => {
-				canvas.toBlob((blob) => {
-					if (blob == null) {
-						throw new Error('Failed to convert canvas to blob');
-					}
-					resolve(blob);
-					renderer.destroy();
-				}, 'image/png');
-			});
+			preprocessedFile = await renderCanvasToBlob(
+				canvas,
+				() => renderer.render(item.watermarkLayers!),
+				() => renderer.destroy(),
+				'image/png',
+			);
 		}
 
 		const needsImageFrame =
@@ -783,17 +773,12 @@ export function useUploader(
 				filename: item.name,
 			});
 
-			await frameRenderer.render(item.imageFrameParams);
-
-			preprocessedFile = await new Promise<Blob>((resolve) => {
-				canvas.toBlob((blob) => {
-					if (blob == null) {
-						throw new Error('Failed to convert canvas to blob');
-					}
-					resolve(blob);
-					frameRenderer.destroy();
-				}, 'image/png');
-			});
+			preprocessedFile = await renderCanvasToBlob(
+				canvas,
+				() => frameRenderer.render(item.imageFrameParams!),
+				() => frameRenderer.destroy(),
+				'image/png',
+			);
 		}
 
 		const compressionSettings = getCompressionSettings(item.compressionLevel);

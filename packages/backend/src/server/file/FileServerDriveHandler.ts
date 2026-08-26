@@ -5,11 +5,11 @@
 
 import { basename, extname } from 'node:path';
 import type { Config } from '@/config.js';
-import type { IImageStreamable } from '@/core/ImageProcessingService.js';
+import type { IImageStreamable } from '@/core/drive/ImageProcessingService.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
 import { correctFilename } from '@/misc/correct-filename.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
-import { VideoProcessingService } from '@/core/VideoProcessingService.js';
+import { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import {
 	attachStreamCleanup,
 	handleRangeRequest,

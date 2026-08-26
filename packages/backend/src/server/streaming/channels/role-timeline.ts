@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fetchRoleByIdFromDatabase } from '@/core/RoleStore.js';
+import { fetchRoleByIdFromDatabase } from '@/core/role/RoleStore.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
@@ -11,7 +11,7 @@ import {
 	filterNoteForStreamingHidingForHonoApi,
 	populateMyReactionForHonoApi,
 	type HonoApiNoteDependencies,
-} from '../../rest/note.js';
+} from '@/server/rest/note/note.js';
 import { isNoteMutedOrBlockedForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
 
 async function isRoleExplorableForHonoStream(
