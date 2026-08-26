@@ -3,9 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// テストファイル側で呼ぶと import 巻き上げに負けるので、setupFile で先に置く。
+// localStorage の seed と msw の起動。テストファイル側で呼ぶと import 巻き上げに負けるので、
+// setupFile から本体より先に評価させる。
 import '@/stories/seed-account.js';
-import { startMockServiceWorker } from '@/stories/environment.js';
-
-// テストファイルが本体のモジュールを import する前に msw を上げる。
-await startMockServiceWorker();
