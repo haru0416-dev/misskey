@@ -5,6 +5,7 @@
 
 import type { StoryObj } from '@/stories/types.js';
 import RouterView from './RouterView.vue';
+import { createRouter } from '@/router.js';
 
 export const Default = {
 	render: (args) => ({
@@ -12,5 +13,8 @@ export const Default = {
 		setup: () => ({ args }),
 		template: '<RouterView v-bind="args" />',
 	}),
-	args: {},
+	args: {
+		// router が無いと mount 時点で throw する。実物のルーターを渡す。
+		router: createRouter('/about'),
+	},
 } satisfies StoryObj<typeof RouterView>;

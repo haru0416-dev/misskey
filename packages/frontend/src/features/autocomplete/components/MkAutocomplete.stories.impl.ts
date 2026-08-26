@@ -88,7 +88,10 @@ export const User = {
 			async () => {
 				await userEvent.type(input, ' ', { delay: 256 });
 				await tick();
-				return await expect(canvas.getByRole('list')).toBeInTheDocument();
+				// ユーザー候補の下には常に「ユーザーを選択」が並ぶので、件数だけでは
+				// 候補が空でも通ってしまう。モックが返した名前が出ることまで見る。
+				const list = canvas.getByRole('list');
+				return await expect(list).toHaveTextContent('mizuki');
 			},
 			{ timeout: 16384 },
 		);
@@ -124,7 +127,8 @@ export const Hashtag = {
 			async () => {
 				await userEvent.type(input, ' ', { delay: 256 });
 				await tick();
-				return await expect(canvas.getByRole('list')).toBeInTheDocument();
+				const list = canvas.getByRole('list');
+				return await expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(0);
 			},
 			{ interval: 256, timeout: 16384 },
 		);
@@ -157,7 +161,8 @@ export const Emoji = {
 			async () => {
 				await userEvent.type(input, ' ', { delay: 256 });
 				await tick();
-				return await expect(canvas.getByRole('list')).toBeInTheDocument();
+				const list = canvas.getByRole('list');
+				return await expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(0);
 			},
 			{ interval: 256, timeout: 16384 },
 		);
@@ -177,7 +182,8 @@ export const MfmTag = {
 		await waitFor(
 			async () => {
 				await tick();
-				return await expect(canvas.getByRole('list')).toBeInTheDocument();
+				const list = canvas.getByRole('list');
+				return await expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(0);
 			},
 			{ interval: 256, timeout: 16384 },
 		);

@@ -9,7 +9,7 @@ Storybook は 2026-08-26 に撤去した (実行時にストーリーが一つ�
 | --- | --- |
 | カタログを開く (http://127.0.0.1:6006/) | `bun run --bun --filter frontend catalog` |
 | 静的ビルド (CI が実行) | `bun run --filter frontend catalog:build` |
-| `play` を実ブラウザで検証 | `bun run --bun --filter frontend test:stories` |
+| すべての story を mount + `play` を実ブラウザで検証 | `bun run --bun --filter frontend test:stories` |
 
 ## story の置き方
 
@@ -53,6 +53,21 @@ async play({ canvasElement }) {
 `document.body` を直接探さないこと。story 間で popup が残ると `getByRole` が複数一致して
 落ちるため、ハーネスが story ごとに `popups` を空にしている。
 
+## テストが見ているもの
+
+`test:stories` は **全 story を mount** し、`play` を持つものはそれも走らせる。mount 中の例外は
+`app.config.errorHandler` で拾って落とすので、play を書かない story でも
+「既定の args で描画できる」ことは守られる。
+
+`nextTick` だけでは、モックした API の応答が解決した後に投げる例外を取り逃す。
+ハーネスはマクロタスクを数回回してから判定している。
+
+**story のハーネスは実運用の初期状態を再現する**。localStorage に account (token 込み) と
+instance の meta を入れてある。どちらも欠けると `$i` が null になったり
+`instance.serverRules.length` が落ちたりして、実運用では起きない失敗が出る。
+`@/i.ts` と `@/instance.ts` は **import された瞬間**に localStorage を読むので、
+seed は `@/stories/seed-account.js` を最初の import に置くことで行う (import 巻き上げに負けるため)。
+
 ## `play` を書くときの罠 (実測)
 
 - **`os.confirm` / `os.contextMenu` を挟む操作は答えるまで進まない。** 同意スイッチ等は
@@ -64,6 +79,9 @@ async play({ canvasElement }) {
 - **装飾画像 (`alt=""`) は `getByRole('img')` で引けない。** role は `presentation` になる。
   リンクの唯一の中身が装飾画像だとリンク名が無くなるので、その場合はコンポーネント側が誤り
 - **汎用の `MkInput` は `textbox`。** autocomplete を付けても `combobox` にはならない
+- **「在ること」だけを見ない。** `getByRole('list')` は中身が空でも通る。`getBy*` は
+  見つからなければ throw するので、直後の `toBeInTheDocument()` は何も足さない。
+  モックが返した実データが出るところまで見る
 - **時刻に依存する story は `origin` を明示する。** 相対表示は基準時刻を渡さないと実時刻になり、
   書いた当時は未来だった日付が過去になって落ちる
 

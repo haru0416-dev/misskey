@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterAll, describe, test } from 'vitest';
-import { createApp } from 'vue';
+import { afterAll, describe, expect, test } from 'vitest';
+import { createApp, nextTick } from 'vue';
 import {
 	applyStoryHandlers,
 	createAppRuntime,
@@ -24,22 +24,35 @@ const runtime = await createAppRuntime();
 
 afterAll(() => worker.stop());
 
+/** 非同期の初期化が落ち着くまで待つ。 */
+async function settle(): Promise<void> {
+	for (let i = 0; i < 3; i++) {
+		await nextTick();
+		await new Promise((resolve) => setTimeout(resolve, 16));
+	}
+}
+
+function isStory(value: unknown): value is StoryObj {
+	if (value == null || typeof value !== 'object') return false;
+	const story = value as StoryObj;
+	return story.render != null || story.args != null;
+}
+
 /**
- * play を持つ story だけを実際に mount して走らせる。play を持たない story の描画確認は
- * カタログ (`bun run --filter frontend catalog`) 側の役目。
+ * すべての story を mount し、play を持つものはそれも走らせる。
+ *
+ * play が無い story も mount だけはする。コンポーネントが既定の args で例外を投げる退行は
+ * それだけで捕まるし、カタログを開かないと分からない状態を CI に載せられる。
  */
 for (const [path, load] of Object.entries(modules)) {
 	const title = path.replace(/^\.\.\/src\//, '').replace(/\.stories\.impl\.ts$/, '');
 	const module = await load();
+	const stories = Object.entries(module).filter(([, value]) => isStory(value)) as [string, StoryObj][];
 
-	const playable = Object.entries(module).filter(
-		([, value]) => value != null && typeof (value as StoryObj).play === 'function',
-	) as [string, StoryObj][];
-
-	if (playable.length === 0) continue;
+	if (stories.length === 0) continue;
 
 	describe(title, () => {
-		for (const [name, story] of playable) {
+		for (const [name, story] of stories) {
 			test(name, async () => {
 				const container = document.createElement('div');
 				document.body.appendChild(container);
@@ -49,8 +62,11 @@ for (const [path, load] of Object.entries(modules)) {
 				resetLocalStorage();
 				applyStoryHandlers(worker, story.parameters?.msw);
 
+				// setup 中の例外は Vue が握り潰すので、拾って落とす。
+				const errors: unknown[] = [];
 				const context = createStoryContext(story, container);
 				const app = createApp(buildStoryComponent(story, context));
+				app.config.errorHandler = (err) => errors.push(err);
 				runtime.install(app);
 				app.mount(container);
 
@@ -59,11 +75,17 @@ for (const [path, load] of Object.entries(modules)) {
 				const popupRoot = document.createElement('div');
 				container.appendChild(popupRoot);
 				const popupApp = createApp(PopupHost);
+				popupApp.config.errorHandler = (err) => errors.push(err);
 				runtime.install(popupApp);
 				popupApp.mount(popupRoot);
 
 				try {
+					// nextTick だけでは、モックした API の応答が解決した後に投げる例外を取り逃す。
+					// マクロタスクを数回回して落ち着かせてから判定する。
+					await settle();
 					await story.play?.(context);
+					await settle();
+					expect(errors).toEqual([]);
 				} finally {
 					app.unmount();
 					popupApp.unmount();
