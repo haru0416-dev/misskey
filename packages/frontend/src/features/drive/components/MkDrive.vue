@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<span v-if="folder != null" :class="[$style.navPathItem, $style.navSeparator]"><i class="ti ti-chevron-right"></i></span>
 				<span v-if="folder != null" :class="[$style.navPathItem, $style.navCurrent]">{{ folder.name }}</span>
 			</div>
-			<button class="_button" :class="$style.navMenu" @click="showMenu"><i class="ti ti-dots"></i></button>
+			<button class="_button" :class="$style.navMenu" :aria-label="i18n.ts.menu" @click="showMenu"><i class="ti ti-dots"></i></button>
 		</nav>
 	</template>
 
@@ -237,12 +237,29 @@ const fetching = ref(true);
 
 const sortModeSelect = ref<NonNullable<Misskey.entities.DriveFilesRequest['sort']>>('+createdAt');
 
+/**
+ * 種類での絞り込み。`props.type` は呼び出し側が固定する条件 (ファイル選択ダイアログ等) なので、
+ * そちらが指定されている場合はメニューを出さず固定条件を優先する。
+ */
+const typeFilter = ref<'all' | 'image' | 'video' | 'audio'>('all');
+const typeFilterPrefix: Record<Exclude<typeof typeFilter.value, 'all'>, string> = {
+	image: 'video/*',
+	video: 'video/*',
+	audio: 'audio/*',
+};
+const canFilterByType = computed(() => props.type === undefined);
+const effectiveType = computed(() => {
+	if (props.type !== undefined) return props.type;
+	if (typeFilter.value === 'all') return undefined;
+	return typeFilterPrefix[typeFilter.value];
+});
+
 const filesPaginator = markRaw(new Paginator('drive/files', {
 	limit: 30,
 	canFetchDetection: 'limit',
 	params: () => ({ // 自動でリロードしたくないためcomputedParamsは使わない
 		folderId: folder.value ? folder.value.id : null,
-		...(props.type === undefined ? {} : { type: props.type }),
+		...(effectiveType.value === undefined ? {} : { type: effectiveType.value }),
 		sort: ['-createdAt', '+createdAt'].includes(sortModeSelect.value) ? null : sortModeSelect.value,
 	}),
 }));
@@ -268,7 +285,7 @@ const filesTimeline = makeDateGroupedTimelineComputedRef(filesPaginator.items, '
 const shouldBeGroupedByDate = computed(() => ['+createdAt', '-createdAt'].includes(sortModeSelect.value));
 
 watch(folder, () => emit('cd', folder.value));
-watch(sortModeSelect, () => {
+watch([sortModeSelect, typeFilter], () => {
 	initialize();
 });
 
@@ -664,6 +681,27 @@ function getMenu() {
 			active: sortModeSelect.value === '-name',
 		}],
 	});
+
+	if (canFilterByType.value) {
+		menu.push({
+			type: 'parent',
+			text: i18n.ts.type,
+			icon: 'ti ti-filter',
+			children: (
+				[
+					['all', i18n.ts.all, 'ti ti-files'],
+					['image', i18n.ts.image, 'ti ti-photo'],
+					['video', i18n.ts.video, 'ti ti-movie'],
+					['audio', i18n.ts.audio, 'ti ti-music'],
+				] as const
+			).map(([value, text, icon]) => ({
+				text,
+				icon,
+				action: () => { typeFilter.value = value; },
+				active: typeFilter.value === value,
+			})),
+		});
+	}
 
 	if (folder.value) {
 		menu.push({
