@@ -171,7 +171,6 @@ export const endpointMetas = {
 				nullable: false,
 				optional: false,
 				properties: {
-					qr: { type: 'string' },
 					url: { type: 'string' },
 					secret: { type: 'string' },
 					label: { type: 'string' },

@@ -5,7 +5,6 @@
 
 import { comparePassword } from '@/misc/password.js';
 import * as OTPAuth from 'otpauth';
-import * as QRCode from 'qrcode';
 import { z } from 'zod';
 import type { RegistrationResponseJSON } from '@simplewebauthn/server';
 import {
@@ -72,7 +71,7 @@ export async function handleApiI2faRegister(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<{ qr: string; url: string; secret: string; label: string; issuer: string }> {
+): Promise<{ url: string; secret: string; label: string; issuer: string }> {
 	const params = parseApiParams(i2faRegisterParamDef, body);
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
@@ -91,12 +90,9 @@ export async function handleApiI2faRegister(
 		label: me.username,
 		issuer: deps.config.runtime.host,
 	});
-	const url = totp.toString();
-	const qr = await QRCode.toDataURL(url);
-
+	// QR はクライアントが url から描く (サーバー側で画像を作らない)。
 	return {
-		qr,
-		url,
+		url: totp.toString(),
 		secret: secret.base32,
 		label: me.username,
 		issuer: deps.config.runtime.host,
