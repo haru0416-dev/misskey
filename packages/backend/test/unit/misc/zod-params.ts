@@ -132,4 +132,28 @@ describe('misc:zod-params', () => {
 			).toBe(true);
 		});
 	});
+
+	describe('誕生日の月日', () => {
+		const parse = (birthday: unknown): boolean =>
+			usersGetFollowingUsersByBirthdayParamDef.safeParse({ birthday }).success;
+
+		test('実在する月日は通す', () => {
+			expect(parse({ month: 1, day: 31 })).toBe(true);
+			expect(parse({ month: 4, day: 30 })).toBe(true);
+			// 閏日生まれは実在するので通す。
+			expect(parse({ month: 2, day: 29 })).toBe(true);
+		});
+
+		test('実在しない月日は弾く', () => {
+			expect(parse({ month: 2, day: 30 })).toBe(false);
+			expect(parse({ month: 2, day: 31 })).toBe(false);
+			expect(parse({ month: 4, day: 31 })).toBe(false);
+			expect(parse({ month: 13, day: 1 })).toBe(false);
+		});
+
+		test('範囲指定の両端にも効く', () => {
+			expect(parse({ begin: { month: 1, day: 1 }, end: { month: 2, day: 30 } })).toBe(false);
+			expect(parse({ begin: { month: 1, day: 1 }, end: { month: 2, day: 28 } })).toBe(true);
+		});
+	});
 });

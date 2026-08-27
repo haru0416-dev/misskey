@@ -490,7 +490,7 @@ describe('ユーザー', () => {
 		{ parameters: () => ({ lang: 'en-US' as const }) },
 		{ parameters: () => ({ fields: [] }) },
 		{ parameters: () => ({ fields: [{ name: 'x', value: 'x' }] }) },
-		{ parameters: () => ({ fields: [{ name: 'x'.repeat(3000), value: 'x'.repeat(3000) }] }) }, // BUG? fieldには制限がない
+		{ parameters: () => ({ fields: [{ name: 'x'.repeat(50), value: 'x'.repeat(512) }] }) },
 		{ parameters: () => ({ fields: Array(16).fill({ name: 'x', value: 'y' }) }) },
 		{ parameters: () => ({ isLocked: true }) },
 		{ parameters: () => ({ isLocked: false }) },
@@ -546,6 +546,16 @@ describe('ユーザー', () => {
 	])('の誕生日に$labelは指定できない', async ({ birthday }) => {
 		await failedApiCall(
 			{ endpoint: 'i/update', parameters: { birthday }, user: alice },
+			{ status: 400, code: 'INVALID_PARAM', id: '3d81ceae-475f-4600-b2a8-2bc116157532' },
+		);
+	});
+
+	test.each([
+		{ label: '名前', fields: [{ name: 'x'.repeat(51), value: 'x' }] },
+		{ label: '値', fields: [{ name: 'x', value: 'x'.repeat(513) }] },
+	])('の追加情報は$labelが長すぎると指定できない', async ({ fields }) => {
+		await failedApiCall(
+			{ endpoint: 'i/update', parameters: { fields }, user: alice },
 			{ status: 400, code: 'INVALID_PARAM', id: '3d81ceae-475f-4600-b2a8-2bc116157532' },
 		);
 	});
@@ -791,8 +801,12 @@ describe('ユーザー', () => {
 			user: () => userSilenced,
 			selector: (user: misskey.entities.UserDetailed) => user.isSilenced,
 		},
-		// FIXME: 落ちる
-		//{ label: 'サスペンドになっている', user: () => userSuspended, selector: (user: misskey.entities.UserDetailed) => user.isSuspended },
+		{
+			label: 'サスペンドになっている',
+			user: () => userSuspended,
+			me: () => userModerator,
+			selector: (user: misskey.entities.UserDetailed) => user.isSuspended,
+		},
 		{
 			label: '削除済みになっている',
 			user: () => userDeletedBySelf,
@@ -939,11 +953,14 @@ describe('ユーザー', () => {
 		{ label: '承認制ユーザーが含まれる', user: () => userLocking },
 		{ label: 'サイレンスユーザーが含まれる', user: () => userSilenced },
 		{ label: 'サスペンドユーザーが（モデレーターが見るときは）含まれる', user: () => userSuspended, me: () => root },
-		// BUG サスペンドユーザーを一般ユーザーから見るとrootユーザーが返ってくる
-		//{ label: 'サスペンドユーザーが（一般ユーザーが見るときは）含まれない', user: () => userSuspended, me: () => bob, excluded: true },
+		{
+			label: 'サスペンドユーザーが（一般ユーザーが見るときは）含まれない',
+			user: () => userSuspended,
+			me: () => bob,
+			excluded: true,
+		},
 		{ label: '削除済ユーザーが含まれる', user: () => userDeletedBySelf },
 		{ label: '削除済(byAdmin)ユーザーが含まれる', user: () => userDeletedByAdmin },
-		// @ts-expect-error excluded は上でコメントアウトされているので
 	] as const)('をID指定のリスト形式で取得することができ、結果に$label', async ({ user, me, excluded }) => {
 		const parameters = { userIds: [user().id] };
 		const response = await successfulApiCall({ endpoint: 'users/show', parameters, user: me?.() ?? alice });
@@ -1111,7 +1128,7 @@ describe('ユーザー', () => {
 		{ label: 'ブロックしてきているユーザーが含まれない', user: () => userBlockingAlice, excluded: true },
 		{ label: '承認制ユーザーが含まれる', user: () => userLocking },
 		{ label: 'サイレンスユーザーが含まれる', user: () => userSilenced },
-		//{ label: 'サスペンドユーザーが含まれない', user: () => userSuspended, excluded: true },
+		{ label: 'サスペンドユーザーが含まれない', user: () => userSuspended, excluded: true },
 		{ label: '削除済ユーザーが含まれる', user: () => userDeletedBySelf },
 		{ label: '削除済(byAdmin)ユーザーが含まれる', user: () => userDeletedByAdmin },
 	] as const)('がよくリプライをするユーザーのリストを取得でき、結果に$label', async ({ user, excluded }) => {

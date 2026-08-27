@@ -115,6 +115,7 @@ async function packApiAnnouncement(
 		forYou: announcement.userId === user?.id,
 		needConfirmationToRead: announcement.needConfirmationToRead,
 		silence: announcement.silence,
+		isActive: announcement.isActive,
 		isRead: isRead !== null ? isRead : undefined,
 		reactions,
 		myReaction: user == null ? undefined : (myReaction ?? null),
@@ -228,6 +229,15 @@ function alreadyReactedError(): ApiError {
 	});
 }
 
+function announcementNotActiveError(): ApiError {
+	return new ApiError({
+		status: 400,
+		message: 'That announcement is no longer active.',
+		code: 'ANNOUNCEMENT_NOT_ACTIVE',
+		id: 'aa4dbb14-7a3c-4a4c-9a44-a1f5f1e0dd39',
+	});
+}
+
 function notReactedError(): ApiError {
 	return new ApiError({
 		status: 400,
@@ -273,6 +283,8 @@ async function fetchReactableAnnouncement(
 	if (announcement == null) throw reactAnnouncementNotFoundError();
 	// 個人宛のお知らせは宛先本人にしか見えない。
 	if (announcement.userId != null && announcement.userId !== me.id) throw reactAnnouncementNotFoundError();
+	// 終了したお知らせは読むだけ。件数は見えるが付け外しはできない。
+	if (!announcement.isActive) throw announcementNotActiveError();
 	return announcement;
 }
 

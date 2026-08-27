@@ -32,8 +32,7 @@ export const Default = {
 	async play({ canvasElement }) {
 		const canvas = within(canvasElement);
 		const a = canvas.getByRole<HTMLAnchorElement>('link');
-		// FIXME: 通るけどその後落ちるのでコメントアウト
-		// await expect(a.href).toMatch(/^https?:\/\/.*#test$/);
+		await expect(a.href).toMatch(/^https?:\/\/.*#test$/);
 		await userEvent.pointer({ keys: '[MouseRight]', target: a });
 		// os.contextMenu は MkContextMenu を動的 import してから popup するので同期では取れない。
 		const menu = await canvas.findByRole('menu');
