@@ -148,6 +148,8 @@ import type {
     AnnouncementsResponse,
     AnnouncementsShowRequest,
     AnnouncementsShowResponse,
+    AnnouncementsReactRequest,
+    AnnouncementsUnreactRequest,
     AntennasCreateRequest,
     AntennasCreateResponse,
     AntennasDeleteRequest,
@@ -822,6 +824,8 @@ export type Endpoints = {
     'admin/update-user-note': { req: AdminUpdateUserNoteRequest; res: EmptyResponse };
     announcements: { req: AnnouncementsRequest; res: AnnouncementsResponse; reqOptional: true };
     'announcements/show': { req: AnnouncementsShowRequest; res: AnnouncementsShowResponse };
+    'announcements/react': { req: AnnouncementsReactRequest; res: EmptyResponse };
+    'announcements/unreact': { req: AnnouncementsUnreactRequest; res: EmptyResponse };
     'antennas/create': { req: AntennasCreateRequest; res: AntennasCreateResponse };
     'antennas/delete': { req: AntennasDeleteRequest; res: EmptyResponse };
     'antennas/list': { req: EmptyRequest; res: AntennasListResponse; reqOptional: true };

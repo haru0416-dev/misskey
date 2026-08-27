@@ -72,5 +72,22 @@ export const packedAnnouncementSchema = {
 			optional: true,
 			nullable: false,
 		},
+		reactions: {
+			type: 'object',
+			optional: false,
+			nullable: false,
+			additionalProperties: {
+				anyOf: [
+					{
+						type: 'number',
+					},
+				],
+			},
+		},
+		myReaction: {
+			type: 'string',
+			optional: true,
+			nullable: true,
+		},
 	},
 } as const;

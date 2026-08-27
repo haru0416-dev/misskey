@@ -10,7 +10,12 @@ import {
 	muteListParamDef,
 	userIdParamDef as userIdParamDef_2,
 } from '@/server/rest/account/account-mutes.js';
-import { announcementShowParamDef, announcementsParamDef } from '@/server/rest/announcement/announcements.js';
+import {
+	announcementReactParamDef,
+	announcementShowParamDef,
+	announcementUnreactParamDef,
+	announcementsParamDef,
+} from '@/server/rest/announcement/announcements.js';
 import { apGetParamDef, apShowParamDef } from '@/server/rest/activitypub/ap.js';
 import { appCreateParamDef, appShowParamDef, myAppsParamDef } from '@/server/rest/auth/app.js';
 import {
@@ -94,6 +99,56 @@ export const endpointMetas = {
 			},
 		} as const,
 		paramDef: announcementShowParamDef,
+	},
+	'announcements/react': {
+		meta: {
+			tags: ['meta'],
+
+			requireCredential: true,
+
+			kind: 'write:account',
+
+			errors: {
+				noSuchAnnouncement: {
+					message: 'No such announcement.',
+					code: 'NO_SUCH_ANNOUNCEMENT',
+					id: 'b1e8f640-5acc-4a77-8337-928a5362f57e',
+					httpStatusCode: 404,
+				},
+
+				alreadyReacted: {
+					message: 'You are already reacting to that announcement.',
+					code: 'ALREADY_REACTED',
+					id: '745c33cb-cd64-4c08-b88a-7bffa45e0c1f',
+				},
+			},
+		} as const,
+		paramDef: announcementReactParamDef,
+	},
+	'announcements/unreact': {
+		meta: {
+			tags: ['meta'],
+
+			requireCredential: true,
+
+			kind: 'write:account',
+
+			errors: {
+				noSuchAnnouncement: {
+					message: 'No such announcement.',
+					code: 'NO_SUCH_ANNOUNCEMENT',
+					id: 'b1e8f640-5acc-4a77-8337-928a5362f57e',
+					httpStatusCode: 404,
+				},
+
+				notReacted: {
+					message: 'You are not reacting to that announcement.',
+					code: 'NOT_REACTED',
+					id: '0d7d5424-466e-45a2-9ed0-9e27c4b9f4a5',
+				},
+			},
+		} as const,
+		paramDef: announcementUnreactParamDef,
 	},
 	'ap/get': {
 		meta: {

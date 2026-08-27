@@ -168,6 +168,8 @@ export const endpointMetas = {
 	'admin/update-user-note': adminMetas['admin/update-user-note'],
 	announcements: miscMetas['announcements'],
 	'announcements/show': miscMetas['announcements/show'],
+	'announcements/react': miscMetas['announcements/react'],
+	'announcements/unreact': miscMetas['announcements/unreact'],
 	'antennas/create': antennasMetas['antennas/create'],
 	'antennas/delete': antennasMetas['antennas/delete'],
 	'antennas/list': antennasMetas['antennas/list'],
