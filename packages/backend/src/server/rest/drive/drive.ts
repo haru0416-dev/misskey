@@ -63,7 +63,7 @@ type DriveFoldersCreateParams = {
 };
 
 export const driveFoldersParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 	folderId: misskeyId().nullable().default(null),
 });

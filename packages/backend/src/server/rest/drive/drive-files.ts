@@ -58,7 +58,7 @@ function accessDeniedError(id: string): ApiError {
 }
 
 export const driveFilesParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 	folderId: misskeyId().nullable().default(null),
 	type: z
@@ -112,7 +112,7 @@ export async function handleApiDriveFilesList(
 }
 
 export const driveStreamParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 	type: z
 		.string()
@@ -231,7 +231,7 @@ export async function handleApiDriveFilesFindByHash(
 
 export const driveFilesAttachedNotesParamDef = z.object({
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	fileId: misskeyId(),
 });
 
@@ -469,7 +469,7 @@ export async function handleApiDriveFilesMoveBulk(
 
 export const driveFilesAttachedChatMessagesParamDef = z.object({
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	fileId: misskeyId(),
 });
 

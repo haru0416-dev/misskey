@@ -67,7 +67,7 @@ type ApiPackedChannel = Packed<'Channel'>;
 
 export const channelsListParamDef = z.object({
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).optional().default(5),
+	limit: z.int().min(1).max(100).optional().default(5),
 });
 
 type ChannelsListParams = {
@@ -82,7 +82,7 @@ export const channelsSearchParamDef = z.object({
 	query: z.string(),
 	type: z.enum(['nameAndDescription', 'nameOnly']).optional().default('nameAndDescription'),
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).optional().default(5),
+	limit: z.int().min(1).max(100).optional().default(5),
 });
 
 type ChannelsSearchParams = ChannelsListParams & {
@@ -144,7 +144,7 @@ type ChannelFollowParams = {
 
 export const channelMuteCreateParamDef = z.object({
 	channelId: misskeyId(),
-	expiresAt: z.number().int().nullable().optional(),
+	expiresAt: z.int().nullable().optional(),
 });
 
 type ChannelMuteCreateParams = {
@@ -170,7 +170,7 @@ type ChannelShowParams = {
 
 const channelTimelineParamDef = z.object({
 	channelId: misskeyId(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 

@@ -56,7 +56,7 @@ export const emojiParamDef = z.object({
 
 export const adminEmojiListParamDef = z.object({
 	query: z.string().nullable().default(null),
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
 
@@ -64,7 +64,7 @@ export const adminEmojiListRemoteParamDef = z.object({
 	query: z.string().nullable().default(null),
 	/** ローカルホストは null で表す。 */
 	host: z.string().nullable().default(null),
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
 
@@ -820,8 +820,8 @@ const v2AdminEmojiListQueryParamDef = z
 const v2AdminEmojiListParamDef = z.object({
 	query: v2AdminEmojiListQueryParamDef.optional(),
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).default(10),
-	page: z.number().int().optional(),
+	limit: z.int().min(1).max(100).default(10),
+	page: z.int().optional(),
 	sortKeys: z.array(z.enum(fetchEmojisSortKeys)).default(['-id']),
 });
 

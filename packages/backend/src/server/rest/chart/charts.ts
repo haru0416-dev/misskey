@@ -104,8 +104,8 @@ export function normalizeApiChartQuery(query: Record<string, string>): Record<st
 
 export const chartParamDef = z.object({
 	span: z.enum(['day', 'hour']),
-	limit: z.number().int().min(1).max(500).default(30),
-	offset: z.number().int().nullable().default(null),
+	limit: z.int().min(1).max(500).default(30),
+	offset: z.int().nullable().default(null),
 });
 
 type ChartParams = {
@@ -116,8 +116,8 @@ type ChartParams = {
 
 export const perUserChartParamDef = z.object({
 	span: z.enum(['day', 'hour']),
-	limit: z.number().int().min(1).max(500).default(30),
-	offset: z.number().int().nullable().default(null),
+	limit: z.int().min(1).max(500).default(30),
+	offset: z.int().nullable().default(null),
 	userId: misskeyId(),
 });
 
@@ -127,8 +127,8 @@ type PerUserChartParams = ChartParams & {
 
 export const instanceChartParamDef = z.object({
 	span: z.enum(['day', 'hour']),
-	limit: z.number().int().min(1).max(500).default(30),
-	offset: z.number().int().nullable().default(null),
+	limit: z.int().min(1).max(500).default(30),
+	offset: z.int().nullable().default(null),
 	host: z.string(),
 });
 

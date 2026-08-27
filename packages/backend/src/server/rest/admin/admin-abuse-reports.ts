@@ -79,7 +79,7 @@ export const adminForwardAbuseUserReportParamDef = z.object({
 });
 
 export const adminAbuseUserReportsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 	state: z.string().nullable().optional().default(null),
 	reporterOrigin: z.enum(['combined', 'local', 'remote']).optional().default('combined'),

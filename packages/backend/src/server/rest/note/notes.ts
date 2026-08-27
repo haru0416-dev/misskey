@@ -116,7 +116,7 @@ function notesShowContentRestrictedByServerError(): ApiError {
 
 export const noteIdPaginationParamDef = z.object({
 	noteId: misskeyId(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 
@@ -173,8 +173,8 @@ function notesConversationNoSuchNoteError(): ApiError {
 
 export const notesConversationParamDef = z.object({
 	noteId: misskeyId(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
-	offset: z.number().int().optional().default(0),
+	limit: z.int().min(1).max(100).optional().default(10),
+	offset: z.int().optional().default(0),
 });
 
 type NotesConversationParams = {
@@ -226,7 +226,7 @@ export async function handleApiNotesConversation(
 
 export const notesMentionsParamDef = z.object({
 	following: z.boolean().optional().default(false),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 	visibility: z.string().optional(),
 });
@@ -526,7 +526,7 @@ function notesGlobalTimelineDisabledError(): ApiError {
 export const notesGlobalTimelineParamDef = z.object({
 	withFiles: z.boolean().optional().default(false),
 	withRenotes: z.boolean().optional().default(true),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 
@@ -571,7 +571,7 @@ export const notesParamDef = z.object({
 	renote: z.boolean().optional(),
 	withFiles: z.boolean().optional(),
 	poll: z.boolean().optional(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 
@@ -635,12 +635,12 @@ export const notesLocalTimelineParamDef = z.object({
 	withFiles: z.boolean().optional().default(false),
 	withRenotes: z.boolean().optional().default(true),
 	withReplies: z.boolean().optional().default(false),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
 	allowPartial: z.boolean().optional().default(false),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	sinceDate: z.int().optional(),
+	untilDate: z.int().optional(),
 });
 
 type NotesLocalTimelineParams = {
@@ -737,7 +737,7 @@ function notesHybridTimelineBothWithRepliesAndWithFilesError(): ApiError {
 }
 
 export const notesHybridTimelineParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 	allowPartial: z.boolean().optional().default(false),
 	includeMyRenotes: z.boolean().optional().default(true),
@@ -894,7 +894,7 @@ let globalNotesRankingCache: string[] = [];
 let globalNotesRankingCacheLastFetchedAt = 0;
 
 export const notesFeaturedParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	untilId: misskeyId().optional(),
 	channelId: misskeyId().nullable().optional(),
 });
@@ -1008,11 +1008,11 @@ function notesSearchUnavailableError(): ApiError {
 
 export const notesSearchParamDef = z.object({
 	query: z.string(),
-	rangeStartAt: z.number().int().nullable().optional(),
-	rangeEndAt: z.number().int().nullable().optional(),
+	rangeStartAt: z.int().nullable().optional(),
+	rangeEndAt: z.int().nullable().optional(),
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).optional().default(10),
-	offset: z.number().int().optional().default(0),
+	limit: z.int().min(1).max(100).optional().default(10),
+	offset: z.int().optional().default(0),
 	host: z.string().optional(),
 	userId: misskeyId().nullable().optional().default(null),
 	channelId: misskeyId().nullable().optional().default(null),
@@ -1119,12 +1119,12 @@ const notesSearchByTagParamDef = z
 		withFiles: z.boolean().optional().default(false),
 		poll: z.boolean().nullable().optional().default(null),
 		...paginationParams,
-		limit: z.number().int().min(1).max(100).optional().default(10),
+		limit: z.int().min(1).max(100).optional().default(10),
 	})
 	.superRefine((data, ctx) => {
 		if (!isValidTagBranch(data.tag) && !isValidQueryBranch(data.query)) {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: 'custom',
 				message: 'must match "anyOf" schema (tag or query)',
 				path: [],
 			});
@@ -1139,7 +1139,7 @@ const notesSearchByTagCommonFieldsDocsSchema = z.object({
 	withFiles: z.boolean().optional().default(false),
 	poll: z.boolean().nullable().optional().default(null),
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 });
 export const notesSearchByTagDocsParamDef = z.intersection(
 	z.union([
@@ -1231,7 +1231,7 @@ export async function handleApiNotesShowPartialBulk(
 }
 
 export const notesTimelineParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 	allowPartial: z.boolean().optional().default(false),
 	includeMyRenotes: z.boolean().optional().default(true),
@@ -1337,7 +1337,7 @@ function notesUserListTimelineNoSuchListError(): ApiError {
 
 export const notesUserListTimelineParamDef = z.object({
 	listId: misskeyId(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 	allowPartial: z.boolean().optional().default(false),
 	includeMyRenotes: z.boolean().optional().default(true),
@@ -1394,8 +1394,8 @@ export async function handleApiNotesUserListTimeline(
 }
 
 export const notesPollsRecommendationParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
-	offset: z.number().int().optional().default(0),
+	limit: z.int().min(1).max(100).optional().default(10),
+	offset: z.int().optional().default(0),
 	excludeChannels: z.boolean().optional().default(false),
 });
 

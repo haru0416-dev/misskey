@@ -1389,7 +1389,7 @@ async function getUserForApiChat(deps: ApiChatDependencies, userId: string): Pro
 // ---------------------------------------------------------------------------
 
 export const chatHistoryParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	room: z.boolean().optional().default(false),
 });
 
@@ -1587,7 +1587,7 @@ export async function handleApiChatMessagesUnreact(
 }
 
 export const chatMessagesRoomTimelineParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 	roomId: misskeyId(),
 });
@@ -1628,7 +1628,7 @@ export async function handleApiChatMessagesRoomTimeline(
 
 export const chatMessagesSearchParamDef = z.object({
 	query: z.string().min(1).max(256),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	userId: misskeyId().nullable().optional(),
 	roomId: misskeyId().nullable().optional(),
 });
@@ -1685,7 +1685,7 @@ export async function handleApiChatMessagesShow(
 }
 
 export const chatMessagesUserTimelineParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 	userId: misskeyId(),
 });
@@ -1812,7 +1812,7 @@ export async function handleApiChatRoomsShow(
 }
 
 export const chatRoomsOwnedParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(30),
+	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
 
@@ -1856,7 +1856,7 @@ export async function handleApiChatRoomsJoin(
 }
 
 export const chatRoomsJoiningParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(30),
+	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
 
@@ -1901,7 +1901,7 @@ export async function handleApiChatRoomsLeave(
 
 export const chatRoomsMembersParamDef = z.object({
 	roomId: misskeyId(),
-	limit: z.number().int().min(1).max(100).optional().default(30),
+	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
 
@@ -1990,7 +1990,7 @@ export async function handleApiChatRoomsInvitationsIgnore(
 }
 
 export const chatRoomsInvitationsInboxParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(30),
+	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
 
@@ -2025,7 +2025,7 @@ export async function handleApiChatRoomsInvitationsInbox(
 
 export const chatRoomsInvitationsOutboxParamDef = z.object({
 	roomId: misskeyId(),
-	limit: z.number().int().min(1).max(100).optional().default(30),
+	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
 

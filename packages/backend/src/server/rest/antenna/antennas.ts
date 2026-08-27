@@ -645,7 +645,7 @@ export async function handleApiAntennasRemoveNote(
 
 export const antennasNotesParamDef = z.object({
 	antennaId: misskeyId(),
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
 

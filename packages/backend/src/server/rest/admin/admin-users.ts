@@ -90,8 +90,8 @@ export const adminShowUserParamDef = z.object({
 });
 
 export const adminShowUsersParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
-	offset: z.number().int().optional().default(0),
+	limit: z.int().min(1).max(100).optional().default(10),
+	offset: z.int().optional().default(0),
 	sort: z
 		.enum([
 			'+follower',

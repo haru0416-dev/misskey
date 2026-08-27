@@ -48,7 +48,7 @@ export type ApiAccountMuteDependencies = UserPackingDependencies & {
 
 export const muteCreateParamDef = z.object({
 	userId: misskeyId(),
-	expiresAt: z.number().int().nullable().optional(),
+	expiresAt: z.int().nullable().optional(),
 });
 
 export const userIdParamDef = z.object({
@@ -56,7 +56,7 @@ export const userIdParamDef = z.object({
 });
 
 export const muteListParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(30),
+	limit: z.int().min(1).max(100).default(30),
 	...paginationParams,
 });
 

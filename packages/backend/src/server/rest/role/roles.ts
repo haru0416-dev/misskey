@@ -52,7 +52,7 @@ export const rolesShowParamDef = z.object({
 export const rolesUsersParamDef = z.object({
 	roleId: misskeyId(),
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 });
 
 function noSuchRoleError(): ApiError {
@@ -84,7 +84,7 @@ function rolesNotesNoSuchRoleError(): ApiError {
 
 export const rolesNotesParamDef = z.object({
 	roleId: misskeyId(),
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
 
