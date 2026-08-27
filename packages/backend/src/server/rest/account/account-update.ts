@@ -9,7 +9,6 @@ import type * as Redis from 'ioredis';
 import * as mfm from 'mfm-js';
 import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
-import RE2 from '@/misc/re2.js';
 import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/AvatarDecorationStore.js';
 import { getDriveFilePublicUrl } from '@/core/drive/DriveFilePublicUrl.js';
 import { getIdenticonUrl } from '@/core/drive/IdenticonUrl.js';
@@ -306,8 +305,9 @@ function validateMuteWordRegex(mutedWords: (string[] | string)[]): void {
 		try {
 			const [, pattern, flags] = regexp;
 			if (pattern == null || flags == null) throw iUpdateInvalidRegexpError();
-			// 正規表現として妥当かどうかだけを見る (不正なら throw する)
-			void new RE2(pattern, flags);
+			// 正規表現として妥当かどうかだけを見る (不正なら throw する)。
+			// ミュートを実際に適用するのはクライアントなので、そちらと同じエンジンで検査する。
+			void new RegExp(pattern, flags);
 		} catch {
 			throw iUpdateInvalidRegexpError();
 		}

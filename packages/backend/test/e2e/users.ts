@@ -560,6 +560,42 @@ describe('ユーザー', () => {
 		);
 	});
 
+	/*
+	 * ワードミュートを実際に適用するのはクライアント (素の RegExp) なので、
+	 * サーバーの検査もそれに合わせる。先読み等をサーバーだけが弾くと、
+	 * クライアントで動くパターンが保存できなくなる。
+	 */
+	test.each([
+		{ label: '先読み', pattern: '/(?=a)b/' },
+		{ label: '否定先読み', pattern: '/a(?!b)/' },
+		{ label: '後読み', pattern: '/(?<=x)y/' },
+		{ label: '後方参照', pattern: '/(a)\\1/' },
+		{ label: 'フラグ付き', pattern: '/(?=a)b/gi' },
+	])('のワードミュートに$labelを含む正規表現を保存できる', async ({ pattern }) => {
+		const response = await successfulApiCall({
+			endpoint: 'i/update',
+			parameters: { mutedWords: [pattern] },
+			user: alice,
+		});
+		expect(response.mutedWords).toStrictEqual([pattern]);
+
+		// 後続のテストは alice のフィクスチャと突き合わせるので、状態を戻す。
+		await successfulApiCall({ endpoint: 'i/update', parameters: { mutedWords: [] }, user: alice });
+	});
+
+	test.each([
+		{ label: '閉じていない文字クラス', pattern: '/[/' },
+		{ label: '順序が逆の量指定子', pattern: '/a{2,1}/' },
+		{ label: '閉じていないグループ', pattern: '/(/' },
+		{ label: '対象のない量指定子', pattern: '/*/' },
+		{ label: 'スラッシュで囲まれていない', pattern: 'not-a-regexp' },
+	])('のワードミュートに$labelは保存できない', async ({ pattern }) => {
+		await failedApiCall(
+			{ endpoint: 'i/update', parameters: { mutedWords: [pattern] }, user: alice },
+			{ status: 400, code: 'INVALID_REGEXP', id: '0d786918-10df-41cd-8f33-8dec7d9a89a5' },
+		);
+	});
+
 	test('を書き換えることができる(Avatar)', async () => {
 		const aliceFile = (await uploadFile(alice)).body;
 		const parameters = { avatarId: aliceFile!.id };

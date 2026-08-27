@@ -24,13 +24,19 @@ describe('isKeywordIncluded', () => {
 		expect(isKeywordIncluded('https://example.com/articles/1', ['/example\\.com\\/articles/i'])).toBe(true);
 	});
 
+	test('スラッシュ 2 個だけの `//` は正規表現ではなくリテラルの語として扱う', () => {
+		// /pattern/flags 形式はスラッシュの間に 1 文字以上を要求する。
+		expect(isKeywordIncluded('a//b', ['//'])).toBe(true);
+		expect(isKeywordIncluded('ab', ['//'])).toBe(false);
+	});
+
 	test('キーワードが空、または text が空なら常に false', () => {
 		expect(isKeywordIncluded('anything', [])).toBe(false);
 		expect(isKeywordIncluded('', ['anything'])).toBe(false);
 	});
 
 	describe('property', () => {
-		const brokenPattern = fc.constantFrom('/[/', '//', '/a{2,1}/', '/(/', '/\\/', '/*/', '/(?<)/');
+		const brokenPattern = fc.constantFrom('/[/', '/a{2,1}/', '/(/', '/\\/', '/*/', '/(?<)/');
 		const keyword = fc.oneof(
 			{ weight: 3, arbitrary: word },
 			{ weight: 2, arbitrary: fc.tuple(word, word).map(([a, b]) => `${a} ${b}`) },
