@@ -7,6 +7,7 @@ import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
 import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
 import { birthdaySchema } from '@/models/User.js';
+import { usersGetFollowingUsersByBirthdayParamDef } from '@/server/rest/user/following.js';
 
 describe('misc:zod-params', () => {
 	describe('uniqueItems', () => {
@@ -90,6 +91,45 @@ describe('misc:zod-params', () => {
 		test('YYYY-MM-DD 以外の形を弾く', () => {
 			expect(birthdaySchema.safeParse('2000-6-15').success).toBe(false);
 			expect(birthdaySchema.safeParse('2000-06-15T00:00:00Z').success).toBe(false);
+		});
+	});
+
+	describe('誕生日の指定 (oneOf)', () => {
+		const monthDay = { month: 6, day: 15 };
+		const range = { begin: { month: 1, day: 1 }, end: { month: 2, day: 2 } };
+		const parse = (birthday: unknown): boolean =>
+			usersGetFollowingUsersByBirthdayParamDef.safeParse({ birthday }).success;
+
+		test('月日のみ・範囲のみは通す', () => {
+			expect(parse(monthDay)).toBe(true);
+			expect(parse(range)).toBe(true);
+		});
+
+		test('両方の形を同時に満たす入力は弾く (union では通ってしまう)', () => {
+			expect(parse({ ...monthDay, ...range })).toBe(false);
+		});
+
+		test('どちらでもない入力は弾く', () => {
+			expect(parse({ month: 6 })).toBe(false);
+		});
+
+		test('OpenAPI に oneOf として出る', () => {
+			// anyOf になると「両方の形に一致する入力を拒否する」ことが公開仕様から消える。
+			const json = z.toJSONSchema(usersGetFollowingUsersByBirthdayParamDef, { io: 'input' }) as {
+				properties?: Record<string, Record<string, unknown>>;
+			};
+			expect(json.properties?.['birthday']).toHaveProperty('oneOf');
+		});
+	});
+
+	describe('offset パラメータ', () => {
+		test('負数を弾く (SQL の OFFSET に渡ると Postgres がエラーにする)', () => {
+			expect(
+				usersGetFollowingUsersByBirthdayParamDef.safeParse({ birthday: { month: 6, day: 15 }, offset: -1 }).success,
+			).toBe(false);
+			expect(
+				usersGetFollowingUsersByBirthdayParamDef.safeParse({ birthday: { month: 6, day: 15 }, offset: 0 }).success,
+			).toBe(true);
 		});
 	});
 });

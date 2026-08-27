@@ -10,7 +10,7 @@ import { usersFlashsParamDef } from '@/server/rest/flash/flash.js';
 import {
 	usersFollowersOrFollowingParamDef,
 	usersFollowingParamDef,
-	usersGetFollowingUsersByBirthdayDocsParamDef,
+	usersGetFollowingUsersByBirthdayParamDef,
 } from '@/server/rest/user/following.js';
 import { usersGalleryPostsParamDef } from '@/server/rest/gallery/gallery.js';
 import { usersFeaturedNotesParamDef, usersNotesParamDef } from '@/server/rest/note/note.js';
@@ -263,7 +263,7 @@ export const endpointMetas = {
 				},
 			},
 		} as const,
-		paramDef: usersGetFollowingUsersByBirthdayDocsParamDef,
+		paramDef: usersGetFollowingUsersByBirthdayParamDef,
 	},
 	'users/gallery/posts': {
 		meta: {

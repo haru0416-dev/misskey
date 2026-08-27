@@ -71,7 +71,7 @@ export const federationInstancesParamDef = z.object({
 	subscribing: z.boolean().nullable().optional(),
 	publishing: z.boolean().nullable().optional(),
 	limit: z.int().min(1).max(100).default(30),
-	offset: z.int().default(0),
+	offset: z.int().nonnegative().default(0),
 	sort: z
 		.union([
 			z.enum([
