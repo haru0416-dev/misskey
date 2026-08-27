@@ -4,50 +4,35 @@ use std::{
 };
 
 use napi::bindgen_prelude::*;
-use zip;
-
-pub struct ZipReader {}
 
 #[napi(js_name = "ZipReader")]
-pub struct JsZipReader {
-  destination: DestinationType,
-}
-
-enum DestinationType {
-  Path(Box<Path>),
+pub struct ZipReader {
+  destination: Box<Path>,
 }
 
 #[napi]
-impl JsZipReader {
+impl ZipReader {
   #[napi(factory)]
   pub fn with_destination_path(path: String) -> Self {
     Self {
-      destination: DestinationType::Path(PathBuf::from(&path).into_boxed_path()),
+      destination: PathBuf::from(&path).into_boxed_path(),
     }
   }
 
   #[napi]
   pub fn via_buffer(&self, buffer: Buffer) -> Result<()> {
-    let mut zip = zip::ZipArchive::new(Cursor::new(buffer.as_ref())).map_err(|err| {
+    let mut archive = zip::ZipArchive::new(Cursor::new(buffer.as_ref())).map_err(|err| {
       Error::new(
         Status::InvalidArg,
         format!("Failed to open zip archive: {}", err),
       )
     })?;
-    self.extract(&mut zip)
-  }
 
-  fn extract(&self, zip: &mut zip::ZipArchive<Cursor<&[u8]>>) -> Result<()> {
-    match &self.destination {
-      DestinationType::Path(path) => {
-        zip.extract(path).map_err(|err| {
-          Error::new(
-            Status::InvalidArg,
-            format!("Failed to extract zip archive: {}", err),
-          )
-        })?;
-      }
-    }
-    Ok(())
+    archive.extract(&self.destination).map_err(|err| {
+      Error::new(
+        Status::InvalidArg,
+        format!("Failed to extract zip archive: {}", err),
+      )
+    })
   }
 }
