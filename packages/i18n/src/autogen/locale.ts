@@ -12673,6 +12673,14 @@ export interface Locale extends ILocale {
          * 内容を隠す（CW）
          */
         "cw": string;
+        /**
+         * 例: 猫 写真
+         */
+        "hashtagPlaceholder": string;
+        /**
+         * 空白で区切ると、全てのタグを含むノートを検索します
+         */
+        "hashtagAndNote": string;
     };
     "_serverSetupWizard": {
         /**

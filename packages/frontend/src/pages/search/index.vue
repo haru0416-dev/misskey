@@ -14,6 +14,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</div>
 
+	<div v-else-if="tab === 'hashtag'" class="_spacer" style="--MI_SPACER-w: 800px;">
+		<XHashtag :query="query"/>
+	</div>
+
 	<div v-else-if="tab === 'user'" class="_spacer" style="--MI_SPACER-w: 800px;">
 		<div v-if="usersSearchAvailable">
 			<XUser :query="query" :origin="origin"/>
@@ -38,7 +42,7 @@ const props = withDefaults(defineProps<{
 	userId?: string,
 	username?: string,
 	host?: string | null,
-	type?: 'note' | 'user',
+	type?: 'note' | 'hashtag' | 'user',
 	origin?: 'combined' | 'local' | 'remote',
 	// Storybook 以外では指定しない。
 	ignoreNotesSearchAvailable?: boolean,
@@ -50,6 +54,7 @@ const props = withDefaults(defineProps<{
 });
 
 const XNote = defineAsyncComponent(() => import('./note.vue'));
+const XHashtag = defineAsyncComponent(() => import('./hashtag.vue'));
 const XUser = defineAsyncComponent(() => import('./user.vue'));
 
 const tab = ref(toRef(props, 'type').value);
@@ -60,6 +65,10 @@ const headerTabs = computed(() => [{
 	key: 'note',
 	title: i18n.ts.notes,
 	icon: 'ti ti-pencil',
+}, {
+	key: 'hashtag',
+	title: i18n.ts.hashtags,
+	icon: 'ti ti-hash',
 }, {
 	key: 'user',
 	title: i18n.ts.users,
