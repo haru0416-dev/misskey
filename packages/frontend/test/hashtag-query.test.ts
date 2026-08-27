@@ -23,4 +23,15 @@ describe('parseHashtagQuery', () => {
 		expect(parseHashtagQuery('   ')).toBeNull();
 		expect(parseHashtagQuery('#')).toBeNull();
 	});
+
+	test('全角の ＃ も剥がす', () => {
+		// IME で「＃猫」と入力すると全角になる。剥がさないと常に 0 件になる。
+		expect(parseHashtagQuery('＃猫')).toEqual(['猫']);
+		expect(parseHashtagQuery('＃猫 ＃写真')).toEqual(['猫', '写真']);
+	});
+
+	test('全角英数字を半角へ寄せる', () => {
+		// サーバーはタグを NFKC で同一視するので、こちらも合わせる。
+		expect(parseHashtagQuery('＃ｍｉｓｓｋｅｙ')).toEqual(['misskey']);
+	});
 });

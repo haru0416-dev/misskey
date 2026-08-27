@@ -1174,9 +1174,26 @@ const usersByUsernameHostBaseParamDef = z
 
 export const usersFollowersOrFollowingParamDef = z.union([usersByUserIdBaseParamDef, usersByUsernameHostBaseParamDef]);
 
+// 月ごとの最大日数。2 月は 29 まで許す (閏日生まれの誕生日は実在するため)。
+const MAX_DAY_OF_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+// この絞り込みはハンドラが年を捨てて月日しか使わないので、年込みのうるう年判定はしない。
+// `birthdaySchema` (z.iso.date()) をそのまま使うと平年の年で 02-29 を渡したときだけ 400 になる。
+const birthdayFilterSchema = z
+	.string()
+	.regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'must match format "date"' })
+	.refine(
+		(value) => {
+			const [, month, day] = value.split('-').map((part) => Number.parseInt(part, 10));
+			if (month == null || day == null || month < 1 || month > 12 || day < 1) return false;
+			return day <= MAX_DAY_OF_MONTH[month - 1]!;
+		},
+		{ message: 'must be an existing month and day' },
+	);
+
 export const usersFollowingParamDef = z.union([
-	usersByUserIdBaseParamDef.extend({ birthday: birthdaySchema.nullable().optional() }),
-	usersByUsernameHostBaseParamDef.extend({ birthday: birthdaySchema.nullable().optional() }),
+	usersByUserIdBaseParamDef.extend({ birthday: birthdayFilterSchema.nullable().optional() }),
+	usersByUsernameHostBaseParamDef.extend({ birthday: birthdayFilterSchema.nullable().optional() }),
 ]);
 
 // z.union の各枝は互いに素なプロパティ集合を持つため、推論される型では userId 版に username/host が
@@ -1313,9 +1330,6 @@ export async function handleApiUsersFollowing(
 
 	return await packFollowingsForApi(deps, followings);
 }
-
-// 月ごとの最大日数。2 月は 29 まで許す (閏日生まれの誕生日は実在するため)。
-const MAX_DAY_OF_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 const birthdayMonthDaySchema = z
 	.object({

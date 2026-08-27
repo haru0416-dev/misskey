@@ -700,14 +700,24 @@ export const packedMeDetailedOnlySchema = {
 			nullable: false,
 			optional: false,
 			items: {
-				type: 'array',
-				nullable: false,
-				optional: false,
-				items: {
-					type: 'string',
-					nullable: false,
-					optional: false,
-				},
+				// 正規表現の行は素の文字列、通常の語の行は AND 条件の配列で入る。
+				oneOf: [
+					{
+						type: 'array',
+						nullable: false,
+						optional: false,
+						items: {
+							type: 'string',
+							nullable: false,
+							optional: false,
+						},
+					},
+					{
+						type: 'string',
+						nullable: false,
+						optional: false,
+					},
+				],
 			},
 		},
 		hardMutedWords: {
@@ -715,14 +725,24 @@ export const packedMeDetailedOnlySchema = {
 			nullable: false,
 			optional: false,
 			items: {
-				type: 'array',
-				nullable: false,
-				optional: false,
-				items: {
-					type: 'string',
-					nullable: false,
-					optional: false,
-				},
+				// 正規表現の行は素の文字列、通常の語の行は AND 条件の配列で入る。
+				oneOf: [
+					{
+						type: 'array',
+						nullable: false,
+						optional: false,
+						items: {
+							type: 'string',
+							nullable: false,
+							optional: false,
+						},
+					},
+					{
+						type: 'string',
+						nullable: false,
+						optional: false,
+					},
+				],
 			},
 		},
 		mutedInstances: {
