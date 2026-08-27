@@ -17,6 +17,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 WORKDIR /misskey
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
+COPY --link ["packages/slacc/package.json", "./packages/slacc/"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]
 COPY --link ["packages/frontend-embed/package.json", "./packages/frontend-embed/"]
@@ -48,6 +49,7 @@ FROM oven/bun:${BUN_VERSION}-debian AS target-builder
 WORKDIR /misskey
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
+COPY --link ["packages/slacc/package.json", "./packages/slacc/"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]
 COPY --link ["packages/frontend-embed/package.json", "./packages/frontend-embed/"]
@@ -68,8 +70,22 @@ RUN --mount=type=cache,target=/root/.bun/install/cache,sharing=locked \
 	&& rm -rf \
 	node_modules/.bun/@img+sharp-libvips-linuxmusl-* \
 	node_modules/.bun/@img+sharp-linuxmusl-* \
-	node_modules/.bun/@napi-rs+canvas-linux-*-musl@* \
-	node_modules/.bun/slacc-linux-*-musl@*
+	node_modules/.bun/@napi-rs+canvas-linux-*-musl@*
+
+# slacc はリポジトリ内でビルドするので、ターゲットの実行環境向けにここで作る。
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+	--mount=type=cache,target=/var/lib/apt,sharing=locked \
+	apt-get update \
+	&& apt-get install -yqq --no-install-recommends build-essential curl \
+	&& curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+
+COPY --link ["packages/slacc", "./packages/slacc/"]
+
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+	--mount=type=cache,target=/misskey/packages/slacc/target,sharing=locked \
+	. "$HOME/.cargo/env" \
+	&& bun install --frozen-lockfile --filter slacc \
+	&& bun run --filter slacc build
 
 FROM oven/bun:${BUN_VERSION}-slim AS runner
 
@@ -95,6 +111,8 @@ WORKDIR /misskey
 COPY --chown=misskey:misskey --from=target-builder /misskey/node_modules ./node_modules
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/backend/node_modules ./packages/backend/node_modules
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/misskey-js/node_modules ./packages/misskey-js/node_modules
+# ビルドしたネイティブモジュール (index.cjs / index.mjs / *.node)。
+COPY --chown=misskey:misskey --from=target-builder /misskey/packages/slacc ./packages/slacc
 COPY --chown=misskey:misskey --from=native-builder /misskey/built ./built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/misskey-js/built ./packages/misskey-js/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/built ./packages/backend/built
