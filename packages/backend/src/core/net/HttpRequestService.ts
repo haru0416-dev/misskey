@@ -8,7 +8,7 @@ import * as https from 'node:https';
 import * as net from 'node:net';
 import * as stream from 'node:stream';
 import ipaddr from 'ipaddr.js';
-import CacheableLookup from 'cacheable-lookup';
+import { createCachedResolver } from '@/core/net/dns-cache.js';
 import { HttpProxyAgent, HttpsProxyAgent } from 'hpagent';
 import type { Config } from '@/config.js';
 import { StatusError } from '@/misc/status-error.js';
@@ -195,11 +195,10 @@ class HttpsRequestServiceAgent extends https.Agent {
 }
 
 export function createHttpRequestService(config: Config) {
-	// SSRF検査と接続先解決で同じDNS結果を使い、名前解決後の差し替えを防ぐ。
-	const dnsCache = new CacheableLookup({
-		maxTtl: config.outboundNetwork.dnsCache.successTtlSeconds,
-		errorTtl: config.outboundNetwork.dnsCache.failureTtlSeconds,
-		lookup: false, // nativeのdns.lookupにfallbackしない
+	// SSRF検査で見た IP へそのまま接続するため、解決結果を呼び出し側へ返せるリゾルバを使う。
+	const dnsCache = createCachedResolver({
+		successTtlMs: config.outboundNetwork.dnsCache.successTtlSeconds * 1000,
+		failureTtlMs: config.outboundNetwork.dnsCache.failureTtlSeconds * 1000,
 	});
 
 	const agentOption = {
@@ -208,7 +207,7 @@ export function createHttpRequestService(config: Config) {
 		maxSockets: config.outboundNetwork.http.maximumSockets,
 		maxFreeSockets: config.outboundNetwork.http.maximumFreeSockets,
 		timeout: config.outboundNetwork.http.connectionTimeoutMs,
-		lookup: dnsCache.lookup as unknown as net.LookupFunction,
+		lookup: dnsCache.lookup,
 		localAddress: config.outboundNetwork.bindAddress,
 		family:
 			config.outboundNetwork.addressFamily === 'ipv4' ? 4 : config.outboundNetwork.addressFamily === 'ipv6' ? 6 : 0,
@@ -255,9 +254,14 @@ export function createHttpRequestService(config: Config) {
 	 * 実質縮小される)、宛先への直接的な private-IP アクセスは確実に遮断できる。
 	 * agent 経路 (URL プレビュー) は Node 実行時には socket レベルで遮断される。
 	 */
-	async function assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<void> {
-		if (isLocalAddressAllowed) return;
-		if (process.env['NODE_ENV'] !== 'production') return;
+	/**
+	 * 宛先が private / non-unicast でないことを確かめ、検査した IP を返す。
+	 * 返した IP へそのまま接続することで、検査と接続の間に名前解決が差し替わる
+	 * (DNS rebinding) 余地を無くす。検査しない場合は null。
+	 */
+	async function assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<string[] | null> {
+		if (isLocalAddressAllowed) return null;
+		if (process.env['NODE_ENV'] !== 'production') return null;
 
 		const host = url.hostname.replace(/^\[/, '').replace(/\]$/, '');
 
@@ -265,13 +269,7 @@ export function createHttpRequestService(config: Config) {
 		if (ipaddr.isValid(host)) {
 			addresses = [host];
 		} else {
-			addresses = await new Promise<string[]>((resolve, reject) => {
-				dnsCache.lookup(host, { all: true }, (err, result) => {
-					if (err) return reject(err);
-					const entries = Array.isArray(result) ? result : [result];
-					resolve(entries.map((e) => (typeof e === 'string' ? e : e.address)));
-				});
-			});
+			addresses = (await dnsCache.resolve(host)).map((entry) => entry.address);
 		}
 
 		for (const address of addresses) {
@@ -282,6 +280,18 @@ export function createHttpRequestService(config: Config) {
 				throw new StatusError(`Blocked address: ${address}`, 403, 'Blocked');
 			}
 		}
+
+		return addresses;
+	}
+
+	/**
+	 * 検査済みの IP へ直接繋ぐためのリクエスト先を組み立てる。
+	 * ホスト名は `Host` ヘッダと TLS の SNI/証明書検証に残すので、接続先だけが IP に変わる。
+	 */
+	function pinToAddress(url: URL, address: string): { url: URL; host: string; serverName: string } {
+		const pinned = new URL(url);
+		pinned.hostname = address.includes(':') ? `[${address}]` : address;
+		return { url: pinned, host: url.host, serverName: url.hostname };
 	}
 
 	async function getActivityJson(
@@ -376,23 +386,31 @@ export function createHttpRequestService(config: Config) {
 		const headers = { ...baseInit.headers };
 
 		for (let redirects = 0; ; redirects++) {
-			await assertUrlAllowed(currentUrl, isLocalAddressAllowed);
+			const allowedAddresses = await assertUrlAllowed(currentUrl, isLocalAddressAllowed);
 
 			// proxy 経由の宛先解決は proxy 側が行うため、bypass 対象や proxyBypassHosts は素通しにする。
 			const proxyUrl = config.outboundNetwork.proxy.url;
 			const useProxy =
 				proxyUrl != null && !(config.outboundNetwork.proxy.bypassHosts ?? []).includes(currentUrl.hostname);
 
-			const init: RequestInit & { proxy?: string } = {
+			// proxy 経由では宛先解決を proxy が行うので、IP 固定はしない (できない)。
+			const pinned =
+				!useProxy && allowedAddresses != null && allowedAddresses.length > 0
+					? pinToAddress(currentUrl, allowedAddresses[0]!)
+					: null;
+
+			const init: RequestInit & { proxy?: string; tls?: { serverName: string } } = {
 				method,
-				headers,
+				headers: pinned == null ? headers : { ...headers, host: pinned.host },
 				...(body === undefined ? {} : { body }),
 				redirect: 'manual',
 				signal: baseInit.signal,
+				// 検査した IP へ繋ぎつつ、証明書は元のホスト名で検証する。
+				...(pinned != null && currentUrl.protocol === 'https:' ? { tls: { serverName: pinned.serverName } } : {}),
 			};
 			if (useProxy) init.proxy = proxyUrl;
 
-			const res = await fetch(currentUrl, init);
+			const res = await fetch(pinned?.url ?? currentUrl, init);
 
 			const location = res.headers.get('location');
 			if (!REDIRECT_STATUSES.has(res.status) || location == null) {
