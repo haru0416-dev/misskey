@@ -18,7 +18,7 @@ import { fetchBlockingByBlockerIdAndBlockeeIdFromDatabase } from '@/core/user/Bl
 import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
 import { fetchNoteReactionByUserAndNoteFromDatabase } from '@/core/note/NoteReactionStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { performOneActivityForHonoApi, type HonoApiInboxDependencies } from '@/server/activitypub/inbox-dispatch.js';
+import { performOneActivityForApi, type ApiInboxDependencies } from '@/server/activitypub/inbox-dispatch.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import type { IObject } from '@/core/activitypub/type.js';
 
@@ -27,7 +27,7 @@ function asRemote(user: MiUser): MiRemoteUser {
 }
 
 async function createTestLocalUser(
-	deps: HonoApiInboxDependencies,
+	deps: ApiInboxDependencies,
 	prefix: string,
 	options: { isLocked?: boolean } = {},
 ): Promise<MiUser> {
@@ -43,7 +43,7 @@ async function createTestLocalUser(
 	});
 }
 
-async function createTestRemoteUser(deps: HonoApiInboxDependencies, prefix: string, host: string): Promise<MiUser> {
+async function createTestRemoteUser(deps: ApiInboxDependencies, prefix: string, host: string): Promise<MiUser> {
 	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: {
@@ -53,7 +53,7 @@ async function createTestRemoteUser(deps: HonoApiInboxDependencies, prefix: stri
 			host,
 			uri: `https://${host}/users/${id}`,
 			inbox: `https://${host}/users/${id}/inbox`,
-			// lastFetchedAt を「直近」にしておき、validateAlsoKnownAsForHonoApi 等の
+			// lastFetchedAt を「直近」にしておき、validateAlsoKnownAsForApi 等の
 			// 「10秒以上古ければ再取得」ロジックによる実ネットワークフェッチ (テスト環境では
 			// 到達不能なダミードメインへの接続になる) をスキップさせる。
 			lastFetchedAt: new Date(),
@@ -62,19 +62,19 @@ async function createTestRemoteUser(deps: HonoApiInboxDependencies, prefix: stri
 	});
 }
 
-function localUserUri(deps: HonoApiInboxDependencies, user: MiUser): string {
+function localUserUri(deps: ApiInboxDependencies, user: MiUser): string {
 	return `${deps.config.instance.url}/users/${user.id}`;
 }
 
-describe('hono-ap-inbox performOneActivityForHonoApi', () => {
+describe('hono-ap-inbox performOneActivityForApi', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoApiInboxDependencies;
+	let deps: ApiInboxDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
 		deps = { ...runtime, logger: runtime.loggerService.getLogger('test-ap-inbox') };
 		// 新規テストDBでは meta.federation が既定で 'none' になっており、そのままだと
-		// isFederationAllowedUri がすべてのホストを拒否してしまう (updatePersonForHonoApi 経由の
+		// isFederationAllowedUri がすべてのホストを拒否してしまう (updatePersonForApi 経由の
 		// リモート再取得が "Instance is blocked" で失敗する) ため、テスト用に全許可へ上書きする。
 		runtime.meta.federation = 'all';
 	});
@@ -94,7 +94,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			object: localUserUri(deps, followee),
 		} as IObject;
 
-		const result = await performOneActivityForHonoApi(deps, asRemote(actor), activity, new Set());
+		const result = await performOneActivityForApi(deps, asRemote(actor), activity, new Set());
 		expect(result).toBe('ok');
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, actor.id, followee.id);
@@ -112,7 +112,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			object: localUserUri(deps, followee),
 		} as IObject;
 
-		const result = await performOneActivityForHonoApi(deps, asRemote(actor), activity, new Set());
+		const result = await performOneActivityForApi(deps, asRemote(actor), activity, new Set());
 		expect(result).toBe('ok');
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, actor.id, followee.id);
@@ -143,7 +143,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			},
 		} as IObject;
 
-		const result = await performOneActivityForHonoApi(deps, asRemote(actor), activity, new Set());
+		const result = await performOneActivityForApi(deps, asRemote(actor), activity, new Set());
 		expect(result).toBe('ok: follow request canceled');
 
 		const request = await fetchFollowRequestFromDatabase(deps.db, actor.id, followee.id);
@@ -161,7 +161,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			object: localUserUri(deps, blockee),
 		} as IObject;
 
-		const result = await performOneActivityForHonoApi(deps, asRemote(actor), activity, new Set());
+		const result = await performOneActivityForApi(deps, asRemote(actor), activity, new Set());
 		expect(result).toBe('ok');
 
 		const blocking = await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, actor.id, blockee.id);
@@ -178,7 +178,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			actor: actor.uri!,
 			object: localUserUri(deps, blockee),
 		} as IObject;
-		await performOneActivityForHonoApi(deps, asRemote(actor), activity, new Set());
+		await performOneActivityForApi(deps, asRemote(actor), activity, new Set());
 		expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, actor.id, blockee.id)).not.toBeNull();
 
 		const undoActivity: IObject = {
@@ -192,7 +192,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			},
 		} as IObject;
 
-		const result = await performOneActivityForHonoApi(deps, asRemote(actor), undoActivity, new Set());
+		const result = await performOneActivityForApi(deps, asRemote(actor), undoActivity, new Set());
 		expect(result).toBe('ok');
 		expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, actor.id, blockee.id)).toBeNull();
 	});
@@ -216,7 +216,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			object: `${deps.config.instance.url}/notes/${noteId}`,
 		} as IObject;
 
-		const result = await performOneActivityForHonoApi(deps, asRemote(actor), activity, new Set());
+		const result = await performOneActivityForApi(deps, asRemote(actor), activity, new Set());
 		expect(result).toBe('ok');
 
 		const reaction = await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, actor.id, noteId);
@@ -241,7 +241,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			actor: actor.uri!,
 			object: `${deps.config.instance.url}/notes/${noteId}`,
 		} as IObject;
-		await performOneActivityForHonoApi(deps, asRemote(actor), likeActivity, new Set());
+		await performOneActivityForApi(deps, asRemote(actor), likeActivity, new Set());
 		expect(await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, actor.id, noteId)).not.toBeNull();
 
 		const undoActivity: IObject = {
@@ -255,7 +255,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			},
 		} as IObject;
 
-		const result = await performOneActivityForHonoApi(deps, asRemote(actor), undoActivity, new Set());
+		const result = await performOneActivityForApi(deps, asRemote(actor), undoActivity, new Set());
 		expect(result).toBe('ok');
 		expect(await fetchNoteReactionByUserAndNoteFromDatabase(deps.db, actor.id, noteId)).toBeNull();
 	});
@@ -280,7 +280,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			object: noteUri,
 		} as IObject;
 
-		const result = await performOneActivityForHonoApi(deps, asRemote(actor), activity, new Set());
+		const result = await performOneActivityForApi(deps, asRemote(actor), activity, new Set());
 		expect(result).toBe('ok: note deleted');
 		expect(await fetchNoteByIdFromDatabase(deps.db, noteId)).toBeNull();
 	});
@@ -295,7 +295,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			object: actor.uri!,
 		} as IObject;
 
-		const result = await performOneActivityForHonoApi(deps, asRemote(actor), activity, new Set());
+		const result = await performOneActivityForApi(deps, asRemote(actor), activity, new Set());
 		expect(result).toContain('unrecognized activity type');
 	});
 
@@ -310,7 +310,7 @@ describe('hono-ap-inbox performOneActivityForHonoApi', () => {
 			object: actor.uri!,
 		} as IObject;
 
-		const result = await performOneActivityForHonoApi(deps, asRemote(suspendedActor), activity, new Set());
+		const result = await performOneActivityForApi(deps, asRemote(suspendedActor), activity, new Set());
 		expect(result).toBeUndefined();
 	});
 });

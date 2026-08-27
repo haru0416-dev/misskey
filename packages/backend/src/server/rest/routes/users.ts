@@ -9,59 +9,59 @@ import {
 	assertProhibitMoved,
 	assertSecureCredential,
 	assertTokenPermission,
-	authenticateHonoApiToken,
+	authenticateApiToken,
 } from '../auth/auth.js';
-import { handleHonoApiUsersReportAbuse } from '../admin/admin-abuse-reports.js';
-import { handleHonoApiUsernameAvailable } from '../auth/availability.js';
-import { handleHonoApiMyApps } from '../auth/app.js';
+import { handleApiUsersReportAbuse } from '../admin/admin-abuse-reports.js';
+import { handleApiUsernameAvailable } from '../auth/availability.js';
+import { handleApiMyApps } from '../auth/app.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleHonoApiUsersGalleryPosts } from '../gallery/gallery.js';
-import { handleHonoApiUsersListsFavorite, handleHonoApiUsersListsUnfavorite } from '../favorite/favorites.js';
-import { handleHonoApiUsersClips } from '../clip/clips.js';
-import { handleHonoApiUsersFlashs } from '../flash/flash.js';
+import { handleApiUsersGalleryPosts } from '../gallery/gallery.js';
+import { handleApiUsersListsFavorite, handleApiUsersListsUnfavorite } from '../favorite/favorites.js';
+import { handleApiUsersClips } from '../clip/clips.js';
+import { handleApiUsersFlashs } from '../flash/flash.js';
 import {
-	handleHonoApiUsersFollowers,
-	handleHonoApiUsersFollowing,
-	handleHonoApiUsersGetFollowingUsersByBirthday,
+	handleApiUsersFollowers,
+	handleApiUsersFollowing,
+	handleApiUsersGetFollowingUsersByBirthday,
 } from '../user/following.js';
 import {
-	handleHonoApiUsers,
-	handleHonoApiUsersGetFrequentlyRepliedUsers,
-	handleHonoApiUsersRecommendation,
-	handleHonoApiUsersRelation,
-	handleHonoApiUsersSearch,
-	handleHonoApiUsersSearchByUsernameAndHost,
-	handleHonoApiUsersShow,
-	handleHonoApiUsersUpdateMemo,
+	handleApiUsers,
+	handleApiUsersGetFrequentlyRepliedUsers,
+	handleApiUsersRecommendation,
+	handleApiUsersRelation,
+	handleApiUsersSearch,
+	handleApiUsersSearchByUsernameAndHost,
+	handleApiUsersShow,
+	handleApiUsersUpdateMemo,
 } from '../user/user.js';
-import { handleHonoApiMiauthCheck, handleHonoApiMiauthGenToken } from '../auth/miauth.js';
+import { handleApiMiauthCheck, handleApiMiauthGenToken } from '../auth/miauth.js';
 import {
-	handleHonoApiNotesDraftsCount,
-	handleHonoApiNotesDraftsCreate,
-	handleHonoApiNotesDraftsDelete,
-	handleHonoApiNotesDraftsList,
-	handleHonoApiNotesDraftsUpdate,
+	handleApiNotesDraftsCount,
+	handleApiNotesDraftsCreate,
+	handleApiNotesDraftsDelete,
+	handleApiNotesDraftsList,
+	handleApiNotesDraftsUpdate,
 } from '../note/note-drafts.js';
-import { handleHonoApiUsersReactions } from '../user/user-reactions.js';
-import { handleHonoApiUsersPages } from '../page/pages.js';
-import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { getHonoApiRolePolicies } from '../role/role-policy.js';
+import { handleApiUsersReactions } from '../user/user-reactions.js';
+import { handleApiUsersPages } from '../page/pages.js';
+import { assertApiRateLimitForUser } from '../rate-limit.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
 import {
-	handleHonoApiUsersAchievements,
-	handleHonoApiUsersListsDelete,
-	handleHonoApiUsersListsList,
-	handleHonoApiUsersListsShow,
-	handleHonoApiUsersListsUpdate,
+	handleApiUsersAchievements,
+	handleApiUsersListsDelete,
+	handleApiUsersListsList,
+	handleApiUsersListsShow,
+	handleApiUsersListsUpdate,
 } from '../user/users.js';
 import {
-	handleHonoApiUsersListsCreate,
-	handleHonoApiUsersListsCreateFromPublic,
-	handleHonoApiUsersListsGetMemberships,
-	handleHonoApiUsersListsPull,
-	handleHonoApiUsersListsPush,
-	handleHonoApiUsersListsUpdateMembership,
+	handleApiUsersListsCreate,
+	handleApiUsersListsCreateFromPublic,
+	handleApiUsersListsGetMemberships,
+	handleApiUsersListsPull,
+	handleApiUsersListsPush,
+	handleApiUsersListsUpdateMembership,
 } from '../user/users-lists.js';
-import { handleHonoApiVerifyEmail } from '../auth/verify-email.js';
+import { handleApiVerifyEmail } from '../auth/verify-email.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -78,7 +78,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/miauth/gen-token',
 		endpointHandler(deps, 'miauth/gen-token', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiMiauthGenToken(deps, auth.user, body)),
+			jsonResponse(c, await handleApiMiauthGenToken(deps, auth.user, body)),
 		),
 	);
 
@@ -101,7 +101,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		}
 
 		return await runApiEndpoint(c, async () => {
-			return jsonResponse(c, await handleHonoApiMiauthCheck(deps, session));
+			return jsonResponse(c, await handleApiMiauthCheck(deps, session));
 		});
 	});
 
@@ -109,7 +109,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/my/apps',
 		endpointHandler(deps, 'my/apps', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiMyApps(deps, auth.user, body)),
+			jsonResponse(c, await handleApiMyApps(deps, auth.user, body)),
 		),
 	);
 
@@ -117,28 +117,28 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/drafts/count',
 		endpointHandler(deps, 'notes/drafts/count', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesDraftsCount(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesDraftsCount(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/notes/drafts/create',
 		endpointHandler(deps, 'notes/drafts/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesDraftsCreate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesDraftsCreate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/notes/drafts/update',
 		endpointHandler(deps, 'notes/drafts/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesDraftsUpdate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesDraftsUpdate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/notes/drafts/delete',
 		endpointHandler(deps, 'notes/drafts/delete', async ({ body, auth, c }) => {
-			await handleHonoApiNotesDraftsDelete(deps, auth.user, body);
+			await handleApiNotesDraftsDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -147,7 +147,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/drafts/list',
 		endpointHandler(deps, 'notes/drafts/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesDraftsList(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesDraftsList(deps, auth.user, body)),
 		),
 	);
 
@@ -157,7 +157,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 			const auth = await authenticateOptionalRequest(deps, c, body);
 			const ip = getRequestIp(c, deps.config);
 
-			return jsonResponse(c, await handleHonoApiUsersShow(deps, auth.user, body, ip));
+			return jsonResponse(c, await handleApiUsersShow(deps, auth.user, body, ip));
 		});
 	});
 
@@ -165,21 +165,21 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/relation',
 		endpointHandler(deps, 'users/relation', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersRelation(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersRelation(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/users',
 		endpointHandlerAnonymous(deps, 'users', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsers(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsers(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/users/update-memo',
 		endpointHandler(deps, 'users/update-memo', async ({ body, auth, c }) => {
-			await handleHonoApiUsersUpdateMemo(deps, auth.user, body);
+			await handleApiUsersUpdateMemo(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -188,7 +188,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/search',
 		endpointHandlerAnonymous(deps, 'users/search', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersSearch(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersSearch(deps, auth.user, body)),
 		),
 	);
 
@@ -196,14 +196,14 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/reactions',
 		endpointHandlerAnonymous(deps, 'users/reactions', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersReactions(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersReactions(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/users/report-abuse',
 		endpointHandler(deps, 'users/report-abuse', async ({ body, auth, c }) => {
-			await handleHonoApiUsersReportAbuse(deps, auth.user, body);
+			await handleApiUsersReportAbuse(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -212,7 +212,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/get-frequently-replied-users',
 		endpointHandlerAnonymous(deps, 'users/get-frequently-replied-users', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersGetFrequentlyRepliedUsers(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersGetFrequentlyRepliedUsers(deps, auth.user, body)),
 		),
 	);
 
@@ -220,7 +220,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/search-by-username-and-host',
 		endpointHandlerAnonymous(deps, 'users/search-by-username-and-host', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersSearchByUsernameAndHost(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersSearchByUsernameAndHost(deps, auth.user, body)),
 		),
 	);
 
@@ -228,7 +228,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/followers',
 		endpointHandlerAnonymous(deps, 'users/followers', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersFollowers(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersFollowers(deps, auth.user, body)),
 		),
 	);
 
@@ -236,7 +236,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/following',
 		endpointHandlerAnonymous(deps, 'users/following', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersFollowing(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersFollowing(deps, auth.user, body)),
 		),
 	);
 
@@ -244,7 +244,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/recommendation',
 		endpointHandler(deps, 'users/recommendation', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersRecommendation(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersRecommendation(deps, auth.user, body)),
 		),
 	);
 
@@ -252,7 +252,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/get-following-users-by-birthday',
 		endpointHandler(deps, 'users/get-following-users-by-birthday', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersGetFollowingUsersByBirthday(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersGetFollowingUsersByBirthday(deps, auth.user, body)),
 		),
 	);
 
@@ -260,7 +260,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/achievements',
 		endpointHandlerAnonymous(deps, 'users/achievements', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersAchievements(deps, body)),
+			jsonResponse(c, await handleApiUsersAchievements(deps, body)),
 		),
 	);
 
@@ -268,7 +268,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/pages',
 		endpointHandlerAnonymous(deps, 'users/pages', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersPages(deps, body)),
+			jsonResponse(c, await handleApiUsersPages(deps, body)),
 		),
 	);
 
@@ -276,7 +276,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/clips',
 		endpointHandlerAnonymous(deps, 'users/clips', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersClips(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersClips(deps, auth.user, body)),
 		),
 	);
 
@@ -284,7 +284,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/flashs',
 		endpointHandlerAnonymous(deps, 'users/flashs', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersFlashs(deps, body)),
+			jsonResponse(c, await handleApiUsersFlashs(deps, body)),
 		),
 	);
 
@@ -292,7 +292,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/gallery/posts',
 		endpointHandlerAnonymous(deps, 'users/gallery/posts', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersGalleryPosts(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersGalleryPosts(deps, auth.user, body)),
 		),
 	);
 
@@ -300,7 +300,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/lists/list',
 		endpointHandlerAnonymous(deps, 'users/lists/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersListsList(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersListsList(deps, auth.user, body)),
 		),
 	);
 
@@ -308,14 +308,14 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/lists/show',
 		endpointHandlerAnonymous(deps, 'users/lists/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersListsShow(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersListsShow(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/users/lists/delete',
 		endpointHandler(deps, 'users/lists/delete', async ({ body, auth, c }) => {
-			await handleHonoApiUsersListsDelete(deps, auth.user, body);
+			await handleApiUsersListsDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -323,14 +323,14 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/users/lists/update',
 		endpointHandler(deps, 'users/lists/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersListsUpdate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersListsUpdate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/users/lists/favorite',
 		endpointHandler(deps, 'users/lists/favorite', async ({ body, auth, c }) => {
-			await handleHonoApiUsersListsFavorite(deps, auth.user, body);
+			await handleApiUsersListsFavorite(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -338,7 +338,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/users/lists/unfavorite',
 		endpointHandler(deps, 'users/lists/unfavorite', async ({ body, auth, c }) => {
-			await handleHonoApiUsersListsUnfavorite(deps, auth.user, body);
+			await handleApiUsersListsUnfavorite(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -346,21 +346,21 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/users/lists/create',
 		endpointHandler(deps, 'users/lists/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersListsCreate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersListsCreate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/users/lists/create-from-public',
 		endpointHandler(deps, 'users/lists/create-from-public', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersListsCreateFromPublic(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersListsCreateFromPublic(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/users/lists/pull',
 		endpointHandler(deps, 'users/lists/pull', async ({ body, auth, c }) => {
-			await handleHonoApiUsersListsPull(deps, auth.user, body);
+			await handleApiUsersListsPull(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -368,7 +368,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/users/lists/push',
 		endpointHandler(deps, 'users/lists/push', async ({ body, auth, c }) => {
-			await handleHonoApiUsersListsPush(deps, auth.user, body);
+			await handleApiUsersListsPush(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -377,14 +377,14 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/lists/get-memberships',
 		endpointHandlerAnonymous(deps, 'users/lists/get-memberships', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersListsGetMemberships(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersListsGetMemberships(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/users/lists/update-membership',
 		endpointHandler(deps, 'users/lists/update-membership', async ({ body, auth, c }) => {
-			await handleHonoApiUsersListsUpdateMembership(deps, auth.user, body);
+			await handleApiUsersListsUpdateMembership(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -393,7 +393,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/username/available',
 		endpointHandlerAnonymous(deps, 'username/available', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsernameAvailable(deps, body)),
+			jsonResponse(c, await handleApiUsernameAvailable(deps, body)),
 		),
 	);
 
@@ -402,7 +402,7 @@ export function registerUsersRoutes(app: Hono, deps: ApiShellDependencies): void
 		endpointHandlerAnonymous(deps, 'verify-email', async ({ body, auth, c }) => {
 			await authenticateOptionalRequest(deps, c, body);
 
-			await handleHonoApiVerifyEmail(deps, body);
+			await handleApiVerifyEmail(deps, body);
 			return emptyResponse(c);
 		}),
 	);

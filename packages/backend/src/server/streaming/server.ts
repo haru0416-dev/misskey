@@ -9,15 +9,11 @@ import type { Socket } from 'node:net';
 import * as WebSocket from 'ws';
 import type * as Redis from 'ioredis';
 import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
-import { HonoApiError } from '../rest/error.js';
-import { authenticateHonoApiToken } from '@/server/rest/auth/auth.js';
-import {
-	HonoStreamConnection,
-	refreshHonoStreamConnections,
-	type HonoStreamConnectionDependencies,
-} from './connection.js';
+import { ApiError } from '../rest/error.js';
+import { authenticateApiToken } from '@/server/rest/auth/auth.js';
+import { StreamConnection, refreshStreamConnections, type StreamConnectionDependencies } from './connection.js';
 
-export type HonoStreamServerDependencies = HonoStreamConnectionDependencies & {
+export type StreamServerDependencies = StreamConnectionDependencies & {
 	redisForSub: Redis.Redis;
 };
 
@@ -25,7 +21,7 @@ const IDLE_TIMEOUT_MS = 1000 * 60 * 2;
 const REAP_INTERVAL_MS = 1000 * 60;
 const LAST_ACTIVE_UPDATE_INTERVAL_MS = 1000 * 60 * 5;
 
-function writeRawHttpError(socket: Socket, error: HonoApiError): void {
+function writeRawHttpError(socket: Socket, error: ApiError): void {
 	const headers = Object.entries({ 'Content-Type': 'text/plain', ...error.headers })
 		.map(([key, value]) => `${key}: ${value}`)
 		.join('\r\n');
@@ -34,25 +30,25 @@ function writeRawHttpError(socket: Socket, error: HonoApiError): void {
 }
 
 async function authenticateStreamingRequest(
-	deps: HonoStreamServerDependencies,
+	deps: StreamServerDependencies,
 	request: IncomingMessage,
 	url: URL,
 ): Promise<
 	| {
-			user: Awaited<ReturnType<typeof authenticateHonoApiToken>>['user'];
-			token: Awaited<ReturnType<typeof authenticateHonoApiToken>>['token'];
+			user: Awaited<ReturnType<typeof authenticateApiToken>>['user'];
+			token: Awaited<ReturnType<typeof authenticateApiToken>>['token'];
 	  }
-	| HonoApiError
+	| ApiError
 > {
 	const authHeader = request.headers.authorization;
 	const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : url.searchParams.get('i');
 
 	let authenticated;
 	try {
-		authenticated = await authenticateHonoApiToken(deps, token);
+		authenticated = await authenticateApiToken(deps, token);
 	} catch (err) {
-		if (err instanceof HonoApiError) return err;
-		return new HonoApiError({
+		if (err instanceof ApiError) return err;
+		return new ApiError({
 			status: 500,
 			message: 'Internal error',
 			code: 'INTERNAL_ERROR',
@@ -61,7 +57,7 @@ async function authenticateStreamingRequest(
 	}
 
 	if (authenticated.token != null && !authenticated.token.permission.includes('read:account')) {
-		return new HonoApiError({
+		return new ApiError({
 			status: 403,
 			message: 'Your app does not have necessary permissions to use websocket API.',
 			code: 'PERMISSION_DENIED',
@@ -70,7 +66,7 @@ async function authenticateStreamingRequest(
 	}
 
 	if (authenticated.user?.isSuspended) {
-		return new HonoApiError({
+		return new ApiError({
 			status: 403,
 			message: 'Your account has been suspended.',
 			code: 'YOUR_ACCOUNT_SUSPENDED',
@@ -87,7 +83,7 @@ async function authenticateStreamingRequest(
  * 誰も捕捉できずストリーミングサーバーのプロセスごと落ちる。
  * また EventEmitter は listener の無い 'error' を emit すると throw するので、チャンネル名としては通さない。
  */
-export function emitHonoStreamRedisMessage(globalEv: EventEmitter, data: string): void {
+export function emitStreamRedisMessage(globalEv: EventEmitter, data: string): void {
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(data);
@@ -103,18 +99,18 @@ export function emitHonoStreamRedisMessage(globalEv: EventEmitter, data: string)
 }
 
 /** WebSocket upgrade は `server.on('upgrade', ...)` で処理し、Hono の fetch パイプラインを経由しない。 */
-export function attachHonoStreamServer(
+export function attachStreamServer(
 	server: Server,
-	deps: HonoStreamServerDependencies,
+	deps: StreamServerDependencies,
 	streamingPath = '/streaming',
 ): { detach: () => Promise<void> } {
 	const wss = new WebSocket.WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
 	const globalEv = new EventEmitter();
 	globalEv.setMaxListeners(0);
 
-	const onRedisMessage = (_channelName: string, data: string) => emitHonoStreamRedisMessage(globalEv, data);
+	const onRedisMessage = (_channelName: string, data: string) => emitStreamRedisMessage(globalEv, data);
 	deps.redisForSub.on('message', onRedisMessage);
-	const activeConnections = new Map<HonoStreamConnection, () => void>();
+	const activeConnections = new Map<StreamConnection, () => void>();
 	let reconnectRefreshPromise: Promise<void> | undefined;
 	let reconnectRefreshQueued = false;
 	const onRedisReady = () => {
@@ -127,7 +123,7 @@ export function attachHonoStreamServer(
 				reconnectRefreshQueued = false;
 				// 更新中に再接続した場合は、更新完了後にスナップショットをもう一度取得する。
 				// eslint-disable-next-line no-await-in-loop
-				await refreshHonoStreamConnections(activeConnections);
+				await refreshStreamConnections(activeConnections);
 			} while (reconnectRefreshQueued);
 		})()
 			.catch((error) => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
@@ -140,7 +136,7 @@ export function attachHonoStreamServer(
 	const connections = new Map<WebSocket.WebSocket, number>();
 
 	const upgradeHandler = async (request: IncomingMessage, socket: Socket, head: Buffer) => {
-		let connection: HonoStreamConnection | undefined;
+		let connection: StreamConnection | undefined;
 		let socketClosed = false;
 		socket.once('close', () => {
 			socketClosed = true;
@@ -156,12 +152,12 @@ export function attachHonoStreamServer(
 
 		const authenticated = await authenticateStreamingRequest(deps, request, url);
 		if (socketClosed) return;
-		if (authenticated instanceof HonoApiError) {
+		if (authenticated instanceof ApiError) {
 			writeRawHttpError(socket, authenticated);
 			return;
 		}
 
-		connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
+		connection = new StreamConnection(deps, authenticated.user, authenticated.token);
 		try {
 			await connection.init(globalEv);
 		} catch {
@@ -185,7 +181,7 @@ export function attachHonoStreamServer(
 		void upgradeHandler(request, socket as Socket, head);
 	});
 
-	wss.on('connection', (ws: WebSocket.WebSocket, _request: IncomingMessage, connection: HonoStreamConnection) => {
+	wss.on('connection', (ws: WebSocket.WebSocket, _request: IncomingMessage, connection: StreamConnection) => {
 		activeConnections.set(connection, () => ws.terminate());
 		connections.set(ws, Date.now());
 

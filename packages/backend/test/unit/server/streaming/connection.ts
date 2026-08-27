@@ -16,13 +16,13 @@ import { createChatRoomInDatabase } from '@/core/chat/ChatRoomStore.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
-	HonoStreamConnection,
-	refreshHonoStreamConnections,
-	type HonoStreamConnectionDependencies,
+	StreamConnection,
+	refreshStreamConnections,
+	type StreamConnectionDependencies,
 } from '@/server/streaming/connection.js';
 import type { MiUser } from '@/models/User.js';
 
-async function createTestUser(deps: HonoStreamConnectionDependencies, prefix: string): Promise<MiUser> {
+async function createTestUser(deps: StreamConnectionDependencies, prefix: string): Promise<MiUser> {
 	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
@@ -37,7 +37,7 @@ function collectSentMessages(): { raw: string[]; send: (raw: string) => void } {
 
 describe('hono-stream-connection', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoStreamConnectionDependencies;
+	let deps: StreamConnectionDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -49,7 +49,7 @@ describe('hono-stream-connection', () => {
 	});
 
 	test('未ログインではrequireCredentialなチャンネルに接続できない', async () => {
-		const connection = new HonoStreamConnection(deps, null, null);
+		const connection = new StreamConnection(deps, null, null);
 		await connection.init();
 
 		const { raw, send } = collectSentMessages();
@@ -62,7 +62,7 @@ describe('hono-stream-connection', () => {
 
 	test('admin channel: 接続してadminStreamイベントを受け取れる', async () => {
 		const user = await createTestUser(deps, 'honostreamadmin');
-		const connection = new HonoStreamConnection(deps, user, null);
+		const connection = new StreamConnection(deps, user, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -83,7 +83,7 @@ describe('hono-stream-connection', () => {
 
 	test('drive channel: 切断後はdriveStreamイベントを受け取らない', async () => {
 		const user = await createTestUser(deps, 'honostreamdrive');
-		const connection = new HonoStreamConnection(deps, user, null);
+		const connection = new StreamConnection(deps, user, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -101,7 +101,7 @@ describe('hono-stream-connection', () => {
 
 	test('存在しないチャンネル名を要求すると例外になる', async () => {
 		const user = await createTestUser(deps, 'honostreamunknown');
-		const connection = new HonoStreamConnection(deps, user, null);
+		const connection = new StreamConnection(deps, user, null);
 		await connection.init();
 
 		connection.listen(new EventEmitter(), () => {});
@@ -112,7 +112,7 @@ describe('hono-stream-connection', () => {
 	test('noteStream 購読: 公開範囲がfollowersかつ非フォロワーには配信しない', async () => {
 		const viewer = await createTestUser(deps, 'honostreamviewer');
 		const author = await createTestUser(deps, 'honostreamauthor');
-		const connection = new HonoStreamConnection(deps, viewer, null);
+		const connection = new StreamConnection(deps, viewer, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -132,7 +132,7 @@ describe('hono-stream-connection', () => {
 	test('noteStream 購読: 公開範囲がpublicなら配信される', async () => {
 		const viewer = await createTestUser(deps, 'honostreamviewer2');
 		const author = await createTestUser(deps, 'honostreamauthor2');
-		const connection = new HonoStreamConnection(deps, viewer, null);
+		const connection = new StreamConnection(deps, viewer, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -154,7 +154,7 @@ describe('hono-stream-connection', () => {
 	test('unsubNote 後は noteStream イベントを受け取らない', async () => {
 		const viewer = await createTestUser(deps, 'honostreamviewer3');
 		const author = await createTestUser(deps, 'honostreamauthor3');
-		const connection = new HonoStreamConnection(deps, viewer, null);
+		const connection = new StreamConnection(deps, viewer, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -173,7 +173,7 @@ describe('hono-stream-connection', () => {
 	});
 
 	test('broadcast イベントはそのままクライアントへ送られる', async () => {
-		const connection = new HonoStreamConnection(deps, null, null);
+		const connection = new StreamConnection(deps, null, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -191,7 +191,7 @@ describe('hono-stream-connection', () => {
 	test('internal イベントで接続中の関係スナップショットを更新する', async () => {
 		const user = await createTestUser(deps, 'honostreaminternal');
 		const other = await createTestUser(deps, 'honostreaminternalother');
-		const connection = new HonoStreamConnection(deps, user, null);
+		const connection = new StreamConnection(deps, user, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -254,7 +254,7 @@ describe('hono-stream-connection', () => {
 	test('初期スナップショット取得中のinternalイベントを取得後に再適用する', async () => {
 		const user = await createTestUser(deps, 'honostreaminit');
 		const other = await createTestUser(deps, 'honostreaminitother');
-		const connection = new HonoStreamConnection(deps, user, null);
+		const connection = new StreamConnection(deps, user, null);
 		const subscriber = new EventEmitter();
 
 		const initializing = connection.init(subscriber);
@@ -273,7 +273,7 @@ describe('hono-stream-connection', () => {
 
 	test('dispose 後はチャンネルのイベントを受け取らない', async () => {
 		const user = await createTestUser(deps, 'honostreamdispose');
-		const connection = new HonoStreamConnection(deps, user, null);
+		const connection = new StreamConnection(deps, user, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -292,7 +292,7 @@ describe('hono-stream-connection', () => {
 	test('チャンネル初期化中にdisposeしてもlistenerを残さない', async () => {
 		const user = await createTestUser(deps, 'honostreamdisposeduringinit');
 		const room = await createChatRoomInDatabase(deps.db, { id: genId(), ownerId: user.id, name: 'test room' });
-		const connection = new HonoStreamConnection(deps, user, null);
+		const connection = new StreamConnection(deps, user, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -308,7 +308,7 @@ describe('hono-stream-connection', () => {
 	test('チャンネル初期化中にdisconnectしてもチャンネルを復活させない', async () => {
 		const user = await createTestUser(deps, 'honostreamdisconnectduringinit');
 		const room = await createChatRoomInDatabase(deps.db, { id: genId(), ownerId: user.id, name: 'test room' });
-		const connection = new HonoStreamConnection(deps, user, null);
+		const connection = new StreamConnection(deps, user, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -324,11 +324,11 @@ describe('hono-stream-connection', () => {
 	test('Redis再接続後の再同期が失敗し続けた接続を切断する', async () => {
 		const refresh = vi.fn().mockRejectedValue(new Error('database unavailable'));
 		const terminate = vi.fn();
-		const connection = { refresh } as unknown as HonoStreamConnection;
+		const connection = { refresh } as unknown as StreamConnection;
 		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		try {
-			await refreshHonoStreamConnections(new Map([[connection, terminate]]));
+			await refreshStreamConnections(new Map([[connection, terminate]]));
 		} finally {
 			consoleError.mockRestore();
 		}

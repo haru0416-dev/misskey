@@ -31,21 +31,21 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from '../events.js';
-import { HonoApiError } from '../error.js';
+import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
+import { ApiError } from '../error.js';
 import { createRoleAssignedNotification } from '../notification/notification.js';
-import { isHonoApiAdministrator } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
-import { packHonoApiRole, packHonoApiRoles } from '../role/roles.js';
-import { packUserDetailedNotMeManyForHonoApi, type UserDetailedNotMeHonoApiResponse } from '../user/user.js';
+import { isApiAdministrator } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
+import { packApiRole, packApiRoles } from '../role/roles.js';
+import { packUserDetailedNotMeManyForApi, type UserDetailedNotMeApiResponse } from '../user/user.js';
 
-export type HonoApiAdminRoleDependencies = {
+export type ApiAdminRoleDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	redis: Redis;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
-	publishMainStream?: HonoApiMainStreamPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
+	publishMainStream?: ApiMainStreamPublisher;
 };
 
 // policies は jsonb へそのまま保存され、ロール適用のたびに読まれる。
@@ -133,12 +133,12 @@ export const adminRolesUsersParamDef = z.object({
 type AdminRoleUser = {
 	id: string;
 	createdAt: string;
-	user: UserDetailedNotMeHonoApiResponse;
+	user: UserDetailedNotMeApiResponse;
 	expiresAt: string | null;
 };
 
-function noSuchRoleError(id: string): HonoApiError {
-	return new HonoApiError({
+function noSuchRoleError(id: string): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such role.',
 		code: 'NO_SUCH_ROLE',
@@ -146,8 +146,8 @@ function noSuchRoleError(id: string): HonoApiError {
 	});
 }
 
-function noSuchUserError(id: string): HonoApiError {
-	return new HonoApiError({
+function noSuchUserError(id: string): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such user.',
 		code: 'NO_SUCH_USER',
@@ -155,8 +155,8 @@ function noSuchUserError(id: string): HonoApiError {
 	});
 }
 
-function accessDeniedError(id: string): HonoApiError {
-	return new HonoApiError({
+function accessDeniedError(id: string): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Only administrators can edit members of the role.',
 		code: 'ACCESS_DENIED',
@@ -164,8 +164,8 @@ function accessDeniedError(id: string): HonoApiError {
 	});
 }
 
-function notAssignedError(): HonoApiError {
-	return new HonoApiError({
+function notAssignedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Not assigned.',
 		code: 'NOT_ASSIGNED',
@@ -173,16 +173,16 @@ function notAssignedError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiAdminRolesAssign(
-	deps: HonoApiAdminRoleDependencies,
+export async function handleApiAdminRolesAssign(
+	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminRolesAssignParamDef, body);
+	const params = parseApiParams(adminRolesAssignParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError('6503c040-6af4-4ed9-bf07-f2dd16678eab');
 
-	if (!role.canEditMembersByModerator && !(await isHonoApiAdministrator(deps, me))) {
+	if (!role.canEditMembersByModerator && !(await isApiAdministrator(deps, me))) {
 		throw accessDeniedError('25b5bc31-dc79-4ebd-9bd2-c84978fd052c');
 	}
 
@@ -210,12 +210,12 @@ export async function handleHonoApiAdminRolesAssign(
 	);
 }
 
-export async function handleHonoApiAdminRolesCreate(
-	deps: HonoApiAdminRoleDependencies,
+export async function handleApiAdminRolesCreate(
+	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Role'>> {
-	const params = parseHonoApiParams(adminRolesCreateParamDef, body);
+	const params = parseApiParams(adminRolesCreateParamDef, body);
 	const created = await createRoleWithSideEffects(
 		{
 			db: deps.db,
@@ -243,24 +243,24 @@ export async function handleHonoApiAdminRolesCreate(
 		me,
 	);
 
-	return await packHonoApiRole(deps, created);
+	return await packApiRole(deps, created);
 }
 
-export async function handleHonoApiAdminRolesList(
-	deps: HonoApiAdminRoleDependencies,
+export async function handleApiAdminRolesList(
+	deps: ApiAdminRoleDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Role'>[]> {
-	parseHonoApiParams(adminRolesListParamDef, body);
+	parseApiParams(adminRolesListParamDef, body);
 	const roles = await listRolesOrderByLastUsedAtDescFromDatabase(deps.db);
-	return await packHonoApiRoles(deps, roles);
+	return await packApiRoles(deps, roles);
 }
 
-export async function handleHonoApiAdminRolesDelete(
-	deps: HonoApiAdminRoleDependencies,
+export async function handleApiAdminRolesDelete(
+	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminRolesDeleteParamDef, body);
+	const params = parseApiParams(adminRolesDeleteParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError('de0d6ecd-8e0a-4253-88ff-74bc89ae3d45');
 
@@ -275,27 +275,27 @@ export async function handleHonoApiAdminRolesDelete(
 	);
 }
 
-export async function handleHonoApiAdminRolesShow(
-	deps: HonoApiAdminRoleDependencies,
+export async function handleApiAdminRolesShow(
+	deps: ApiAdminRoleDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Role'>> {
-	const params = parseHonoApiParams(adminRolesShowParamDef, body);
+	const params = parseApiParams(adminRolesShowParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError('07dc7d34-c0d8-49b7-96c6-db3ce64ee0b3');
 
-	return await packHonoApiRole(deps, role);
+	return await packApiRole(deps, role);
 }
 
-export async function handleHonoApiAdminRolesUnassign(
-	deps: HonoApiAdminRoleDependencies,
+export async function handleApiAdminRolesUnassign(
+	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminRolesUnassignParamDef, body);
+	const params = parseApiParams(adminRolesUnassignParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError('6e519036-a70d-4c76-b679-bc8fb18194e2');
 
-	if (!role.canEditMembersByModerator && !(await isHonoApiAdministrator(deps, me))) {
+	if (!role.canEditMembersByModerator && !(await isApiAdministrator(deps, me))) {
 		throw accessDeniedError('24636eee-e8c1-493e-94b2-e16ad401e262');
 	}
 
@@ -321,12 +321,12 @@ export async function handleHonoApiAdminRolesUnassign(
 	}
 }
 
-export async function handleHonoApiAdminRolesUpdate(
-	deps: HonoApiAdminRoleDependencies,
+export async function handleApiAdminRolesUpdate(
+	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminRolesUpdateParamDef, body);
+	const params = parseApiParams(adminRolesUpdateParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError('cd23ef55-09ad-428a-ac61-95a45e124b32');
 
@@ -358,12 +358,12 @@ export async function handleHonoApiAdminRolesUpdate(
 	);
 }
 
-export async function handleHonoApiAdminRolesUpdateDefaultPolicies(
-	deps: HonoApiAdminRoleDependencies,
+export async function handleApiAdminRolesUpdateDefaultPolicies(
+	deps: ApiAdminRoleDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminRolesUpdateDefaultPoliciesParamDef, body);
+	const params = parseApiParams(adminRolesUpdateDefaultPoliciesParamDef, body);
 	const before = await fetchMetaFromDatabase(deps.db);
 	const { before: updateBefore, after } = await updateMetaInDatabase(deps.db, {
 		policies: params.policies as MiMeta['policies'],
@@ -382,12 +382,12 @@ export async function handleHonoApiAdminRolesUpdateDefaultPolicies(
 	});
 }
 
-export async function handleHonoApiAdminRolesUsers(
-	deps: HonoApiAdminRoleDependencies,
+export async function handleApiAdminRolesUsers(
+	deps: ApiAdminRoleDependencies,
 	me: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<AdminRoleUser[]> {
-	const params = parseHonoApiParams(adminRolesUsersParamDef, body);
+	const params = parseApiParams(adminRolesUsersParamDef, body);
 	const role = await fetchRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError('224eff5e-2488-4b18-b3e7-f50d94421648');
 
@@ -401,7 +401,7 @@ export async function handleHonoApiAdminRolesUsers(
 		),
 	});
 
-	const packedUsers = await packUserDetailedNotMeManyForHonoApi(
+	const packedUsers = await packUserDetailedNotMeManyForApi(
 		deps,
 		assigns.map((assign) => assign.userId),
 		me,

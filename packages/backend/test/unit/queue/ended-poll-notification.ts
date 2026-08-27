@@ -12,8 +12,8 @@ import { createNoteInDatabase, createNoteWithPollInDatabase } from '@/core/note/
 import { createPollVoteInDatabase } from '@/core/note/PollVoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
-	handleHonoQueueEndedPollNotification,
-	type HonoQueueEndedPollNotificationDependencies,
+	handleQueueEndedPollNotification,
+	type QueueEndedPollNotificationDependencies,
 } from '@/queue/handlers/ended-poll-notification.js';
 import type { EndedPollNotificationJobData } from '@/queue/types.js';
 import type { Config } from '@/config.js';
@@ -26,7 +26,7 @@ describe('hono-queue-ended-poll-notification', () => {
 	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
 	let config: Config;
-	let deps: HonoQueueEndedPollNotificationDependencies;
+	let deps: QueueEndedPollNotificationDependencies;
 	const publishedNotifications: { userId: string; type: string }[] = [];
 
 	beforeAll(() => {
@@ -39,7 +39,7 @@ describe('hono-queue-ended-poll-notification', () => {
 			redis: {
 				xadd: async () => '0-1',
 				get: async () => null,
-			} as unknown as HonoQueueEndedPollNotificationDependencies['redis'],
+			} as unknown as QueueEndedPollNotificationDependencies['redis'],
 			meta: { enableServiceWorker: false, swPublicKey: null, swPrivateKey: null },
 			publishMainStream: (userId, type) => {
 				publishedNotifications.push({ userId, type });
@@ -96,7 +96,7 @@ describe('hono-queue-ended-poll-notification', () => {
 		await createPollVoteInDatabase(db, { id: genId(), noteId, userId: voterId, choice: 0 });
 
 		publishedNotifications.length = 0;
-		await handleHonoQueueEndedPollNotification(deps, fakeJob({ noteId }));
+		await handleQueueEndedPollNotification(deps, fakeJob({ noteId }));
 
 		// trackPromise による fire-and-forget のため、publishMainStream の呼び出し完了を待つ。
 		await vi.waitFor(
@@ -128,14 +128,14 @@ describe('hono-queue-ended-poll-notification', () => {
 		});
 
 		publishedNotifications.length = 0;
-		await handleHonoQueueEndedPollNotification(deps, fakeJob({ noteId }));
+		await handleQueueEndedPollNotification(deps, fakeJob({ noteId }));
 
 		expect(publishedNotifications).toHaveLength(0);
 	});
 
 	test('存在しないnoteIdは何もしない', async () => {
 		publishedNotifications.length = 0;
-		await handleHonoQueueEndedPollNotification(deps, fakeJob({ noteId: genId() }));
+		await handleQueueEndedPollNotification(deps, fakeJob({ noteId: genId() }));
 		expect(publishedNotifications).toHaveLength(0);
 	});
 });

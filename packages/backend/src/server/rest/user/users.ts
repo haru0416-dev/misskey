@@ -30,15 +30,15 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import { HonoApiError } from '../error.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiUsersDependencies = {
+export type ApiUsersDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
 
-export type HonoApiPackedUserList = {
+export type ApiPackedUserList = {
 	id: string;
 	createdAt: string;
 	name: string;
@@ -46,7 +46,7 @@ export type HonoApiPackedUserList = {
 	isPublic: boolean;
 };
 
-export type HonoApiPackedUserListShow = HonoApiPackedUserList & {
+export type ApiPackedUserListShow = ApiPackedUserList & {
 	likedCount?: number;
 	isLiked?: boolean;
 };
@@ -97,13 +97,13 @@ type UsersListsUpdateParams = {
 	isPublic?: boolean;
 };
 
-async function packUserListForHonoApi(
-	deps: HonoApiUsersDependencies,
+async function packUserListForApi(
+	deps: ApiUsersDependencies,
 	src: MiUserList['id'] | MiUserList,
 	options?: {
 		userIds?: string[];
 	},
-): Promise<HonoApiPackedUserList> {
+): Promise<ApiPackedUserList> {
 	const userList = typeof src === 'object' ? src : await fetchUserListByIdOrFailFromDatabase(deps.db, src);
 	const userIds =
 		options?.userIds ?? (await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, userList.id));
@@ -117,43 +117,43 @@ async function packUserListForHonoApi(
 	};
 }
 
-async function packUserListsManyForHonoApi(
-	deps: HonoApiUsersDependencies,
+async function packUserListsManyForApi(
+	deps: ApiUsersDependencies,
 	userLists: MiUserList[],
-): Promise<HonoApiPackedUserList[]> {
+): Promise<ApiPackedUserList[]> {
 	const userIdsByListId = await listUserListMembershipUserIdsByUserListIdsFromDatabase(
 		deps.db,
 		userLists.map((userList) => userList.id),
 	);
 	return await Promise.all(
 		userLists.map((userList) =>
-			packUserListForHonoApi(deps, userList, {
+			packUserListForApi(deps, userList, {
 				userIds: userIdsByListId.get(userList.id) ?? [],
 			}),
 		),
 	);
 }
 
-export async function handleHonoApiUsersAchievements(
-	deps: HonoApiUsersDependencies,
+export async function handleApiUsersAchievements(
+	deps: ApiUsersDependencies,
 	body: Record<string, unknown>,
 ): Promise<MiUserProfile['achievements']> {
-	const params = parseHonoApiParams(usersAchievementsParamDef, body);
+	const params = parseApiParams(usersAchievementsParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, params.userId);
 	return profile.achievements;
 }
 
-export async function handleHonoApiUsersListsList(
-	deps: HonoApiUsersDependencies,
+export async function handleApiUsersListsList(
+	deps: ApiUsersDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedUserList[]> {
-	const params = parseHonoApiParams(usersListsListParamDef, body);
+): Promise<ApiPackedUserList[]> {
+	const params = parseApiParams(usersListsListParamDef, body);
 
 	if (params.userId !== undefined) {
 		const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 		if (user == null) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'No such user.',
 				code: 'NO_SUCH_USER',
@@ -161,7 +161,7 @@ export async function handleHonoApiUsersListsList(
 			});
 		}
 		if (user.host !== null) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: "Not allowed to load the remote user's list",
 				code: 'REMOTE_USER_NOT_ALLOWED',
@@ -169,7 +169,7 @@ export async function handleHonoApiUsersListsList(
 			});
 		}
 	} else if (me === null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'Invalid param.',
 			code: 'INVALID_PARAM',
@@ -182,22 +182,22 @@ export async function handleHonoApiUsersListsList(
 			? await listUserListsByUserIdFromDatabase(deps.db, me!.id)
 			: await listUserListsByUserIdFromDatabase(deps.db, params.userId, { publicOnly: true });
 
-	return await packUserListsManyForHonoApi(deps, userLists);
+	return await packUserListsManyForApi(deps, userLists);
 }
 
-export async function handleHonoApiUsersListsShow(
-	deps: HonoApiUsersDependencies,
+export async function handleApiUsersListsShow(
+	deps: ApiUsersDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedUserListShow> {
-	const params = parseHonoApiParams(usersListsShowParamDef, body);
+): Promise<ApiPackedUserListShow> {
+	const params = parseApiParams(usersListsShowParamDef, body);
 	const userList =
 		!params.forPublic && me !== null
 			? await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id)
 			: await fetchPublicUserListByIdFromDatabase(deps.db, params.listId);
 
 	if (userList == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such list.',
 			code: 'NO_SUCH_LIST',
@@ -205,7 +205,7 @@ export async function handleHonoApiUsersListsShow(
 		});
 	}
 
-	const packed: HonoApiPackedUserListShow = await packUserListForHonoApi(deps, userList);
+	const packed: ApiPackedUserListShow = await packUserListForApi(deps, userList);
 	if (params.forPublic && userList.isPublic) {
 		packed.likedCount = await countUserListFavoritesFromDatabase(deps.db, params.listId);
 		packed.isLiked = me !== null ? await userListFavoriteExistsInDatabase(deps.db, me.id, params.listId) : false;
@@ -214,16 +214,16 @@ export async function handleHonoApiUsersListsShow(
 	return packed;
 }
 
-export async function handleHonoApiUsersListsDelete(
-	deps: HonoApiUsersDependencies,
+export async function handleApiUsersListsDelete(
+	deps: ApiUsersDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(usersListsDeleteParamDef, body);
+	const params = parseApiParams(usersListsDeleteParamDef, body);
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 
 	if (userList == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such list.',
 			code: 'NO_SUCH_LIST',
@@ -234,16 +234,16 @@ export async function handleHonoApiUsersListsDelete(
 	await deleteUserListByIdInDatabase(deps.db, userList.id);
 }
 
-export async function handleHonoApiUsersListsUpdate(
-	deps: HonoApiUsersDependencies,
+export async function handleApiUsersListsUpdate(
+	deps: ApiUsersDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedUserList> {
-	const params = parseHonoApiParams(usersListsUpdateParamDef, body);
+): Promise<ApiPackedUserList> {
+	const params = parseApiParams(usersListsUpdateParamDef, body);
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 
 	if (userList == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such list.',
 			code: 'NO_SUCH_LIST',
@@ -260,5 +260,5 @@ export async function handleHonoApiUsersListsUpdate(
 		}),
 	);
 
-	return await packUserListForHonoApi(deps, userList.id);
+	return await packUserListForApi(deps, userList.id);
 }

@@ -7,13 +7,13 @@ import { z } from 'zod';
 import { fetchPageByIdFromDatabase } from '@/core/page/PageStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { HonoApiMainStreamPublisher } from '../events.js';
-import { HonoApiError } from '../error.js';
-import { packUserDetailedForHonoApi, type UserPackingDependencies } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import type { ApiMainStreamPublisher } from '../events.js';
+import { ApiError } from '../error.js';
+import { packUserDetailedForApi, type UserPackingDependencies } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiPagePushDependencies = UserPackingDependencies & {
-	publishMainStream?: HonoApiMainStreamPublisher;
+export type ApiPagePushDependencies = UserPackingDependencies & {
+	publishMainStream?: ApiMainStreamPublisher;
 };
 
 export const pagePushParamDef = z.object({
@@ -28,8 +28,8 @@ type PagePushParams = {
 	var?: unknown;
 };
 
-function noSuchPageError(): HonoApiError {
-	return new HonoApiError({
+function noSuchPageError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such page.',
 		code: 'NO_SUCH_PAGE',
@@ -37,12 +37,12 @@ function noSuchPageError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiPagePush(
-	deps: HonoApiPagePushDependencies,
+export async function handleApiPagePush(
+	deps: ApiPagePushDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pagePushParamDef, body);
+	const params = parseApiParams(pagePushParamDef, body);
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
 		throw noSuchPageError();
@@ -53,6 +53,6 @@ export async function handleHonoApiPagePush(
 		event: params.event,
 		var: params.var,
 		userId: me.id,
-		user: await packUserDetailedForHonoApi(deps, me, { id: page.userId }),
+		user: await packUserDetailedForApi(deps, me, { id: page.userId }),
 	});
 }

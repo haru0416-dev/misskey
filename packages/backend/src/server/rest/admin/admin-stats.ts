@@ -6,9 +6,9 @@
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminStatsDependencies = {
+export type ApiAdminStatsDependencies = {
 	db: MiDrizzleDatabase;
 };
 
@@ -27,11 +27,11 @@ type TableStatsResponse = Record<
 
 export const adminStatsParamDef = z.object({});
 
-export async function handleHonoApiAdminGetIndexStats(
-	deps: HonoApiAdminStatsDependencies,
+export async function handleApiAdminGetIndexStats(
+	deps: ApiAdminStatsDependencies,
 	body: Record<string, unknown>,
 ): Promise<IndexStatsResponse> {
-	parseHonoApiParams(adminStatsParamDef, body);
+	parseApiParams(adminStatsParamDef, body);
 
 	const result = await deps.db.execute<{
 		tablename: string;
@@ -44,11 +44,11 @@ export async function handleHonoApiAdminGetIndexStats(
 	}));
 }
 
-export async function handleHonoApiAdminGetTableStats(
-	deps: HonoApiAdminStatsDependencies,
+export async function handleApiAdminGetTableStats(
+	deps: ApiAdminStatsDependencies,
 	body: Record<string, unknown>,
 ): Promise<TableStatsResponse> {
-	parseHonoApiParams(adminStatsParamDef, body);
+	parseApiParams(adminStatsParamDef, body);
 
 	const result = await deps.db.execute<{
 		table: string;

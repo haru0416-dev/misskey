@@ -4,12 +4,12 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import { createHonoEventPublishers } from '@/server/rest/events.js';
+import { createEventPublishers } from '@/server/rest/events.js';
 
-describe('createHonoEventPublishers', () => {
+describe('createEventPublishers', () => {
 	test('publishNotesStream は note をラップせずそのまま message にする (GlobalEventService#publish の type=null 挙動と一致)', () => {
 		const published: { host: string; message: string }[] = [];
-		const publishers = createHonoEventPublishers({
+		const publishers = createEventPublishers({
 			config: { runtime: { host: 'example.tld' } },
 			publish: (host, message) => {
 				published.push({ host, message });
@@ -29,7 +29,7 @@ describe('createHonoEventPublishers', () => {
 
 	test('publishMainStream 等の type 付きイベントは {type, body} でラップする', () => {
 		const published: { host: string; message: string }[] = [];
-		const publishers = createHonoEventPublishers({
+		const publishers = createEventPublishers({
 			config: { runtime: { host: 'example.tld' } },
 			publish: (host, message) => {
 				published.push({ host, message });
@@ -46,7 +46,7 @@ describe('createHonoEventPublishers', () => {
 
 	test('value が undefined の type 付きイベントは body: null になる', () => {
 		const published: { host: string; message: string }[] = [];
-		const publishers = createHonoEventPublishers({
+		const publishers = createEventPublishers({
 			config: { runtime: { host: 'example.tld' } },
 			publish: (host, message) => {
 				published.push({ host, message });

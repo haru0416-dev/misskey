@@ -54,11 +54,11 @@ async function fs() {
 	return await si.disksIO().catch(() => ({ rIO_sec: 0, wIO_sec: 0 }));
 }
 
-export type HonoDaemonServerStatsDependencies = {
+export type DaemonServerStatsDependencies = {
 	meta: Pick<MiMeta, 'enableServerMachineStats'>;
 };
 
-export function startHonoServerStatsDaemon(deps: HonoDaemonServerStatsDependencies): { dispose: () => void } {
+export function startServerStatsDaemon(deps: DaemonServerStatsDependencies): { dispose: () => void } {
 	if (!deps.meta.enableServerMachineStats) {
 		return { dispose: () => {} };
 	}

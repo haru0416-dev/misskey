@@ -39,23 +39,23 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { UserListMembershipRow } from '@/db/schema/user-list-membership.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
-import { HonoApiError } from '../error.js';
-import type { HonoApiInternalEventPublisher, HonoApiUserListStreamPublisher } from '../events.js';
-import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from './user.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import type { ApiInternalEventPublisher, ApiUserListStreamPublisher } from '../events.js';
+import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from './user.js';
+import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiUsersListsDependencies = UserPackingDependencies &
-	HonoApiRolePolicyDependencies & {
+export type ApiUsersListsDependencies = UserPackingDependencies &
+	ApiRolePolicyDependencies & {
 		relationshipQueue: RelationshipQueue;
-		publishInternalEvent?: HonoApiInternalEventPublisher;
-		publishUserListStream?: HonoApiUserListStreamPublisher;
+		publishInternalEvent?: ApiInternalEventPublisher;
+		publishUserListStream?: ApiUserListStreamPublisher;
 	};
 
 class TooManyUsersError extends Error {}
 
-async function packUserListByRowForHonoApi(
-	deps: HonoApiUsersListsDependencies,
+async function packUserListByRowForApi(
+	deps: ApiUsersListsDependencies,
 	userList: MiUserList,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
 	const userIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(deps.db, userList.id);
@@ -69,11 +69,11 @@ async function packUserListByRowForHonoApi(
 	};
 }
 
-async function packUserListMembershipsManyForHonoApi(
-	deps: HonoApiUsersListsDependencies,
+async function packUserListMembershipsManyForApi(
+	deps: ApiUsersListsDependencies,
 	memberships: UserListMembershipRow[],
 ): Promise<{ id: string; createdAt: string; userId: string; user: Packed<'UserLite'>; withReplies: boolean }[]> {
-	const packedUsers = await packUserLiteManyForHonoApi(
+	const packedUsers = await packUserLiteManyForApi(
 		deps,
 		memberships.map(({ userId }) => userId),
 	);
@@ -84,14 +84,14 @@ async function packUserListMembershipsManyForHonoApi(
 			id: membership.id,
 			createdAt: parseId(membership.id).date.toISOString(),
 			userId: membership.userId,
-			user: userMap.get(membership.userId) ?? (await packUserLiteForHonoApi(deps, membership.userId)),
+			user: userMap.get(membership.userId) ?? (await packUserLiteForApi(deps, membership.userId)),
 			withReplies: membership.withReplies,
 		})),
 	);
 }
 
-function createFollowJobForHonoApi(
-	deps: HonoApiUsersListsDependencies,
+function createFollowJobForApi(
+	deps: ApiUsersListsDependencies,
 	followings: { from: { id: MiUser['id'] }; to: { id: MiUser['id'] } }[],
 ): Promise<unknown> {
 	const jobs = followings.map((rel) => ({
@@ -105,14 +105,14 @@ function createFollowJobForHonoApi(
 	return deps.relationshipQueue.addBulk(jobs);
 }
 
-export async function addUserListMemberForHonoApi(
-	deps: HonoApiUsersListsDependencies,
+export async function addUserListMemberForApi(
+	deps: ApiUsersListsDependencies,
 	target: MiUser,
 	list: MiUserList,
 	me: MiUser,
 	options: { withReplies?: boolean } = {},
 ): Promise<void> {
-	const policies = await getHonoApiRolePolicies(deps, me);
+	const policies = await getApiRolePolicies(deps, me);
 	const created = await createUserListMembershipWithinLimitInDatabase(
 		deps.db,
 		{
@@ -127,27 +127,27 @@ export async function addUserListMemberForHonoApi(
 	if (!created) throw new TooManyUsersError();
 
 	deps.publishInternalEvent?.('userListMemberAdded', { userListId: list.id, memberId: target.id });
-	deps.publishUserListStream?.(list.id, 'userAdded', await packUserLiteForHonoApi(deps, target));
+	deps.publishUserListStream?.(list.id, 'userAdded', await packUserLiteForApi(deps, target));
 
 	if (target.host != null) {
 		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
-		await createFollowJobForHonoApi(deps, [{ from: { id: proxy.id }, to: { id: target.id } }]);
+		await createFollowJobForApi(deps, [{ from: { id: proxy.id }, to: { id: target.id } }]);
 	}
 }
 
-async function removeUserListMemberForHonoApi(
-	deps: HonoApiUsersListsDependencies,
+async function removeUserListMemberForApi(
+	deps: ApiUsersListsDependencies,
 	target: MiUser,
 	list: MiUserList,
 ): Promise<void> {
 	await deleteUserListMembershipInDatabase(deps.db, target.id, list.id);
 
 	deps.publishInternalEvent?.('userListMemberRemoved', { userListId: list.id, memberId: target.id });
-	deps.publishUserListStream?.(list.id, 'userRemoved', await packUserLiteForHonoApi(deps, target));
+	deps.publishUserListStream?.(list.id, 'userRemoved', await packUserLiteForApi(deps, target));
 }
 
-async function updateUserListMembershipForHonoApi(
-	deps: HonoApiUsersListsDependencies,
+async function updateUserListMembershipForApi(
+	deps: ApiUsersListsDependencies,
 	target: MiUser,
 	list: MiUserList,
 	options: { withReplies?: boolean },
@@ -160,16 +160,16 @@ async function updateUserListMembershipForHonoApi(
 	await updateUserListMembershipWithRepliesInDatabase(deps.db, membership.id, options.withReplies);
 }
 
-function noSuchListError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such list.', code: 'NO_SUCH_LIST', id });
+function noSuchListError(id: string): ApiError {
+	return new ApiError({ status: 400, message: 'No such list.', code: 'NO_SUCH_LIST', id });
 }
 
-function noSuchUserError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id });
+function noSuchUserError(id: string): ApiError {
+	return new ApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id });
 }
 
-async function getUserForHonoApi(
-	deps: HonoApiUsersListsDependencies,
+async function getUserForApi(
+	deps: ApiUsersListsDependencies,
 	userId: string,
 	noSuchUserErrorId: string,
 ): Promise<MiUser> {
@@ -186,14 +186,14 @@ type CreateParams = {
 	name: string;
 };
 
-export async function handleHonoApiUsersListsCreate(
-	deps: HonoApiUsersListsDependencies,
+export async function handleApiUsersListsCreate(
+	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
-	const params = parseHonoApiParams(createParamDef, body);
+	const params = parseApiParams(createParamDef, body);
 
-	const policies = await getHonoApiRolePolicies(deps, me);
+	const policies = await getApiRolePolicies(deps, me);
 	const userList = await createUserListWithinLimitInDatabase(
 		deps.db,
 		{
@@ -204,14 +204,14 @@ export async function handleHonoApiUsersListsCreate(
 		policies.userListLimit,
 	);
 	if (!userList)
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'You cannot create user list any more.',
 			code: 'TOO_MANY_USERLISTS',
 			id: '0cf21a28-7715-4f39-a20d-777bfdb8d138',
 		});
 
-	return await packUserListByRowForHonoApi(deps, userList);
+	return await packUserListByRowForApi(deps, userList);
 }
 
 export const createFromPublicParamDef = z.object({
@@ -224,21 +224,21 @@ type CreateFromPublicParams = {
 	listId: string;
 };
 
-export async function handleHonoApiUsersListsCreateFromPublic(
-	deps: HonoApiUsersListsDependencies,
+export async function handleApiUsersListsCreateFromPublic(
+	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; createdAt: string; name: string; userIds: string[]; isPublic: boolean }> {
-	const params = parseHonoApiParams(createFromPublicParamDef, body);
+	const params = parseApiParams(createFromPublicParamDef, body);
 	const copied = await deps.db.transaction(async (transaction) => {
 		const db = transaction as typeof deps.db;
 		const ownerExists = await lockUserListOwnerForCreationInDatabase(db, me.id);
 		const sourceList = await fetchPublicUserListByIdForShareFromDatabase(db, params.listId);
 		if (sourceList == null) throw noSuchListError('9292f798-6175-4f7d-93f4-b6742279667d');
 
-		const policies = await getHonoApiRolePolicies({ ...deps, db }, me);
+		const policies = await getApiRolePolicies({ ...deps, db }, me);
 		if (!ownerExists || (await countUserListsByUserIdFromDatabase(db, me.id)) >= policies.userListLimit) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'You cannot create user list any more.',
 				code: 'TOO_MANY_USERLISTS',
@@ -248,7 +248,7 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 
 		const userIds = await listUserListMembershipUserIdsByUserListIdFromDatabase(db, sourceList.id);
 		if (userIds.length > policies.userEachUserListsLimit) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'You can not push users any more.',
 				code: 'TOO_MANY_USERS',
@@ -274,7 +274,7 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 			return user;
 		});
 		if (blockerIds.length > 0) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'You cannot push this user because you have been blocked by this user.',
 				code: 'YOU_HAVE_BEEN_BLOCKED',
@@ -288,7 +288,7 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 				: (
 						await Promise.all(
 							Array.from({ length: Math.ceil(userIds.length / 50) }, (_, index) =>
-								packUserLiteManyForHonoApi({ ...deps, db }, userIds.slice(index * 50, (index + 1) * 50)),
+								packUserLiteManyForApi({ ...deps, db }, userIds.slice(index * 50, (index + 1) * 50)),
 							),
 						)
 					).flat();
@@ -306,14 +306,14 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 			},
 		);
 		if (result.status === 'tooManyLists')
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'You cannot create user list any more.',
 				code: 'TOO_MANY_USERLISTS',
 				id: 'e9c105b2-c595-47de-97fb-7f7c2c33e92f',
 			});
 		if (result.status === 'tooManyMembers')
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'You can not push users any more.',
 				code: 'TOO_MANY_USERS',
@@ -332,7 +332,7 @@ export async function handleHonoApiUsersListsCreateFromPublic(
 	}
 	if (remoteUsers.length > 0) {
 		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
-		await createFollowJobForHonoApi(
+		await createFollowJobForApi(
 			deps,
 			remoteUsers.map((user) => ({ from: { id: proxy.id }, to: { id: user.id } })),
 		);
@@ -357,19 +357,19 @@ type PullParams = {
 	userId: string;
 };
 
-export async function handleHonoApiUsersListsPull(
-	deps: HonoApiUsersListsDependencies,
+export async function handleApiUsersListsPull(
+	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pullParamDef, body);
+	const params = parseApiParams(pullParamDef, body);
 
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
 
-	const user = await getUserForHonoApi(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
+	const user = await getUserForApi(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
 
-	await removeUserListMemberForHonoApi(deps, user, userList);
+	await removeUserListMemberForApi(deps, user, userList);
 }
 
 export const pushParamDef = z.object({
@@ -382,22 +382,22 @@ type PushParams = {
 	userId: string;
 };
 
-export async function handleHonoApiUsersListsPush(
-	deps: HonoApiUsersListsDependencies,
+export async function handleApiUsersListsPush(
+	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pushParamDef, body);
+	const params = parseApiParams(pushParamDef, body);
 
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) throw noSuchListError('2214501d-ac96-4049-b717-91e42272a711');
 
-	const user = await getUserForHonoApi(deps, params.userId, 'a89abd3d-f0bc-4cce-beb1-2f446f4f1e6a');
+	const user = await getUserForApi(deps, params.userId, 'a89abd3d-f0bc-4cce-beb1-2f446f4f1e6a');
 
 	if (user.id !== me.id) {
 		const blockExist = await blockingExistsInDatabase(deps.db, user.id, me.id);
 		if (blockExist) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'You cannot push this user because you have been blocked by this user.',
 				code: 'YOU_HAVE_BEEN_BLOCKED',
@@ -408,7 +408,7 @@ export async function handleHonoApiUsersListsPush(
 
 	const exists = await userListMembershipExistsInDatabase(deps.db, user.id, userList.id);
 	if (exists) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'That user has already been added to that list.',
 			code: 'ALREADY_ADDED',
@@ -417,10 +417,10 @@ export async function handleHonoApiUsersListsPush(
 	}
 
 	try {
-		await addUserListMemberForHonoApi(deps, user, userList, me);
+		await addUserListMemberForApi(deps, user, userList, me);
 	} catch (err) {
 		if (err instanceof TooManyUsersError) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'You can not push users any more.',
 				code: 'TOO_MANY_USERS',
@@ -451,12 +451,12 @@ type GetMembershipsParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiUsersListsGetMemberships(
-	deps: HonoApiUsersListsDependencies,
+export async function handleApiUsersListsGetMemberships(
+	deps: ApiUsersListsDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; createdAt: string; userId: string; user: Packed<'UserLite'>; withReplies: boolean }[]> {
-	const params = parseHonoApiParams(getMembershipsParamDef, body);
+	const params = parseApiParams(getMembershipsParamDef, body);
 
 	const userList =
 		!params.forPublic && me != null
@@ -473,7 +473,7 @@ export async function handleHonoApiUsersListsGetMemberships(
 		untilId: pagination.untilId,
 	});
 
-	return await packUserListMembershipsManyForHonoApi(deps, memberships);
+	return await packUserListMembershipsManyForApi(deps, memberships);
 }
 
 export const updateMembershipParamDef = z.object({
@@ -488,19 +488,19 @@ type UpdateMembershipParams = {
 	withReplies?: boolean;
 };
 
-export async function handleHonoApiUsersListsUpdateMembership(
-	deps: HonoApiUsersListsDependencies,
+export async function handleApiUsersListsUpdateMembership(
+	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(updateMembershipParamDef, body);
+	const params = parseApiParams(updateMembershipParamDef, body);
 
 	const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
 	if (userList == null) throw noSuchListError('7f44670e-ab16-43b8-b4c1-ccd2ee89cc02');
 
-	const user = await getUserForHonoApi(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
+	const user = await getUserForApi(deps, params.userId, '588e7f72-c744-4a61-b180-d354e912bda2');
 
-	await updateUserListMembershipForHonoApi(
+	await updateUserListMembershipForApi(
 		deps,
 		user,
 		userList,

@@ -28,9 +28,9 @@ import { createRoleAssignmentInDatabase } from '@/core/role/RoleAssignmentStore.
 import { createTemp } from '@/misc/create-temp.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
-	handleHonoQueueExportCustomEmojis,
-	handleHonoQueueImportCustomEmojis,
-	type HonoQueueEmojisDependencies,
+	handleQueueExportCustomEmojis,
+	handleQueueImportCustomEmojis,
+	type QueueEmojisDependencies,
 } from '@/queue/handlers/emojis.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
 import type { RuntimeDependencies as RuntimeDeps } from '@/runtime-dependencies.js';
@@ -80,7 +80,7 @@ async function serveBuffer(buffer: Buffer, contentType: string): Promise<{ url: 
 
 describe('hono-queue-emojis', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueEmojisDependencies;
+	let deps: QueueEmojisDependencies;
 	let servers: Server[] = [];
 
 	beforeAll(async () => {
@@ -100,7 +100,7 @@ describe('hono-queue-emojis', () => {
 		await runtime.dispose();
 	});
 
-	test('handleHonoQueueExportCustomEmojis: ローカル絵文字をzipとしてドライブに保存する', async () => {
+	test('handleQueueExportCustomEmojis: ローカル絵文字をzipとしてドライブに保存する', async () => {
 		const user = await createModeratorTestUser(runtime, 'honoqueueemoji');
 
 		const pngBytes = Buffer.from('89504e470d0a1a0a', 'hex');
@@ -118,7 +118,7 @@ describe('hono-queue-emojis', () => {
 			type: 'image/png',
 		});
 
-		await handleHonoQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: user.id } }));
+		await handleQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: user.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('custom-emojis-') && f.name.endsWith('.zip'))).toBe(true);
@@ -126,11 +126,11 @@ describe('hono-queue-emojis', () => {
 
 	test('存在しないuserIdは何もしない (export)', async () => {
 		await expect(
-			handleHonoQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: genId() } })),
+			handleQueueExportCustomEmojis(deps, fakeJob<DbJobDataWithUser>({ user: { id: genId() } })),
 		).resolves.toBeUndefined();
 	});
 
-	test('handleHonoQueueImportCustomEmojis: zipから絵文字をインポートする', async () => {
+	test('handleQueueImportCustomEmojis: zipから絵文字をインポートする', async () => {
 		const emojiName = `honoqueueimpemoji${genId()}`;
 		const pngBytes = Buffer.from('89504e470d0a1a0a', 'hex');
 
@@ -187,7 +187,7 @@ describe('hono-queue-emojis', () => {
 				userHost: null,
 			});
 
-			await handleHonoQueueImportCustomEmojis(deps, fakeJob<DbUserImportJobData>({ user: { id: user.id }, fileId }));
+			await handleQueueImportCustomEmojis(deps, fakeJob<DbUserImportJobData>({ user: { id: user.id }, fileId }));
 
 			const imported = await fetchEmojiByNameAndHostFromDatabase(runtime.db, emojiName, null);
 			expect(imported).not.toBeNull();
@@ -199,7 +199,7 @@ describe('hono-queue-emojis', () => {
 	test('存在しないfileIdは何もしない (import)', async () => {
 		const id = genId();
 		await expect(
-			handleHonoQueueImportCustomEmojis(deps, fakeJob<DbUserImportJobData>({ user: { id }, fileId: genId() })),
+			handleQueueImportCustomEmojis(deps, fakeJob<DbUserImportJobData>({ user: { id }, fileId: genId() })),
 		).resolves.toBeUndefined();
 	});
 });

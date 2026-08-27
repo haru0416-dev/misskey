@@ -146,7 +146,7 @@ async function getMultiFromRedis(
 	);
 }
 
-export async function getFanoutTimelineNotesForHonoApi(
+export async function getFanoutTimelineNotesForApi(
 	deps: FanoutTimelineReadDependencies,
 	ps: FanoutTimelineReadOptions,
 ): Promise<MiNote[]> {

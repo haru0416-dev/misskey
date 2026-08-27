@@ -16,7 +16,7 @@ vi.mock('node:crypto', async (importOriginal) => ({
 	randomUUID: randomUUIDMock,
 }));
 
-import { isHonoApiRateLimited, isHonoApiRateLimitedForUser } from '@/server/rest/rate-limit.js';
+import { isApiRateLimited, isApiRateLimitedForUser } from '@/server/rest/rate-limit.js';
 
 type MultiResult = [Error | null, unknown][];
 
@@ -76,7 +76,7 @@ function config(ipRateLimit: boolean): Config {
 	} as Config;
 }
 
-describe('Hono API rate limiter', () => {
+describe('API rate limiter', () => {
 	afterEach(() => {
 		process.env['NODE_ENV'] = 'test';
 		vi.clearAllMocks();
@@ -88,7 +88,7 @@ describe('Hono API rate limiter', () => {
 		const redis = createRedis({ time: ['123', '456789'] });
 		const dateNow = vi.spyOn(Date, 'now').mockReturnValue(999_999_999);
 
-		await isHonoApiRateLimited(
+		await isApiRateLimited(
 			{ config: config(true), redis: redis.redis },
 			{
 				key: 'test',
@@ -111,8 +111,8 @@ describe('Hono API rate limiter', () => {
 		const deps = { config: config(true), redis: redis.redis };
 		const limitation = { key: 'test', duration: 1000, max: 2 };
 
-		await isHonoApiRateLimited(deps, limitation, 'actor');
-		await isHonoApiRateLimited(deps, limitation, 'actor');
+		await isApiRateLimited(deps, limitation, 'actor');
+		await isApiRateLimited(deps, limitation, 'actor');
 
 		expect(redis.zadd).toHaveBeenNthCalledWith(1, 'limit:actor:test', 123_456_789, 'request-1');
 		expect(redis.zadd).toHaveBeenNthCalledWith(2, 'limit:actor:test', 123_456_789, 'request-2');
@@ -126,7 +126,7 @@ describe('Hono API rate limiter', () => {
 		const redis = createRedis();
 
 		await expect(
-			isHonoApiRateLimitedForUser({ config: config(true), redis: redis.redis }, limitation, 'actor', factor),
+			isApiRateLimitedForUser({ config: config(true), redis: redis.redis }, limitation, 'actor', factor),
 		).rejects.toThrow('rate limiter duration must be finite');
 
 		expect(redis.time).not.toHaveBeenCalled();
@@ -141,10 +141,10 @@ describe('Hono API rate limiter', () => {
 		const limitation = { key: 'test', duration: 1000, max: 1 };
 
 		await expect(
-			isHonoApiRateLimited({ config: config(false), redis: ipRedis.redis }, limitation, '127.0.0.1'),
+			isApiRateLimited({ config: config(false), redis: ipRedis.redis }, limitation, '127.0.0.1'),
 		).resolves.toBe(false);
 		await expect(
-			isHonoApiRateLimitedForUser({ config: config(false), redis: userRedis.redis }, limitation, 'user-id'),
+			isApiRateLimitedForUser({ config: config(false), redis: userRedis.redis }, limitation, 'user-id'),
 		).resolves.toBe(true);
 
 		expect(ipRedis.time).not.toHaveBeenCalled();

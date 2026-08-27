@@ -7,7 +7,7 @@
 | 系統 | 役割 | 実行時の効果 |
 |---|---|---|
 | `server/api/metas/<category>.ts` → [endpoint-metas.ts](../../../../../packages/backend/src/server/api/endpoint-metas.ts) → [endpoints.ts](../../../../../packages/backend/src/server/api/endpoints.ts) | `meta` (tags/requireCredential/kind/limit/errors/res 等) と `paramDef` (zod) の **宣言**。OpenAPI 仕様生成・`misskey-js` 型自動生成・`/endpoints` `/endpoint` API の情報源 | **リクエストのルーティングや認可には一切使われない** (実行時に `endpointMetas` を読むコードは存在しない) |
-| `server/rest/routes/<category>.ts` → [shell.ts](../../../../../packages/backend/src/server/rest/shell.ts) の `registerXxxRoutes(app, deps)` 群 | Hono の実ルート。認証・権限・レート制限を **その場で手続き的に呼び出し**、ハンドラ関数 (`server/rest/<feature>.ts` の `handleHonoApiXxx`) を実行する | **実際にリクエストを処理するのはこちら** |
+| `server/rest/routes/<category>.ts` → [shell.ts](../../../../../packages/backend/src/server/rest/shell.ts) の `registerXxxRoutes(app, deps)` 群 | Hono の実ルート。認証・権限・レート制限を **その場で手続き的に呼び出し**、ハンドラ関数 (`server/rest/<feature>.ts` の `handleApiXxx`) を実行する | **実際にリクエストを処理するのはこちら** |
 
 つまり `meta.requireCredential: true` と書いても、それだけでは何も強制されない。ルート側で `assertCredential(auth)` を **自分で呼ばない限り** 認証は強制されない。同様に `meta.kind: 'write:notes'` を書いても、ルート側で `assertTokenPermission(auth, 'write:notes')` を呼ばない限り OAuth スコープはチェックされない。**meta は「宣言」、ルートは「実装」で、両者は手で同期させる別々のコード**だと理解すること。
 
@@ -57,13 +57,13 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post('/notes/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);                       // ← meta.requireCredential: true に対応
 			assertProhibitMoved(auth.user);                // ← meta.prohibitMoved: true に対応
 			assertTokenPermission(auth, 'write:notes');    // ← meta.kind に対応 (文字列はハードコード、meta と手で揃える)
-			await assertHonoApiRateLimitForUser(deps, 'notes/create', { duration: 60 * 60 * 1000, max: 300 }, auth.user); // ← meta.limit と値を揃える
+			await assertApiRateLimitForUser(deps, 'notes/create', { duration: 60 * 60 * 1000, max: 300 }, auth.user); // ← meta.limit と値を揃える
 
-			return jsonResponse(c, await handleHonoApiNotesCreate(deps, auth.user, body));
+			return jsonResponse(c, await handleApiNotesCreate(deps, auth.user, body));
 		});
 	});
 }

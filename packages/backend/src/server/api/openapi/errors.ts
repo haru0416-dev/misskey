@@ -15,10 +15,10 @@ import {
 	rateLimitExceededError,
 	rolePermissionDeniedError,
 	userSuspendedError,
-	type HonoApiError,
+	type ApiError,
 } from '../../rest/error.js';
 
-function example(error: HonoApiError) {
+function example(error: ApiError) {
 	return { value: error.toBody() };
 }
 

@@ -4,40 +4,35 @@
  */
 
 import type { Hono } from 'hono';
+import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import {
-	assertCredential,
-	assertProhibitMoved,
-	assertTokenPermission,
-	authenticateHonoApiToken,
-} from '../auth/auth.js';
-import {
-	handleHonoApiDrive,
-	handleHonoApiDriveFilesCheckExistence,
-	handleHonoApiDriveFolders,
-	handleHonoApiDriveFoldersCreate,
-	handleHonoApiDriveFoldersDelete,
-	handleHonoApiDriveFoldersFind,
-	handleHonoApiDriveFoldersShow,
-	handleHonoApiDriveFoldersUpdate,
+	handleApiDrive,
+	handleApiDriveFilesCheckExistence,
+	handleApiDriveFolders,
+	handleApiDriveFoldersCreate,
+	handleApiDriveFoldersDelete,
+	handleApiDriveFoldersFind,
+	handleApiDriveFoldersShow,
+	handleApiDriveFoldersUpdate,
 } from '../drive/drive.js';
 import {
-	handleHonoApiDriveFilesAttachedChatMessages,
-	handleHonoApiDriveFilesAttachedNotes,
-	handleHonoApiDriveFilesDelete,
-	handleHonoApiDriveFilesFind,
-	handleHonoApiDriveFilesFindByHash,
-	handleHonoApiDriveFilesList,
-	handleHonoApiDriveFilesMoveBulk,
-	handleHonoApiDriveFilesShow,
-	handleHonoApiDriveFilesUpdate,
-	handleHonoApiDriveStream,
+	handleApiDriveFilesAttachedChatMessages,
+	handleApiDriveFilesAttachedNotes,
+	handleApiDriveFilesDelete,
+	handleApiDriveFilesFind,
+	handleApiDriveFilesFindByHash,
+	handleApiDriveFilesList,
+	handleApiDriveFilesMoveBulk,
+	handleApiDriveFilesShow,
+	handleApiDriveFilesUpdate,
+	handleApiDriveStream,
 } from '../drive/drive-files.js';
 import {
-	handleHonoApiDriveFilesCreate,
-	handleHonoApiDriveFilesUploadFromUrl,
-	readHonoApiMultipartRequest,
+	handleApiDriveFilesCreate,
+	handleApiDriveFilesUploadFromUrl,
+	readApiMultipartRequest,
 } from '../drive/drive-file-upload.js';
-import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
+import { assertApiRateLimitForUser } from '../rate-limit.js';
 import { invalidParamError, payloadTooLargeError } from '../error.js';
 import {
 	jsonResponse,
@@ -55,7 +50,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/drive/files',
 		endpointHandler(deps, 'drive/files', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFilesList(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFilesList(deps, auth.user, body)),
 		),
 	);
 
@@ -63,23 +58,23 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/drive/stream',
 		endpointHandler(deps, 'drive/stream', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveStream(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveStream(deps, auth.user, body)),
 		),
 	);
 
 	app.post('/drive/files/create', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const parsed = await readHonoApiMultipartRequest(c, deps.config);
+			const parsed = await readApiMultipartRequest(c, deps.config);
 			if (parsed.status === 'missing-file') throw invalidParamError({ param: 'file', reason: 'required' });
 			if (parsed.status === 'too-large') throw payloadTooLargeError();
 
 			const { file, cleanup, fields } = parsed;
 			try {
-				const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, fields));
+				const auth = await authenticateApiToken(deps, tokenFromRequest(c, fields));
 				assertCredential(auth);
 				assertProhibitMoved(auth.user);
 				assertTokenPermission(auth, 'write:drive');
-				await assertHonoApiRateLimitForUser(
+				await assertApiRateLimitForUser(
 					deps,
 					'drive/files/create',
 					{
@@ -92,7 +87,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 				const ip = getRequestIp(c, deps.config);
 				const headers = Object.fromEntries(c.req.raw.headers.entries());
 
-				return jsonResponse(c, await handleHonoApiDriveFilesCreate(deps, auth.user, fields, file, ip, headers));
+				return jsonResponse(c, await handleApiDriveFilesCreate(deps, auth.user, fields, file, ip, headers));
 			} finally {
 				cleanup();
 			}
@@ -102,11 +97,11 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post('/drive/files/upload-from-url', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertProhibitMoved(auth.user);
 			assertTokenPermission(auth, 'write:drive');
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'drive/files/upload-from-url',
 				{
@@ -119,7 +114,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 			const ip = getRequestIp(c, deps.config);
 			const headers = Object.fromEntries(c.req.raw.headers.entries());
 
-			handleHonoApiDriveFilesUploadFromUrl(deps, auth.user, body, ip, headers);
+			handleApiDriveFilesUploadFromUrl(deps, auth.user, body, ip, headers);
 			return emptyResponse(c);
 		});
 	});
@@ -128,7 +123,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/drive/files/show',
 		endpointHandler(deps, 'drive/files/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFilesShow(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFilesShow(deps, auth.user, body)),
 		),
 	);
 
@@ -136,7 +131,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/drive/files/find',
 		endpointHandler(deps, 'drive/files/find', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFilesFind(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFilesFind(deps, auth.user, body)),
 		),
 	);
 
@@ -144,7 +139,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/drive/files/find-by-hash',
 		endpointHandler(deps, 'drive/files/find-by-hash', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFilesFindByHash(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFilesFindByHash(deps, auth.user, body)),
 		),
 	);
 
@@ -152,7 +147,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/drive/files/attached-notes',
 		endpointHandler(deps, 'drive/files/attached-notes', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFilesAttachedNotes(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFilesAttachedNotes(deps, auth.user, body)),
 		),
 	);
 
@@ -160,14 +155,14 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/drive/files/attached-chat-messages',
 		endpointHandler(deps, 'drive/files/attached-chat-messages', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFilesAttachedChatMessages(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFilesAttachedChatMessages(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/drive/files/delete',
 		endpointHandler(deps, 'drive/files/delete', async ({ body, auth, c }) => {
-			await handleHonoApiDriveFilesDelete(deps, auth.user, body);
+			await handleApiDriveFilesDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -175,30 +170,28 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/drive/files/update',
 		endpointHandler(deps, 'drive/files/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFilesUpdate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFilesUpdate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/drive/files/move-bulk',
 		endpointHandler(deps, 'drive/files/move-bulk', async ({ body, auth, c }) => {
-			await handleHonoApiDriveFilesMoveBulk(deps, auth.user, body);
+			await handleApiDriveFilesMoveBulk(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
 
 	app.post(
 		'/drive',
-		endpointHandler(deps, 'drive', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDrive(deps, auth.user)),
-		),
+		endpointHandler(deps, 'drive', async ({ body, auth, c }) => jsonResponse(c, await handleApiDrive(deps, auth.user))),
 	);
 
 	app.on(
 		['POST', 'QUERY'],
 		'/drive/files/check-existence',
 		endpointHandler(deps, 'drive/files/check-existence', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFilesCheckExistence(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFilesCheckExistence(deps, auth.user, body)),
 		),
 	);
 
@@ -206,21 +199,21 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/drive/folders',
 		endpointHandler(deps, 'drive/folders', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFolders(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFolders(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/drive/folders/create',
 		endpointHandler(deps, 'drive/folders/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFoldersCreate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFoldersCreate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/drive/folders/delete',
 		endpointHandler(deps, 'drive/folders/delete', async ({ body, auth, c }) => {
-			await handleHonoApiDriveFoldersDelete(deps, auth.user, body);
+			await handleApiDriveFoldersDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -229,7 +222,7 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/drive/folders/find',
 		endpointHandler(deps, 'drive/folders/find', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFoldersFind(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFoldersFind(deps, auth.user, body)),
 		),
 	);
 
@@ -237,14 +230,14 @@ export function registerDriveRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/drive/folders/show',
 		endpointHandler(deps, 'drive/folders/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFoldersShow(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFoldersShow(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/drive/folders/update',
 		endpointHandler(deps, 'drive/folders/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiDriveFoldersUpdate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiDriveFoldersUpdate(deps, auth.user, body)),
 		),
 	);
 }

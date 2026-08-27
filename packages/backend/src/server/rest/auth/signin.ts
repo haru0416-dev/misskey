@@ -25,11 +25,11 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type Logger from '@/logger.js';
-import { createLoginNotification, type HonoApiNotificationDependencies } from '../notification/notification.js';
-import { isHonoApiRateLimited } from '../rate-limit.js';
-import type { HonoApiErrorBody, HonoApiErrorKind } from '../error.js';
+import { createLoginNotification, type ApiNotificationDependencies } from '../notification/notification.js';
+import { isApiRateLimited } from '../rate-limit.js';
+import type { ApiErrorBody, ApiErrorKind } from '../error.js';
 
-export type HonoApiSigninDependencies = HonoApiNotificationDependencies & {
+export type ApiSigninDependencies = ApiNotificationDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -47,7 +47,7 @@ export type HonoApiSigninDependencies = HonoApiNotificationDependencies & {
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 };
 
-type HonoApiSigninBody = Record<string, unknown> & {
+type ApiSigninBody = Record<string, unknown> & {
 	username?: unknown;
 	password?: unknown;
 	token?: unknown;
@@ -56,22 +56,22 @@ type HonoApiSigninBody = Record<string, unknown> & {
 	code?: unknown;
 };
 
-export type HonoApiSigninRequest = {
-	body: HonoApiSigninBody;
+export type ApiSigninRequest = {
+	body: ApiSigninBody;
 	headers: Headers;
 	ip: string;
 };
 
-export type HonoApiSigninErrorBody = HonoApiErrorBody;
+export type ApiSigninErrorBody = ApiErrorBody;
 
-export type HonoApiSigninFlowResult = {
+export type ApiSigninFlowResult = {
 	status: number;
-	body?: Misskey.entities.SigninFlowResponse | HonoApiSigninErrorBody;
+	body?: Misskey.entities.SigninFlowResponse | ApiSigninErrorBody;
 };
 
-export type HonoApiSigninErrorResult = {
+export type ApiSigninErrorResult = {
 	status: number;
-	body: HonoApiSigninErrorBody;
+	body: ApiSigninErrorBody;
 };
 
 type CaptchaResponse = {
@@ -79,10 +79,10 @@ type CaptchaResponse = {
 	'error-codes'?: string[];
 };
 
-export function honoApiSigninError(status: number, id: string): HonoApiSigninErrorResult {
+export function honoApiSigninError(status: number, id: string): ApiSigninErrorResult {
 	let message = 'Invalid param.';
 	let code = 'INVALID_PARAM';
-	let kind: HonoApiErrorKind = 'client';
+	let kind: ApiErrorKind = 'client';
 	if (status === 403) {
 		message = 'Authentication failed.';
 		code = 'AUTHENTICATION_FAILED';
@@ -100,7 +100,7 @@ export function honoApiSigninError(status: number, id: string): HonoApiSigninErr
 	};
 }
 
-export function tooManyAuthenticationFailures(): HonoApiSigninErrorResult {
+export function tooManyAuthenticationFailures(): ApiSigninErrorResult {
 	return {
 		status: 429,
 		body: {
@@ -122,8 +122,8 @@ function headersObject(headers: Headers): Record<string, string> {
 	return result;
 }
 
-async function isSigninRateLimited(deps: HonoApiSigninDependencies, ip: string): Promise<boolean> {
-	return await isHonoApiRateLimited(
+async function isSigninRateLimited(deps: ApiSigninDependencies, ip: string): Promise<boolean> {
+	return await isApiRateLimited(
 		deps,
 		{
 			key: 'signin',
@@ -136,7 +136,7 @@ async function isSigninRateLimited(deps: HonoApiSigninDependencies, ip: string):
 }
 
 async function getCaptchaResponse(
-	deps: HonoApiSigninDependencies,
+	deps: ApiSigninDependencies,
 	url: string,
 	secret: string,
 	response: string | null | undefined,
@@ -170,7 +170,7 @@ async function getCaptchaResponse(
 }
 
 async function verifyRecaptcha(
-	deps: HonoApiSigninDependencies,
+	deps: ApiSigninDependencies,
 	secret: string,
 	response: string | null | undefined,
 ): Promise<void> {
@@ -181,7 +181,7 @@ async function verifyRecaptcha(
 }
 
 async function verifyHcaptcha(
-	deps: HonoApiSigninDependencies,
+	deps: ApiSigninDependencies,
 	secret: string,
 	response: string | null | undefined,
 ): Promise<void> {
@@ -192,7 +192,7 @@ async function verifyHcaptcha(
 }
 
 async function verifyMcaptcha(
-	deps: HonoApiSigninDependencies,
+	deps: ApiSigninDependencies,
 	secret: string,
 	siteKey: string,
 	instanceHost: string,
@@ -230,7 +230,7 @@ async function verifyMcaptcha(
 }
 
 async function verifyTurnstile(
-	deps: HonoApiSigninDependencies,
+	deps: ApiSigninDependencies,
 	secret: string,
 	response: string | null | undefined,
 ): Promise<void> {
@@ -251,7 +251,7 @@ function verifyTestcaptcha(response: string | null | undefined): void {
 	}
 }
 
-async function verifyEnabledCaptchas(deps: HonoApiSigninDependencies, body: Record<string, unknown>): Promise<void> {
+async function verifyEnabledCaptchas(deps: ApiSigninDependencies, body: Record<string, unknown>): Promise<void> {
 	if (process.env['NODE_ENV'] === 'test') return;
 
 	if (deps.meta.enableHcaptcha && deps.meta.hcaptchaSecretKey) {
@@ -301,8 +301,8 @@ function packSignin(config: Config, src: MiSignin): Record<string, unknown> {
 }
 
 async function appendFailedSignin(
-	deps: HonoApiSigninDependencies,
-	request: HonoApiSigninRequest,
+	deps: ApiSigninDependencies,
+	request: ApiSigninRequest,
 	user: MiLocalUser,
 ): Promise<void> {
 	await createSigninInDatabase(deps.db, {
@@ -314,11 +314,11 @@ async function appendFailedSignin(
 	});
 }
 
-export function completeHonoApiSignin(
-	deps: HonoApiSigninDependencies,
-	request: HonoApiSigninRequest,
+export function completeApiSignin(
+	deps: ApiSigninDependencies,
+	request: ApiSigninRequest,
 	user: MiLocalUser,
-): HonoApiSigninFlowResult {
+): ApiSigninFlowResult {
 	trackPromise(
 		(async () => {
 			try {
@@ -359,21 +359,21 @@ export function completeHonoApiSignin(
 	};
 }
 
-export async function failHonoApiSignin(
-	deps: HonoApiSigninDependencies,
-	request: HonoApiSigninRequest,
+export async function failApiSignin(
+	deps: ApiSigninDependencies,
+	request: ApiSigninRequest,
 	user: MiLocalUser,
 	status: number,
 	id: string,
-): Promise<HonoApiSigninErrorResult> {
+): Promise<ApiSigninErrorResult> {
 	await appendFailedSignin(deps, request, user);
 	return honoApiSigninError(status, id);
 }
 
-export async function handleHonoApiSigninFlow(
-	deps: HonoApiSigninDependencies,
-	request: HonoApiSigninRequest,
-): Promise<HonoApiSigninFlowResult> {
+export async function handleApiSigninFlow(
+	deps: ApiSigninDependencies,
+	request: ApiSigninRequest,
+): Promise<ApiSigninFlowResult> {
 	const body = request.body;
 	const username = body.username;
 	const password = body.password;
@@ -440,27 +440,27 @@ export async function handleHonoApiSigninFlow(
 		}
 
 		if (same) {
-			return completeHonoApiSignin(deps, request, user);
+			return completeApiSignin(deps, request, user);
 		}
 
-		return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
+		return await failApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 	}
 
 	if (token) {
 		if (!same) {
-			return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
+			return await failApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 		}
 
 		try {
 			await deps.userAuthService.twoFactorAuthenticate(profile, token);
 		} catch {
-			return await failHonoApiSignin(deps, request, user, 403, 'cdf1235b-ac71-46d4-a3a6-84ccce48df6f');
+			return await failApiSignin(deps, request, user, 403, 'cdf1235b-ac71-46d4-a3a6-84ccce48df6f');
 		}
 
-		return completeHonoApiSignin(deps, request, user);
+		return completeApiSignin(deps, request, user);
 	} else if (body.credential) {
 		if (!same && !profile.usePasswordLessLogin) {
-			return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
+			return await failApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 		}
 
 		const authorized = await deps.webAuthnService.verifyAuthentication(
@@ -469,13 +469,13 @@ export async function handleHonoApiSigninFlow(
 		);
 
 		if (authorized) {
-			return completeHonoApiSignin(deps, request, user);
+			return completeApiSignin(deps, request, user);
 		}
 
-		return await failHonoApiSignin(deps, request, user, 403, '93b86c4b-72f9-40eb-9815-798928603d1e');
+		return await failApiSignin(deps, request, user, 403, '93b86c4b-72f9-40eb-9815-798928603d1e');
 	} else if (securityKeysAvailable) {
 		if (!same && !profile.usePasswordLessLogin) {
-			return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
+			return await failApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 		}
 
 		const authRequest = await deps.webAuthnService.initiateAuthentication(user.id);
@@ -491,7 +491,7 @@ export async function handleHonoApiSigninFlow(
 	}
 
 	if (!same || !profile.twoFactorEnabled) {
-		return await failHonoApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
+		return await failApiSignin(deps, request, user, 403, '932c904e-9460-45b7-9ce6-7ed33be7eb2c');
 	}
 
 	return {

@@ -39,7 +39,7 @@ export type FileServerDependencies = {
 	logger: Logger;
 };
 
-class HonoFileReply implements FileServerReply {
+class FileReply implements FileServerReply {
 	public statusCode = 200;
 	public readonly headers = new Headers({
 		'Content-Security-Policy': "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
@@ -97,7 +97,7 @@ function createFileServerRequest<Params extends Record<string, string>, Query ex
 	};
 }
 
-function createRedirectToOmitSearch(c: Context, reply: HonoFileReply): Response | null {
+function createRedirectToOmitSearch(c: Context, reply: FileReply): Response | null {
 	const url = new URL(c.req.url);
 	if (url.search === '') return null;
 
@@ -121,7 +121,7 @@ function isReadable(value: unknown): value is NodeJS.ReadableStream {
 	);
 }
 
-async function fileBodyToResponse(body: FileBody, reply: HonoFileReply, method: string): Promise<Response> {
+async function fileBodyToResponse(body: FileBody, reply: FileReply, method: string): Promise<Response> {
 	const fileStat = await stat(body.path).catch(() => null);
 	if (fileStat == null || !fileStat.isFile()) {
 		return new Response(null, {
@@ -145,7 +145,7 @@ async function fileBodyToResponse(body: FileBody, reply: HonoFileReply, method: 
 	);
 }
 
-async function toResponse(body: unknown, reply: HonoFileReply, method: string): Promise<Response> {
+async function toResponse(body: unknown, reply: FileReply, method: string): Promise<Response> {
 	if (isFileBody(body)) {
 		return await fileBodyToResponse(body, reply, method);
 	}
@@ -179,7 +179,7 @@ async function toResponse(body: unknown, reply: HonoFileReply, method: string): 
 
 async function errorHandler(
 	request: FileServerRequest<Record<string, string>, Record<string, unknown>>,
-	reply: HonoFileReply,
+	reply: FileReply,
 	assetsPath: string,
 	logger: Logger,
 	err: unknown,
@@ -213,7 +213,7 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 	const proxyHandler = new FileServerProxyHandler(deps.config, fileResolver, assetsPath, deps.imageProcessingService);
 
 	app.get('/files/:key', async (c) => {
-		const reply = new HonoFileReply();
+		const reply = new FileReply();
 		const redirect = createRedirectToOmitSearch(c, reply);
 		if (redirect) return redirect;
 
@@ -233,7 +233,7 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 	});
 
 	app.get('/files/:key/*', async (c) => {
-		const reply = new HonoFileReply();
+		const reply = new FileReply();
 		const redirect = createRedirectToOmitSearch(c, reply);
 		if (redirect) return redirect;
 
@@ -244,7 +244,7 @@ export function createFileServerApp(deps: FileServerDependencies): Hono {
 	// 複数セグメントを跨ぐ正規表現パラメータは RegExpRouter 非対応のため、ワイルドカードで受けて
 	// パスから URL を切り出す。percent-decode はパラメータ抽出と同じ挙動になるよう自前で行う。
 	app.get('/proxy/*', async (c) => {
-		const reply = new HonoFileReply();
+		const reply = new FileReply();
 		const rawUrl = c.req.path.slice('/proxy/'.length);
 		let url = rawUrl;
 		try {

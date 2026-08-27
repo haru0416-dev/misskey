@@ -13,11 +13,11 @@ import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserInDatabase, createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import { resolveUserForApi, type ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
-describe('resolveUserForHonoApi', () => {
+describe('resolveUserForApi', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoApiApPersonDependencies;
+	let deps: ApiApPersonDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -33,7 +33,7 @@ describe('resolveUserForHonoApi', () => {
 		const username = `honoresolveuser${id}`;
 		await createUserInDatabase(runtime.db, { id, username, usernameLower: username.toLowerCase() });
 
-		const resolved = await resolveUserForHonoApi(deps, username, null);
+		const resolved = await resolveUserForApi(deps, username, null);
 		expect(resolved.id).toBe(id);
 		expect(resolved.host).toBeNull();
 	});
@@ -43,12 +43,12 @@ describe('resolveUserForHonoApi', () => {
 		const username = `honoresolveuser${id}`;
 		await createUserInDatabase(runtime.db, { id, username, usernameLower: username.toLowerCase() });
 
-		const resolved = await resolveUserForHonoApi(deps, username, runtime.config.runtime.host);
+		const resolved = await resolveUserForApi(deps, username, runtime.config.runtime.host);
 		expect(resolved.id).toBe(id);
 	});
 
 	test('存在しないローカルユーザーはエラーを投げる', async () => {
-		await expect(resolveUserForHonoApi(deps, 'nonexistent-user-xyz', null)).rejects.toThrow('user not found');
+		await expect(resolveUserForApi(deps, 'nonexistent-user-xyz', null)).rejects.toThrow('user not found');
 	});
 
 	test('lastFetchedAtが新しいリモートユーザーはWebFingerせずそのまま返す', async () => {
@@ -67,7 +67,7 @@ describe('resolveUserForHonoApi', () => {
 			profile: { userId: id },
 		});
 
-		const resolved = await resolveUserForHonoApi(deps, username, host);
+		const resolved = await resolveUserForApi(deps, username, host);
 		expect(resolved.id).toBe(remoteUser.id);
 	});
 });

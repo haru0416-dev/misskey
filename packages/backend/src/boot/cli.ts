@@ -8,7 +8,7 @@ import { createRedactedConfig, loadConfig } from '@/config.js';
 import { createDrizzleDatabase, createDrizzlePool } from '@/drizzle.js';
 import { updateMetaInDatabase } from '@/core/meta/MetaStore.js';
 import { createRedisForPub } from '@/runtime-dependencies.js';
-import { createHonoEventPublishers } from '@/server/rest/events.js';
+import { createEventPublishers } from '@/server/rest/events.js';
 
 process.title = 'Erebia CLI';
 
@@ -54,7 +54,7 @@ async function resetCaptcha(): Promise<void> {
 	const redisForPub = createRedisForPub(config);
 
 	try {
-		const { publishInternalEvent } = createHonoEventPublishers({
+		const { publishInternalEvent } = createEventPublishers({
 			config,
 			publish: (host, message) => redisForPub.publish(host, message),
 		});

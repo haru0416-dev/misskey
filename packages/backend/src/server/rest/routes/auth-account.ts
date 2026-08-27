@@ -5,26 +5,21 @@
 
 import type { Hono } from 'hono';
 import { listActiveInstanceHostsFromDatabase } from '@/core/instance/InstanceStore.js';
+import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import {
-	assertCredential,
-	assertProhibitMoved,
-	assertTokenPermission,
-	authenticateHonoApiToken,
-} from '../auth/auth.js';
-import {
-	handleHonoApiAntennasCreate,
-	handleHonoApiAntennasDelete,
-	handleHonoApiAntennasList,
-	handleHonoApiAntennasNotes,
-	handleHonoApiAntennasRemoveNote,
-	handleHonoApiAntennasShow,
-	handleHonoApiAntennasUpdate,
+	handleApiAntennasCreate,
+	handleApiAntennasDelete,
+	handleApiAntennasList,
+	handleApiAntennasNotes,
+	handleApiAntennasRemoveNote,
+	handleApiAntennasShow,
+	handleApiAntennasUpdate,
 } from '../antenna/antennas.js';
-import { handleHonoApiAppCreate, handleHonoApiAppShow } from '../auth/app.js';
-import { handleHonoApiSigninFlow } from '../auth/signin.js';
-import { handleHonoApiSigninWithPasskey } from '../auth/signin-with-passkey.js';
-import { signupPendingWithHonoApi, signupWithHonoApi } from '../auth/signup.js';
-import { assertHonoApiRateLimit, type HonoApiEndpointRateLimit } from '../rate-limit.js';
+import { handleApiAppCreate, handleApiAppShow } from '../auth/app.js';
+import { handleApiSigninFlow } from '../auth/signin.js';
+import { handleApiSigninWithPasskey } from '../auth/signin-with-passkey.js';
+import { signupPendingWithApi, signupWithApi } from '../auth/signup.js';
+import { assertApiRateLimit, type ApiEndpointRateLimit } from '../rate-limit.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -48,10 +43,10 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 		return await runApiEndpoint(c, async () => {
 			const limitation = getSignupRateLimit(deps.meta);
 			if (limitation != null) {
-				await assertHonoApiRateLimit(deps, 'signup', limitation, getRequestIp(c, deps.config));
+				await assertApiRateLimit(deps, 'signup', limitation, getRequestIp(c, deps.config));
 			}
 			const body = await jsonBody(c);
-			return jsonResponse(c, await signupWithHonoApi(deps, body ?? {}));
+			return jsonResponse(c, await signupWithApi(deps, body ?? {}));
 		});
 	});
 
@@ -61,7 +56,7 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 			return signinFlowResponse(
 				c,
 				deps,
-				await signupPendingWithHonoApi(deps, {
+				await signupPendingWithApi(deps, {
 					body,
 					headers: c.req.raw.headers,
 					ip: getRequestIp(c, deps.config),
@@ -76,7 +71,7 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 			return signinFlowResponse(
 				c,
 				deps,
-				await handleHonoApiSigninFlow(deps, {
+				await handleApiSigninFlow(deps, {
 					body,
 					headers: c.req.raw.headers,
 					ip: getRequestIp(c, deps.config),
@@ -91,7 +86,7 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 			return signinWithPasskeyResponse(
 				c,
 				deps,
-				await handleHonoApiSigninWithPasskey(deps, {
+				await handleApiSigninWithPasskey(deps, {
 					body,
 					headers: c.req.raw.headers,
 					ip: getRequestIp(c, deps.config),
@@ -103,21 +98,21 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 	app.post(
 		'/antennas/create',
 		endpointHandler(deps, 'antennas/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAntennasCreate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiAntennasCreate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/antennas/update',
 		endpointHandler(deps, 'antennas/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAntennasUpdate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiAntennasUpdate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/antennas/delete',
 		endpointHandler(deps, 'antennas/delete', async ({ body, auth, c }) => {
-			await handleHonoApiAntennasDelete(deps, auth.user, body);
+			await handleApiAntennasDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -126,7 +121,7 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 		['POST', 'QUERY'],
 		'/antennas/list',
 		endpointHandler(deps, 'antennas/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAntennasList(deps, auth.user, body)),
+			jsonResponse(c, await handleApiAntennasList(deps, auth.user, body)),
 		),
 	);
 
@@ -134,14 +129,14 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 		['POST', 'QUERY'],
 		'/antennas/show',
 		endpointHandler(deps, 'antennas/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAntennasShow(deps, auth.user, body)),
+			jsonResponse(c, await handleApiAntennasShow(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/antennas/remove-note',
 		endpointHandler(deps, 'antennas/remove-note', async ({ body, auth, c }) => {
-			await handleHonoApiAntennasRemoveNote(deps, auth.user, body);
+			await handleApiAntennasRemoveNote(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -149,14 +144,14 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 	app.post(
 		'/antennas/notes',
 		endpointHandler(deps, 'antennas/notes', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAntennasNotes(deps, auth.user, body)),
+			jsonResponse(c, await handleApiAntennasNotes(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/app/create',
 		endpointHandlerAnonymous(deps, 'app/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAppCreate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiAppCreate(deps, auth.user, body)),
 		),
 	);
 
@@ -165,15 +160,12 @@ export function registerAuthAccountRoutes(app: Hono, deps: ApiShellDependencies)
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
-			return jsonResponse(
-				c,
-				await handleHonoApiAppShow(deps, auth.user, auth.user != null && auth.token == null, body),
-			);
+			return jsonResponse(c, await handleApiAppShow(deps, auth.user, auth.user != null && auth.token == null, body));
 		});
 	});
 }
 
-export function getSignupRateLimit(meta: ApiShellDependencies['meta']): HonoApiEndpointRateLimit | null {
+export function getSignupRateLimit(meta: ApiShellDependencies['meta']): ApiEndpointRateLimit | null {
 	const minInterval =
 		meta.signupRateLimitMinIntervalSeconds > 0 ? meta.signupRateLimitMinIntervalSeconds * 1000 : undefined;
 	const max = meta.signupRateLimitMaxPerHour > 0 ? meta.signupRateLimitMaxPerHour : undefined;

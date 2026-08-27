@@ -22,19 +22,19 @@ import { safeForSql } from '@/misc/safe-for-sql.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiHashtag } from '@/models/Hashtag.js';
 import type { MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
+import { ApiError } from '../error.js';
 import {
-	packUserDetailedManyForHonoApi,
-	type MeDetailedHonoApiResponse,
-	type UserDetailedNotMeHonoApiResponse,
+	packUserDetailedManyForApi,
+	type MeDetailedApiResponse,
+	type UserDetailedNotMeApiResponse,
 	type UserPackingDependencies,
 } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
 export const HASHTAG_RANKING_WINDOW = 1000 * 60 * 60;
 const featuredEpoc = new Date('2023-01-01T00:00:00Z').getTime();
 
-export type HonoApiHashtagDependencies = UserPackingDependencies & {
+export type ApiHashtagDependencies = UserPackingDependencies & {
 	redis: Redis.Redis;
 };
 
@@ -162,8 +162,8 @@ async function getHashtagCharts(
 	return charts;
 }
 
-function noSuchHashtagError(): HonoApiError {
-	return new HonoApiError({
+function noSuchHashtagError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such hashtag.',
 		code: 'NO_SUCH_HASHTAG',
@@ -171,7 +171,7 @@ function noSuchHashtagError(): HonoApiError {
 	});
 }
 
-function packHonoApiHashtag(src: MiHashtag): Packed<'Hashtag'> {
+function packApiHashtag(src: MiHashtag): Packed<'Hashtag'> {
 	return {
 		tag: src.name,
 		mentionedUsersCount: src.mentionedUsersCount,
@@ -183,8 +183,8 @@ function packHonoApiHashtag(src: MiHashtag): Packed<'Hashtag'> {
 	};
 }
 
-export async function handleHonoApiHashtagsTrend(
-	deps: HonoApiHashtagDependencies,
+export async function handleApiHashtagsTrend(
+	deps: ApiHashtagDependencies,
 	body: Record<string, unknown>,
 ): Promise<
 	{
@@ -193,7 +193,7 @@ export async function handleHonoApiHashtagsTrend(
 		usersCount: number;
 	}[]
 > {
-	parseHonoApiParams(hashtagsTrendParamDef, body);
+	parseApiParams(hashtagsTrendParamDef, body);
 	const ranking = await getFeaturedRanking(deps.redis, 'featuredHashtagsRanking', HASHTAG_RANKING_WINDOW, 10);
 	const charts = ranking.length === 0 ? {} : await getHashtagCharts(deps.redis, ranking, 20);
 
@@ -209,11 +209,11 @@ export async function handleHonoApiHashtagsTrend(
 	});
 }
 
-export async function handleHonoApiHashtagsList(
-	deps: HonoApiHashtagDependencies,
+export async function handleApiHashtagsList(
+	deps: ApiHashtagDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Hashtag'>[]> {
-	const params = parseHonoApiParams(hashtagsListParamDef, body);
+	const params = parseApiParams(hashtagsListParamDef, body);
 	const tags = await listHashtagsFromDatabase(deps.db, {
 		limit: params.limit,
 		attachedToUserOnly: params.attachedToUserOnly,
@@ -222,14 +222,14 @@ export async function handleHonoApiHashtagsList(
 		sort: params.sort as HashtagSort,
 	});
 
-	return tags.map(packHonoApiHashtag);
+	return tags.map(packApiHashtag);
 }
 
-export async function handleHonoApiHashtagsSearch(
-	deps: HonoApiHashtagDependencies,
+export async function handleApiHashtagsSearch(
+	deps: ApiHashtagDependencies,
 	body: Record<string, unknown>,
 ): Promise<string[]> {
-	const params = parseHonoApiParams(hashtagsSearchParamDef, body);
+	const params = parseApiParams(hashtagsSearchParamDef, body);
 	return await searchHashtagNamesFromDatabase(deps.db, {
 		query: params.query,
 		limit: params.limit,
@@ -237,15 +237,15 @@ export async function handleHonoApiHashtagsSearch(
 	});
 }
 
-export async function handleHonoApiHashtagsShow(
-	deps: HonoApiHashtagDependencies,
+export async function handleApiHashtagsShow(
+	deps: ApiHashtagDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Hashtag'>> {
-	const params = parseHonoApiParams(hashtagsShowParamDef, body);
+	const params = parseApiParams(hashtagsShowParamDef, body);
 	const hashtag = await fetchHashtagByNameFromDatabase(deps.db, normalizeForSearch(params.tag));
 	if (hashtag == null) throw noSuchHashtagError();
 
-	return packHonoApiHashtag(hashtag);
+	return packApiHashtag(hashtag);
 }
 
 export const hashtagsUsersParamDef = z.object({
@@ -266,12 +266,12 @@ type HashtagsUsersParams = {
 	origin: UserListOrigin;
 };
 
-export async function handleHonoApiHashtagsUsers(
-	deps: HonoApiHashtagDependencies,
+export async function handleApiHashtagsUsers(
+	deps: ApiHashtagDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
-): Promise<(MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]> {
-	const params = parseHonoApiParams(hashtagsUsersParamDef, body);
+): Promise<(MeDetailedApiResponse | UserDetailedNotMeApiResponse)[]> {
+	const params = parseApiParams(hashtagsUsersParamDef, body);
 
 	const tag = normalizeForSearch(params.tag);
 	if (!safeForSql(tag)) throw new Error('Injection');
@@ -285,5 +285,5 @@ export async function handleHonoApiHashtagsUsers(
 		origin: params.origin,
 	});
 
-	return await packUserDetailedManyForHonoApi(deps, users, me);
+	return await packUserDetailedManyForApi(deps, users, me);
 }

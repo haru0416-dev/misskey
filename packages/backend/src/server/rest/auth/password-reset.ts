@@ -22,11 +22,11 @@ import { getIpHash } from '@/misc/get-ip-hash.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
 import { passwordSchema } from '@/models/User.js';
-import { HonoApiError, rateLimitExceededError } from '../error.js';
-import { isHonoApiRateLimited } from '../rate-limit.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError, rateLimitExceededError } from '../error.js';
+import { isApiRateLimited } from '../rate-limit.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiPasswordResetDependencies = {
+export type ApiPasswordResetDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
@@ -43,8 +43,8 @@ type RequestResetPasswordParams = {
 	email: string;
 };
 
-function invalidPasswordResetTokenError(): HonoApiError {
-	return new HonoApiError({
+function invalidPasswordResetTokenError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Invalid or expired token.',
 		code: 'INVALID_TOKEN',
@@ -62,15 +62,15 @@ type ResetPasswordParams = {
 	password: string;
 };
 
-export async function handleHonoApiRequestResetPassword(
-	deps: HonoApiPasswordResetDependencies,
+export async function handleApiRequestResetPassword(
+	deps: ApiPasswordResetDependencies,
 	body: Record<string, unknown>,
 	ip: string,
 ): Promise<void> {
-	const params = parseHonoApiParams(requestResetPasswordParamDef, body);
+	const params = parseApiParams(requestResetPasswordParamDef, body);
 
 	if (
-		await isHonoApiRateLimited(
+		await isApiRateLimited(
 			deps,
 			{
 				key: 'request-reset-password',
@@ -110,11 +110,11 @@ export async function handleHonoApiRequestResetPassword(
 	);
 }
 
-export async function handleHonoApiResetPassword(
-	deps: HonoApiPasswordResetDependencies,
+export async function handleApiResetPassword(
+	deps: ApiPasswordResetDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(resetPasswordParamDef, body);
+	const params = parseApiParams(resetPasswordParamDef, body);
 	const req = await fetchPasswordResetRequestByTokenFromDatabase(deps.db, params.token);
 
 	// メールのリンクは30分で切れる。これは利用者にとって普通に起こることなので、

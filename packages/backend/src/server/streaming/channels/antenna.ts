@@ -7,18 +7,18 @@ import { antennaExistsForUserFromDatabase } from '@/core/antenna/AntennaStore.js
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import {
-	filterNoteForStreamingHidingForHonoApi,
-	packNoteForHonoApi,
-	populateMyReactionForHonoApi,
-	type HonoApiNoteDependencies,
+	filterNoteForStreamingHidingForApi,
+	packNoteForApi,
+	populateMyReactionForApi,
+	type ApiNoteDependencies,
 } from '@/server/rest/note/note.js';
 import {
-	isNoteMutedOrBlockedForHonoStream,
-	isNoteVisibleForMeForHonoStream,
-	type HonoStreamChannelDefinition,
+	isNoteMutedOrBlockedForStream,
+	isNoteVisibleForMeForStream,
+	type StreamChannelDefinition,
 } from '../channel.js';
 
-export const honoStreamChannelAntenna: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
+export const honoStreamChannelAntenna: StreamChannelDefinition<ApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: true,
 	kind: 'read:account',
@@ -33,17 +33,17 @@ export const honoStreamChannelAntenna: HonoStreamChannelDefinition<HonoApiNoteDe
 
 		const handler = async (data: { type: string; body: JsonValue & { id?: string } }) => {
 			if (data.type === 'note' && typeof data.body.id === 'string') {
-				const note = await packNoteForHonoApi(deps, data.body.id, user, { detail: true });
+				const note = await packNoteForApi(deps, data.body.id, user, { detail: true });
 
-				if (!isNoteVisibleForMeForHonoStream(ctx, note)) return;
-				if (isNoteMutedOrBlockedForHonoStream(ctx, note)) return;
+				if (!isNoteVisibleForMeForStream(ctx, note)) return;
+				if (isNoteMutedOrBlockedForStream(ctx, note)) return;
 
-				const filtered = await filterNoteForStreamingHidingForHonoApi(deps, note, user.id);
+				const filtered = await filterNoteForStreamingHidingForApi(deps, note, user.id);
 				if (!filtered) return;
 
 				if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 					if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-						filtered.renote.myReaction = await populateMyReactionForHonoApi(
+						filtered.renote.myReaction = await populateMyReactionForApi(
 							deps,
 							{
 								id: filtered.renote.id,

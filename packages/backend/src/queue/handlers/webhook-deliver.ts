@@ -12,14 +12,14 @@ import { updateWebhookInDatabase } from '@/core/webhook/WebhookStore.js';
 import { updateSystemWebhookInDatabase } from '@/core/webhook/SystemWebhookStore.js';
 import type { UserWebhookDeliverJobData, SystemWebhookDeliverJobData } from '@/queue/types.js';
 
-export type HonoQueueWebhookDeliverDependencies = {
+export type QueueWebhookDeliverDependencies = {
 	config: Pick<Config, 'runtime' | 'instance'>;
 	db: MiDrizzleDatabase;
 	httpRequestService: Pick<HttpRequestService, 'send'>;
 };
 
-async function deliverWebhookForHonoQueue(
-	deps: HonoQueueWebhookDeliverDependencies,
+async function deliverWebhookForQueue(
+	deps: QueueWebhookDeliverDependencies,
 	data: {
 		webhookId: string;
 		to: string;
@@ -71,11 +71,11 @@ async function deliverWebhookForHonoQueue(
 	}
 }
 
-export async function handleHonoQueueUserWebhookDeliver(
-	deps: HonoQueueWebhookDeliverDependencies,
+export async function handleQueueUserWebhookDeliver(
+	deps: QueueWebhookDeliverDependencies,
 	job: Bull.Job<UserWebhookDeliverJobData>,
 ): Promise<string> {
-	return await deliverWebhookForHonoQueue(deps, job.data, async (status) => {
+	return await deliverWebhookForQueue(deps, job.data, async (status) => {
 		await updateWebhookInDatabase(deps.db, job.data.webhookId, {
 			latestSentAt: new Date(),
 			latestStatus: status,
@@ -83,11 +83,11 @@ export async function handleHonoQueueUserWebhookDeliver(
 	});
 }
 
-export async function handleHonoQueueSystemWebhookDeliver(
-	deps: HonoQueueWebhookDeliverDependencies,
+export async function handleQueueSystemWebhookDeliver(
+	deps: QueueWebhookDeliverDependencies,
 	job: Bull.Job<SystemWebhookDeliverJobData>,
 ): Promise<string> {
-	return await deliverWebhookForHonoQueue(deps, job.data, async (status) => {
+	return await deliverWebhookForQueue(deps, job.data, async (status) => {
 		await updateSystemWebhookInDatabase(deps.db, job.data.webhookId, {
 			latestSentAt: new Date(),
 			latestStatus: status,

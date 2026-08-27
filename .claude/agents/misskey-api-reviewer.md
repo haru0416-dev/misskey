@@ -95,17 +95,17 @@ grep -rn "id: '<生成された UUID>'" packages/backend/src/server/api/metas/ p
 
 - `meta.requireCredential: true` → ルート側で `assertCredential(auth)` を呼んでいるか
 - `meta.kind` → ルート側で `assertTokenPermission(auth, '<同じ文字列>')` を呼んでいるか (文字列がハードコードなので typo・値のズレに注意)
-- `meta.limit` → ルート側で `assertHonoApiRateLimitForUser(deps, '<name>', { duration, max }, ...)` を呼び、`duration`/`max` の値が meta と一致しているか
+- `meta.limit` → ルート側で `assertApiRateLimitForUser(deps, '<name>', { duration, max }, ...)` を呼び、`duration`/`max` の値が meta と一致しているか
 - `meta.prohibitMoved: true` → ルート側で `assertProhibitMoved(auth.user)` を呼んでいるか
-- `meta.requireModerator` / `requireAdmin` → ルート側で `assertHonoApiModerator(deps, auth)` / `assertHonoApiAdministrator(deps, auth)` 相当を呼んでいるか
-- `meta.errors.<key>` の `message`/`code`/`id` → ハンドラ内のローカルエラーファクトリ (`function xxxError(): HonoApiError { return new HonoApiError({...}) }`) の値と完全一致しているか
+- `meta.requireModerator` / `requireAdmin` → ルート側で `assertApiModerator(deps, auth)` / `assertApiAdmin(deps, auth)` 相当を呼んでいるか
+- `meta.errors.<key>` の `message`/`code`/`id` → ハンドラ内のローカルエラーファクトリ (`function xxxError(): ApiError { return new ApiError({...}) }`) の値と完全一致しているか
 
 **この整合性は CI では検知されない** ので、このエージェントの最重要チェック項目として扱う。
 
 ### 6. エンドポイント実装本体 (Major)
 
 - ハンドラ関数が `deps` を第一引数に取り、必要な依存だけを型で宣言しているか (グローバル DI コンテナは無い。詳細 → [service-architecture.md](../skills/working-on-backend/references/knowledge/service-architecture.md))
-- **クライアントに返すべき API エラーは `HonoApiError` のローカルファクトリ経由で throw されているか** ([error.ts](../../packages/backend/src/server/rest/error.ts) 参照)。`meta.errors` で定義したエラーケースを `throw new Error(...)` (通常の Error) で投げているなら指摘する。
+- **クライアントに返すべき API エラーは `ApiError` のローカルファクトリ経由で throw されているか** ([error.ts](../../packages/backend/src/server/rest/error.ts) 参照)。`meta.errors` で定義したエラーケースを `throw new Error(...)` (通常の Error) で投げているなら指摘する。
 - 防御的アサーション・「起きるはずがない」内部不整合・テスト用 ENV ガード等の **想定外フェイルファスト** は `throw new Error('...')` で構わない。`meta.errors` に対応がない `throw new Error` を一律で指摘しない。
 - アップロード系 (`requireFile` 相当) はマルチパートパース結果の `cleanup()` を `try { ... } finally { cleanup(); }` で必ず呼んでいるか ([routes/drive.ts](../../packages/backend/src/server/rest/routes/drive.ts) `/drive/files/create` が手本)。
 - 同期 `throw` は許容。非同期処理での例外伝搬を確認する。
@@ -176,7 +176,7 @@ git diff --name-only "$BASE"...HEAD -- packages/misskey-js/src/autogen/
 - [.claude/skills/working-on-backend/references/knowledge/service-architecture.md](../skills/working-on-backend/references/knowledge/service-architecture.md) — サービス層の依存注入パターン (DI コンテナ無し)
 - [endpoints.ts (meta/paramDef 型定義)](../../packages/backend/src/server/api/endpoints.ts)
 - [endpoint-metas.ts (metas/*.ts の集約)](../../packages/backend/src/server/api/endpoint-metas.ts)
-- [error.ts (HonoApiError)](../../packages/backend/src/server/rest/error.ts)
+- [error.ts (ApiError)](../../packages/backend/src/server/rest/error.ts)
 - [shell.ts (ルート配線)](../../packages/backend/src/server/rest/shell.ts)
 - [test/e2e/endpoints-users.ts](../../packages/backend/test/e2e/endpoints-users.ts)
 - [AGENTS.md](../../AGENTS.md) — SPDX / マイグレーション履歴 / CHANGELOG 書式などの最低限ルール (Codex / Copilot と共通)

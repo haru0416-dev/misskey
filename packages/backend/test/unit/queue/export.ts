@@ -22,12 +22,12 @@ import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
 import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
-	handleHonoQueueExportAntennas,
-	handleHonoQueueExportBlocking,
-	handleHonoQueueExportFollowing,
-	handleHonoQueueExportMuting,
-	handleHonoQueueExportUserLists,
-	type HonoQueueDbDependencies,
+	handleQueueExportAntennas,
+	handleQueueExportBlocking,
+	handleQueueExportFollowing,
+	handleQueueExportMuting,
+	handleQueueExportUserLists,
+	type QueueDbDependencies,
 } from '@/queue/handlers/db.js';
 import type { DBExportAntennasData, DbExportFollowingData, DbJobDataWithUser } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
@@ -50,7 +50,7 @@ async function createTestUser(runtime: RuntimeDependencies, prefix: string): Pro
 
 describe('hono-queue-db (export)', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueDbDependencies;
+	let deps: QueueDbDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -61,29 +61,29 @@ describe('hono-queue-db (export)', () => {
 		await runtime.dispose();
 	});
 
-	test('handleHonoQueueExportMuting: ミュート一覧をCSVとしてドライブに保存する', async () => {
+	test('handleQueueExportMuting: ミュート一覧をCSVとしてドライブに保存する', async () => {
 		const muter = await createTestUser(runtime, 'honoqueueexpmute');
 		const mutee = await createTestUser(runtime, 'honoqueueexpmute');
 		await createMutingInDatabase(runtime.db, { id: genId(), muterId: muter.id, muteeId: mutee.id, expiresAt: null });
 
-		await handleHonoQueueExportMuting(deps, fakeJob({ user: { id: muter.id } }));
+		await handleQueueExportMuting(deps, fakeJob({ user: { id: muter.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, muter.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('mute-') && f.name.endsWith('.csv'))).toBe(true);
 	});
 
-	test('handleHonoQueueExportBlocking: ブロック一覧をCSVとしてドライブに保存する', async () => {
+	test('handleQueueExportBlocking: ブロック一覧をCSVとしてドライブに保存する', async () => {
 		const blocker = await createTestUser(runtime, 'honoqueueexpblock');
 		const blockee = await createTestUser(runtime, 'honoqueueexpblock');
 		await createBlockingInDatabase(runtime.db, { id: genId(), blockerId: blocker.id, blockeeId: blockee.id });
 
-		await handleHonoQueueExportBlocking(deps, fakeJob({ user: { id: blocker.id } }));
+		await handleQueueExportBlocking(deps, fakeJob({ user: { id: blocker.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, blocker.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('blocking-') && f.name.endsWith('.csv'))).toBe(true);
 	});
 
-	test('handleHonoQueueExportUserLists: リスト一覧をCSVとしてドライブに保存する', async () => {
+	test('handleQueueExportUserLists: リスト一覧をCSVとしてドライブに保存する', async () => {
 		const owner = await createTestUser(runtime, 'honoqueueexplist');
 		const member = await createTestUser(runtime, 'honoqueueexplist');
 		const listId = genId();
@@ -95,13 +95,13 @@ describe('hono-queue-db (export)', () => {
 			userListUserId: owner.id,
 		});
 
-		await handleHonoQueueExportUserLists(deps, fakeJob({ user: { id: owner.id } }));
+		await handleQueueExportUserLists(deps, fakeJob({ user: { id: owner.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, owner.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('user-lists-') && f.name.endsWith('.csv'))).toBe(true);
 	});
 
-	test('handleHonoQueueExportAntennas: アンテナ一覧をJSONとしてドライブに保存する', async () => {
+	test('handleQueueExportAntennas: アンテナ一覧をJSONとしてドライブに保存する', async () => {
 		const owner = await createTestUser(runtime, 'honoqueueexpant');
 		await createAntennaInDatabase(runtime.db, {
 			id: genId(),
@@ -112,13 +112,13 @@ describe('hono-queue-db (export)', () => {
 			lastUsedAt: new Date(),
 		});
 
-		await handleHonoQueueExportAntennas(deps, fakeJob<DBExportAntennasData>({ user: { id: owner.id } }));
+		await handleQueueExportAntennas(deps, fakeJob<DBExportAntennasData>({ user: { id: owner.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, owner.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('antennas-') && f.name.endsWith('.json'))).toBe(true);
 	});
 
-	test('handleHonoQueueExportFollowing: フォロー一覧をCSVとしてドライブに保存する', async () => {
+	test('handleQueueExportFollowing: フォロー一覧をCSVとしてドライブに保存する', async () => {
 		const follower = await createTestUser(runtime, 'honoqueueexpfollow');
 		const followee = await createTestUser(runtime, 'honoqueueexpfollow');
 		await createFollowingInDatabase(runtime.db, {
@@ -127,7 +127,7 @@ describe('hono-queue-db (export)', () => {
 			followeeId: followee.id,
 		});
 
-		await handleHonoQueueExportFollowing(
+		await handleQueueExportFollowing(
 			deps,
 			fakeJob<DbExportFollowingData>({
 				user: { id: follower.id },
@@ -141,6 +141,6 @@ describe('hono-queue-db (export)', () => {
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueExportMuting(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
+		await expect(handleQueueExportMuting(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 });

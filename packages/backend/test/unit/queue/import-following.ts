@@ -18,9 +18,9 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { createDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
-	handleHonoQueueImportFollowing,
-	handleHonoQueueImportFollowingToDb,
-	type HonoQueueDbDependencies,
+	handleQueueImportFollowing,
+	handleQueueImportFollowingToDb,
+	type QueueDbDependencies,
 } from '@/queue/handlers/db.js';
 import type { DbUserImportJobData, DbUserImportToDbJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
@@ -47,7 +47,7 @@ async function serveText(text: string): Promise<{ url: string; server: Server }>
 
 describe('hono-queue-db (importFollowing)', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueDbDependencies;
+	let deps: QueueDbDependencies;
 	let servers: Server[] = [];
 
 	beforeAll(async () => {
@@ -72,7 +72,7 @@ describe('hono-queue-db (importFollowing)', () => {
 		});
 	}
 
-	test('handleHonoQueueImportFollowing: CSVの行ごとにimportFollowingToDbジョブを積む', async () => {
+	test('handleQueueImportFollowing: CSVの行ごとにimportFollowingToDbジョブを積む', async () => {
 		const follower = await createTestUser('honoqueueimpfollowme');
 		const followee = await createTestUser('honoqueueimpfollowtarget');
 
@@ -92,7 +92,7 @@ describe('hono-queue-db (importFollowing)', () => {
 			userHost: null,
 		});
 
-		await handleHonoQueueImportFollowing(
+		await handleQueueImportFollowing(
 			deps,
 			fakeJob<DbUserImportJobData>({ user: { id: follower.id }, fileId, withReplies: false }),
 		);
@@ -105,13 +105,13 @@ describe('hono-queue-db (importFollowing)', () => {
 		expect((enqueued!.data as DbUserImportToDbJobData).target).toContain(followee.username);
 	});
 
-	test('handleHonoQueueImportFollowingToDb: ローカルユーザーへのfollowジョブをrelationshipQueueに積む', async () => {
+	test('handleQueueImportFollowingToDb: ローカルユーザーへのfollowジョブをrelationshipQueueに積む', async () => {
 		const follower = await createTestUser('honoqueueimpfollowdbme');
 		const followee = await createTestUser('honoqueueimpfollowdbtarget');
 
 		// following import の行は `acct,withReplies=true` の2カラムで、withReplies は index 1 にある。
 		// 処理では job.data.withReplies (ジョブ全体で1つ) のみを使うため、行ごとの指定は反映されない。
-		await handleHonoQueueImportFollowingToDb(
+		await handleQueueImportFollowingToDb(
 			deps,
 			fakeJob<DbUserImportToDbJobData>({
 				user: { id: follower.id },
@@ -129,10 +129,10 @@ describe('hono-queue-db (importFollowing)', () => {
 		expect(enqueued!.data.withReplies).toBe(false);
 	});
 
-	test('handleHonoQueueImportFollowingToDb: 自分自身はスキップされジョブを積まない', async () => {
+	test('handleQueueImportFollowingToDb: 自分自身はスキップされジョブを積まない', async () => {
 		const follower = await createTestUser('honoqueueimpfollowdbself');
 
-		await handleHonoQueueImportFollowingToDb(
+		await handleQueueImportFollowingToDb(
 			deps,
 			fakeJob<DbUserImportToDbJobData>({
 				user: { id: follower.id },

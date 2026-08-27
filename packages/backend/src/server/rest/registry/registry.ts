@@ -17,14 +17,14 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import type { HonoApiMainStreamPublisher } from '../notification/notification.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import type { ApiMainStreamPublisher } from '../notification/notification.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiRegistryDependencies = {
+export type ApiRegistryDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishMainStream?: HonoApiMainStreamPublisher;
+	publishMainStream?: ApiMainStreamPublisher;
 };
 
 const registryScopeZodSchema = z.array(z.string().regex(/^[a-zA-Z0-9_]+$/)).default([]);
@@ -56,8 +56,8 @@ type RegistrySetParams = {
 	domain?: string | null;
 };
 
-function noSuchGetKeyError(): HonoApiError {
-	return new HonoApiError({
+function noSuchGetKeyError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such key.',
 		code: 'NO_SUCH_KEY',
@@ -65,8 +65,8 @@ function noSuchGetKeyError(): HonoApiError {
 	});
 }
 
-function noSuchGetDetailKeyError(): HonoApiError {
-	return new HonoApiError({
+function noSuchGetDetailKeyError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such key.',
 		code: 'NO_SUCH_KEY',
@@ -78,13 +78,13 @@ function registryDomain(token: MiAccessToken | null, bodyDomain: string | null |
 	return token != null ? token.id : (bodyDomain ?? null);
 }
 
-export async function handleHonoApiRegistryGet(
-	deps: HonoApiRegistryDependencies,
+export async function handleApiRegistryGet(
+	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<unknown> {
-	const params = parseHonoApiParams(registryGetParamDef, body);
+	const params = parseApiParams(registryGetParamDef, body);
 	const item = await fetchRegistryItemFromDatabase(
 		deps.db,
 		user.id,
@@ -97,13 +97,13 @@ export async function handleHonoApiRegistryGet(
 	return item.value;
 }
 
-export async function handleHonoApiRegistryGetAll(
-	deps: HonoApiRegistryDependencies,
+export async function handleApiRegistryGetAll(
+	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-	const params = parseHonoApiParams(registryScopeParamDef, body);
+	const params = parseApiParams(registryScopeParamDef, body);
 	const items = await listRegistryItemsOfScopeFromDatabase(
 		deps.db,
 		user.id,
@@ -119,8 +119,8 @@ export async function handleHonoApiRegistryGetAll(
 	return result;
 }
 
-export async function handleHonoApiRegistryGetDetail(
-	deps: HonoApiRegistryDependencies,
+export async function handleApiRegistryGetDetail(
+	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
@@ -128,7 +128,7 @@ export async function handleHonoApiRegistryGetDetail(
 	updatedAt: string;
 	value: unknown;
 }> {
-	const params = parseHonoApiParams(registryGetParamDef, body);
+	const params = parseApiParams(registryGetParamDef, body);
 	const item = await fetchRegistryItemFromDatabase(
 		deps.db,
 		user.id,
@@ -144,13 +144,13 @@ export async function handleHonoApiRegistryGetDetail(
 	};
 }
 
-export async function handleHonoApiRegistryKeys(
-	deps: HonoApiRegistryDependencies,
+export async function handleApiRegistryKeys(
+	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<string[]> {
-	const params = parseHonoApiParams(registryScopeParamDef, body);
+	const params = parseApiParams(registryScopeParamDef, body);
 	return await listRegistryKeysOfScopeFromDatabase(
 		deps.db,
 		user.id,
@@ -159,13 +159,13 @@ export async function handleHonoApiRegistryKeys(
 	);
 }
 
-export async function handleHonoApiRegistryKeysWithType(
-	deps: HonoApiRegistryDependencies,
+export async function handleApiRegistryKeysWithType(
+	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<Record<string, string>> {
-	const params = parseHonoApiParams(registryScopeParamDef, body);
+	const params = parseApiParams(registryScopeParamDef, body);
 	const items = await listRegistryItemsOfScopeFromDatabase(
 		deps.db,
 		user.id,
@@ -195,13 +195,13 @@ export async function handleHonoApiRegistryKeysWithType(
 	return result;
 }
 
-export async function handleHonoApiRegistryRemove(
-	deps: HonoApiRegistryDependencies,
+export async function handleApiRegistryRemove(
+	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(registryGetParamDef, body);
+	const params = parseApiParams(registryGetParamDef, body);
 	await deleteRegistryItemFromDatabase(
 		deps.db,
 		user.id,
@@ -211,12 +211,12 @@ export async function handleHonoApiRegistryRemove(
 	);
 }
 
-export async function handleHonoApiRegistryScopesWithDomain(
-	deps: HonoApiRegistryDependencies,
+export async function handleApiRegistryScopesWithDomain(
+	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ domain: string | null; scopes: string[][] }[]> {
-	parseHonoApiParams(registryScopesWithDomainParamDef, body);
+	parseApiParams(registryScopesWithDomainParamDef, body);
 	const items = await listRegistryScopeAndDomainsFromDatabase(deps.db, user.id);
 	const result: { domain: string | null; scopes: string[][] }[] = [];
 	const entryByDomain = new Map<string | null, { domain: string | null; scopes: string[][] }>();
@@ -244,13 +244,13 @@ export async function handleHonoApiRegistryScopesWithDomain(
 	return result;
 }
 
-export async function handleHonoApiRegistrySet(
-	deps: HonoApiRegistryDependencies,
+export async function handleApiRegistrySet(
+	deps: ApiRegistryDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(registrySetParamDef, body);
+	const params = parseApiParams(registrySetParamDef, body);
 	const domain = registryDomain(token, params.domain);
 	const itemDomain = domain || null;
 

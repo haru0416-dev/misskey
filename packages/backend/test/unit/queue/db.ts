@@ -15,7 +15,7 @@ import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-d
 import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueDeleteDriveFiles, type HonoQueueDbDependencies } from '@/queue/handlers/db.js';
+import { handleQueueDeleteDriveFiles, type QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbJobDataWithUser } from '@/queue/types.js';
 
 function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {
@@ -24,7 +24,7 @@ function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {
 
 describe('hono-queue-db', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueDbDependencies;
+	let deps: QueueDbDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -35,7 +35,7 @@ describe('hono-queue-db', () => {
 		await runtime.dispose();
 	});
 
-	test('handleHonoQueueDeleteDriveFiles: 対象ユーザーのドライブファイルを全て削除する', async () => {
+	test('handleQueueDeleteDriveFiles: 対象ユーザーのドライブファイルを全て削除する', async () => {
 		const userId = genId();
 		await createUserInDatabase(runtime.db, {
 			id: userId,
@@ -59,7 +59,7 @@ describe('hono-queue-db', () => {
 			});
 		}
 
-		await handleHonoQueueDeleteDriveFiles(deps, fakeJob({ user: { id: userId } }));
+		await handleQueueDeleteDriveFiles(deps, fakeJob({ user: { id: userId } }));
 
 		for (const fileId of fileIds) {
 			expect(await fetchDriveFileByIdFromDatabase(runtime.db, fileId)).toBeNull();
@@ -67,6 +67,6 @@ describe('hono-queue-db', () => {
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueDeleteDriveFiles(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
+		await expect(handleQueueDeleteDriveFiles(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 });

@@ -4,38 +4,38 @@
  */
 
 import type { Hono } from 'hono';
-import { assertCredential, assertTokenPermission, authenticateHonoApiToken } from '../auth/auth.js';
-import { handleHonoApiAdminGetIndexStats, handleHonoApiAdminGetTableStats } from '../admin/admin-stats.js';
+import { assertCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
+import { handleApiAdminGetIndexStats, handleApiAdminGetTableStats } from '../admin/admin-stats.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleHonoApiAdminCaptchaCurrent, handleHonoApiAdminCaptchaSave } from '../captcha/captcha.js';
+import { handleApiAdminCaptchaCurrent, handleApiAdminCaptchaSave } from '../captcha/captcha.js';
 import {
-	handleHonoApiAdminQueueAbandonOutboxDeadLetter,
-	handleHonoApiAdminQueueClear,
-	handleHonoApiAdminQueueDeliverDelayed,
-	handleHonoApiAdminQueueInboxDelayed,
-	handleHonoApiAdminQueueJobs,
-	handleHonoApiAdminQueueOutboxDeadLetters,
-	handleHonoApiAdminQueuePause,
-	handleHonoApiAdminQueuePromoteJobs,
-	handleHonoApiAdminQueueQueueStats,
-	handleHonoApiAdminQueueQueues,
-	handleHonoApiAdminQueueRemoveJob,
-	handleHonoApiAdminQueueResume,
-	handleHonoApiAdminQueueRetryJob,
-	handleHonoApiAdminQueueRetryOutboxDeadLetter,
-	handleHonoApiAdminQueueShowJob,
-	handleHonoApiAdminQueueShowJobLogs,
-	handleHonoApiAdminQueueStats,
+	handleApiAdminQueueAbandonOutboxDeadLetter,
+	handleApiAdminQueueClear,
+	handleApiAdminQueueDeliverDelayed,
+	handleApiAdminQueueInboxDelayed,
+	handleApiAdminQueueJobs,
+	handleApiAdminQueueOutboxDeadLetters,
+	handleApiAdminQueuePause,
+	handleApiAdminQueuePromoteJobs,
+	handleApiAdminQueueQueueStats,
+	handleApiAdminQueueQueues,
+	handleApiAdminQueueRemoveJob,
+	handleApiAdminQueueResume,
+	handleApiAdminQueueRetryJob,
+	handleApiAdminQueueRetryOutboxDeadLetter,
+	handleApiAdminQueueShowJob,
+	handleApiAdminQueueShowJobLogs,
+	handleApiAdminQueueStats,
 } from '../admin/admin-queue.js';
-import { isHonoApiAdministrator } from '../role/role-policy.js';
+import { isApiAdministrator } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,
 	jsonBody,
 	tokenFromRequest,
 	runApiEndpoint,
-	assertHonoApiModerator,
-	assertHonoApiAdmin,
+	assertApiModerator,
+	assertApiAdmin,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler } from '../endpoint-handlers.js';
@@ -45,7 +45,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		['POST', 'QUERY'],
 		'/admin/queue/queues',
 		endpointHandler(deps, 'admin/queue/queues', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAdminQueueQueues(deps, body)),
+			jsonResponse(c, await handleApiAdminQueueQueues(deps, body)),
 		),
 	);
 
@@ -53,7 +53,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		['POST', 'QUERY'],
 		'/admin/queue/queue-stats',
 		endpointHandler(deps, 'admin/queue/queue-stats', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAdminQueueQueueStats(deps, body)),
+			jsonResponse(c, await handleApiAdminQueueQueueStats(deps, body)),
 		),
 	);
 
@@ -61,7 +61,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		['POST', 'QUERY'],
 		'/admin/queue/stats',
 		endpointHandler(deps, 'admin/queue/stats', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAdminQueueStats(deps, body)),
+			jsonResponse(c, await handleApiAdminQueueStats(deps, body)),
 		),
 	);
 
@@ -69,7 +69,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		['POST', 'QUERY'],
 		'/admin/queue/deliver-delayed',
 		endpointHandler(deps, 'admin/queue/deliver-delayed', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAdminQueueDeliverDelayed(deps, body)),
+			jsonResponse(c, await handleApiAdminQueueDeliverDelayed(deps, body)),
 		),
 	);
 
@@ -77,7 +77,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		['POST', 'QUERY'],
 		'/admin/queue/inbox-delayed',
 		endpointHandler(deps, 'admin/queue/inbox-delayed', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAdminQueueInboxDelayed(deps, body)),
+			jsonResponse(c, await handleApiAdminQueueInboxDelayed(deps, body)),
 		),
 	);
 
@@ -85,7 +85,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		['POST', 'QUERY'],
 		'/admin/queue/jobs',
 		endpointHandler(deps, 'admin/queue/jobs', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAdminQueueJobs(deps, body)),
+			jsonResponse(c, await handleApiAdminQueueJobs(deps, body)),
 		),
 	);
 
@@ -93,16 +93,16 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		['POST', 'QUERY'],
 		'/admin/queue/outbox-dead-letters',
 		endpointHandler(deps, 'admin/queue/outbox-dead-letters', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAdminQueueOutboxDeadLetters(deps, body)),
+			jsonResponse(c, await handleApiAdminQueueOutboxDeadLetters(deps, body)),
 		),
 	);
 
 	app.post(
 		'/admin/queue/retry-outbox-dead-letter',
 		endpointHandler(deps, 'admin/queue/retry-outbox-dead-letter', async ({ body, auth, c }) => {
-			await assertHonoApiModerator(deps, auth);
+			await assertApiModerator(deps, auth);
 
-			await handleHonoApiAdminQueueRetryOutboxDeadLetter(deps, body);
+			await handleApiAdminQueueRetryOutboxDeadLetter(deps, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -110,9 +110,9 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 	app.post(
 		'/admin/queue/abandon-outbox-dead-letter',
 		endpointHandler(deps, 'admin/queue/abandon-outbox-dead-letter', async ({ body, auth, c }) => {
-			await assertHonoApiModerator(deps, auth);
+			await assertApiModerator(deps, auth);
 
-			await handleHonoApiAdminQueueAbandonOutboxDeadLetter(deps, body);
+			await handleApiAdminQueueAbandonOutboxDeadLetter(deps, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -121,7 +121,7 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		['POST', 'QUERY'],
 		'/admin/queue/show-job',
 		endpointHandler(deps, 'admin/queue/show-job', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAdminQueueShowJob(deps, body)),
+			jsonResponse(c, await handleApiAdminQueueShowJob(deps, body)),
 		),
 	);
 
@@ -129,16 +129,16 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		['POST', 'QUERY'],
 		'/admin/queue/show-job-logs',
 		endpointHandler(deps, 'admin/queue/show-job-logs', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAdminQueueShowJobLogs(deps, body)),
+			jsonResponse(c, await handleApiAdminQueueShowJobLogs(deps, body)),
 		),
 	);
 
 	app.post(
 		'/admin/queue/clear',
 		endpointHandler(deps, 'admin/queue/clear', async ({ body, auth, c }) => {
-			await assertHonoApiModerator(deps, auth);
+			await assertApiModerator(deps, auth);
 
-			await handleHonoApiAdminQueueClear(deps, auth.user, body);
+			await handleApiAdminQueueClear(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -146,9 +146,9 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 	app.post(
 		'/admin/queue/pause',
 		endpointHandler(deps, 'admin/queue/pause', async ({ body, auth, c }) => {
-			await assertHonoApiModerator(deps, auth);
+			await assertApiModerator(deps, auth);
 
-			await handleHonoApiAdminQueuePause(deps, auth.user, body);
+			await handleApiAdminQueuePause(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -156,9 +156,9 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 	app.post(
 		'/admin/queue/resume',
 		endpointHandler(deps, 'admin/queue/resume', async ({ body, auth, c }) => {
-			await assertHonoApiModerator(deps, auth);
+			await assertApiModerator(deps, auth);
 
-			await handleHonoApiAdminQueueResume(deps, auth.user, body);
+			await handleApiAdminQueueResume(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -166,9 +166,9 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 	app.post(
 		'/admin/queue/promote-jobs',
 		endpointHandler(deps, 'admin/queue/promote-jobs', async ({ body, auth, c }) => {
-			await assertHonoApiModerator(deps, auth);
+			await assertApiModerator(deps, auth);
 
-			await handleHonoApiAdminQueuePromoteJobs(deps, auth.user, body);
+			await handleApiAdminQueuePromoteJobs(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -176,9 +176,9 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 	app.post(
 		'/admin/queue/retry-job',
 		endpointHandler(deps, 'admin/queue/retry-job', async ({ body, auth, c }) => {
-			await assertHonoApiModerator(deps, auth);
+			await assertApiModerator(deps, auth);
 
-			await handleHonoApiAdminQueueRetryJob(deps, body);
+			await handleApiAdminQueueRetryJob(deps, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -186,9 +186,9 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 	app.post(
 		'/admin/queue/remove-job',
 		endpointHandler(deps, 'admin/queue/remove-job', async ({ body, auth, c }) => {
-			await assertHonoApiModerator(deps, auth);
+			await assertApiModerator(deps, auth);
 
-			await handleHonoApiAdminQueueRemoveJob(deps, body);
+			await handleApiAdminQueueRemoveJob(deps, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -196,28 +196,28 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 	app.on(['POST', 'QUERY'], '/admin/get-index-stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
-			if (!(await isHonoApiAdministrator(deps, auth.user))) {
+			if (!(await isApiAdministrator(deps, auth.user))) {
 				throw rolePermissionDeniedError();
 			}
 			assertTokenPermission(auth, 'read:admin:index-stats');
 
-			return jsonResponse(c, await handleHonoApiAdminGetIndexStats(deps, body));
+			return jsonResponse(c, await handleApiAdminGetIndexStats(deps, body));
 		});
 	});
 
 	app.on(['POST', 'QUERY'], '/admin/get-table-stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
-			if (!(await isHonoApiAdministrator(deps, auth.user))) {
+			if (!(await isApiAdministrator(deps, auth.user))) {
 				throw rolePermissionDeniedError();
 			}
 			assertTokenPermission(auth, 'read:admin:table-stats');
 
-			return jsonResponse(c, await handleHonoApiAdminGetTableStats(deps, body));
+			return jsonResponse(c, await handleApiAdminGetTableStats(deps, body));
 		});
 	});
 
@@ -225,17 +225,17 @@ export function registerAdminQueueRoutes(app: Hono, deps: ApiShellDependencies):
 		['POST', 'QUERY'],
 		'/admin/captcha/current',
 		endpointHandler(deps, 'admin/captcha/current', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAdminCaptchaCurrent(deps, body)),
+			jsonResponse(c, await handleApiAdminCaptchaCurrent(deps, body)),
 		),
 	);
 
 	app.post(
 		'/admin/captcha/save',
 		endpointHandler(deps, 'admin/captcha/save', async ({ body, auth, c }) => {
-			await assertHonoApiAdmin(deps, auth);
+			await assertApiAdmin(deps, auth);
 			assertTokenPermission(auth, 'write:admin:meta');
 
-			await handleHonoApiAdminCaptchaSave(deps, body);
+			await handleApiAdminCaptchaSave(deps, body);
 			return emptyResponse(c);
 		}),
 	);

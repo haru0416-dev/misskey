@@ -62,28 +62,25 @@ import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import {
 	extractDbHost,
-	getUserFromApIdForHonoApi,
+	getUserFromApIdForApi,
 	isSelfHost,
 	parseLocalApUri,
-	resolveApObjectForHonoApi,
-	resolveCollectionForHonoApi,
-	type HonoApiApResolveDependencies,
-	type HonoApiAuthUser,
+	resolveApObjectForApi,
+	resolveCollectionForApi,
+	type ApiApResolveDependencies,
+	type ApiAuthUser,
 } from './ap-resolve.js';
-import { HonoApiError } from '../error.js';
-import { postMoveProcessForHonoApi, type HonoApiAccountMoveDependencies } from '../account/account-move.js';
-import {
-	uploadDriveFileFromUrlForHonoApi,
-	type HonoApiDriveFileUploadDependencies,
-} from '../drive/drive-file-upload.js';
-import { updateUsertagsForHonoApi } from '../account/account-update.js';
-import { getHonoApiRolePolicies } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
-import { fetchOrRegisterInstanceForHonoApi } from '../note/notes-create.js';
+import { ApiError } from '../error.js';
+import { postMoveProcessForApi, type ApiAccountMoveDependencies } from '../account/account-move.js';
+import { uploadDriveFileFromUrlForApi, type ApiDriveFileUploadDependencies } from '../drive/drive-file-upload.js';
+import { updateUsertagsForApi } from '../account/account-update.js';
+import { getApiRolePolicies } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
+import { fetchOrRegisterInstanceForApi } from '../note/notes-create.js';
 import type { RelationshipQueue } from '@/core/queue/queues.js';
 
-export type HonoApiApPersonDependencies = HonoApiApResolveDependencies &
-	HonoApiDriveFileUploadDependencies & {
+export type ApiApPersonDependencies = ApiApResolveDependencies &
+	ApiDriveFileUploadDependencies & {
 		relationshipQueue: RelationshipQueue;
 	};
 
@@ -94,8 +91,8 @@ function serializeAlsoKnownAs(value: string[] | null | undefined): string | null
 	return value == null ? value : value.join(',');
 }
 
-function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IObject, uri: string): IActor {
-	const expectHost = punyHostForHonoApi(uri);
+function validateActorForApi(config: Pick<Config, 'instance'>, x: IObject, uri: string): IActor {
+	const expectHost = punyHostForApi(uri);
 
 	if (!isActor(x)) {
 		throw new Error(`invalid Actor type '${x.type}'`);
@@ -109,7 +106,7 @@ function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IObject, u
 		throw new Error('invalid Actor: wrong inbox');
 	}
 
-	if (punyHostForHonoApi(x.inbox) !== expectHost) {
+	if (punyHostForApi(x.inbox) !== expectHost) {
 		throw new Error('invalid Actor: inbox has different host');
 	}
 
@@ -129,7 +126,7 @@ function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IObject, u
 		if (xCollection != null) {
 			const collectionUri = getApId(xCollection);
 			if (typeof collectionUri === 'string' && collectionUri.length > 0) {
-				if (punyHostForHonoApi(collectionUri) !== expectHost) {
+				if (punyHostForApi(collectionUri) !== expectHost) {
 					throw new Error(`invalid Actor: ${collection} has different host`);
 				}
 			} else if (collectionUri != null) {
@@ -164,7 +161,7 @@ function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IObject, u
 		x.summary = truncate(x.summary, summaryLength);
 	}
 
-	const idHost = punyHostForHonoApi(x.id);
+	const idHost = punyHostForApi(x.id);
 	if (idHost !== expectHost) {
 		throw new Error('invalid Actor: id has different host');
 	}
@@ -174,7 +171,7 @@ function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IObject, u
 			throw new Error('invalid Actor: publicKey.id is not a string');
 		}
 
-		const publicKeyIdHost = punyHostForHonoApi(x.publicKey.id);
+		const publicKeyIdHost = punyHostForApi(x.publicKey.id);
 		if (publicKeyIdHost !== expectHost) {
 			throw new Error('invalid Actor: publicKey.id has different host');
 		}
@@ -183,16 +180,16 @@ function validateActorForHonoApi(config: Pick<Config, 'instance'>, x: IObject, u
 	return x;
 }
 
-export function toPunyForHonoApi(host: string): string {
+export function toPunyForApi(host: string): string {
 	return domainToASCII(host.toLowerCase());
 }
 
-function punyHostForHonoApi(url: string): string {
+function punyHostForApi(url: string): string {
 	const urlObj = new URL(url);
-	return `${toPunyForHonoApi(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
+	return `${toPunyForApi(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
 }
 
-function analyzeAttachmentsForHonoApi(
+function analyzeAttachmentsForApi(
 	config: Pick<Config, 'instance'>,
 	attachments: IObject | IObject[] | undefined,
 ): { name: string; value: string }[] {
@@ -210,12 +207,12 @@ function analyzeAttachmentsForHonoApi(
 	return fields;
 }
 
-export async function extractEmojisForHonoApi(
-	deps: HonoApiApPersonDependencies,
+export async function extractEmojisForApi(
+	deps: ApiApPersonDependencies,
 	tags: IObject | IObject[],
 	host: string,
 ): Promise<MiEmoji[]> {
-	const punyHost = toPunyForHonoApi(host);
+	const punyHost = toPunyForApi(host);
 	const emojiTags = toArray(tags).filter(isEmoji);
 
 	const existingEmojis = await listEmojisByHostAndNamesFromDatabase(
@@ -274,8 +271,8 @@ export async function extractEmojisForHonoApi(
 	);
 }
 
-export async function resolveImageForHonoApi(
-	deps: HonoApiApPersonDependencies,
+export async function resolveImageForApi(
+	deps: ApiApPersonDependencies,
 	actor: MiRemoteUser,
 	value: string | IObject,
 ): Promise<MiDriveFile | null> {
@@ -283,7 +280,7 @@ export async function resolveImageForHonoApi(
 		throw new Error('actor has been suspended');
 	}
 
-	const image = await resolveApObjectForHonoApi(deps, value);
+	const image = await resolveApObjectForApi(deps, value);
 
 	if (!isDocument(image)) return null;
 	if (image.url == null || typeof image.url !== 'string') return null;
@@ -292,7 +289,7 @@ export async function resolveImageForHonoApi(
 	const shouldBeCached = deps.meta.cacheRemoteFiles && (deps.meta.cacheRemoteSensitiveFiles || !image.sensitive);
 
 	try {
-		const file = await uploadDriveFileFromUrlForHonoApi(
+		const file = await uploadDriveFileFromUrlForApi(
 			deps,
 			omitUndefined({
 				url: image.url,
@@ -314,8 +311,8 @@ export async function resolveImageForHonoApi(
 	}
 }
 
-async function resolveAvatarAndBannerForHonoApi(
-	deps: HonoApiApPersonDependencies,
+async function resolveAvatarAndBannerForApi(
+	deps: ApiApPersonDependencies,
 	user: MiRemoteUser,
 	icon: unknown,
 	image: unknown,
@@ -332,13 +329,13 @@ async function resolveAvatarAndBannerForHonoApi(
 				return { id: null, url: null, blurhash: null };
 			}
 
-			return await resolveImageForHonoApi(deps, user, img as string | IObject).catch(() => null);
+			return await resolveImageForApi(deps, user, img as string | IObject).catch(() => null);
 		}),
 	);
 
 	if (
 		((avatar != null && avatar.id != null) || (banner != null && banner.id != null)) &&
-		!(await getHonoApiRolePolicies(deps, user)).canUpdateBioMedia
+		!(await getApiRolePolicies(deps, user)).canUpdateBioMedia
 	) {
 		return {};
 	}
@@ -367,13 +364,13 @@ async function resolveAvatarAndBannerForHonoApi(
 	>;
 }
 
-async function isPublicCollectionForHonoApi(
-	deps: HonoApiApPersonDependencies,
+async function isPublicCollectionForApi(
+	deps: ApiApPersonDependencies,
 	collection: string | IObject | undefined,
 	history: Set<string>,
 ): Promise<boolean> {
 	if (collection) {
-		const resolved = await resolveCollectionForHonoApi(deps, collection, history);
+		const resolved = await resolveCollectionForApi(deps, collection, history);
 		const rec = resolved as { first?: unknown; items?: unknown; orderedItems?: unknown };
 		if (rec.first || rec.items || rec.orderedItems) {
 			return true;
@@ -383,14 +380,14 @@ async function isPublicCollectionForHonoApi(
 	return false;
 }
 
-export type HonoApiUpdatePersonDependencies = HonoApiApPersonDependencies & HonoApiAccountMoveDependencies;
+export type ApiUpdatePersonDependencies = ApiApPersonDependencies & ApiAccountMoveDependencies;
 
 /**
- * updatePersonForHonoApi が movedToUri の新規出現・変更を検知したときに呼ぶ。
+ * updatePersonForApi が movedToUri の新規出現・変更を検知したときに呼ぶ。
  * 移行先が移行元を alsoKnownAs で承認している場合だけ移行カスケードを実行する。
  */
-async function processRemoteMoveForHonoApi(
-	deps: HonoApiUpdatePersonDependencies,
+async function processRemoteMoveForApi(
+	deps: ApiUpdatePersonDependencies,
 	src: MiRemoteUser,
 	movePreventUris: string[] = [],
 ): Promise<string> {
@@ -398,7 +395,7 @@ async function processRemoteMoveForHonoApi(
 	if (src.uri === src.movedToUri) return 'skip: movedTo itself (src)';
 	if (movePreventUris.length > 10) return 'skip: too many moves';
 
-	let dst: MiLocalUser | MiRemoteUser | null = await fetchPersonForHonoApi(deps, src.movedToUri);
+	let dst: MiLocalUser | MiRemoteUser | null = await fetchPersonForApi(deps, src.movedToUri);
 
 	if (dst && dst.host == null) {
 		// ローカルユーザーだった場合はDBから読み直す
@@ -408,13 +405,13 @@ async function processRemoteMoveForHonoApi(
 		if (movePreventUris.includes(src.movedToUri)) return 'skip: circular move';
 
 		// dst自体も移行済みの可能性があるので再取得しておく (連鎖的な引っ越しの追跡)
-		await updatePersonForHonoApi(deps, src.movedToUri, dst as MiRemoteUser, [...movePreventUris, src.uri]);
-		dst = (await fetchPersonForHonoApi(deps, src.movedToUri)) ?? dst;
+		await updatePersonForApi(deps, src.movedToUri, dst as MiRemoteUser, [...movePreventUris, src.uri]);
+		dst = (await fetchPersonForApi(deps, src.movedToUri)) ?? dst;
 	} else {
 		if (isSelfHost(deps.config, extractDbHost(src.movedToUri))) {
 			return 'failed: movedTo is local but not found';
 		}
-		dst = await resolvePersonForHonoApi(deps, src.movedToUri);
+		dst = await resolvePersonForApi(deps, src.movedToUri);
 	}
 
 	if (dst.movedToUri === dst.uri) return 'skip: movedTo itself (dst)';
@@ -423,7 +420,7 @@ async function processRemoteMoveForHonoApi(
 	if (!dst.alsoKnownAs || dst.alsoKnownAs.length === 0) return 'skip: dst.alsoKnownAs is empty';
 	if (!dst.alsoKnownAs.includes(src.uri)) return 'skip: alsoKnownAs does not include from.uri';
 
-	await postMoveProcessForHonoApi(deps, src, dst);
+	await postMoveProcessForApi(deps, src, dst);
 
 	return 'ok';
 }
@@ -433,8 +430,8 @@ async function processRemoteMoveForHonoApi(
  * リモートユーザーの再取得だけではピン留めノート一覧は更新されない。
  * uriPersonCache はプロセス内メモリキャッシュのため、この経路では更新しない。
  */
-export async function updatePersonForHonoApi(
-	deps: HonoApiUpdatePersonDependencies,
+export async function updatePersonForApi(
+	deps: ApiUpdatePersonDependencies,
 	uri: string,
 	exist: MiRemoteUser,
 	movePreventUris: string[] = [],
@@ -443,21 +440,21 @@ export async function updatePersonForHonoApi(
 	const history = new Set<string>();
 	// Update activity に埋め込まれたオブジェクトが渡されていれば再フェッチしない (中間キャッシュ (nginx 等) が
 	// 古い Person を返すと更新が反映されないため、hint の利用は正しさに直結する)
-	const object = hint ?? (await resolveApObjectForHonoApi(deps, uri, FetchAllowSoftFailMask.Strict, history));
+	const object = hint ?? (await resolveApObjectForApi(deps, uri, FetchAllowSoftFailMask.Strict, history));
 
-	const person = validateActorForHonoApi(deps.config, object, uri);
+	const person = validateActorForApi(deps.config, object, uri);
 
-	const emojis = await extractEmojisForHonoApi(deps, person.tag ?? [], exist.host).catch(() => [] as MiEmoji[]);
+	const emojis = await extractEmojisForApi(deps, person.tag ?? [], exist.host).catch(() => [] as MiEmoji[]);
 	const emojiNames = emojis.map((emoji) => emoji.name);
 
-	const fields = analyzeAttachmentsForHonoApi(deps.config, person.attachment ?? []);
+	const fields = analyzeAttachmentsForApi(deps.config, person.attachment ?? []);
 
 	const tags = extractApHashtags(person.tag).map(normalizeForSearch).splice(0, 32);
 
 	const [followingVisibility, followersVisibility] = await Promise.all(
 		[
-			isPublicCollectionForHonoApi(deps, person.following, history),
-			isPublicCollectionForHonoApi(deps, person.followers, history),
+			isPublicCollectionForApi(deps, person.following, history),
+			isPublicCollectionForApi(deps, person.followers, history),
 		].map((p): Promise<'public' | 'private' | undefined> =>
 			p
 				.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private')
@@ -484,7 +481,7 @@ export async function updatePersonForHonoApi(
 			throw new Error('unexpected schema of person url: ' + url);
 		}
 
-		if (punyHostForHonoApi(url) !== punyHostForHonoApi(person.id)) {
+		if (punyHostForApi(url) !== punyHostForApi(person.id)) {
 			throw new Error(`person url <> uri host mismatch: ${url} <> ${person.id}`);
 		}
 	}
@@ -504,7 +501,7 @@ export async function updatePersonForHonoApi(
 		movedToUri: person.movedTo ?? null,
 		alsoKnownAs: person.alsoKnownAs ? toArray(person.alsoKnownAs) : null,
 		isExplorable: person.discoverable,
-		...(await resolveAvatarAndBannerForHonoApi(deps, exist, person.icon, person.image).catch(() => ({}))),
+		...(await resolveAvatarAndBannerForApi(deps, exist, person.icon, person.image).catch(() => ({}))),
 	};
 
 	const moving = (() => {
@@ -561,7 +558,7 @@ export async function updatePersonForHonoApi(
 
 	deps.publishInternalEvent?.('remoteUserUpdated', { id: exist.id });
 
-	await updateUsertagsForHonoApi(deps, exist, tags);
+	await updateUsertagsForApi(deps, exist, tags);
 
 	await updateFollowingsByFollowerIdInDatabase(deps.db, exist.id, {
 		followerSharedInbox: person.sharedInbox ?? person.endpoints?.sharedInbox ?? null,
@@ -575,7 +572,7 @@ export async function updatePersonForHonoApi(
 		mergedUpdated.movedAt &&
 		(exist.movedAt == null || exist.movedAt.getTime() + 1000 * 60 * 60 * 24 * 14 < mergedUpdated.movedAt.getTime())
 	) {
-		await processRemoteMoveForHonoApi(deps, mergedUpdated, movePreventUris).catch(() => 'failed');
+		await processRemoteMoveForApi(deps, mergedUpdated, movePreventUris).catch(() => 'failed');
 	}
 }
 
@@ -584,20 +581,20 @@ export async function updatePersonForHonoApi(
  * インスタンスメタデータ取得とチャート更新は分析用の副作用なので、ユーザー作成経路には含めない。
  * インスタンス行の作成とユーザー数更新は、この経路内で完了させる。
  */
-export async function createPersonForHonoApi(
-	deps: HonoApiApPersonDependencies,
+export async function createPersonForApi(
+	deps: ApiApPersonDependencies,
 	uri: string,
 	history: Set<string> = new Set(),
 ): Promise<MiRemoteUser> {
-	const host = punyHostForHonoApi(uri);
-	if (host === toPunyForHonoApi(deps.config.runtime.host)) {
+	const host = punyHostForApi(uri);
+	if (host === toPunyForApi(deps.config.runtime.host)) {
 		throw new StatusError('cannot resolve local user', 400, 'cannot resolve local user');
 	}
 
-	const object = await resolveApObjectForHonoApi(deps, uri, FetchAllowSoftFailMask.Strict, history);
+	const object = await resolveApObjectForApi(deps, uri, FetchAllowSoftFailMask.Strict, history);
 	if (object.id == null) throw new Error('invalid object.id: ' + object.id);
 
-	const person = validateActorForHonoApi(deps.config, object, uri);
+	const person = validateActorForApi(deps.config, object, uri);
 
 	if (person.id == null) {
 		throw new Error('Refusing to create person without id');
@@ -606,14 +603,14 @@ export async function createPersonForHonoApi(
 		throw new Error('Refusing to create person without preferredUsername');
 	}
 
-	const fields = analyzeAttachmentsForHonoApi(deps.config, person.attachment ?? []);
+	const fields = analyzeAttachmentsForApi(deps.config, person.attachment ?? []);
 	const tags = extractApHashtags(person.tag).map(normalizeForSearch).splice(0, 32);
 	const isBot = getApType(object) === 'Service' || getApType(object) === 'Application';
 
 	const [followingVisibility, followersVisibility] = await Promise.all(
 		[
-			isPublicCollectionForHonoApi(deps, person.following, history),
-			isPublicCollectionForHonoApi(deps, person.followers, history),
+			isPublicCollectionForApi(deps, person.following, history),
+			isPublicCollectionForApi(deps, person.followers, history),
 		].map((p): Promise<'public' | 'private'> =>
 			p.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private').catch(() => 'private' as const),
 		),
@@ -626,7 +623,7 @@ export async function createPersonForHonoApi(
 		throw new Error('unexpected schema of person url: ' + url);
 	}
 
-	const emojis = await extractEmojisForHonoApi(deps, person.tag ?? [], host)
+	const emojis = await extractEmojisForApi(deps, person.tag ?? [], host)
 		.then((_emojis) => _emojis.map((emoji) => emoji.name))
 		.catch(() => [] as string[]);
 
@@ -708,17 +705,17 @@ export async function createPersonForHonoApi(
 	}
 
 	if (deps.meta.enableStatsForFederatedInstances) {
-		fetchOrRegisterInstanceForHonoApi(deps, host)
+		fetchOrRegisterInstanceForApi(deps, host)
 			.then(async (i) => {
 				await adjustInstanceUsersCountFromDatabase(deps.db, i.id, 1);
 			})
 			.catch(() => {});
 	}
 
-	await updateUsertagsForHonoApi(deps, user, tags);
+	await updateUsertagsForApi(deps, user, tags);
 
 	try {
-		const updates = await resolveAvatarAndBannerForHonoApi(deps, user, person.icon, person.image);
+		const updates = await resolveAvatarAndBannerForApi(deps, user, person.icon, person.image);
 		await updateUserInDatabase(deps.db, user.id, updates);
 		user = { ...user, ...updates };
 	} catch {
@@ -729,8 +726,8 @@ export async function createPersonForHonoApi(
 }
 
 /** uriPersonCache はプロセス内キャッシュのため、この経路では更新しない。 */
-export async function fetchPersonForHonoApi(
-	deps: HonoApiApPersonDependencies,
+export async function fetchPersonForApi(
+	deps: ApiApPersonDependencies,
 	uri: string,
 ): Promise<MiLocalUser | MiRemoteUser | null> {
 	if (uri.startsWith(`${deps.config.instance.url}/`)) {
@@ -743,23 +740,23 @@ export async function fetchPersonForHonoApi(
 	return (await fetchUserByUriFromDatabase(deps.db, uri)) as MiLocalUser | MiRemoteUser | null;
 }
 
-export async function resolvePersonForHonoApi(
-	deps: HonoApiApPersonDependencies,
+export async function resolvePersonForApi(
+	deps: ApiApPersonDependencies,
 	uri: string,
 	history: Set<string> = new Set(),
 ): Promise<MiLocalUser | MiRemoteUser> {
-	const exist = await fetchPersonForHonoApi(deps, uri);
+	const exist = await fetchPersonForApi(deps, uri);
 	if (exist) return exist;
 
-	return await createPersonForHonoApi(deps, uri, history);
+	return await createPersonForApi(deps, uri, history);
 }
 
 /** 認証済み・レート制限付きの AP 解決経路で使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
-export async function getAuthUserFromApIdForHonoApi(
-	deps: HonoApiApPersonDependencies,
+export async function getAuthUserFromApIdForApi(
+	deps: ApiApPersonDependencies,
 	uri: string,
-): Promise<HonoApiAuthUser | null> {
-	const user = (await resolvePersonForHonoApi(deps, uri)) as MiRemoteUser;
+): Promise<ApiAuthUser | null> {
+	const user = (await resolvePersonForApi(deps, uri)) as MiRemoteUser;
 	if (user.isDeleted) return null;
 
 	const key = await fetchUserPublickeyByUserIdFromDatabase(deps.db, user.id);
@@ -773,8 +770,8 @@ function getUserUriForApPerson(config: Pick<Config, 'instance'>, user: MiLocalUs
 /**
  * dst の alsoKnownAs を辿り、movedToUri が dst を指す旧アカウントが実在するかを調べる。
  */
-export async function validateAlsoKnownAsForHonoApi(
-	deps: HonoApiApPersonDependencies,
+export async function validateAlsoKnownAsForApi(
+	deps: ApiApPersonDependencies,
 	dstInput: MiLocalUser | MiRemoteUser,
 	check: (
 		oldUser: MiLocalUser | MiRemoteUser | null,
@@ -787,9 +784,9 @@ export async function validateAlsoKnownAsForHonoApi(
 
 	if (dst.host != null) {
 		if (Date.now() - (dst.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {
-			await updatePersonForHonoApi(deps, dst.uri, dst);
+			await updatePersonForApi(deps, dst.uri, dst);
 		}
-		dst = (await fetchPersonForHonoApi(deps, dst.uri)) ?? dst;
+		dst = (await fetchPersonForApi(deps, dst.uri)) ?? dst;
 	}
 
 	if (!dst.alsoKnownAs || dst.alsoKnownAs.length === 0) return null;
@@ -798,14 +795,14 @@ export async function validateAlsoKnownAsForHonoApi(
 
 	for (const srcUri of dst.alsoKnownAs) {
 		try {
-			let src = await fetchPersonForHonoApi(deps, srcUri);
+			let src = await fetchPersonForApi(deps, srcUri);
 			if (!src) continue; // このサーバーに存在しない旧アカウントにはフォロー関係がないため対象外とする。
 
 			if (dst.host != null && src.host != null) {
 				if (Date.now() - (src.lastFetchedAt?.getTime() ?? 0) > 10 * 1000) {
-					await updatePersonForHonoApi(deps, srcUri, src);
+					await updatePersonForApi(deps, srcUri, src);
 				}
-				src = (await fetchPersonForHonoApi(deps, srcUri)) ?? src;
+				src = (await fetchPersonForApi(deps, srcUri)) ?? src;
 			}
 
 			if (src.movedToUri === dstUri) {
@@ -830,17 +827,17 @@ type FederationUpdateRemoteUserParams = {
 	userId: MiUser['id'];
 };
 
-export async function handleHonoApiFederationUpdateRemoteUser(
-	deps: HonoApiApPersonDependencies,
+export async function handleApiFederationUpdateRemoteUser(
+	deps: ApiApPersonDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(federationUpdateRemoteUserParamDef, body);
+	const params = parseApiParams(federationUpdateRemoteUserParamDef, body);
 
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	// IdentifiableError も生の Error も runApiEndpoint では 500 INTERNAL_ERROR になってしまうため、
 	// 「そのIDのユーザーが居ない」「ローカルユーザーを指定した」は明示的なAPIエラーとして返す
 	if (user == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such user.',
 			code: 'NO_SUCH_USER',
@@ -848,7 +845,7 @@ export async function handleHonoApiFederationUpdateRemoteUser(
 		});
 	}
 	if (user.host == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'User is not a remote user.',
 			code: 'NOT_REMOTE_USER',
@@ -856,7 +853,7 @@ export async function handleHonoApiFederationUpdateRemoteUser(
 		});
 	}
 
-	await updatePersonForHonoApi(deps, user.uri!, user as MiRemoteUser);
+	await updatePersonForApi(deps, user.uri!, user as MiRemoteUser);
 }
 
 type WebfingerLink = {
@@ -872,7 +869,7 @@ type WebfingerResult = {
 const webfingerUrlRegex = /^https?:\/\//;
 const webfingerAcctRegex = /^([^@]+)@(.*)/;
 
-async function webfingerForHonoApi(
+async function webfingerForApi(
 	deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> },
 	query: string,
 ): Promise<WebfingerResult> {
@@ -892,11 +889,11 @@ async function webfingerForHonoApi(
 	return await deps.httpRequestService.getJson<WebfingerResult>(url, 'application/jrd+json, application/json');
 }
 
-async function resolveSelfForHonoApi(
+async function resolveSelfForApi(
 	deps: { httpRequestService: Pick<HttpRequestService, 'getJson'> },
 	acctLower: string,
 ): Promise<WebfingerLink> {
-	const finger = await webfingerForHonoApi(deps, acctLower).catch((err) => {
+	const finger = await webfingerForApi(deps, acctLower).catch((err) => {
 		throw new Error(`Failed to WebFinger for ${acctLower}: ${err.statusCode ?? err.message}`);
 	});
 	const self = finger.links.find((link) => link.rel != null && link.rel.toLowerCase() === 'self');
@@ -908,16 +905,16 @@ async function resolveSelfForHonoApi(
 
 /**
  * リモートユーザーが未登録ならWebFingerで解決して作成し、登録済みかつ
- * 24時間以上再取得していなければWebFinger→updatePersonForHonoApiで再同期する。
+ * 24時間以上再取得していなければWebFinger→updatePersonForApiで再同期する。
  */
-export async function resolveUserForHonoApi(
-	deps: HonoApiApPersonDependencies,
+export async function resolveUserForApi(
+	deps: ApiApPersonDependencies,
 	username: string,
 	host: string | null,
 ): Promise<MiLocalUser | MiRemoteUser> {
 	const usernameLower = username.toLowerCase();
 
-	if (host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.runtime.host)) {
+	if (host == null || toPunyForApi(host) === toPunyForApi(deps.config.runtime.host)) {
 		const localUser = await fetchLocalUserByUsernameFromDatabase(deps.db, usernameLower);
 		if (localUser == null) {
 			throw new Error('user not found');
@@ -925,18 +922,18 @@ export async function resolveUserForHonoApi(
 		return localUser;
 	}
 
-	const punyHost = toPunyForHonoApi(host);
+	const punyHost = toPunyForApi(host);
 	const user = (await fetchUserByUsernameAndHostFromDatabase(deps.db, usernameLower, punyHost)) as MiRemoteUser | null;
 
 	const acctLower = `${usernameLower}@${punyHost}`;
 
 	if (user == null) {
-		const self = await resolveSelfForHonoApi(deps, acctLower);
+		const self = await resolveSelfForApi(deps, acctLower);
 
-		if (punyHostForHonoApi(self.href) === toPunyForHonoApi(deps.config.runtime.host)) {
+		if (punyHostForApi(self.href) === toPunyForApi(deps.config.runtime.host)) {
 			const local = parseLocalApUri(deps.config, self.href);
 			if (local.local && local.type === 'users') {
-				const u = await getUserFromApIdForHonoApi(deps, self.href);
+				const u = await getUserFromApIdForApi(deps, self.href);
 				if (u == null) {
 					throw new Error('local user not found');
 				}
@@ -944,7 +941,7 @@ export async function resolveUserForHonoApi(
 			}
 		}
 
-		return await createPersonForHonoApi(deps, self.href);
+		return await createPersonForApi(deps, self.href);
 	}
 
 	// ユーザー情報が古い場合は、WebFingerからやりなおして返す
@@ -952,7 +949,7 @@ export async function resolveUserForHonoApi(
 		// 繋がらないインスタンスに何回も試行するのを防ぐ, 後続の同様処理の連続試行を防ぐ ため 試行前にも更新する
 		await updateUserLastFetchedAtInDatabase(deps.db, user.id, new Date());
 
-		const self = await resolveSelfForHonoApi(deps, acctLower);
+		const self = await resolveSelfForApi(deps, acctLower);
 
 		if (user.uri !== self.href) {
 			// URI が一致しない場合は user@host と AP の Person ID (RemoteUser.uri) の対応を修正する。
@@ -964,7 +961,7 @@ export async function resolveUserForHonoApi(
 			await updateUserUriByUsernameAndHostInDatabase(deps.db, usernameLower, punyHost, self.href);
 		}
 
-		await updatePersonForHonoApi(deps, self.href, user);
+		await updatePersonForApi(deps, self.href, user);
 
 		const resynced = await fetchUserByUriFromDatabase(deps.db, self.href);
 		if (resynced == null) {

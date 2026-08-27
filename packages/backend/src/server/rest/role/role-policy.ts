@@ -14,7 +14,7 @@ import type { RoleCondFormulaValue } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { memoizeInRequest } from '@/misc/request-scope.js';
 
-export type HonoApiRolePolicyDependencies = {
+export type ApiRolePolicyDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -73,8 +73,8 @@ function evaluateRoleCondition(user: MiUser, assignedRoles: MiRole[], value: Rol
  * 取得済みの role 全件 + そのユーザーの assignment 群からユーザーの保持ロールを計算する純粋部分。
  * ユーザー一覧のpackで assignments をIN句一括取得した上でユーザー毎に呼べるよう分離してある。
  */
-export function computeHonoApiUserRoles(
-	deps: HonoApiRolePolicyDependencies,
+export function computeApiUserRoles(
+	deps: ApiRolePolicyDependencies,
 	user: MiUser,
 	roles: MiRole[],
 	assignments: { roleId: MiRole['id']; expiresAt: Date | null }[],
@@ -95,7 +95,7 @@ export function computeHonoApiUserRoles(
 	];
 }
 
-export async function getHonoApiUserRoles(deps: HonoApiRolePolicyDependencies, user: MiUser | null): Promise<MiRole[]> {
+export async function getApiUserRoles(deps: ApiRolePolicyDependencies, user: MiUser | null): Promise<MiRole[]> {
 	if (user == null) return [];
 
 	// 同一リクエスト内で複数箇所から呼ばれる (notes/create と users/show でそれぞれ3回)。
@@ -105,7 +105,7 @@ export async function getHonoApiUserRoles(deps: HonoApiRolePolicyDependencies, u
 		memoizeInRequest(`roleAssignment:${user.id}`, () => listRoleAssignmentsByUserIdFromDatabase(deps.db, user.id)),
 	]);
 
-	return computeHonoApiUserRoles(deps, user, roles, assignments);
+	return computeApiUserRoles(deps, user, roles, assignments);
 }
 
 /**
@@ -128,13 +128,13 @@ function aggregateChatAvailability(values: RolePolicies['chatAvailability'][]): 
 	return 'unavailable';
 }
 
-export async function getHonoApiRolePolicies(
-	deps: HonoApiRolePolicyDependencies,
+export async function getApiRolePolicies(
+	deps: ApiRolePolicyDependencies,
 	user: MiUser | null,
 	precomputedRoles?: MiRole[],
 ): Promise<RolePolicies> {
 	const basePolicies = { ...DEFAULT_POLICIES, ...deps.meta.policies };
-	const roles = precomputedRoles ?? (await getHonoApiUserRoles(deps, user));
+	const roles = precomputedRoles ?? (await getApiUserRoles(deps, user));
 
 	function calc<T extends keyof RolePolicies>(
 		name: T,
@@ -217,31 +217,28 @@ export async function getHonoApiRolePolicies(
 	};
 }
 
-export async function isHonoApiModerator(deps: HonoApiRolePolicyDependencies, user: MiUser | null): Promise<boolean> {
+export async function isApiModerator(deps: ApiRolePolicyDependencies, user: MiUser | null): Promise<boolean> {
 	if (user == null) return false;
 	if (deps.meta.rootUserId === user.id) return true;
 
-	const roles = await getHonoApiUserRoles(deps, user);
+	const roles = await getApiUserRoles(deps, user);
 	return roles.some((role) => role.isModerator || role.isAdministrator);
 }
 
-export async function isHonoApiAdministrator(
-	deps: HonoApiRolePolicyDependencies,
-	user: MiUser | null,
-): Promise<boolean> {
+export async function isApiAdministrator(deps: ApiRolePolicyDependencies, user: MiUser | null): Promise<boolean> {
 	if (user == null) return false;
 	if (deps.meta.rootUserId === user.id) return true;
 
-	const roles = await getHonoApiUserRoles(deps, user);
+	const roles = await getApiUserRoles(deps, user);
 	return roles.some((role) => role.isAdministrator);
 }
 
 /** root ユーザーは requiredRolePolicy の値にかかわらず許可する。 */
-export async function hasHonoApiRolePolicyOrIsRoot(
-	deps: HonoApiRolePolicyDependencies,
+export async function hasApiRolePolicyOrIsRoot(
+	deps: ApiRolePolicyDependencies,
 	user: MiUser,
 	policy: keyof RolePolicies,
 ): Promise<boolean> {
 	if (deps.meta.rootUserId === user.id) return true;
-	return !!(await getHonoApiRolePolicies(deps, user))[policy];
+	return !!(await getApiRolePolicies(deps, user))[policy];
 }

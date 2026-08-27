@@ -9,11 +9,11 @@ import { z } from 'zod';
 import type { Config } from '@/config.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError, rateLimitExceededError } from '../error.js';
-import { isHonoApiRateLimitedForUser } from '../rate-limit.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError, rateLimitExceededError } from '../error.js';
+import { isApiRateLimitedForUser } from '../rate-limit.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiFetchExternalResourcesDependencies = {
+export type ApiFetchExternalResourcesDependencies = {
 	config: Config;
 	redis: Redis.Redis;
 	httpRequestService: HttpRequestService;
@@ -46,8 +46,8 @@ const hashUnmatched = {
 	id: '693ba8ba-b486-40df-a174-72f8279b56a4',
 };
 
-function clientError(error: { message: string; code: string; id: string }): HonoApiError {
-	return new HonoApiError({
+function clientError(error: { message: string; code: string; id: string }): ApiError {
+	return new ApiError({
 		status: 400,
 		message: error.message,
 		code: error.code,
@@ -55,15 +55,15 @@ function clientError(error: { message: string; code: string; id: string }): Hono
 	});
 }
 
-export async function handleHonoApiFetchExternalResources(
-	deps: HonoApiFetchExternalResourcesDependencies,
+export async function handleApiFetchExternalResources(
+	deps: ApiFetchExternalResourcesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<ExternalResourceResponse> {
-	const params = parseHonoApiParams(fetchExternalResourcesParamDef, body);
+	const params = parseApiParams(fetchExternalResourcesParamDef, body);
 
 	if (
-		await isHonoApiRateLimitedForUser(
+		await isApiRateLimitedForUser(
 			deps,
 			{
 				key: 'fetch-external-resources',

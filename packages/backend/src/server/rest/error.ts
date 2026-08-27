@@ -3,23 +3,23 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-export type HonoApiErrorKind = 'client' | 'server' | 'permission';
+export type ApiErrorKind = 'client' | 'server' | 'permission';
 
-export type HonoApiErrorBody = {
+export type ApiErrorBody = {
 	error: {
 		message: string;
 		code: string;
 		id: string;
-		kind: HonoApiErrorKind;
+		kind: ApiErrorKind;
 		info?: unknown;
 	};
 };
 
-export class HonoApiError extends Error {
+export class ApiError extends Error {
 	public readonly status: number;
 	public readonly code: string;
 	public readonly id: string;
-	public readonly kind: HonoApiErrorKind;
+	public readonly kind: ApiErrorKind;
 	public readonly headers: Record<string, string>;
 	public readonly info?: unknown;
 
@@ -28,7 +28,7 @@ export class HonoApiError extends Error {
 		message: string;
 		code: string;
 		id: string;
-		kind?: HonoApiErrorKind;
+		kind?: ApiErrorKind;
 		headers?: Record<string, string>;
 		info?: unknown;
 	}) {
@@ -41,7 +41,7 @@ export class HonoApiError extends Error {
 		this.info = params.info;
 	}
 
-	public toBody(): HonoApiErrorBody {
+	public toBody(): ApiErrorBody {
 		return {
 			error: {
 				message: this.message,
@@ -55,16 +55,16 @@ export class HonoApiError extends Error {
 }
 
 /** 400 Bad Request のクライアントエラーを組み立てる汎用ヘルパー。status を変えたい場合は clientErrorWithStatus を使う。 */
-export function clientError(message: string, code: string, id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message, code, id });
+export function clientError(message: string, code: string, id: string): ApiError {
+	return new ApiError({ status: 400, message, code, id });
 }
 
-export function clientErrorWithStatus(status: number, message: string, code: string, id: string): HonoApiError {
-	return new HonoApiError({ status, message, code, id });
+export function clientErrorWithStatus(status: number, message: string, code: string, id: string): ApiError {
+	return new ApiError({ status, message, code, id });
 }
 
-export function payloadTooLargeError(): HonoApiError {
-	return new HonoApiError({
+export function payloadTooLargeError(): ApiError {
+	return new ApiError({
 		status: 413,
 		message: 'Payload too large.',
 		code: 'PAYLOAD_TOO_LARGE',
@@ -72,8 +72,8 @@ export function payloadTooLargeError(): HonoApiError {
 	});
 }
 
-export function invalidJsonBody(): HonoApiError {
-	return new HonoApiError({
+export function invalidJsonBody(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Invalid JSON body.',
 		code: 'INVALID_PARAM',
@@ -81,8 +81,8 @@ export function invalidJsonBody(): HonoApiError {
 	});
 }
 
-export function invalidParamError(info?: unknown): HonoApiError {
-	return new HonoApiError({
+export function invalidParamError(info?: unknown): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Invalid param.',
 		code: 'INVALID_PARAM',
@@ -91,8 +91,8 @@ export function invalidParamError(info?: unknown): HonoApiError {
 	});
 }
 
-export function rateLimitExceededError(): HonoApiError {
-	return new HonoApiError({
+export function rateLimitExceededError(): ApiError {
+	return new ApiError({
 		status: 429,
 		message: 'Rate limit exceeded. Please try again later.',
 		code: 'RATE_LIMIT_EXCEEDED',
@@ -100,8 +100,8 @@ export function rateLimitExceededError(): HonoApiError {
 	});
 }
 
-export function credentialRequiredError(): HonoApiError {
-	return new HonoApiError({
+export function credentialRequiredError(): ApiError {
+	return new ApiError({
 		status: 401,
 		message: 'Credential required.',
 		code: 'CREDENTIAL_REQUIRED',
@@ -112,9 +112,9 @@ export function credentialRequiredError(): HonoApiError {
 	});
 }
 
-export function authenticationFailedError(): HonoApiError {
+export function authenticationFailedError(): ApiError {
 	const message = 'Authentication failed. Please ensure your token is correct.';
-	return new HonoApiError({
+	return new ApiError({
 		status: 401,
 		message,
 		code: 'AUTHENTICATION_FAILED',
@@ -125,9 +125,9 @@ export function authenticationFailedError(): HonoApiError {
 	});
 }
 
-export function permissionDeniedError(): HonoApiError {
+export function permissionDeniedError(): ApiError {
 	const message = 'Your app does not have the necessary permissions to use this endpoint.';
-	return new HonoApiError({
+	return new ApiError({
 		status: 403,
 		message,
 		code: 'PERMISSION_DENIED',
@@ -139,8 +139,8 @@ export function permissionDeniedError(): HonoApiError {
 	});
 }
 
-export function rolePermissionDeniedError(): HonoApiError {
-	return new HonoApiError({
+export function rolePermissionDeniedError(): ApiError {
+	return new ApiError({
 		status: 403,
 		message: 'Role permission denied.',
 		code: 'ROLE_PERMISSION_DENIED',
@@ -149,8 +149,8 @@ export function rolePermissionDeniedError(): HonoApiError {
 	});
 }
 
-export function accessDeniedError(): HonoApiError {
-	return new HonoApiError({
+export function accessDeniedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Access denied.',
 		code: 'ACCESS_DENIED',
@@ -158,8 +158,8 @@ export function accessDeniedError(): HonoApiError {
 	});
 }
 
-export function userSuspendedError(): HonoApiError {
-	return new HonoApiError({
+export function userSuspendedError(): ApiError {
+	return new ApiError({
 		status: 403,
 		message: 'Your account has been suspended.',
 		code: 'YOUR_ACCOUNT_SUSPENDED',
@@ -168,8 +168,8 @@ export function userSuspendedError(): HonoApiError {
 	});
 }
 
-export function accountMovedError(): HonoApiError {
-	return new HonoApiError({
+export function accountMovedError(): ApiError {
+	return new ApiError({
 		status: 403,
 		message: 'You have moved your account.',
 		code: 'YOUR_ACCOUNT_MOVED',
@@ -178,8 +178,8 @@ export function accountMovedError(): HonoApiError {
 	});
 }
 
-export function userDeletedError(): HonoApiError {
-	return new HonoApiError({
+export function userDeletedError(): ApiError {
+	return new ApiError({
 		status: 403,
 		message: 'User is deleted.',
 		code: 'USER_IS_DELETED',
@@ -188,8 +188,8 @@ export function userDeletedError(): HonoApiError {
 	});
 }
 
-export function signupValidationError(code: string): HonoApiError {
-	return new HonoApiError({
+export function signupValidationError(code: string): ApiError {
+	return new ApiError({
 		status: 400,
 		message: code,
 		code,

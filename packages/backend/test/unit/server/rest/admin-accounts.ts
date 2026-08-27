@@ -10,10 +10,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import {
-	handleHonoApiAdminAccountsCreate,
-	type HonoApiAdminAccountsDependencies,
-} from '@/server/rest/admin/admin-accounts.js';
+import { handleApiAdminAccountsCreate, type ApiAdminAccountsDependencies } from '@/server/rest/admin/admin-accounts.js';
 import type { SignupResponse } from '@/server/rest/auth/signup.js';
 
 const {
@@ -53,15 +50,15 @@ vi.mock('@/server/rest/auth/signup.js', () => ({
 	packSignupUser: packSignupUserMock,
 }));
 
-function createDeps(setupPassword: string | null = null): HonoApiAdminAccountsDependencies {
+function createDeps(setupPassword: string | null = null): ApiAdminAccountsDependencies {
 	return {
 		config: { instance: { setupPassword } } as unknown as Config,
 		db: {} as MiDrizzleDatabase,
 		meta: { id: 'x', rootUserId: null, rootUser: null } as MiMeta,
-	} as HonoApiAdminAccountsDependencies;
+	} as ApiAdminAccountsDependencies;
 }
 
-describe('handleHonoApiAdminAccountsCreate', () => {
+describe('handleApiAdminAccountsCreate', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		hashPasswordMock.mockResolvedValue('hashed');
@@ -73,7 +70,7 @@ describe('handleHonoApiAdminAccountsCreate', () => {
 		fetchMetaFromDatabaseMock.mockResolvedValue({ rootUserId: 'root' } as MiMeta);
 
 		await expect(
-			handleHonoApiAdminAccountsCreate(
+			handleApiAdminAccountsCreate(
 				createDeps(),
 				{
 					user: { id: 'not-root' } as MiLocalUser,
@@ -97,7 +94,7 @@ describe('handleHonoApiAdminAccountsCreate', () => {
 		packSignupUserMock.mockResolvedValue(response);
 
 		await expect(
-			handleHonoApiAdminAccountsCreate(
+			handleApiAdminAccountsCreate(
 				createDeps(),
 				{
 					user: { id: 'root' } as MiLocalUser,
@@ -128,7 +125,7 @@ describe('handleHonoApiAdminAccountsCreate', () => {
 		packSignupUserMock.mockResolvedValue(response);
 
 		await expect(
-			handleHonoApiAdminAccountsCreate(
+			handleApiAdminAccountsCreate(
 				createDeps(),
 				{
 					user: { id: 'not-root' } as MiLocalUser,
@@ -147,7 +144,7 @@ describe('handleHonoApiAdminAccountsCreate', () => {
 		createLocalSignupAccountMock.mockRejectedValue(new RootUserAlreadyAssignedError());
 
 		await expect(
-			handleHonoApiAdminAccountsCreate(
+			handleApiAdminAccountsCreate(
 				createDeps(),
 				{
 					user: null,
@@ -172,7 +169,7 @@ describe('handleHonoApiAdminAccountsCreate', () => {
 		fetchMetaFromDatabaseMock.mockResolvedValue({ rootUserId: null } as MiMeta);
 
 		await expect(
-			handleHonoApiAdminAccountsCreate(
+			handleApiAdminAccountsCreate(
 				createDeps('secret'),
 				{
 					user: null,

@@ -6,11 +6,11 @@
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import { isJsonObject } from '@/misc/json-value.js';
 import type { JsonObject, JsonValue } from '@/misc/json-value.js';
-import type { HonoStreamChannelDefinition } from '../channel.js';
+import type { StreamChannelDefinition } from '../channel.js';
 
 const ev = globalEventBus;
 
-export const honoStreamChannelQueueStats: HonoStreamChannelDefinition<unknown> = {
+export const honoStreamChannelQueueStats: StreamChannelDefinition<unknown> = {
 	shouldShare: true,
 	requireCredential: false,
 	kind: null,

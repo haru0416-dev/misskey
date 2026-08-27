@@ -28,12 +28,12 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { isHonoApiModerator } from '../role/role-policy.js';
-import { packUserLiteManyForHonoApi } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { isApiModerator } from '../role/role-policy.js';
+import { packUserLiteManyForApi } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiInviteDependencies = {
+export type ApiInviteDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -65,8 +65,8 @@ export const adminInviteListParamDef = z.object({
 	sort: z.enum(['+createdAt', '-createdAt', '+usedAt', '-usedAt']).optional(),
 });
 
-function adminInviteCreateInvalidDateTimeError(): HonoApiError {
-	return new HonoApiError({
+function adminInviteCreateInvalidDateTimeError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Invalid date-time format',
 		code: 'INVALID_DATE_TIME',
@@ -74,8 +74,8 @@ function adminInviteCreateInvalidDateTimeError(): HonoApiError {
 	});
 }
 
-function inviteCreateExceededCreateLimitError(): HonoApiError {
-	return new HonoApiError({
+function inviteCreateExceededCreateLimitError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You have exceeded the limit for creating an invitation code.',
 		code: 'EXCEEDED_LIMIT_OF_CREATE_INVITE_CODE',
@@ -83,8 +83,8 @@ function inviteCreateExceededCreateLimitError(): HonoApiError {
 	});
 }
 
-function inviteDeleteNoSuchCodeError(): HonoApiError {
-	return new HonoApiError({
+function inviteDeleteNoSuchCodeError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such invite code.',
 		code: 'NO_SUCH_INVITE_CODE',
@@ -92,8 +92,8 @@ function inviteDeleteNoSuchCodeError(): HonoApiError {
 	});
 }
 
-function inviteDeleteCantDeleteError(): HonoApiError {
-	return new HonoApiError({
+function inviteDeleteCantDeleteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: "You can't delete this invite code.",
 		code: 'CAN_NOT_DELETE_INVITE_CODE',
@@ -101,8 +101,8 @@ function inviteDeleteCantDeleteError(): HonoApiError {
 	});
 }
 
-function inviteDeleteAccessDeniedError(): HonoApiError {
-	return new HonoApiError({
+function inviteDeleteAccessDeniedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Access denied.',
 		code: 'ACCESS_DENIED',
@@ -110,8 +110,8 @@ function inviteDeleteAccessDeniedError(): HonoApiError {
 	});
 }
 
-async function packInviteCodesForHonoApi(
-	deps: HonoApiInviteDependencies,
+async function packInviteCodesForApi(
+	deps: ApiInviteDependencies,
 	tickets: RegistrationTicketRow[],
 ): Promise<Packed<'InviteCode'>[]> {
 	const userIds = [
@@ -119,7 +119,7 @@ async function packInviteCodesForHonoApi(
 			tickets.flatMap((ticket) => [ticket.createdById, ticket.usedById]).filter((id): id is string => id != null),
 		),
 	];
-	const packedUsers = userIds.length > 0 ? await packUserLiteManyForHonoApi(deps, userIds) : [];
+	const packedUsers = userIds.length > 0 ? await packUserLiteManyForApi(deps, userIds) : [];
 	const userById = new Map(packedUsers.map((user) => [user.id, user]));
 
 	return tickets.map((ticket) => ({
@@ -134,21 +134,21 @@ async function packInviteCodesForHonoApi(
 	}));
 }
 
-async function packInviteCodeForHonoApi(
-	deps: HonoApiInviteDependencies,
+async function packInviteCodeForApi(
+	deps: ApiInviteDependencies,
 	ticket: RegistrationTicketRow,
 ): Promise<Packed<'InviteCode'>> {
-	const packed = (await packInviteCodesForHonoApi(deps, [ticket]))[0];
+	const packed = (await packInviteCodesForApi(deps, [ticket]))[0];
 	if (packed == null) throw new Error('Packed invite code is missing');
 	return packed;
 }
 
-export async function handleHonoApiAdminInviteCreate(
-	deps: HonoApiInviteDependencies,
+export async function handleApiAdminInviteCreate(
+	deps: ApiInviteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>[]> {
-	const params = parseHonoApiParams(adminInviteCreateParamDef, body);
+	const params = parseApiParams(adminInviteCreateParamDef, body);
 	if (params.expiresAt && isNaN(Date.parse(params.expiresAt))) {
 		throw adminInviteCreateInvalidDateTimeError();
 	}
@@ -172,14 +172,14 @@ export async function handleHonoApiAdminInviteCreate(
 		},
 	});
 
-	return await packInviteCodesForHonoApi(deps, tickets);
+	return await packInviteCodesForApi(deps, tickets);
 }
 
-export async function handleHonoApiAdminInviteList(
-	deps: HonoApiInviteDependencies,
+export async function handleApiAdminInviteList(
+	deps: ApiInviteDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>[]> {
-	const params = parseHonoApiParams(adminInviteListParamDef, body);
+	const params = parseApiParams(adminInviteListParamDef, body);
 	const tickets = await listRegistrationTicketsForAdminFromDatabase(
 		deps.db,
 		omitUndefined({
@@ -190,16 +190,16 @@ export async function handleHonoApiAdminInviteList(
 		}),
 	);
 
-	return await packInviteCodesForHonoApi(deps, tickets);
+	return await packInviteCodesForApi(deps, tickets);
 }
 
-export async function handleHonoApiInviteCreate(
-	deps: HonoApiInviteDependencies,
+export async function handleApiInviteCreate(
+	deps: ApiInviteDependencies,
 	me: MiLocalUser,
 	policies: RolePolicies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>> {
-	parseHonoApiParams(emptyParamDef, body);
+	parseApiParams(emptyParamDef, body);
 
 	const ticketData = {
 		id: genId(),
@@ -215,17 +215,17 @@ export async function handleHonoApiInviteCreate(
 		: await createRegistrationTicketInDatabase(deps.db, ticketData);
 	if (ticket == null) throw inviteCreateExceededCreateLimitError();
 
-	return await packInviteCodeForHonoApi(deps, ticket);
+	return await packInviteCodeForApi(deps, ticket);
 }
 
-export async function handleHonoApiInviteDelete(
-	deps: HonoApiInviteDependencies,
+export async function handleApiInviteDelete(
+	deps: ApiInviteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(inviteDeleteParamDef, body);
+	const params = parseApiParams(inviteDeleteParamDef, body);
 	const ticket = await fetchRegistrationTicketByIdFromDatabase(deps.db, params.inviteId);
-	const isModerator = await isHonoApiModerator(deps, me);
+	const isModerator = await isApiModerator(deps, me);
 
 	if (ticket == null) {
 		throw inviteDeleteNoSuchCodeError();
@@ -242,13 +242,13 @@ export async function handleHonoApiInviteDelete(
 	await deleteRegistrationTicketInDatabase(deps.db, ticket.id);
 }
 
-export async function handleHonoApiInviteLimit(
-	deps: HonoApiInviteDependencies,
+export async function handleApiInviteLimit(
+	deps: ApiInviteDependencies,
 	me: MiLocalUser,
 	policies: RolePolicies,
 	body: Record<string, unknown>,
 ): Promise<{ remaining: number | null }> {
-	parseHonoApiParams(emptyParamDef, body);
+	parseApiParams(emptyParamDef, body);
 
 	const count = policies.inviteLimit
 		? await countRegistrationTicketsCreatedSinceFromDatabase(deps.db, {
@@ -262,12 +262,12 @@ export async function handleHonoApiInviteLimit(
 	};
 }
 
-export async function handleHonoApiInviteList(
-	deps: HonoApiInviteDependencies,
+export async function handleApiInviteList(
+	deps: ApiInviteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'InviteCode'>[]> {
-	const params = parseHonoApiParams(inviteListParamDef, body);
+	const params = parseApiParams(inviteListParamDef, body);
 	const { sinceId, untilId, order } = resolveRegistrationTicketPagination(
 		{
 			gen: (time?: number) => genId(time),
@@ -283,5 +283,5 @@ export async function handleHonoApiInviteList(
 		untilId,
 	});
 
-	return await packInviteCodesForHonoApi(deps, tickets);
+	return await packInviteCodesForApi(deps, tickets);
 }

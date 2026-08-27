@@ -17,10 +17,10 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiSwDependencies = {
+export type ApiSwDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -72,8 +72,8 @@ type SwShowRegistrationResponse = {
 	sendReadMessage: boolean;
 };
 
-function noSuchRegistrationError(): HonoApiError {
-	return new HonoApiError({
+function noSuchRegistrationError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such registration.',
 		code: 'NO_SUCH_REGISTRATION',
@@ -81,12 +81,12 @@ function noSuchRegistrationError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiSwRegister(
-	deps: HonoApiSwDependencies,
+export async function handleApiSwRegister(
+	deps: ApiSwDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<SwRegisterResponse> {
-	const params = parseHonoApiParams(swRegisterParamDef, body);
+	const params = parseApiParams(swRegisterParamDef, body);
 	const exist = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (exist != null) {
@@ -140,12 +140,12 @@ export async function handleHonoApiSwRegister(
 	};
 }
 
-export async function handleHonoApiSwShowRegistration(
-	deps: HonoApiSwDependencies,
+export async function handleApiSwShowRegistration(
+	deps: ApiSwDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<SwShowRegistrationResponse | null> {
-	const params = parseHonoApiParams(swShowRegistrationParamDef, body);
+	const params = parseApiParams(swShowRegistrationParamDef, body);
 	const exist = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (exist == null) {
@@ -159,24 +159,24 @@ export async function handleHonoApiSwShowRegistration(
 	};
 }
 
-export async function handleHonoApiSwUnregister(
-	deps: HonoApiSwDependencies,
+export async function handleApiSwUnregister(
+	deps: ApiSwDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(swShowRegistrationParamDef, body);
+	const params = parseApiParams(swShowRegistrationParamDef, body);
 	await deleteSwSubscriptionByEndpointFromDatabase(deps.db, me?.id ?? null, params.endpoint);
 
 	if (me != null) {
 	}
 }
 
-export async function handleHonoApiSwUpdateRegistration(
-	deps: HonoApiSwDependencies,
+export async function handleApiSwUpdateRegistration(
+	deps: ApiSwDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<SwShowRegistrationResponse> {
-	const params = parseHonoApiParams(swUpdateRegistrationParamDef, body);
+	const params = parseApiParams(swUpdateRegistrationParamDef, body);
 	const swSubscription = await fetchSwSubscriptionFromDatabase(deps.db, me.id, params.endpoint);
 
 	if (swSubscription == null) {

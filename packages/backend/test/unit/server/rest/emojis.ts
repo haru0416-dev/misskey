@@ -20,13 +20,13 @@ import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import {
-	handleHonoApiAdminEmojiAddAliasesBulk,
-	handleHonoApiAdminEmojiDeleteBulk,
-	handleHonoApiAdminEmojiRemoveAliasesBulk,
-	handleHonoApiAdminEmojiSetAliasesBulk,
-	handleHonoApiAdminEmojiSetCategoryBulk,
-	handleHonoApiAdminEmojiSetLicenseBulk,
-	type HonoApiEmojiDependencies,
+	handleApiAdminEmojiAddAliasesBulk,
+	handleApiAdminEmojiDeleteBulk,
+	handleApiAdminEmojiRemoveAliasesBulk,
+	handleApiAdminEmojiSetAliasesBulk,
+	handleApiAdminEmojiSetCategoryBulk,
+	handleApiAdminEmojiSetLicenseBulk,
+	type ApiEmojiDependencies,
 } from '@/server/rest/emoji/emojis.js';
 
 describe('emoji bulk operations', () => {
@@ -58,8 +58,8 @@ describe('emoji bulk operations', () => {
 		});
 	}
 
-	function createDeps(publishBroadcastStream = vi.fn()): HonoApiEmojiDependencies {
-		return { ...runtime, publishBroadcastStream } as unknown as HonoApiEmojiDependencies;
+	function createDeps(publishBroadcastStream = vi.fn()): ApiEmojiDependencies {
+		return { ...runtime, publishBroadcastStream } as unknown as ApiEmojiDependencies;
 	}
 
 	test('updates aliases and metadata atomically while preserving alias order', async () => {
@@ -68,7 +68,7 @@ describe('emoji bulk operations', () => {
 		const publishBroadcastStream = vi.fn();
 		const deps = createDeps(publishBroadcastStream);
 
-		await handleHonoApiAdminEmojiAddAliasesBulk(deps, {
+		await handleApiAdminEmojiAddAliasesBulk(deps, {
 			ids: [second.id, first.id, second.id],
 			aliases: ['added', 'base'],
 		});
@@ -82,23 +82,23 @@ describe('emoji bulk operations', () => {
 			],
 		});
 
-		await handleHonoApiAdminEmojiRemoveAliasesBulk(deps, {
+		await handleApiAdminEmojiRemoveAliasesBulk(deps, {
 			ids: [first.id, second.id],
 			aliases: ['base'],
 		});
 		expect((await fetchEmojiByIdOrFailFromDatabase(runtime.db, first.id)).aliases).toEqual([null, 'added']);
 		expect((await fetchEmojiByIdOrFailFromDatabase(runtime.db, second.id)).aliases).toEqual(['added']);
 
-		await handleHonoApiAdminEmojiSetAliasesBulk(deps, {
+		await handleApiAdminEmojiSetAliasesBulk(deps, {
 			ids: [second.id],
 			aliases: ['final'],
 		});
-		await handleHonoApiAdminEmojiSetCategoryBulk(deps, {
+		await handleApiAdminEmojiSetCategoryBulk(deps, {
 			ids: [first.id, second.id],
 			category: 'bulk',
 		});
 		expect((await fetchEmojiByNameAndHostFromDatabaseCached(runtime.db, first.name, first.host))?.license).toBeNull();
-		await handleHonoApiAdminEmojiSetLicenseBulk(deps, {
+		await handleApiAdminEmojiSetLicenseBulk(deps, {
 			ids: [first.id, second.id],
 			license: 'test license',
 		});
@@ -118,7 +118,7 @@ describe('emoji bulk operations', () => {
 		const missingId = genId();
 		await fetchEmojiByNameAndHostFromDatabaseCached(runtime.db, first.name, first.host);
 		await expect(
-			handleHonoApiAdminEmojiSetCategoryBulk(deps, {
+			handleApiAdminEmojiSetCategoryBulk(deps, {
 				ids: [first.id, missingId],
 				category: 'must-roll-back',
 			}),
@@ -146,12 +146,12 @@ describe('emoji bulk operations', () => {
 		const deps = createDeps(publishBroadcastStream);
 		const missingId = genId();
 
-		await handleHonoApiAdminEmojiDeleteBulk(deps, moderator, { ids: [missingId] });
+		await handleApiAdminEmojiDeleteBulk(deps, moderator, { ids: [missingId] });
 		expect(publishBroadcastStream).toHaveBeenCalledWith('emojiDeleted', { emojis: [] });
 		publishBroadcastStream.mockClear();
 
 		await expect(
-			handleHonoApiAdminEmojiDeleteBulk(deps, { id: genId() } as MiLocalUser, {
+			handleApiAdminEmojiDeleteBulk(deps, { id: genId() } as MiLocalUser, {
 				ids: [first.id, second.id],
 			}),
 		).rejects.toThrow();
@@ -159,7 +159,7 @@ describe('emoji bulk operations', () => {
 		expect(await fetchEmojiByIdFromDatabase(runtime.db, second.id)).not.toBeNull();
 		expect(publishBroadcastStream).not.toHaveBeenCalled();
 
-		await handleHonoApiAdminEmojiDeleteBulk(deps, moderator, {
+		await handleApiAdminEmojiDeleteBulk(deps, moderator, {
 			ids: [second.id, first.id],
 		});
 		expect(await fetchEmojiByIdFromDatabase(runtime.db, first.id)).toBeNull();

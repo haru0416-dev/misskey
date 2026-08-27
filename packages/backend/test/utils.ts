@@ -14,7 +14,7 @@ import * as htmlParser from 'node-html-parser';
 import type * as misskey from 'misskey-js';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
-import type { HonoApiErrorBody } from '@/server/rest/error.js';
+import type { ApiErrorBody } from '@/server/rest/error.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { resolveStreamingUrl, resolveTargetUrl, startJobQueue, testTarget } from './target.js';
 import { expect } from 'vitest';
@@ -794,8 +794,8 @@ export async function sendEnvResetRequest() {
 
 // 与えられた値を強制的にエラーとみなす。この関数は型安全性を破壊するため、異常系のアサーション以外で用いられるべきではない。
 // FIXME(misskey-js): misskey-jsがエラー情報を公開するようになったらこの関数を廃止する
-export function castAsError(obj: unknown): HonoApiErrorBody {
-	return obj as HonoApiErrorBody;
+export function castAsError(obj: unknown): ApiErrorBody {
+	return obj as ApiErrorBody;
 }
 
 export async function captureWebhook<T = SystemWebhookPayload>(

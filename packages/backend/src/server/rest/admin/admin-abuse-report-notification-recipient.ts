@@ -25,12 +25,12 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAbuseReportNotificationRecipient, RecipientMethod } from '@/models/AbuseReportNotificationRecipient.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { packHonoApiSystemWebhook } from './admin-system-webhooks.js';
-import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { packApiSystemWebhook } from './admin-system-webhooks.js';
+import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminAbuseReportNotificationRecipientDependencies = UserPackingDependencies;
+export type ApiAdminAbuseReportNotificationRecipientDependencies = UserPackingDependencies;
 
 export const adminAbuseReportNotificationRecipientListParamDef = z.object({
 	method: z.array(z.enum(['email', 'webhook'])).optional(),
@@ -80,8 +80,8 @@ type AdminAbuseReportNotificationRecipientUpdateParams = Omit<
 	method: RecipientMethod;
 };
 
-function noSuchRecipientError(): HonoApiError {
-	return new HonoApiError({
+function noSuchRecipientError(): ApiError {
+	return new ApiError({
 		status: 404,
 		message: 'No such recipient.',
 		code: 'NO_SUCH_RECIPIENT',
@@ -90,8 +90,8 @@ function noSuchRecipientError(): HonoApiError {
 	});
 }
 
-function correlationCheckEmailError(): HonoApiError {
-	return new HonoApiError({
+function correlationCheckEmailError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'If "method" is email, "userId" must be set.',
 		code: 'CORRELATION_CHECK_EMAIL',
@@ -99,8 +99,8 @@ function correlationCheckEmailError(): HonoApiError {
 	});
 }
 
-function correlationCheckWebhookError(): HonoApiError {
-	return new HonoApiError({
+function correlationCheckWebhookError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'If "method" is webhook, "systemWebhookId" must be set.',
 		code: 'CORRELATION_CHECK_WEBHOOK',
@@ -108,8 +108,8 @@ function correlationCheckWebhookError(): HonoApiError {
 	});
 }
 
-function emailAddressNotSetError(): HonoApiError {
-	return new HonoApiError({
+function emailAddressNotSetError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Email address is not set.',
 		code: 'EMAIL_ADDRESS_NOT_SET',
@@ -118,7 +118,7 @@ function emailAddressNotSetError(): HonoApiError {
 }
 
 async function listModeratorIdsForAbuseReportNotification(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 ): Promise<MiUser['id'][]> {
 	const roles = await listRolesFromDatabase(deps.db);
 	const moderatorRoleIds = roles.filter((role) => role.isModerator || role.isAdministrator).map((role) => role.id);
@@ -136,7 +136,7 @@ async function listModeratorIdsForAbuseReportNotification(
 }
 
 async function removeUnauthorizedRecipientUsers(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	recipients: MiAbuseReportNotificationRecipient[],
 ): Promise<MiAbuseReportNotificationRecipient[]> {
 	const userRecipients = recipients.filter((recipient) => recipient.userId !== null);
@@ -168,7 +168,7 @@ async function removeUnauthorizedRecipientUsers(
 }
 
 async function fetchRecipients(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	params?: {
 		ids?: MiAbuseReportNotificationRecipient['id'][];
 		method?: RecipientMethod[];
@@ -187,7 +187,7 @@ async function fetchRecipients(
 }
 
 async function assertRecipientCorrelation(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	params: Pick<AdminAbuseReportNotificationRecipientCreateParams, 'method' | 'userId' | 'systemWebhookId'>,
 ): Promise<void> {
 	if (params.method === 'email') {
@@ -207,23 +207,23 @@ async function assertRecipientCorrelation(
 	}
 }
 
-async function packHonoApiAbuseReportNotificationRecipient(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+async function packApiAbuseReportNotificationRecipient(
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	recipient: MiAbuseReportNotificationRecipient,
 	refs?: {
 		users: Map<string, Packed<'UserLite'>>;
-		webhooks: Map<string, ReturnType<typeof packHonoApiSystemWebhook>>;
+		webhooks: Map<string, ReturnType<typeof packApiSystemWebhook>>;
 	},
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
 	const user =
 		recipient.userId == null
 			? undefined
-			: (refs?.users.get(recipient.userId) ?? (await packUserLiteForHonoApi(deps, recipient.userId)));
+			: (refs?.users.get(recipient.userId) ?? (await packUserLiteForApi(deps, recipient.userId)));
 	const systemWebhook =
 		recipient.systemWebhookId == null
 			? undefined
 			: (refs?.webhooks.get(recipient.systemWebhookId) ??
-				packHonoApiSystemWebhook(await fetchSystemWebhookByIdOrFailFromDatabase(deps.db, recipient.systemWebhookId)));
+				packApiSystemWebhook(await fetchSystemWebhookByIdOrFailFromDatabase(deps.db, recipient.systemWebhookId)));
 
 	return {
 		id: recipient.id,
@@ -238,12 +238,12 @@ async function packHonoApiAbuseReportNotificationRecipient(
 	};
 }
 
-async function packHonoApiAbuseReportNotificationRecipients(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+async function packApiAbuseReportNotificationRecipients(
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	recipients: MiAbuseReportNotificationRecipient[],
 ): Promise<Packed<'AbuseReportNotificationRecipient'>[]> {
 	const userIds = recipients.map((recipient) => recipient.userId).filter((x) => x != null);
-	const users = userIds.length > 0 ? await packUserLiteManyForHonoApi(deps, [...new Set(userIds)]) : [];
+	const users = userIds.length > 0 ? await packUserLiteManyForApi(deps, [...new Set(userIds)]) : [];
 	const usersById = new Map(users.map((user) => [user.id, user]));
 
 	const systemWebhookIds = recipients.map((recipient) => recipient.systemWebhookId).filter((x) => x != null);
@@ -251,11 +251,11 @@ async function packHonoApiAbuseReportNotificationRecipients(
 		systemWebhookIds.length > 0
 			? await listSystemWebhooksFromDatabase(deps.db, { ids: [...new Set(systemWebhookIds)] })
 			: [];
-	const systemWebhooksById = new Map(systemWebhooks.map((webhook) => [webhook.id, packHonoApiSystemWebhook(webhook)]));
+	const systemWebhooksById = new Map(systemWebhooks.map((webhook) => [webhook.id, packApiSystemWebhook(webhook)]));
 
 	return await Promise.all(
 		recipients.map((recipient) =>
-			packHonoApiAbuseReportNotificationRecipient(deps, recipient, {
+			packApiAbuseReportNotificationRecipient(deps, recipient, {
 				users: usersById,
 				webhooks: systemWebhooksById,
 			}),
@@ -263,35 +263,35 @@ async function packHonoApiAbuseReportNotificationRecipients(
 	).then((packed) => packed.toSorted((a, b) => a.id.localeCompare(b.id)));
 }
 
-export async function handleHonoApiAdminAbuseReportNotificationRecipientList(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+export async function handleApiAdminAbuseReportNotificationRecipientList(
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>[]> {
-	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientListParamDef, body);
+	const params = parseApiParams(adminAbuseReportNotificationRecipientListParamDef, body);
 	const recipients = await fetchRecipients(deps, omitUndefined({ method: params.method }));
 
-	return await packHonoApiAbuseReportNotificationRecipients(deps, recipients);
+	return await packApiAbuseReportNotificationRecipients(deps, recipients);
 }
 
-export async function handleHonoApiAdminAbuseReportNotificationRecipientShow(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+export async function handleApiAdminAbuseReportNotificationRecipientShow(
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
-	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientShowParamDef, body);
+	const params = parseApiParams(adminAbuseReportNotificationRecipientShowParamDef, body);
 	const recipients = await fetchRecipients(deps, { ids: [params.id] });
 	if (recipients.length === 0) throw noSuchRecipientError();
 	const recipient = recipients[0];
 	if (recipient == null) throw noSuchRecipientError();
 
-	return await packHonoApiAbuseReportNotificationRecipient(deps, recipient);
+	return await packApiAbuseReportNotificationRecipient(deps, recipient);
 }
 
-export async function handleHonoApiAdminAbuseReportNotificationRecipientCreate(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+export async function handleApiAdminAbuseReportNotificationRecipientCreate(
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
-	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientCreateParamDef, body);
+	const params = parseApiParams(adminAbuseReportNotificationRecipientCreateParamDef, body);
 	await assertRecipientCorrelation(deps, params);
 
 	const recipient = await createAbuseReportNotificationRecipientInDatabase(deps.db, {
@@ -308,15 +308,15 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientCreate(
 		recipient,
 	});
 
-	return await packHonoApiAbuseReportNotificationRecipient(deps, recipient);
+	return await packApiAbuseReportNotificationRecipient(deps, recipient);
 }
 
-export async function handleHonoApiAdminAbuseReportNotificationRecipientUpdate(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+export async function handleApiAdminAbuseReportNotificationRecipientUpdate(
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'AbuseReportNotificationRecipient'>> {
-	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientUpdateParamDef, body);
+	const params = parseApiParams(adminAbuseReportNotificationRecipientUpdateParamDef, body);
 	await assertRecipientCorrelation(deps, params);
 
 	const before = await fetchAbuseReportNotificationRecipientByIdOrFailFromDatabase(deps.db, params.id);
@@ -338,15 +338,15 @@ export async function handleHonoApiAdminAbuseReportNotificationRecipientUpdate(
 		after,
 	});
 
-	return await packHonoApiAbuseReportNotificationRecipient(deps, after);
+	return await packApiAbuseReportNotificationRecipient(deps, after);
 }
 
-export async function handleHonoApiAdminAbuseReportNotificationRecipientDelete(
-	deps: HonoApiAdminAbuseReportNotificationRecipientDependencies,
+export async function handleApiAdminAbuseReportNotificationRecipientDelete(
+	deps: ApiAdminAbuseReportNotificationRecipientDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAbuseReportNotificationRecipientDeleteParamDef, body);
+	const params = parseApiParams(adminAbuseReportNotificationRecipientDeleteParamDef, body);
 	const recipient = await listAbuseReportNotificationRecipientsFromDatabase(deps.db, { ids: [params.id] });
 
 	await deleteAbuseReportNotificationRecipientsFromDatabase(deps.db, params.id);

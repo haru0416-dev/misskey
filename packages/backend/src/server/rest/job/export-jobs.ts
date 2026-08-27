@@ -7,11 +7,11 @@ import { z } from 'zod';
 import { addDbJob, type DbQueue } from '@/core/queue/queues.js';
 import type { Config } from '@/config.js';
 import { queueRetentionOptions } from '@/queue/const.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ThinUser } from '@/queue/types.js';
 
-export type HonoApiExportJobDependencies = {
+export type ApiExportJobDependencies = {
 	config: Config;
 	dbQueue: DbQueue;
 };
@@ -36,11 +36,7 @@ type SimpleExportJobName =
 	| 'exportUserLists'
 	| 'exportAntennas';
 
-function enqueueSimpleExportJob(
-	deps: HonoApiExportJobDependencies,
-	jobName: SimpleExportJobName,
-	user: ThinUser,
-): void {
+function enqueueSimpleExportJob(deps: ApiExportJobDependencies, jobName: SimpleExportJobName, user: ThinUser): void {
 	void addDbJob(deps.dbQueue, {
 		name: jobName,
 		data: { user: { id: user.id } },
@@ -48,44 +44,44 @@ function enqueueSimpleExportJob(
 	});
 }
 
-export function handleHonoApiExportCustomEmojis(deps: HonoApiExportJobDependencies, me: MiLocalUser): void {
+export function handleApiExportCustomEmojis(deps: ApiExportJobDependencies, me: MiLocalUser): void {
 	enqueueSimpleExportJob(deps, 'exportCustomEmojis', me);
 }
 
-export function handleHonoApiIExportNotes(deps: HonoApiExportJobDependencies, me: MiLocalUser): void {
+export function handleApiIExportNotes(deps: ApiExportJobDependencies, me: MiLocalUser): void {
 	enqueueSimpleExportJob(deps, 'exportNotes', me);
 }
 
-export function handleHonoApiIExportClips(deps: HonoApiExportJobDependencies, me: MiLocalUser): void {
+export function handleApiIExportClips(deps: ApiExportJobDependencies, me: MiLocalUser): void {
 	enqueueSimpleExportJob(deps, 'exportClips', me);
 }
 
-export function handleHonoApiIExportFavorites(deps: HonoApiExportJobDependencies, me: MiLocalUser): void {
+export function handleApiIExportFavorites(deps: ApiExportJobDependencies, me: MiLocalUser): void {
 	enqueueSimpleExportJob(deps, 'exportFavorites', me);
 }
 
-export function handleHonoApiIExportMute(deps: HonoApiExportJobDependencies, me: MiLocalUser): void {
+export function handleApiIExportMute(deps: ApiExportJobDependencies, me: MiLocalUser): void {
 	enqueueSimpleExportJob(deps, 'exportMuting', me);
 }
 
-export function handleHonoApiIExportBlocking(deps: HonoApiExportJobDependencies, me: MiLocalUser): void {
+export function handleApiIExportBlocking(deps: ApiExportJobDependencies, me: MiLocalUser): void {
 	enqueueSimpleExportJob(deps, 'exportBlocking', me);
 }
 
-export function handleHonoApiIExportUserLists(deps: HonoApiExportJobDependencies, me: MiLocalUser): void {
+export function handleApiIExportUserLists(deps: ApiExportJobDependencies, me: MiLocalUser): void {
 	enqueueSimpleExportJob(deps, 'exportUserLists', me);
 }
 
-export function handleHonoApiIExportAntennas(deps: HonoApiExportJobDependencies, me: MiLocalUser): void {
+export function handleApiIExportAntennas(deps: ApiExportJobDependencies, me: MiLocalUser): void {
 	enqueueSimpleExportJob(deps, 'exportAntennas', me);
 }
 
-export function handleHonoApiIExportFollowing(
-	deps: HonoApiExportJobDependencies,
+export function handleApiIExportFollowing(
+	deps: ApiExportJobDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): void {
-	const params = parseHonoApiParams(exportFollowingParamDef, body);
+	const params = parseApiParams(exportFollowingParamDef, body);
 	void addDbJob(deps.dbQueue, {
 		name: 'exportFollowing',
 		data: {

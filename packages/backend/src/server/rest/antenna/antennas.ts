@@ -42,22 +42,22 @@ import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserList } from '@/models/UserList.js';
-import { HonoApiError } from '../error.js';
-import type { HonoApiAntennaStreamPublisher, HonoApiInternalEventPublisher } from '../events.js';
-import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from '../note/note.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import type { ApiAntennaStreamPublisher, ApiInternalEventPublisher } from '../events.js';
+import { packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
+import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAntennaDependencies = HonoApiNoteDependencies &
-	HonoApiRolePolicyDependencies & {
-		publishInternalEvent?: HonoApiInternalEventPublisher;
+export type ApiAntennaDependencies = ApiNoteDependencies &
+	ApiRolePolicyDependencies & {
+		publishInternalEvent?: ApiInternalEventPublisher;
 	};
 
-export type HonoApiAntennaFanoutDependencies = {
+export type ApiAntennaFanoutDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	redisForTimelines: Redis.Redis;
-	publishAntennaStream?: HonoApiAntennaStreamPublisher;
+	publishAntennaStream?: ApiAntennaStreamPublisher;
 };
 
 function getFullApAccount(
@@ -100,8 +100,8 @@ function passesAntennaPreconditions(
 	return true;
 }
 
-export async function checkHitAntennaForHonoApi(
-	deps: Pick<HonoApiAntennaFanoutDependencies, 'config' | 'db'>,
+export async function checkHitAntennaForApi(
+	deps: Pick<ApiAntennaFanoutDependencies, 'config' | 'db'>,
 	antenna: MiAntenna,
 	note: MiNote,
 	noteUser: { id: MiUser['id']; username: string; host: string | null; isBot: boolean },
@@ -191,11 +191,11 @@ export async function checkHitAntennaForHonoApi(
 /**
  * アカウント移行直前の users リストを基準に対象を決めるため、アンテナ一覧は毎回DBから読む。
  */
-export async function onMoveAccountForHonoApi(
+export async function onMoveAccountForApi(
 	deps: {
 		config: { runtime: Pick<Config['runtime'], 'host'> };
 		db: MiDrizzleDatabase;
-		publishInternalEvent?: HonoApiInternalEventPublisher;
+		publishInternalEvent?: ApiInternalEventPublisher;
 	},
 	src: MiUser,
 	dst: MiUser,
@@ -227,8 +227,8 @@ export async function onMoveAccountForHonoApi(
  * アクティブなアンテナ一覧を DB から取得し、評価を分割して実行する。
  * FanoutTimelineService.push と同じく直近3分以内のノートのみ即時lpushし、古いノートは末尾IDと比較する。
  */
-export async function addNoteToAntennasForHonoApi(
-	deps: HonoApiAntennaFanoutDependencies,
+export async function addNoteToAntennasForApi(
+	deps: ApiAntennaFanoutDependencies,
 	note: MiNote,
 	noteUser: { id: MiUser['id']; username: string; host: string | null; isBot: boolean },
 ): Promise<void> {
@@ -269,7 +269,7 @@ export async function addNoteToAntennasForHonoApi(
 		antennasWithMatchResult.push(
 			...(await Promise.all(
 				batch.map((antenna) =>
-					checkHitAntennaForHonoApi(deps, antenna, note, noteUser, {
+					checkHitAntennaForApi(deps, antenna, note, noteUser, {
 						listMembershipUserListIds,
 						followerIds: followerIdSet,
 					}).then((hit) => [antenna, hit] as const),
@@ -307,16 +307,16 @@ export async function addNoteToAntennasForHonoApi(
 	}
 }
 
-function noSuchAntennaError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such antenna.', code: 'NO_SUCH_ANTENNA', id });
+function noSuchAntennaError(id: string): ApiError {
+	return new ApiError({ status: 400, message: 'No such antenna.', code: 'NO_SUCH_ANTENNA', id });
 }
 
-function noSuchUserListError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such user list.', code: 'NO_SUCH_USER_LIST', id });
+function noSuchUserListError(id: string): ApiError {
+	return new ApiError({ status: 400, message: 'No such user list.', code: 'NO_SUCH_USER_LIST', id });
 }
 
-function emptyKeywordError(id: string): HonoApiError {
-	return new HonoApiError({
+function emptyKeywordError(id: string): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Either keywords or excludeKeywords is required.',
 		code: 'EMPTY_KEYWORD',
@@ -324,8 +324,8 @@ function emptyKeywordError(id: string): HonoApiError {
 	});
 }
 
-async function packAntennaForHonoApi(
-	deps: { db: HonoApiAntennaDependencies['db']; config: HonoApiAntennaDependencies['config'] },
+async function packAntennaForApi(
+	deps: { db: ApiAntennaDependencies['db']; config: ApiAntennaDependencies['config'] },
 	src: MiAntenna['id'] | MiAntenna,
 ): Promise<Packed<'Antenna'>> {
 	const antenna = typeof src === 'object' ? src : await fetchAntennaByIdOrFailFromDatabase(deps.db, src);
@@ -393,12 +393,12 @@ type AntennasCreateParams = {
 	excludeNotesInSensitiveChannel?: boolean;
 };
 
-export async function handleHonoApiAntennasCreate(
-	deps: HonoApiAntennaDependencies,
+export async function handleApiAntennasCreate(
+	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Antenna'>> {
-	const params = parseHonoApiParams(antennasCreateParamDef, body);
+	const params = parseApiParams(antennasCreateParamDef, body);
 
 	if (params.keywords.flat().every((x) => x === '') && params.excludeKeywords.flat().every((x) => x === '')) {
 		throw emptyKeywordError('53ee222e-1ddd-4f9a-92e5-9fb82ddb463a');
@@ -439,11 +439,11 @@ export async function handleHonoApiAntennasCreate(
 		async (tx) => {
 			const currentUser = await fetchUserByIdFromDatabase(tx, me.id);
 			if (currentUser == null) throw new Error('Authenticated user no longer exists');
-			return (await getHonoApiRolePolicies({ ...deps, db: tx }, currentUser)).antennaLimit;
+			return (await getApiRolePolicies({ ...deps, db: tx }, currentUser)).antennaLimit;
 		},
 	);
 	if (result.status === 'limitExceeded') {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'You cannot create antenna any more.',
 			code: 'TOO_MANY_ANTENNAS',
@@ -455,7 +455,7 @@ export async function handleHonoApiAntennasCreate(
 	if (antenna == null) throw new Error('Failed to create antenna');
 	deps.publishInternalEvent?.('antennaCreated', antenna);
 
-	return await packAntennaForHonoApi(deps, antenna);
+	return await packAntennaForApi(deps, antenna);
 }
 
 export const antennasUpdateParamDef = z
@@ -500,12 +500,12 @@ type AntennasUpdateParams = {
 	excludeNotesInSensitiveChannel?: boolean;
 };
 
-export async function handleHonoApiAntennasUpdate(
-	deps: HonoApiAntennaDependencies,
+export async function handleApiAntennasUpdate(
+	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Antenna'>> {
-	const params = parseHonoApiParams(antennasUpdateParamDef, body);
+	const params = parseApiParams(antennasUpdateParamDef, body);
 
 	if (params.keywords && params.excludeKeywords) {
 		if (params.keywords.flat().every((x) => x === '') && params.excludeKeywords.flat().every((x) => x === '')) {
@@ -559,7 +559,7 @@ export async function handleHonoApiAntennasUpdate(
 
 	deps.publishInternalEvent?.('antennaUpdated', await fetchAntennaByIdOrFailFromDatabase(deps.db, antenna.id));
 
-	return await packAntennaForHonoApi(deps, antenna.id);
+	return await packAntennaForApi(deps, antenna.id);
 }
 
 export const antennasDeleteParamDef = z.object({
@@ -570,12 +570,12 @@ type AntennasDeleteParams = {
 	antennaId: string;
 };
 
-export async function handleHonoApiAntennasDelete(
-	deps: HonoApiAntennaDependencies,
+export async function handleApiAntennasDelete(
+	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(antennasDeleteParamDef, body);
+	const params = parseApiParams(antennasDeleteParamDef, body);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) throw noSuchAntennaError('b34dcf9d-348f-44bb-99d0-6c9314cfe2df');
@@ -587,16 +587,16 @@ export async function handleHonoApiAntennasDelete(
 
 export const antennasListParamDef = z.object({});
 
-export async function handleHonoApiAntennasList(
-	deps: HonoApiAntennaDependencies,
+export async function handleApiAntennasList(
+	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Antenna'>[]> {
-	parseHonoApiParams(antennasListParamDef, body);
+	parseApiParams(antennasListParamDef, body);
 
 	const antennas = await listAntennasByUserIdFromDatabase(deps.db, me.id);
 
-	return await Promise.all(antennas.map((x) => packAntennaForHonoApi(deps, x)));
+	return await Promise.all(antennas.map((x) => packAntennaForApi(deps, x)));
 }
 
 export const antennasShowParamDef = z.object({
@@ -607,17 +607,17 @@ type AntennasShowParams = {
 	antennaId: string;
 };
 
-export async function handleHonoApiAntennasShow(
-	deps: HonoApiAntennaDependencies,
+export async function handleApiAntennasShow(
+	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Antenna'>> {
-	const params = parseHonoApiParams(antennasShowParamDef, body);
+	const params = parseApiParams(antennasShowParamDef, body);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) throw noSuchAntennaError('c06569fb-b025-4f23-b22d-1fcd20d2816b');
 
-	return await packAntennaForHonoApi(deps, antenna);
+	return await packAntennaForApi(deps, antenna);
 }
 
 export const antennasRemoveNoteParamDef = z.object({
@@ -630,12 +630,12 @@ type AntennasRemoveNoteParams = {
 	noteId: string;
 };
 
-export async function handleHonoApiAntennasRemoveNote(
-	deps: HonoApiAntennaDependencies,
+export async function handleApiAntennasRemoveNote(
+	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(antennasRemoveNoteParamDef, body);
+	const params = parseApiParams(antennasRemoveNoteParamDef, body);
 
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) throw noSuchAntennaError('850926e0-fd3b-49b6-b69a-b28a5dbd82fe');
@@ -661,12 +661,12 @@ type AntennasNotesParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiAntennasNotes(
-	deps: HonoApiAntennaDependencies,
+export async function handleApiAntennasNotes(
+	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(antennasNotesParamDef, body);
+	const params = parseApiParams(antennasNotesParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
@@ -714,5 +714,5 @@ export async function handleHonoApiAntennasNotes(
 		notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 	}
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForApi(deps, notes, me);
 }

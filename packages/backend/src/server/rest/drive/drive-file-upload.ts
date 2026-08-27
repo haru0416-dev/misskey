@@ -52,20 +52,20 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type Logger from '@/logger.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError, invalidParamError } from '../error.js';
+import { ApiError, invalidParamError } from '../error.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
-import { packDriveFileOrFailForHonoApi, type HonoApiDriveFileDependencies } from './drive-file.js';
+import { packDriveFileOrFailForApi, type ApiDriveFileDependencies } from './drive-file.js';
 import {
 	buildDriveFileDeletionDependencies,
-	validateHonoApiDriveFileName,
-	type HonoApiDriveFilesDependencies,
+	validateApiDriveFileName,
+	type ApiDriveFilesDependencies,
 } from './drive-files.js';
-import type { HonoApiDriveStreamPublisher, HonoApiMainStreamPublisher } from '../events.js';
-import { getHonoApiRolePolicies, isHonoApiModerator } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
+import type { ApiDriveStreamPublisher, ApiMainStreamPublisher } from '../events.js';
+import { getApiRolePolicies, isApiModerator } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiDriveFileUploadDependencies = Omit<HonoApiDriveFilesDependencies, 'internalStorageService'> &
-	HonoApiDriveFileDependencies & {
+export type ApiDriveFileUploadDependencies = Omit<ApiDriveFilesDependencies, 'internalStorageService'> &
+	ApiDriveFileDependencies & {
 		downloadService: Pick<DownloadService, 'downloadUrl'>;
 		fileInfoService: Pick<FileInfoService, 'getFileInfo'>;
 		imageProcessingService: Pick<ImageProcessingService, 'convertSharpToPng' | 'convertSharpToWebp'>;
@@ -73,12 +73,12 @@ export type HonoApiDriveFileUploadDependencies = Omit<HonoApiDriveFilesDependenc
 		s3Service: Pick<S3Service, 'upload' | 'delete'>;
 		videoProcessingService: Pick<VideoProcessingService, 'generateVideoThumbnail'>;
 		logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
-		publishMainStream?: HonoApiMainStreamPublisher;
-		publishDriveStream?: HonoApiDriveStreamPublisher;
+		publishMainStream?: ApiMainStreamPublisher;
+		publishDriveStream?: ApiDriveStreamPublisher;
 	};
 
 // ファイル欠如・サイズ超過は、API互換性のためエラーボディ無しの生ステータスとして呼び出し元へ返す。
-export type HonoApiMultipartResult =
+export type ApiMultipartResult =
 	| { status: 'missing-file' }
 	| { status: 'too-large' }
 	| { status: 'ok'; file: { name: string | null; path: string }; cleanup: () => void; fields: Record<string, unknown> };
@@ -86,10 +86,7 @@ export type HonoApiMultipartResult =
 // multipart のフィールド・境界文字列ぶんの余裕。ファイル本体の上限は maxFileSize で別途判定する。
 const MULTIPART_OVERHEAD = 1024 * 1024;
 
-export async function readHonoApiMultipartRequest(
-	c: Context,
-	config: Pick<Config, 'limits'>,
-): Promise<HonoApiMultipartResult> {
+export async function readApiMultipartRequest(c: Context, config: Pick<Config, 'limits'>): Promise<ApiMultipartResult> {
 	// c.req.formData() はボディ全体を上限なしでメモリに読むため、先に上限つきで読み切る。
 	class BodyLimitExceeded extends Error {}
 	let rawBody: Uint8Array;
@@ -149,7 +146,7 @@ export async function readHonoApiMultipartRequest(
 	};
 }
 
-function castHonoApiMultipartFields(
+function castApiMultipartFields(
 	paramDef: { properties?: Record<string, { type?: string }> },
 	fields: Record<string, unknown>,
 ): void {
@@ -168,13 +165,13 @@ function castHonoApiMultipartFields(
 	}
 }
 
-function isMediaSilencedHostForHonoApi(silencedHosts: string[] | undefined, host: string | null): boolean {
+function isMediaSilencedHostForApi(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) return false;
 	return silencedHosts.includes(host.toLowerCase());
 }
 
-function driveFileInternalError(): HonoApiError {
-	return new HonoApiError({
+function driveFileInternalError(): ApiError {
+	return new ApiError({
 		status: 500,
 		message: 'Internal error occurred. Please contact us if the error persists.',
 		code: 'INTERNAL_ERROR',
@@ -183,8 +180,8 @@ function driveFileInternalError(): HonoApiError {
 	});
 }
 
-async function generateDriveFileAltsForHonoApi(
-	deps: HonoApiDriveFileUploadDependencies,
+async function generateDriveFileAltsForApi(
+	deps: ApiDriveFileUploadDependencies,
 	path: string,
 	type: string,
 	generateWeb: boolean,
@@ -261,8 +258,8 @@ async function generateDriveFileAltsForHonoApi(
 	return { webpublic, thumbnail };
 }
 
-async function uploadDriveFileToObjectStorageForHonoApi(
-	deps: HonoApiDriveFileUploadDependencies,
+async function uploadDriveFileToObjectStorageForApi(
+	deps: ApiDriveFileUploadDependencies,
 	key: string,
 	body: fs.ReadStream | Buffer,
 	type: string,
@@ -295,10 +292,7 @@ async function uploadDriveFileToObjectStorageForHonoApi(
 	deps.logger.debug(`Uploaded: ${result.Bucket}/${result.Key} => ${result.Location}`);
 }
 
-async function deleteDriveFileObjectsForHonoApi(
-	deps: HonoApiDriveFileUploadDependencies,
-	keys: string[],
-): Promise<void> {
+async function deleteDriveFileObjectsForApi(deps: ApiDriveFileUploadDependencies, keys: string[]): Promise<void> {
 	await Promise.all(
 		keys.map(async (accessKey) => {
 			try {
@@ -318,8 +312,8 @@ type StoredDriveFile = {
 	cleanup: () => Promise<void>;
 };
 
-async function saveDriveFileForHonoApi(
-	deps: HonoApiDriveFileUploadDependencies,
+async function saveDriveFileForApi(
+	deps: ApiDriveFileUploadDependencies,
 	file: MiDriveFile,
 	path: string,
 	name: string,
@@ -327,7 +321,7 @@ async function saveDriveFileForHonoApi(
 	hash: string,
 	size: number,
 ): Promise<StoredDriveFile> {
-	const alts = await generateDriveFileAltsForHonoApi(deps, path, type, !file.uri);
+	const alts = await generateDriveFileAltsForApi(deps, path, type, !file.uri);
 
 	if (deps.meta.useObjectStorage) {
 		const [ext] = name.match(/\.([a-zA-Z0-9_-]+)$/) ?? [''];
@@ -359,13 +353,13 @@ async function saveDriveFileForHonoApi(
 		let thumbnailKey: string | null = null;
 		let thumbnailUrl: string | null = null;
 
-		const uploads = [uploadDriveFileToObjectStorageForHonoApi(deps, key, fs.createReadStream(path), type, null, name)];
+		const uploads = [uploadDriveFileToObjectStorageForApi(deps, key, fs.createReadStream(path), type, null, name)];
 
 		if (alts.webpublic) {
 			webpublicKey = `${prefix}webpublic-${randomUUID()}.${alts.webpublic.ext}`;
 			webpublicUrl = `${baseUrl}/${webpublicKey}`;
 			uploads.push(
-				uploadDriveFileToObjectStorageForHonoApi(
+				uploadDriveFileToObjectStorageForApi(
 					deps,
 					webpublicKey,
 					alts.webpublic.data,
@@ -380,7 +374,7 @@ async function saveDriveFileForHonoApi(
 			thumbnailKey = `${prefix}thumbnail-${randomUUID()}.${alts.thumbnail.ext}`;
 			thumbnailUrl = `${baseUrl}/${thumbnailKey}`;
 			uploads.push(
-				uploadDriveFileToObjectStorageForHonoApi(
+				uploadDriveFileToObjectStorageForApi(
 					deps,
 					thumbnailKey,
 					alts.thumbnail.data,
@@ -397,7 +391,7 @@ async function saveDriveFileForHonoApi(
 			await Promise.all(uploads);
 		} catch (err) {
 			// 一部だけ成功していることがあるため、DBに載らないオブジェクトを残さないよう掃除してから中断する
-			await deleteDriveFileObjectsForHonoApi(deps, keys);
+			await deleteDriveFileObjectsForApi(deps, keys);
 			throw err;
 		}
 
@@ -416,7 +410,7 @@ async function saveDriveFileForHonoApi(
 
 		return {
 			file,
-			cleanup: () => deleteDriveFileObjectsForHonoApi(deps, keys),
+			cleanup: () => deleteDriveFileObjectsForApi(deps, keys),
 		};
 	} else {
 		const accessKey = randomUUID();
@@ -471,8 +465,8 @@ async function saveDriveFileForHonoApi(
 	}
 }
 
-async function persistStoredDriveFileForHonoApi(
-	deps: HonoApiDriveFileUploadDependencies,
+async function persistStoredDriveFileForApi(
+	deps: ApiDriveFileUploadDependencies,
 	stored: StoredDriveFile,
 	user: MiUser | null,
 	force: boolean,
@@ -503,11 +497,11 @@ async function persistStoredDriveFileForHonoApi(
 			}
 
 			const isLocalUser = user.host == null;
-			const isModerator = isLocalUser ? await isHonoApiModerator({ ...deps, db: transaction }, user) : false;
+			const isModerator = isLocalUser ? await isApiModerator({ ...deps, db: transaction }, user) : false;
 			let expiredFiles: MiDriveFile[] = [];
 
 			if (!stored.file.isLink && !isModerator) {
-				const policies = await getHonoApiRolePolicies({ ...deps, db: transaction }, user);
+				const policies = await getApiRolePolicies({ ...deps, db: transaction }, user);
 				const driveCapacity = 1024 * 1024 * policies.driveCapacityMb;
 				const usage = await sumDriveFileSizeByUserIdFromDatabase(transaction, user.id);
 
@@ -546,8 +540,8 @@ async function persistStoredDriveFileForHonoApi(
 	}
 }
 
-async function expireOldDriveFileForHonoApi(
-	deps: HonoApiDriveFileUploadDependencies,
+async function expireOldDriveFileForApi(
+	deps: ApiDriveFileUploadDependencies,
 	user: MiUser,
 	driveCapacity: number,
 ): Promise<void> {
@@ -580,8 +574,8 @@ export type AddDriveFileArgs = {
 	requestHeaders?: Record<string, string> | null;
 };
 
-export async function addDriveFileForHonoApi(
-	deps: HonoApiDriveFileUploadDependencies,
+export async function addDriveFileForApi(
+	deps: ApiDriveFileUploadDependencies,
 	{
 		user,
 		path,
@@ -598,7 +592,7 @@ export async function addDriveFileForHonoApi(
 		ext = null,
 	}: AddDriveFileArgs,
 ): Promise<MiDriveFile> {
-	const userRoleNSFW = user != null && (await getHonoApiRolePolicies(deps, user)).alwaysMarkNsfw;
+	const userRoleNSFW = user != null && (await getApiRolePolicies(deps, user)).alwaysMarkNsfw;
 	let skipNsfwCheck = user == null || userRoleNSFW;
 	if (deps.meta.sensitiveMediaDetection === 'none') skipNsfwCheck = true;
 	if (user != null && deps.meta.sensitiveMediaDetection === 'local' && user.host != null) skipNsfwCheck = true;
@@ -622,7 +616,7 @@ export async function addDriveFileForHonoApi(
 	});
 
 	const detectedName = correctFilename(
-		name != null && validateHonoApiDriveFileName(name) ? name : 'untitled',
+		name != null && validateApiDriveFileName(name) ? name : 'untitled',
 		ext ?? info.type.ext,
 	);
 
@@ -640,9 +634,9 @@ export async function addDriveFileForHonoApi(
 
 	if (user != null && !isLink) {
 		const isLocalUser = user.host == null;
-		const isModerator = isLocalUser ? await isHonoApiModerator(deps, user) : false;
+		const isModerator = isLocalUser ? await isApiModerator(deps, user) : false;
 		if (!isModerator) {
-			const policies = await getHonoApiRolePolicies(deps, user);
+			const policies = await getApiRolePolicies(deps, user);
 
 			const allowedMimeTypes = policies.uploadableFileTypes;
 			const isAllowed = allowedMimeTypes.some((mimeType) => {
@@ -669,7 +663,7 @@ export async function addDriveFileForHonoApi(
 				if (isLocalUser) {
 					throw new IdentifiableError('c6244ed2-a39a-4e1c-bf93-f0fbd7764fa6', 'No free space.');
 				}
-				await expireOldDriveFileForHonoApi(
+				await expireOldDriveFileForApi(
 					deps,
 					await fetchUserByIdOrFailFromDatabase(deps.db, user.id),
 					driveCapacity - info.size,
@@ -683,7 +677,7 @@ export async function addDriveFileForHonoApi(
 
 		const driveFolder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, folderId, user ? user.id : null);
 		if (driveFolder == null) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'No such folder.',
 				code: 'NO_SUCH_FOLDER',
@@ -725,7 +719,7 @@ export async function addDriveFileForHonoApi(
 		isSensitive: user ? (user.host == null && profile!.alwaysMarkNsfw ? true : (sensitive ?? false)) : false,
 	} as MiDriveFile;
 
-	if (user != null && isMediaSilencedHostForHonoApi(deps.meta.mediaSilencedHosts, user.host)) file.isSensitive = true;
+	if (user != null && isMediaSilencedHostForApi(deps.meta.mediaSilencedHosts, user.host)) file.isSensitive = true;
 	if (info.sensitive && profile!.autoSensitive) file.isSensitive = true;
 	if (info.sensitive && deps.meta.setSensitiveFlagAutomatically) file.isSensitive = true;
 	if (userRoleNSFW) file.isSensitive = true;
@@ -767,8 +761,8 @@ export async function addDriveFileForHonoApi(
 			}
 		}
 	} else {
-		const stored = await saveDriveFileForHonoApi(deps, file, path, detectedName, info.type.mime, info.md5, info.size);
-		const persisted = await persistStoredDriveFileForHonoApi(deps, stored, user, force, sensitive);
+		const stored = await saveDriveFileForApi(deps, file, path, detectedName, info.type.mime, info.md5, info.size);
+		const persisted = await persistStoredDriveFileForApi(deps, stored, user, force, sensitive);
 		if (!persisted.inserted) return persisted.file;
 		file = persisted.file;
 	}
@@ -777,7 +771,7 @@ export async function addDriveFileForHonoApi(
 	// これらのストリームを購読するのはローカルのクライアントだけなので、
 	// リモート宛に流しても誰も受け取らず publish が無駄になる。
 	if (user != null && user.host == null) {
-		packDriveFileOrFailForHonoApi(deps, file, { self: true }).then((packedFile) => {
+		packDriveFileOrFailForApi(deps, file, { self: true }).then((packedFile) => {
 			deps.publishMainStream?.(user.id, 'driveFileCreated', packedFile);
 			deps.publishDriveStream?.(user.id, 'fileCreated', packedFile);
 		});
@@ -803,7 +797,7 @@ export const driveFilesCreateParamDef = z.object({
 	force: z.boolean().optional().default(false),
 });
 
-// multipart フォームは全フィールドを文字列で送るため、castHonoApiMultipartFields で
+// multipart フォームは全フィールドを文字列で送るため、castApiMultipartFields で
 // boolean/number/integer 型のフィールドのみ JSON.parse して型を戻す。driveFilesCreateParamDef の
 // 対象プロパティのうち boolean 型なのは isSensitive/force のみ (他は string 系)。
 const driveFilesCreateMultipartCastFields = {
@@ -821,16 +815,16 @@ type DriveFilesCreateParams = {
 	force: boolean;
 };
 
-export async function handleHonoApiDriveFilesCreate(
-	deps: HonoApiDriveFileUploadDependencies,
+export async function handleApiDriveFilesCreate(
+	deps: ApiDriveFileUploadDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 	file: { name: string | null; path: string },
 	ip: string | null,
 	headers: Record<string, string> | null,
 ): Promise<Packed<'DriveFile'>> {
-	castHonoApiMultipartFields(driveFilesCreateMultipartCastFields, body);
-	const params = parseHonoApiParams(driveFilesCreateParamDef, body);
+	castApiMultipartFields(driveFilesCreateMultipartCastFields, body);
+	const params = parseApiParams(driveFilesCreateParamDef, body);
 
 	let name = params.name ?? file.name ?? null;
 	if (name != null) {
@@ -839,8 +833,8 @@ export async function handleHonoApiDriveFilesCreate(
 			name = null;
 		} else if (name === 'blob') {
 			name = null;
-		} else if (!validateHonoApiDriveFileName(name)) {
-			throw new HonoApiError({
+		} else if (!validateApiDriveFileName(name)) {
+			throw new ApiError({
 				status: 400,
 				message: 'Invalid file name.',
 				code: 'INVALID_FILE_NAME',
@@ -850,7 +844,7 @@ export async function handleHonoApiDriveFilesCreate(
 	}
 
 	try {
-		const driveFile = await addDriveFileForHonoApi(deps, {
+		const driveFile = await addDriveFileForApi(deps, {
 			user: me,
 			path: file.path,
 			name,
@@ -861,15 +855,15 @@ export async function handleHonoApiDriveFilesCreate(
 			requestIp: deps.meta.enableIpLogging ? ip : null,
 			requestHeaders: deps.meta.enableIpLogging ? headers : null,
 		});
-		return await packDriveFileOrFailForHonoApi(deps, driveFile, { self: true });
+		return await packDriveFileOrFailForApi(deps, driveFile, { self: true });
 	} catch (err) {
-		if (err instanceof HonoApiError) throw err;
+		if (err instanceof ApiError) throw err;
 		if (err instanceof Error || typeof err === 'string') {
 			deps.logger.error(String(err));
 		}
 		if (err instanceof IdentifiableError) {
 			if (err.id === 'c6244ed2-a39a-4e1c-bf93-f0fbd7764fa6') {
-				throw new HonoApiError({
+				throw new ApiError({
 					status: 400,
 					message: 'Cannot upload the file because you have no free space of drive.',
 					code: 'NO_FREE_SPACE',
@@ -877,7 +871,7 @@ export async function handleHonoApiDriveFilesCreate(
 				});
 			}
 			if (err.id === 'f9e4e5f3-4df4-40b5-b400-f236945f7073') {
-				throw new HonoApiError({
+				throw new ApiError({
 					status: 413,
 					message: 'Cannot upload the file because it exceeds the maximum file size.',
 					code: 'MAX_FILE_SIZE_EXCEEDED',
@@ -885,7 +879,7 @@ export async function handleHonoApiDriveFilesCreate(
 				});
 			}
 			if (err.id === 'bd71c601-f9b0-4808-9137-a330647ced9b') {
-				throw new HonoApiError({
+				throw new ApiError({
 					status: 400,
 					message: 'Cannot upload the file because it is an unallowed file type.',
 					code: 'UNALLOWED_FILE_TYPE',
@@ -915,8 +909,8 @@ type DriveFilesUploadFromUrlParams = {
 	force: boolean;
 };
 
-export async function uploadDriveFileFromUrlForHonoApi(
-	deps: HonoApiDriveFileUploadDependencies,
+export async function uploadDriveFileFromUrlForApi(
+	deps: ApiDriveFileUploadDependencies,
 	{
 		url,
 		user,
@@ -950,7 +944,7 @@ export async function uploadDriveFileFromUrlForHonoApi(
 			comment = null;
 		}
 
-		const driveFile = await addDriveFileForHonoApi(deps, {
+		const driveFile = await addDriveFileForApi(deps, {
 			user,
 			path,
 			name,
@@ -974,16 +968,16 @@ export async function uploadDriveFileFromUrlForHonoApi(
 	}
 }
 
-export function handleHonoApiDriveFilesUploadFromUrl(
-	deps: HonoApiDriveFileUploadDependencies,
+export function handleApiDriveFilesUploadFromUrl(
+	deps: ApiDriveFileUploadDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 	ip: string | null,
 	headers: Record<string, string> | null,
 ): void {
-	const params = parseHonoApiParams(driveFilesUploadFromUrlParamDef, body);
+	const params = parseApiParams(driveFilesUploadFromUrlParamDef, body);
 
-	uploadDriveFileFromUrlForHonoApi(deps, {
+	uploadDriveFileFromUrlForApi(deps, {
 		url: params.url,
 		user: me,
 		folderId: params.folderId,
@@ -994,7 +988,7 @@ export function handleHonoApiDriveFilesUploadFromUrl(
 		requestIp: ip,
 		requestHeaders: headers,
 	}).then((file) => {
-		packDriveFileOrFailForHonoApi(deps, file, { self: true }).then((packedFile) => {
+		packDriveFileOrFailForApi(deps, file, { self: true }).then((packedFile) => {
 			deps.publishMainStream?.(me.id, 'urlUploadFinished', {
 				marker: params.marker,
 				file: packedFile,

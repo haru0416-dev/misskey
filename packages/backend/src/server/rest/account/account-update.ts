@@ -48,40 +48,32 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import {
-	acceptAllFollowRequestsForHonoApi,
-	genLocalUserUri,
-	type HonoApiFollowingDependencies,
-} from '../user/following.js';
-import { HonoApiError } from '../error.js';
+import { acceptAllFollowRequestsForApi, genLocalUserUri, type ApiFollowingDependencies } from '../user/following.js';
+import { ApiError } from '../error.js';
 import {
 	addActivityContext,
-	deliverNoteActivityForHonoApi,
+	deliverNoteActivityForApi,
 	renderEmoji,
-	renderUpdateForHonoApi,
-	type HonoApiNoteApDependencies,
+	renderUpdateForApi,
+	type ApiNoteApDependencies,
 } from '../activitypub/notes-ap.js';
-import { isKeyWordIncludedForHonoApi, updateHashtagsRankingsForHonoApi } from '../note/notes-create.js';
+import { isKeyWordIncludedForApi, updateHashtagsRankingsForApi } from '../note/notes-create.js';
 import {
-	getHonoApiRolePolicies,
-	getHonoApiUserRoles,
-	isHonoApiModerator,
-	type HonoApiRolePolicyDependencies,
+	getApiRolePolicies,
+	getApiUserRoles,
+	isApiModerator,
+	type ApiRolePolicyDependencies,
 } from '../role/role-policy.js';
-import {
-	packMeDetailedForHonoApi,
-	type MeDetailedHonoApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
-import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from '../activitypub/ap-person.js';
+import { packMeDetailedForApi, type MeDetailedApiResponse, type UserPackingDependencies } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
+import { resolveUserForApi, type ApiApPersonDependencies } from '../activitypub/ap-person.js';
 
-export type HonoApiAccountUpdateDependencies = HonoApiRolePolicyDependencies &
-	HonoApiFollowingDependencies &
+export type ApiAccountUpdateDependencies = ApiRolePolicyDependencies &
+	ApiFollowingDependencies &
 	UserPackingDependencies &
-	HonoApiNoteApDependencies & {
+	ApiNoteApDependencies & {
 		httpRequestService: Pick<HttpRequestService, 'getHtml'>;
-		/** hashtag ランキング (updateHashtagsRankingsForHonoApi) 用。 */
+		/** hashtag ランキング (updateHashtagsRankingsForApi) 用。 */
 		redis: Redis.Redis;
 	};
 
@@ -90,104 +82,104 @@ type RenderedPerson = Record<string, unknown> & {
 	alsoKnownAs?: string[];
 };
 
-function iUpdateNoSuchAvatarError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateNoSuchAvatarError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such avatar file.',
 		code: 'NO_SUCH_AVATAR',
 		id: '539f3a45-f215-4f81-a9a8-31293640207f',
 	});
 }
-function iUpdateNoSuchBannerError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateNoSuchBannerError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such banner file.',
 		code: 'NO_SUCH_BANNER',
 		id: '0d8f5629-f210-41c2-9433-735831a58595',
 	});
 }
-function iUpdateAvatarNotAnImageError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateAvatarNotAnImageError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'The file specified as an avatar is not an image.',
 		code: 'AVATAR_NOT_AN_IMAGE',
 		id: 'f419f9f8-2f4d-46b1-9fb4-49d3a2fd7191',
 	});
 }
-function iUpdateBannerNotAnImageError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateBannerNotAnImageError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'The file specified as a banner is not an image.',
 		code: 'BANNER_NOT_AN_IMAGE',
 		id: '75aedb19-2afd-4e6d-87fc-67941256fa60',
 	});
 }
-function iUpdateNoSuchPageError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateNoSuchPageError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such page.',
 		code: 'NO_SUCH_PAGE',
 		id: '8e01b590-7eb9-431b-a239-860e086c408e',
 	});
 }
-function iUpdateInvalidRegexpError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateInvalidRegexpError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Invalid Regular Expression.',
 		code: 'INVALID_REGEXP',
 		id: '0d786918-10df-41cd-8f33-8dec7d9a89a5',
 	});
 }
-function iUpdateTooManyMutedWordsError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateTooManyMutedWordsError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Too many muted words.',
 		code: 'TOO_MANY_MUTED_WORDS',
 		id: '010665b1-a211-42d2-bc64-8f6609d79785',
 	});
 }
-function iUpdateNoSuchUserError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateNoSuchUserError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such user.',
 		code: 'NO_SUCH_USER',
 		id: 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5',
 	});
 }
-function iUpdateUriNullError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateUriNullError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'User ActivityPup URI is null.',
 		code: 'URI_NULL',
 		id: 'bf326f31-d430-4f97-9933-5d61e4d48a23',
 	});
 }
-function iUpdateForbiddenToSetYourselfError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateForbiddenToSetYourselfError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: "You can't set yourself as your own alias.",
 		code: 'FORBIDDEN_TO_SET_YOURSELF',
 		id: '25c90186-4ab0-49c8-9bba-a1fa6c202ba4',
 	});
 }
-function iUpdateRestrictedByRoleError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateRestrictedByRoleError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'This feature is restricted by your role.',
 		code: 'RESTRICTED_BY_ROLE',
 		id: '8feff0ba-5ab5-585b-31f4-4df816663fad',
 	});
 }
-function iUpdateNameContainsProhibitedWordsError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateNameContainsProhibitedWordsError(): ApiError {
+	return new ApiError({
 		status: 422,
 		message: 'Your new name contains prohibited words.',
 		code: 'YOUR_NAME_CONTAINS_PROHIBITED_WORDS',
 		id: '0b3f9f6a-2f4d-4b1f-9fb4-49d3a2fd7191',
 	});
 }
-function iUpdateYourAccountMovedError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateYourAccountMovedError(): ApiError {
+	return new ApiError({
 		status: 403,
 		message: 'You have moved your account.',
 		code: 'YOUR_ACCOUNT_MOVED',
@@ -330,7 +322,7 @@ function tryRewriteUrl(maybeUrl: string): string {
 	}
 }
 
-export function renderKeyForHonoApi(
+export function renderKeyForApi(
 	config: Pick<Config, 'instance'>,
 	user: MiLocalUser,
 	key: MiUserKeypair,
@@ -344,8 +336,8 @@ export function renderKeyForHonoApi(
 	};
 }
 
-export async function renderPersonForHonoApi(
-	deps: HonoApiAccountUpdateDependencies,
+export async function renderPersonForApi(
+	deps: ApiAccountUpdateDependencies,
 	user: MiLocalUser,
 ): Promise<Record<string, unknown>> {
 	const id = genLocalUserUri(deps.config, user.id);
@@ -439,7 +431,7 @@ export async function renderPersonForHonoApi(
 		tag,
 		manuallyApprovesFollowers: user.isLocked,
 		discoverable: user.isExplorable,
-		publicKey: renderKeyForHonoApi(deps.config, user, keypair, '#main-key'),
+		publicKey: renderKeyForApi(deps.config, user, keypair, '#main-key'),
 		isCat: user.isCat,
 		attachment: attachment.length ? attachment : undefined,
 	};
@@ -452,47 +444,43 @@ export async function renderPersonForHonoApi(
 	return person;
 }
 
-async function publishAccountUpdateToFollowersForHonoApi(
-	deps: HonoApiAccountUpdateDependencies,
+async function publishAccountUpdateToFollowersForApi(
+	deps: ApiAccountUpdateDependencies,
 	userId: MiUser['id'],
 ): Promise<void> {
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, userId);
 	if (user.host != null) return;
 
 	const localUser = user as MiLocalUser;
-	const person = await renderPersonForHonoApi(deps, localUser);
-	const content = addActivityContext(deps.config, renderUpdateForHonoApi(deps.config, person, localUser));
+	const person = await renderPersonForApi(deps, localUser);
+	const content = addActivityContext(deps.config, renderUpdateForApi(deps.config, person, localUser));
 
 	// リレー配送には LD-signature が必要なため、署名しないこの経路ではフォロワー配送だけを行う。
-	await deliverNoteActivityForHonoApi(deps, localUser, content, { directRecipients: [], deliverToFollowers: true });
+	await deliverNoteActivityForApi(deps, localUser, content, { directRecipients: [], deliverToFollowers: true });
 }
 
-function toPunyForHonoApi(host: string): string {
+function toPunyForApi(host: string): string {
 	return domainToASCII(host.toLowerCase());
 }
 
-async function resolveAlsoKnownAsUserForHonoApi(deps: HonoApiAccountUpdateDependencies, acct: string): Promise<MiUser> {
+async function resolveAlsoKnownAsUserForApi(deps: ApiAccountUpdateDependencies, acct: string): Promise<MiUser> {
 	const { username, host } = Acct.parse(acct);
 	const normalizedHost =
-		host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.runtime.host)
-			? null
-			: toPunyForHonoApi(host);
+		host == null || toPunyForApi(host) === toPunyForApi(deps.config.runtime.host) ? null : toPunyForApi(host);
 	// 未知のリモートユーザーは WebFinger で解決する。
-	// deps の型に HonoApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
+	// deps の型に ApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
 	// (shell の実 deps は両方を満たす)
-	return await resolveUserForHonoApi(deps as unknown as HonoApiApPersonDependencies, username, normalizedHost).catch(
-		() => {
-			throw iUpdateNoSuchUserError();
-		},
-	);
+	return await resolveUserForApi(deps as unknown as ApiApPersonDependencies, username, normalizedHost).catch(() => {
+		throw iUpdateNoSuchUserError();
+	});
 }
 
-function getUserUriForHonoApi(config: Pick<Config, 'instance'>, user: MiUser): string | null {
+function getUserUriForApi(config: Pick<Config, 'instance'>, user: MiUser): string | null {
 	return user.host != null ? user.uri : genLocalUserUri(config, user.id);
 }
 
-export async function updateUsertagsForHonoApi(
-	deps: HonoApiAccountUpdateDependencies,
+export async function updateUsertagsForApi(
+	deps: ApiAccountUpdateDependencies,
 	user: MiUser,
 	tags: string[],
 ): Promise<void> {
@@ -501,7 +489,7 @@ export async function updateUsertagsForHonoApi(
 		...new Set(user.tags.filter((tag) => !tags.includes(tag)).map((tag) => normalizeForSearch(tag))),
 	];
 	// ランキング更新は fire-and-forget とし、タグ更新処理を待たせない。
-	void updateHashtagsRankingsForHonoApi(deps, [...attachedNames, ...detachedNames], user.id).catch(() => {});
+	void updateHashtagsRankingsForApi(deps, [...attachedNames, ...detachedNames], user.id).catch(() => {});
 	await recordHashtagUsagesInDatabase(deps.db, {
 		entries: attachedNames.map((name) => ({ id: genId(), name })),
 		userId: user.id,
@@ -520,11 +508,7 @@ export async function updateUsertagsForHonoApi(
 	});
 }
 
-async function verifyLinkForHonoApi(
-	deps: HonoApiAccountUpdateDependencies,
-	url: string,
-	user: MiLocalUser,
-): Promise<void> {
+async function verifyLinkForApi(deps: ApiAccountUpdateDependencies, url: string, user: MiLocalUser): Promise<void> {
 	if (!safeForSql(url)) return;
 
 	try {
@@ -548,13 +532,13 @@ async function verifyLinkForHonoApi(
 	}
 }
 
-export async function handleHonoApiIUpdate(
-	deps: HonoApiAccountUpdateDependencies,
+export async function handleApiIUpdate(
+	deps: ApiAccountUpdateDependencies,
 	me: MiLocalUser,
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
-): Promise<MeDetailedHonoApiResponse> {
-	const ps = parseHonoApiParams(iUpdateParamDef, body);
+): Promise<MeDetailedApiResponse> {
+	const ps = parseApiParams(iUpdateParamDef, body);
 	const user = (await fetchUserByIdOrFailFromDatabase(deps.db, me.id)) as MiLocalUser;
 	const isSecure = token == null;
 
@@ -562,7 +546,7 @@ export async function handleHonoApiIUpdate(
 	const profileUpdates: UserProfileUpdate = {};
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-	let policies: Awaited<ReturnType<typeof getHonoApiRolePolicies>> | null = null;
+	let policies: Awaited<ReturnType<typeof getApiRolePolicies>> | null = null;
 
 	if (ps.name !== undefined) {
 		if (ps.name === null) {
@@ -582,7 +566,7 @@ export async function handleHonoApiIUpdate(
 	if (ps.chatScope !== undefined) updates.chatScope = ps.chatScope;
 
 	if (ps.mutedWords !== undefined) {
-		policies ??= await getHonoApiRolePolicies(deps, user);
+		policies ??= await getApiRolePolicies(deps, user);
 		checkMuteWordCount(ps.mutedWords, policies.wordMuteLimit);
 		validateMuteWordRegex(ps.mutedWords);
 
@@ -590,7 +574,7 @@ export async function handleHonoApiIUpdate(
 		profileUpdates.enableWordMute = ps.mutedWords.length > 0;
 	}
 	if (ps.hardMutedWords !== undefined) {
-		policies ??= await getHonoApiRolePolicies(deps, user);
+		policies ??= await getApiRolePolicies(deps, user);
 		checkMuteWordCount(ps.hardMutedWords, policies.wordMuteLimit);
 		validateMuteWordRegex(ps.hardMutedWords);
 		profileUpdates.hardMutedWords = ps.hardMutedWords;
@@ -618,7 +602,7 @@ export async function handleHonoApiIUpdate(
 	if (typeof ps.receiveAnnouncementEmail === 'boolean')
 		profileUpdates.receiveAnnouncementEmail = ps.receiveAnnouncementEmail;
 	if (typeof ps.alwaysMarkNsfw === 'boolean') {
-		policies ??= await getHonoApiRolePolicies(deps, user);
+		policies ??= await getApiRolePolicies(deps, user);
 		if (policies.alwaysMarkNsfw) throw iUpdateRestrictedByRoleError();
 		profileUpdates.alwaysMarkNsfw = ps.alwaysMarkNsfw;
 	}
@@ -626,7 +610,7 @@ export async function handleHonoApiIUpdate(
 	if (ps.emailNotificationTypes !== undefined) profileUpdates.emailNotificationTypes = ps.emailNotificationTypes;
 
 	if (ps.avatarId) {
-		policies ??= await getHonoApiRolePolicies(deps, user);
+		policies ??= await getApiRolePolicies(deps, user);
 		if (!policies.canUpdateBioMedia) throw iUpdateRestrictedByRoleError();
 
 		const avatar = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, ps.avatarId, user.id);
@@ -648,7 +632,7 @@ export async function handleHonoApiIUpdate(
 	}
 
 	if (ps.bannerId) {
-		policies ??= await getHonoApiRolePolicies(deps, user);
+		policies ??= await getApiRolePolicies(deps, user);
 		if (!policies.canUpdateBioMedia) throw iUpdateRestrictedByRoleError();
 
 		const banner = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, ps.bannerId, user.id);
@@ -666,10 +650,10 @@ export async function handleHonoApiIUpdate(
 	}
 
 	if (ps.avatarDecorations) {
-		policies ??= await getHonoApiRolePolicies(deps, user);
+		policies ??= await getApiRolePolicies(deps, user);
 		const [decorations, myRoles, allRoles] = await Promise.all([
 			listAvatarDecorationsFromDatabase(deps.db),
-			getHonoApiUserRoles(deps, user),
+			getApiUserRoles(deps, user),
 			listRolesFromDatabase(deps.db),
 		]);
 		const allRoleIds = new Set(allRoles.map((role) => role.id));
@@ -722,10 +706,10 @@ export async function handleHonoApiIUpdate(
 		for (const line of ps.alsoKnownAs) {
 			if (!line) throw iUpdateNoSuchUserError();
 
-			const knownAs = await resolveAlsoKnownAsUserForHonoApi(deps, line);
+			const knownAs = await resolveAlsoKnownAsUserForApi(deps, line);
 			if (knownAs.id === me.id) throw iUpdateForbiddenToSetYourselfError();
 
-			const toUrl = getUserUriForHonoApi(deps.config, knownAs);
+			const toUrl = getUserUriForApi(deps.config, knownAs);
 			if (!toUrl) throw iUpdateUriNullError();
 
 			newAlsoKnownAs.add(toUrl);
@@ -745,8 +729,8 @@ export async function handleHonoApiIUpdate(
 
 	if (newName != null) {
 		let hasProhibitedWords = false;
-		if (!(await isHonoApiModerator(deps, user))) {
-			hasProhibitedWords = isKeyWordIncludedForHonoApi(newName, deps.meta.prohibitedWordsForNameOfUser);
+		if (!(await isApiModerator(deps, user))) {
+			hasProhibitedWords = isKeyWordIncludedForApi(newName, deps.meta.prohibitedWordsForNameOfUser);
 		}
 		if (hasProhibitedWords) throw iUpdateNameContainsProhibitedWordsError();
 
@@ -777,7 +761,7 @@ export async function handleHonoApiIUpdate(
 	updates.tags = tags;
 
 	// ハッシュタグ更新 (ランキング更新 (Redis) 込み)
-	void updateUsertagsForHonoApi(deps, user, tags).catch(() => {});
+	void updateUsertagsForApi(deps, user, tags).catch(() => {});
 
 	if (Object.keys(updates).length > 0) {
 		await updateUserInDatabase(deps.db, user.id, updates);
@@ -790,7 +774,7 @@ export async function handleHonoApiIUpdate(
 	});
 
 	const freshUser = (await fetchUserByIdOrFailFromDatabase(deps.db, user.id)) as MiLocalUser;
-	const iObj = await packMeDetailedForHonoApi(deps, freshUser, { includeSecrets: isSecure });
+	const iObj = await packMeDetailedForApi(deps, freshUser, { includeSecrets: isSecure });
 
 	const updatedProfile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 	deps.publishInternalEvent?.('updateUserProfile', updatedProfile);
@@ -799,15 +783,15 @@ export async function handleHonoApiIUpdate(
 
 	// 鍵垢を解除したとき、溜まっていたフォローリクエストがあるならすべて承認
 	if (user.isLocked && ps.isLocked === false) {
-		void acceptAllFollowRequestsForHonoApi(deps, user).catch(() => {});
+		void acceptAllFollowRequestsForApi(deps, user).catch(() => {});
 	}
 
 	// フォロワーにUpdateを配信
-	void publishAccountUpdateToFollowersForHonoApi(deps, user.id).catch(() => {});
+	void publishAccountUpdateToFollowersForApi(deps, user.id).catch(() => {});
 
 	const urls = updatedProfile.fields.filter((x) => x.value.startsWith('https://'));
 	for (const url of urls) {
-		void verifyLinkForHonoApi(deps, url.value, user);
+		void verifyLinkForApi(deps, url.value, user);
 	}
 
 	return iObj;

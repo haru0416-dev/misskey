@@ -19,7 +19,7 @@ import { createDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
 import { fetchUserListByNameAndUserIdFromDatabase } from '@/core/user/UserListStore.js';
 import { userListMembershipExistsInDatabase } from '@/core/user/UserListMembershipStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueImportUserLists, type HonoQueueDbDependencies } from '@/queue/handlers/db.js';
+import { handleQueueImportUserLists, type QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbUserImportJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -45,7 +45,7 @@ async function serveText(text: string): Promise<{ url: string; server: Server }>
 
 describe('hono-queue-db (importUserLists)', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueDbDependencies;
+	let deps: QueueDbDependencies;
 	let servers: Server[] = [];
 
 	beforeAll(async () => {
@@ -93,7 +93,7 @@ describe('hono-queue-db (importUserLists)', () => {
 			userHost: null,
 		});
 
-		await handleHonoQueueImportUserLists(deps, fakeJob({ user: { id: owner.id }, fileId }));
+		await handleQueueImportUserLists(deps, fakeJob({ user: { id: owner.id }, fileId }));
 
 		const list = await fetchUserListByNameAndUserIdFromDatabase(runtime.db, listName, owner.id);
 		expect(list).not.toBeNull();
@@ -103,7 +103,7 @@ describe('hono-queue-db (importUserLists)', () => {
 	test('存在しないfileIdは何もしない', async () => {
 		const owner = await createTestUser('honoqueueimpulnofile');
 		await expect(
-			handleHonoQueueImportUserLists(deps, fakeJob({ user: { id: owner.id }, fileId: genId() })),
+			handleQueueImportUserLists(deps, fakeJob({ user: { id: owner.id }, fileId: genId() })),
 		).resolves.toBeUndefined();
 	});
 });

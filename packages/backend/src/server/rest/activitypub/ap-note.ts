@@ -45,36 +45,32 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import {
 	extractDbHost,
-	getNoteFromApIdForHonoApi,
+	getNoteFromApIdForApi,
 	isFederationAllowedUri,
 	isSelfHost,
 	parseLocalApUri,
-	resolveApObjectForHonoApi,
-	type HonoApiApResolveDependencies,
+	resolveApObjectForApi,
+	type ApiApResolveDependencies,
 } from './ap-resolve.js';
 import {
-	extractEmojisForHonoApi,
-	fetchPersonForHonoApi,
-	resolveImageForHonoApi,
-	resolvePersonForHonoApi,
-	type HonoApiApPersonDependencies,
+	extractEmojisForApi,
+	fetchPersonForApi,
+	resolveImageForApi,
+	resolvePersonForApi,
+	type ApiApPersonDependencies,
 } from './ap-person.js';
-import { deliverQuestionUpdateForHonoApi } from './notes-ap.js';
-import {
-	createNoteForHonoApi,
-	type CreateNoteData,
-	type HonoApiNotesCreateDependencies,
-} from '../note/notes-create.js';
-import type { HonoApiNoteStreamPublisher } from '../events.js';
+import { deliverQuestionUpdateForApi } from './notes-ap.js';
+import { createNoteForApi, type CreateNoteData, type ApiNotesCreateDependencies } from '../note/notes-create.js';
+import type { ApiNoteStreamPublisher } from '../events.js';
 
-export type HonoApiApNoteDependencies = HonoApiApPersonDependencies &
-	HonoApiApResolveDependencies &
-	HonoApiNotesCreateDependencies & {
+export type ApiApNoteDependencies = ApiApPersonDependencies &
+	ApiApResolveDependencies &
+	ApiNotesCreateDependencies & {
 		redis: Redis.Redis;
-		publishNoteStream?: HonoApiNoteStreamPublisher;
+		publishNoteStream?: ApiNoteStreamPublisher;
 	};
 
-function validateNoteForHonoApi(x: IObject, uri: string, actor?: MiRemoteUser): Error | null {
+function validateNoteForApi(x: IObject, uri: string, actor?: MiRemoteUser): Error | null {
 	const expectHost = extractDbHost(uri);
 	const apType = (x as { type?: string }).type;
 
@@ -123,8 +119,8 @@ function validateNoteForHonoApi(x: IObject, uri: string, actor?: MiRemoteUser): 
 	return null;
 }
 
-export async function parseAudienceForHonoApi(
-	deps: HonoApiApNoteDependencies,
+export async function parseAudienceForApi(
+	deps: ApiApNoteDependencies,
 	actor: MiRemoteUser,
 	to: ApObject | undefined,
 	cc: ApObject | undefined,
@@ -150,7 +146,7 @@ export async function parseAudienceForHonoApi(
 
 	const limit = promiseLimit<MiUser | null>(2);
 	const mentionedUsers = (
-		await Promise.all(others.map((id) => limit(() => resolvePersonForHonoApi(deps, id, history).catch(() => null))))
+		await Promise.all(others.map((id) => limit(() => resolvePersonForApi(deps, id, history).catch(() => null))))
 	).filter((x): x is MiUser => x != null);
 
 	if (toGroups.public.length > 0) return { visibility: 'public', visibleUsers: [] };
@@ -161,35 +157,33 @@ export async function parseAudienceForHonoApi(
 	return { visibility: 'specified', visibleUsers: mentionedUsers };
 }
 
-function extractApMentionObjectsForHonoApi(tags: IObject | IObject[] | null | undefined): IApMention[] {
+function extractApMentionObjectsForApi(tags: IObject | IObject[] | null | undefined): IApMention[] {
 	if (tags == null) return [];
 	return toArray(tags).filter(isMention);
 }
 
-async function extractApMentionsForHonoApi(
-	deps: HonoApiApNoteDependencies,
+async function extractApMentionsForApi(
+	deps: ApiApNoteDependencies,
 	tags: IObject | IObject[] | null | undefined,
 	history: Set<string>,
 ): Promise<MiUser[]> {
-	const hrefs = unique(extractApMentionObjectsForHonoApi(tags).map((x) => x.href));
+	const hrefs = unique(extractApMentionObjectsForApi(tags).map((x) => x.href));
 	const limit = promiseLimit<MiUser | null>(2);
 	return (
 		await Promise.all(
 			hrefs.map((href) =>
-				href == null
-					? Promise.resolve(null)
-					: limit(() => resolvePersonForHonoApi(deps, href, history).catch(() => null)),
+				href == null ? Promise.resolve(null) : limit(() => resolvePersonForApi(deps, href, history).catch(() => null)),
 			),
 		)
 	).filter((x): x is MiUser => x != null);
 }
 
-async function extractPollFromQuestionForHonoApi(
-	deps: HonoApiApNoteDependencies,
+async function extractPollFromQuestionForApi(
+	deps: ApiApNoteDependencies,
 	source: string | IObject,
 	history: Set<string>,
 ): Promise<IPoll> {
-	const question = await resolveApObjectForHonoApi(deps, source, FetchAllowSoftFailMask.Strict, history);
+	const question = await resolveApObjectForApi(deps, source, FetchAllowSoftFailMask.Strict, history);
 	if (!isQuestion(question)) throw new Error('invalid type');
 
 	const multiple = question.oneOf === undefined;
@@ -211,8 +205,8 @@ async function extractPollFromQuestionForHonoApi(
 	return { choices, votes, multiple, expiresAt };
 }
 
-export async function updateQuestionFromApForHonoApi(
-	deps: HonoApiApNoteDependencies,
+export async function updateQuestionFromApForApi(
+	deps: ApiApNoteDependencies,
 	value: string | IObject,
 	actor?: MiRemoteUser,
 	history: Set<string> = new Set(),
@@ -231,7 +225,7 @@ export async function updateQuestionFromApForHonoApi(
 	const user = await fetchUserByIdFromDatabase(deps.db, poll.userId);
 	if (user == null) throw new Error('Question is not registered');
 
-	const question = await resolveApObjectForHonoApi(deps, value, FetchAllowSoftFailMask.Strict, history);
+	const question = await resolveApObjectForApi(deps, value, FetchAllowSoftFailMask.Strict, history);
 	if (!isQuestion(question)) throw new Error('object is not a Question');
 
 	const attribution = question.attributedTo ? getOneApId(question.attributedTo as ApObject) : user.uri;
@@ -266,8 +260,8 @@ export async function updateQuestionFromApForHonoApi(
 }
 
 /** AP由来の投票更新の配送は呼び出し元で行う。 */
-async function voteFromApForHonoApi(
-	deps: HonoApiApNoteDependencies,
+async function voteFromApForApi(
+	deps: ApiApNoteDependencies,
 	actor: { id: MiUser['id'] },
 	note: MiNote,
 	choice: number,
@@ -294,18 +288,18 @@ async function voteFromApForHonoApi(
 	deps.publishNoteStream?.(note, 'pollVoted', { choice, userId: actor.id });
 }
 
-/** 禁止ワードは actor 解決後、ノート作成前に createNoteForHonoApi 内で必ず検査する。 */
-export async function createNoteFromApForHonoApi(
-	deps: HonoApiApNoteDependencies,
+/** 禁止ワードは actor 解決後、ノート作成前に createNoteForApi 内で必ず検査する。 */
+export async function createNoteFromApForApi(
+	deps: ApiApNoteDependencies,
 	value: string | IObject,
 	actor: MiRemoteUser | undefined,
 	history: Set<string> = new Set(),
 	silent = false,
 ): Promise<MiNote | null> {
-	const object = await resolveApObjectForHonoApi(deps, value, FetchAllowSoftFailMask.Strict, history);
+	const object = await resolveApObjectForApi(deps, value, FetchAllowSoftFailMask.Strict, history);
 
 	const entryUri = getApId(value);
-	const err = validateNoteForHonoApi(object, entryUri, actor);
+	const err = validateNoteForApi(object, entryUri, actor);
 	if (err) throw err;
 
 	const note = object as IPost;
@@ -319,13 +313,13 @@ export async function createNoteFromApForHonoApi(
 	if (note.attributedTo == null) throw new Error('invalid note.attributedTo: ' + note.attributedTo);
 	const uri = getOneApId(note.attributedTo as ApObject);
 
-	actor ??= (await fetchPersonForHonoApi(deps, uri)) as MiRemoteUser | undefined;
+	actor ??= (await fetchPersonForApi(deps, uri)) as MiRemoteUser | undefined;
 	if (actor?.isSuspended) {
 		throw new IdentifiableError('85ab9bd7-3a41-4530-959d-f07073900109', 'actor has been suspended');
 	}
 
-	const apMentionRawCount = new Set(extractApMentionObjectsForHonoApi(note.tag).map((x) => x.href)).size;
-	const apMentions = await extractApMentionsForHonoApi(deps, note.tag, history);
+	const apMentionRawCount = new Set(extractApMentionObjectsForApi(note.tag).map((x) => x.href)).size;
+	const apMentions = await extractApMentionsForApi(deps, note.tag, history);
 	const apHashtags = extractApHashtags(note.tag);
 
 	const cw = note.summary === '' ? null : (note.summary ?? null);
@@ -339,15 +333,15 @@ export async function createNoteFromApForHonoApi(
 		text = createApMfmService(createMfmService(deps.config as Config)).htmlToMfm(note.content, note.tag);
 	}
 
-	const poll = await extractPollFromQuestionForHonoApi(deps, note, history).catch(() => undefined);
+	const poll = await extractPollFromQuestionForApi(deps, note, history).catch(() => undefined);
 
-	actor ??= (await resolvePersonForHonoApi(deps, uri, history)) as MiRemoteUser;
+	actor ??= (await resolvePersonForApi(deps, uri, history)) as MiRemoteUser;
 
 	if (actor.isSuspended) {
 		throw new IdentifiableError('85ab9bd7-3a41-4530-959d-f07073900109', 'actor has been suspended');
 	}
 
-	const noteAudience = await parseAudienceForHonoApi(
+	const noteAudience = await parseAudienceForApi(
 		deps,
 		actor,
 		note.to as ApObject | undefined,
@@ -369,11 +363,11 @@ export async function createNoteFromApForHonoApi(
 		const sensitive = (note as { sensitive?: boolean }).sensitive;
 		if (attachment.sensitive == null && sensitive !== undefined) attachment.sensitive = sensitive;
 	}
-	const resolvedFiles = await Promise.all(attachments.map((attach) => resolveImageForHonoApi(deps, actor, attach)));
+	const resolvedFiles = await Promise.all(attachments.map((attach) => resolveImageForApi(deps, actor, attach)));
 	const files = resolvedFiles.filter((file) => file != null);
 
 	const reply = note.inReplyTo
-		? await resolveNoteForHonoApi(deps, note.inReplyTo as string | IObject, {
+		? await resolveNoteForApi(deps, note.inReplyTo as string | IObject, {
 				sentFrom: new URL(actor.uri),
 				resolver: history,
 			}).then((x) => {
@@ -391,7 +385,7 @@ export async function createNoteFromApForHonoApi(
 		): Promise<{ status: 'ok'; res: MiNote } | { status: 'permerror' | 'temperror' }> => {
 			if (!/^https?:/.test(u)) return { status: 'permerror' };
 			try {
-				const res = await resolveNoteForHonoApi(deps, u);
+				const res = await resolveNoteForApi(deps, u);
 				if (res == null) return { status: 'permerror' };
 				return { status: 'ok', res };
 			} catch (e) {
@@ -421,14 +415,14 @@ export async function createNoteFromApForHonoApi(
 			if (replyPoll.expiresAt && Date.now() > new Date(replyPoll.expiresAt).getTime()) {
 				return null;
 			} else if (index >= 0) {
-				await voteFromApForHonoApi(deps, actor, reply, index);
-				void deliverQuestionUpdateForHonoApi(deps, reply.id).catch(() => {});
+				await voteFromApForApi(deps, actor, reply, index);
+				void deliverQuestionUpdateForApi(deps, reply.id).catch(() => {});
 			}
 			return null;
 		}
 	}
 
-	const emojis = await extractEmojisForHonoApi(deps, note.tag ?? [], actor.host ?? '').catch(() => []);
+	const emojis = await extractEmojisForApi(deps, note.tag ?? [], actor.host ?? '').catch(() => []);
 	const apEmojis = emojis.map((emoji) => emoji.name);
 
 	const data: CreateNoteData = omitUndefined({
@@ -454,10 +448,10 @@ export async function createNoteFromApForHonoApi(
 	});
 
 	try {
-		return await createNoteForHonoApi(deps, actor, data, silent);
+		return await createNoteForApi(deps, actor, data, silent);
 	} catch (err) {
 		if (err instanceof Error && err.name === 'duplicated') {
-			const duplicate = await getNoteFromApIdForHonoApi(deps, value);
+			const duplicate = await getNoteFromApIdForApi(deps, value);
 			if (!duplicate)
 				throw new Error('The note creation failed with duplication error even when there is no duplication', {
 					cause: err,
@@ -468,8 +462,8 @@ export async function createNoteFromApForHonoApi(
 	}
 }
 
-export async function resolveNoteForHonoApi(
-	deps: HonoApiApNoteDependencies,
+export async function resolveNoteForApi(
+	deps: ApiApNoteDependencies,
 	value: string | IObject,
 	options: { sentFrom?: URL; resolver?: Set<string> } = {},
 ): Promise<MiNote | null> {
@@ -481,7 +475,7 @@ export async function resolveNoteForHonoApi(
 
 	const unlock = await acquireApObjectLock(deps.redis, uri);
 	try {
-		const exist = await getNoteFromApIdForHonoApi(deps, uri);
+		const exist = await getNoteFromApIdForApi(deps, uri);
 		if (exist) return exist;
 
 		if (parseLocalApUri(deps.config, uri).local) {
@@ -489,7 +483,7 @@ export async function resolveNoteForHonoApi(
 		}
 
 		const createFrom = options.sentFrom?.origin === new URL(uri).origin ? value : uri;
-		return await createNoteFromApForHonoApi(deps, createFrom, undefined, options.resolver ?? new Set(), true);
+		return await createNoteFromApForApi(deps, createFrom, undefined, options.resolver ?? new Set(), true);
 	} finally {
 		await unlock();
 	}

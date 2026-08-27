@@ -22,16 +22,12 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import { HonoApiError } from '../error.js';
-import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from '../events.js';
-import {
-	packMeDetailedForHonoApi,
-	type MeDetailedHonoApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
+import { packMeDetailedForApi, type MeDetailedApiResponse, type UserPackingDependencies } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAccountSecurityDependencies = UserPackingDependencies & {
+export type ApiAccountSecurityDependencies = UserPackingDependencies & {
 	config: Config;
 	meta: MiMeta;
 	db: MiDrizzleDatabase;
@@ -39,19 +35,19 @@ export type HonoApiAccountSecurityDependencies = UserPackingDependencies & {
 	deliverQueue: DeliverQueue;
 	userAuthService: Pick<UserAuthService, 'twoFactorAuthenticate'>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
-	publishMainStream?: HonoApiMainStreamPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
+	publishMainStream?: ApiMainStreamPublisher;
 };
 
 // パスワード誤入力も2FA失敗も利用者の入力ミスであってサーバー内部の異常ではない。
 // 生の Error を投げると 500 INTERNAL_ERROR になり、クライアントが原因を出し分けられないうえ
 // 予期しない例外としてサーバーログに残り続けるので、明示的なAPIエラーとして返す
-function incorrectPasswordError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Incorrect password.', code: 'INCORRECT_PASSWORD', id });
+function incorrectPasswordError(id: string): ApiError {
+	return new ApiError({ status: 400, message: 'Incorrect password.', code: 'INCORRECT_PASSWORD', id });
 }
 
-function twoFactorAuthenticationFailedError(id: string): HonoApiError {
-	return new HonoApiError({
+function twoFactorAuthenticationFailedError(id: string): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Two-factor authentication failed.',
 		code: 'TWO_FACTOR_AUTHENTICATION_FAILED',
@@ -59,8 +55,8 @@ function twoFactorAuthenticationFailedError(id: string): HonoApiError {
 	});
 }
 
-async function assertHonoApiTwoFactorIfEnabled(
-	deps: Pick<HonoApiAccountSecurityDependencies, 'userAuthService'>,
+async function assertApiTwoFactorIfEnabled(
+	deps: Pick<ApiAccountSecurityDependencies, 'userAuthService'>,
 	profile: MiUserProfile,
 	token: string | null | undefined,
 	errorId: string,
@@ -90,15 +86,15 @@ type ChangePasswordParams = {
 	token?: string | null;
 };
 
-export async function handleHonoApiIChangePassword(
-	deps: HonoApiAccountSecurityDependencies,
+export async function handleApiIChangePassword(
+	deps: ApiAccountSecurityDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(changePasswordParamDef, body);
+	const params = parseApiParams(changePasswordParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
-	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token, '540239bb-cf8b-4870-8ca7-3a7f2bf8d0a1');
+	await assertApiTwoFactorIfEnabled(deps, profile, params.token, '540239bb-cf8b-4870-8ca7-3a7f2bf8d0a1');
 
 	const passwordMatched = await comparePassword(params.currentPassword, profile.password!);
 	if (!passwordMatched) {
@@ -120,12 +116,12 @@ type RegenerateTokenParams = {
 	password: string;
 };
 
-export async function handleHonoApiIRegenerateToken(
-	deps: HonoApiAccountSecurityDependencies,
+export async function handleApiIRegenerateToken(
+	deps: ApiAccountSecurityDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(regenerateTokenParamDef, body);
+	const params = parseApiParams(regenerateTokenParamDef, body);
 	const freshUser = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 	const oldToken = freshUser.token!;
 
@@ -156,15 +152,15 @@ type DeleteAccountParams = {
 	token?: string | null;
 };
 
-export async function handleHonoApiIDeleteAccount(
-	deps: HonoApiAccountSecurityDependencies,
+export async function handleApiIDeleteAccount(
+	deps: ApiAccountSecurityDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(deleteAccountParamDef, body);
+	const params = parseApiParams(deleteAccountParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
-	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token, '05b2bab3-0825-4a3e-a13d-8793701af4de');
+	await assertApiTwoFactorIfEnabled(deps, profile, params.token, '05b2bab3-0825-4a3e-a13d-8793701af4de');
 
 	const userDetailed = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 	if (userDetailed.isDeleted) return;
@@ -177,24 +173,24 @@ export async function handleHonoApiIDeleteAccount(
 	await deleteAccountWithSideEffects(deps, me);
 }
 
-function iUpdateEmailIncorrectPasswordError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateEmailIncorrectPasswordError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Incorrect password.',
 		code: 'INCORRECT_PASSWORD',
 		id: 'e54c1d7e-e7d6-4103-86b6-0a95069b4ad3',
 	});
 }
-function iUpdateEmailUnavailableError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateEmailUnavailableError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Unavailable email address.',
 		code: 'UNAVAILABLE',
 		id: 'a2defefb-f220-8849-0af6-17f816099323',
 	});
 }
-function iUpdateEmailRequiredError(): HonoApiError {
-	return new HonoApiError({
+function iUpdateEmailRequiredError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Email address is required.',
 		code: 'EMAIL_REQUIRED',
@@ -214,15 +210,15 @@ type UpdateEmailParams = {
 	token?: string | null;
 };
 
-export async function handleHonoApiIUpdateEmail(
-	deps: HonoApiAccountSecurityDependencies,
+export async function handleApiIUpdateEmail(
+	deps: ApiAccountSecurityDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<MeDetailedHonoApiResponse> {
-	const params = parseHonoApiParams(updateEmailParamDef, body);
+): Promise<MeDetailedApiResponse> {
+	const params = parseApiParams(updateEmailParamDef, body);
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, me.id);
 
-	await assertHonoApiTwoFactorIfEnabled(deps, profile, params.token, '624fde07-67a7-4da7-b27d-086e529666b6');
+	await assertApiTwoFactorIfEnabled(deps, profile, params.token, '624fde07-67a7-4da7-b27d-086e529666b6');
 
 	const passwordMatched = await comparePassword(params.password, profile.password!);
 	if (!passwordMatched) throw iUpdateEmailIncorrectPasswordError();
@@ -244,7 +240,7 @@ export async function handleHonoApiIUpdateEmail(
 		}),
 	);
 
-	const iObj = await packMeDetailedForHonoApi(deps, me, { includeSecrets: true });
+	const iObj = await packMeDetailedForApi(deps, me, { includeSecrets: true });
 
 	deps.publishMainStream?.(me.id, 'meUpdated', iObj);
 

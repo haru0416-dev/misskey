@@ -5,17 +5,17 @@
 
 import { EventEmitter } from 'node:events';
 import { describe, expect, test, vi } from 'vitest';
-import { emitHonoStreamRedisMessage } from '@/server/streaming/server.js';
+import { emitStreamRedisMessage } from '@/server/streaming/server.js';
 
 // この関数は ioredis の 'message' リスナーとして同期的に呼ばれるため、
 // 投げた例外は誰も捕捉できずストリーミングサーバーのプロセスごと落とす
-describe('emitHonoStreamRedisMessage', () => {
+describe('emitStreamRedisMessage', () => {
 	test('正しい payload は channel 名のイベントとして配る', () => {
 		const ev = new EventEmitter();
 		const listener = vi.fn();
 		ev.on('example.com', listener);
 
-		emitHonoStreamRedisMessage(ev, JSON.stringify({ channel: 'example.com', message: { type: 'note', body: 1 } }));
+		emitStreamRedisMessage(ev, JSON.stringify({ channel: 'example.com', message: { type: 'note', body: 1 } }));
 
 		expect(listener).toHaveBeenCalledWith({ type: 'note', body: 1 });
 	});
@@ -30,7 +30,7 @@ describe('emitHonoStreamRedisMessage', () => {
 		['channel が空文字', '{"channel":"","message":{}}'],
 	])('%s payload では throw しない', (_label, data) => {
 		const ev = new EventEmitter();
-		expect(() => emitHonoStreamRedisMessage(ev, data)).not.toThrow();
+		expect(() => emitStreamRedisMessage(ev, data)).not.toThrow();
 	});
 
 	test("channel が 'error' でも throw しない (listener の無い error イベントは EventEmitter が throw する)", () => {
@@ -38,7 +38,7 @@ describe('emitHonoStreamRedisMessage', () => {
 		const listener = vi.fn();
 		ev.on('example.com', listener);
 
-		expect(() => emitHonoStreamRedisMessage(ev, JSON.stringify({ channel: 'error', message: {} }))).not.toThrow();
+		expect(() => emitStreamRedisMessage(ev, JSON.stringify({ channel: 'error', message: {} }))).not.toThrow();
 		expect(listener).not.toHaveBeenCalled();
 	});
 });

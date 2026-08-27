@@ -6,13 +6,13 @@
 import { fetchChatRoomByIdFromDatabase } from '@/core/chat/ChatRoomStore.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import {
-	hasPermissionToViewRoomTimelineForHonoApi,
-	readRoomChatMessageForHonoApi,
-	type HonoApiChatDependencies,
+	hasPermissionToViewRoomTimelineForApi,
+	readRoomChatMessageForApi,
+	type ApiChatDependencies,
 } from '@/server/rest/chat/chat.js';
-import type { HonoStreamChannelDefinition } from '../channel.js';
+import type { StreamChannelDefinition } from '../channel.js';
 
-export const honoStreamChannelChatRoom: HonoStreamChannelDefinition<HonoApiChatDependencies> = {
+export const honoStreamChannelChatRoom: StreamChannelDefinition<ApiChatDependencies> = {
 	shouldShare: false,
 	requireCredential: true,
 	kind: 'read:chat',
@@ -25,7 +25,7 @@ export const honoStreamChannelChatRoom: HonoStreamChannelDefinition<HonoApiChatD
 
 		const room = await fetchChatRoomByIdFromDatabase(deps.db, roomId);
 		if (room == null) return false;
-		if (!(await hasPermissionToViewRoomTimelineForHonoApi(deps, user.id, room))) return false;
+		if (!(await hasPermissionToViewRoomTimelineForApi(deps, user.id, room))) return false;
 
 		const handler = (data: { type: string; body: JsonValue }) => {
 			ctx.send(data.type, data.body);
@@ -39,7 +39,7 @@ export const honoStreamChannelChatRoom: HonoStreamChannelDefinition<HonoApiChatD
 			},
 			onMessage: (type) => {
 				if (type === 'read') {
-					void readRoomChatMessageForHonoApi(deps, user.id, roomId);
+					void readRoomChatMessageForApi(deps, user.id, roomId);
 				}
 			},
 		};

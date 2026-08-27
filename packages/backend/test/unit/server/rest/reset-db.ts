@@ -8,7 +8,7 @@ import type * as Redis from 'ioredis';
 import type { MiDrizzleDatabase, MiDrizzlePool } from '@/drizzle.js';
 import type { MiMeta } from '@/models/Meta.js';
 import { createApiShellApp, type ApiShellDependencies } from '@/server/rest/shell.js';
-import { handleHonoApiResetDb } from '@/server/rest/admin/reset-db.js';
+import { handleApiResetDb } from '@/server/rest/admin/reset-db.js';
 
 const { fetchMetaFromDatabaseMock, resetDbMock } = vi.hoisted(() => ({
 	fetchMetaFromDatabaseMock: vi.fn(),
@@ -49,7 +49,7 @@ function createDeps() {
 	};
 }
 
-describe('handleHonoApiResetDb', () => {
+describe('handleApiResetDb', () => {
 	afterEach(() => {
 		vi.useRealTimers();
 		vi.clearAllMocks();
@@ -77,7 +77,7 @@ describe('handleHonoApiResetDb', () => {
 			return after;
 		});
 
-		const promise = handleHonoApiResetDb(deps, {});
+		const promise = handleApiResetDb(deps, {});
 		await vi.advanceTimersByTimeAsync(1000);
 		await promise;
 
@@ -93,7 +93,7 @@ describe('handleHonoApiResetDb', () => {
 		process.env['NODE_ENV'] = 'production';
 		const { deps, flushdb } = createDeps();
 
-		await expect(handleHonoApiResetDb(deps, {})).rejects.toThrow('NODE_ENV is not a test');
+		await expect(handleApiResetDb(deps, {})).rejects.toThrow('NODE_ENV is not a test');
 
 		expect(flushdb).not.toHaveBeenCalled();
 		expect(resetDbMock).not.toHaveBeenCalled();

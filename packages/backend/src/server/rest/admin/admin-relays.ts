@@ -18,10 +18,10 @@ import { genId } from '@/misc/id/gen-id.js';
 import type { MiRelay } from '@/models/Relay.js';
 import type { MiMeta } from '@/models/_.js';
 import type { DeliverQueue } from '@/core/queue/queues.js';
-import { HonoApiError } from '../error.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminRelaysDependencies = {
+export type ApiAdminRelaysDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -40,8 +40,8 @@ type AdminRelaysListResponse = {
 	status: MiRelay['status'];
 }[];
 
-function invalidUrlError(): HonoApiError {
-	return new HonoApiError({
+function invalidUrlError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Invalid URL',
 		code: 'INVALID_URL',
@@ -55,30 +55,24 @@ function assertHttpsUrl(url: string): void {
 			throw invalidUrlError();
 		}
 	} catch (err) {
-		if (err instanceof HonoApiError) throw err;
+		if (err instanceof ApiError) throw err;
 		throw invalidUrlError();
 	}
 }
 
-export async function relayAcceptedForHonoApi(
-	deps: Pick<HonoApiAdminRelaysDependencies, 'db'>,
-	id: string,
-): Promise<string> {
+export async function relayAcceptedForApi(deps: Pick<ApiAdminRelaysDependencies, 'db'>, id: string): Promise<string> {
 	const result = await updateRelayStatusInDatabase(deps.db, id, 'accepted');
 	return JSON.stringify(result);
 }
 
-export async function relayRejectedForHonoApi(
-	deps: Pick<HonoApiAdminRelaysDependencies, 'db'>,
-	id: string,
-): Promise<string> {
+export async function relayRejectedForApi(deps: Pick<ApiAdminRelaysDependencies, 'db'>, id: string): Promise<string> {
 	const result = await updateRelayStatusInDatabase(deps.db, id, 'rejected');
 	return JSON.stringify(result);
 }
 
 /** accepted リレーの短命キャッシュを使い、actor がリレーか判定する。 */
-export async function isRelayActorForHonoApi(
-	deps: Pick<HonoApiAdminRelaysDependencies, 'db'>,
+export async function isRelayActorForApi(
+	deps: Pick<ApiAdminRelaysDependencies, 'db'>,
 	actor: { inbox: string | null; sharedInbox: string | null },
 ): Promise<boolean> {
 	const relays = await listRelaysByStatusFromDatabaseCached(deps.db, 'accepted');
@@ -89,11 +83,11 @@ export async function isRelayActorForHonoApi(
 	);
 }
 
-export async function handleHonoApiAdminRelaysList(
-	deps: HonoApiAdminRelaysDependencies,
+export async function handleApiAdminRelaysList(
+	deps: ApiAdminRelaysDependencies,
 	body: Record<string, unknown>,
 ): Promise<AdminRelaysListResponse> {
-	parseHonoApiParams(adminRelaysListParamDef, body);
+	parseApiParams(adminRelaysListParamDef, body);
 
 	const relays = await listRelaysFromDatabase(deps.db);
 
@@ -104,11 +98,11 @@ export async function handleHonoApiAdminRelaysList(
 	}));
 }
 
-export async function handleHonoApiAdminRelaysAdd(
-	deps: HonoApiAdminRelaysDependencies,
+export async function handleApiAdminRelaysAdd(
+	deps: ApiAdminRelaysDependencies,
 	body: Record<string, unknown>,
 ): Promise<MiRelay> {
-	const ps = parseHonoApiParams(adminRelaysWriteParamDef, body);
+	const ps = parseApiParams(adminRelaysWriteParamDef, body);
 	assertHttpsUrl(ps.inbox);
 
 	return await addRelayWithSideEffects(
@@ -132,11 +126,11 @@ export async function handleHonoApiAdminRelaysAdd(
 	);
 }
 
-export async function handleHonoApiAdminRelaysRemove(
-	deps: HonoApiAdminRelaysDependencies,
+export async function handleApiAdminRelaysRemove(
+	deps: ApiAdminRelaysDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminRelaysWriteParamDef, body);
+	const ps = parseApiParams(adminRelaysWriteParamDef, body);
 
 	await removeRelayWithSideEffects(
 		{

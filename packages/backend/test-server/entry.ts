@@ -4,16 +4,16 @@ import { Redis } from 'ioredis';
 import { loadConfig } from '@/config.js';
 import { createDrizzlePool } from '@/drizzle.js';
 import { resetDatabase, runMigrations } from '@/migration-runner.js';
-import { createHonoNodeServer } from '@/server/node-server.js';
+import { createNodeServer } from '@/server/node-server.js';
 import { initExtraThreadPool, server as startServer } from '@/boot/common.js';
-import type { HonoServerRuntime } from '@/boot/server.js';
+import type { ServerRuntime } from '@/boot/server.js';
 
 const config = loadConfig();
 const originEnv = JSON.stringify(process.env);
 
 process.env['NODE_ENV'] = 'test';
 
-let runtime: HonoServerRuntime | undefined;
+let runtime: ServerRuntime | undefined;
 let controllerServer: Server | undefined;
 let controllerOperation = Promise.resolve();
 
@@ -120,7 +120,7 @@ async function startControllerEndpoints(
 		});
 	});
 
-	controllerServer = createHonoNodeServer({ app: controller });
+	controllerServer = createNodeServer({ app: controller });
 	await new Promise<void>((resolve, reject) => {
 		controllerServer!.once('error', reject);
 		controllerServer!.listen(port, 'localhost', () => {

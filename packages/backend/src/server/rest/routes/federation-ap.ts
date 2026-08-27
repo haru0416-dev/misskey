@@ -4,28 +4,23 @@
  */
 
 import type { Hono } from 'hono';
-import {
-	assertCredential,
-	assertSecureCredential,
-	assertTokenPermission,
-	authenticateHonoApiToken,
-} from '../auth/auth.js';
+import { assertCredential, assertSecureCredential, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
-import { handleHonoApiEndpoint, handleHonoApiEndpoints } from '../endpoint-info.js';
+import { handleApiEndpoint, handleApiEndpoints } from '../endpoint-info.js';
 import {
-	handleHonoApiFederationFollowers,
-	handleHonoApiFederationFollowing,
-	handleHonoApiFederationInstances,
-	handleHonoApiFederationShowInstance,
-	handleHonoApiFederationStats,
-	handleHonoApiFederationUsers,
-	normalizeHonoApiFederationQuery,
+	handleApiFederationFollowers,
+	handleApiFederationFollowing,
+	handleApiFederationInstances,
+	handleApiFederationShowInstance,
+	handleApiFederationStats,
+	handleApiFederationUsers,
+	normalizeApiFederationQuery,
 } from '../activitypub/federation.js';
-import { handleHonoApiFetchExternalResources } from '../activitypub/fetch-external-resources.js';
-import { handleHonoApiApGet, handleHonoApiApShow } from '../activitypub/ap.js';
-import { handleHonoApiFederationUpdateRemoteUser } from '../activitypub/ap-person.js';
-import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { isHonoApiAdministrator } from '../role/role-policy.js';
+import { handleApiFetchExternalResources } from '../activitypub/fetch-external-resources.js';
+import { handleApiApGet, handleApiApShow } from '../activitypub/ap.js';
+import { handleApiFederationUpdateRemoteUser } from '../activitypub/ap-person.js';
+import { assertApiRateLimitForUser } from '../rate-limit.js';
+import { isApiAdministrator } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -42,25 +37,25 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 	app.post(
 		'/endpoints',
 		endpointHandlerAnonymous(deps, 'endpoints', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiEndpoints()),
+			jsonResponse(c, await handleApiEndpoints()),
 		),
 	);
 
 	app.post(
 		'/endpoint',
 		endpointHandlerAnonymous(deps, 'endpoint', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiEndpoint(body)),
+			jsonResponse(c, await handleApiEndpoint(body)),
 		),
 	);
 
 	app.get('/federation/instances', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const body = normalizeHonoApiFederationQuery(c.req.query());
+			const body = normalizeApiFederationQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiFederationInstances(deps, auth.user, body),
+				await handleApiFederationInstances(deps, auth.user, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -74,7 +69,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 
 			return jsonResponse(
 				c,
-				await handleHonoApiFederationInstances(deps, auth.user, body),
+				await handleApiFederationInstances(deps, auth.user, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -85,18 +80,18 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		['POST', 'QUERY'],
 		'/federation/show-instance',
 		endpointHandlerAnonymous(deps, 'federation/show-instance', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiFederationShowInstance(deps, auth.user, body)),
+			jsonResponse(c, await handleApiFederationShowInstance(deps, auth.user, body)),
 		),
 	);
 
 	app.get('/federation/stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const body = normalizeHonoApiFederationQuery(c.req.query());
+			const body = normalizeApiFederationQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiFederationStats(deps, auth.user, body),
+				await handleApiFederationStats(deps, auth.user, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -110,7 +105,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 
 			return jsonResponse(
 				c,
-				await handleHonoApiFederationStats(deps, auth.user, body),
+				await handleApiFederationStats(deps, auth.user, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -121,7 +116,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		['POST', 'QUERY'],
 		'/federation/users',
 		endpointHandlerAnonymous(deps, 'federation/users', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiFederationUsers(deps, auth.user, body)),
+			jsonResponse(c, await handleApiFederationUsers(deps, auth.user, body)),
 		),
 	);
 
@@ -129,7 +124,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		['POST', 'QUERY'],
 		'/federation/followers',
 		endpointHandlerAnonymous(deps, 'federation/followers', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiFederationFollowers(deps, body)),
+			jsonResponse(c, await handleApiFederationFollowers(deps, body)),
 		),
 	);
 
@@ -137,20 +132,20 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 		['POST', 'QUERY'],
 		'/federation/following',
 		endpointHandlerAnonymous(deps, 'federation/following', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiFederationFollowing(deps, body)),
+			jsonResponse(c, await handleApiFederationFollowing(deps, body)),
 		),
 	);
 
 	app.on(['POST', 'QUERY'], '/ap/get', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
-			if (!(await isHonoApiAdministrator(deps, auth.user))) {
+			if (!(await isApiAdministrator(deps, auth.user))) {
 				throw rolePermissionDeniedError();
 			}
 			assertTokenPermission(auth, 'read:federation');
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'ap/get',
 				{
@@ -160,14 +155,14 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 				auth.user,
 			);
 
-			return jsonResponse(c, await handleHonoApiApGet(deps, body));
+			return jsonResponse(c, await handleApiApGet(deps, body));
 		});
 	});
 
 	app.post(
 		'/federation/update-remote-user',
 		endpointHandlerAnonymous(deps, 'federation/update-remote-user', async ({ body, auth, c }) => {
-			await handleHonoApiFederationUpdateRemoteUser(deps, body);
+			await handleApiFederationUpdateRemoteUser(deps, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -175,14 +170,14 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 	app.post(
 		'/ap/show',
 		endpointHandler(deps, 'ap/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiApShow(deps, auth.user, body)),
+			jsonResponse(c, await handleApiApShow(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/fetch-external-resources',
 		endpointHandler(deps, 'fetch-external-resources', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiFetchExternalResources(deps, auth.user, body)),
+			jsonResponse(c, await handleApiFetchExternalResources(deps, auth.user, body)),
 		),
 	);
 }

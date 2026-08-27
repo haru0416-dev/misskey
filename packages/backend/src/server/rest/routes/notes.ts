@@ -4,60 +4,55 @@
  */
 
 import type { Hono } from 'hono';
+import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
 import {
-	assertCredential,
-	assertProhibitMoved,
-	assertTokenPermission,
-	authenticateHonoApiToken,
-} from '../auth/auth.js';
-import {
-	handleHonoApiNotes,
-	handleHonoApiNotesChildren,
-	handleHonoApiNotesClips,
-	handleHonoApiNotesConversation,
-	handleHonoApiNotesFavoritesCreate,
-	handleHonoApiNotesFavoritesDelete,
-	handleHonoApiNotesFeatured,
-	handleHonoApiNotesGlobalTimeline,
-	handleHonoApiNotesHybridTimeline,
-	handleHonoApiNotesLocalTimeline,
-	handleHonoApiNotesMentions,
-	handleHonoApiNotesPollsRecommendation,
-	handleHonoApiNotesRenotes,
-	handleHonoApiNotesReplies,
-	handleHonoApiNotesSearch,
-	handleHonoApiNotesSearchByTag,
-	handleHonoApiNotesShow,
-	handleHonoApiNotesShowPartialBulk,
-	handleHonoApiNotesState,
-	handleHonoApiNotesThreadMutingCreate,
-	handleHonoApiNotesThreadMutingDelete,
-	handleHonoApiNotesTimeline,
-	handleHonoApiNotesUserListTimeline,
-	normalizeHonoApiNotesFeaturedQuery,
+	handleApiNotes,
+	handleApiNotesChildren,
+	handleApiNotesClips,
+	handleApiNotesConversation,
+	handleApiNotesFavoritesCreate,
+	handleApiNotesFavoritesDelete,
+	handleApiNotesFeatured,
+	handleApiNotesGlobalTimeline,
+	handleApiNotesHybridTimeline,
+	handleApiNotesLocalTimeline,
+	handleApiNotesMentions,
+	handleApiNotesPollsRecommendation,
+	handleApiNotesRenotes,
+	handleApiNotesReplies,
+	handleApiNotesSearch,
+	handleApiNotesSearchByTag,
+	handleApiNotesShow,
+	handleApiNotesShowPartialBulk,
+	handleApiNotesState,
+	handleApiNotesThreadMutingCreate,
+	handleApiNotesThreadMutingDelete,
+	handleApiNotesTimeline,
+	handleApiNotesUserListTimeline,
+	normalizeApiNotesFeaturedQuery,
 } from '../note/notes.js';
 import {
-	handleHonoApiNotesTranslate,
-	handleHonoApiUsersFeaturedNotes,
-	handleHonoApiUsersNotes,
-	normalizeHonoApiUsersFeaturedNotesQuery,
+	handleApiNotesTranslate,
+	handleApiUsersFeaturedNotes,
+	handleApiUsersNotes,
+	normalizeApiUsersFeaturedNotesQuery,
 } from '../note/note.js';
-import { handleHonoApiNotesCreate } from '../note/notes-create.js';
+import { handleApiNotesCreate } from '../note/notes-create.js';
 import {
-	handleHonoApiNotesDelete,
-	handleHonoApiNotesUnrenote,
+	handleApiNotesDelete,
+	handleApiNotesUnrenote,
 	notesDeleteRateLimit,
 	notesUnrenoteRateLimit,
 } from '../note/notes-delete.js';
 import {
-	handleHonoApiNotesReactions,
-	handleHonoApiNotesReactionsCreate,
-	handleHonoApiNotesReactionsDelete,
-	normalizeHonoApiNotesReactionsQuery,
+	handleApiNotesReactions,
+	handleApiNotesReactionsCreate,
+	handleApiNotesReactionsDelete,
+	normalizeApiNotesReactionsQuery,
 	reactionsDeleteRateLimit,
 } from '../note/notes-reactions.js';
-import { handleHonoApiNotesPollsVote } from '../note/notes-polls-vote.js';
-import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
+import { handleApiNotesPollsVote } from '../note/notes-polls-vote.js';
+import { assertApiRateLimitForUser } from '../rate-limit.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -74,16 +69,16 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/create',
 		endpointHandler(deps, 'notes/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesCreate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesCreate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/notes/delete',
 		endpointHandler(deps, 'notes/delete', async ({ body, auth, c }) => {
-			await assertHonoApiRateLimitForUser(deps, 'notes/delete', notesDeleteRateLimit, auth.user);
+			await assertApiRateLimitForUser(deps, 'notes/delete', notesDeleteRateLimit, auth.user);
 
-			await handleHonoApiNotesDelete(deps, auth.user, body);
+			await handleApiNotesDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -91,9 +86,9 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/unrenote',
 		endpointHandler(deps, 'notes/unrenote', async ({ body, auth, c }) => {
-			await assertHonoApiRateLimitForUser(deps, 'notes/unrenote', notesUnrenoteRateLimit, auth.user);
+			await assertApiRateLimitForUser(deps, 'notes/unrenote', notesUnrenoteRateLimit, auth.user);
 
-			await handleHonoApiNotesUnrenote(deps, auth.user, body);
+			await handleApiNotesUnrenote(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -101,7 +96,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/reactions/create',
 		endpointHandler(deps, 'notes/reactions/create', async ({ body, auth, c }) => {
-			await handleHonoApiNotesReactionsCreate(deps, auth.user, body);
+			await handleApiNotesReactionsCreate(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -109,21 +104,21 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/reactions/delete',
 		endpointHandler(deps, 'notes/reactions/delete', async ({ body, auth, c }) => {
-			await assertHonoApiRateLimitForUser(deps, 'notes/reactions/delete', reactionsDeleteRateLimit, auth.user);
+			await assertApiRateLimitForUser(deps, 'notes/reactions/delete', reactionsDeleteRateLimit, auth.user);
 
-			await handleHonoApiNotesReactionsDelete(deps, auth.user, body);
+			await handleApiNotesReactionsDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
 
 	app.get('/notes/reactions', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiNotesReactionsQuery(c.req.query());
+			const query = normalizeApiNotesReactionsQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiNotesReactions(deps, auth.user, query),
+				await handleApiNotesReactions(deps, auth.user, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 60),
 			);
@@ -137,7 +132,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 
 			return jsonResponse(
 				c,
-				await handleHonoApiNotesReactions(deps, auth.user, body),
+				await handleApiNotesReactions(deps, auth.user, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 60),
 			);
@@ -147,7 +142,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/polls/vote',
 		endpointHandler(deps, 'notes/polls/vote', async ({ body, auth, c }) => {
-			await handleHonoApiNotesPollsVote(deps, auth.user, body);
+			await handleApiNotesPollsVote(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -156,7 +151,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/show',
 		endpointHandlerAnonymous(deps, 'notes/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesShow(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesShow(deps, auth.user, body)),
 		),
 	);
 
@@ -164,7 +159,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/children',
 		endpointHandlerAnonymous(deps, 'notes/children', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesChildren(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesChildren(deps, auth.user, body)),
 		),
 	);
 
@@ -172,7 +167,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/conversation',
 		endpointHandlerAnonymous(deps, 'notes/conversation', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesConversation(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesConversation(deps, auth.user, body)),
 		),
 	);
 
@@ -180,7 +175,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/mentions',
 		endpointHandler(deps, 'notes/mentions', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesMentions(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesMentions(deps, auth.user, body)),
 		),
 	);
 
@@ -188,7 +183,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/replies',
 		endpointHandlerAnonymous(deps, 'notes/replies', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesReplies(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesReplies(deps, auth.user, body)),
 		),
 	);
 
@@ -196,7 +191,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/renotes',
 		endpointHandlerAnonymous(deps, 'notes/renotes', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesRenotes(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesRenotes(deps, auth.user, body)),
 		),
 	);
 
@@ -204,14 +199,14 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/state',
 		endpointHandler(deps, 'notes/state', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesState(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesState(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/notes/favorites/create',
 		endpointHandler(deps, 'notes/favorites/create', async ({ body, auth, c }) => {
-			await handleHonoApiNotesFavoritesCreate(deps, auth.user, body);
+			await handleApiNotesFavoritesCreate(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -219,7 +214,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/favorites/delete',
 		endpointHandler(deps, 'notes/favorites/delete', async ({ body, auth, c }) => {
-			await handleHonoApiNotesFavoritesDelete(deps, auth.user, body);
+			await handleApiNotesFavoritesDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -227,7 +222,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/thread-muting/create',
 		endpointHandler(deps, 'notes/thread-muting/create', async ({ body, auth, c }) => {
-			await handleHonoApiNotesThreadMutingCreate(deps, auth.user, body);
+			await handleApiNotesThreadMutingCreate(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -235,7 +230,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes/thread-muting/delete',
 		endpointHandler(deps, 'notes/thread-muting/delete', async ({ body, auth, c }) => {
-			await handleHonoApiNotesThreadMutingDelete(deps, auth.user, body);
+			await handleApiNotesThreadMutingDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -243,7 +238,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/notes',
 		endpointHandlerAnonymous(deps, 'notes', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotes(deps, body)),
+			jsonResponse(c, await handleApiNotes(deps, body)),
 		),
 	);
 
@@ -251,7 +246,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/global-timeline',
 		endpointHandlerAnonymous(deps, 'notes/global-timeline', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesGlobalTimeline(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesGlobalTimeline(deps, auth.user, body)),
 		),
 	);
 
@@ -259,7 +254,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/local-timeline',
 		endpointHandlerAnonymous(deps, 'notes/local-timeline', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesLocalTimeline(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesLocalTimeline(deps, auth.user, body)),
 		),
 	);
 
@@ -267,18 +262,18 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/hybrid-timeline',
 		endpointHandler(deps, 'notes/hybrid-timeline', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesHybridTimeline(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesHybridTimeline(deps, auth.user, body)),
 		),
 	);
 
 	app.get('/notes/featured', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiNotesFeaturedQuery(c.req.query());
+			const query = normalizeApiNotesFeaturedQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiNotesFeatured(deps, auth.user, query),
+				await handleApiNotesFeatured(deps, auth.user, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -292,7 +287,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 
 			return jsonResponse(
 				c,
-				await handleHonoApiNotesFeatured(deps, auth.user, body),
+				await handleApiNotesFeatured(deps, auth.user, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -302,11 +297,11 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.on(['POST', 'QUERY'], '/notes/translate', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertTokenPermission(auth, 'read:account');
 
-			const result = await handleHonoApiNotesTranslate(deps, auth.user, body);
+			const result = await handleApiNotesTranslate(deps, auth.user, body);
 			if (result === undefined) return emptyResponse(c);
 			return jsonResponse(c, result);
 		});
@@ -314,12 +309,12 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 
 	app.get('/users/featured-notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiUsersFeaturedNotesQuery(c.req.query());
+			const query = normalizeApiUsersFeaturedNotesQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiUsersFeaturedNotes(deps, auth.user, query),
+				await handleApiUsersFeaturedNotes(deps, auth.user, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -333,7 +328,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 
 			return jsonResponse(
 				c,
-				await handleHonoApiUsersFeaturedNotes(deps, auth.user, body),
+				await handleApiUsersFeaturedNotes(deps, auth.user, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -344,7 +339,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/users/notes',
 		endpointHandlerAnonymous(deps, 'users/notes', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiUsersNotes(deps, auth.user, body)),
+			jsonResponse(c, await handleApiUsersNotes(deps, auth.user, body)),
 		),
 	);
 
@@ -352,7 +347,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/clips',
 		endpointHandlerAnonymous(deps, 'notes/clips', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesClips(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesClips(deps, auth.user, body)),
 		),
 	);
 
@@ -360,7 +355,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/search',
 		endpointHandlerAnonymous(deps, 'notes/search', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesSearch(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesSearch(deps, auth.user, body)),
 		),
 	);
 
@@ -368,7 +363,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/search-by-tag',
 		endpointHandlerAnonymous(deps, 'notes/search-by-tag', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesSearchByTag(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesSearchByTag(deps, auth.user, body)),
 		),
 	);
 
@@ -376,7 +371,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/show-partial-bulk',
 		endpointHandlerAnonymous(deps, 'notes/show-partial-bulk', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesShowPartialBulk(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesShowPartialBulk(deps, auth.user, body)),
 		),
 	);
 
@@ -384,7 +379,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/timeline',
 		endpointHandler(deps, 'notes/timeline', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesTimeline(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesTimeline(deps, auth.user, body)),
 		),
 	);
 
@@ -392,7 +387,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/user-list-timeline',
 		endpointHandler(deps, 'notes/user-list-timeline', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesUserListTimeline(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesUserListTimeline(deps, auth.user, body)),
 		),
 	);
 
@@ -400,7 +395,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/notes/polls/recommendation',
 		endpointHandler(deps, 'notes/polls/recommendation', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiNotesPollsRecommendation(deps, auth.user, body)),
+			jsonResponse(c, await handleApiNotesPollsRecommendation(deps, auth.user, body)),
 		),
 	);
 }

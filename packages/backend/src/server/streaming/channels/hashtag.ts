@@ -7,17 +7,17 @@ import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
 import {
-	filterNoteForStreamingHidingForHonoApi,
-	populateMyReactionForHonoApi,
-	type HonoApiNoteDependencies,
+	filterNoteForStreamingHidingForApi,
+	populateMyReactionForApi,
+	type ApiNoteDependencies,
 } from '@/server/rest/note/note.js';
 import {
-	isNoteMutedOrBlockedForHonoStream,
-	isNoteVisibleForMeForHonoStream,
-	type HonoStreamChannelDefinition,
+	isNoteMutedOrBlockedForStream,
+	isNoteVisibleForMeForStream,
+	type StreamChannelDefinition,
 } from '../channel.js';
 
-export const honoStreamChannelHashtag: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
+export const honoStreamChannelHashtag: StreamChannelDefinition<ApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,
 	kind: null,
@@ -33,7 +33,7 @@ export const honoStreamChannelHashtag: HonoStreamChannelDefinition<HonoApiNoteDe
 			const matched = q.some((tags) => tags.every((tag) => noteTags.includes(normalizeForSearch(tag))));
 			if (!matched) return;
 
-			if (!isNoteVisibleForMeForHonoStream(ctx, note)) return;
+			if (!isNoteVisibleForMeForStream(ctx, note)) return;
 			if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null)
 				return;
 			if (
@@ -48,15 +48,15 @@ export const honoStreamChannelHashtag: HonoStreamChannelDefinition<HonoApiNoteDe
 				ctx.user == null
 			)
 				return;
-			if (isNoteMutedOrBlockedForHonoStream(ctx, note)) return;
+			if (isNoteMutedOrBlockedForStream(ctx, note)) return;
 
-			const filtered = await filterNoteForStreamingHidingForHonoApi(deps, note, ctx.user?.id ?? null);
+			const filtered = await filterNoteForStreamingHidingForApi(deps, note, ctx.user?.id ?? null);
 			if (!filtered) return;
 
 			if (ctx.user) {
 				if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 					if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-						filtered.renote.myReaction = await populateMyReactionForHonoApi(
+						filtered.renote.myReaction = await populateMyReactionForApi(
 							deps,
 							{
 								id: filtered.renote.id,

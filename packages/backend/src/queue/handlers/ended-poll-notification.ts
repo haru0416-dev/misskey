@@ -11,10 +11,10 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { EndedPollNotificationJobData } from '@/queue/types.js';
 import {
 	createPollEndedNotification,
-	type HonoApiNotificationDependencies,
+	type ApiNotificationDependencies,
 } from '@/server/rest/notification/notification.js';
 
-export type HonoQueueEndedPollNotificationDependencies = HonoApiNotificationDependencies & {
+export type QueueEndedPollNotificationDependencies = ApiNotificationDependencies & {
 	db: MiDrizzleDatabase;
 };
 
@@ -22,8 +22,8 @@ export type HonoQueueEndedPollNotificationDependencies = HonoApiNotificationDepe
  * キュープロセッサーは認証・レート制限の境界外で動作するため、
  * ユーザープロフィールをプロセスローカルキャッシュに保持せず直接DBから読む。
  */
-export async function handleHonoQueueEndedPollNotification(
-	deps: HonoQueueEndedPollNotificationDependencies,
+export async function handleQueueEndedPollNotification(
+	deps: QueueEndedPollNotificationDependencies,
 	job: Bull.Job<EndedPollNotificationJobData>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, job.data.noteId);

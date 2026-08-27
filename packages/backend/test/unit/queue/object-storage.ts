@@ -10,10 +10,10 @@ import { createDrizzleDatabase, createDrizzlePool, type MiDrizzleDatabase, type 
 import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
-	deleteFileSyncForHonoApi,
-	handleHonoQueueCleanRemoteFiles,
-	handleHonoQueueDeleteFile,
-	type HonoQueueObjectStorageDependencies,
+	deleteFileSyncForApi,
+	handleQueueCleanRemoteFiles,
+	handleQueueDeleteFile,
+	type QueueObjectStorageDependencies,
 } from '@/queue/handlers/object-storage.js';
 import type { ObjectStorageFileJobData } from '@/queue/types.js';
 import type { Config } from '@/config.js';
@@ -28,7 +28,7 @@ describe('hono-queue-object-storage', () => {
 	let db: MiDrizzleDatabase;
 	let config: Config;
 	let deleteMock: ReturnType<typeof vi.fn>;
-	let deps: HonoQueueObjectStorageDependencies;
+	let deps: QueueObjectStorageDependencies;
 
 	beforeAll(() => {
 		config = loadConfig();
@@ -46,27 +46,27 @@ describe('hono-queue-object-storage', () => {
 			db,
 			meta: { enableChartsForFederatedInstances: false, objectStorageBucket: 'test-bucket' },
 			s3Service: {
-				getS3Client: (() => ({})) as unknown as HonoQueueObjectStorageDependencies['s3Service']['getS3Client'],
-				delete: deleteMock as unknown as HonoQueueObjectStorageDependencies['s3Service']['delete'],
+				getS3Client: (() => ({})) as unknown as QueueObjectStorageDependencies['s3Service']['getS3Client'],
+				delete: deleteMock as unknown as QueueObjectStorageDependencies['s3Service']['delete'],
 			},
 			internalStorageService: { del: vi.fn() },
 			chartWriters: {
 				driveChart: {
 					update: async () => {},
-				} as unknown as HonoQueueObjectStorageDependencies['chartWriters']['driveChart'],
+				} as unknown as QueueObjectStorageDependencies['chartWriters']['driveChart'],
 				perUserDriveChart: {
 					update: async () => {},
-				} as unknown as HonoQueueObjectStorageDependencies['chartWriters']['perUserDriveChart'],
+				} as unknown as QueueObjectStorageDependencies['chartWriters']['perUserDriveChart'],
 				instanceChart: {
 					updateDrive: async () => {},
-				} as unknown as HonoQueueObjectStorageDependencies['chartWriters']['instanceChart'],
+				} as unknown as QueueObjectStorageDependencies['chartWriters']['instanceChart'],
 			},
 		};
 	});
 
-	test('handleHonoQueueDeleteFile: object storageからキーを削除する', async () => {
+	test('handleQueueDeleteFile: object storageからキーを削除する', async () => {
 		deleteMock.mockClear();
-		const result = await handleHonoQueueDeleteFile(
+		const result = await handleQueueDeleteFile(
 			deps,
 			fakeJob({ key: 'some-key' }) as unknown as Bull.Job<ObjectStorageFileJobData>,
 		);
@@ -74,15 +74,15 @@ describe('hono-queue-object-storage', () => {
 		expect(deleteMock).toHaveBeenCalledOnce();
 	});
 
-	test('handleHonoQueueDeleteFile: NoSuchKeyエラーは握りつぶす', async () => {
+	test('handleQueueDeleteFile: NoSuchKeyエラーは握りつぶす', async () => {
 		deleteMock.mockClear();
 		deleteMock.mockRejectedValueOnce(Object.assign(new Error('no such key'), { name: 'NoSuchKey' }));
 		await expect(
-			handleHonoQueueDeleteFile(deps, fakeJob({ key: 'missing-key' }) as unknown as Bull.Job<ObjectStorageFileJobData>),
+			handleQueueDeleteFile(deps, fakeJob({ key: 'missing-key' }) as unknown as Bull.Job<ObjectStorageFileJobData>),
 		).resolves.toBe('Success');
 	});
 
-	test('deleteFileSyncForHonoApi: storedInternalなファイルはinternalStorageServiceで削除しレコードも消える', async () => {
+	test('deleteFileSyncForApi: storedInternalなファイルはinternalStorageServiceで削除しレコードも消える', async () => {
 		const fileId = genId();
 		await createDriveFileInDatabase(db, {
 			id: fileId,
@@ -98,14 +98,14 @@ describe('hono-queue-object-storage', () => {
 		const file = await fetchDriveFileByIdFromDatabase(db, fileId);
 		expect(file).not.toBeNull();
 
-		await deleteFileSyncForHonoApi(deps, file!, false);
+		await deleteFileSyncForApi(deps, file!, false);
 
 		const after = await fetchDriveFileByIdFromDatabase(db, fileId);
 		expect(after).toBeNull();
 		expect(deps.internalStorageService.del).toHaveBeenCalledWith(`access-${fileId}`);
 	});
 
-	test('deleteFileSyncForHonoApi: storage削除失敗時はレコードを残し、再試行後にだけ消す', async () => {
+	test('deleteFileSyncForApi: storage削除失敗時はレコードを残し、再試行後にだけ消す', async () => {
 		const fileId = genId();
 		await createDriveFileInDatabase(db, {
 			id: fileId,
@@ -122,16 +122,16 @@ describe('hono-queue-object-storage', () => {
 		const del = deps.internalStorageService.del as ReturnType<typeof vi.fn>;
 		del.mockRejectedValueOnce(new Error('injected storage failure')).mockResolvedValue(undefined);
 
-		await expect(deleteFileSyncForHonoApi(deps, file!, false)).rejects.toThrow('injected storage failure');
+		await expect(deleteFileSyncForApi(deps, file!, false)).rejects.toThrow('injected storage failure');
 		expect(await fetchDriveFileByIdFromDatabase(db, fileId)).not.toBeNull();
 
-		await expect(deleteFileSyncForHonoApi(deps, file!, false)).resolves.toBeUndefined();
+		await expect(deleteFileSyncForApi(deps, file!, false)).resolves.toBeUndefined();
 		expect(await fetchDriveFileByIdFromDatabase(db, fileId)).toBeNull();
-		await expect(deleteFileSyncForHonoApi(deps, file!, false)).resolves.toBeUndefined();
+		await expect(deleteFileSyncForApi(deps, file!, false)).resolves.toBeUndefined();
 		expect(await fetchDriveFileByIdFromDatabase(db, fileId)).toBeNull();
 	});
 
-	test('deleteFileSyncForHonoApi: 同じ削除の再試行ではチャートを重複減算しない', async () => {
+	test('deleteFileSyncForApi: 同じ削除の再試行ではチャートを重複減算しない', async () => {
 		const fileId = genId();
 		await createDriveFileInDatabase(db, {
 			id: fileId,
@@ -152,17 +152,17 @@ describe('hono-queue-object-storage', () => {
 				...deps.chartWriters,
 				driveChart: {
 					update: driveUpdate,
-				} as unknown as HonoQueueObjectStorageDependencies['chartWriters']['driveChart'],
+				} as unknown as QueueObjectStorageDependencies['chartWriters']['driveChart'],
 			},
 		};
 
-		await deleteFileSyncForHonoApi(retryDeps, file!, false);
-		await deleteFileSyncForHonoApi(retryDeps, file!, false);
+		await deleteFileSyncForApi(retryDeps, file!, false);
+		await deleteFileSyncForApi(retryDeps, file!, false);
 
 		expect(driveUpdate).toHaveBeenCalledOnce();
 	});
 
-	test('deleteFileSyncForHonoApi: moderatorによる削除を監査ログへ渡す', async () => {
+	test('deleteFileSyncForApi: moderatorによる削除を監査ログへ渡す', async () => {
 		const fileId = genId();
 		await createDriveFileInDatabase(db, {
 			id: fileId,
@@ -179,7 +179,7 @@ describe('hono-queue-object-storage', () => {
 		const deleter = { id: genId() } as MiUser;
 		const logDriveFileDeletion = vi.fn().mockResolvedValue(undefined);
 
-		await deleteFileSyncForHonoApi(
+		await deleteFileSyncForApi(
 			{
 				...deps,
 				isModerator: vi.fn().mockResolvedValue(true),
@@ -198,7 +198,7 @@ describe('hono-queue-object-storage', () => {
 		);
 	});
 
-	test('handleHonoQueueCleanRemoteFiles: リモートかつisLink=falseのキャッシュ済みファイルを削除する', async () => {
+	test('handleQueueCleanRemoteFiles: リモートかつisLink=falseのキャッシュ済みファイルを削除する', async () => {
 		deleteMock.mockClear();
 		const fileId = genId();
 		await createDriveFileInDatabase(db, {
@@ -214,7 +214,7 @@ describe('hono-queue-object-storage', () => {
 			userHost: 'remote.example.com',
 		});
 
-		await handleHonoQueueCleanRemoteFiles(deps, fakeJob());
+		await handleQueueCleanRemoteFiles(deps, fakeJob());
 
 		const after = await fetchDriveFileByIdFromDatabase(db, fileId);
 		expect(after).toBeNull();

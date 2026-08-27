@@ -11,7 +11,7 @@ import { MemoryKVCache } from '@/misc/cache.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 import { query } from '@/misc/prelude/url.js';
 import { LoggerService } from '@/core/LoggerService.js';
-import type { HonoApiErrorBody } from '@/server/rest/error.js';
+import type { ApiErrorBody } from '@/server/rest/error.js';
 import { MiMeta } from '@/models/Meta.js';
 
 export type UrlPreviewRequest = {
@@ -71,7 +71,7 @@ export function createUrlPreviewService(
 					code: 'URL_PREVIEW_DISABLED',
 					id: '58b36e13-d2f5-0323-b0c6-76aa9dabefb8',
 					kind: 'client',
-				} satisfies HonoApiErrorBody['error'],
+				} satisfies ApiErrorBody['error'],
 			};
 		}
 
@@ -124,7 +124,7 @@ export function createUrlPreviewService(
 					code: 'URL_PREVIEW_FAILED',
 					id: '09d01cb5-53b9-4856-82e5-38a50c290a3b',
 					kind: 'client',
-				} satisfies HonoApiErrorBody['error'],
+				} satisfies ApiErrorBody['error'],
 			};
 		}
 	}

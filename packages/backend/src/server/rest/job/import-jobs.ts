@@ -16,21 +16,21 @@ import { fetchUserByIdFromDatabase, listUsersByIdsFromDatabase } from '@/core/us
 import { misskeyId } from '@/misc/zod-params.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError, rolePermissionDeniedError } from '../error.js';
-import type { HonoApiInternalEventPublisher } from '../events.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { resolveAlsoKnownAsForHonoApi, type UserPackingDependencies } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError, rolePermissionDeniedError } from '../error.js';
+import type { ApiInternalEventPublisher } from '../events.js';
+import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { resolveAlsoKnownAsForApi, type UserPackingDependencies } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiImportJobDependencies = UserPackingDependencies & {
+export type ApiImportJobDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	dbQueue: DbQueue;
 };
 
-export type HonoApiIImportAntennasDependencies = HonoApiRolePolicyDependencies & {
+export type ApiIImportAntennasDependencies = ApiRolePolicyDependencies & {
 	downloadService: Pick<DownloadService, 'downloadTextFile'>;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
 };
 
 const importJobOptions = (config: Pick<Config, 'queues'>) => ({
@@ -42,8 +42,8 @@ const importJobOptions = (config: Pick<Config, 'queues'>) => ({
 	...queueRetentionOptions(config),
 });
 
-async function checkRecentlyMovedForHonoApi(deps: HonoApiImportJobDependencies, me: MiLocalUser): Promise<boolean> {
-	const oldSelfIds = await resolveAlsoKnownAsForHonoApi(deps, me.alsoKnownAs);
+async function checkRecentlyMovedForApi(deps: ApiImportJobDependencies, me: MiLocalUser): Promise<boolean> {
+	const oldSelfIds = await resolveAlsoKnownAsForApi(deps, me.alsoKnownAs);
 	if (!oldSelfIds || oldSelfIds.length === 0) return false;
 
 	const meUri = `${deps.config.instance.url}/users/${me.id}`;
@@ -64,19 +64,19 @@ type ImportFileErrors = {
 };
 
 async function validateImportFile(
-	deps: HonoApiImportJobDependencies,
+	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
 	fileId: string,
 	errors: ImportFileErrors,
 ): Promise<{ id: string }> {
 	const file = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, fileId, me.id);
 
-	if (file == null) throw new HonoApiError({ status: 400, kind: 'client', ...errors.noSuchFile });
-	if (file.size === 0) throw new HonoApiError({ status: 400, kind: 'client', ...errors.emptyFile });
+	if (file == null) throw new ApiError({ status: 400, kind: 'client', ...errors.noSuchFile });
+	if (file.size === 0) throw new ApiError({ status: 400, kind: 'client', ...errors.emptyFile });
 
-	const checkMoving = await checkRecentlyMovedForHonoApi(deps, me);
+	const checkMoving = await checkRecentlyMovedForApi(deps, me);
 	if (checkMoving ? file.size > 32 * 1024 * 1024 : file.size > 64 * 1024) {
-		throw new HonoApiError({ status: 400, kind: 'client', ...errors.tooBigFile });
+		throw new ApiError({ status: 400, kind: 'client', ...errors.tooBigFile });
 	}
 
 	return { id: file.id };
@@ -88,12 +88,12 @@ export const importBlockingParamDef = z.object({
 
 type ImportBlockingParams = { fileId: string };
 
-export async function handleHonoApiIImportBlocking(
-	deps: HonoApiImportJobDependencies,
+export async function handleApiIImportBlocking(
+	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(importBlockingParamDef, body);
+	const params = parseApiParams(importBlockingParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'ebb53e5f-6574-9c0c-0b92-7ca6def56d7e' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: 'b7fbf0b1-aeef-3b21-29ef-fadd4cb72ccf' },
@@ -114,12 +114,12 @@ export const importFollowingParamDef = z.object({
 
 type ImportFollowingParams = { fileId: string; withReplies?: boolean };
 
-export async function handleHonoApiIImportFollowing(
-	deps: HonoApiImportJobDependencies,
+export async function handleApiIImportFollowing(
+	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(importFollowingParamDef, body);
+	const params = parseApiParams(importFollowingParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'b98644cf-a5ac-4277-a502-0b8054a709a3' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: 'dee9d4ed-ad07-43ed-8b34-b2856398bc60' },
@@ -143,12 +143,12 @@ export const importMutingParamDef = z.object({
 
 type ImportMutingParams = { fileId: string };
 
-export async function handleHonoApiIImportMuting(
-	deps: HonoApiImportJobDependencies,
+export async function handleApiIImportMuting(
+	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(importMutingParamDef, body);
+	const params = parseApiParams(importMutingParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'e674141e-bd2a-ba85-e616-aefb187c9c2a' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: '9b4ada6d-d7f7-0472-0713-4f558bd1ec9c' },
@@ -168,12 +168,12 @@ export const importUserListsParamDef = z.object({
 
 type ImportUserListsParams = { fileId: string };
 
-export async function handleHonoApiIImportUserLists(
-	deps: HonoApiImportJobDependencies,
+export async function handleApiIImportUserLists(
+	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(importUserListsParamDef, body);
+	const params = parseApiParams(importUserListsParamDef, body);
 	const file = await validateImportFile(deps, me, params.fileId, {
 		noSuchFile: { message: 'No such file.', code: 'NO_SUCH_FILE', id: 'ea9cc34f-c415-4bc6-a6fe-28ac40357049' },
 		tooBigFile: { message: 'That file is too big.', code: 'TOO_BIG_FILE', id: 'ae6e7a22-971b-4b52-b2be-fc0b9b121fe9' },
@@ -193,8 +193,8 @@ export const importAntennasParamDef = z.object({
 
 type ImportAntennasParams = { fileId: string };
 
-function importAntennasNoSuchFileError(): HonoApiError {
-	return new HonoApiError({
+function importAntennasNoSuchFileError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such file.',
 		code: 'NO_SUCH_FILE',
@@ -202,8 +202,8 @@ function importAntennasNoSuchFileError(): HonoApiError {
 	});
 }
 
-function importAntennasNoSuchUserError(): HonoApiError {
-	return new HonoApiError({
+function importAntennasNoSuchUserError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such user.',
 		code: 'NO_SUCH_USER',
@@ -211,8 +211,8 @@ function importAntennasNoSuchUserError(): HonoApiError {
 	});
 }
 
-function importAntennasEmptyFileError(): HonoApiError {
-	return new HonoApiError({
+function importAntennasEmptyFileError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'That file is empty.',
 		code: 'EMPTY_FILE',
@@ -220,8 +220,8 @@ function importAntennasEmptyFileError(): HonoApiError {
 	});
 }
 
-function importAntennasTooManyAntennasError(): HonoApiError {
-	return new HonoApiError({
+function importAntennasTooManyAntennasError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You cannot create antenna any more.',
 		code: 'TOO_MANY_ANTENNAS',
@@ -229,8 +229,8 @@ function importAntennasTooManyAntennasError(): HonoApiError {
 	});
 }
 
-function invalidAntennaImportFileError(): HonoApiError {
-	return new HonoApiError({
+function invalidAntennaImportFileError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'The antenna import file is invalid.',
 		code: 'INVALID_ANTENNA_IMPORT_FILE',
@@ -238,8 +238,8 @@ function invalidAntennaImportFileError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiIImportAntennas(
-	deps: HonoApiIImportAntennasDependencies,
+export async function handleApiIImportAntennas(
+	deps: ApiIImportAntennasDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 	/**
@@ -249,7 +249,7 @@ export async function handleHonoApiIImportAntennas(
 	 */
 	consumeRateLimit?: () => Promise<void>,
 ): Promise<void> {
-	const params = parseHonoApiParams(importAntennasParamDef, body);
+	const params = parseApiParams(importAntennasParamDef, body);
 
 	const user = await fetchUserByIdFromDatabase(deps.db, me.id);
 	if (user == null) throw importAntennasNoSuchUserError();
@@ -269,7 +269,7 @@ export async function handleHonoApiIImportAntennas(
 
 	// 上限超過で1件も作られないのに実行枠 (1回/時) を消費すると、アンテナを整理しても
 	// 1時間再試行できなくなる。先に概算で弾いておく (競合を考慮した厳密な判定は下の transaction 内)
-	const policies = await getHonoApiRolePolicies(deps, user);
+	const policies = await getApiRolePolicies(deps, user);
 	const currentCount = await countAntennasByUserIdFromDatabase(deps.db, me.id);
 	if (currentCount + validated.data.length > policies.antennaLimit) throw importAntennasTooManyAntennasError();
 
@@ -284,7 +284,7 @@ export async function handleHonoApiIImportAntennas(
 			const currentUser = await fetchUserByIdFromDatabase(tx, me.id);
 			if (currentUser == null) throw importAntennasNoSuchUserError();
 
-			const policies = await getHonoApiRolePolicies({ ...deps, db: tx }, currentUser);
+			const policies = await getApiRolePolicies({ ...deps, db: tx }, currentUser);
 			if (currentUser.id !== deps.meta.rootUserId && !policies.canImportAntennas) {
 				throw rolePermissionDeniedError();
 			}

@@ -9,18 +9,18 @@ import Logger from '@/logger.js';
 import type { Config } from '@/config.js';
 import { envOption } from '@/env.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { createMisskeyHonoApp } from '@/server/app.js';
-import { createHonoNodeServer } from '@/server/node-server.js';
+import { createMisskeyApp } from '@/server/app.js';
+import { createNodeServer } from '@/server/node-server.js';
 import { createOAuthProviderRuntime } from '@/server/oauth/OAuthProviderRuntime.js';
 import { createClientCommonDataLoader } from '@/server/web/client-common-data.js';
-import { attachHonoStreamServer, type HonoStreamServerDependencies } from '@/server/streaming/server.js';
+import { attachStreamServer, type StreamServerDependencies } from '@/server/streaming/server.js';
 import { createBunNativeStreamRuntime } from '@/server/streaming/bun-native.js';
 import { traceHttpRequest } from '@/telemetry.js';
-import { startHonoQueueStatsDaemon } from '@/server/daemons/queue-stats.js';
-import { startHonoServerStatsDaemon } from '@/server/daemons/server-stats.js';
-import { createHonoEventPublishers } from '@/server/rest/events.js';
+import { startQueueStatsDaemon } from '@/server/daemons/queue-stats.js';
+import { startServerStatsDaemon } from '@/server/daemons/server-stats.js';
+import { createEventPublishers } from '@/server/rest/events.js';
 
-export type HonoServerRuntime = {
+export type ServerRuntime = {
 	server: Server | Bun.Server;
 	dispose: () => Promise<void>;
 };
@@ -80,16 +80,16 @@ async function disposeServerRuntime(disposers: RuntimeDisposer[]): Promise<void>
 	if (firstError != null) throw firstError;
 }
 
-export async function launchHonoServer(
+export async function launchServer(
 	config: Config,
 	logger = new Logger('hono', 'cyan'),
 	dependencies?: RuntimeDependencies,
 	options?: { daemons?: boolean },
-): Promise<HonoServerRuntime> {
+): Promise<ServerRuntime> {
 	const deps = dependencies ?? (await createRuntimeDependencies(config));
 	const disposers: RuntimeDisposer[] = dependencies == null ? [() => deps.dispose()] : [];
 	try {
-		return await launchHonoServerWithDependencies(config, logger, deps, disposers, options?.daemons ?? false);
+		return await launchServerWithDependencies(config, logger, deps, disposers, options?.daemons ?? false);
 	} catch (error) {
 		try {
 			await disposeServerRuntime(disposers);
@@ -100,14 +100,14 @@ export async function launchHonoServer(
 	}
 }
 
-async function launchHonoServerWithDependencies(
+async function launchServerWithDependencies(
 	config: Config,
 	logger: Logger,
 	deps: Awaited<ReturnType<typeof createRuntimeDependencies>>,
 	disposers: RuntimeDisposer[],
 	daemons: boolean,
-): Promise<HonoServerRuntime> {
-	const eventPublishers = createHonoEventPublishers({
+): Promise<ServerRuntime> {
+	const eventPublishers = createEventPublishers({
 		config,
 		publish: (host, message) => deps.redisForPub.publish(host, message),
 	});
@@ -124,7 +124,7 @@ async function launchHonoServerWithDependencies(
 		redis: deps.redis,
 	});
 	disposers.push(() => oauthRuntime.dispose());
-	const app = createMisskeyHonoApp({
+	const app = createMisskeyApp({
 		http: {
 			config,
 			meta: deps.meta,
@@ -262,18 +262,18 @@ async function launchHonoServerWithDependencies(
 		redisForSub: deps.redisForSub,
 		meta: deps.meta,
 		publishMainStream: eventPublishers.publishMainStream,
-	} satisfies HonoStreamServerDependencies;
+	} satisfies StreamServerDependencies;
 
 	// デーモンはホスト全体で1プロセスだけが持つ (master が cluster-roles.ts で割り当てる)。
 	// 複数プロセスで動かすと同じ統計がプロセス数ぶん重複して全ストリームへ配信されてしまう。
 	if (daemons && !envOption.noDaemons) {
-		const queueStatsDaemon = startHonoQueueStatsDaemon({
+		const queueStatsDaemon = startQueueStatsDaemon({
 			config,
 			deliverQueue: deps.deliverQueue,
 			inboxQueue: deps.inboxQueue,
 		});
 		disposers.push(() => queueStatsDaemon.dispose());
-		const serverStatsDaemon = startHonoServerStatsDaemon({ meta: deps.meta });
+		const serverStatsDaemon = startServerStatsDaemon({ meta: deps.meta });
 		disposers.push(() => serverStatsDaemon.dispose());
 	}
 
@@ -327,9 +327,9 @@ async function launchHonoServerWithDependencies(
 		};
 	}
 
-	const server = createHonoNodeServer({ app });
+	const server = createNodeServer({ app });
 	disposers.push(() => closeServer(server));
-	const streamServer = attachHonoStreamServer(server, streamDeps);
+	const streamServer = attachStreamServer(server, streamDeps);
 	disposers.push(() => streamServer.detach());
 
 	await listen(server, config, logger);

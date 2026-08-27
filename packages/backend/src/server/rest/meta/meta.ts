@@ -18,15 +18,15 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { adminUpdateMetaParamDef, buildAdminUpdateMetaPatch } from '@/server/rest/admin/AdminUpdateMetaLogic.js';
-import type { HonoApiInternalEventPublisher } from '../events.js';
-import { parseHonoApiParams } from '../validation.js';
+import type { ApiInternalEventPublisher } from '../events.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiMetaDependencies = {
+export type ApiMetaDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	redis: Redis.Redis;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
 };
 
 const hashtagRankingWindow = 1000 * 60 * 60;
@@ -67,7 +67,7 @@ async function removeHiddenTagsFromFeaturedRanking(redis: Redis.Redis, tags: Set
 }
 
 function scheduleHiddenTagsRankingRemoval(
-	deps: HonoApiMetaDependencies,
+	deps: ApiMetaDependencies,
 	before: MiMeta | undefined,
 	hiddenTags: MiMeta['hiddenTags'] | undefined,
 ): void {
@@ -85,15 +85,15 @@ function scheduleHiddenTagsRankingRemoval(
 	});
 }
 
-export async function handleHonoApiMeta(
-	deps: HonoApiMetaDependencies,
+export async function handleApiMeta(
+	deps: ApiMetaDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'MetaLite'> | Packed<'MetaDetailed'>> {
-	const params = parseHonoApiParams(metaParamDef, body);
+	const params = parseApiParams(metaParamDef, body);
 	return params.detail ? await packMetaDetailed(deps) : await packMetaLite(deps);
 }
 
-export async function handleHonoApiAdminMeta(deps: HonoApiMetaDependencies): Promise<Record<string, unknown>> {
+export async function handleApiAdminMeta(deps: ApiMetaDependencies): Promise<Record<string, unknown>> {
 	const instance = await fetchMetaFromDatabase(deps.db);
 	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, instance, 'proxy');
 
@@ -241,12 +241,12 @@ export async function handleHonoApiAdminMeta(deps: HonoApiMetaDependencies): Pro
 	};
 }
 
-export async function handleHonoApiAdminUpdateMeta(
-	deps: HonoApiMetaDependencies,
+export async function handleApiAdminUpdateMeta(
+	deps: ApiMetaDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUpdateMetaParamDef, body);
+	const params = parseApiParams(adminUpdateMetaParamDef, body);
 	const before = await fetchMetaFromDatabase(deps.db);
 	const set = buildAdminUpdateMetaPatch(deps.meta, params);
 	const { before: updateBefore, after } = await updateMetaInDatabase(deps.db, set);
@@ -265,17 +265,17 @@ export async function handleHonoApiAdminUpdateMeta(
 	});
 }
 
-export function handleHonoApiPing(): { pong: number } {
+export function handleApiPing(): { pong: number } {
 	return {
 		pong: Date.now(),
 	};
 }
 
-export function handleHonoApiTest(body: Record<string, unknown>): TestParams {
-	return parseHonoApiParams(testParamDef, body);
+export function handleApiTest(body: Record<string, unknown>): TestParams {
+	return parseApiParams(testParamDef, body);
 }
 
-export async function handleHonoApiServerInfo(meta: MiMeta): Promise<{
+export async function handleApiServerInfo(meta: MiMeta): Promise<{
 	machine: string;
 	cpu: {
 		model: string;

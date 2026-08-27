@@ -8,21 +8,21 @@ import type * as Redis from 'ioredis';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
 import { rateLimitExceededError } from './error.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from './role/role-policy.js';
+import { getApiRolePolicies, type ApiRolePolicyDependencies } from './role/role-policy.js';
 
-export type HonoApiRateLimitDependencies = {
+export type ApiRateLimitDependencies = {
 	config: Config;
 	redis: Redis.Redis;
 };
 
-export type HonoApiRateLimit = {
+export type ApiRateLimit = {
 	key: string;
 	duration?: number;
 	max?: number;
 	minInterval?: number;
 };
 
-export type HonoApiEndpointRateLimit = Omit<HonoApiRateLimit, 'key'> & {
+export type ApiEndpointRateLimit = Omit<ApiRateLimit, 'key'> & {
 	key?: string;
 };
 
@@ -70,9 +70,9 @@ async function checkLimiter(options: {
 	return { remaining: count < options.max ? options.max - count : 0 };
 }
 
-export async function isHonoApiRateLimited(
-	deps: HonoApiRateLimitDependencies,
-	limitation: HonoApiRateLimit,
+export async function isApiRateLimited(
+	deps: ApiRateLimitDependencies,
+	limitation: ApiRateLimit,
 	actor: string,
 	factor = 1,
 ): Promise<boolean> {
@@ -80,12 +80,12 @@ export async function isHonoApiRateLimited(
 		return false;
 	}
 
-	return await isHonoApiRateLimitedForUser(deps, limitation, actor, factor);
+	return await isApiRateLimitedForUser(deps, limitation, actor, factor);
 }
 
-export async function isHonoApiRateLimitedForUser(
-	deps: HonoApiRateLimitDependencies,
-	limitation: HonoApiRateLimit,
+export async function isApiRateLimitedForUser(
+	deps: ApiRateLimitDependencies,
+	limitation: ApiRateLimit,
 	actor: string,
 	factor = 1,
 ): Promise<boolean> {
@@ -126,15 +126,15 @@ export async function isHonoApiRateLimitedForUser(
 	return false;
 }
 
-export async function assertHonoApiRateLimit(
-	deps: HonoApiRateLimitDependencies,
+export async function assertApiRateLimit(
+	deps: ApiRateLimitDependencies,
 	endpointName: string,
-	limitation: HonoApiEndpointRateLimit,
+	limitation: ApiEndpointRateLimit,
 	actor: string,
 	factor = 1,
 ): Promise<void> {
 	if (
-		await isHonoApiRateLimited(
+		await isApiRateLimited(
 			deps,
 			{
 				...limitation,
@@ -152,17 +152,17 @@ export async function assertHonoApiRateLimit(
  * 元の ApiCallService と同じく、認証済みユーザーにはロールポリシーの rateLimitFactor を適用する。
  * factor <= 0 はレート制限なし、1 未満は緩和、1 超は強化 (minInterval/max に反映される)。
  */
-export async function assertHonoApiRateLimitForUser(
-	deps: HonoApiRateLimitDependencies & HonoApiRolePolicyDependencies,
+export async function assertApiRateLimitForUser(
+	deps: ApiRateLimitDependencies & ApiRolePolicyDependencies,
 	endpointName: string,
-	limitation: HonoApiEndpointRateLimit,
+	limitation: ApiEndpointRateLimit,
 	user: MiUser,
 ): Promise<void> {
-	const factor = (await getHonoApiRolePolicies(deps, user)).rateLimitFactor;
+	const factor = (await getApiRolePolicies(deps, user)).rateLimitFactor;
 	if (factor <= 0) return;
 
 	if (
-		await isHonoApiRateLimitedForUser(
+		await isApiRateLimitedForUser(
 			deps,
 			{
 				...limitation,

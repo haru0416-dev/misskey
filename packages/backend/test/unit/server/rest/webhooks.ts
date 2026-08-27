@@ -8,7 +8,7 @@ import type { Config } from '@/config.js';
 import type { UserWebhookDeliverQueue } from '@/core/queue/queues.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { HonoApiWebhookTestDependencies } from '@/server/rest/webhook/webhooks.js';
+import type { ApiWebhookTestDependencies } from '@/server/rest/webhook/webhooks.js';
 
 const { fetchWebhookMock } = vi.hoisted(() => ({
 	fetchWebhookMock: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock('@/server/rest/note/note.js', () => ({
 	populateEmojis: vi.fn().mockResolvedValue({}),
 }));
 
-import { handleHonoApiIWebhooksTest } from '@/server/rest/webhook/webhooks.js';
+import { handleApiIWebhooksTest } from '@/server/rest/webhook/webhooks.js';
 
 describe('i/webhooks/test REST handler', () => {
 	const me = { id: 'webhook-owner' } as MiLocalUser;
@@ -60,9 +60,9 @@ describe('i/webhooks/test REST handler', () => {
 			config,
 			db: {} as MiDrizzleDatabase,
 			userWebhookDeliverQueue: { add } as unknown as UserWebhookDeliverQueue,
-		} as HonoApiWebhookTestDependencies;
+		} as ApiWebhookTestDependencies;
 
-		await handleHonoApiIWebhooksTest(deps, me, { webhookId: webhook.id, type: 'reaction' });
+		await handleApiIWebhooksTest(deps, me, { webhookId: webhook.id, type: 'reaction' });
 
 		expect(add).toHaveBeenCalledOnce();
 		expect(add).toHaveBeenCalledWith(
@@ -93,10 +93,8 @@ describe('i/webhooks/test REST handler', () => {
 			userWebhookDeliverQueue: {
 				add: vi.fn().mockRejectedValue(queueError),
 			} as unknown as UserWebhookDeliverQueue,
-		} as HonoApiWebhookTestDependencies;
+		} as ApiWebhookTestDependencies;
 
-		await expect(handleHonoApiIWebhooksTest(deps, me, { webhookId: webhook.id, type: 'note' })).rejects.toBe(
-			queueError,
-		);
+		await expect(handleApiIWebhooksTest(deps, me, { webhookId: webhook.id, type: 'note' })).rejects.toBe(queueError);
 	});
 });
