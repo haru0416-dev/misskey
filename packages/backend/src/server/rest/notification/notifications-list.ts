@@ -14,7 +14,7 @@ import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { paginationParams } from '@/misc/zod-params.js';
 import type { MiGroupedNotification, MiNotification } from '@/models/Notification.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
@@ -332,10 +332,7 @@ const notificationTypeEnumValues = [...notificationTypes, ...obsoleteNotificatio
 
 export const notificationsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	markAsRead: z.boolean().optional().default(true),
 	includeTypes: z.array(z.enum(notificationTypeEnumValues)).optional(),
 	excludeTypes: z.array(z.enum(notificationTypeEnumValues)).optional(),

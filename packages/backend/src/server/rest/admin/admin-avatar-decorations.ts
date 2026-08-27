@@ -17,7 +17,7 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiAvatarDecoration } from '@/models/AvatarDecoration.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiInternalEventPublisher } from '../events.js';
@@ -54,10 +54,7 @@ export const adminAvatarDecorationsDeleteParamDef = z.object({
 
 export const adminAvatarDecorationsListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	userId: misskeyId().nullable().optional(),
 });
 

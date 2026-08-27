@@ -45,7 +45,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
@@ -66,10 +66,7 @@ export type ApiChannelsDependencies = {
 type ApiPackedChannel = Packed<'Channel'>;
 
 export const channelsListParamDef = z.object({
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).optional().default(5),
 });
 
@@ -84,10 +81,7 @@ type ChannelsListParams = {
 export const channelsSearchParamDef = z.object({
 	query: z.string(),
 	type: z.enum(['nameAndDescription', 'nameOnly']).optional().default('nameAndDescription'),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).optional().default(5),
 });
 
@@ -177,10 +171,7 @@ type ChannelShowParams = {
 const channelTimelineParamDef = z.object({
 	channelId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type ChannelTimelineParams = {

@@ -35,7 +35,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { sqlLikeEscape } from '@/misc/sql-like-escape.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiClip } from '@/models/Clip.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -72,10 +72,7 @@ function getDatabaseErrorCode(error: unknown): unknown {
 
 export const clipsListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type ClipsListParams = {
@@ -93,10 +90,7 @@ export const clipIdParamDef = z.object({
 export const clipNotesParamDef = z.object({
 	clipId: misskeyId(),
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	search: z.string().min(1).max(100).nullable().optional(),
 });
 
@@ -518,10 +512,7 @@ export async function handleApiClipsNotes(
 export const usersClipsParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type UsersClipsParams = {

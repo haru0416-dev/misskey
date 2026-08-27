@@ -36,7 +36,7 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiBroadcastStreamPublisher } from '../events.js';
@@ -57,10 +57,7 @@ export const emojiParamDef = z.object({
 export const adminEmojiListParamDef = z.object({
 	query: z.string().nullable().default(null),
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 export const adminEmojiListRemoteParamDef = z.object({
@@ -68,10 +65,7 @@ export const adminEmojiListRemoteParamDef = z.object({
 	/** ローカルホストは null で表す。 */
 	host: z.string().nullable().default(null),
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 export const adminEmojiAddParamDef = z.object({
@@ -825,10 +819,7 @@ const v2AdminEmojiListQueryParamDef = z
 
 const v2AdminEmojiListParamDef = z.object({
 	query: v2AdminEmojiListQueryParamDef.optional(),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).default(10),
 	page: z.number().int().optional(),
 	sortKeys: z.array(z.enum(fetchEmojisSortKeys)).default(['-id']),

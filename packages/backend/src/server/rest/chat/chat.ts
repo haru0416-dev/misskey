@@ -70,7 +70,7 @@ import { omitUndefined } from '@/misc/clone.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { EntityNotFoundError } from '@/misc/db-errors.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiChatMessage } from '@/models/ChatMessage.js';
 import type { MiChatRoom } from '@/models/ChatRoom.js';
 import type { ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js';
@@ -1588,10 +1588,7 @@ export async function handleApiChatMessagesUnreact(
 
 export const chatMessagesRoomTimelineParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	roomId: misskeyId(),
 });
 
@@ -1689,10 +1686,7 @@ export async function handleApiChatMessagesShow(
 
 export const chatMessagesUserTimelineParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	userId: misskeyId(),
 });
 
@@ -1819,10 +1813,7 @@ export async function handleApiChatRoomsShow(
 
 export const chatRoomsOwnedParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(30),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type ChatRoomsOwnedParams = {
@@ -1866,10 +1857,7 @@ export async function handleApiChatRoomsJoin(
 
 export const chatRoomsJoiningParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(30),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type ChatRoomsJoiningParams = {
@@ -1914,10 +1902,7 @@ export async function handleApiChatRoomsLeave(
 export const chatRoomsMembersParamDef = z.object({
 	roomId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(30),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type ChatRoomsMembersParams = {
@@ -2006,10 +1991,7 @@ export async function handleApiChatRoomsInvitationsIgnore(
 
 export const chatRoomsInvitationsInboxParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(30),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type ChatRoomsInvitationsInboxParams = {
@@ -2044,10 +2026,7 @@ export async function handleApiChatRoomsInvitationsInbox(
 export const chatRoomsInvitationsOutboxParamDef = z.object({
 	roomId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(30),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type ChatRoomsInvitationsOutboxParams = {

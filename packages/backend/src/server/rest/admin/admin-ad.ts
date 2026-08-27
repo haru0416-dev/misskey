@@ -18,7 +18,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiAd } from '@/models/Ad.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
@@ -48,10 +48,7 @@ export const adminAdDeleteParamDef = z.object({
 
 export const adminAdListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	publishing: z.boolean().nullable().default(null),
 });
 

@@ -34,7 +34,7 @@ import type { SystemWebhookPayload } from '@/core/webhook/system-webhook-types.j
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import type { MiAbuseReportNotificationRecipient } from '@/models/AbuseReportNotificationRecipient.js';
 import type { MiMeta } from '@/models/_.js';
@@ -80,10 +80,7 @@ export const adminForwardAbuseUserReportParamDef = z.object({
 
 export const adminAbuseUserReportsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	state: z.string().nullable().optional().default(null),
 	reporterOrigin: z.enum(['combined', 'local', 'remote']).optional().default('combined'),
 	targetUserOrigin: z.enum(['combined', 'local', 'remote']).optional().default('combined'),
