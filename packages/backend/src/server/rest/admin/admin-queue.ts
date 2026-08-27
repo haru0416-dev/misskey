@@ -64,13 +64,13 @@ export const adminQueueJobParamDef = z.object({
 });
 
 export const adminQueueOutboxJobsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional(),
+	limit: z.int().min(1).max(100).optional(),
 	untilId: z.string().min(1).max(32).optional(),
 });
 
 export const adminQueueOutboxJobParamDef = z.object({
 	outboxId: z.string().min(1).max(32),
-	revision: z.number().int().min(0),
+	revision: z.int().min(0),
 });
 
 type AdminQueueSelectParams = z.infer<typeof adminQueueSelectParamDef> & {

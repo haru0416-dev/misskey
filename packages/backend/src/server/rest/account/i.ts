@@ -23,7 +23,7 @@ export type ApiIDependencies = UserPackingDependencies & {
 };
 
 export const iSigninHistoryParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 

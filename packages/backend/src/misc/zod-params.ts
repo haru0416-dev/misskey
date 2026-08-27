@@ -35,6 +35,6 @@ export function uniqueItems<T extends z.ZodType>(schema: z.ZodArray<T>): z.ZodAr
 export const paginationParams = {
 	sinceId: misskeyId().optional(),
 	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	sinceDate: z.int().optional(),
+	untilDate: z.int().optional(),
 };

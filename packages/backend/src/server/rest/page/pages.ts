@@ -548,7 +548,7 @@ export async function handleApiPagesFeatured(
 }
 
 export const iPagesParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 
@@ -579,7 +579,7 @@ export async function handleApiIPages(
 }
 
 export const iPageLikesParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 
@@ -650,7 +650,7 @@ export async function handleApiIPageLikes(
 
 export const usersPagesParamDef = z.object({
 	userId: misskeyId(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 

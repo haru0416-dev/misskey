@@ -44,7 +44,7 @@ export type ApiAnnouncementDependencies = ApiRolePolicyDependencies & {
 };
 
 export const announcementsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 	isActive: z.boolean().default(true),
 });

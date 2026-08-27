@@ -128,13 +128,13 @@ export const followingUpdateAllParamDef = z.object({
 
 export const followingRequestsListParamDef = z.object({
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 });
 
 export const followingListParamDef = z.object({
 	notification: z.boolean().default(false),
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 });
 
 export type FollowingListItem = {
@@ -1155,7 +1155,7 @@ function toPunyNullableForApi(host: string | null | undefined): string | null {
 // `usersFollowingParamDef` はその base に `.extend({ birthday })` して組み立てる。
 const usersPaginationShape = {
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 };
 
 // `.passthrough()` は元 ajv 版が `additionalProperties: false` を指定しておらず、
@@ -1319,8 +1319,8 @@ export async function handleApiUsersFollowing(
 }
 
 const birthdayMonthDaySchema = z.object({
-	month: z.number().int().min(1).max(12),
-	day: z.number().int().min(1).max(31),
+	month: z.int().min(1).max(12),
+	day: z.int().min(1).max(31),
 });
 
 const birthdayRangeSchema = z.object({
@@ -1342,8 +1342,8 @@ const birthdayOneOfSchema = z.custom<z.infer<typeof birthdayMonthDaySchema> | z.
 );
 
 const usersGetFollowingUsersByBirthdayParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
-	offset: z.number().int().default(0),
+	limit: z.int().min(1).max(100).default(10),
+	offset: z.int().default(0),
 	birthday: birthdayOneOfSchema,
 });
 
@@ -1351,8 +1351,8 @@ const usersGetFollowingUsersByBirthdayParamDef = z.object({
 // `z.custom` を使っており JSON Schema 化できないため、docs 用にはこちらの anyOf 相当
 // (どちらか一方の形に一致すれば可、両方一致する入力の拒否は docs には反映されない) を使う。
 export const usersGetFollowingUsersByBirthdayDocsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
-	offset: z.number().int().default(0),
+	limit: z.int().min(1).max(100).default(10),
+	offset: z.int().default(0),
 	birthday: z.union([birthdayMonthDaySchema, birthdayRangeSchema]),
 });
 

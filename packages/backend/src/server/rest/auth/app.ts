@@ -53,8 +53,8 @@ export const appShowParamDef = z.object({
 });
 
 export const myAppsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
-	offset: z.number().int().default(0),
+	limit: z.int().min(1).max(100).default(10),
+	offset: z.int().default(0),
 });
 
 export const iAppsParamDef = z.object({
@@ -62,8 +62,8 @@ export const iAppsParamDef = z.object({
 });
 
 export const iAuthorizedAppsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
-	offset: z.number().int().default(0),
+	limit: z.int().min(1).max(100).default(10),
+	offset: z.int().default(0),
 	sort: z.enum(['desc', 'asc']).default('desc'),
 });
 

@@ -72,7 +72,7 @@ export const adminAnnouncementsDeleteParamDef = z.object({
 });
 
 export const adminAnnouncementsListParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 	userId: misskeyId().nullable().optional(),
 	status: z.enum(['all', 'active', 'archived']).default('active'),

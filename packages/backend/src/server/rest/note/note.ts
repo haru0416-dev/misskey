@@ -1091,7 +1091,7 @@ export function normalizeApiUsersFeaturedNotesQuery(query: Record<string, string
 }
 
 export const usersFeaturedNotesParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	untilId: misskeyId().optional(),
 	userId: misskeyId(),
 });
@@ -1314,7 +1314,7 @@ export const usersNotesParamDef = z.object({
 	withReplies: z.boolean().default(false),
 	withRenotes: z.boolean().default(true),
 	withChannelNotes: z.boolean().default(false),
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 	allowPartial: z.boolean().default(false),
 	withFiles: z.boolean().default(false),

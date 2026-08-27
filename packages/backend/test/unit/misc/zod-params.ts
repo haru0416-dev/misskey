@@ -36,13 +36,13 @@ describe('misc:zod-params', () => {
 
 	describe('paginationParams', () => {
 		test('展開してもインラインで書いた場合と同じ JSON Schema になる', () => {
-			const shared = z.object({ limit: z.number().int().min(1).max(100).default(10), ...paginationParams });
+			const shared = z.object({ limit: z.int().min(1).max(100).default(10), ...paginationParams });
 			const inline = z.object({
-				limit: z.number().int().min(1).max(100).default(10),
+				limit: z.int().min(1).max(100).default(10),
 				sinceId: misskeyId().optional(),
 				untilId: misskeyId().optional(),
-				sinceDate: z.number().int().optional(),
-				untilDate: z.number().int().optional(),
+				sinceDate: z.int().optional(),
+				untilDate: z.int().optional(),
 			});
 			// キー順まで一致していないと api.json が変わる。
 			expect(JSON.stringify(z.toJSONSchema(shared, { io: 'input' }))).toBe(

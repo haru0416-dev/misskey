@@ -41,7 +41,7 @@ export type ApiHashtagDependencies = UserPackingDependencies & {
 export const hashtagsTrendParamDef = z.object({});
 
 export const hashtagsListParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	attachedToUserOnly: z.boolean().optional().default(false),
 	attachedToLocalUserOnly: z.boolean().optional().default(false),
 	attachedToRemoteUserOnly: z.boolean().optional().default(false),
@@ -62,9 +62,9 @@ export const hashtagsListParamDef = z.object({
 });
 
 export const hashtagsSearchParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	query: z.string(),
-	offset: z.number().int().optional().default(0),
+	offset: z.int().optional().default(0),
 });
 
 export const hashtagsShowParamDef = z.object({
@@ -250,8 +250,8 @@ export async function handleApiHashtagsShow(
 
 export const hashtagsUsersParamDef = z.object({
 	tag: z.string(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
-	offset: z.number().int().optional().default(0),
+	limit: z.int().min(1).max(100).optional().default(10),
+	offset: z.int().optional().default(0),
 	sort: z.enum(['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt']),
 	state: z.enum(['all', 'alive']).optional().default('all'),
 	origin: z.enum(['combined', 'local', 'remote']).optional().default('local'),

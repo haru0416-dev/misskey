@@ -54,7 +54,7 @@ const rolePoliciesRecord = z.record(
 	z.string(),
 	z.object({
 		useDefault: z.boolean(),
-		priority: z.number().int(),
+		priority: z.int(),
 		value: z.unknown(),
 	}),
 );
@@ -62,7 +62,7 @@ const rolePoliciesRecord = z.record(
 export const adminRolesAssignParamDef = z.object({
 	roleId: misskeyId(),
 	userId: misskeyId(),
-	expiresAt: z.number().int().nullable().optional(),
+	expiresAt: z.int().nullable().optional(),
 });
 
 export const adminRolesCreateParamDef = z.object({
@@ -124,7 +124,7 @@ export const adminRolesUpdateDefaultPoliciesParamDef = z.object({
 export const adminRolesUsersParamDef = z.object({
 	roleId: misskeyId(),
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 });
 
 type AdminRoleUser = {

@@ -1835,8 +1835,8 @@ export const notesCreateParamDef = z
 			.object({
 				choices: uniqueItems(z.array(z.string().min(1).max(50)).min(2).max(10)),
 				multiple: z.boolean().optional(),
-				expiresAt: z.number().int().nullable().optional(),
-				expiredAfter: z.number().int().min(1).nullable().optional(),
+				expiresAt: z.int().nullable().optional(),
+				expiredAfter: z.int().min(1).nullable().optional(),
 			})
 			.nullable()
 			.optional(),

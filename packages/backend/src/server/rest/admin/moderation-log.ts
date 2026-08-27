@@ -35,7 +35,7 @@ type ApiModerationLogResponse = {
 };
 
 export const adminShowModerationLogsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 	type: z.string().nullable().optional(),
 	userId: misskeyId().nullable().optional(),
