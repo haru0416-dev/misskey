@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import { z } from 'zod';
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
 import { assignRoleWithSideEffects, RoleAlreadyAssignedError } from '@/core/role/RoleLogic.js';
@@ -116,14 +116,9 @@ function getUserUriForApi(config: Pick<Config, 'instance'>, user: MiUser): strin
 	return user.host != null ? user.uri : genLocalUserUri(config, user.id);
 }
 
-function toPunyForApi(host: string): string {
-	return domainToASCII(host.toLowerCase());
-}
-
 async function resolveMoveDestinationUserForApi(deps: ApiAccountMoveDependencies, acct: string): Promise<MiUser> {
 	const { username, host } = Acct.parse(acct);
-	const normalizedHost =
-		host == null || toPunyForApi(host) === toPunyForApi(deps.config.runtime.host) ? null : toPunyForApi(host);
+	const normalizedHost = host == null || toPuny(host) === toPuny(deps.config.runtime.host) ? null : toPuny(host);
 	// 未知のリモートユーザーは WebFinger で解決する。
 	// deps の型に ApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
 	// (shell の実 deps は両方を満たす)

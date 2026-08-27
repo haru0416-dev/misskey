@@ -6,7 +6,7 @@
 import * as fs from 'node:fs';
 import * as readline from 'node:readline';
 import { Writable } from 'node:stream';
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import { formatDateTimeForFileName } from '@/misc/format-date-time.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type * as Bull from 'bullmq';
@@ -84,7 +84,7 @@ import { queueRetentionOptions } from '@/queue/const.js';
 import { addDriveFileForApi, type ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
 import { packDriveFileManyByIdsForApi } from '@/server/rest/drive/drive-file.js';
 import { isSelfHost } from '@/server/rest/activitypub/ap-resolve.js';
-import { resolveUserForApi, toPunyForApi, type ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import { resolveUserForApi, type ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 import type { ApiInternalEventPublisher } from '../../server/rest/events.js';
 import {
 	createExportCompletedNotification,
@@ -131,10 +131,6 @@ function toRelationshipJobForApi(
 		}),
 		opts: queueRetentionOptions(config),
 	};
-}
-
-function toPuny(host: string): string {
-	return domainToASCII(host.toLowerCase());
 }
 
 function getFullApAccountForApi(config: Pick<Config, 'runtime'>, username: string, host: string | null): string {
@@ -511,7 +507,7 @@ async function resolveImportTargetUserForApi(
 	let target = await fetchUserByUsernameAndHostFromDatabase(
 		deps.db,
 		username,
-		isSelfHost(deps.config, host) ? null : toPunyForApi(host),
+		isSelfHost(deps.config, host) ? null : toPuny(host),
 	);
 
 	if (target == null) {
@@ -601,7 +597,7 @@ export async function handleQueueImportUserLists(
 			let target = await fetchUserByUsernameAndHostFromDatabase(
 				deps.db,
 				username,
-				isSelfHost(deps.config, host) ? null : toPunyForApi(host!),
+				isSelfHost(deps.config, host) ? null : toPuny(host!),
 			);
 
 			if (target == null) {

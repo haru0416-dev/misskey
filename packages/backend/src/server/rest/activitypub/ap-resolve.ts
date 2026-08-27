@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import * as htmlParser from 'node-html-parser';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -59,10 +59,6 @@ type LocalApUriParseResult =
 			local: false;
 			uri: string;
 	  };
-
-function toPuny(host: string): string {
-	return domainToASCII(host.toLowerCase());
-}
 
 export function extractDbHost(uri: string): string {
 	const url = new URL(uri);

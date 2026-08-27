@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
@@ -65,9 +65,7 @@ function getFullApAccount(
 	username: string,
 	host: string | null,
 ): string {
-	return host
-		? `${username}@${domainToASCII(host.toLowerCase())}`
-		: `${username}@${domainToASCII(config.runtime.host.toLowerCase())}`;
+	return host ? `${username}@${toPuny(host)}` : `${username}@${toPuny(config.runtime.host)}`;
 }
 
 export function antennaUsersIncludes(
@@ -76,12 +74,12 @@ export function antennaUsersIncludes(
 	user: { username: string; host: string | null },
 ): boolean {
 	const account = getFullApAccount(config, user.username, user.host).toLowerCase();
-	const accountHost = domainToASCII((user.host ?? config.runtime.host).toLowerCase());
+	const accountHost = toPuny(user.host ?? config.runtime.host);
 
 	return users.some((value) => {
 		const { username, host } = Acct.parse(value);
 		if (username === '*' && host != null) {
-			return domainToASCII(host.toLowerCase()) === accountHost;
+			return toPuny(host) === accountHost;
 		}
 
 		return getFullApAccount(config, username, host).toLowerCase() === account;

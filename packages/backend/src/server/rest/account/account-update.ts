@@ -4,7 +4,7 @@
  */
 
 import { createPublicKey } from 'node:crypto';
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
 import * as mfm from 'mfm-js';
 import * as htmlParser from 'node-html-parser';
@@ -459,14 +459,9 @@ async function publishAccountUpdateToFollowersForApi(
 	await deliverNoteActivityForApi(deps, localUser, content, { directRecipients: [], deliverToFollowers: true });
 }
 
-function toPunyForApi(host: string): string {
-	return domainToASCII(host.toLowerCase());
-}
-
 async function resolveAlsoKnownAsUserForApi(deps: ApiAccountUpdateDependencies, acct: string): Promise<MiUser> {
 	const { username, host } = Acct.parse(acct);
-	const normalizedHost =
-		host == null || toPunyForApi(host) === toPunyForApi(deps.config.runtime.host) ? null : toPunyForApi(host);
+	const normalizedHost = host == null || toPuny(host) === toPuny(deps.config.runtime.host) ? null : toPuny(host);
 	// 未知のリモートユーザーは WebFinger で解決する。
 	// deps の型に ApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
 	// (shell の実 deps は両方を満たす)

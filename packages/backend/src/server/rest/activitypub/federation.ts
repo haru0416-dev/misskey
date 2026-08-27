@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
 import semver from 'semver';
 import { z } from 'zod';
@@ -116,10 +116,6 @@ export const federationStatsParamDef = z.object({
 type FederatedInstanceDependencies = {
 	db: MiDrizzleDatabase;
 };
-
-export function toPuny(host: string): string {
-	return domainToASCII(host.toLowerCase());
-}
 
 export async function fetchOrRegisterFederatedInstance(
 	deps: FederatedInstanceDependencies,

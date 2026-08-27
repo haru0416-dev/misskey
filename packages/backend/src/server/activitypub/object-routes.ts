@@ -4,7 +4,7 @@
  */
 
 import { preferredMediaType } from '@/misc/content-negotiation.js';
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import type * as Redis from 'ioredis';
@@ -95,7 +95,7 @@ function apError(status: number, cacheControl?: string): Response {
 
 function isSelfHost(configHost: string, host: string | null): boolean {
 	if (host == null) return true;
-	return domainToASCII(configHost.toLowerCase()) === domainToASCII(host.toLowerCase());
+	return toPuny(configHost) === toPuny(host);
 }
 
 function withApContext(obj: Record<string, unknown>): Record<string, unknown> {
