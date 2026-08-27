@@ -6,7 +6,7 @@
 import * as crypto from 'node:crypto';
 import { promisify } from 'node:util';
 import { Verifier } from 'slacc';
-import type { SignatureAlgorithmIdentifier } from 'slacc';
+import type { SignatureAlgorithm } from 'slacc';
 
 /**
  * HTTP Signatures (draft-cavage-http-signatures) のうち、ActivityPub の inbox で
@@ -111,10 +111,10 @@ export function parseRequestSignature(request: SignatureTargetRequest): ParsedSi
  * 公開鍵の種類から slacc のスイートを選ぶ。
  * `hs2019` は鍵の種類で決まる仕様なので、algorithm ではなく鍵側から決める。
  */
-function suiteOf(publicKeyPem: string): SignatureAlgorithmIdentifier {
+function suiteOf(publicKeyPem: string): SignatureAlgorithm {
 	const type = crypto.createPublicKey(publicKeyPem).asymmetricKeyType;
-	if (type === 'rsa') return 'Rsa2048_8192' as SignatureAlgorithmIdentifier;
-	if (type === 'ed25519') return 'Eddsa' as SignatureAlgorithmIdentifier;
+	if (type === 'rsa') return 'Rsa2048_8192' as SignatureAlgorithm;
+	if (type === 'ed25519') return 'Eddsa' as SignatureAlgorithm;
 	throw new HttpSignatureError(`unsupported key type: ${type ?? 'unknown'}`);
 }
 

@@ -8,7 +8,7 @@ import { URL } from 'node:url';
 import { promisify } from 'node:util';
 import { getCachedSigner } from './signer-cache.js';
 
-// slacc の SignatureAlgorithmIdentifier は ambient const enum のため isolatedModules 下では値として import できない。
+// slacc の SignatureAlgorithm は ambient const enum のため isolatedModules 下では値として import できない。
 // 値自体は enum メンバー名と同じ文字列なので、型だけ import してリテラルをそのまま渡す。
 
 type Request = {
