@@ -51,7 +51,7 @@ const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>(resol
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, shallowRef, useTemplateRef, watch } from 'vue';
-import { render } from 'buraha';
+import { render } from '@shared/utility/render-blurhash.js';
 import { calculateBlurhashDimensions } from '@shared/utility/blurhash.js';
 import { extractAvgColorFromBlurhash } from '@shared/utility/extract-avg-color-from-blurhash.js';
 import { genId } from '@/utility/id.js';

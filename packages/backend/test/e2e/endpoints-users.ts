@@ -956,7 +956,7 @@ describe('Endpoints', () => {
 			const registered = await api('i/2fa/register', { password: 'test' }, user);
 			expect(registered.status).toBe(200);
 			expect(typeof registered.body.secret).toBe('string');
-			expect(typeof registered.body.qr).toBe('string');
+			expect(registered.body.url).toContain(registered.body.secret);
 
 			// テスト環境では MISSKEY_TEST_CHECK_DUPLICATED_TOTP 未設定時に任意の TOTP トークンが受理される。
 			const done = await api('i/2fa/done', { token: '000000' }, user);
