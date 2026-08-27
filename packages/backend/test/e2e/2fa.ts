@@ -255,9 +255,10 @@ describe('2要素認証', () => {
 			alice,
 		);
 		expect(registerResponse.status).toBe(200);
-		expect(registerResponse.body.qr).toEqual(expect.anything());
-		expect(registerResponse.body.url).toEqual(expect.anything());
+		// QR はクライアントがこの url から描くので、url が otpauth 形式で secret を含むことを見る。
+		expect(registerResponse.body.url).toMatch(/^otpauth:\/\/totp\//);
 		expect(registerResponse.body.secret).toEqual(expect.anything());
+		expect(registerResponse.body.url).toContain(registerResponse.body.secret);
 		expect(registerResponse.body.label).toBe(username);
 		expect(registerResponse.body.issuer).toBe(config.runtime.host);
 

@@ -46,7 +46,7 @@ const canvasPromise = new Promise<WorkerMultiDispatch | HTMLCanvasElement>(resol
 
 <script lang="ts" setup>
 import { computed, nextTick, onMounted, onUnmounted, shallowRef, watch, ref } from 'vue';
-import { render } from 'buraha';
+import { render } from '@shared/utility/render-blurhash.js';
 import { calculateBlurhashDimensions } from '@shared/utility/blurhash.js';
 
 const props = withDefaults(defineProps<{

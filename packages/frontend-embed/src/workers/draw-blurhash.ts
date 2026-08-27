@@ -6,7 +6,7 @@
 /// <reference lib="esnext" />
 /// <reference lib="webworker" />
 
-import { render } from 'buraha';
+import { render } from '@shared/utility/render-blurhash.js';
 
 const canvas = new OffscreenCanvas(64, 64);
 

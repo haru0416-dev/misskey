@@ -37,7 +37,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</I18n>
 							<div>{{ i18n.ts._2fa.step2 }}</div>
 							<div>
-								<a :class="$style.qrRoot" :href="twoFactorData.url"><img :class="$style.qr" :src="twoFactorData.qr" alt=""></a>
+								<a ref="qrCodeEl" :class="$style.qrRoot" :href="twoFactorData.url"></a>
 								<!-- QRコード側にマージンが入っているので直下でOK -->
 								<div><MkButton inline rounded type="routerLink" :to="twoFactorData.url" :linkBehavior="'browser'">{{ i18n.ts.launchApp }}</MkButton></div>
 							</div>
@@ -107,7 +107,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { hostname, port } from '@shared/utility/config';
-import { useTemplateRef, ref } from 'vue';
+import QRCodeStyling from 'qr-code-styling';
+import { useTemplateRef, ref, onMounted } from 'vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkModalWindow from '@/components/overlay/MkModalWindow.vue';
 import MkKeyValue from '@/components/display/MkKeyValue.vue';
@@ -122,9 +123,8 @@ import { ensureSignin } from '@/i.js';
 
 const $i = ensureSignin();
 
-defineProps<{
+const props = defineProps<{
 	twoFactorData: {
-		qr: string;
 		url: string;
 	};
 }>();
@@ -134,6 +134,28 @@ const emit = defineEmits<{
 }>();
 
 const dialog = useTemplateRef('dialog');
+const qrCodeEl = useTemplateRef('qrCodeEl');
+
+/*
+ * 認証アプリに読ませる QR なので、読み取りやすさを最優先して黒白・角丸なしで描く。
+ * 背景を明示しないとダークテーマで透過し、読み取れなくなる。
+ */
+const qrCodeInstance = new QRCodeStyling({
+	width: 256,
+	height: 256,
+	margin: 8,
+	type: 'canvas',
+	data: props.twoFactorData.url,
+	qrOptions: { typeNumber: 0, mode: 'Byte', errorCorrectionLevel: 'M' },
+	dotsOptions: { type: 'square', color: '#000000' },
+	cornersDotOptions: { type: 'square', color: '#000000' },
+	cornersSquareOptions: { type: 'square', color: '#000000' },
+	backgroundOptions: { color: '#ffffff' },
+});
+
+onMounted(() => {
+	if (qrCodeEl.value != null) qrCodeInstance.append(qrCodeEl.value);
+});
 const page = ref(0);
 const token = ref<string | null>(null);
 const backupCodes = ref<string[]>();
@@ -193,7 +215,9 @@ function allDone() {
 	max-width: 100%;
 }
 
-.qr {
+.qrRoot canvas {
+	display: block;
 	width: 100%;
+	height: auto;
 }
 </style>

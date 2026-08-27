@@ -31,7 +31,6 @@
 		"@tanstack/vue-virtual": "3.13.31",
 		"@vue/devtools-api": "8.2.1",
 		"analytics": "0.8.19",
-		"buraha": "0.0.1",
 		"canvas-confetti": "1.9.4",
 		"compare-versions": "6.1.1",
 		"cropperjs": "2.1.1",

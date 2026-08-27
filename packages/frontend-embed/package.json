@@ -9,7 +9,6 @@
 		"lint": "bun run --bun typecheck"
 	},
 	"dependencies": {
-		"buraha": "0.0.1",
 		"frontend-shared": "workspace:*",
 		"i18n": "workspace:*",
 		"icons-subsetter": "workspace:*",
