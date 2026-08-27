@@ -69,7 +69,7 @@ export const userIdParamDef = z.object({
 });
 
 export const blockingListParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(30),
+	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
 

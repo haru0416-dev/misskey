@@ -34,11 +34,11 @@ export const adminAdCreateParamDef = z.object({
 	memo: z.string(),
 	place: z.string(),
 	priority: z.string(),
-	ratio: z.number().int(),
-	expiresAt: z.number().int(),
-	startsAt: z.number().int(),
+	ratio: z.int(),
+	expiresAt: z.int(),
+	startsAt: z.int(),
 	imageUrl: z.string().min(1),
-	dayOfWeek: z.number().int(),
+	dayOfWeek: z.int(),
 	isSensitive: z.boolean().optional(),
 });
 
@@ -47,7 +47,7 @@ export const adminAdDeleteParamDef = z.object({
 });
 
 export const adminAdListParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 	publishing: z.boolean().nullable().default(null),
 });
@@ -59,10 +59,10 @@ export const adminAdUpdateParamDef = z.object({
 	imageUrl: z.string().min(1).optional(),
 	place: z.string().optional(),
 	priority: z.string().optional(),
-	ratio: z.number().int().optional(),
-	expiresAt: z.number().int().optional(),
-	startsAt: z.number().int().optional(),
-	dayOfWeek: z.number().int().optional(),
+	ratio: z.int().optional(),
+	expiresAt: z.int().optional(),
+	startsAt: z.int().optional(),
+	dayOfWeek: z.int().optional(),
 	isSensitive: z.boolean().optional(),
 });
 

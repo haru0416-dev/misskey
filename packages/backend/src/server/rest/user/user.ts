@@ -1125,8 +1125,8 @@ async function searchUsersForApi(
 
 export const usersSearchParamDef = z.object({
 	query: z.string(),
-	offset: z.number().int().default(0),
-	limit: z.number().int().min(1).max(100).default(10),
+	offset: z.int().default(0),
+	limit: z.int().min(1).max(100).default(10),
 	origin: z.enum(['local', 'remote', 'combined']).default('combined'),
 	detail: z.boolean().default(true),
 });
@@ -1238,7 +1238,7 @@ async function selectSearchUserIdsForApi(
  * usersShowParamDef と同様に分岐ごとの z.object を z.union で束ねる形で再現する。
  */
 const usersSearchByUsernameAndHostCommon = {
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	detail: z.boolean().default(true),
 };
 
@@ -1283,8 +1283,8 @@ export async function handleApiUsersSearchByUsernameAndHost(
 }
 
 export const usersRecommendationParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
-	offset: z.number().int().default(0),
+	limit: z.int().min(1).max(100).default(10),
+	offset: z.int().default(0),
 });
 
 type UsersRecommendationParams = {
@@ -1309,7 +1309,7 @@ export async function handleApiUsersRecommendation(
 
 export const usersGetFrequentlyRepliedUsersParamDef = z.object({
 	userId: misskeyId(),
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 });
 
 type UsersGetFrequentlyRepliedUsersParams = {
@@ -1358,8 +1358,8 @@ export async function handleApiUsersGetFrequentlyRepliedUsers(
 }
 
 export const usersParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
-	offset: z.number().int().default(0),
+	limit: z.int().min(1).max(100).default(10),
+	offset: z.int().default(0),
 	sort: z.enum(['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt']).optional(),
 	state: z.enum(['all', 'alive']).default('all'),
 	origin: z.enum(['combined', 'local', 'remote']).default('local'),

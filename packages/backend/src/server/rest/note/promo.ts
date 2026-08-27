@@ -26,7 +26,7 @@ export const promoReadParamDef = z.object({
 
 export const adminPromoCreateParamDef = z.object({
 	noteId: misskeyId(),
-	expiresAt: z.number().int(),
+	expiresAt: z.int(),
 });
 
 type PromoReadParams = {

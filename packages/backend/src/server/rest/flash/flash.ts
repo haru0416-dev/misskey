@@ -216,8 +216,8 @@ export async function handleApiFlashDelete(
 }
 
 export const flashFeaturedParamDef = z.object({
-	offset: z.number().int().min(0).optional().default(0),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	offset: z.int().min(0).optional().default(0),
+	limit: z.int().min(1).max(100).optional().default(10),
 });
 
 type FlashFeaturedParams = {
@@ -240,7 +240,7 @@ export async function handleApiFlashFeatured(
 }
 
 export const flashMyParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 
@@ -271,7 +271,7 @@ export async function handleApiFlashMy(
 }
 
 export const flashMyLikesParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 	search: z.string().min(1).max(100).nullable().optional(),
 });
@@ -344,7 +344,7 @@ export async function handleApiFlashMyLikes(
 export const flashSearchParamDef = z.object({
 	query: z.string().min(1).max(100),
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).optional().default(5),
+	limit: z.int().min(1).max(100).optional().default(5),
 });
 
 type FlashSearchParams = {
@@ -399,7 +399,7 @@ export async function handleApiFlashShow(
 
 export const usersFlashsParamDef = z.object({
 	userId: misskeyId(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 

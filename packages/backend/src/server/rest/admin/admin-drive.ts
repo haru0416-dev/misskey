@@ -67,7 +67,7 @@ export const adminDriveShowFileDocsParamDef = z.union([
 ]);
 
 export const adminDriveFilesParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 	userId: misskeyId().nullable().optional(),
 	type: z

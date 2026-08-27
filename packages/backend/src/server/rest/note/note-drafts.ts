@@ -61,8 +61,8 @@ const notePollParamDef = z
 	.object({
 		choices: uniqueItems(z.array(z.string().min(1).max(50)).min(0).max(10)),
 		multiple: z.boolean().optional(),
-		expiresAt: z.number().int().nullable().optional(),
-		expiredAfter: z.number().int().min(1).nullable().optional(),
+		expiresAt: z.int().nullable().optional(),
+		expiredAfter: z.int().min(1).nullable().optional(),
 	})
 	.nullable();
 
@@ -84,7 +84,7 @@ export const notesDraftsCreateParamDef = z.object({
 	text: z.string().min(0).max(MAX_NOTE_TEXT_LENGTH).nullable().optional(),
 	fileIds: uniqueItems(z.array(misskeyId()).min(0).max(16)).optional(),
 	poll: notePollParamDef.optional(),
-	scheduledAt: z.number().int().nullable().optional(),
+	scheduledAt: z.int().nullable().optional(),
 	isActuallyScheduled: z.boolean().default(false),
 });
 
@@ -129,7 +129,7 @@ export const notesDraftsUpdateParamDef = z.object({
 	text: z.string().min(0).max(MAX_NOTE_TEXT_LENGTH).nullable().optional(),
 	fileIds: uniqueItems(z.array(misskeyId()).min(0).max(16)).optional(),
 	poll: notePollParamDef.optional(),
-	scheduledAt: z.number().int().nullable().optional(),
+	scheduledAt: z.int().nullable().optional(),
 	isActuallyScheduled: z.boolean().optional(),
 });
 
@@ -165,7 +165,7 @@ type NotesDraftsDeleteParams = {
 };
 
 export const notesDraftsListParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(30),
+	limit: z.int().min(1).max(100).default(30),
 	...paginationParams,
 	scheduled: z.boolean().nullable().optional(),
 });

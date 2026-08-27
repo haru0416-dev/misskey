@@ -46,18 +46,18 @@ export const inviteDeleteParamDef = z.object({
 });
 
 export const inviteListParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(30),
+	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
 
 export const adminInviteCreateParamDef = z.object({
-	count: z.number().int().min(1).max(100).optional().default(1),
+	count: z.int().min(1).max(100).optional().default(1),
 	expiresAt: z.string().nullable().optional(),
 });
 
 export const adminInviteListParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(30),
-	offset: z.number().int().optional().default(0),
+	limit: z.int().min(1).max(100).optional().default(30),
+	offset: z.int().optional().default(0),
 	type: z.enum(['unused', 'used', 'expired', 'all']).optional().default('all'),
 	sort: z.enum(['+createdAt', '-createdAt', '+usedAt', '-usedAt']).optional(),
 });

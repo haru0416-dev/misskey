@@ -435,7 +435,7 @@ export function normalizeApiNotesReactionsQuery(query: Record<string, string>): 
 export const notesReactionsParamDef = z.object({
 	noteId: misskeyId(),
 	type: z.string().nullable().optional(),
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
 

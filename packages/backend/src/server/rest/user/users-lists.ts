@@ -434,7 +434,7 @@ export async function handleApiUsersListsPush(
 export const getMembershipsParamDef = z.object({
 	listId: misskeyId(),
 	forPublic: z.boolean().default(false),
-	limit: z.number().int().min(1).max(100).default(30),
+	limit: z.int().min(1).max(100).default(30),
 	...paginationParams,
 });
 

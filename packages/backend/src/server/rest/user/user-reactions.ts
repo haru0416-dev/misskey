@@ -47,7 +47,7 @@ function usersReactionsNotPublicError(): ApiError {
 
 export const usersReactionsParamDef = z.object({
 	userId: misskeyId(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 

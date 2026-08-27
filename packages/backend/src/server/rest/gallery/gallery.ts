@@ -110,7 +110,7 @@ let galleryPostsRankingCache: string[] = [];
 let galleryPostsRankingCacheLastFetchedAt = 0;
 
 export const galleryFeaturedParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	untilId: misskeyId().optional(),
 });
 
@@ -122,7 +122,7 @@ type GalleryFeaturedParams = {
 export const galleryPopularParamDef = z.object({});
 
 export const galleryPostsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 
@@ -520,7 +520,7 @@ export async function handleApiGalleryPostsUnlike(
 }
 
 export const iGalleryPostsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 
@@ -551,7 +551,7 @@ export async function handleApiIGalleryPosts(
 }
 
 export const iGalleryLikesParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 
@@ -595,7 +595,7 @@ export async function handleApiIGalleryLikes(
 
 export const usersGalleryPostsParamDef = z.object({
 	userId: misskeyId(),
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
 

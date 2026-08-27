@@ -71,7 +71,7 @@ function getDatabaseErrorCode(error: unknown): unknown {
 }
 
 export const clipsListParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
 
@@ -89,7 +89,7 @@ export const clipIdParamDef = z.object({
 
 export const clipNotesParamDef = z.object({
 	clipId: misskeyId(),
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 	search: z.string().min(1).max(100).nullable().optional(),
 });
@@ -511,7 +511,7 @@ export async function handleApiClipsNotes(
 
 export const usersClipsParamDef = z.object({
 	userId: misskeyId(),
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
 

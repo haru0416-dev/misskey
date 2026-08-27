@@ -331,7 +331,7 @@ async function packNotificationsForApi<T extends MiNotification | MiGroupedNotif
 const notificationTypeEnumValues = [...notificationTypes, ...obsoleteNotificationTypes] as const;
 
 export const notificationsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).optional().default(10),
+	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 	markAsRead: z.boolean().optional().default(true),
 	includeTypes: z.array(z.enum(notificationTypeEnumValues)).optional(),

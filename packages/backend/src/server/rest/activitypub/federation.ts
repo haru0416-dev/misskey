@@ -70,8 +70,8 @@ export const federationInstancesParamDef = z.object({
 	federating: z.boolean().nullable().optional(),
 	subscribing: z.boolean().nullable().optional(),
 	publishing: z.boolean().nullable().optional(),
-	limit: z.number().int().min(1).max(100).default(30),
-	offset: z.number().int().default(0),
+	limit: z.int().min(1).max(100).default(30),
+	offset: z.int().default(0),
 	sort: z
 		.union([
 			z.enum([
@@ -110,7 +110,7 @@ export const adminFederationHostParamDef = z.object({
 });
 
 export const federationStatsParamDef = z.object({
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 });
 
 const federationIntegerQueryParams = new Set(['limit', 'offset']);
@@ -496,7 +496,7 @@ export async function handleApiFederationStats(
 export const federationUsersParamDef = z.object({
 	host: z.string(),
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 });
 
 export async function handleApiFederationUsers(
@@ -526,7 +526,7 @@ export async function handleApiFederationUsers(
 export const federationHostFollowingParamDef = z.object({
 	host: z.string(),
 	...paginationParams,
-	limit: z.number().int().min(1).max(100).default(10),
+	limit: z.int().min(1).max(100).default(10),
 });
 
 export async function handleApiFederationFollowers(

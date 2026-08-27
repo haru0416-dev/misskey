@@ -83,7 +83,7 @@ function pollsVoteYouHaveBeenBlockedError(): ApiError {
 
 export const notesPollsVoteParamDef = z.object({
 	noteId: misskeyId(),
-	choice: z.number().int(),
+	choice: z.int(),
 });
 
 type NotesPollsVoteParams = {
