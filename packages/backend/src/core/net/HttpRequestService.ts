@@ -246,18 +246,12 @@ export function createHttpRequestService(config: Config) {
 		: httpsNonProxyAgent;
 
 	/**
-	 * fetch() 経路の SSRF 防御。宛先ホスト名を事前に DNS 解決し、解決先が private / non-unicast なら例外を投げる。
-	 *
-	 * Bun の node:http compat 層はカスタム Agent.createConnection を呼ばないため、Agent クラス側の
-	 * private-IP ブロックは Bun ランタイムでは機能しない。そこで fetch を投げる前にこの事前チェックで防ぐ。
-	 * 解決とその後の fetch は別々に名前解決するため DNS rebinding の TOCTOU 窓は残るが (dnsCache により
-	 * 実質縮小される)、宛先への直接的な private-IP アクセスは確実に遮断できる。
-	 * agent 経路 (URL プレビュー) は Node 実行時には socket レベルで遮断される。
-	 */
-	/**
 	 * 宛先が private / non-unicast でないことを確かめ、検査した IP を返す。
 	 * 返した IP へそのまま接続することで、検査と接続の間に名前解決が差し替わる
 	 * (DNS rebinding) 余地を無くす。検査しない場合は null。
+	 *
+	 * fetch() は node の Agent を受け取らないので、agent 経路 (URL プレビュー) の
+	 * socket レベル遮断はここには効かない。fetch 経路の遮断はこの事前検査が担う。
 	 */
 	async function assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<string[] | null> {
 		if (isLocalAddressAllowed) return null;
