@@ -10,14 +10,14 @@ import { noteDraft, type NoteDraftRow } from '@/db/schema/note-draft.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
 import type { PostScheduledNoteJobData } from '@/queue/types.js';
-import { fetchAndCreateNoteForHonoApi, type HonoApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
+import { fetchAndCreateNoteForApi, type ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
 import {
 	createScheduledNotePostFailedNotification,
 	createScheduledNotePostedNotification,
-	type HonoApiNotificationDependencies,
+	type ApiNotificationDependencies,
 } from '@/server/rest/notification/notification.js';
 
-export type HonoQueuePostScheduledNoteDependencies = HonoApiNotesCreateDependencies & HonoApiNotificationDependencies;
+export type QueuePostScheduledNoteDependencies = ApiNotesCreateDependencies & ApiNotificationDependencies;
 
 class ScheduledNoteDraftUnavailableError extends Error {}
 
@@ -44,8 +44,8 @@ function scheduledNoteDraftFingerprint(draft: MiNoteDraft | NoteDraftRow): strin
 	});
 }
 
-export async function handleHonoQueuePostScheduledNote(
-	deps: HonoQueuePostScheduledNoteDependencies,
+export async function handleQueuePostScheduledNote(
+	deps: QueuePostScheduledNoteDependencies,
 	job: Bull.Job<PostScheduledNoteJobData>,
 ): Promise<void> {
 	const draft = await fetchNoteDraftWithUserByIdFromDatabase(deps.db, job.data.noteDraftId);
@@ -61,7 +61,7 @@ export async function handleHonoQueuePostScheduledNote(
 	}
 
 	try {
-		const note = await fetchAndCreateNoteForHonoApi(
+		const note = await fetchAndCreateNoteForApi(
 			deps,
 			draft.user,
 			{

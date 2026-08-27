@@ -18,9 +18,9 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { createDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
-	handleHonoQueueImportBlocking,
-	handleHonoQueueImportBlockingToDb,
-	type HonoQueueDbDependencies,
+	handleQueueImportBlocking,
+	handleQueueImportBlockingToDb,
+	type QueueDbDependencies,
 } from '@/queue/handlers/db.js';
 import type { DbUserImportJobData, DbUserImportToDbJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
@@ -47,7 +47,7 @@ async function serveText(text: string): Promise<{ url: string; server: Server }>
 
 describe('hono-queue-db (importBlocking)', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueDbDependencies;
+	let deps: QueueDbDependencies;
 	let servers: Server[] = [];
 
 	beforeAll(async () => {
@@ -72,7 +72,7 @@ describe('hono-queue-db (importBlocking)', () => {
 		});
 	}
 
-	test('handleHonoQueueImportBlocking: CSVの行ごとにimportBlockingToDbジョブを積む', async () => {
+	test('handleQueueImportBlocking: CSVの行ごとにimportBlockingToDbジョブを積む', async () => {
 		const blocker = await createTestUser('honoqueueimpblockme');
 		const target = await createTestUser('honoqueueimpblocktarget');
 
@@ -92,7 +92,7 @@ describe('hono-queue-db (importBlocking)', () => {
 			userHost: null,
 		});
 
-		await handleHonoQueueImportBlocking(deps, fakeJob<DbUserImportJobData>({ user: { id: blocker.id }, fileId }));
+		await handleQueueImportBlocking(deps, fakeJob<DbUserImportJobData>({ user: { id: blocker.id }, fileId }));
 
 		const waiting = await runtime.dbQueue.getJobs(['waiting', 'delayed']);
 		const enqueued = waiting.find(
@@ -102,11 +102,11 @@ describe('hono-queue-db (importBlocking)', () => {
 		expect((enqueued!.data as DbUserImportToDbJobData).target).toContain(target.username);
 	});
 
-	test('handleHonoQueueImportBlockingToDb: ローカルユーザーへのblockジョブをrelationshipQueueに積む', async () => {
+	test('handleQueueImportBlockingToDb: ローカルユーザーへのblockジョブをrelationshipQueueに積む', async () => {
 		const blocker = await createTestUser('honoqueueimpblockdbme');
 		const target = await createTestUser('honoqueueimpblockdbtarget');
 
-		await handleHonoQueueImportBlockingToDb(
+		await handleQueueImportBlockingToDb(
 			deps,
 			fakeJob<DbUserImportToDbJobData>({
 				user: { id: blocker.id },
@@ -122,10 +122,10 @@ describe('hono-queue-db (importBlocking)', () => {
 		expect(enqueued!.data.silent).toBe(true);
 	});
 
-	test('handleHonoQueueImportBlockingToDb: 自分自身はスキップされジョブを積まない', async () => {
+	test('handleQueueImportBlockingToDb: 自分自身はスキップされジョブを積まない', async () => {
 		const blocker = await createTestUser('honoqueueimpblockdbself');
 
-		await handleHonoQueueImportBlockingToDb(
+		await handleQueueImportBlockingToDb(
 			deps,
 			fakeJob<DbUserImportToDbJobData>({
 				user: { id: blocker.id },

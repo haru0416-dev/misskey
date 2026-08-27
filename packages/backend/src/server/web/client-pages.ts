@@ -22,14 +22,14 @@ import * as Acct from '@/misc/acct.js';
 import { htmlSafeJsonStringify } from '@/misc/json-stringify-html-safe.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import { packAnnouncementForHonoApi } from '@/server/rest/admin/admin-announcements.js';
-import { packChannelForSsr, type HonoApiChannelsDependencies } from '@/server/rest/channel/channels.js';
-import { packClipForHonoApi, type HonoApiClipDependencies } from '@/server/rest/clip/clips.js';
-import { packFlashForHonoApi, type HonoApiFlashDependencies } from '@/server/rest/flash/flash.js';
-import { packGalleryPostForHonoApi, type HonoApiGalleryDependencies } from '@/server/rest/gallery/gallery.js';
-import { packNoteForHonoApi, type HonoApiNoteDependencies } from '@/server/rest/note/note.js';
-import { packPageForHonoApi, type HonoApiPageDependencies } from '@/server/rest/page/pages.js';
-import { packUserDetailedNotMeForHonoApi } from '@/server/rest/user/user.js';
+import { packAnnouncementForApi } from '@/server/rest/admin/admin-announcements.js';
+import { packChannelForSsr, type ApiChannelsDependencies } from '@/server/rest/channel/channels.js';
+import { packClipForApi, type ApiClipDependencies } from '@/server/rest/clip/clips.js';
+import { packFlashForApi, type ApiFlashDependencies } from '@/server/rest/flash/flash.js';
+import { packGalleryPostForApi, type ApiGalleryDependencies } from '@/server/rest/gallery/gallery.js';
+import { packNoteForApi, type ApiNoteDependencies } from '@/server/rest/note/note.js';
+import { packPageForApi, type ApiPageDependencies } from '@/server/rest/page/pages.js';
+import { packUserDetailedNotMeForApi } from '@/server/rest/user/user.js';
 import type { CommonData } from './views/_.js';
 import { AnnouncementPage } from './views/announcement.js';
 import { ChannelPage } from './views/channel.js';
@@ -41,12 +41,12 @@ import { NotePage } from './views/note.js';
 import { PagePage } from './views/page.js';
 import { UserPage } from './views/user.js';
 
-export type ClientPagesDependencies = HonoApiNoteDependencies &
-	HonoApiClipDependencies &
-	HonoApiFlashDependencies &
-	HonoApiGalleryDependencies &
-	HonoApiPageDependencies &
-	HonoApiChannelsDependencies & {
+export type ClientPagesDependencies = ApiNoteDependencies &
+	ApiClipDependencies &
+	ApiFlashDependencies &
+	ApiGalleryDependencies &
+	ApiPageDependencies &
+	ApiChannelsDependencies & {
 		getCommonData: () => Promise<CommonData>;
 	};
 
@@ -120,7 +120,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			['public', 'home'].includes(note.visibility) &&
 			isUgcVisibleToVisitor(deps, note.userHost)
 		) {
-			const packedNote = await packNoteForHonoApi(deps, note, null, { detail: true });
+			const packedNote = await packNoteForApi(deps, note, null, { detail: true });
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, note.userId);
 
 			return htmlResponse(
@@ -143,7 +143,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 
 		// 非公開 Play のタイトル等が匿名訪問者へ漏れるため、public のみ SSR する (非公開は汎用ページへ)。
 		if (flash?.visibility === 'public') {
-			const packedFlash = (await packFlashForHonoApi(deps, flash, null)) as unknown as Packed<'Flash'>;
+			const packedFlash = (await packFlashForApi(deps, flash, null)) as unknown as Packed<'Flash'>;
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, flash.userId);
 
 			return htmlResponse(
@@ -164,7 +164,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		const clip = await fetchClipByIdFromDatabase(deps.db, c.req.param('clip'));
 
 		if (clip?.isPublic) {
-			const packedClip = await packClipForHonoApi(deps, clip, null);
+			const packedClip = await packClipForApi(deps, clip, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, clip.userId);
 
 			return htmlResponse(
@@ -186,7 +186,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		const post = await fetchGalleryPostByIdFromDatabase(deps.db, c.req.param('post'));
 
 		if (post != null) {
-			const packedPost = await packGalleryPostForHonoApi(deps, post, null);
+			const packedPost = await packGalleryPostForApi(deps, post, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, post.userId);
 
 			return htmlResponse(
@@ -214,7 +214,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return;
 		}
 
-		const packedUser = await packUserDetailedNotMeForHonoApi(deps, user, null);
+		const packedUser = await packUserDetailedNotMeForApi(deps, user, null);
 
 		return embedHtmlResponse(
 			BaseEmbed({
@@ -247,7 +247,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return;
 		}
 
-		const packedNote = await packNoteForHonoApi(deps, note, null, { detail: true });
+		const packedNote = await packNoteForApi(deps, note, null, { detail: true });
 
 		return embedHtmlResponse(
 			BaseEmbed({
@@ -268,7 +268,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			return;
 		}
 
-		const packedClip = await packClipForHonoApi(deps, clip, null);
+		const packedClip = await packClipForApi(deps, clip, null);
 
 		return embedHtmlResponse(
 			BaseEmbed({
@@ -312,7 +312,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		const announcement = await fetchGlobalAnnouncementByIdFromDatabase(deps.db, c.req.param('announcement'));
 
 		if (announcement != null) {
-			const packedAnnouncement = packAnnouncementForHonoApi(deps.config, announcement, null);
+			const packedAnnouncement = packAnnouncementForApi(deps.config, announcement, null);
 
 			return htmlResponse(
 				AnnouncementPage({
@@ -363,7 +363,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 				return;
 			}
 
-			const packedPage = await packPageForHonoApi(deps, page, null);
+			const packedPage = await packPageForApi(deps, page, null);
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, page.userId);
 
 			return htmlResponse(
@@ -384,7 +384,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 
 		if (user != null && !user.isSuspended && isUgcVisibleToVisitor(deps, user.host)) {
 			const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
-			const packedUser = (await packUserDetailedNotMeForHonoApi(deps, user, null)) as unknown as Packed<'UserDetailed'>;
+			const packedUser = (await packUserDetailedNotMeForApi(deps, user, null)) as unknown as Packed<'UserDetailed'>;
 
 			return htmlResponse(
 				UserPage({

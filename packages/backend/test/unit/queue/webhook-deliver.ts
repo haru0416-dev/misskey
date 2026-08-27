@@ -17,10 +17,7 @@ import {
 	fetchSystemWebhookByIdOrFailFromDatabase,
 } from '@/core/webhook/SystemWebhookStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import {
-	handleHonoQueueSystemWebhookDeliver,
-	handleHonoQueueUserWebhookDeliver,
-} from '@/queue/handlers/webhook-deliver.js';
+import { handleQueueSystemWebhookDeliver, handleQueueUserWebhookDeliver } from '@/queue/handlers/webhook-deliver.js';
 import type { SystemWebhookDeliverJobData, UserWebhookDeliverJobData } from '@/queue/types.js';
 
 function fakeJob<T>(data: T): Bull.Job<T> {
@@ -42,7 +39,7 @@ describe('hono-queue-webhook-deliver', () => {
 		await pool.end();
 	});
 
-	test('handleHonoQueueUserWebhookDeliver は成功時にlatestSentAt/latestStatusを更新する', async () => {
+	test('handleQueueUserWebhookDeliver は成功時にlatestSentAt/latestStatusを更新する', async () => {
 		let received: { headers: Record<string, string | string[] | undefined>; body: string } | undefined;
 		const server: Server = createServer((req, res) => {
 			let body = '';
@@ -93,7 +90,7 @@ describe('hono-queue-webhook-deliver', () => {
 				eventId: genId(),
 			};
 
-			const result = await handleHonoQueueUserWebhookDeliver({ config, db, httpRequestService }, fakeJob(data));
+			const result = await handleQueueUserWebhookDeliver({ config, db, httpRequestService }, fakeJob(data));
 			expect(result).toBe('Success');
 
 			expect(received?.headers['x-misskey-hook-id']).toBe(webhook.id);
@@ -111,7 +108,7 @@ describe('hono-queue-webhook-deliver', () => {
 		}
 	});
 
-	test('handleHonoQueueSystemWebhookDeliver は成功時にlatestSentAt/latestStatusを更新する', async () => {
+	test('handleQueueSystemWebhookDeliver は成功時にlatestSentAt/latestStatusを更新する', async () => {
 		let received: { headers: Record<string, string | string[] | undefined>; body: string } | undefined;
 		const server: Server = createServer((req, res) => {
 			let body = '';
@@ -154,7 +151,7 @@ describe('hono-queue-webhook-deliver', () => {
 				eventId: genId(),
 			};
 
-			const result = await handleHonoQueueSystemWebhookDeliver({ config, db, httpRequestService }, fakeJob(data));
+			const result = await handleQueueSystemWebhookDeliver({ config, db, httpRequestService }, fakeJob(data));
 			expect(result).toBe('Success');
 
 			expect(received?.headers['x-misskey-hook-id']).toBe(webhook.id);
@@ -171,7 +168,7 @@ describe('hono-queue-webhook-deliver', () => {
 		}
 	});
 
-	test('handleHonoQueueUserWebhookDeliver は4xxでUnrecoverableErrorを投げる', async () => {
+	test('handleQueueUserWebhookDeliver は4xxでUnrecoverableErrorを投げる', async () => {
 		const server: Server = createServer((_req, res) => {
 			res.writeHead(400, { 'Content-Type': 'application/json' });
 			res.end('{}');
@@ -214,9 +211,9 @@ describe('hono-queue-webhook-deliver', () => {
 				eventId: genId(),
 			};
 
-			await expect(
-				handleHonoQueueUserWebhookDeliver({ config, db, httpRequestService }, fakeJob(data)),
-			).rejects.toThrow(Bull.UnrecoverableError);
+			await expect(handleQueueUserWebhookDeliver({ config, db, httpRequestService }, fakeJob(data))).rejects.toThrow(
+				Bull.UnrecoverableError,
+			);
 
 			const updated = await fetchWebhookByIdAndUserIdFromDatabase(db, webhook.id, userId);
 			expect(updated!.latestStatus).toBe(400);

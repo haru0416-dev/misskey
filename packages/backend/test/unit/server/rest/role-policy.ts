@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
-import { getHonoApiRolePolicies } from '@/server/rest/role/role-policy.js';
+import { getApiRolePolicies } from '@/server/rest/role/role-policy.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta, MiRole } from '@/models/_.js';
@@ -24,9 +24,9 @@ function role(policies: Record<string, unknown>): MiRole {
 	return { id: 'test', target: 'manual', policies } as unknown as MiRole;
 }
 
-describe('getHonoApiRolePolicies', () => {
+describe('getApiRolePolicies', () => {
 	test('正しい値のロールポリシーはそのまま採用される', async () => {
-		const policies = await getHonoApiRolePolicies(deps(), null, [
+		const policies = await getApiRolePolicies(deps(), null, [
 			role({
 				driveCapacityMb: { useDefault: false, priority: 1, value: 512 },
 				canInvite: { useDefault: false, priority: 1, value: true },
@@ -42,7 +42,7 @@ describe('getHonoApiRolePolicies', () => {
 	});
 
 	test('型の合わない値は既定値へ落とす (Math.max が NaN を返さない)', async () => {
-		const policies = await getHonoApiRolePolicies(deps(), null, [
+		const policies = await getApiRolePolicies(deps(), null, [
 			role({
 				driveCapacityMb: { useDefault: false, priority: 1, value: '512' },
 				antennaLimit: { useDefault: false, priority: 1, value: null },
@@ -60,7 +60,7 @@ describe('getHonoApiRolePolicies', () => {
 	});
 
 	test('value を持たない / useDefault のポリシーはインスタンス既定値になる', async () => {
-		const policies = await getHonoApiRolePolicies(deps({ antennaLimit: 30 }), null, [
+		const policies = await getApiRolePolicies(deps({ antennaLimit: 30 }), null, [
 			role({
 				antennaLimit: { useDefault: true, priority: 1, value: 999 },
 				clipLimit: { useDefault: false, priority: 1 },
@@ -74,21 +74,19 @@ describe('getHonoApiRolePolicies', () => {
 	test('インスタンス既定値 (meta.policies) が壊れていてもコード側の既定値へ落とす', async () => {
 		const brokenMeta = deps({ antennaLimit: 'unlimited', gtlAvailable: 1 });
 
-		const withoutRoles = await getHonoApiRolePolicies(brokenMeta, null, []);
+		const withoutRoles = await getApiRolePolicies(brokenMeta, null, []);
 		expect(withoutRoles.antennaLimit).toBe(DEFAULT_POLICIES.antennaLimit);
 		expect(withoutRoles.gtlAvailable).toBe(DEFAULT_POLICIES.gtlAvailable);
 
 		// ロールを持つユーザーでも、useDefault のフォールバック先が壊れた値にならない
-		const withRole = await getHonoApiRolePolicies(brokenMeta, null, [
+		const withRole = await getApiRolePolicies(brokenMeta, null, [
 			role({ antennaLimit: { useDefault: true, priority: 1 } }),
 		]);
 		expect(withRole.antennaLimit).toBe(DEFAULT_POLICIES.antennaLimit);
 	});
 
 	test('ロールが壊れたポリシーオブジェクトを持っていても例外にならない', async () => {
-		const policies = await getHonoApiRolePolicies(deps(), null, [
-			role({ antennaLimit: 'broken', driveCapacityMb: null }),
-		]);
+		const policies = await getApiRolePolicies(deps(), null, [role({ antennaLimit: 'broken', driveCapacityMb: null })]);
 
 		expect(policies.antennaLimit).toBe(DEFAULT_POLICIES.antennaLimit);
 		expect(policies.driveCapacityMb).toBe(DEFAULT_POLICIES.driveCapacityMb);

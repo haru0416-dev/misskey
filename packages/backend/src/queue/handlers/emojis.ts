@@ -18,19 +18,16 @@ import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { createTemp, createTempDir } from '@/misc/create-temp.js';
 import type { DownloadService } from '@/core/net/DownloadService.js';
 import type { DbJobDataWithUser, DbUserImportJobData } from '@/queue/types.js';
-import {
-	addDriveFileForHonoApi,
-	type HonoApiDriveFileUploadDependencies,
-} from '@/server/rest/drive/drive-file-upload.js';
-import { addCustomEmojiForHonoApi, type HonoApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
+import { addDriveFileForApi, type ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
+import { addCustomEmojiForApi, type ApiEmojiDependencies } from '@/server/rest/emoji/emojis.js';
 import {
 	createExportCompletedNotification,
-	type HonoApiNotificationDependencies,
+	type ApiNotificationDependencies,
 } from '@/server/rest/notification/notification.js';
 
-export type HonoQueueEmojisDependencies = HonoApiDriveFileUploadDependencies &
-	HonoApiEmojiDependencies &
-	HonoApiNotificationDependencies & {
+export type QueueEmojisDependencies = ApiDriveFileUploadDependencies &
+	ApiEmojiDependencies &
+	ApiNotificationDependencies & {
 		downloadService: Pick<DownloadService, 'downloadUrl'>;
 	};
 
@@ -46,8 +43,8 @@ function writeToFile(stream: fs.WriteStream, content: string): Promise<void> {
 	});
 }
 
-export async function handleHonoQueueExportCustomEmojis(
-	deps: HonoQueueEmojisDependencies,
+export async function handleQueueExportCustomEmojis(
+	deps: QueueEmojisDependencies,
 	job: Bull.Job<DbJobDataWithUser>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
@@ -106,7 +103,7 @@ export async function handleHonoQueueExportCustomEmojis(
 		});
 		archiveStream.on('close', async () => {
 			const fileName = 'custom-emojis-' + formatDateTimeForFileName(new Date()) + '.zip';
-			const driveFile = await addDriveFileForHonoApi(deps, { user, path: archivePath, name: fileName, force: true });
+			const driveFile = await addDriveFileForApi(deps, { user, path: archivePath, name: fileName, force: true });
 
 			createExportCompletedNotification(deps, user.id, 'customEmoji', driveFile.id);
 
@@ -133,8 +130,8 @@ type ExportedEmojiMetaRecord = {
 	};
 };
 
-export async function handleHonoQueueImportCustomEmojis(
-	deps: HonoQueueEmojisDependencies,
+export async function handleQueueImportCustomEmojis(
+	deps: QueueEmojisDependencies,
 	job: Bull.Job<DbUserImportJobData>,
 ): Promise<void> {
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, job.data.fileId);
@@ -169,13 +166,13 @@ export async function handleHonoQueueImportCustomEmojis(
 			await deleteEmojiByNameAndHostFromDatabase(deps.db, emojiInfo.name, null);
 
 			try {
-				const driveFile = await addDriveFileForHonoApi(deps, {
+				const driveFile = await addDriveFileForApi(deps, {
 					user: null,
 					path: emojiPath,
 					name: record.fileName,
 					force: true,
 				});
-				await addCustomEmojiForHonoApi(deps, {
+				await addCustomEmojiForApi(deps, {
 					originalUrl: driveFile.url,
 					publicUrl: driveFile.webpublicUrl ?? driveFile.url,
 					fileType: driveFile.webpublicType ?? driveFile.type,

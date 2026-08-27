@@ -39,15 +39,15 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiClip } from '@/models/Clip.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from '../note/note.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
+import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiClipDependencies = UserPackingDependencies & HonoApiRolePolicyDependencies;
+export type ApiClipDependencies = UserPackingDependencies & ApiRolePolicyDependencies;
 
-export type HonoApiClipNotesDependencies = HonoApiNoteDependencies & {
+export type ApiClipNotesDependencies = ApiNoteDependencies & {
 	meta: MiMeta;
 };
 
@@ -150,8 +150,8 @@ type ClipsNoteParams = {
 	noteId: string;
 };
 
-function clipsShowNoSuchClipError(): HonoApiError {
-	return new HonoApiError({
+function clipsShowNoSuchClipError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such clip.',
 		code: 'NO_SUCH_CLIP',
@@ -159,8 +159,8 @@ function clipsShowNoSuchClipError(): HonoApiError {
 	});
 }
 
-function clipsCreateTooManyClipsError(): HonoApiError {
-	return new HonoApiError({
+function clipsCreateTooManyClipsError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You cannot create clip any more.',
 		code: 'TOO_MANY_CLIPS',
@@ -168,8 +168,8 @@ function clipsCreateTooManyClipsError(): HonoApiError {
 	});
 }
 
-function clipsUpdateNoSuchClipError(): HonoApiError {
-	return new HonoApiError({
+function clipsUpdateNoSuchClipError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such clip.',
 		code: 'NO_SUCH_CLIP',
@@ -177,8 +177,8 @@ function clipsUpdateNoSuchClipError(): HonoApiError {
 	});
 }
 
-function clipsDeleteNoSuchClipError(): HonoApiError {
-	return new HonoApiError({
+function clipsDeleteNoSuchClipError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such clip.',
 		code: 'NO_SUCH_CLIP',
@@ -186,8 +186,8 @@ function clipsDeleteNoSuchClipError(): HonoApiError {
 	});
 }
 
-function clipsAddNoteNoSuchClipError(): HonoApiError {
-	return new HonoApiError({
+function clipsAddNoteNoSuchClipError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such clip.',
 		code: 'NO_SUCH_CLIP',
@@ -195,8 +195,8 @@ function clipsAddNoteNoSuchClipError(): HonoApiError {
 	});
 }
 
-function clipsAddNoteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function clipsAddNoteNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -204,8 +204,8 @@ function clipsAddNoteNoSuchNoteError(): HonoApiError {
 	});
 }
 
-function clipsAddNoteAlreadyClippedError(): HonoApiError {
-	return new HonoApiError({
+function clipsAddNoteAlreadyClippedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'The note has already been clipped.',
 		code: 'ALREADY_CLIPPED',
@@ -213,8 +213,8 @@ function clipsAddNoteAlreadyClippedError(): HonoApiError {
 	});
 }
 
-function clipsAddNoteTooManyClipNotesError(): HonoApiError {
-	return new HonoApiError({
+function clipsAddNoteTooManyClipNotesError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You cannot add notes to the clip any more.',
 		code: 'TOO_MANY_CLIP_NOTES',
@@ -222,8 +222,8 @@ function clipsAddNoteTooManyClipNotesError(): HonoApiError {
 	});
 }
 
-function clipsRemoveNoteNoSuchClipError(): HonoApiError {
-	return new HonoApiError({
+function clipsRemoveNoteNoSuchClipError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such clip.',
 		code: 'NO_SUCH_CLIP',
@@ -231,8 +231,8 @@ function clipsRemoveNoteNoSuchClipError(): HonoApiError {
 	});
 }
 
-function clipsRemoveNoteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function clipsRemoveNoteNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -240,8 +240,8 @@ function clipsRemoveNoteNoSuchNoteError(): HonoApiError {
 	});
 }
 
-export async function packClipForHonoApi(
-	deps: HonoApiClipDependencies,
+export async function packClipForApi(
+	deps: ApiClipDependencies,
 	clip: MiClip,
 	me: { id: MiUser['id'] } | null | undefined,
 	hint?: {
@@ -254,7 +254,7 @@ export async function packClipForHonoApi(
 	const meId = me ? me.id : null;
 
 	const [user, favoritedCount, isFavorited, notesCount] = await Promise.all([
-		hint?.packedUser ? Promise.resolve(hint.packedUser) : packUserLiteForHonoApi(deps, clip.userId),
+		hint?.packedUser ? Promise.resolve(hint.packedUser) : packUserLiteForApi(deps, clip.userId),
 		hint?.favoritedCount !== undefined
 			? Promise.resolve(hint.favoritedCount)
 			: countClipFavoritesFromDatabase(deps.db, clip.id),
@@ -285,8 +285,8 @@ export async function packClipForHonoApi(
 	};
 }
 
-export async function packClipsManyForHonoApi(
-	deps: HonoApiClipDependencies,
+export async function packClipsManyForApi(
+	deps: ApiClipDependencies,
 	clips: MiClip[],
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'Clip'>[]> {
@@ -295,7 +295,7 @@ export async function packClipsManyForHonoApi(
 	const meId = me?.id ?? null;
 	const ownedClipIds = meId == null ? [] : clips.filter((clip) => clip.userId === meId).map((clip) => clip.id);
 	const [packedUsers, favoriteCounts, favoritedClipIds, noteCounts] = await Promise.all([
-		packUserLiteManyForHonoApi(deps, userIds),
+		packUserLiteManyForApi(deps, userIds),
 		countClipFavoritesByClipIdsFromDatabase(deps.db, clipIds),
 		meId == null ? Promise.resolve([]) : listFavoritedClipIdsByUserIdAndClipIdsFromDatabase(deps.db, meId, clipIds),
 		countClipNotesByClipIdsFromDatabase(deps.db, ownedClipIds),
@@ -305,7 +305,7 @@ export async function packClipsManyForHonoApi(
 
 	return await Promise.all(
 		clips.map((clip) =>
-			packClipForHonoApi(
+			packClipForApi(
 				deps,
 				clip,
 				me,
@@ -320,12 +320,12 @@ export async function packClipsManyForHonoApi(
 	);
 }
 
-export async function handleHonoApiClipsList(
-	deps: HonoApiClipDependencies,
+export async function handleApiClipsList(
+	deps: ApiClipDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>[]> {
-	const params = parseHonoApiParams(clipsListParamDef, body);
+	const params = parseApiParams(clipsListParamDef, body);
 	const pagination = resolveClipPagination({ gen: (time) => genId(time) }, params);
 	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
@@ -335,43 +335,43 @@ export async function handleHonoApiClipsList(
 		untilId: pagination.untilId,
 	});
 
-	return await packClipsManyForHonoApi(deps, clips, me);
+	return await packClipsManyForApi(deps, clips, me);
 }
 
-export async function handleHonoApiClipsShow(
-	deps: HonoApiClipDependencies,
+export async function handleApiClipsShow(
+	deps: ApiClipDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>> {
-	const params = parseHonoApiParams(clipIdParamDef, body);
+	const params = parseApiParams(clipIdParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null) throw clipsShowNoSuchClipError();
 	if (!clip.isPublic && (me == null || clip.userId !== me.id)) throw clipsShowNoSuchClipError();
 
-	return await packClipForHonoApi(deps, clip, me);
+	return await packClipForApi(deps, clip, me);
 }
 
-export async function handleHonoApiClipsMyFavorites(
-	deps: HonoApiClipDependencies,
+export async function handleApiClipsMyFavorites(
+	deps: ApiClipDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>[]> {
-	parseHonoApiParams(emptyParamDef, body);
+	parseApiParams(emptyParamDef, body);
 	const clipIds = await listFavoritedClipIdsByUserIdFromDatabase(deps.db, me.id);
 	if (clipIds.length === 0) return [];
 
 	const clipById = new Map((await listClipsByIdsFromDatabase(deps.db, clipIds)).map((clip) => [clip.id, clip]));
 	const clips = clipIds.map((id) => clipById.get(id)).filter((clip): clip is MiClip => clip != null);
 
-	return await packClipsManyForHonoApi(deps, clips, me);
+	return await packClipsManyForApi(deps, clips, me);
 }
 
-export async function handleHonoApiClipsCreate(
-	deps: HonoApiClipDependencies,
+export async function handleApiClipsCreate(
+	deps: ApiClipDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>> {
-	const params = parseHonoApiParams(clipsCreateParamDef, body);
+	const params = parseApiParams(clipsCreateParamDef, body);
 
 	const clip = await createClipWithinLimitInDatabase(
 		deps.db,
@@ -382,19 +382,19 @@ export async function handleHonoApiClipsCreate(
 			isPublic: params.isPublic,
 			description: params.description || null,
 		},
-		(await getHonoApiRolePolicies(deps, me)).clipLimit,
+		(await getApiRolePolicies(deps, me)).clipLimit,
 	);
 	if (clip == null) throw clipsCreateTooManyClipsError();
 
-	return await packClipForHonoApi(deps, clip, me);
+	return await packClipForApi(deps, clip, me);
 }
 
-export async function handleHonoApiClipsUpdate(
-	deps: HonoApiClipDependencies,
+export async function handleApiClipsUpdate(
+	deps: ApiClipDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>> {
-	const params = parseHonoApiParams(clipsUpdateParamDef, body);
+	const params = parseApiParams(clipsUpdateParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsUpdateNoSuchClipError();
 
@@ -408,27 +408,27 @@ export async function handleHonoApiClipsUpdate(
 		}),
 	);
 
-	return await packClipForHonoApi(deps, await fetchClipByIdOrFailFromDatabase(deps.db, clip.id), me);
+	return await packClipForApi(deps, await fetchClipByIdOrFailFromDatabase(deps.db, clip.id), me);
 }
 
-export async function handleHonoApiClipsDelete(
-	deps: HonoApiClipDependencies,
+export async function handleApiClipsDelete(
+	deps: ApiClipDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(clipIdParamDef, body);
+	const params = parseApiParams(clipIdParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsDeleteNoSuchClipError();
 
 	await deleteClipInDatabase(deps.db, clip.id);
 }
 
-export async function handleHonoApiClipsAddNote(
-	deps: HonoApiClipDependencies,
+export async function handleApiClipsAddNote(
+	deps: ApiClipDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(clipsNoteParamDef, body);
+	const params = parseApiParams(clipsNoteParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsAddNoteNoSuchClipError();
 
@@ -440,24 +440,24 @@ export async function handleHonoApiClipsAddNote(
 				noteId: params.noteId,
 				clipId: clip.id,
 			},
-			(await getHonoApiRolePolicies(deps, me)).noteEachClipsLimit,
+			(await getApiRolePolicies(deps, me)).noteEachClipsLimit,
 		);
 		if (result === 'tooManyClipNotes') throw clipsAddNoteTooManyClipNotesError();
 		if (result === 'noSuchNote') throw clipsAddNoteNoSuchNoteError();
 	} catch (e: unknown) {
-		if (e instanceof HonoApiError) throw e;
+		if (e instanceof ApiError) throw e;
 		if (isDuplicateKeyValueDatabaseError(e)) throw clipsAddNoteAlreadyClippedError();
 		if (getDatabaseErrorCode(e) === '23503') throw clipsAddNoteNoSuchNoteError();
 		throw e;
 	}
 }
 
-export async function handleHonoApiClipsRemoveNote(
-	deps: HonoApiClipDependencies,
+export async function handleApiClipsRemoveNote(
+	deps: ApiClipDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(clipsNoteParamDef, body);
+	const params = parseApiParams(clipsNoteParamDef, body);
 	const clip = await fetchClipByIdAndUserIdFromDatabase(deps.db, params.clipId, me.id);
 	if (clip == null) throw clipsRemoveNoteNoSuchClipError();
 
@@ -467,8 +467,8 @@ export async function handleHonoApiClipsRemoveNote(
 	await deleteClipNoteAndDecrementNoteClippedCountInDatabase(deps.db, { noteId: params.noteId, clipId: clip.id });
 }
 
-function clipsNotesNoSuchClipError(): HonoApiError {
-	return new HonoApiError({
+function clipsNotesNoSuchClipError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such clip.',
 		code: 'NO_SUCH_CLIP',
@@ -476,12 +476,12 @@ function clipsNotesNoSuchClipError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiClipsNotes(
-	deps: HonoApiClipNotesDependencies,
+export async function handleApiClipsNotes(
+	deps: ApiClipNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(clipNotesParamDef, body);
+	const params = parseApiParams(clipNotesParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null) throw clipsNotesNoSuchClipError();
 	if (!clip.isPublic && (me == null || clip.userId !== me.id)) throw clipsNotesNoSuchClipError();
@@ -512,7 +512,7 @@ export async function handleHonoApiClipsNotes(
 		}),
 	);
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForApi(deps, notes, me);
 }
 
 export const usersClipsParamDef = z.object({
@@ -533,12 +533,12 @@ type UsersClipsParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiUsersClips(
-	deps: HonoApiClipDependencies,
+export async function handleApiUsersClips(
+	deps: ApiClipDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>[]> {
-	const params = parseHonoApiParams(usersClipsParamDef, body);
+	const params = parseApiParams(usersClipsParamDef, body);
 	const pagination = resolveClipPagination({ gen: (time) => genId(time) }, params);
 	const clips = await listClipsWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,
@@ -549,5 +549,5 @@ export async function handleHonoApiUsersClips(
 		untilId: pagination.untilId,
 	});
 
-	return await packClipsManyForHonoApi(deps, clips, me);
+	return await packClipsManyForApi(deps, clips, me);
 }

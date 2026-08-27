@@ -13,52 +13,48 @@ import type { Config } from '@/config.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { HonoApiError } from '../error.js';
+import { ApiError } from '../error.js';
 import { genLocalUserUri } from '../user/following.js';
 import {
 	addActivityContext,
-	deliverNoteActivityForHonoApi,
-	deliverToRelaysForHonoApi,
-	type HonoApiRelayDeliverDependencies,
+	deliverNoteActivityForApi,
+	deliverToRelaysForApi,
+	type ApiRelayDeliverDependencies,
 } from '../activitypub/notes-ap.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import {
-	packMeDetailedForHonoApi,
-	type MeDetailedHonoApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packMeDetailedForApi, type MeDetailedApiResponse, type UserPackingDependencies } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAccountPinDependencies = HonoApiRolePolicyDependencies &
-	HonoApiRelayDeliverDependencies &
+export type ApiAccountPinDependencies = ApiRolePolicyDependencies &
+	ApiRelayDeliverDependencies &
 	UserPackingDependencies;
 
-function iPinNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function iPinNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
 		id: '56734f8b-3928-431e-bf80-6ff87df40cb3',
 	});
 }
-function iPinLimitExceededError(): HonoApiError {
-	return new HonoApiError({
+function iPinLimitExceededError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You can not pin notes any more.',
 		code: 'PIN_LIMIT_EXCEEDED',
 		id: '72dab508-c64d-498f-8740-a8eec1ba385a',
 	});
 }
-function iPinAlreadyPinnedError(): HonoApiError {
-	return new HonoApiError({
+function iPinAlreadyPinnedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'That note has already been pinned.',
 		code: 'ALREADY_PINNED',
 		id: '8b18c2b7-68fe-4edb-9892-c0cbaeb6c913',
 	});
 }
-function iUnpinNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function iUnpinNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -74,7 +70,7 @@ type IPinOrUnpinParams = {
 	noteId: string;
 };
 
-function renderAddForHonoApi(
+function renderAddForApi(
 	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },
 	target: string,
@@ -83,7 +79,7 @@ function renderAddForHonoApi(
 	return { type: 'Add', actor: genLocalUserUri(config, user.id), target, object };
 }
 
-function renderRemoveForHonoApi(
+function renderRemoveForApi(
 	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },
 	target: string,
@@ -92,8 +88,8 @@ function renderRemoveForHonoApi(
 	return { type: 'Remove', actor: genLocalUserUri(config, user.id), target, object };
 }
 
-async function deliverPinnedChangeForHonoApi(
-	deps: HonoApiAccountPinDependencies,
+async function deliverPinnedChangeForApi(
+	deps: ApiAccountPinDependencies,
 	user: MiLocalUser,
 	noteId: string,
 	isAddition: boolean,
@@ -102,25 +98,23 @@ async function deliverPinnedChangeForHonoApi(
 	const item = `${deps.config.instance.url}/notes/${noteId}`;
 	const content = addActivityContext(
 		deps.config,
-		isAddition
-			? renderAddForHonoApi(deps.config, user, target, item)
-			: renderRemoveForHonoApi(deps.config, user, target, item),
+		isAddition ? renderAddForApi(deps.config, user, target, item) : renderRemoveForApi(deps.config, user, target, item),
 	);
 
-	await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
+	await deliverNoteActivityForApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
 	// リレー配信は fire-and-forget とし、ピン留め処理の完了を待たせない。
-	void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, content).catch(() => {});
+	void deliverToRelaysForApi(deps, { id: user.id, host: null }, content).catch(() => {});
 }
 
-export async function addPinnedForHonoApi(
-	deps: HonoApiAccountPinDependencies,
+export async function addPinnedForApi(
+	deps: ApiAccountPinDependencies,
 	user: { id: MiUser['id']; host: MiUser['host'] },
 	noteId: string,
 ): Promise<void> {
 	const note = await fetchNoteByIdAndUserIdFromDatabase(deps.db, noteId, user.id);
 	if (note == null) throw iPinNoSuchNoteError();
 
-	const policies = await getHonoApiRolePolicies(deps, user as MiUser);
+	const policies = await getApiRolePolicies(deps, user as MiUser);
 	const result = await createUserNotePiningWithinLimitInDatabase(
 		deps.db,
 		{
@@ -134,12 +128,12 @@ export async function addPinnedForHonoApi(
 	if (result === 'alreadyPinned') throw iPinAlreadyPinnedError();
 
 	if (user.host == null && !note.localOnly && (note.visibility === 'public' || note.visibility === 'home')) {
-		void deliverPinnedChangeForHonoApi(deps, user as MiLocalUser, note.id, true).catch(() => {});
+		void deliverPinnedChangeForApi(deps, user as MiLocalUser, note.id, true).catch(() => {});
 	}
 }
 
-export async function removePinnedForHonoApi(
-	deps: HonoApiAccountPinDependencies,
+export async function removePinnedForApi(
+	deps: ApiAccountPinDependencies,
 	user: { id: MiUser['id']; host: MiUser['host'] },
 	noteId: string,
 ): Promise<void> {
@@ -149,30 +143,30 @@ export async function removePinnedForHonoApi(
 	await deleteUserNotePiningFromDatabase(deps.db, { userId: user.id, noteId: note.id });
 
 	if (user.host == null && !note.localOnly && (note.visibility === 'public' || note.visibility === 'home')) {
-		void deliverPinnedChangeForHonoApi(deps, user as MiLocalUser, note.id, false).catch(() => {});
+		void deliverPinnedChangeForApi(deps, user as MiLocalUser, note.id, false).catch(() => {});
 	}
 }
 
-export async function handleHonoApiIPin(
-	deps: HonoApiAccountPinDependencies,
+export async function handleApiIPin(
+	deps: ApiAccountPinDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<MeDetailedHonoApiResponse> {
-	const params = parseHonoApiParams(iPinOrUnpinParamDef, body);
+): Promise<MeDetailedApiResponse> {
+	const params = parseApiParams(iPinOrUnpinParamDef, body);
 
-	await addPinnedForHonoApi(deps, me, params.noteId);
+	await addPinnedForApi(deps, me, params.noteId);
 
-	return await packMeDetailedForHonoApi(deps, me, { includeSecrets: false });
+	return await packMeDetailedForApi(deps, me, { includeSecrets: false });
 }
 
-export async function handleHonoApiIUnpin(
-	deps: HonoApiAccountPinDependencies,
+export async function handleApiIUnpin(
+	deps: ApiAccountPinDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<MeDetailedHonoApiResponse> {
-	const params = parseHonoApiParams(iPinOrUnpinParamDef, body);
+): Promise<MeDetailedApiResponse> {
+	const params = parseApiParams(iPinOrUnpinParamDef, body);
 
-	await removePinnedForHonoApi(deps, me, params.noteId);
+	await removePinnedForApi(deps, me, params.noteId);
 
-	return await packMeDetailedForHonoApi(deps, me, { includeSecrets: false });
+	return await packMeDetailedForApi(deps, me, { includeSecrets: false });
 }

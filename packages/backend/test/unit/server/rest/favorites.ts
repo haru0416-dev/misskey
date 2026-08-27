@@ -47,7 +47,7 @@ vi.mock('@/core/user/UserListStore.js', () => ({
 	userListExistsByIdAndPublicFromDatabase: userListExistsMock,
 }));
 
-import { handleHonoApiClipsFavorite, handleHonoApiUsersListsFavorite } from '@/server/rest/favorite/favorites.js';
+import { handleApiClipsFavorite, handleApiUsersListsFavorite } from '@/server/rest/favorite/favorites.js';
 
 describe('favorites REST handlers', () => {
 	const userId = genId();
@@ -70,7 +70,7 @@ describe('favorites REST handlers', () => {
 		createUserListFavoriteMock.mockRejectedValue({ cause: { code: '23505' } });
 
 		await expect(
-			handleHonoApiUsersListsFavorite(deps, me, {
+			handleApiUsersListsFavorite(deps, me, {
 				listId: resourceId,
 			}),
 		).rejects.toMatchObject({
@@ -84,7 +84,7 @@ describe('favorites REST handlers', () => {
 		createClipFavoriteMock.mockRejectedValue({ driverError: { code: '23505' } });
 
 		await expect(
-			handleHonoApiClipsFavorite(deps, me, {
+			handleApiClipsFavorite(deps, me, {
 				clipId: resourceId,
 			}),
 		).rejects.toMatchObject({

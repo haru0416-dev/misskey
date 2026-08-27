@@ -9,25 +9,25 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta, MiRole, MiUser, MiUserProfile } from '@/models/_.js';
 
 const {
-	getHonoApiRolePoliciesMock,
-	getHonoApiUserRolesMock,
-	isHonoApiAdministratorMock,
-	isHonoApiModeratorMock,
+	getApiRolePoliciesMock,
+	getApiUserRolesMock,
+	isApiAdministratorMock,
+	isApiModeratorMock,
 	listUserNotePiningsByUserIdFromDatabaseMock,
 } = vi.hoisted(() => ({
-	getHonoApiRolePoliciesMock: vi.fn(),
-	getHonoApiUserRolesMock: vi.fn(),
-	isHonoApiAdministratorMock: vi.fn(),
-	isHonoApiModeratorMock: vi.fn(),
+	getApiRolePoliciesMock: vi.fn(),
+	getApiUserRolesMock: vi.fn(),
+	isApiAdministratorMock: vi.fn(),
+	isApiModeratorMock: vi.fn(),
 	listUserNotePiningsByUserIdFromDatabaseMock: vi.fn(),
 }));
 
 vi.mock('@/server/rest/role/role-policy.js', () => ({
-	computeHonoApiUserRoles: vi.fn(),
-	getHonoApiRolePolicies: getHonoApiRolePoliciesMock,
-	getHonoApiUserRoles: getHonoApiUserRolesMock,
-	isHonoApiAdministrator: isHonoApiAdministratorMock,
-	isHonoApiModerator: isHonoApiModeratorMock,
+	computeApiUserRoles: vi.fn(),
+	getApiRolePolicies: getApiRolePoliciesMock,
+	getApiUserRoles: getApiUserRolesMock,
+	isApiAdministrator: isApiAdministratorMock,
+	isApiModerator: isApiModeratorMock,
 }));
 
 vi.mock('@/core/user/UserMemoStore.js', () => ({
@@ -43,12 +43,12 @@ vi.mock('@/core/user/UserNotePiningStore.js', () => ({
 }));
 
 vi.mock('@/server/rest/note/note.js', () => ({
-	packNoteManyForHonoApi: vi.fn(async () => []),
+	packNoteManyForApi: vi.fn(async () => []),
 	populateEmojis: vi.fn(async () => ({})),
 	populateEmojisMany: vi.fn(async () => []),
 }));
 
-import { packMeDetailedForHonoApi } from '@/server/rest/user/user.js';
+import { packMeDetailedForApi } from '@/server/rest/user/user.js';
 
 const userId = '019f587c6bc4785ead8d511d603959f0';
 
@@ -130,10 +130,10 @@ const policies = {
 };
 
 async function packWithRoles(roles: MiRole[], rootUserId: string | null = null) {
-	getHonoApiUserRolesMock.mockResolvedValue(roles);
-	getHonoApiRolePoliciesMock.mockResolvedValue(policies);
+	getApiUserRolesMock.mockResolvedValue(roles);
+	getApiRolePoliciesMock.mockResolvedValue(policies);
 
-	return await packMeDetailedForHonoApi(
+	return await packMeDetailedForApi(
 		{
 			config: {
 				instance: { url: 'https://example.test/' },
@@ -154,7 +154,7 @@ async function packWithRoles(roles: MiRole[], rootUserId: string | null = null) 
 	);
 }
 
-describe('packMeDetailedForHonoApi', () => {
+describe('packMeDetailedForApi', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		listUserNotePiningsByUserIdFromDatabaseMock.mockResolvedValue([]);
@@ -175,11 +175,11 @@ describe('packMeDetailedForHonoApi', () => {
 		} as MiRole;
 		const response = await packWithRoles([administratorRole]);
 
-		expect(getHonoApiUserRolesMock).toHaveBeenCalledOnce();
-		expect(getHonoApiRolePoliciesMock).toHaveBeenCalledOnce();
-		expect(getHonoApiRolePoliciesMock).toHaveBeenCalledWith(expect.anything(), expect.anything(), [administratorRole]);
-		expect(isHonoApiModeratorMock).not.toHaveBeenCalled();
-		expect(isHonoApiAdministratorMock).not.toHaveBeenCalled();
+		expect(getApiUserRolesMock).toHaveBeenCalledOnce();
+		expect(getApiRolePoliciesMock).toHaveBeenCalledOnce();
+		expect(getApiRolePoliciesMock).toHaveBeenCalledWith(expect.anything(), expect.anything(), [administratorRole]);
+		expect(isApiModeratorMock).not.toHaveBeenCalled();
+		expect(isApiAdministratorMock).not.toHaveBeenCalled();
 		expect(response).toMatchObject({
 			isAdmin: true,
 			isModerator: true,

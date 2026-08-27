@@ -7,16 +7,16 @@ import { z } from 'zod';
 import { listAvatarDecorationsFromDatabase } from '@/core/avatar-decoration/AvatarDecorationStore.js';
 import { listRolesFromDatabase } from '@/core/role/RoleStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAvatarDecorationDependencies = {
+export type ApiAvatarDecorationDependencies = {
 	db: MiDrizzleDatabase;
 };
 
 export const getAvatarDecorationsParamDef = z.object({});
 
-export async function handleHonoApiGetAvatarDecorations(
-	deps: HonoApiAvatarDecorationDependencies,
+export async function handleApiGetAvatarDecorations(
+	deps: ApiAvatarDecorationDependencies,
 	body: Record<string, unknown>,
 ): Promise<
 	{
@@ -28,7 +28,7 @@ export async function handleHonoApiGetAvatarDecorations(
 		category: string | null;
 	}[]
 > {
-	parseHonoApiParams(getAvatarDecorationsParamDef, body);
+	parseApiParams(getAvatarDecorationsParamDef, body);
 	const decorations = await listAvatarDecorationsFromDatabase(deps.db);
 	const allRoles = await listRolesFromDatabase(deps.db);
 	const roleIds = new Set(allRoles.map((role) => role.id));

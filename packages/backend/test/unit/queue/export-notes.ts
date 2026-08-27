@@ -16,7 +16,7 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { createNoteInDatabase } from '@/core/note/NoteStore.js';
 import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueExportNotes, type HonoQueueDbDependencies } from '@/queue/handlers/db.js';
+import { handleQueueExportNotes, type QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbJobDataWithUser } from '@/queue/types.js';
 
 function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {
@@ -25,7 +25,7 @@ function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {
 
 describe('hono-queue-db (exportNotes)', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueDbDependencies;
+	let deps: QueueDbDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -51,13 +51,13 @@ describe('hono-queue-db (exportNotes)', () => {
 			visibility: 'public',
 		});
 
-		await handleHonoQueueExportNotes(deps, fakeJob({ user: { id: user.id } }));
+		await handleQueueExportNotes(deps, fakeJob({ user: { id: user.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('notes-') && f.name.endsWith('.json'))).toBe(true);
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueExportNotes(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
+		await expect(handleQueueExportNotes(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 });

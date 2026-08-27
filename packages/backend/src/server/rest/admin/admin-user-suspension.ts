@@ -28,10 +28,10 @@ import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { queueRetentionOptions } from '@/queue/const.js';
 import type { DbUserSuspensionPostEffectsJobData } from '@/queue/types.js';
 import { addActivityContext, genLocalUserUri, renderUndo } from '../user/following.js';
-import { isHonoApiModerator } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
+import { isApiModerator } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminUserSuspensionDependencies = {
+export type ApiAdminUserSuspensionDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -63,7 +63,7 @@ function suspensionDeliveryJobId(prefix: string, userId: MiUser['id'], transitio
 }
 
 async function enqueueSharedInboxDelete(
-	deps: HonoApiAdminUserSuspensionDependencies,
+	deps: ApiAdminUserSuspensionDependencies,
 	user: MiUser,
 	transitionedAt: string,
 	transitionId: string,
@@ -92,7 +92,7 @@ async function enqueueSharedInboxDelete(
 }
 
 async function enqueueSharedInboxUndoDelete(
-	deps: HonoApiAdminUserSuspensionDependencies,
+	deps: ApiAdminUserSuspensionDependencies,
 	user: MiUser,
 	transitionedAt: string,
 	transitionId: string,
@@ -125,7 +125,7 @@ async function enqueueSharedInboxUndoDelete(
 }
 
 async function enqueueUnfollowAllJobs(
-	deps: HonoApiAdminUserSuspensionDependencies,
+	deps: ApiAdminUserSuspensionDependencies,
 	follower: MiUser,
 	transitionedAt: string,
 	transitionId: string,
@@ -151,7 +151,7 @@ async function enqueueUnfollowAllJobs(
 }
 
 async function postSuspend(
-	deps: HonoApiAdminUserSuspensionDependencies,
+	deps: ApiAdminUserSuspensionDependencies,
 	user: MiUser,
 	transitionedAt: string,
 	transitionId: string,
@@ -162,7 +162,7 @@ async function postSuspend(
 }
 
 async function postUnsuspend(
-	deps: HonoApiAdminUserSuspensionDependencies,
+	deps: ApiAdminUserSuspensionDependencies,
 	user: MiUser,
 	transitionedAt: string,
 	transitionId: string,
@@ -173,10 +173,10 @@ async function postUnsuspend(
 }
 
 async function findSuspensionTarget(
-	deps: HonoApiAdminUserSuspensionDependencies,
+	deps: ApiAdminUserSuspensionDependencies,
 	body: Record<string, unknown>,
 ): Promise<MiUser> {
-	const params = parseHonoApiParams(adminUserSuspensionParamDef, body);
+	const params = parseApiParams(adminUserSuspensionParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
 		throw new Error('user not found');
@@ -185,8 +185,8 @@ async function findSuspensionTarget(
 	return user;
 }
 
-export async function handleHonoQueueUserSuspensionPostEffects(
-	deps: HonoApiAdminUserSuspensionDependencies,
+export async function handleQueueUserSuspensionPostEffects(
+	deps: ApiAdminUserSuspensionDependencies,
 	job: Bull.Job<DbUserSuspensionPostEffectsJobData>,
 ): Promise<void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.userId);
@@ -207,7 +207,7 @@ export async function handleHonoQueueUserSuspensionPostEffects(
 }
 
 async function changeSuspensionState(
-	deps: HonoApiAdminUserSuspensionDependencies,
+	deps: ApiAdminUserSuspensionDependencies,
 	me: MiLocalUser,
 	user: MiUser,
 	isSuspended: boolean,
@@ -243,7 +243,7 @@ async function changeSuspensionState(
 
 	try {
 		await runInlineDbOutboxJob(deps.db, result, async (db) => {
-			await handleHonoQueueUserSuspensionPostEffects({ ...deps, db }, {
+			await handleQueueUserSuspensionPostEffects({ ...deps, db }, {
 				data: result.data,
 			} as Bull.Job<DbUserSuspensionPostEffectsJobData>);
 		});
@@ -252,21 +252,21 @@ async function changeSuspensionState(
 	}
 }
 
-export async function handleHonoApiAdminSuspendUser(
-	deps: HonoApiAdminUserSuspensionDependencies,
+export async function handleApiAdminSuspendUser(
+	deps: ApiAdminUserSuspensionDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
 	const user = await findSuspensionTarget(deps, body);
-	if (await isHonoApiModerator(deps, user)) {
+	if (await isApiModerator(deps, user)) {
 		throw new Error('cannot suspend moderator account');
 	}
 
 	await changeSuspensionState(deps, me, user, true);
 }
 
-export async function handleHonoApiAdminUnsuspendUser(
-	deps: HonoApiAdminUserSuspensionDependencies,
+export async function handleApiAdminUnsuspendUser(
+	deps: ApiAdminUserSuspensionDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {

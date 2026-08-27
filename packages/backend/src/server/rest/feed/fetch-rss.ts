@@ -6,8 +6,8 @@
 import Parser from 'rss-parser';
 import { z } from 'zod';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { HonoApiError } from '../error.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { parseApiParams } from '../validation.js';
 
 const FETCH_RSS_MAX_SIZE = 1024 * 1024;
 const FETCH_RSS_MAX_URL_LENGTH = 8192;
@@ -30,7 +30,7 @@ const rssParser = new Parser({
 /** 同一URLへの同時リクエストは1本にまとめて、その結果を全員で共有する。 */
 const inFlightRequests = new Map<string, Promise<unknown>>();
 
-export type HonoApiFetchRssDependencies = {
+export type ApiFetchRssDependencies = {
 	httpRequestService: HttpRequestService;
 };
 
@@ -38,8 +38,8 @@ export const fetchRssParamDef = z.object({
 	url: z.string(),
 });
 
-function invalidUrlError(): HonoApiError {
-	return new HonoApiError({
+function invalidUrlError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Invalid URL.',
 		code: 'INVALID_URL',
@@ -47,8 +47,8 @@ function invalidUrlError(): HonoApiError {
 	});
 }
 
-function fetchRssFailedError(): HonoApiError {
-	return new HonoApiError({
+function fetchRssFailedError(): ApiError {
+	return new ApiError({
 		status: 422,
 		message: 'Failed to fetch RSS.',
 		code: 'FETCH_RSS_FAILED',
@@ -57,8 +57,8 @@ function fetchRssFailedError(): HonoApiError {
 	});
 }
 
-function fetchRssUnavailableError(): HonoApiError {
-	return new HonoApiError({
+function fetchRssUnavailableError(): ApiError {
+	return new ApiError({
 		status: 503,
 		message: 'RSS fetching is temporarily unavailable.',
 		code: 'FETCH_RSS_UNAVAILABLE',
@@ -94,7 +94,7 @@ function normalizeFetchRssUrl(input: string): string {
 	return url.href;
 }
 
-async function fetchRss(deps: HonoApiFetchRssDependencies, url: string): Promise<unknown> {
+async function fetchRss(deps: ApiFetchRssDependencies, url: string): Promise<unknown> {
 	const res = await deps.httpRequestService.send(url, {
 		method: 'GET',
 		headers: {
@@ -112,11 +112,11 @@ async function fetchRss(deps: HonoApiFetchRssDependencies, url: string): Promise
 	return await rssParser.parseString(await res.text());
 }
 
-export async function handleHonoApiFetchRss(
-	deps: HonoApiFetchRssDependencies,
+export async function handleApiFetchRss(
+	deps: ApiFetchRssDependencies,
 	body: Record<string, unknown>,
 ): Promise<unknown> {
-	const params = parseHonoApiParams(fetchRssParamDef, body);
+	const params = parseApiParams(fetchRssParamDef, body);
 	const url = normalizeFetchRssUrl(params.url);
 
 	const inFlight = inFlightRequests.get(url);

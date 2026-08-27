@@ -6,11 +6,11 @@
 import { isInstanceMuted, isUserFromMutedInstance } from '@/misc/is-instance-muted.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { packNoteForHonoApi, type HonoApiNoteDependencies } from '@/server/rest/note/note.js';
+import { packNoteForApi, type ApiNoteDependencies } from '@/server/rest/note/note.js';
 import {
-	isNoteMutedOrBlockedForHonoStream,
-	isNoteVisibleForMeForHonoStream,
-	type HonoStreamChannelDefinition,
+	isNoteMutedOrBlockedForStream,
+	isNoteVisibleForMeForStream,
+	type StreamChannelDefinition,
 } from '../channel.js';
 
 type MainStreamNotificationBody = {
@@ -18,7 +18,7 @@ type MainStreamNotificationBody = {
 	note?: { id: string; isHidden?: boolean } & Record<string, unknown>;
 } & Record<string, unknown>;
 
-export const honoStreamChannelMain: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
+export const honoStreamChannelMain: StreamChannelDefinition<ApiNoteDependencies> = {
 	shouldShare: true,
 	requireCredential: true,
 	kind: 'read:account',
@@ -35,7 +35,7 @@ export const honoStreamChannelMain: HonoStreamChannelDefinition<HonoApiNoteDepen
 					if (body.userId && ctx.userIdsWhoMeMuting.has(body.userId)) return;
 
 					if (body.note?.isHidden) {
-						const note = await packNoteForHonoApi(deps, body.note.id, user, { detail: true });
+						const note = await packNoteForApi(deps, body.note.id, user, { detail: true });
 						data = { type: data.type, body: { ...body, note } };
 					}
 					break;
@@ -43,10 +43,10 @@ export const honoStreamChannelMain: HonoStreamChannelDefinition<HonoApiNoteDepen
 				case 'mention': {
 					const note = data.body as Packed<'Note'>;
 					if (isInstanceMuted(note, ctx.userMutedInstances)) return;
-					if (!isNoteVisibleForMeForHonoStream(ctx, note)) return;
-					if (isNoteMutedOrBlockedForHonoStream(ctx, note)) return;
+					if (!isNoteVisibleForMeForStream(ctx, note)) return;
+					if (isNoteMutedOrBlockedForStream(ctx, note)) return;
 					if (note.isHidden) {
-						const packed = await packNoteForHonoApi(deps, note.id, user, { detail: true });
+						const packed = await packNoteForApi(deps, note.id, user, { detail: true });
 						data = { type: data.type, body: packed as unknown as JsonValue };
 					}
 					break;

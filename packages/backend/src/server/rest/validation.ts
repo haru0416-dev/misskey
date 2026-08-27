@@ -9,7 +9,7 @@ import { invalidParamError } from './error.js';
 
 type ExactOptionalProperties<T> = T extends Record<string, unknown> ? OmitUndefinedProperties<T> : T;
 
-export function parseHonoApiParams<Z extends z.ZodType>(
+export function parseApiParams<Z extends z.ZodType>(
 	schema: Z,
 	body: Record<string, unknown>,
 ): ExactOptionalProperties<z.infer<Z>> {

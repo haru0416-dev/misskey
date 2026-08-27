@@ -13,13 +13,13 @@ const ev = globalEventBus;
 
 const INTERVAL_MS = 10000;
 
-export type HonoDaemonQueueStatsDependencies = {
+export type DaemonQueueStatsDependencies = {
 	config: Config;
 	deliverQueue: DeliverQueue;
 	inboxQueue: InboxQueue;
 };
 
-export function startHonoQueueStatsDaemon(deps: HonoDaemonQueueStatsDependencies): { dispose: () => void } {
+export function startQueueStatsDaemon(deps: DaemonQueueStatsDependencies): { dispose: () => void } {
 	const log: unknown[] = [];
 
 	const onRequestLog = (x: { id: string; length?: number }) => {

@@ -17,14 +17,14 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import type { ObjectStorageFileJobData } from '@/queue/types.js';
-import type { HonoChartWriters } from '../../server/chart-runtime.js';
+import type { ChartWriters } from '../../server/chart-runtime.js';
 
-export type HonoQueueObjectStorageDependencies = {
+export type QueueObjectStorageDependencies = {
 	db: MiDrizzleDatabase;
 	meta: Pick<MiMeta, 'enableChartsForFederatedInstances' | 'objectStorageBucket'>;
 	s3Service: Pick<S3Service, 'getS3Client' | 'delete'>;
 	internalStorageService: Pick<InternalStorageService, 'del'>;
-	chartWriters: Pick<HonoChartWriters, 'driveChart' | 'perUserDriveChart' | 'instanceChart'>;
+	chartWriters: Pick<ChartWriters, 'driveChart' | 'perUserDriveChart' | 'instanceChart'>;
 	publishDriveStream?: (userId: MiUser['id'], type: 'fileDeleted', value: MiDriveFile['id']) => void;
 	isModerator?: (user: MiUser) => Promise<boolean>;
 	logDriveFileDeletion?: (
@@ -40,10 +40,7 @@ export type HonoQueueObjectStorageDependencies = {
 	) => unknown;
 };
 
-export async function deleteObjectStorageFileForHonoApi(
-	deps: HonoQueueObjectStorageDependencies,
-	key: string,
-): Promise<void> {
+export async function deleteObjectStorageFileForApi(deps: QueueObjectStorageDependencies, key: string): Promise<void> {
 	try {
 		const param = {
 			Bucket: deps.meta.objectStorageBucket,
@@ -61,8 +58,8 @@ export async function deleteObjectStorageFileForHonoApi(
 	}
 }
 
-export async function deleteFileSyncForHonoApi(
-	deps: HonoQueueObjectStorageDependencies,
+export async function deleteFileSyncForApi(
+	deps: QueueObjectStorageDependencies,
 	file: MiDriveFile,
 	isExpired = false,
 	deleter?: MiUser,
@@ -83,14 +80,14 @@ export async function deleteFileSyncForHonoApi(
 	} else if (!file.isLink) {
 		const promises: Promise<void>[] = [];
 
-		if (file.accessKey != null) promises.push(deleteObjectStorageFileForHonoApi(deps, file.accessKey));
+		if (file.accessKey != null) promises.push(deleteObjectStorageFileForApi(deps, file.accessKey));
 
 		if (file.thumbnailUrl && file.thumbnailAccessKey != null) {
-			promises.push(deleteObjectStorageFileForHonoApi(deps, file.thumbnailAccessKey));
+			promises.push(deleteObjectStorageFileForApi(deps, file.thumbnailAccessKey));
 		}
 
 		if (file.webpublicUrl && file.webpublicAccessKey != null) {
-			promises.push(deleteObjectStorageFileForHonoApi(deps, file.webpublicAccessKey));
+			promises.push(deleteObjectStorageFileForApi(deps, file.webpublicAccessKey));
 		}
 
 		await Promise.all(promises);
@@ -101,7 +98,7 @@ export async function deleteFileSyncForHonoApi(
 			db: deps.db,
 			meta: deps.meta,
 			deleteInternalFile: (key) => deps.internalStorageService.del(key),
-			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFileForHonoApi(deps, key),
+			enqueueDeleteObjectStorageFile: (key) => deleteObjectStorageFileForApi(deps, key),
 			updateDriveChart: (f, isAdditional) => deps.chartWriters.driveChart.update(f, isAdditional),
 			updatePerUserDriveChart: (f, isAdditional) => deps.chartWriters.perUserDriveChart.update(f, isAdditional),
 			updateInstanceDriveChart: (f, isAdditional) => deps.chartWriters.instanceChart.updateDrive(f, isAdditional),
@@ -115,8 +112,8 @@ export async function deleteFileSyncForHonoApi(
 	);
 }
 
-export async function handleHonoQueueCleanRemoteFiles(
-	deps: HonoQueueObjectStorageDependencies,
+export async function handleQueueCleanRemoteFiles(
+	deps: QueueObjectStorageDependencies,
 	job: Bull.Job<Record<string, unknown>>,
 ): Promise<void> {
 	let deletedCount = 0;
@@ -137,7 +134,7 @@ export async function handleHonoQueueCleanRemoteFiles(
 
 		cursor = files.at(-1)?.id ?? null;
 
-		await Promise.all(files.map((file) => deleteFileSyncForHonoApi(deps, file, true)));
+		await Promise.all(files.map((file) => deleteFileSyncForApi(deps, file, true)));
 
 		deletedCount += 8;
 
@@ -145,10 +142,10 @@ export async function handleHonoQueueCleanRemoteFiles(
 	}
 }
 
-export async function handleHonoQueueDeleteFile(
-	deps: HonoQueueObjectStorageDependencies,
+export async function handleQueueDeleteFile(
+	deps: QueueObjectStorageDependencies,
 	job: Bull.Job<ObjectStorageFileJobData>,
 ): Promise<string> {
-	await deleteObjectStorageFileForHonoApi(deps, job.data.key);
+	await deleteObjectStorageFileForApi(deps, job.data.key);
 	return 'Success';
 }

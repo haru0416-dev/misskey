@@ -20,7 +20,7 @@ import {
 } from '@/core/user/UserStore.js';
 import { createFollowingInDatabase } from '@/core/user/FollowingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { updatePersonForHonoApi, type HonoApiUpdatePersonDependencies } from '@/server/rest/activitypub/ap-person.js';
+import { updatePersonForApi, type ApiUpdatePersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 import type { MiRemoteUser } from '@/models/User.js';
 
 /**
@@ -42,9 +42,9 @@ function actorFixtureServer(getPerson: () => Record<string, unknown>): Promise<{
 	});
 }
 
-describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', () => {
+describe('updatePersonForApi の引っ越し (processRemoteMove) 処理', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoApiUpdatePersonDependencies;
+	let deps: ApiUpdatePersonDependencies;
 	const servers: Server[] = [];
 
 	beforeAll(async () => {
@@ -121,7 +121,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 			followeeHost: srcFixture.host,
 		});
 
-		await updatePersonForHonoApi(deps, srcUri, srcUser);
+		await updatePersonForApi(deps, srcUri, srcUser);
 
 		const updatedSrc = await fetchUserByIdOrFailFromDatabase(deps.db, srcUser.id);
 		expect(updatedSrc.movedToUri).toBe(dstUri);
@@ -184,7 +184,7 @@ describe('updatePersonForHonoApi の引っ越し (processRemoteMove) 処理', ()
 			followeeHost: srcFixture.host,
 		});
 
-		await updatePersonForHonoApi(deps, srcUri, srcUser);
+		await updatePersonForApi(deps, srcUri, srcUser);
 
 		const updatedSrc = await fetchUserByIdOrFailFromDatabase(deps.db, srcUser.id);
 		expect(updatedSrc.movedToUri).toBe(dstUri);

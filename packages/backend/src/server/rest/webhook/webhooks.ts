@@ -25,23 +25,23 @@ import { MiNote } from '@/models/Note.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { MiUser } from '@/models/User.js';
 import { webhookEventTypes, type MiWebhook, type WebhookEventTypes } from '@/models/Webhook.js';
-import type { HonoApiInternalEventPublisher } from '../events.js';
-import { HonoApiError } from '../error.js';
-import { populateEmojis, type HonoApiEmojiPopulateDependencies } from '../note/note.js';
-import { parseHonoApiParams } from '../validation.js';
+import type { ApiInternalEventPublisher } from '../events.js';
+import { ApiError } from '../error.js';
+import { populateEmojis, type ApiEmojiPopulateDependencies } from '../note/note.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiWebhookDependencies = {
+export type ApiWebhookDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
 };
 
-export type HonoApiWebhookTestDependencies = HonoApiWebhookDependencies &
-	HonoApiEmojiPopulateDependencies & {
+export type ApiWebhookTestDependencies = ApiWebhookDependencies &
+	ApiEmojiPopulateDependencies & {
 		userWebhookDeliverQueue: UserWebhookDeliverQueue;
 	};
 
-export type HonoApiUserWebhook = {
+export type ApiUserWebhook = {
 	id: string;
 	userId: string;
 	name: string;
@@ -103,7 +103,7 @@ type WebhooksUpdateParams = {
 	active?: boolean;
 };
 
-function packUserWebhook(webhook: MiWebhook): HonoApiUserWebhook {
+function packUserWebhook(webhook: MiWebhook): ApiUserWebhook {
 	return {
 		id: webhook.id,
 		userId: webhook.userId,
@@ -117,26 +117,26 @@ function packUserWebhook(webhook: MiWebhook): HonoApiUserWebhook {
 	};
 }
 
-export async function handleHonoApiIWebhooksList(
-	deps: HonoApiWebhookDependencies,
+export async function handleApiIWebhooksList(
+	deps: ApiWebhookDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiUserWebhook[]> {
-	parseHonoApiParams(webhooksListParamDef, body);
+): Promise<ApiUserWebhook[]> {
+	parseApiParams(webhooksListParamDef, body);
 	const webhooks = await listWebhooksByUserIdFromDatabase(deps.db, me.id);
 	return webhooks.map((webhook) => packUserWebhook(webhook));
 }
 
-export async function handleHonoApiIWebhooksShow(
-	deps: HonoApiWebhookDependencies,
+export async function handleApiIWebhooksShow(
+	deps: ApiWebhookDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiUserWebhook> {
-	const params = parseHonoApiParams(webhooksShowParamDef, body);
+): Promise<ApiUserWebhook> {
+	const params = parseApiParams(webhooksShowParamDef, body);
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
 	if (webhook == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such webhook.',
 			code: 'NO_SUCH_WEBHOOK',
@@ -147,16 +147,16 @@ export async function handleHonoApiIWebhooksShow(
 	return packUserWebhook(webhook);
 }
 
-export async function handleHonoApiIWebhooksDelete(
-	deps: HonoApiWebhookDependencies,
+export async function handleApiIWebhooksDelete(
+	deps: ApiWebhookDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(webhooksDeleteParamDef, body);
+	const params = parseApiParams(webhooksDeleteParamDef, body);
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
 	if (webhook == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such webhook.',
 			code: 'NO_SUCH_WEBHOOK',
@@ -168,16 +168,16 @@ export async function handleHonoApiIWebhooksDelete(
 	deps.publishInternalEvent?.('webhookDeleted', webhook);
 }
 
-export async function handleHonoApiIWebhooksUpdate(
-	deps: HonoApiWebhookDependencies,
+export async function handleApiIWebhooksUpdate(
+	deps: ApiWebhookDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(webhooksUpdateParamDef, body);
+	const params = parseApiParams(webhooksUpdateParamDef, body);
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 
 	if (webhook == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such webhook.',
 			code: 'NO_SUCH_WEBHOOK',
@@ -204,13 +204,13 @@ export async function handleHonoApiIWebhooksUpdate(
 	deps.publishInternalEvent?.('webhookUpdated', updated);
 }
 
-export async function handleHonoApiIWebhooksCreate(
-	deps: HonoApiWebhookDependencies,
+export async function handleApiIWebhooksCreate(
+	deps: ApiWebhookDependencies,
 	me: MiLocalUser,
 	webhookLimit: number,
 	body: Record<string, unknown>,
-): Promise<HonoApiUserWebhook> {
-	const params = parseHonoApiParams(webhooksCreateParamDef, body);
+): Promise<ApiUserWebhook> {
+	const params = parseApiParams(webhooksCreateParamDef, body);
 
 	const webhook = await createWebhookWithinLimitInDatabase(
 		deps.db,
@@ -225,7 +225,7 @@ export async function handleHonoApiIWebhooksCreate(
 		webhookLimit,
 	);
 	if (webhook == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'You cannot create webhook any more.',
 			code: 'TOO_MANY_WEBHOOKS',
@@ -378,7 +378,7 @@ const webhookTestDummyUser3 = generateWebhookTestDummyUser({
 });
 
 async function toWebhookTestPackedUserLite(
-	deps: HonoApiEmojiPopulateDependencies,
+	deps: ApiEmojiPopulateDependencies,
 	user: MiUser,
 	override?: Packed<'UserLite'>,
 ): Promise<Packed<'UserLite'>> {
@@ -407,7 +407,7 @@ async function toWebhookTestPackedUserLite(
 }
 
 async function toWebhookTestPackedUserDetailedNotMe(
-	deps: HonoApiEmojiPopulateDependencies,
+	deps: ApiEmojiPopulateDependencies,
 	user: MiUser,
 	override?: Packed<'UserDetailedNotMe'>,
 ): Promise<Packed<'UserDetailedNotMe'>> {
@@ -464,7 +464,7 @@ async function toWebhookTestPackedUserDetailedNotMe(
 }
 
 async function toWebhookTestPackedNote(
-	deps: HonoApiEmojiPopulateDependencies,
+	deps: ApiEmojiPopulateDependencies,
 	note: MiNote,
 	detail = true,
 	override?: Packed<'Note'>,
@@ -512,16 +512,16 @@ async function toWebhookTestPackedNote(
 	} as Packed<'Note'>;
 }
 
-export async function handleHonoApiIWebhooksTest(
-	deps: HonoApiWebhookTestDependencies,
+export async function handleApiIWebhooksTest(
+	deps: ApiWebhookTestDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(webhooksTestParamDef, body);
+	const params = parseApiParams(webhooksTestParamDef, body);
 
 	const webhook = await fetchWebhookByIdAndUserIdFromDatabase(deps.db, params.webhookId, me.id);
 	if (webhook == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such webhook.',
 			code: 'NO_SUCH_WEBHOOK',

@@ -8,18 +8,14 @@ import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import type { Packed } from '@/misc/json-schema.js';
 import {
-	filterNoteForStreamingHidingForHonoApi,
-	populateMyReactionForHonoApi,
-	type HonoApiNoteDependencies,
+	filterNoteForStreamingHidingForApi,
+	populateMyReactionForApi,
+	type ApiNoteDependencies,
 } from '@/server/rest/note/note.js';
-import {
-	isNoteVisibleForMeForHonoStream,
-	type HonoStreamChannelContext,
-	type HonoStreamChannelDefinition,
-} from '../channel.js';
+import { isNoteVisibleForMeForStream, type StreamChannelContext, type StreamChannelDefinition } from '../channel.js';
 
 function isNoteMutedOrBlockedForChannelChannel(
-	ctx: HonoStreamChannelContext,
+	ctx: StreamChannelContext,
 	channelId: string,
 	note: Packed<'Note'>,
 ): boolean {
@@ -43,7 +39,7 @@ function isNoteMutedOrBlockedForChannelChannel(
 	return false;
 }
 
-export const honoStreamChannelChannel: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
+export const honoStreamChannelChannel: StreamChannelDefinition<ApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,
 	kind: null,
@@ -69,16 +65,16 @@ export const honoStreamChannelChannel: HonoStreamChannelDefinition<HonoApiNoteDe
 			)
 				return;
 
-			if (!isNoteVisibleForMeForHonoStream(ctx, note)) return;
+			if (!isNoteVisibleForMeForStream(ctx, note)) return;
 			if (isNoteMutedOrBlockedForChannelChannel(ctx, channelId, note)) return;
 
-			const filtered = await filterNoteForStreamingHidingForHonoApi(deps, note, ctx.user?.id ?? null);
+			const filtered = await filterNoteForStreamingHidingForApi(deps, note, ctx.user?.id ?? null);
 			if (!filtered) return;
 
 			if (ctx.user) {
 				if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 					if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-						filtered.renote.myReaction = await populateMyReactionForHonoApi(
+						filtered.renote.myReaction = await populateMyReactionForApi(
 							deps,
 							{
 								id: filtered.renote.id,

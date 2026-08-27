@@ -12,9 +12,9 @@ import type Logger from '@/logger.js';
 import { resetDb } from '@/misc/reset-db.js';
 import type { MiMeta } from '@/models/_.js';
 import type { SignupInternalEventPublisher } from '../auth/signup.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiResetDbDependencies = {
+export type ApiResetDbDependencies = {
 	db: MiDrizzleDatabase;
 	dbPool: MiDrizzlePool;
 	meta: MiMeta;
@@ -25,11 +25,8 @@ export type HonoApiResetDbDependencies = {
 
 export const resetDbParamDef = z.object({});
 
-export async function handleHonoApiResetDb(
-	deps: HonoApiResetDbDependencies,
-	body: Record<string, unknown>,
-): Promise<void> {
-	parseHonoApiParams(resetDbParamDef, body);
+export async function handleApiResetDb(deps: ApiResetDbDependencies, body: Record<string, unknown>): Promise<void> {
+	parseApiParams(resetDbParamDef, body);
 
 	if (process.env['NODE_ENV'] !== 'test') throw new Error('NODE_ENV is not a test');
 

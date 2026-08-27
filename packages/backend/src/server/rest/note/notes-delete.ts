@@ -16,28 +16,28 @@ import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import type { HonoApiNoteStreamPublisher } from '../events.js';
+import { ApiError } from '../error.js';
+import type { ApiNoteStreamPublisher } from '../events.js';
 import {
-	deliverNoteActivityForHonoApi,
-	deliverToRelaysForHonoApi,
-	renderNoteDeleteOrUndoAnnounceActivityForHonoApi,
-	resolveMentionedAndInvolvedRemoteUsersForHonoApi,
-	type HonoApiRelayDeliverDependencies,
+	deliverNoteActivityForApi,
+	deliverToRelaysForApi,
+	renderNoteDeleteOrUndoAnnounceActivityForApi,
+	resolveMentionedAndInvolvedRemoteUsersForApi,
+	type ApiRelayDeliverDependencies,
 } from '../activitypub/notes-ap.js';
-import { fetchOrRegisterInstanceForHonoApi } from './notes-create.js';
-import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import type { HonoChartWriters } from '@/server/chart-runtime.js';
-import { parseHonoApiParams } from '../validation.js';
+import { fetchOrRegisterInstanceForApi } from './notes-create.js';
+import { isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import type { ChartWriters } from '@/server/chart-runtime.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiNotesDeleteDependencies = HonoApiRelayDeliverDependencies &
-	HonoApiRolePolicyDependencies & {
-		chartWriters: HonoChartWriters;
-		publishNoteStream?: HonoApiNoteStreamPublisher;
+export type ApiNotesDeleteDependencies = ApiRelayDeliverDependencies &
+	ApiRolePolicyDependencies & {
+		chartWriters: ChartWriters;
+		publishNoteStream?: ApiNoteStreamPublisher;
 	};
 
-function notesDeleteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesDeleteNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -45,8 +45,8 @@ function notesDeleteNoSuchNoteError(): HonoApiError {
 	});
 }
 
-function notesDeleteAccessDeniedError(): HonoApiError {
-	return new HonoApiError({
+function notesDeleteAccessDeniedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Access denied.',
 		code: 'ACCESS_DENIED',
@@ -62,8 +62,8 @@ type NotesDeleteParams = {
 	noteId: string;
 };
 
-export async function deleteNoteForHonoApi(
-	deps: HonoApiNotesDeleteDependencies,
+export async function deleteNoteForApi(
+	deps: ApiNotesDeleteDependencies,
 	user: { id: MiUser['id']; uri: MiUser['uri']; host: MiUser['host']; isBot: MiUser['isBot'] },
 	note: MiNote,
 	deleter?: { id: MiUser['id'] },
@@ -74,15 +74,15 @@ export async function deleteNoteForHonoApi(
 
 	if (user.host == null && !note.localOnly) {
 		// アクティビティ生成の失敗は削除を失敗させ、ネットワーク配送だけをバックグラウンドで行う。
-		const activity = await renderNoteDeleteOrUndoAnnounceActivityForHonoApi(deps, note, user);
+		const activity = await renderNoteDeleteOrUndoAnnounceActivityForApi(deps, note, user);
 		(async () => {
-			const directRecipients = await resolveMentionedAndInvolvedRemoteUsersForHonoApi(deps, note);
-			await deliverNoteActivityForHonoApi(deps, user, activity, {
+			const directRecipients = await resolveMentionedAndInvolvedRemoteUsersForApi(deps, note);
+			await deliverNoteActivityForApi(deps, user, activity, {
 				directRecipients,
 				deliverToFollowers: true,
 			});
 
-			void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, activity).catch(() => {});
+			void deliverToRelaysForApi(deps, { id: user.id, host: null }, activity).catch(() => {});
 		})().catch(() => {});
 	}
 
@@ -92,7 +92,7 @@ export async function deleteNoteForHonoApi(
 	}
 
 	if (deps.meta.enableStatsForFederatedInstances && user.host != null) {
-		fetchOrRegisterInstanceForHonoApi(deps, user.host)
+		fetchOrRegisterInstanceForApi(deps, user.host)
 			.then(async (i) => {
 				await adjustInstanceNotesCountFromDatabase(deps.db, i.id, -1);
 				if (deps.meta.enableChartsForFederatedInstances) {
@@ -116,23 +116,23 @@ export async function deleteNoteForHonoApi(
 	}
 }
 
-export async function handleHonoApiNotesDelete(
-	deps: HonoApiNotesDeleteDependencies,
+export async function handleApiNotesDelete(
+	deps: ApiNotesDeleteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(notesDeleteParamDef, body);
+	const params = parseApiParams(notesDeleteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesDeleteNoSuchNoteError();
 
-	if (!(await isHonoApiModerator(deps, me)) && note.userId !== me.id) {
+	if (!(await isApiModerator(deps, me)) && note.userId !== me.id) {
 		throw notesDeleteAccessDeniedError();
 	}
 
 	const noteAuthor = await fetchUserByIdOrFailFromDatabase(deps.db, note.userId);
 
-	await deleteNoteForHonoApi(deps, noteAuthor, note, me);
+	await deleteNoteForApi(deps, noteAuthor, note, me);
 }
 
 export const notesDeleteRateLimit = {
@@ -141,8 +141,8 @@ export const notesDeleteRateLimit = {
 	minInterval: SECOND,
 };
 
-function notesUnrenoteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesUnrenoteNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -158,12 +158,12 @@ type NotesUnrenoteParams = {
 	noteId: string;
 };
 
-export async function handleHonoApiNotesUnrenote(
-	deps: HonoApiNotesDeleteDependencies,
+export async function handleApiNotesUnrenote(
+	deps: ApiNotesDeleteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(notesUnrenoteParamDef, body);
+	const params = parseApiParams(notesUnrenoteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesUnrenoteNoSuchNoteError();
@@ -171,7 +171,7 @@ export async function handleHonoApiNotesUnrenote(
 	const renotes = await listNotesByUserIdAndRenoteIdFromDatabase(deps.db, me.id, note.id);
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
 
-	await Promise.all(renotes.map((renote) => deleteNoteForHonoApi(deps, user, renote)));
+	await Promise.all(renotes.map((renote) => deleteNoteForApi(deps, user, renote)));
 }
 
 export const notesUnrenoteRateLimit = {

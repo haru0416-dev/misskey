@@ -33,22 +33,22 @@ import type { MiMeta, MiRole } from '@/models/_.js';
 import type { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import {
-	computeHonoApiUserRoles,
-	getHonoApiRolePolicies,
-	getHonoApiUserRoles,
-	isHonoApiAdministrator,
-	isHonoApiModerator,
+	computeApiUserRoles,
+	getApiRolePolicies,
+	getApiUserRoles,
+	isApiAdministrator,
+	isApiModerator,
 } from '../role/role-policy.js';
-import { packHonoApiRoles } from '../role/roles.js';
-import { packHonoApiSignin } from '../account/i.js';
+import { packApiRoles } from '../role/roles.js';
+import { packApiSignin } from '../account/i.js';
 import {
-	packUserDetailedNotMeManyForHonoApi,
-	type UserDetailedNotMeHonoApiResponse,
+	packUserDetailedNotMeManyForApi,
+	type UserDetailedNotMeApiResponse,
 	type UserPackingDependencies,
 } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminUsersDependencies = UserPackingDependencies & {
+export type ApiAdminUsersDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -75,8 +75,8 @@ type AdminShowUserResponse = {
 	isHibernated: boolean;
 	lastActiveDate: string | null;
 	moderationNote: string;
-	signins: ReturnType<typeof packHonoApiSignin>[];
-	policies: Awaited<ReturnType<typeof getHonoApiRolePolicies>>;
+	signins: ReturnType<typeof packApiSignin>[];
+	policies: Awaited<ReturnType<typeof getApiRolePolicies>>;
 	roles: Packed<'Role'>[];
 	roleAssigns: {
 		createdAt: string;
@@ -118,7 +118,7 @@ function isActiveRoleAssignment(assign: MiRoleAssignment): boolean {
 	return assign.expiresAt == null || assign.expiresAt.getTime() > Date.now();
 }
 
-async function getAdministratorIds(deps: HonoApiAdminUsersDependencies): Promise<MiUser['id'][]> {
+async function getAdministratorIds(deps: ApiAdminUsersDependencies): Promise<MiUser['id'][]> {
 	const roles = await listRolesFromDatabase(deps.db);
 	const administratorRoles = roles.filter((role) => role.isAdministrator);
 	const assigns =
@@ -132,8 +132,8 @@ async function getAdministratorIds(deps: HonoApiAdminUsersDependencies): Promise
 	return [...new Set(assigns.map((assign) => assign.userId))].sort((a, b) => a.localeCompare(b));
 }
 
-async function getModeratorIdsForHonoApi(
-	deps: Pick<HonoApiAdminUsersDependencies, 'db' | 'meta'>,
+async function getModeratorIdsForApi(
+	deps: Pick<ApiAdminUsersDependencies, 'db' | 'meta'>,
 	options: {
 		includeAdmins: boolean;
 		includeRoot?: boolean;
@@ -166,15 +166,15 @@ async function getModeratorIdsForHonoApi(
 	return [...resultSet].sort((a, b) => a.localeCompare(b));
 }
 
-export async function getModeratorsForHonoApi(
-	deps: Pick<HonoApiAdminUsersDependencies, 'db' | 'meta'>,
+export async function getModeratorsForApi(
+	deps: Pick<ApiAdminUsersDependencies, 'db' | 'meta'>,
 	options: {
 		includeAdmins: boolean;
 		includeRoot?: boolean;
 		excludeExpire?: boolean;
 	},
 ): Promise<MiUser[]> {
-	const ids = await getModeratorIdsForHonoApi(deps, options);
+	const ids = await getModeratorIdsForApi(deps, options);
 	return ids.length > 0 ? await listUsersByIdsFromDatabase(deps.db, ids, { includeSuspended: true }) : [];
 }
 
@@ -200,21 +200,21 @@ function packPublicUserRole(role: MiRole): {
 	};
 }
 
-async function packAdminUserDetailedForHonoApi(
-	deps: HonoApiAdminUsersDependencies,
+async function packAdminUserDetailedForApi(
+	deps: ApiAdminUsersDependencies,
 	user: MiUser,
-	base: UserDetailedNotMeHonoApiResponse,
+	base: UserDetailedNotMeApiResponse,
 	hint?: {
 		profile?: Awaited<ReturnType<typeof fetchUserProfileByUserIdOrFailFromDatabase>>;
 		roles?: MiRole[];
-		policies?: Awaited<ReturnType<typeof getHonoApiRolePolicies>>;
+		policies?: Awaited<ReturnType<typeof getApiRolePolicies>>;
 	},
-): Promise<UserDetailedNotMeHonoApiResponse> {
+): Promise<UserDetailedNotMeApiResponse> {
 	const [profile, roles] = await Promise.all([
 		hint?.profile ?? fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id),
-		hint?.roles ?? getHonoApiUserRoles(deps, user),
+		hint?.roles ?? getApiUserRoles(deps, user),
 	]);
-	const policies = hint?.policies ?? (await getHonoApiRolePolicies(deps, user, roles));
+	const policies = hint?.policies ?? (await getApiRolePolicies(deps, user, roles));
 	const publicRoles = roles
 		.filter((role) => role.isPublic)
 		.sort((a, b) => b.displayOrder - a.displayOrder)
@@ -232,11 +232,11 @@ async function packAdminUserDetailedForHonoApi(
 	};
 }
 
-async function packAdminUsersDetailedForHonoApi(
-	deps: HonoApiAdminUsersDependencies,
+async function packAdminUsersDetailedForApi(
+	deps: ApiAdminUsersDependencies,
 	users: MiUser[],
-	baseUsers: UserDetailedNotMeHonoApiResponse[],
-): Promise<UserDetailedNotMeHonoApiResponse[]> {
+	baseUsers: UserDetailedNotMeApiResponse[],
+): Promise<UserDetailedNotMeApiResponse[]> {
 	const userIds = users.map((user) => user.id);
 	const [profiles, roles, assignments] = await Promise.all([
 		listUserProfilesByUserIdsFromDatabase(deps.db, userIds),
@@ -256,10 +256,10 @@ async function packAdminUsersDetailedForHonoApi(
 
 	return await Promise.all(
 		users.map(async (user, index) => {
-			const userRoles = computeHonoApiUserRoles(deps, user, roles, assignmentsByUserId.get(user.id) ?? []);
-			const policies = await getHonoApiRolePolicies(deps, user, userRoles);
+			const userRoles = computeApiUserRoles(deps, user, roles, assignmentsByUserId.get(user.id) ?? []);
+			const policies = await getApiRolePolicies(deps, user, userRoles);
 			const profile = profileByUserId.get(user.id);
-			return await packAdminUserDetailedForHonoApi(deps, user, baseUsers[index]!, {
+			return await packAdminUserDetailedForApi(deps, user, baseUsers[index]!, {
 				...(profile === undefined ? {} : { profile }),
 				roles: userRoles,
 				policies,
@@ -268,12 +268,12 @@ async function packAdminUsersDetailedForHonoApi(
 	);
 }
 
-export async function handleHonoApiAdminShowUser(
-	deps: HonoApiAdminUsersDependencies,
+export async function handleApiAdminShowUser(
+	deps: ApiAdminUsersDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<AdminShowUserResponse> {
-	const params = parseHonoApiParams(adminShowUserParamDef, body);
+	const params = parseApiParams(adminShowUserParamDef, body);
 	const [user, profile] = await Promise.all([
 		fetchUserByIdFromDatabase(deps.db, params.userId),
 		fetchUserProfileByUserIdFromDatabase(deps.db, params.userId),
@@ -284,16 +284,16 @@ export async function handleHonoApiAdminShowUser(
 	}
 
 	const freshMe = await fetchUserByIdOrFailFromDatabase(deps.db, me.id);
-	if (!(await isHonoApiAdministrator(deps, freshMe)) && (await isHonoApiAdministrator(deps, user))) {
+	if (!(await isApiAdministrator(deps, freshMe)) && (await isApiAdministrator(deps, user))) {
 		throw new Error('cannot show info of admin');
 	}
 
 	const [policies, signins, assigns, roles, isModerator] = await Promise.all([
-		getHonoApiRolePolicies(deps, user),
+		getApiRolePolicies(deps, user),
 		listSigninsByUserIdFromDatabase(deps.db, user.id),
 		listRoleAssignmentsByUserIdFromDatabase(deps.db, user.id).then((result) => result.filter(isActiveRoleAssignment)),
-		getHonoApiUserRoles(deps, user),
-		isHonoApiModerator(deps, user),
+		getApiUserRoles(deps, user),
+		isApiModerator(deps, user),
 	]);
 
 	return {
@@ -317,9 +317,9 @@ export async function handleHonoApiAdminShowUser(
 		isHibernated: user.isHibernated,
 		lastActiveDate: user.lastActiveDate ? user.lastActiveDate.toISOString() : null,
 		moderationNote: profile.moderationNote ?? '',
-		signins: signins.map((signin) => packHonoApiSignin(deps, signin)),
+		signins: signins.map((signin) => packApiSignin(deps, signin)),
 		policies,
-		roles: await packHonoApiRoles(deps, roles),
+		roles: await packApiRoles(deps, roles),
 		roleAssigns: assigns.map((assign) => ({
 			createdAt: parseId(assign.id).date.toISOString(),
 			expiresAt: assign.expiresAt ? assign.expiresAt.toISOString() : null,
@@ -328,12 +328,12 @@ export async function handleHonoApiAdminShowUser(
 	};
 }
 
-export async function handleHonoApiAdminShowUsers(
-	deps: HonoApiAdminUsersDependencies,
+export async function handleApiAdminShowUsers(
+	deps: ApiAdminUsersDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<UserDetailedNotMeHonoApiResponse[]> {
-	const params = parseHonoApiParams(adminShowUsersParamDef, body);
+): Promise<UserDetailedNotMeApiResponse[]> {
+	const params = parseApiParams(adminShowUsersParamDef, body);
 	let roleUserIds: MiUser['id'][] | null = null;
 
 	switch (params.state) {
@@ -343,12 +343,12 @@ export async function handleHonoApiAdminShowUsers(
 			break;
 		}
 		case 'moderator': {
-			roleUserIds = await getModeratorIdsForHonoApi(deps, { includeAdmins: false });
+			roleUserIds = await getModeratorIdsForApi(deps, { includeAdmins: false });
 			if (roleUserIds.length === 0) return [];
 			break;
 		}
 		case 'adminOrModerator': {
-			roleUserIds = await getModeratorIdsForHonoApi(deps, { includeAdmins: true });
+			roleUserIds = await getModeratorIdsForApi(deps, { includeAdmins: true });
 			if (roleUserIds.length === 0) return [];
 			break;
 		}
@@ -367,7 +367,7 @@ export async function handleHonoApiAdminShowUsers(
 			roleUserIds,
 		}),
 	);
-	const baseUsers = await packUserDetailedNotMeManyForHonoApi(deps, users, me);
+	const baseUsers = await packUserDetailedNotMeManyForApi(deps, users, me);
 
-	return await packAdminUsersDetailedForHonoApi(deps, users, baseUsers);
+	return await packAdminUsersDetailedForApi(deps, users, baseUsers);
 }

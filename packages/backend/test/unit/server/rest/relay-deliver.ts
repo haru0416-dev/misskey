@@ -15,11 +15,11 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
-import { attachLdSignatureForHonoApi, deliverToRelaysForHonoApi } from '@/server/rest/activitypub/notes-ap.js';
+import { attachLdSignatureForApi, deliverToRelaysForApi } from '@/server/rest/activitypub/notes-ap.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
-describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#deliverToRelays / ApRendererService#attachLdSignature 相当)', () => {
+describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverToRelays / ApRendererService#attachLdSignature 相当)', () => {
 	let runtime: RuntimeDependencies;
 	let user: MiUser;
 	const createdRelayIds: string[] = [];
@@ -57,7 +57,7 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 			object: { type: 'Note' },
 		};
 
-		await deliverToRelaysForHonoApi(runtime, { id: user.id, host: null }, activity);
+		await deliverToRelaysForApi(runtime, { id: user.id, host: null }, activity);
 
 		// 共有 redis 上の deliver キューには他テストの残骸ジョブが混在し得るため、
 		// JSON.parse せず content 文字列に自分のアクティビティ id が含まれるかだけを見る。
@@ -81,7 +81,7 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 			object: `${runtime.config.instance.url}/notes/dummy`,
 		};
 
-		const signed = await attachLdSignatureForHonoApi(runtime, activity, { id: user.id, host: null });
+		const signed = await attachLdSignatureForApi(runtime, activity, { id: user.id, host: null });
 
 		const signature = signed['signature'] as Record<string, unknown>;
 		expect(signature).toBeDefined();
@@ -114,7 +114,7 @@ describe('deliverToRelaysForHonoApi / attachLdSignatureForHonoApi (RelayService#
 			object: { type: 'Note' },
 		};
 
-		await deliverToRelaysForHonoApi(runtime, { id: user.id, host: null }, activity);
+		await deliverToRelaysForApi(runtime, { id: user.id, host: null }, activity);
 
 		const jobs = await runtime.deliverQueue.getJobs(['waiting', 'delayed']);
 		const relayJob = jobs.find((j) => (j.data as DeliverJobData).to === inbox);

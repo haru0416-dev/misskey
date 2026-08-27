@@ -10,14 +10,14 @@ import {
 	updateUserProfileInDatabase,
 } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { HonoApiError } from '../error.js';
-import type { HonoApiMainStreamPublisher } from '../notification/notification.js';
-import { packMeDetailedForHonoApi, type UserPackingDependencies } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import type { ApiMainStreamPublisher } from '../notification/notification.js';
+import { packMeDetailedForApi, type UserPackingDependencies } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiVerifyEmailDependencies = UserPackingDependencies & {
+export type ApiVerifyEmailDependencies = UserPackingDependencies & {
 	db: MiDrizzleDatabase;
-	publishMainStream?: HonoApiMainStreamPublisher;
+	publishMainStream?: ApiMainStreamPublisher;
 };
 
 export const verifyEmailParamDef = z.object({
@@ -28,8 +28,8 @@ type VerifyEmailParams = {
 	code: string;
 };
 
-function noSuchCodeError(): HonoApiError {
-	return new HonoApiError({
+function noSuchCodeError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such code.',
 		code: 'NO_SUCH_CODE',
@@ -37,11 +37,11 @@ function noSuchCodeError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiVerifyEmail(
-	deps: HonoApiVerifyEmailDependencies,
+export async function handleApiVerifyEmail(
+	deps: ApiVerifyEmailDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(verifyEmailParamDef, body);
+	const params = parseApiParams(verifyEmailParamDef, body);
 	const profile = await fetchUserProfileByEmailVerifyCodeFromDatabase(deps.db, params.code);
 
 	if (profile == null) {
@@ -57,7 +57,7 @@ export async function handleHonoApiVerifyEmail(
 	deps.publishMainStream?.(
 		profile.userId,
 		'meUpdated',
-		await packMeDetailedForHonoApi(deps, user, {
+		await packMeDetailedForApi(deps, user, {
 			includeSecrets: true,
 			profile: {
 				...profile,

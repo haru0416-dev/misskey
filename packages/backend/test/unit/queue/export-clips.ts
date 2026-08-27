@@ -18,7 +18,7 @@ import { createClipInDatabase } from '@/core/clip/ClipStore.js';
 import { createClipNoteInDatabase } from '@/core/clip/ClipNoteStore.js';
 import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueExportClips, type HonoQueueDbDependencies } from '@/queue/handlers/db.js';
+import { handleQueueExportClips, type QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbJobDataWithUser } from '@/queue/types.js';
 
 function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {
@@ -27,7 +27,7 @@ function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {
 
 describe('hono-queue-db (exportClips)', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueDbDependencies;
+	let deps: QueueDbDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -61,13 +61,13 @@ describe('hono-queue-db (exportClips)', () => {
 		});
 		await createClipNoteInDatabase(runtime.db, { id: genId(), clipId: clip.id, noteId });
 
-		await handleHonoQueueExportClips(deps, fakeJob({ user: { id: user.id } }));
+		await handleQueueExportClips(deps, fakeJob({ user: { id: user.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('clips-') && f.name.endsWith('.json'))).toBe(true);
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueExportClips(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
+		await expect(handleQueueExportClips(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 });

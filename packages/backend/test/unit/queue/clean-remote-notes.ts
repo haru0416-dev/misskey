@@ -11,8 +11,8 @@ import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { createNoteInDatabase, fetchNoteByIdFromDatabase } from '@/core/note/NoteStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
-	handleHonoQueueCleanRemoteNotes,
-	type HonoQueueCleanRemoteNotesDependencies,
+	handleQueueCleanRemoteNotes,
+	type QueueCleanRemoteNotesDependencies,
 } from '@/queue/handlers/clean-remote-notes.js';
 import type { Config } from '@/config.js';
 
@@ -27,7 +27,7 @@ describe('hono-queue-clean-remote-notes', () => {
 	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
 	let config: Config;
-	let deps: HonoQueueCleanRemoteNotesDependencies;
+	let deps: QueueCleanRemoteNotesDependencies;
 
 	beforeAll(() => {
 		config = loadConfig();
@@ -48,7 +48,7 @@ describe('hono-queue-clean-remote-notes', () => {
 	});
 
 	test('enableRemoteNotesCleaningがfalseの場合はskippedを返す', async () => {
-		const result = await handleHonoQueueCleanRemoteNotes(deps, fakeJob());
+		const result = await handleQueueCleanRemoteNotes(deps, fakeJob());
 		expect(result).toEqual({ deletedCount: 0, oldest: null, newest: null, skipped: true, transientErrors: 0 });
 	});
 
@@ -75,7 +75,7 @@ describe('hono-queue-clean-remote-notes', () => {
 		// 処理時間の上限を短く抑えてテストの実行時間を有界にする
 		// (NODE_ENV=testではバッチ間のsetTimeoutはスキップされるが、CTEクエリ自体の
 		// 累積コストは残るため、maxDurationによる打ち切りを安全弁として使う)。
-		const result = await handleHonoQueueCleanRemoteNotes(
+		const result = await handleQueueCleanRemoteNotes(
 			{
 				...deps,
 				meta: { ...deps.meta, enableRemoteNotesCleaning: true, remoteNotesCleaningMaxProcessingDurationInMinutes: 0.1 },

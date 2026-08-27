@@ -14,16 +14,13 @@ import { listAllDriveFilesByUserIdFromDatabase } from '@/core/drive/DriveFileSto
 import { fetchMetaFromDatabase } from '@/core/meta/MetaStore.js';
 import { createUserWithProfileAndPublickeyInDatabase, deleteUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import {
-	addDriveFileForHonoApi,
-	type HonoApiDriveFileUploadDependencies,
-} from '@/server/rest/drive/drive-file-upload.js';
+import { addDriveFileForApi, type ApiDriveFileUploadDependencies } from '@/server/rest/drive/drive-file-upload.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiUser } from '@/models/User.js';
 import { queueOutbox } from '@/db/schema/queue-outbox.js';
 import type { DbQueue } from '@/core/queue/queues.js';
 
-describe('addDriveFileForHonoApi quota serialization', () => {
+describe('addDriveFileForApi quota serialization', () => {
 	let config: Config;
 	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
@@ -121,11 +118,11 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 				instanceChart: { updateDrive: update },
 			},
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-		} as unknown as HonoApiDriveFileUploadDependencies;
+		} as unknown as ApiDriveFileUploadDependencies;
 
 		const results = await Promise.allSettled(
 			paths.map((filePath) =>
-				addDriveFileForHonoApi(deps, {
+				addDriveFileForApi(deps, {
 					user,
 					path: filePath,
 					force: true,
@@ -214,11 +211,11 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 				instanceChart: { updateDrive: vi.fn() },
 			},
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-		} as unknown as HonoApiDriveFileUploadDependencies;
+		} as unknown as ApiDriveFileUploadDependencies;
 
 		try {
-			await addDriveFileForHonoApi(deps, { user: remoteUser, path: paths[0]!, force: true });
-			const second = await addDriveFileForHonoApi(deps, { user: remoteUser, path: paths[1]!, force: true });
+			await addDriveFileForApi(deps, { user: remoteUser, path: paths[0]!, force: true });
+			const second = await addDriveFileForApi(deps, { user: remoteUser, path: paths[1]!, force: true });
 			const files = await listAllDriveFilesByUserIdFromDatabase(db, remoteUser.id);
 			const outboxRows = await db.select().from(queueOutbox).where(eq(queueOutbox.name, 'deleteDriveFile'));
 
@@ -298,7 +295,7 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 					instanceChart: { updateDrive: update },
 				},
 				logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-			}) as unknown as HonoApiDriveFileUploadDependencies;
+			}) as unknown as ApiDriveFileUploadDependencies;
 
 		const remotePath = path.join(tempDir, 'stream-remote.bin');
 		const localPath = path.join(tempDir, 'stream-local.bin');
@@ -306,7 +303,7 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 		await fs.writeFile(localPath, Buffer.alloc(16));
 
 		try {
-			await addDriveFileForHonoApi(buildDeps('77777777777777777777777777777777'), {
+			await addDriveFileForApi(buildDeps('77777777777777777777777777777777'), {
 				user: remoteUser,
 				path: remotePath,
 				force: true,
@@ -316,7 +313,7 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 			expect(publishMainStream, 'リモート宛には流さない').not.toHaveBeenCalled();
 			expect(publishDriveStream, 'リモート宛には流さない').not.toHaveBeenCalled();
 
-			await addDriveFileForHonoApi(buildDeps('88888888888888888888888888888888'), {
+			await addDriveFileForApi(buildDeps('88888888888888888888888888888888'), {
 				user,
 				path: localPath,
 				force: true,
@@ -372,9 +369,9 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 				instanceChart: { updateDrive: update },
 			},
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-		} as unknown as HonoApiDriveFileUploadDependencies;
+		} as unknown as ApiDriveFileUploadDependencies;
 
-		await expect(addDriveFileForHonoApi(deps, { user, path: filePath, force: true })).rejects.toThrow(
+		await expect(addDriveFileForApi(deps, { user, path: filePath, force: true })).rejects.toThrow(
 			'object storage is down',
 		);
 
@@ -418,9 +415,9 @@ describe('addDriveFileForHonoApi quota serialization', () => {
 				instanceChart: { updateDrive: update },
 			},
 			logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-		} as unknown as HonoApiDriveFileUploadDependencies;
+		} as unknown as ApiDriveFileUploadDependencies;
 
-		await expect(addDriveFileForHonoApi(deps, { user, path: filePath, force: true })).rejects.toThrow(/Upload aborted/);
+		await expect(addDriveFileForApi(deps, { user, path: filePath, force: true })).rejects.toThrow(/Upload aborted/);
 		expect(await listAllDriveFilesByUserIdFromDatabase(db, user.id)).toHaveLength(before.length);
 	});
 });

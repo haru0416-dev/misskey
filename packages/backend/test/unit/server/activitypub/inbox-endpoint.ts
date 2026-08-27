@@ -17,7 +17,7 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { userKeypair } from '@/db/schema/user-keypair.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { signedPostForHonoApi } from '@/server/rest/activitypub/ap-resolve.js';
+import { signedPostForApi } from '@/server/rest/activitypub/ap-resolve.js';
 import { handleInboxRequest, type InboxEndpointDependencies } from '@/server/activitypub/inbox-endpoint.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -44,7 +44,7 @@ async function createTestUserWithKeypair(
 	return user;
 }
 
-// 実際に自分自身へ signedPostForHonoApi で配送させ、送信された生のHTTPリクエストを
+// 実際に自分自身へ signedPostForApi で配送させ、送信された生のHTTPリクエストを
 // ローカルHTTPフィクスチャで捕捉することで、本物のHTTP-Signature/Digestヘッダーを持つ
 // リクエストを再現する (established local HTTP fixture pattern)。
 function captureRequestServer(): Promise<{ server: Server; url: string; capture: () => Promise<CapturedRequest> }> {
@@ -108,7 +108,7 @@ describe('hono-inbox-endpoint', () => {
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 		const activityId = `https://${host}/activities/${genId()}`;
 
-		await signedPostForHonoApi(
+		await signedPostForApi(
 			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
 			user,
 			url,
@@ -208,7 +208,7 @@ describe('hono-inbox-endpoint', () => {
 		};
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 
-		await signedPostForHonoApi(
+		await signedPostForApi(
 			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
 			user,
 			url,
@@ -244,7 +244,7 @@ describe('hono-inbox-endpoint', () => {
 		};
 		const user = await createTestUserWithKeypair({ ...deps, db: runtime.db });
 
-		await signedPostForHonoApi(
+		await signedPostForApi(
 			{ config: runtime.config, db: runtime.db, httpRequestService: runtime.httpRequestService },
 			user,
 			url,

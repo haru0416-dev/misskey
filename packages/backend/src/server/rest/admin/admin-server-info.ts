@@ -8,9 +8,9 @@ import { sql } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminServerInfoDependencies = {
+export type ApiAdminServerInfoDependencies = {
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
 };
@@ -39,11 +39,11 @@ type AdminServerInfoResponse = {
 
 export const adminServerInfoParamDef = z.object({});
 
-export async function handleHonoApiAdminServerInfo(
-	deps: HonoApiAdminServerInfoDependencies,
+export async function handleApiAdminServerInfo(
+	deps: ApiAdminServerInfoDependencies,
 	body: Record<string, unknown>,
 ): Promise<AdminServerInfoResponse> {
-	parseHonoApiParams(adminServerInfoParamDef, body);
+	parseApiParams(adminServerInfoParamDef, body);
 
 	const si = await import('systeminformation');
 	const memStats = await si.mem();

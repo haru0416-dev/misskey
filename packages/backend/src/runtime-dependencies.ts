@@ -50,10 +50,10 @@ import {
 import { createVideoProcessingService, type VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import { createUrlPreviewService, type UrlPreviewService } from '@/server/web/UrlPreviewService.js';
 import {
-	createHonoChartWriters,
-	saveHonoChartWriters,
-	startHonoChartWriterSaveInterval,
-	type HonoChartWriters,
+	createChartWriters,
+	saveChartWriters,
+	startChartWriterSaveInterval,
+	type ChartWriters,
 } from '@/server/chart-runtime.js';
 
 export type RuntimeDependencies = {
@@ -89,7 +89,7 @@ export type RuntimeDependencies = {
 	redisForSub: Redis.Redis;
 	redisForTimelines: Redis.Redis;
 	redisForReactions: Redis.Redis;
-	chartWriters: HonoChartWriters;
+	chartWriters: ChartWriters;
 	dispose: () => Promise<void>;
 };
 
@@ -288,8 +288,8 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		const emailService = createEmailService(config, meta, db, loggerService, utilityService, httpRequestService);
 		const userAuthService = createUserAuthService(redis, db);
 		const webAuthnService = createWebAuthnService(config, meta, redis, db);
-		const chartWriters = createHonoChartWriters({ db, redis, meta, logger: loggerService.getLogger('chart', 'white') });
-		const chartWriterSaveIntervalId = startHonoChartWriterSaveInterval(chartWriters);
+		const chartWriters = createChartWriters({ db, redis, meta, logger: loggerService.getLogger('chart', 'white') });
+		const chartWriterSaveIntervalId = startChartWriterSaveInterval(chartWriters);
 		let disposed = false;
 
 		return {
@@ -332,7 +332,7 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 				clearInterval(chartWriterSaveIntervalId);
 				try {
 					if (process.env['NODE_ENV'] !== 'test') {
-						await saveHonoChartWriters(chartWriters);
+						await saveChartWriters(chartWriters);
 					}
 				} finally {
 					await disposeRuntimeResources(resources);

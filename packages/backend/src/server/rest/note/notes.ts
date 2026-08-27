@@ -58,22 +58,22 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { packClipsManyForHonoApi, type HonoApiClipDependencies } from '../clip/clips.js';
-import { HonoApiError } from '../error.js';
+import { packClipsManyForApi, type ApiClipDependencies } from '../clip/clips.js';
+import { ApiError } from '../error.js';
 import {
-	fetchNoteDiffsForHonoApi,
-	filterVisibleNotesForHonoApi,
-	packNoteForHonoApi,
-	packNoteManyForHonoApi,
-	type HonoApiNoteDependencies,
+	fetchNoteDiffsForApi,
+	filterVisibleNotesForApi,
+	packNoteForApi,
+	packNoteManyForApi,
+	type ApiNoteDependencies,
 } from './note.js';
-import { grantAchievementForHonoApi, type HonoApiNotificationDependencies } from '../notification/notification.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { getFanoutTimelineNotesForHonoApi } from './fanout-timeline.js';
-import { parseHonoApiParams } from '../validation.js';
+import { grantAchievementForApi, type ApiNotificationDependencies } from '../notification/notification.js';
+import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiNotesDependencies = HonoApiNoteDependencies &
-	HonoApiNotificationDependencies & {
+export type ApiNotesDependencies = ApiNoteDependencies &
+	ApiNotificationDependencies & {
 		meta: MiMeta;
 		/** fanout タイムライン (Redis) 読み取りに必要。省略時は常にDBから読む。 */
 		redisForTimelines?: Redis.Redis;
@@ -87,8 +87,8 @@ type NotesShowParams = {
 	noteId: string;
 };
 
-function notesShowNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesShowNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -96,8 +96,8 @@ function notesShowNoSuchNoteError(): HonoApiError {
 	});
 }
 
-function notesShowContentRestrictedByUserError(): HonoApiError {
-	return new HonoApiError({
+function notesShowContentRestrictedByUserError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Content restricted by user. Please sign in to view.',
 		code: 'CONTENT_RESTRICTED_BY_USER',
@@ -105,8 +105,8 @@ function notesShowContentRestrictedByUserError(): HonoApiError {
 	});
 }
 
-function notesShowContentRestrictedByServerError(): HonoApiError {
-	return new HonoApiError({
+function notesShowContentRestrictedByServerError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Content restricted by server settings. Please sign in to view.',
 		code: 'CONTENT_RESTRICTED_BY_SERVER',
@@ -133,7 +133,7 @@ type NoteIdPaginationParams = {
 };
 
 function resolveNoteSinceUntilId(
-	config: HonoApiNotesDependencies['config'],
+	config: ApiNotesDependencies['config'],
 	params: { sinceId?: string; untilId?: string; sinceDate?: number; untilDate?: number },
 ): { sinceId: string | null; untilId: string | null } {
 	let sinceId = params.sinceId ?? null;
@@ -145,12 +145,12 @@ function resolveNoteSinceUntilId(
 	return { sinceId, untilId };
 }
 
-export async function handleHonoApiNotesChildren(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesChildren(
+	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(noteIdPaginationParamDef, body);
+	const params = parseApiParams(noteIdPaginationParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const notes = await listChildNotesFromDatabase(deps.db, {
@@ -162,11 +162,11 @@ export async function handleHonoApiNotesChildren(
 		blockedHosts: deps.meta.blockedHosts,
 	});
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForApi(deps, notes, me);
 }
 
-function notesConversationNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesConversationNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -186,12 +186,12 @@ type NotesConversationParams = {
 	offset: number;
 };
 
-export async function handleHonoApiNotesConversation(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesConversation(
+	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesConversationParamDef, body);
+	const params = parseApiParams(notesConversationParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesConversationNoSuchNoteError();
 
@@ -220,7 +220,7 @@ export async function handleHonoApiNotesConversation(
 		await get(note.replyId);
 	}
 
-	return await packNoteManyForHonoApi(
+	return await packNoteManyForApi(
 		deps,
 		conversation.filter((n) => n != null),
 		me,
@@ -247,12 +247,12 @@ type NotesMentionsParams = {
 	visibility?: string;
 };
 
-export async function handleHonoApiNotesMentions(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesMentions(
+	deps: ApiNotesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesMentionsParamDef, body);
+	const params = parseApiParams(notesMentionsParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const mentions = await listMentionNotesFromDatabase(
@@ -268,15 +268,15 @@ export async function handleHonoApiNotesMentions(
 		}),
 	);
 
-	return await packNoteManyForHonoApi(deps, mentions, me);
+	return await packNoteManyForApi(deps, mentions, me);
 }
 
-export async function handleHonoApiNotesReplies(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesReplies(
+	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(noteIdPaginationParamDef, body);
+	const params = parseApiParams(noteIdPaginationParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const timeline = await listReplyNotesFromDatabase(deps.db, {
@@ -288,11 +288,11 @@ export async function handleHonoApiNotesReplies(
 		blockedHosts: deps.meta.blockedHosts,
 	});
 
-	return await packNoteManyForHonoApi(deps, timeline, me);
+	return await packNoteManyForApi(deps, timeline, me);
 }
 
-function notesRenotesNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesRenotesNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -300,12 +300,12 @@ function notesRenotesNoSuchNoteError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiNotesRenotes(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesRenotes(
+	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(noteIdPaginationParamDef, body);
+	const params = parseApiParams(noteIdPaginationParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesRenotesNoSuchNoteError();
 
@@ -320,7 +320,7 @@ export async function handleHonoApiNotesRenotes(
 		blockedHosts: deps.meta.blockedHosts,
 	});
 
-	return await packNoteManyForHonoApi(deps, renotes, me);
+	return await packNoteManyForApi(deps, renotes, me);
 }
 
 export const noteIdOnlyParamDef = z.object({
@@ -331,12 +331,12 @@ type NoteIdOnlyParams = {
 	noteId: string;
 };
 
-export async function handleHonoApiNotesState(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesState(
+	deps: ApiNotesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ isFavorited: boolean; isMutedThread: boolean }> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
+	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdOrFailFromDatabase(deps.db, params.noteId);
 
 	const [favorite, threadMuting] = await Promise.all([
@@ -350,8 +350,8 @@ export async function handleHonoApiNotesState(
 	};
 }
 
-function notesFavoritesCreateNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesFavoritesCreateNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -359,8 +359,8 @@ function notesFavoritesCreateNoSuchNoteError(): HonoApiError {
 	});
 }
 
-function notesFavoritesCreateAlreadyFavoritedError(): HonoApiError {
-	return new HonoApiError({
+function notesFavoritesCreateAlreadyFavoritedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'The note has already been marked as a favorite.',
 		code: 'ALREADY_FAVORITED',
@@ -368,12 +368,12 @@ function notesFavoritesCreateAlreadyFavoritedError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiNotesFavoritesCreate(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesFavoritesCreate(
+	deps: ApiNotesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
+	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesFavoritesCreateNoSuchNoteError();
 
@@ -394,12 +394,12 @@ export async function handleHonoApiNotesFavoritesCreate(
 	}
 
 	if (note.userHost == null && note.userId !== me.id) {
-		await grantAchievementForHonoApi(deps, note.userId, 'myNoteFavorited1');
+		await grantAchievementForApi(deps, note.userId, 'myNoteFavorited1');
 	}
 }
 
-function notesFavoritesDeleteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesFavoritesDeleteNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -407,8 +407,8 @@ function notesFavoritesDeleteNoSuchNoteError(): HonoApiError {
 	});
 }
 
-function notesFavoritesDeleteNotFavoritedError(): HonoApiError {
-	return new HonoApiError({
+function notesFavoritesDeleteNotFavoritedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You have not marked that note a favorite.',
 		code: 'NOT_FAVORITED',
@@ -416,12 +416,12 @@ function notesFavoritesDeleteNotFavoritedError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiNotesFavoritesDelete(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesFavoritesDelete(
+	deps: ApiNotesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
+	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesFavoritesDeleteNoSuchNoteError();
 
@@ -431,8 +431,8 @@ export async function handleHonoApiNotesFavoritesDelete(
 	await deleteNoteFavoriteByIdFromDatabase(deps.db, exist.id);
 }
 
-function notesThreadMutingCreateNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesThreadMutingCreateNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -440,8 +440,8 @@ function notesThreadMutingCreateNoSuchNoteError(): HonoApiError {
 	});
 }
 
-function notesThreadMutingCreateAlreadyMutingError(): HonoApiError {
-	return new HonoApiError({
+function notesThreadMutingCreateAlreadyMutingError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You are already muting that thread.',
 		code: 'ALREADY_MUTING',
@@ -449,12 +449,12 @@ function notesThreadMutingCreateAlreadyMutingError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiNotesThreadMutingCreate(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesThreadMutingCreate(
+	deps: ApiNotesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
+	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesThreadMutingCreateNoSuchNoteError();
 
@@ -471,8 +471,8 @@ export async function handleHonoApiNotesThreadMutingCreate(
 	}
 }
 
-function notesThreadMutingDeleteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesThreadMutingDeleteNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -480,24 +480,24 @@ function notesThreadMutingDeleteNoSuchNoteError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiNotesThreadMutingDelete(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesThreadMutingDelete(
+	deps: ApiNotesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
+	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesThreadMutingDeleteNoSuchNoteError();
 
 	await deleteNoteThreadMutingFromDatabase(deps.db, me.id, note.threadId ?? note.id);
 }
 
-export async function handleHonoApiNotesShow(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesShow(
+	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>> {
-	const params = parseHonoApiParams(notesShowParamDef, body);
+	const params = parseApiParams(notesShowParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesShowNoSuchNoteError();
 
@@ -515,13 +515,13 @@ export async function handleHonoApiNotesShow(
 		throw notesShowContentRestrictedByServerError();
 	}
 
-	return await packNoteForHonoApi(deps, note, me, {
+	return await packNoteForApi(deps, note, me, {
 		detail: true,
 	});
 }
 
-function notesGlobalTimelineDisabledError(): HonoApiError {
-	return new HonoApiError({
+function notesGlobalTimelineDisabledError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Global timeline has been disabled.',
 		code: 'GTL_DISABLED',
@@ -549,14 +549,14 @@ type NotesGlobalTimelineParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiNotesGlobalTimeline(
-	deps: HonoApiNotesDependencies & HonoApiRolePolicyDependencies,
+export async function handleApiNotesGlobalTimeline(
+	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesGlobalTimelineParamDef, body);
+	const params = parseApiParams(notesGlobalTimelineParamDef, body);
 
-	const policies = await getHonoApiRolePolicies(deps, me);
+	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.gtlAvailable) throw notesGlobalTimelineDisabledError();
 
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
@@ -571,7 +571,7 @@ export async function handleHonoApiNotesGlobalTimeline(
 		blockedHosts: deps.meta.blockedHosts,
 	});
 
-	return await packNoteManyForHonoApi(deps, timeline, me);
+	return await packNoteManyForApi(deps, timeline, me);
 }
 
 export const notesParamDef = z.object({
@@ -600,11 +600,11 @@ type NotesParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiNotes(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotes(
+	deps: ApiNotesDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesParamDef, body);
+	const params = parseApiParams(notesParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const notes = await listPublicNotesFromDatabase(
@@ -622,11 +622,11 @@ export async function handleHonoApiNotes(
 	);
 
 	// me を指定せず、常に匿名としてパックする。
-	return await packNoteManyForHonoApi(deps, notes, null);
+	return await packNoteManyForApi(deps, notes, null);
 }
 
-function notesLocalTimelineDisabledError(): HonoApiError {
-	return new HonoApiError({
+function notesLocalTimelineDisabledError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Local timeline has been disabled.',
 		code: 'LTL_DISABLED',
@@ -634,8 +634,8 @@ function notesLocalTimelineDisabledError(): HonoApiError {
 	});
 }
 
-function notesLocalTimelineBothWithRepliesAndWithFilesError(): HonoApiError {
-	return new HonoApiError({
+function notesLocalTimelineBothWithRepliesAndWithFilesError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Specifying both withReplies and withFiles is not supported',
 		code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
@@ -667,15 +667,15 @@ type NotesLocalTimelineParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiNotesLocalTimeline(
-	deps: HonoApiNotesDependencies & HonoApiRolePolicyDependencies,
+export async function handleApiNotesLocalTimeline(
+	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesLocalTimelineParamDef, body);
+	const params = parseApiParams(notesLocalTimelineParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
-	const policies = await getHonoApiRolePolicies(deps, me);
+	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.ltlAvailable) throw notesLocalTimelineDisabledError();
 
 	if (params.withReplies && params.withFiles) throw notesLocalTimelineBothWithRepliesAndWithFilesError();
@@ -699,7 +699,7 @@ export async function handleHonoApiNotesLocalTimeline(
 		});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
-		const notes = await getFanoutTimelineNotesForHonoApi(
+		const notes = await getFanoutTimelineNotesForApi(
 			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
 			{
 				untilId,
@@ -722,16 +722,16 @@ export async function handleHonoApiNotesLocalTimeline(
 			},
 		);
 
-		return await packNoteManyForHonoApi(deps, notes, me);
+		return await packNoteManyForApi(deps, notes, me);
 	}
 
 	const timeline = await getFromDb(untilId, sinceId, params.limit);
 
-	return await packNoteManyForHonoApi(deps, timeline, me);
+	return await packNoteManyForApi(deps, timeline, me);
 }
 
-function notesHybridTimelineDisabledError(): HonoApiError {
-	return new HonoApiError({
+function notesHybridTimelineDisabledError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Hybrid timeline has been disabled.',
 		code: 'STL_DISABLED',
@@ -739,8 +739,8 @@ function notesHybridTimelineDisabledError(): HonoApiError {
 	});
 }
 
-function notesHybridTimelineBothWithRepliesAndWithFilesError(): HonoApiError {
-	return new HonoApiError({
+function notesHybridTimelineBothWithRepliesAndWithFilesError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Specifying both withReplies and withFiles is not supported',
 		code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
@@ -778,15 +778,15 @@ type NotesHybridTimelineParams = {
 	withReplies: boolean;
 };
 
-export async function handleHonoApiNotesHybridTimeline(
-	deps: HonoApiNotesDependencies & HonoApiRolePolicyDependencies,
+export async function handleApiNotesHybridTimeline(
+	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesHybridTimelineParamDef, body);
+	const params = parseApiParams(notesHybridTimelineParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
-	const policies = await getHonoApiRolePolicies(deps, me);
+	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.ltlAvailable) throw notesHybridTimelineDisabledError();
 
 	if (params.withReplies && params.withFiles) throw notesHybridTimelineBothWithRepliesAndWithFilesError();
@@ -832,7 +832,7 @@ export async function handleHonoApiNotesHybridTimeline(
 			timelineConfig = [`homeTimeline:${me.id}`, 'localTimeline', `localTimelineWithReplyTo:${me.id}`];
 		}
 
-		const notes = await getFanoutTimelineNotesForHonoApi(
+		const notes = await getFanoutTimelineNotesForApi(
 			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
 			{
 				untilId,
@@ -856,12 +856,12 @@ export async function handleHonoApiNotesHybridTimeline(
 			},
 		);
 
-		return await packNoteManyForHonoApi(deps, notes, me, { followeeIds: followeeIdSet });
+		return await packNoteManyForApi(deps, notes, me, { followeeIds: followeeIdSet });
 	}
 
 	const notes = await getFromDb(untilId, sinceId, params.limit);
 
-	return await packNoteManyForHonoApi(deps, notes, me, { followeeIds: followeeIdSet });
+	return await packNoteManyForApi(deps, notes, me, { followeeIds: followeeIdSet });
 }
 
 const GLOBAL_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 3;
@@ -872,11 +872,7 @@ function getCurrentNotesFeaturedWindow(windowRange: number): number {
 	return Math.floor(passed / windowRange);
 }
 
-async function getNotesFeaturedRanking(
-	deps: HonoApiNotesDependencies,
-	name: string,
-	threshold: number,
-): Promise<string[]> {
+async function getNotesFeaturedRanking(deps: ApiNotesDependencies, name: string, threshold: number): Promise<string[]> {
 	const currentWindow = getCurrentNotesFeaturedWindow(GLOBAL_NOTES_RANKING_WINDOW);
 	const previousWindow = currentWindow - 1;
 
@@ -924,7 +920,7 @@ type NotesFeaturedParams = {
 	channelId?: string | null;
 };
 
-export function normalizeHonoApiNotesFeaturedQuery(query: Record<string, string>): Record<string, unknown> {
+export function normalizeApiNotesFeaturedQuery(query: Record<string, string>): Record<string, unknown> {
 	const body: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(query)) {
 		if (key === 'limit') {
@@ -939,12 +935,12 @@ export function normalizeHonoApiNotesFeaturedQuery(query: Record<string, string>
 	return body;
 }
 
-export async function handleHonoApiNotesFeatured(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesFeatured(
+	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesFeaturedParamDef, body);
+	const params = parseApiParams(notesFeaturedParamDef, body);
 
 	let noteIds: string[];
 	if (params.channelId) {
@@ -987,11 +983,11 @@ export async function handleHonoApiNotesFeatured(
 
 	notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForApi(deps, notes, me);
 }
 
-function notesClipsNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesClipsNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -999,12 +995,12 @@ function notesClipsNoSuchNoteError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiNotesClips(
-	deps: HonoApiNotesDependencies & HonoApiClipDependencies,
+export async function handleApiNotesClips(
+	deps: ApiNotesDependencies & ApiClipDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Clip'>[]> {
-	const params = parseHonoApiParams(noteIdOnlyParamDef, body);
+	const params = parseApiParams(noteIdOnlyParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesClipsNoSuchNoteError();
 
@@ -1013,11 +1009,11 @@ export async function handleHonoApiNotesClips(
 
 	const clips = await listClipsByIdsFromDatabase(deps.db, clipIds, { isPublic: true });
 
-	return await packClipsManyForHonoApi(deps, clips, me);
+	return await packClipsManyForApi(deps, clips, me);
 }
 
-function notesSearchUnavailableError(): HonoApiError {
-	return new HonoApiError({
+function notesSearchUnavailableError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Search of notes unavailable.',
 		code: 'UNAVAILABLE',
@@ -1067,21 +1063,21 @@ type NotesSearchParams = {
 	visibility?: MiNote['visibility'] | null;
 };
 
-export async function handleHonoApiNotesSearch(
-	deps: HonoApiNotesDependencies & HonoApiRolePolicyDependencies,
+export async function handleApiNotesSearch(
+	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesSearchParamDef, body);
+	const params = parseApiParams(notesSearchParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
-	const policies = await getHonoApiRolePolicies(deps, me);
+	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.canSearchNotes) throw notesSearchUnavailableError();
 
 	const provider = deps.config.search.provider ?? 'sqlLike';
 	if (provider !== 'sqlLike' && provider !== 'sqlPgroonga') {
-		// Meilisearch 検索は Hono に移植していないため、SQL ベースの全文検索 provider 設定時だけ到達する。
+		// 全文検索は SQL ベースの provider しか実装が無い。
 		throw notesSearchUnavailableError();
 	}
 
@@ -1109,7 +1105,7 @@ export async function handleHonoApiNotesSearch(
 		}),
 	);
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForApi(deps, notes, me);
 }
 
 // 元の ajv スキーマは `allOf: [{ anyOf: [tag必須, query必須] }, { 共通プロパティ (additionalProperties 制限なし) }]`。
@@ -1191,12 +1187,12 @@ type NotesSearchByTagParams = {
 	limit: number;
 };
 
-export async function handleHonoApiNotesSearchByTag(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesSearchByTag(
+	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesSearchByTagParamDef, body) as NotesSearchByTagParams;
+	const params = parseApiParams(notesSearchByTagParamDef, body) as NotesSearchByTagParams;
 
 	try {
 		const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
@@ -1232,7 +1228,7 @@ export async function handleHonoApiNotesSearchByTag(
 			}),
 		);
 
-		return await packNoteManyForHonoApi(deps, notes, me);
+		return await packNoteManyForApi(deps, notes, me);
 	} catch (e) {
 		if (e instanceof Error && e.message === 'Injection') return [];
 		throw e;
@@ -1247,15 +1243,15 @@ type NotesShowPartialBulkParams = {
 	noteIds: string[];
 };
 
-export async function handleHonoApiNotesShowPartialBulk(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesShowPartialBulk(
+	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; reactions: Record<string, number>; reactionEmojis: Record<string, string> }[]> {
-	const params = parseHonoApiParams(notesShowPartialBulkParamDef, body);
+	const params = parseApiParams(notesShowPartialBulkParamDef, body);
 	const notes = await listNotesByIdsFromDatabase(deps.db, params.noteIds);
-	const visibleNotes = await filterVisibleNotesForHonoApi(deps, notes, me?.id ?? null);
-	return await fetchNoteDiffsForHonoApi(deps, visibleNotes);
+	const visibleNotes = await filterVisibleNotesForApi(deps, notes, me?.id ?? null);
+	return await fetchNoteDiffsForApi(deps, visibleNotes);
 }
 
 export const notesTimelineParamDef = z.object({
@@ -1286,12 +1282,12 @@ type NotesTimelineParams = {
 	withRenotes: boolean;
 };
 
-export async function handleHonoApiNotesTimeline(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesTimeline(
+	deps: ApiNotesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesTimelineParamDef, body);
+	const params = parseApiParams(notesTimelineParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	// 閲覧者コンテキストは fanout 側のフィルタでも同じものが要るので、ここで1本にまとめて取って渡す
@@ -1325,7 +1321,7 @@ export async function handleHonoApiNotesTimeline(
 		});
 
 	if (deps.meta.enableFanoutTimeline && deps.redisForTimelines != null) {
-		const notes = await getFanoutTimelineNotesForHonoApi(
+		const notes = await getFanoutTimelineNotesForApi(
 			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
 			{
 				untilId,
@@ -1349,16 +1345,16 @@ export async function handleHonoApiNotesTimeline(
 			},
 		);
 
-		return await packNoteManyForHonoApi(deps, notes, me, { followeeIds: followeeIdSet });
+		return await packNoteManyForApi(deps, notes, me, { followeeIds: followeeIdSet });
 	}
 
 	const notes = await getFromDb(untilId, sinceId, params.limit);
 
-	return await packNoteManyForHonoApi(deps, notes, me, { followeeIds: followeeIdSet });
+	return await packNoteManyForApi(deps, notes, me, { followeeIds: followeeIdSet });
 }
 
-function notesUserListTimelineNoSuchListError(): HonoApiError {
-	return new HonoApiError({
+function notesUserListTimelineNoSuchListError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such list.',
 		code: 'NO_SUCH_LIST',
@@ -1396,12 +1392,12 @@ type NotesUserListTimelineParams = {
 	withFiles: boolean;
 };
 
-export async function handleHonoApiNotesUserListTimeline(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesUserListTimeline(
+	deps: ApiNotesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesUserListTimelineParamDef, body);
+	const params = parseApiParams(notesUserListTimelineParamDef, body);
 	const { sinceId, untilId } = resolveNoteSinceUntilId(deps.config, params);
 
 	const list = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.listId, me.id);
@@ -1424,7 +1420,7 @@ export async function handleHonoApiNotesUserListTimeline(
 		blockedHosts: deps.meta.blockedHosts,
 	});
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForApi(deps, notes, me);
 }
 
 export const notesPollsRecommendationParamDef = z.object({
@@ -1439,12 +1435,12 @@ type NotesPollsRecommendationParams = {
 	excludeChannels: boolean;
 };
 
-export async function handleHonoApiNotesPollsRecommendation(
-	deps: HonoApiNotesDependencies,
+export async function handleApiNotesPollsRecommendation(
+	deps: ApiNotesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(notesPollsRecommendationParamDef, body);
+	const params = parseApiParams(notesPollsRecommendationParamDef, body);
 	const noteIds = await listUnvotedPublicPollNoteIdsFromDatabase(deps.db, {
 		meId: me.id,
 		excludeChannels: params.excludeChannels,
@@ -1457,7 +1453,7 @@ export async function handleHonoApiNotesPollsRecommendation(
 	const notes = await listNotesByIdsFromDatabase(deps.db, noteIds);
 	notes.sort((a, b) => b.id.localeCompare(a.id));
 
-	return await packNoteManyForHonoApi(deps, notes, me, {
+	return await packNoteManyForApi(deps, notes, me, {
 		detail: true,
 	});
 }

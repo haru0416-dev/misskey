@@ -13,67 +13,67 @@ import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { isVisibleForMeForHonoApi, type HonoApiNoteDependencies } from './note.js';
+import { ApiError } from '../error.js';
+import { isVisibleForMeForApi, type ApiNoteDependencies } from './note.js';
 import {
 	addActivityContext,
-	deliverQuestionUpdateForHonoApi,
-	deliverSingleActivityForHonoApi,
-	renderVoteForHonoApi,
-	type HonoApiNoteApDependencies,
-	type HonoApiRelayDeliverDependencies,
+	deliverQuestionUpdateForApi,
+	deliverSingleActivityForApi,
+	renderVoteForApi,
+	type ApiNoteApDependencies,
+	type ApiRelayDeliverDependencies,
 } from '../activitypub/notes-ap.js';
-import type { HonoApiNoteStreamPublisher } from '../events.js';
-import { parseHonoApiParams } from '../validation.js';
+import type { ApiNoteStreamPublisher } from '../events.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiNotesPollsVoteDependencies = HonoApiRelayDeliverDependencies &
-	HonoApiNoteDependencies & {
-		config: HonoApiNoteApDependencies['config'];
-		publishNoteStream?: HonoApiNoteStreamPublisher;
+export type ApiNotesPollsVoteDependencies = ApiRelayDeliverDependencies &
+	ApiNoteDependencies & {
+		config: ApiNoteApDependencies['config'];
+		publishNoteStream?: ApiNoteStreamPublisher;
 	};
 
-function pollsVoteNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function pollsVoteNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
 		id: 'ecafbd2e-c283-4d6d-aecb-1a0a33b75396',
 	});
 }
-function pollsVoteNoPollError(): HonoApiError {
-	return new HonoApiError({
+function pollsVoteNoPollError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'The note does not attach a poll.',
 		code: 'NO_POLL',
 		id: '5f979967-52d9-4314-a911-1c673727f92f',
 	});
 }
-function pollsVoteInvalidChoiceError(): HonoApiError {
-	return new HonoApiError({
+function pollsVoteInvalidChoiceError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Choice ID is invalid.',
 		code: 'INVALID_CHOICE',
 		id: 'e0cc9a04-f2e8-41e4-a5f1-4127293260cc',
 	});
 }
-function pollsVoteAlreadyVotedError(): HonoApiError {
-	return new HonoApiError({
+function pollsVoteAlreadyVotedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You have already voted.',
 		code: 'ALREADY_VOTED',
 		id: '0963fc77-efac-419b-9424-b391608dc6d8',
 	});
 }
-function pollsVoteAlreadyExpiredError(): HonoApiError {
-	return new HonoApiError({
+function pollsVoteAlreadyExpiredError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'The poll is already expired.',
 		code: 'ALREADY_EXPIRED',
 		id: '1022a357-b085-4054-9083-8f8de358337e',
 	});
 }
-function pollsVoteYouHaveBeenBlockedError(): HonoApiError {
-	return new HonoApiError({
+function pollsVoteYouHaveBeenBlockedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You cannot vote this poll because you have been blocked by this user.',
 		code: 'YOU_HAVE_BEEN_BLOCKED',
@@ -91,16 +91,16 @@ type NotesPollsVoteParams = {
 	choice: number;
 };
 
-export async function handleHonoApiNotesPollsVote(
-	deps: HonoApiNotesPollsVoteDependencies,
+export async function handleApiNotesPollsVote(
+	deps: ApiNotesPollsVoteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(notesPollsVoteParamDef, body);
+	const params = parseApiParams(notesPollsVoteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw pollsVoteNoSuchNoteError();
-	if (!(await isVisibleForMeForHonoApi(deps, note, me.id))) throw pollsVoteNoSuchNoteError();
+	if (!(await isVisibleForMeForApi(deps, note, me.id))) throw pollsVoteNoSuchNoteError();
 
 	if (!note.hasPoll) throw pollsVoteNoPollError();
 
@@ -141,11 +141,11 @@ export async function handleHonoApiNotesPollsVote(
 		if (pollOwner.inbox != null && pollOwner.uri != null) {
 			const activity = addActivityContext(
 				deps.config,
-				renderVoteForHonoApi(deps.config, me, vote, note, poll, { uri: pollOwner.uri }),
+				renderVoteForApi(deps.config, me, vote, note, poll, { uri: pollOwner.uri }),
 			);
-			await deliverSingleActivityForHonoApi(deps, me, activity, pollOwner.inbox);
+			await deliverSingleActivityForApi(deps, me, activity, pollOwner.inbox);
 		}
 	}
 
-	void deliverQuestionUpdateForHonoApi(deps, note.id).catch(() => {});
+	void deliverQuestionUpdateForApi(deps, note.id).catch(() => {});
 }

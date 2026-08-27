@@ -13,8 +13,8 @@ import { listMuteeIdsByMuterIdFromDatabase } from '@/core/user/MutingStore.js';
 import { listBlockerIdsByBlockeeIdFromDatabase } from '@/core/user/BlockingStore.js';
 import { listRenoteMuteeIdsByMuterIdFromDatabase } from '@/core/user/RenoteMutingStore.js';
 import {
-	markAllHonoApiNotificationsAsRead,
-	type HonoApiNotificationDependencies,
+	markAllApiNotificationsAsRead,
+	type ApiNotificationDependencies,
 } from '@/server/rest/notification/notification.js';
 import { isJsonObject, type JsonObject, type JsonValue } from '@/misc/json-value.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
@@ -22,10 +22,10 @@ import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiFollowing, MiUserProfile } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import type {
-	HonoStreamChannelContext,
-	HonoStreamChannelDefinition,
-	HonoStreamChannelHandle,
-	HonoStreamChannelSubscriber,
+	StreamChannelContext,
+	StreamChannelDefinition,
+	StreamChannelHandle,
+	StreamChannelSubscriber,
 } from './channel.js';
 import { honoStreamChannelAdmin } from './channels/admin.js';
 import { honoStreamChannelDrive } from './channels/drive.js';
@@ -49,7 +49,7 @@ const INITIALIZATION_TIMEOUT_MS = 30_000;
 const REFRESH_CONCURRENCY = 8;
 const REFRESH_RETRY_DELAYS_MS = [0, 250, 1000] as const;
 
-class HonoStreamInitializationTimeoutError extends Error {}
+class StreamInitializationTimeoutError extends Error {}
 
 async function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
 	let timeoutId: NodeJS.Timeout | undefined;
@@ -57,10 +57,7 @@ async function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> 
 		return await Promise.race([
 			promise,
 			new Promise<never>((_resolve, reject) => {
-				timeoutId = setTimeout(
-					() => reject(new HonoStreamInitializationTimeoutError(message)),
-					INITIALIZATION_TIMEOUT_MS,
-				);
+				timeoutId = setTimeout(() => reject(new StreamInitializationTimeoutError(message)), INITIALIZATION_TIMEOUT_MS);
 			}),
 		]);
 	} finally {
@@ -68,7 +65,7 @@ async function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> 
 	}
 }
 
-class HonoStreamChannelSubscriberScope implements HonoStreamChannelSubscriber {
+class StreamChannelSubscriberScope implements StreamChannelSubscriber {
 	private readonly listeners: { eventName: string | symbol; listener: Parameters<EventEmitter['on']>[1] }[] = [];
 	private disposed = false;
 
@@ -93,7 +90,7 @@ class HonoStreamChannelSubscriberScope implements HonoStreamChannelSubscriber {
 	}
 }
 
-export type HonoStreamConnectionDependencies = HonoApiNotificationDependencies &
+export type StreamConnectionDependencies = ApiNotificationDependencies &
 	Parameters<typeof honoStreamChannelMain.init>[0] &
 	Parameters<typeof honoStreamChannelChatRoom.init>[0] &
 	Parameters<typeof honoStreamChannelHashtag.init>[0] &
@@ -121,7 +118,7 @@ type ConnectionSnapshot = {
 
 /** ストリーミング接続で使う関連セットを DB から取得する。 */
 async function fetchStreamConnectionSnapshot(
-	deps: HonoStreamConnectionDependencies,
+	deps: StreamConnectionDependencies,
 	userId: MiUser['id'],
 ): Promise<ConnectionSnapshot> {
 	const [userProfile, followees, followingChannelIds, mutedChannelIds, muteeIds, blockerIds, renoteMuteeIds] =
@@ -152,7 +149,7 @@ async function fetchStreamConnectionSnapshot(
 	};
 }
 
-const HONO_STREAM_CHANNELS: Record<string, HonoStreamChannelDefinition<HonoStreamConnectionDependencies>> = {
+const HONO_STREAM_CHANNELS: Record<string, StreamChannelDefinition<StreamConnectionDependencies>> = {
 	admin: honoStreamChannelAdmin,
 	drive: honoStreamChannelDrive,
 	main: honoStreamChannelMain,
@@ -172,14 +169,14 @@ const HONO_STREAM_CHANNELS: Record<string, HonoStreamChannelDefinition<HonoStrea
 };
 
 /** ストリーミング接続ごとの状態とチャンネル購読を保持する。 */
-export class HonoStreamConnection {
+export class StreamConnection {
 	public readonly user?: MiUser;
 	public readonly token?: MiAccessToken;
 	private subscriber?: EventEmitter;
 	private sendToClient?: (raw: string) => void;
-	private readonly channels: Map<string, { channelName: string; handle: HonoStreamChannelHandle }> = new Map();
-	private readonly pendingChannels: Map<string, HonoStreamChannelSubscriberScope> = new Map();
-	private readonly pendingChannelScopes: Set<HonoStreamChannelSubscriberScope> = new Set();
+	private readonly channels: Map<string, { channelName: string; handle: StreamChannelHandle }> = new Map();
+	private readonly pendingChannels: Map<string, StreamChannelSubscriberScope> = new Map();
+	private readonly pendingChannelScopes: Set<StreamChannelSubscriberScope> = new Set();
 	private readonly subscribingNotes: Partial<Record<string, number>> = {};
 	private userProfile: MiUserProfile | null = null;
 	private following: Record<string, Pick<MiFollowing, 'withReplies'> | undefined> = {};
@@ -286,7 +283,7 @@ export class HonoStreamConnection {
 	};
 
 	constructor(
-		private readonly deps: HonoStreamConnectionDependencies,
+		private readonly deps: StreamConnectionDependencies,
 		user: MiUser | null | undefined,
 		token: MiAccessToken | null | undefined,
 	) {
@@ -387,7 +384,7 @@ export class HonoStreamConnection {
 
 	private onReadNotification(): void {
 		if (this.user == null) return;
-		void markAllHonoApiNotificationsAsRead(this.deps, this.user.id, false);
+		void markAllApiNotificationsAsRead(this.deps, this.user.id, false);
 	}
 
 	private onSubscribeNote(payload: JsonValue | undefined): void {
@@ -436,9 +433,9 @@ export class HonoStreamConnection {
 
 	private buildChannelContext(
 		id: string,
-		subscriber: HonoStreamChannelSubscriber,
+		subscriber: StreamChannelSubscriber,
 		send: (type: string, body: JsonValue) => void,
-	): HonoStreamChannelContext {
+	): StreamChannelContext {
 		return {
 			id,
 			...(this.user !== undefined ? { user: this.user } : {}),
@@ -498,13 +495,13 @@ export class HonoStreamConnection {
 		const send = (type: string, body: JsonValue) => {
 			this.sendMessageToWs('channel', { id, type, body });
 		};
-		const subscriber = new HonoStreamChannelSubscriberScope(this.subscriber!);
+		const subscriber = new StreamChannelSubscriberScope(this.subscriber!);
 		this.pendingChannels.set(id, subscriber);
 		this.pendingChannelScopes.add(subscriber);
 		const ctx = this.buildChannelContext(id, subscriber, send);
 		const initialization = Promise.resolve().then(() => definition.init(this.deps, ctx, params ?? {}));
 
-		let result: HonoStreamChannelHandle | false | void;
+		let result: StreamChannelHandle | false | void;
 		try {
 			result = await withTimeout(initialization, `Stream channel initialization timed out: ${channelName}`);
 		} catch (error) {
@@ -514,7 +511,7 @@ export class HonoStreamConnection {
 				(lateResult) => lateResult && lateResult.dispose?.(),
 				() => {},
 			);
-			if (error instanceof HonoStreamInitializationTimeoutError) {
+			if (error instanceof StreamInitializationTimeoutError) {
 				void cleanupLateResult.finally(() => this.pendingChannelScopes.delete(subscriber));
 			} else {
 				this.pendingChannelScopes.delete(subscriber);
@@ -588,9 +585,7 @@ export class HonoStreamConnection {
 	}
 }
 
-export async function refreshHonoStreamConnections(
-	connections: ReadonlyMap<HonoStreamConnection, () => void>,
-): Promise<void> {
+export async function refreshStreamConnections(connections: ReadonlyMap<StreamConnection, () => void>): Promise<void> {
 	const pending = [...connections.entries()];
 	let index = 0;
 	const workers = Array.from({ length: Math.min(REFRESH_CONCURRENCY, pending.length) }, async () => {

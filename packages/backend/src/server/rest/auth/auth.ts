@@ -23,19 +23,19 @@ import {
 	userSuspendedError,
 } from '../error.js';
 
-export type HonoApiAuthDependencies = {
+export type ApiAuthDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-export type HonoApiAuthenticated = {
+export type ApiAuthenticated = {
 	user: MiLocalUser | null;
 	token: MiAccessToken | null;
 };
 
-export async function authenticateHonoApiToken(
-	deps: HonoApiAuthDependencies,
+export async function authenticateApiToken(
+	deps: ApiAuthDependencies,
 	token: string | null | undefined,
-): Promise<HonoApiAuthenticated> {
+): Promise<ApiAuthenticated> {
 	if (token == null) {
 		return { user: null, token: null };
 	}
@@ -74,7 +74,7 @@ export async function authenticateHonoApiToken(
 	};
 }
 
-export function assertCredential(auth: HonoApiAuthenticated): asserts auth is {
+export function assertCredential(auth: ApiAuthenticated): asserts auth is {
 	user: MiLocalUser;
 	token: MiAccessToken | null;
 } {
@@ -82,7 +82,7 @@ export function assertCredential(auth: HonoApiAuthenticated): asserts auth is {
 	if (auth.user.isSuspended) throw userSuspendedError();
 }
 
-export function assertOptionalCredential(auth: HonoApiAuthenticated): void {
+export function assertOptionalCredential(auth: ApiAuthenticated): void {
 	if (auth.user?.isSuspended) throw userSuspendedError();
 }
 

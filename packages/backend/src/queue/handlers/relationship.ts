@@ -20,10 +20,10 @@ import { enqueueDeliverJob } from '@/core/queue/DeliverQueue.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import {
-	blockForHonoApi,
-	unblockForHonoApi,
+	blockForApi,
+	unblockForApi,
 	unfollow,
-	type HonoApiAccountBlockingDependencies,
+	type ApiAccountBlockingDependencies,
 } from '@/server/rest/account/account-blocking.js';
 import {
 	addActivityContext,
@@ -34,16 +34,13 @@ import {
 	renderAccept,
 	renderFollow,
 	renderReject,
-	type HonoApiFollowingDependencies,
+	type ApiFollowingDependencies,
 } from '@/server/rest/user/following.js';
-import {
-	validateAlsoKnownAsForHonoApi,
-	type HonoApiApPersonDependencies,
-} from '@/server/rest/activitypub/ap-person.js';
+import { validateAlsoKnownAsForApi, type ApiApPersonDependencies } from '@/server/rest/activitypub/ap-person.js';
 
-export type HonoQueueRelationshipDependencies = HonoApiAccountBlockingDependencies &
-	HonoApiFollowingDependencies &
-	HonoApiApPersonDependencies;
+export type QueueRelationshipDependencies = ApiAccountBlockingDependencies &
+	ApiFollowingDependencies &
+	ApiApPersonDependencies;
 
 function isSilencedHost(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) return false;
@@ -51,7 +48,7 @@ function isSilencedHost(silencedHosts: string[] | undefined, host: string | null
 }
 
 async function deliverAcceptFollowActivity(
-	deps: HonoQueueRelationshipDependencies,
+	deps: QueueRelationshipDependencies,
 	follower: MiUser,
 	followee: MiUser,
 	requestId?: string,
@@ -65,8 +62,8 @@ async function deliverAcceptFollowActivity(
 	enqueueDeliverJob(deps.deliverQueue, deps.config, followee, content as IActivity, follower.inbox, false);
 }
 
-export async function followWithSideEffectsForHonoApi(
-	deps: HonoQueueRelationshipDependencies,
+export async function followWithSideEffectsForApi(
+	deps: QueueRelationshipDependencies,
 	follower: MiLocalUser | MiRemoteUser,
 	followee: MiLocalUser | MiRemoteUser,
 	options: { requestId?: string; silent?: boolean; withReplies?: boolean } = {},
@@ -92,7 +89,7 @@ export async function followWithSideEffectsForHonoApi(
 		return 'rejected: blocked';
 	} else if (isRemoteUser(follower) && isLocalUser(followee) && blocking) {
 		// リモートフォローを受けてブロックされているはずの場合だったら、ブロック解除しておく。
-		await unblockForHonoApi(deps, followee, follower);
+		await unblockForApi(deps, followee, follower);
 	} else {
 		if (blocking) throw new IdentifiableError('710e8fb0-b8c3-4922-be49-d5d93d8e6a6e', 'blocking');
 		if (blocked) throw new IdentifiableError('3338392a-f764-498d-8855-db939dcf8c48', 'blocked');
@@ -140,7 +137,7 @@ export async function followWithSideEffectsForHonoApi(
 
 		// フォロワーが移行済みアカウントで、非公開のフォロー先が旧アカウントを承認済みなら自動承認する。
 		if (!autoAccept && followee.isLocked) {
-			autoAccept = !!(await validateAlsoKnownAsForHonoApi(
+			autoAccept = !!(await validateAlsoKnownAsForApi(
 				deps,
 				follower,
 				(_oldSrc, newSrc) => followingExistsInDatabase(deps.db, newSrc.id, followee.id),
@@ -178,8 +175,8 @@ export async function followWithSideEffectsForHonoApi(
 	return 'ok';
 }
 
-export async function handleHonoQueueRelationshipFollow(
-	deps: HonoQueueRelationshipDependencies,
+export async function handleQueueRelationshipFollow(
+	deps: QueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
 ): Promise<string> {
 	const [follower, followee] = (await Promise.all([
@@ -187,7 +184,7 @@ export async function handleHonoQueueRelationshipFollow(
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
 	])) as [MiLocalUser | MiRemoteUser, MiLocalUser | MiRemoteUser];
 
-	return followWithSideEffectsForHonoApi(
+	return followWithSideEffectsForApi(
 		deps,
 		follower,
 		followee,
@@ -199,8 +196,8 @@ export async function handleHonoQueueRelationshipFollow(
 	);
 }
 
-export async function handleHonoQueueRelationshipUnfollow(
-	deps: HonoQueueRelationshipDependencies,
+export async function handleQueueRelationshipUnfollow(
+	deps: QueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
 ): Promise<string> {
 	if (job.data.userStateGuard != null) {
@@ -220,8 +217,8 @@ export async function handleHonoQueueRelationshipUnfollow(
 	return 'ok';
 }
 
-export async function handleHonoQueueRelationshipBlock(
-	deps: HonoQueueRelationshipDependencies,
+export async function handleQueueRelationshipBlock(
+	deps: QueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
 ): Promise<string> {
 	const [blocker, blockee] = await Promise.all([
@@ -229,13 +226,13 @@ export async function handleHonoQueueRelationshipBlock(
 		fetchUserByIdOrFailFromDatabase(deps.db, job.data.to.id),
 	]);
 
-	await blockForHonoApi(deps, blocker, blockee, job.data.silent);
+	await blockForApi(deps, blocker, blockee, job.data.silent);
 
 	return 'ok';
 }
 
-export async function handleHonoQueueRelationshipUnblock(
-	deps: HonoQueueRelationshipDependencies,
+export async function handleQueueRelationshipUnblock(
+	deps: QueueRelationshipDependencies,
 	job: Bull.Job<RelationshipJobData>,
 ): Promise<string> {
 	const [blocker, blockee] = await Promise.all([
@@ -249,7 +246,7 @@ export async function handleHonoQueueRelationshipUnblock(
 		return 'skip: not blocking';
 	}
 
-	await unblockForHonoApi(deps, blocker, blockee);
+	await unblockForApi(deps, blocker, blockee);
 
 	return 'ok';
 }

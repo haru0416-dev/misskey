@@ -26,15 +26,15 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
 import { systemWebhookEventTypes, type SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { HonoApiInternalEventPublisher } from '../events.js';
-import { HonoApiError } from '../error.js';
-import { parseHonoApiParams } from '../validation.js';
+import type { ApiInternalEventPublisher } from '../events.js';
+import { ApiError } from '../error.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminSystemWebhookDependencies = {
+export type ApiAdminSystemWebhookDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
 };
 
 export const adminSystemWebhookCreateParamDef = z.object({
@@ -91,7 +91,7 @@ type AdminSystemWebhookUpdateParams = Omit<z.infer<typeof adminSystemWebhookUpda
 	on: SystemWebhookEventType[];
 };
 
-export function packHonoApiSystemWebhook(webhook: MiSystemWebhook): Packed<'SystemWebhook'> {
+export function packApiSystemWebhook(webhook: MiSystemWebhook): Packed<'SystemWebhook'> {
 	return {
 		id: webhook.id,
 		isActive: webhook.isActive,
@@ -105,12 +105,12 @@ export function packHonoApiSystemWebhook(webhook: MiSystemWebhook): Packed<'Syst
 	};
 }
 
-function packHonoApiSystemWebhooks(webhooks: MiSystemWebhook[]): Packed<'SystemWebhook'>[] {
-	return webhooks.map((webhook) => packHonoApiSystemWebhook(webhook)).sort((a, b) => a.id.localeCompare(b.id));
+function packApiSystemWebhooks(webhooks: MiSystemWebhook[]): Packed<'SystemWebhook'>[] {
+	return webhooks.map((webhook) => packApiSystemWebhook(webhook)).sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function noSuchSystemWebhookError(): HonoApiError {
-	return new HonoApiError({
+function noSuchSystemWebhookError(): ApiError {
+	return new ApiError({
 		status: 404,
 		message: 'No such SystemWebhook.',
 		code: 'NO_SUCH_SYSTEM_WEBHOOK',
@@ -119,8 +119,8 @@ function noSuchSystemWebhookError(): HonoApiError {
 	});
 }
 
-function noSuchWebhookError(): HonoApiError {
-	return new HonoApiError({
+function noSuchWebhookError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such webhook.',
 		code: 'NO_SUCH_WEBHOOK',
@@ -128,12 +128,12 @@ function noSuchWebhookError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiAdminSystemWebhookCreate(
-	deps: HonoApiAdminSystemWebhookDependencies,
+export async function handleApiAdminSystemWebhookCreate(
+	deps: ApiAdminSystemWebhookDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>> {
-	const params = parseHonoApiParams(adminSystemWebhookCreateParamDef, body);
+	const params = parseApiParams(adminSystemWebhookCreateParamDef, body);
 	const webhook = await createSystemWebhookWithSideEffects(
 		{
 			db: deps.db,
@@ -145,15 +145,15 @@ export async function handleHonoApiAdminSystemWebhookCreate(
 		me,
 	);
 
-	return packHonoApiSystemWebhook(webhook);
+	return packApiSystemWebhook(webhook);
 }
 
-export async function handleHonoApiAdminSystemWebhookDelete(
-	deps: HonoApiAdminSystemWebhookDependencies,
+export async function handleApiAdminSystemWebhookDelete(
+	deps: ApiAdminSystemWebhookDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminSystemWebhookDeleteParamDef, body);
+	const params = parseApiParams(adminSystemWebhookDeleteParamDef, body);
 	await deleteSystemWebhookWithSideEffects(
 		{
 			db: deps.db,
@@ -165,11 +165,11 @@ export async function handleHonoApiAdminSystemWebhookDelete(
 	);
 }
 
-export async function handleHonoApiAdminSystemWebhookList(
-	deps: HonoApiAdminSystemWebhookDependencies,
+export async function handleApiAdminSystemWebhookList(
+	deps: ApiAdminSystemWebhookDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>[]> {
-	const params = parseHonoApiParams(adminSystemWebhookListParamDef, body);
+	const params = parseApiParams(adminSystemWebhookListParamDef, body);
 	const webhooks = await listSystemWebhooksFromDatabase(
 		deps.db,
 		omitUndefined({
@@ -178,25 +178,25 @@ export async function handleHonoApiAdminSystemWebhookList(
 		}),
 	);
 
-	return packHonoApiSystemWebhooks(webhooks);
+	return packApiSystemWebhooks(webhooks);
 }
 
-export async function handleHonoApiAdminSystemWebhookShow(
-	deps: HonoApiAdminSystemWebhookDependencies,
+export async function handleApiAdminSystemWebhookShow(
+	deps: ApiAdminSystemWebhookDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>> {
-	const params = parseHonoApiParams(adminSystemWebhookShowParamDef, body);
+	const params = parseApiParams(adminSystemWebhookShowParamDef, body);
 	const webhook = await fetchSystemWebhookByIdFromDatabase(deps.db, params.id);
 	if (webhook == null) throw noSuchSystemWebhookError();
 
-	return packHonoApiSystemWebhook(webhook);
+	return packApiSystemWebhook(webhook);
 }
 
-export async function handleHonoApiAdminSystemWebhookTest(
-	deps: HonoApiAdminSystemWebhookDependencies,
+export async function handleApiAdminSystemWebhookTest(
+	deps: ApiAdminSystemWebhookDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminSystemWebhookTestParamDef, body);
+	const params = parseApiParams(adminSystemWebhookTestParamDef, body);
 	const testParams =
 		params.override === undefined
 			? {
@@ -226,12 +226,12 @@ export async function handleHonoApiAdminSystemWebhookTest(
 	}
 }
 
-export async function handleHonoApiAdminSystemWebhookUpdate(
-	deps: HonoApiAdminSystemWebhookDependencies,
+export async function handleApiAdminSystemWebhookUpdate(
+	deps: ApiAdminSystemWebhookDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'SystemWebhook'>> {
-	const params = parseHonoApiParams(adminSystemWebhookUpdateParamDef, body);
+	const params = parseApiParams(adminSystemWebhookUpdateParamDef, body);
 	const webhook = await updateSystemWebhookWithSideEffects(
 		{
 			db: deps.db,
@@ -242,5 +242,5 @@ export async function handleHonoApiAdminSystemWebhookUpdate(
 		me,
 	);
 
-	return packHonoApiSystemWebhook(webhook);
+	return packApiSystemWebhook(webhook);
 }

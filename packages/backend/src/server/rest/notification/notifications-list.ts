@@ -19,30 +19,21 @@ import type { MiGroupedNotification, MiNotification } from '@/models/Notificatio
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import { notificationTypes, obsoleteNotificationTypes } from '@/types.js';
+import { packChatRoomInvitationForApi, packChatRoomInvitationsForApi, type ApiChatDependencies } from '../chat/chat.js';
+import { packNoteForApi, packNoteManyForApi, type ApiNoteDependencies, type PackNoteBatchHint } from '../note/note.js';
+import { packApiRole, packApiRoles, type ApiRoleDependencies } from '../role/roles.js';
+import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 import {
-	packChatRoomInvitationForHonoApi,
-	packChatRoomInvitationsForHonoApi,
-	type HonoApiChatDependencies,
-} from '../chat/chat.js';
-import {
-	packNoteForHonoApi,
-	packNoteManyForHonoApi,
-	type HonoApiNoteDependencies,
-	type PackNoteBatchHint,
-} from '../note/note.js';
-import { packHonoApiRole, packHonoApiRoles, type HonoApiRoleDependencies } from '../role/roles.js';
-import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
-import {
-	markAllHonoApiNotificationsAsRead,
+	markAllApiNotificationsAsRead,
 	resolveNotificationStreamId,
-	type HonoApiNotificationDependencies,
+	type ApiNotificationDependencies,
 } from './notification.js';
 
-export type HonoApiNotificationsListDependencies = HonoApiNoteDependencies &
-	HonoApiChatDependencies &
-	HonoApiRoleDependencies &
-	HonoApiNotificationDependencies;
+export type ApiNotificationsListDependencies = ApiNoteDependencies &
+	ApiChatDependencies &
+	ApiRoleDependencies &
+	ApiNotificationDependencies;
 
 const NOTE_REQUIRED_NOTIFICATION_TYPES = new Set([
 	'note',
@@ -57,8 +48,8 @@ const NOTE_REQUIRED_NOTIFICATION_TYPES = new Set([
 	'scheduledNotePosted',
 ]);
 
-async function getHonoApiNotifications(
-	deps: HonoApiNotificationsListDependencies,
+async function getApiNotifications(
+	deps: ApiNotificationsListDependencies,
 	userId: MiUser['id'],
 	options: {
 		sinceId?: string;
@@ -125,8 +116,8 @@ async function getHonoApiNotifications(
 	return notifications;
 }
 
-async function filterValidNotifiersForHonoApi<T extends MiNotification | MiGroupedNotification>(
-	deps: HonoApiNotificationsListDependencies,
+async function filterValidNotifiersForApi<T extends MiNotification | MiGroupedNotification>(
+	deps: ApiNotificationsListDependencies,
 	notifications: T[],
 	meId: MiUser['id'],
 ): Promise<T[]> {
@@ -159,8 +150,8 @@ async function filterValidNotifiersForHonoApi<T extends MiNotification | MiGroup
 	});
 }
 
-export async function packNotificationForHonoApi<T extends MiNotification | MiGroupedNotification>(
-	deps: HonoApiNotificationsListDependencies,
+export async function packNotificationForApi<T extends MiNotification | MiGroupedNotification>(
+	deps: ApiNotificationsListDependencies,
 	src: T,
 	meId: MiUser['id'],
 	options: { checkValidNotifier?: boolean },
@@ -174,7 +165,7 @@ export async function packNotificationForHonoApi<T extends MiNotification | MiGr
 	},
 ): Promise<Record<string, unknown> | null> {
 	if (options.checkValidNotifier !== false) {
-		const filtered = await filterValidNotifiersForHonoApi(deps, [src], meId);
+		const filtered = await filterValidNotifiersForApi(deps, [src], meId);
 		if (filtered.length === 0) return null;
 	}
 
@@ -183,7 +174,7 @@ export async function packNotificationForHonoApi<T extends MiNotification | MiGr
 	const noteIfNeed = needsNote
 		? hint?.packedNotes != null
 			? hint.packedNotes.get(noteId!)
-			: await packNoteForHonoApi(
+			: await packNoteForApi(
 					deps,
 					hint?.noteSources?.get(noteId!) ?? noteId!,
 					{ id: meId },
@@ -196,7 +187,7 @@ export async function packNotificationForHonoApi<T extends MiNotification | MiGr
 	const userIfNeed = needsUser
 		? hint?.packedUsers != null
 			? hint.packedUsers.get((src as { notifierId: string }).notifierId)
-			: await packUserLiteForHonoApi(deps, (src as { notifierId: string }).notifierId).catch(() => null)
+			: await packUserLiteForApi(deps, (src as { notifierId: string }).notifierId).catch(() => null)
 		: undefined;
 	if (needsUser && !userIfNeed) return null;
 
@@ -206,7 +197,7 @@ export async function packNotificationForHonoApi<T extends MiNotification | MiGr
 				src.reactions.map(async (reaction) => {
 					const user =
 						hint?.packedUsers?.get(reaction.userId) ??
-						(await packUserLiteForHonoApi(deps, reaction.userId).catch(() => null));
+						(await packUserLiteForApi(deps, reaction.userId).catch(() => null));
 					return user ? { user, reaction: reaction.reaction } : null;
 				}),
 			)
@@ -218,7 +209,7 @@ export async function packNotificationForHonoApi<T extends MiNotification | MiGr
 		const users = (
 			await Promise.all(
 				src.userIds.map(
-					(userId) => hint?.packedUsers?.get(userId) ?? packUserLiteForHonoApi(deps, userId).catch(() => null),
+					(userId) => hint?.packedUsers?.get(userId) ?? packUserLiteForApi(deps, userId).catch(() => null),
 				),
 			)
 		).filter((u): u is Packed<'UserLite'> => u != null);
@@ -231,7 +222,7 @@ export async function packNotificationForHonoApi<T extends MiNotification | MiGr
 	const role = needsRole
 		? hint?.packedRoles != null
 			? hint.packedRoles.get(src.roleId)
-			: await fetchRoleByIdFromDatabase(deps.db, src.roleId).then((r) => (r ? packHonoApiRole(deps, r) : null))
+			: await fetchRoleByIdFromDatabase(deps.db, src.roleId).then((r) => (r ? packApiRole(deps, r) : null))
 		: undefined;
 	if (needsRole && !role) return null;
 
@@ -239,7 +230,7 @@ export async function packNotificationForHonoApi<T extends MiNotification | MiGr
 	const chatRoomInvitation = needsChatRoomInvitation
 		? hint?.packedChatRoomInvitations != null
 			? hint.packedChatRoomInvitations.get(src.invitationId)
-			: await packChatRoomInvitationForHonoApi(deps, src.invitationId, { id: meId }).catch(() => null)
+			: await packChatRoomInvitationForApi(deps, src.invitationId, { id: meId }).catch(() => null)
 		: undefined;
 	if (needsChatRoomInvitation && !chatRoomInvitation) return null;
 
@@ -260,20 +251,20 @@ export async function packNotificationForHonoApi<T extends MiNotification | MiGr
 	};
 }
 
-async function packNotificationsForHonoApi<T extends MiNotification | MiGroupedNotification>(
-	deps: HonoApiNotificationsListDependencies,
+async function packNotificationsForApi<T extends MiNotification | MiGroupedNotification>(
+	deps: ApiNotificationsListDependencies,
 	notifications: T[],
 	meId: MiUser['id'],
 ): Promise<Record<string, unknown>[]> {
 	if (notifications.length === 0) return [];
 
-	let validNotifications = await filterValidNotifiersForHonoApi(deps, notifications, meId);
+	let validNotifications = await filterValidNotifiersForApi(deps, notifications, meId);
 
 	const noteIds = validNotifications
 		.map((x) => ('noteId' in x ? x.noteId : null))
 		.filter((x): x is string => x != null);
 	const notes = noteIds.length > 0 ? await listNotesByIdsFromDatabase(deps.db, noteIds) : [];
-	const packedNotesArray = await packNoteManyForHonoApi(deps, notes, { id: meId }, { detail: true });
+	const packedNotesArray = await packNoteManyForApi(deps, notes, { id: meId }, { detail: true });
 	const packedNotes = new Map(packedNotesArray.map((p) => [p.id, p]));
 
 	validNotifications = validNotifications.filter((x) => !('noteId' in x) || packedNotes.has(x.noteId));
@@ -284,14 +275,14 @@ async function packNotificationsForHonoApi<T extends MiNotification | MiGroupedN
 		if (notification.type === 'reaction:grouped') userIds.push(...notification.reactions.map((x) => x.userId));
 		if (notification.type === 'renote:grouped') userIds.push(...notification.userIds);
 	}
-	const packedUsersArray = userIds.length > 0 ? await packUserLiteManyForHonoApi(deps, [...new Set(userIds)]) : [];
+	const packedUsersArray = userIds.length > 0 ? await packUserLiteManyForApi(deps, [...new Set(userIds)]) : [];
 	const packedUsers = new Map(packedUsersArray.map((p) => [p.id, p]));
 
 	const roleIds = validNotifications
 		.map((x) => (x.type === 'roleAssigned' ? x.roleId : null))
 		.filter((id): id is string => id != null);
 	const roles = roleIds.length > 0 ? await listRolesByIdsFromDatabase(deps.db, [...new Set(roleIds)]) : [];
-	const packedRolesArray = await packHonoApiRoles(deps, roles);
+	const packedRolesArray = await packApiRoles(deps, roles);
 	const packedRoles = new Map(packedRolesArray.map((role) => [role.id, role]));
 
 	const chatRoomInvitationIds = validNotifications
@@ -301,7 +292,7 @@ async function packNotificationsForHonoApi<T extends MiNotification | MiGroupedN
 		chatRoomInvitationIds.length > 0
 			? await listChatRoomInvitationsByIdsFromDatabase(deps.db, [...new Set(chatRoomInvitationIds)])
 			: [];
-	const packedChatRoomInvitationArray = await packChatRoomInvitationsForHonoApi(deps, chatRoomInvitations, {
+	const packedChatRoomInvitationArray = await packChatRoomInvitationsForApi(deps, chatRoomInvitations, {
 		id: meId,
 	});
 	const packedChatRoomInvitations = new Map(
@@ -324,7 +315,7 @@ async function packNotificationsForHonoApi<T extends MiNotification | MiGroupedN
 
 	const packed = await Promise.all(
 		validNotifications.map((x) =>
-			packNotificationForHonoApi(
+			packNotificationForApi(
 				deps,
 				x,
 				meId,
@@ -361,12 +352,12 @@ type NotificationsParams = {
 	excludeTypes?: string[];
 };
 
-export async function handleHonoApiINotifications(
-	deps: HonoApiNotificationsListDependencies,
+export async function handleApiINotifications(
+	deps: ApiNotificationsListDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(notificationsParamDef, body);
+	const params = parseApiParams(notificationsParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
@@ -380,7 +371,7 @@ export async function handleHonoApiINotifications(
 		(type) => !(obsoleteNotificationTypes as readonly string[]).includes(type),
 	);
 
-	const notifications = await getHonoApiNotifications(
+	const notifications = await getApiNotifications(
 		deps,
 		me.id,
 		omitUndefined({
@@ -393,13 +384,13 @@ export async function handleHonoApiINotifications(
 	);
 
 	if (params.markAsRead) {
-		void markAllHonoApiNotificationsAsRead(deps, me.id, false);
+		void markAllApiNotificationsAsRead(deps, me.id, false);
 	}
 
-	return await packNotificationsForHonoApi(deps, notifications, me.id);
+	return await packNotificationsForApi(deps, notifications, me.id);
 }
 
-function groupHonoApiNotifications(notifications: MiNotification[]): MiGroupedNotification[] {
+function groupApiNotifications(notifications: MiNotification[]): MiGroupedNotification[] {
 	const firstNotification = notifications[0];
 	if (firstNotification == null) return [];
 	const groupedNotifications: MiGroupedNotification[] = [firstNotification];
@@ -452,12 +443,12 @@ function groupHonoApiNotifications(notifications: MiNotification[]): MiGroupedNo
 	return groupedNotifications;
 }
 
-export async function handleHonoApiINotificationsGrouped(
-	deps: HonoApiNotificationsListDependencies,
+export async function handleApiINotificationsGrouped(
+	deps: ApiNotificationsListDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(notificationsParamDef, body);
+	const params = parseApiParams(notificationsParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : undefined);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : undefined);
 
@@ -471,7 +462,7 @@ export async function handleHonoApiINotificationsGrouped(
 		(type) => !(obsoleteNotificationTypes as readonly string[]).includes(type),
 	);
 
-	const notifications = await getHonoApiNotifications(
+	const notifications = await getApiNotifications(
 		deps,
 		me.id,
 		omitUndefined({
@@ -486,10 +477,10 @@ export async function handleHonoApiINotificationsGrouped(
 	if (notifications.length === 0) return [];
 
 	if (params.markAsRead) {
-		void markAllHonoApiNotificationsAsRead(deps, me.id, false);
+		void markAllApiNotificationsAsRead(deps, me.id, false);
 	}
 
-	const groupedNotifications = groupHonoApiNotifications(notifications).slice(0, params.limit);
+	const groupedNotifications = groupApiNotifications(notifications).slice(0, params.limit);
 
-	return await packNotificationsForHonoApi(deps, groupedNotifications, me.id);
+	return await packNotificationsForApi(deps, groupedNotifications, me.id);
 }

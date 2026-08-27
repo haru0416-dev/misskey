@@ -39,22 +39,18 @@ import { misskeyId } from '@/misc/zod-params.js';
 import { MiPage, pageNameSchema, type MiPageContentBlock } from '@/models/Page.js';
 import type { PageLikeRow } from '@/db/schema/page-like.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import {
-	packDriveFileForHonoApi,
-	packDriveFileManyForHonoApi,
-	type HonoApiDriveFileDependencies,
-} from '../drive/drive-file.js';
-import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { packDriveFileForApi, packDriveFileManyForApi, type ApiDriveFileDependencies } from '../drive/drive-file.js';
+import { isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
 /** `pageNameSchema` の pattern を Zod 用に再利用する。 */
 const pageNamePattern = new RegExp(pageNameSchema.pattern);
 
-export type HonoApiPageDependencies = HonoApiDriveFileDependencies & HonoApiRolePolicyDependencies;
+export type ApiPageDependencies = ApiDriveFileDependencies & ApiRolePolicyDependencies;
 
-function collectReferencedNotesForHonoApi(content: MiPage['content']): string[] {
+function collectReferencedNotesForApi(content: MiPage['content']): string[] {
 	const referencingNotes = new Set<string>();
 	const recursiveCollect = (items: unknown[]): void => {
 		for (const item of items) {
@@ -72,7 +68,7 @@ function collectReferencedNotesForHonoApi(content: MiPage['content']): string[] 
 	return [...referencingNotes];
 }
 
-function collectAttachedFileIdsForHonoApi(content: MiPage['content']): string[] {
+function collectAttachedFileIdsForApi(content: MiPage['content']): string[] {
 	const attachedFiles: string[] = [];
 	const collectFiles = (items: MiPageContentBlock[]): void => {
 		for (const item of items) {
@@ -88,8 +84,8 @@ function collectAttachedFileIdsForHonoApi(content: MiPage['content']): string[] 
 	return attachedFiles;
 }
 
-export async function packPageForHonoApi(
-	deps: HonoApiPageDependencies,
+export async function packPageForApi(
+	deps: ApiPageDependencies,
 	src: MiPage['id'] | MiPage,
 	me?: { id: MiUser['id'] } | null | undefined,
 	hint?: {
@@ -102,7 +98,7 @@ export async function packPageForHonoApi(
 	const meId = me ? me.id : null;
 	const pageEntity = typeof src === 'object' ? src : await fetchPageByIdOrFailFromDatabase(deps.db, src);
 
-	const attachedFiles = collectAttachedFileIdsForHonoApi(pageEntity.content);
+	const attachedFiles = collectAttachedFileIdsForApi(pageEntity.content);
 
 	let migrated = false;
 	const migrate = (items: MiPageContentBlock[]): void => {
@@ -128,11 +124,11 @@ export async function packPageForHonoApi(
 	}
 
 	const [user, eyeCatchingImage, attachedFilesPacked, pageLikeExists] = await Promise.all([
-		hint?.packedUser ?? packUserLiteForHonoApi(deps, pageEntity.user ?? pageEntity.userId),
+		hint?.packedUser ?? packUserLiteForApi(deps, pageEntity.user ?? pageEntity.userId),
 		hint?.packedEyeCatchingImage !== undefined
 			? hint.packedEyeCatchingImage
 			: pageEntity.eyeCatchingImageId
-				? packDriveFileForHonoApi(deps, pageEntity.eyeCatchingImageId)
+				? packDriveFileForApi(deps, pageEntity.eyeCatchingImageId)
 				: Promise.resolve(null),
 		hint?.packedAttachedFiles ??
 			(async () => {
@@ -141,7 +137,7 @@ export async function packPageForHonoApi(
 				const orderedFiles = attachedFiles
 					.map((fileId) => fileById.get(fileId))
 					.filter((file): file is NonNullable<typeof file> => file != null && file.userId === pageEntity.userId);
-				return await packDriveFileManyForHonoApi(deps, orderedFiles);
+				return await packDriveFileManyForApi(deps, orderedFiles);
 			})(),
 		hint?.isLiked ?? (meId ? pageLikeExistsInDatabase(deps.db, meId, pageEntity.id) : Promise.resolve(undefined)),
 	]);
@@ -169,8 +165,8 @@ export async function packPageForHonoApi(
 	};
 }
 
-async function packPageManyForHonoApi(
-	deps: HonoApiPageDependencies,
+async function packPageManyForApi(
+	deps: ApiPageDependencies,
 	pages: MiPage[],
 	me?: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'Page'>[]> {
@@ -182,25 +178,25 @@ async function packPageManyForHonoApi(
 		...new Set(
 			pages.flatMap((pageEntity) => [
 				...(pageEntity.eyeCatchingImageId ? [pageEntity.eyeCatchingImageId] : []),
-				...collectAttachedFileIdsForHonoApi(pageEntity.content),
+				...collectAttachedFileIdsForApi(pageEntity.content),
 			]),
 		),
 	];
 	const [packedUsers, files, likedPageIds] = await Promise.all([
-		packUserLiteManyForHonoApi(deps, users),
+		packUserLiteManyForApi(deps, users),
 		fileIds.length > 0 ? listDriveFilesByIdsFromDatabase(deps.db, fileIds) : Promise.resolve([]),
 		me ? listLikedPageIdsByUserIdAndPageIdsFromDatabase(deps.db, me.id, pageIds) : Promise.resolve([]),
 	]);
 	const packedUserById = new Map(packedUsers.map((u) => [u.id, u]));
-	const packedFiles = await packDriveFileManyForHonoApi(deps, files);
+	const packedFiles = await packDriveFileManyForApi(deps, files);
 	const packedFileById = new Map(packedFiles.map((file) => [file.id, file]));
 	const fileById = new Map(files.map((file) => [file.id, file]));
 	const likedPageIdSet = new Set(likedPageIds);
 
 	return await Promise.all(
 		pages.map((pageEntity) => {
-			const attachedFileIds = collectAttachedFileIdsForHonoApi(pageEntity.content);
-			return packPageForHonoApi(
+			const attachedFileIds = collectAttachedFileIdsForApi(pageEntity.content);
+			return packPageForApi(
 				deps,
 				pageEntity,
 				me,
@@ -222,8 +218,8 @@ async function packPageManyForHonoApi(
 	);
 }
 
-async function packPageLikeForHonoApi(
-	deps: HonoApiPageDependencies,
+async function packPageLikeForApi(
+	deps: ApiPageDependencies,
 	src: PageLikeRow['id'] | (PageLikeRow & { page?: MiPage | null }),
 	me?: { id: MiUser['id'] } | null | undefined,
 ): Promise<{ id: string; page: Packed<'Page'> }> {
@@ -232,7 +228,7 @@ async function packPageLikeForHonoApi(
 
 	return {
 		id: like.id,
-		page: await packPageForHonoApi(deps, pageSrc, me),
+		page: await packPageForApi(deps, pageSrc, me),
 	};
 }
 
@@ -262,18 +258,18 @@ type PagesCreateParams = {
 	hideTitleWhenPinned: boolean;
 };
 
-export async function handleHonoApiPagesCreate(
-	deps: HonoApiPageDependencies,
+export async function handleApiPagesCreate(
+	deps: ApiPageDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>> {
-	const params = parseHonoApiParams(pagesCreateParamDef, body);
+	const params = parseApiParams(pagesCreateParamDef, body);
 
 	let eyeCatchingImage = null;
 	if (params.eyeCatchingImageId != null) {
 		eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.eyeCatchingImageId, me.id);
 		if (eyeCatchingImage == null) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'No such file.',
 				code: 'NO_SUCH_FILE',
@@ -283,7 +279,7 @@ export async function handleHonoApiPagesCreate(
 	}
 
 	if (await pageNameExistsForUserInDatabase(deps.db, me.id, params.name)) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'Specified name already exists.',
 			code: 'NAME_ALREADY_EXISTS',
@@ -308,12 +304,12 @@ export async function handleHonoApiPagesCreate(
 		font: params.font,
 	});
 
-	const referencedNotes = collectReferencedNotesForHonoApi(pageEntity.content);
+	const referencedNotes = collectReferencedNotesForApi(pageEntity.content);
 	if (referencedNotes.length > 0) {
 		await adjustNotesPageCountInDatabase(deps.db, referencedNotes, 1);
 	}
 
-	return await packPageForHonoApi(deps, pageEntity);
+	return await packPageForApi(deps, pageEntity);
 }
 
 export const pagesUpdateParamDef = z.object({
@@ -344,18 +340,18 @@ type PagesUpdateParams = {
 	hideTitleWhenPinned?: boolean;
 };
 
-export async function handleHonoApiPagesUpdate(
-	deps: HonoApiPageDependencies,
+export async function handleApiPagesUpdate(
+	deps: ApiPageDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pagesUpdateParamDef, body);
+	const params = parseApiParams(pagesUpdateParamDef, body);
 
 	let eyeCatchingImageId = params.eyeCatchingImageId;
 	if (params.eyeCatchingImageId !== undefined && params.eyeCatchingImageId != null) {
 		const eyeCatchingImage = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.eyeCatchingImageId, me.id);
 		if (eyeCatchingImage == null) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'No such file.',
 				code: 'NO_SUCH_FILE',
@@ -384,7 +380,7 @@ export async function handleHonoApiPagesUpdate(
 	);
 
 	if (result.status === 'not-found') {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such page.',
 			code: 'NO_SUCH_PAGE',
@@ -392,7 +388,7 @@ export async function handleHonoApiPagesUpdate(
 		});
 	}
 	if (result.status === 'forbidden') {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'Access denied.',
 			code: 'ACCESS_DENIED',
@@ -400,7 +396,7 @@ export async function handleHonoApiPagesUpdate(
 		});
 	}
 	if (result.status === 'name-conflict') {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'Specified name already exists.',
 			code: 'NAME_ALREADY_EXISTS',
@@ -411,8 +407,8 @@ export async function handleHonoApiPagesUpdate(
 	const { before } = result;
 
 	if (params.content != null) {
-		const beforeReferencedNotes = collectReferencedNotesForHonoApi(before.content);
-		const afterReferencedNotes = collectReferencedNotesForHonoApi(params.content);
+		const beforeReferencedNotes = collectReferencedNotesForApi(before.content);
+		const afterReferencedNotes = collectReferencedNotesForApi(params.content);
 		const beforeReferencedNoteSet = new Set(beforeReferencedNotes);
 		const afterReferencedNoteSet = new Set(afterReferencedNotes);
 
@@ -437,12 +433,12 @@ type PagesDeleteParams = {
 };
 
 /** not-found/forbiddenはHTTPエラーに変換せず、そのままステータスとして返す。 */
-export async function deletePageForHonoApi(
-	deps: HonoApiPageDependencies,
+export async function deletePageForApi(
+	deps: ApiPageDependencies,
 	me: MiUser,
 	pageId: MiPage['id'],
 ): Promise<{ status: 'not-found' | 'forbidden' } | { status: 'ok'; page: MiPage }> {
-	const isModerator = await isHonoApiModerator(deps, me);
+	const isModerator = await isApiModerator(deps, me);
 
 	const result = await deletePageInDatabase(deps.db, pageId, { userId: me.id, isModerator });
 
@@ -462,7 +458,7 @@ export async function deletePageForHonoApi(
 		});
 	}
 
-	const referencedNotes = collectReferencedNotesForHonoApi(deletedPage.content);
+	const referencedNotes = collectReferencedNotesForApi(deletedPage.content);
 	if (referencedNotes.length > 0) {
 		await adjustNotesPageCountInDatabase(deps.db, referencedNotes, -1);
 	}
@@ -470,17 +466,17 @@ export async function deletePageForHonoApi(
 	return { status: 'ok', page: deletedPage };
 }
 
-export async function handleHonoApiPagesDelete(
-	deps: HonoApiPageDependencies,
+export async function handleApiPagesDelete(
+	deps: ApiPageDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pagesDeleteParamDef, body);
+	const params = parseApiParams(pagesDeleteParamDef, body);
 
-	const result = await deletePageForHonoApi(deps, me, params.pageId);
+	const result = await deletePageForApi(deps, me, params.pageId);
 
 	if (result.status === 'not-found') {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such page.',
 			code: 'NO_SUCH_PAGE',
@@ -488,7 +484,7 @@ export async function handleHonoApiPagesDelete(
 		});
 	}
 	if (result.status === 'forbidden') {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'Access denied.',
 			code: 'ACCESS_DENIED',
@@ -508,12 +504,12 @@ export const pagesShowParamDef = z.union([
 
 type PagesShowParams = { pageId: string } | { name: string; username: string };
 
-export async function handleHonoApiPagesShow(
-	deps: HonoApiPageDependencies,
+export async function handleApiPagesShow(
+	deps: ApiPageDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>> {
-	const params = parseHonoApiParams(pagesShowParamDef, body);
+	const params = parseApiParams(pagesShowParamDef, body);
 
 	let pageEntity: MiPage | null = null;
 	if ('pageId' in params) {
@@ -526,7 +522,7 @@ export async function handleHonoApiPagesShow(
 	}
 
 	if (pageEntity == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such page.',
 			code: 'NO_SUCH_PAGE',
@@ -534,21 +530,21 @@ export async function handleHonoApiPagesShow(
 		});
 	}
 
-	return await packPageForHonoApi(deps, pageEntity, me);
+	return await packPageForApi(deps, pageEntity, me);
 }
 
 export const pagesFeaturedParamDef = z.object({});
 
-export async function handleHonoApiPagesFeatured(
-	deps: HonoApiPageDependencies,
+export async function handleApiPagesFeatured(
+	deps: ApiPageDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>[]> {
-	parseHonoApiParams(pagesFeaturedParamDef, body);
+	parseApiParams(pagesFeaturedParamDef, body);
 
 	const pages = await listFeaturedPagesFromDatabase(deps.db);
 
-	return await packPageManyForHonoApi(deps, pages, me);
+	return await packPageManyForApi(deps, pages, me);
 }
 
 export const iPagesParamDef = z.object({
@@ -567,12 +563,12 @@ type IPagesParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiIPages(
-	deps: HonoApiPageDependencies,
+export async function handleApiIPages(
+	deps: ApiPageDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>[]> {
-	const params = parseHonoApiParams(iPagesParamDef, body);
+	const params = parseApiParams(iPagesParamDef, body);
 	const { sinceId, untilId, order } = resolvePagePagination({ gen: (time) => genId(time) }, params);
 
 	const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, me.id, {
@@ -582,7 +578,7 @@ export async function handleHonoApiIPages(
 		untilId,
 	});
 
-	return await packPageManyForHonoApi(deps, pages);
+	return await packPageManyForApi(deps, pages);
 }
 
 export const iPageLikesParamDef = z.object({
@@ -601,12 +597,12 @@ type IPageLikesParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiIPageLikes(
-	deps: HonoApiPageDependencies,
+export async function handleApiIPageLikes(
+	deps: ApiPageDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ id: string; page: Packed<'Page'> }[]> {
-	const params = parseHonoApiParams(iPageLikesParamDef, body);
+	const params = parseApiParams(iPageLikesParamDef, body);
 
 	let sinceId: string | null = null;
 	let untilId: string | null = null;
@@ -643,7 +639,7 @@ export async function handleHonoApiIPageLikes(
 	const pageById = await listPagesByIdsFromDatabase(deps.db, pageIds).then(
 		(pages) => new Map(pages.map((pageEntity) => [pageEntity.id, pageEntity])),
 	);
-	const packedPages = await packPageManyForHonoApi(
+	const packedPages = await packPageManyForApi(
 		deps,
 		likes.map((like) => pageById.get(like.pageId)).filter((page) => page != null),
 		me,
@@ -653,7 +649,7 @@ export async function handleHonoApiIPageLikes(
 	return await Promise.all(
 		likes.map(async (like) => ({
 			id: like.id,
-			page: packedPageById.get(like.pageId) ?? (await packPageLikeForHonoApi(deps, like, me)).page,
+			page: packedPageById.get(like.pageId) ?? (await packPageLikeForApi(deps, like, me)).page,
 		})),
 	);
 }
@@ -676,11 +672,11 @@ type UsersPagesParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiUsersPages(
-	deps: HonoApiPageDependencies,
+export async function handleApiUsersPages(
+	deps: ApiPageDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Page'>[]> {
-	const params = parseHonoApiParams(usersPagesParamDef, body);
+	const params = parseApiParams(usersPagesParamDef, body);
 	const { sinceId, untilId, order } = resolvePagePagination({ gen: (time) => genId(time) }, params);
 
 	const pages = await listPagesByUserIdWithPaginationFromDatabase(deps.db, params.userId, {
@@ -691,5 +687,5 @@ export async function handleHonoApiUsersPages(
 		publicOnly: true,
 	});
 
-	return await packPageManyForHonoApi(deps, pages);
+	return await packPageManyForApi(deps, pages);
 }

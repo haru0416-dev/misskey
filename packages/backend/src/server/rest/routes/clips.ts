@@ -4,25 +4,20 @@
  */
 
 import type { Hono } from 'hono';
+import { assertCredential, assertProhibitMoved, assertTokenPermission, authenticateApiToken } from '../auth/auth.js';
+import { handleApiClipsFavorite, handleApiClipsUnfavorite } from '../favorite/favorites.js';
 import {
-	assertCredential,
-	assertProhibitMoved,
-	assertTokenPermission,
-	authenticateHonoApiToken,
-} from '../auth/auth.js';
-import { handleHonoApiClipsFavorite, handleHonoApiClipsUnfavorite } from '../favorite/favorites.js';
-import {
-	handleHonoApiClipsAddNote,
-	handleHonoApiClipsCreate,
-	handleHonoApiClipsDelete,
-	handleHonoApiClipsList,
-	handleHonoApiClipsMyFavorites,
-	handleHonoApiClipsNotes,
-	handleHonoApiClipsRemoveNote,
-	handleHonoApiClipsShow,
-	handleHonoApiClipsUpdate,
+	handleApiClipsAddNote,
+	handleApiClipsCreate,
+	handleApiClipsDelete,
+	handleApiClipsList,
+	handleApiClipsMyFavorites,
+	handleApiClipsNotes,
+	handleApiClipsRemoveNote,
+	handleApiClipsShow,
+	handleApiClipsUpdate,
 } from '../clip/clips.js';
-import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
+import { assertApiRateLimitForUser } from '../rate-limit.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -38,7 +33,7 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/clips/favorite',
 		endpointHandler(deps, 'clips/favorite', async ({ body, auth, c }) => {
-			await handleHonoApiClipsFavorite(deps, auth.user, body);
+			await handleApiClipsFavorite(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -46,7 +41,7 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/clips/unfavorite',
 		endpointHandler(deps, 'clips/unfavorite', async ({ body, auth, c }) => {
-			await handleHonoApiClipsUnfavorite(deps, auth.user, body);
+			await handleApiClipsUnfavorite(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -55,7 +50,7 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/clips/list',
 		endpointHandler(deps, 'clips/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiClipsList(deps, auth.user, body)),
+			jsonResponse(c, await handleApiClipsList(deps, auth.user, body)),
 		),
 	);
 
@@ -63,7 +58,7 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/clips/show',
 		endpointHandlerAnonymous(deps, 'clips/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiClipsShow(deps, auth.user, body)),
+			jsonResponse(c, await handleApiClipsShow(deps, auth.user, body)),
 		),
 	);
 
@@ -71,7 +66,7 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/clips/my-favorites',
 		endpointHandler(deps, 'clips/my-favorites', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiClipsMyFavorites(deps, auth.user, body)),
+			jsonResponse(c, await handleApiClipsMyFavorites(deps, auth.user, body)),
 		),
 	);
 
@@ -79,28 +74,28 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 		['POST', 'QUERY'],
 		'/clips/notes',
 		endpointHandlerAnonymous(deps, 'clips/notes', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiClipsNotes(deps, auth.user, body)),
+			jsonResponse(c, await handleApiClipsNotes(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/clips/create',
 		endpointHandler(deps, 'clips/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiClipsCreate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiClipsCreate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/clips/update',
 		endpointHandler(deps, 'clips/update', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiClipsUpdate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiClipsUpdate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/clips/delete',
 		endpointHandler(deps, 'clips/delete', async ({ body, auth, c }) => {
-			await handleHonoApiClipsDelete(deps, auth.user, body);
+			await handleApiClipsDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -108,7 +103,7 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/clips/add-note',
 		endpointHandler(deps, 'clips/add-note', async ({ body, auth, c }) => {
-			await handleHonoApiClipsAddNote(deps, auth.user, body);
+			await handleApiClipsAddNote(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -116,7 +111,7 @@ export function registerClipsRoutes(app: Hono, deps: ApiShellDependencies): void
 	app.post(
 		'/clips/remove-note',
 		endpointHandler(deps, 'clips/remove-note', async ({ body, auth, c }) => {
-			await handleHonoApiClipsRemoveNote(deps, auth.user, body);
+			await handleApiClipsRemoveNote(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);

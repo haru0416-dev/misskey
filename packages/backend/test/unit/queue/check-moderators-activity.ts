@@ -21,8 +21,8 @@ import { fetchMetaFromDatabase, updateMetaInDatabase } from '@/core/meta/MetaSto
 import { listAnnouncementsForAdminFromDatabase } from '@/core/announcement/AnnouncementStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
-	handleHonoQueueCheckModeratorsActivity,
-	type HonoQueueCheckModeratorsActivityDependencies,
+	handleQueueCheckModeratorsActivity,
+	type QueueCheckModeratorsActivityDependencies,
 } from '@/queue/handlers/check-moderators-activity.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -52,7 +52,7 @@ async function createModeratorTestUser(
 
 describe('hono-queue-check-moderators-activity', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueCheckModeratorsActivityDependencies;
+	let deps: QueueCheckModeratorsActivityDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -79,7 +79,7 @@ describe('hono-queue-check-moderators-activity', () => {
 		const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
 		const moderator = await createModeratorTestUser(runtime, 'honoqueuecma1', eightDaysAgo);
 
-		await handleHonoQueueCheckModeratorsActivity(deps);
+		await handleQueueCheckModeratorsActivity(deps);
 
 		const meta = await fetchMetaFromDatabase(runtime.db);
 		expect(meta.disableRegistration).toBe(true);
@@ -102,7 +102,7 @@ describe('hono-queue-check-moderators-activity', () => {
 		const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
 		const moderator = await createModeratorTestUser(runtime, 'honoqueuecma2', eightDaysAgo);
 
-		await handleHonoQueueCheckModeratorsActivity(deps);
+		await handleQueueCheckModeratorsActivity(deps);
 
 		const announcements = await listAnnouncementsForAdminFromDatabase(runtime.db, {
 			limit: 10,
@@ -116,7 +116,7 @@ describe('hono-queue-check-moderators-activity', () => {
 	test('モデレーターがアクティブなら招待制に切り替わらない', async () => {
 		await createModeratorTestUser(runtime, 'honoqueuecma3', new Date());
 
-		await handleHonoQueueCheckModeratorsActivity(deps);
+		await handleQueueCheckModeratorsActivity(deps);
 
 		const meta = await fetchMetaFromDatabase(runtime.db);
 		expect(meta.disableRegistration).toBe(false);

@@ -177,8 +177,8 @@ describe('Endpoints', () => {
 				softwareName: 'misskey',
 				softwareVersion: '2024.5.0',
 				openRegistrations: true,
-				name: 'Hono Federation Alpha',
-				description: 'Hono federation endpoint test instance',
+				name: 'Federation Alpha',
+				description: 'federation endpoint test instance',
 				maintainerName: 'hono maintainer',
 				maintainerEmail: 'hono@example.com',
 				iconUrl: 'https://example.com/icon.png',
@@ -201,7 +201,7 @@ describe('Endpoints', () => {
 				softwareName: 'mastodon',
 				softwareVersion: '4.3.0',
 				openRegistrations: false,
-				name: 'Hono Federation Beta',
+				name: 'Federation Beta',
 				description: null,
 				maintainerName: null,
 				maintainerEmail: null,
@@ -624,8 +624,8 @@ describe('Endpoints', () => {
 			let actorServer: Server | undefined;
 			let actorUri = '';
 			// このVPS環境では slacc (署名用ネイティブモジュール) が壊れており RsaKeyPair.sign が
-			// 常に失敗するため (Hono移植とは無関係、Node単体でrequire('slacc')するだけで再現する
-			// 環境固有の問題)、signToActivityPubGet を無効化して署名なしGETの経路を検証する。
+			// 常に失敗するため (Node単体で require('slacc') するだけで再現する環境固有の問題)、
+			// signToActivityPubGet を無効化して署名なしGETの経路を検証する。
 			// meta はプロセス内にキャッシュされているため、DB直接更新ではなく admin/update-meta 経由で
 			// 変更してキャッシュ無効化イベントを発行させる。
 			const originalMeta = await fetchMetaFromDatabase(db);

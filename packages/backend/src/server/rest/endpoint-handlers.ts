@@ -13,19 +13,13 @@ import {
 	assertProhibitMoved,
 	assertSecureCredential,
 	assertTokenPermission,
-	authenticateHonoApiToken,
-	type HonoApiAuthenticated,
+	authenticateApiToken,
+	type ApiAuthenticated,
 } from './auth/auth.js';
-import {
-	assertHonoApiAdmin,
-	assertHonoApiModerator,
-	jsonBody,
-	runApiEndpoint,
-	tokenFromRequest,
-} from './shell-helpers.js';
-import { assertHonoApiRateLimitForUser, type HonoApiEndpointRateLimit } from './rate-limit.js';
+import { assertApiAdmin, assertApiModerator, jsonBody, runApiEndpoint, tokenFromRequest } from './shell-helpers.js';
+import { assertApiRateLimitForUser, type ApiEndpointRateLimit } from './rate-limit.js';
 import { rolePermissionDeniedError } from './error.js';
-import { hasHonoApiRolePolicyOrIsRoot } from './role/role-policy.js';
+import { hasApiRolePolicyOrIsRoot } from './role/role-policy.js';
 
 /** 認証を通した後の資格情報。requireCredential のエンドポイントでは user が非 null。 */
 export type AuthedCredential = { user: MiLocalUser; token: MiAccessToken | null };
@@ -43,11 +37,11 @@ export type AuthedCredential = { user: MiLocalUser; token: MiAccessToken | null 
  */
 export async function withEndpointGuards<T>(
 	c: Context,
-	deps: Parameters<typeof authenticateHonoApiToken>[0] &
-		Parameters<typeof assertHonoApiModerator>[0] &
-		Parameters<typeof assertHonoApiRateLimitForUser>[0],
+	deps: Parameters<typeof authenticateApiToken>[0] &
+		Parameters<typeof assertApiModerator>[0] &
+		Parameters<typeof assertApiRateLimitForUser>[0],
 	name: keyof typeof endpointMetas,
-	run: (args: { body: Record<string, unknown>; auth: HonoApiAuthenticated }) => Promise<T>,
+	run: (args: { body: Record<string, unknown>; auth: ApiAuthenticated }) => Promise<T>,
 ): Promise<T> {
 	const meta = endpointMetas[name].meta as {
 		requireCredential?: boolean;
@@ -55,13 +49,13 @@ export async function withEndpointGuards<T>(
 		requireAdmin?: boolean;
 		secure?: boolean;
 		prohibitMoved?: boolean;
-		requireRolePolicy?: Parameters<typeof hasHonoApiRolePolicyOrIsRoot>[2];
+		requireRolePolicy?: Parameters<typeof hasApiRolePolicyOrIsRoot>[2];
 		kind?: string;
-		limit?: HonoApiEndpointRateLimit;
+		limit?: ApiEndpointRateLimit;
 	};
 
 	const body = await jsonBody(c);
-	const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+	const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 
 	if (meta.requireCredential === true || meta.requireModerator === true || meta.requireAdmin === true) {
 		assertCredential(auth);
@@ -82,21 +76,21 @@ export async function withEndpointGuards<T>(
 	}
 
 	if (meta.requireRolePolicy != null) {
-		if (!(await hasHonoApiRolePolicyOrIsRoot(deps, (auth as AuthedCredential).user, meta.requireRolePolicy))) {
+		if (!(await hasApiRolePolicyOrIsRoot(deps, (auth as AuthedCredential).user, meta.requireRolePolicy))) {
 			throw rolePermissionDeniedError();
 		}
 	}
 
 	if (meta.requireAdmin === true) {
-		await assertHonoApiAdmin(deps, auth as AuthedCredential);
+		await assertApiAdmin(deps, auth as AuthedCredential);
 	} else if (meta.requireModerator === true) {
-		await assertHonoApiModerator(deps, auth as AuthedCredential);
+		await assertApiModerator(deps, auth as AuthedCredential);
 	}
 
 	// レートリミットは資格情報を要するものだけ meta から適用する。未認証でも通る
 	// エンドポイントの制限は IP 単位で、呼び出し側が別途掛けている。
 	if (meta.limit != null && auth.user != null) {
-		await assertHonoApiRateLimitForUser(deps, name, meta.limit, auth.user);
+		await assertApiRateLimitForUser(deps, name, meta.limit, auth.user);
 	}
 
 	return await run({ body, auth });
@@ -129,7 +123,7 @@ export function endpointHandler<T>(
 export function endpointHandlerAnonymous<T>(
 	deps: Parameters<typeof withEndpointGuards>[1],
 	name: keyof typeof endpointMetas,
-	run: (args: { body: Record<string, unknown>; auth: HonoApiAuthenticated; c: Context }) => Promise<T>,
+	run: (args: { body: Record<string, unknown>; auth: ApiAuthenticated; c: Context }) => Promise<T>,
 ): (c: Context) => Promise<Response> {
 	return async (c: Context) =>
 		(await runApiEndpoint(

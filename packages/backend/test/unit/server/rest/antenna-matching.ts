@@ -44,7 +44,7 @@ vi.mock('@/core/user/UserListMembershipStore.js', () => ({
 	userListMembershipExistsInDatabase: vi.fn(),
 }));
 
-import { addNoteToAntennasForHonoApi, checkHitAntennaForHonoApi } from '@/server/rest/antenna/antennas.js';
+import { addNoteToAntennasForApi, checkHitAntennaForApi } from '@/server/rest/antenna/antennas.js';
 
 const authorId = '019f587c6bc4785ead8d511d603959f0';
 const followerId = '019f587c6bc4785ead8d511d603959f1';
@@ -68,7 +68,7 @@ function createAntenna(id: string, userId: string): MiAntenna {
 	} as unknown as MiAntenna;
 }
 
-describe('addNoteToAntennasForHonoApi', () => {
+describe('addNoteToAntennasForApi', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		listUserListIdsContainingUserFromDatabaseMock.mockResolvedValue([]);
@@ -99,13 +99,13 @@ describe('addNoteToAntennasForHonoApi', () => {
 			channel: null,
 		} as unknown as MiNote;
 
-		await addNoteToAntennasForHonoApi(
+		await addNoteToAntennasForApi(
 			{
-				config: { runtime: { host: 'local.example' } } as Parameters<typeof addNoteToAntennasForHonoApi>[0]['config'],
+				config: { runtime: { host: 'local.example' } } as Parameters<typeof addNoteToAntennasForApi>[0]['config'],
 				db: {} as MiDrizzleDatabase,
 				redisForTimelines: {
 					pipeline: vi.fn(() => pipeline),
-				} as unknown as Parameters<typeof addNoteToAntennasForHonoApi>[0]['redisForTimelines'],
+				} as unknown as Parameters<typeof addNoteToAntennasForApi>[0]['redisForTimelines'],
 				publishAntennaStream,
 			},
 			note,
@@ -146,13 +146,13 @@ describe('addNoteToAntennasForHonoApi', () => {
 			channel: null,
 		} as unknown as MiNote;
 
-		await addNoteToAntennasForHonoApi(
+		await addNoteToAntennasForApi(
 			{
-				config: { runtime: { host: 'local.example' } } as Parameters<typeof addNoteToAntennasForHonoApi>[0]['config'],
+				config: { runtime: { host: 'local.example' } } as Parameters<typeof addNoteToAntennasForApi>[0]['config'],
 				db: {} as MiDrizzleDatabase,
 				redisForTimelines: {
 					pipeline: vi.fn(() => pipeline),
-				} as unknown as Parameters<typeof addNoteToAntennasForHonoApi>[0]['redisForTimelines'],
+				} as unknown as Parameters<typeof addNoteToAntennasForApi>[0]['redisForTimelines'],
 			},
 			note,
 			{ id: authorId, username: 'bot', host: null, isBot: true },
@@ -176,9 +176,9 @@ describe('addNoteToAntennasForHonoApi', () => {
 		} as unknown as MiNote;
 		followingExistsInDatabaseMock.mockResolvedValue(true);
 
-		const hit = await checkHitAntennaForHonoApi(
+		const hit = await checkHitAntennaForApi(
 			{
-				config: { runtime: { host: 'local.example' } } as Parameters<typeof checkHitAntennaForHonoApi>[0]['config'],
+				config: { runtime: { host: 'local.example' } } as Parameters<typeof checkHitAntennaForApi>[0]['config'],
 				db: {} as MiDrizzleDatabase,
 			},
 			antenna,

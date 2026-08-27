@@ -9,19 +9,19 @@ import {
 	assertProhibitMoved,
 	assertSecureCredential,
 	assertTokenPermission,
-	authenticateHonoApiToken,
+	authenticateApiToken,
 } from '../auth/auth.js';
-import { handleHonoApiEmailAddressAvailable } from '../auth/availability.js';
-import { handleHonoApiPinnedUsers } from '../user/user.js';
+import { handleApiEmailAddressAvailable } from '../auth/availability.js';
+import { handleApiPinnedUsers } from '../user/user.js';
 import {
-	handleHonoApiAnnouncementReact,
-	handleHonoApiAnnouncements,
-	handleHonoApiAnnouncementShow,
-	handleHonoApiAnnouncementUnreact,
-	handleHonoApiIReadAnnouncement,
+	handleApiAnnouncementReact,
+	handleApiAnnouncements,
+	handleApiAnnouncementShow,
+	handleApiAnnouncementUnreact,
+	handleApiIReadAnnouncement,
 } from '../announcement/announcements.js';
-import { handleHonoApiIClaimAchievement } from '../notification/notification.js';
-import { handleHonoApiPagePush } from '../page/page-push.js';
+import { handleApiIClaimAchievement } from '../notification/notification.js';
+import { handleApiPagePush } from '../page/page-push.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -37,7 +37,7 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 	app.post(
 		'/announcements',
 		endpointHandlerAnonymous(deps, 'announcements', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAnnouncements(deps, auth.user, body)),
+			jsonResponse(c, await handleApiAnnouncements(deps, auth.user, body)),
 		),
 	);
 
@@ -45,14 +45,14 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		['POST', 'QUERY'],
 		'/announcements/show',
 		endpointHandlerAnonymous(deps, 'announcements/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAnnouncementShow(deps, auth.user, body)),
+			jsonResponse(c, await handleApiAnnouncementShow(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/announcements/react',
 		endpointHandler(deps, 'announcements/react', async ({ body, auth, c }) => {
-			await handleHonoApiAnnouncementReact(deps, auth.user, body);
+			await handleApiAnnouncementReact(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -60,7 +60,7 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 	app.post(
 		'/announcements/unreact',
 		endpointHandler(deps, 'announcements/unreact', async ({ body, auth, c }) => {
-			await handleHonoApiAnnouncementUnreact(deps, auth.user, body);
+			await handleApiAnnouncementUnreact(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -68,7 +68,7 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 	app.post(
 		'/i/read-announcement',
 		endpointHandler(deps, 'i/read-announcement', async ({ body, auth, c }) => {
-			await handleHonoApiIReadAnnouncement(deps, auth.user, body);
+			await handleApiIReadAnnouncement(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -76,7 +76,7 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 	app.post(
 		'/i/claim-achievement',
 		endpointHandler(deps, 'i/claim-achievement', async ({ body, auth, c }) => {
-			await handleHonoApiIClaimAchievement(deps, auth.user, body);
+			await handleApiIClaimAchievement(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -85,14 +85,14 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		['POST', 'QUERY'],
 		'/pinned-users',
 		endpointHandlerAnonymous(deps, 'pinned-users', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiPinnedUsers(deps, auth.user, body)),
+			jsonResponse(c, await handleApiPinnedUsers(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/page-push',
 		endpointHandler(deps, 'page-push', async ({ body, auth, c }) => {
-			await handleHonoApiPagePush(deps, auth.user, body);
+			await handleApiPagePush(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -101,7 +101,7 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		['POST', 'QUERY'],
 		'/email-address/available',
 		endpointHandlerAnonymous(deps, 'email-address/available', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiEmailAddressAvailable(deps, body)),
+			jsonResponse(c, await handleApiEmailAddressAvailable(deps, body)),
 		),
 	);
 }

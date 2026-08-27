@@ -14,24 +14,24 @@ import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { omitUndefined } from '@/misc/clone.js';
 import type { MiModerationLog } from '@/models/ModerationLog.js';
 import {
-	packUserDetailedNotMeManyForHonoApi,
-	type UserDetailedNotMeHonoApiResponse,
+	packUserDetailedNotMeManyForApi,
+	type UserDetailedNotMeApiResponse,
 	type UserPackingDependencies,
 } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiModerationLogDependencies = UserPackingDependencies & {
+export type ApiModerationLogDependencies = UserPackingDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
 
-type HonoApiModerationLogResponse = {
+type ApiModerationLogResponse = {
 	id: string;
 	createdAt: string;
 	type: string;
 	info: Record<string, unknown>;
 	userId: string;
-	user: UserDetailedNotMeHonoApiResponse;
+	user: UserDetailedNotMeApiResponse;
 };
 
 export const adminShowModerationLogsParamDef = z.object({
@@ -45,11 +45,11 @@ export const adminShowModerationLogsParamDef = z.object({
 	search: z.string().nullable().optional(),
 });
 
-async function packModerationLogsForHonoApi(
-	deps: HonoApiModerationLogDependencies,
+async function packModerationLogsForApi(
+	deps: ApiModerationLogDependencies,
 	logs: MiModerationLog[],
-): Promise<HonoApiModerationLogResponse[]> {
-	const users = await packUserDetailedNotMeManyForHonoApi(
+): Promise<ApiModerationLogResponse[]> {
+	const users = await packUserDetailedNotMeManyForApi(
 		deps,
 		logs.map((log) => log.user ?? log.userId),
 	);
@@ -68,11 +68,11 @@ async function packModerationLogsForHonoApi(
 	});
 }
 
-export async function handleHonoApiAdminShowModerationLogs(
-	deps: HonoApiModerationLogDependencies,
+export async function handleApiAdminShowModerationLogs(
+	deps: ApiModerationLogDependencies,
 	body: Record<string, unknown>,
-): Promise<HonoApiModerationLogResponse[]> {
-	const params = parseHonoApiParams(adminShowModerationLogsParamDef, body);
+): Promise<ApiModerationLogResponse[]> {
+	const params = parseApiParams(adminShowModerationLogsParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const logs = await listModerationLogsFromDatabase(
 		deps.db,
@@ -87,5 +87,5 @@ export async function handleHonoApiAdminShowModerationLogs(
 		}),
 	);
 
-	return await packModerationLogsForHonoApi(deps, logs);
+	return await packModerationLogsForApi(deps, logs);
 }

@@ -13,7 +13,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 
-export type HonoQueueCleanRemoteNotesDependencies = {
+export type QueueCleanRemoteNotesDependencies = {
 	db: MiDrizzleDatabase;
 	meta: Pick<
 		MiMeta,
@@ -170,8 +170,8 @@ async function listRemoteRootNoteIdsWindow(
 	return result.rows.map((row) => row.id);
 }
 
-export async function handleHonoQueueCleanRemoteNotes(
-	deps: HonoQueueCleanRemoteNotesDependencies,
+export async function handleQueueCleanRemoteNotes(
+	deps: QueueCleanRemoteNotesDependencies,
 	job: Bull.Job<Record<string, unknown>>,
 ): Promise<CleanRemoteNotesResult> {
 	const computeProgress = (minId: string, maxId: string, cursorLeft: string): number => {

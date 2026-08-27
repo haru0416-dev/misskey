@@ -18,10 +18,10 @@ import { omitUndefined } from '@/misc/clone.js';
 import { descriptionSchema, localUsernameSchema, passwordSchema } from '@/models/User.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { hashPassword } from '@/misc/password.js';
-import { HonoApiError } from '../error.js';
-import type { HonoApiAuthenticated } from '../auth/auth.js';
-import type { HonoApiInternalEventPublisher } from '../events.js';
-import { isHonoApiAdministrator } from '../role/role-policy.js';
+import { ApiError } from '../error.js';
+import type { ApiAuthenticated } from '../auth/auth.js';
+import type { ApiInternalEventPublisher } from '../events.js';
+import { isApiAdministrator } from '../role/role-policy.js';
 import {
 	createLocalSignupAccount,
 	packSignupUser,
@@ -29,19 +29,19 @@ import {
 	type SignupResponse,
 } from '../auth/signup.js';
 import {
-	packMeDetailedForHonoApi,
-	packUserDetailedNotMeForHonoApi,
-	type MeDetailedHonoApiResponse,
-	type UserDetailedNotMeHonoApiResponse,
+	packMeDetailedForApi,
+	packUserDetailedNotMeForApi,
+	type MeDetailedApiResponse,
+	type UserDetailedNotMeApiResponse,
 	type UserPackingDependencies,
 } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminAccountsDependencies = UserPackingDependencies &
+export type ApiAdminAccountsDependencies = UserPackingDependencies &
 	SignupDependencies & {
 		dbQueue: DbQueue;
 		deliverQueue: DeliverQueue;
-		publishInternalEvent?: HonoApiInternalEventPublisher;
+		publishInternalEvent?: ApiInternalEventPublisher;
 	};
 
 export const adminAccountCreateParamDef = z.object({
@@ -62,8 +62,8 @@ export const adminUpdateProxyAccountParamDef = z.object({
 	description: descriptionSchema.nullable().optional(),
 });
 
-function userNotFoundError(): HonoApiError {
-	return new HonoApiError({
+function userNotFoundError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such user who has the email address.',
 		code: 'USER_NOT_FOUND',
@@ -71,8 +71,8 @@ function userNotFoundError(): HonoApiError {
 	});
 }
 
-function adminAccountCreateAccessDeniedError(): HonoApiError {
-	return new HonoApiError({
+function adminAccountCreateAccessDeniedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Access denied.',
 		code: 'ACCESS_DENIED',
@@ -80,8 +80,8 @@ function adminAccountCreateAccessDeniedError(): HonoApiError {
 	});
 }
 
-function adminAccountCreateWrongInitialPasswordError(): HonoApiError {
-	return new HonoApiError({
+function adminAccountCreateWrongInitialPasswordError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Initial password is incorrect.',
 		code: 'INCORRECT_INITIAL_PASSWORD',
@@ -89,8 +89,8 @@ function adminAccountCreateWrongInitialPasswordError(): HonoApiError {
 	});
 }
 
-function adminAccountNoSuchUserError(id: string): HonoApiError {
-	return new HonoApiError({
+function adminAccountNoSuchUserError(id: string): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such user.',
 		code: 'NO_SUCH_USER',
@@ -98,12 +98,12 @@ function adminAccountNoSuchUserError(id: string): HonoApiError {
 	});
 }
 
-export async function handleHonoApiAdminAccountsCreate(
-	deps: HonoApiAdminAccountsDependencies,
-	auth: HonoApiAuthenticated,
+export async function handleApiAdminAccountsCreate(
+	deps: ApiAdminAccountsDependencies,
+	auth: ApiAuthenticated,
 	body: Record<string, unknown>,
 ): Promise<SignupResponse> {
-	const params = parseHonoApiParams(adminAccountCreateParamDef, body);
+	const params = parseApiParams(adminAccountCreateParamDef, body);
 	const currentMeta = await fetchMetaFromDatabase(deps.db);
 	const rootUserId = currentMeta.rootUserId;
 
@@ -118,7 +118,7 @@ export async function handleHonoApiAdminAccountsCreate(
 	} else if (
 		auth.token !== null ||
 		// root だけに限ると、後から管理者ロールを付与したアカウントがこのAPIを使えない
-		!(await isHonoApiAdministrator({ ...deps, meta: currentMeta }, auth.user))
+		!(await isApiAdministrator({ ...deps, meta: currentMeta }, auth.user))
 	) {
 		throw adminAccountCreateAccessDeniedError();
 	}
@@ -140,26 +140,26 @@ export async function handleHonoApiAdminAccountsCreate(
 	return await packSignupUser(deps, created.account, created.token);
 }
 
-export async function handleHonoApiAdminAccountsFindByEmail(
-	deps: HonoApiAdminAccountsDependencies,
+export async function handleApiAdminAccountsFindByEmail(
+	deps: ApiAdminAccountsDependencies,
 	body: Record<string, unknown>,
-): Promise<UserDetailedNotMeHonoApiResponse> {
-	const params = parseHonoApiParams(adminAccountsFindByEmailParamDef, body);
+): Promise<UserDetailedNotMeApiResponse> {
+	const params = parseApiParams(adminAccountsFindByEmailParamDef, body);
 	const profile = await fetchUserProfileByEmailFromDatabase(deps.db, params.email);
 
 	if (profile == null) {
 		throw userNotFoundError();
 	}
 
-	return await packUserDetailedNotMeForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, profile.userId));
+	return await packUserDetailedNotMeForApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, profile.userId));
 }
 
-export async function handleHonoApiAdminAccountsDelete(
-	deps: HonoApiAdminAccountsDependencies,
+export async function handleApiAdminAccountsDelete(
+	deps: ApiAdminAccountsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAccountDeleteParamDef, body);
+	const params = parseApiParams(adminAccountDeleteParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 
 	if (user == null) {
@@ -169,12 +169,12 @@ export async function handleHonoApiAdminAccountsDelete(
 	await deleteAccountWithSideEffects(deps, user, me);
 }
 
-export async function handleHonoApiAdminDeleteAccount(
-	deps: HonoApiAdminAccountsDependencies,
+export async function handleApiAdminDeleteAccount(
+	deps: ApiAdminAccountsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAccountDeleteParamDef, body);
+	const params = parseApiParams(adminAccountDeleteParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) {
 		throw adminAccountNoSuchUserError('7ccf53b8-f359-45a7-b376-5f05a7bdfa93');
@@ -186,12 +186,12 @@ export async function handleHonoApiAdminDeleteAccount(
 	await deleteAccountWithSideEffects(deps, user, me);
 }
 
-export async function handleHonoApiAdminUpdateProxyAccount(
-	deps: HonoApiAdminAccountsDependencies,
+export async function handleApiAdminUpdateProxyAccount(
+	deps: ApiAdminAccountsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<MeDetailedHonoApiResponse> {
-	const params = parseHonoApiParams(adminUpdateProxyAccountParamDef, body);
+): Promise<MeDetailedApiResponse> {
+	const params = parseApiParams(adminUpdateProxyAccountParamDef, body);
 	const proxy = await fetchOrCreateSystemAccount(deps.db, deps.config, deps.meta, 'proxy');
 	const updated = await updateSystemAccountUserInDatabase(
 		deps.db,
@@ -208,7 +208,7 @@ export async function handleHonoApiAdminUpdateProxyAccount(
 		});
 	}
 
-	return await packMeDetailedForHonoApi(deps, updated, {
+	return await packMeDetailedForApi(deps, updated, {
 		includeSecrets: false,
 	});
 }

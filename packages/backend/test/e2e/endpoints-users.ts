@@ -163,7 +163,7 @@ describe('Endpoints', () => {
 		await context.close();
 	});
 
-	describe('Hono account data endpoints', () => {
+	describe('account data endpoints', () => {
 		test('drive/files/check-existence returns ownership-scoped md5 existence', async () => {
 			const config = fixtureConfig;
 			const md5 = createHash('md5').update(`hono-drive-${Date.now()}`).digest('hex');
@@ -1790,7 +1790,7 @@ describe('Endpoints', () => {
 			expect(fetched?.isPublic).toBe(true);
 		});
 
-		test('Hono account data endpoints require matching app token permissions', async () => {
+		test('account data endpoints require matching app token permissions', async () => {
 			const readAccountToken = await createAppToken(alice, ['read:account']);
 			const readDriveToken = await createAppToken(alice, ['read:drive']);
 			const config = fixtureConfig;
@@ -2282,7 +2282,7 @@ describe('Endpoints', () => {
 		test('users/search はname/username/description一致、origin絞り込み、mute除外、detailスキーマを維持する', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const byName = await signup({ username: `husn${suffix}` });
-			await api('i/update', { name: `Hono Search Target ${suffix}` }, byName);
+			await api('i/update', { name: `Search Target ${suffix}` }, byName);
 
 			const byUsername = await signup({ username: `hussrch${suffix}` });
 
@@ -2296,7 +2296,7 @@ describe('Endpoints', () => {
 			const muteRes = await api('mute/create', { userId: muted.id }, muter);
 			expect(muteRes.status).toBe(204);
 
-			const byNameResult = await api('users/search', { query: `Hono Search Target ${suffix}` });
+			const byNameResult = await api('users/search', { query: `Search Target ${suffix}` });
 			expect(byNameResult.status).toBe(200);
 			assert.ok(byNameResult.body.some((u: any) => u.id === byName.id));
 

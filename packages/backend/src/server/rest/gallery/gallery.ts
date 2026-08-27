@@ -38,14 +38,14 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from '../drive/drive-file.js';
-import { HonoApiError } from '../error.js';
-import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { packDriveFileManyByIdsForApi, type ApiDriveFileDependencies } from '../drive/drive-file.js';
+import { ApiError } from '../error.js';
+import { isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiGalleryDependencies = HonoApiDriveFileDependencies &
-	HonoApiRolePolicyDependencies & {
+export type ApiGalleryDependencies = ApiDriveFileDependencies &
+	ApiRolePolicyDependencies & {
 		redis: Redis.Redis;
 	};
 
@@ -58,7 +58,7 @@ function getCurrentFeaturedWindow(windowRange: number): number {
 }
 
 async function updateGalleryPostsRanking(
-	deps: HonoApiGalleryDependencies,
+	deps: ApiGalleryDependencies,
 	galleryPostId: string,
 	score = 1,
 ): Promise<void> {
@@ -73,7 +73,7 @@ async function updateGalleryPostsRanking(
 	await redisTransaction.exec();
 }
 
-async function getGalleryPostsRanking(deps: HonoApiGalleryDependencies, threshold: number): Promise<string[]> {
+async function getGalleryPostsRanking(deps: ApiGalleryDependencies, threshold: number): Promise<string[]> {
 	const currentWindow = getCurrentFeaturedWindow(GALLERY_POSTS_RANKING_WINDOW);
 	const previousWindow = currentWindow - 1;
 
@@ -175,8 +175,8 @@ type GalleryPostsPostIdParams = {
 	postId: string;
 };
 
-function galleryPostsShowNoSuchPostError(): HonoApiError {
-	return new HonoApiError({
+function galleryPostsShowNoSuchPostError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such post.',
 		code: 'NO_SUCH_POST',
@@ -184,8 +184,8 @@ function galleryPostsShowNoSuchPostError(): HonoApiError {
 	});
 }
 
-function galleryPostsDeleteNoSuchPostError(): HonoApiError {
-	return new HonoApiError({
+function galleryPostsDeleteNoSuchPostError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such post.',
 		code: 'NO_SUCH_POST',
@@ -193,8 +193,8 @@ function galleryPostsDeleteNoSuchPostError(): HonoApiError {
 	});
 }
 
-function galleryPostsDeleteAccessDeniedError(): HonoApiError {
-	return new HonoApiError({
+function galleryPostsDeleteAccessDeniedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Access denied.',
 		code: 'ACCESS_DENIED',
@@ -202,8 +202,8 @@ function galleryPostsDeleteAccessDeniedError(): HonoApiError {
 	});
 }
 
-function galleryPostsLikeNoSuchPostError(): HonoApiError {
-	return new HonoApiError({
+function galleryPostsLikeNoSuchPostError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such post.',
 		code: 'NO_SUCH_POST',
@@ -211,8 +211,8 @@ function galleryPostsLikeNoSuchPostError(): HonoApiError {
 	});
 }
 
-function galleryPostsLikeYourPostError(): HonoApiError {
-	return new HonoApiError({
+function galleryPostsLikeYourPostError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You cannot like your post.',
 		code: 'YOUR_POST',
@@ -220,8 +220,8 @@ function galleryPostsLikeYourPostError(): HonoApiError {
 	});
 }
 
-function galleryPostsLikeAlreadyLikedError(): HonoApiError {
-	return new HonoApiError({
+function galleryPostsLikeAlreadyLikedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'The post has already been liked.',
 		code: 'ALREADY_LIKED',
@@ -229,8 +229,8 @@ function galleryPostsLikeAlreadyLikedError(): HonoApiError {
 	});
 }
 
-function galleryPostsUnlikeNoSuchPostError(): HonoApiError {
-	return new HonoApiError({
+function galleryPostsUnlikeNoSuchPostError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such post.',
 		code: 'NO_SUCH_POST',
@@ -238,8 +238,8 @@ function galleryPostsUnlikeNoSuchPostError(): HonoApiError {
 	});
 }
 
-function galleryPostsUnlikeNotLikedError(): HonoApiError {
-	return new HonoApiError({
+function galleryPostsUnlikeNotLikedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You have not liked that post.',
 		code: 'NOT_LIKED',
@@ -247,8 +247,8 @@ function galleryPostsUnlikeNotLikedError(): HonoApiError {
 	});
 }
 
-export async function packGalleryPostForHonoApi(
-	deps: HonoApiGalleryDependencies,
+export async function packGalleryPostForApi(
+	deps: ApiGalleryDependencies,
 	src: MiGalleryPost['id'] | MiGalleryPost,
 	me: { id: MiUser['id'] } | null | undefined,
 	hint?: {
@@ -261,8 +261,8 @@ export async function packGalleryPostForHonoApi(
 	const post = typeof src === 'object' ? src : await fetchGalleryPostByIdOrFailFromDatabase(deps.db, src);
 
 	const [user, files, isLiked] = await Promise.all([
-		hint?.packedUser ?? packUserLiteForHonoApi(deps, post.userId),
-		hint?.packedFiles ?? packDriveFileManyByIdsForHonoApi(deps, post.fileIds),
+		hint?.packedUser ?? packUserLiteForApi(deps, post.userId),
+		hint?.packedFiles ?? packDriveFileManyByIdsForApi(deps, post.fileIds),
 		hint?.isLiked ?? (meId ? galleryLikeExistsInDatabase(deps.db, meId, post.id) : Promise.resolve(undefined)),
 	]);
 
@@ -283,8 +283,8 @@ export async function packGalleryPostForHonoApi(
 	};
 }
 
-async function packGalleryPostsManyForHonoApi(
-	deps: HonoApiGalleryDependencies,
+async function packGalleryPostsManyForApi(
+	deps: ApiGalleryDependencies,
 	posts: MiGalleryPost[],
 	me: { id: MiUser['id'] } | null | undefined,
 ): Promise<Packed<'GalleryPost'>[]> {
@@ -294,8 +294,8 @@ async function packGalleryPostsManyForHonoApi(
 	const fileIds = [...new Set(posts.flatMap((post) => post.fileIds))];
 	const postIds = posts.map((post) => post.id);
 	const [packedUsers, packedFiles, likedPostIds] = await Promise.all([
-		packUserLiteManyForHonoApi(deps, userIds),
-		packDriveFileManyByIdsForHonoApi(deps, fileIds),
+		packUserLiteManyForApi(deps, userIds),
+		packDriveFileManyByIdsForApi(deps, fileIds),
 		me ? listLikedGalleryPostIdsByUserIdAndPostIdsFromDatabase(deps.db, me.id, postIds) : Promise.resolve([]),
 	]);
 	const userById = new Map(packedUsers.map((user) => [user.id, user]));
@@ -304,7 +304,7 @@ async function packGalleryPostsManyForHonoApi(
 
 	return await Promise.all(
 		posts.map((post) =>
-			packGalleryPostForHonoApi(
+			packGalleryPostForApi(
 				deps,
 				post,
 				me,
@@ -320,12 +320,12 @@ async function packGalleryPostsManyForHonoApi(
 	);
 }
 
-export async function handleHonoApiGalleryFeatured(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiGalleryFeatured(
+	deps: ApiGalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	const params = parseHonoApiParams(galleryFeaturedParamDef, body);
+	const params = parseApiParams(galleryFeaturedParamDef, body);
 
 	let postIds: string[];
 	if (
@@ -348,25 +348,25 @@ export async function handleHonoApiGalleryFeatured(
 	if (postIds.length === 0) return [];
 
 	const posts = await listGalleryPostsByIdsFromDatabase(deps.db, postIds);
-	return await packGalleryPostsManyForHonoApi(deps, posts, me);
+	return await packGalleryPostsManyForApi(deps, posts, me);
 }
 
-export async function handleHonoApiGalleryPopular(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiGalleryPopular(
+	deps: ApiGalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	parseHonoApiParams(galleryPopularParamDef, body);
+	parseApiParams(galleryPopularParamDef, body);
 	const posts = await listPopularGalleryPostsFromDatabase(deps.db);
-	return await packGalleryPostsManyForHonoApi(deps, posts, me);
+	return await packGalleryPostsManyForApi(deps, posts, me);
 }
 
-export async function handleHonoApiGalleryPosts(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiGalleryPosts(
+	deps: ApiGalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	const params = parseHonoApiParams(galleryPostsParamDef, body);
+	const params = parseApiParams(galleryPostsParamDef, body);
 	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(time) }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		limit: params.limit,
@@ -375,27 +375,27 @@ export async function handleHonoApiGalleryPosts(
 		untilId: pagination.untilId,
 	});
 
-	return await packGalleryPostsManyForHonoApi(deps, posts, me);
+	return await packGalleryPostsManyForApi(deps, posts, me);
 }
 
-export async function handleHonoApiGalleryPostsShow(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiGalleryPostsShow(
+	deps: ApiGalleryDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>> {
-	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body);
+	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) throw galleryPostsShowNoSuchPostError();
 
-	return await packGalleryPostForHonoApi(deps, post, me);
+	return await packGalleryPostForApi(deps, post, me);
 }
 
-export async function handleHonoApiGalleryPostsCreate(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiGalleryPostsCreate(
+	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>> {
-	const params = parseHonoApiParams(galleryPostsCreateParamDef, body);
+	const params = parseApiParams(galleryPostsCreateParamDef, body);
 	const files = await listDriveFilesByIdsAndUserIdPreservingOrderFromDatabase(deps.db, params.fileIds, me.id);
 	if (files.length === 0) throw new Error();
 
@@ -409,15 +409,15 @@ export async function handleHonoApiGalleryPostsCreate(
 		fileIds: files.map((file) => file.id),
 	});
 
-	return await packGalleryPostForHonoApi(deps, post, me);
+	return await packGalleryPostForApi(deps, post, me);
 }
 
-export async function handleHonoApiGalleryPostsUpdate(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiGalleryPostsUpdate(
+	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>> {
-	const params = parseHonoApiParams(galleryPostsUpdateParamDef, body);
+	const params = parseApiParams(galleryPostsUpdateParamDef, body);
 
 	let files;
 	if (params.fileIds) {
@@ -439,19 +439,19 @@ export async function handleHonoApiGalleryPostsUpdate(
 	);
 
 	const post = await fetchGalleryPostByIdOrFailFromDatabase(deps.db, params.postId);
-	return await packGalleryPostForHonoApi(deps, post, me);
+	return await packGalleryPostForApi(deps, post, me);
 }
 
-export async function handleHonoApiGalleryPostsDelete(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiGalleryPostsDelete(
+	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body);
+	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) throw galleryPostsDeleteNoSuchPostError();
 
-	if (!(await isHonoApiModerator(deps, me)) && post.userId !== me.id) {
+	if (!(await isApiModerator(deps, me)) && post.userId !== me.id) {
 		throw galleryPostsDeleteAccessDeniedError();
 	}
 
@@ -468,12 +468,12 @@ export async function handleHonoApiGalleryPostsDelete(
 	}
 }
 
-export async function handleHonoApiGalleryPostsLike(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiGalleryPostsLike(
+	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body);
+	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) throw galleryPostsLikeNoSuchPostError();
 	if (post.userId === me.id) throw galleryPostsLikeYourPostError();
@@ -501,12 +501,12 @@ export async function handleHonoApiGalleryPostsLike(
 	await incrementGalleryPostLikedCountInDatabase(deps.db, post.id);
 }
 
-export async function handleHonoApiGalleryPostsUnlike(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiGalleryPostsUnlike(
+	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(galleryPostsPostIdParamDef, body);
+	const params = parseApiParams(galleryPostsPostIdParamDef, body);
 	const post = await fetchGalleryPostByIdFromDatabase(deps.db, params.postId);
 	if (post == null) throw galleryPostsUnlikeNoSuchPostError();
 
@@ -538,12 +538,12 @@ type IGalleryPostsParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiIGalleryPosts(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiIGalleryPosts(
+	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'GalleryPost'>[]> {
-	const params = parseHonoApiParams(iGalleryPostsParamDef, body);
+	const params = parseApiParams(iGalleryPostsParamDef, body);
 	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(time) }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
@@ -553,7 +553,7 @@ export async function handleHonoApiIGalleryPosts(
 		untilId: pagination.untilId,
 	});
 
-	return await packGalleryPostsManyForHonoApi(deps, posts, me);
+	return await packGalleryPostsManyForApi(deps, posts, me);
 }
 
 export const iGalleryLikesParamDef = z.object({
@@ -572,12 +572,12 @@ type IGalleryLikesParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiIGalleryLikes(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiIGalleryLikes(
+	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(iGalleryLikesParamDef, body);
+	const params = parseApiParams(iGalleryLikesParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 
 	const likes = await listGalleryLikesByUserIdFromDatabase(deps.db, me.id, {
@@ -591,13 +591,13 @@ export async function handleHonoApiIGalleryLikes(
 
 	const postIds = likes.map((like) => like.postId);
 	const posts = await listGalleryPostsByIdsFromDatabase(deps.db, postIds);
-	const packedPosts = await packGalleryPostsManyForHonoApi(deps, posts, me);
+	const packedPosts = await packGalleryPostsManyForApi(deps, posts, me);
 	const packedPostById = new Map(packedPosts.map((post) => [post.id, post]));
 
 	return await Promise.all(
 		likes.map(async (like) => ({
 			id: like.id,
-			post: packedPostById.get(like.postId) ?? (await packGalleryPostForHonoApi(deps, like.postId, me)),
+			post: packedPostById.get(like.postId) ?? (await packGalleryPostForApi(deps, like.postId, me)),
 		})),
 	);
 }
@@ -620,12 +620,12 @@ type UsersGalleryPostsParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiUsersGalleryPosts(
-	deps: HonoApiGalleryDependencies,
+export async function handleApiUsersGalleryPosts(
+	deps: ApiGalleryDependencies,
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(usersGalleryPostsParamDef, body);
+	const params = parseApiParams(usersGalleryPostsParamDef, body);
 	const pagination = resolveGalleryPostPagination({ gen: (time) => genId(time) }, params);
 	const posts = await listGalleryPostsWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,
@@ -635,5 +635,5 @@ export async function handleHonoApiUsersGalleryPosts(
 		untilId: pagination.untilId,
 	});
 
-	return await packGalleryPostsManyForHonoApi(deps, posts, me);
+	return await packGalleryPostsManyForApi(deps, posts, me);
 }

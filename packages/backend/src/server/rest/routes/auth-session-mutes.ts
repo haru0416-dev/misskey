@@ -9,28 +9,28 @@ import {
 	assertProhibitMoved,
 	assertSecureCredential,
 	assertTokenPermission,
-	authenticateHonoApiToken,
+	authenticateApiToken,
 } from '../auth/auth.js';
 import {
-	handleHonoApiAuthAccept,
-	handleHonoApiAuthSessionGenerate,
-	handleHonoApiAuthSessionShow,
-	handleHonoApiAuthSessionUserkey,
+	handleApiAuthAccept,
+	handleApiAuthSessionGenerate,
+	handleApiAuthSessionShow,
+	handleApiAuthSessionUserkey,
 } from '../auth/auth-session.js';
 import {
-	handleHonoApiBlockingCreate,
-	handleHonoApiBlockingDelete,
-	handleHonoApiBlockingList,
+	handleApiBlockingCreate,
+	handleApiBlockingDelete,
+	handleApiBlockingList,
 } from '../account/account-blocking.js';
 import {
-	handleHonoApiMuteCreate,
-	handleHonoApiMuteDelete,
-	handleHonoApiMuteList,
-	handleHonoApiRenoteMuteCreate,
-	handleHonoApiRenoteMuteDelete,
-	handleHonoApiRenoteMuteList,
+	handleApiMuteCreate,
+	handleApiMuteDelete,
+	handleApiMuteList,
+	handleApiRenoteMuteCreate,
+	handleApiRenoteMuteDelete,
+	handleApiRenoteMuteList,
 } from '../account/account-mutes.js';
-import { assertHonoApiRateLimitForUser } from '../rate-limit.js';
+import { assertApiRateLimitForUser } from '../rate-limit.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -46,7 +46,7 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 	app.post(
 		'/auth/session/generate',
 		endpointHandlerAnonymous(deps, 'auth/session/generate', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAuthSessionGenerate(deps, body)),
+			jsonResponse(c, await handleApiAuthSessionGenerate(deps, body)),
 		),
 	);
 
@@ -54,21 +54,21 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		['POST', 'QUERY'],
 		'/auth/session/show',
 		endpointHandlerAnonymous(deps, 'auth/session/show', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAuthSessionShow(deps, auth.user, body)),
+			jsonResponse(c, await handleApiAuthSessionShow(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/auth/session/userkey',
 		endpointHandlerAnonymous(deps, 'auth/session/userkey', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiAuthSessionUserkey(deps, body)),
+			jsonResponse(c, await handleApiAuthSessionUserkey(deps, body)),
 		),
 	);
 
 	app.post(
 		'/auth/accept',
 		endpointHandler(deps, 'auth/accept', async ({ body, auth, c }) => {
-			await handleHonoApiAuthAccept(deps, auth.user, body);
+			await handleApiAuthAccept(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -76,14 +76,14 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 	app.post(
 		'/blocking/create',
 		endpointHandler(deps, 'blocking/create', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiBlockingCreate(deps, auth.user, body)),
+			jsonResponse(c, await handleApiBlockingCreate(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/blocking/delete',
 		endpointHandler(deps, 'blocking/delete', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiBlockingDelete(deps, auth.user, body)),
+			jsonResponse(c, await handleApiBlockingDelete(deps, auth.user, body)),
 		),
 	);
 
@@ -91,14 +91,14 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		['POST', 'QUERY'],
 		'/blocking/list',
 		endpointHandler(deps, 'blocking/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiBlockingList(deps, auth.user, body)),
+			jsonResponse(c, await handleApiBlockingList(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/mute/create',
 		endpointHandler(deps, 'mute/create', async ({ body, auth, c }) => {
-			await handleHonoApiMuteCreate(deps, auth.user, body);
+			await handleApiMuteCreate(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -106,7 +106,7 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 	app.post(
 		'/mute/delete',
 		endpointHandler(deps, 'mute/delete', async ({ body, auth, c }) => {
-			await handleHonoApiMuteDelete(deps, auth.user, body);
+			await handleApiMuteDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -115,14 +115,14 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		['POST', 'QUERY'],
 		'/mute/list',
 		endpointHandler(deps, 'mute/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiMuteList(deps, auth.user, body)),
+			jsonResponse(c, await handleApiMuteList(deps, auth.user, body)),
 		),
 	);
 
 	app.post(
 		'/renote-mute/create',
 		endpointHandler(deps, 'renote-mute/create', async ({ body, auth, c }) => {
-			await handleHonoApiRenoteMuteCreate(deps, auth.user, body);
+			await handleApiRenoteMuteCreate(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -130,7 +130,7 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 	app.post(
 		'/renote-mute/delete',
 		endpointHandler(deps, 'renote-mute/delete', async ({ body, auth, c }) => {
-			await handleHonoApiRenoteMuteDelete(deps, auth.user, body);
+			await handleApiRenoteMuteDelete(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -139,7 +139,7 @@ export function registerAuthSessionMutesRoutes(app: Hono, deps: ApiShellDependen
 		['POST', 'QUERY'],
 		'/renote-mute/list',
 		endpointHandler(deps, 'renote-mute/list', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiRenoteMuteList(deps, auth.user, body)),
+			jsonResponse(c, await handleApiRenoteMuteList(deps, auth.user, body)),
 		),
 	);
 }

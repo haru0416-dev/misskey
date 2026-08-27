@@ -17,11 +17,11 @@ import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { uniqueItems } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { createTokenNotification, type HonoApiNotificationDependencies } from '../notification/notification.js';
-import { packUserDetailedNotMeForHonoApi } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { createTokenNotification, type ApiNotificationDependencies } from '../notification/notification.js';
+import { packUserDetailedNotMeForApi } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiMiauthDependencies = HonoApiNotificationDependencies & {
+export type ApiMiauthDependencies = ApiNotificationDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -43,12 +43,12 @@ export const miauthGenTokenParamDef = z.object({
 	permission: uniqueItems(z.array(z.string())),
 });
 
-export async function handleHonoApiMiauthGenToken(
-	deps: HonoApiMiauthDependencies,
+export async function handleApiMiauthGenToken(
+	deps: ApiMiauthDependencies,
 	user: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<{ token: string }> {
-	const params = parseHonoApiParams(miauthGenTokenParamDef, body);
+	const params = parseApiParams(miauthGenTokenParamDef, body);
 	const accessToken = secureRndstr(32);
 	const now = new Date();
 
@@ -72,8 +72,8 @@ export async function handleHonoApiMiauthGenToken(
 	};
 }
 
-export async function handleHonoApiMiauthCheck(
-	deps: HonoApiMiauthDependencies,
+export async function handleApiMiauthCheck(
+	deps: ApiMiauthDependencies,
 	session: string,
 ): Promise<
 	| {
@@ -98,6 +98,6 @@ export async function handleHonoApiMiauthCheck(
 	return {
 		ok: true,
 		token: token.token,
-		user: await packUserDetailedNotMeForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, token.userId)),
+		user: await packUserDetailedNotMeForApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, token.userId)),
 	};
 }

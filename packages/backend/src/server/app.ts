@@ -34,7 +34,7 @@ type HttpMiddlewareDependencies = {
 	logger?: Logger;
 };
 
-export type MisskeyHonoAppDependencies = {
+export type MisskeyAppDependencies = {
 	http: HttpMiddlewareDependencies;
 	apiShell: ApiShellDependencies;
 	clientBase: ClientBaseDependencies;
@@ -121,7 +121,7 @@ function registerHttpMiddleware(app: Hono, deps: HttpMiddlewareDependencies): vo
 	}
 }
 
-export function createMisskeyHonoApp(deps: MisskeyHonoAppDependencies): Hono {
+export function createMisskeyApp(deps: MisskeyAppDependencies): Hono {
 	const app = new Hono();
 
 	// API シェルは runApiEndpoint が例外を捕捉するが、それ以外のルート (web SSR / file /

@@ -18,7 +18,7 @@ import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserSto
 import { createDriveFileInDatabase } from '@/core/drive/DriveFileStore.js';
 import { mutingExistsInDatabase } from '@/core/user/MutingStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueImportMuting, type HonoQueueDbDependencies } from '@/queue/handlers/db.js';
+import { handleQueueImportMuting, type QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbUserImportJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
 
@@ -44,7 +44,7 @@ async function serveText(text: string): Promise<{ url: string; server: Server }>
 
 describe('hono-queue-db (importMuting)', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueDbDependencies;
+	let deps: QueueDbDependencies;
 	let servers: Server[] = [];
 
 	beforeAll(async () => {
@@ -89,7 +89,7 @@ describe('hono-queue-db (importMuting)', () => {
 			userHost: null,
 		});
 
-		await handleHonoQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId }));
+		await handleQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId }));
 
 		expect(await mutingExistsInDatabase(runtime.db, muter.id, target.id)).toBe(true);
 	});
@@ -113,7 +113,7 @@ describe('hono-queue-db (importMuting)', () => {
 			userHost: null,
 		});
 
-		await handleHonoQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId }));
+		await handleQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId }));
 
 		expect(await mutingExistsInDatabase(runtime.db, muter.id, muter.id)).toBe(false);
 	});
@@ -121,7 +121,7 @@ describe('hono-queue-db (importMuting)', () => {
 	test('存在しないfileIdは何もしない', async () => {
 		const muter = await createTestUser('honoqueueimpmutenofile');
 		await expect(
-			handleHonoQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId: genId() })),
+			handleQueueImportMuting(deps, fakeJob({ user: { id: muter.id }, fileId: genId() })),
 		).resolves.toBeUndefined();
 	});
 });

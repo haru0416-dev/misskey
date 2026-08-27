@@ -15,7 +15,7 @@ import type { MiMeta } from '@/models/_.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import MisskeyLogger from '@/logger.js';
-import { isFederationAllowedUri, signedPostForHonoApi } from '@/server/rest/activitypub/ap-resolve.js';
+import { isFederationAllowedUri, signedPostForApi } from '@/server/rest/activitypub/ap-resolve.js';
 import {
 	fetchFederatedInstance,
 	fetchOrRegisterFederatedInstance,
@@ -25,9 +25,9 @@ import {
 	unlockFetchInstanceMetadata,
 	updateFederatedInstance,
 } from '@/server/rest/activitypub/federation.js';
-import type { HonoChartWriters } from '../../server/chart-runtime.js';
+import type { ChartWriters } from '../../server/chart-runtime.js';
 
-export type HonoQueueDeliverDependencies = {
+export type QueueDeliverDependencies = {
 	config: Pick<Config, 'instance' | 'runtime'>;
 	db: MiDrizzleDatabase;
 	meta: Pick<
@@ -41,7 +41,7 @@ export type HonoQueueDeliverDependencies = {
 	>;
 	redis: Pick<import('ioredis').Redis, 'set' | 'del'>;
 	httpRequestService: Pick<HttpRequestService, 'getJson' | 'getHtml' | 'send'>;
-	chartWriters: Pick<HonoChartWriters, 'instanceChart' | 'apRequestChart' | 'federationChart'>;
+	chartWriters: Pick<ChartWriters, 'instanceChart' | 'apRequestChart' | 'federationChart'>;
 };
 
 // キュー処理関数はプロセスごとに1つだけ生成されるため、停止ホストキャッシュをモジュールスコープで共有する。
@@ -54,8 +54,8 @@ const logBackgroundInstanceUpdateError = (error: unknown): void => {
 	logger.error('background federated-instance update failed', { error });
 };
 
-export async function handleHonoQueueDeliver(
-	deps: HonoQueueDeliverDependencies,
+export async function handleQueueDeliver(
+	deps: QueueDeliverDependencies,
 	job: Bull.Job<DeliverJobData>,
 ): Promise<string> {
 	if (job.data.userStateGuard != null) {
@@ -94,7 +94,7 @@ export async function handleHonoQueueDeliver(
 	}
 
 	try {
-		await signedPostForHonoApi(deps, job.data.user, job.data.to, job.data.content, job.data.digest);
+		await signedPostForApi(deps, job.data.user, job.data.to, job.data.content, job.data.digest);
 
 		void deps.chartWriters.apRequestChart.deliverSucc();
 		void deps.chartWriters.federationChart.deliverd(host, true);

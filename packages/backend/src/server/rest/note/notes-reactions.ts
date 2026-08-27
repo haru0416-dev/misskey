@@ -32,30 +32,30 @@ import { listUsersByIdsFromDatabase } from '@/core/user/UserStore.js';
 import type { MiEmoji } from '@/models/Emoji.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
+import { ApiError } from '../error.js';
 import {
 	addActivityContext,
-	deliverNoteActivityForHonoApi,
-	renderLikeForHonoApi,
-	renderUndoForHonoApi,
-	resolveRemoteRecipientForHonoApi,
-	type HonoApiNoteApDependencies,
+	deliverNoteActivityForApi,
+	renderLikeForApi,
+	renderUndoForApi,
+	resolveRemoteRecipientForApi,
+	type ApiNoteApDependencies,
 } from '../activitypub/notes-ap.js';
-import { createNoteNotificationForHonoApi } from './notes-create.js';
-import { isVisibleForMeForHonoApi, type HonoApiNoteDependencies } from './note.js';
-import { packUserLiteManyForHonoApi } from '../user/user.js';
-import type { HonoApiNotificationDependencies } from '../notification/notification.js';
-import { getHonoApiUserRoles, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import type { HonoApiNoteStreamPublisher } from '../events.js';
-import type { HonoChartWriters } from '@/server/chart-runtime.js';
-import { parseHonoApiParams } from '../validation.js';
+import { createNoteNotificationForApi } from './notes-create.js';
+import { isVisibleForMeForApi, type ApiNoteDependencies } from './note.js';
+import { packUserLiteManyForApi } from '../user/user.js';
+import type { ApiNotificationDependencies } from '../notification/notification.js';
+import { getApiUserRoles, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import type { ApiNoteStreamPublisher } from '../events.js';
+import type { ChartWriters } from '@/server/chart-runtime.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiNotesReactionsDependencies = HonoApiNoteApDependencies &
-	HonoApiNoteDependencies &
-	HonoApiRolePolicyDependencies &
-	HonoApiNotificationDependencies & {
-		chartWriters: HonoChartWriters;
-		publishNoteStream?: HonoApiNoteStreamPublisher;
+export type ApiNotesReactionsDependencies = ApiNoteApDependencies &
+	ApiNoteDependencies &
+	ApiRolePolicyDependencies &
+	ApiNotificationDependencies & {
+		chartWriters: ChartWriters;
+		publishNoteStream?: ApiNoteStreamPublisher;
 		redisForReactions: Redis.Redis;
 	};
 
@@ -79,7 +79,7 @@ const isCustomEmojiRegexp = /^:([\w+-]+)(?:@\.)?:$/;
 const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
 
 /** Unicode 絵文字とレガシー名を、保存できる 1 つの絵文字へ寄せる。該当しなければフォールバック。 */
-export function normalizeReactionForHonoApi(reaction: string | null): string {
+export function normalizeReactionForApi(reaction: string | null): string {
 	if (reaction == null) return FALLBACK;
 	if (Object.hasOwn(legacies, reaction)) return legacies[reaction]!;
 
@@ -92,7 +92,7 @@ export function normalizeReactionForHonoApi(reaction: string | null): string {
 	return FALLBACK;
 }
 
-export function decodeReactionForHonoApi(str: string): { reaction: string; name?: string; host?: string | null } {
+export function decodeReactionForApi(str: string): { reaction: string; name?: string; host?: string | null } {
 	const custom = str.match(decodeCustomEmojiRegexp);
 	if (custom) {
 		const name = custom[1]!;
@@ -102,56 +102,56 @@ export function decodeReactionForHonoApi(str: string): { reaction: string; name?
 	return { reaction: str };
 }
 
-function reactionNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function reactionNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
 		id: '033d0620-5bfe-4027-965d-980b0c85a3ea',
 	});
 }
-function reactionsNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function reactionsNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
 		id: '263fff3d-d0e1-4af4-bea7-8408059b451a',
 	});
 }
-function reactionAlreadyReactedError(): HonoApiError {
-	return new HonoApiError({
+function reactionAlreadyReactedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You are already reacting to that note.',
 		code: 'ALREADY_REACTED',
 		id: '71efcf98-86d6-4e2b-b2ad-9d032369366b',
 	});
 }
-function reactionYouHaveBeenBlockedError(): HonoApiError {
-	return new HonoApiError({
+function reactionYouHaveBeenBlockedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You cannot react this note because you have been blocked by this user.',
 		code: 'YOU_HAVE_BEEN_BLOCKED',
 		id: '20ef5475-9f38-4e4c-bd33-de6d979498ec',
 	});
 }
-function reactionCannotReactToRenoteError(): HonoApiError {
-	return new HonoApiError({
+function reactionCannotReactToRenoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You cannot react to Renote.',
 		code: 'CANNOT_REACT_TO_RENOTE',
 		id: 'eaccdc08-ddef-43fe-908f-d108faad57f5',
 	});
 }
-function unreactionNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function unreactionNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
 		id: '764d9fce-f9f2-4a0e-92b1-6ceac9a7ad37',
 	});
 }
-function unreactionNotReactedError(): HonoApiError {
-	return new HonoApiError({
+function unreactionNotReactedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You are not reacting to that note.',
 		code: 'NOT_REACTED',
@@ -159,8 +159,8 @@ function unreactionNotReactedError(): HonoApiError {
 	});
 }
 
-export async function createNoteReactionForHonoApi(
-	deps: HonoApiNotesReactionsDependencies,
+export async function createNoteReactionForApi(
+	deps: ApiNotesReactionsDependencies,
 	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
 	note: MiNote,
 	requestedReaction: string | null | undefined,
@@ -170,7 +170,7 @@ export async function createNoteReactionForHonoApi(
 		if (blocked) throw new IdentifiableError('e70412a4-7197-4726-8e74-f3e0deb92aa7');
 	}
 
-	if (!(await isVisibleForMeForHonoApi(deps, note, user.id))) {
+	if (!(await isVisibleForMeForApi(deps, note, user.id))) {
 		throw new IdentifiableError('68e9d2d1-48bf-42c2-b90a-b20e09fd3d48', 'Note not accessible for you.');
 	}
 
@@ -196,9 +196,7 @@ export async function createNoteReactionForHonoApi(
 
 			if (emoji) {
 				const roles =
-					emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0
-						? []
-						: await getHonoApiUserRoles(deps, user as MiUser);
+					emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ? [] : await getApiUserRoles(deps, user as MiUser);
 				const allowed =
 					emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 ||
 					roles.some((r) => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.includes(r.id));
@@ -224,7 +222,7 @@ export async function createNoteReactionForHonoApi(
 				reaction = FALLBACK;
 			}
 		} else {
-			reaction = normalizeReactionForHonoApi(reaction);
+			reaction = normalizeReactionForApi(reaction);
 		}
 	}
 
@@ -244,7 +242,7 @@ export async function createNoteReactionForHonoApi(
 		if (isDuplicateKeyValueDatabaseError(err)) {
 			const exists = await fetchNoteReactionByUserAndNoteOrFailFromDatabase(deps.db, user.id, note.id);
 			if (exists.reaction !== reaction) {
-				await deleteNoteReactionForHonoApi(deps, user, note);
+				await deleteNoteReactionForApi(deps, user, note);
 				await deps.db.transaction(async (transaction) => {
 					await createNoteReactionInDatabase(transaction as typeof deps.db, record);
 					await incrementNoteReactionInDatabase(
@@ -266,7 +264,7 @@ export async function createNoteReactionForHonoApi(
 		deps.chartWriters.perUserReactionsChart.update(user, note);
 	}
 
-	const decoded = decodeReactionForHonoApi(reaction);
+	const decoded = decodeReactionForApi(reaction);
 	const customEmoji: MiEmoji | null =
 		decoded.name == null
 			? null
@@ -285,17 +283,17 @@ export async function createNoteReactionForHonoApi(
 	});
 
 	if (note.userHost === null) {
-		void createNoteNotificationForHonoApi(deps, note.userId, user.id, 'reaction', { noteId: note.id, reaction });
+		void createNoteNotificationForApi(deps, note.userId, user.id, 'reaction', { noteId: note.id, reaction });
 	}
 
 	if (user.host == null && !note.localOnly) {
 		(async () => {
-			const activity = await renderLikeForHonoApi(deps, record, note);
+			const activity = await renderLikeForApi(deps, record, note);
 			const content = addActivityContext(deps.config, activity);
 
 			const directRecipients: MiUser[] = [];
 			if (note.userHost !== null) {
-				const reactee = await resolveRemoteRecipientForHonoApi(deps, note.userId);
+				const reactee = await resolveRemoteRecipientForApi(deps, note.userId);
 				if (reactee) directRecipients.push(reactee);
 			}
 
@@ -307,13 +305,13 @@ export async function createNoteReactionForHonoApi(
 				for (const u of visibleUsers.filter((u) => u.host != null)) directRecipients.push(u);
 			}
 
-			await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients, deliverToFollowers });
+			await deliverNoteActivityForApi(deps, user, content, { directRecipients, deliverToFollowers });
 		})().catch(() => {});
 	}
 }
 
-export async function deleteNoteReactionForHonoApi(
-	deps: HonoApiNotesReactionsDependencies,
+export async function deleteNoteReactionForApi(
+	deps: ApiNotesReactionsDependencies,
 	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
 	note: MiNote,
 ): Promise<void> {
@@ -332,23 +330,23 @@ export async function deleteNoteReactionForHonoApi(
 	});
 
 	deps.publishNoteStream?.(note, 'unreacted', {
-		reaction: decodeReactionForHonoApi(exist.reaction).reaction,
+		reaction: decodeReactionForApi(exist.reaction).reaction,
 		userId: user.id,
 	});
 
 	if (user.host == null && !note.localOnly) {
 		(async () => {
-			const like = await renderLikeForHonoApi(deps, exist, note);
-			const undo = renderUndoForHonoApi(deps.config, like, user);
+			const like = await renderLikeForApi(deps, exist, note);
+			const undo = renderUndoForApi(deps.config, like, user);
 			const content = addActivityContext(deps.config, undo);
 
 			const directRecipients: MiUser[] = [];
 			if (note.userHost !== null) {
-				const reactee = await resolveRemoteRecipientForHonoApi(deps, note.userId);
+				const reactee = await resolveRemoteRecipientForApi(deps, note.userId);
 				if (reactee) directRecipients.push(reactee);
 			}
 
-			await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients, deliverToFollowers: true });
+			await deliverNoteActivityForApi(deps, user, content, { directRecipients, deliverToFollowers: true });
 		})().catch(() => {});
 	}
 }
@@ -363,18 +361,18 @@ type ReactionsCreateParams = {
 	reaction: string;
 };
 
-export async function handleHonoApiNotesReactionsCreate(
-	deps: HonoApiNotesReactionsDependencies,
+export async function handleApiNotesReactionsCreate(
+	deps: ApiNotesReactionsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(reactionsCreateParamDef, body);
+	const params = parseApiParams(reactionsCreateParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw reactionNoSuchNoteError();
 
 	try {
-		await createNoteReactionForHonoApi(deps, me, note, params.reaction);
+		await createNoteReactionForApi(deps, me, note, params.reaction);
 	} catch (err) {
 		if (err instanceof IdentifiableError) {
 			if (err.id === '51c42bb4-931a-456b-bff7-e5a8a70dd298') throw reactionAlreadyReactedError();
@@ -393,18 +391,18 @@ type ReactionsDeleteParams = {
 	noteId: string;
 };
 
-export async function handleHonoApiNotesReactionsDelete(
-	deps: HonoApiNotesReactionsDependencies,
+export async function handleApiNotesReactionsDelete(
+	deps: ApiNotesReactionsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(reactionsDeleteParamDef, body);
+	const params = parseApiParams(reactionsDeleteParamDef, body);
 
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw unreactionNoSuchNoteError();
 
 	try {
-		await deleteNoteReactionForHonoApi(deps, me, note);
+		await deleteNoteReactionForApi(deps, me, note);
 	} catch (err) {
 		if (err instanceof IdentifiableError && err.id === '60527ec9-b4cb-4a88-a6bd-32d3ad26817d') {
 			throw unreactionNotReactedError();
@@ -421,7 +419,7 @@ export const reactionsDeleteRateLimit = {
 
 const notesReactionsIntegerQueryParams = new Set(['limit', 'sinceDate', 'untilDate']);
 
-export function normalizeHonoApiNotesReactionsQuery(query: Record<string, string>): Record<string, unknown> {
+export function normalizeApiNotesReactionsQuery(query: Record<string, string>): Record<string, unknown> {
 	const body: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(query)) {
 		if (notesReactionsIntegerQueryParams.has(key)) {
@@ -454,14 +452,14 @@ type NotesReactionsParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiNotesReactions(
-	deps: HonoApiNotesReactionsDependencies,
+export async function handleApiNotesReactions(
+	deps: ApiNotesReactionsDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Array<{ id: string; createdAt: string; user: unknown; type: string }>> {
-	const params = parseHonoApiParams(notesReactionsParamDef, body);
+	const params = parseApiParams(notesReactionsParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
-	if (note == null || !(await isVisibleForMeForHonoApi(deps, note, me?.id ?? null))) {
+	if (note == null || !(await isVisibleForMeForApi(deps, note, me?.id ?? null))) {
 		throw reactionsNoSuchNoteError();
 	}
 
@@ -500,7 +498,7 @@ export async function handleHonoApiNotesReactions(
 		type,
 	});
 
-	const packedUsers = await packUserLiteManyForHonoApi(
+	const packedUsers = await packUserLiteManyForApi(
 		deps,
 		reactions.map((r) => r.userId),
 	);
@@ -510,6 +508,6 @@ export async function handleHonoApiNotesReactions(
 		id: r.id,
 		createdAt: parseId(r.id).date.toISOString(),
 		user: userMap.get(r.userId),
-		type: decodeReactionForHonoApi(r.reaction).reaction,
+		type: decodeReactionForApi(r.reaction).reaction,
 	}));
 }

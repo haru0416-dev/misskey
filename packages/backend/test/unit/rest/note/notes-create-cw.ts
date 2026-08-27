@@ -14,7 +14,7 @@ import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-d
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { DB_MAX_NOTE_CW_LENGTH } from '@/const.js';
-import { createNoteForHonoApi, type HonoApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
+import { createNoteForApi, type ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
 import type { MiLocalUser } from '@/models/User.js';
 
 /**
@@ -22,13 +22,13 @@ import type { MiLocalUser } from '@/models/User.js';
  * ActivityPub 経由の summary には長さの保証が無い。切らずに挿入すると DB エラーになり、
  * inbox ジョブが再試行され続ける。
  */
-describe('createNoteForHonoApi の cw', () => {
+describe('createNoteForApi の cw', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoApiNotesCreateDependencies;
+	let deps: ApiNotesCreateDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
-		deps = runtime as unknown as HonoApiNotesCreateDependencies;
+		deps = runtime as unknown as ApiNotesCreateDependencies;
 	});
 
 	afterAll(async () => {
@@ -59,12 +59,7 @@ describe('createNoteForHonoApi の cw', () => {
 
 	test('列長を超える cw は切り詰められる', async () => {
 		const user = await createUser();
-		const note = await createNoteForHonoApi(
-			deps,
-			user,
-			{ ...base, cw: 'あ'.repeat(DB_MAX_NOTE_CW_LENGTH + 88) },
-			false,
-		);
+		const note = await createNoteForApi(deps, user, { ...base, cw: 'あ'.repeat(DB_MAX_NOTE_CW_LENGTH + 88) }, false);
 
 		expect(note.cw).toHaveLength(DB_MAX_NOTE_CW_LENGTH);
 	});
@@ -72,7 +67,7 @@ describe('createNoteForHonoApi の cw', () => {
 	// 閾値が 1 ずれても列長ちょうどのケースだけでは気付けない。+1 で確かめる。
 	test('列長 + 1 の cw は列長へ切り詰められる', async () => {
 		const user = await createUser();
-		const note = await createNoteForHonoApi(deps, user, { ...base, cw: 'う'.repeat(DB_MAX_NOTE_CW_LENGTH + 1) }, false);
+		const note = await createNoteForApi(deps, user, { ...base, cw: 'う'.repeat(DB_MAX_NOTE_CW_LENGTH + 1) }, false);
 
 		expect(note.cw).toHaveLength(DB_MAX_NOTE_CW_LENGTH);
 	});
@@ -80,7 +75,7 @@ describe('createNoteForHonoApi の cw', () => {
 	test('列長以内の cw はそのまま保たれる', async () => {
 		const user = await createUser();
 		const cw = 'い'.repeat(DB_MAX_NOTE_CW_LENGTH);
-		const note = await createNoteForHonoApi(deps, user, { ...base, cw }, false);
+		const note = await createNoteForApi(deps, user, { ...base, cw }, false);
 
 		expect(note.cw).toBe(cw);
 	});

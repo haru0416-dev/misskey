@@ -26,22 +26,22 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from '../note/note.js';
+import { ApiError } from '../error.js';
+import { packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
 import {
-	packUserDetailedManyForHonoApi,
-	type MeDetailedHonoApiResponse,
-	type UserDetailedNotMeHonoApiResponse,
+	packUserDetailedManyForApi,
+	type MeDetailedApiResponse,
+	type UserDetailedNotMeApiResponse,
 	type UserPackingDependencies,
 } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiRoleDependencies = {
+export type ApiRoleDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
 
-export type HonoApiRoleNotesDependencies = HonoApiNoteDependencies;
+export type ApiRoleNotesDependencies = ApiNoteDependencies;
 
 export const rolesListParamDef = z.object({});
 
@@ -58,8 +58,8 @@ export const rolesUsersParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
 });
 
-function noSuchRoleError(): HonoApiError {
-	return new HonoApiError({
+function noSuchRoleError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such role.',
 		code: 'NO_SUCH_ROLE',
@@ -67,8 +67,8 @@ function noSuchRoleError(): HonoApiError {
 	});
 }
 
-function rolesUsersNoSuchRoleError(): HonoApiError {
-	return new HonoApiError({
+function rolesUsersNoSuchRoleError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such role.',
 		code: 'NO_SUCH_ROLE',
@@ -76,8 +76,8 @@ function rolesUsersNoSuchRoleError(): HonoApiError {
 	});
 }
 
-function rolesNotesNoSuchRoleError(): HonoApiError {
-	return new HonoApiError({
+function rolesNotesNoSuchRoleError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such role.',
 		code: 'NO_SUCH_ROLE',
@@ -94,8 +94,8 @@ export const rolesNotesParamDef = z.object({
 	untilDate: z.number().int().optional(),
 });
 
-export async function packHonoApiRole(
-	deps: HonoApiRoleDependencies,
+export async function packApiRole(
+	deps: ApiRoleDependencies,
 	role: MiRole,
 	options?: {
 		assignedCount?: number;
@@ -138,46 +138,46 @@ export async function packHonoApiRole(
 	};
 }
 
-export async function packHonoApiRoles(deps: HonoApiRoleDependencies, roles: MiRole[]): Promise<Packed<'Role'>[]> {
+export async function packApiRoles(deps: ApiRoleDependencies, roles: MiRole[]): Promise<Packed<'Role'>[]> {
 	const assignedCountByRoleId = await countActiveRoleAssignmentsByRoleIdsFromDatabase(
 		deps.db,
 		roles.map((role) => role.id),
 	);
 	return await Promise.all(
 		roles.map((role) =>
-			packHonoApiRole(deps, role, {
+			packApiRole(deps, role, {
 				assignedCount: assignedCountByRoleId.get(role.id) ?? 0,
 			}),
 		),
 	);
 }
 
-export async function handleHonoApiRolesList(
-	deps: HonoApiRoleDependencies,
+export async function handleApiRolesList(
+	deps: ApiRoleDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Role'>[]> {
-	parseHonoApiParams(rolesListParamDef, body);
+	parseApiParams(rolesListParamDef, body);
 	const roles = await listPublicExplorableRolesFromDatabase(deps.db);
-	return await packHonoApiRoles(deps, roles);
+	return await packApiRoles(deps, roles);
 }
 
-export async function handleHonoApiRolesShow(
-	deps: HonoApiRoleDependencies,
+export async function handleApiRolesShow(
+	deps: ApiRoleDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Role'>> {
-	const params = parseHonoApiParams(rolesShowParamDef, body);
+	const params = parseApiParams(rolesShowParamDef, body);
 	const role = await fetchPublicRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw noSuchRoleError();
 
-	return await packHonoApiRole(deps, role);
+	return await packApiRole(deps, role);
 }
 
-export async function handleHonoApiRolesUsers(
-	deps: HonoApiRoleDependencies & UserPackingDependencies,
+export async function handleApiRolesUsers(
+	deps: ApiRoleDependencies & UserPackingDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
-): Promise<{ id: string; user: MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse }[]> {
-	const params = parseHonoApiParams(rolesUsersParamDef, body);
+): Promise<{ id: string; user: MeDetailedApiResponse | UserDetailedNotMeApiResponse }[]> {
+	const params = parseApiParams(rolesUsersParamDef, body);
 	const role = await fetchPublicExplorableRoleByIdFromDatabase(deps.db, params.roleId);
 	if (role == null) throw rolesUsersNoSuchRoleError();
 
@@ -189,7 +189,7 @@ export async function handleHonoApiRolesUsers(
 		untilId: pagination.untilId,
 	});
 
-	const packedUsers = await packUserDetailedManyForHonoApi(
+	const packedUsers = await packUserDetailedManyForApi(
 		deps,
 		assigns.map((assign) => assign.userId),
 		me,
@@ -200,12 +200,12 @@ export async function handleHonoApiRolesUsers(
 	}));
 }
 
-export async function handleHonoApiRolesNotes(
-	deps: HonoApiRoleNotesDependencies,
+export async function handleApiRolesNotes(
+	deps: ApiRoleNotesDependencies,
 	me: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(rolesNotesParamDef, body);
+	const params = parseApiParams(rolesNotesParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
@@ -237,5 +237,5 @@ export async function handleHonoApiRolesNotes(
 	});
 	notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForApi(deps, notes, me);
 }

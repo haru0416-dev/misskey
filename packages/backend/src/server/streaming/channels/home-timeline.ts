@@ -6,17 +6,17 @@
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
 import {
-	filterNoteForStreamingHidingForHonoApi,
-	populateMyReactionForHonoApi,
-	type HonoApiNoteDependencies,
+	filterNoteForStreamingHidingForApi,
+	populateMyReactionForApi,
+	type ApiNoteDependencies,
 } from '@/server/rest/note/note.js';
 import {
-	isNoteMutedOrBlockedForHonoStream,
-	isNoteVisibleForMeForHonoStream,
-	type HonoStreamChannelDefinition,
+	isNoteMutedOrBlockedForStream,
+	isNoteVisibleForMeForStream,
+	type StreamChannelDefinition,
 } from '../channel.js';
 
-export const honoStreamChannelHomeTimeline: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
+export const honoStreamChannelHomeTimeline: StreamChannelDefinition<ApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: true,
 	kind: 'read:account',
@@ -42,7 +42,7 @@ export const honoStreamChannelHomeTimeline: HonoStreamChannelDefinition<HonoApiN
 				if (!isMe && !Object.hasOwn(ctx.following, note.userId)) return;
 			}
 
-			if (!isNoteVisibleForMeForHonoStream(ctx, note)) return;
+			if (!isNoteVisibleForMeForStream(ctx, note)) return;
 
 			if (note.reply) {
 				const reply = note.reply;
@@ -75,14 +75,14 @@ export const honoStreamChannelHomeTimeline: HonoStreamChannelDefinition<HonoApiN
 				}
 			}
 
-			if (isNoteMutedOrBlockedForHonoStream(ctx, note)) return;
+			if (isNoteMutedOrBlockedForStream(ctx, note)) return;
 
-			const filtered = await filterNoteForStreamingHidingForHonoApi(deps, note, user.id);
+			const filtered = await filterNoteForStreamingHidingForApi(deps, note, user.id);
 			if (!filtered) return;
 
 			if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 				if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-					filtered.renote.myReaction = await populateMyReactionForHonoApi(
+					filtered.renote.myReaction = await populateMyReactionForApi(
 						deps,
 						{
 							id: filtered.renote.id,

@@ -45,16 +45,16 @@ import { parseMfmCached } from '@/misc/mfm-parse-cache.js';
 import type { MiUser } from '@/models/User.js';
 import type { DeliverJobData } from '@/queue/types.js';
 
-export type HonoApiNoteApDependencies = {
+export type ApiNoteApDependencies = {
 	config: Pick<Config, 'instance' | 'queues' | 'media'>;
 	meta: Pick<MiMeta, 'proxyRemoteFiles'>;
 	db: MiDrizzleDatabase;
 	deliverQueue: DeliverQueue;
 };
 
-/** リレー配信 (deliverToRelaysForHonoApi) を行う呼び出し元が満たすべき依存。LD 署名の
+/** リレー配信 (deliverToRelaysForApi) を行う呼び出し元が満たすべき依存。LD 署名の
  * JSON-LD 正規化で remote context の取得があり得るため full HttpRequestService を要求する。 */
-export type HonoApiRelayDeliverDependencies = HonoApiNoteApDependencies & {
+export type ApiRelayDeliverDependencies = ApiNoteApDependencies & {
 	httpRequestService: HttpRequestService;
 };
 
@@ -102,7 +102,7 @@ export function renderEmoji(config: Pick<Config, 'instance'>, emoji: MiEmoji): R
 	};
 }
 
-function renderDocument(deps: HonoApiNoteApDependencies, file: MiDriveFile): Record<string, unknown> {
+function renderDocument(deps: ApiNoteApDependencies, file: MiDriveFile): Record<string, unknown> {
 	return {
 		type: 'Document',
 		mediaType: file.webpublicType ?? file.type,
@@ -114,8 +114,8 @@ function renderDocument(deps: HonoApiNoteApDependencies, file: MiDriveFile): Rec
 	};
 }
 
-export async function renderNoteForHonoApi(
-	deps: HonoApiNoteApDependencies,
+export async function renderNoteForApi(
+	deps: ApiNoteApDependencies,
 	note: MiNote,
 	dive: boolean,
 ): Promise<Record<string, unknown>> {
@@ -126,9 +126,9 @@ export async function renderNoteForHonoApi(
 			if (inReplyToNote.uri) {
 				inReplyTo = inReplyToNote.uri;
 			} else if (note.visibility === 'specified' && inReplyToNote.visibility === 'specified') {
-				inReplyTo = await renderNoteForHonoApi(deps, inReplyToNote, false);
+				inReplyTo = await renderNoteForApi(deps, inReplyToNote, false);
 			} else if (dive) {
-				inReplyTo = JSON.stringify(await renderNoteForHonoApi(deps, inReplyToNote, false));
+				inReplyTo = JSON.stringify(await renderNoteForApi(deps, inReplyToNote, false));
 			} else {
 				inReplyTo = `${deps.config.instance.url}/notes/${inReplyToNote.id}`;
 			}
@@ -255,7 +255,7 @@ export async function renderNoteForHonoApi(
 	};
 }
 
-export function renderCreateForHonoApi(
+export function renderCreateForApi(
 	config: Pick<Config, 'instance'>,
 	object: Record<string, unknown>,
 	note: MiNote,
@@ -272,11 +272,7 @@ export function renderCreateForHonoApi(
 	return activity;
 }
 
-function renderAnnounceForHonoApi(
-	config: Pick<Config, 'instance'>,
-	object: string,
-	note: MiNote,
-): Record<string, unknown> {
+function renderAnnounceForApi(config: Pick<Config, 'instance'>, object: string, note: MiNote): Record<string, unknown> {
 	const attributedTo = genLocalUserUri(config, note.userId);
 	const Public = 'https://www.w3.org/ns/activitystreams#Public';
 	const followers = `${attributedTo}/followers`;
@@ -311,8 +307,8 @@ function renderAnnounceForHonoApi(
 	};
 }
 
-export async function renderNoteOrRenoteActivityForHonoApi(
-	deps: HonoApiNoteApDependencies,
+export async function renderNoteOrRenoteActivityForApi(
+	deps: ApiNoteApDependencies,
 	data: { localOnly: boolean; renote: Pick<MiNote, 'id' | 'uri'> | null; isQuote: boolean },
 	note: MiNote,
 ): Promise<Record<string, unknown> | null> {
@@ -320,18 +316,18 @@ export async function renderNoteOrRenoteActivityForHonoApi(
 
 	const content =
 		data.renote != null && !data.isQuote
-			? renderAnnounceForHonoApi(
+			? renderAnnounceForApi(
 					deps.config,
 					data.renote.uri ?? `${deps.config.instance.url}/notes/${data.renote.id}`,
 					note,
 				)
-			: renderCreateForHonoApi(deps.config, await renderNoteForHonoApi(deps, note, false), note);
+			: renderCreateForApi(deps.config, await renderNoteForApi(deps, note, false), note);
 
 	return addActivityContext(deps.config, content);
 }
 
-export async function deliverNoteActivityForHonoApi(
-	deps: HonoApiNoteApDependencies,
+export async function deliverNoteActivityForApi(
+	deps: ApiNoteApDependencies,
 	author: { id: MiUser['id'] },
 	activity: Record<string, unknown> | null,
 	options: {
@@ -387,8 +383,8 @@ export async function deliverNoteActivityForHonoApi(
 	);
 }
 
-export async function resolveRemoteRecipientForHonoApi(
-	deps: HonoApiNoteApDependencies,
+export async function resolveRemoteRecipientForApi(
+	deps: ApiNoteApDependencies,
 	userId: MiUser['id'],
 ): Promise<MiUser | null> {
 	const u = await fetchUserByIdFromDatabase(deps.db, userId);
@@ -396,11 +392,11 @@ export async function resolveRemoteRecipientForHonoApi(
 	return u;
 }
 
-function renderTombstoneForHonoApi(id: string): Record<string, unknown> {
+function renderTombstoneForApi(id: string): Record<string, unknown> {
 	return { id, type: 'Tombstone' };
 }
 
-function renderDeleteForHonoApi(
+function renderDeleteForApi(
 	config: Pick<Config, 'instance'>,
 	object: Record<string, unknown> | string,
 	user: { id: MiUser['id'] },
@@ -413,7 +409,7 @@ function renderDeleteForHonoApi(
 	};
 }
 
-export function renderUndoForHonoApi(
+export function renderUndoForApi(
 	config: Pick<Config, 'instance'>,
 	object: string | Record<string, unknown>,
 	user: { id: MiUser['id'] },
@@ -431,8 +427,8 @@ export function renderUndoForHonoApi(
 	};
 }
 
-export async function renderLikeForHonoApi(
-	deps: HonoApiNoteApDependencies,
+export async function renderLikeForApi(
+	deps: ApiNoteApDependencies,
 	noteReaction: { id: string; userId: MiUser['id']; reaction: string },
 	note: { uri: string | null; id: MiNote['id'] },
 ): Promise<Record<string, unknown>> {
@@ -458,8 +454,8 @@ export async function renderLikeForHonoApi(
 	return object;
 }
 
-export async function renderNoteDeleteOrUndoAnnounceActivityForHonoApi(
-	deps: HonoApiNoteApDependencies,
+export async function renderNoteDeleteOrUndoAnnounceActivityForApi(
+	deps: ApiNoteApDependencies,
 	note: MiNote,
 	user: { id: MiUser['id'] },
 ): Promise<Record<string, unknown>> {
@@ -474,22 +470,18 @@ export async function renderNoteDeleteOrUndoAnnounceActivityForHonoApi(
 
 	const content =
 		renote != null
-			? renderUndoForHonoApi(
+			? renderUndoForApi(
 					deps.config,
-					renderAnnounceForHonoApi(deps.config, renote.uri ?? `${deps.config.instance.url}/notes/${renote.id}`, note),
+					renderAnnounceForApi(deps.config, renote.uri ?? `${deps.config.instance.url}/notes/${renote.id}`, note),
 					user,
 				)
-			: renderDeleteForHonoApi(
-					deps.config,
-					renderTombstoneForHonoApi(`${deps.config.instance.url}/notes/${note.id}`),
-					user,
-				);
+			: renderDeleteForApi(deps.config, renderTombstoneForApi(`${deps.config.instance.url}/notes/${note.id}`), user);
 
 	return addActivityContext(deps.config, content);
 }
 
-export async function resolveMentionedAndInvolvedRemoteUsersForHonoApi(
-	deps: HonoApiNoteApDependencies,
+export async function resolveMentionedAndInvolvedRemoteUsersForApi(
+	deps: ApiNoteApDependencies,
 	note: MiNote,
 ): Promise<MiUser[]> {
 	const mentionUris = (JSON.parse(note.mentionedRemoteUsers) as IMentionedRemoteUsers).map((x) => x.uri);
@@ -503,7 +495,7 @@ export async function resolveMentionedAndInvolvedRemoteUsersForHonoApi(
 	return all.filter((u, i, self) => i === self.findIndex((u2) => u.id === u2.id));
 }
 
-export function renderUpdateForHonoApi(
+export function renderUpdateForApi(
 	config: Pick<Config, 'instance'>,
 	object: string | Record<string, unknown>,
 	user: { id: MiUser['id'] },
@@ -518,7 +510,7 @@ export function renderUpdateForHonoApi(
 	};
 }
 
-export function renderVoteForHonoApi(
+export function renderVoteForApi(
 	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },
 	vote: { id: string; choice: number },
@@ -543,8 +535,8 @@ export function renderVoteForHonoApi(
 	};
 }
 
-export async function deliverSingleActivityForHonoApi(
-	deps: HonoApiNoteApDependencies,
+export async function deliverSingleActivityForApi(
+	deps: ApiNoteApDependencies,
 	author: { id: MiUser['id'] },
 	activity: Record<string, unknown>,
 	inbox: string,
@@ -552,8 +544,8 @@ export async function deliverSingleActivityForHonoApi(
 	enqueueDeliverJob(deps.deliverQueue, deps.config as Config, author, activity as unknown as IActivity, inbox, false);
 }
 
-export async function deliverQuestionUpdateForHonoApi(
-	deps: HonoApiRelayDeliverDependencies,
+export async function deliverQuestionUpdateForApi(
+	deps: ApiRelayDeliverDependencies,
 	noteId: MiNote['id'],
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, noteId);
@@ -566,16 +558,16 @@ export async function deliverQuestionUpdateForHonoApi(
 	if (!isRemoteUser(user)) {
 		const content = addActivityContext(
 			deps.config,
-			renderUpdateForHonoApi(deps.config, await renderNoteForHonoApi(deps, note, false), user),
+			renderUpdateForApi(deps.config, await renderNoteForApi(deps, note, false), user),
 		);
-		await deliverNoteActivityForHonoApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
+		await deliverNoteActivityForApi(deps, user, content, { directRecipients: [], deliverToFollowers: true });
 		// リレー配信は fire-and-forget とし、アンケート更新を待たせない。
-		void deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, content).catch(() => {});
+		void deliverToRelaysForApi(deps, { id: user.id, host: null }, content).catch(() => {});
 	}
 }
 
-export async function attachLdSignatureForHonoApi(
-	deps: Pick<HonoApiRelayDeliverDependencies, 'db' | 'config' | 'httpRequestService'>,
+export async function attachLdSignatureForApi(
+	deps: Pick<ApiRelayDeliverDependencies, 'db' | 'config' | 'httpRequestService'>,
 	activity: Record<string, unknown>,
 	user: { id: MiUser['id']; host: null },
 ): Promise<Record<string, unknown>> {
@@ -591,8 +583,8 @@ export async function attachLdSignatureForHonoApi(
 }
 
 /** accepted リレーを直接 DB から読み、リレー未設定インスタンスでは空配列で終了する。 */
-export async function deliverToRelaysForHonoApi(
-	deps: HonoApiRelayDeliverDependencies,
+export async function deliverToRelaysForApi(
+	deps: ApiRelayDeliverDependencies,
 	user: { id: MiUser['id']; host: null },
 	activity: Record<string, unknown> | null,
 	jobIdPrefix?: string,
@@ -605,7 +597,7 @@ export async function deliverToRelaysForHonoApi(
 	const copy = deepClone(activity as Parameters<typeof deepClone>[0]) as Record<string, unknown> & { to?: unknown };
 	if (!copy.to) copy.to = ['https://www.w3.org/ns/activitystreams#Public'];
 
-	const signed = await attachLdSignatureForHonoApi(deps, copy, user);
+	const signed = await attachLdSignatureForApi(deps, copy, user);
 
 	if (jobIdPrefix == null) {
 		for (const relay of relays) {

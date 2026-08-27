@@ -37,74 +37,70 @@ import * as Acct from '@/misc/acct.js';
 import Logger from '@/logger.js';
 import type { Config } from '@/config.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
+import { ApiError } from '../error.js';
 import {
 	addActivityContext,
-	deliverNoteActivityForHonoApi,
-	deliverToRelaysForHonoApi,
-	renderUpdateForHonoApi,
-	type HonoApiNoteApDependencies,
-	type HonoApiRelayDeliverDependencies,
+	deliverNoteActivityForApi,
+	deliverToRelaysForApi,
+	renderUpdateForApi,
+	type ApiNoteApDependencies,
+	type ApiRelayDeliverDependencies,
 } from '../activitypub/notes-ap.js';
-import { onMoveAccountForHonoApi } from '../antenna/antennas.js';
-import { renderPersonForHonoApi, type HonoApiAccountUpdateDependencies } from './account-update.js';
-import { createRoleAssignedNotification, type HonoApiNotificationDependencies } from '../notification/notification.js';
-import type { HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import {
-	packMeDetailedForHonoApi,
-	type MeDetailedHonoApiResponse,
-	type UserPackingDependencies,
-} from '../user/user.js';
-import { genLocalUserUri, type HonoApiFollowingDependencies } from '../user/following.js';
-import { parseHonoApiParams } from '../validation.js';
-import { resolveUserForHonoApi, type HonoApiApPersonDependencies } from '../activitypub/ap-person.js';
+import { onMoveAccountForApi } from '../antenna/antennas.js';
+import { renderPersonForApi, type ApiAccountUpdateDependencies } from './account-update.js';
+import { createRoleAssignedNotification, type ApiNotificationDependencies } from '../notification/notification.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packMeDetailedForApi, type MeDetailedApiResponse, type UserPackingDependencies } from '../user/user.js';
+import { genLocalUserUri, type ApiFollowingDependencies } from '../user/following.js';
+import { parseApiParams } from '../validation.js';
+import { resolveUserForApi, type ApiApPersonDependencies } from '../activitypub/ap-person.js';
 
 const accountMoveLogger = new Logger('account-move', 'yellow');
 
-export type HonoApiAccountMoveDependencies = HonoApiRolePolicyDependencies &
-	HonoApiFollowingDependencies &
-	HonoApiNotificationDependencies &
-	HonoApiNoteApDependencies &
-	HonoApiRelayDeliverDependencies &
-	HonoApiAccountUpdateDependencies &
+export type ApiAccountMoveDependencies = ApiRolePolicyDependencies &
+	ApiFollowingDependencies &
+	ApiNotificationDependencies &
+	ApiNoteApDependencies &
+	ApiRelayDeliverDependencies &
+	ApiAccountUpdateDependencies &
 	UserPackingDependencies & {
 		relationshipQueue: RelationshipQueue;
 	};
 
-function iMoveDestinationAccountForbidsError(): HonoApiError {
-	return new HonoApiError({
+function iMoveDestinationAccountForbidsError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: "Destination account doesn't have proper 'Known As' alias, or has already moved.",
 		code: 'DESTINATION_ACCOUNT_FORBIDS',
 		id: 'b5c90186-4ab0-49c8-9bba-a1f766282ba4',
 	});
 }
-function iMoveRootForbiddenError(): HonoApiError {
-	return new HonoApiError({
+function iMoveRootForbiddenError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: "The root can't migrate.",
 		code: 'NOT_ROOT_FORBIDDEN',
 		id: '4362e8dc-731f-4ad8-a694-be2a88922a24',
 	});
 }
-function iMoveNoSuchUserError(): HonoApiError {
-	return new HonoApiError({
+function iMoveNoSuchUserError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such user.',
 		code: 'NO_SUCH_USER',
 		id: 'fcd2eef9-a9b2-4c4f-8624-038099e90aa5',
 	});
 }
-function iMoveUriNullError(): HonoApiError {
-	return new HonoApiError({
+function iMoveUriNullError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'User ActivityPup URI is null.',
 		code: 'URI_NULL',
 		id: 'bf326f31-d430-4f97-9933-5d61e4d48a23',
 	});
 }
-function iMoveAlreadyMovedError(): HonoApiError {
-	return new HonoApiError({
+function iMoveAlreadyMovedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Account was already moved to another account.',
 		code: 'ALREADY_MOVED',
@@ -120,34 +116,27 @@ type IMoveParams = {
 	moveToAccount: string;
 };
 
-function getUserUriForHonoApi(config: Pick<Config, 'instance'>, user: MiUser): string | null {
+function getUserUriForApi(config: Pick<Config, 'instance'>, user: MiUser): string | null {
 	return user.host != null ? user.uri : genLocalUserUri(config, user.id);
 }
 
-function toPunyForHonoApi(host: string): string {
+function toPunyForApi(host: string): string {
 	return domainToASCII(host.toLowerCase());
 }
 
-async function resolveMoveDestinationUserForHonoApi(
-	deps: HonoApiAccountMoveDependencies,
-	acct: string,
-): Promise<MiUser> {
+async function resolveMoveDestinationUserForApi(deps: ApiAccountMoveDependencies, acct: string): Promise<MiUser> {
 	const { username, host } = Acct.parse(acct);
 	const normalizedHost =
-		host == null || toPunyForHonoApi(host) === toPunyForHonoApi(deps.config.runtime.host)
-			? null
-			: toPunyForHonoApi(host);
+		host == null || toPunyForApi(host) === toPunyForApi(deps.config.runtime.host) ? null : toPunyForApi(host);
 	// 未知のリモートユーザーは WebFinger で解決する。
-	// deps の型に HonoApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
+	// deps の型に ApiApPersonDependencies を混ぜると型エイリアスが循環参照になるため、呼び出し時にキャストする
 	// (shell の実 deps は両方を満たす)
-	return await resolveUserForHonoApi(deps as unknown as HonoApiApPersonDependencies, username, normalizedHost).catch(
-		() => {
-			throw iMoveNoSuchUserError();
-		},
-	);
+	return await resolveUserForApi(deps as unknown as ApiApPersonDependencies, username, normalizedHost).catch(() => {
+		throw iMoveNoSuchUserError();
+	});
 }
 
-function renderMoveForHonoApi(
+function renderMoveForApi(
 	config: Pick<Config, 'instance'>,
 	src: { id: MiUser['id'] },
 	dst: MiUser,
@@ -158,12 +147,12 @@ function renderMoveForHonoApi(
 		actor: srcUri,
 		type: 'Move',
 		object: srcUri,
-		target: getUserUriForHonoApi(config, dst),
+		target: getUserUriForApi(config, dst),
 	};
 }
 
-async function enqueueRelationshipJobForHonoApi(
-	deps: HonoApiAccountMoveDependencies,
+async function enqueueRelationshipJobForApi(
+	deps: ApiAccountMoveDependencies,
 	name: 'follow' | 'unfollow' | 'block',
 	rels: { from: ThinUser; to: ThinUser }[],
 	opts: { delay?: number } = {},
@@ -185,11 +174,7 @@ async function enqueueRelationshipJobForHonoApi(
 	return await deps.relationshipQueue.addBulk(jobs);
 }
 
-async function copyBlockingForHonoApi(
-	deps: HonoApiAccountMoveDependencies,
-	src: ThinUser,
-	dst: ThinUser,
-): Promise<void> {
+async function copyBlockingForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: ThinUser): Promise<void> {
 	const [srcBlockerIds, dstBlockerIds] = await Promise.all([
 		listBlockerIdsByBlockeeIdFromDatabase(deps.db, src.id),
 		listBlockerIdsByBlockeeIdFromDatabase(deps.db, dst.id),
@@ -201,14 +186,10 @@ async function copyBlockingForHonoApi(
 		if (dstBlockerIdSet.has(blockerId)) continue;
 		blockJobs.push({ from: { id: blockerId }, to: { id: dst.id } });
 	}
-	await enqueueRelationshipJobForHonoApi(deps, 'block', blockJobs);
+	await enqueueRelationshipJobForApi(deps, 'block', blockJobs);
 }
 
-async function copyMutingsForHonoApi(
-	deps: HonoApiAccountMoveDependencies,
-	src: ThinUser,
-	dst: ThinUser,
-): Promise<void> {
+async function copyMutingsForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: ThinUser): Promise<void> {
 	const oldMutings = await listActiveMutingsByMuteeIdFromDatabase(deps.db, src.id, new Date());
 	if (oldMutings.length === 0) return;
 
@@ -241,7 +222,7 @@ async function copyMutingsForHonoApi(
 	}
 }
 
-async function copyRolesForHonoApi(deps: HonoApiAccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
+async function copyRolesForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
 	const oldRoleAssignments = await listRoleAssignmentsByUserIdFromDatabase(deps.db, src.id);
 	if (oldRoleAssignments.length === 0) return;
 
@@ -278,7 +259,7 @@ async function copyRolesForHonoApi(deps: HonoApiAccountMoveDependencies, src: Th
 	}
 }
 
-async function updateListsForHonoApi(deps: HonoApiAccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
+async function updateListsForApi(deps: ApiAccountMoveDependencies, src: ThinUser, dst: MiUser): Promise<void> {
 	const oldMemberships = await listUserListMembershipsByUserIdFromDatabase(deps.db, src.id);
 	if (oldMemberships.length === 0) return;
 
@@ -311,12 +292,12 @@ async function updateListsForHonoApi(deps: HonoApiAccountMoveDependencies, src: 
 
 	if (dst.host != null) {
 		const proxy = await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'proxy');
-		await enqueueRelationshipJobForHonoApi(deps, 'follow', [{ from: { id: proxy.id }, to: { id: dst.id } }]);
+		await enqueueRelationshipJobForApi(deps, 'follow', [{ from: { id: proxy.id }, to: { id: dst.id } }]);
 	}
 }
 
-async function adjustFollowingCountsForHonoApi(
-	deps: HonoApiAccountMoveDependencies,
+async function adjustFollowingCountsForApi(
+	deps: ApiAccountMoveDependencies,
 	localFollowerIds: string[],
 	oldAccount: MiUser,
 ): Promise<void> {
@@ -338,12 +319,12 @@ async function adjustFollowingCountsForHonoApi(
 	// フォロー・フォロワーカウントの実データ更新は上記で完了する。
 }
 
-async function moveFromLocalForHonoApi(
-	deps: HonoApiAccountMoveDependencies,
+async function moveFromLocalForApi(
+	deps: ApiAccountMoveDependencies,
 	src: MiLocalUser,
 	dst: MiUser,
-): Promise<MeDetailedHonoApiResponse> {
-	const dstUri = getUserUriForHonoApi(deps.config, dst);
+): Promise<MeDetailedApiResponse> {
+	const dstUri = getUserUriForApi(deps.config, dst);
 	if (dstUri == null) throw iMoveUriNullError();
 
 	const alsoKnownAs = src.alsoKnownAs?.includes(dstUri)
@@ -359,20 +340,20 @@ async function moveFromLocalForHonoApi(
 
 	deps.publishInternalEvent?.('localUserUpdated', updatedSrc);
 
-	const srcPerson = await renderPersonForHonoApi(deps, updatedSrc);
-	const updateAct = addActivityContext(deps.config, renderUpdateForHonoApi(deps.config, srcPerson, updatedSrc));
-	await deliverNoteActivityForHonoApi(deps, updatedSrc, updateAct, { directRecipients: [], deliverToFollowers: true });
+	const srcPerson = await renderPersonForApi(deps, updatedSrc);
+	const updateAct = addActivityContext(deps.config, renderUpdateForApi(deps.config, srcPerson, updatedSrc));
+	await deliverNoteActivityForApi(deps, updatedSrc, updateAct, { directRecipients: [], deliverToFollowers: true });
 	// リレー配信は fire-and-forget とし、アカウント移行の完了を待たせない。
-	void deliverToRelaysForHonoApi(deps, { id: updatedSrc.id, host: null }, updateAct).catch(() => {});
+	void deliverToRelaysForApi(deps, { id: updatedSrc.id, host: null }, updateAct).catch(() => {});
 
-	const moveAct = addActivityContext(deps.config, renderMoveForHonoApi(deps.config, updatedSrc, dst));
-	await deliverNoteActivityForHonoApi(deps, updatedSrc, moveAct, { directRecipients: [], deliverToFollowers: true });
+	const moveAct = addActivityContext(deps.config, renderMoveForApi(deps.config, updatedSrc, dst));
+	await deliverNoteActivityForApi(deps, updatedSrc, moveAct, { directRecipients: [], deliverToFollowers: true });
 
-	const iObj = await packMeDetailedForHonoApi(deps, updatedSrc, { includeSecrets: true });
+	const iObj = await packMeDetailedForApi(deps, updatedSrc, { includeSecrets: true });
 	deps.publishMainStream?.(updatedSrc.id, 'meUpdated', iObj);
 
 	const followings = await listAllFollowingsByFollowerIdFromDatabase(deps.db, updatedSrc.id);
-	void enqueueRelationshipJobForHonoApi(
+	void enqueueRelationshipJobForApi(
 		deps,
 		'unfollow',
 		followings.map((f) => ({
@@ -382,25 +363,21 @@ async function moveFromLocalForHonoApi(
 		{ delay: process.env['NODE_ENV'] === 'test' ? 10000 : 1000 * 60 * 60 * 24 },
 	).catch(() => {});
 
-	await postMoveProcessForHonoApi(deps, updatedSrc, dst);
+	await postMoveProcessForApi(deps, updatedSrc, dst);
 
 	return iObj;
 }
 
 /** ローカルからの引っ越しとリモートアクターの movedToUri 検知の両方から呼ぶ。 */
-export async function postMoveProcessForHonoApi(
-	deps: HonoApiAccountMoveDependencies,
-	src: MiUser,
-	dst: MiUser,
-): Promise<void> {
+export async function postMoveProcessForApi(deps: ApiAccountMoveDependencies, src: MiUser, dst: MiUser): Promise<void> {
 	// 個々のカスケードは独立しているので、1つ失敗しても残りは完走させる (Promise.all だと先頭の失敗で
 	// 残りの結果が捨てられ、その rejection が unhandledRejection にしか残らない)。
 	const cascades = [
-		['copyBlocking', copyBlockingForHonoApi(deps, src, dst)],
-		['copyMutings', copyMutingsForHonoApi(deps, src, dst)],
-		['copyRoles', copyRolesForHonoApi(deps, src, dst)],
-		['updateLists', updateListsForHonoApi(deps, src, dst)],
-		['onMoveAccount', onMoveAccountForHonoApi(deps, src, dst)],
+		['copyBlocking', copyBlockingForApi(deps, src, dst)],
+		['copyMutings', copyMutingsForApi(deps, src, dst)],
+		['copyRoles', copyRolesForApi(deps, src, dst)],
+		['updateLists', updateListsForApi(deps, src, dst)],
+		['onMoveAccount', onMoveAccountForApi(deps, src, dst)],
 	] as const;
 	const results = await Promise.allSettled(cascades.map(([, promise]) => promise));
 	for (const [index, result] of results.entries()) {
@@ -418,7 +395,7 @@ export async function postMoveProcessForHonoApi(
 	const followJobs = followings.map((f) => ({ from: { id: f.followerId }, to: { id: dst.id } }));
 
 	try {
-		await adjustFollowingCountsForHonoApi(
+		await adjustFollowingCountsForApi(
 			deps,
 			followJobs.map((job) => job.from.id),
 			src,
@@ -427,21 +404,21 @@ export async function postMoveProcessForHonoApi(
 		accountMoveLogger.error(`postMoveProcess: adjustFollowingCounts failed for ${src.id} -> ${dst.id}`, { error });
 	}
 
-	await enqueueRelationshipJobForHonoApi(deps, 'follow', followJobs);
+	await enqueueRelationshipJobForApi(deps, 'follow', followJobs);
 }
 
-export async function handleHonoApiIMove(
-	deps: HonoApiAccountMoveDependencies,
+export async function handleApiIMove(
+	deps: ApiAccountMoveDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<MeDetailedHonoApiResponse> {
-	const ps = parseHonoApiParams(iMoveParamDef, body);
+): Promise<MeDetailedApiResponse> {
+	const ps = parseApiParams(iMoveParamDef, body);
 
 	if (!ps.moveToAccount) throw iMoveNoSuchUserError();
 	if (deps.meta.rootUserId === me.id) throw iMoveRootForbiddenError();
 	if (me.movedToUri) throw iMoveAlreadyMovedError();
 
-	let moveTo = await resolveMoveDestinationUserForHonoApi(deps, ps.moveToAccount);
+	let moveTo = await resolveMoveDestinationUserForApi(deps, ps.moveToAccount);
 	const destination = await fetchUserByIdOrFailFromDatabase(deps.db, moveTo.id);
 	moveTo = destination;
 
@@ -458,5 +435,5 @@ export async function handleHonoApiIMove(
 
 	if (!allowed || moveTo.movedToUri) throw iMoveDestinationAccountForbidsError();
 
-	return await moveFromLocalForHonoApi(deps, me, moveTo);
+	return await moveFromLocalForApi(deps, me, moveTo);
 }
