@@ -631,6 +631,109 @@ describe('Endpoints', () => {
 			expect(shownUser.body.needConfirmationToRead).toBe(true);
 		});
 
+		test('announcements/react はお知らせにリアクションを付け外しできる', async () => {
+			const now = Date.now();
+			const announcement = await createAnnouncementInDatabase(db, {
+				id: genId(now),
+				updatedAt: null,
+				title: 'Reactable announcement',
+				text: 'React to me',
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				needConfirmationToRead: false,
+				isActive: true,
+				forExistingUsers: false,
+				silence: false,
+				userId: null,
+			});
+
+			const reacted = await api('announcements/react', { announcementId: announcement.id, reaction: '👍' }, alice);
+			expect(reacted.status).toBe(204);
+
+			// 別ユーザーの同じリアクションは 1 件にまとまる。
+			const reactedByBob = await api('announcements/react', { announcementId: announcement.id, reaction: '👍' }, bob);
+			expect(reactedByBob.status).toBe(204);
+
+			const listed = await api('announcements', { limit: 10 }, alice);
+			expect(listed.status).toBe(200);
+			const found = listed.body.find((a) => a.id === announcement.id);
+			expect(found?.reactions).toStrictEqual({ '👍': 2 });
+			expect(found?.myReaction).toBe('👍');
+
+			// 未ログインでも件数は見えるが、myReaction は付かない。
+			const anonymous = await api('announcements/show', { announcementId: announcement.id });
+			expect(anonymous.status).toBe(200);
+			expect(anonymous.body.reactions).toStrictEqual({ '👍': 2 });
+			expect(anonymous.body.myReaction).toBeUndefined();
+
+			// 1 ユーザー 1 リアクションなので、2 回目は弾かれる。
+			const again = await api('announcements/react', { announcementId: announcement.id, reaction: '🎉' }, alice);
+			expect(again.status).toBe(400);
+			expect(castAsError(again.body as any).error.code).toBe('ALREADY_REACTED');
+
+			const unreacted = await api('announcements/unreact', { announcementId: announcement.id }, alice);
+			expect(unreacted.status).toBe(204);
+
+			const afterUnreact = await api('announcements/show', { announcementId: announcement.id }, alice);
+			expect(afterUnreact.status).toBe(200);
+			expect(afterUnreact.body.reactions).toStrictEqual({ '👍': 1 });
+			expect(afterUnreact.body.myReaction).toBeNull();
+
+			const unreactAgain = await api('announcements/unreact', { announcementId: announcement.id }, alice);
+			expect(unreactAgain.status).toBe(400);
+			expect(castAsError(unreactAgain.body as any).error.code).toBe('NOT_REACTED');
+		});
+
+		test('announcements/react は使えない絵文字をフォールバックへ寄せ、他人宛のお知らせを隠す', async () => {
+			const now = Date.now();
+			const announcement = await createAnnouncementInDatabase(db, {
+				id: genId(now + 100),
+				updatedAt: null,
+				title: 'Fallback announcement',
+				text: 'React to me',
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				needConfirmationToRead: false,
+				isActive: true,
+				forExistingUsers: false,
+				silence: false,
+				userId: null,
+			});
+
+			// 存在しないカスタム絵文字はフォールバック (❤) になる。
+			const reacted = await api(
+				'announcements/react',
+				{ announcementId: announcement.id, reaction: ':nonexistent_emoji:' },
+				alice,
+			);
+			expect(reacted.status).toBe(204);
+
+			const shown = await api('announcements/show', { announcementId: announcement.id }, alice);
+			expect(shown.status).toBe(200);
+			expect(shown.body.myReaction).toBe('❤');
+
+			const forBob = await createAnnouncementInDatabase(db, {
+				id: genId(now + 101),
+				updatedAt: null,
+				title: 'For Bob only',
+				text: 'Private',
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				needConfirmationToRead: false,
+				isActive: true,
+				forExistingUsers: false,
+				silence: false,
+				userId: bob.id,
+			});
+
+			const denied = await api('announcements/react', { announcementId: forBob.id, reaction: '👍' }, alice);
+			expect(denied.status).toBe(404);
+			expect(castAsError(denied.body as any).error.code).toBe('NO_SUCH_ANNOUNCEMENT');
+		});
+
 		test('i/read-announcement は既読化し全既読ならreadAllAnnouncementsを発行する', async () => {
 			const config = fixtureConfig;
 			const now = Date.now();

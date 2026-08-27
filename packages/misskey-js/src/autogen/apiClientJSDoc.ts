@@ -1325,6 +1325,30 @@ declare module '../api.js' {
          *
          * **Credential required**: *Yes* / **Permission**: *write:account*
          */
+        request<E extends 'announcements/react', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
+            endpoint: E,
+            ...args: Endpoints[E] extends { reqOptional: true }
+                ? [params?: P, credential?: string | null]
+                : [params: P, credential?: string | null]
+        ): Promise<SwitchCaseResponseType<E, P>>;
+
+        /**
+         * No description provided.
+         *
+         * **Credential required**: *Yes* / **Permission**: *write:account*
+         */
+        request<E extends 'announcements/unreact', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
+            endpoint: E,
+            ...args: Endpoints[E] extends { reqOptional: true }
+                ? [params?: P, credential?: string | null]
+                : [params: P, credential?: string | null]
+        ): Promise<SwitchCaseResponseType<E, P>>;
+
+        /**
+         * No description provided.
+         *
+         * **Credential required**: *Yes* / **Permission**: *write:account*
+         */
         request<E extends 'antennas/create', P extends Endpoints[E]['req'] = Endpoints[E]['req']>(
             endpoint: E,
             ...args: Endpoints[E] extends { reqOptional: true }

@@ -78,7 +78,8 @@ const legacies: Record<string, string> = {
 const isCustomEmojiRegexp = /^:([\w+-]+)(?:@\.)?:$/;
 const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
 
-function normalizeReactionForHonoApi(reaction: string | null): string {
+/** Unicode 絵文字とレガシー名を、保存できる 1 つの絵文字へ寄せる。該当しなければフォールバック。 */
+export function normalizeReactionForHonoApi(reaction: string | null): string {
 	if (reaction == null) return FALLBACK;
 	if (Object.hasOwn(legacies, reaction)) return legacies[reaction]!;
 

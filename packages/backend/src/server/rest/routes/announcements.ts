@@ -14,8 +14,10 @@ import {
 import { handleHonoApiEmailAddressAvailable } from '../auth/availability.js';
 import { handleHonoApiPinnedUsers } from '../user/user.js';
 import {
+	handleHonoApiAnnouncementReact,
 	handleHonoApiAnnouncements,
 	handleHonoApiAnnouncementShow,
+	handleHonoApiAnnouncementUnreact,
 	handleHonoApiIReadAnnouncement,
 } from '../announcement/announcements.js';
 import { handleHonoApiIClaimAchievement } from '../notification/notification.js';
@@ -45,6 +47,22 @@ export function registerAnnouncementsRoutes(app: Hono, deps: ApiShellDependencie
 		endpointHandlerAnonymous(deps, 'announcements/show', async ({ body, auth, c }) =>
 			jsonResponse(c, await handleHonoApiAnnouncementShow(deps, auth.user, body)),
 		),
+	);
+
+	app.post(
+		'/announcements/react',
+		endpointHandler(deps, 'announcements/react', async ({ body, auth, c }) => {
+			await handleHonoApiAnnouncementReact(deps, auth.user, body);
+			return emptyResponse(c);
+		}),
+	);
+
+	app.post(
+		'/announcements/unreact',
+		endpointHandler(deps, 'announcements/unreact', async ({ body, auth, c }) => {
+			await handleHonoApiAnnouncementUnreact(deps, auth.user, body);
+			return emptyResponse(c);
+		}),
 	);
 
 	app.post(

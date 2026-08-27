@@ -479,6 +479,9 @@ type AnnouncementCreated = {
 };
 
 // @public (undocumented)
+type AnnouncementsReactRequest = NonNullable<operations['announcements___react']['requestBody']>['content']['application/json'];
+
+// @public (undocumented)
 type AnnouncementsRequest = NonNullable<operations['announcements']['requestBody']>['content']['application/json'];
 
 // @public (undocumented)
@@ -489,6 +492,9 @@ type AnnouncementsShowRequest = NonNullable<operations['announcements___show']['
 
 // @public (undocumented)
 type AnnouncementsShowResponse = operations['announcements___show']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
+type AnnouncementsUnreactRequest = NonNullable<operations['announcements___unreact']['requestBody']>['content']['application/json'];
 
 // @public (undocumented)
 type Antenna = components['schemas']['Antenna'];
@@ -1602,6 +1608,8 @@ declare namespace entities {
         AnnouncementsResponse,
         AnnouncementsShowRequest,
         AnnouncementsShowResponse,
+        AnnouncementsReactRequest,
+        AnnouncementsUnreactRequest,
         AntennasCreateRequest,
         AntennasCreateResponse,
         AntennasDeleteRequest,
