@@ -95,4 +95,5 @@ vite.config.local-dev.ts.timestamp-*
 
 # packages/slacc はリポジトリ内でビルドする。成果物と cargo の中間物は追跡しない。
 /packages/slacc/target
+!/packages/slacc/Cargo.lock
 /packages/slacc/*.node

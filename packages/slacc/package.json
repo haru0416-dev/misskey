@@ -13,8 +13,8 @@
 		"*.node"
 	],
 	"scripts": {
-		"build": "napi build --platform --release",
-		"build:debug": "napi build --platform"
+		"build": "napi build --platform --release --no-js",
+		"build:debug": "napi build --platform --no-js"
 	},
 	"devDependencies": {
 		"@napi-rs/cli": "3.8.6"
