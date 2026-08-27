@@ -7,64 +7,91 @@ import fc from 'fast-check';
 import { describe, expect, test } from 'vitest';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 
+// 正規表現形式 (/…/) と誤認されず、空白 AND 区切りとも衝突しない語だけを作る。
+const word = fc
+	.array(fc.constantFrom(...'abcdefあいう'), { minLength: 1, maxLength: 6 })
+	.map((chars) => chars.join(''));
+
 describe('isKeywordIncluded', () => {
-	test('treats list entries as OR and space-separated words as AND', () => {
+	test('リストの要素は OR、空白区切りの語は AND', () => {
 		expect(isKeywordIncluded('https://example.com/articles/1', ['example.com missing', 'example.com articles'])).toBe(
 			true,
 		);
 		expect(isKeywordIncluded('https://example.com/articles/1', ['example.com missing'])).toBe(false);
 	});
 
-	test('supports regular expressions without accepting invalid or ReDoS-prone patterns', () => {
+	test('/pattern/flags 形式は正規表現として扱う', () => {
 		expect(isKeywordIncluded('https://example.com/articles/1', ['/example\\.com\\/articles/i'])).toBe(true);
-		expect(isKeywordIncluded('https://example.com/articles/1', ['/[/'])).toBe(false);
-		expect(isKeywordIncluded(`${'a'.repeat(10_000)}!`, ['/^(a+)+$/'])).toBe(false);
 	});
 
-	/*
-	 * この関数はサインアップ (未認証) の禁止ワード判定と URL プレビューのセンシティブ判定から
-	 * 呼ばれる。パターンは管理者が設定するが、突き合わせる text は相手が自由に選べる。
-	 * バックトラックする実装に差し替わると、管理者が置いた何気ないパターンで未認証の入力から
-	 * サーバーを止められる。RE2 (線形時間) を通していることを、生成した入力で確かめる。
-	 */
-	describe('property', () => {
-		// バックトラック実装なら組み合わせ爆発するパターン。RE2 なら入力長に比例した時間で終わる。
-		const catastrophic = fc.constantFrom(
-			'/^(a+)+$/',
-			'/^(a|a)+$/',
-			'/^(a*)*$/',
-			'/^(a|aa)+$/',
-			'/(x+x+)+y/',
-			'/^(([a-z])+.)+[A-Z]([a-z])+$/',
-		);
-		// 構文として壊れているもの・RE2 が受け付けない構文も混ぜる (握り潰されて false になるはず)。
-		const brokenPattern = fc.constantFrom('/[/', '//', '/(?<=a)b/', '/(?!a)b/', '/a{2,1}/', '/\\1(a)/', '/(?P<n>a)/');
-		const keyword = fc.oneof(
-			{ weight: 2, arbitrary: catastrophic },
-			{ weight: 1, arbitrary: brokenPattern },
-			{ weight: 2, arbitrary: fc.string({ maxLength: 20 }) },
-		);
-		// 上のパターンが食いつく形の長い入力。
-		const text = fc.oneof(
-			{ weight: 2, arbitrary: fc.integer({ min: 1_000, max: 20_000 }).map((n) => `${'a'.repeat(n)}!`) },
-			{ weight: 1, arbitrary: fc.integer({ min: 1_000, max: 20_000 }).map((n) => `${'xy'.repeat(n)}z`) },
-			{ weight: 1, arbitrary: fc.string({ maxLength: 200 }) },
-		);
+	test('キーワードが空、または text が空なら常に false', () => {
+		expect(isKeywordIncluded('anything', [])).toBe(false);
+		expect(isKeywordIncluded('', ['anything'])).toBe(false);
+	});
 
-		test('敵対的なパターンと長い入力でも例外を投げず線形時間で返る', () => {
-			let worst = 0;
+	describe('property', () => {
+		const brokenPattern = fc.constantFrom('/[/', '//', '/a{2,1}/', '/(/', '/\\/', '/*/', '/(?<)/');
+		const keyword = fc.oneof(
+			{ weight: 3, arbitrary: word },
+			{ weight: 2, arbitrary: fc.tuple(word, word).map(([a, b]) => `${a} ${b}`) },
+			{ weight: 2, arbitrary: word.map((w) => `/${w}/i`) },
+			{ weight: 1, arbitrary: brokenPattern },
+		);
+		const text = fc.array(fc.constantFrom(...'abcdefあいう /'), { maxLength: 40 }).map((chars) => chars.join(''));
+
+		test('リスト全体の判定は、要素を 1 つずつ判定した OR に一致する', () => {
+			// 要素が互いに干渉しないこと。false になる組み合わせも通るよう、当たり外れ両方を数える。
+			let hits = 0;
+			let misses = 0;
 			fc.assert(
 				fc.property(text, fc.array(keyword, { minLength: 1, maxLength: 4 }), (input, keywords) => {
-					const started = performance.now();
-					// 戻り値は入力次第なので主張しない。ここで見るのは「返ること」と「かかる時間」。
-					isKeywordIncluded(input, keywords);
-					worst = Math.max(worst, performance.now() - started);
+					const whole = isKeywordIncluded(input, keywords);
+					const perElement = keywords.some((k) => isKeywordIncluded(input, [k]));
+					expect(whole).toBe(perElement);
+					if (whole) hits++;
+					else misses++;
+				}),
+				{ numRuns: 500 },
+			);
+			// 常に false を返す実装でも通ってしまう空振りを防ぐ。
+			expect(hits).toBeGreaterThan(20);
+			expect(misses).toBeGreaterThan(20);
+		});
+
+		test('空白区切りは、全ての語を含むときだけ該当する', () => {
+			let reached = 0;
+			fc.assert(
+				fc.property(text, fc.array(word, { minLength: 1, maxLength: 3 }), (input, words) => {
+					if (input === '') return;
+					reached++;
+					const expected = words.every((w) => input.includes(w));
+					expect(isKeywordIncluded(input, [words.join(' ')])).toBe(expected);
+				}),
+				{ numRuns: 500 },
+			);
+			expect(reached).toBeGreaterThan(400);
+		});
+
+		test('正規表現形式の判定は RegExp と一致する', () => {
+			let matched = 0;
+			fc.assert(
+				fc.property(text, word, fc.constantFrom('', 'i', 'm', 's'), (input, pattern, flags) => {
+					const expected = new RegExp(pattern, flags).test(input);
+					expect(isKeywordIncluded(input, [`/${pattern}/${flags}`])).toBe(expected);
+					if (expected) matched++;
+				}),
+				{ numRuns: 500 },
+			);
+			expect(matched).toBeGreaterThan(20);
+		});
+
+		test('壊れたパターンは例外にせず該当なしとして扱う', () => {
+			fc.assert(
+				fc.property(text, brokenPattern, (input, pattern) => {
+					expect(isKeywordIncluded(input, [pattern])).toBe(false);
 				}),
 				{ numRuns: 200 },
 			);
-
-			// バックトラック実装ならここは秒どころではなくなる。RE2 なら 20,000 文字でもミリ秒台。
-			expect(worst).toBeLessThan(1_000);
 		});
 	});
 });

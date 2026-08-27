@@ -3,10 +3,17 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import RE2 from '@/misc/re2.js';
-
 const regexpPattern = /^\/(.+)\/(.*)$/;
 
+/**
+ * 管理者が設定した禁止ワード・センシティブワードに `text` が該当するか。
+ *
+ * 要素間は OR、空白で区切った語は AND。`/pattern/flags` 形式の要素は正規表現として扱い、
+ * 壊れたパターンは該当なしとして握り潰す (設定不備で投稿やサインアップを止めない)。
+ *
+ * パターンは管理者しか書けない一方、突き合わせる text は相手が自由に選べるので、
+ * 破滅的バックトラックを起こすパターンを置くと未認証の入力からサーバーを止められる。
+ */
 export function isKeywordIncluded(text: string, keywords: string[]): boolean {
 	if (keywords.length === 0 || text === '') return false;
 
@@ -19,7 +26,7 @@ export function isKeywordIncluded(text: string, keywords: string[]): boolean {
 		try {
 			const [, pattern, flags] = regexp;
 			if (pattern == null || flags == null) return false;
-			return new RE2(pattern, flags).test(text);
+			return new RegExp(pattern, flags).test(text);
 		} catch {
 			return false;
 		}

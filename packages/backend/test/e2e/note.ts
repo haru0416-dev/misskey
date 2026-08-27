@@ -1119,6 +1119,27 @@ describe('Note', () => {
 			}, POLL);
 		});
 
+		/*
+		 * 禁止ユーザー名の判定は notes/create の禁止ワード判定と同じ関数を通る。
+		 * かつて両者は別実装で、正規表現の解釈が食い違っていた。
+		 */
+		test('禁止ワードに該当するユーザー名ではサインアップできない (正規表現)', async () => {
+			const updated = await api('admin/update-meta', { prohibitedWordsForNameOfUser: ['/^Bad/i'] }, root);
+			expect(updated.status).toBe(204);
+
+			try {
+				await vi.waitFor(async () => {
+					const rejected = await api('signup', { username: 'badname', password: 'test' });
+					expect(rejected.status).toBe(400);
+				}, POLL);
+
+				const accepted = await api('signup', { username: 'goodname', password: 'test' });
+				expect(accepted.status).toBe(200);
+			} finally {
+				await api('admin/update-meta', { prohibitedWordsForNameOfUser: [] }, root);
+			}
+		});
+
 		test('メンションの数が上限を超えるとエラーになる', async () => {
 			const res = await api(
 				'admin/roles/create',
