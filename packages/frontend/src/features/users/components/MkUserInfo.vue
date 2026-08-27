@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkA :class="$style.name" :to="userPage(user)"><MkUserName :user="user" :nowrap="false"/></MkA>
 		<p :class="$style.username"><MkAcct :user="user"/></p>
 	</div>
-	<span v-if="$i && $i.id !== user.id && user.isFollowed" :class="$style.followed">{{ i18n.ts.followsYou }}</span>
+	<span v-if="followRelation != null" :class="$style.followed">{{ followRelation === 'mutual' ? i18n.ts.mutualFollow : i18n.ts.followsYou }}</span>
 	<div :class="$style.description">
 		<div v-if="user.description" :class="$style.mfm">
 			<Mfm :text="user.description" :author="user"/>
@@ -36,6 +36,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
+import { computed } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkFollowButton from '@/features/users/components/MkFollowButton.vue';
 import number from '@/filters/number.js';
@@ -43,12 +44,15 @@ import { userPage } from '@/filters/user.js';
 import { i18n } from '@/i18n.js';
 import { $i } from '@/i.js';
 import { isFollowingVisibleForMe, isFollowersVisibleForMe } from '@/features/users/is-ff-visible-for-me.js';
+import { getFollowRelationBadge } from '@/features/users/follow-relation.js';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
 import { prefer } from '@/preferences.js';
 
-defineProps<{
+const props = defineProps<{
 	user: Misskey.entities.UserDetailed;
 }>();
+
+const followRelation = computed(() => getFollowRelationBadge($i, props.user));
 </script>
 
 <style lang="scss" module>
