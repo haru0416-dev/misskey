@@ -11,7 +11,6 @@ minimumReleaseAgeExcludes = [
 	"@misskey-dev/sharp-read-bmp",
 	"@misskey-dev/summaly",
 	"@syuilo/aiscript",
-	"buraha",
 	"mfm-js",
 	"slacc",
 	"slacc-android-arm-eabi",
