@@ -35,7 +35,7 @@ describe('misc:zod-params', () => {
 	});
 
 	describe('paginationParams', () => {
-		test('展開してもインラインで書いた場合と同じ JSON Schema になる', () => {
+		test('説明を除けばインラインで書いた場合と同じ JSON Schema になる', () => {
 			const shared = z.object({ limit: z.int().min(1).max(100).default(10), ...paginationParams });
 			const inline = z.object({
 				limit: z.int().min(1).max(100).default(10),
@@ -44,10 +44,25 @@ describe('misc:zod-params', () => {
 				sinceDate: z.int().optional(),
 				untilDate: z.int().optional(),
 			});
-			// キー順まで一致していないと api.json が変わる。
-			expect(JSON.stringify(z.toJSONSchema(shared, { io: 'input' }))).toBe(
-				JSON.stringify(z.toJSONSchema(inline, { io: 'input' })),
-			);
+			const stripDescriptions = (schema: z.ZodObject): string => {
+				const json = z.toJSONSchema(schema, { io: 'input' }) as {
+					properties?: Record<string, Record<string, unknown>>;
+				};
+				for (const property of Object.values(json.properties ?? {})) delete property['description'];
+				// キー順まで一致していないと api.json が変わる。
+				return JSON.stringify(json);
+			};
+			expect(stripDescriptions(shared)).toBe(stripDescriptions(inline));
+		});
+
+		test('4 つとも OpenAPI に説明が載る', () => {
+			// ここが空になると、生成される misskey-js の型から since/until の意味が消える。
+			const json = z.toJSONSchema(z.object({ ...paginationParams }), { io: 'input' }) as {
+				properties?: Record<string, { description?: string }>;
+			};
+			for (const key of ['sinceId', 'untilId', 'sinceDate', 'untilDate']) {
+				expect(json.properties?.[key]?.description, key).toBeTruthy();
+			}
 		});
 
 		test('4 つとも省略可能', () => {
