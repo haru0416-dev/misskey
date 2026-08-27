@@ -13,6 +13,7 @@ import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import { parseMfmCached } from '@/misc/mfm-parse-cache.js';
+import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
@@ -163,28 +164,6 @@ function concatNoteContentsForKeyWordCheck(content: {
 	return `${content.cw ?? ''}${content.text ?? ''}\n${(content.pollChoices ?? []).join('\n')}\n${(content.others ?? []).join('\n')}`;
 }
 
-export function isKeyWordIncludedForApi(text: string, keyWords: string[]): boolean {
-	if (keyWords.length === 0) return false;
-	if (text === '') return false;
-
-	const regexpregexp = /^\/(.+)\/(.*)$/;
-
-	return keyWords.some((filter) => {
-		const regexp = filter.match(regexpregexp);
-		if (!regexp) {
-			const words = filter.split(' ');
-			return words.every((keyword) => text.includes(keyword));
-		}
-		try {
-			const [, pattern, flags] = regexp;
-			if (pattern == null || flags == null) return false;
-			return new RegExp(pattern, flags).test(text);
-		} catch {
-			return false;
-		}
-	});
-}
-
 /** hashtags は normalizeForSearch 済みで渡すこと。 */
 export async function updateHashtagsRankingsForApi(
 	deps: { meta: Pick<MiMeta, 'hiddenTags' | 'sensitiveWords'>; redis: Redis.Redis },
@@ -193,7 +172,7 @@ export async function updateHashtagsRankingsForApi(
 ): Promise<void> {
 	const hiddenTags = new Set(deps.meta.hiddenTags.map((tag) => normalizeForSearch(tag)));
 	const candidates = [...new Set(hashtags)].filter(
-		(hashtag) => !hiddenTags.has(hashtag) && !isKeyWordIncludedForApi(hashtag, deps.meta.sensitiveWords),
+		(hashtag) => !hiddenTags.has(hashtag) && !isKeywordIncluded(hashtag, deps.meta.sensitiveWords),
 	);
 	if (candidates.length === 0) return;
 
@@ -1493,16 +1472,13 @@ export async function createNoteForApi(
 	const policies = await getApiRolePolicies(deps, user as MiUser);
 
 	if (data.visibility === 'public' && data.channel == null) {
-		if (
-			isKeyWordIncludedForApi(data.cw ?? data.text ?? '', deps.meta.sensitiveWords) ||
-			policies.canPublicNote === false
-		) {
+		if (isKeywordIncluded(data.cw ?? data.text ?? '', deps.meta.sensitiveWords) || policies.canPublicNote === false) {
 			data.visibility = 'home';
 		}
 	}
 
 	if (
-		isKeyWordIncludedForApi(
+		isKeywordIncluded(
 			concatNoteContentsForKeyWordCheck(
 				omitUndefined({ cw: data.cw, text: data.text, pollChoices: data.poll?.choices }),
 			),

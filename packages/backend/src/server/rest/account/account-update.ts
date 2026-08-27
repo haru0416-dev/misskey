@@ -65,7 +65,8 @@ import {
 	renderUpdateForApi,
 	type ApiNoteApDependencies,
 } from '../activitypub/notes-ap.js';
-import { isKeyWordIncludedForApi, updateHashtagsRankingsForApi } from '../note/notes-create.js';
+import { updateHashtagsRankingsForApi } from '../note/notes-create.js';
+import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
 import {
 	getApiRolePolicies,
 	getApiUserRoles,
@@ -733,7 +734,7 @@ export async function handleApiIUpdate(
 	if (newName != null) {
 		let hasProhibitedWords = false;
 		if (!(await isApiModerator(deps, user))) {
-			hasProhibitedWords = isKeyWordIncludedForApi(newName, deps.meta.prohibitedWordsForNameOfUser);
+			hasProhibitedWords = isKeywordIncluded(newName, deps.meta.prohibitedWordsForNameOfUser);
 		}
 		if (hasProhibitedWords) throw iUpdateNameContainsProhibitedWordsError();
 
