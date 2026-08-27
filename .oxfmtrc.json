@@ -29,6 +29,8 @@
 		".claude/**",
 		".config/**",
 		"built/**",
+		// napi-rs が生成する型定義。整形すると次のビルドで書き戻されて往復する。
+		"packages/slacc/index.d.ts",
 		"built-test/**",
 		"chart/**",
 		"coverage/**",
