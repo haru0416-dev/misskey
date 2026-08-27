@@ -1328,32 +1328,12 @@ const birthdayRangeSchema = z.object({
 	end: birthdayMonthDaySchema,
 });
 
-// 元 ajv 版は `oneOf` (どちらか一方の形にのみ一致することを要求。両方の形に同時に一致する入力は拒否される) だった。
-// Zod の `z.union` は anyOf 相当 (どれか一つでも一致すれば可) のため oneOf の「ちょうど1つ」を表現できない。
-// そのため両方のサブスキーマで安全に safeParse し、一致した個数がちょうど1つであることを明示的に検証する。
-const birthdayOneOfSchema = z.custom<z.infer<typeof birthdayMonthDaySchema> | z.infer<typeof birthdayRangeSchema>>(
-	(value) => {
-		const matches = [birthdayMonthDaySchema.safeParse(value), birthdayRangeSchema.safeParse(value)].filter(
-			(result) => result.success,
-		).length;
-		return matches === 1;
-	},
-	{ message: 'must match exactly one schema in oneOf' },
-);
-
-const usersGetFollowingUsersByBirthdayParamDef = z.object({
+// 月日だけの指定と範囲指定は排他 (両方の形を同時に満たす入力は受け付けない)。
+// z.union は anyOf 相当なので、ちょうど 1 つに一致することを要求する z.xor を使う。
+export const usersGetFollowingUsersByBirthdayParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
-	offset: z.int().default(0),
-	birthday: birthdayOneOfSchema,
-});
-
-// OpenAPI/misskey-js コード生成 (endpoints/*.ts) 専用。上の `birthdayOneOfSchema` は
-// `z.custom` を使っており JSON Schema 化できないため、docs 用にはこちらの anyOf 相当
-// (どちらか一方の形に一致すれば可、両方一致する入力の拒否は docs には反映されない) を使う。
-export const usersGetFollowingUsersByBirthdayDocsParamDef = z.object({
-	limit: z.int().min(1).max(100).default(10),
-	offset: z.int().default(0),
-	birthday: z.union([birthdayMonthDaySchema, birthdayRangeSchema]),
+	offset: z.int().nonnegative().default(0),
+	birthday: z.xor([birthdayMonthDaySchema, birthdayRangeSchema]),
 });
 
 export async function handleApiUsersGetFollowingUsersByBirthday(

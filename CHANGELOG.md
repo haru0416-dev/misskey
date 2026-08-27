@@ -200,6 +200,8 @@
 - Fix: `misskey-js` のモデレーションログ型に `pauseQueue` / `resumeQueue` が含まれておらず、キューの一時停止・再開のログを型付きで扱えなかった問題を修正
 
 ### Server
+- Fix: ページネーションの `offset` に負の数を渡すとサーバーエラー (500) になっていたのを 400 で弾くように (13 パラメータ)
+- Fix: `users/get-following-users-by-birthday` の `birthday` が、OpenAPI 上は「どちらかの形に一致すれば可」と公開されていたのを実挙動どおり `oneOf` (ちょうど一方の形) に修正
 - Fix: プロフィールの誕生日に `2001-02-29` や `9999-99-99` のような実在しない日付を保存できていたのを修正 (うるう年込みで検証するように)
 - Fix: `notes/reactions` を GET / QUERY で叩くとき `type=null` が文字列の "null" として扱われ、リアクション種別の指定なしにならなかったのを修正 (POST でボディに `null` を渡した場合と挙動が違っていた)
 - Fix: 配列パラメータの重複禁止 (`uniqueItems`) が OpenAPI (`/api.json`) に出ていなかったのを修正 (ajv から zod へ移した際に落ちていた。`notes/create` の `fileIds` など 16 箇所)

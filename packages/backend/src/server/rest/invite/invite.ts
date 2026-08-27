@@ -57,7 +57,7 @@ export const adminInviteCreateParamDef = z.object({
 
 export const adminInviteListParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(30),
-	offset: z.int().optional().default(0),
+	offset: z.int().nonnegative().optional().default(0),
 	type: z.enum(['unused', 'used', 'expired', 'all']).optional().default('all'),
 	sort: z.enum(['+createdAt', '-createdAt', '+usedAt', '-usedAt']).optional(),
 });
