@@ -83,10 +83,6 @@ export const notesShowParamDef = z.object({
 	noteId: misskeyId(),
 });
 
-type NotesShowParams = {
-	noteId: string;
-};
-
 function notesShowNoSuchNoteError(): ApiError {
 	return new ApiError({
 		status: 400,
@@ -119,15 +115,6 @@ export const noteIdPaginationParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
-
-type NoteIdPaginationParams = {
-	noteId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 function resolveNoteSinceUntilId(
 	config: ApiNotesDependencies['config'],
@@ -177,12 +164,6 @@ export const notesConversationParamDef = z.object({
 	offset: z.int().optional().default(0),
 });
 
-type NotesConversationParams = {
-	noteId: string;
-	limit: number;
-	offset: number;
-};
-
 export async function handleApiNotesConversation(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
@@ -230,16 +211,6 @@ export const notesMentionsParamDef = z.object({
 	...paginationParams,
 	visibility: z.string().optional(),
 });
-
-type NotesMentionsParams = {
-	following: boolean;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	visibility?: string;
-};
 
 export async function handleApiNotesMentions(
 	deps: ApiNotesDependencies,
@@ -320,10 +291,6 @@ export async function handleApiNotesRenotes(
 export const noteIdOnlyParamDef = z.object({
 	noteId: misskeyId(),
 });
-
-type NoteIdOnlyParams = {
-	noteId: string;
-};
 
 export async function handleApiNotesState(
 	deps: ApiNotesDependencies,
@@ -530,16 +497,6 @@ export const notesGlobalTimelineParamDef = z.object({
 	...paginationParams,
 });
 
-type NotesGlobalTimelineParams = {
-	withFiles: boolean;
-	withRenotes: boolean;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
-
 export async function handleApiNotesGlobalTimeline(
 	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
 	me: MiLocalUser | null,
@@ -574,19 +531,6 @@ export const notesParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
-
-type NotesParams = {
-	local: boolean;
-	reply?: boolean;
-	renote?: boolean;
-	withFiles?: boolean;
-	poll?: boolean;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiNotes(
 	deps: ApiNotesDependencies,
@@ -642,18 +586,6 @@ export const notesLocalTimelineParamDef = z.object({
 	sinceDate: z.int().optional(),
 	untilDate: z.int().optional(),
 });
-
-type NotesLocalTimelineParams = {
-	withFiles: boolean;
-	withRenotes: boolean;
-	withReplies: boolean;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	allowPartial: boolean;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiNotesLocalTimeline(
 	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
@@ -747,21 +679,6 @@ export const notesHybridTimelineParamDef = z.object({
 	withRenotes: z.boolean().optional().default(true),
 	withReplies: z.boolean().optional().default(false),
 });
-
-type NotesHybridTimelineParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	allowPartial: boolean;
-	includeMyRenotes: boolean;
-	includeRenotedMyNotes: boolean;
-	includeLocalRenotes: boolean;
-	withFiles: boolean;
-	withRenotes: boolean;
-	withReplies: boolean;
-};
 
 export async function handleApiNotesHybridTimeline(
 	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
@@ -899,12 +816,6 @@ export const notesFeaturedParamDef = z.object({
 	channelId: misskeyId().nullable().optional(),
 });
 
-type NotesFeaturedParams = {
-	limit: number;
-	untilId?: string;
-	channelId?: string | null;
-};
-
 export async function handleApiNotesFeatured(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
@@ -1008,27 +919,6 @@ export const notesSearchParamDef = z.object({
 	withCw: z.boolean().nullable().optional().default(null),
 	visibility: z.enum(['public', 'home', 'followers', 'specified']).nullable().optional().default(null),
 });
-
-type NotesSearchParams = {
-	query: string;
-	rangeStartAt?: number | null;
-	rangeEndAt?: number | null;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	limit: number;
-	offset: number;
-	host?: string;
-	userId?: string | null;
-	channelId?: string | null;
-	withFiles?: boolean | null;
-	withSensitiveFiles?: boolean | null;
-	withReplies?: boolean | null;
-	withQuotes?: boolean | null;
-	withCw?: boolean | null;
-	visibility?: MiNote['visibility'] | null;
-};
 
 export async function handleApiNotesSearch(
 	deps: ApiNotesDependencies & ApiRolePolicyDependencies,
@@ -1200,10 +1090,6 @@ export const notesShowPartialBulkParamDef = z.object({
 	noteIds: z.array(misskeyId()).min(1).max(100),
 });
 
-type NotesShowPartialBulkParams = {
-	noteIds: string[];
-};
-
 export async function handleApiNotesShowPartialBulk(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
@@ -1225,20 +1111,6 @@ export const notesTimelineParamDef = z.object({
 	withFiles: z.boolean().optional().default(false),
 	withRenotes: z.boolean().optional().default(true),
 });
-
-type NotesTimelineParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	allowPartial: boolean;
-	includeMyRenotes: boolean;
-	includeRenotedMyNotes: boolean;
-	includeLocalRenotes: boolean;
-	withFiles: boolean;
-	withRenotes: boolean;
-};
 
 export async function handleApiNotesTimeline(
 	deps: ApiNotesDependencies,
@@ -1332,21 +1204,6 @@ export const notesUserListTimelineParamDef = z.object({
 	withFiles: z.boolean().optional().default(false),
 });
 
-type NotesUserListTimelineParams = {
-	listId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	allowPartial: boolean;
-	includeMyRenotes: boolean;
-	includeRenotedMyNotes: boolean;
-	includeLocalRenotes: boolean;
-	withRenotes: boolean;
-	withFiles: boolean;
-};
-
 export async function handleApiNotesUserListTimeline(
 	deps: ApiNotesDependencies,
 	me: MiLocalUser,
@@ -1383,12 +1240,6 @@ export const notesPollsRecommendationParamDef = z.object({
 	offset: z.int().optional().default(0),
 	excludeChannels: z.boolean().optional().default(false),
 });
-
-type NotesPollsRecommendationParams = {
-	limit: number;
-	offset: number;
-	excludeChannels: boolean;
-};
 
 export async function handleApiNotesPollsRecommendation(
 	deps: ApiNotesDependencies,

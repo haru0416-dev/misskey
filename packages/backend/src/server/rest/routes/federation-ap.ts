@@ -33,7 +33,7 @@ import {
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
-import { queryToApiBody } from '../query-params.js';
+import { queryToApiBody } from '../string-params.js';
 
 export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post(

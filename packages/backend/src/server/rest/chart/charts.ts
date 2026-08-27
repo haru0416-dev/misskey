@@ -102,20 +102,12 @@ export const perUserChartParamDef = z.object({
 	userId: misskeyId(),
 });
 
-type PerUserChartParams = ChartParams & {
-	userId: string;
-};
-
 export const instanceChartParamDef = z.object({
 	span: z.enum(['day', 'hour']),
 	limit: z.int().min(1).max(500).default(30),
 	offset: z.int().nullable().default(null),
 	host: z.string(),
 });
-
-type InstanceChartParams = ChartParams & {
-	host: string;
-};
 
 export async function handleApiChartsActiveUsers(deps: ApiChartDependencies, body: Record<string, unknown>) {
 	const params = parseApiParams(chartParamDef, body);

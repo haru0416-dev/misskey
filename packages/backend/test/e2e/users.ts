@@ -13,7 +13,17 @@ import {
 	openTestDatabase,
 	type TestDatabase,
 } from '../fixtures.js';
-import { api, POLL, post, role, signup, successfulApiCall, testPaginationConsistency, uploadFile } from '../utils.js';
+import {
+	api,
+	failedApiCall,
+	POLL,
+	post,
+	role,
+	signup,
+	successfulApiCall,
+	testPaginationConsistency,
+	uploadFile,
+} from '../utils.js';
 import type * as misskey from 'misskey-js';
 import { omitUndefined as stripUndefined } from '@/misc/clone.js';
 
@@ -475,8 +485,8 @@ describe('ユーザー', () => {
 		{ parameters: () => ({ location: 'x'.repeat(50) }) },
 		{ parameters: () => ({ location: 'x' }) },
 		{ parameters: () => ({ location: 'My location' }) },
-		{ parameters: () => ({ birthday: '0000-00-00' }) },
-		{ parameters: () => ({ birthday: '9999-99-99' }) },
+		{ parameters: () => ({ birthday: '2000-02-29' }) },
+		{ parameters: () => ({ birthday: '1900-12-31' }) },
 		{ parameters: () => ({ lang: 'en-US' as const }) },
 		{ parameters: () => ({ fields: [] }) },
 		{ parameters: () => ({ fields: [{ name: 'x', value: 'x' }] }) },
@@ -527,6 +537,17 @@ describe('ユーザー', () => {
 		const response = await successfulApiCall({ endpoint: 'i/update', parameters: parameters(), user: alice });
 		const expected = { ...meDetailed(alice, true), ...parameters() };
 		expect(response, inspect(parameters())).toStrictEqual(expected);
+	});
+
+	test.each([
+		{ label: '存在しない日付', birthday: '2001-02-29' },
+		{ label: '月日が範囲外', birthday: '9999-99-99' },
+		{ label: '桁が足りない', birthday: '2000-6-15' },
+	])('の誕生日に$labelは指定できない', async ({ birthday }) => {
+		await failedApiCall(
+			{ endpoint: 'i/update', parameters: { birthday }, user: alice },
+			{ status: 400, code: 'INVALID_PARAM', id: '3d81ceae-475f-4600-b2a8-2bc116157532' },
+		);
 	});
 
 	test('を書き換えることができる(Avatar)', async () => {

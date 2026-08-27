@@ -823,10 +823,6 @@ export const federationUpdateRemoteUserParamDef = z.object({
 	userId: misskeyId(),
 });
 
-type FederationUpdateRemoteUserParams = {
-	userId: MiUser['id'];
-};
-
 export async function handleApiFederationUpdateRemoteUser(
 	deps: ApiApPersonDependencies,
 	body: Record<string, unknown>,

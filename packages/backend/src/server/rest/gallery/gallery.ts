@@ -114,11 +114,6 @@ export const galleryFeaturedParamDef = z.object({
 	untilId: misskeyId().optional(),
 });
 
-type GalleryFeaturedParams = {
-	limit: number;
-	untilId?: string;
-};
-
 export const galleryPopularParamDef = z.object({});
 
 export const galleryPostsParamDef = z.object({
@@ -126,27 +121,12 @@ export const galleryPostsParamDef = z.object({
 	...paginationParams,
 });
 
-type GalleryPostsParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
-
 export const galleryPostsCreateParamDef = z.object({
 	title: z.string().min(1),
 	description: z.string().nullable().optional(),
 	fileIds: uniqueItems(z.array(misskeyId()).min(1).max(32)),
 	isSensitive: z.boolean().optional().default(false),
 });
-
-type GalleryPostsCreateParams = {
-	title: string;
-	description?: string | null;
-	fileIds: string[];
-	isSensitive: boolean;
-};
 
 export const galleryPostsUpdateParamDef = z.object({
 	postId: misskeyId(),
@@ -156,21 +136,9 @@ export const galleryPostsUpdateParamDef = z.object({
 	isSensitive: z.boolean().optional().default(false),
 });
 
-type GalleryPostsUpdateParams = {
-	postId: string;
-	title?: string;
-	description?: string | null;
-	fileIds?: string[];
-	isSensitive: boolean;
-};
-
 export const galleryPostsPostIdParamDef = z.object({
 	postId: misskeyId(),
 });
-
-type GalleryPostsPostIdParams = {
-	postId: string;
-};
 
 function galleryPostsShowNoSuchPostError(): ApiError {
 	return new ApiError({
@@ -524,14 +492,6 @@ export const iGalleryPostsParamDef = z.object({
 	...paginationParams,
 });
 
-type IGalleryPostsParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
-
 export async function handleApiIGalleryPosts(
 	deps: ApiGalleryDependencies,
 	me: MiLocalUser,
@@ -554,14 +514,6 @@ export const iGalleryLikesParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
-
-type IGalleryLikesParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiIGalleryLikes(
 	deps: ApiGalleryDependencies,
@@ -598,15 +550,6 @@ export const usersGalleryPostsParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
-
-type UsersGalleryPostsParams = {
-	userId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiUsersGalleryPosts(
 	deps: ApiGalleryDependencies,

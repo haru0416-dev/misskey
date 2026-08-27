@@ -31,7 +31,7 @@ import {
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
-import { queryToApiBody } from '../query-params.js';
+import { queryToApiBody } from '../string-params.js';
 
 export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.get('/charts/active-users', async (c) => {

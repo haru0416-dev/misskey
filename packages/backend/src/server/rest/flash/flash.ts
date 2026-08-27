@@ -44,15 +44,6 @@ export const flashUpdateParamDef = z.object({
 	visibility: z.enum(['public', 'private']).optional(),
 });
 
-type FlashUpdateParams = {
-	flashId: string;
-	title?: string;
-	summary?: string;
-	script?: string;
-	permissions?: string[];
-	visibility?: MiFlash['visibility'];
-};
-
 export async function handleApiFlashUpdate(
 	deps: ApiFlashDependencies,
 	me: MiLocalUser,
@@ -151,14 +142,6 @@ export const flashCreateParamDef = z.object({
 	visibility: z.enum(['public', 'private']).optional().default('public'),
 });
 
-type FlashCreateParams = {
-	title: string;
-	summary: string;
-	script: string;
-	permissions: string[];
-	visibility: MiFlash['visibility'];
-};
-
 export async function handleApiFlashCreate(
 	deps: ApiFlashDependencies,
 	me: MiLocalUser,
@@ -182,10 +165,6 @@ export async function handleApiFlashCreate(
 export const flashDeleteParamDef = z.object({
 	flashId: misskeyId(),
 });
-
-type FlashDeleteParams = {
-	flashId: string;
-};
 
 export async function handleApiFlashDelete(
 	deps: ApiFlashDependencies,
@@ -220,11 +199,6 @@ export const flashFeaturedParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
 });
 
-type FlashFeaturedParams = {
-	offset: number;
-	limit: number;
-};
-
 export async function handleApiFlashFeatured(
 	deps: ApiFlashDependencies,
 	me: MiUser | null,
@@ -243,14 +217,6 @@ export const flashMyParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
-
-type FlashMyParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiFlashMy(
 	deps: ApiFlashDependencies,
@@ -275,15 +241,6 @@ export const flashMyLikesParamDef = z.object({
 	...paginationParams,
 	search: z.string().min(1).max(100).nullable().optional(),
 });
-
-type FlashMyLikesParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	search?: string | null;
-};
 
 export async function handleApiFlashMyLikes(
 	deps: ApiFlashDependencies,
@@ -347,15 +304,6 @@ export const flashSearchParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(5),
 });
 
-type FlashSearchParams = {
-	query: string;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	limit: number;
-};
-
 export async function handleApiFlashSearch(
 	deps: ApiFlashDependencies,
 	me: MiUser | null,
@@ -379,10 +327,6 @@ export const flashShowParamDef = z.object({
 	flashId: misskeyId(),
 });
 
-type FlashShowParams = {
-	flashId: string;
-};
-
 export async function handleApiFlashShow(
 	deps: ApiFlashDependencies,
 	me: MiUser | null,
@@ -402,15 +346,6 @@ export const usersFlashsParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
-
-type UsersFlashsParams = {
-	userId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiUsersFlashs(
 	deps: ApiFlashDependencies,

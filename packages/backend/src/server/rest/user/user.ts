@@ -936,8 +936,6 @@ export const usersRelationParamDef = z.object({
 	userId: z.union([misskeyId(), z.array(misskeyId())]),
 });
 
-type UsersRelationParams = { userId: string | string[] };
-
 export type ApiUsersRelationDependencies = {
 	db: MiDrizzleDatabase;
 };
@@ -1131,14 +1129,6 @@ export const usersSearchParamDef = z.object({
 	detail: z.boolean().default(true),
 });
 
-type UsersSearchParams = {
-	query: string;
-	offset: number;
-	limit: number;
-	origin: 'local' | 'remote' | 'combined';
-	detail: boolean;
-};
-
 export async function handleApiUsersSearch(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
@@ -1247,13 +1237,6 @@ export const usersSearchByUsernameAndHostParamDef = z.union([
 	z.object({ host: z.string().nullable(), ...usersSearchByUsernameAndHostCommon }),
 ]);
 
-type UsersSearchByUsernameAndHostParams = {
-	username?: string | null;
-	host?: string | null;
-	limit: number;
-	detail: boolean;
-};
-
 export async function handleApiUsersSearchByUsernameAndHost(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
@@ -1287,11 +1270,6 @@ export const usersRecommendationParamDef = z.object({
 	offset: z.int().default(0),
 });
 
-type UsersRecommendationParams = {
-	limit: number;
-	offset: number;
-};
-
 export async function handleApiUsersRecommendation(
 	deps: UserPackingDependencies,
 	me: MiUser,
@@ -1311,11 +1289,6 @@ export const usersGetFrequentlyRepliedUsersParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.int().min(1).max(100).default(10),
 });
-
-type UsersGetFrequentlyRepliedUsersParams = {
-	userId: string;
-	limit: number;
-};
 
 function usersGetFrequentlyRepliedUsersNoSuchUserError(): ApiError {
 	return new ApiError({
@@ -1366,15 +1339,6 @@ export const usersParamDef = z.object({
 	hostname: z.string().nullable().default(null),
 });
 
-type UsersParams = {
-	limit: number;
-	offset: number;
-	sort?: '+follower' | '-follower' | '+createdAt' | '-createdAt' | '+updatedAt' | '-updatedAt';
-	state: 'all' | 'alive';
-	origin: 'combined' | 'local' | 'remote';
-	hostname: string | null;
-};
-
 export async function handleApiUsers(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
@@ -1402,11 +1366,6 @@ export const usersUpdateMemoParamDef = z.object({
 	userId: misskeyId(),
 	memo: z.string().nullable(),
 });
-
-type UsersUpdateMemoParams = {
-	userId: string;
-	memo: string | null;
-};
 
 function usersUpdateMemoNoSuchUserError(): ApiError {
 	return new ApiError({

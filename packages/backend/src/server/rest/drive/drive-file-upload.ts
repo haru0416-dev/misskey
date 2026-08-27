@@ -53,6 +53,7 @@ import type Logger from '@/logger.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { ApiError, invalidParamError } from '../error.js';
+import { castMultipartFields } from '../string-params.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
 import { packDriveFileOrFailForApi, type ApiDriveFileDependencies } from './drive-file.js';
 import {
@@ -144,25 +145,6 @@ export async function readApiMultipartRequest(c: Context, config: Pick<Config, '
 		cleanup: () => fs.unlink(path, () => {}),
 		fields,
 	};
-}
-
-function castApiMultipartFields(
-	paramDef: { properties?: Record<string, { type?: string }> },
-	fields: Record<string, unknown>,
-): void {
-	const properties = paramDef.properties;
-	if (properties == null) return;
-
-	for (const key of Object.keys(properties)) {
-		const type = properties[key]?.type;
-		if (type != null && ['boolean', 'number', 'integer'].includes(type) && typeof fields[key] === 'string') {
-			try {
-				fields[key] = JSON.parse(fields[key] as string);
-			} catch {
-				throw invalidParamError({ param: key, reason: `cannot cast to ${type}` });
-			}
-		}
-	}
 }
 
 function isMediaSilencedHostForApi(silencedHosts: string[] | undefined, host: string | null): boolean {
@@ -797,24 +779,6 @@ export const driveFilesCreateParamDef = z.object({
 	force: z.boolean().optional().default(false),
 });
 
-// multipart フォームは全フィールドを文字列で送るため、castApiMultipartFields で
-// boolean/number/integer 型のフィールドのみ JSON.parse して型を戻す。driveFilesCreateParamDef の
-// 対象プロパティのうち boolean 型なのは isSensitive/force のみ (他は string 系)。
-const driveFilesCreateMultipartCastFields = {
-	properties: {
-		isSensitive: { type: 'boolean' },
-		force: { type: 'boolean' },
-	},
-} as const;
-
-type DriveFilesCreateParams = {
-	folderId: string | null;
-	name: string | null;
-	comment: string | null;
-	isSensitive: boolean;
-	force: boolean;
-};
-
 export async function handleApiDriveFilesCreate(
 	deps: ApiDriveFileUploadDependencies,
 	me: MiLocalUser,
@@ -823,7 +787,8 @@ export async function handleApiDriveFilesCreate(
 	ip: string | null,
 	headers: Record<string, string> | null,
 ): Promise<Packed<'DriveFile'>> {
-	castApiMultipartFields(driveFilesCreateMultipartCastFields, body);
+	// multipart は全フィールドを文字列で送るため、宣言された型へ戻してから検証する。
+	castMultipartFields(driveFilesCreateParamDef, body);
 	const params = parseApiParams(driveFilesCreateParamDef, body);
 
 	let name = params.name ?? file.name ?? null;
@@ -899,15 +864,6 @@ export const driveFilesUploadFromUrlParamDef = z.object({
 	marker: z.string().nullable().optional().default(null),
 	force: z.boolean().optional().default(false),
 });
-
-type DriveFilesUploadFromUrlParams = {
-	url: string;
-	folderId: string | null;
-	isSensitive: boolean;
-	comment: string | null;
-	marker: string | null;
-	force: boolean;
-};
 
 export async function uploadDriveFileFromUrlForApi(
 	deps: ApiDriveFileUploadDependencies,

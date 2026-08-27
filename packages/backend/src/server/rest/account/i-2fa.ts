@@ -68,11 +68,6 @@ export const i2faRegisterParamDef = z.object({
 	token: z.string().nullable().optional(),
 });
 
-type I2faRegisterParams = {
-	password: string;
-	token?: string | null;
-};
-
 export async function handleApiI2faRegister(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
@@ -112,10 +107,6 @@ export const i2faDoneParamDef = z.object({
 	token: z.string(),
 });
 
-type I2faDoneParams = {
-	token: string;
-};
-
 export async function handleApiI2faDone(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
@@ -151,11 +142,6 @@ export const i2faRegisterKeyParamDef = z.object({
 	password: z.string(),
 	token: z.string().nullable().optional(),
 });
-
-type I2faRegisterKeyParams = {
-	password: string;
-	token?: string | null;
-};
 
 function userNotFoundError(): ApiError {
 	return new ApiError({
@@ -194,13 +180,6 @@ export const i2faKeyDoneParamDef = z.object({
 	name: z.string().min(1).max(30),
 	credential: z.record(z.string(), z.unknown()),
 });
-
-type I2faKeyDoneParams = {
-	password: string;
-	token?: string | null;
-	name: string;
-	credential: Record<string, unknown>;
-};
 
 export async function handleApiI2faKeyDone(
 	deps: ApiI2faDependencies,
@@ -245,11 +224,6 @@ export const i2faUpdateKeyParamDef = z.object({
 	credentialId: z.string(),
 });
 
-type I2faUpdateKeyParams = {
-	name: string;
-	credentialId: string;
-};
-
 export async function handleApiI2faUpdateKey(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
@@ -288,12 +262,6 @@ export const i2faRemoveKeyParamDef = z.object({
 	credentialId: z.string(),
 });
 
-type I2faRemoveKeyParams = {
-	password: string;
-	token?: string | null;
-	credentialId: string;
-};
-
 export async function handleApiI2faRemoveKey(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
@@ -324,11 +292,6 @@ export const i2faUnregisterParamDef = z.object({
 	token: z.string().nullable().optional(),
 });
 
-type I2faUnregisterParams = {
-	password: string;
-	token?: string | null;
-};
-
 export async function handleApiI2faUnregister(
 	deps: ApiI2faDependencies,
 	me: MiLocalUser,
@@ -353,10 +316,6 @@ export async function handleApiI2faUnregister(
 export const i2faPasswordLessParamDef = z.object({
 	value: z.boolean(),
 });
-
-type I2faPasswordLessParams = {
-	value: boolean;
-};
 
 export async function handleApiI2faPasswordLess(
 	deps: ApiI2faDependencies,

@@ -245,19 +245,6 @@ export const pagesCreateParamDef = z.object({
 	hideTitleWhenPinned: z.boolean().optional().default(false),
 });
 
-type PagesCreateParams = {
-	title: string;
-	name: string;
-	summary?: string | null;
-	content: Record<string, unknown>[];
-	variables: Record<string, unknown>[];
-	script: string;
-	eyeCatchingImageId?: string | null;
-	font: 'serif' | 'sans-serif';
-	alignCenter: boolean;
-	hideTitleWhenPinned: boolean;
-};
-
 export async function handleApiPagesCreate(
 	deps: ApiPageDependencies,
 	me: MiLocalUser,
@@ -325,20 +312,6 @@ export const pagesUpdateParamDef = z.object({
 	alignCenter: z.boolean().optional(),
 	hideTitleWhenPinned: z.boolean().optional(),
 });
-
-type PagesUpdateParams = {
-	pageId: string;
-	title?: string;
-	name?: string;
-	summary?: string | null;
-	content?: Record<string, unknown>[];
-	variables?: Record<string, unknown>[];
-	script?: string;
-	eyeCatchingImageId?: string | null;
-	font?: 'serif' | 'sans-serif';
-	alignCenter?: boolean;
-	hideTitleWhenPinned?: boolean;
-};
 
 export async function handleApiPagesUpdate(
 	deps: ApiPageDependencies,
@@ -428,10 +401,6 @@ export const pagesDeleteParamDef = z.object({
 	pageId: misskeyId(),
 });
 
-type PagesDeleteParams = {
-	pageId: string;
-};
-
 /** not-found/forbiddenはHTTPエラーに変換せず、そのままステータスとして返す。 */
 export async function deletePageForApi(
 	deps: ApiPageDependencies,
@@ -502,8 +471,6 @@ export const pagesShowParamDef = z.union([
 	z.object({ name: z.string(), username: z.string() }),
 ]);
 
-type PagesShowParams = { pageId: string } | { name: string; username: string };
-
 export async function handleApiPagesShow(
 	deps: ApiPageDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
@@ -552,14 +519,6 @@ export const iPagesParamDef = z.object({
 	...paginationParams,
 });
 
-type IPagesParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
-
 export async function handleApiIPages(
 	deps: ApiPageDependencies,
 	me: MiLocalUser,
@@ -582,14 +541,6 @@ export const iPageLikesParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
-
-type IPageLikesParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiIPageLikes(
 	deps: ApiPageDependencies,
@@ -653,15 +604,6 @@ export const usersPagesParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
-
-type UsersPagesParams = {
-	userId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiUsersPages(
 	deps: ApiPageDependencies,

@@ -86,8 +86,6 @@ export const importBlockingParamDef = z.object({
 	fileId: misskeyId(),
 });
 
-type ImportBlockingParams = { fileId: string };
-
 export async function handleApiIImportBlocking(
 	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
@@ -111,8 +109,6 @@ export const importFollowingParamDef = z.object({
 	fileId: misskeyId(),
 	withReplies: z.boolean().optional(),
 });
-
-type ImportFollowingParams = { fileId: string; withReplies?: boolean };
 
 export async function handleApiIImportFollowing(
 	deps: ApiImportJobDependencies,
@@ -141,8 +137,6 @@ export const importMutingParamDef = z.object({
 	fileId: misskeyId(),
 });
 
-type ImportMutingParams = { fileId: string };
-
 export async function handleApiIImportMuting(
 	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
@@ -166,8 +160,6 @@ export const importUserListsParamDef = z.object({
 	fileId: misskeyId(),
 });
 
-type ImportUserListsParams = { fileId: string };
-
 export async function handleApiIImportUserLists(
 	deps: ApiImportJobDependencies,
 	me: MiLocalUser,
@@ -190,8 +182,6 @@ export async function handleApiIImportUserLists(
 export const importAntennasParamDef = z.object({
 	fileId: misskeyId(),
 });
-
-type ImportAntennasParams = { fileId: string };
 
 function importAntennasNoSuchFileError(): ApiError {
 	return new ApiError({

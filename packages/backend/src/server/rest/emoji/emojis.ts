@@ -164,9 +164,6 @@ export const adminEmojiSetLicenseBulkParamDef = z.object({
 	license: z.string().nullable().optional(),
 });
 
-type EmojiParams = {
-	name: string;
-};
 type AdminEmojiListParams = z.infer<typeof adminEmojiListParamDef>;
 type AdminEmojiListRemoteParams = z.infer<typeof adminEmojiListRemoteParamDef>;
 type AdminEmojiUpdateParams = {

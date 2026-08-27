@@ -257,15 +257,6 @@ export const hashtagsUsersParamDef = z.object({
 	origin: z.enum(['combined', 'local', 'remote']).optional().default('local'),
 });
 
-type HashtagsUsersParams = {
-	tag: string;
-	limit: number;
-	offset: number;
-	sort: UserListSort;
-	state: UserListState;
-	origin: UserListOrigin;
-};
-
 export async function handleApiHashtagsUsers(
 	deps: ApiHashtagDependencies,
 	me: { id: MiUser['id'] } | null | undefined,

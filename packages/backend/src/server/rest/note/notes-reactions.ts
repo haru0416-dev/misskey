@@ -356,11 +356,6 @@ export const reactionsCreateParamDef = z.object({
 	reaction: z.string(),
 });
 
-type ReactionsCreateParams = {
-	noteId: string;
-	reaction: string;
-};
-
 export async function handleApiNotesReactionsCreate(
 	deps: ApiNotesReactionsDependencies,
 	me: MiLocalUser,
@@ -386,10 +381,6 @@ export async function handleApiNotesReactionsCreate(
 export const reactionsDeleteParamDef = z.object({
 	noteId: misskeyId(),
 });
-
-type ReactionsDeleteParams = {
-	noteId: string;
-};
 
 export async function handleApiNotesReactionsDelete(
 	deps: ApiNotesReactionsDependencies,
@@ -423,16 +414,6 @@ export const notesReactionsParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
-
-type NotesReactionsParams = {
-	noteId: string;
-	type?: string | null;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiNotesReactions(
 	deps: ApiNotesReactionsDependencies,
