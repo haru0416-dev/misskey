@@ -313,7 +313,7 @@
       },
       "devDependencies": {
         "@types/node": "26.2.0",
-        "@typescript/lib-webworker": "npm:@types/serviceworker@0.0.74",
+        "@typescript/lib-webworker": "npm:@types/serviceworker@0.0.200",
         "esbuild": "0.28.2",
         "vitest": "4.1.11",
       },
@@ -1478,7 +1478,7 @@
 
     "@types/ws": ["@types/ws@8.18.1", "", { "dependencies": { "@types/node": "26.0.0" } }, "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg=="],
 
-    "@typescript/lib-webworker": ["@types/serviceworker@0.0.74", "", {}, "sha512-HNt7NJHrjGtCmI3h1+rsb1g/ZY0iy5KaeenfEV7zAWPSaCs49hEUvgH++V1BHNwlLfB3sbjPh3pSiNixfYjb1w=="],
+    "@typescript/lib-webworker": ["@types/serviceworker@0.0.200", "", {}, "sha512-g6wCD+XlCDKytamqjiVvYRUJbS0jr/1lZ2PpXSYTU802UyPNlOVl9DN6A9EhRuFRH7s2LATTgheBnMEWJahV8A=="],
 
     "@typescript/typescript-aix-ppc64": ["@typescript/typescript-aix-ppc64@7.0.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ=="],
 

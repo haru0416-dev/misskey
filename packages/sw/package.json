@@ -15,7 +15,7 @@
 		"misskey-js": "workspace:*"
 	},
 	"devDependencies": {
-		"@typescript/lib-webworker": "npm:@types/serviceworker@0.0.74",
+		"@typescript/lib-webworker": "npm:@types/serviceworker@0.0.200",
 		"@types/node": "26.2.0",
 		"esbuild": "0.28.2",
 		"vitest": "4.1.11"
