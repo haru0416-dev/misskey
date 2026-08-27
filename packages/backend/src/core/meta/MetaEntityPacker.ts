@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import JSON5 from 'json5';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import type { Config } from '@/config.js';
 import { DEFAULT_POLICIES } from '@/core/role/role-policies.js';
@@ -22,11 +21,12 @@ export type MetaEntityPackerDependencies = {
 	fetchProxyAccount?: () => Promise<MiLocalUser>;
 };
 
-function parseTheme(theme: string | null): string | null {
+export function parseTheme(theme: string | null): string | null {
 	if (theme == null) return null;
 
 	try {
-		return JSON.stringify(JSON5.parse(theme));
+		// 実行環境は bun 固定 (backend の engines)。Bun の型だけ undefined を許しているので潰す。
+		return JSON.stringify(Bun!.JSON5.parse(theme));
 	} catch {
 		return null;
 	}
