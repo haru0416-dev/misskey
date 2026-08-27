@@ -5,6 +5,8 @@
 
 import type { StoryObj } from '@/stories/types.js';
 import { HttpResponse, http } from 'msw';
+import { expect, userEvent, waitFor, within } from '@/stories/test.js';
+import { i18n } from '@/i18n.js';
 import search_ from './index.vue';
 import { userDetailed } from '@/stories/fakes.js';
 import { commonHandlers } from '@/stories/mocks.js';
@@ -84,5 +86,36 @@ export const WithUserType = {
 	...Default,
 	args: {
 		type: 'user',
+	},
+} satisfies StoryObj<typeof search_>;
+
+const searchByTagRequests: Record<string, unknown>[] = [];
+
+export const WithHashtagType = {
+	...Default,
+	args: {
+		type: 'hashtag',
+	},
+	parameters: {
+		...Default.parameters,
+		msw: {
+			handlers: [
+				...commonHandlers,
+				http.post('/api/notes/search-by-tag', async ({ request }) => {
+					searchByTagRequests.push((await request.json()) as Record<string, unknown>);
+					return HttpResponse.json([]);
+				}),
+			],
+		},
+	},
+	async play({ canvasElement }) {
+		const canvas = within(canvasElement);
+
+		// 先頭の `#` と全角空白を落として AND 条件 1 組に畳むところまでを見る。
+		await userEvent.type(await canvas.findByRole('searchbox'), '#猫\u3000写真');
+		await userEvent.click(canvas.getByRole('button', { name: i18n.ts.search }));
+
+		await waitFor(() => expect(searchByTagRequests.length).toBeGreaterThan(0));
+		expect(searchByTagRequests.at(-1)?.['query']).toEqual([['猫', '写真']]);
 	},
 } satisfies StoryObj<typeof search_>;
