@@ -113,47 +113,6 @@ export const federationStatsParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
 });
 
-const federationIntegerQueryParams = new Set(['limit', 'offset']);
-const federationBooleanQueryParams = new Set([
-	'blocked',
-	'notResponding',
-	'suspended',
-	'silenced',
-	'federating',
-	'subscribing',
-	'publishing',
-]);
-const federationNullableQueryParams = new Set([
-	'host',
-	'blocked',
-	'notResponding',
-	'suspended',
-	'silenced',
-	'federating',
-	'subscribing',
-	'publishing',
-	'sort',
-]);
-
-export function normalizeApiFederationQuery(query: Record<string, string>): Record<string, unknown> {
-	const body: Record<string, unknown> = {};
-
-	for (const [key, value] of Object.entries(query)) {
-		if (federationNullableQueryParams.has(key) && value === 'null') {
-			body[key] = null;
-		} else if (federationIntegerQueryParams.has(key)) {
-			const numeric = Number(value);
-			body[key] = Number.isInteger(numeric) ? numeric : value;
-		} else if (federationBooleanQueryParams.has(key) && (value === 'true' || value === 'false')) {
-			body[key] = value === 'true';
-		} else {
-			body[key] = value;
-		}
-	}
-
-	return body;
-}
-
 type FederatedInstanceDependencies = {
 	db: MiDrizzleDatabase;
 };

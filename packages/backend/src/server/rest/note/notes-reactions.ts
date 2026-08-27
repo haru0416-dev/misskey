@@ -417,21 +417,6 @@ export const reactionsDeleteRateLimit = {
 	minInterval: 3 * SECOND,
 };
 
-const notesReactionsIntegerQueryParams = new Set(['limit', 'sinceDate', 'untilDate']);
-
-export function normalizeApiNotesReactionsQuery(query: Record<string, string>): Record<string, unknown> {
-	const body: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(query)) {
-		if (notesReactionsIntegerQueryParams.has(key)) {
-			const numeric = Number(value);
-			body[key] = Number.isInteger(numeric) ? numeric : value;
-		} else {
-			body[key] = value;
-		}
-	}
-	return body;
-}
-
 export const notesReactionsParamDef = z.object({
 	noteId: misskeyId(),
 	type: z.string().nullable().optional(),
