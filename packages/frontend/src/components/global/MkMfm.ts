@@ -15,6 +15,7 @@ import MkLink from '@/features/link-preview/components/MkLink.vue';
 import MkMention from '@/features/users/components/MkMention.vue';
 import MkEmoji from '@/components/global/MkEmoji.vue';
 import MkCustomEmoji from '@/components/global/MkCustomEmoji.vue';
+import { getHashtagMenu } from '@/features/notes/get-hashtag-menu.js';
 import MkCode from '@/features/code/components/MkCode.vue';
 import MkCodeInline from '@/features/code/components/MkCodeInline.vue';
 import MkGoogle from '@/features/search/components/MkGoogle.vue';
@@ -474,18 +475,19 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 					}
 
 					case 'hashtag': {
+						const hashtag = token.props.hashtag;
 						return [
 							h(
 								MkA,
 								{
 									key: nextKey(),
-									to: isNote
-										? `/tags/${encodeURIComponent(token.props.hashtag)}`
-										: `/user-tags/${encodeURIComponent(token.props.hashtag)}`,
+									to: isNote ? `/tags/${encodeURIComponent(hashtag)}` : `/user-tags/${encodeURIComponent(hashtag)}`,
 									style: 'color:var(--MI_THEME-hashtag);',
+									// ハッシュタグはリンクだが「タグ」としての操作も要るので、既定のリンクメニューを差し替える。
+									contextMenu: () => getHashtagMenu(hashtag),
 									...(props.linkNavigationBehavior === undefined ? {} : { behavior: props.linkNavigationBehavior }),
 								},
-								{ default: () => `#${token.props.hashtag}` },
+								{ default: () => `#${hashtag}` },
 							),
 						];
 					}

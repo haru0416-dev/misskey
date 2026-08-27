@@ -4,7 +4,8 @@
  */
 
 import type { StoryObj } from '@/stories/types.js';
-import { expect, within } from '@/stories/test.js';
+import { expect, waitFor, within } from '@/stories/test.js';
+import { i18n } from '@/i18n.js';
 import MkMfm from './MkMfm.js';
 export const Default = {
 	render(args) {
@@ -73,5 +74,21 @@ export const IsNotNote = {
 	args: {
 		...Default.args,
 		isNote: false,
+	},
+} satisfies StoryObj<typeof MkMfm>;
+
+// ハッシュタグの右クリックはリンク既定のメニューでなく、ミュート導線を持つ専用メニューを出す。
+export const HashtagMenu = {
+	...Default,
+	async play({ canvasElement }) {
+		const canvas = within(canvasElement);
+		const hashtag = canvas.getByText('#Miskist');
+
+		hashtag.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+		// os.contextMenu は MkContextMenu を動的 import してから popup する。
+		const menu = await waitFor(() => canvas.getByRole('menu'));
+		await expect(menu).toHaveTextContent('#Miskist');
+		await expect(menu).toHaveTextContent(i18n.ts.mute);
 	},
 } satisfies StoryObj<typeof MkMfm>;
