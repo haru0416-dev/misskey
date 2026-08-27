@@ -20,18 +20,18 @@ import {
 	type AnnouncementCreateValues,
 } from '@/core/announcement/AnnouncementLogic.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { getModeratorsForHonoApi } from '@/server/rest/admin/admin-users.js';
-import { packAnnouncementForHonoApi } from '@/server/rest/admin/admin-announcements.js';
-import type { HonoApiInternalEventPublisher, HonoApiMainStreamPublisher } from '../../server/rest/events.js';
+import { getModeratorsForApi } from '@/server/rest/admin/admin-users.js';
+import { packAnnouncementForApi } from '@/server/rest/admin/admin-announcements.js';
+import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../../server/rest/events.js';
 
-export type HonoQueueCheckModeratorsActivityDependencies = {
+export type QueueCheckModeratorsActivityDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
 	emailService: Pick<EmailService, 'sendEmail'>;
 	systemWebhookDeliverQueue: SystemWebhookDeliverQueue;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
-	publishMainStream?: HonoApiMainStreamPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
+	publishMainStream?: ApiMainStreamPublisher;
 };
 
 // モデレーターが不在と判断する日付の閾値
@@ -93,13 +93,13 @@ function generateInvitationOnlyChangedMail() {
 	return { subject, html: message.join('<br>'), text: message.join('\n') };
 }
 
-async function fetchModeratorsForCheck(deps: HonoQueueCheckModeratorsActivityDependencies): Promise<MiUser[]> {
+async function fetchModeratorsForCheck(deps: QueueCheckModeratorsActivityDependencies): Promise<MiUser[]> {
 	// TODO: モデレーター以外にも特別な権限を持つユーザーがいる場合は考慮する
-	return getModeratorsForHonoApi(deps, { includeAdmins: true, includeRoot: true, excludeExpire: true });
+	return getModeratorsForApi(deps, { includeAdmins: true, includeRoot: true, excludeExpire: true });
 }
 
 async function evaluateModeratorsInactiveDays(
-	deps: HonoQueueCheckModeratorsActivityDependencies,
+	deps: QueueCheckModeratorsActivityDependencies,
 ): Promise<ModeratorInactivityEvaluationResult> {
 	const today = new Date();
 	const inactivePeriod = new Date(today);
@@ -127,14 +127,14 @@ async function evaluateModeratorsInactiveDays(
 	};
 }
 
-async function changeToInvitationOnly(deps: HonoQueueCheckModeratorsActivityDependencies): Promise<void> {
+async function changeToInvitationOnly(deps: QueueCheckModeratorsActivityDependencies): Promise<void> {
 	const { before, after } = await updateMetaInDatabase(deps.db, { disableRegistration: true });
 	Object.assign(deps.meta, after);
 	deps.publishInternalEvent?.('metaUpdated', { ...(before === undefined ? {} : { before }), after });
 }
 
 async function enqueueCheckModeratorsActivitySystemWebhook<T extends SystemWebhookEventType>(
-	deps: HonoQueueCheckModeratorsActivityDependencies,
+	deps: QueueCheckModeratorsActivityDependencies,
 	type: T,
 	content: SystemWebhookPayload<T>,
 ): Promise<void> {
@@ -147,7 +147,7 @@ async function enqueueCheckModeratorsActivitySystemWebhook<T extends SystemWebho
 }
 
 async function notifyInactiveModeratorsWarning(
-	deps: HonoQueueCheckModeratorsActivityDependencies,
+	deps: QueueCheckModeratorsActivityDependencies,
 	remainingTime: ModeratorInactivityRemainingTime,
 ): Promise<void> {
 	const moderators = await fetchModeratorsForCheck(deps);
@@ -167,7 +167,7 @@ async function notifyInactiveModeratorsWarning(
 	await enqueueCheckModeratorsActivitySystemWebhook(deps, 'inactiveModeratorsWarning', { remainingTime });
 }
 
-async function notifyChangeToInvitationOnly(deps: HonoQueueCheckModeratorsActivityDependencies): Promise<void> {
+async function notifyChangeToInvitationOnly(deps: QueueCheckModeratorsActivityDependencies): Promise<void> {
 	const moderators = await fetchModeratorsForCheck(deps);
 	const moderatorProfiles = await listUserProfilesByUserIdsFromDatabase(
 		deps.db,
@@ -180,7 +180,7 @@ async function notifyChangeToInvitationOnly(deps: HonoQueueCheckModeratorsActivi
 			{
 				db: deps.db,
 				genId,
-				packAnnouncement: (announcement) => Promise.resolve(packAnnouncementForHonoApi(deps.config, announcement)),
+				packAnnouncement: (announcement) => Promise.resolve(packAnnouncementForApi(deps.config, announcement)),
 				publishMainStream: (userId, type, value) => deps.publishMainStream?.(userId, type, value),
 			},
 			{
@@ -206,8 +206,8 @@ async function notifyChangeToInvitationOnly(deps: HonoQueueCheckModeratorsActivi
 	await enqueueCheckModeratorsActivitySystemWebhook(deps, 'inactiveModeratorsInvitationOnlyChanged', {});
 }
 
-export async function handleHonoQueueCheckModeratorsActivity(
-	deps: HonoQueueCheckModeratorsActivityDependencies,
+export async function handleQueueCheckModeratorsActivity(
+	deps: QueueCheckModeratorsActivityDependencies,
 ): Promise<void> {
 	if (deps.meta.disableRegistration) return;
 

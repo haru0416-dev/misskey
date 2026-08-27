@@ -12,10 +12,10 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiPromoDependencies = {
+export type ApiPromoDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
@@ -38,8 +38,8 @@ type AdminPromoCreateParams = {
 	expiresAt: number;
 };
 
-function noSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function noSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -47,8 +47,8 @@ function noSuchNoteError(): HonoApiError {
 	});
 }
 
-function adminPromoNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function adminPromoNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -56,8 +56,8 @@ function adminPromoNoSuchNoteError(): HonoApiError {
 	});
 }
 
-function alreadyPromotedError(): HonoApiError {
-	return new HonoApiError({
+function alreadyPromotedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'The note has already promoted.',
 		code: 'ALREADY_PROMOTED',
@@ -65,12 +65,12 @@ function alreadyPromotedError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiPromoRead(
-	deps: HonoApiPromoDependencies,
+export async function handleApiPromoRead(
+	deps: ApiPromoDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(promoReadParamDef, body);
+	const params = parseApiParams(promoReadParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 
 	if (note == null) {
@@ -88,11 +88,11 @@ export async function handleHonoApiPromoRead(
 	});
 }
 
-export async function handleHonoApiAdminPromoCreate(
-	deps: HonoApiPromoDependencies,
+export async function handleApiAdminPromoCreate(
+	deps: ApiPromoDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminPromoCreateParamDef, body);
+	const params = parseApiParams(adminPromoCreateParamDef, body);
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 
 	if (note == null) {

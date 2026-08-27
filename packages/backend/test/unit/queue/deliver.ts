@@ -16,7 +16,7 @@ import { createInstanceInDatabase, fetchInstanceByHostFromDatabase } from '@/cor
 import { fetchOrCreateSystemAccountInDatabase } from '@/core/system-account/SystemAccountLogic.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { StatusError } from '@/misc/status-error.js';
-import { handleHonoQueueDeliver, type HonoQueueDeliverDependencies } from '@/queue/handlers/deliver.js';
+import { handleQueueDeliver, type QueueDeliverDependencies } from '@/queue/handlers/deliver.js';
 import type { DeliverJobData } from '@/queue/types.js';
 import type { MiLocalUser } from '@/models/User.js';
 
@@ -29,7 +29,7 @@ describe('hono-queue-deliver', () => {
 	let actor: MiLocalUser;
 	// meta.federationはデフォルト'none'(連合オフ)なので、素通りさせたいテストは
 	// 'all'に上書きする。
-	let federatedDeps: HonoQueueDeliverDependencies;
+	let federatedDeps: QueueDeliverDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -63,7 +63,7 @@ describe('hono-queue-deliver', () => {
 			suspensionState: 'manuallySuspended',
 		});
 
-		const result = await handleHonoQueueDeliver(
+		const result = await handleQueueDeliver(
 			federatedDeps,
 			fakeJob({
 				user: { id: actor.id },
@@ -80,7 +80,7 @@ describe('hono-queue-deliver', () => {
 	test("meta.federationが'none'の場合はskip (blocked)を返す", async () => {
 		const host = `honoqueuedeliver-blocked-${genId()}.example.com`;
 
-		const result = await handleHonoQueueDeliver(
+		const result = await handleQueueDeliver(
 			runtime,
 			fakeJob({
 				user: { id: actor.id },
@@ -97,7 +97,7 @@ describe('hono-queue-deliver', () => {
 	test('meta.blockedHostsに含まれるホスト宛はskip (blocked)を返す', async () => {
 		const host = `honoqueuedeliver-blocked-${genId()}.example.com`;
 
-		const result = await handleHonoQueueDeliver(
+		const result = await handleQueueDeliver(
 			{ ...federatedDeps, meta: { ...federatedDeps.meta, blockedHosts: [...federatedDeps.meta.blockedHosts, host] } },
 			fakeJob({
 				user: { id: actor.id },
@@ -115,12 +115,12 @@ describe('hono-queue-deliver', () => {
 		const host = `honoqueuedeliver-ok-${genId()}.example.com`;
 		const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
 
-		const deps: HonoQueueDeliverDependencies = {
+		const deps: QueueDeliverDependencies = {
 			...federatedDeps,
 			httpRequestService: { ...federatedDeps.httpRequestService, send },
 		};
 
-		const result = await handleHonoQueueDeliver(
+		const result = await handleQueueDeliver(
 			deps,
 			fakeJob({
 				user: { id: actor.id },
@@ -139,13 +139,13 @@ describe('hono-queue-deliver', () => {
 		const host = `honoqueuedeliver-ng-${genId()}.example.com`;
 		const send = vi.fn().mockRejectedValue(new StatusError('Not Found', 404, 'Not Found'));
 
-		const deps: HonoQueueDeliverDependencies = {
+		const deps: QueueDeliverDependencies = {
 			...federatedDeps,
 			httpRequestService: { ...federatedDeps.httpRequestService, send },
 		};
 
 		await expect(
-			handleHonoQueueDeliver(
+			handleQueueDeliver(
 				deps,
 				fakeJob({
 					user: { id: actor.id },

@@ -17,7 +17,7 @@ import { endpointMetas } from '@/server/api/endpoint-metas.js';
  */
 
 const GUARD_CALL =
-	/\b(assertCredential|assertSecureCredential|assertTokenPermission|assertProhibitMoved|hasHonoApiRolePolicyOrIsRoot|assertHonoApiAdmin|isHonoApiAdministrator|assertHonoApiModerator|assertHonoApiRateLimitForUser)\b/g;
+	/\b(assertCredential|assertSecureCredential|assertTokenPermission|assertProhibitMoved|hasApiRolePolicyOrIsRoot|assertApiAdmin|isApiAdministrator|assertApiModerator|assertApiRateLimitForUser)\b/g;
 
 const routesDir = join(dirname(fileURLToPath(import.meta.url)), '../../../../src/server/rest/routes');
 
@@ -113,16 +113,16 @@ function expectedGuards(meta: GuardMeta): { label: string; accepts: string[] }[]
 	if (meta.kind != null && meta.kind !== 'server') expected.push({ label: 'kind', accepts: ['assertTokenPermission'] });
 	if (meta.prohibitMoved === true) expected.push({ label: 'prohibitMoved', accepts: ['assertProhibitMoved'] });
 	if (meta.requireRolePolicy != null) {
-		expected.push({ label: 'requireRolePolicy', accepts: ['hasHonoApiRolePolicyOrIsRoot'] });
+		expected.push({ label: 'requireRolePolicy', accepts: ['hasApiRolePolicyOrIsRoot'] });
 	}
 	if (meta.requireAdmin === true) {
-		expected.push({ label: 'requireAdmin', accepts: ['assertHonoApiAdmin', 'isHonoApiAdministrator'] });
+		expected.push({ label: 'requireAdmin', accepts: ['assertApiAdmin', 'isApiAdministrator'] });
 	} else if (meta.requireModerator === true) {
-		expected.push({ label: 'requireModerator', accepts: ['assertHonoApiModerator', 'isHonoApiModerator'] });
+		expected.push({ label: 'requireModerator', accepts: ['assertApiModerator', 'isApiModerator'] });
 	}
 	// 未認証でも通るエンドポイントの制限は IP 単位で、meta からは適用されない。
 	if (meta.limit != null && requiresCredential(meta)) {
-		expected.push({ label: 'limit', accepts: ['assertHonoApiRateLimitForUser', 'assertHonoApiRateLimit'] });
+		expected.push({ label: 'limit', accepts: ['assertApiRateLimitForUser', 'assertApiRateLimit'] });
 	}
 
 	return expected;

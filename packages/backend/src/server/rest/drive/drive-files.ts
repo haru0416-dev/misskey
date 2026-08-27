@@ -31,38 +31,30 @@ import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import {
-	checkChatAvailabilityForHonoApi,
-	packChatMessagesDetailedForHonoApi,
-	type HonoApiChatDependencies,
-} from '../chat/chat.js';
-import {
-	packDriveFileManyForHonoApi,
-	packDriveFileOrFailForHonoApi,
-	type HonoApiDriveFileDependencies,
-} from './drive-file.js';
-import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from '../note/note.js';
-import { getHonoApiRolePolicies, isHonoApiModerator, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import type { HonoChartWriters } from '@/server/chart-runtime.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { checkChatAvailabilityForApi, packChatMessagesDetailedForApi, type ApiChatDependencies } from '../chat/chat.js';
+import { packDriveFileManyForApi, packDriveFileOrFailForApi, type ApiDriveFileDependencies } from './drive-file.js';
+import { packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
+import { getApiRolePolicies, isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import type { ChartWriters } from '@/server/chart-runtime.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiDriveFilesDependencies = HonoApiNoteDependencies &
-	HonoApiDriveFileDependencies &
-	HonoApiRolePolicyDependencies &
-	HonoApiChatDependencies & {
+export type ApiDriveFilesDependencies = ApiNoteDependencies &
+	ApiDriveFileDependencies &
+	ApiRolePolicyDependencies &
+	ApiChatDependencies & {
 		objectStorageQueue: ObjectStorageQueue;
 		dbQueue: DbQueue;
 		internalStorageService: Pick<InternalStorageService, 'del'>;
-		chartWriters: HonoChartWriters;
+		chartWriters: ChartWriters;
 	};
 
-function noSuchFileError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such file.', code: 'NO_SUCH_FILE', id });
+function noSuchFileError(id: string): ApiError {
+	return new ApiError({ status: 400, message: 'No such file.', code: 'NO_SUCH_FILE', id });
 }
 
-function accessDeniedError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id });
+function accessDeniedError(id: string): ApiError {
+	return new ApiError({ status: 400, message: 'Access denied.', code: 'ACCESS_DENIED', id });
 }
 
 export const driveFilesParamDef = z.object({
@@ -91,12 +83,12 @@ type DriveFilesParams = {
 	sort?: '+createdAt' | '-createdAt' | '+name' | '-name' | '+size' | '-size' | null;
 };
 
-export async function handleHonoApiDriveFilesList(
-	deps: HonoApiDriveFilesDependencies,
+export async function handleApiDriveFilesList(
+	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseHonoApiParams(driveFilesParamDef, body);
+	const params = parseApiParams(driveFilesParamDef, body);
 
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
@@ -119,7 +111,7 @@ export async function handleHonoApiDriveFilesList(
 		}),
 	);
 
-	return await packDriveFileManyForHonoApi(deps, files, { detail: false, self: true });
+	return await packDriveFileManyForApi(deps, files, { detail: false, self: true });
 }
 
 export const driveStreamParamDef = z.object({
@@ -143,12 +135,12 @@ type DriveStreamParams = {
 	type?: string;
 };
 
-export async function handleHonoApiDriveStream(
-	deps: HonoApiDriveFilesDependencies,
+export async function handleApiDriveStream(
+	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseHonoApiParams(driveStreamParamDef, body);
+	const params = parseApiParams(driveStreamParamDef, body);
 
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
@@ -169,19 +161,19 @@ export async function handleHonoApiDriveStream(
 		}),
 	);
 
-	return await packDriveFileManyForHonoApi(deps, files, { detail: false, self: true });
+	return await packDriveFileManyForApi(deps, files, { detail: false, self: true });
 }
 
 export const driveFilesShowParamDef = z.union([z.object({ fileId: misskeyId() }), z.object({ url: z.string() })]);
 
 type DriveFilesShowParams = { fileId: string } | { url: string };
 
-export async function handleHonoApiDriveFilesShow(
-	deps: HonoApiDriveFilesDependencies,
+export async function handleApiDriveFilesShow(
+	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>> {
-	const params = parseHonoApiParams(driveFilesShowParamDef, body);
+	const params = parseApiParams(driveFilesShowParamDef, body);
 
 	const file =
 		'fileId' in params
@@ -190,11 +182,11 @@ export async function handleHonoApiDriveFilesShow(
 
 	if (file == null) throw noSuchFileError('067bc436-2718-4795-b0fb-ecbe43949e31');
 
-	if (!(await isHonoApiModerator(deps, me)) && file.userId !== me.id) {
+	if (!(await isApiModerator(deps, me)) && file.userId !== me.id) {
 		throw accessDeniedError('25b73c73-68b1-41d0-bad1-381cfdf6579f');
 	}
 
-	return await packDriveFileOrFailForHonoApi(deps, file, { detail: true, withUser: true, self: true });
+	return await packDriveFileOrFailForApi(deps, file, { detail: true, withUser: true, self: true });
 }
 
 export const driveFilesFindParamDef = z.object({
@@ -207,12 +199,12 @@ type DriveFilesFindParams = {
 	folderId?: string | null;
 };
 
-export async function handleHonoApiDriveFilesFind(
-	deps: HonoApiDriveFilesDependencies,
+export async function handleApiDriveFilesFind(
+	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseHonoApiParams(driveFilesFindParamDef, body);
+	const params = parseApiParams(driveFilesFindParamDef, body);
 
 	const files = await listDriveFilesByNameUserIdAndFolderIdFromDatabase(deps.db, {
 		name: params.name,
@@ -220,7 +212,7 @@ export async function handleHonoApiDriveFilesFind(
 		folderId: params.folderId ?? null,
 	});
 
-	return await packDriveFileManyForHonoApi(deps, files, { self: true });
+	return await packDriveFileManyForApi(deps, files, { self: true });
 }
 
 export const driveFilesFindByHashParamDef = z.object({
@@ -231,16 +223,16 @@ type DriveFilesFindByHashParams = {
 	md5: string;
 };
 
-export async function handleHonoApiDriveFilesFindByHash(
-	deps: HonoApiDriveFilesDependencies,
+export async function handleApiDriveFilesFindByHash(
+	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseHonoApiParams(driveFilesFindByHashParamDef, body);
+	const params = parseApiParams(driveFilesFindByHashParamDef, body);
 
 	const files = await listDriveFilesByMd5AndUserIdFromDatabase(deps.db, params.md5, me.id);
 
-	return await packDriveFileManyForHonoApi(deps, files, { self: true });
+	return await packDriveFileManyForApi(deps, files, { self: true });
 }
 
 export const driveFilesAttachedNotesParamDef = z.object({
@@ -261,14 +253,14 @@ type DriveFilesAttachedNotesParams = {
 	fileId: string;
 };
 
-export async function handleHonoApiDriveFilesAttachedNotes(
-	deps: HonoApiDriveFilesDependencies,
+export async function handleApiDriveFilesAttachedNotes(
+	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(driveFilesAttachedNotesParamDef, body);
+	const params = parseApiParams(driveFilesAttachedNotesParamDef, body);
 
-	const isModerator = await isHonoApiModerator(deps, me);
+	const isModerator = await isApiModerator(deps, me);
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 
 	if (file == null || (!isModerator && file.userId !== me.id)) {
@@ -289,10 +281,10 @@ export async function handleHonoApiDriveFilesAttachedNotes(
 		untilId,
 	});
 
-	return await packNoteManyForHonoApi(deps, notes, me, { detail: true });
+	return await packNoteManyForApi(deps, notes, me, { detail: true });
 }
 
-export function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDependencies): DriveFileDeletionDependencies {
+export function buildDriveFileDeletionDependencies(deps: ApiDriveFilesDependencies): DriveFileDeletionDependencies {
 	return {
 		db: deps.db,
 		config: deps.config,
@@ -314,7 +306,7 @@ export function buildDriveFileDeletionDependencies(deps: HonoApiDriveFilesDepend
 		updatePerUserDriveChart: (file, isAdditional) => deps.chartWriters.perUserDriveChart.update(file, isAdditional),
 		updateInstanceDriveChart: (file, isAdditional) => deps.chartWriters.instanceChart.updateDrive(file, isAdditional),
 		publishDriveStream: (userId, type, value) => deps.publishDriveStream?.(userId, type, value),
-		isModerator: (user) => isHonoApiModerator(deps, user),
+		isModerator: (user) => isApiModerator(deps, user),
 		logDriveFileDeletion: (db, deleter, logId, info) =>
 			logModerationEventWithIdInDatabase({ db }, deleter, 'deleteDriveFile', info, logId),
 	};
@@ -328,17 +320,17 @@ type DriveFilesDeleteParams = {
 	fileId: string;
 };
 
-export async function handleHonoApiDriveFilesDelete(
-	deps: HonoApiDriveFilesDependencies,
+export async function handleApiDriveFilesDelete(
+	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(driveFilesDeleteParamDef, body);
+	const params = parseApiParams(driveFilesDeleteParamDef, body);
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 	if (file == null) throw noSuchFileError('908939ec-e52b-4458-b395-1025195cea58');
 
-	if (!(await isHonoApiModerator(deps, me)) && file.userId !== me.id) {
+	if (!(await isApiModerator(deps, me)) && file.userId !== me.id) {
 		throw accessDeniedError('5eb8d909-2540-4970-90b8-dd6f86088121');
 	}
 
@@ -361,31 +353,31 @@ type DriveFilesUpdateParams = {
 	comment?: string | null;
 };
 
-export function validateHonoApiDriveFileName(name: string): boolean {
+export function validateApiDriveFileName(name: string): boolean {
 	return (
 		name.trim().length > 0 && name.length <= 200 && !name.includes('\\') && !name.includes('/') && !name.includes('..')
 	);
 }
 
-export async function handleHonoApiDriveFilesUpdate(
-	deps: HonoApiDriveFilesDependencies,
+export async function handleApiDriveFilesUpdate(
+	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>> {
-	const params = parseHonoApiParams(driveFilesUpdateParamDef, body);
+	const params = parseApiParams(driveFilesUpdateParamDef, body);
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
 	if (file == null) throw noSuchFileError('e7778c7e-3af9-49cd-9690-6dbc3e6c972d');
 
-	if (!(await isHonoApiModerator(deps, me)) && file.userId !== me.id) {
+	if (!(await isApiModerator(deps, me)) && file.userId !== me.id) {
 		throw accessDeniedError('01a53b27-82fc-445b-a0c1-b558465a8ed2');
 	}
 
 	const owner = file.userId != null ? await fetchUserByIdOrFailFromDatabase(deps.db, file.userId) : null;
-	const policies = await getHonoApiRolePolicies(deps, owner);
+	const policies = await getApiRolePolicies(deps, owner);
 
-	if (params.name != null && !validateHonoApiDriveFileName(params.name)) {
-		throw new HonoApiError({
+	if (params.name != null && !validateApiDriveFileName(params.name)) {
+		throw new ApiError({
 			status: 400,
 			message: 'Invalid file name.',
 			code: 'INVALID_FILE_NAME',
@@ -399,7 +391,7 @@ export async function handleHonoApiDriveFilesUpdate(
 		policies.alwaysMarkNsfw &&
 		!params.isSensitive
 	) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'This feature is restricted by your role.',
 			code: 'RESTRICTED_BY_ROLE',
@@ -410,7 +402,7 @@ export async function handleHonoApiDriveFilesUpdate(
 	if (params.folderId != null) {
 		const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, file.userId);
 		if (folder == null) {
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'No such folder.',
 				code: 'NO_SUCH_FOLDER',
@@ -427,13 +419,13 @@ export async function handleHonoApiDriveFilesUpdate(
 	});
 	await updateDriveFileInDatabase(deps.db, file.id, values);
 
-	const packed = await packDriveFileOrFailForHonoApi(deps, file.id, { self: true });
+	const packed = await packDriveFileOrFailForApi(deps, file.id, { self: true });
 
 	if (file.userId) {
 		deps.publishDriveStream?.(file.userId, 'fileUpdated', packed);
 	}
 
-	if ((await isHonoApiModerator(deps, me)) && file.userId !== me.id) {
+	if ((await isApiModerator(deps, me)) && file.userId !== me.id) {
 		if (params.isSensitive !== undefined && params.isSensitive !== file.isSensitive) {
 			await logModerationEventInDatabase(
 				deps,
@@ -462,18 +454,18 @@ type DriveFilesMoveBulkParams = {
 	folderId?: string | null;
 };
 
-export async function handleHonoApiDriveFilesMoveBulk(
-	deps: HonoApiDriveFilesDependencies,
+export async function handleApiDriveFilesMoveBulk(
+	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(driveFilesMoveBulkParamDef, body);
+	const params = parseApiParams(driveFilesMoveBulkParamDef, body);
 
 	const folder = params.folderId
 		? await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id)
 		: null;
 	if (params.folderId && folder == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'No such folder.',
 			code: 'NO_SUCH_FOLDER',
@@ -502,17 +494,17 @@ type DriveFilesAttachedChatMessagesParams = {
 	fileId: string;
 };
 
-export async function handleHonoApiDriveFilesAttachedChatMessages(
-	deps: HonoApiDriveFilesDependencies,
+export async function handleApiDriveFilesAttachedChatMessages(
+	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessage'>[]> {
-	const params = parseHonoApiParams(driveFilesAttachedChatMessagesParamDef, body);
+	const params = parseApiParams(driveFilesAttachedChatMessagesParamDef, body);
 
-	const isModerator = await isHonoApiModerator(deps, me);
+	const isModerator = await isApiModerator(deps, me);
 
 	if (!isModerator) {
-		await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+		await checkChatAvailabilityForApi(deps, me.id, 'read');
 	}
 
 	const file = await fetchDriveFileByIdFromDatabase(deps.db, params.fileId);
@@ -526,5 +518,5 @@ export async function handleHonoApiDriveFilesAttachedChatMessages(
 		...resolveChatMessagePagination({ gen: (time) => genId(time) }, params),
 	});
 
-	return await packChatMessagesDetailedForHonoApi(deps, messages, me);
+	return await packChatMessagesDetailedForApi(deps, messages, me);
 }

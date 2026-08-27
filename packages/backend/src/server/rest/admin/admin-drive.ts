@@ -26,19 +26,19 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
-import { packDriveFoldersManyForHonoApi } from '../drive/drive.js';
-import { packUserLiteManyForHonoApi } from '../user/user.js';
-import type { HonoApiDriveStreamPublisher } from '../events.js';
-import type { HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { isHonoApiModerator } from '../role/role-policy.js';
-import { HonoApiError } from '../error.js';
-import { parseHonoApiParams } from '../validation.js';
+import { packDriveFoldersManyForApi } from '../drive/drive.js';
+import { packUserLiteManyForApi } from '../user/user.js';
+import type { ApiDriveStreamPublisher } from '../events.js';
+import type { ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { isApiModerator } from '../role/role-policy.js';
+import { ApiError } from '../error.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminDriveDependencies = HonoApiRolePolicyDependencies & {
+export type ApiAdminDriveDependencies = ApiRolePolicyDependencies & {
 	internalStorageService: Pick<InternalStorageService, 'del'>;
 	objectStorageQueue: ObjectStorageQueue;
 	dbQueue: import('@/core/queue/queues.js').DbQueue;
-	publishDriveStream?: HonoApiDriveStreamPublisher;
+	publishDriveStream?: ApiDriveStreamPublisher;
 };
 
 const adminDriveNoParamsDef = z.object({});
@@ -114,8 +114,8 @@ type AdminDriveFileResponse = {
 	requestHeaders: Record<string, string> | null;
 };
 
-function noSuchFileError(): HonoApiError {
-	return new HonoApiError({
+function noSuchFileError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such file.',
 		code: 'NO_SUCH_FILE',
@@ -123,7 +123,7 @@ function noSuchFileError(): HonoApiError {
 	});
 }
 
-function getProxiedUrl(deps: HonoApiAdminDriveDependencies, url: string, mode?: 'static' | 'avatar'): string {
+function getProxiedUrl(deps: ApiAdminDriveDependencies, url: string, mode?: 'static' | 'avatar'): string {
 	return appendQuery(
 		`${deps.config.media.proxyUrl}/${mode ?? 'image'}.webp`,
 		query({
@@ -133,7 +133,7 @@ function getProxiedUrl(deps: HonoApiAdminDriveDependencies, url: string, mode?: 
 	);
 }
 
-function getExternalVideoThumbnailUrl(deps: HonoApiAdminDriveDependencies, url: string): string | null {
+function getExternalVideoThumbnailUrl(deps: ApiAdminDriveDependencies, url: string): string | null {
 	if (deps.config.media.videoThumbnailGeneratorUrl == null) return null;
 
 	return appendQuery(
@@ -145,7 +145,7 @@ function getExternalVideoThumbnailUrl(deps: HonoApiAdminDriveDependencies, url: 
 	);
 }
 
-function getAdminDriveFileThumbnailUrl(deps: HonoApiAdminDriveDependencies, file: MiDriveFile): string | null {
+function getAdminDriveFileThumbnailUrl(deps: ApiAdminDriveDependencies, file: MiDriveFile): string | null {
 	if (file.type.startsWith('video')) {
 		if (file.thumbnailUrl) return file.thumbnailUrl;
 
@@ -180,8 +180,8 @@ function enqueueDeleteObjectStorageFile(
 	);
 }
 
-export async function startHonoApiAdminDriveFileDeletion(
-	deps: HonoApiAdminDriveDependencies,
+export async function startApiAdminDriveFileDeletion(
+	deps: ApiAdminDriveDependencies,
 	file: MiDriveFile,
 ): Promise<void> {
 	await startDriveFileDeletion(
@@ -199,22 +199,22 @@ export async function startHonoApiAdminDriveFileDeletion(
 	);
 }
 
-async function packAdminDriveFilesForHonoApi(
-	deps: HonoApiAdminDriveDependencies,
+async function packAdminDriveFilesForApi(
+	deps: ApiAdminDriveDependencies,
 	files: MiDriveFile[],
 ): Promise<Packed<'DriveFile'>[]> {
 	const userRefs = files.map(({ user, userId }) => user ?? userId).filter((x) => x != null);
 	const uniqueUserRefs = Array.from(
 		new Map(userRefs.map((user) => [typeof user === 'string' ? user : user.id, user])).values(),
 	);
-	const packedUsers = uniqueUserRefs.length > 0 ? await packUserLiteManyForHonoApi(deps, uniqueUserRefs) : [];
+	const packedUsers = uniqueUserRefs.length > 0 ? await packUserLiteManyForApi(deps, uniqueUserRefs) : [];
 	const userMap = new Map(packedUsers.map((user) => [user.id, user]));
 
 	const folderRefs = files.map(({ folder, folderId }) => folder ?? folderId).filter((x) => x != null);
 	const uniqueFolderRefs = Array.from(
 		new Map(folderRefs.map((folder) => [typeof folder === 'string' ? folder : folder.id, folder])).values(),
 	);
-	const packedFolders = await packDriveFoldersManyForHonoApi(deps, uniqueFolderRefs, { detail: true });
+	const packedFolders = await packDriveFoldersManyForApi(deps, uniqueFolderRefs, { detail: true });
 	const folderMap = new Map(packedFolders.map((folder) => [folder.id, folder]));
 
 	return files.map((file) => ({
@@ -237,11 +237,11 @@ async function packAdminDriveFilesForHonoApi(
 	}));
 }
 
-export async function handleHonoApiAdminDriveCleanRemoteFiles(
-	deps: HonoApiAdminDriveDependencies,
+export async function handleApiAdminDriveCleanRemoteFiles(
+	deps: ApiAdminDriveDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	parseHonoApiParams(adminDriveNoParamsDef, body);
+	parseApiParams(adminDriveNoParamsDef, body);
 
 	await deps.objectStorageQueue.add(
 		'cleanRemoteFiles',
@@ -255,35 +255,35 @@ export async function handleHonoApiAdminDriveCleanRemoteFiles(
 	);
 }
 
-export async function handleHonoApiAdminDriveCleanup(
-	deps: HonoApiAdminDriveDependencies,
+export async function handleApiAdminDriveCleanup(
+	deps: ApiAdminDriveDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	parseHonoApiParams(adminDriveNoParamsDef, body);
+	parseApiParams(adminDriveNoParamsDef, body);
 	const files = await listOrphanDriveFilesFromDatabase(deps.db);
 
 	for (const file of files) {
-		await startHonoApiAdminDriveFileDeletion(deps, file);
+		await startApiAdminDriveFileDeletion(deps, file);
 	}
 }
 
-export async function handleHonoApiAdminDeleteAllFilesOfAUser(
-	deps: HonoApiAdminDriveDependencies,
+export async function handleApiAdminDeleteAllFilesOfAUser(
+	deps: ApiAdminDriveDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminDriveUserParamDef, body);
+	const params = parseApiParams(adminDriveUserParamDef, body);
 	const files = await listAllDriveFilesByUserIdFromDatabase(deps.db, params.userId);
 
 	for (const file of files) {
-		await startHonoApiAdminDriveFileDeletion(deps, file);
+		await startApiAdminDriveFileDeletion(deps, file);
 	}
 }
 
-export async function handleHonoApiAdminDriveFiles(
-	deps: HonoApiAdminDriveDependencies,
+export async function handleApiAdminDriveFiles(
+	deps: ApiAdminDriveDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'DriveFile'>[]> {
-	const params = parseHonoApiParams(adminDriveFilesParamDef, body);
+	const params = parseApiParams(adminDriveFilesParamDef, body);
 	let sinceId = params.sinceId ?? null;
 	let untilId = params.untilId ?? null;
 
@@ -305,15 +305,15 @@ export async function handleHonoApiAdminDriveFiles(
 		}),
 	);
 
-	return await packAdminDriveFilesForHonoApi(deps, files);
+	return await packAdminDriveFilesForApi(deps, files);
 }
 
-export async function handleHonoApiAdminDriveShowFile(
-	deps: HonoApiAdminDriveDependencies,
+export async function handleApiAdminDriveShowFile(
+	deps: ApiAdminDriveDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<AdminDriveFileResponse> {
-	const params = parseHonoApiParams(adminDriveShowFileParamDef, body);
+	const params = parseApiParams(adminDriveShowFileParamDef, body);
 	const file =
 		params.fileId !== undefined
 			? await fetchDriveFileByIdFromDatabase(deps.db, params.fileId)
@@ -324,10 +324,7 @@ export async function handleHonoApiAdminDriveShowFile(
 	}
 
 	const owner = file.userId == null ? null : await fetchUserByIdOrFailFromDatabase(deps.db, file.userId);
-	const [iAmModerator, ownerIsModerator] = await Promise.all([
-		isHonoApiModerator(deps, me),
-		isHonoApiModerator(deps, owner),
-	]);
+	const [iAmModerator, ownerIsModerator] = await Promise.all([isApiModerator(deps, me), isApiModerator(deps, owner)]);
 
 	return {
 		id: file.id,

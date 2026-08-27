@@ -41,10 +41,10 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { getApId } from '@/core/activitypub/type.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
-import { addActivityContext, renderCreateForHonoApi, renderLikeForHonoApi, renderNoteForHonoApi } from './notes-ap.js';
-import { renderPersonForHonoApi, type HonoApiAccountUpdateDependencies } from '../account/account-update.js';
+import { addActivityContext, renderCreateForApi, renderLikeForApi, renderNoteForApi } from './notes-ap.js';
+import { renderPersonForApi, type ApiAccountUpdateDependencies } from '../account/account-update.js';
 
-export type HonoApiApResolveDependencies = HonoApiAccountUpdateDependencies & {
+export type ApiApResolveDependencies = ApiAccountUpdateDependencies & {
 	httpRequestService: HttpRequestService;
 };
 
@@ -124,7 +124,7 @@ export function parseLocalApUri(
 }
 
 /** 認証済み・レート制限付きの ap/show だけが使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
-export async function getNoteFromApIdForHonoApi(
+export async function getNoteFromApIdForApi(
 	deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase },
 	value: string | IObject,
 ): Promise<MiNote | null> {
@@ -137,7 +137,7 @@ export async function getNoteFromApIdForHonoApi(
 }
 
 /** 認証済み・レート制限付きの ap/show だけが使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
-export async function getUserFromApIdForHonoApi(
+export async function getUserFromApIdForApi(
 	deps: { config: Pick<Config, 'runtime'>; db: MiDrizzleDatabase },
 	value: string | IObject,
 ): Promise<MiLocalUser | MiRemoteUser | null> {
@@ -151,16 +151,16 @@ export async function getUserFromApIdForHonoApi(
 	return user == null || user.isDeleted ? null : (user as MiRemoteUser);
 }
 
-export type HonoApiAuthUser = {
+export type ApiAuthUser = {
 	user: MiRemoteUser;
 	key: MiUserPublickey | null;
 };
 
 /** 認証済み・レート制限付きの AP 解決経路で使うため、プロセスローカルキャッシュを持たず直接DBを読む。 */
-export async function getAuthUserFromKeyIdForHonoApi(
+export async function getAuthUserFromKeyIdForApi(
 	deps: { db: MiDrizzleDatabase },
 	keyId: string,
-): Promise<HonoApiAuthUser | null> {
+): Promise<ApiAuthUser | null> {
 	const key = await fetchUserPublickeyByKeyIdFromDatabase(deps.db, keyId);
 	if (key == null) return null;
 
@@ -170,7 +170,7 @@ export async function getAuthUserFromKeyIdForHonoApi(
 	return { user: user as MiRemoteUser, key };
 }
 
-function renderQuestionForHonoApi(
+function renderQuestionForApi(
 	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },
 	note: { id: string; text: string | null },
@@ -192,7 +192,7 @@ function renderQuestionForHonoApi(
 	};
 }
 
-function renderFollowForHonoApi(
+function renderFollowForApi(
 	config: Pick<Config, 'instance'>,
 	follower: MiLocalUser | MiRemoteUser,
 	followee: MiLocalUser | MiRemoteUser,
@@ -208,7 +208,7 @@ function renderFollowForHonoApi(
 	};
 }
 
-async function resolveLocalApObjectForHonoApi(deps: HonoApiApResolveDependencies, url: string): Promise<IObject> {
+async function resolveLocalApObjectForApi(deps: ApiApResolveDependencies, url: string): Promise<IObject> {
 	const parsed = parseLocalApUri(deps.config, url);
 	if (!parsed.local) throw new IdentifiableError('02b40cd0-fa92-4b0c-acc9-fb2ada952ab8', 'resolveLocal: not local');
 	if (parsed.id == null) {
@@ -219,28 +219,25 @@ async function resolveLocalApObjectForHonoApi(deps: HonoApiApResolveDependencies
 		case 'notes': {
 			const note = await fetchNoteByIdOrFailFromDatabase(deps.db, parsed.id);
 			if (parsed.rest === 'activity') {
-				const rendered = await renderNoteForHonoApi(deps, note, true);
-				return addActivityContext(
-					deps.config,
-					renderCreateForHonoApi(deps.config, rendered, note),
-				) as unknown as IObject;
+				const rendered = await renderNoteForApi(deps, note, true);
+				return addActivityContext(deps.config, renderCreateForApi(deps.config, rendered, note)) as unknown as IObject;
 			}
-			return (await renderNoteForHonoApi(deps, note, true)) as unknown as IObject;
+			return (await renderNoteForApi(deps, note, true)) as unknown as IObject;
 		}
 		case 'users': {
 			const user = await fetchUserByIdOrFailFromDatabase(deps.db, parsed.id);
-			return (await renderPersonForHonoApi(deps, user as MiLocalUser)) as unknown as IObject;
+			return (await renderPersonForApi(deps, user as MiLocalUser)) as unknown as IObject;
 		}
 		case 'questions': {
 			const note = await fetchNoteByIdOrFailFromDatabase(deps.db, parsed.id);
 			const poll = await fetchPollByNoteIdOrFailFromDatabase(deps.db, parsed.id);
-			return renderQuestionForHonoApi(deps.config, { id: note.userId }, note, poll) as unknown as IObject;
+			return renderQuestionForApi(deps.config, { id: note.userId }, note, poll) as unknown as IObject;
 		}
 		case 'likes': {
 			const reaction = await fetchNoteReactionByIdOrFailFromDatabase(deps.db, parsed.id);
 			return addActivityContext(
 				deps.config,
-				await renderLikeForHonoApi(deps, reaction, { uri: null, id: reaction.noteId }),
+				await renderLikeForApi(deps, reaction, { uri: null, id: reaction.noteId }),
 			) as unknown as IObject;
 		}
 		case 'follows': {
@@ -259,7 +256,7 @@ async function resolveLocalApObjectForHonoApi(deps: HonoApiApResolveDependencies
 			}
 			return addActivityContext(
 				deps.config,
-				renderFollowForHonoApi(deps.config, follower, followee, url),
+				renderFollowForApi(deps.config, follower, followee, url),
 			) as unknown as IObject;
 		}
 		default:
@@ -270,8 +267,8 @@ async function resolveLocalApObjectForHonoApi(deps: HonoApiApResolveDependencies
 	}
 }
 
-async function signedGetForHonoApi(
-	deps: HonoApiApResolveDependencies,
+async function signedGetForApi(
+	deps: ApiApResolveDependencies,
 	url: string,
 	user: { id: MiUser['id'] },
 	allowSoftfail: FetchAllowSoftFailMask,
@@ -310,7 +307,7 @@ async function signedGetForHonoApi(
 			if (alternate) {
 				const href = alternate.getAttribute('href');
 				if (href && punyHost(url) === punyHost(href)) {
-					return await signedGetForHonoApi(deps, href, user, allowSoftfail, false);
+					return await signedGetForApi(deps, href, user, allowSoftfail, false);
 				}
 			}
 		} catch (_) {
@@ -326,14 +323,14 @@ async function signedGetForHonoApi(
 	return activity;
 }
 
-export type HonoApiSignedPostDependencies = {
+export type ApiSignedPostDependencies = {
 	config: Pick<Config, 'instance'>;
 	db: MiDrizzleDatabase;
 	httpRequestService: Pick<HttpRequestService, 'send'>;
 };
 
-export async function signedPostForHonoApi(
-	deps: HonoApiSignedPostDependencies,
+export async function signedPostForApi(
+	deps: ApiSignedPostDependencies,
 	user: { id: MiUser['id'] },
 	url: string,
 	object: unknown,
@@ -365,8 +362,8 @@ export async function signedPostForHonoApi(
  * 複数回の解決を跨いで再帰を防ぐ呼び出し元は、同じ `history` Set を明示的に使い回すこと。
  * 省略時は呼び出しごとに新しい Set を使うため、単発解決に限って使用できる。
  */
-export async function resolveApObjectForHonoApi(
-	deps: HonoApiApResolveDependencies,
+export async function resolveApObjectForApi(
+	deps: ApiApResolveDependencies,
 	value: string | IObject,
 	allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict,
 	history: Set<string> = new Set(),
@@ -389,7 +386,7 @@ export async function resolveApObjectForHonoApi(
 
 	const host = extractDbHost(value);
 	if (isSelfHost(deps.config, host)) {
-		return await resolveLocalApObjectForHonoApi(deps, value);
+		return await resolveLocalApObjectForApi(deps, value);
 	}
 
 	if (!isFederationAllowedHost(deps.config, deps.meta, host)) {
@@ -397,7 +394,7 @@ export async function resolveApObjectForHonoApi(
 	}
 
 	const object = deps.meta.signToActivityPubGet
-		? await signedGetForHonoApi(
+		? await signedGetForApi(
 				deps,
 				value,
 				await fetchOrCreateSystemAccountInDatabase({ db: deps.db, meta: deps.meta, genId }, 'actor'),
@@ -415,14 +412,14 @@ export async function resolveApObjectForHonoApi(
 	return object;
 }
 
-export async function resolveCollectionForHonoApi(
-	deps: HonoApiApResolveDependencies,
+export async function resolveCollectionForApi(
+	deps: ApiApResolveDependencies,
 	value: string | IObject,
 	history: Set<string> = new Set(),
 ): Promise<ICollection | IOrderedCollection> {
 	const collection =
 		typeof value === 'string'
-			? await resolveApObjectForHonoApi(deps, value, FetchAllowSoftFailMask.Strict, history)
+			? await resolveApObjectForApi(deps, value, FetchAllowSoftFailMask.Strict, history)
 			: value;
 
 	if (isCollectionOrOrderedCollection(collection)) {

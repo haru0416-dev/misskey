@@ -25,19 +25,19 @@ import type { DbUserSuspensionPostEffectsJobData } from '@/queue/types.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import {
-	handleHonoApiAdminSuspendUser,
-	handleHonoApiAdminUnsuspendUser,
-	handleHonoQueueUserSuspensionPostEffects,
-	type HonoApiAdminUserSuspensionDependencies,
+	handleApiAdminSuspendUser,
+	handleApiAdminUnsuspendUser,
+	handleQueueUserSuspensionPostEffects,
+	type ApiAdminUserSuspensionDependencies,
 } from '@/server/rest/admin/admin-user-suspension.js';
-import { createNoteForHonoApi, type HonoApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
-import { handleHonoQueueDeliver } from '@/queue/handlers/deliver.js';
-import { handleHonoQueueRelationshipUnfollow } from '@/queue/handlers/relationship.js';
+import { createNoteForApi, type ApiNotesCreateDependencies } from '@/server/rest/note/notes-create.js';
+import { handleQueueDeliver } from '@/queue/handlers/deliver.js';
+import { handleQueueRelationshipUnfollow } from '@/queue/handlers/relationship.js';
 import type { DeliverJobData, RelationshipJobData } from '@/queue/types.js';
 import {
 	resolveNotificationStreamId,
 	toXListId,
-	xaddHonoApiNotification,
+	xaddApiNotification,
 } from '@/server/rest/notification/notification.js';
 
 describe('durable reliability boundaries', () => {
@@ -68,10 +68,10 @@ describe('durable reliability boundaries', () => {
 		const deps = {
 			...runtime,
 			publishInternalEvent,
-		} as unknown as HonoApiAdminUserSuspensionDependencies;
+		} as unknown as ApiAdminUserSuspensionDependencies;
 
 		try {
-			await handleHonoApiAdminSuspendUser(deps, moderator, { userId: target.id });
+			await handleApiAdminSuspendUser(deps, moderator, { userId: target.id });
 			expect((await fetchUserByIdOrFailFromDatabase(runtime.db, target.id)).isSuspended).toBe(true);
 			const [suspendOutbox] = await runtime.db
 				.select()
@@ -79,7 +79,7 @@ describe('durable reliability boundaries', () => {
 				.where(eq(queueOutbox.name, 'userSuspensionPostEffects'));
 			expect(suspendOutbox).toBeDefined();
 
-			await handleHonoApiAdminUnsuspendUser(deps, moderator, { userId: target.id });
+			await handleApiAdminUnsuspendUser(deps, moderator, { userId: target.id });
 			expect((await fetchUserByIdOrFailFromDatabase(runtime.db, target.id)).isSuspended).toBe(false);
 			const [unsuspendLog] = await listModerationLogsFromDatabase(runtime.db, {
 				limit: 1,
@@ -94,7 +94,7 @@ describe('durable reliability boundaries', () => {
 			await deleteUserByIdFromDatabase(runtime.db, moderator.id);
 			await updateUserInDatabase(runtime.db, target.id, { updatedAt: new Date(Date.now() + 1000) });
 			publishInternalEvent.mockClear();
-			await handleHonoQueueUserSuspensionPostEffects(deps, {
+			await handleQueueUserSuspensionPostEffects(deps, {
 				data: {
 					userId: target.id,
 					isSuspended: false,
@@ -108,15 +108,15 @@ describe('durable reliability boundaries', () => {
 			});
 			publishInternalEvent.mockClear();
 
-			await handleHonoQueueUserSuspensionPostEffects(deps, {
+			await handleQueueUserSuspensionPostEffects(deps, {
 				data: suspendOutbox!.data as DbUserSuspensionPostEffectsJobData,
 			} as Bull.Job<DbUserSuspensionPostEffectsJobData>);
 			expect(publishInternalEvent).not.toHaveBeenCalled();
 
 			const guard = suspendOutbox!.data as DbUserSuspensionPostEffectsJobData;
 			await expect(
-				handleHonoQueueDeliver(
-					deps as unknown as Parameters<typeof handleHonoQueueDeliver>[0],
+				handleQueueDeliver(
+					deps as unknown as Parameters<typeof handleQueueDeliver>[0],
 					{
 						data: {
 							user: { id: target.id },
@@ -130,8 +130,8 @@ describe('durable reliability boundaries', () => {
 				),
 			).resolves.toBe('skip (stale user state)');
 			await expect(
-				handleHonoQueueRelationshipUnfollow(
-					deps as unknown as Parameters<typeof handleHonoQueueRelationshipUnfollow>[0],
+				handleQueueRelationshipUnfollow(
+					deps as unknown as Parameters<typeof handleQueueRelationshipUnfollow>[0],
 					{
 						data: {
 							from: { id: target.id },
@@ -163,11 +163,11 @@ describe('durable reliability boundaries', () => {
 		const deps = {
 			...runtime,
 			dbQueue: { addBulk } as unknown as DbQueue,
-		} as unknown as HonoApiNotesCreateDependencies;
+		} as unknown as ApiNotesCreateDependencies;
 		let noteId: string | undefined;
 
 		try {
-			const note = await createNoteForHonoApi(
+			const note = await createNoteForApi(
 				deps,
 				user,
 				{
@@ -219,8 +219,8 @@ describe('durable reliability boundaries', () => {
 		const key = `notificationTimeline:${user.id}`;
 
 		try {
-			await xaddHonoApiNotification(runtime, user.id, notification);
-			await expect(xaddHonoApiNotification(runtime, user.id, notification)).resolves.toBe(toXListId(notification.id));
+			await xaddApiNotification(runtime, user.id, notification);
+			await expect(xaddApiNotification(runtime, user.id, notification)).resolves.toBe(toXListId(notification.id));
 			expect(await runtime.redis.xlen(key)).toBe(1);
 		} finally {
 			await runtime.redis.del(key);
@@ -241,9 +241,9 @@ describe('durable reliability boundaries', () => {
 		const key = `notificationTimeline:${user.id}`;
 
 		try {
-			await xaddHonoApiNotification(runtime, user.id, newer);
-			const appendedId = await xaddHonoApiNotification(runtime, user.id, older);
-			await expect(xaddHonoApiNotification(runtime, user.id, older)).resolves.toBe(appendedId);
+			await xaddApiNotification(runtime, user.id, newer);
+			const appendedId = await xaddApiNotification(runtime, user.id, older);
+			await expect(xaddApiNotification(runtime, user.id, older)).resolves.toBe(appendedId);
 			await expect(resolveNotificationStreamId(runtime, user.id, older.id)).resolves.toBe(appendedId);
 			expect(await runtime.redis.xlen(key)).toBe(2);
 		} finally {

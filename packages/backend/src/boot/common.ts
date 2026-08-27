@@ -6,7 +6,7 @@
 import { init } from 'slacc';
 import { loadConfig, type Config } from '@/config.js';
 import type { RuntimeDependencies } from '@/runtime-dependencies.js';
-import type { HonoQueueShellDependencies } from '@/queue/worker.js';
+import type { QueueShellDependencies } from '@/queue/worker.js';
 
 let slaccInitialized = false;
 
@@ -25,8 +25,8 @@ export async function server(
 	dependencies?: RuntimeDependencies,
 	options?: { daemons?: boolean },
 ) {
-	const { launchHonoServer } = await import('./server.js');
-	return await launchHonoServer(config, undefined, dependencies, options);
+	const { launchServer } = await import('./server.js');
+	return await launchServer(config, undefined, dependencies, options);
 }
 
 export type JobQueueRuntime = {
@@ -39,9 +39,9 @@ export type JobQueueRuntime = {
  */
 export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDependencies): Promise<JobQueueRuntime> {
 	const { createRuntimeDependencies } = await import('../runtime-dependencies.js');
-	const { createHonoQueueWorkers } = await import('../queue/worker.js');
+	const { createQueueWorkers } = await import('../queue/worker.js');
 	const { syncSystemJobSchedulers } = await import('../queue/system-job-schedulers.js');
-	const { createHonoEventPublishers } = await import('../server/rest/events.js');
+	const { createEventPublishers } = await import('../server/rest/events.js');
 
 	const deps = dependencies ?? (await createRuntimeDependencies(config));
 	const logger = deps.loggerService.getLogger('queue', 'orange');
@@ -73,13 +73,13 @@ export async function jobQueue(config = loadConfig(), dependencies?: RuntimeDepe
 		relationshipQueue: deps.relationshipQueue,
 		systemWebhookDeliverQueue: deps.systemWebhookDeliverQueue,
 		userWebhookDeliverQueue: deps.userWebhookDeliverQueue,
-		...createHonoEventPublishers({
+		...createEventPublishers({
 			config,
 			publish: (host, message) => deps.redisForPub.publish(host, message),
 		}),
 		logger,
-	} satisfies HonoQueueShellDependencies;
-	const workers = createHonoQueueWorkers(workerDeps);
+	} satisfies QueueShellDependencies;
+	const workers = createQueueWorkers(workerDeps);
 
 	// Bull.Worker#run() は内部のメインループが解決するまで (= close() されるまで) 待ち続けるため、
 	// 起動時には await しない。

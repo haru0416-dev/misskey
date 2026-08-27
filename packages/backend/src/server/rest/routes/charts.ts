@@ -5,20 +5,20 @@
 
 import type { Hono } from 'hono';
 import {
-	handleHonoApiChartsActiveUsers,
-	handleHonoApiChartsApRequest,
-	handleHonoApiChartsDrive,
-	handleHonoApiChartsFederation,
-	handleHonoApiChartsInstance,
-	handleHonoApiChartsNotes,
-	handleHonoApiChartsUserDrive,
-	handleHonoApiChartsUserFollowing,
-	handleHonoApiChartsUserNotes,
-	handleHonoApiChartsUserPv,
-	handleHonoApiChartsUserReactions,
-	handleHonoApiChartsUsers,
-	handleHonoApiStats,
-	normalizeHonoApiChartQuery,
+	handleApiChartsActiveUsers,
+	handleApiChartsApRequest,
+	handleApiChartsDrive,
+	handleApiChartsFederation,
+	handleApiChartsInstance,
+	handleApiChartsNotes,
+	handleApiChartsUserDrive,
+	handleApiChartsUserFollowing,
+	handleApiChartsUserNotes,
+	handleApiChartsUserPv,
+	handleApiChartsUserReactions,
+	handleApiChartsUsers,
+	handleApiStats,
+	normalizeApiChartQuery,
 } from '../chart/charts.js';
 import {
 	jsonResponse,
@@ -33,12 +33,12 @@ import { endpointHandlerAnonymous } from '../endpoint-handlers.js';
 export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.get('/charts/active-users', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsActiveUsers(deps, query),
+				await handleApiChartsActiveUsers(deps, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -52,7 +52,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsActiveUsers(deps, body),
+				await handleApiChartsActiveUsers(deps, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -61,12 +61,12 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.get('/charts/ap-request', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsApRequest(deps, query),
+				await handleApiChartsApRequest(deps, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -80,7 +80,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsApRequest(deps, body),
+				await handleApiChartsApRequest(deps, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -89,15 +89,10 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.get('/charts/drive', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
-			return jsonResponse(
-				c,
-				await handleHonoApiChartsDrive(deps, query),
-				200,
-				publicCacheHeadersWhenAnonymous(auth, 3600),
-			);
+			return jsonResponse(c, await handleApiChartsDrive(deps, query), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
 		});
 	});
 
@@ -106,23 +101,18 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
-			return jsonResponse(
-				c,
-				await handleHonoApiChartsDrive(deps, body),
-				200,
-				publicCacheHeadersWhenAnonymous(auth, 3600),
-			);
+			return jsonResponse(c, await handleApiChartsDrive(deps, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
 		});
 	});
 
 	app.get('/charts/federation', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsFederation(deps, query),
+				await handleApiChartsFederation(deps, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -136,7 +126,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsFederation(deps, body),
+				await handleApiChartsFederation(deps, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -145,12 +135,12 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.get('/charts/instance', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsInstance(deps, query),
+				await handleApiChartsInstance(deps, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -164,7 +154,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsInstance(deps, body),
+				await handleApiChartsInstance(deps, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -173,15 +163,10 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.get('/charts/notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
-			return jsonResponse(
-				c,
-				await handleHonoApiChartsNotes(deps, query),
-				200,
-				publicCacheHeadersWhenAnonymous(auth, 3600),
-			);
+			return jsonResponse(c, await handleApiChartsNotes(deps, query), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
 		});
 	});
 
@@ -190,26 +175,16 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
-			return jsonResponse(
-				c,
-				await handleHonoApiChartsNotes(deps, body),
-				200,
-				publicCacheHeadersWhenAnonymous(auth, 3600),
-			);
+			return jsonResponse(c, await handleApiChartsNotes(deps, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
 		});
 	});
 
 	app.get('/charts/users', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
-			return jsonResponse(
-				c,
-				await handleHonoApiChartsUsers(deps, query),
-				200,
-				publicCacheHeadersWhenAnonymous(auth, 3600),
-			);
+			return jsonResponse(c, await handleApiChartsUsers(deps, query), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
 		});
 	});
 
@@ -218,23 +193,18 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
-			return jsonResponse(
-				c,
-				await handleHonoApiChartsUsers(deps, body),
-				200,
-				publicCacheHeadersWhenAnonymous(auth, 3600),
-			);
+			return jsonResponse(c, await handleApiChartsUsers(deps, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
 		});
 	});
 
 	app.get('/charts/user/drive', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsUserDrive(deps, query),
+				await handleApiChartsUserDrive(deps, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -248,7 +218,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsUserDrive(deps, body),
+				await handleApiChartsUserDrive(deps, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -257,12 +227,12 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.get('/charts/user/following', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsUserFollowing(deps, query),
+				await handleApiChartsUserFollowing(deps, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -276,7 +246,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsUserFollowing(deps, body),
+				await handleApiChartsUserFollowing(deps, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -285,12 +255,12 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.get('/charts/user/notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsUserNotes(deps, query),
+				await handleApiChartsUserNotes(deps, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -304,7 +274,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsUserNotes(deps, body),
+				await handleApiChartsUserNotes(deps, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -313,12 +283,12 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.get('/charts/user/pv', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsUserPv(deps, query),
+				await handleApiChartsUserPv(deps, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -330,23 +300,18 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 			const body = await jsonBody(c);
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
-			return jsonResponse(
-				c,
-				await handleHonoApiChartsUserPv(deps, body),
-				200,
-				publicCacheHeadersWhenAnonymous(auth, 3600),
-			);
+			return jsonResponse(c, await handleApiChartsUserPv(deps, body), 200, publicCacheHeadersWhenAnonymous(auth, 3600));
 		});
 	});
 
 	app.get('/charts/user/reactions', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeHonoApiChartQuery(c.req.query());
+			const query = normalizeApiChartQuery(c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsUserReactions(deps, query),
+				await handleApiChartsUserReactions(deps, query),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -360,7 +325,7 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 			return jsonResponse(
 				c,
-				await handleHonoApiChartsUserReactions(deps, body),
+				await handleApiChartsUserReactions(deps, body),
 				200,
 				publicCacheHeadersWhenAnonymous(auth, 3600),
 			);
@@ -369,8 +334,6 @@ export function registerChartsRoutes(app: Hono, deps: ApiShellDependencies): voi
 
 	app.post(
 		'/stats',
-		endpointHandlerAnonymous(deps, 'stats', async ({ body, auth, c }) =>
-			jsonResponse(c, await handleHonoApiStats(deps)),
-		),
+		endpointHandlerAnonymous(deps, 'stats', async ({ body, auth, c }) => jsonResponse(c, await handleApiStats(deps))),
 	);
 }

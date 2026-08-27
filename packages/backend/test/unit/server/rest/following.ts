@@ -5,7 +5,7 @@
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { HonoApiFollowingDependencies } from '@/server/rest/user/following.js';
+import type { ApiFollowingDependencies } from '@/server/rest/user/following.js';
 
 const {
 	createFollowingMock,
@@ -72,19 +72,19 @@ vi.mock('@/core/webhook/WebhookStore.js', async (importOriginal) => ({
 
 vi.mock('@/server/rest/user/user.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('@/server/rest/user/user.js')>()),
-	packMeDetailedForHonoApi: packMeMock,
-	packUserDetailedNotMeForHonoApi: vi.fn(async (_deps, user: MiUser) => ({ id: user.id })),
-	packUserLiteForHonoApi: vi.fn(async (_deps, user: MiUser) => ({ id: user.id })),
+	packMeDetailedForApi: packMeMock,
+	packUserDetailedNotMeForApi: vi.fn(async (_deps, user: MiUser) => ({ id: user.id })),
+	packUserLiteForApi: vi.fn(async (_deps, user: MiUser) => ({ id: user.id })),
 }));
 
 vi.mock('@/server/rest/notification/notification.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('@/server/rest/notification/notification.js')>()),
-	xaddHonoApiNotification: xaddNotificationMock,
+	xaddApiNotification: xaddNotificationMock,
 }));
 
-import { acceptAllFollowRequestsForHonoApi } from '@/server/rest/user/following.js';
+import { acceptAllFollowRequestsForApi } from '@/server/rest/user/following.js';
 
-describe('acceptAllFollowRequestsForHonoApi', () => {
+describe('acceptAllFollowRequestsForApi', () => {
 	const followee = { id: 'followee', host: null, isLocked: false } as MiLocalUser;
 	const freshFollowee = { ...followee, followersCount: 18 } as MiLocalUser;
 	const followers = Array.from({ length: 20 }, (_, index) => ({
@@ -142,9 +142,9 @@ describe('acceptAllFollowRequestsForHonoApi', () => {
 			deliverQueue: {},
 			userWebhookDeliverQueue: { add: vi.fn() },
 			publishMainStream,
-		} as unknown as HonoApiFollowingDependencies;
+		} as unknown as ApiFollowingDependencies;
 
-		const completion = acceptAllFollowRequestsForHonoApi(deps, followee);
+		const completion = acceptAllFollowRequestsForApi(deps, followee);
 		await vi.waitFor(() => expect(createFollowingMock).toHaveBeenCalledTimes(8));
 		expect(active).toBe(8);
 		releaseCreates();
@@ -181,10 +181,10 @@ describe('acceptAllFollowRequestsForHonoApi', () => {
 			config: { instance: { url: 'https://example.test' }, limits: { userNotifications: 100 } },
 			deliverQueue: {},
 			userWebhookDeliverQueue: { add: vi.fn() },
-		} as unknown as HonoApiFollowingDependencies;
+		} as unknown as ApiFollowingDependencies;
 
 		let settled = false;
-		const completion = acceptAllFollowRequestsForHonoApi(deps, followee).then(() => {
+		const completion = acceptAllFollowRequestsForApi(deps, followee).then(() => {
 			settled = true;
 		});
 		await vi.waitFor(() => expect(xaddNotificationMock).toHaveBeenCalledTimes(1));
@@ -220,10 +220,10 @@ describe('acceptAllFollowRequestsForHonoApi', () => {
 			config: { instance: { url: 'https://example.test' } },
 			deliverQueue: {},
 			userWebhookDeliverQueue: { add: vi.fn() },
-		} as unknown as HonoApiFollowingDependencies;
+		} as unknown as ApiFollowingDependencies;
 
 		let settled = false;
-		const completion = acceptAllFollowRequestsForHonoApi(deps, followee).then(() => {
+		const completion = acceptAllFollowRequestsForApi(deps, followee).then(() => {
 			settled = true;
 		});
 		await vi.waitFor(() => expect(enqueueDeliverMock).toHaveBeenCalledTimes(1));

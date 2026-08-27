@@ -18,10 +18,7 @@ import { createDriveFileInDatabase, fetchDriveFileByIdFromDatabase } from '@/cor
 import { createPageInDatabase, fetchPageByIdFromDatabase } from '@/core/page/PageStore.js';
 import { fetchUserByIdFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import {
-	handleHonoQueueDeleteAccount,
-	type HonoQueueDeleteAccountDependencies,
-} from '@/queue/handlers/delete-account.js';
+import { handleQueueDeleteAccount, type QueueDeleteAccountDependencies } from '@/queue/handlers/delete-account.js';
 import type { DbUserDeleteJobData } from '@/queue/types.js';
 
 function fakeJob(data: DbUserDeleteJobData, id?: string): Bull.Job<DbUserDeleteJobData> {
@@ -30,7 +27,7 @@ function fakeJob(data: DbUserDeleteJobData, id?: string): Bull.Job<DbUserDeleteJ
 
 describe('hono-queue-delete-account', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueDeleteAccountDependencies;
+	let deps: QueueDeleteAccountDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -83,7 +80,7 @@ describe('hono-queue-delete-account', () => {
 			visibility: 'public',
 		});
 
-		await handleHonoQueueDeleteAccount(
+		await handleQueueDeleteAccount(
 			deps,
 			fakeJob({ user: { id: user.id }, soft: false, accountDeleteCoordinatorId: genId() }),
 		);
@@ -101,7 +98,7 @@ describe('hono-queue-delete-account', () => {
 			profile: { userId: id },
 		});
 
-		await handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: true }));
+		await handleQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: true }));
 
 		expect(await fetchUserByIdFromDatabase(runtime.db, user.id)).not.toBeNull();
 	});
@@ -115,7 +112,7 @@ describe('hono-queue-delete-account', () => {
 
 		try {
 			await expect(
-				handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: false }, `legacy-${user.id}`)),
+				handleQueueDeleteAccount(deps, fakeJob({ user: { id: user.id }, soft: false }, `legacy-${user.id}`)),
 			).rejects.toThrow('Local account deletion requires an outbox coordinator');
 			expect(await fetchUserByIdFromDatabase(runtime.db, user.id)).not.toBeNull();
 		} finally {
@@ -125,7 +122,7 @@ describe('hono-queue-delete-account', () => {
 
 	test('存在しないuserIdは何もしない', async () => {
 		await expect(
-			handleHonoQueueDeleteAccount(deps, fakeJob({ user: { id: genId() }, soft: false })),
+			handleQueueDeleteAccount(deps, fakeJob({ user: { id: genId() }, soft: false })),
 		).resolves.toBeUndefined();
 	});
 });

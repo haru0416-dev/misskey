@@ -5,18 +5,18 @@
 
 import { EventEmitter } from 'node:events';
 import { updateUserLastActiveDateInDatabase } from '@/core/user/UserStore.js';
-import { HonoApiError } from '../rest/error.js';
-import { authenticateHonoApiToken } from '@/server/rest/auth/auth.js';
-import { HonoStreamConnection, refreshHonoStreamConnections } from './connection.js';
-import { emitHonoStreamRedisMessage } from './server.js';
-import type { HonoStreamServerDependencies } from './server.js';
+import { ApiError } from '../rest/error.js';
+import { authenticateApiToken } from '@/server/rest/auth/auth.js';
+import { StreamConnection, refreshStreamConnections } from './connection.js';
+import { emitStreamRedisMessage } from './server.js';
+import type { StreamServerDependencies } from './server.js';
 
 const IDLE_TIMEOUT_MS = 1000 * 60 * 2;
 const REAP_INTERVAL_MS = 1000 * 60;
 const LAST_ACTIVE_UPDATE_INTERVAL_MS = 1000 * 60 * 5;
 
 type WsData = {
-	connection: HonoStreamConnection;
+	connection: StreamConnection;
 	cleanup?: () => void;
 };
 
@@ -25,7 +25,7 @@ function resolveStreamingToken(authHeader: string | null, url: URL): string | nu
 	return url.searchParams.get('i');
 }
 
-function errorResponse(error: HonoApiError): Response {
+function errorResponse(error: ApiError): Response {
 	return new Response(error.message, {
 		status: error.status,
 		headers: { 'Content-Type': 'text/plain', ...error.headers },
@@ -40,12 +40,12 @@ function errorResponse(error: HonoApiError): Response {
  * 最小再現では bun 1.3.14 がハングし、1.4.0 は成功した。Bun.serve() は compat 層を経由しないため、
  * Bun 実行時はこちらを使い、Node 実行時は server.ts の node:http 実装を使う。
  */
-export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies, streamingPath = '/streaming') {
+export function createBunNativeStreamRuntime(deps: StreamServerDependencies, streamingPath = '/streaming') {
 	const globalEv = new EventEmitter();
 	globalEv.setMaxListeners(0);
-	const onRedisMessage = (_channelName: string, data: string) => emitHonoStreamRedisMessage(globalEv, data);
+	const onRedisMessage = (_channelName: string, data: string) => emitStreamRedisMessage(globalEv, data);
 	deps.redisForSub.on('message', onRedisMessage);
-	const activeConnections = new Map<HonoStreamConnection, () => void>();
+	const activeConnections = new Map<StreamConnection, () => void>();
 	let reconnectRefreshPromise: Promise<void> | undefined;
 	let reconnectRefreshQueued = false;
 	const onRedisReady = () => {
@@ -58,7 +58,7 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 				reconnectRefreshQueued = false;
 				// 更新中に再接続した場合は、更新完了後にスナップショットをもう一度取得する。
 				// eslint-disable-next-line no-await-in-loop
-				await refreshHonoStreamConnections(activeConnections);
+				await refreshStreamConnections(activeConnections);
 			} while (reconnectRefreshQueued);
 		})()
 			.catch((error) => console.error('Failed to refresh streaming connections after Redis reconnected.', error))
@@ -86,15 +86,15 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 
 		let authenticated;
 		try {
-			authenticated = await authenticateHonoApiToken(deps, token);
+			authenticated = await authenticateApiToken(deps, token);
 		} catch (err) {
-			if (err instanceof HonoApiError) return errorResponse(err);
+			if (err instanceof ApiError) return errorResponse(err);
 			return new Response('Internal error', { status: 500 });
 		}
 
 		if (authenticated.token != null && !authenticated.token.permission.includes('read:account')) {
 			return errorResponse(
-				new HonoApiError({
+				new ApiError({
 					status: 403,
 					message: 'Your app does not have necessary permissions to use websocket API.',
 					code: 'PERMISSION_DENIED',
@@ -104,7 +104,7 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 		}
 		if (authenticated.user?.isSuspended) {
 			return errorResponse(
-				new HonoApiError({
+				new ApiError({
 					status: 403,
 					message: 'Your account has been suspended.',
 					code: 'YOUR_ACCOUNT_SUSPENDED',
@@ -113,7 +113,7 @@ export function createBunNativeStreamRuntime(deps: HonoStreamServerDependencies,
 			);
 		}
 
-		const connection = new HonoStreamConnection(deps, authenticated.user, authenticated.token);
+		const connection = new StreamConnection(deps, authenticated.user, authenticated.token);
 		try {
 			await connection.init(globalEv);
 		} catch {

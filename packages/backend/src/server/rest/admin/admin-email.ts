@@ -5,9 +5,9 @@
 
 import { z } from 'zod';
 import type { EmailService } from '@/core/email/EmailService.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminEmailDependencies = {
+export type ApiAdminEmailDependencies = {
 	emailService: Pick<EmailService, 'sendEmail'>;
 };
 
@@ -17,10 +17,10 @@ export const adminSendEmailParamDef = z.object({
 	text: z.string(),
 });
 
-export async function handleHonoApiAdminSendEmail(
-	deps: HonoApiAdminEmailDependencies,
+export async function handleApiAdminSendEmail(
+	deps: ApiAdminEmailDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminSendEmailParamDef, body);
+	const params = parseApiParams(adminSendEmailParamDef, body);
 	await deps.emailService.sendEmail(params.to, params.subject, params.text, params.text);
 }

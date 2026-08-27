@@ -8,21 +8,21 @@ import { getApId, isActor, isPost, type IObject } from '@/core/activitypub/type.
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { parseApiParams } from '../validation.js';
 import {
 	extractDbHost,
-	getNoteFromApIdForHonoApi,
-	getUserFromApIdForHonoApi,
+	getNoteFromApIdForApi,
+	getUserFromApIdForApi,
 	isFederationAllowedUri,
 	isSelfHost,
-	resolveApObjectForHonoApi,
-	type HonoApiApResolveDependencies,
+	resolveApObjectForApi,
+	type ApiApResolveDependencies,
 } from './ap-resolve.js';
-import { createNoteFromApForHonoApi, type HonoApiApNoteDependencies } from './ap-note.js';
-import { createPersonForHonoApi, type HonoApiApPersonDependencies } from './ap-person.js';
-import { packUserDetailedNotMeForHonoApi, type UserPackingDependencies } from '../user/user.js';
-import { packNoteForHonoApi, type HonoApiNoteDependencies } from '../note/note.js';
+import { createNoteFromApForApi, type ApiApNoteDependencies } from './ap-note.js';
+import { createPersonForApi, type ApiApPersonDependencies } from './ap-person.js';
+import { packUserDetailedNotMeForApi, type UserPackingDependencies } from '../user/user.js';
+import { packNoteForApi, type ApiNoteDependencies } from '../note/note.js';
 import { FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 
 export const apGetParamDef = z.object({
@@ -33,18 +33,15 @@ type ApGetParams = {
 	uri: string;
 };
 
-export async function handleHonoApiApGet(
-	deps: HonoApiApResolveDependencies,
-	body: Record<string, unknown>,
-): Promise<IObject> {
-	const params = parseHonoApiParams(apGetParamDef, body);
-	return await resolveApObjectForHonoApi(deps, params.uri);
+export async function handleApiApGet(deps: ApiApResolveDependencies, body: Record<string, unknown>): Promise<IObject> {
+	const params = parseApiParams(apGetParamDef, body);
+	return await resolveApObjectForApi(deps, params.uri);
 }
 
-export type HonoApiApShowDependencies = HonoApiApNoteDependencies &
-	HonoApiApPersonDependencies &
+export type ApiApShowDependencies = ApiApNoteDependencies &
+	ApiApPersonDependencies &
 	UserPackingDependencies &
-	HonoApiNoteDependencies;
+	ApiNoteDependencies;
 
 export const apShowParamDef = z.object({
 	uri: z.string(),
@@ -55,43 +52,43 @@ type ApShowParams = {
 };
 
 type ApShowResult =
-	| { type: 'User'; object: Awaited<ReturnType<typeof packUserDetailedNotMeForHonoApi>> }
-	| { type: 'Note'; object: Awaited<ReturnType<typeof packNoteForHonoApi>> };
+	| { type: 'User'; object: Awaited<ReturnType<typeof packUserDetailedNotMeForApi>> }
+	| { type: 'Note'; object: Awaited<ReturnType<typeof packNoteForApi>> };
 
-function apShowFederationNotAllowedError(): HonoApiError {
-	return new HonoApiError({
+function apShowFederationNotAllowedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Federation for this host is not allowed.',
 		code: 'FEDERATION_NOT_ALLOWED',
 		id: '974b799e-1a29-4889-b706-18d4dd93e266',
 	});
 }
-function apShowUriInvalidError(): HonoApiError {
-	return new HonoApiError({
+function apShowUriInvalidError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'URI is invalid.',
 		code: 'URI_INVALID',
 		id: '1a5eab56-e47b-48c2-8d5e-217b897d70db',
 	});
 }
-function apShowRequestFailedError(): HonoApiError {
-	return new HonoApiError({
+function apShowRequestFailedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Request failed.',
 		code: 'REQUEST_FAILED',
 		id: '81b539cf-4f57-4b29-bc98-032c33c0792e',
 	});
 }
-function apShowResponseInvalidError(): HonoApiError {
-	return new HonoApiError({
+function apShowResponseInvalidError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Response from remote server is invalid.',
 		code: 'RESPONSE_INVALID',
 		id: '70193c39-54f3-4813-82f0-70a680f7495b',
 	});
 }
-function apShowNoSuchObjectError(): HonoApiError {
-	return new HonoApiError({
+function apShowNoSuchObjectError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such object.',
 		code: 'NO_SUCH_OBJECT',
@@ -99,8 +96,8 @@ function apShowNoSuchObjectError(): HonoApiError {
 	});
 }
 
-async function mergePackForHonoApi(
-	deps: HonoApiApShowDependencies,
+async function mergePackForApi(
+	deps: ApiApShowDependencies,
 	me: MiLocalUser | null | undefined,
 	user: MiUser | null | undefined,
 	note: MiNote | null | undefined,
@@ -108,13 +105,13 @@ async function mergePackForHonoApi(
 	if (user != null) {
 		return {
 			type: 'User',
-			object: await packUserDetailedNotMeForHonoApi(deps, user, me),
+			object: await packUserDetailedNotMeForApi(deps, user, me),
 		};
 	} else if (note != null) {
 		try {
 			return {
 				type: 'Note',
-				object: await packNoteForHonoApi(deps, note, me, { detail: true }),
+				object: await packNoteForApi(deps, note, me, { detail: true }),
 			};
 		} catch {
 			return null;
@@ -124,8 +121,8 @@ async function mergePackForHonoApi(
 	return null;
 }
 
-async function fetchAnyForHonoApi(
-	deps: HonoApiApShowDependencies,
+async function fetchAnyForApi(
+	deps: ApiApShowDependencies,
 	uri: string,
 	me: MiLocalUser | null | undefined,
 ): Promise<ApShowResult | null> {
@@ -133,10 +130,10 @@ async function fetchAnyForHonoApi(
 		throw apShowFederationNotAllowedError();
 	}
 
-	let local = await mergePackForHonoApi(
+	let local = await mergePackForApi(
 		deps,
 		me,
-		...(await Promise.all([getUserFromApIdForHonoApi(deps, uri), getNoteFromApIdForHonoApi(deps, uri)])),
+		...(await Promise.all([getUserFromApIdForApi(deps, uri), getNoteFromApIdForApi(deps, uri)])),
 	);
 	if (local != null) return local;
 
@@ -145,7 +142,7 @@ async function fetchAnyForHonoApi(
 	if (isSelfHost(deps.config, host)) return null;
 
 	const history = new Set<string>();
-	const object = await resolveApObjectForHonoApi(
+	const object = await resolveApObjectForApi(
 		deps,
 		uri,
 		FetchAllowSoftFailMask.CrossOrigin | FetchAllowSoftFailMask.NonCanonicalId,
@@ -180,30 +177,30 @@ async function fetchAnyForHonoApi(
 	}
 
 	if (uri !== object.id) {
-		local = await mergePackForHonoApi(
+		local = await mergePackForApi(
 			deps,
 			me,
-			...(await Promise.all([getUserFromApIdForHonoApi(deps, object.id), getNoteFromApIdForHonoApi(deps, object.id)])),
+			...(await Promise.all([getUserFromApIdForApi(deps, object.id), getNoteFromApIdForApi(deps, object.id)])),
 		);
 		if (local != null) return local;
 	}
 
-	return await mergePackForHonoApi(
+	return await mergePackForApi(
 		deps,
 		me,
-		isActor(object) ? await createPersonForHonoApi(deps, getApId(object)) : null,
-		isPost(object) ? await createNoteFromApForHonoApi(deps, getApId(object), undefined, new Set(), true) : null,
+		isActor(object) ? await createPersonForApi(deps, getApId(object)) : null,
+		isPost(object) ? await createNoteFromApForApi(deps, getApId(object), undefined, new Set(), true) : null,
 	);
 }
 
-export async function handleHonoApiApShow(
-	deps: HonoApiApShowDependencies,
+export async function handleApiApShow(
+	deps: ApiApShowDependencies,
 	me: MiLocalUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<ApShowResult> {
-	const params = parseHonoApiParams(apShowParamDef, body);
+	const params = parseApiParams(apShowParamDef, body);
 
-	const object = await fetchAnyForHonoApi(deps, params.uri, me);
+	const object = await fetchAnyForApi(deps, params.uri, me);
 	if (object) {
 		return object;
 	}

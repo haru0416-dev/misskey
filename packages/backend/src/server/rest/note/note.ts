@@ -51,23 +51,23 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiPollVote } from '@/models/PollVote.js';
 import type { MiUser } from '@/models/User.js';
-import { packDriveFileManyByIdsForHonoApi, type HonoApiDriveFileDependencies } from '../drive/drive-file.js';
-import { HonoApiError } from '../error.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from '../user/user.js';
-import { getFanoutTimelineNotesForHonoApi } from './fanout-timeline.js';
-import { parseHonoApiParams } from '../validation.js';
+import { packDriveFileManyByIdsForApi, type ApiDriveFileDependencies } from '../drive/drive-file.js';
+import { ApiError } from '../error.js';
+import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from '../user/user.js';
+import { getFanoutTimelineNotesForApi } from './fanout-timeline.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiNoteDependencies = HonoApiDriveFileDependencies &
+export type ApiNoteDependencies = ApiDriveFileDependencies &
 	UserPackingDependencies & {
 		redis: Redis.Redis;
 		/** fanout タイムライン (Redis) 読み取りに必要。省略時は常にDBから読む。 */
 		redisForTimelines?: Redis.Redis;
 	};
 
-export type HonoApiEmojiPopulateDependencies = {
+export type ApiEmojiPopulateDependencies = {
 	config: Config;
-	db: HonoApiNoteDependencies['db'];
+	db: ApiNoteDependencies['db'];
 };
 
 const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
@@ -122,7 +122,7 @@ function mergeReactions(src: MiNote['reactions'], delta: Record<string, number>)
 }
 
 async function getBufferedReactions(
-	deps: HonoApiNoteDependencies,
+	deps: ApiNoteDependencies,
 	noteId: MiNote['id'],
 ): Promise<{ deltas: Record<string, number>; pairs: [MiUser['id'], string][] }> {
 	if (!deps.meta.enableReactionsBuffering) return { deltas: {}, pairs: [] };
@@ -146,7 +146,7 @@ async function getBufferedReactions(
 }
 
 async function getBufferedReactionsMany(
-	deps: HonoApiNoteDependencies,
+	deps: ApiNoteDependencies,
 	noteIds: MiNote['id'][],
 ): Promise<Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>> {
 	const result = new Map<MiNote['id'], { deltas: Record<string, number>; pairs: [MiUser['id'], string][] }>(
@@ -216,7 +216,7 @@ function parseEmojiStr(
 }
 
 export async function populateEmojis(
-	deps: HonoApiEmojiPopulateDependencies,
+	deps: ApiEmojiPopulateDependencies,
 	emojiNames: string[],
 	noteUserHost: string | null,
 ): Promise<Record<string, string>> {
@@ -224,7 +224,7 @@ export async function populateEmojis(
 }
 
 export async function populateEmojisMany(
-	deps: HonoApiEmojiPopulateDependencies,
+	deps: ApiEmojiPopulateDependencies,
 	requests: readonly { emojiNames: readonly string[]; noteUserHost: string | null }[],
 ): Promise<Record<string, string>[]> {
 	const refs: { requestIndex: number; emojiName: string; name: string; host: string }[] = [];
@@ -261,7 +261,7 @@ async function nullIfEntityNotFound<T>(promise: Promise<T>): Promise<T | null> {
 }
 
 async function populatePoll(
-	deps: HonoApiNoteDependencies,
+	deps: ApiNoteDependencies,
 	note: MiNote,
 	meId: MiUser['id'] | null,
 	hint?: {
@@ -301,8 +301,8 @@ async function populatePoll(
 	};
 }
 
-export async function populateMyReactionForHonoApi(
-	deps: HonoApiNoteDependencies,
+export async function populateMyReactionForApi(
+	deps: ApiNoteDependencies,
 	note: {
 		id: MiNote['id'];
 		reactions: MiNote['reactions'];
@@ -338,8 +338,8 @@ function treatVisibility(packedNote: Packed<'Note'>): Packed<'Note'>['visibility
 	return packedNote.visibility;
 }
 
-async function shouldHideNoteForHonoApi(
-	deps: HonoApiNoteDependencies,
+async function shouldHideNoteForApi(
+	deps: ApiNoteDependencies,
 	packedNote: Packed<'Note'>,
 	meId: MiUser['id'] | null,
 	followeeIds?: Set<MiUser['id']>,
@@ -374,7 +374,7 @@ async function shouldHideNoteForHonoApi(
 	return false;
 }
 
-function hideNoteForHonoApi(packedNote: Packed<'Note'>): void {
+function hideNoteForApi(packedNote: Packed<'Note'>): void {
 	packedNote.visibleUserIds = undefined;
 	packedNote.fileIds = [];
 	packedNote.files = [];
@@ -384,7 +384,7 @@ function hideNoteForHonoApi(packedNote: Packed<'Note'>): void {
 	packedNote.isHidden = true;
 }
 
-function collectRenoteChainForHonoApi(note: Packed<'Note'>): Packed<'Note'>[] {
+function collectRenoteChainForApi(note: Packed<'Note'>): Packed<'Note'>[] {
 	const renoteChain: Packed<'Note'>[] = [];
 	for (let current: Packed<'Note'> | null | undefined = note; current != null; current = current.renote) {
 		renoteChain.push(current);
@@ -392,13 +392,13 @@ function collectRenoteChainForHonoApi(note: Packed<'Note'>): Packed<'Note'>[] {
 	return renoteChain;
 }
 
-export async function filterNoteForStreamingHidingForHonoApi(
-	deps: HonoApiNoteDependencies,
+export async function filterNoteForStreamingHidingForApi(
+	deps: ApiNoteDependencies,
 	note: Packed<'Note'>,
 	meId: MiUser['id'] | null,
 ): Promise<Packed<'Note'> | null> {
-	const renoteChain = collectRenoteChainForHonoApi(note);
-	const shouldHide = await Promise.all(renoteChain.map((n) => shouldHideNoteForHonoApi(deps, n, meId)));
+	const renoteChain = collectRenoteChainForApi(note);
+	const shouldHide = await Promise.all(renoteChain.map((n) => shouldHideNoteForApi(deps, n, meId)));
 
 	if (!shouldHide.some((h) => h)) {
 		return note;
@@ -414,7 +414,7 @@ export async function filterNoteForStreamingHidingForHonoApi(
 
 	for (let i = 0; i < renoteChain.length; i++) {
 		if (shouldHide[i] && currentCloned) {
-			hideNoteForHonoApi(currentCloned);
+			hideNoteForApi(currentCloned);
 		}
 		currentCloned = currentCloned?.renote ?? undefined;
 	}
@@ -422,8 +422,8 @@ export async function filterNoteForStreamingHidingForHonoApi(
 	return clonedNote;
 }
 
-export async function isVisibleForMeForHonoApi(
-	deps: HonoApiNoteDependencies,
+export async function isVisibleForMeForApi(
+	deps: ApiNoteDependencies,
 	note: MiNote,
 	meId: MiUser['id'] | null,
 	hint?: {
@@ -456,8 +456,8 @@ export async function isVisibleForMeForHonoApi(
 	return true;
 }
 
-export async function filterVisibleNotesForHonoApi(
-	deps: HonoApiNoteDependencies,
+export async function filterVisibleNotesForApi(
+	deps: ApiNoteDependencies,
 	notes: MiNote[],
 	meId: MiUser['id'] | null,
 ): Promise<MiNote[]> {
@@ -475,7 +475,7 @@ export async function filterVisibleNotesForHonoApi(
 	);
 
 	if (meId == null || followeeIdCoverage.size === 0) {
-		const visibility = await Promise.all(notes.map((note) => isVisibleForMeForHonoApi(deps, note, meId)));
+		const visibility = await Promise.all(notes.map((note) => isVisibleForMeForApi(deps, note, meId)));
 		return notes.filter((_, index) => visibility[index]);
 	}
 
@@ -489,14 +489,14 @@ export async function filterVisibleNotesForHonoApi(
 		followeeIdCoverage,
 		meHost,
 	};
-	const visibility = await Promise.all(notes.map((note) => isVisibleForMeForHonoApi(deps, note, meId, hint)));
+	const visibility = await Promise.all(notes.map((note) => isVisibleForMeForApi(deps, note, meId, hint)));
 	return notes.filter((_, index) => visibility[index]);
 }
 
 type PackNoteChannel = NonNullable<Awaited<ReturnType<typeof fetchChannelByIdFromDatabase>>>;
 
 /**
- * packNoteManyForHonoApi が事前一括取得した結果。`noteIds` に含まれるノートについてのみ
+ * packNoteManyForApi が事前一括取得した結果。`noteIds` に含まれるノートについてのみ
  * 各 Map の内容を信頼してよい。含まれないノートは個別取得にフォールバックする。
  */
 export type PackNoteBatchHint = {
@@ -519,8 +519,8 @@ export type PackNoteBatchHint = {
 	followeeIdCoverage?: Set<MiUser['id']>;
 };
 
-export async function packNoteForHonoApi(
-	deps: HonoApiNoteDependencies,
+export async function packNoteForApi(
+	deps: ApiNoteDependencies,
 	src: MiNote['id'] | MiNote,
 	me: { id: MiUser['id'] } | null | undefined,
 	options?: {
@@ -560,10 +560,10 @@ export async function packNoteForHonoApi(
 	const reactionEmojiNames = collectReactionEmojiNames(reactions);
 
 	const [user, files, reactionEmojis, emojis, channel, reply, renote, poll, myReaction] = await Promise.all([
-		hint?.packedUsers.get(note.userId) ?? packUserLiteForHonoApi(deps, note.user ?? note.userId),
+		hint?.packedUsers.get(note.userId) ?? packUserLiteForApi(deps, note.user ?? note.userId),
 		hint != null
 			? note.fileIds.map((id) => hint.packedFiles.get(id)).filter((f): f is Packed<'DriveFile'> => f != null)
-			: packDriveFileManyByIdsForHonoApi(deps, note.fileIds),
+			: packDriveFileManyByIdsForApi(deps, note.fileIds),
 		hint?.reactionEmojis.get(note.id) ?? populateEmojis(deps, reactionEmojiNames, host),
 		hint?.emojis.has(note.id)
 			? hint.emojis.get(note.id)
@@ -577,7 +577,7 @@ export async function packNoteForHonoApi(
 			: Promise.resolve(null),
 		opts.detail && note.replyId
 			? nullIfEntityNotFound(
-					packNoteForHonoApi(
+					packNoteForApi(
 						deps,
 						note.reply ?? note.replyId,
 						me,
@@ -592,7 +592,7 @@ export async function packNoteForHonoApi(
 			: Promise.resolve(undefined),
 		opts.detail && note.renoteId
 			? nullIfEntityNotFound(
-					packNoteForHonoApi(
+					packNoteForApi(
 						deps,
 						note.renote ?? note.renoteId,
 						me,
@@ -621,7 +621,7 @@ export async function packNoteForHonoApi(
 		opts.detail && meId && Object.keys(reactions).length > 0
 			? hint?.myReactions.has(note.id)
 				? hint.myReactions.get(note.id)
-				: populateMyReactionForHonoApi(
+				: populateMyReactionForApi(
 						deps,
 						{
 							id: note.id,
@@ -686,9 +686,9 @@ export async function packNoteForHonoApi(
 
 	if (
 		!opts.skipHide &&
-		(await shouldHideNoteForHonoApi(deps, packed, meId, opts.hint?.followeeIds, opts.hint?.followeeIdCoverage))
+		(await shouldHideNoteForApi(deps, packed, meId, opts.hint?.followeeIds, opts.hint?.followeeIdCoverage))
 	) {
-		hideNoteForHonoApi(packed);
+		hideNoteForApi(packed);
 	}
 
 	return packed;
@@ -703,7 +703,7 @@ type PackNoteTargets = {
 
 function collectPackNoteTargets(notes: MiNote[], detail: boolean): PackNoteTargets {
 	// 本体 + relation ロード済みの reply/renote を事前一括取得の対象にする
-	// (relation 未ロードのノートは packNoteForHonoApi 内の個別取得にフォールバックする)
+	// (relation 未ロードのノートは packNoteForApi 内の個別取得にフォールバックする)
 	const targetById = new Map<MiNote['id'], MiNote>();
 	const detailTargetIds = new Set<MiNote['id']>();
 	const addTarget = (note: MiNote, packDetail: boolean): void => {
@@ -731,7 +731,7 @@ type PackNoteStaticHint = Pick<
 >;
 
 async function buildPackNoteStaticHint(
-	deps: HonoApiNoteDependencies,
+	deps: ApiNoteDependencies,
 	targetInfo: PackNoteTargets,
 ): Promise<PackNoteStaticHint> {
 	const { targetById, targets, pollTargetIds } = targetInfo;
@@ -761,8 +761,8 @@ async function buildPackNoteStaticHint(
 	}
 
 	const [packedUserArray, packedFileArray, channelArray, populatedEmojiArray] = await Promise.all([
-		packUserLiteManyForHonoApi(deps, [...userSrcById.values()]),
-		packDriveFileManyByIdsForHonoApi(deps, [...fileIds]),
+		packUserLiteManyForApi(deps, [...userSrcById.values()]),
+		packDriveFileManyByIdsForApi(deps, [...fileIds]),
 		channelIds.size > 0 ? listChannelsByIdsFromDatabase(deps.db, [...channelIds]) : Promise.resolve([]),
 		populateEmojisMany(deps, emojiRequests),
 	]);
@@ -784,8 +784,8 @@ async function buildPackNoteStaticHint(
 	};
 }
 
-export async function createPackNoteStaticHintForHonoApi(
-	deps: HonoApiNoteDependencies,
+export async function createPackNoteStaticHintForApi(
+	deps: ApiNoteDependencies,
 	notes: MiNote[],
 	options?: { detail?: boolean },
 ): Promise<PackNoteBatchHint> {
@@ -800,8 +800,8 @@ export async function createPackNoteStaticHintForHonoApi(
 	};
 }
 
-export async function createPackNoteHintsForUsersForHonoApi(
-	deps: HonoApiNoteDependencies,
+export async function createPackNoteHintsForUsersForApi(
+	deps: ApiNoteDependencies,
 	notes: MiNote[],
 	userIds: MiUser['id'][],
 	options?: {
@@ -816,7 +816,7 @@ export async function createPackNoteHintsForUsersForHonoApi(
 	const detail = options?.detail ?? true;
 	const targetInfo = collectPackNoteTargets(notes, detail);
 	const { targets, detailTargetIds, pollTargetIds } = targetInfo;
-	const staticHint = options?.staticHint ?? (await createPackNoteStaticHintForHonoApi(deps, notes, { detail }));
+	const staticHint = options?.staticHint ?? (await createPackNoteStaticHintForApi(deps, notes, { detail }));
 	const reactionLookupNoteIds: MiNote['id'][] = [];
 	for (const target of targets) {
 		if (!detailTargetIds.has(target.id)) continue;
@@ -907,8 +907,8 @@ export async function createPackNoteHintsForUsersForHonoApi(
 	);
 }
 
-export async function packNoteManyForHonoApi(
-	deps: HonoApiNoteDependencies,
+export async function packNoteManyForApi(
+	deps: ApiNoteDependencies,
 	notes: MiNote[],
 	me: { id: MiUser['id'] } | null | undefined,
 	options?: {
@@ -955,7 +955,7 @@ export async function packNoteManyForHonoApi(
 			: Promise.resolve([]),
 	]);
 
-	// myReaction: populateMyReactionForHonoApi と同じ判定で pair cache から解決し、
+	// myReaction: populateMyReactionForApi と同じ判定で pair cache から解決し、
 	// DB 参照が必要なノートだけ IN 句 1 クエリでまとめて引く
 	const myReactions = new Map<MiNote['id'], string | undefined>();
 	if (meId != null && detail) {
@@ -1002,11 +1002,11 @@ export async function packNoteManyForHonoApi(
 		}),
 	};
 
-	return await Promise.all(notes.map((note) => packNoteForHonoApi(deps, note, me, { ...options, hint })));
+	return await Promise.all(notes.map((note) => packNoteForApi(deps, note, me, { ...options, hint })));
 }
 
-export async function fetchNoteDiffsForHonoApi(
-	deps: HonoApiNoteDependencies,
+export async function fetchNoteDiffsForApi(
+	deps: ApiNoteDependencies,
 	notes: MiNote[],
 ): Promise<{ id: string; reactions: MiNote['reactions']; reactionEmojis: Record<string, string> }[]> {
 	const bufferedReactionsByNoteId = await getBufferedReactionsMany(
@@ -1036,18 +1036,18 @@ export async function fetchNoteDiffsForHonoApi(
 const FEATURED_EPOCH = new Date('2023-01-01T00:00:00Z').getTime();
 const PER_USER_NOTES_RANKING_WINDOW = 1000 * 60 * 60 * 24 * 7;
 
-function getFeaturedRankingCurrentWindowForHonoApi(windowRange: number): number {
+function getFeaturedRankingCurrentWindowForApi(windowRange: number): number {
 	const passed = new Date().getTime() - FEATURED_EPOCH;
 	return Math.floor(passed / windowRange);
 }
 
-async function getFeaturedRankingOfForHonoApi(
+async function getFeaturedRankingOfForApi(
 	redis: Redis.Redis,
 	name: string,
 	windowRange: number,
 	threshold: number,
 ): Promise<string[]> {
-	const currentWindow = getFeaturedRankingCurrentWindowForHonoApi(windowRange);
+	const currentWindow = getFeaturedRankingCurrentWindowForApi(windowRange);
 	const previousWindow = currentWindow - 1;
 
 	const redisPipeline = redis.pipeline();
@@ -1077,7 +1077,7 @@ async function getFeaturedRankingOfForHonoApi(
 	return Array.from(ranking.keys());
 }
 
-export function normalizeHonoApiUsersFeaturedNotesQuery(query: Record<string, string>): Record<string, unknown> {
+export function normalizeApiUsersFeaturedNotesQuery(query: Record<string, string>): Record<string, unknown> {
 	const body: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(query)) {
 		if (key === 'limit') {
@@ -1102,12 +1102,12 @@ type UsersFeaturedNotesParams = {
 	userId: string;
 };
 
-export async function handleHonoApiUsersFeaturedNotes(
-	deps: HonoApiNoteDependencies,
+export async function handleApiUsersFeaturedNotes(
+	deps: ApiNoteDependencies,
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(usersFeaturedNotesParamDef, body);
+	const params = parseApiParams(usersFeaturedNotesParamDef, body);
 
 	const userIdsWhoBlockingMe = me
 		? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id))
@@ -1117,7 +1117,7 @@ export async function handleHonoApiUsersFeaturedNotes(
 		return [];
 	}
 
-	let noteIds = await getFeaturedRankingOfForHonoApi(
+	let noteIds = await getFeaturedRankingOfForApi(
 		deps.redis,
 		`featuredPerUserNotesRanking:${params.userId}`,
 		PER_USER_NOTES_RANKING_WINDOW,
@@ -1145,11 +1145,11 @@ export async function handleHonoApiUsersFeaturedNotes(
 
 	notes.sort((a, b) => (a.id > b.id ? -1 : 1));
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForApi(deps, notes, me);
 }
 
-function notesTranslateUnavailableError(): HonoApiError {
-	return new HonoApiError({
+function notesTranslateUnavailableError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Translate of notes unavailable.',
 		code: 'UNAVAILABLE',
@@ -1157,8 +1157,8 @@ function notesTranslateUnavailableError(): HonoApiError {
 	});
 }
 
-function notesTranslateNoSuchNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesTranslateNoSuchNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such note.',
 		code: 'NO_SUCH_NOTE',
@@ -1166,8 +1166,8 @@ function notesTranslateNoSuchNoteError(): HonoApiError {
 	});
 }
 
-function notesTranslateCannotTranslateInvisibleNoteError(): HonoApiError {
-	return new HonoApiError({
+function notesTranslateCannotTranslateInvisibleNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Cannot translate invisible note.',
 		code: 'CANNOT_TRANSLATE_INVISIBLE_NOTE',
@@ -1185,8 +1185,8 @@ type NotesTranslateParams = {
 	targetLang: string;
 };
 
-export type HonoApiNotesTranslateDependencies = HonoApiNoteDependencies &
-	HonoApiRolePolicyDependencies & {
+export type ApiNotesTranslateDependencies = ApiNoteDependencies &
+	ApiRolePolicyDependencies & {
 		httpRequestService: Pick<HttpRequestService, 'send'>;
 	};
 
@@ -1210,8 +1210,8 @@ const libreTranslateResponse = z.object({
 		.optional(),
 });
 
-export async function translateTextForHonoApi(
-	deps: Pick<HonoApiNotesTranslateDependencies, 'meta' | 'httpRequestService'>,
+export async function translateTextForApi(
+	deps: Pick<ApiNotesTranslateDependencies, 'meta' | 'httpRequestService'>,
 	text: string,
 	targetLang: string,
 ): Promise<{ sourceLang: string; text: string }> {
@@ -1280,14 +1280,14 @@ export async function translateTextForHonoApi(
 	};
 }
 
-export async function handleHonoApiNotesTranslate(
-	deps: HonoApiNotesTranslateDependencies,
+export async function handleApiNotesTranslate(
+	deps: ApiNotesTranslateDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<{ sourceLang: string; text: string } | undefined> {
-	const params = parseHonoApiParams(notesTranslateParamDef, body);
+	const params = parseApiParams(notesTranslateParamDef, body);
 
-	const policies = await getHonoApiRolePolicies(deps, me);
+	const policies = await getApiRolePolicies(deps, me);
 	if (!policies.canUseTranslator) {
 		throw notesTranslateUnavailableError();
 	}
@@ -1295,7 +1295,7 @@ export async function handleHonoApiNotesTranslate(
 	const note = await fetchNoteByIdFromDatabase(deps.db, params.noteId);
 	if (note == null) throw notesTranslateNoSuchNoteError();
 
-	if (!(await isVisibleForMeForHonoApi(deps, note, me.id))) {
+	if (!(await isVisibleForMeForApi(deps, note, me.id))) {
 		throw notesTranslateCannotTranslateInvisibleNoteError();
 	}
 
@@ -1306,7 +1306,7 @@ export async function handleHonoApiNotesTranslate(
 	let targetLang = params.targetLang;
 	if (targetLang.includes('-')) targetLang = targetLang.split('-')[0]!;
 
-	return await translateTextForHonoApi(deps, note.text, targetLang);
+	return await translateTextForApi(deps, note.text, targetLang);
 }
 
 export const usersNotesParamDef = z.object({
@@ -1337,8 +1337,8 @@ type UsersNotesParams = {
 	withFiles: boolean;
 };
 
-function usersNotesBothWithRepliesAndWithFilesError(): HonoApiError {
-	return new HonoApiError({
+function usersNotesBothWithRepliesAndWithFilesError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Specifying both withReplies and withFiles is not supported',
 		code: 'BOTH_WITH_REPLIES_AND_WITH_FILES',
@@ -1346,12 +1346,12 @@ function usersNotesBothWithRepliesAndWithFilesError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiUsersNotes(
-	deps: HonoApiNoteDependencies,
+export async function handleApiUsersNotes(
+	deps: ApiNoteDependencies,
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(usersNotesParamDef, body);
+	const params = parseApiParams(usersNotesParamDef, body);
 
 	if (params.withReplies && params.withFiles) throw usersNotesBothWithRepliesAndWithFilesError();
 
@@ -1392,7 +1392,7 @@ export async function handleHonoApiUsersNotes(
 
 		const isFollowing = me != null && (await followingExistsInDatabase(deps.db, me.id, params.userId));
 
-		const notes = await getFanoutTimelineNotesForHonoApi(
+		const notes = await getFanoutTimelineNotesForApi(
 			{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
 			{
 				untilId,
@@ -1428,10 +1428,10 @@ export async function handleHonoApiUsersNotes(
 			},
 		);
 
-		return await packNoteManyForHonoApi(deps, notes, me);
+		return await packNoteManyForApi(deps, notes, me);
 	}
 
 	const notes = await getFromDb(untilId, sinceId, params.limit);
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForApi(deps, notes, me);
 }

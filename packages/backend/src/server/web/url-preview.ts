@@ -10,7 +10,7 @@ export type UrlPreviewDependencies = {
 	urlPreviewService: UrlPreviewService;
 };
 
-class HonoUrlPreviewReply implements UrlPreviewReply {
+class CollectedUrlPreviewReply implements UrlPreviewReply {
 	public statusCode = 200;
 	public readonly headers = new Headers();
 
@@ -43,7 +43,7 @@ function createUrlPreviewRequest(c: Context): UrlPreviewRequest {
 	};
 }
 
-function toResponse(body: object | undefined, reply: HonoUrlPreviewReply): Response {
+function toResponse(body: object | undefined, reply: CollectedUrlPreviewReply): Response {
 	if (body == null) {
 		return new Response(null, {
 			status: reply.statusCode,
@@ -64,7 +64,7 @@ export function createUrlPreviewApp(deps: UrlPreviewDependencies): Hono {
 	const app = new Hono();
 
 	app.get('/url', async (c) => {
-		const reply = new HonoUrlPreviewReply();
+		const reply = new CollectedUrlPreviewReply();
 		const body = await deps.urlPreviewService.handle(createUrlPreviewRequest(c), reply);
 		return toResponse(body, reply);
 	});

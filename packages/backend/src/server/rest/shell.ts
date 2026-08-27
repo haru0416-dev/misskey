@@ -18,20 +18,20 @@ import type { UserAuthService } from '@/core/account/UserAuthService.js';
 import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import type { WebAuthnService } from '@/core/account/WebAuthnService.js';
 import type { EmailService } from '@/core/email/EmailService.js';
-import type { HonoChartWriters } from '@/server/chart-runtime.js';
+import type { ChartWriters } from '@/server/chart-runtime.js';
 import type Logger from '@/logger.js';
-import type { HonoApiAdminQueueDependencies } from './admin/admin-queue.js';
-import type { HonoApiMainStreamPublisher } from './notification/notification.js';
+import type { ApiAdminQueueDependencies } from './admin/admin-queue.js';
+import type { ApiMainStreamPublisher } from './notification/notification.js';
 import type {
-	HonoApiAdminStreamPublisher,
-	HonoApiBroadcastStreamPublisher,
-	HonoApiChatRoomStreamPublisher,
-	HonoApiChatUserStreamPublisher,
-	HonoApiDriveStreamPublisher,
-	HonoApiInternalEventPublisher,
-	HonoApiNoteStreamPublisher,
-	HonoApiNotesStreamPublisher,
-	HonoApiUserListStreamPublisher,
+	ApiAdminStreamPublisher,
+	ApiBroadcastStreamPublisher,
+	ApiChatRoomStreamPublisher,
+	ApiChatUserStreamPublisher,
+	ApiDriveStreamPublisher,
+	ApiInternalEventPublisher,
+	ApiNoteStreamPublisher,
+	ApiNotesStreamPublisher,
+	ApiUserListStreamPublisher,
 } from './events.js';
 import { jsonResponse, setApiHeaders } from './shell-helpers.js';
 import { registerAuthAccountRoutes } from './routes/auth-account.js';
@@ -54,7 +54,7 @@ import { registerMiscRoutes } from './routes/misc.js';
 import { registerAccountIRoutes } from './routes/account-i.js';
 import { registerUsersRoutes } from './routes/users.js';
 
-export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
+export type ApiShellDependencies = ApiAdminQueueDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	dbPool: MiDrizzlePool;
@@ -80,18 +80,18 @@ export type ApiShellDependencies = HonoApiAdminQueueDependencies & {
 		| 'verifyRegistration'
 	>;
 	emailService: Pick<EmailService, 'sendEmail' | 'validateEmailForAccount'>;
-	chartWriters: HonoChartWriters;
+	chartWriters: ChartWriters;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
-	publishBroadcastStream?: HonoApiBroadcastStreamPublisher;
-	publishMainStream?: HonoApiMainStreamPublisher;
-	publishAdminStream?: HonoApiAdminStreamPublisher;
-	publishDriveStream?: HonoApiDriveStreamPublisher;
-	publishUserListStream?: HonoApiUserListStreamPublisher;
-	publishChatUserStream?: HonoApiChatUserStreamPublisher;
-	publishChatRoomStream?: HonoApiChatRoomStreamPublisher;
-	publishNotesStream?: HonoApiNotesStreamPublisher;
-	publishNoteStream?: HonoApiNoteStreamPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
+	publishBroadcastStream?: ApiBroadcastStreamPublisher;
+	publishMainStream?: ApiMainStreamPublisher;
+	publishAdminStream?: ApiAdminStreamPublisher;
+	publishDriveStream?: ApiDriveStreamPublisher;
+	publishUserListStream?: ApiUserListStreamPublisher;
+	publishChatUserStream?: ApiChatUserStreamPublisher;
+	publishChatRoomStream?: ApiChatRoomStreamPublisher;
+	publishNotesStream?: ApiNotesStreamPublisher;
+	publishNoteStream?: ApiNoteStreamPublisher;
 };
 
 const unknownApiEndpoint = {

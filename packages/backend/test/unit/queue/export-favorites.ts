@@ -17,7 +17,7 @@ import { createNoteInDatabase } from '@/core/note/NoteStore.js';
 import { createNoteFavoriteInDatabase } from '@/core/note/NoteFavoriteStore.js';
 import { listDriveFilesByUserIdWithPaginationFromDatabase } from '@/core/drive/DriveFileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueueExportFavorites, type HonoQueueDbDependencies } from '@/queue/handlers/db.js';
+import { handleQueueExportFavorites, type QueueDbDependencies } from '@/queue/handlers/db.js';
 import type { DbJobDataWithUser } from '@/queue/types.js';
 
 function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {
@@ -26,7 +26,7 @@ function fakeJob(data: DbJobDataWithUser): Bull.Job<DbJobDataWithUser> {
 
 describe('hono-queue-db (exportFavorites)', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueDbDependencies;
+	let deps: QueueDbDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -54,13 +54,13 @@ describe('hono-queue-db (exportFavorites)', () => {
 		});
 		await createNoteFavoriteInDatabase(runtime.db, { id: genId(), userId: user.id, noteId });
 
-		await handleHonoQueueExportFavorites(deps, fakeJob({ user: { id: user.id } }));
+		await handleQueueExportFavorites(deps, fakeJob({ user: { id: user.id } }));
 
 		const files = await listDriveFilesByUserIdWithPaginationFromDatabase(runtime.db, user.id, { limit: 10 });
 		expect(files.some((f) => f.name.startsWith('favorites-') && f.name.endsWith('.json'))).toBe(true);
 	});
 
 	test('存在しないuserIdは何もしない', async () => {
-		await expect(handleHonoQueueExportFavorites(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
+		await expect(handleQueueExportFavorites(deps, fakeJob({ user: { id: genId() } }))).resolves.toBeUndefined();
 	});
 });

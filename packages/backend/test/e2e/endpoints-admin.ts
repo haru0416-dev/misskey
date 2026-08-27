@@ -1032,8 +1032,8 @@ describe('Endpoints', () => {
 				id: genId(now - 1000),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
-				name: `Hono public role ${now}`,
-				description: 'Hono role endpoint test',
+				name: `public role ${now}`,
+				description: 'role endpoint test',
 				color: '#2255aa',
 				iconUrl: null,
 				target: 'manual',
@@ -1094,8 +1094,8 @@ describe('Endpoints', () => {
 				id: genId(now - 2000),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
-				name: `Hono explorable role ${suffix}`,
-				description: 'Hono roles/users test',
+				name: `explorable role ${suffix}`,
+				description: 'roles/users test',
 				color: null,
 				iconUrl: null,
 				target: 'manual',
@@ -1114,8 +1114,8 @@ describe('Endpoints', () => {
 				id: genId(now - 1999),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
-				name: `Hono non-explorable role ${suffix}`,
-				description: 'Hono roles/users test',
+				name: `non-explorable role ${suffix}`,
+				description: 'roles/users test',
 				color: null,
 				iconUrl: null,
 				target: 'manual',
@@ -1171,8 +1171,8 @@ describe('Endpoints', () => {
 				id: genId(now - 3000),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
-				name: `Hono roles/notes role ${suffix}`,
-				description: 'Hono roles/notes test',
+				name: `roles/notes role ${suffix}`,
+				description: 'roles/notes test',
 				color: null,
 				iconUrl: null,
 				target: 'manual',
@@ -1307,8 +1307,8 @@ describe('Endpoints', () => {
 			const now = Date.now();
 			const config = fixtureConfig;
 			const createPayload = {
-				name: `Hono admin role ${now}`,
-				description: 'Hono admin role endpoint test',
+				name: `admin role ${now}`,
+				description: 'admin role endpoint test',
 				color: '#3366cc',
 				iconUrl: null,
 				target: 'manual' as const,
@@ -1359,7 +1359,7 @@ describe('Endpoints', () => {
 				'admin/roles/update',
 				{
 					roleId: created.body.id,
-					name: `Hono admin role updated ${now}`,
+					name: `admin role updated ${now}`,
 					description: 'updated role description',
 					color: null,
 					isPublic: false,
@@ -1375,7 +1375,7 @@ describe('Endpoints', () => {
 
 			const afterUpdate = await api('admin/roles/show', { roleId: created.body.id }, alice);
 			expect(afterUpdate.status).toBe(200);
-			expect(afterUpdate.body.name).toBe(`Hono admin role updated ${now}`);
+			expect(afterUpdate.body.name).toBe(`admin role updated ${now}`);
 			expect(afterUpdate.body.description).toBe('updated role description');
 			expect(afterUpdate.body.color).toBe(null);
 			expect(afterUpdate.body.isPublic).toBe(false);
@@ -1427,7 +1427,7 @@ describe('Endpoints', () => {
 				'admin/roles/create',
 				{
 					...createPayload,
-					name: `Hono admin assign role ${now}`,
+					name: `admin assign role ${now}`,
 					isPublic: true,
 					canEditMembersByModerator: true,
 				},
@@ -1439,7 +1439,7 @@ describe('Endpoints', () => {
 				'admin/roles/create',
 				{
 					...createPayload,
-					name: `Hono admin role denied ${now}`,
+					name: `admin role denied ${now}`,
 				},
 				{ token: readToken },
 			);
@@ -1511,8 +1511,8 @@ describe('Endpoints', () => {
 				id: genId(now + 2000),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
-				name: `Hono moderator role ${now}`,
-				description: 'Hono moderator role',
+				name: `moderator role ${now}`,
+				description: 'moderator role',
 				color: null,
 				iconUrl: null,
 				target: 'manual',
@@ -1708,7 +1708,7 @@ describe('Endpoints', () => {
 
 		test('admin/system-webhook は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
 			const now = Date.now();
-			const name = `Hono system webhook ${now}`;
+			const name = `system webhook ${now}`;
 			const created = await api(
 				'admin/system-webhook/create',
 				{
@@ -1847,14 +1847,14 @@ describe('Endpoints', () => {
 		test('admin/abuse-report/notification-recipient は作成、一覧、表示、更新、削除、secure 権限、ログを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
-			const name = `Hono abuse recipient ${suffix}`;
+			const name = `abuse recipient ${suffix}`;
 			const emailUser = await signup({ username: `harn${suffix}` });
 			await updateUserProfileInDatabase(db, emailUser.id, {
 				email: `hono-recipient-${suffix}@example.test`,
 				emailVerified: true,
 			});
 			const moderatorRole = await role(alice, {
-				name: `Hono abuse recipient moderator ${suffix}`,
+				name: `abuse recipient moderator ${suffix}`,
 				isModerator: true,
 			});
 			const assign = await api(
@@ -2064,7 +2064,7 @@ describe('Endpoints', () => {
 				id: genId(),
 				targetUserId: bob.id,
 				reporterId: carol.id,
-				comment: `Hono abuse report ${suffix}`,
+				comment: `abuse report ${suffix}`,
 				targetUserHost: null,
 				reporterHost: null,
 				...values,
@@ -2102,7 +2102,7 @@ describe('Endpoints', () => {
 			const config = fixtureConfig;
 			const unresolved = await createReport(`${suffix}unresolved`, {
 				id: genId(now - 2000),
-				comment: `Hono abuse report list unresolved ${suffix}`,
+				comment: `abuse report list unresolved ${suffix}`,
 			});
 			const resolved = await createReport(`${suffix}resolved`, {
 				id: genId(now - 1000),
@@ -2110,12 +2110,12 @@ describe('Endpoints', () => {
 				resolved: true,
 				resolvedAs: 'reject',
 				moderationNote: `resolved note ${suffix}`,
-				comment: `Hono abuse report list resolved ${suffix}`,
+				comment: `abuse report list resolved ${suffix}`,
 			});
 			const remoteReporter = await createReport(`${suffix}remote`, {
 				id: genId(now),
 				reporterHost: 'remote.example',
-				comment: `Hono abuse report list remote ${suffix}`,
+				comment: `abuse report list remote ${suffix}`,
 			});
 
 			const listed = await api(
@@ -2135,7 +2135,7 @@ describe('Endpoints', () => {
 				createdIds,
 			);
 			const packedResolved = listedReports.find((report) => report.id === resolved.id);
-			expect(packedResolved.comment).toBe(`Hono abuse report list resolved ${suffix}`);
+			expect(packedResolved.comment).toBe(`abuse report list resolved ${suffix}`);
 			expect(packedResolved.resolved).toBe(true);
 			expect(packedResolved.resolvedAs).toBe('reject');
 			expect(packedResolved.moderationNote).toBe(`resolved note ${suffix}`);
@@ -2217,7 +2217,7 @@ describe('Endpoints', () => {
 				'admin/system-webhook/create',
 				{
 					isActive: true,
-					name: `Hono resolve abuse report webhook ${suffix}`,
+					name: `resolve abuse report webhook ${suffix}`,
 					on: ['abuseReportResolved'],
 					url: `https://example.test/resolve-abuse-report/${suffix}`,
 				},
@@ -2340,7 +2340,7 @@ describe('Endpoints', () => {
 				id: genId(now),
 				targetUserId: target.id,
 				targetUserHost: targetHost,
-				comment: `Hono abuse report forward ${suffix}`,
+				comment: `abuse report forward ${suffix}`,
 			});
 
 			const forwarded = await api(
@@ -2365,7 +2365,7 @@ describe('Endpoints', () => {
 			expect(flag.type).toBe('Flag');
 			expect(flag.actor.startsWith(`${origin}/users/`)).toBe(true);
 			expect(flag.object).toBe(targetUri);
-			expect(flag.content).toBe(`Hono abuse report forward ${suffix}`);
+			expect(flag.content).toBe(`abuse report forward ${suffix}`);
 			assert.ok(flag.id.startsWith(`${origin}/`));
 			assert.ok(flag['@context']);
 			await deliverJob.remove();
@@ -2375,7 +2375,7 @@ describe('Endpoints', () => {
 				id: genId(now + 1000),
 				targetUserId: target.id,
 				targetUserHost: targetHost,
-				comment: `Hono abuse report forward token ${suffix}`,
+				comment: `abuse report forward token ${suffix}`,
 			});
 			const forwardedByToken = await api(
 				'admin/forward-abuse-user-report',
@@ -2587,7 +2587,7 @@ describe('Endpoints', () => {
 				id: genId(now),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
-				name: `Hono show user role ${suffix}`,
+				name: `show user role ${suffix}`,
 				description: 'show user role',
 				color: '#2266aa',
 				iconUrl: null,
@@ -3003,7 +3003,7 @@ describe('Endpoints', () => {
 			const suffix = now.toString(36).slice(-8);
 			const payload = {
 				to: `hono-send-email-${suffix}@example.test`,
-				subject: `Hono send email ${suffix}`,
+				subject: `send email ${suffix}`,
 				text: `Hello ${suffix}`,
 			};
 
@@ -3987,7 +3987,7 @@ describe('Endpoints', () => {
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
 				name: `avatar manager ${now}`,
-				description: 'Hono avatar decoration admin role',
+				description: 'avatar decoration admin role',
 				color: null,
 				iconUrl: null,
 				target: 'manual',

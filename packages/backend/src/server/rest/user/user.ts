@@ -81,25 +81,20 @@ import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserNotePining } from '@/models/UserNotePining.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
-import { HonoApiError } from '../error.js';
+import { ApiError } from '../error.js';
+import { packNoteManyForApi, populateEmojis, populateEmojisMany, type ApiNoteDependencies } from '../note/note.js';
+import type { ChartWriters } from '@/server/chart-runtime.js';
 import {
-	packNoteManyForHonoApi,
-	populateEmojis,
-	populateEmojisMany,
-	type HonoApiNoteDependencies,
-} from '../note/note.js';
-import type { HonoChartWriters } from '@/server/chart-runtime.js';
-import {
-	computeHonoApiUserRoles,
-	getHonoApiRolePolicies,
-	getHonoApiUserRoles,
-	isHonoApiModerator,
-	type HonoApiRolePolicyDependencies,
+	computeApiUserRoles,
+	getApiRolePolicies,
+	getApiUserRoles,
+	isApiModerator,
+	type ApiRolePolicyDependencies,
 } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type MeDetailedHonoApiResponse = Record<string, unknown>;
-export type UserDetailedNotMeHonoApiResponse = Record<string, unknown> & { id: MiUser['id'] };
+export type MeDetailedApiResponse = Record<string, unknown>;
+export type UserDetailedNotMeApiResponse = Record<string, unknown> & { id: MiUser['id'] };
 
 export type UserPackingDependencies = {
 	config: Config;
@@ -109,7 +104,7 @@ export type UserPackingDependencies = {
 	redis?: Redis.Redis;
 };
 
-type HonoApiAvatarDecorationLite = {
+type ApiAvatarDecorationLite = {
 	id: string;
 	angle?: number;
 	flipH?: boolean;
@@ -123,7 +118,7 @@ type PackMeDetailedOptions = {
 	profile?: MiUserProfile;
 };
 
-function getHonoApiUserPolicies(config: Config, meta: MiMeta): RolePolicies {
+function getApiUserPolicies(config: Config, meta: MiMeta): RolePolicies {
 	const policies = { ...DEFAULT_POLICIES, ...meta.policies };
 	const serverMaxFileSizeMb = Math.floor(config.limits.maximumFileSizeBytes / (1024 * 1024));
 
@@ -133,10 +128,10 @@ function getHonoApiUserPolicies(config: Config, meta: MiMeta): RolePolicies {
 	};
 }
 
-function packUserLiteCoreForHonoApi(
+function packUserLiteCoreForApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
-	avatarDecorations: HonoApiAvatarDecorationLite[],
+	avatarDecorations: ApiAvatarDecorationLite[],
 	emojis: Record<string, string>,
 ): Packed<'UserLite'> {
 	return {
@@ -159,16 +154,16 @@ function packUserLiteCoreForHonoApi(
 	};
 }
 
-async function buildHonoApiAvatarDecorations(
+async function buildApiAvatarDecorations(
 	deps: UserPackingDependencies,
 	users: MiUser[],
-): Promise<Map<MiUser['id'], HonoApiAvatarDecorationLite[]>> {
+): Promise<Map<MiUser['id'], ApiAvatarDecorationLite[]>> {
 	const usersWithDecorations = users.filter((user) => user.avatarDecorations.length > 0);
 	if (usersWithDecorations.length === 0) return new Map();
 
 	const decorations = await listAvatarDecorationsFromDatabaseCached(deps.db);
 	const decorationById = new Map(decorations.map((decoration) => [decoration.id, decoration]));
-	const map = new Map<MiUser['id'], HonoApiAvatarDecorationLite[]>();
+	const map = new Map<MiUser['id'], ApiAvatarDecorationLite[]>();
 
 	for (const user of usersWithDecorations) {
 		map.set(
@@ -193,19 +188,19 @@ async function buildHonoApiAvatarDecorations(
 	return map;
 }
 
-export async function packUserLiteForHonoApi(
+export async function packUserLiteForApi(
 	deps: UserPackingDependencies,
 	src: MiUser['id'] | MiUser,
 ): Promise<Packed<'UserLite'>> {
 	const user = typeof src === 'object' ? src : await fetchUserByIdOrFailFromDatabase(deps.db, src);
-	const avatarDecorations = await buildHonoApiAvatarDecorations(deps, [user]);
+	const avatarDecorations = await buildApiAvatarDecorations(deps, [user]);
 	const emojis = await populateEmojis(deps, user.emojis, user.host);
 
-	return packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? [], emojis);
+	return packUserLiteCoreForApi(deps, user, avatarDecorations.get(user.id) ?? [], emojis);
 }
 
 /** srcs (MiUser本体 or ID) を MiUser[] に解決する。バッチ取得で見つからなかったIDは1件ずつ fetchUserByIdOrFailFromDatabase にフォールバックする (見つからなければ throw)。 */
-async function resolveUsersFromSrcsForHonoApi(
+async function resolveUsersFromSrcsForApi(
 	deps: UserPackingDependencies,
 	srcs: (MiUser['id'] | MiUser)[],
 ): Promise<MiUser[]> {
@@ -223,7 +218,7 @@ async function resolveUsersFromSrcsForHonoApi(
 	return srcs.map((src) => (typeof src === 'object' ? src : userById.get(src)!));
 }
 
-async function populateUserEmojisManyForHonoApi(
+async function populateUserEmojisManyForApi(
 	deps: UserPackingDependencies,
 	users: MiUser[],
 ): Promise<Map<MiUser['id'], Record<string, string>>> {
@@ -238,20 +233,20 @@ async function populateUserEmojisManyForHonoApi(
 	return new Map(users.map((user, index) => [user.id, resolved[index]!]));
 }
 
-export async function packUserLiteManyForHonoApi(
+export async function packUserLiteManyForApi(
 	deps: UserPackingDependencies,
 	srcs: (MiUser['id'] | MiUser)[],
 ): Promise<Packed<'UserLite'>[]> {
-	const users = await resolveUsersFromSrcsForHonoApi(deps, srcs);
-	const avatarDecorations = await buildHonoApiAvatarDecorations(deps, users);
-	const emojisByUserId = await populateUserEmojisManyForHonoApi(deps, users);
+	const users = await resolveUsersFromSrcsForApi(deps, srcs);
+	const avatarDecorations = await buildApiAvatarDecorations(deps, users);
+	const emojisByUserId = await populateUserEmojisManyForApi(deps, users);
 
 	return users.map((user) =>
-		packUserLiteCoreForHonoApi(deps, user, avatarDecorations.get(user.id) ?? [], emojisByUserId.get(user.id) ?? {}),
+		packUserLiteCoreForApi(deps, user, avatarDecorations.get(user.id) ?? [], emojisByUserId.get(user.id) ?? {}),
 	);
 }
 
-type UserRelationForPack = Awaited<ReturnType<typeof getUserRelationForHonoApi>>;
+type UserRelationForPack = Awaited<ReturnType<typeof getUserRelationForApi>>;
 
 type UserDetailedExtras = {
 	roles: {
@@ -278,7 +273,7 @@ type UserDetailedExtras = {
 /**
  * relation は me が別ユーザーの場合のみ、twoFactor は本人またはモデレーターが閲覧する場合のみ返す。
  */
-async function buildUserDetailedExtrasForHonoApi(
+async function buildUserDetailedExtrasForApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	profile: MiUserProfile,
@@ -298,11 +293,11 @@ async function buildUserDetailedExtrasForHonoApi(
 	let iAmModerator = hint?.iAmModerator ?? false;
 	if (hint?.iAmModerator === undefined && me != null) {
 		const meUser = isMe ? user : await fetchUserByIdFromDatabase(deps.db, me.id);
-		iAmModerator = meUser != null && (await isHonoApiModerator(deps, meUser));
+		iAmModerator = meUser != null && (await isApiModerator(deps, meUser));
 	}
 
-	const userRoles = hint?.userRoles ?? (await getHonoApiUserRoles(deps, user));
-	const policies = hint?.policies ?? (await getHonoApiRolePolicies(deps, user, userRoles));
+	const userRoles = hint?.userRoles ?? (await getApiUserRoles(deps, user));
+	const policies = hint?.policies ?? (await getApiRolePolicies(deps, user, userRoles));
 
 	const pins = hint?.pins ?? (await listUserNotePiningsByUserIdFromDatabase(deps.db, user.id, { order: 'desc' }));
 	const pinnedNoteIds = pins.map((pin) => pin.noteId);
@@ -311,19 +306,16 @@ async function buildUserDetailedExtrasForHonoApi(
 		const notes = await listHydratedNotesByIdsFromDatabase(deps.db, pinnedNoteIds);
 		const noteById = new Map(notes.map((note) => [note.id, note]));
 		const orderedNotes = pinnedNoteIds.map((id) => noteById.get(id)).filter((note) => note != null);
-		pinnedNotes = await packNoteManyForHonoApi(
-			deps as UserPackingDependencies & HonoApiNoteDependencies,
-			orderedNotes,
-			me,
-			{ detail: true },
-		);
+		pinnedNotes = await packNoteManyForApi(deps as UserPackingDependencies & ApiNoteDependencies, orderedNotes, me, {
+			detail: true,
+		});
 	}
 
 	const relation =
 		hint?.relation !== undefined
 			? hint.relation
 			: me != null && !isMe
-				? await getUserRelationForHonoApi(deps, me.id, user.id)
+				? await getUserRelationForApi(deps, me.id, user.id)
 				: null;
 
 	const twoFactor =
@@ -369,34 +361,34 @@ async function buildUserDetailedExtrasForHonoApi(
 	};
 }
 
-export async function packUserDetailedNotMeForHonoApi(
+export async function packUserDetailedNotMeForApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	me?: { id: MiUser['id'] } | null,
-): Promise<UserDetailedNotMeHonoApiResponse> {
+): Promise<UserDetailedNotMeApiResponse> {
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 	const memo = me ? await fetchUserMemoTextFromDatabase(deps.db, me.id, user.id) : null;
-	const extras = await buildUserDetailedExtrasForHonoApi(deps, user, profile, me);
+	const extras = await buildUserDetailedExtrasForApi(deps, user, profile, me);
 
-	return packUserDetailedNotMeCoreForHonoApi(deps, user, profile, memo, extras);
+	return packUserDetailedNotMeCoreForApi(deps, user, profile, memo, extras);
 }
 
-export async function packUserDetailedNotMeManyForHonoApi(
+export async function packUserDetailedNotMeManyForApi(
 	deps: UserPackingDependencies,
 	srcs: (MiUser['id'] | MiUser)[],
 	me?: { id: MiUser['id'] } | null,
-): Promise<UserDetailedNotMeHonoApiResponse[]> {
-	const users = await resolveUsersFromSrcsForHonoApi(deps, srcs);
+): Promise<UserDetailedNotMeApiResponse[]> {
+	const users = await resolveUsersFromSrcsForApi(deps, srcs);
 	const userIds = [...new Set(users.map((user) => user.id))];
 	const profiles = await listUserProfilesByUserIdsFromDatabase(deps.db, userIds);
 	const profileByUserId = new Map(profiles.map((profile) => [profile.userId, profile]));
 	const memoByTargetUserId = me ? await listUserMemoTextsByUserIdFromDatabase(deps.db, me.id) : null;
 
 	const meUser = me != null ? await fetchUserByIdFromDatabase(deps.db, me.id) : null;
-	const iAmModerator = meUser != null && (await isHonoApiModerator(deps, meUser));
+	const iAmModerator = meUser != null && (await isApiModerator(deps, meUser));
 	const relationByUserId =
 		me != null
-			? await getUserRelationsForHonoApi(
+			? await getUserRelationsForApi(
 					deps,
 					me.id,
 					users.filter((user) => user.id !== me.id).map((user) => user.id),
@@ -419,8 +411,8 @@ export async function packUserDetailedNotMeManyForHonoApi(
 						.map((user) => user.id),
 				)
 			: Promise.resolve([]),
-		resolveAlsoKnownAsManyForHonoApi(deps, users),
-		populateUserEmojisManyForHonoApi(deps, users),
+		resolveAlsoKnownAsManyForApi(deps, users),
+		populateUserEmojisManyForApi(deps, users),
 	]);
 	const securityKeyUserIdSet = new Set(securityKeyUserIds);
 	const assignmentsByUserId = new Map<string, typeof allAssignments>();
@@ -447,8 +439,8 @@ export async function packUserDetailedNotMeManyForHonoApi(
 		const notes = await listHydratedNotesByIdsFromDatabase(deps.db, allPinnedNoteIds);
 		const noteById = new Map(notes.map((note) => [note.id, note]));
 		const orderedNotes = allPinnedNoteIds.map((id) => noteById.get(id)).filter((note) => note != null);
-		const packedPinnedNotes = await packNoteManyForHonoApi(
-			deps as UserPackingDependencies & HonoApiNoteDependencies,
+		const packedPinnedNotes = await packNoteManyForApi(
+			deps as UserPackingDependencies & ApiNoteDependencies,
 			orderedNotes,
 			me,
 			{ detail: true },
@@ -467,7 +459,7 @@ export async function packUserDetailedNotMeManyForHonoApi(
 				me != null && (iAmModerator || user.id === me.id) && profile.twoFactorEnabled
 					? securityKeyUserIdSet.has(user.id)
 					: undefined;
-			const extras = await buildUserDetailedExtrasForHonoApi(
+			const extras = await buildUserDetailedExtrasForApi(
 				deps,
 				user,
 				profile,
@@ -475,13 +467,13 @@ export async function packUserDetailedNotMeManyForHonoApi(
 				omitUndefined({
 					iAmModerator,
 					relation: relationByUserId?.get(user.id) ?? null,
-					userRoles: computeHonoApiUserRoles(deps, user, allRoles, assignmentsByUserId.get(user.id) ?? []),
+					userRoles: computeApiUserRoles(deps, user, allRoles, assignmentsByUserId.get(user.id) ?? []),
 					pins,
 					pinnedNotes: pins.map((pin) => packedPinnedNoteById.get(pin.noteId)).filter((note) => note != null),
 					hasSecurityKey,
 				}),
 			);
-			return packUserDetailedNotMeCoreForHonoApi(
+			return packUserDetailedNotMeCoreForApi(
 				deps,
 				user,
 				profile,
@@ -496,7 +488,7 @@ export async function packUserDetailedNotMeManyForHonoApi(
 	);
 }
 
-export async function resolveAlsoKnownAsForHonoApi(
+export async function resolveAlsoKnownAsForApi(
 	deps: UserPackingDependencies,
 	alsoKnownAs: string[] | null,
 ): Promise<string[] | null> {
@@ -513,7 +505,7 @@ export async function resolveAlsoKnownAsForHonoApi(
 		.filter((id): id is string => id != null);
 }
 
-async function resolveAlsoKnownAsManyForHonoApi(
+async function resolveAlsoKnownAsManyForApi(
 	deps: UserPackingDependencies,
 	users: MiUser[],
 ): Promise<Map<MiUser['id'], string[] | null>> {
@@ -545,7 +537,7 @@ async function resolveAlsoKnownAsManyForHonoApi(
 	return resolvedByUserId;
 }
 
-async function packUserDetailedNotMeCoreForHonoApi(
+async function packUserDetailedNotMeCoreForApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	profile: MiUserProfile,
@@ -555,9 +547,9 @@ async function packUserDetailedNotMeCoreForHonoApi(
 		alsoKnownAs?: string[] | null;
 		emojis?: Record<string, string>;
 	},
-): Promise<UserDetailedNotMeHonoApiResponse> {
+): Promise<UserDetailedNotMeApiResponse> {
 	const alsoKnownAs =
-		hint?.alsoKnownAs !== undefined ? hint.alsoKnownAs : await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
+		hint?.alsoKnownAs !== undefined ? hint.alsoKnownAs : await resolveAlsoKnownAsForApi(deps, user.alsoKnownAs);
 	const emojis = hint?.emojis ?? (await populateEmojis(deps, user.emojis, user.host));
 
 	return {
@@ -644,20 +636,20 @@ function backupCodesStock(profile: MiUserProfile): 'none' | 'partial' | 'full' {
 	return count > 0 ? 'partial' : 'none';
 }
 
-export async function packMeDetailedForHonoApi(
+export async function packMeDetailedForApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	options: PackMeDetailedOptions,
-): Promise<MeDetailedHonoApiResponse> {
+): Promise<MeDetailedApiResponse> {
 	const profile = options.profile ?? (await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id));
-	const userRoles = await getHonoApiUserRoles(deps, user);
-	const policies = await getHonoApiRolePolicies(deps, user, userRoles);
+	const userRoles = await getApiUserRoles(deps, user);
+	const policies = await getApiRolePolicies(deps, user, userRoles);
 	const isRoot = deps.meta.rootUserId === user.id;
 	const isAdmin = isRoot || userRoles.some((role) => role.isAdministrator);
 	const isModerator = isRoot || userRoles.some((role) => role.isModerator || role.isAdministrator);
-	const alsoKnownAs = await resolveAlsoKnownAsForHonoApi(deps, user.alsoKnownAs);
+	const alsoKnownAs = await resolveAlsoKnownAsForApi(deps, user.alsoKnownAs);
 	const memo = await fetchUserMemoTextFromDatabase(deps.db, user.id, user.id);
-	const extras = await buildUserDetailedExtrasForHonoApi(
+	const extras = await buildUserDetailedExtrasForApi(
 		deps,
 		user,
 		profile,
@@ -772,36 +764,36 @@ export async function packMeDetailedForHonoApi(
 	};
 }
 
-export async function packUserDetailedForHonoApi(
+export async function packUserDetailedForApi(
 	deps: UserPackingDependencies,
 	user: MiUser,
 	me: { id: MiUser['id'] } | null | undefined,
-): Promise<MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse> {
+): Promise<MeDetailedApiResponse | UserDetailedNotMeApiResponse> {
 	if (me != null && me.id === user.id) {
-		return await packMeDetailedForHonoApi(deps, user, { includeSecrets: false });
+		return await packMeDetailedForApi(deps, user, { includeSecrets: false });
 	}
 
-	return await packUserDetailedNotMeForHonoApi(deps, user, me);
+	return await packUserDetailedNotMeForApi(deps, user, me);
 }
 
-export async function packUserDetailedManyForHonoApi(
+export async function packUserDetailedManyForApi(
 	deps: UserPackingDependencies,
 	srcs: (MiUser['id'] | MiUser)[],
 	me: { id: MiUser['id'] } | null | undefined,
-): Promise<(MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]> {
+): Promise<(MeDetailedApiResponse | UserDetailedNotMeApiResponse)[]> {
 	if (me == null) {
-		return await packUserDetailedNotMeManyForHonoApi(deps, srcs);
+		return await packUserDetailedNotMeManyForApi(deps, srcs);
 	}
 
-	const users = await resolveUsersFromSrcsForHonoApi(deps, srcs);
+	const users = await resolveUsersFromSrcsForApi(deps, srcs);
 	const meIndex = users.findIndex((user) => user.id === me.id);
 	const others = meIndex === -1 ? users : users.filter((_, index) => index !== meIndex);
-	const packedOthers = await packUserDetailedNotMeManyForHonoApi(deps, others, me);
+	const packedOthers = await packUserDetailedNotMeManyForApi(deps, others, me);
 
 	if (meIndex === -1) return packedOthers;
 
-	const packedMe = await packMeDetailedForHonoApi(deps, users[meIndex]!, { includeSecrets: false });
-	const result: (MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[] = [];
+	const packedMe = await packMeDetailedForApi(deps, users[meIndex]!, { includeSecrets: false });
+	const result: (MeDetailedApiResponse | UserDetailedNotMeApiResponse)[] = [];
 	let otherIndex = 0;
 	for (let i = 0; i < users.length; i++) {
 		result.push(i === meIndex ? packedMe : packedOthers[otherIndex++]!);
@@ -811,12 +803,12 @@ export async function packUserDetailedManyForHonoApi(
 
 export const pinnedUsersParamDef = z.object({});
 
-export async function handleHonoApiPinnedUsers(
+export async function handleApiPinnedUsers(
 	deps: UserPackingDependencies,
 	me: { id: MiUser['id'] } | null | undefined,
 	body: Record<string, unknown>,
-): Promise<(MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]> {
-	parseHonoApiParams(pinnedUsersParamDef, body);
+): Promise<(MeDetailedApiResponse | UserDetailedNotMeApiResponse)[]> {
+	parseApiParams(pinnedUsersParamDef, body);
 
 	const accounts = deps.meta.pinnedUsers.map((acct) => Acct.parse(acct));
 	const users = await listUsersByUsernamesAndHostsFromDatabase(deps.db, accounts);
@@ -825,16 +817,16 @@ export async function handleHonoApiPinnedUsers(
 		.map((account) => userByAccount.get(`${account.username.toLowerCase()}@${account.host ?? ''}`))
 		.filter((user) => user != null);
 
-	return await packUserDetailedManyForHonoApi(deps, orderedUsers, me);
+	return await packUserDetailedManyForApi(deps, orderedUsers, me);
 }
 
-export type HonoApiUsersShowDependencies = UserPackingDependencies &
-	HonoApiRolePolicyDependencies & {
-		chartWriters: HonoChartWriters;
+export type ApiUsersShowDependencies = UserPackingDependencies &
+	ApiRolePolicyDependencies & {
+		chartWriters: ChartWriters;
 	};
 
-function usersShowFailedToResolveRemoteUserError(): HonoApiError {
-	return new HonoApiError({
+function usersShowFailedToResolveRemoteUserError(): ApiError {
+	return new ApiError({
 		status: 500,
 		message: 'Failed to resolve remote user.',
 		code: 'FAILED_TO_RESOLVE_REMOTE_USER',
@@ -843,8 +835,8 @@ function usersShowFailedToResolveRemoteUserError(): HonoApiError {
 	});
 }
 
-function usersShowNoSuchUserError(): HonoApiError {
-	return new HonoApiError({
+function usersShowNoSuchUserError(): ApiError {
+	return new ApiError({
 		status: 404,
 		message: 'No such user.',
 		code: 'NO_SUCH_USER',
@@ -870,18 +862,17 @@ type UsersShowParams =
 	| { userIds: string[]; host?: string | null }
 	| { username: string; host?: string | null };
 
-export async function handleHonoApiUsersShow(
-	deps: HonoApiUsersShowDependencies,
+export async function handleApiUsersShow(
+	deps: ApiUsersShowDependencies,
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 	ip: string | null,
 ): Promise<
-	| (MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)
-	| (MeDetailedHonoApiResponse | UserDetailedNotMeHonoApiResponse)[]
+	(MeDetailedApiResponse | UserDetailedNotMeApiResponse) | (MeDetailedApiResponse | UserDetailedNotMeApiResponse)[]
 > {
-	const params = parseHonoApiParams(usersShowParamDef, body);
+	const params = parseApiParams(usersShowParamDef, body);
 
-	const isModerator = await isHonoApiModerator(deps, me ?? null);
+	const isModerator = await isApiModerator(deps, me ?? null);
 
 	if ('username' in params) {
 		params.username = params.username.trim();
@@ -900,7 +891,7 @@ export async function handleHonoApiUsersShow(
 		}
 
 		const packedMap = new Map(
-			(await packUserDetailedManyForHonoApi(deps, ordered, me)).map((packed, i) => [ordered[i]!.id, packed]),
+			(await packUserDetailedManyForApi(deps, ordered, me)).map((packed, i) => [ordered[i]!.id, packed]),
 		);
 		return ordered.map((u) => packedMap.get(u.id)!);
 	}
@@ -938,7 +929,7 @@ export async function handleHonoApiUsersShow(
 		}
 	}
 
-	return await packUserDetailedForHonoApi(deps, user, me);
+	return await packUserDetailedForApi(deps, user, me);
 }
 
 export const usersRelationParamDef = z.object({
@@ -947,15 +938,11 @@ export const usersRelationParamDef = z.object({
 
 type UsersRelationParams = { userId: string | string[] };
 
-export type HonoApiUsersRelationDependencies = {
+export type ApiUsersRelationDependencies = {
 	db: MiDrizzleDatabase;
 };
 
-async function getUserRelationForHonoApi(
-	deps: HonoApiUsersRelationDependencies,
-	me: MiUser['id'],
-	target: MiUser['id'],
-) {
+async function getUserRelationForApi(deps: ApiUsersRelationDependencies, me: MiUser['id'], target: MiUser['id']) {
 	const [
 		following,
 		isFollowed,
@@ -990,11 +977,7 @@ async function getUserRelationForHonoApi(
 	};
 }
 
-async function getUserRelationsForHonoApi(
-	deps: HonoApiUsersRelationDependencies,
-	me: MiUser['id'],
-	targets: MiUser['id'][],
-) {
+async function getUserRelationsForApi(deps: ApiUsersRelationDependencies, me: MiUser['id'], targets: MiUser['id'][]) {
 	const targetIds = [...new Set(targets)];
 	if (targetIds.length === 0) return new Map();
 
@@ -1042,19 +1025,19 @@ async function getUserRelationsForHonoApi(
 	);
 }
 
-export async function handleHonoApiUsersRelation(
-	deps: HonoApiUsersRelationDependencies,
+export async function handleApiUsersRelation(
+	deps: ApiUsersRelationDependencies,
 	me: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<unknown> {
-	const params = parseHonoApiParams(usersRelationParamDef, body);
+	const params = parseApiParams(usersRelationParamDef, body);
 
 	return Array.isArray(params.userId)
-		? await getUserRelationsForHonoApi(deps, me.id, params.userId).then((it) => [...it.values()])
-		: await getUserRelationForHonoApi(deps, me.id, params.userId).then((it) => [it]);
+		? await getUserRelationsForApi(deps, me.id, params.userId).then((it) => [...it.values()])
+		: await getUserRelationForApi(deps, me.id, params.userId).then((it) => [it]);
 }
 
-function limitOffsetSqlForHonoApi(options: { limit?: number; offset?: number }): SQL {
+function limitOffsetSqlForApi(options: { limit?: number; offset?: number }): SQL {
 	return sql.join(
 		[
 			options.limit == null ? sql`` : sql`LIMIT ${options.limit}`,
@@ -1064,7 +1047,7 @@ function limitOffsetSqlForHonoApi(options: { limit?: number; offset?: number }):
 	);
 }
 
-async function searchUsersForHonoApi(
+async function searchUsersForApi(
 	deps: { db: MiDrizzleDatabase },
 	query: string,
 	meId: MiUser['id'] | null,
@@ -1101,7 +1084,7 @@ async function searchUsersForHonoApi(
 		FROM "user"
 		WHERE ${sql.join(nameConditions, sql` AND `)}
 		ORDER BY "user"."updatedAt" DESC NULLS LAST
-		${limitOffsetSqlForHonoApi(options)}
+		${limitOffsetSqlForApi(options)}
 	`);
 	let users = nameResult.rows.map((row) => deserializeUser(row));
 
@@ -1131,7 +1114,7 @@ async function searchUsersForHonoApi(
 				AND ("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})
 				AND "user"."isSuspended" = FALSE
 			ORDER BY "user"."updatedAt" DESC NULLS LAST
-			${limitOffsetSqlForHonoApi(options)}
+			${limitOffsetSqlForApi(options)}
 		`);
 
 		users = users.concat(profileResult.rows.map((row) => deserializeUser(row)));
@@ -1156,24 +1139,22 @@ type UsersSearchParams = {
 	detail: boolean;
 };
 
-export async function handleHonoApiUsersSearch(
+export async function handleApiUsersSearch(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<unknown[]> {
-	const params = parseHonoApiParams(usersSearchParamDef, body);
-	const users = await searchUsersForHonoApi(deps, params.query.trim(), me?.id ?? null, {
+	const params = parseApiParams(usersSearchParamDef, body);
+	const users = await searchUsersForApi(deps, params.query.trim(), me?.id ?? null, {
 		offset: params.offset,
 		limit: params.limit,
 		origin: params.origin,
 	});
 
-	return params.detail
-		? await packUserDetailedManyForHonoApi(deps, users, me)
-		: await packUserLiteManyForHonoApi(deps, users);
+	return params.detail ? await packUserDetailedManyForApi(deps, users, me) : await packUserLiteManyForApi(deps, users);
 }
 
-function buildBaseUserSearchConditionsForHonoApi(
+function buildBaseUserSearchConditionsForApi(
 	config: Config,
 	params: { username?: string | null; host?: string | null },
 ): SQL[] {
@@ -1196,18 +1177,18 @@ function buildBaseUserSearchConditionsForHonoApi(
 	return conditions;
 }
 
-function defaultActiveThresholdForHonoApi(): Date {
+function defaultActiveThresholdForApi(): Date {
 	return new Date(Date.now() - 1000 * 60 * 60 * 24 * 30);
 }
 
-function buildSearchUserQueriesForHonoApi(
+function buildSearchUserQueriesForApi(
 	config: Config,
 	me: MiUser,
 	params: { username?: string | null; host?: string | null; activeThreshold?: Date },
 ): SQL[][] {
-	const activeThreshold = params.activeThreshold ?? defaultActiveThresholdForHonoApi();
+	const activeThreshold = params.activeThreshold ?? defaultActiveThresholdForApi();
 	const followingUserQuery = sql`SELECT "followeeId" FROM "following" WHERE "followerId" = ${me.id}`;
-	const baseConditions = buildBaseUserSearchConditionsForHonoApi(config, params);
+	const baseConditions = buildBaseUserSearchConditionsForApi(config, params);
 
 	return [
 		[...baseConditions, sql`"user"."id" IN (${followingUserQuery})`, sql`"user"."updatedAt" > ${activeThreshold}`],
@@ -1221,12 +1202,12 @@ function buildSearchUserQueriesForHonoApi(
 	];
 }
 
-function buildSearchUserNoLoginQueriesForHonoApi(
+function buildSearchUserNoLoginQueriesForApi(
 	config: Config,
 	params: { username?: string | null; host?: string | null; activeThreshold?: Date },
 ): SQL[][] {
-	const activeThreshold = params.activeThreshold ?? defaultActiveThresholdForHonoApi();
-	const baseConditions = buildBaseUserSearchConditionsForHonoApi(config, params);
+	const activeThreshold = params.activeThreshold ?? defaultActiveThresholdForApi();
+	const baseConditions = buildBaseUserSearchConditionsForApi(config, params);
 
 	return [
 		[...baseConditions, sql`("user"."updatedAt" IS NULL OR "user"."updatedAt" > ${activeThreshold})`],
@@ -1234,7 +1215,7 @@ function buildSearchUserNoLoginQueriesForHonoApi(
 	];
 }
 
-async function selectSearchUserIdsForHonoApi(
+async function selectSearchUserIdsForApi(
 	deps: { db: MiDrizzleDatabase },
 	conditions: SQL[],
 	limit: number,
@@ -1273,12 +1254,12 @@ type UsersSearchByUsernameAndHostParams = {
 	detail: boolean;
 };
 
-export async function handleHonoApiUsersSearchByUsernameAndHost(
+export async function handleApiUsersSearchByUsernameAndHost(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<unknown[]> {
-	const params = parseHonoApiParams(usersSearchByUsernameAndHostParamDef, body);
+	const params = parseApiParams(usersSearchByUsernameAndHostParamDef, body);
 
 	const searchParams = omitUndefined({
 		username: 'username' in params ? params.username : undefined,
@@ -1286,21 +1267,19 @@ export async function handleHonoApiUsersSearchByUsernameAndHost(
 	});
 
 	const queries = me
-		? buildSearchUserQueriesForHonoApi(deps.config, me, searchParams)
-		: buildSearchUserNoLoginQueriesForHonoApi(deps.config, searchParams);
+		? buildSearchUserQueriesForApi(deps.config, me, searchParams)
+		: buildSearchUserNoLoginQueriesForApi(deps.config, searchParams);
 
 	let resultSet = new Set<MiUser['id']>();
 	const limit = params.limit;
 	for (const conditions of queries) {
-		const ids = await selectSearchUserIdsForHonoApi(deps, conditions, limit - resultSet.size);
+		const ids = await selectSearchUserIdsForApi(deps, conditions, limit - resultSet.size);
 		resultSet = new Set([...resultSet, ...ids]);
 		if (resultSet.size >= limit) break;
 	}
 
 	const ids = [...resultSet].slice(0, limit);
-	return params.detail
-		? await packUserDetailedManyForHonoApi(deps, ids, me)
-		: await packUserLiteManyForHonoApi(deps, ids);
+	return params.detail ? await packUserDetailedManyForApi(deps, ids, me) : await packUserLiteManyForApi(deps, ids);
 }
 
 export const usersRecommendationParamDef = z.object({
@@ -1313,19 +1292,19 @@ type UsersRecommendationParams = {
 	offset: number;
 };
 
-export async function handleHonoApiUsersRecommendation(
+export async function handleApiUsersRecommendation(
 	deps: UserPackingDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<unknown[]> {
-	const params = parseHonoApiParams(usersRecommendationParamDef, body);
+	const params = parseApiParams(usersRecommendationParamDef, body);
 	const users = await listRecommendedUsersFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		offset: params.offset,
 		updatedAfter: new Date(Date.now() - 7 * DAY),
 	});
 
-	return await packUserDetailedManyForHonoApi(deps, users, me);
+	return await packUserDetailedManyForApi(deps, users, me);
 }
 
 export const usersGetFrequentlyRepliedUsersParamDef = z.object({
@@ -1338,8 +1317,8 @@ type UsersGetFrequentlyRepliedUsersParams = {
 	limit: number;
 };
 
-function usersGetFrequentlyRepliedUsersNoSuchUserError(): HonoApiError {
-	return new HonoApiError({
+function usersGetFrequentlyRepliedUsersNoSuchUserError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such user.',
 		code: 'NO_SUCH_USER',
@@ -1347,12 +1326,12 @@ function usersGetFrequentlyRepliedUsersNoSuchUserError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiUsersGetFrequentlyRepliedUsers(
+export async function handleApiUsersGetFrequentlyRepliedUsers(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<{ user: unknown; weight: number }[]> {
-	const params = parseHonoApiParams(usersGetFrequentlyRepliedUsersParamDef, body);
+	const params = parseApiParams(usersGetFrequentlyRepliedUsersParamDef, body);
 
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw usersGetFrequentlyRepliedUsersNoSuchUserError();
@@ -1365,14 +1344,14 @@ export async function handleHonoApiUsersGetFrequentlyRepliedUsers(
 	const repliedUserCounts = new Map(repliedUsers.map((row) => [row.userId, row.count]));
 
 	const userMap = new Map(
-		(await packUserDetailedManyForHonoApi(deps, topRepliedUserIds, me)).map((u) => [(u as { id: string }).id, u]),
+		(await packUserDetailedManyForApi(deps, topRepliedUserIds, me)).map((u) => [(u as { id: string }).id, u]),
 	);
 
 	return await Promise.all(
 		topRepliedUserIds.map(async (userId) => ({
 			user:
 				userMap.get(userId) ??
-				(await packUserDetailedForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, userId), me)),
+				(await packUserDetailedForApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, userId), me)),
 			weight: repliedUserCounts.get(userId)! / peak,
 		})),
 	);
@@ -1396,12 +1375,12 @@ type UsersParams = {
 	hostname: string | null;
 };
 
-export async function handleHonoApiUsers(
+export async function handleApiUsers(
 	deps: UserPackingDependencies,
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<unknown[]> {
-	const params = parseHonoApiParams(usersParamDef, body);
+	const params = parseApiParams(usersParamDef, body);
 
 	const users = await listExplorableUsersFromDatabase(
 		deps.db,
@@ -1416,7 +1395,7 @@ export async function handleHonoApiUsers(
 		}),
 	);
 
-	return await packUserDetailedManyForHonoApi(deps, users, me);
+	return await packUserDetailedManyForApi(deps, users, me);
 }
 
 export const usersUpdateMemoParamDef = z.object({
@@ -1429,8 +1408,8 @@ type UsersUpdateMemoParams = {
 	memo: string | null;
 };
 
-function usersUpdateMemoNoSuchUserError(): HonoApiError {
-	return new HonoApiError({
+function usersUpdateMemoNoSuchUserError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such user.',
 		code: 'NO_SUCH_USER',
@@ -1438,12 +1417,12 @@ function usersUpdateMemoNoSuchUserError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiUsersUpdateMemo(
+export async function handleApiUsersUpdateMemo(
 	deps: UserPackingDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(usersUpdateMemoParamDef, body);
+	const params = parseApiParams(usersUpdateMemoParamDef, body);
 
 	const target = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (target == null) throw usersUpdateMemoNoSuchUserError();

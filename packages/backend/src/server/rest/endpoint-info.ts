@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { parseHonoApiParams } from './validation.js';
+import { parseApiParams } from './validation.js';
 
 type ApiEndpoints = typeof import('../api/endpoints.js').default;
 
@@ -56,18 +56,18 @@ function paramProperties(params: unknown): Record<string, unknown> {
 	return (params as { properties?: Record<string, unknown> } | undefined)?.properties ?? {};
 }
 
-export async function handleHonoApiEndpoints(): Promise<string[]> {
+export async function handleApiEndpoints(): Promise<string[]> {
 	const endpoints = await getEndpoints();
 	return endpoints.map((endpoint) => endpoint.name);
 }
 
-export async function handleHonoApiEndpoint(body: Record<string, unknown>): Promise<{
+export async function handleApiEndpoint(body: Record<string, unknown>): Promise<{
 	params: {
 		name: string;
 		type: string;
 	}[];
 } | null> {
-	const params = parseHonoApiParams(endpointParamDef, body);
+	const params = parseApiParams(endpointParamDef, body);
 	const endpoints = await getEndpoints();
 	const endpoint = endpoints.find((item) => item.name === params.endpoint);
 	if (endpoint == null) return null;

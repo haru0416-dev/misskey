@@ -12,26 +12,26 @@ import { getIpHash } from '@/misc/get-ip-hash.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiUser } from '@/models/User.js';
 import {
-	completeHonoApiSignin,
-	failHonoApiSignin,
+	completeApiSignin,
+	failApiSignin,
 	honoApiSigninError,
-	type HonoApiSigninDependencies,
-	type HonoApiSigninErrorBody,
-	type HonoApiSigninRequest,
+	type ApiSigninDependencies,
+	type ApiSigninErrorBody,
+	type ApiSigninRequest,
 	tooManyAuthenticationFailures,
 } from './signin.js';
-import { isHonoApiRateLimited } from '../rate-limit.js';
+import { isApiRateLimited } from '../rate-limit.js';
 
-export type HonoApiSigninWithPasskeyResult = {
+export type ApiSigninWithPasskeyResult = {
 	status: number;
 	body:
 		| Misskey.entities.SigninWithPasskeyInitResponse
 		| Misskey.entities.SigninWithPasskeyResponse
-		| HonoApiSigninErrorBody;
+		| ApiSigninErrorBody;
 };
 
-async function isPasskeySigninRateLimited(deps: HonoApiSigninDependencies, ip: string): Promise<boolean> {
-	return await isHonoApiRateLimited(
+async function isPasskeySigninRateLimited(deps: ApiSigninDependencies, ip: string): Promise<boolean> {
+	return await isApiRateLimited(
 		deps,
 		{
 			key: 'signin-with-passkey',
@@ -43,7 +43,7 @@ async function isPasskeySigninRateLimited(deps: HonoApiSigninDependencies, ip: s
 	);
 }
 
-function passkeySigninError(status: number, id: string): HonoApiSigninWithPasskeyResult {
+function passkeySigninError(status: number, id: string): ApiSigninWithPasskeyResult {
 	const result = honoApiSigninError(status, id);
 	return {
 		status: result.status,
@@ -51,10 +51,10 @@ function passkeySigninError(status: number, id: string): HonoApiSigninWithPasske
 	};
 }
 
-export async function handleHonoApiSigninWithPasskey(
-	deps: HonoApiSigninDependencies,
-	request: HonoApiSigninRequest,
-): Promise<HonoApiSigninWithPasskeyResult> {
+export async function handleApiSigninWithPasskey(
+	deps: ApiSigninDependencies,
+	request: ApiSigninRequest,
+): Promise<ApiSigninWithPasskeyResult> {
 	const credential = request.body.credential as AuthenticationResponseJSON | undefined;
 
 	if (await isPasskeySigninRateLimited(deps, request.ip)) {
@@ -110,14 +110,14 @@ export async function handleHonoApiSigninWithPasskey(
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
 
 	if (!profile.usePasswordLessLogin) {
-		const result = await failHonoApiSignin(deps, request, user, 403, '2d84773e-f7b7-4d0b-8f72-bb69b584c912');
+		const result = await failApiSignin(deps, request, user, 403, '2d84773e-f7b7-4d0b-8f72-bb69b584c912');
 		return {
 			status: result.status,
 			body: result.body!,
 		};
 	}
 
-	const signinResponse = completeHonoApiSignin(deps, request, user);
+	const signinResponse = completeApiSignin(deps, request, user);
 
 	return {
 		status: 200,

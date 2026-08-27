@@ -13,12 +13,12 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { createUserWithProfileAndPublickeyInDatabase } from '@/core/user/UserStore.js';
-import { createChatRoomForHonoApi } from '@/server/rest/chat/chat.js';
+import { createChatRoomForApi } from '@/server/rest/chat/chat.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { HonoStreamConnection, type HonoStreamConnectionDependencies } from '@/server/streaming/connection.js';
+import { StreamConnection, type StreamConnectionDependencies } from '@/server/streaming/connection.js';
 import type { MiUser } from '@/models/User.js';
 
-async function createTestUser(deps: HonoStreamConnectionDependencies, prefix: string): Promise<MiUser> {
+async function createTestUser(deps: StreamConnectionDependencies, prefix: string): Promise<MiUser> {
 	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: { id, username: `${prefix}${id}`, usernameLower: `${prefix}${id}`.toLowerCase() },
@@ -33,7 +33,7 @@ function collectSentMessages(): { raw: string[]; send: (raw: string) => void } {
 
 describe('hono-stream-connection: chat channels', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoStreamConnectionDependencies;
+	let deps: StreamConnectionDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -47,7 +47,7 @@ describe('hono-stream-connection: chat channels', () => {
 	test('chatUser: 接続してchatUserStreamイベントを受け取れる', async () => {
 		const me = await createTestUser(deps, 'honostreamchatuserme');
 		const other = await createTestUser(deps, 'honostreamchatuserother');
-		const connection = new HonoStreamConnection(deps, me, null);
+		const connection = new StreamConnection(deps, me, null);
 		await connection.init();
 
 		const subscriber = new EventEmitter();
@@ -66,7 +66,7 @@ describe('hono-stream-connection: chat channels', () => {
 
 	test('chatUser: otherIdが自分自身だと接続できない', async () => {
 		const me = await createTestUser(deps, 'honostreamchatuserself');
-		const connection = new HonoStreamConnection(deps, me, null);
+		const connection = new StreamConnection(deps, me, null);
 		await connection.init();
 
 		const { raw, send } = collectSentMessages();
@@ -78,9 +78,9 @@ describe('hono-stream-connection: chat channels', () => {
 
 	test('chatRoom: ルームオーナーは接続してchatRoomStreamイベントを受け取れる', async () => {
 		const owner = await createTestUser(deps, 'honostreamchatroomowner');
-		const connection = new HonoStreamConnection(deps, owner, null);
+		const connection = new StreamConnection(deps, owner, null);
 		await connection.init();
-		const room = await createChatRoomForHonoApi(deps, owner, { name: 'test room' });
+		const room = await createChatRoomForApi(deps, owner, { name: 'test room' });
 
 		const subscriber = new EventEmitter();
 		const { raw, send } = collectSentMessages();
@@ -99,9 +99,9 @@ describe('hono-stream-connection: chat channels', () => {
 	test('chatRoom: 権限のないユーザーは接続できない', async () => {
 		const owner = await createTestUser(deps, 'honostreamchatroomowner2');
 		const stranger = await createTestUser(deps, 'honostreamchatroomstranger');
-		const room = await createChatRoomForHonoApi(deps, owner, { name: 'private room' });
+		const room = await createChatRoomForApi(deps, owner, { name: 'private room' });
 
-		const connection = new HonoStreamConnection(deps, stranger, null);
+		const connection = new StreamConnection(deps, stranger, null);
 		await connection.init();
 
 		const { raw, send } = collectSentMessages();
@@ -113,7 +113,7 @@ describe('hono-stream-connection: chat channels', () => {
 
 	test('chatRoom: 存在しないルームIDでは接続できない', async () => {
 		const me = await createTestUser(deps, 'honostreamchatroomnoroom');
-		const connection = new HonoStreamConnection(deps, me, null);
+		const connection = new StreamConnection(deps, me, null);
 		await connection.init();
 
 		const { raw, send } = collectSentMessages();

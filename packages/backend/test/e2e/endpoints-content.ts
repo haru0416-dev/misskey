@@ -784,7 +784,7 @@ describe('Endpoints', () => {
 				'<?xml version="1.0" encoding="UTF-8" ?>',
 				'<rss version="2.0">',
 				'<channel>',
-				'<title>Hono RSS Feed</title>',
+				'<title>Example RSS Feed</title>',
 				'<link>https://example.com/</link>',
 				'<description>RSS fixture</description>',
 				'<item>',
@@ -815,7 +815,7 @@ describe('Endpoints', () => {
 
 			const post = await api('fetch-rss', { url });
 			expect(post.status).toBe(200);
-			expect(post.body.title).toBe('Hono RSS Feed');
+			expect(post.body.title).toBe('Example RSS Feed');
 			expect(getAt(post.body.items, 0).title).toBe('First entry');
 			expect(getAt(post.body.items, 0).guid).toBe('entry-1');
 
@@ -823,7 +823,7 @@ describe('Endpoints', () => {
 			expect(get.status).toBe(200);
 			expect(get.headers.get('cache-control')).toBe('public, max-age=180');
 			const getBody = (await get.json()) as { title?: string; items?: { title?: string }[] };
-			expect(getBody.title).toBe('Hono RSS Feed');
+			expect(getBody.title).toBe('Example RSS Feed');
 			expect(getAt(getDefined(getBody.items), 0).title).toBe('First entry');
 		});
 	});
@@ -1081,7 +1081,7 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('Hono rate limited write endpoints', () => {
+	describe('rate limited write endpoints', () => {
 		test('following/create は follow 作成、locked follow request、blocking、scope、エラーを維持する', async () => {
 			const now = Date.now();
 			const suffix = now.toString(36).slice(-8);
@@ -1565,7 +1565,7 @@ describe('Endpoints', () => {
 			expect(unchanged?.title).toBe('moved title');
 		});
 
-		test('Hono rate limited write endpoints require matching app token permissions', async () => {
+		test('rate limited write endpoints require matching app token permissions', async () => {
 			const config = fixtureConfig;
 			const readAccountToken = await createAppToken(alice, ['read:account']);
 			const flash = await createFlashInDatabase(db, {
@@ -1881,14 +1881,14 @@ describe('Endpoints', () => {
 			const created = await api(
 				'gallery/posts/create',
 				{
-					title: `Hono gallery post ${suffix}`,
+					title: `gallery post ${suffix}`,
 					description: 'created via e2e',
 					fileIds: [file.id],
 				},
 				owner,
 			);
 			expect(created.status).toBe(200);
-			expect(created.body.title).toBe(`Hono gallery post ${suffix}`);
+			expect(created.body.title).toBe(`gallery post ${suffix}`);
 			expect(created.body.userId).toBe(owner.id);
 			expect(created.body.user.id).toBe(owner.id);
 			expect(created.body.fileIds!.length).toBe(1);
@@ -1958,7 +1958,7 @@ describe('Endpoints', () => {
 			const post = await api(
 				'gallery/posts/create',
 				{
-					title: `Hono gallery like ${suffix}`,
+					title: `gallery like ${suffix}`,
 					fileIds: [file.id],
 				},
 				owner,
@@ -2017,7 +2017,7 @@ describe('Endpoints', () => {
 			const post = await api(
 				'gallery/posts/create',
 				{
-					title: `Hono gallery list ${suffix}`,
+					title: `gallery list ${suffix}`,
 					fileIds: [file.id],
 				},
 				owner,
@@ -2061,7 +2061,7 @@ describe('Endpoints', () => {
 			const post = await api(
 				'gallery/posts/create',
 				{
-					title: `Hono i gallery posts ${suffix}`,
+					title: `i gallery posts ${suffix}`,
 					fileIds: [file.id],
 				},
 				owner,
@@ -2088,7 +2088,7 @@ describe('Endpoints', () => {
 			const otherPost = await api(
 				'gallery/posts/create',
 				{
-					title: `Hono i gallery posts other ${suffix}`,
+					title: `i gallery posts other ${suffix}`,
 					fileIds: [otherFile.id],
 				},
 				other,
@@ -2130,7 +2130,7 @@ describe('Endpoints', () => {
 			const post = await api(
 				'gallery/posts/create',
 				{
-					title: `Hono i gallery likes ${suffix}`,
+					title: `i gallery likes ${suffix}`,
 					fileIds: [file.id],
 				},
 				owner,
@@ -2163,11 +2163,11 @@ describe('Endpoints', () => {
 
 			const created = await api(
 				'clips/create',
-				{ name: `Hono clip ${suffix}`, isPublic: false, description: 'desc' },
+				{ name: `clip ${suffix}`, isPublic: false, description: 'desc' },
 				owner,
 			);
 			expect(created.status).toBe(200);
-			expect(created.body.name).toBe(`Hono clip ${suffix}`);
+			expect(created.body.name).toBe(`clip ${suffix}`);
 			expect(created.body.isPublic).toBe(false);
 			expect(created.body.userId).toBe(owner.id);
 			expect(created.body.favoritedCount).toBe(0);
@@ -2225,7 +2225,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const clip = await api('clips/create', { name: `Hono clip notes ${suffix}` }, owner);
+			const clip = await api('clips/create', { name: `clip notes ${suffix}` }, owner);
 			expect(clip.status).toBe(200);
 
 			const missingClip = await api('clips/add-note', { clipId: genId(), noteId }, owner);
@@ -2258,7 +2258,7 @@ describe('Endpoints', () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const owner = await signup({ username: `hcf${suffix}` });
 			const favoriter = await signup({ username: `hcff${suffix}` });
-			const clip = await api('clips/create', { name: `Hono clip fav ${suffix}`, isPublic: true }, owner);
+			const clip = await api('clips/create', { name: `clip fav ${suffix}`, isPublic: true }, owner);
 			expect(clip.status).toBe(200);
 
 			const favorited = await api('clips/favorite', { clipId: clip.body.id }, favoriter);
@@ -2285,11 +2285,7 @@ describe('Endpoints', () => {
 				userHost: null,
 				visibility: 'public',
 			});
-			const privateClip = await api(
-				'clips/create',
-				{ name: `Hono clip notes private ${suffix}`, isPublic: false },
-				owner,
-			);
+			const privateClip = await api('clips/create', { name: `clip notes private ${suffix}`, isPublic: false }, owner);
 			expect(privateClip.status).toBe(200);
 			await api('clips/add-note', { clipId: privateClip.body.id, noteId }, owner);
 
@@ -2302,7 +2298,7 @@ describe('Endpoints', () => {
 			expect(visibleForOwner.body.length).toBe(1);
 			expect(getAt(visibleForOwner.body, 0).id).toBe(noteId);
 
-			const publicClip = await api('clips/create', { name: `Hono clip notes public ${suffix}`, isPublic: true }, owner);
+			const publicClip = await api('clips/create', { name: `clip notes public ${suffix}`, isPublic: true }, owner);
 			await api('clips/add-note', { clipId: publicClip.body.id, noteId }, owner);
 			const visibleForAnyone = await api('clips/notes', { clipId: publicClip.body.id });
 			expect(visibleForAnyone.status).toBe(200);

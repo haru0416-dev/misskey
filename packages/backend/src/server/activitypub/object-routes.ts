@@ -25,7 +25,7 @@ import {
 	listUsersByIdsFromDatabase,
 	fetchRemoteUserByIdFromDatabase,
 } from '@/core/user/UserStore.js';
-import { renderEmoji, renderLikeForHonoApi } from '@/server/rest/activitypub/notes-ap.js';
+import { renderEmoji, renderLikeForApi } from '@/server/rest/activitypub/notes-ap.js';
 import { renderFollow } from '@/server/rest/user/following.js';
 import { fetchEmojiByNameAndHostFromDatabase } from '@/core/emoji/EmojiStore.js';
 import { fetchFollowRequestByIdFromDatabase } from '@/core/user/FollowRequestStore.js';
@@ -38,17 +38,17 @@ import * as Acct from '@/misc/acct.js';
 import { query as urlQuery } from '@/misc/prelude/url.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { getFanoutTimelineNotesForHonoApi } from '@/server/rest/note/fanout-timeline.js';
+import { getFanoutTimelineNotesForApi } from '@/server/rest/note/fanout-timeline.js';
 import {
-	renderKeyForHonoApi,
-	renderPersonForHonoApi,
-	type HonoApiAccountUpdateDependencies,
+	renderKeyForApi,
+	renderPersonForApi,
+	type ApiAccountUpdateDependencies,
 } from '@/server/rest/account/account-update.js';
 import { getUserUri, isRemoteUser } from '@/server/rest/user/following.js';
-import { renderNoteForHonoApi, renderNoteOrRenoteActivityForHonoApi } from '@/server/rest/activitypub/notes-ap.js';
+import { renderNoteForApi, renderNoteOrRenoteActivityForApi } from '@/server/rest/activitypub/notes-ap.js';
 import { isRenote, isQuote } from '@/misc/is-renote.js';
 
-export type ApObjectRoutesDependencies = HonoApiAccountUpdateDependencies & {
+export type ApObjectRoutesDependencies = ApiAccountUpdateDependencies & {
 	redisForTimelines: Redis.Redis;
 };
 
@@ -105,7 +105,7 @@ function withApContext(obj: Record<string, unknown>): Record<string, unknown> {
 async function packActivity(deps: ApObjectRoutesDependencies, note: MiNote): Promise<Record<string, unknown> | null> {
 	const pureRenote = isRenote(note) && !isQuote(note);
 	const renote = pureRenote ? await fetchNoteByIdFromDatabase(deps.db, note.renoteId!) : null;
-	return await renderNoteOrRenoteActivityForHonoApi(
+	return await renderNoteOrRenoteActivityForApi(
 		deps,
 		{
 			localOnly: note.localOnly,
@@ -126,7 +126,7 @@ async function renderUserInfo(deps: ApObjectRoutesDependencies, c: Context, user
 		return c.redirect(user.uri, 301);
 	}
 
-	return apJson(c, withApContext(await renderPersonForHonoApi(deps, user as MiLocalUser)));
+	return apJson(c, withApContext(await renderPersonForApi(deps, user as MiLocalUser)));
 }
 
 /**
@@ -156,7 +156,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			return c.redirect(note.uri);
 		}
 
-		return apJson(c, withApContext(await renderNoteForHonoApi(deps, note, false)));
+		return apJson(c, withApContext(await renderNoteForApi(deps, note, false)));
 	});
 
 	app.get('/notes/:note/activity', async (c) => {
@@ -198,7 +198,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 				});
 
 			const notes = deps.meta.enableFanoutTimeline
-				? await getFanoutTimelineNotesForHonoApi(
+				? await getFanoutTimelineNotesForApi(
 						{ db: deps.db, meta: deps.meta, redisForTimelines: deps.redisForTimelines },
 						{
 							sinceId,
@@ -350,7 +350,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 			.filter((note): note is MiNote => note != null)
 			.filter((note) => !note.localOnly && ['public', 'home'].includes(note.visibility));
 
-		const renderedNotes = await Promise.all(pinnedNotes.map((note) => renderNoteForHonoApi(deps, note, true)));
+		const renderedNotes = await Promise.all(pinnedNotes.map((note) => renderNoteForApi(deps, note, true)));
 
 		return apJson(
 			c,
@@ -371,7 +371,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 
 		const keypair = await fetchUserKeypairFromDatabaseCached(deps.db, user.id);
 
-		return apJson(c, withApContext(renderKeyForHonoApi(deps.config, user, keypair)));
+		return apJson(c, withApContext(renderKeyForApi(deps.config, user, keypair)));
 	});
 
 	app.get('/users/:user', async (c, next) => {
@@ -407,7 +407,7 @@ export function createApObjectRoutesApp(deps: ApObjectRoutesDependencies): Hono 
 		const note = await fetchNoteByIdFromDatabase(deps.db, reaction.noteId);
 		if (note == null) return apError(404);
 
-		return apJson(c, withApContext(await renderLikeForHonoApi(deps, reaction, note)));
+		return apJson(c, withApContext(await renderLikeForApi(deps, reaction, note)));
 	});
 
 	// フォロー成立前にも参照されるため、following の存在は確認しない。

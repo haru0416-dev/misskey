@@ -16,12 +16,12 @@ import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInsta
 import type { InboxJobData } from '@/queue/types.js';
 import {
 	extractDbHost,
-	getAuthUserFromKeyIdForHonoApi,
-	getUserFromApIdForHonoApi,
+	getAuthUserFromKeyIdForApi,
+	getUserFromApIdForApi,
 	isFederationAllowedHost,
-	type HonoApiAuthUser,
+	type ApiAuthUser,
 } from '@/server/rest/activitypub/ap-resolve.js';
-import { getAuthUserFromApIdForHonoApi, resolvePersonForHonoApi } from '@/server/rest/activitypub/ap-person.js';
+import { getAuthUserFromApIdForApi, resolvePersonForApi } from '@/server/rest/activitypub/ap-person.js';
 import {
 	fetchFederatedInstance,
 	fetchOrRegisterFederatedInstance,
@@ -29,9 +29,9 @@ import {
 	unlockFetchInstanceMetadata,
 	updateFederatedInstance,
 } from '@/server/rest/activitypub/federation.js';
-import { performActivityForHonoApi, type HonoApiInboxDependencies } from '../../server/activitypub/inbox-dispatch.js';
+import { performActivityForApi, type ApiInboxDependencies } from '../../server/activitypub/inbox-dispatch.js';
 
-export type HonoQueueInboxDependencies = HonoApiInboxDependencies;
+export type QueueInboxDependencies = ApiInboxDependencies;
 
 function toPuny(host: string): string {
 	return domainToASCII(host.toLowerCase());
@@ -56,7 +56,7 @@ function collapseUpdateInstanceJobs(oldJob: UpdateInstanceJob, newJob: UpdateIns
 // deps は初回呼び出し時のものに固定されるが、db/redis 等の実体は起動時から不変である。
 let updateInstanceQueue: CollapsedQueue<string, UpdateInstanceJob> | undefined;
 
-function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueue<string, UpdateInstanceJob> {
+function getUpdateInstanceQueue(deps: QueueInboxDependencies): CollapsedQueue<string, UpdateInstanceJob> {
 	if (!updateInstanceQueue) {
 		const timeout = process.env['NODE_ENV'] !== 'test' ? 60 * 1000 * 5 : 0;
 		updateInstanceQueue = new CollapsedQueue<string, UpdateInstanceJob>(
@@ -81,14 +81,14 @@ function getUpdateInstanceQueue(deps: HonoQueueInboxDependencies): CollapsedQueu
 }
 
 /** テストから更新キューを明示的にflushするために公開する。 */
-export async function flushHonoQueueInboxUpdateInstanceQueue(): Promise<void> {
+export async function flushQueueInboxUpdateInstanceQueue(): Promise<void> {
 	await updateInstanceQueue?.performAllNow();
 }
 
 async function verifyAndResolveAuthUser(
-	deps: HonoQueueInboxDependencies,
+	deps: QueueInboxDependencies,
 	job: Bull.Job<InboxJobData>,
-): Promise<{ authUser: HonoApiAuthUser; activity: IActivity } | string> {
+): Promise<{ authUser: ApiAuthUser; activity: IActivity } | string> {
 	const signature = job.data.signature;
 	let activity = job.data.activity;
 
@@ -113,7 +113,7 @@ async function verifyAndResolveAuthUser(
 		}
 
 		if (userExistenceCheckApId != null) {
-			const user = await getUserFromApIdForHonoApi(deps, userExistenceCheckApId);
+			const user = await getUserFromApIdForApi(deps, userExistenceCheckApId);
 			if (user == null) {
 				return `skip: user not found for delete activity. ${getApId(userExistenceCheckApId)}`;
 			}
@@ -121,12 +121,12 @@ async function verifyAndResolveAuthUser(
 	}
 
 	// HTTP-Signature keyIdを元にDBから取得
-	let authUser: HonoApiAuthUser | null = await getAuthUserFromKeyIdForHonoApi(deps, signature.keyId);
+	let authUser: ApiAuthUser | null = await getAuthUserFromKeyIdForApi(deps, signature.keyId);
 
 	// keyIdでわからなければ、activity.actorを元にDBから取得 || activity.actorを元にリモートから取得
 	if (authUser == null) {
 		try {
-			authUser = await getAuthUserFromApIdForHonoApi(deps, getApId(activity.actor));
+			authUser = await getAuthUserFromApIdForApi(deps, getApId(activity.actor));
 		} catch (err) {
 			// 対象が4xxならスキップ
 			if (err instanceof StatusError) {
@@ -172,11 +172,11 @@ async function verifyAndResolveAuthUser(
 		// みたいになっててUserを引っ張れば公開キーも入ることを期待する
 		if (ldSignature.creator) {
 			const candicate = ldSignature.creator.replace(/#.*/, '');
-			await resolvePersonForHonoApi(deps, candicate).catch(() => null);
+			await resolvePersonForApi(deps, candicate).catch(() => null);
 		}
 
 		// keyIdからLD-Signatureのユーザーを取得
-		authUser = await getAuthUserFromKeyIdForHonoApi(deps, ldSignature.creator);
+		authUser = await getAuthUserFromKeyIdForApi(deps, ldSignature.creator);
 		if (authUser == null) {
 			throw new Bull.UnrecoverableError('skip: LD-Signatureのユーザーが取得できませんでした');
 		}
@@ -243,10 +243,7 @@ async function verifyAndResolveAuthUser(
 	return { authUser, activity };
 }
 
-export async function handleHonoQueueInbox(
-	deps: HonoQueueInboxDependencies,
-	job: Bull.Job<InboxJobData>,
-): Promise<string> {
+export async function handleQueueInbox(deps: QueueInboxDependencies, job: Bull.Job<InboxJobData>): Promise<string> {
 	const host = toPuny(new URL(job.data.signature.keyId).hostname);
 	if (!isFederationAllowedHost(deps.config, deps.meta, host)) {
 		return `Blocked request: ${host}`;
@@ -295,7 +292,7 @@ export async function handleHonoQueueInbox(
 
 	// アクティビティを処理
 	try {
-		const result = await performActivityForHonoApi(deps, authUser.user, activity);
+		const result = await performActivityForApi(deps, authUser.user, activity);
 		if (result && !result.startsWith('ok')) {
 			return result;
 		}

@@ -9,12 +9,12 @@ import Logger from '@/logger.js';
 import { recordException } from '@/telemetry.js';
 import type { Context } from 'hono';
 import type { Config } from '@/config.js';
-import { assertOptionalCredential, authenticateHonoApiToken, type HonoApiAuthenticated } from './auth/auth.js';
-import { HonoApiError, invalidJsonBody, payloadTooLargeError, rolePermissionDeniedError } from './error.js';
+import { assertOptionalCredential, authenticateApiToken, type ApiAuthenticated } from './auth/auth.js';
+import { ApiError, invalidJsonBody, payloadTooLargeError, rolePermissionDeniedError } from './error.js';
 import { readRequestBodyWithLimit } from '@/server/body-limit.js';
-import { hasHonoApiRolePolicyOrIsRoot, isHonoApiAdministrator, isHonoApiModerator } from './role/role-policy.js';
-import type { HonoApiSigninFlowResult } from './auth/signin.js';
-import type { HonoApiSigninWithPasskeyResult } from './auth/signin-with-passkey.js';
+import { hasApiRolePolicyOrIsRoot, isApiAdministrator, isApiModerator } from './role/role-policy.js';
+import type { ApiSigninFlowResult } from './auth/signin.js';
+import type { ApiSigninWithPasskeyResult } from './auth/signin-with-passkey.js';
 import type { ApiShellDependencies } from './shell.js';
 import { runInRequestScope } from '@/misc/request-scope.js';
 
@@ -58,7 +58,7 @@ function rawStatusResponse(c: Context, status: number): Response {
 	});
 }
 
-export function signinFlowResponse(c: Context, deps: ApiShellDependencies, result: HonoApiSigninFlowResult): Response {
+export function signinFlowResponse(c: Context, deps: ApiShellDependencies, result: ApiSigninFlowResult): Response {
 	setApiHeaders(c);
 	const headers: Record<string, string> = {
 		'Access-Control-Allow-Origin': deps.config.instance.url,
@@ -85,7 +85,7 @@ export function signinFlowResponse(c: Context, deps: ApiShellDependencies, resul
 export function signinWithPasskeyResponse(
 	c: Context,
 	deps: ApiShellDependencies,
-	result: HonoApiSigninWithPasskeyResult,
+	result: ApiSigninWithPasskeyResult,
 ): Response {
 	setApiHeaders(c);
 	return new Response(JSON.stringify(result.body), {
@@ -99,11 +99,11 @@ export function signinWithPasskeyResponse(
 	});
 }
 
-export function publicCacheHeadersWhenAnonymous(auth: HonoApiAuthenticated, seconds: number): Record<string, string> {
+export function publicCacheHeadersWhenAnonymous(auth: ApiAuthenticated, seconds: number): Record<string, string> {
 	return auth.user == null ? { 'Cache-Control': `public, max-age=${seconds}` } : {};
 }
 
-function apiErrorResponse(c: Context, err: HonoApiError): Response {
+function apiErrorResponse(c: Context, err: ApiError): Response {
 	setApiHeaders(c);
 
 	// 401以外のclient系エラーには invalid_request の WWW-Authenticate を付ける。
@@ -197,7 +197,7 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 		// リクエスト内 memo のスコープ。同じ問い合わせを1リクエストで何度も投げている箇所を畳む。
 		return await runInRequestScope(handler);
 	} catch (err) {
-		if (err instanceof HonoApiError) {
+		if (err instanceof ApiError) {
 			return apiErrorResponse(c, err);
 		}
 
@@ -209,7 +209,7 @@ export async function runApiEndpoint(c: Context, handler: () => Promise<Response
 		apiLogger.error(`Unexpected error while handling ${new URL(c.req.url).pathname}`, { errorId, e: error });
 		return apiErrorResponse(
 			c,
-			new HonoApiError({
+			new ApiError({
 				status: 500,
 				message: 'Internal error occurred. Please contact us if the error persists.',
 				code: 'INTERNAL_ERROR',
@@ -225,44 +225,44 @@ export async function authenticateOptionalRequest(
 	deps: ApiShellDependencies,
 	c: Context,
 	body: Record<string, unknown>,
-): Promise<HonoApiAuthenticated> {
-	const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+): Promise<ApiAuthenticated> {
+	const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 	assertOptionalCredential(auth);
 	return auth;
 }
 
-export async function assertHonoApiModerator(
+export async function assertApiModerator(
 	deps: ApiShellDependencies,
-	auth: { user: NonNullable<HonoApiAuthenticated['user']> },
+	auth: { user: NonNullable<ApiAuthenticated['user']> },
 ): Promise<void> {
-	if (!(await isHonoApiModerator(deps, auth.user))) {
+	if (!(await isApiModerator(deps, auth.user))) {
 		throw rolePermissionDeniedError();
 	}
 }
 
-export async function assertHonoApiAdmin(
+export async function assertApiAdmin(
 	deps: ApiShellDependencies,
-	auth: { user: NonNullable<HonoApiAuthenticated['user']> },
+	auth: { user: NonNullable<ApiAuthenticated['user']> },
 ): Promise<void> {
-	if (!(await isHonoApiAdministrator(deps, auth.user))) {
+	if (!(await isApiAdministrator(deps, auth.user))) {
 		throw rolePermissionDeniedError();
 	}
 }
 
-export async function assertHonoApiCanManageAvatarDecorations(
+export async function assertApiCanManageAvatarDecorations(
 	deps: ApiShellDependencies,
-	auth: { user: NonNullable<HonoApiAuthenticated['user']> },
+	auth: { user: NonNullable<ApiAuthenticated['user']> },
 ): Promise<void> {
-	if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canManageAvatarDecorations'))) {
+	if (!(await hasApiRolePolicyOrIsRoot(deps, auth.user, 'canManageAvatarDecorations'))) {
 		throw rolePermissionDeniedError();
 	}
 }
 
-export async function assertHonoApiCanManageCustomEmojis(
+export async function assertApiCanManageCustomEmojis(
 	deps: ApiShellDependencies,
-	auth: { user: NonNullable<HonoApiAuthenticated['user']> },
+	auth: { user: NonNullable<ApiAuthenticated['user']> },
 ): Promise<void> {
-	if (!(await hasHonoApiRolePolicyOrIsRoot(deps, auth.user, 'canManageCustomEmojis'))) {
+	if (!(await hasApiRolePolicyOrIsRoot(deps, auth.user, 'canManageCustomEmojis'))) {
 		throw rolePermissionDeniedError();
 	}
 }

@@ -31,10 +31,10 @@ import {
 import { logModerationEventInDatabase } from '@/core/moderation/ModerationLogLogic.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminQueueDependencies = AdminQueueDependencies & {
+export type ApiAdminQueueDependencies = AdminQueueDependencies & {
 	db: MiDrizzleDatabase;
 };
 
@@ -91,59 +91,50 @@ type AdminQueueJobParams = z.infer<typeof adminQueueJobParamDef> & {
 	queue: QueueType;
 };
 
-export async function handleHonoApiAdminQueueQueues(
-	deps: HonoApiAdminQueueDependencies,
-	body: Record<string, unknown>,
-) {
-	parseHonoApiParams(adminQueueNoParamsDef, body);
+export async function handleApiAdminQueueQueues(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
+	parseApiParams(adminQueueNoParamsDef, body);
 
 	return await getQueues(deps);
 }
 
-export async function handleHonoApiAdminQueueQueueStats(
-	deps: HonoApiAdminQueueDependencies,
-	body: Record<string, unknown>,
-) {
-	const ps = parseHonoApiParams(adminQueueSelectParamDef, body);
+export async function handleApiAdminQueueQueueStats(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
+	const ps = parseApiParams(adminQueueSelectParamDef, body);
 
 	return await getQueueStats(deps, ps.queue);
 }
 
-export async function handleHonoApiAdminQueueStats(deps: HonoApiAdminQueueDependencies, body: Record<string, unknown>) {
-	parseHonoApiParams(adminQueueNoParamsDef, body);
+export async function handleApiAdminQueueStats(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
+	parseApiParams(adminQueueNoParamsDef, body);
 
 	return await getLegacyQueueCounts(deps);
 }
 
-export async function handleHonoApiAdminQueueDeliverDelayed(
-	deps: HonoApiAdminQueueDependencies,
+export async function handleApiAdminQueueDeliverDelayed(
+	deps: ApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ) {
-	parseHonoApiParams(adminQueueNoParamsDef, body);
+	parseApiParams(adminQueueNoParamsDef, body);
 
 	return await getDelayedDeliverHosts(deps.deliverQueue);
 }
 
-export async function handleHonoApiAdminQueueInboxDelayed(
-	deps: HonoApiAdminQueueDependencies,
-	body: Record<string, unknown>,
-) {
-	parseHonoApiParams(adminQueueNoParamsDef, body);
+export async function handleApiAdminQueueInboxDelayed(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
+	parseApiParams(adminQueueNoParamsDef, body);
 
 	return await getDelayedInboxHosts(deps.inboxQueue);
 }
 
-export async function handleHonoApiAdminQueueJobs(deps: HonoApiAdminQueueDependencies, body: Record<string, unknown>) {
-	const ps = parseHonoApiParams(adminQueueJobsParamDef, body);
+export async function handleApiAdminQueueJobs(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
+	const ps = parseApiParams(adminQueueJobsParamDef, body);
 
 	return await getQueueJobs(deps, ps.queue, ps.state, ps.search);
 }
 
-export async function handleHonoApiAdminQueueOutboxDeadLetters(
-	deps: HonoApiAdminQueueDependencies,
+export async function handleApiAdminQueueOutboxDeadLetters(
+	deps: ApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ) {
-	const ps = parseHonoApiParams(adminQueueOutboxJobsParamDef, body);
+	const ps = parseApiParams(adminQueueOutboxJobsParamDef, body);
 	const rows = await listQueueOutboxDeadLetters(deps, ps.limit ?? 50, ps.untilId);
 	return rows.map((row) => ({
 		id: row.id,
@@ -161,8 +152,8 @@ export async function handleHonoApiAdminQueueOutboxDeadLetters(
 	}));
 }
 
-function outboxStateChangedError(): HonoApiError {
-	return new HonoApiError({
+function outboxStateChangedError(): ApiError {
+	return new ApiError({
 		status: 409,
 		message: 'The queue outbox item has changed.',
 		code: 'QUEUE_OUTBOX_STATE_CHANGED',
@@ -170,98 +161,92 @@ function outboxStateChangedError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiAdminQueueRetryOutboxDeadLetter(
-	deps: HonoApiAdminQueueDependencies,
+export async function handleApiAdminQueueRetryOutboxDeadLetter(
+	deps: ApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueOutboxJobParamDef, body);
+	const ps = parseApiParams(adminQueueOutboxJobParamDef, body);
 	if (!(await retryQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision))) throw outboxStateChangedError();
 }
 
-export async function handleHonoApiAdminQueueAbandonOutboxDeadLetter(
-	deps: HonoApiAdminQueueDependencies,
+export async function handleApiAdminQueueAbandonOutboxDeadLetter(
+	deps: ApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueOutboxJobParamDef, body);
+	const ps = parseApiParams(adminQueueOutboxJobParamDef, body);
 	if (!(await abandonQueueOutboxDeadLetter(deps, ps.outboxId, ps.revision))) throw outboxStateChangedError();
 }
 
-export async function handleHonoApiAdminQueueShowJob(
-	deps: HonoApiAdminQueueDependencies,
-	body: Record<string, unknown>,
-) {
-	const ps = parseHonoApiParams(adminQueueJobParamDef, body);
+export async function handleApiAdminQueueShowJob(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
+	const ps = parseApiParams(adminQueueJobParamDef, body);
 
 	return await getQueueJob(deps, ps.queue, ps.jobId);
 }
 
-export async function handleHonoApiAdminQueueShowJobLogs(
-	deps: HonoApiAdminQueueDependencies,
-	body: Record<string, unknown>,
-) {
-	const ps = parseHonoApiParams(adminQueueJobParamDef, body);
+export async function handleApiAdminQueueShowJobLogs(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
+	const ps = parseApiParams(adminQueueJobParamDef, body);
 
 	return await getQueueJobLogs(deps, ps.queue, ps.jobId);
 }
 
-export async function handleHonoApiAdminQueueClear(
-	deps: HonoApiAdminQueueDependencies,
+export async function handleApiAdminQueueClear(
+	deps: ApiAdminQueueDependencies,
 	moderator: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueClearParamDef, body);
+	const ps = parseApiParams(adminQueueClearParamDef, body);
 
 	await clearQueue(deps, ps.queue, ps.state);
 	await logModerationEventInDatabase(deps, moderator, 'clearQueue');
 }
 
-export async function handleHonoApiAdminQueuePause(
-	deps: HonoApiAdminQueueDependencies,
+export async function handleApiAdminQueuePause(
+	deps: ApiAdminQueueDependencies,
 	moderator: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueSelectParamDef, body);
+	const ps = parseApiParams(adminQueueSelectParamDef, body);
 
 	await pauseQueue(deps, ps.queue);
 	await logModerationEventInDatabase(deps, moderator, 'pauseQueue');
 }
 
-export async function handleHonoApiAdminQueueResume(
-	deps: HonoApiAdminQueueDependencies,
+export async function handleApiAdminQueueResume(
+	deps: ApiAdminQueueDependencies,
 	moderator: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueSelectParamDef, body);
+	const ps = parseApiParams(adminQueueSelectParamDef, body);
 
 	await resumeQueue(deps, ps.queue);
 	await logModerationEventInDatabase(deps, moderator, 'resumeQueue');
 }
 
-export async function handleHonoApiAdminQueuePromoteJobs(
-	deps: HonoApiAdminQueueDependencies,
+export async function handleApiAdminQueuePromoteJobs(
+	deps: ApiAdminQueueDependencies,
 	moderator: { id: MiUser['id'] },
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueSelectParamDef, body);
+	const ps = parseApiParams(adminQueueSelectParamDef, body);
 
 	await promoteQueueJobs(deps, ps.queue);
 	await logModerationEventInDatabase(deps, moderator, 'promoteQueue');
 }
 
-export async function handleHonoApiAdminQueueRetryJob(
-	deps: HonoApiAdminQueueDependencies,
+export async function handleApiAdminQueueRetryJob(
+	deps: ApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueJobParamDef, body);
+	const ps = parseApiParams(adminQueueJobParamDef, body);
 
 	await retryQueueJob(deps, ps.queue, ps.jobId);
 }
 
-export async function handleHonoApiAdminQueueRemoveJob(
-	deps: HonoApiAdminQueueDependencies,
+export async function handleApiAdminQueueRemoveJob(
+	deps: ApiAdminQueueDependencies,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const ps = parseHonoApiParams(adminQueueJobParamDef, body);
+	const ps = parseApiParams(adminQueueJobParamDef, body);
 
 	await removeQueueJob(deps, ps.queue, ps.jobId);
 }

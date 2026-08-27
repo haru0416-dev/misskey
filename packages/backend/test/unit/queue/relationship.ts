@@ -25,11 +25,11 @@ import {
 import { updateUserProfileInDatabase } from '@/core/user/UserProfileStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import {
-	handleHonoQueueRelationshipBlock,
-	handleHonoQueueRelationshipFollow,
-	handleHonoQueueRelationshipUnblock,
-	handleHonoQueueRelationshipUnfollow,
-	type HonoQueueRelationshipDependencies,
+	handleQueueRelationshipBlock,
+	handleQueueRelationshipFollow,
+	handleQueueRelationshipUnblock,
+	handleQueueRelationshipUnfollow,
+	type QueueRelationshipDependencies,
 } from '@/queue/handlers/relationship.js';
 import type { RelationshipJobData } from '@/queue/types.js';
 import type { MiUser } from '@/models/User.js';
@@ -39,7 +39,7 @@ function fakeJob(data: RelationshipJobData): Bull.Job<RelationshipJobData> {
 }
 
 async function createTestUser(
-	deps: HonoQueueRelationshipDependencies,
+	deps: QueueRelationshipDependencies,
 	options: { isLocked?: boolean } = {},
 ): Promise<MiUser> {
 	const id = genId();
@@ -54,7 +54,7 @@ async function createTestUser(
 	});
 }
 
-async function createTestRemoteUser(deps: HonoQueueRelationshipDependencies, host: string): Promise<MiUser> {
+async function createTestRemoteUser(deps: QueueRelationshipDependencies, host: string): Promise<MiUser> {
 	const id = genId();
 	return await createUserWithProfileAndPublickeyInDatabase(deps.db, {
 		user: {
@@ -71,7 +71,7 @@ async function createTestRemoteUser(deps: HonoQueueRelationshipDependencies, hos
 
 describe('hono-queue-relationship', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueRelationshipDependencies;
+	let deps: QueueRelationshipDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -82,7 +82,7 @@ describe('hono-queue-relationship', () => {
 		await runtime.dispose();
 	});
 
-	test('handleHonoQueueRelationshipUnfollow はフォロー関係を削除しカウントを減らす', async () => {
+	test('handleQueueRelationshipUnfollow はフォロー関係を削除しカウントを減らす', async () => {
 		const follower = await createTestUser(deps);
 		const followee = await createTestUser(deps);
 
@@ -92,28 +92,22 @@ describe('hono-queue-relationship', () => {
 			followeeId: followee.id,
 		});
 
-		const result = await handleHonoQueueRelationshipUnfollow(
-			deps,
-			fakeJob({ from: follower, to: followee, silent: true }),
-		);
+		const result = await handleQueueRelationshipUnfollow(deps, fakeJob({ from: follower, to: followee, silent: true }));
 		expect(result).toBe('ok');
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
 		expect(following).toBeNull();
 	});
 
-	test('handleHonoQueueRelationshipUnfollow は既にフォローしていない場合は何もしない', async () => {
+	test('handleQueueRelationshipUnfollow は既にフォローしていない場合は何もしない', async () => {
 		const follower = await createTestUser(deps);
 		const followee = await createTestUser(deps);
 
-		const result = await handleHonoQueueRelationshipUnfollow(
-			deps,
-			fakeJob({ from: follower, to: followee, silent: true }),
-		);
+		const result = await handleQueueRelationshipUnfollow(deps, fakeJob({ from: follower, to: followee, silent: true }));
 		expect(result).toBe('ok');
 	});
 
-	test('handleHonoQueueRelationshipBlock はフォロー解除・フォローリクエスト取消・ブロック作成を行う', async () => {
+	test('handleQueueRelationshipBlock はフォロー解除・フォローリクエスト取消・ブロック作成を行う', async () => {
 		const blocker = await createTestUser(deps);
 		const blockee = await createTestUser(deps);
 
@@ -129,7 +123,7 @@ describe('hono-queue-relationship', () => {
 			followeeId: blocker.id,
 		});
 
-		const result = await handleHonoQueueRelationshipBlock(deps, fakeJob({ from: blocker, to: blockee, silent: true }));
+		const result = await handleQueueRelationshipBlock(deps, fakeJob({ from: blocker, to: blockee, silent: true }));
 		expect(result).toBe('ok');
 
 		const [followingA, followingB, blocking] = await Promise.all([
@@ -145,7 +139,7 @@ describe('hono-queue-relationship', () => {
 		expect(blocking!.blockeeId).toBe(blockee.id);
 	});
 
-	test('handleHonoQueueRelationshipBlock は保留中のフォローリクエストも取り消す', async () => {
+	test('handleQueueRelationshipBlock は保留中のフォローリクエストも取り消す', async () => {
 		const blocker = await createTestUser(deps);
 		const blockee = await createTestUser(deps);
 
@@ -155,61 +149,49 @@ describe('hono-queue-relationship', () => {
 			followeeId: blocker.id,
 		});
 
-		await handleHonoQueueRelationshipBlock(deps, fakeJob({ from: blocker, to: blockee, silent: true }));
+		await handleQueueRelationshipBlock(deps, fakeJob({ from: blocker, to: blockee, silent: true }));
 
 		const request = await fetchFollowRequestFromDatabase(deps.db, blockee.id, blocker.id);
 		expect(request).toBeNull();
 	});
 
-	test('handleHonoQueueRelationshipUnblock はブロックを削除する', async () => {
+	test('handleQueueRelationshipUnblock はブロックを削除する', async () => {
 		const blocker = await createTestUser(deps);
 		const blockee = await createTestUser(deps);
 
-		await handleHonoQueueRelationshipBlock(deps, fakeJob({ from: blocker, to: blockee, silent: true }));
+		await handleQueueRelationshipBlock(deps, fakeJob({ from: blocker, to: blockee, silent: true }));
 		expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id)).not.toBeNull();
 
-		const result = await handleHonoQueueRelationshipUnblock(
-			deps,
-			fakeJob({ from: blocker, to: blockee, silent: true }),
-		);
+		const result = await handleQueueRelationshipUnblock(deps, fakeJob({ from: blocker, to: blockee, silent: true }));
 		expect(result).toBe('ok');
 
 		expect(await fetchBlockingByBlockerIdAndBlockeeIdFromDatabase(deps.db, blocker.id, blockee.id)).toBeNull();
 	});
 
-	test('handleHonoQueueRelationshipUnblock はブロックしていない場合はskipする', async () => {
+	test('handleQueueRelationshipUnblock はブロックしていない場合はskipする', async () => {
 		const blocker = await createTestUser(deps);
 		const blockee = await createTestUser(deps);
 
-		const result = await handleHonoQueueRelationshipUnblock(
-			deps,
-			fakeJob({ from: blocker, to: blockee, silent: true }),
-		);
+		const result = await handleQueueRelationshipUnblock(deps, fakeJob({ from: blocker, to: blockee, silent: true }));
 		expect(result).toBe('skip: not blocking');
 	});
 
-	test('handleHonoQueueRelationshipFollow はローカル同士なら即フォロー関係を作る', async () => {
+	test('handleQueueRelationshipFollow はローカル同士なら即フォロー関係を作る', async () => {
 		const follower = await createTestUser(deps);
 		const followee = await createTestUser(deps);
 
-		const result = await handleHonoQueueRelationshipFollow(
-			deps,
-			fakeJob({ from: follower, to: followee, silent: true }),
-		);
+		const result = await handleQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true }));
 		expect(result).toBe('ok');
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
 		expect(following).not.toBeNull();
 	});
 
-	test('handleHonoQueueRelationshipFollow は鍵アカウントに対してフォローリクエストを作る', async () => {
+	test('handleQueueRelationshipFollow は鍵アカウントに対してフォローリクエストを作る', async () => {
 		const follower = await createTestUser(deps);
 		const followee = await createTestUser(deps, { isLocked: true });
 
-		const result = await handleHonoQueueRelationshipFollow(
-			deps,
-			fakeJob({ from: follower, to: followee, silent: true }),
-		);
+		const result = await handleQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true }));
 		expect(result).toBe('ok: follow request created');
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
@@ -219,7 +201,7 @@ describe('hono-queue-relationship', () => {
 		expect(request).not.toBeNull();
 	});
 
-	test('handleHonoQueueRelationshipFollow はリモートフォロワーが既にフォロー済みならAcceptを配送するだけ', async () => {
+	test('handleQueueRelationshipFollow はリモートフォロワーが既にフォロー済みならAcceptを配送するだけ', async () => {
 		const follower = await createTestRemoteUser(deps, 'honoqueuerel-remote-a.example.com');
 		const followee = await createTestUser(deps);
 
@@ -229,14 +211,11 @@ describe('hono-queue-relationship', () => {
 			followeeId: followee.id,
 		});
 
-		const result = await handleHonoQueueRelationshipFollow(
-			deps,
-			fakeJob({ from: follower, to: followee, silent: true }),
-		);
+		const result = await handleQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true }));
 		expect(result).toBe('ok: already following');
 	});
 
-	test('handleHonoQueueRelationshipFollow はブロックされていればRejectを配送して終了する', async () => {
+	test('handleQueueRelationshipFollow はブロックされていればRejectを配送して終了する', async () => {
 		const follower = await createTestRemoteUser(deps, 'honoqueuerel-remote-b.example.com');
 		const followee = await createTestUser(deps);
 
@@ -246,17 +225,14 @@ describe('hono-queue-relationship', () => {
 			blockeeId: follower.id,
 		});
 
-		const result = await handleHonoQueueRelationshipFollow(
-			deps,
-			fakeJob({ from: follower, to: followee, silent: true }),
-		);
+		const result = await handleQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true }));
 		expect(result).toBe('rejected: blocked');
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);
 		expect(following).toBeNull();
 	});
 
-	test('handleHonoQueueRelationshipFollow はローカルフォロワーがブロックされていれば例外を投げる', async () => {
+	test('handleQueueRelationshipFollow はローカルフォロワーがブロックされていれば例外を投げる', async () => {
 		const follower = await createTestUser(deps);
 		const followee = await createTestUser(deps);
 
@@ -267,11 +243,11 @@ describe('hono-queue-relationship', () => {
 		});
 
 		await expect(
-			handleHonoQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true })),
+			handleQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true })),
 		).rejects.toThrow();
 	});
 
-	test('handleHonoQueueRelationshipFollow は既にローカルからフォロー済みなら例外を投げる', async () => {
+	test('handleQueueRelationshipFollow は既にローカルからフォロー済みなら例外を投げる', async () => {
 		const follower = await createTestUser(deps);
 		const followee = await createTestUser(deps);
 
@@ -282,20 +258,20 @@ describe('hono-queue-relationship', () => {
 		});
 
 		await expect(
-			handleHonoQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true })),
+			handleQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true })),
 		).rejects.toThrow();
 	});
 
-	test('handleHonoQueueRelationshipFollow はリモート同士のフォローを拒否する', async () => {
+	test('handleQueueRelationshipFollow はリモート同士のフォローを拒否する', async () => {
 		const follower = await createTestRemoteUser(deps, 'honoqueuerel-remote-c.example.com');
 		const followee = await createTestRemoteUser(deps, 'honoqueuerel-remote-d.example.com');
 
 		await expect(
-			handleHonoQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true })),
+			handleQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true })),
 		).rejects.toThrow();
 	});
 
-	test('handleHonoQueueRelationshipFollow はautoAcceptFollowedが有効ならフォロー中の相手からのフォローを自動承認する', async () => {
+	test('handleQueueRelationshipFollow はautoAcceptFollowedが有効ならフォロー中の相手からのフォローを自動承認する', async () => {
 		const followee = await createTestUser(deps, { isLocked: true });
 		await updateUserProfileInDatabase(deps.db, followee.id, { autoAcceptFollowed: true });
 		const follower = await createTestUser(deps);
@@ -307,10 +283,7 @@ describe('hono-queue-relationship', () => {
 			followeeId: follower.id,
 		});
 
-		const result = await handleHonoQueueRelationshipFollow(
-			deps,
-			fakeJob({ from: follower, to: followee, silent: true }),
-		);
+		const result = await handleQueueRelationshipFollow(deps, fakeJob({ from: follower, to: followee, silent: true }));
 		expect(result).toBe('ok');
 
 		const following = await fetchFollowingByFollowerIdAndFolloweeIdFromDatabase(deps.db, follower.id, followee.id);

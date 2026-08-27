@@ -17,17 +17,17 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { NoteReactionRow } from '@/db/schema/note-reaction.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
-import { decodeReactionForHonoApi } from '../note/notes-reactions.js';
-import { packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from '../note/note.js';
-import { packUserLiteManyForHonoApi } from './user.js';
-import { HonoApiError } from '../error.js';
-import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
+import { decodeReactionForApi } from '../note/notes-reactions.js';
+import { packNoteForApi, packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
+import { packUserLiteManyForApi } from './user.js';
+import { ApiError } from '../error.js';
+import { isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiUserReactionsDependencies = HonoApiNoteDependencies & HonoApiRolePolicyDependencies;
+export type ApiUserReactionsDependencies = ApiNoteDependencies & ApiRolePolicyDependencies;
 
-function usersReactionsIsRemoteUserError(): HonoApiError {
-	return new HonoApiError({
+function usersReactionsIsRemoteUserError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message:
 			'Currently unavailable to display reactions of remote users. See https://github.com/misskey-dev/misskey/issues/12964',
@@ -36,8 +36,8 @@ function usersReactionsIsRemoteUserError(): HonoApiError {
 	});
 }
 
-function usersReactionsNotPublicError(): HonoApiError {
-	return new HonoApiError({
+function usersReactionsNotPublicError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Reactions of the user is not public.',
 		code: 'REACTIONS_NOT_PUBLIC',
@@ -63,33 +63,33 @@ type UsersReactionsParams = {
 	untilDate?: number;
 };
 
-async function packNoteReactionWithNoteForHonoApi(
-	deps: HonoApiUserReactionsDependencies,
+async function packNoteReactionWithNoteForApi(
+	deps: ApiUserReactionsDependencies,
 	reaction: NoteReactionRow & { note: MiNote },
 	me: { id: MiUser['id'] } | null | undefined,
 	packedUser: unknown,
-	packedNote?: Awaited<ReturnType<typeof packNoteForHonoApi>>,
+	packedNote?: Awaited<ReturnType<typeof packNoteForApi>>,
 ): Promise<Record<string, unknown>> {
 	return {
 		id: reaction.id,
 		createdAt: parseId(reaction.id).date.toISOString(),
 		user: packedUser,
-		type: decodeReactionForHonoApi(reaction.reaction).reaction,
-		note: packedNote ?? (await packNoteForHonoApi(deps, reaction.note, me)),
+		type: decodeReactionForApi(reaction.reaction).reaction,
+		note: packedNote ?? (await packNoteForApi(deps, reaction.note, me)),
 	};
 }
 
-export async function handleHonoApiUsersReactions(
-	deps: HonoApiUserReactionsDependencies,
+export async function handleApiUsersReactions(
+	deps: ApiUserReactionsDependencies,
 	me: MiUser | null | undefined,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(usersReactionsParamDef, body);
+	const params = parseApiParams(usersReactionsParamDef, body);
 
 	const userIdsWhoBlockingMe = me
 		? new Set(await listBlockerIdsByBlockeeIdFromDatabase(deps.db, me.id))
 		: new Set<string>();
-	const iAmModerator = me ? await isHonoApiModerator(deps, me) : false;
+	const iAmModerator = me ? await isApiModerator(deps, me) : false;
 
 	if (!iAmModerator) {
 		const user = await fetchUserByIdOrFailFromDatabase(deps.db, params.userId);
@@ -158,9 +158,9 @@ export async function handleHonoApiUsersReactions(
 	}
 
 	const userIds = [...new Set(collected.map((r) => r.userId))];
-	const packedUsers = await packUserLiteManyForHonoApi(deps, userIds);
+	const packedUsers = await packUserLiteManyForApi(deps, userIds);
 	const userMap = new Map(packedUsers.map((u) => [u.id, u]));
-	const packedNotes = await packNoteManyForHonoApi(
+	const packedNotes = await packNoteManyForApi(
 		deps,
 		collected.map((reaction) => reaction.note),
 		me,
@@ -168,7 +168,7 @@ export async function handleHonoApiUsersReactions(
 
 	return await Promise.all(
 		collected.map((reaction, index) =>
-			packNoteReactionWithNoteForHonoApi(deps, reaction, me, userMap.get(reaction.userId), packedNotes[index]),
+			packNoteReactionWithNoteForApi(deps, reaction, me, userMap.get(reaction.userId), packedNotes[index]),
 		),
 	);
 }

@@ -31,16 +31,16 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAnnouncement, MiUser } from '@/models/_.js';
 import { omitUndefined } from '@/misc/clone.js';
 import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
-import { normalizeReactionForHonoApi } from '../note/notes-reactions.js';
-import { getHonoApiUserRoles, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { HonoApiError } from '../error.js';
-import type { HonoApiMainStreamPublisher } from '../events.js';
-import { parseHonoApiParams } from '../validation.js';
+import { normalizeReactionForApi } from '../note/notes-reactions.js';
+import { getApiUserRoles, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { ApiError } from '../error.js';
+import type { ApiMainStreamPublisher } from '../events.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAnnouncementDependencies = HonoApiRolePolicyDependencies & {
+export type ApiAnnouncementDependencies = ApiRolePolicyDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishMainStream?: HonoApiMainStreamPublisher;
+	publishMainStream?: ApiMainStreamPublisher;
 };
 
 export const announcementsParamDef = z.object({
@@ -69,8 +69,8 @@ export const announcementUnreactParamDef = z.object({
 	announcementId: misskeyId(),
 });
 
-function noSuchAnnouncementError(): HonoApiError {
-	return new HonoApiError({
+function noSuchAnnouncementError(): ApiError {
+	return new ApiError({
 		status: 404,
 		message: 'No such announcement.',
 		code: 'NO_SUCH_ANNOUNCEMENT',
@@ -78,8 +78,8 @@ function noSuchAnnouncementError(): HonoApiError {
 	});
 }
 
-async function packHonoApiAnnouncement(
-	deps: HonoApiAnnouncementDependencies,
+async function packApiAnnouncement(
+	deps: ApiAnnouncementDependencies,
 	announcement: MiAnnouncement & {
 		isRead?: boolean | null;
 		reactions?: Record<string, number>;
@@ -124,12 +124,12 @@ async function packHonoApiAnnouncement(
 	};
 }
 
-export async function handleHonoApiAnnouncements(
-	deps: HonoApiAnnouncementDependencies,
+export async function handleApiAnnouncements(
+	deps: ApiAnnouncementDependencies,
 	user: { id: MiUser['id'] } | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Announcement'>[]> {
-	const params = parseHonoApiParams(announcementsParamDef, body);
+	const params = parseApiParams(announcementsParamDef, body);
 	const announcements = await listAnnouncementsForUserFromDatabase(
 		deps.db,
 		omitUndefined({
@@ -159,7 +159,7 @@ export async function handleHonoApiAnnouncements(
 
 	return await Promise.all(
 		announcements.map((announcement) =>
-			packHonoApiAnnouncement(
+			packApiAnnouncement(
 				deps,
 				{
 					...announcement,
@@ -173,25 +173,25 @@ export async function handleHonoApiAnnouncements(
 	);
 }
 
-export async function handleHonoApiAnnouncementShow(
-	deps: HonoApiAnnouncementDependencies,
+export async function handleApiAnnouncementShow(
+	deps: ApiAnnouncementDependencies,
 	user: { id: MiUser['id'] } | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Announcement'>> {
-	const params = parseHonoApiParams(announcementShowParamDef, body);
+	const params = parseApiParams(announcementShowParamDef, body);
 	const announcement = await fetchAnnouncementByIdFromDatabase(deps.db, params.announcementId);
 	if (announcement == null) throw noSuchAnnouncementError();
 	if (announcement.userId != null && announcement.userId !== user?.id) throw noSuchAnnouncementError();
 
-	return await packHonoApiAnnouncement(deps, announcement, user);
+	return await packApiAnnouncement(deps, announcement, user);
 }
 
-export async function handleHonoApiIReadAnnouncement(
-	deps: HonoApiAnnouncementDependencies,
+export async function handleApiIReadAnnouncement(
+	deps: ApiAnnouncementDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(readAnnouncementParamDef, body);
+	const params = parseApiParams(readAnnouncementParamDef, body);
 
 	const created = await createAnnouncementReadInDatabase(deps.db, {
 		id: genId(),
@@ -213,8 +213,8 @@ export async function handleHonoApiIReadAnnouncement(
 	}
 }
 
-function reactAnnouncementNotFoundError(): HonoApiError {
-	return new HonoApiError({
+function reactAnnouncementNotFoundError(): ApiError {
+	return new ApiError({
 		status: 404,
 		message: 'No such announcement.',
 		code: 'NO_SUCH_ANNOUNCEMENT',
@@ -222,8 +222,8 @@ function reactAnnouncementNotFoundError(): HonoApiError {
 	});
 }
 
-function alreadyReactedError(): HonoApiError {
-	return new HonoApiError({
+function alreadyReactedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You are already reacting to that announcement.',
 		code: 'ALREADY_REACTED',
@@ -231,8 +231,8 @@ function alreadyReactedError(): HonoApiError {
 	});
 }
 
-function notReactedError(): HonoApiError {
-	return new HonoApiError({
+function notReactedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You are not reacting to that announcement.',
 		code: 'NOT_REACTED',
@@ -247,28 +247,28 @@ const isCustomEmojiReaction = /^:([\w+-]+)(?:@\.)?:$/;
  * 使えないものが来たら弾かずにフォールバックへ寄せる (ノートのリアクションと同じ扱い)。
  */
 async function normalizeAnnouncementReaction(
-	deps: HonoApiAnnouncementDependencies,
+	deps: ApiAnnouncementDependencies,
 	me: MiUser,
 	requested: string,
 ): Promise<string> {
 	const custom = requested.match(isCustomEmojiReaction);
-	if (custom == null) return normalizeReactionForHonoApi(requested);
+	if (custom == null) return normalizeReactionForApi(requested);
 
 	const name = custom[1]!;
 	const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, null);
-	if (emoji == null) return normalizeReactionForHonoApi(null);
+	if (emoji == null) return normalizeReactionForApi(null);
 
 	if (emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length > 0) {
-		const roles = await getHonoApiUserRoles(deps, me);
+		const roles = await getApiUserRoles(deps, me);
 		const allowed = roles.some((role) => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.includes(role.id));
-		if (!allowed) return normalizeReactionForHonoApi(null);
+		if (!allowed) return normalizeReactionForApi(null);
 	}
 
 	return `:${name}:`;
 }
 
 async function fetchReactableAnnouncement(
-	deps: HonoApiAnnouncementDependencies,
+	deps: ApiAnnouncementDependencies,
 	me: MiUser,
 	announcementId: MiAnnouncement['id'],
 ): Promise<MiAnnouncement> {
@@ -279,12 +279,12 @@ async function fetchReactableAnnouncement(
 	return announcement;
 }
 
-export async function handleHonoApiAnnouncementReact(
-	deps: HonoApiAnnouncementDependencies,
+export async function handleApiAnnouncementReact(
+	deps: ApiAnnouncementDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(announcementReactParamDef, body);
+	const params = parseApiParams(announcementReactParamDef, body);
 	await fetchReactableAnnouncement(deps, me, params.announcementId);
 
 	const reaction = await normalizeAnnouncementReaction(deps, me, params.reaction);
@@ -297,12 +297,12 @@ export async function handleHonoApiAnnouncementReact(
 	if (!created) throw alreadyReactedError();
 }
 
-export async function handleHonoApiAnnouncementUnreact(
-	deps: HonoApiAnnouncementDependencies,
+export async function handleApiAnnouncementUnreact(
+	deps: ApiAnnouncementDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(announcementUnreactParamDef, body);
+	const params = parseApiParams(announcementUnreactParamDef, body);
 	await fetchReactableAnnouncement(deps, me, params.announcementId);
 
 	const deleted = await deleteAnnouncementReactionInDatabase(deps.db, me.id, params.announcementId);

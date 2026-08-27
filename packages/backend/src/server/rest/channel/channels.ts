@@ -50,20 +50,20 @@ import type { MiMeta } from '@/models/_.js';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { HonoApiInternalEventPublisher } from '../events.js';
-import { HonoApiError } from '../error.js';
-import { packNoteManyForHonoApi, type HonoApiNoteDependencies } from '../note/note.js';
-import { isHonoApiModerator } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
+import type { ApiInternalEventPublisher } from '../events.js';
+import { ApiError } from '../error.js';
+import { packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
+import { isApiModerator } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiChannelsDependencies = {
+export type ApiChannelsDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
 };
 
-type HonoApiPackedChannel = Packed<'Channel'>;
+type ApiPackedChannel = Packed<'Channel'>;
 
 export const channelsListParamDef = z.object({
 	sinceId: misskeyId().optional(),
@@ -192,8 +192,8 @@ type ChannelTimelineParams = {
 	untilDate?: number;
 };
 
-function channelsShowNoSuchChannelError(): HonoApiError {
-	return new HonoApiError({
+function channelsShowNoSuchChannelError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such channel.',
 		code: 'NO_SUCH_CHANNEL',
@@ -201,8 +201,8 @@ function channelsShowNoSuchChannelError(): HonoApiError {
 	});
 }
 
-function channelsTimelineNoSuchChannelError(): HonoApiError {
-	return new HonoApiError({
+function channelsTimelineNoSuchChannelError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such channel.',
 		code: 'NO_SUCH_CHANNEL',
@@ -210,8 +210,8 @@ function channelsTimelineNoSuchChannelError(): HonoApiError {
 	});
 }
 
-function channelCreateNoSuchFileError(): HonoApiError {
-	return new HonoApiError({
+function channelCreateNoSuchFileError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such file.',
 		code: 'NO_SUCH_FILE',
@@ -219,8 +219,8 @@ function channelCreateNoSuchFileError(): HonoApiError {
 	});
 }
 
-function channelUpdateNoSuchChannelError(): HonoApiError {
-	return new HonoApiError({
+function channelUpdateNoSuchChannelError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such channel.',
 		code: 'NO_SUCH_CHANNEL',
@@ -228,8 +228,8 @@ function channelUpdateNoSuchChannelError(): HonoApiError {
 	});
 }
 
-function channelUpdateAccessDeniedError(): HonoApiError {
-	return new HonoApiError({
+function channelUpdateAccessDeniedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You do not have edit privilege of the channel.',
 		code: 'ACCESS_DENIED',
@@ -237,8 +237,8 @@ function channelUpdateAccessDeniedError(): HonoApiError {
 	});
 }
 
-function channelUpdateNoSuchFileError(): HonoApiError {
-	return new HonoApiError({
+function channelUpdateNoSuchFileError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such file.',
 		code: 'NO_SUCH_FILE',
@@ -246,8 +246,8 @@ function channelUpdateNoSuchFileError(): HonoApiError {
 	});
 }
 
-function channelFollowNoSuchChannelError(): HonoApiError {
-	return new HonoApiError({
+function channelFollowNoSuchChannelError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such channel.',
 		code: 'NO_SUCH_CHANNEL',
@@ -255,8 +255,8 @@ function channelFollowNoSuchChannelError(): HonoApiError {
 	});
 }
 
-function channelFollowAlreadyFollowingError(): HonoApiError {
-	return new HonoApiError({
+function channelFollowAlreadyFollowingError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You are already following that channel.',
 		code: 'ALREADY_FOLLOWING',
@@ -264,8 +264,8 @@ function channelFollowAlreadyFollowingError(): HonoApiError {
 	});
 }
 
-function channelUnfollowNoSuchChannelError(): HonoApiError {
-	return new HonoApiError({
+function channelUnfollowNoSuchChannelError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such channel.',
 		code: 'NO_SUCH_CHANNEL',
@@ -273,8 +273,8 @@ function channelUnfollowNoSuchChannelError(): HonoApiError {
 	});
 }
 
-function channelMuteCreateNoSuchChannelError(): HonoApiError {
-	return new HonoApiError({
+function channelMuteCreateNoSuchChannelError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such Channel.',
 		code: 'NO_SUCH_CHANNEL',
@@ -282,8 +282,8 @@ function channelMuteCreateNoSuchChannelError(): HonoApiError {
 	});
 }
 
-function channelMuteCreateAlreadyMutingError(): HonoApiError {
-	return new HonoApiError({
+function channelMuteCreateAlreadyMutingError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You are already muting that user.',
 		code: 'ALREADY_MUTING_CHANNEL',
@@ -291,8 +291,8 @@ function channelMuteCreateAlreadyMutingError(): HonoApiError {
 	});
 }
 
-function channelMuteCreateExpiresAtIsPastError(): HonoApiError {
-	return new HonoApiError({
+function channelMuteCreateExpiresAtIsPastError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Cannot set past date to "expiresAt".',
 		code: 'EXPIRES_AT_IS_PAST',
@@ -300,8 +300,8 @@ function channelMuteCreateExpiresAtIsPastError(): HonoApiError {
 	});
 }
 
-function channelMuteDeleteNoSuchChannelError(): HonoApiError {
-	return new HonoApiError({
+function channelMuteDeleteNoSuchChannelError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such Channel.',
 		code: 'NO_SUCH_CHANNEL',
@@ -309,8 +309,8 @@ function channelMuteDeleteNoSuchChannelError(): HonoApiError {
 	});
 }
 
-function channelMuteDeleteNotMutingError(): HonoApiError {
-	return new HonoApiError({
+function channelMuteDeleteNotMutingError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You are not muting that channel.',
 		code: 'NOT_MUTING_CHANNEL',
@@ -326,7 +326,7 @@ type ChannelPackHint = {
 };
 
 async function buildChannelPackHint(
-	deps: HonoApiChannelsDependencies,
+	deps: ApiChannelsDependencies,
 	channels: MiChannel[],
 	me: MiLocalUser | null,
 ): Promise<ChannelPackHint> {
@@ -355,12 +355,12 @@ async function buildChannelPackHint(
 	};
 }
 
-function packChannelForHonoApi(
-	deps: HonoApiChannelsDependencies,
+function packChannelForApi(
+	deps: ApiChannelsDependencies,
 	channel: MiChannel,
 	me: MiLocalUser | null,
 	hint: ChannelPackHint,
-): HonoApiPackedChannel {
+): ApiPackedChannel {
 	const bannerFile = channel.bannerId == null ? null : (hint.bannerFiles.get(channel.bannerId) ?? null);
 
 	return {
@@ -390,38 +390,35 @@ function packChannelForHonoApi(
 	};
 }
 
-async function packChannelsForHonoApi(
-	deps: HonoApiChannelsDependencies,
+async function packChannelsForApi(
+	deps: ApiChannelsDependencies,
 	channels: MiChannel[],
 	me: MiLocalUser | null,
-): Promise<HonoApiPackedChannel[]> {
+): Promise<ApiPackedChannel[]> {
 	const hint = await buildChannelPackHint(deps, channels, me);
-	return channels.map((channel) => packChannelForHonoApi(deps, channel, me, hint));
+	return channels.map((channel) => packChannelForApi(deps, channel, me, hint));
 }
 
 /**
  * SSR (web/client-pages.ts の /channels/:channel) から使う。
  * 未ログイン閲覧者向けなので me は常に null で、hint も単体分だけ組む。
  */
-export async function packChannelForSsr(
-	deps: HonoApiChannelsDependencies,
-	channel: MiChannel,
-): Promise<HonoApiPackedChannel> {
+export async function packChannelForSsr(deps: ApiChannelsDependencies, channel: MiChannel): Promise<ApiPackedChannel> {
 	const hint = await buildChannelPackHint(deps, [channel], null);
-	return packChannelForHonoApi(deps, channel, null, hint);
+	return packChannelForApi(deps, channel, null, hint);
 }
 
-async function packChannelDetailedForHonoApi(
-	deps: HonoApiChannelsDependencies & HonoApiNoteDependencies,
+async function packChannelDetailedForApi(
+	deps: ApiChannelsDependencies & ApiNoteDependencies,
 	channel: MiChannel,
 	me: MiLocalUser | null,
-): Promise<HonoApiPackedChannel> {
+): Promise<ApiPackedChannel> {
 	const hint = await buildChannelPackHint(deps, [channel], me);
-	const packed = packChannelForHonoApi(deps, channel, me, hint);
+	const packed = packChannelForApi(deps, channel, me, hint);
 
 	const pinnedNotes =
 		channel.pinnedNoteIds.length > 0 ? await listNotesByIdsFromDatabase(deps.db, channel.pinnedNoteIds) : [];
-	const packedPinnedNotes = (await packNoteManyForHonoApi(deps, pinnedNotes, me)).sort(
+	const packedPinnedNotes = (await packNoteManyForApi(deps, pinnedNotes, me)).sort(
 		(a, b) => channel.pinnedNoteIds.indexOf(a.id) - channel.pinnedNoteIds.indexOf(b.id),
 	);
 
@@ -431,22 +428,22 @@ async function packChannelDetailedForHonoApi(
 	};
 }
 
-export async function handleHonoApiChannelsFeatured(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsFeatured(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedChannel[]> {
-	parseHonoApiParams(emptyParamDef, body);
+): Promise<ApiPackedChannel[]> {
+	parseApiParams(emptyParamDef, body);
 	const channels = await listRecentlyActiveChannelsFromDatabase(deps.db, 10);
-	return await packChannelsForHonoApi(deps, channels, me);
+	return await packChannelsForApi(deps, channels, me);
 }
 
-export async function handleHonoApiChannelsSearch(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsSearch(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedChannel[]> {
-	const params = parseHonoApiParams(channelsSearchParamDef, body);
+): Promise<ApiPackedChannel[]> {
+	const params = parseApiParams(channelsSearchParamDef, body);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const channels = await listChannelsBySearchFromDatabase(deps.db, {
@@ -458,15 +455,15 @@ export async function handleHonoApiChannelsSearch(
 		order: sinceId != null && untilId == null ? 'asc' : 'desc',
 	});
 
-	return await packChannelsForHonoApi(deps, channels, me);
+	return await packChannelsForApi(deps, channels, me);
 }
 
-export async function handleHonoApiChannelsOwned(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsOwned(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedChannel[]> {
-	const params = parseHonoApiParams(channelsListParamDef, body);
+): Promise<ApiPackedChannel[]> {
+	const params = parseApiParams(channelsListParamDef, body);
 	const channels = await listOwnedChannelsFromDatabase(deps.db, me.id, {
 		...resolveChannelPagination(
 			{
@@ -477,15 +474,15 @@ export async function handleHonoApiChannelsOwned(
 		limit: params.limit,
 	});
 
-	return await packChannelsForHonoApi(deps, channels, me);
+	return await packChannelsForApi(deps, channels, me);
 }
 
-export async function handleHonoApiChannelsFollowed(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsFollowed(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedChannel[]> {
-	const params = parseHonoApiParams(channelsListParamDef, body);
+): Promise<ApiPackedChannel[]> {
+	const params = parseApiParams(channelsListParamDef, body);
 	const followings = await listChannelFollowingsByFollowerIdFromDatabase(deps.db, me.id, {
 		limit: params.limit,
 		...resolveChannelPagination(
@@ -503,15 +500,15 @@ export async function handleHonoApiChannelsFollowed(
 		.map((id) => channelById.get(id))
 		.filter((channel): channel is MiChannel => channel != null);
 
-	return await packChannelsForHonoApi(deps, channels, me);
+	return await packChannelsForApi(deps, channels, me);
 }
 
-export async function handleHonoApiChannelsMyFavorites(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsMyFavorites(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedChannel[]> {
-	parseHonoApiParams(emptyParamDef, body);
+): Promise<ApiPackedChannel[]> {
+	parseApiParams(emptyParamDef, body);
 	const channelIds = await listFavoritedChannelIdsByUserIdFromDatabase(deps.db, me.id);
 	if (channelIds.length === 0) return [];
 
@@ -522,15 +519,15 @@ export async function handleHonoApiChannelsMyFavorites(
 		.map((id) => channelById.get(id))
 		.filter((channel): channel is MiChannel => channel != null);
 
-	return await packChannelsForHonoApi(deps, channels, me);
+	return await packChannelsForApi(deps, channels, me);
 }
 
-export async function handleHonoApiChannelsCreate(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsCreate(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedChannel> {
-	const params = parseHonoApiParams(channelCreateParamDef, body);
+): Promise<ApiPackedChannel> {
+	const params = parseApiParams(channelCreateParamDef, body);
 	let bannerId: string | null = null;
 	if (params.bannerId != null) {
 		const banner = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.bannerId, me.id);
@@ -551,21 +548,21 @@ export async function handleHonoApiChannelsCreate(
 		allowRenoteToExternal: params.allowRenoteToExternal ?? true,
 	});
 
-	return packChannelForHonoApi(deps, channel, me, await buildChannelPackHint(deps, [channel], me));
+	return packChannelForApi(deps, channel, me, await buildChannelPackHint(deps, [channel], me));
 }
 
-export async function handleHonoApiChannelsUpdate(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsUpdate(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedChannel> {
-	const params = parseHonoApiParams(channelUpdateParamDef, body);
+): Promise<ApiPackedChannel> {
+	const params = parseApiParams(channelUpdateParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
 		throw channelUpdateNoSuchChannelError();
 	}
 
-	const isModerator = await isHonoApiModerator(deps, me);
+	const isModerator = await isApiModerator(deps, me);
 	if (channel.userId !== me.id && !isModerator) {
 		throw channelUpdateAccessDeniedError();
 	}
@@ -598,15 +595,15 @@ export async function handleHonoApiChannelsUpdate(
 		throw channelUpdateNoSuchChannelError();
 	}
 
-	return packChannelForHonoApi(deps, updated, me, await buildChannelPackHint(deps, [updated], me));
+	return packChannelForApi(deps, updated, me, await buildChannelPackHint(deps, [updated], me));
 }
 
-export async function handleHonoApiChannelsFollow(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsFollow(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelFollowParamDef, body);
+	const params = parseApiParams(channelFollowParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
 		throw channelFollowNoSuchChannelError();
@@ -630,12 +627,12 @@ export async function handleHonoApiChannelsFollow(
 	});
 }
 
-export async function handleHonoApiChannelsUnfollow(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsUnfollow(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelFollowParamDef, body);
+	const params = parseApiParams(channelFollowParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
 		throw channelUnfollowNoSuchChannelError();
@@ -648,12 +645,12 @@ export async function handleHonoApiChannelsUnfollow(
 	});
 }
 
-export async function handleHonoApiChannelsMuteCreate(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsMuteCreate(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelMuteCreateParamDef, body);
+	const params = parseApiParams(channelMuteCreateParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
 		throw channelMuteCreateNoSuchChannelError();
@@ -687,12 +684,12 @@ export async function handleHonoApiChannelsMuteCreate(
 	});
 }
 
-export async function handleHonoApiChannelsMuteDelete(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsMuteDelete(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelMuteDeleteParamDef, body);
+	const params = parseApiParams(channelMuteDeleteParamDef, body);
 	const targetChannel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (targetChannel == null) {
 		throw channelMuteDeleteNoSuchChannelError();
@@ -710,12 +707,12 @@ export async function handleHonoApiChannelsMuteDelete(
 	});
 }
 
-export async function handleHonoApiChannelsMuteList(
-	deps: HonoApiChannelsDependencies,
+export async function handleApiChannelsMuteList(
+	deps: ApiChannelsDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedChannel[]> {
-	parseHonoApiParams(emptyParamDef, body);
+): Promise<ApiPackedChannel[]> {
+	parseApiParams(emptyParamDef, body);
 	const channelIds = await listActiveMutedChannelIdsByUserIdFromDatabase(deps.db, me.id, new Date());
 	if (channelIds.length === 0) return [];
 
@@ -727,27 +724,27 @@ export async function handleHonoApiChannelsMuteList(
 		.filter((channel): channel is MiChannel => channel != null)
 		.sort((a, b) => a.id.localeCompare(b.id));
 
-	return await packChannelsForHonoApi(deps, channels, me);
+	return await packChannelsForApi(deps, channels, me);
 }
 
-export async function handleHonoApiChannelsShow(
-	deps: HonoApiChannelsDependencies & HonoApiNoteDependencies,
+export async function handleApiChannelsShow(
+	deps: ApiChannelsDependencies & ApiNoteDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedChannel> {
-	const params = parseHonoApiParams(channelShowParamDef, body);
+): Promise<ApiPackedChannel> {
+	const params = parseApiParams(channelShowParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) throw channelsShowNoSuchChannelError();
 
-	return await packChannelDetailedForHonoApi(deps, channel, me);
+	return await packChannelDetailedForApi(deps, channel, me);
 }
 
-export async function handleHonoApiChannelsTimeline(
-	deps: HonoApiChannelsDependencies & HonoApiNoteDependencies,
+export async function handleApiChannelsTimeline(
+	deps: ApiChannelsDependencies & ApiNoteDependencies,
 	me: MiLocalUser | null,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Note'>[]> {
-	const params = parseHonoApiParams(channelTimelineParamDef, body);
+	const params = parseApiParams(channelTimelineParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
@@ -771,5 +768,5 @@ export async function handleHonoApiChannelsTimeline(
 		mutedChannelIds: mutingChannelIds,
 	});
 
-	return await packNoteManyForHonoApi(deps, notes, me);
+	return await packNoteManyForApi(deps, notes, me);
 }

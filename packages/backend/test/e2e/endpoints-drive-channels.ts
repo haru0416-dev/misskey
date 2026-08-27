@@ -147,7 +147,7 @@ describe('Endpoints', () => {
 		await context.close();
 	});
 
-	describe('Hono channel read endpoints', () => {
+	describe('channel read endpoints', () => {
 		test('featured, owned, followed, and my-favorites preserve caller-scoped flags', async () => {
 			const config = fixtureConfig;
 			const stamp = Date.now().toString(36);
@@ -239,7 +239,7 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('Hono channel write endpoints', () => {
+	describe('channel write endpoints', () => {
 		const createOwnedDriveFile = async (userId: string, seed: string) => {
 			const config = fixtureConfig;
 			const md5 = createHash('md5').update(seed).digest('hex');
@@ -321,8 +321,8 @@ describe('Endpoints', () => {
 				id: genId(now),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
-				name: `Hono channel create deny role ${now}`,
-				description: 'Hono channel create deny role',
+				name: `channel create deny role ${now}`,
+				description: 'channel create deny role',
 				color: null,
 				iconUrl: null,
 				target: 'manual',
@@ -465,8 +465,8 @@ describe('Endpoints', () => {
 				id: genId(now + 2),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
-				name: `Hono channel moderator role ${now}`,
-				description: 'Hono channel moderator role',
+				name: `channel moderator role ${now}`,
+				description: 'channel moderator role',
 				color: null,
 				iconUrl: null,
 				target: 'manual',
@@ -505,7 +505,7 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('Hono channel follow endpoints', () => {
+	describe('channel follow endpoints', () => {
 		test('follow and unfollow update the channel following row', async () => {
 			const config = fixtureConfig;
 			const target = await createChannelInDatabase(db, {
@@ -609,7 +609,7 @@ describe('Endpoints', () => {
 		});
 	});
 
-	describe('Hono channel mute endpoints', () => {
+	describe('channel mute endpoints', () => {
 		test('create, list, and delete preserve channel mute behavior', async () => {
 			const config = fixtureConfig;
 			const stamp = Date.now().toString(36);

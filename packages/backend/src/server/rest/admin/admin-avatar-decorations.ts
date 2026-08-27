@@ -20,13 +20,13 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAvatarDecoration } from '@/models/AvatarDecoration.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { HonoApiInternalEventPublisher } from '../events.js';
-import { parseHonoApiParams } from '../validation.js';
+import type { ApiInternalEventPublisher } from '../events.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminAvatarDecorationDependencies = {
+export type ApiAdminAvatarDecorationDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
 };
 
 type AdminAvatarDecoration = {
@@ -70,7 +70,7 @@ export const adminAvatarDecorationsUpdateParamDef = z.object({
 	category: z.string().nullable().optional(),
 });
 
-function packAdminAvatarDecorationForHonoApi(config: Config, decoration: MiAvatarDecoration): AdminAvatarDecoration {
+function packAdminAvatarDecorationForApi(config: Config, decoration: MiAvatarDecoration): AdminAvatarDecoration {
 	return {
 		id: decoration.id,
 		createdAt: parseId(decoration.id).date.toISOString(),
@@ -83,12 +83,12 @@ function packAdminAvatarDecorationForHonoApi(config: Config, decoration: MiAvata
 	};
 }
 
-export async function handleHonoApiAdminAvatarDecorationsCreate(
-	deps: HonoApiAdminAvatarDecorationDependencies,
+export async function handleApiAdminAvatarDecorationsCreate(
+	deps: ApiAdminAvatarDecorationDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<AdminAvatarDecoration> {
-	const params = parseHonoApiParams(adminAvatarDecorationsCreateParamDef, body);
+	const params = parseApiParams(adminAvatarDecorationsCreateParamDef, body);
 	const created = await createAvatarDecorationWithSideEffects(
 		{
 			db: deps.db,
@@ -106,15 +106,15 @@ export async function handleHonoApiAdminAvatarDecorationsCreate(
 		me,
 	);
 
-	return packAdminAvatarDecorationForHonoApi(deps.config, created);
+	return packAdminAvatarDecorationForApi(deps.config, created);
 }
 
-export async function handleHonoApiAdminAvatarDecorationsDelete(
-	deps: HonoApiAdminAvatarDecorationDependencies,
+export async function handleApiAdminAvatarDecorationsDelete(
+	deps: ApiAdminAvatarDecorationDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAvatarDecorationsDeleteParamDef, body);
+	const params = parseApiParams(adminAvatarDecorationsDeleteParamDef, body);
 
 	await deleteAvatarDecorationWithSideEffects(
 		{
@@ -127,24 +127,24 @@ export async function handleHonoApiAdminAvatarDecorationsDelete(
 	);
 }
 
-export async function handleHonoApiAdminAvatarDecorationsList(
-	deps: HonoApiAdminAvatarDecorationDependencies,
+export async function handleApiAdminAvatarDecorationsList(
+	deps: ApiAdminAvatarDecorationDependencies,
 	body: Record<string, unknown>,
 ): Promise<AdminAvatarDecoration[]> {
-	parseHonoApiParams(adminAvatarDecorationsListParamDef, body);
+	parseApiParams(adminAvatarDecorationsListParamDef, body);
 	const decorations = await listAvatarDecorationsFromDatabase(deps.db);
 
 	return decorations.map((decoration) =>
-		packAdminAvatarDecorationForHonoApi(deps.config, decoration as MiAvatarDecoration),
+		packAdminAvatarDecorationForApi(deps.config, decoration as MiAvatarDecoration),
 	);
 }
 
-export async function handleHonoApiAdminAvatarDecorationsUpdate(
-	deps: HonoApiAdminAvatarDecorationDependencies,
+export async function handleApiAdminAvatarDecorationsUpdate(
+	deps: ApiAdminAvatarDecorationDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAvatarDecorationsUpdateParamDef, body);
+	const params = parseApiParams(adminAvatarDecorationsUpdateParamDef, body);
 
 	await updateAvatarDecorationWithSideEffects(
 		{

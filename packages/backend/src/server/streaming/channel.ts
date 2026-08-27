@@ -15,7 +15,7 @@ import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiUser } from '@/models/User.js';
 import type { Awaitable } from '@/types.js';
 
-export type HonoStreamChannelSubscriber = {
+export type StreamChannelSubscriber = {
 	on: (eventName: string | symbol, listener: Parameters<EventEmitter['on']>[1]) => void;
 	off: (eventName: string | symbol, listener: Parameters<EventEmitter['off']>[1]) => void;
 };
@@ -23,7 +23,7 @@ export type HonoStreamChannelSubscriber = {
 /**
  * channel 初期化時点のフォロー・ミュート・ブロック関係を保持するスナップショット。
  */
-export type HonoStreamChannelContext = {
+export type StreamChannelContext = {
 	id: string;
 	user?: MiUser;
 	token?: MiAccessToken;
@@ -35,11 +35,11 @@ export type HonoStreamChannelContext = {
 	userIdsWhoMeMutingRenotes: Set<string>;
 	userIdsWhoBlockingMe: Set<string>;
 	userMutedInstances: Set<string>;
-	subscriber: HonoStreamChannelSubscriber;
+	subscriber: StreamChannelSubscriber;
 	send: (type: string, body: JsonValue) => void;
 };
 
-export function isNoteVisibleForMeForHonoStream(ctx: HonoStreamChannelContext, note: Packed<'Note'>): boolean {
+export function isNoteVisibleForMeForStream(ctx: StreamChannelContext, note: Packed<'Note'>): boolean {
 	const meId = ctx.user?.id ?? null;
 
 	if (note.visibility === 'specified') {
@@ -59,7 +59,7 @@ export function isNoteVisibleForMeForHonoStream(ctx: HonoStreamChannelContext, n
 	return true;
 }
 
-export function isNoteMutedOrBlockedForHonoStream(ctx: HonoStreamChannelContext, note: Packed<'Note'>): boolean {
+export function isNoteMutedOrBlockedForStream(ctx: StreamChannelContext, note: Packed<'Note'>): boolean {
 	if (isInstanceMuted(note, ctx.userMutedInstances)) return true;
 	if (isUserRelated(note, ctx.userIdsWhoMeMuting)) return true;
 	if (isUserRelated(note, ctx.userIdsWhoBlockingMe)) return true;
@@ -68,7 +68,7 @@ export function isNoteMutedOrBlockedForHonoStream(ctx: HonoStreamChannelContext,
 	return false;
 }
 
-export type HonoStreamChannelHandle = {
+export type StreamChannelHandle = {
 	dispose?: () => void;
 	onMessage?: (type: string, body: JsonValue) => void;
 };
@@ -76,13 +76,9 @@ export type HonoStreamChannelHandle = {
 /**
  * `init` が `false` を返す/初期化不可の場合は接続を拒否する。
  */
-export type HonoStreamChannelDefinition<Deps> = {
+export type StreamChannelDefinition<Deps> = {
 	shouldShare: boolean;
 	requireCredential: boolean;
 	kind: string | null;
-	init: (
-		deps: Deps,
-		ctx: HonoStreamChannelContext,
-		params: JsonObject,
-	) => Awaitable<HonoStreamChannelHandle | false | void>;
+	init: (deps: Deps, ctx: StreamChannelContext, params: JsonObject) => Awaitable<StreamChannelHandle | false | void>;
 };

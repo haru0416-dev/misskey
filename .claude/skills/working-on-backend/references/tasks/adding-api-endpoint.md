@@ -14,7 +14,7 @@ Misskey backend の API endpoint は **1 endpoint = 1 ファイル** ではな�
 ## 最重要事実 (見落とすと CI / 本番が壊れる)
 
 1. **ルートは自動収集されない**。`routes/<category>.ts` への実装 + (新規カテゴリなら) `shell.ts` への配線が無いと 404 になる → [knowledge/endpoint-registration.md](../knowledge/endpoint-registration.md)
-2. **meta の `requireCredential` / `kind` / `limit` / `prohibitMoved` はドキュメント用の宣言に過ぎない**。ルート側で `assertCredential` / `assertTokenPermission` / `assertHonoApiRateLimitForUser` / `assertProhibitMoved` を **自分で呼ばないと実際には強制されない**。忘れても 404 にはならず気づきにくいので要注意
+2. **meta の `requireCredential` / `kind` / `limit` / `prohibitMoved` はドキュメント用の宣言に過ぎない**。ルート側で `assertCredential` / `assertTokenPermission` / `assertApiRateLimitForUser` / `assertProhibitMoved` を **自分で呼ばないと実際には強制されない**。忘れても 404 にはならず気づきにくいので要注意
 3. **`meta` / `paramDef` / `res` を変えたら misskey-js 再生成が必須**。`bun run build-misskey-js-with-types` を忘れると CI の `check-misskey-js-autogen` で必ず落ちる
 4. **`meta.errors` の各 `id` は UUID v4 で、リポジトリ内で一意**。`crypto.randomUUID()` で生成し、`grep -rn "id: '<UUID>'" packages/backend/src/server/api/metas/ packages/backend/src/server/rest/` で衝突確認。ハンドラ側のローカルエラーファクトリの `message`/`code`/`id` は meta の宣言と完全一致させる
 
@@ -37,12 +37,12 @@ Misskey backend の API endpoint は **1 endpoint = 1 ファイル** ではな�
 
 | 性質 | meta | ルート | ハンドラ |
 |---|---|---|---|
-| 認証不要・パラメータなし・小さなレスポンス | [metas/misc.ts](../../../../../packages/backend/src/server/api/metas/misc.ts) `'ping'` | [routes/misc.ts](../../../../../packages/backend/src/server/rest/routes/misc.ts) `/ping` | [rest/meta.ts](../../../../../packages/backend/src/server/rest/meta/meta.ts) `handleHonoApiPing` |
+| 認証不要・パラメータなし・小さなレスポンス | [metas/misc.ts](../../../../../packages/backend/src/server/api/metas/misc.ts) `'ping'` | [routes/misc.ts](../../../../../packages/backend/src/server/rest/routes/misc.ts) `/ping` | [rest/meta.ts](../../../../../packages/backend/src/server/rest/meta/meta.ts) `handleApiPing` |
 | 認証必須・errors あり・レート制限 | [metas/notes.ts](../../../../../packages/backend/src/server/api/metas/notes.ts) `'notes/create'` | [routes/notes.ts](../../../../../packages/backend/src/server/rest/routes/notes.ts) `/notes/create` | [rest/notes-create.ts](../../../../../packages/backend/src/server/rest/note/notes-create.ts) |
-| ページネーション (sinceId/untilId/limit) | [metas/i.ts](../../../../../packages/backend/src/server/api/metas/i.ts) `'i/signin-history'` | — | [rest/i.ts](../../../../../packages/backend/src/server/rest/account/i.ts) `iSigninHistoryParamDef` / `handleHonoApiISigninHistory` |
-| ロールポリシー (動的) ベースのアクセス制御 | [metas/notes.ts](../../../../../packages/backend/src/server/api/metas/notes.ts) `'notes/global-timeline'` | [routes/notes.ts](../../../../../packages/backend/src/server/rest/routes/notes.ts) | [rest/notes.ts](../../../../../packages/backend/src/server/rest/note/notes.ts) — `getHonoApiRolePolicies(deps, me)` |
+| ページネーション (sinceId/untilId/limit) | [metas/i.ts](../../../../../packages/backend/src/server/api/metas/i.ts) `'i/signin-history'` | — | [rest/i.ts](../../../../../packages/backend/src/server/rest/account/i.ts) `iSigninHistoryParamDef` / `handleApiISigninHistory` |
+| ロールポリシー (動的) ベースのアクセス制御 | [metas/notes.ts](../../../../../packages/backend/src/server/api/metas/notes.ts) `'notes/global-timeline'` | [routes/notes.ts](../../../../../packages/backend/src/server/rest/routes/notes.ts) | [rest/notes.ts](../../../../../packages/backend/src/server/rest/note/notes.ts) — `getApiRolePolicies(deps, me)` |
 | ファイル添付 (`requireFile: true`) | [metas/drive.ts](../../../../../packages/backend/src/server/api/metas/drive.ts) `'drive/files/create'` | [routes/drive.ts](../../../../../packages/backend/src/server/rest/routes/drive.ts) `/drive/files/create` | [rest/drive-file-upload.ts](../../../../../packages/backend/src/server/rest/drive/drive-file-upload.ts) |
-| moderator / admin 専用 | [metas/admin.ts](../../../../../packages/backend/src/server/api/metas/admin.ts) `'admin/suspend-user'` | [routes/admin.ts](../../../../../packages/backend/src/server/rest/routes/admin.ts) `/admin/suspend-user` (`assertHonoApiModerator`) | [rest/admin-user-suspension.ts](../../../../../packages/backend/src/server/rest/admin/admin-user-suspension.ts) |
+| moderator / admin 専用 | [metas/admin.ts](../../../../../packages/backend/src/server/api/metas/admin.ts) `'admin/suspend-user'` | [routes/admin.ts](../../../../../packages/backend/src/server/rest/routes/admin.ts) `/admin/suspend-user` (`assertApiModerator`) | [rest/admin-user-suspension.ts](../../../../../packages/backend/src/server/rest/admin/admin-user-suspension.ts) |
 
 `<category>` は機能領域 (例: `notes`, `users`, `admin`)。ファイルは既存に倣う。
 
@@ -75,9 +75,9 @@ import { z } from 'zod';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError } from './error.js';
+import { ApiError } from './error.js';
 
-export type HonoApiFooDependencies = {
+export type ApiFooDependencies = {
 	db: MiDrizzleDatabase;
 };
 
@@ -85,8 +85,8 @@ export const fooShowParamDef = z.object({
 	fooId: misskeyId(),
 });
 
-function noSuchFooError(): HonoApiError {
-	return new HonoApiError({
+function noSuchFooError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such foo.',
 		code: 'NO_SUCH_FOO',
@@ -94,8 +94,8 @@ function noSuchFooError(): HonoApiError {
 	});
 }
 
-export async function handleHonoApiFooShow(
-	deps: HonoApiFooDependencies,
+export async function handleApiFooShow(
+	deps: ApiFooDependencies,
 	me: MiLocalUser | null,
 	params: z.infer<typeof fooShowParamDef>,
 ): Promise<Record<string, unknown>> {
@@ -107,7 +107,7 @@ export async function handleHonoApiFooShow(
 ```
 
 - 依存はすべて `deps` 第一引数にまとめる (型はそのファイルで必要な分だけ宣言。`ApiShellDependencies` に自動で合流する)
-- 業務エラーはローカルなファクトリ関数で `HonoApiError` を組み立てる。メッセージ/code/id は次の meta 宣言と完全一致させる
+- 業務エラーはローカルなファクトリ関数で `ApiError` を組み立てる。メッセージ/code/id は次の meta 宣言と完全一致させる
 - サービス層の依存注入パターンの詳細 → [knowledge/service-architecture.md](../knowledge/service-architecture.md)
 
 ### 2.3 meta 宣言 (`server/api/metas/<category>.ts`)
@@ -148,12 +148,12 @@ export const endpointMetas = {
 app.post('/foo/show', async (c) => {
 	return await runApiEndpoint(c, async () => {
 		const body = await jsonBody(c);
-		const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+		const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 		assertCredential(auth);                     // ← meta.requireCredential: true に対応
 		assertTokenPermission(auth, 'read:account'); // ← meta.kind に対応 (文字列は手で一致させる)
 
-		const params = parseHonoApiParams(fooShowParamDef, body);
-		return jsonResponse(c, await handleHonoApiFooShow(deps, auth.user, params));
+		const params = parseApiParams(fooShowParamDef, body);
+		return jsonResponse(c, await handleApiFooShow(deps, auth.user, params));
 	});
 });
 ```
@@ -162,9 +162,9 @@ app.post('/foo/show', async (c) => {
 
 ### 2.5 エラー throw のバランス
 
-**クライアントに返すべき業務エラー** は必ず `meta.errors` に列挙し、ハンドラ内のローカルファクトリで同じ `message`/`code`/`id` の `HonoApiError` を throw する。これを守らないと misskey-js 側の型に出ず、レスポンスも 500 になる。
+**クライアントに返すべき業務エラー** は必ず `meta.errors` に列挙し、ハンドラ内のローカルファクトリで同じ `message`/`code`/`id` の `ApiError` を throw する。これを守らないと misskey-js 側の型に出ず、レスポンスも 500 になる。
 
-一方で **想定外の例外 (DB 不整合 / 下層 service の bug / 防御的アサーション)** は `throw new Error('...')` のままで構わない。すべての例外を `HonoApiError` で包むと、未知のバグが client error として隠蔽されてしまう。
+一方で **想定外の例外 (DB 不整合 / 下層 service の bug / 防御的アサーション)** は `throw new Error('...')` のままで構わない。すべての例外を `ApiError` で包むと、未知のバグが client error として隠蔽されてしまう。
 
 ---
 
@@ -234,7 +234,7 @@ PR に `packages/misskey-js/src/autogen/` 配下の差分が含まれていな�
 詳細な症状 → 原因 → 修正 のフォーマット → **[knowledge/api-meta-paramdef.md](../knowledge/api-meta-paramdef.md) §落とし穴**
 
 - **404 になる** → `routes/<category>.ts` へのルート未登録、または新規カテゴリの `shell.ts` 配線漏れ
-- **meta と実際の enforcement が食い違う (404 にならないので気づきにくい)** → `assertCredential` / `assertTokenPermission` / `assertHonoApiRateLimitForUser` の呼び出し忘れ・値の不一致
+- **meta と実際の enforcement が食い違う (404 にならないので気づきにくい)** → `assertCredential` / `assertTokenPermission` / `assertApiRateLimitForUser` の呼び出し忘れ・値の不一致
 - **CI `check-misskey-js-autogen` で落ちる** → `bun run build-misskey-js-with-types` 忘れ
 - **CI `spdx` で落ちる** → SPDX ヘッダー欠落
 - **クライアントが 500 と error 型不在を受け取る** → `meta.errors` とハンドラ側エラーファクトリの不一致・列挙漏れ
@@ -251,8 +251,8 @@ PR に `packages/misskey-js/src/autogen/` 配下の差分が含まれていな�
 
 - [endpoints.ts (meta/paramDef 型定義)](../../../../../packages/backend/src/server/api/endpoints.ts)
 - [endpoint-metas.ts (metas/*.ts の集約)](../../../../../packages/backend/src/server/api/endpoint-metas.ts)
-- [error.ts (HonoApiError)](../../../../../packages/backend/src/server/rest/error.ts)
-- [validation.ts (parseHonoApiParams)](../../../../../packages/backend/src/server/rest/validation.ts)
+- [error.ts (ApiError)](../../../../../packages/backend/src/server/rest/error.ts)
+- [validation.ts (parseApiParams)](../../../../../packages/backend/src/server/rest/validation.ts)
 - [zod-params.ts (misskeyId / uniqueItems)](../../../../../packages/backend/src/misc/zod-params.ts)
 - [shell.ts (ApiShellDependencies / ルート配線)](../../../../../packages/backend/src/server/rest/shell.ts)
 - [metas/misc.ts (`ping` — 最小例)](../../../../../packages/backend/src/server/api/metas/misc.ts)

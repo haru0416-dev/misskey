@@ -229,8 +229,8 @@ describe('Endpoints', () => {
 				id: genId(now),
 				updatedAt: new Date(now),
 				lastUsedAt: new Date(now),
-				name: `Hono avatar decoration role ${now}`,
-				description: 'Hono avatar decoration endpoint test',
+				name: `avatar decoration role ${now}`,
+				description: 'avatar decoration endpoint test',
 				color: null,
 				iconUrl: null,
 				target: 'manual',
@@ -250,8 +250,8 @@ describe('Endpoints', () => {
 			});
 			const decoration = await createAvatarDecorationInDatabase(db, {
 				id: genId(now + 1),
-				name: `Hono decoration ${now}`,
-				description: 'Hono avatar decoration',
+				name: `decoration ${now}`,
+				description: 'avatar decoration',
 				url: 'https://example.com/avatar-decoration.png',
 				roleIdsThatCanBeUsedThisDecoration: [createdRole.id, 'missing-role-id'],
 				category: 'hono',

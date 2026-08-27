@@ -8,7 +8,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { Hono } from 'hono';
 
-export type HonoNodeServerOptions = {
+export type NodeServerOptions = {
 	app: Pick<Hono, 'fetch'>;
 };
 
@@ -68,7 +68,7 @@ async function writeResponse(res: ServerResponse, response: Response): Promise<v
 	await pipeline(Readable.fromWeb(response.body as import('node:stream/web').ReadableStream<Uint8Array>), res);
 }
 
-export function createHonoNodeServer(options: HonoNodeServerOptions): Server {
+export function createNodeServer(options: NodeServerOptions): Server {
 	return createServer(async (req, res) => {
 		try {
 			await writeResponse(res, await options.app.fetch(toRequest(req)));

@@ -9,99 +9,96 @@ import type Logger from '@/logger.js';
 import { isDebugLoggingEnabled } from '@/logger.js';
 import { QUEUE, baseWorkerOptions } from '@/queue/const.js';
 import {
-	handleHonoQueueSystemWebhookDeliver,
-	handleHonoQueueUserWebhookDeliver,
-	type HonoQueueWebhookDeliverDependencies,
+	handleQueueSystemWebhookDeliver,
+	handleQueueUserWebhookDeliver,
+	type QueueWebhookDeliverDependencies,
 } from './handlers/webhook-deliver.js';
 import {
-	handleHonoQueueRelationshipBlock,
-	handleHonoQueueRelationshipFollow,
-	handleHonoQueueRelationshipUnblock,
-	handleHonoQueueRelationshipUnfollow,
-	type HonoQueueRelationshipDependencies,
+	handleQueueRelationshipBlock,
+	handleQueueRelationshipFollow,
+	handleQueueRelationshipUnblock,
+	handleQueueRelationshipUnfollow,
+	type QueueRelationshipDependencies,
 } from './handlers/relationship.js';
 import {
-	handleHonoQueuePostScheduledNote,
-	type HonoQueuePostScheduledNoteDependencies,
+	handleQueuePostScheduledNote,
+	type QueuePostScheduledNoteDependencies,
 } from './handlers/post-scheduled-note.js';
 import {
-	handleHonoQueueAggregateRetention,
-	handleHonoQueueBakeBufferedReactions,
-	handleHonoQueueCheckExpiredMutings,
-	handleHonoQueueClean,
-	handleHonoQueueCleanCharts,
-	handleHonoQueueResyncCharts,
-	handleHonoQueueTickCharts,
-	type HonoQueueSystemDependencies,
+	handleQueueAggregateRetention,
+	handleQueueBakeBufferedReactions,
+	handleQueueCheckExpiredMutings,
+	handleQueueClean,
+	handleQueueCleanCharts,
+	handleQueueResyncCharts,
+	handleQueueTickCharts,
+	type QueueSystemDependencies,
 } from './handlers/system.js';
+import { handleQueueCleanRemoteNotes, type QueueCleanRemoteNotesDependencies } from './handlers/clean-remote-notes.js';
 import {
-	handleHonoQueueCleanRemoteNotes,
-	type HonoQueueCleanRemoteNotesDependencies,
-} from './handlers/clean-remote-notes.js';
-import {
-	handleHonoQueueCheckModeratorsActivity,
-	type HonoQueueCheckModeratorsActivityDependencies,
+	handleQueueCheckModeratorsActivity,
+	type QueueCheckModeratorsActivityDependencies,
 } from './handlers/check-moderators-activity.js';
-import { handleHonoQueueDeliver, type HonoQueueDeliverDependencies } from './handlers/deliver.js';
-import { handleHonoQueueInbox, type HonoQueueInboxDependencies } from './handlers/inbox.js';
+import { handleQueueDeliver, type QueueDeliverDependencies } from './handlers/deliver.js';
+import { handleQueueInbox, type QueueInboxDependencies } from './handlers/inbox.js';
 import {
-	handleHonoQueueEndedPollNotification,
-	type HonoQueueEndedPollNotificationDependencies,
+	handleQueueEndedPollNotification,
+	type QueueEndedPollNotificationDependencies,
 } from './handlers/ended-poll-notification.js';
 import {
-	handleHonoQueueCleanRemoteFiles,
-	handleHonoQueueDeleteFile,
-	type HonoQueueObjectStorageDependencies,
+	handleQueueCleanRemoteFiles,
+	handleQueueDeleteFile,
+	type QueueObjectStorageDependencies,
 } from './handlers/object-storage.js';
 import {
-	handleHonoQueueDeleteDriveFiles,
-	handleHonoQueueDeleteDriveFile,
-	handleHonoQueueExportAntennas,
-	handleHonoQueueExportBlocking,
-	handleHonoQueueExportFollowing,
-	handleHonoQueueExportMuting,
-	handleHonoQueueExportUserLists,
-	handleHonoQueueImportMuting,
-	handleHonoQueueImportUserLists,
-	handleHonoQueueImportBlocking,
-	handleHonoQueueImportBlockingToDb,
-	handleHonoQueueImportFollowing,
-	handleHonoQueueImportFollowingToDb,
-	handleHonoQueueExportFavorites,
-	handleHonoQueueExportNotes,
-	handleHonoQueueExportClips,
-	type HonoQueueDbDependencies,
+	handleQueueDeleteDriveFiles,
+	handleQueueDeleteDriveFile,
+	handleQueueExportAntennas,
+	handleQueueExportBlocking,
+	handleQueueExportFollowing,
+	handleQueueExportMuting,
+	handleQueueExportUserLists,
+	handleQueueImportMuting,
+	handleQueueImportUserLists,
+	handleQueueImportBlocking,
+	handleQueueImportBlockingToDb,
+	handleQueueImportFollowing,
+	handleQueueImportFollowingToDb,
+	handleQueueExportFavorites,
+	handleQueueExportNotes,
+	handleQueueExportClips,
+	type QueueDbDependencies,
 } from './handlers/db.js';
 import {
-	handleHonoQueueExportCustomEmojis,
-	handleHonoQueueImportCustomEmojis,
-	type HonoQueueEmojisDependencies,
+	handleQueueExportCustomEmojis,
+	handleQueueImportCustomEmojis,
+	type QueueEmojisDependencies,
 } from './handlers/emojis.js';
-import { handleHonoQueueDeleteAccount, type HonoQueueDeleteAccountDependencies } from './handlers/delete-account.js';
+import { handleQueueDeleteAccount, type QueueDeleteAccountDependencies } from './handlers/delete-account.js';
 import type { SystemJobName } from './system-job-schedulers.js';
 import { dispatchQueueOutbox } from '@/core/queue/QueueOutboxStore.js';
 import type { DbJobData, DbJobName } from '@/queue/types.js';
-import { handleHonoQueueUserSuspensionPostEffects } from '@/server/rest/admin/admin-user-suspension.js';
-import { handleHonoQueueNotePostCreate } from '@/server/rest/note/notes-create.js';
+import { handleQueueUserSuspensionPostEffects } from '@/server/rest/admin/admin-user-suspension.js';
+import { handleQueueNotePostCreate } from '@/server/rest/note/notes-create.js';
 
-export type HonoQueueShellDependencies = HonoQueueWebhookDeliverDependencies &
-	HonoQueueRelationshipDependencies &
-	HonoQueuePostScheduledNoteDependencies &
-	HonoQueueSystemDependencies &
-	HonoQueueCleanRemoteNotesDependencies &
-	HonoQueueDeliverDependencies &
-	HonoQueueInboxDependencies &
-	HonoQueueEndedPollNotificationDependencies &
-	HonoQueueObjectStorageDependencies &
-	HonoQueueDbDependencies &
-	HonoQueueEmojisDependencies &
-	HonoQueueDeleteAccountDependencies &
-	HonoQueueCheckModeratorsActivityDependencies & {
+export type QueueShellDependencies = QueueWebhookDeliverDependencies &
+	QueueRelationshipDependencies &
+	QueuePostScheduledNoteDependencies &
+	QueueSystemDependencies &
+	QueueCleanRemoteNotesDependencies &
+	QueueDeliverDependencies &
+	QueueInboxDependencies &
+	QueueEndedPollNotificationDependencies &
+	QueueObjectStorageDependencies &
+	QueueDbDependencies &
+	QueueEmojisDependencies &
+	QueueDeleteAccountDependencies &
+	QueueCheckModeratorsActivityDependencies & {
 		config: Config;
 		logger: Logger;
 	};
 
-export type HonoQueueWorkers = {
+export type QueueWorkers = {
 	userWebhookDeliverQueueWorker: Bull.Worker;
 	systemWebhookDeliverQueueWorker: Bull.Worker;
 	relationshipQueueWorker: Bull.Worker;
@@ -158,7 +155,7 @@ function renderError(e?: Error): unknown {
  * endedPollNotification/postScheduledNote の10個の Worker をここで組み立てる。
  * 本番のジョブキュー起動経路は `boot/common.ts` の `jobQueue()`。
  */
-export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQueueWorkers {
+export function createQueueWorkers(deps: QueueShellDependencies): QueueWorkers {
 	const outboxLogger = deps.logger.createSubLogger('queue-outbox');
 	let outboxTimer: ReturnType<typeof setInterval> | undefined;
 	let isDispatchingOutbox = false;
@@ -178,7 +175,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	const userWebhookDeliverQueueWorker = new Bull.Worker(
 		QUEUE.USER_WEBHOOK_DELIVER,
 		(job) => {
-			return handleHonoQueueUserWebhookDeliver(deps, job);
+			return handleQueueUserWebhookDeliver(deps, job);
 		},
 		{
 			...baseWorkerOptions(deps.config, QUEUE.USER_WEBHOOK_DELIVER),
@@ -213,7 +210,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	const systemWebhookDeliverQueueWorker = new Bull.Worker(
 		QUEUE.SYSTEM_WEBHOOK_DELIVER,
 		(job) => {
-			return handleHonoQueueSystemWebhookDeliver(deps, job);
+			return handleQueueSystemWebhookDeliver(deps, job);
 		},
 		{
 			...baseWorkerOptions(deps.config, QUEUE.SYSTEM_WEBHOOK_DELIVER),
@@ -250,13 +247,13 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 		(job) => {
 			switch (job.name) {
 				case 'follow':
-					return handleHonoQueueRelationshipFollow(deps, job);
+					return handleQueueRelationshipFollow(deps, job);
 				case 'unfollow':
-					return handleHonoQueueRelationshipUnfollow(deps, job);
+					return handleQueueRelationshipUnfollow(deps, job);
 				case 'block':
-					return handleHonoQueueRelationshipBlock(deps, job);
+					return handleQueueRelationshipBlock(deps, job);
 				case 'unblock':
-					return handleHonoQueueRelationshipUnblock(deps, job);
+					return handleQueueRelationshipUnblock(deps, job);
 				default:
 					throw new Error(`unrecognized or not-yet-migrated job type ${job.name} for relationship`);
 			}
@@ -287,7 +284,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	const postScheduledNoteQueueWorker = new Bull.Worker(
 		QUEUE.POST_SCHEDULED_NOTE,
 		(job) => {
-			return handleHonoQueuePostScheduledNote(deps, job);
+			return handleQueuePostScheduledNote(deps, job);
 		},
 		{
 			...baseWorkerOptions(deps.config, QUEUE.POST_SCHEDULED_NOTE),
@@ -296,15 +293,15 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	);
 
 	const systemJobHandlers = {
-		clean: () => handleHonoQueueClean(deps),
-		aggregateRetention: () => handleHonoQueueAggregateRetention(deps),
-		tickCharts: () => handleHonoQueueTickCharts(deps),
-		resyncCharts: () => handleHonoQueueResyncCharts(deps),
-		cleanCharts: () => handleHonoQueueCleanCharts(deps),
-		checkExpiredMutings: () => handleHonoQueueCheckExpiredMutings(deps),
-		bakeBufferedReactions: () => handleHonoQueueBakeBufferedReactions(deps),
-		cleanRemoteNotes: (job) => handleHonoQueueCleanRemoteNotes(deps, job),
-		checkModeratorsActivity: () => handleHonoQueueCheckModeratorsActivity(deps),
+		clean: () => handleQueueClean(deps),
+		aggregateRetention: () => handleQueueAggregateRetention(deps),
+		tickCharts: () => handleQueueTickCharts(deps),
+		resyncCharts: () => handleQueueResyncCharts(deps),
+		cleanCharts: () => handleQueueCleanCharts(deps),
+		checkExpiredMutings: () => handleQueueCheckExpiredMutings(deps),
+		bakeBufferedReactions: () => handleQueueBakeBufferedReactions(deps),
+		cleanRemoteNotes: (job) => handleQueueCleanRemoteNotes(deps, job),
+		checkModeratorsActivity: () => handleQueueCheckModeratorsActivity(deps),
 	} satisfies Record<SystemJobName, (job: Bull.Job) => Promise<unknown>>;
 	const systemQueueWorker = new Bull.Worker(
 		QUEUE.SYSTEM,
@@ -335,7 +332,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	const deliverQueueWorker = new Bull.Worker(
 		QUEUE.DELIVER,
 		(job) => {
-			return handleHonoQueueDeliver(deps, job);
+			return handleQueueDeliver(deps, job);
 		},
 		{
 			...baseWorkerOptions(deps.config, QUEUE.DELIVER),
@@ -370,7 +367,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	const inboxQueueWorker = new Bull.Worker(
 		QUEUE.INBOX,
 		(job) => {
-			return handleHonoQueueInbox(deps, job);
+			return handleQueueInbox(deps, job);
 		},
 		{
 			...baseWorkerOptions(deps.config, QUEUE.INBOX),
@@ -408,7 +405,7 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	const endedPollNotificationQueueWorker = new Bull.Worker(
 		QUEUE.ENDED_POLL_NOTIFICATION,
 		(job) => {
-			return handleHonoQueueEndedPollNotification(deps, job);
+			return handleQueueEndedPollNotification(deps, job);
 		},
 		{
 			...baseWorkerOptions(deps.config, QUEUE.ENDED_POLL_NOTIFICATION),
@@ -421,9 +418,9 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 		(job) => {
 			switch (job.name) {
 				case 'deleteFile':
-					return handleHonoQueueDeleteFile(deps, job);
+					return handleQueueDeleteFile(deps, job);
 				case 'cleanRemoteFiles':
-					return handleHonoQueueCleanRemoteFiles(deps, job);
+					return handleQueueCleanRemoteFiles(deps, job);
 				default:
 					throw new Error(`unrecognized job type ${job.name} for objectStorage`);
 			}
@@ -448,27 +445,27 @@ export function createHonoQueueWorkers(deps: HonoQueueShellDependencies): HonoQu
 	}
 
 	const dbJobHandlers = {
-		deleteDriveFile: (job) => handleHonoQueueDeleteDriveFile(deps, job),
-		deleteDriveFiles: (job) => handleHonoQueueDeleteDriveFiles(deps, job),
-		exportMuting: (job) => handleHonoQueueExportMuting(deps, job),
-		exportBlocking: (job) => handleHonoQueueExportBlocking(deps, job),
-		exportUserLists: (job) => handleHonoQueueExportUserLists(deps, job),
-		exportAntennas: (job) => handleHonoQueueExportAntennas(deps, job),
-		exportFollowing: (job) => handleHonoQueueExportFollowing(deps, job),
-		importMuting: (job) => handleHonoQueueImportMuting(deps, job),
-		importUserLists: (job) => handleHonoQueueImportUserLists(deps, job),
-		importBlocking: (job) => handleHonoQueueImportBlocking(deps, job),
-		importBlockingToDb: (job) => handleHonoQueueImportBlockingToDb(deps, job),
-		importFollowing: (job) => handleHonoQueueImportFollowing(deps, job),
-		importFollowingToDb: (job) => handleHonoQueueImportFollowingToDb(deps, job),
-		exportFavorites: (job) => handleHonoQueueExportFavorites(deps, job),
-		exportNotes: (job) => handleHonoQueueExportNotes(deps, job),
-		exportClips: (job) => handleHonoQueueExportClips(deps, job),
-		exportCustomEmojis: (job) => handleHonoQueueExportCustomEmojis(deps, job),
-		importCustomEmojis: (job) => handleHonoQueueImportCustomEmojis(deps, job),
-		deleteAccount: (job) => handleHonoQueueDeleteAccount(deps, job),
-		userSuspensionPostEffects: (job) => handleHonoQueueUserSuspensionPostEffects(deps, job),
-		notePostCreate: (job) => handleHonoQueueNotePostCreate(deps, job),
+		deleteDriveFile: (job) => handleQueueDeleteDriveFile(deps, job),
+		deleteDriveFiles: (job) => handleQueueDeleteDriveFiles(deps, job),
+		exportMuting: (job) => handleQueueExportMuting(deps, job),
+		exportBlocking: (job) => handleQueueExportBlocking(deps, job),
+		exportUserLists: (job) => handleQueueExportUserLists(deps, job),
+		exportAntennas: (job) => handleQueueExportAntennas(deps, job),
+		exportFollowing: (job) => handleQueueExportFollowing(deps, job),
+		importMuting: (job) => handleQueueImportMuting(deps, job),
+		importUserLists: (job) => handleQueueImportUserLists(deps, job),
+		importBlocking: (job) => handleQueueImportBlocking(deps, job),
+		importBlockingToDb: (job) => handleQueueImportBlockingToDb(deps, job),
+		importFollowing: (job) => handleQueueImportFollowing(deps, job),
+		importFollowingToDb: (job) => handleQueueImportFollowingToDb(deps, job),
+		exportFavorites: (job) => handleQueueExportFavorites(deps, job),
+		exportNotes: (job) => handleQueueExportNotes(deps, job),
+		exportClips: (job) => handleQueueExportClips(deps, job),
+		exportCustomEmojis: (job) => handleQueueExportCustomEmojis(deps, job),
+		importCustomEmojis: (job) => handleQueueImportCustomEmojis(deps, job),
+		deleteAccount: (job) => handleQueueDeleteAccount(deps, job),
+		userSuspensionPostEffects: (job) => handleQueueUserSuspensionPostEffects(deps, job),
+		notePostCreate: (job) => handleQueueNotePostCreate(deps, job),
 	} satisfies DbJobHandlerMap;
 	const dispatchDbJob = <K extends DbJobName>(job: Bull.Job<DbJobData<K>, unknown, K>): Promise<unknown> => {
 		if (!Object.hasOwn(dbJobHandlers, job.name)) throw new Error(`unrecognized job type ${job.name} for db`);

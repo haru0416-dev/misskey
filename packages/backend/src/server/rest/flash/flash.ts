@@ -29,11 +29,11 @@ import { misskeyId } from '@/misc/zod-params.js';
 import type { MiFlash } from '@/models/Flash.js';
 import type { MiUser, MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from '../error.js';
-import { isHonoApiModerator, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { packUserLiteForHonoApi, packUserLiteManyForHonoApi, type UserPackingDependencies } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { packUserLiteForApi, packUserLiteManyForApi, type UserPackingDependencies } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiFlashDependencies = HonoApiRolePolicyDependencies & UserPackingDependencies;
+export type ApiFlashDependencies = ApiRolePolicyDependencies & UserPackingDependencies;
 
 export const flashUpdateParamDef = z.object({
 	flashId: misskeyId(),
@@ -53,12 +53,12 @@ type FlashUpdateParams = {
 	visibility?: MiFlash['visibility'];
 };
 
-export async function handleHonoApiFlashUpdate(
-	deps: HonoApiFlashDependencies,
+export async function handleApiFlashUpdate(
+	deps: ApiFlashDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(flashUpdateParamDef, body);
+	const params = parseApiParams(flashUpdateParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', '611e13d2-309e-419a-a5e4-e0422da39b02');
@@ -79,8 +79,8 @@ export async function handleHonoApiFlashUpdate(
 	await updateFlashInDatabase(deps.db, flash.id, values);
 }
 
-export async function packFlashForHonoApi(
-	deps: HonoApiFlashDependencies,
+export async function packFlashForApi(
+	deps: ApiFlashDependencies,
 	src: MiFlash['id'] | MiFlash,
 	me?: { id: MiUser['id'] } | null,
 	hint?: { packedUser?: Packed<'UserLite'>; likedFlashIds?: Set<MiFlash['id']> },
@@ -88,7 +88,7 @@ export async function packFlashForHonoApi(
 	const meId = me ? me.id : null;
 	const flash = typeof src === 'object' ? src : await fetchFlashByIdOrFailFromDatabase(deps.db, src);
 
-	const user = hint?.packedUser ?? (await packUserLiteForHonoApi(deps, flash.userId));
+	const user = hint?.packedUser ?? (await packUserLiteForApi(deps, flash.userId));
 
 	let isLiked: boolean | undefined;
 	if (meId) {
@@ -112,8 +112,8 @@ export async function packFlashForHonoApi(
 	};
 }
 
-async function packFlashManyForHonoApi(
-	deps: HonoApiFlashDependencies,
+async function packFlashManyForApi(
+	deps: ApiFlashDependencies,
 	flashes: MiFlash[],
 	me?: { id: MiUser['id'] } | null,
 ): Promise<Record<string, unknown>[]> {
@@ -122,7 +122,7 @@ async function packFlashManyForHonoApi(
 	const userIds = [...new Set(flashes.map((flash) => flash.userId))];
 	const flashIds = flashes.map((flash) => flash.id);
 	const [packedUsers, likedFlashIds] = await Promise.all([
-		packUserLiteManyForHonoApi(deps, userIds),
+		packUserLiteManyForApi(deps, userIds),
 		me ? listLikedFlashIdsByUserIdAndFlashIdsFromDatabase(deps.db, me.id, flashIds) : Promise.resolve([]),
 	]);
 	const userById = new Map(packedUsers.map((u) => [u.id, u]));
@@ -130,7 +130,7 @@ async function packFlashManyForHonoApi(
 
 	return await Promise.all(
 		flashes.map((flash) =>
-			packFlashForHonoApi(
+			packFlashForApi(
 				deps,
 				flash,
 				me,
@@ -159,12 +159,12 @@ type FlashCreateParams = {
 	visibility: MiFlash['visibility'];
 };
 
-export async function handleHonoApiFlashCreate(
-	deps: HonoApiFlashDependencies,
+export async function handleApiFlashCreate(
+	deps: ApiFlashDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-	const params = parseHonoApiParams(flashCreateParamDef, body);
+	const params = parseApiParams(flashCreateParamDef, body);
 	const flash = await createFlashInDatabase(deps.db, {
 		id: genId(),
 		userId: me.id,
@@ -176,7 +176,7 @@ export async function handleHonoApiFlashCreate(
 		visibility: params.visibility,
 	});
 
-	return await packFlashForHonoApi(deps, flash);
+	return await packFlashForApi(deps, flash);
 }
 
 export const flashDeleteParamDef = z.object({
@@ -187,18 +187,18 @@ type FlashDeleteParams = {
 	flashId: string;
 };
 
-export async function handleHonoApiFlashDelete(
-	deps: HonoApiFlashDependencies,
+export async function handleApiFlashDelete(
+	deps: ApiFlashDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(flashDeleteParamDef, body);
+	const params = parseApiParams(flashDeleteParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'de1623ef-bbb3-4289-a71e-14cfa83d9740');
 	}
 
-	if (!(await isHonoApiModerator(deps, me)) && flash.userId !== me.id) {
+	if (!(await isApiModerator(deps, me)) && flash.userId !== me.id) {
 		throw clientErrorWithStatus(400, 'Access denied.', 'ACCESS_DENIED', '1036ad7b-9f92-4fff-89c3-0e50dc941704');
 	}
 
@@ -225,18 +225,18 @@ type FlashFeaturedParams = {
 	limit: number;
 };
 
-export async function handleHonoApiFlashFeatured(
-	deps: HonoApiFlashDependencies,
+export async function handleApiFlashFeatured(
+	deps: ApiFlashDependencies,
 	me: MiUser | null,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(flashFeaturedParamDef, body);
+	const params = parseApiParams(flashFeaturedParamDef, body);
 	const result = await listFeaturedFlashesFromDatabase(deps.db, {
 		offset: params.offset,
 		limit: params.limit,
 	});
 
-	return await packFlashManyForHonoApi(deps, result, me);
+	return await packFlashManyForApi(deps, result, me);
 }
 
 export const flashMyParamDef = z.object({
@@ -255,12 +255,12 @@ type FlashMyParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiFlashMy(
-	deps: HonoApiFlashDependencies,
+export async function handleApiFlashMy(
+	deps: ApiFlashDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(flashMyParamDef, body);
+	const params = parseApiParams(flashMyParamDef, body);
 	const pagination = resolveFlashPagination({ gen: (time) => genId(time) }, params);
 	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
 		userId: me.id,
@@ -270,7 +270,7 @@ export async function handleHonoApiFlashMy(
 		untilId: pagination.untilId,
 	});
 
-	return await packFlashManyForHonoApi(deps, flashes);
+	return await packFlashManyForApi(deps, flashes);
 }
 
 export const flashMyLikesParamDef = z.object({
@@ -291,12 +291,12 @@ type FlashMyLikesParams = {
 	search?: string | null;
 };
 
-export async function handleHonoApiFlashMyLikes(
-	deps: HonoApiFlashDependencies,
+export async function handleApiFlashMyLikes(
+	deps: ApiFlashDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(flashMyLikesParamDef, body);
+	const params = parseApiParams(flashMyLikesParamDef, body);
 
 	let sinceId: string | null = null;
 	let untilId: string | null = null;
@@ -332,7 +332,7 @@ export async function handleHonoApiFlashMyLikes(
 		}),
 	);
 
-	const packedFlashes = await packFlashManyForHonoApi(
+	const packedFlashes = await packFlashManyForApi(
 		deps,
 		likes.map((like) => like.flash),
 		me,
@@ -342,7 +342,7 @@ export async function handleHonoApiFlashMyLikes(
 	return await Promise.all(
 		likes.map(async (like) => ({
 			id: like.id,
-			flash: packedFlashById.get(like.flashId) ?? (await packFlashForHonoApi(deps, like.flash, me)),
+			flash: packedFlashById.get(like.flashId) ?? (await packFlashForApi(deps, like.flash, me)),
 		})),
 	);
 }
@@ -365,12 +365,12 @@ type FlashSearchParams = {
 	limit: number;
 };
 
-export async function handleHonoApiFlashSearch(
-	deps: HonoApiFlashDependencies,
+export async function handleApiFlashSearch(
+	deps: ApiFlashDependencies,
 	me: MiUser | null,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(flashSearchParamDef, body);
+	const params = parseApiParams(flashSearchParamDef, body);
 	const pagination = resolveFlashPagination({ gen: (time) => genId(time) }, params);
 	const result = await listFlashesWithPaginationFromDatabase(deps.db, {
 		visibility: 'public',
@@ -381,7 +381,7 @@ export async function handleHonoApiFlashSearch(
 		untilId: pagination.untilId,
 	});
 
-	return await packFlashManyForHonoApi(deps, result, me);
+	return await packFlashManyForApi(deps, result, me);
 }
 
 export const flashShowParamDef = z.object({
@@ -392,18 +392,18 @@ type FlashShowParams = {
 	flashId: string;
 };
 
-export async function handleHonoApiFlashShow(
-	deps: HonoApiFlashDependencies,
+export async function handleApiFlashShow(
+	deps: ApiFlashDependencies,
 	me: MiUser | null,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-	const params = parseHonoApiParams(flashShowParamDef, body);
+	const params = parseApiParams(flashShowParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'f0d34a1a-d29a-401d-90ba-1982122b5630');
 	}
 
-	return await packFlashForHonoApi(deps, flash, me);
+	return await packFlashForApi(deps, flash, me);
 }
 
 export const usersFlashsParamDef = z.object({
@@ -424,11 +424,11 @@ type UsersFlashsParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiUsersFlashs(
-	deps: HonoApiFlashDependencies,
+export async function handleApiUsersFlashs(
+	deps: ApiFlashDependencies,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(usersFlashsParamDef, body);
+	const params = parseApiParams(usersFlashsParamDef, body);
 	const pagination = resolveFlashPagination({ gen: (time) => genId(time) }, params);
 	const flashes = await listFlashesWithPaginationFromDatabase(deps.db, {
 		userId: params.userId,
@@ -439,5 +439,5 @@ export async function handleHonoApiUsersFlashs(
 		untilId: pagination.untilId,
 	});
 
-	return await packFlashManyForHonoApi(deps, flashes);
+	return await packFlashManyForApi(deps, flashes);
 }

@@ -6,16 +6,16 @@
 import { z } from 'zod';
 import { listLatestRetentionAggregations } from '@/core/retention/RetentionAggregationStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiRetentionDependencies = {
+export type ApiRetentionDependencies = {
 	db: MiDrizzleDatabase;
 };
 
 export const retentionParamDef = z.object({});
 
-export async function handleHonoApiRetention(
-	deps: HonoApiRetentionDependencies,
+export async function handleApiRetention(
+	deps: ApiRetentionDependencies,
 	body: Record<string, unknown>,
 ): Promise<
 	{
@@ -24,7 +24,7 @@ export async function handleHonoApiRetention(
 		data: Record<string, number>;
 	}[]
 > {
-	parseHonoApiParams(retentionParamDef, body);
+	parseApiParams(retentionParamDef, body);
 	const records = await listLatestRetentionAggregations(deps.db, 30);
 
 	return records.map((record) => ({

@@ -15,7 +15,7 @@ import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-d
 import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { createNoteDraftInDatabase, fetchNoteDraftByIdFromDatabase } from '@/core/note/NoteDraftStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { handleHonoQueuePostScheduledNote } from '@/queue/handlers/post-scheduled-note.js';
+import { handleQueuePostScheduledNote } from '@/queue/handlers/post-scheduled-note.js';
 import type { PostScheduledNoteJobData } from '@/queue/types.js';
 
 function fakeJob(data: PostScheduledNoteJobData): Bull.Job<PostScheduledNoteJobData> {
@@ -52,7 +52,7 @@ describe('hono-queue-post-scheduled-note', () => {
 			isActuallyScheduled: true,
 		});
 
-		await handleHonoQueuePostScheduledNote(
+		await handleQueuePostScheduledNote(
 			runtime,
 			fakeJob({
 				noteDraftId: draftId,
@@ -82,7 +82,7 @@ describe('hono-queue-post-scheduled-note', () => {
 			isActuallyScheduled: false,
 		});
 
-		await handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: draftId, scheduledAt: 0 }));
+		await handleQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: draftId, scheduledAt: 0 }));
 
 		const draftAfter = await fetchNoteDraftByIdFromDatabase(runtime.db, draftId);
 		expect(draftAfter).not.toBeNull();
@@ -90,7 +90,7 @@ describe('hono-queue-post-scheduled-note', () => {
 
 	test('存在しないnoteDraftIdは何もしない', async () => {
 		await expect(
-			handleHonoQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: genId(), scheduledAt: Date.now() })),
+			handleQueuePostScheduledNote(runtime, fakeJob({ noteDraftId: genId(), scheduledAt: Date.now() })),
 		).resolves.toBeUndefined();
 	});
 });

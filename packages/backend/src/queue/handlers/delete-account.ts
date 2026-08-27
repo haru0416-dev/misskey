@@ -18,11 +18,11 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiMeta, MiUser } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { DbUserDeleteJobData } from '@/queue/types.js';
-import { deletePageForHonoApi, type HonoApiPageDependencies } from '@/server/rest/page/pages.js';
-import { deleteFileSyncForHonoApi, type HonoQueueObjectStorageDependencies } from './object-storage.js';
+import { deletePageForApi, type ApiPageDependencies } from '@/server/rest/page/pages.js';
+import { deleteFileSyncForApi, type QueueObjectStorageDependencies } from './object-storage.js';
 
-export type HonoQueueDeleteAccountDependencies = HonoQueueObjectStorageDependencies &
-	HonoApiPageDependencies & {
+export type QueueDeleteAccountDependencies = QueueObjectStorageDependencies &
+	ApiPageDependencies & {
 		db: MiDrizzleDatabase;
 		config: Config;
 		meta: Pick<MiMeta, 'rootUserId'>;
@@ -36,8 +36,8 @@ export type HonoQueueDeleteAccountDependencies = HonoQueueObjectStorageDependenc
 		) => void;
 	};
 
-async function unindexNoteForHonoApi(
-	deps: HonoQueueDeleteAccountDependencies,
+async function unindexNoteForApi(
+	deps: QueueDeleteAccountDependencies,
 	note: Pick<MiNote, 'id' | 'visibility'>,
 ): Promise<void> {
 	if (!deps.meilisearch) return;
@@ -47,8 +47,8 @@ async function unindexNoteForHonoApi(
 	await index.deleteDocument(note.id);
 }
 
-export async function handleHonoQueueDeleteAccount(
-	deps: HonoQueueDeleteAccountDependencies,
+export async function handleQueueDeleteAccount(
+	deps: QueueDeleteAccountDependencies,
 	job: Bull.Job<DbUserDeleteJobData>,
 ): Promise<string | void> {
 	const user = await fetchUserByIdFromDatabase(deps.db, job.data.user.id);
@@ -76,7 +76,7 @@ export async function handleHonoQueueDeleteAccount(
 			);
 
 			for (const note of notes) {
-				await unindexNoteForHonoApi(deps, note);
+				await unindexNoteForApi(deps, note);
 			}
 		}
 	}
@@ -95,7 +95,7 @@ export async function handleHonoQueueDeleteAccount(
 			cursor = files.at(-1)?.id ?? null;
 
 			for (const file of files) {
-				await deleteFileSyncForHonoApi(deps, file);
+				await deleteFileSyncForApi(deps, file);
 			}
 		}
 	}
@@ -112,7 +112,7 @@ export async function handleHonoQueueDeleteAccount(
 			if (pages.length === 0) break;
 
 			for (const page of pages) {
-				const result = await deletePageForHonoApi(deps, user, page.id);
+				const result = await deletePageForApi(deps, user, page.id);
 				if (result.status !== 'ok') {
 					throw new Error(`failed to delete page ${page.id}: ${result.status}`);
 				}

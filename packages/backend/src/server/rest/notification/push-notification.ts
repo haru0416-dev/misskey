@@ -26,7 +26,7 @@ export type PushNotificationsTypes = {
 	newChatMessage: Packed<'ChatMessage'>;
 };
 
-export type HonoApiPushNotificationDependencies = {
+export type ApiPushNotificationDependencies = {
 	config: Pick<Config, 'instance' | 'outboundNetwork'>;
 	meta: Pick<MiMeta, 'enableServiceWorker' | 'swPublicKey' | 'swPrivateKey'>;
 	db: MiDrizzleDatabase;
@@ -64,8 +64,8 @@ function truncateNotificationBody<T extends keyof PushNotificationsTypes>(
 /**
  * fire-and-forget (配信失敗はエンドポイント失効時の購読削除以外は握りつぶす) なので await 不要。
  */
-export async function pushSwNotificationForHonoApi<T extends keyof PushNotificationsTypes>(
-	deps: HonoApiPushNotificationDependencies,
+export async function pushSwNotificationForApi<T extends keyof PushNotificationsTypes>(
+	deps: ApiPushNotificationDependencies,
 	userId: MiUser['id'],
 	type: T,
 	body: PushNotificationsTypes[T],

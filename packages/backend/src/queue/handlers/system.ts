@@ -26,24 +26,24 @@ import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta } from '@/models/_.js';
-import type { HonoChartWriters } from '../../server/chart-runtime.js';
-import type { HonoApiInternalEventPublisher } from '../../server/rest/events.js';
+import type { ChartWriters } from '../../server/chart-runtime.js';
+import type { ApiInternalEventPublisher } from '../../server/rest/events.js';
 
 const REACTIONS_BUFFER_DELTA_PREFIX = 'reactionsBufferDeltas';
 const REACTIONS_BUFFER_PAIR_PREFIX = 'reactionsBufferPairs';
 const REACTIONS_BUFFER_REBUILD_PREFIX = 'reactionsBufferRebuild';
 
-export type HonoQueueSystemDependencies = {
+export type QueueSystemDependencies = {
 	config: Pick<Config, 'maintenance' | 'valkey'>;
 	db: MiDrizzleDatabase;
-	chartWriters: HonoChartWriters;
+	chartWriters: ChartWriters;
 	meta: Pick<MiMeta, 'enableReactionsBuffering'>;
 	redisForReactions: Redis.Redis;
-	publishInternalEvent?: HonoApiInternalEventPublisher;
+	publishInternalEvent?: ApiInternalEventPublisher;
 };
 
 /** DBへの同時接続を避けるため直列に実行する。 */
-export async function handleHonoQueueTickCharts(deps: HonoQueueSystemDependencies): Promise<void> {
+export async function handleQueueTickCharts(deps: QueueSystemDependencies): Promise<void> {
 	await deps.chartWriters.federationChart.tick(false);
 	await deps.chartWriters.notesChart.tick(false);
 	await deps.chartWriters.usersChart.tick(false);
@@ -58,13 +58,13 @@ export async function handleHonoQueueTickCharts(deps: HonoQueueSystemDependencie
 	await deps.chartWriters.apRequestChart.tick(false);
 }
 
-export async function handleHonoQueueResyncCharts(deps: HonoQueueSystemDependencies): Promise<void> {
+export async function handleQueueResyncCharts(deps: QueueSystemDependencies): Promise<void> {
 	await deps.chartWriters.driveChart.resync();
 	await deps.chartWriters.notesChart.resync();
 	await deps.chartWriters.usersChart.resync();
 }
 
-export async function handleHonoQueueCleanCharts(deps: HonoQueueSystemDependencies): Promise<void> {
+export async function handleQueueCleanCharts(deps: QueueSystemDependencies): Promise<void> {
 	await deps.chartWriters.federationChart.clean();
 	await deps.chartWriters.notesChart.clean();
 	await deps.chartWriters.usersChart.clean();
@@ -79,7 +79,7 @@ export async function handleHonoQueueCleanCharts(deps: HonoQueueSystemDependenci
 	await deps.chartWriters.apRequestChart.clean();
 }
 
-export async function handleHonoQueueClean(deps: HonoQueueSystemDependencies): Promise<void> {
+export async function handleQueueClean(deps: QueueSystemDependencies): Promise<void> {
 	await deleteUserIpsOlderThanFromDatabase(deps.db, new Date(Date.now() - 1000 * 60 * 60 * 24 * 90));
 
 	if (deps.config.maintenance.antennaInactiveAfterMs > 0) {
@@ -92,7 +92,7 @@ export async function handleHonoQueueClean(deps: HonoQueueSystemDependencies): P
 	await deleteExpiredRoleAssignmentsFromDatabase(deps.db, new Date());
 }
 
-export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDependencies): Promise<void> {
+export async function handleQueueAggregateRetention(deps: QueueSystemDependencies): Promise<void> {
 	const now = new Date();
 	const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
 
@@ -133,7 +133,7 @@ export async function handleHonoQueueAggregateRetention(deps: HonoQueueSystemDep
 	}
 }
 
-export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDependencies): Promise<void> {
+export async function handleQueueCheckExpiredMutings(deps: QueueSystemDependencies): Promise<void> {
 	const expiredMutings = await listExpiredMutingsFromDatabase(deps.db, new Date());
 	if (expiredMutings.length > 0) {
 		await deleteMutingsByIdsFromDatabase(
@@ -159,7 +159,7 @@ export async function handleHonoQueueCheckExpiredMutings(deps: HonoQueueSystemDe
 	}
 }
 
-export async function handleHonoQueueBakeBufferedReactions(deps: HonoQueueSystemDependencies): Promise<void> {
+export async function handleQueueBakeBufferedReactions(deps: QueueSystemDependencies): Promise<void> {
 	if (!deps.meta.enableReactionsBuffering) return;
 
 	const bufferedNoteIds = new Set<string>();

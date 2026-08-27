@@ -56,15 +56,15 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from '../error.js';
-import { packNoteForHonoApi, packNoteManyForHonoApi, type HonoApiNoteDependencies } from '../note/note.js';
-import { parseHonoApiParams } from '../validation.js';
+import { packNoteForApi, packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiFavoriteDependencies = {
+export type ApiFavoriteDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
 
-export type HonoApiIFavoritesDependencies = HonoApiNoteDependencies;
+export type ApiIFavoritesDependencies = ApiNoteDependencies;
 
 export const userListParamDef = z.object({
 	listId: misskeyId(),
@@ -92,12 +92,12 @@ type ChannelParams = { channelId: string };
 type PageParams = { pageId: string };
 type FlashParams = { flashId: string };
 
-export async function handleHonoApiUsersListsFavorite(
-	deps: HonoApiFavoriteDependencies,
+export async function handleApiUsersListsFavorite(
+	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(userListParamDef, body);
+	const params = parseApiParams(userListParamDef, body);
 	const exists = await userListExistsByIdAndPublicFromDatabase(deps.db, params.listId);
 	if (!exists) {
 		throw clientErrorWithStatus(400, 'No such user list.', 'NO_SUCH_USER_LIST', '7dbaf3cf-7b42-4b8f-b431-b3919e580dbe');
@@ -131,12 +131,12 @@ export async function handleHonoApiUsersListsFavorite(
 	}
 }
 
-export async function handleHonoApiUsersListsUnfavorite(
-	deps: HonoApiFavoriteDependencies,
+export async function handleApiUsersListsUnfavorite(
+	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(userListParamDef, body);
+	const params = parseApiParams(userListParamDef, body);
 	const exists = await userListExistsByIdAndPublicFromDatabase(deps.db, params.listId);
 	if (!exists) {
 		throw clientErrorWithStatus(400, 'No such user list.', 'NO_SUCH_USER_LIST', 'baedb33e-76b8-4b0c-86a8-9375c0a7b94b');
@@ -155,12 +155,12 @@ export async function handleHonoApiUsersListsUnfavorite(
 	await deleteUserListFavoriteByIdFromDatabase(deps.db, favorite.id);
 }
 
-export async function handleHonoApiClipsFavorite(
-	deps: HonoApiFavoriteDependencies,
+export async function handleApiClipsFavorite(
+	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(clipParamDef, body);
+	const params = parseApiParams(clipParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null || (clip.userId !== me.id && !clip.isPublic)) {
 		throw clientErrorWithStatus(400, 'No such clip.', 'NO_SUCH_CLIP', '4c2aaeae-80d8-4250-9606-26cb1fdb77a5');
@@ -194,12 +194,12 @@ export async function handleHonoApiClipsFavorite(
 	}
 }
 
-export async function handleHonoApiClipsUnfavorite(
-	deps: HonoApiFavoriteDependencies,
+export async function handleApiClipsUnfavorite(
+	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(clipParamDef, body);
+	const params = parseApiParams(clipParamDef, body);
 	const clip = await fetchClipByIdFromDatabase(deps.db, params.clipId);
 	if (clip == null) {
 		throw clientErrorWithStatus(400, 'No such clip.', 'NO_SUCH_CLIP', '2603966e-b865-426c-94a7-af4a01241dc1');
@@ -218,12 +218,12 @@ export async function handleHonoApiClipsUnfavorite(
 	await deleteClipFavoriteByIdFromDatabase(deps.db, favorite.id);
 }
 
-export async function handleHonoApiChannelsFavorite(
-	deps: HonoApiFavoriteDependencies,
+export async function handleApiChannelsFavorite(
+	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelParamDef, body);
+	const params = parseApiParams(channelParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
 		throw clientErrorWithStatus(400, 'No such channel.', 'NO_SUCH_CHANNEL', '4938f5f3-6167-4c04-9149-6607b7542861');
@@ -236,12 +236,12 @@ export async function handleHonoApiChannelsFavorite(
 	});
 }
 
-export async function handleHonoApiChannelsUnfavorite(
-	deps: HonoApiFavoriteDependencies,
+export async function handleApiChannelsUnfavorite(
+	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(channelParamDef, body);
+	const params = parseApiParams(channelParamDef, body);
 	const channel = await fetchChannelByIdFromDatabase(deps.db, params.channelId);
 	if (channel == null) {
 		throw clientErrorWithStatus(400, 'No such channel.', 'NO_SUCH_CHANNEL', '353c68dd-131a-476c-aa99-88a345e83668');
@@ -250,12 +250,12 @@ export async function handleHonoApiChannelsUnfavorite(
 	await deleteChannelFavoriteFromDatabase(deps.db, me.id, channel.id);
 }
 
-export async function handleHonoApiPagesLike(
-	deps: HonoApiFavoriteDependencies,
+export async function handleApiPagesLike(
+	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pageParamDef, body);
+	const params = parseApiParams(pageParamDef, body);
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
 		throw clientErrorWithStatus(400, 'No such page.', 'NO_SUCH_PAGE', 'cc98a8a2-0dc3-4123-b198-62c71df18ed3');
@@ -296,12 +296,12 @@ export async function handleHonoApiPagesLike(
 	}
 }
 
-export async function handleHonoApiPagesUnlike(
-	deps: HonoApiFavoriteDependencies,
+export async function handleApiPagesUnlike(
+	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(pageParamDef, body);
+	const params = parseApiParams(pageParamDef, body);
 	const page = await fetchPageByIdFromDatabase(deps.db, params.pageId);
 	if (page == null) {
 		throw clientErrorWithStatus(400, 'No such page.', 'NO_SUCH_PAGE', 'a0d41e20-1993-40bd-890e-f6e560ae648e');
@@ -331,12 +331,12 @@ export async function handleHonoApiPagesUnlike(
 	});
 }
 
-export async function handleHonoApiFlashLike(
-	deps: HonoApiFavoriteDependencies,
+export async function handleApiFlashLike(
+	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(flashParamDef, body);
+	const params = parseApiParams(flashParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'c07c1491-9161-4c5c-9d75-01906f911f73');
@@ -382,12 +382,12 @@ export async function handleHonoApiFlashLike(
 	}
 }
 
-export async function handleHonoApiFlashUnlike(
-	deps: HonoApiFavoriteDependencies,
+export async function handleApiFlashUnlike(
+	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(flashParamDef, body);
+	const params = parseApiParams(flashParamDef, body);
 	const flash = await fetchFlashByIdFromDatabase(deps.db, params.flashId);
 	if (flash == null) {
 		throw clientErrorWithStatus(400, 'No such flash.', 'NO_SUCH_FLASH', 'afe8424a-a69e-432d-a5f2-2f0740c62410');
@@ -433,12 +433,12 @@ type IFavoritesParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiIFavorites(
-	deps: HonoApiIFavoritesDependencies,
+export async function handleApiIFavorites(
+	deps: ApiIFavoritesDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
-	const params = parseHonoApiParams(iFavoritesParamDef, body);
+	const params = parseApiParams(iFavoritesParamDef, body);
 	const pagination = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 
 	const favorites = await listNoteFavoritesByUserIdFromDatabase(deps.db, me.id, {
@@ -455,7 +455,7 @@ export async function handleHonoApiIFavorites(
 					deps.db,
 					favorites.map((f) => f.noteId),
 				);
-	const packedNotes = await packNoteManyForHonoApi(deps, notes, me);
+	const packedNotes = await packNoteManyForApi(deps, notes, me);
 	const packedNoteMap = new Map(packedNotes.map((note) => [note.id, note]));
 
 	return await Promise.all(
@@ -463,7 +463,7 @@ export async function handleHonoApiIFavorites(
 			id: favorite.id,
 			createdAt: parseId(favorite.id).date.toISOString(),
 			noteId: favorite.noteId,
-			note: packedNoteMap.get(favorite.noteId) ?? (await packNoteForHonoApi(deps, favorite.noteId, me)),
+			note: packedNoteMap.get(favorite.noteId) ?? (await packNoteForApi(deps, favorite.noteId, me)),
 		})),
 	);
 }

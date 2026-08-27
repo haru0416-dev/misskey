@@ -6,7 +6,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import type { MiMeta } from '@/models/Meta.js';
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import { translateTextForHonoApi } from '@/server/rest/note/note.js';
+import { translateTextForApi } from '@/server/rest/note/note.js';
 
 type SendArgs = Parameters<HttpRequestService['send']>;
 
@@ -21,7 +21,7 @@ function meta(overrides: Partial<MiMeta>): MiMeta {
 	} as MiMeta;
 }
 
-describe('translateTextForHonoApi', () => {
+describe('translateTextForApi', () => {
 	test('uses DeepL by default and validates its response', async () => {
 		const send = vi.fn(
 			async (_url: SendArgs[0], _args?: SendArgs[1]) =>
@@ -33,7 +33,7 @@ describe('translateTextForHonoApi', () => {
 		);
 
 		await expect(
-			translateTextForHonoApi(
+			translateTextForApi(
 				{
 					meta: meta({ deeplAuthKey: 'secret' }),
 					httpRequestService: { send },
@@ -63,7 +63,7 @@ describe('translateTextForHonoApi', () => {
 		);
 
 		await expect(
-			translateTextForHonoApi(
+			translateTextForApi(
 				{
 					meta: meta({ translatorProvider: 'libreTranslate', libreTranslateApiUrl: 'http://localhost:5000/base/' }),
 					httpRequestService: { send },
@@ -87,7 +87,7 @@ describe('translateTextForHonoApi', () => {
 		const send = vi.fn(
 			async (_url: SendArgs[0], _args?: SendArgs[1]) => new Response(JSON.stringify({ translatedText: 'Hello' })),
 		);
-		await translateTextForHonoApi(
+		await translateTextForApi(
 			{
 				meta: meta({
 					translatorProvider: 'libreTranslate',

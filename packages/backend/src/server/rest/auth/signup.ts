@@ -30,18 +30,18 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { generateNativeUserToken } from '@/misc/token.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import type { HonoApiInternalEventPublisher } from '../events.js';
+import type { ApiInternalEventPublisher } from '../events.js';
 import { enqueueSystemWebhookDeliverJob } from '@/core/queue/SystemWebhookQueue.js';
 import { listSystemWebhooksFromDatabase } from '@/core/webhook/SystemWebhookStore.js';
 import type { SystemWebhookDeliverQueue } from '@/core/queue/queues.js';
-import { HonoApiError, signupValidationError } from '../error.js';
+import { ApiError, signupValidationError } from '../error.js';
 import {
-	completeHonoApiSignin,
-	type HonoApiSigninDependencies,
-	type HonoApiSigninFlowResult,
-	type HonoApiSigninRequest,
+	completeApiSignin,
+	type ApiSigninDependencies,
+	type ApiSigninFlowResult,
+	type ApiSigninRequest,
 } from './signin.js';
-import { packMeDetailedForHonoApi, packUserLiteForHonoApi } from '../user/user.js';
+import { packMeDetailedForApi, packUserLiteForApi } from '../user/user.js';
 
 type SignupBody = {
 	username?: unknown;
@@ -55,7 +55,7 @@ export type SignupResponse = Record<string, unknown> & {
 	token: string;
 };
 
-export type SignupInternalEventPublisher = HonoApiInternalEventPublisher;
+export type SignupInternalEventPublisher = ApiInternalEventPublisher;
 
 export type SignupDependencies = {
 	config: Config;
@@ -113,7 +113,7 @@ function assertUsernameAvailableForNonRoot(meta: MiMeta, usernameLower: string):
 
 export async function packSignupUser(deps: SignupDependencies, user: MiUser, token: string): Promise<SignupResponse> {
 	return {
-		...(await packMeDetailedForHonoApi(deps, user, { includeSecrets: true })),
+		...(await packMeDetailedForApi(deps, user, { includeSecrets: true })),
 		token,
 	};
 }
@@ -194,7 +194,7 @@ export async function createLocalSignupAccount(
 		void (async () => {
 			const webhooks = await listSystemWebhooksFromDatabase(deps.db, { isActive: true, on: ['userCreated'] });
 			if (webhooks.length === 0) return;
-			const packed = await packUserLiteForHonoApi(deps, account);
+			const packed = await packUserLiteForApi(deps, account);
 			await Promise.all(
 				webhooks.map((webhook) => enqueueSystemWebhookDeliverJob(queue, deps.config, webhook, 'userCreated', packed)),
 			);
@@ -204,7 +204,7 @@ export async function createLocalSignupAccount(
 	return { account, token };
 }
 
-export async function signupWithHonoApi(deps: SignupDependencies, body: SignupBody): Promise<SignupResponse> {
+export async function signupWithApi(deps: SignupDependencies, body: SignupBody): Promise<SignupResponse> {
 	assertSignupGateOpen(deps.meta);
 	validateUsername(body.username);
 	validatePassword(body.password);
@@ -222,10 +222,10 @@ export async function signupWithHonoApi(deps: SignupDependencies, body: SignupBo
 	return await packSignupUser(deps, account, token);
 }
 
-export async function signupPendingWithHonoApi(
-	deps: SignupDependencies & HonoApiSigninDependencies,
-	request: HonoApiSigninRequest,
-): Promise<HonoApiSigninFlowResult> {
+export async function signupPendingWithApi(
+	deps: SignupDependencies & ApiSigninDependencies,
+	request: ApiSigninRequest,
+): Promise<ApiSigninFlowResult> {
 	const code = request.body.code;
 	if (typeof code !== 'string') {
 		throw signupValidationError('INVALID_PARAM');
@@ -263,9 +263,9 @@ export async function signupPendingWithHonoApi(
 			});
 		}
 
-		return completeHonoApiSignin(deps, request, account as MiLocalUser);
+		return completeApiSignin(deps, request, account as MiLocalUser);
 	} catch (err) {
-		if (err instanceof HonoApiError) {
+		if (err instanceof ApiError) {
 			throw err;
 		}
 

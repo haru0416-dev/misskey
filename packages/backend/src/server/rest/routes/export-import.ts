@@ -4,34 +4,29 @@
  */
 
 import type { Hono } from 'hono';
-import {
-	assertCredential,
-	assertProhibitMoved,
-	assertSecureCredential,
-	authenticateHonoApiToken,
-} from '../auth/auth.js';
+import { assertCredential, assertProhibitMoved, assertSecureCredential, authenticateApiToken } from '../auth/auth.js';
 import { rolePermissionDeniedError } from '../error.js';
 import {
-	handleHonoApiExportCustomEmojis,
-	handleHonoApiIExportAntennas,
-	handleHonoApiIExportBlocking,
-	handleHonoApiIExportClips,
-	handleHonoApiIExportFavorites,
-	handleHonoApiIExportFollowing,
-	handleHonoApiIExportMute,
-	handleHonoApiIExportNotes,
-	handleHonoApiIExportUserLists,
+	handleApiExportCustomEmojis,
+	handleApiIExportAntennas,
+	handleApiIExportBlocking,
+	handleApiIExportClips,
+	handleApiIExportFavorites,
+	handleApiIExportFollowing,
+	handleApiIExportMute,
+	handleApiIExportNotes,
+	handleApiIExportUserLists,
 } from '../job/export-jobs.js';
 import {
-	handleHonoApiIImportAntennas,
-	handleHonoApiIImportBlocking,
-	handleHonoApiIImportFollowing,
-	handleHonoApiIImportMuting,
-	handleHonoApiIImportUserLists,
+	handleApiIImportAntennas,
+	handleApiIImportBlocking,
+	handleApiIImportFollowing,
+	handleApiIImportMuting,
+	handleApiIImportUserLists,
 } from '../job/import-jobs.js';
-import { handleHonoApiFetchRss } from '../feed/fetch-rss.js';
-import { assertHonoApiRateLimit, assertHonoApiRateLimitForUser } from '../rate-limit.js';
-import { hasHonoApiRolePolicyOrIsRoot } from '../role/role-policy.js';
+import { handleApiFetchRss } from '../feed/fetch-rss.js';
+import { assertApiRateLimit, assertApiRateLimitForUser } from '../rate-limit.js';
+import { hasApiRolePolicyOrIsRoot } from '../role/role-policy.js';
 import {
 	jsonResponse,
 	emptyResponse,
@@ -47,10 +42,10 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post('/export-custom-emojis', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'export-custom-emojis',
 				{
@@ -60,7 +55,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 				auth.user,
 			);
 
-			handleHonoApiExportCustomEmojis(deps, auth.user);
+			handleApiExportCustomEmojis(deps, auth.user);
 			return emptyResponse(c);
 		});
 	});
@@ -68,10 +63,10 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post('/i/export-notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'i/export-notes',
 				{
@@ -81,7 +76,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 				auth.user,
 			);
 
-			handleHonoApiIExportNotes(deps, auth.user);
+			handleApiIExportNotes(deps, auth.user);
 			return emptyResponse(c);
 		});
 	});
@@ -89,10 +84,10 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post('/i/export-clips', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'i/export-clips',
 				{
@@ -102,7 +97,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 				auth.user,
 			);
 
-			handleHonoApiIExportClips(deps, auth.user);
+			handleApiIExportClips(deps, auth.user);
 			return emptyResponse(c);
 		});
 	});
@@ -110,10 +105,10 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post('/i/export-favorites', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'i/export-favorites',
 				{
@@ -123,7 +118,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 				auth.user,
 			);
 
-			handleHonoApiIExportFavorites(deps, auth.user);
+			handleApiIExportFavorites(deps, auth.user);
 			return emptyResponse(c);
 		});
 	});
@@ -131,10 +126,10 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post('/i/export-following', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'i/export-following',
 				{
@@ -144,7 +139,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 				auth.user,
 			);
 
-			handleHonoApiIExportFollowing(deps, auth.user, body);
+			handleApiIExportFollowing(deps, auth.user, body);
 			return emptyResponse(c);
 		});
 	});
@@ -152,10 +147,10 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post('/i/export-mute', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'i/export-mute',
 				{
@@ -165,7 +160,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 				auth.user,
 			);
 
-			handleHonoApiIExportMute(deps, auth.user);
+			handleApiIExportMute(deps, auth.user);
 			return emptyResponse(c);
 		});
 	});
@@ -173,10 +168,10 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post('/i/export-blocking', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'i/export-blocking',
 				{
@@ -186,7 +181,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 				auth.user,
 			);
 
-			handleHonoApiIExportBlocking(deps, auth.user);
+			handleApiIExportBlocking(deps, auth.user);
 			return emptyResponse(c);
 		});
 	});
@@ -194,10 +189,10 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post('/i/export-user-lists', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'i/export-user-lists',
 				{
@@ -207,7 +202,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 				auth.user,
 			);
 
-			handleHonoApiIExportUserLists(deps, auth.user);
+			handleApiIExportUserLists(deps, auth.user);
 			return emptyResponse(c);
 		});
 	});
@@ -215,7 +210,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post(
 		'/i/import-blocking',
 		endpointHandler(deps, 'i/import-blocking', async ({ body, auth, c }) => {
-			await handleHonoApiIImportBlocking(deps, auth.user, body);
+			await handleApiIImportBlocking(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -223,7 +218,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post(
 		'/i/import-following',
 		endpointHandler(deps, 'i/import-following', async ({ body, auth, c }) => {
-			await handleHonoApiIImportFollowing(deps, auth.user, body);
+			await handleApiIImportFollowing(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -231,7 +226,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post(
 		'/i/import-muting',
 		endpointHandler(deps, 'i/import-muting', async ({ body, auth, c }) => {
-			await handleHonoApiIImportMuting(deps, auth.user, body);
+			await handleApiIImportMuting(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -239,7 +234,7 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post(
 		'/i/import-user-lists',
 		endpointHandler(deps, 'i/import-user-lists', async ({ body, auth, c }) => {
-			await handleHonoApiIImportUserLists(deps, auth.user, body);
+			await handleApiIImportUserLists(deps, auth.user, body);
 			return emptyResponse(c);
 		}),
 	);
@@ -247,8 +242,8 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post(
 		'/i/import-antennas',
 		endpointHandler(deps, 'i/import-antennas', async ({ body, auth, c }) => {
-			await handleHonoApiIImportAntennas(deps, auth.user, body, () =>
-				assertHonoApiRateLimitForUser(
+			await handleApiIImportAntennas(deps, auth.user, body, () =>
+				assertApiRateLimitForUser(
 					deps,
 					'i/import-antennas',
 					{
@@ -265,10 +260,10 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 	app.post('/i/export-antennas', async (c) => {
 		return await runApiEndpoint(c, async () => {
 			const body = await jsonBody(c);
-			const auth = await authenticateHonoApiToken(deps, tokenFromRequest(c, body));
+			const auth = await authenticateApiToken(deps, tokenFromRequest(c, body));
 			assertCredential(auth);
 			assertSecureCredential(auth);
-			await assertHonoApiRateLimitForUser(
+			await assertApiRateLimitForUser(
 				deps,
 				'i/export-antennas',
 				{
@@ -278,15 +273,15 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 				auth.user,
 			);
 
-			handleHonoApiIExportAntennas(deps, auth.user);
+			handleApiIExportAntennas(deps, auth.user);
 			return emptyResponse(c);
 		});
 	});
 
 	app.get('/fetch-rss', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			await assertHonoApiRateLimit(deps, 'fetch-rss', { duration: 60 * 1000, max: 30 }, getRequestIp(c, deps.config));
-			return jsonResponse(c, await handleHonoApiFetchRss(deps, c.req.query()), 200, {
+			await assertApiRateLimit(deps, 'fetch-rss', { duration: 60 * 1000, max: 30 }, getRequestIp(c, deps.config));
+			return jsonResponse(c, await handleApiFetchRss(deps, c.req.query()), 200, {
 				'Cache-Control': 'public, max-age=180',
 			});
 		});
@@ -294,9 +289,9 @@ export function registerExportImportRoutes(app: Hono, deps: ApiShellDependencies
 
 	app.post('/fetch-rss', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			await assertHonoApiRateLimit(deps, 'fetch-rss', { duration: 60 * 1000, max: 30 }, getRequestIp(c, deps.config));
+			await assertApiRateLimit(deps, 'fetch-rss', { duration: 60 * 1000, max: 30 }, getRequestIp(c, deps.config));
 			const body = await jsonBody(c);
-			return jsonResponse(c, await handleHonoApiFetchRss(deps, body), 200, {
+			return jsonResponse(c, await handleApiFetchRss(deps, body), 200, {
 				'Cache-Control': 'public, max-age=180',
 			});
 		});

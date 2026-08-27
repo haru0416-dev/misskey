@@ -15,10 +15,10 @@ import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { userDeletedError } from '../error.js';
-import { packMeDetailedForHonoApi, type UserPackingDependencies } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { packMeDetailedForApi, type UserPackingDependencies } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiIDependencies = UserPackingDependencies & {
+export type ApiIDependencies = UserPackingDependencies & {
 	db: MiDrizzleDatabase;
 };
 
@@ -30,8 +30,8 @@ export const iSigninHistoryParamDef = z.object({
 	untilDate: z.number().int().optional(),
 });
 
-export function packHonoApiSignin(
-	deps: HonoApiIDependencies,
+export function packApiSignin(
+	deps: ApiIDependencies,
 	src: MiSignin,
 ): {
 	id: string;
@@ -49,8 +49,8 @@ export function packHonoApiSignin(
 	};
 }
 
-export async function handleHonoApiI(
-	deps: HonoApiIDependencies,
+export async function handleApiI(
+	deps: ApiIDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
 ): Promise<Record<string, unknown>> {
@@ -73,18 +73,18 @@ export async function handleHonoApiI(
 		});
 	}
 
-	return await packMeDetailedForHonoApi(deps, freshUser, {
+	return await packMeDetailedForApi(deps, freshUser, {
 		includeSecrets: token == null,
 		profile: userProfile,
 	});
 }
 
-export async function handleHonoApiISigninHistory(
-	deps: HonoApiIDependencies,
+export async function handleApiISigninHistory(
+	deps: ApiIDependencies,
 	user: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<ReturnType<typeof packHonoApiSignin>[]> {
-	const params = parseHonoApiParams(iSigninHistoryParamDef, body);
+): Promise<ReturnType<typeof packApiSignin>[]> {
+	const params = parseApiParams(iSigninHistoryParamDef, body);
 	let sinceId: string | null = null;
 	let untilId: string | null = null;
 	let order: SigninHistoryOrder = 'desc';
@@ -114,5 +114,5 @@ export async function handleHonoApiISigninHistory(
 		untilId,
 	});
 
-	return history.map((record) => packHonoApiSignin(deps, record));
+	return history.map((record) => packApiSignin(deps, record));
 }

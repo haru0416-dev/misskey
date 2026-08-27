@@ -37,15 +37,15 @@ import { MemoryKVCache } from '@/misc/cache.js';
 import type Logger from '@/logger.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { misskeyId } from '@/misc/zod-params.js';
-import { parseHonoApiParams } from '../validation.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiChartDependencies = {
+export type ApiChartDependencies = {
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
 };
 
-type HonoChartSchema = Record<
+type ChartSchema = Record<
 	string,
 	{
 		uniqueIncrement?: boolean;
@@ -57,7 +57,7 @@ type HonoChartSchema = Record<
 
 // getChart()/getChartRaw() は tickMajor/tickMinor を呼ばないため、読み取り専用の stub は
 // 各チャートの書き込み側依存なしで Chart.getChart() を呼び出せる。
-class HonoReadOnlyChart<S extends HonoChartSchema> extends Chart<S> {
+class ReadOnlyChart<S extends ChartSchema> extends Chart<S> {
 	protected async tickMajor(): Promise<Partial<KVs<S>>> {
 		return {};
 	}
@@ -67,13 +67,13 @@ class HonoReadOnlyChart<S extends HonoChartSchema> extends Chart<S> {
 	}
 }
 
-function createHonoApiChart<S extends HonoChartSchema>(
-	deps: HonoApiChartDependencies,
+function createApiChart<S extends ChartSchema>(
+	deps: ApiChartDependencies,
 	name: string,
 	schema: S,
 	grouped = false,
-): HonoReadOnlyChart<S> {
-	return new HonoReadOnlyChart(
+): ReadOnlyChart<S> {
+	return new ReadOnlyChart(
 		deps.db,
 		(key) => acquireChartInsertLock(deps.redis, key),
 		deps.logger as Logger,
@@ -85,7 +85,7 @@ function createHonoApiChart<S extends HonoChartSchema>(
 
 const chartIntegerQueryParams = new Set(['limit', 'offset']);
 
-export function normalizeHonoApiChartQuery(query: Record<string, string>): Record<string, unknown> {
+export function normalizeApiChartQuery(query: Record<string, string>): Record<string, unknown> {
 	const body: Record<string, unknown> = {};
 
 	for (const [key, value] of Object.entries(query)) {
@@ -136,87 +136,87 @@ type InstanceChartParams = ChartParams & {
 	host: string;
 };
 
-export async function handleHonoApiChartsActiveUsers(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body);
-	const chart = createHonoApiChart(deps, activeUsersChartName, activeUsersChartSchema);
+export async function handleApiChartsActiveUsers(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(chartParamDef, body);
+	const chart = createApiChart(deps, activeUsersChartName, activeUsersChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleHonoApiChartsApRequest(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body);
-	const chart = createHonoApiChart(deps, apRequestChartName, apRequestChartSchema);
+export async function handleApiChartsApRequest(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(chartParamDef, body);
+	const chart = createApiChart(deps, apRequestChartName, apRequestChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleHonoApiChartsDrive(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body);
-	const chart = createHonoApiChart(deps, driveChartName, driveChartSchema);
+export async function handleApiChartsDrive(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(chartParamDef, body);
+	const chart = createApiChart(deps, driveChartName, driveChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleHonoApiChartsFederation(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body);
-	const chart = createHonoApiChart(deps, federationChartName, federationChartSchema);
+export async function handleApiChartsFederation(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(chartParamDef, body);
+	const chart = createApiChart(deps, federationChartName, federationChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleHonoApiChartsInstance(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(instanceChartParamDef, body);
-	const chart = createHonoApiChart(deps, instanceChartName, instanceChartSchema, true);
+export async function handleApiChartsInstance(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(instanceChartParamDef, body);
+	const chart = createApiChart(deps, instanceChartName, instanceChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.host);
 }
 
-export async function handleHonoApiChartsNotes(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body);
-	const chart = createHonoApiChart(deps, notesChartName, notesChartSchema);
+export async function handleApiChartsNotes(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(chartParamDef, body);
+	const chart = createApiChart(deps, notesChartName, notesChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleHonoApiChartsUsers(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(chartParamDef, body);
-	const chart = createHonoApiChart(deps, usersChartName, usersChartSchema);
+export async function handleApiChartsUsers(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(chartParamDef, body);
+	const chart = createApiChart(deps, usersChartName, usersChartSchema);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null);
 }
 
-export async function handleHonoApiChartsUserDrive(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(perUserChartParamDef, body);
-	const chart = createHonoApiChart(deps, perUserDriveChartName, perUserDriveChartSchema, true);
+export async function handleApiChartsUserDrive(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(perUserChartParamDef, body);
+	const chart = createApiChart(deps, perUserDriveChartName, perUserDriveChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
-export async function handleHonoApiChartsUserFollowing(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(perUserChartParamDef, body);
-	const chart = createHonoApiChart(deps, perUserFollowingChartName, perUserFollowingChartSchema, true);
+export async function handleApiChartsUserFollowing(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(perUserChartParamDef, body);
+	const chart = createApiChart(deps, perUserFollowingChartName, perUserFollowingChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
-export async function handleHonoApiChartsUserNotes(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(perUserChartParamDef, body);
-	const chart = createHonoApiChart(deps, perUserNotesChartName, perUserNotesChartSchema, true);
+export async function handleApiChartsUserNotes(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(perUserChartParamDef, body);
+	const chart = createApiChart(deps, perUserNotesChartName, perUserNotesChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
-export async function handleHonoApiChartsUserPv(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(perUserChartParamDef, body);
-	const chart = createHonoApiChart(deps, perUserPvChartName, perUserPvChartSchema, true);
+export async function handleApiChartsUserPv(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(perUserChartParamDef, body);
+	const chart = createApiChart(deps, perUserPvChartName, perUserPvChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
-export async function handleHonoApiChartsUserReactions(deps: HonoApiChartDependencies, body: Record<string, unknown>) {
-	const params = parseHonoApiParams(perUserChartParamDef, body);
-	const chart = createHonoApiChart(deps, perUserReactionsChartName, perUserReactionsChartSchema, true);
+export async function handleApiChartsUserReactions(deps: ApiChartDependencies, body: Record<string, unknown>) {
+	const params = parseApiParams(perUserChartParamDef, body);
+	const chart = createApiChart(deps, perUserReactionsChartName, perUserReactionsChartSchema, true);
 	return await chart.getChart(params.span, params.limit, params.offset ? new Date(params.offset) : null, params.userId);
 }
 
 const statsReactionsCountCache = new MemoryKVCache<number>(1000 * 60 * 60);
 const statsInstancesCountCache = new MemoryKVCache<number>(1000 * 60 * 60);
 
-export async function handleHonoApiStats(deps: HonoApiChartDependencies): Promise<Record<string, unknown>> {
-	const notesChart = await createHonoApiChart(deps, notesChartName, notesChartSchema).getChart('hour', 1, null);
+export async function handleApiStats(deps: ApiChartDependencies): Promise<Record<string, unknown>> {
+	const notesChart = await createApiChart(deps, notesChartName, notesChartSchema).getChart('hour', 1, null);
 	const originalNotesCount = notesChart.local.total[0] ?? 0;
 	const notesCount = originalNotesCount + (notesChart.remote.total[0] ?? 0);
 
-	const usersChart = await createHonoApiChart(deps, usersChartName, usersChartSchema).getChart('hour', 1, null);
+	const usersChart = await createApiChart(deps, usersChartName, usersChartSchema).getChart('hour', 1, null);
 	const originalUsersCount = usersChart.local.total[0] ?? 0;
 	const usersCount = originalUsersCount + (usersChart.remote.total[0] ?? 0);
 

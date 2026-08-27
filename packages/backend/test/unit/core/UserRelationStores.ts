@@ -31,7 +31,7 @@ import {
 import { createUserWithProfileAndPublickeyInDatabase, fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { unfollow, type HonoApiAccountBlockingDependencies } from '@/server/rest/account/account-blocking.js';
+import { unfollow, type ApiAccountBlockingDependencies } from '@/server/rest/account/account-blocking.js';
 
 describe('targeted user relation stores', () => {
 	let runtime: RuntimeDependencies;
@@ -166,7 +166,7 @@ describe('targeted user relation stores', () => {
 			deliverQueue: {},
 			userWebhookDeliverQueue: { add: vi.fn() },
 			publishInternalEvent,
-		} as unknown as HonoApiAccountBlockingDependencies;
+		} as unknown as ApiAccountBlockingDependencies;
 
 		await Promise.all([unfollow(deps, follower, followee, true), unfollow(deps, follower, followee, true)]);
 		const [updatedFollower, updatedFollowee] = await Promise.all([

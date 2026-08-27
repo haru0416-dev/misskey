@@ -31,18 +31,18 @@ import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
-import type { HonoApiDriveStreamPublisher } from '../events.js';
-import { HonoApiError } from '../error.js';
-import { getHonoApiRolePolicies, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
+import type { ApiDriveStreamPublisher } from '../events.js';
+import { ApiError } from '../error.js';
+import { getApiRolePolicies, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiDriveDependencies = {
+export type ApiDriveDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
-	publishDriveStream?: HonoApiDriveStreamPublisher;
+	publishDriveStream?: ApiDriveStreamPublisher;
 };
 
-export type HonoApiPackedDriveFolder = Packed<'DriveFolder'>;
+export type ApiPackedDriveFolder = Packed<'DriveFolder'>;
 
 export const driveFilesCheckExistenceParamDef = z.object({
 	md5: z.string(),
@@ -118,8 +118,8 @@ type DriveFoldersDeleteParams = {
 	folderId: string;
 };
 
-function driveFoldersCreateNoSuchFolderError(): HonoApiError {
-	return new HonoApiError({
+function driveFoldersCreateNoSuchFolderError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such folder.',
 		code: 'NO_SUCH_FOLDER',
@@ -127,8 +127,8 @@ function driveFoldersCreateNoSuchFolderError(): HonoApiError {
 	});
 }
 
-function driveFoldersShowNoSuchFolderError(): HonoApiError {
-	return new HonoApiError({
+function driveFoldersShowNoSuchFolderError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such folder.',
 		code: 'NO_SUCH_FOLDER',
@@ -136,8 +136,8 @@ function driveFoldersShowNoSuchFolderError(): HonoApiError {
 	});
 }
 
-function driveFoldersUpdateNoSuchFolderError(): HonoApiError {
-	return new HonoApiError({
+function driveFoldersUpdateNoSuchFolderError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such folder.',
 		code: 'NO_SUCH_FOLDER',
@@ -145,8 +145,8 @@ function driveFoldersUpdateNoSuchFolderError(): HonoApiError {
 	});
 }
 
-function driveFoldersUpdateNoSuchParentFolderError(): HonoApiError {
-	return new HonoApiError({
+function driveFoldersUpdateNoSuchParentFolderError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such parent folder.',
 		code: 'NO_SUCH_PARENT_FOLDER',
@@ -154,8 +154,8 @@ function driveFoldersUpdateNoSuchParentFolderError(): HonoApiError {
 	});
 }
 
-function driveFoldersUpdateRecursiveNestingError(): HonoApiError {
-	return new HonoApiError({
+function driveFoldersUpdateRecursiveNestingError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'It can not be structured like nesting folders recursively.',
 		code: 'RECURSIVE_NESTING',
@@ -163,8 +163,8 @@ function driveFoldersUpdateRecursiveNestingError(): HonoApiError {
 	});
 }
 
-function driveFoldersDeleteNoSuchFolderError(): HonoApiError {
-	return new HonoApiError({
+function driveFoldersDeleteNoSuchFolderError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such folder.',
 		code: 'NO_SUCH_FOLDER',
@@ -172,8 +172,8 @@ function driveFoldersDeleteNoSuchFolderError(): HonoApiError {
 	});
 }
 
-function driveFoldersDeleteHasChildrenError(): HonoApiError {
-	return new HonoApiError({
+function driveFoldersDeleteHasChildrenError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'This folder has child files or folders.',
 		code: 'HAS_CHILD_FILES_OR_FOLDERS',
@@ -181,7 +181,7 @@ function driveFoldersDeleteHasChildrenError(): HonoApiError {
 	});
 }
 
-function packDriveFolderBaseForHonoApi(folder: DriveFolderRow): HonoApiPackedDriveFolder {
+function packDriveFolderBaseForApi(folder: DriveFolderRow): ApiPackedDriveFolder {
 	return {
 		id: folder.id,
 		createdAt: parseId(folder.id).date.toISOString(),
@@ -190,8 +190,8 @@ function packDriveFolderBaseForHonoApi(folder: DriveFolderRow): HonoApiPackedDri
 	};
 }
 
-async function resolveDriveFoldersForHonoApi(
-	deps: HonoApiDriveDependencies,
+async function resolveDriveFoldersForApi(
+	deps: ApiDriveDependencies,
 	srcs: (DriveFolderRow['id'] | DriveFolderRow)[],
 ): Promise<DriveFolderRow[]> {
 	const folderById = new Map<DriveFolderRow['id'], DriveFolderRow>();
@@ -217,13 +217,13 @@ async function resolveDriveFoldersForHonoApi(
 	);
 }
 
-export async function packDriveFolderForHonoApi(
-	deps: HonoApiDriveDependencies,
+export async function packDriveFolderForApi(
+	deps: ApiDriveDependencies,
 	src: DriveFolderRow['id'] | DriveFolderRow,
 	options?: {
 		detail: boolean;
 	},
-): Promise<HonoApiPackedDriveFolder> {
+): Promise<ApiPackedDriveFolder> {
 	const opts = Object.assign(
 		{
 			detail: false,
@@ -232,7 +232,7 @@ export async function packDriveFolderForHonoApi(
 	);
 	const folder = typeof src === 'object' ? src : await fetchDriveFolderByIdOrFailFromDatabase(deps.db, src);
 
-	const packed = packDriveFolderBaseForHonoApi(folder);
+	const packed = packDriveFolderBaseForApi(folder);
 
 	if (!opts.detail) return packed;
 
@@ -241,7 +241,7 @@ export async function packDriveFolderForHonoApi(
 		countDriveFilesByFolderIdFromDatabase(deps.db, folder.id),
 		folder.parentId == null
 			? Promise.resolve(undefined)
-			: packDriveFolderForHonoApi(deps, folder.parentId, { detail: true }),
+			: packDriveFolderForApi(deps, folder.parentId, { detail: true }),
 	]);
 
 	return {
@@ -252,23 +252,23 @@ export async function packDriveFolderForHonoApi(
 	};
 }
 
-export async function packDriveFoldersManyForHonoApi(
-	deps: HonoApiDriveDependencies,
+export async function packDriveFoldersManyForApi(
+	deps: ApiDriveDependencies,
 	srcs: (DriveFolderRow['id'] | DriveFolderRow)[],
 	options?: {
 		detail: boolean;
 	},
-): Promise<HonoApiPackedDriveFolder[]> {
+): Promise<ApiPackedDriveFolder[]> {
 	const opts = Object.assign(
 		{
 			detail: false,
 		},
 		options,
 	);
-	const folders = await resolveDriveFoldersForHonoApi(deps, srcs);
+	const folders = await resolveDriveFoldersForApi(deps, srcs);
 
 	if (!opts.detail) {
-		return folders.map((folder) => packDriveFolderBaseForHonoApi(folder));
+		return folders.map((folder) => packDriveFolderBaseForApi(folder));
 	}
 
 	const folderIds = [...new Set(folders.map((folder) => folder.id))];
@@ -278,14 +278,14 @@ export async function packDriveFoldersManyForHonoApi(
 	const [folderCounts, fileCounts, parents] = await Promise.all([
 		countChildDriveFoldersGroupedByParentIdsFromDatabase(deps.db, folderIds),
 		countDriveFilesGroupedByFolderIdsFromDatabase(deps.db, folderIds),
-		parentIds.length === 0 ? Promise.resolve([]) : packDriveFoldersManyForHonoApi(deps, parentIds, { detail: true }),
+		parentIds.length === 0 ? Promise.resolve([]) : packDriveFoldersManyForApi(deps, parentIds, { detail: true }),
 	]);
 	const folderCountById = new Map(folderCounts.map((row) => [row.parentId, row.count]));
 	const fileCountById = new Map(fileCounts.map((row) => [row.folderId, row.count]));
 	const parentById = new Map(parents.map((parent) => [parent.id, parent]));
 
 	return folders.map((folder) => {
-		const packed = packDriveFolderBaseForHonoApi(folder);
+		const packed = packDriveFolderBaseForApi(folder);
 		const parent = folder.parentId == null ? null : parentById.get(folder.parentId);
 
 		return {
@@ -297,21 +297,21 @@ export async function packDriveFoldersManyForHonoApi(
 	});
 }
 
-export async function handleHonoApiDriveFilesCheckExistence(
-	deps: HonoApiDriveDependencies,
+export async function handleApiDriveFilesCheckExistence(
+	deps: ApiDriveDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<boolean> {
-	const params = parseHonoApiParams(driveFilesCheckExistenceParamDef, body);
+	const params = parseApiParams(driveFilesCheckExistenceParamDef, body);
 	return await driveFileExistsByMd5AndUserIdFromDatabase(deps.db, params.md5, me.id);
 }
 
-export async function handleHonoApiDriveFoldersCreate(
-	deps: HonoApiDriveDependencies,
+export async function handleApiDriveFoldersCreate(
+	deps: ApiDriveDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedDriveFolder> {
-	const params = parseHonoApiParams(driveFoldersCreateParamDef, body);
+): Promise<ApiPackedDriveFolder> {
+	const params = parseApiParams(driveFoldersCreateParamDef, body);
 	let parent: DriveFolderRow | null = null;
 
 	if (params.parentId) {
@@ -329,18 +329,18 @@ export async function handleHonoApiDriveFoldersCreate(
 		userId: me.id,
 	});
 
-	const packed = await packDriveFolderForHonoApi(deps, folder);
+	const packed = await packDriveFolderForApi(deps, folder);
 	deps.publishDriveStream?.(me.id, 'folderCreated', packed);
 
 	return packed;
 }
 
-export async function handleHonoApiDriveFolders(
-	deps: HonoApiDriveDependencies,
+export async function handleApiDriveFolders(
+	deps: ApiDriveDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedDriveFolder[]> {
-	const params = parseHonoApiParams(driveFoldersParamDef, body);
+): Promise<ApiPackedDriveFolder[]> {
+	const params = parseApiParams(driveFoldersParamDef, body);
 	const pagination = resolveDriveFolderPagination(
 		{
 			gen: (time?: number) => genId(time),
@@ -353,43 +353,43 @@ export async function handleHonoApiDriveFolders(
 		...pagination,
 	});
 
-	return await packDriveFoldersManyForHonoApi(deps, folders);
+	return await packDriveFoldersManyForApi(deps, folders);
 }
 
-export async function handleHonoApiDriveFoldersFind(
-	deps: HonoApiDriveDependencies,
+export async function handleApiDriveFoldersFind(
+	deps: ApiDriveDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedDriveFolder[]> {
-	const params = parseHonoApiParams(driveFoldersFindParamDef, body);
+): Promise<ApiPackedDriveFolder[]> {
+	const params = parseApiParams(driveFoldersFindParamDef, body);
 	const folders = await listDriveFoldersByNameFromDatabase(deps.db, {
 		name: params.name,
 		userId: me.id,
 		parentId: params.parentId ?? null,
 	});
 
-	return await packDriveFoldersManyForHonoApi(deps, folders);
+	return await packDriveFoldersManyForApi(deps, folders);
 }
 
-export async function handleHonoApiDriveFoldersShow(
-	deps: HonoApiDriveDependencies,
+export async function handleApiDriveFoldersShow(
+	deps: ApiDriveDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedDriveFolder> {
-	const params = parseHonoApiParams(driveFoldersShowParamDef, body);
+): Promise<ApiPackedDriveFolder> {
+	const params = parseApiParams(driveFoldersShowParamDef, body);
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
 
 	if (folder == null) {
 		throw driveFoldersShowNoSuchFolderError();
 	}
 
-	return await packDriveFolderForHonoApi(deps, folder, {
+	return await packDriveFolderForApi(deps, folder, {
 		detail: true,
 	});
 }
 
 async function driveFolderWillNestRecursively(
-	deps: HonoApiDriveDependencies,
+	deps: ApiDriveDependencies,
 	targetFolderId: string,
 	parentId: string | null,
 ): Promise<boolean> {
@@ -406,12 +406,12 @@ async function driveFolderWillNestRecursively(
 	return false;
 }
 
-export async function handleHonoApiDriveFoldersUpdate(
-	deps: HonoApiDriveDependencies,
+export async function handleApiDriveFoldersUpdate(
+	deps: ApiDriveDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
-): Promise<HonoApiPackedDriveFolder> {
-	const params = parseHonoApiParams(driveFoldersUpdateParamDef, body);
+): Promise<ApiPackedDriveFolder> {
+	const params = parseApiParams(driveFoldersUpdateParamDef, body);
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
 
 	if (folder == null) {
@@ -451,18 +451,18 @@ export async function handleHonoApiDriveFoldersUpdate(
 		parentId: nextFolder.parentId,
 	});
 
-	const packed = await packDriveFolderForHonoApi(deps, nextFolder);
+	const packed = await packDriveFolderForApi(deps, nextFolder);
 	deps.publishDriveStream?.(me.id, 'folderUpdated', packed);
 
 	return packed;
 }
 
-export async function handleHonoApiDriveFoldersDelete(
-	deps: HonoApiDriveDependencies,
+export async function handleApiDriveFoldersDelete(
+	deps: ApiDriveDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(driveFoldersDeleteParamDef, body);
+	const params = parseApiParams(driveFoldersDeleteParamDef, body);
 	const folder = await fetchDriveFolderByIdAndUserIdFromDatabase(deps.db, params.folderId, me.id);
 
 	if (folder == null) {
@@ -482,12 +482,12 @@ export async function handleHonoApiDriveFoldersDelete(
 	deps.publishDriveStream?.(me.id, 'folderDeleted', folder.id);
 }
 
-export async function handleHonoApiDrive(
-	deps: HonoApiDriveDependencies & HonoApiRolePolicyDependencies,
+export async function handleApiDrive(
+	deps: ApiDriveDependencies & ApiRolePolicyDependencies,
 	me: MiLocalUser,
 ): Promise<{ capacity: number; usage: number }> {
 	const usage = await sumDriveFileSizeByUserIdFromDatabase(deps.db, me.id);
-	const policies = await getHonoApiRolePolicies(deps, me);
+	const policies = await getApiRolePolicies(deps, me);
 
 	return {
 		capacity: 1024 * 1024 * policies.driveCapacityMb,

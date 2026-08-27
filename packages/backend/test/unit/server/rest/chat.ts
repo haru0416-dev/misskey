@@ -22,9 +22,9 @@ import type { MiUser } from '@/models/User.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
 import { countDatabaseQueries, type QueryCounter } from '../../../query-counter.js';
 import {
-	packChatMessageDetailedForHonoApi,
-	packChatMessagesDetailedForHonoApi,
-	type HonoApiChatDependencies,
+	packChatMessageDetailedForApi,
+	packChatMessagesDetailedForApi,
+	type ApiChatDependencies,
 } from '@/server/rest/chat/chat.js';
 
 describe('chat message packing', () => {
@@ -73,10 +73,10 @@ describe('chat message packing', () => {
 			reactions: [`${reactor1.id}/👍`, `${deletedReactorId}/❌`, `${reactor2.id}/⭐`],
 		};
 
-		const deps = runtime as unknown as HonoApiChatDependencies;
+		const deps = runtime as unknown as ApiChatDependencies;
 
 		queries.reset();
-		const packedSingle = await packChatMessageDetailedForHonoApi(deps, message, sender);
+		const packedSingle = await packChatMessageDetailedForApi(deps, message, sender);
 		expect(queries.count()).toBe(1);
 		expect(packedSingle.reactions.map((reaction) => [reaction.user.id, reaction.reaction])).toEqual([
 			[reactor1.id, '👍'],
@@ -85,20 +85,20 @@ describe('chat message packing', () => {
 
 		queries.reset();
 		const secondMessage = { ...message, id: genId(), reactions: [`${reactor2.id}/⭐`, `${reactor1.id}/👍`] };
-		const [packedMany, packedSecond] = await packChatMessagesDetailedForHonoApi(deps, [message, secondMessage], sender);
+		const [packedMany, packedSecond] = await packChatMessagesDetailedForApi(deps, [message, secondMessage], sender);
 		expect(queries.count()).toBe(1);
 		expect(packedMany!.reactions).toEqual(packedSingle.reactions);
 		expect(packedSecond!.reactions.map((reaction) => reaction.user.id)).toEqual([reactor2.id, reactor1.id]);
 
 		queries.reset();
-		const packedWithPartialHint = await packChatMessageDetailedForHonoApi(deps, message, sender, {
+		const packedWithPartialHint = await packChatMessageDetailedForApi(deps, message, sender, {
 			_hint_: { packedUsers: new Map([[reactor1.id, packedSingle.reactions[0]!.user]]) },
 		});
 		expect(queries.count()).toBe(1);
 		expect(packedWithPartialHint.reactions).toEqual(packedSingle.reactions);
 
 		const explicitSenderMessage = { ...message, fromUser: sender, reactions: [`${sender.id}/👍`] };
-		const packedWithStaleMissingHint = await packChatMessageDetailedForHonoApi(deps, explicitSenderMessage, sender, {
+		const packedWithStaleMissingHint = await packChatMessageDetailedForApi(deps, explicitSenderMessage, sender, {
 			_hint_: { missingUserIds: new Set([sender.id]) },
 		});
 		expect(packedWithStaleMissingHint.reactions[0]!.user.id).toBe(sender.id);
@@ -122,10 +122,10 @@ describe('chat message packing', () => {
 			reactions: [],
 		} satisfies MiChatMessage;
 
-		const deps = runtime as unknown as HonoApiChatDependencies;
+		const deps = runtime as unknown as ApiChatDependencies;
 
 		queries.reset();
-		await expect(packChatMessageDetailedForHonoApi(deps, message, sender)).rejects.toMatchObject({
+		await expect(packChatMessageDetailedForApi(deps, message, sender)).rejects.toMatchObject({
 			name: 'EntityNotFoundError',
 		});
 		expect(queries.count()).toBe(1);

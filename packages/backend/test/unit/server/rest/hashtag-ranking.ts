@@ -9,14 +9,14 @@ import type * as Redis from 'ioredis';
 import { loadConfig, type Config } from '@/config.js';
 import { createRedisClient } from '@/runtime-dependencies.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { updateHashtagsRankingForHonoApi, updateHashtagsRankingsForHonoApi } from '@/server/rest/note/notes-create.js';
+import { updateHashtagsRankingForApi, updateHashtagsRankingsForApi } from '@/server/rest/note/notes-create.js';
 import {
 	formatHashtagUsersWindow,
 	getCurrentFeaturedWindow,
 	HASHTAG_RANKING_WINDOW,
 } from '@/server/rest/hashtag/hashtags.js';
 
-describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 相当)', () => {
+describe('updateHashtagsRankingForApi (HashtagService#updateHashtagsRanking 相当)', () => {
 	let config: Config;
 	let redis: Redis.Redis;
 
@@ -52,7 +52,7 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 		now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
 		const window = formatHashtagUsersWindow(now);
 
-		await updateHashtagsRankingForHonoApi({ meta: { hiddenTags: [], sensitiveWords: [] }, redis }, tag, userId);
+		await updateHashtagsRankingForApi({ meta: { hiddenTags: [], sensitiveWords: [] }, redis }, tag, userId);
 
 		expect(await pollFeaturedScore(tag)).toBe(1);
 		expect(await redis.sismember(`hashtagUsers:${tag}`, userId)).toBe(1);
@@ -64,10 +64,10 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 		const userId = genId();
 		const deps = { meta: { hiddenTags: [], sensitiveWords: [] }, redis };
 
-		await updateHashtagsRankingForHonoApi(deps, tag, userId);
+		await updateHashtagsRankingForApi(deps, tag, userId);
 		expect(await pollFeaturedScore(tag)).toBe(1);
 
-		await updateHashtagsRankingForHonoApi(deps, tag, userId);
+		await updateHashtagsRankingForApi(deps, tag, userId);
 		await sleep(300);
 		expect(await pollFeaturedScore(tag)).toBe(1);
 	});
@@ -76,10 +76,10 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 		const tag = uniqueTag();
 		const deps = { meta: { hiddenTags: [], sensitiveWords: [] }, redis };
 
-		await updateHashtagsRankingForHonoApi(deps, tag, genId());
+		await updateHashtagsRankingForApi(deps, tag, genId());
 		expect(await pollFeaturedScore(tag)).toBe(1);
 
-		await updateHashtagsRankingForHonoApi(deps, tag, genId());
+		await updateHashtagsRankingForApi(deps, tag, genId());
 		for (let i = 0; i < 20; i++) {
 			if ((await pollFeaturedScore(tag)) === 2) break;
 			await sleep(100);
@@ -93,7 +93,7 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 		if (firstTag == null || secondTag == null) throw new Error('Failed to create hashtag fixtures');
 		const userId = genId();
 
-		await updateHashtagsRankingsForHonoApi(
+		await updateHashtagsRankingsForApi(
 			{ meta: { hiddenTags: [], sensitiveWords: [] }, redis },
 			[firstTag, secondTag, firstTag],
 			userId,
@@ -109,7 +109,7 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 		const tag = uniqueTag();
 		const userId = genId();
 
-		await updateHashtagsRankingForHonoApi({ meta: { hiddenTags: [tag], sensitiveWords: [] }, redis }, tag, userId);
+		await updateHashtagsRankingForApi({ meta: { hiddenTags: [tag], sensitiveWords: [] }, redis }, tag, userId);
 
 		await sleep(300);
 		expect(
@@ -122,7 +122,7 @@ describe('updateHashtagsRankingForHonoApi (HashtagService#updateHashtagsRanking 
 		const tag = uniqueTag();
 		const userId = genId();
 
-		await updateHashtagsRankingForHonoApi({ meta: { hiddenTags: [], sensitiveWords: [tag] }, redis }, tag, userId);
+		await updateHashtagsRankingForApi({ meta: { hiddenTags: [], sensitiveWords: [tag] }, redis }, tag, userId);
 
 		await sleep(300);
 		expect(

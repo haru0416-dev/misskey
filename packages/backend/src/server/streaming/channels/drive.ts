@@ -4,9 +4,9 @@
  */
 
 import type { JsonValue } from '@/misc/json-value.js';
-import type { HonoStreamChannelDefinition } from '../channel.js';
+import type { StreamChannelDefinition } from '../channel.js';
 
-export const honoStreamChannelDrive: HonoStreamChannelDefinition<unknown> = {
+export const honoStreamChannelDrive: StreamChannelDefinition<unknown> = {
 	shouldShare: true,
 	requireCredential: true,
 	kind: 'read:account',

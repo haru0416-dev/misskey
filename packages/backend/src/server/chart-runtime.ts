@@ -47,7 +47,7 @@ import type { MiUser } from '@/models/User.js';
 
 // Chart.commit() はメモリ上の差分だけを保持し、20 分間隔で呼ぶ Chart.save() が永続化する。
 // writer は起動時に1回だけ生成し、deps 経由でリクエスト間で共有する。
-type HonoChartWriterDependencies = {
+type ChartWriterDependencies = {
 	db: MiDrizzleDatabase;
 	redis: Redis.Redis;
 	logger: Pick<Logger, 'debug' | 'error' | 'info' | 'warn'>;
@@ -57,7 +57,7 @@ type HonoChartWriterDependencies = {
 	meta: MiMeta;
 };
 
-class HonoDriveChartWriter extends Chart<typeof driveChartSchema> {
+class DriveChartWriter extends Chart<typeof driveChartSchema> {
 	protected async tickMajor(): Promise<Partial<KVs<typeof driveChartSchema>>> {
 		return {};
 	}
@@ -86,7 +86,7 @@ class HonoDriveChartWriter extends Chart<typeof driveChartSchema> {
 	}
 }
 
-class HonoPerUserDriveChartWriter extends Chart<typeof perUserDriveChartSchema> {
+class PerUserDriveChartWriter extends Chart<typeof perUserDriveChartSchema> {
 	protected async tickMajor(): Promise<Partial<KVs<typeof perUserDriveChartSchema>>> {
 		return {};
 	}
@@ -112,7 +112,7 @@ class HonoPerUserDriveChartWriter extends Chart<typeof perUserDriveChartSchema> 
 	}
 }
 
-class HonoInstanceChartWriter extends Chart<typeof instanceChartSchema> {
+class InstanceChartWriter extends Chart<typeof instanceChartSchema> {
 	protected async tickMajor(): Promise<Partial<KVs<typeof instanceChartSchema>>> {
 		return {};
 	}
@@ -206,7 +206,7 @@ class HonoInstanceChartWriter extends Chart<typeof instanceChartSchema> {
 	}
 }
 
-class HonoNotesChartWriter extends Chart<typeof notesChartSchema> {
+class NotesChartWriter extends Chart<typeof notesChartSchema> {
 	protected async tickMajor(): Promise<Partial<KVs<typeof notesChartSchema>>> {
 		return {};
 	}
@@ -233,7 +233,7 @@ class HonoNotesChartWriter extends Chart<typeof notesChartSchema> {
 	}
 }
 
-class HonoPerUserNotesChartWriter extends Chart<typeof perUserNotesChartSchema> {
+class PerUserNotesChartWriter extends Chart<typeof perUserNotesChartSchema> {
 	protected async tickMajor(): Promise<Partial<KVs<typeof perUserNotesChartSchema>>> {
 		return {};
 	}
@@ -262,7 +262,7 @@ class HonoPerUserNotesChartWriter extends Chart<typeof perUserNotesChartSchema> 
 	}
 }
 
-class HonoPerUserReactionsChartWriter extends Chart<typeof perUserReactionsChartSchema> {
+class PerUserReactionsChartWriter extends Chart<typeof perUserReactionsChartSchema> {
 	protected async tickMajor(): Promise<Partial<KVs<typeof perUserReactionsChartSchema>>> {
 		return {};
 	}
@@ -282,7 +282,7 @@ class HonoPerUserReactionsChartWriter extends Chart<typeof perUserReactionsChart
 	}
 }
 
-class HonoPerUserPvChartWriter extends Chart<typeof perUserPvChartSchema> {
+class PerUserPvChartWriter extends Chart<typeof perUserPvChartSchema> {
 	protected async tickMajor(): Promise<Partial<KVs<typeof perUserPvChartSchema>>> {
 		return {};
 	}
@@ -312,7 +312,7 @@ class HonoPerUserPvChartWriter extends Chart<typeof perUserPvChartSchema> {
 	}
 }
 
-class HonoActiveUsersChartWriter extends Chart<typeof activeUsersChartSchema> {
+class ActiveUsersChartWriter extends Chart<typeof activeUsersChartSchema> {
 	constructor(db: MiDrizzleDatabase, lock: (key: string) => ReturnType<typeof acquireChartInsertLock>, logger: Logger) {
 		super(db, lock, logger, activeUsersChartName, activeUsersChartSchema);
 	}
@@ -350,7 +350,7 @@ class HonoActiveUsersChartWriter extends Chart<typeof activeUsersChartSchema> {
 	}
 }
 
-class HonoFederationChartWriter extends Chart<typeof federationChartSchema> {
+class FederationChartWriter extends Chart<typeof federationChartSchema> {
 	constructor(
 		db: MiDrizzleDatabase,
 		lock: (key: string) => ReturnType<typeof acquireChartInsertLock>,
@@ -483,7 +483,7 @@ class HonoFederationChartWriter extends Chart<typeof federationChartSchema> {
 	}
 }
 
-class HonoUsersChartWriter extends Chart<typeof usersChartSchema> {
+class UsersChartWriter extends Chart<typeof usersChartSchema> {
 	constructor(
 		db: MiDrizzleDatabase,
 		lock: (key: string) => ReturnType<typeof acquireChartInsertLock>,
@@ -520,7 +520,7 @@ class HonoUsersChartWriter extends Chart<typeof usersChartSchema> {
 	}
 }
 
-class HonoPerUserFollowingChartWriter extends Chart<typeof perUserFollowingChartSchema> {
+class PerUserFollowingChartWriter extends Chart<typeof perUserFollowingChartSchema> {
 	constructor(
 		db: MiDrizzleDatabase,
 		lock: (key: string) => ReturnType<typeof acquireChartInsertLock>,
@@ -577,7 +577,7 @@ class HonoPerUserFollowingChartWriter extends Chart<typeof perUserFollowingChart
 	}
 }
 
-class HonoApRequestChartWriter extends Chart<typeof apRequestChartSchema> {
+class ApRequestChartWriter extends Chart<typeof apRequestChartSchema> {
 	protected async tickMajor(): Promise<Partial<KVs<typeof apRequestChartSchema>>> {
 		return {};
 	}
@@ -605,28 +605,28 @@ class HonoApRequestChartWriter extends Chart<typeof apRequestChartSchema> {
 	}
 }
 
-export type HonoChartWriters = {
-	driveChart: HonoDriveChartWriter;
-	perUserDriveChart: HonoPerUserDriveChartWriter;
-	instanceChart: HonoInstanceChartWriter;
-	notesChart: HonoNotesChartWriter;
-	perUserNotesChart: HonoPerUserNotesChartWriter;
-	activeUsersChart: HonoActiveUsersChartWriter;
-	perUserReactionsChart: HonoPerUserReactionsChartWriter;
-	perUserPvChart: HonoPerUserPvChartWriter;
-	federationChart: HonoFederationChartWriter;
-	usersChart: HonoUsersChartWriter;
-	perUserFollowingChart: HonoPerUserFollowingChartWriter;
-	apRequestChart: HonoApRequestChartWriter;
+export type ChartWriters = {
+	driveChart: DriveChartWriter;
+	perUserDriveChart: PerUserDriveChartWriter;
+	instanceChart: InstanceChartWriter;
+	notesChart: NotesChartWriter;
+	perUserNotesChart: PerUserNotesChartWriter;
+	activeUsersChart: ActiveUsersChartWriter;
+	perUserReactionsChart: PerUserReactionsChartWriter;
+	perUserPvChart: PerUserPvChartWriter;
+	federationChart: FederationChartWriter;
+	usersChart: UsersChartWriter;
+	perUserFollowingChart: PerUserFollowingChartWriter;
+	apRequestChart: ApRequestChartWriter;
 };
 
-export function createHonoChartWriters(deps: HonoChartWriterDependencies): HonoChartWriters {
+export function createChartWriters(deps: ChartWriterDependencies): ChartWriters {
 	const lock = (key: string) => acquireChartInsertLock(deps.redis, key);
 	const logger = deps.logger as Logger;
 
 	return {
-		driveChart: new HonoDriveChartWriter(deps.db, lock, logger, driveChartName, driveChartSchema),
-		perUserDriveChart: new HonoPerUserDriveChartWriter(
+		driveChart: new DriveChartWriter(deps.db, lock, logger, driveChartName, driveChartSchema),
+		perUserDriveChart: new PerUserDriveChartWriter(
 			deps.db,
 			lock,
 			logger,
@@ -634,9 +634,9 @@ export function createHonoChartWriters(deps: HonoChartWriterDependencies): HonoC
 			perUserDriveChartSchema,
 			true,
 		),
-		instanceChart: new HonoInstanceChartWriter(deps.db, lock, logger, instanceChartName, instanceChartSchema, true),
-		notesChart: new HonoNotesChartWriter(deps.db, lock, logger, notesChartName, notesChartSchema),
-		perUserNotesChart: new HonoPerUserNotesChartWriter(
+		instanceChart: new InstanceChartWriter(deps.db, lock, logger, instanceChartName, instanceChartSchema, true),
+		notesChart: new NotesChartWriter(deps.db, lock, logger, notesChartName, notesChartSchema),
+		perUserNotesChart: new PerUserNotesChartWriter(
 			deps.db,
 			lock,
 			logger,
@@ -644,8 +644,8 @@ export function createHonoChartWriters(deps: HonoChartWriterDependencies): HonoC
 			perUserNotesChartSchema,
 			true,
 		),
-		activeUsersChart: new HonoActiveUsersChartWriter(deps.db, lock, logger),
-		perUserReactionsChart: new HonoPerUserReactionsChartWriter(
+		activeUsersChart: new ActiveUsersChartWriter(deps.db, lock, logger),
+		perUserReactionsChart: new PerUserReactionsChartWriter(
 			deps.db,
 			lock,
 			logger,
@@ -653,15 +653,15 @@ export function createHonoChartWriters(deps: HonoChartWriterDependencies): HonoC
 			perUserReactionsChartSchema,
 			true,
 		),
-		perUserPvChart: new HonoPerUserPvChartWriter(deps.db, lock, logger, perUserPvChartName, perUserPvChartSchema, true),
-		federationChart: new HonoFederationChartWriter(deps.db, lock, logger, deps.db, deps.meta),
-		usersChart: new HonoUsersChartWriter(deps.db, lock, logger, deps.db),
-		perUserFollowingChart: new HonoPerUserFollowingChartWriter(deps.db, lock, logger, deps.db),
-		apRequestChart: new HonoApRequestChartWriter(deps.db, lock, logger, apRequestChartName, apRequestChartSchema),
+		perUserPvChart: new PerUserPvChartWriter(deps.db, lock, logger, perUserPvChartName, perUserPvChartSchema, true),
+		federationChart: new FederationChartWriter(deps.db, lock, logger, deps.db, deps.meta),
+		usersChart: new UsersChartWriter(deps.db, lock, logger, deps.db),
+		perUserFollowingChart: new PerUserFollowingChartWriter(deps.db, lock, logger, deps.db),
+		apRequestChart: new ApRequestChartWriter(deps.db, lock, logger, apRequestChartName, apRequestChartSchema),
 	};
 }
 
-export async function saveHonoChartWriters(writers: HonoChartWriters): Promise<void> {
+export async function saveChartWriters(writers: ChartWriters): Promise<void> {
 	await Promise.all([
 		writers.driveChart.save(),
 		writers.perUserDriveChart.save(),
@@ -678,10 +678,10 @@ export async function saveHonoChartWriters(writers: HonoChartWriters): Promise<v
 	]);
 }
 
-export function startHonoChartWriterSaveInterval(writers: HonoChartWriters): NodeJS.Timeout {
+export function startChartWriterSaveInterval(writers: ChartWriters): NodeJS.Timeout {
 	return setInterval(
 		() => {
-			void saveHonoChartWriters(writers);
+			void saveChartWriters(writers);
 		},
 		1000 * 60 * 20,
 	);

@@ -23,14 +23,14 @@
 |---|---|---|---|
 | `stability` | `'deprecated' \| 'experimental' \| 'stable'` | (未指定) | 安定度のヒント。`'deprecated'` を付けた API は新規利用を避ける |
 | `tags` | `ReadonlyArray<string>` | — | OpenAPI タグ。実質 `tags[0]` のみが反映される |
-| `errors` | `Record<key, { message, code, id }>` | — | クライアントに返す業務エラー定義 (**ドキュメント用の宣言**。実際に throw するのは別途ハンドラ内の `HonoApiError`)。各 `id` は UUID v4 で一意 |
+| `errors` | `Record<key, { message, code, id }>` | — | クライアントに返す業務エラー定義 (**ドキュメント用の宣言**。実際に throw するのは別途ハンドラ内の `ApiError`)。各 `id` は UUID v4 で一意 |
 | `res` | `Schema` (`@/misc/json-schema.js`) | — | レスポンス JSON Schema。`ref: 'Note'` のような packed entity 参照も可 |
 | `requireCredential` | `boolean` | `false` | 認証必須か。**宣言のみ**。実際の強制はルート側で `assertCredential(auth)` を呼ぶこと。`true` のとき `kind` を必ず設定する |
 | `requireModerator` | `boolean` | `false` | isModerator ロール必須。`true` のとき `kind` 必須 |
 | `requireAdmin` | `boolean` | `false` | isAdministrator ロール必須。`true` のとき `kind` 必須 |
 | `requiredRolePolicy` | `KeyOf<'RolePolicies'>` | (未指定) | 特定のロールポリシー (例: `'canCreateChannel'`) を満たすロールを要求 |
 | `prohibitMoved` | `boolean` | `false` | アカウント移行済ユーザーを拒否。**宣言のみ**。強制はルート側で `assertProhibitMoved(auth.user)` を呼ぶこと |
-| `limit` | `{ key?, duration?, max?, minInterval? }` | なし | レート制限。**宣言のみ**。強制はルート側で `assertHonoApiRateLimitForUser(deps, '<name>', { duration, max }, user)` を呼び、値を meta と揃える |
+| `limit` | `{ key?, duration?, max?, minInterval? }` | なし | レート制限。**宣言のみ**。強制はルート側で `assertApiRateLimitForUser(deps, '<name>', { duration, max }, user)` を呼び、値を meta と揃える |
 | `requireFile` | `boolean` | `false` | multipart/form-data でファイル添付必須。ドキュメント用の宣言 |
 | `secure` | `boolean` | `false` | サードパーティアプリからは利用不可。OpenAPI に "Internal Endpoint" 表記が出る |
 | `kind` | `(typeof permissions)[number]` | — | OAuth スコープ。`'read:account'` / `'write:notes'` 等。型は require* 系と相互排他制約あり。**宣言のみ**。強制はルート側で `assertTokenPermission(auth, '<kind文字列>')` を呼ぶこと |
@@ -52,11 +52,11 @@
 | 管理者必須 | (省略) | (省略) | `true` | **必須** (例: `'write:admin:emoji'`) |
 | Misskey 本体専用 (`secure: true`) | 任意 | 任意 | 任意 | **不要** (型 union で除外) |
 
-ルート側でモデレーター/管理者判定を行うには [role-policy.ts](../../../../../packages/backend/src/server/rest/role/role-policy.ts) の `isHonoApiModerator(deps, user)` / `isHonoApiAdministrator(deps, user)` を呼ぶ (root ユーザーは常に true を返す)。
+ルート側でモデレーター/管理者判定を行うには [role-policy.ts](../../../../../packages/backend/src/server/rest/role/role-policy.ts) の `isApiModerator(deps, user)` / `isApiAdministrator(deps, user)` を呼ぶ (root ユーザーは常に true を返す)。
 
 加えて以下も使える:
 
-- **`requiredRolePolicy: 'canCreateChannel'`** — 特定のロールポリシーが許可されているユーザーだけに絞る。ルート側では [role-policy.ts](../../../../../packages/backend/src/server/rest/role/role-policy.ts) の `getHonoApiRolePolicies(deps, user)` を呼んで `policies.<policyName>` を判定する ([server/rest/notes.ts](../../../../../packages/backend/src/server/rest/note/notes.ts) の `notes/global-timeline` 相当処理が `policies.gtlAvailable` をこの方法でチェックしている)。匿名ユーザーにも判定したい場合は `user` に `null` を渡せる (`getHonoApiRolePolicies` は `user: MiUser | null` を受け付ける)。ロールポリシーの型一覧は [`role-policies.ts`](../../../../../packages/backend/src/core/role/role-policies.ts) の `RolePolicies` を参照
+- **`requiredRolePolicy: 'canCreateChannel'`** — 特定のロールポリシーが許可されているユーザーだけに絞る。ルート側では [role-policy.ts](../../../../../packages/backend/src/server/rest/role/role-policy.ts) の `getApiRolePolicies(deps, user)` を呼んで `policies.<policyName>` を判定する ([server/rest/notes.ts](../../../../../packages/backend/src/server/rest/note/notes.ts) の `notes/global-timeline` 相当処理が `policies.gtlAvailable` をこの方法でチェックしている)。匿名ユーザーにも判定したい場合は `user` に `null` を渡せる (`getApiRolePolicies` は `user: MiUser | null` を受け付ける)。ロールポリシーの型一覧は [`role-policies.ts`](../../../../../packages/backend/src/core/role/role-policies.ts) の `RolePolicies` を参照
 - **`secure: true`** — Misskey 本体フロントエンドからしか叩けないようにする (OAuth トークンで叩けなくなる)。上記の通り `kind` は不要
 
 ## `kind` の値
@@ -88,9 +88,9 @@ errors: {
 ```
 
 ```ts
-// server/rest/notes-delete.ts 側の実装 (HonoApiError, ../error.js)
-function noSuchRenoteTargetError(): HonoApiError {
-	return new HonoApiError({
+// server/rest/notes-delete.ts 側の実装 (ApiError, ../error.js)
+function noSuchRenoteTargetError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such renote target.',   // ← meta.errors と同じ文字列
 		code: 'NO_SUCH_RENOTE_TARGET',        // ← meta.errors と同じ
@@ -102,7 +102,7 @@ function noSuchRenoteTargetError(): HonoApiError {
 if (renote == null) throw noSuchRenoteTargetError();
 ```
 
-[HonoApiError](../../../../../packages/backend/src/server/rest/error.ts) は `status` / `message` / `code` / `id` / `kind?` ('client' デフォルト / 'server' / 'permission') / `headers?` / `info?` を受け取る。`invalidParamError(info)` / `credentialRequiredError()` / `permissionDeniedError()` 等の汎用ヘルパーも同ファイルにあるので、認証・パーミッション系の定型エラーは自分で書かずそちらを使う。
+[ApiError](../../../../../packages/backend/src/server/rest/error.ts) は `status` / `message` / `code` / `id` / `kind?` ('client' デフォルト / 'server' / 'permission') / `headers?` / `info?` を受け取る。`invalidParamError(info)` / `credentialRequiredError()` / `permissionDeniedError()` 等の汎用ヘルパーも同ファイルにあるので、認証・パーミッション系の定型エラーは自分で書かずそちらを使う。
 
 命名規則 (既存実装で一貫):
 
@@ -110,7 +110,7 @@ if (renote == null) throw noSuchRenoteTargetError();
 - `code`: `SCREAMING_SNAKE_CASE` (`'NO_SUCH_NOTE'`, `'CANNOT_RENOTE_TO_A_PURE_RENOTE'`)
 - 接頭辞パターン: `NO_SUCH_*` / `CANNOT_*` / `ALREADY_*` / `TOO_MANY_*` / `INVALID_*` / `*_REQUIRED`
 
-`HonoApiError` の `info` フィールドはレスポンス JSON の `error.info` として返却される (第 2 引数相当)。
+`ApiError` の `info` フィールドはレスポンス JSON の `error.info` として返却される (第 2 引数相当)。
 
 ## `res` の書き方
 
@@ -149,7 +149,7 @@ res: {
 
 ## `paramDef` (zod) 実用パターン
 
-`paramDef` は **zod schema**。ハンドラファイル (`server/rest/<feature>.ts`) 側で定義し、`meta` ファイルはそれを import して渡すだけ (二重定義しない)。実行時の検証は [validation.ts](../../../../../packages/backend/src/server/rest/validation.ts) の `parseHonoApiParams(schema, body)` が行う。
+`paramDef` は **zod schema**。ハンドラファイル (`server/rest/<feature>.ts`) 側で定義し、`meta` ファイルはそれを import して渡すだけ (二重定義しない)。実行時の検証は [validation.ts](../../../../../packages/backend/src/server/rest/validation.ts) の `parseApiParams(schema, body)` が行う。
 
 ### 基本パターン
 
@@ -285,7 +285,7 @@ PR レビューで頻発するミスを「**症状 → 原因 → 修正**」で
 ### 2. meta とルートの enforcement が食い違う (404 にならないので気づきにくい)
 
 - **症状**: `meta.requireCredential: true` / `kind` / `limit` を書いたのに、未認証や無関係な OAuth スコープのトークンでも通ってしまう
-- **原因**: ルート側で `assertCredential` / `assertTokenPermission` / `assertHonoApiRateLimitForUser` の呼び出しを書き忘れた、または値が meta と食い違っている
+- **原因**: ルート側で `assertCredential` / `assertTokenPermission` / `assertApiRateLimitForUser` の呼び出しを書き忘れた、または値が meta と食い違っている
 - **修正**: meta とルートを並べて目視確認する。自動検知ツールは無い
 
 ### 3. CI `check-misskey-js-autogen` で落ちる
@@ -328,7 +328,7 @@ PR レビューで頻発するミスを「**症状 → 原因 → 修正**」で
 
 - **症状**: 「`gtlAvailable: true` を payload で渡してください」のような不自然な API になっている / クライアントが指定したらバイパスできる
 - **原因**: ロールポリシーは **動的に取得するもの**
-- **修正**: paramDef からは外し、ハンドラ内で `getHonoApiRolePolicies(deps, user)` を呼んで判定する
+- **修正**: paramDef からは外し、ハンドラ内で `getApiRolePolicies(deps, user)` を呼んで判定する
 
 ### 9. エラーメッセージを日本語で書く
 
@@ -347,13 +347,13 @@ PR レビューで頻発するミスを「**症状 → 原因 → 修正**」で
 
 - **症状**: アップロード後にエンドポイントが正常終了/例外終了しても OS の一時ディレクトリにファイルが残り続け、ディスクが埋まる
 - **原因**: `cleanup()` を `try { ... } finally { cleanup(); }` で囲わずに呼び忘れた
-- **修正**: [routes/drive.ts](../../../../../packages/backend/src/server/rest/routes/drive.ts) の `/drive/files/create` ルートが手本。multipart パース (`readHonoApiMultipartRequest`) が返す `cleanup` を必ず `finally` で呼ぶ
+- **修正**: [routes/drive.ts](../../../../../packages/backend/src/server/rest/routes/drive.ts) の `/drive/files/create` ルートが手本。multipart パース (`readApiMultipartRequest`) が返す `cleanup` を必ず `finally` で呼ぶ
 
 ### 12. `requiredRolePolicy` だけで匿名許可してしまう
 
 - **症状**: API を匿名で叩くと 500 + `TypeError: Cannot read properties of null (reading 'id')`
 - **原因**: ハンドラが `user.id` を非null前提でアクセスしているのに、ルート側で `assertCredential` を呼んでいない
-- **修正**: 静的に必須ポリシーを宣言するなら `requireCredential: true` + ルートで `assertCredential` を必ず併用する。匿名ユーザーにも違うポリシーセットを適用したいなら、`getHonoApiRolePolicies(deps, user)` の `user` に `null` を渡して判定する ([server/rest/notes.ts](../../../../../packages/backend/src/server/rest/note/notes.ts) の `notes/global-timeline` 相当パターン)
+- **修正**: 静的に必須ポリシーを宣言するなら `requireCredential: true` + ルートで `assertCredential` を必ず併用する。匿名ユーザーにも違うポリシーセットを適用したいなら、`getApiRolePolicies(deps, user)` の `user` に `null` を渡して判定する ([server/rest/notes.ts](../../../../../packages/backend/src/server/rest/note/notes.ts) の `notes/global-timeline` 相当パターン)
 
 ### 13. e2e テストが起動しない
 

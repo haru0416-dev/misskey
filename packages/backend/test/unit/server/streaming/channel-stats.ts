@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { globalEventBus } from '@/misc/global-event-bus.js';
 import { loadConfig } from '@/config.js';
 import { createRuntimeDependencies, type RuntimeDependencies } from '@/runtime-dependencies.js';
-import { HonoStreamConnection, type HonoStreamConnectionDependencies } from '@/server/streaming/connection.js';
+import { StreamConnection, type StreamConnectionDependencies } from '@/server/streaming/connection.js';
 
 function collectSentMessages(): { raw: string[]; send: (raw: string) => void } {
 	const raw: string[] = [];
@@ -38,7 +38,7 @@ async function waitUntil(condition: () => boolean, timeoutMs = 2000, intervalMs 
 
 describe('hono-stream-connection: stats channels', () => {
 	let runtime: RuntimeDependencies;
-	let deps: HonoStreamConnectionDependencies;
+	let deps: StreamConnectionDependencies;
 
 	beforeAll(async () => {
 		runtime = await createRuntimeDependencies(loadConfig());
@@ -50,7 +50,7 @@ describe('hono-stream-connection: stats channels', () => {
 	});
 
 	test('queueStats: 未ログインでも接続でき、queueStatsイベントを受け取れる', async () => {
-		const connection = new HonoStreamConnection(deps, null, null);
+		const connection = new StreamConnection(deps, null, null);
 		await connection.init();
 		const subscriber = new EventEmitter();
 		const { raw, send } = collectSentMessages();
@@ -75,7 +75,7 @@ describe('hono-stream-connection: stats channels', () => {
 		testEv.on('requestQueueStatsLog', onRequest);
 
 		try {
-			const connection = new HonoStreamConnection(deps, null, null);
+			const connection = new StreamConnection(deps, null, null);
 			await connection.init();
 			const subscriber = new EventEmitter();
 			const { raw, send } = collectSentMessages();
@@ -99,7 +99,7 @@ describe('hono-stream-connection: stats channels', () => {
 	});
 
 	test('serverStats: 未ログインでも接続でき、serverStatsイベントを受け取れる', async () => {
-		const connection = new HonoStreamConnection(deps, null, null);
+		const connection = new StreamConnection(deps, null, null);
 		await connection.init();
 		const subscriber = new EventEmitter();
 		const { raw, send } = collectSentMessages();
@@ -116,7 +116,7 @@ describe('hono-stream-connection: stats channels', () => {
 	});
 
 	test('serverStats: dispose後はイベントを受け取らない', async () => {
-		const connection = new HonoStreamConnection(deps, null, null);
+		const connection = new StreamConnection(deps, null, null);
 		await connection.init();
 		const subscriber = new EventEmitter();
 		const { raw, send } = collectSentMessages();

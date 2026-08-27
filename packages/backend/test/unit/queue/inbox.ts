@@ -21,9 +21,9 @@ import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import {
-	handleHonoQueueInbox,
-	flushHonoQueueInboxUpdateInstanceQueue,
-	type HonoQueueInboxDependencies,
+	handleQueueInbox,
+	flushQueueInboxUpdateInstanceQueue,
+	type QueueInboxDependencies,
 } from '@/queue/handlers/inbox.js';
 import type { InboxJobData } from '@/queue/types.js';
 import type { IActivity } from '@/core/activitypub/type.js';
@@ -61,11 +61,11 @@ function captureRequestServer(): Promise<{ server: Server; url: string; capture:
 	});
 }
 
-describe('hono-queue-inbox handleHonoQueueInbox', () => {
+describe('hono-queue-inbox handleQueueInbox', () => {
 	type ActivityOverrides = { [K in keyof IActivity]?: IActivity[K] | undefined };
 
 	let runtime: RuntimeDependencies;
-	let deps: HonoQueueInboxDependencies;
+	let deps: QueueInboxDependencies;
 	let keyPair: Awaited<ReturnType<typeof genRsaKeyPair>>;
 	const servers: Server[] = [];
 
@@ -79,7 +79,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 	});
 
 	afterEach(async () => {
-		await flushHonoQueueInboxUpdateInstanceQueue();
+		await flushQueueInboxUpdateInstanceQueue();
 		await Promise.all(servers.splice(0).map((s) => new Promise<void>((resolve) => s.close(() => resolve()))));
 	});
 
@@ -170,14 +170,14 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 		return buf.toString('base64');
 	}
 
-	test('正しい署名のFollowアクティビティはperformActivityForHonoApiまで到達しFollowRequestを作成する', async () => {
+	test('正しい署名のFollowアクティビティはperformActivityForApiまで到達しFollowRequestを作成する', async () => {
 		const host = `hono-queue-inbox-ok-${genId()}.example.com`;
 		const followee = await createTestLocalUser('honoqueueinboxee');
 		const { user: actor, job } = await createSignedInboxJob(host, {
 			object: `${deps.config.instance.url}/users/${followee.id}`,
 		});
 
-		const result = await handleHonoQueueInbox(deps, job);
+		const result = await handleQueueInbox(deps, job);
 		expect(result).toBe('ok');
 
 		// followee は isLocked ではないため即時Followingが作られる (承認制ならFollowRequestになる)
@@ -192,7 +192,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 
 		job.data.signature.params.signature = tamperBase64Signature(job.data.signature.params.signature);
 
-		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
 	test('正しい署名でもactivity.actorが署名者と異なる場合は拒否する', async () => {
@@ -201,7 +201,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 			actor: `http://${host}/users/${genId()}`,
 		});
 
-		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
 	test('正しい署名でもactivity.idのホストが署名者と異なる場合は拒否する', async () => {
@@ -210,14 +210,14 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 			id: `http://other-${genId()}.example.com/activities/${genId()}`,
 		});
 
-		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
 	test('正しい署名でもactivity.idが無い場合は拒否する', async () => {
 		const host = `hono-queue-inbox-missing-id-${genId()}.example.com`;
 		const { job } = await createSignedInboxJob(host, { id: undefined });
 
-		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
 	// actor はリモートが送ってくる値で、欠けていても不思議ではない。UnrecoverableError にしないと
@@ -230,7 +230,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 		job.data.signature.keyId = `http://${host}/users/unknown#main-key`;
 		delete (job.data.activity as { actor?: unknown }).actor;
 
-		await expect(handleHonoQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
+		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
 	});
 
 	test('federationでブロックされたホストからのリクエストはBlocked requestを返す', async () => {
@@ -242,7 +242,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 		runtime.meta.federation = 'specified';
 		runtime.meta.federationHosts = [];
 		try {
-			const result = await handleHonoQueueInbox(deps, job);
+			const result = await handleQueueInbox(deps, job);
 			expect(result).toContain('Blocked request');
 		} finally {
 			runtime.meta.federation = originalFederation;
@@ -256,7 +256,7 @@ describe('hono-queue-inbox handleHonoQueueInbox', () => {
 
 		job.data.signature.keyId = `acct:someone@${host}`;
 
-		const result = await handleHonoQueueInbox(deps, job);
+		const result = await handleQueueInbox(deps, job);
 		expect(result).toContain('Old keyId is no longer supported');
 	});
 });

@@ -14,10 +14,10 @@ import {
 } from '@/core/antenna/AntennaStore.js';
 import { createUserInDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { onMoveAccountForHonoApi } from '@/server/rest/antenna/antennas.js';
+import { onMoveAccountForApi } from '@/server/rest/antenna/antennas.js';
 import type { MiUser } from '@/models/User.js';
 
-describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => {
+describe('onMoveAccountForApi (AntennaService#onMoveAccount 相当)', () => {
 	let config: Config;
 	let pool: MiDrizzlePool;
 	let db: MiDrizzleDatabase;
@@ -72,7 +72,7 @@ describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => 
 		const unrelatedAntennaId = await createAntenna(['@someoneelse']);
 
 		const publishInternalEvent = vi.fn();
-		await onMoveAccountForHonoApi({ config, db, publishInternalEvent }, src, dst);
+		await onMoveAccountForApi({ config, db, publishInternalEvent }, src, dst);
 
 		const updated = await fetchAntennaByIdOrFailFromDatabase(db, hitAntennaId);
 		expect(updated.users).toContain(`@${src.username}`);
@@ -95,7 +95,7 @@ describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => 
 		const inactiveAntennaId = await createAntenna([`@${src.username}`], false);
 
 		const publishInternalEvent = vi.fn();
-		await onMoveAccountForHonoApi({ config, db, publishInternalEvent }, src, dst);
+		await onMoveAccountForApi({ config, db, publishInternalEvent }, src, dst);
 
 		const antenna = await fetchAntennaByIdOrFailFromDatabase(db, inactiveAntennaId);
 		expect(antenna.users).toEqual([`@${src.username}`]);
@@ -109,7 +109,7 @@ describe('onMoveAccountForHonoApi (AntennaService#onMoveAccount 相当)', () => 
 		const antennaId = await createAntenna([`@${src.username}@${src.host}`]);
 
 		const publishInternalEvent = vi.fn();
-		await onMoveAccountForHonoApi({ config, db, publishInternalEvent }, src, dst);
+		await onMoveAccountForApi({ config, db, publishInternalEvent }, src, dst);
 
 		const updated = await fetchAntennaByIdOrFailFromDatabase(db, antennaId);
 		expect(updated.users).toContain(`@${dst.username}@${dst.host}`);

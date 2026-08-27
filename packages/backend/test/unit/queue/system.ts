@@ -29,17 +29,17 @@ import {
 import { createNoteInDatabase, fetchNoteByIdOrFailFromDatabase } from '@/core/note/NoteStore.js';
 import { createNoteReactionInDatabase } from '@/core/note/NoteReactionStore.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { createHonoChartWriters, type HonoChartWriters } from '@/server/chart-runtime.js';
+import { createChartWriters, type ChartWriters } from '@/server/chart-runtime.js';
 import Logger from '@/logger.js';
 import {
-	handleHonoQueueAggregateRetention,
-	handleHonoQueueBakeBufferedReactions,
-	handleHonoQueueCheckExpiredMutings,
-	handleHonoQueueClean,
-	handleHonoQueueCleanCharts,
-	handleHonoQueueResyncCharts,
-	handleHonoQueueTickCharts,
-	type HonoQueueSystemDependencies,
+	handleQueueAggregateRetention,
+	handleQueueBakeBufferedReactions,
+	handleQueueCheckExpiredMutings,
+	handleQueueClean,
+	handleQueueCleanCharts,
+	handleQueueResyncCharts,
+	handleQueueTickCharts,
+	type QueueSystemDependencies,
 } from '@/queue/handlers/system.js';
 import type { Config } from '@/config.js';
 
@@ -49,8 +49,8 @@ describe('hono-queue-system', () => {
 	let redis: Redis.Redis;
 	let redisForReactions: Redis.Redis;
 	let config: Config;
-	let chartWriters: HonoChartWriters;
-	let deps: HonoQueueSystemDependencies;
+	let chartWriters: ChartWriters;
+	let deps: QueueSystemDependencies;
 
 	beforeAll(async () => {
 		config = loadConfig();
@@ -59,7 +59,7 @@ describe('hono-queue-system', () => {
 		redis = new Redis.Redis(config.valkey.primary);
 		redisForReactions = new Redis.Redis(config.valkey.reactions);
 		const meta = await fetchMetaFromDatabase(db);
-		chartWriters = createHonoChartWriters({ db, redis, meta, logger: new Logger('test-chart') });
+		chartWriters = createChartWriters({ db, redis, meta, logger: new Logger('test-chart') });
 		deps = { config, db, chartWriters, meta, redisForReactions };
 	});
 
@@ -69,7 +69,7 @@ describe('hono-queue-system', () => {
 		await pool.end();
 	});
 
-	describe('handleHonoQueueClean', () => {
+	describe('handleQueueClean', () => {
 		test('期限切れのロールアサインメントを削除する', async () => {
 			const userId = genId();
 			await createUserInDatabase(db, {
@@ -95,7 +95,7 @@ describe('hono-queue-system', () => {
 				expiresAt: new Date(Date.now() - 1000),
 			});
 
-			await handleHonoQueueClean(deps);
+			await handleQueueClean(deps);
 
 			const assignmentsAfter = await listRoleAssignmentsByUserIdFromDatabase(db, userId);
 			expect(assignmentsAfter.some((a) => a.id === assignmentId)).toBe(false);
@@ -115,7 +115,7 @@ describe('hono-queue-system', () => {
 				createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 91),
 			});
 
-			await handleHonoQueueClean(deps);
+			await handleQueueClean(deps);
 
 			const ipsAfter = await listUserIpsFromDatabase(db, userId, 10);
 			expect(ipsAfter.length).toBe(0);
@@ -141,7 +141,7 @@ describe('hono-queue-system', () => {
 				lastUsedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 365),
 			});
 
-			await handleHonoQueueClean({
+			await handleQueueClean({
 				...deps,
 				config: { ...config, maintenance: { antennaInactiveAfterMs: 0 } },
 			});
@@ -151,7 +151,7 @@ describe('hono-queue-system', () => {
 		});
 	});
 
-	describe('handleHonoQueueAggregateRetention', () => {
+	describe('handleQueueAggregateRetention', () => {
 		test('本日分のretention_aggregationレコードを作成し、過去のレコードのretention数を更新する', async () => {
 			const pastId = genId(Date.now() - 1000 * 60 * 60 * 24 * 5);
 			await createRetentionAggregationInDatabase(db, {
@@ -163,7 +163,7 @@ describe('hono-queue-system', () => {
 				usersCount: 0,
 			});
 
-			await handleHonoQueueAggregateRetention(deps);
+			await handleQueueAggregateRetention(deps);
 
 			const now = new Date();
 			const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
@@ -175,14 +175,14 @@ describe('hono-queue-system', () => {
 		});
 
 		test('既に本日分が存在する場合は重複エラーを握りつぶす', async () => {
-			await expect(handleHonoQueueAggregateRetention(deps)).resolves.toBeUndefined();
+			await expect(handleQueueAggregateRetention(deps)).resolves.toBeUndefined();
 		});
 	});
 
 	describe('chart processors', () => {
 		// チャートを1つ追加してハンドラー側への追記を忘れると、そのチャートだけ永久に集計されない。
 		// 実DBに対する実行 (SQLの健全性) と、呼び出し対象の網羅の両方を見る。
-		function recordChartCalls(): { chartWriters: HonoChartWriters; calls: Map<string, string[]> } {
+		function recordChartCalls(): { chartWriters: ChartWriters; calls: Map<string, string[]> } {
 			const calls = new Map<string, string[]>();
 			const spied = Object.fromEntries(
 				Object.keys(chartWriters).map((name) => [
@@ -196,39 +196,39 @@ describe('hono-queue-system', () => {
 						},
 					),
 				]),
-			) as unknown as HonoChartWriters;
+			) as unknown as ChartWriters;
 			return { chartWriters: spied, calls };
 		}
 
-		test('handleHonoQueueTickCharts: chartWriters の全チャートを tick する', async () => {
-			await expect(handleHonoQueueTickCharts(deps)).resolves.toBeUndefined();
+		test('handleQueueTickCharts: chartWriters の全チャートを tick する', async () => {
+			await expect(handleQueueTickCharts(deps)).resolves.toBeUndefined();
 
 			const recorded = recordChartCalls();
-			await handleHonoQueueTickCharts({ ...deps, chartWriters: recorded.chartWriters });
+			await handleQueueTickCharts({ ...deps, chartWriters: recorded.chartWriters });
 			expect([...recorded.calls.keys()].sort()).toStrictEqual(Object.keys(chartWriters).sort());
 			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['tick']);
 		});
 
-		test('handleHonoQueueResyncCharts: drive/notes/users チャートだけを resync する', async () => {
-			await expect(handleHonoQueueResyncCharts(deps)).resolves.toBeUndefined();
+		test('handleQueueResyncCharts: drive/notes/users チャートだけを resync する', async () => {
+			await expect(handleQueueResyncCharts(deps)).resolves.toBeUndefined();
 
 			const recorded = recordChartCalls();
-			await handleHonoQueueResyncCharts({ ...deps, chartWriters: recorded.chartWriters });
+			await handleQueueResyncCharts({ ...deps, chartWriters: recorded.chartWriters });
 			expect([...recorded.calls.keys()].sort()).toStrictEqual(['driveChart', 'notesChart', 'usersChart']);
 			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['resync']);
 		});
 
-		test('handleHonoQueueCleanCharts: chartWriters の全チャートを clean する', async () => {
-			await expect(handleHonoQueueCleanCharts(deps)).resolves.toBeUndefined();
+		test('handleQueueCleanCharts: chartWriters の全チャートを clean する', async () => {
+			await expect(handleQueueCleanCharts(deps)).resolves.toBeUndefined();
 
 			const recorded = recordChartCalls();
-			await handleHonoQueueCleanCharts({ ...deps, chartWriters: recorded.chartWriters });
+			await handleQueueCleanCharts({ ...deps, chartWriters: recorded.chartWriters });
 			expect([...recorded.calls.keys()].sort()).toStrictEqual(Object.keys(chartWriters).sort());
 			expect([...new Set([...recorded.calls.values()].flat())]).toStrictEqual(['clean']);
 		});
 	});
 
-	describe('handleHonoQueueCheckExpiredMutings', () => {
+	describe('handleQueueCheckExpiredMutings', () => {
 		test('期限切れのユーザーミュート/チャンネルミュートを削除する', async () => {
 			const published: { type: string; value: unknown }[] = [];
 			const muterId = genId();
@@ -262,7 +262,7 @@ describe('hono-queue-system', () => {
 				expiresAt: new Date(Date.now() - 1000),
 			});
 
-			await handleHonoQueueCheckExpiredMutings({
+			await handleQueueCheckExpiredMutings({
 				...deps,
 				publishInternalEvent: (type, value) => {
 					published.push({ type, value });
@@ -277,10 +277,10 @@ describe('hono-queue-system', () => {
 		});
 	});
 
-	describe('handleHonoQueueBakeBufferedReactions', () => {
+	describe('handleQueueBakeBufferedReactions', () => {
 		test('enableReactionsBufferingがfalseの場合は何もしない', async () => {
 			await expect(
-				handleHonoQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: false } }),
+				handleQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: false } }),
 			).resolves.toBeUndefined();
 		});
 
@@ -312,7 +312,7 @@ describe('hono-queue-system', () => {
 			await redisForReactions.hincrby(`reactionsBufferDeltas:${noteId}`, '👍', 1);
 			await redisForReactions.zadd(`reactionsBufferPairs:${noteId}`, 0, `${userId}/👍`);
 
-			await handleHonoQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: true } });
+			await handleQueueBakeBufferedReactions({ ...deps, meta: { enableReactionsBuffering: true } });
 
 			const noteAfter = await fetchNoteByIdOrFailFromDatabase(db, noteId);
 			expect(noteAfter.reactions['👍']).toBe(1);

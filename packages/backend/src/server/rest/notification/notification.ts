@@ -22,19 +22,19 @@ import type { MiMeta } from '@/models/_.js';
 import { ACHIEVEMENT_TYPES } from '@/models/UserProfile.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { userExportableEntities } from '@/types.js';
-import { packHonoApiRole } from '../role/roles.js';
-import { pushSwNotificationForHonoApi } from './push-notification.js';
-import type { HonoApiMainStreamPublisher } from '../events.js';
-import { parseHonoApiParams } from '../validation.js';
+import { packApiRole } from '../role/roles.js';
+import { pushSwNotificationForApi } from './push-notification.js';
+import type { ApiMainStreamPublisher } from '../events.js';
+import { parseApiParams } from '../validation.js';
 
-export type { HonoApiMainStreamPublisher } from '../events.js';
+export type { ApiMainStreamPublisher } from '../events.js';
 
-export type HonoApiNotificationDependencies = {
+export type ApiNotificationDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	redis: Redis;
 	meta: Pick<MiMeta, 'enableServiceWorker' | 'swPublicKey' | 'swPrivateKey'>;
-	publishMainStream?: HonoApiMainStreamPublisher;
+	publishMainStream?: ApiMainStreamPublisher;
 };
 
 type CreateTokenNotification = {
@@ -49,7 +49,7 @@ type LoginNotification = {
 	type: 'login';
 };
 
-type HonoSimpleNotification = CreateTokenNotification | LoginNotification;
+type SimpleNotification = CreateTokenNotification | LoginNotification;
 
 type RoleAssignedNotification = {
 	id: string;
@@ -110,8 +110,8 @@ type ExportCompletedNotification = {
 	fileId: MiDriveFile['id'];
 };
 
-type HonoStoredNotification =
-	| HonoSimpleNotification
+type StoredNotification =
+	| SimpleNotification
 	| RoleAssignedNotification
 	| AppNotification
 	| TestNotification
@@ -121,14 +121,14 @@ type HonoStoredNotification =
 	| PollEndedNotification
 	| ExportCompletedNotification;
 
-type HonoPackedRoleAssignedNotification = {
+type PackedRoleAssignedNotification = {
 	id: string;
 	createdAt: string;
 	type: 'roleAssigned';
 	role: Packed<'Role'>;
 };
 
-type HonoPackedAppNotification = {
+type PackedAppNotification = {
 	id: string;
 	createdAt: string;
 	type: 'app';
@@ -168,7 +168,7 @@ export function toXListId(id: string): string {
 }
 
 export async function resolveNotificationStreamId(
-	deps: Pick<HonoApiNotificationDependencies, 'redis'>,
+	deps: Pick<ApiNotificationDependencies, 'redis'>,
 	userId: MiUser['id'],
 	notificationId: string,
 ): Promise<string> {
@@ -205,8 +205,8 @@ end
 return redis.call('XADD', KEYS[1], 'MAXLEN', '~', ARGV[1], '*', 'data', ARGV[2])
 `;
 
-export async function xaddHonoApiNotification(
-	deps: HonoApiNotificationDependencies,
+export async function xaddApiNotification(
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
 	notification: { id: string } & Record<string, unknown>,
 ): Promise<string> {
@@ -240,8 +240,8 @@ export async function xaddHonoApiNotification(
 	}
 }
 
-export async function xaddHonoApiNotifications(
-	deps: HonoApiNotificationDependencies,
+export async function xaddApiNotifications(
+	deps: ApiNotificationDependencies,
 	items: readonly {
 		userId: MiUser['id'];
 		notification: { id: string } & Record<string, unknown>;
@@ -272,7 +272,7 @@ export async function xaddHonoApiNotifications(
 				if (error == null) return Promise.resolve();
 				if (error instanceof ReplyError) {
 					const item = batch[index]!;
-					return xaddHonoApiNotification(deps, item.userId, item.notification).then(() => undefined);
+					return xaddApiNotification(deps, item.userId, item.notification).then(() => undefined);
 				}
 				return Promise.reject(error);
 			}),
@@ -281,17 +281,17 @@ export async function xaddHonoApiNotifications(
 }
 
 async function xaddNotification(
-	deps: HonoApiNotificationDependencies,
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
-	notification: HonoStoredNotification,
+	notification: StoredNotification,
 ): Promise<string> {
-	return await xaddHonoApiNotification(deps, userId, notification);
+	return await xaddApiNotification(deps, userId, notification);
 }
 
 function createSimpleNotification(
-	deps: HonoApiNotificationDependencies,
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
-	type: HonoSimpleNotification['type'],
+	type: SimpleNotification['type'],
 ): void {
 	trackPromise(
 		(async () => {
@@ -302,11 +302,11 @@ function createSimpleNotification(
 				id: genId(),
 				createdAt: new Date().toISOString(),
 				type,
-			} satisfies HonoSimpleNotification;
+			} satisfies SimpleNotification;
 			const redisId = await xaddNotification(deps, userId, notification);
 
 			deps.publishMainStream?.(userId, 'notification', notification);
-			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			trackPromise(
 				delay(2000, undefined, { ref: false })
@@ -321,16 +321,16 @@ function createSimpleNotification(
 	);
 }
 
-export function createTokenNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
+export function createTokenNotification(deps: ApiNotificationDependencies, userId: MiUser['id']): void {
 	createSimpleNotification(deps, userId, 'createToken');
 }
 
-export function createLoginNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
+export function createLoginNotification(deps: ApiNotificationDependencies, userId: MiUser['id']): void {
 	createSimpleNotification(deps, userId, 'login');
 }
 
 export function createRoleAssignedNotification(
-	deps: HonoApiNotificationDependencies,
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
 	role: MiRole,
 ): void {
@@ -350,11 +350,11 @@ export function createRoleAssignedNotification(
 				id: notification.id,
 				createdAt: notification.createdAt,
 				type: notification.type,
-				role: await packHonoApiRole(deps, role),
-			} satisfies HonoPackedRoleAssignedNotification;
+				role: await packApiRole(deps, role),
+			} satisfies PackedRoleAssignedNotification;
 
 			deps.publishMainStream?.(userId, 'notification', packed);
-			void pushSwNotificationForHonoApi(deps, userId, 'notification', packed);
+			void pushSwNotificationForApi(deps, userId, 'notification', packed);
 
 			trackPromise(
 				delay(2000, undefined, { ref: false })
@@ -370,7 +370,7 @@ export function createRoleAssignedNotification(
 }
 
 export function createScheduledNotePostedNotification(
-	deps: HonoApiNotificationDependencies,
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
 	noteId: string,
 ): void {
@@ -388,7 +388,7 @@ export function createScheduledNotePostedNotification(
 			const redisId = await xaddNotification(deps, userId, notification);
 
 			deps.publishMainStream?.(userId, 'notification', notification);
-			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			trackPromise(
 				delay(2000, undefined, { ref: false })
@@ -404,7 +404,7 @@ export function createScheduledNotePostedNotification(
 }
 
 export function createScheduledNotePostFailedNotification(
-	deps: HonoApiNotificationDependencies,
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
 	noteDraftId: string,
 ): void {
@@ -422,7 +422,7 @@ export function createScheduledNotePostFailedNotification(
 			const redisId = await xaddNotification(deps, userId, notification);
 
 			deps.publishMainStream?.(userId, 'notification', notification);
-			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			trackPromise(
 				delay(2000, undefined, { ref: false })
@@ -438,7 +438,7 @@ export function createScheduledNotePostFailedNotification(
 }
 
 export async function createPollEndedNotification(
-	deps: HonoApiNotificationDependencies,
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
 	noteId: string,
 	profile?: MiUserProfile,
@@ -455,7 +455,7 @@ export async function createPollEndedNotification(
 	const redisId = await xaddNotification(deps, userId, notification);
 
 	deps.publishMainStream?.(userId, 'notification', notification);
-	void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+	void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 	trackPromise(
 		delay(2000, undefined, { ref: false })
@@ -469,7 +469,7 @@ export async function createPollEndedNotification(
 }
 
 export function createExportCompletedNotification(
-	deps: HonoApiNotificationDependencies,
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
 	exportedEntity: (typeof userExportableEntities)[number],
 	fileId: MiDriveFile['id'],
@@ -489,7 +489,7 @@ export function createExportCompletedNotification(
 			const redisId = await xaddNotification(deps, userId, notification);
 
 			deps.publishMainStream?.(userId, 'notification', notification);
-			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			trackPromise(
 				delay(2000, undefined, { ref: false })
@@ -505,7 +505,7 @@ export function createExportCompletedNotification(
 }
 
 function createAppNotification(
-	deps: HonoApiNotificationDependencies,
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
 	data: {
 		appAccessTokenId: string | null;
@@ -536,10 +536,10 @@ function createAppNotification(
 				body: notification.customBody,
 				header: notification.customHeader,
 				icon: notification.customIcon,
-			} satisfies HonoPackedAppNotification;
+			} satisfies PackedAppNotification;
 
 			deps.publishMainStream?.(userId, 'notification', packed);
-			void pushSwNotificationForHonoApi(deps, userId, 'notification', packed);
+			void pushSwNotificationForApi(deps, userId, 'notification', packed);
 
 			trackPromise(
 				delay(2000, undefined, { ref: false })
@@ -554,7 +554,7 @@ function createAppNotification(
 	);
 }
 
-function createTestNotification(deps: HonoApiNotificationDependencies, userId: MiUser['id']): void {
+function createTestNotification(deps: ApiNotificationDependencies, userId: MiUser['id']): void {
 	trackPromise(
 		(async () => {
 			const profile = await fetchUserProfileByUserIdFromDatabase(deps.db, userId);
@@ -568,7 +568,7 @@ function createTestNotification(deps: HonoApiNotificationDependencies, userId: M
 			const redisId = await xaddNotification(deps, userId, notification);
 
 			deps.publishMainStream?.(userId, 'notification', notification);
-			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			const latestReadNotificationId = await deps.redis.get(`latestReadNotification:${userId}`);
 			if (latestReadNotificationId && latestReadNotificationId >= redisId) return;
@@ -578,7 +578,7 @@ function createTestNotification(deps: HonoApiNotificationDependencies, userId: M
 }
 
 function createAchievementEarnedNotification(
-	deps: HonoApiNotificationDependencies,
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
 	achievement: (typeof ACHIEVEMENT_TYPES)[number],
 ): void {
@@ -596,7 +596,7 @@ function createAchievementEarnedNotification(
 			const redisId = await xaddNotification(deps, userId, notification);
 
 			deps.publishMainStream?.(userId, 'notification', notification);
-			void pushSwNotificationForHonoApi(deps, userId, 'notification', notification);
+			void pushSwNotificationForApi(deps, userId, 'notification', notification);
 
 			trackPromise(
 				delay(2000, undefined, { ref: false })
@@ -611,8 +611,8 @@ function createAchievementEarnedNotification(
 	);
 }
 
-export async function grantAchievementForHonoApi(
-	deps: HonoApiNotificationDependencies,
+export async function grantAchievementForApi(
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
 	name: (typeof ACHIEVEMENT_TYPES)[number],
 ): Promise<void> {
@@ -635,19 +635,16 @@ export async function grantAchievementForHonoApi(
 	createAchievementEarnedNotification(deps, userId, name);
 }
 
-export async function handleHonoApiIClaimAchievement(
-	deps: HonoApiNotificationDependencies,
+export async function handleApiIClaimAchievement(
+	deps: ApiNotificationDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(claimAchievementParamDef, body);
-	await grantAchievementForHonoApi(deps, me.id, params.name);
+	const params = parseApiParams(claimAchievementParamDef, body);
+	await grantAchievementForApi(deps, me.id, params.name);
 }
 
-async function flushAllHonoApiNotifications(
-	deps: HonoApiNotificationDependencies,
-	userId: MiUser['id'],
-): Promise<void> {
+async function flushAllApiNotifications(deps: ApiNotificationDependencies, userId: MiUser['id']): Promise<void> {
 	await Promise.all([
 		deps.redis.del(`notificationTimeline:${userId}`),
 		deps.redis.del(`latestReadNotification:${userId}`),
@@ -655,8 +652,8 @@ async function flushAllHonoApiNotifications(
 	deps.publishMainStream?.(userId, 'notificationFlushed');
 }
 
-export async function markAllHonoApiNotificationsAsRead(
-	deps: HonoApiNotificationDependencies,
+export async function markAllApiNotificationsAsRead(
+	deps: ApiNotificationDependencies,
 	userId: MiUser['id'],
 	force: boolean,
 ): Promise<void> {
@@ -671,17 +668,17 @@ export async function markAllHonoApiNotificationsAsRead(
 
 	if (force || latestReadNotificationId == null || latestReadNotificationId < latestNotificationId) {
 		deps.publishMainStream?.(userId, 'readAllNotifications');
-		void pushSwNotificationForHonoApi(deps, userId, 'readAllNotifications', undefined);
+		void pushSwNotificationForApi(deps, userId, 'readAllNotifications', undefined);
 	}
 }
 
-export async function handleHonoApiNotificationsCreate(
-	deps: HonoApiNotificationDependencies,
+export async function handleApiNotificationsCreate(
+	deps: ApiNotificationDependencies,
 	me: MiUser,
 	token: MiAccessToken | null,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(notificationsCreateParamDef, body);
+	const params = parseApiParams(notificationsCreateParamDef, body);
 	createAppNotification(deps, me.id, {
 		appAccessTokenId: token ? token.id : null,
 		customBody: params.body,
@@ -700,12 +697,12 @@ function notificationGroupKey(notification: Record<string, unknown>): string | n
 	return null;
 }
 
-export async function handleHonoApiNotificationsDelete(
-	deps: HonoApiNotificationDependencies,
+export async function handleApiNotificationsDelete(
+	deps: ApiNotificationDependencies,
 	me: MiUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(notificationsDeleteParamDef, body);
+	const params = parseApiParams(notificationsDeleteParamDef, body);
 	const streamKey = `notificationTimeline:${me.id}`;
 	const redisId = await resolveNotificationStreamId(deps, me.id, params.notificationId);
 	let idsToDelete = [redisId];
@@ -746,14 +743,14 @@ export async function handleHonoApiNotificationsDelete(
 	deps.publishMainStream?.(me.id, 'notificationFlushed');
 }
 
-export function handleHonoApiNotificationsFlush(deps: HonoApiNotificationDependencies, me: MiUser): void {
-	trackPromise(flushAllHonoApiNotifications(deps, me.id));
+export function handleApiNotificationsFlush(deps: ApiNotificationDependencies, me: MiUser): void {
+	trackPromise(flushAllApiNotifications(deps, me.id));
 }
 
-export function handleHonoApiNotificationsMarkAllAsRead(deps: HonoApiNotificationDependencies, me: MiUser): void {
-	trackPromise(markAllHonoApiNotificationsAsRead(deps, me.id, true));
+export function handleApiNotificationsMarkAllAsRead(deps: ApiNotificationDependencies, me: MiUser): void {
+	trackPromise(markAllApiNotificationsAsRead(deps, me.id, true));
 }
 
-export function handleHonoApiNotificationsTestNotification(deps: HonoApiNotificationDependencies, me: MiUser): void {
+export function handleApiNotificationsTestNotification(deps: ApiNotificationDependencies, me: MiUser): void {
 	createTestNotification(deps, me.id);
 }

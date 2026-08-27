@@ -27,12 +27,12 @@ import { genId } from '@/misc/id/gen-id.js';
 import { secureRndstr } from '@/misc/secure-rndstr.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { packHonoApiApp, type HonoApiAppDependencies } from './app.js';
-import { packUserDetailedNotMeForHonoApi } from '../user/user.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { packApiApp, type ApiAppDependencies } from './app.js';
+import { packUserDetailedNotMeForApi } from '../user/user.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAuthSessionDependencies = HonoApiAppDependencies & {
+export type ApiAuthSessionDependencies = ApiAppDependencies & {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -64,8 +64,8 @@ type AuthSessionUserkeyParams = {
 	token: string;
 };
 
-function noSuchGenerateAppError(): HonoApiError {
-	return new HonoApiError({
+function noSuchGenerateAppError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such app.',
 		code: 'NO_SUCH_APP',
@@ -73,8 +73,8 @@ function noSuchGenerateAppError(): HonoApiError {
 	});
 }
 
-function noSuchUserkeyAppError(): HonoApiError {
-	return new HonoApiError({
+function noSuchUserkeyAppError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such app.',
 		code: 'NO_SUCH_APP',
@@ -82,8 +82,8 @@ function noSuchUserkeyAppError(): HonoApiError {
 	});
 }
 
-function noSuchSessionShowError(): HonoApiError {
-	return new HonoApiError({
+function noSuchSessionShowError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such session.',
 		code: 'NO_SUCH_SESSION',
@@ -91,8 +91,8 @@ function noSuchSessionShowError(): HonoApiError {
 	});
 }
 
-function noSuchSessionAcceptError(): HonoApiError {
-	return new HonoApiError({
+function noSuchSessionAcceptError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such session.',
 		code: 'NO_SUCH_SESSION',
@@ -100,8 +100,8 @@ function noSuchSessionAcceptError(): HonoApiError {
 	});
 }
 
-function noSuchSessionUserkeyError(): HonoApiError {
-	return new HonoApiError({
+function noSuchSessionUserkeyError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such session.',
 		code: 'NO_SUCH_SESSION',
@@ -109,8 +109,8 @@ function noSuchSessionUserkeyError(): HonoApiError {
 	});
 }
 
-function pendingSessionError(): HonoApiError {
-	return new HonoApiError({
+function pendingSessionError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'This session is not completed yet.',
 		code: 'PENDING_SESSION',
@@ -118,27 +118,27 @@ function pendingSessionError(): HonoApiError {
 	});
 }
 
-async function packHonoApiAuthSession(
-	deps: HonoApiAuthSessionDependencies,
+async function packApiAuthSession(
+	deps: ApiAuthSessionDependencies,
 	session: AuthSessionRow,
 	user: { id: MiUser['id'] } | null,
 ): Promise<{
 	id: string;
-	app: Awaited<ReturnType<typeof packHonoApiApp>>;
+	app: Awaited<ReturnType<typeof packApiApp>>;
 	token: string;
 }> {
 	return {
 		id: session.id,
-		app: await packHonoApiApp(deps, session.appId, user),
+		app: await packApiApp(deps, session.appId, user),
 		token: session.token,
 	};
 }
 
-export async function handleHonoApiAuthSessionGenerate(
-	deps: HonoApiAuthSessionDependencies,
+export async function handleApiAuthSessionGenerate(
+	deps: ApiAuthSessionDependencies,
 	body: Record<string, unknown>,
 ): Promise<{ token: string; url: string }> {
-	const params = parseHonoApiParams(authSessionGenerateParamDef, body);
+	const params = parseApiParams(authSessionGenerateParamDef, body);
 	const app = await fetchAppBySecretFromDatabase(deps.db, params.appSecret);
 	if (app == null) throw noSuchGenerateAppError();
 
@@ -155,24 +155,24 @@ export async function handleHonoApiAuthSessionGenerate(
 	};
 }
 
-export async function handleHonoApiAuthSessionShow(
-	deps: HonoApiAuthSessionDependencies,
+export async function handleApiAuthSessionShow(
+	deps: ApiAuthSessionDependencies,
 	user: { id: MiUser['id'] } | null,
 	body: Record<string, unknown>,
-): Promise<Awaited<ReturnType<typeof packHonoApiAuthSession>>> {
-	const params = parseHonoApiParams(authSessionShowParamDef, body);
+): Promise<Awaited<ReturnType<typeof packApiAuthSession>>> {
+	const params = parseApiParams(authSessionShowParamDef, body);
 	const session = await fetchAuthSessionByTokenFromDatabase(deps.db, params.token);
 	if (session == null) throw noSuchSessionShowError();
 
-	return await packHonoApiAuthSession(deps, session, user);
+	return await packApiAuthSession(deps, session, user);
 }
 
-export async function handleHonoApiAuthAccept(
-	deps: HonoApiAuthSessionDependencies,
+export async function handleApiAuthAccept(
+	deps: ApiAuthSessionDependencies,
 	user: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(authSessionShowParamDef, body);
+	const params = parseApiParams(authSessionShowParamDef, body);
 	const session = await fetchAuthSessionByTokenFromDatabase(deps.db, params.token);
 	if (session == null) throw noSuchSessionAcceptError();
 
@@ -200,14 +200,14 @@ export async function handleHonoApiAuthAccept(
 	await updateAuthSessionUserIdInDatabase(deps.db, session.id, user.id);
 }
 
-export async function handleHonoApiAuthSessionUserkey(
-	deps: HonoApiAuthSessionDependencies,
+export async function handleApiAuthSessionUserkey(
+	deps: ApiAuthSessionDependencies,
 	body: Record<string, unknown>,
 ): Promise<{
 	accessToken: string;
 	user: Record<string, unknown>;
 }> {
-	const params = parseHonoApiParams(authSessionUserkeyParamDef, body);
+	const params = parseApiParams(authSessionUserkeyParamDef, body);
 	const app = await fetchAppBySecretFromDatabase(deps.db, params.appSecret);
 	if (app == null) throw noSuchUserkeyAppError();
 
@@ -220,6 +220,6 @@ export async function handleHonoApiAuthSessionUserkey(
 
 	return {
 		accessToken: accessToken.token,
-		user: await packUserDetailedNotMeForHonoApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, session.userId)),
+		user: await packUserDetailedNotMeForApi(deps, await fetchUserByIdOrFailFromDatabase(deps.db, session.userId)),
 	};
 }

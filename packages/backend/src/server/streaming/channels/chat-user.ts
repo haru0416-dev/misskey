@@ -4,10 +4,10 @@
  */
 
 import type { JsonValue } from '@/misc/json-value.js';
-import { readUserChatMessageForHonoApi, type HonoApiChatDependencies } from '@/server/rest/chat/chat.js';
-import type { HonoStreamChannelDefinition } from '../channel.js';
+import { readUserChatMessageForApi, type ApiChatDependencies } from '@/server/rest/chat/chat.js';
+import type { StreamChannelDefinition } from '../channel.js';
 
-export const honoStreamChannelChatUser: HonoStreamChannelDefinition<HonoApiChatDependencies> = {
+export const honoStreamChannelChatUser: StreamChannelDefinition<ApiChatDependencies> = {
 	shouldShare: false,
 	requireCredential: true,
 	kind: 'read:chat',
@@ -31,7 +31,7 @@ export const honoStreamChannelChatUser: HonoStreamChannelDefinition<HonoApiChatD
 			},
 			onMessage: (type) => {
 				if (type === 'read') {
-					void readUserChatMessageForHonoApi(deps, user.id, otherId);
+					void readUserChatMessageForApi(deps, user.id, otherId);
 				}
 			},
 		};

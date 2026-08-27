@@ -21,10 +21,10 @@ import type { Packed } from '@/misc/json-schema.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiAd } from '@/models/Ad.js';
 import type { MiLocalUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminAdDependencies = {
+export type ApiAdminAdDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 };
@@ -69,8 +69,8 @@ export const adminAdUpdateParamDef = z.object({
 	isSensitive: z.boolean().optional(),
 });
 
-function noSuchAdError(id: string): HonoApiError {
-	return new HonoApiError({
+function noSuchAdError(id: string): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such ad.',
 		code: 'NO_SUCH_AD',
@@ -78,7 +78,7 @@ function noSuchAdError(id: string): HonoApiError {
 	});
 }
 
-function packAdForHonoApi(ad: MiAd): Packed<'Ad'> {
+function packAdForApi(ad: MiAd): Packed<'Ad'> {
 	return {
 		id: ad.id,
 		expiresAt: ad.expiresAt.toISOString(),
@@ -94,12 +94,12 @@ function packAdForHonoApi(ad: MiAd): Packed<'Ad'> {
 	};
 }
 
-export async function handleHonoApiAdminAdCreate(
-	deps: HonoApiAdminAdDependencies,
+export async function handleApiAdminAdCreate(
+	deps: ApiAdminAdDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Ad'>> {
-	const params = parseHonoApiParams(adminAdCreateParamDef, body);
+	const params = parseApiParams(adminAdCreateParamDef, body);
 	const ad = await createAdInDatabase(deps.db, {
 		id: genId(),
 		expiresAt: new Date(params.expiresAt),
@@ -119,15 +119,15 @@ export async function handleHonoApiAdminAdCreate(
 		ad,
 	});
 
-	return packAdForHonoApi(ad);
+	return packAdForApi(ad);
 }
 
-export async function handleHonoApiAdminAdDelete(
-	deps: HonoApiAdminAdDependencies,
+export async function handleApiAdminAdDelete(
+	deps: ApiAdminAdDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAdDeleteParamDef, body);
+	const params = parseApiParams(adminAdDeleteParamDef, body);
 	const ad = await fetchAdByIdFromDatabase(deps.db, params.id);
 
 	if (ad == null) throw noSuchAdError('ccac9863-3a03-416e-b899-8a64041118b1');
@@ -140,11 +140,11 @@ export async function handleHonoApiAdminAdDelete(
 	});
 }
 
-export async function handleHonoApiAdminAdList(
-	deps: HonoApiAdminAdDependencies,
+export async function handleApiAdminAdList(
+	deps: ApiAdminAdDependencies,
 	body: Record<string, unknown>,
 ): Promise<Packed<'Ad'>[]> {
-	const params = parseHonoApiParams(adminAdListParamDef, body);
+	const params = parseApiParams(adminAdListParamDef, body);
 	const { sinceId, untilId } = resolveDateIdPagination({ gen: (time) => genId(time) }, params);
 	const ads = await listAdsFromDatabase(deps.db, {
 		limit: params.limit,
@@ -153,15 +153,15 @@ export async function handleHonoApiAdminAdList(
 		publishing: params.publishing,
 	});
 
-	return ads.map(packAdForHonoApi);
+	return ads.map(packAdForApi);
 }
 
-export async function handleHonoApiAdminAdUpdate(
-	deps: HonoApiAdminAdDependencies,
+export async function handleApiAdminAdUpdate(
+	deps: ApiAdminAdDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminAdUpdateParamDef, body);
+	const params = parseApiParams(adminAdUpdateParamDef, body);
 	const ad = await fetchAdByIdFromDatabase(deps.db, params.id);
 
 	if (ad == null) throw noSuchAdError('b7aa1727-1354-47bc-a182-3a9c3973d300');

@@ -39,12 +39,12 @@ REST API のハンドラ関数 (`server/rest/*.ts`) は、必要な依存を **1
 
 ```ts
 // packages/backend/src/server/rest/account/i.ts
-export type HonoApiIDependencies = UserPackingDependencies & {
+export type ApiIDependencies = UserPackingDependencies & {
 	db: MiDrizzleDatabase;
 };
 
-export async function handleHonoApiI(
-	deps: HonoApiIDependencies,
+export async function handleApiI(
+	deps: ApiIDependencies,
 	user: MiLocalUser,
 	token: MiAccessToken | null,
 ): Promise<Record<string, unknown>> {

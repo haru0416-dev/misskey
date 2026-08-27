@@ -18,11 +18,11 @@ import { secureRndstr } from '@/misc/secure-rndstr.js';
 import { misskeyId } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { HonoApiError } from '../error.js';
-import { isHonoApiAdministrator } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
+import { ApiError } from '../error.js';
+import { isApiAdministrator } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiAdminUserMaintenanceDependencies = {
+export type ApiAdminUserMaintenanceDependencies = {
 	config: Config;
 	db: MiDrizzleDatabase;
 	meta: MiMeta;
@@ -41,8 +41,8 @@ type ResetPasswordResponse = {
 	password: string;
 };
 
-function noSuchUserError(): HonoApiError {
-	return new HonoApiError({
+function noSuchUserError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such user.',
 		code: 'NO_SUCH_USER',
@@ -50,8 +50,8 @@ function noSuchUserError(): HonoApiError {
 	});
 }
 
-function accessDeniedError(): HonoApiError {
-	return new HonoApiError({
+function accessDeniedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Access denied.',
 		code: 'ACCESS_DENIED',
@@ -65,19 +65,19 @@ function accessDeniedError(): HonoApiError {
  * 管理者どうしの横取りも防ぐ。
  */
 async function assertCanTakeOverUser(
-	deps: HonoApiAdminUserMaintenanceDependencies,
+	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
 	user: MiUser,
 ): Promise<void> {
-	if (me.id !== user.id && (await isHonoApiAdministrator(deps, user))) throw accessDeniedError();
+	if (me.id !== user.id && (await isApiAdministrator(deps, user))) throw accessDeniedError();
 }
 
-export async function handleHonoApiAdminResetPassword(
-	deps: HonoApiAdminUserMaintenanceDependencies,
+export async function handleApiAdminResetPassword(
+	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<ResetPasswordResponse> {
-	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
+	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw noSuchUserError();
 	await assertCanTakeOverUser(deps, me, user);
@@ -96,12 +96,12 @@ export async function handleHonoApiAdminResetPassword(
 	return { password: passwd };
 }
 
-export async function handleHonoApiAdminUnsetMfa(
-	deps: HonoApiAdminUserMaintenanceDependencies,
+export async function handleApiAdminUnsetMfa(
+	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
+	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw noSuchUserError();
 	await assertCanTakeOverUser(deps, me, user);
@@ -114,12 +114,12 @@ export async function handleHonoApiAdminUnsetMfa(
 	});
 }
 
-export async function handleHonoApiAdminUnsetUserAvatar(
-	deps: HonoApiAdminUserMaintenanceDependencies,
+export async function handleApiAdminUnsetUserAvatar(
+	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
+	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw new Error('user not found');
 	if (user.avatarId == null) return;
@@ -138,12 +138,12 @@ export async function handleHonoApiAdminUnsetUserAvatar(
 	});
 }
 
-export async function handleHonoApiAdminUnsetUserBanner(
-	deps: HonoApiAdminUserMaintenanceDependencies,
+export async function handleApiAdminUnsetUserBanner(
+	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUserMaintenanceParamDef, body);
+	const params = parseApiParams(adminUserMaintenanceParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw new Error('user not found');
 	if (user.bannerId == null) return;
@@ -162,12 +162,12 @@ export async function handleHonoApiAdminUnsetUserBanner(
 	});
 }
 
-export async function handleHonoApiAdminUpdateUserNote(
-	deps: HonoApiAdminUserMaintenanceDependencies,
+export async function handleApiAdminUpdateUserNote(
+	deps: ApiAdminUserMaintenanceDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(adminUpdateUserNoteParamDef, body);
+	const params = parseApiParams(adminUpdateUserNoteParamDef, body);
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
 	if (user == null) throw new Error('user not found');
 

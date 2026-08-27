@@ -77,36 +77,32 @@ import type { ChatRoomInvitationRow } from '@/db/schema/chat-room-invitation.js'
 import type { ChatRoomMembershipRow } from '@/db/schema/chat-room-membership.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
-import { xaddHonoApiNotification, type HonoApiNotificationDependencies } from '../notification/notification.js';
-import { HonoApiError, invalidParamError } from '../error.js';
-import type {
-	HonoApiChatRoomStreamPublisher,
-	HonoApiChatUserStreamPublisher,
-	HonoApiMainStreamPublisher,
-} from '../events.js';
+import { xaddApiNotification, type ApiNotificationDependencies } from '../notification/notification.js';
+import { ApiError, invalidParamError } from '../error.js';
+import type { ApiChatRoomStreamPublisher, ApiChatUserStreamPublisher, ApiMainStreamPublisher } from '../events.js';
 import {
-	packDriveFileForHonoApi,
-	packDriveFileManyByIdsForHonoApi,
-	type HonoApiDriveFileDependencies,
+	packDriveFileForApi,
+	packDriveFileManyByIdsForApi,
+	type ApiDriveFileDependencies,
 } from '../drive/drive-file.js';
-import { packUserLiteForHonoApi, packUserLiteManyForHonoApi } from '../user/user.js';
-import { getHonoApiRolePolicies, isHonoApiModerator, type HonoApiRolePolicyDependencies } from '../role/role-policy.js';
-import { parseHonoApiParams } from '../validation.js';
-import { pushSwNotificationForHonoApi } from '../notification/push-notification.js';
+import { packUserLiteForApi, packUserLiteManyForApi } from '../user/user.js';
+import { getApiRolePolicies, isApiModerator, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { parseApiParams } from '../validation.js';
+import { pushSwNotificationForApi } from '../notification/push-notification.js';
 
-export type HonoApiChatDependencies = HonoApiDriveFileDependencies &
-	HonoApiRolePolicyDependencies &
-	HonoApiNotificationDependencies & {
-		publishChatUserStream?: HonoApiChatUserStreamPublisher;
-		publishChatRoomStream?: HonoApiChatRoomStreamPublisher;
-		publishMainStream?: HonoApiMainStreamPublisher;
+export type ApiChatDependencies = ApiDriveFileDependencies &
+	ApiRolePolicyDependencies &
+	ApiNotificationDependencies & {
+		publishChatUserStream?: ApiChatUserStreamPublisher;
+		publishChatRoomStream?: ApiChatRoomStreamPublisher;
+		publishMainStream?: ApiMainStreamPublisher;
 	};
 
 const MAX_ROOM_MEMBERS = 50;
 const MAX_REACTIONS_PER_MESSAGE = 100;
 const isCustomEmojiRegexp = /^:([\w+-]+)(?:@\.)?:$/;
 
-function normalizeEmojiStringForHonoApi(x: string): string {
+function normalizeEmojiStringForApi(x: string): string {
 	const match = emojiRegex.exec(x);
 	if (match) {
 		// 合字を含む1つの絵文字
@@ -132,8 +128,8 @@ type ChatRoomMembershipPackable = ChatRoomMembershipRow & {
 	room?: MiChatRoom | null;
 };
 
-async function packChatMessageUsersForHonoApi(
-	deps: HonoApiChatDependencies,
+async function packChatMessageUsersForApi(
+	deps: ApiChatDependencies,
 	messages: MiChatMessage[],
 	packedUserHint?: Map<MiUser['id'], Packed<'UserLite'>>,
 	missingUserIdHint?: Set<MiUser['id']>,
@@ -169,7 +165,7 @@ async function packChatMessageUsersForHonoApi(
 		throw new EntityNotFoundError('MiUser', { id: missingRequiredUserId });
 	}
 
-	const newlyPackedUsers = await packUserLiteManyForHonoApi(
+	const newlyPackedUsers = await packUserLiteManyForApi(
 		deps,
 		[...userById.values()].filter((user) => !packedUsers.has(user.id)),
 	);
@@ -180,8 +176,8 @@ async function packChatMessageUsersForHonoApi(
 	return { packedUsers, missingUserIds };
 }
 
-export async function packChatMessageDetailedForHonoApi(
-	deps: HonoApiChatDependencies,
+export async function packChatMessageDetailedForApi(
+	deps: ApiChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	me?: { id: MiUser['id'] },
 	options?: {
@@ -197,7 +193,7 @@ export async function packChatMessageDetailedForHonoApi(
 	const packedRooms = options?._hint_?.packedRooms;
 
 	const message = typeof src === 'object' ? src : await fetchChatMessageByIdOrFailFromDatabase(deps.db, src);
-	const { packedUsers } = await packChatMessageUsersForHonoApi(
+	const { packedUsers } = await packChatMessageUsersForApi(
 		deps,
 		[message],
 		options?._hint_?.packedUsers,
@@ -219,39 +215,37 @@ export async function packChatMessageDetailedForHonoApi(
 		text: message.text,
 		fromUserId: message.fromUserId,
 		fromUser:
-			packedUsers?.get(message.fromUserId) ??
-			(await packUserLiteForHonoApi(deps, message.fromUser ?? message.fromUserId)),
+			packedUsers?.get(message.fromUserId) ?? (await packUserLiteForApi(deps, message.fromUser ?? message.fromUserId)),
 		toUserId: message.toUserId,
 		toUser: message.toUserId
-			? (packedUsers?.get(message.toUserId) ?? (await packUserLiteForHonoApi(deps, message.toUser ?? message.toUserId)))
+			? (packedUsers?.get(message.toUserId) ?? (await packUserLiteForApi(deps, message.toUser ?? message.toUserId)))
 			: undefined,
 		toRoomId: message.toRoomId,
 		toRoom: message.toRoomId
-			? (packedRooms?.get(message.toRoomId) ??
-				(await packChatRoomForHonoApi(deps, message.toRoom ?? message.toRoomId, me)))
+			? (packedRooms?.get(message.toRoomId) ?? (await packChatRoomForApi(deps, message.toRoom ?? message.toRoomId, me)))
 			: undefined,
 		fileId: message.fileId,
 		file: message.fileId
-			? (packedFiles?.get(message.fileId) ?? (await packDriveFileForHonoApi(deps, message.file ?? message.fileId)))
+			? (packedFiles?.get(message.fileId) ?? (await packDriveFileForApi(deps, message.file ?? message.fileId)))
 			: null,
 		reactions: reactions.filter((r): r is { user: Packed<'UserLite'>; reaction: string } => r.user != null),
 	} as Packed<'ChatMessage'>;
 }
 
-export async function packChatMessagesDetailedForHonoApi(
-	deps: HonoApiChatDependencies,
+export async function packChatMessagesDetailedForApi(
+	deps: ApiChatDependencies,
 	messages: MiChatMessage[],
 	me: { id: MiUser['id'] },
 ): Promise<Packed<'ChatMessage'>[]> {
 	if (messages.length === 0) return [];
 
 	const [packedUserData, packedFiles, packedRooms] = await Promise.all([
-		packChatMessageUsersForHonoApi(deps, messages),
-		packDriveFileManyByIdsForHonoApi(
+		packChatMessageUsersForApi(deps, messages),
+		packDriveFileManyByIdsForApi(
 			deps,
 			messages.map((m) => m.fileId).filter((x): x is string => x != null),
 		).then((files) => new Map(files.map((f) => [f.id, f as Packed<'DriveFile'> | null]))),
-		packChatRoomsForHonoApi(
+		packChatRoomsForApi(
 			deps,
 			messages.map((m) => m.toRoom ?? m.toRoomId).filter((x): x is MiChatRoom | string => x != null),
 			me,
@@ -260,13 +254,13 @@ export async function packChatMessagesDetailedForHonoApi(
 
 	return await Promise.all(
 		messages.map((message) =>
-			packChatMessageDetailedForHonoApi(deps, message, me, { _hint_: { ...packedUserData, packedFiles, packedRooms } }),
+			packChatMessageDetailedForApi(deps, message, me, { _hint_: { ...packedUserData, packedFiles, packedRooms } }),
 		),
 	);
 }
 
-async function packChatMessageLiteFor1on1ForHonoApi(
-	deps: HonoApiChatDependencies,
+async function packChatMessageLiteFor1on1ForApi(
+	deps: ApiChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	options?: { _hint_?: { packedFiles: Map<MiChatMessage['fileId'], Packed<'DriveFile'> | null> } },
 ): Promise<Packed<'ChatMessageLiteFor1on1'>> {
@@ -287,30 +281,30 @@ async function packChatMessageLiteFor1on1ForHonoApi(
 		toUserId: message.toUserId!,
 		fileId: message.fileId,
 		file: message.fileId
-			? (packedFiles?.get(message.fileId) ?? (await packDriveFileForHonoApi(deps, message.file ?? message.fileId)))
+			? (packedFiles?.get(message.fileId) ?? (await packDriveFileForApi(deps, message.file ?? message.fileId)))
 			: null,
 		reactions,
 	} as Packed<'ChatMessageLiteFor1on1'>;
 }
 
-async function packChatMessagesLiteFor1on1ForHonoApi(
-	deps: HonoApiChatDependencies,
+async function packChatMessagesLiteFor1on1ForApi(
+	deps: ApiChatDependencies,
 	messages: MiChatMessage[],
 ): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
 	if (messages.length === 0) return [];
 
-	const packedFiles = await packDriveFileManyByIdsForHonoApi(
+	const packedFiles = await packDriveFileManyByIdsForApi(
 		deps,
 		messages.map((m) => m.fileId).filter((x): x is string => x != null),
 	).then((files) => new Map(files.map((f) => [f.id, f as Packed<'DriveFile'> | null])));
 
 	return await Promise.all(
-		messages.map((message) => packChatMessageLiteFor1on1ForHonoApi(deps, message, { _hint_: { packedFiles } })),
+		messages.map((message) => packChatMessageLiteFor1on1ForApi(deps, message, { _hint_: { packedFiles } })),
 	);
 }
 
-async function packChatMessageLiteForRoomForHonoApi(
-	deps: HonoApiChatDependencies,
+async function packChatMessageLiteForRoomForApi(
+	deps: ApiChatDependencies,
 	src: MiChatMessage['id'] | MiChatMessage,
 	options?: {
 		_hint_?: {
@@ -327,7 +321,7 @@ async function packChatMessageLiteForRoomForHonoApi(
 	for (const record of message.reactions) {
 		const [userId, reaction] = record.split('/') as [string, string];
 		reactions.push({
-			user: packedUsers?.get(userId) ?? (await packUserLiteForHonoApi(deps, userId).catch(() => null)),
+			user: packedUsers?.get(userId) ?? (await packUserLiteForApi(deps, userId).catch(() => null)),
 			reaction,
 		});
 	}
@@ -338,19 +332,18 @@ async function packChatMessageLiteForRoomForHonoApi(
 		text: message.text,
 		fromUserId: message.fromUserId,
 		fromUser:
-			packedUsers?.get(message.fromUserId) ??
-			(await packUserLiteForHonoApi(deps, message.fromUser ?? message.fromUserId)),
+			packedUsers?.get(message.fromUserId) ?? (await packUserLiteForApi(deps, message.fromUser ?? message.fromUserId)),
 		toRoomId: message.toRoomId!,
 		fileId: message.fileId,
 		file: message.fileId
-			? (packedFiles?.get(message.fileId) ?? (await packDriveFileForHonoApi(deps, message.file ?? message.fileId)))
+			? (packedFiles?.get(message.fileId) ?? (await packDriveFileForApi(deps, message.file ?? message.fileId)))
 			: null,
 		reactions: reactions.filter((r): r is { user: Packed<'UserLite'>; reaction: string } => r.user != null),
 	} as Packed<'ChatMessageLiteForRoom'>;
 }
 
-async function packChatMessagesLiteForRoomForHonoApi(
-	deps: HonoApiChatDependencies,
+async function packChatMessagesLiteForRoomForApi(
+	deps: ApiChatDependencies,
 	messages: MiChatMessage[],
 ): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
 	if (messages.length === 0) return [];
@@ -366,8 +359,8 @@ async function packChatMessagesLiteForRoomForHonoApi(
 	}
 
 	const [packedUsers, packedFiles] = await Promise.all([
-		packUserLiteManyForHonoApi(deps, users).then((users) => new Map(users.map((u) => [u.id, u]))),
-		packDriveFileManyByIdsForHonoApi(
+		packUserLiteManyForApi(deps, users).then((users) => new Map(users.map((u) => [u.id, u]))),
+		packDriveFileManyByIdsForApi(
 			deps,
 			messages.map((m) => m.fileId).filter((x): x is string => x != null),
 		).then((files) => new Map(files.map((f) => [f.id, f as Packed<'DriveFile'> | null]))),
@@ -375,13 +368,13 @@ async function packChatMessagesLiteForRoomForHonoApi(
 
 	return await Promise.all(
 		messages.map((message) =>
-			packChatMessageLiteForRoomForHonoApi(deps, message, { _hint_: { packedFiles, packedUsers } }),
+			packChatMessageLiteForRoomForApi(deps, message, { _hint_: { packedFiles, packedUsers } }),
 		),
 	);
 }
 
-async function packChatRoomForHonoApi(
-	deps: HonoApiChatDependencies,
+async function packChatRoomForApi(
+	deps: ApiChatDependencies,
 	src: MiChatRoom['id'] | MiChatRoom,
 	me?: { id: MiUser['id'] },
 	options?: {
@@ -414,15 +407,14 @@ async function packChatRoomForHonoApi(
 		description: room.description,
 		ownerId: room.ownerId,
 		owner:
-			options?._hint_?.packedOwners.get(room.ownerId) ??
-			(await packUserLiteForHonoApi(deps, room.owner ?? room.ownerId)),
+			options?._hint_?.packedOwners.get(room.ownerId) ?? (await packUserLiteForApi(deps, room.owner ?? room.ownerId)),
 		isMuted: membership != null ? membership.isMuted : false,
 		invitationExists: invitation != null,
 	} as Packed<'ChatRoom'>;
 }
 
-async function packChatRoomsForHonoApi(
-	deps: HonoApiChatDependencies,
+async function packChatRoomsForApi(
+	deps: ApiChatDependencies,
 	rooms: (MiChatRoom | MiChatRoom['id'])[],
 	me: { id: MiUser['id'] },
 ): Promise<Packed<'ChatRoom'>[]> {
@@ -443,7 +435,7 @@ async function packChatRoomsForHonoApi(
 	const owners = _rooms.map((x) => x.owner ?? x.ownerId);
 
 	const [packedOwners, myMemberships, myInvitations] = await Promise.all([
-		packUserLiteManyForHonoApi(deps, owners).then((users) => new Map(users.map((u) => [u.id, u]))),
+		packUserLiteManyForApi(deps, owners).then((users) => new Map(users.map((u) => [u.id, u]))),
 		listChatRoomMembershipsByRoomIdsAndUserIdFromDatabase(
 			deps.db,
 			_rooms.map((x) => x.id),
@@ -464,13 +456,13 @@ async function packChatRoomsForHonoApi(
 
 	return await Promise.all(
 		_rooms.map((room) =>
-			packChatRoomForHonoApi(deps, room, me, { _hint_: { packedOwners, myMemberships, myInvitations } }),
+			packChatRoomForApi(deps, room, me, { _hint_: { packedOwners, myMemberships, myInvitations } }),
 		),
 	);
 }
 
-export async function packChatRoomInvitationForHonoApi(
-	deps: HonoApiChatDependencies,
+export async function packChatRoomInvitationForApi(
+	deps: ApiChatDependencies,
 	src: ChatRoomInvitationRow['id'] | ChatRoomInvitationPackable,
 	me: { id: MiUser['id'] },
 	options?: {
@@ -489,28 +481,28 @@ export async function packChatRoomInvitationForHonoApi(
 		roomId: invitation.roomId,
 		room:
 			options?._hint_?.packedRooms.get(invitation.roomId) ??
-			(await packChatRoomForHonoApi(deps, invitation.room ?? invitation.roomId, me)),
+			(await packChatRoomForApi(deps, invitation.room ?? invitation.roomId, me)),
 		userId: invitation.userId,
 		user:
 			options?._hint_?.packedUsers.get(invitation.userId) ??
-			(await packUserLiteForHonoApi(deps, invitation.user ?? invitation.userId)),
+			(await packUserLiteForApi(deps, invitation.user ?? invitation.userId)),
 	} as Packed<'ChatRoomInvitation'>;
 }
 
-export async function packChatRoomInvitationsForHonoApi(
-	deps: HonoApiChatDependencies,
+export async function packChatRoomInvitationsForApi(
+	deps: ApiChatDependencies,
 	invitations: ChatRoomInvitationPackable[],
 	me: { id: MiUser['id'] },
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
 	if (invitations.length === 0) return [];
 
 	const [packedRooms, packedUsers] = await Promise.all([
-		packChatRoomsForHonoApi(
+		packChatRoomsForApi(
 			deps,
 			invitations.map((invitation) => invitation.room ?? invitation.roomId),
 			me,
 		).then((rooms) => new Map(rooms.map((room) => [room.id, room]))),
-		packUserLiteManyForHonoApi(
+		packUserLiteManyForApi(
 			deps,
 			invitations.map((invitation) => invitation.user ?? invitation.userId),
 		).then((users) => new Map(users.map((user) => [user.id, user]))),
@@ -518,13 +510,13 @@ export async function packChatRoomInvitationsForHonoApi(
 
 	return await Promise.all(
 		invitations.map((invitation) =>
-			packChatRoomInvitationForHonoApi(deps, invitation, me, { _hint_: { packedRooms, packedUsers } }),
+			packChatRoomInvitationForApi(deps, invitation, me, { _hint_: { packedRooms, packedUsers } }),
 		),
 	);
 }
 
-async function packChatRoomMembershipForHonoApi(
-	deps: HonoApiChatDependencies,
+async function packChatRoomMembershipForApi(
+	deps: ApiChatDependencies,
 	src: ChatRoomMembershipRow['id'] | ChatRoomMembershipPackable,
 	me: { id: MiUser['id'] },
 	options?: {
@@ -545,18 +537,18 @@ async function packChatRoomMembershipForHonoApi(
 		userId: membership.userId,
 		user: options?.populateUser
 			? (options._hint_?.packedUsers?.get(membership.userId) ??
-				(await packUserLiteForHonoApi(deps, membership.user ?? membership.userId)))
+				(await packUserLiteForApi(deps, membership.user ?? membership.userId)))
 			: undefined,
 		roomId: membership.roomId,
 		room: options?.populateRoom
 			? (options._hint_?.packedRooms?.get(membership.roomId) ??
-				(await packChatRoomForHonoApi(deps, membership.room ?? membership.roomId, me)))
+				(await packChatRoomForApi(deps, membership.room ?? membership.roomId, me)))
 			: undefined,
 	} as Packed<'ChatRoomMembership'>;
 }
 
-async function packChatRoomMembershipsForHonoApi(
-	deps: HonoApiChatDependencies,
+async function packChatRoomMembershipsForApi(
+	deps: ApiChatDependencies,
 	memberships: ChatRoomMembershipPackable[],
 	me: { id: MiUser['id'] },
 	options: { populateUser?: boolean; populateRoom?: boolean } = {},
@@ -565,13 +557,13 @@ async function packChatRoomMembershipsForHonoApi(
 
 	const [packedUsers, packedRooms] = await Promise.all([
 		options.populateUser
-			? packUserLiteManyForHonoApi(
+			? packUserLiteManyForApi(
 					deps,
 					memberships.map((x) => x.user ?? x.userId),
 				).then((users) => new Map(users.map((u) => [u.id, u])))
 			: Promise.resolve(undefined),
 		options.populateRoom
-			? packChatRoomsForHonoApi(
+			? packChatRoomsForApi(
 					deps,
 					memberships.map((x) => x.room ?? x.roomId),
 					me,
@@ -581,7 +573,7 @@ async function packChatRoomMembershipsForHonoApi(
 
 	return await Promise.all(
 		memberships.map((membership) =>
-			packChatRoomMembershipForHonoApi(deps, membership, me, {
+			packChatRoomMembershipForApi(deps, membership, me, {
 				...options,
 				_hint_: omitUndefined({ packedUsers, packedRooms }),
 			}),
@@ -593,12 +585,12 @@ async function packChatRoomMembershipsForHonoApi(
 // ChatService のサービスロジック。
 // ---------------------------------------------------------------------------
 
-async function getChatAvailabilityForHonoApi(
-	deps: HonoApiChatDependencies,
+async function getChatAvailabilityForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 ): Promise<{ read: boolean; write: boolean }> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
-	const policies = await getHonoApiRolePolicies(deps, user);
+	const policies = await getApiRolePolicies(deps, user);
 
 	switch (policies.chatAvailability) {
 		case 'available':
@@ -612,14 +604,14 @@ async function getChatAvailabilityForHonoApi(
 	}
 }
 
-export async function checkChatAvailabilityForHonoApi(
-	deps: HonoApiChatDependencies,
+export async function checkChatAvailabilityForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 	permission: 'read' | 'write',
 ): Promise<void> {
-	const policy = await getChatAvailabilityForHonoApi(deps, userId);
+	const policy = await getChatAvailabilityForApi(deps, userId);
 	if (policy[permission] === false) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 403,
 			message: 'Role permission denied.',
 			code: 'ROLE_PERMISSION_DENIED',
@@ -629,18 +621,18 @@ export async function checkChatAvailabilityForHonoApi(
 	}
 }
 
-async function pushChatNotificationForHonoApi(
-	deps: HonoApiChatDependencies,
+async function pushChatNotificationForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 	body: Packed<'ChatMessage'>,
 ): Promise<void> {
-	await pushSwNotificationForHonoApi(deps, userId, 'newChatMessage', body);
+	await pushSwNotificationForApi(deps, userId, 'newChatMessage', body);
 }
 
 // notifierId を考慮したフィルタ (never/following/follower/mutualFollow/
 // followingOrFollower と mute 判定) を DB から直接読み、現在の関係で通知可否を判定する。
-async function createChatRoomInvitationNotificationForHonoApi(
-	deps: HonoApiChatDependencies,
+async function createChatRoomInvitationNotificationForApi(
+	deps: ApiChatDependencies,
 	notifieeId: MiUser['id'],
 	invitationId: string,
 	notifierId: MiUser['id'],
@@ -676,14 +668,14 @@ async function createChatRoomInvitationNotificationForHonoApi(
 		notifierId,
 		invitationId,
 	};
-	await xaddHonoApiNotification(deps, notifieeId, notification);
+	await xaddApiNotification(deps, notifieeId, notification);
 
 	deps.publishMainStream?.(notifieeId, 'notification', notification);
-	void pushSwNotificationForHonoApi(deps, notifieeId, 'notification', notification);
+	void pushSwNotificationForApi(deps, notifieeId, 'notification', notification);
 }
 
-async function createChatMessageToUserForHonoApi(
-	deps: HonoApiChatDependencies,
+async function createChatMessageToUserForApi(
+	deps: ApiChatDependencies,
 	fromUser: { id: MiUser['id']; host: MiUser['host'] },
 	toUser: MiUser,
 	params: { text?: string | null; file?: MiDriveFile | null; uri?: string | null },
@@ -709,12 +701,12 @@ async function createChatMessageToUserForHonoApi(
 		}
 	}
 
-	if (!(await getChatAvailabilityForHonoApi(deps, toUser.id)).write) {
+	if (!(await getChatAvailabilityForApi(deps, toUser.id)).write) {
 		throw chatNotAvailableError();
 	}
 
 	if (await blockingExistsInDatabase(deps.db, toUser.id, fromUser.id)) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'You cannot send a message because you have been blocked by this user.',
 			code: 'YOU_HAVE_BEEN_BLOCKED',
@@ -742,7 +734,7 @@ async function createChatMessageToUserForHonoApi(
 		});
 	}
 
-	const packedMessage = await packChatMessageLiteFor1on1ForHonoApi(deps, inserted);
+	const packedMessage = await packChatMessageLiteFor1on1ForApi(deps, inserted);
 
 	if (toUser.host == null) {
 		await deps.redis
@@ -765,17 +757,17 @@ async function createChatMessageToUserForHonoApi(
 			const marker = await deps.redis.get(`newUserChatMessageExists:${toUser.id}:${fromUser.id}`);
 			if (marker == null) return;
 
-			const packedMessageForTo = await packChatMessageDetailedForHonoApi(deps, inserted, toUser);
+			const packedMessageForTo = await packChatMessageDetailedForApi(deps, inserted, toUser);
 			deps.publishMainStream?.(toUser.id, 'newChatMessage', packedMessageForTo);
-			void pushChatNotificationForHonoApi(deps, toUser.id, packedMessageForTo);
+			void pushChatNotificationForApi(deps, toUser.id, packedMessageForTo);
 		}, 3000);
 	}
 
 	return packedMessage;
 }
 
-async function createChatMessageToRoomForHonoApi(
-	deps: HonoApiChatDependencies,
+async function createChatMessageToRoomForApi(
+	deps: ApiChatDependencies,
 	fromUser: { id: MiUser['id']; host: MiUser['host'] },
 	toRoom: MiChatRoom,
 	params: { text?: string | null; file?: MiDriveFile | null; uri?: string | null },
@@ -804,7 +796,7 @@ async function createChatMessageToRoomForHonoApi(
 	};
 
 	const inserted = await createChatMessageInDatabase(deps.db, message);
-	const packedMessage = await packChatMessageLiteForRoomForHonoApi(deps, inserted);
+	const packedMessage = await packChatMessageLiteForRoomForApi(deps, inserted);
 
 	deps.publishChatRoomStream?.(toRoom.id, 'message', packedMessage);
 
@@ -826,22 +818,22 @@ async function createChatMessageToRoomForHonoApi(
 
 		if (markers.every((marker) => marker[1] == null)) return;
 
-		const packedMessageForTo = await packChatMessageDetailedForHonoApi(deps, inserted);
+		const packedMessageForTo = await packChatMessageDetailedForApi(deps, inserted);
 
 		for (let i = 0; i < membershipsOtherThanMe.length; i++) {
 			const marker = markers[i]![1];
 			if (marker == null) continue;
 
 			deps.publishMainStream?.(membershipsOtherThanMe[i]!.userId, 'newChatMessage', packedMessageForTo);
-			void pushChatNotificationForHonoApi(deps, membershipsOtherThanMe[i]!.userId, packedMessageForTo);
+			void pushChatNotificationForApi(deps, membershipsOtherThanMe[i]!.userId, packedMessageForTo);
 		}
 	}, 3000);
 
 	return packedMessage;
 }
 
-export async function readUserChatMessageForHonoApi(
-	deps: HonoApiChatDependencies,
+export async function readUserChatMessageForApi(
+	deps: ApiChatDependencies,
 	readerId: MiUser['id'],
 	senderId: MiUser['id'],
 ): Promise<void> {
@@ -852,8 +844,8 @@ export async function readUserChatMessageForHonoApi(
 		.exec();
 }
 
-export async function readRoomChatMessageForHonoApi(
-	deps: HonoApiChatDependencies,
+export async function readRoomChatMessageForApi(
+	deps: ApiChatDependencies,
 	readerId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
@@ -864,20 +856,20 @@ export async function readRoomChatMessageForHonoApi(
 		.exec();
 }
 
-async function readAllChatMessagesForHonoApi(deps: HonoApiChatDependencies, readerId: MiUser['id']): Promise<void> {
+async function readAllChatMessagesForApi(deps: ApiChatDependencies, readerId: MiUser['id']): Promise<void> {
 	await deps.redis.pipeline().del(`newChatMessagesExists:${readerId}`).exec();
 }
 
-export async function hasPermissionToViewRoomTimelineForHonoApi(
-	deps: HonoApiChatDependencies,
+export async function hasPermissionToViewRoomTimelineForApi(
+	deps: ApiChatDependencies,
 	meId: MiUser['id'],
 	room: MiChatRoom,
 ): Promise<boolean> {
-	if (await isChatRoomMemberForHonoApi(deps, room, meId)) return true;
-	return await isHonoApiModerator(deps, { id: meId } as MiUser);
+	if (await isChatRoomMemberForApi(deps, room, meId)) return true;
+	return await isApiModerator(deps, { id: meId } as MiUser);
 }
 
-async function deleteChatMessageForHonoApi(deps: HonoApiChatDependencies, message: MiChatMessage): Promise<void> {
+async function deleteChatMessageForApi(deps: ApiChatDependencies, message: MiChatMessage): Promise<void> {
 	await deleteChatMessageByIdFromDatabase(deps.db, message.id);
 
 	if (message.toUserId) {
@@ -894,8 +886,8 @@ async function deleteChatMessageForHonoApi(deps: HonoApiChatDependencies, messag
 	}
 }
 
-async function chatUserTimelineForHonoApi(
-	deps: HonoApiChatDependencies,
+async function chatUserTimelineForApi(
+	deps: ApiChatDependencies,
 	meId: MiUser['id'],
 	otherId: MiUser['id'],
 	limit: number,
@@ -908,8 +900,8 @@ async function chatUserTimelineForHonoApi(
 	});
 }
 
-async function chatRoomTimelineForHonoApi(
-	deps: HonoApiChatDependencies,
+async function chatRoomTimelineForApi(
+	deps: ApiChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
 	sinceId?: MiChatMessage['id'] | null,
@@ -921,24 +913,24 @@ async function chatRoomTimelineForHonoApi(
 	});
 }
 
-async function chatUserHistoryForHonoApi(
-	deps: HonoApiChatDependencies,
+async function chatUserHistoryForApi(
+	deps: ApiChatDependencies,
 	meId: MiUser['id'],
 	limit: number,
 ): Promise<MiChatMessage[]> {
 	return await listUserChatHistoryFromDatabase(deps.db, meId, limit);
 }
 
-async function chatRoomHistoryForHonoApi(
-	deps: HonoApiChatDependencies,
+async function chatRoomHistoryForApi(
+	deps: ApiChatDependencies,
 	meId: MiUser['id'],
 	limit: number,
 ): Promise<MiChatMessage[]> {
 	return await listRoomChatHistoryFromDatabase(deps.db, meId, limit);
 }
 
-async function getUserChatReadStateMapForHonoApi(
-	deps: HonoApiChatDependencies,
+async function getUserChatReadStateMapForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 	otherIds: MiUser['id'][],
 ): Promise<Record<MiUser['id'], boolean>> {
@@ -958,8 +950,8 @@ async function getUserChatReadStateMapForHonoApi(
 	return readStateMap;
 }
 
-async function getRoomChatReadStateMapForHonoApi(
-	deps: HonoApiChatDependencies,
+async function getRoomChatReadStateMapForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 	roomIds: MiChatRoom['id'][],
 ): Promise<Record<MiChatRoom['id'], boolean>> {
@@ -979,8 +971,8 @@ async function getRoomChatReadStateMapForHonoApi(
 	return readStateMap;
 }
 
-export async function createChatRoomForHonoApi(
-	deps: HonoApiChatDependencies,
+export async function createChatRoomForApi(
+	deps: ApiChatDependencies,
 	owner: MiUser,
 	params: Partial<{ name: string; description: string }>,
 ): Promise<MiChatRoom> {
@@ -992,31 +984,27 @@ export async function createChatRoomForHonoApi(
 	});
 }
 
-async function hasPermissionToViewRoomInfoForHonoApi(
-	deps: HonoApiChatDependencies,
+async function hasPermissionToViewRoomInfoForApi(
+	deps: ApiChatDependencies,
 	meId: MiUser['id'],
 	room: MiChatRoom,
 ): Promise<boolean> {
 	if (room.ownerId === meId) return true;
-	if (await isChatRoomMemberForHonoApi(deps, room, meId)) return true;
+	if (await isChatRoomMemberForApi(deps, room, meId)) return true;
 	if (await fetchChatRoomInvitationFromDatabase(deps.db, room.id, meId)) return true;
-	return await isHonoApiModerator(deps, { id: meId } as MiUser);
+	return await isApiModerator(deps, { id: meId } as MiUser);
 }
 
-async function hasPermissionToDeleteRoomForHonoApi(
-	deps: HonoApiChatDependencies,
+async function hasPermissionToDeleteRoomForApi(
+	deps: ApiChatDependencies,
 	meId: MiUser['id'],
 	room: MiChatRoom,
 ): Promise<boolean> {
 	if (room.ownerId === meId) return true;
-	return await isHonoApiModerator(deps, { id: meId } as MiUser);
+	return await isApiModerator(deps, { id: meId } as MiUser);
 }
 
-async function deleteChatRoomForHonoApi(
-	deps: HonoApiChatDependencies,
-	room: MiChatRoom,
-	deleter?: MiUser,
-): Promise<void> {
+async function deleteChatRoomForApi(deps: ApiChatDependencies, room: MiChatRoom, deleter?: MiUser): Promise<void> {
 	const memberships = (await listChatRoomMembershipsByRoomIdFromDatabase(deps.db, room.id))
 		.map((m) => ({ userId: m.userId }))
 		.concat({ userId: room.ownerId });
@@ -1031,7 +1019,7 @@ async function deleteChatRoomForHonoApi(
 	await deleteChatRoomByIdFromDatabase(deps.db, room.id);
 
 	if (deleter) {
-		if (await isHonoApiModerator(deps, deleter)) {
+		if (await isApiModerator(deps, deleter)) {
 			await logModerationEventInDatabase(deps, deleter, 'deleteChatRoom', {
 				roomId: room.id,
 				room,
@@ -1040,23 +1028,20 @@ async function deleteChatRoomForHonoApi(
 	}
 }
 
-async function findMyChatRoomByIdForHonoApi(
-	deps: HonoApiChatDependencies,
+async function findMyChatRoomByIdForApi(
+	deps: ApiChatDependencies,
 	ownerId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 ): Promise<MiChatRoom | null> {
 	return await fetchChatRoomByIdAndOwnerIdFromDatabase(deps.db, roomId, ownerId);
 }
 
-async function findChatRoomByIdForHonoApi(
-	deps: HonoApiChatDependencies,
-	roomId: MiChatRoom['id'],
-): Promise<MiChatRoom | null> {
+async function findChatRoomByIdForApi(deps: ApiChatDependencies, roomId: MiChatRoom['id']): Promise<MiChatRoom | null> {
 	return await fetchChatRoomByIdFromDatabase(deps.db, roomId);
 }
 
-async function isChatRoomMemberForHonoApi(
-	deps: HonoApiChatDependencies,
+async function isChatRoomMemberForApi(
+	deps: ApiChatDependencies,
 	room: MiChatRoom,
 	userId: MiUser['id'],
 ): Promise<boolean> {
@@ -1064,8 +1049,8 @@ async function isChatRoomMemberForHonoApi(
 	return (await fetchChatRoomMembershipFromDatabase(deps.db, room.id, userId)) != null;
 }
 
-async function createChatRoomInvitationForHonoApi(
-	deps: HonoApiChatDependencies,
+async function createChatRoomInvitationForApi(
+	deps: ApiChatDependencies,
 	inviterId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 	inviteeId: MiUser['id'],
@@ -1095,13 +1080,13 @@ async function createChatRoomInvitationForHonoApi(
 		throw error;
 	});
 
-	void createChatRoomInvitationNotificationForHonoApi(deps, inviteeId, invitation.id, inviterId);
+	void createChatRoomInvitationNotificationForApi(deps, inviteeId, invitation.id, inviterId);
 
 	return created;
 }
 
-async function getSentChatRoomInvitationsWithPaginationForHonoApi(
-	deps: HonoApiChatDependencies,
+async function getSentChatRoomInvitationsWithPaginationForApi(
+	deps: ApiChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
 	sinceId?: string | null,
@@ -1113,8 +1098,8 @@ async function getSentChatRoomInvitationsWithPaginationForHonoApi(
 	});
 }
 
-async function getOwnedChatRoomsWithPaginationForHonoApi(
-	deps: HonoApiChatDependencies,
+async function getOwnedChatRoomsWithPaginationForApi(
+	deps: ApiChatDependencies,
 	ownerId: MiUser['id'],
 	limit: number,
 	sinceId?: string | null,
@@ -1126,8 +1111,8 @@ async function getOwnedChatRoomsWithPaginationForHonoApi(
 	});
 }
 
-async function getReceivedChatRoomInvitationsWithPaginationForHonoApi(
-	deps: HonoApiChatDependencies,
+async function getReceivedChatRoomInvitationsWithPaginationForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 	limit: number,
 	sinceId?: string | null,
@@ -1140,8 +1125,8 @@ async function getReceivedChatRoomInvitationsWithPaginationForHonoApi(
 	});
 }
 
-async function joinToChatRoomForHonoApi(
-	deps: HonoApiChatDependencies,
+async function joinToChatRoomForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
@@ -1166,8 +1151,8 @@ async function joinToChatRoomForHonoApi(
 	});
 }
 
-async function ignoreChatRoomInvitationForHonoApi(
-	deps: HonoApiChatDependencies,
+async function ignoreChatRoomInvitationForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
@@ -1176,8 +1161,8 @@ async function ignoreChatRoomInvitationForHonoApi(
 	await updateChatRoomInvitationIgnoredFromDatabase(deps.db, invitation.id, true);
 }
 
-async function leaveChatRoomForHonoApi(
-	deps: HonoApiChatDependencies,
+async function leaveChatRoomForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 ): Promise<void> {
@@ -1192,8 +1177,8 @@ async function leaveChatRoomForHonoApi(
 		.exec();
 }
 
-async function muteChatRoomForHonoApi(
-	deps: HonoApiChatDependencies,
+async function muteChatRoomForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 	roomId: MiChatRoom['id'],
 	mute: boolean,
@@ -1203,16 +1188,16 @@ async function muteChatRoomForHonoApi(
 	await updateChatRoomMembershipMuteFromDatabase(deps.db, membership.id, mute);
 }
 
-async function updateChatRoomForHonoApi(
-	deps: HonoApiChatDependencies,
+async function updateChatRoomForApi(
+	deps: ApiChatDependencies,
 	room: MiChatRoom,
 	params: { name?: string; description?: string },
 ): Promise<MiChatRoom> {
 	return await updateChatRoomInDatabase(deps.db, room.id, params);
 }
 
-async function getRoomChatMembershipsWithPaginationForHonoApi(
-	deps: HonoApiChatDependencies,
+async function getRoomChatMembershipsWithPaginationForApi(
+	deps: ApiChatDependencies,
 	roomId: MiChatRoom['id'],
 	limit: number,
 	sinceId?: string | null,
@@ -1224,8 +1209,8 @@ async function getRoomChatMembershipsWithPaginationForHonoApi(
 	});
 }
 
-async function searchChatMessagesForHonoApi(
-	deps: HonoApiChatDependencies,
+async function searchChatMessagesForApi(
+	deps: ApiChatDependencies,
 	meId: MiUser['id'],
 	query: string,
 	limit: number,
@@ -1234,15 +1219,15 @@ async function searchChatMessagesForHonoApi(
 	return await searchChatMessagesFromDatabase(deps.db, meId, query, limit, params);
 }
 
-async function resolveChatReactionForHonoApi(
-	deps: HonoApiChatDependencies,
+async function resolveChatReactionForApi(
+	deps: ApiChatDependencies,
 	reactionInput: string,
 	requireExists: boolean,
 ): Promise<string> {
 	const custom = reactionInput.match(isCustomEmojiRegexp);
 
 	if (custom == null) {
-		return normalizeEmojiStringForHonoApi(reactionInput);
+		return normalizeEmojiStringForApi(reactionInput);
 	} else {
 		const name = custom[1]!;
 		if (requireExists) {
@@ -1253,13 +1238,13 @@ async function resolveChatReactionForHonoApi(
 	}
 }
 
-async function reactToChatMessageForHonoApi(
-	deps: HonoApiChatDependencies,
+async function reactToChatMessageForApi(
+	deps: ApiChatDependencies,
 	messageId: MiChatMessage['id'],
 	userId: MiUser['id'],
 	reactionInput: string,
 ): Promise<void> {
-	const reaction = await resolveChatReactionForHonoApi(deps, reactionInput, true);
+	const reaction = await resolveChatReactionForApi(deps, reactionInput, true);
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, messageId);
 	if (message == null) throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
@@ -1279,7 +1264,7 @@ async function reactToChatMessageForHonoApi(
 	const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(deps.db, message.toRoomId) : null;
 
 	if (room) {
-		if (!(await isChatRoomMemberForHonoApi(deps, room, userId))) {
+		if (!(await isChatRoomMemberForApi(deps, room, userId))) {
 			throw noSuchMessageError('9b5839b9-0ba0-4351-8c35-37082093d200');
 		}
 	}
@@ -1289,7 +1274,7 @@ async function reactToChatMessageForHonoApi(
 	if (room) {
 		deps.publishChatRoomStream?.(room.id, 'react', {
 			messageId: message.id,
-			user: await packUserLiteForHonoApi(deps, userId),
+			user: await packUserLiteForApi(deps, userId),
 			reaction,
 		});
 	} else {
@@ -1298,13 +1283,13 @@ async function reactToChatMessageForHonoApi(
 	}
 }
 
-async function unreactToChatMessageForHonoApi(
-	deps: HonoApiChatDependencies,
+async function unreactToChatMessageForApi(
+	deps: ApiChatDependencies,
 	messageId: MiChatMessage['id'],
 	userId: MiUser['id'],
 	reactionInput: string,
 ): Promise<void> {
-	const reaction = await resolveChatReactionForHonoApi(deps, reactionInput, false);
+	const reaction = await resolveChatReactionForApi(deps, reactionInput, false);
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, messageId);
 	if (message == null) throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
@@ -1312,7 +1297,7 @@ async function unreactToChatMessageForHonoApi(
 		throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
 	}
 	const room = message.toRoomId ? await fetchChatRoomByIdOrFailFromDatabase(deps.db, message.toRoomId) : null;
-	if (room && !(await isChatRoomMemberForHonoApi(deps, room, userId))) {
+	if (room && !(await isChatRoomMemberForApi(deps, room, userId))) {
 		throw noSuchMessageError('c39ea42f-e3ca-428a-ad57-390e0a711595');
 	}
 
@@ -1321,7 +1306,7 @@ async function unreactToChatMessageForHonoApi(
 	if (room) {
 		deps.publishChatRoomStream?.(room.id, 'unreact', {
 			messageId: message.id,
-			user: await packUserLiteForHonoApi(deps, userId),
+			user: await packUserLiteForApi(deps, userId),
 			reaction,
 		});
 	} else {
@@ -1330,8 +1315,8 @@ async function unreactToChatMessageForHonoApi(
 	}
 }
 
-async function getMyChatMembershipsForHonoApi(
-	deps: HonoApiChatDependencies,
+async function getMyChatMembershipsForApi(
+	deps: ApiChatDependencies,
 	userId: MiUser['id'],
 	limit: number,
 	sinceId?: string | null,
@@ -1346,20 +1331,20 @@ async function getMyChatMembershipsForHonoApi(
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-function noSuchRoomError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such room.', code: 'NO_SUCH_ROOM', id });
+function noSuchRoomError(id: string): ApiError {
+	return new ApiError({ status: 400, message: 'No such room.', code: 'NO_SUCH_ROOM', id });
 }
 
-function noSuchMessageError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such message.', code: 'NO_SUCH_MESSAGE', id });
+function noSuchMessageError(id: string): ApiError {
+	return new ApiError({ status: 400, message: 'No such message.', code: 'NO_SUCH_MESSAGE', id });
 }
 
-function noSuchUserError(id: string): HonoApiError {
-	return new HonoApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id });
+function noSuchUserError(id: string): ApiError {
+	return new ApiError({ status: 400, message: 'No such user.', code: 'NO_SUCH_USER', id });
 }
 
-function chatNotAvailableError(): HonoApiError {
-	return new HonoApiError({
+function chatNotAvailableError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Chat is not available with this user.',
 		code: 'CHAT_NOT_AVAILABLE',
@@ -1367,8 +1352,8 @@ function chatNotAvailableError(): HonoApiError {
 	});
 }
 
-function tooManyChatMessageReactionsError(): HonoApiError {
-	return new HonoApiError({
+function tooManyChatMessageReactionsError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'This message has too many reactions.',
 		code: 'TOO_MANY_REACTIONS',
@@ -1376,8 +1361,8 @@ function tooManyChatMessageReactionsError(): HonoApiError {
 	});
 }
 
-function cannotCreateChatRoomInvitationError(): HonoApiError {
-	return new HonoApiError({
+function cannotCreateChatRoomInvitationError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Cannot create an invitation for this room.',
 		code: 'CANNOT_CREATE_INVITATION',
@@ -1385,8 +1370,8 @@ function cannotCreateChatRoomInvitationError(): HonoApiError {
 	});
 }
 
-function cannotJoinChatRoomError(): HonoApiError {
-	return new HonoApiError({
+function cannotJoinChatRoomError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Cannot join this room.',
 		code: 'CANNOT_JOIN_ROOM',
@@ -1394,7 +1379,7 @@ function cannotJoinChatRoomError(): HonoApiError {
 	});
 }
 
-async function getUserForHonoApiChat(deps: HonoApiChatDependencies, userId: string): Promise<MiUser> {
+async function getUserForApiChat(deps: ApiChatDependencies, userId: string): Promise<MiUser> {
 	const user = await fetchUserByIdFromDatabase(deps.db, userId);
 	if (user == null) throw noSuchUserError('11795c64-40ea-4198-b06e-3c873ed9039d');
 	return user;
@@ -1410,28 +1395,28 @@ export const chatHistoryParamDef = z.object({
 
 type ChatHistoryParams = { limit: number; room: boolean };
 
-export async function handleHonoApiChatHistory(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatHistory(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessage'>[]> {
-	const params = parseHonoApiParams(chatHistoryParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	const params = parseApiParams(chatHistoryParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	const history = params.room
-		? await chatRoomHistoryForHonoApi(deps, me.id, params.limit)
-		: await chatUserHistoryForHonoApi(deps, me.id, params.limit);
-	const packedMessages = await packChatMessagesDetailedForHonoApi(deps, history, me);
+		? await chatRoomHistoryForApi(deps, me.id, params.limit)
+		: await chatUserHistoryForApi(deps, me.id, params.limit);
+	const packedMessages = await packChatMessagesDetailedForApi(deps, history, me);
 
 	if (params.room) {
 		const roomIds = history.map((m) => m.toRoomId!);
-		const readStateMap = await getRoomChatReadStateMapForHonoApi(deps, me.id, roomIds);
+		const readStateMap = await getRoomChatReadStateMapForApi(deps, me.id, roomIds);
 		for (const message of packedMessages) {
 			message.isRead = readStateMap[message.toRoomId!] ?? false;
 		}
 	} else {
 		const otherIds = history.map((m) => (m.fromUserId === me.id ? m.toUserId! : m.fromUserId!));
-		const readStateMap = await getUserChatReadStateMapForHonoApi(deps, me.id, otherIds);
+		const readStateMap = await getUserChatReadStateMapForApi(deps, me.id, otherIds);
 		for (const message of packedMessages) {
 			const otherId = message.fromUserId === me.id ? message.toUserId! : message.fromUserId!;
 			message.isRead = readStateMap[otherId] ?? false;
@@ -1443,14 +1428,14 @@ export async function handleHonoApiChatHistory(
 
 const chatReadAllParamDef = z.object({});
 
-export async function handleHonoApiChatReadAll(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatReadAll(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	parseHonoApiParams(chatReadAllParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
-	await readAllChatMessagesForHonoApi(deps, me.id);
+	parseApiParams(chatReadAllParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
+	await readAllChatMessagesForApi(deps, me.id);
 }
 
 export const chatMessagesCreateToUserParamDef = z.object({
@@ -1461,19 +1446,19 @@ export const chatMessagesCreateToUserParamDef = z.object({
 
 type ChatMessagesCreateToUserParams = { text?: string | null; fileId?: string; toUserId: string };
 
-export async function handleHonoApiChatMessagesCreateToUser(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatMessagesCreateToUser(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessageLiteFor1on1'>> {
-	const params = parseHonoApiParams(chatMessagesCreateToUserParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
+	const params = parseApiParams(chatMessagesCreateToUserParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	let file = null;
 	if (params.fileId != null) {
 		file = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.fileId, me.id);
 		if (file == null)
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'No such file.',
 				code: 'NO_SUCH_FILE',
@@ -1482,7 +1467,7 @@ export async function handleHonoApiChatMessagesCreateToUser(
 	}
 
 	if (params.text == null && file == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'Content required. You need to set text or fileId.',
 			code: 'CONTENT_REQUIRED',
@@ -1491,7 +1476,7 @@ export async function handleHonoApiChatMessagesCreateToUser(
 	}
 
 	if (params.toUserId === me.id) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'You can not send a message to yourself.',
 			code: 'RECIPIENT_IS_YOURSELF',
@@ -1499,9 +1484,9 @@ export async function handleHonoApiChatMessagesCreateToUser(
 		});
 	}
 
-	const toUser = await getUserForHonoApiChat(deps, params.toUserId);
+	const toUser = await getUserForApiChat(deps, params.toUserId);
 
-	return await createChatMessageToUserForHonoApi(deps, me, toUser, omitUndefined({ text: params.text, file }));
+	return await createChatMessageToUserForApi(deps, me, toUser, omitUndefined({ text: params.text, file }));
 }
 
 export const chatMessagesCreateToRoomParamDef = z.object({
@@ -1512,22 +1497,22 @@ export const chatMessagesCreateToRoomParamDef = z.object({
 
 type ChatMessagesCreateToRoomParams = { text?: string | null; fileId?: string; toRoomId: string };
 
-export async function handleHonoApiChatMessagesCreateToRoom(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatMessagesCreateToRoom(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessageLiteForRoom'>> {
-	const params = parseHonoApiParams(chatMessagesCreateToRoomParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
+	const params = parseApiParams(chatMessagesCreateToRoomParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
-	const room = await findChatRoomByIdForHonoApi(deps, params.toRoomId);
+	const room = await findChatRoomByIdForApi(deps, params.toRoomId);
 	if (room == null) throw noSuchRoomError('8098520d-2da5-4e8f-8ee1-df78b55a4ec6');
 
 	let file = null;
 	if (params.fileId != null) {
 		file = await fetchDriveFileByIdAndUserIdFromDatabase(deps.db, params.fileId, me.id);
 		if (file == null)
-			throw new HonoApiError({
+			throw new ApiError({
 				status: 400,
 				message: 'No such file.',
 				code: 'NO_SUCH_FILE',
@@ -1536,7 +1521,7 @@ export async function handleHonoApiChatMessagesCreateToRoom(
 	}
 
 	if (params.text == null && file == null) {
-		throw new HonoApiError({
+		throw new ApiError({
 			status: 400,
 			message: 'Content required. You need to set text or fileId.',
 			code: 'CONTENT_REQUIRED',
@@ -1544,7 +1529,7 @@ export async function handleHonoApiChatMessagesCreateToRoom(
 		});
 	}
 
-	return await createChatMessageToRoomForHonoApi(deps, me, room, omitUndefined({ text: params.text, file }));
+	return await createChatMessageToRoomForApi(deps, me, room, omitUndefined({ text: params.text, file }));
 }
 
 export const chatMessagesDeleteParamDef = z.object({
@@ -1553,18 +1538,18 @@ export const chatMessagesDeleteParamDef = z.object({
 
 type ChatMessagesDeleteParams = { messageId: string };
 
-export async function handleHonoApiChatMessagesDelete(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatMessagesDelete(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(chatMessagesDeleteParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
+	const params = parseApiParams(chatMessagesDeleteParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
 	const message = await fetchChatMessageByIdAndFromUserIdFromDatabase(deps.db, params.messageId, me.id);
 	if (message == null) throw noSuchMessageError('36b67f0e-66a6-414b-83df-992a55294f17');
 
-	await deleteChatMessageForHonoApi(deps, message);
+	await deleteChatMessageForApi(deps, message);
 }
 
 export const chatMessagesReactParamDef = z.object({
@@ -1574,14 +1559,14 @@ export const chatMessagesReactParamDef = z.object({
 
 type ChatMessagesReactParams = { messageId: string; reaction: string };
 
-export async function handleHonoApiChatMessagesReact(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatMessagesReact(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(chatMessagesReactParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
-	await reactToChatMessageForHonoApi(deps, params.messageId, me.id, params.reaction);
+	const params = parseApiParams(chatMessagesReactParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await reactToChatMessageForApi(deps, params.messageId, me.id, params.reaction);
 }
 
 export const chatMessagesUnreactParamDef = z.object({
@@ -1591,14 +1576,14 @@ export const chatMessagesUnreactParamDef = z.object({
 
 type ChatMessagesUnreactParams = { messageId: string; reaction: string };
 
-export async function handleHonoApiChatMessagesUnreact(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatMessagesUnreact(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(chatMessagesUnreactParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
-	await unreactToChatMessageForHonoApi(deps, params.messageId, me.id, params.reaction);
+	const params = parseApiParams(chatMessagesUnreactParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await unreactToChatMessageForApi(deps, params.messageId, me.id, params.reaction);
 }
 
 export const chatMessagesRoomTimelineParamDef = z.object({
@@ -1619,29 +1604,29 @@ type ChatMessagesRoomTimelineParams = {
 	roomId: string;
 };
 
-export async function handleHonoApiChatMessagesRoomTimeline(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatMessagesRoomTimeline(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessageLiteForRoom'>[]> {
-	const params = parseHonoApiParams(chatMessagesRoomTimelineParamDef, body);
+	const params = parseApiParams(chatMessagesRoomTimelineParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
-	const room = await findChatRoomByIdForHonoApi(deps, params.roomId);
+	const room = await findChatRoomByIdForApi(deps, params.roomId);
 	if (room == null) throw noSuchRoomError('c4d9f88c-9270-4632-b032-6ed8cee36f7f');
 
-	if (!(await hasPermissionToViewRoomTimelineForHonoApi(deps, me.id, room))) {
+	if (!(await hasPermissionToViewRoomTimelineForApi(deps, me.id, room))) {
 		throw noSuchRoomError('c4d9f88c-9270-4632-b032-6ed8cee36f7f');
 	}
 
-	const messages = await chatRoomTimelineForHonoApi(deps, room.id, params.limit, sinceId, untilId);
+	const messages = await chatRoomTimelineForApi(deps, room.id, params.limit, sinceId, untilId);
 
-	void readRoomChatMessageForHonoApi(deps, me.id, room.id);
+	void readRoomChatMessageForApi(deps, me.id, room.id);
 
-	return await packChatMessagesLiteForRoomForHonoApi(deps, messages);
+	return await packChatMessagesLiteForRoomForApi(deps, messages);
 }
 
 export const chatMessagesSearchParamDef = z.object({
@@ -1653,22 +1638,22 @@ export const chatMessagesSearchParamDef = z.object({
 
 type ChatMessagesSearchParams = { query: string; limit: number; userId?: string | null; roomId?: string | null };
 
-export async function handleHonoApiChatMessagesSearch(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatMessagesSearch(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessage'>[]> {
-	const params = parseHonoApiParams(chatMessagesSearchParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	const params = parseApiParams(chatMessagesSearchParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	if (params.roomId != null) {
-		const room = await findChatRoomByIdForHonoApi(deps, params.roomId);
+		const room = await findChatRoomByIdForApi(deps, params.roomId);
 		if (room == null) throw noSuchRoomError('460b3669-81b0-4dc9-a997-44442141bf83');
-		if (!(await isChatRoomMemberForHonoApi(deps, room, me.id)))
+		if (!(await isChatRoomMemberForApi(deps, room, me.id)))
 			throw noSuchRoomError('460b3669-81b0-4dc9-a997-44442141bf83');
 	}
 
-	const messages = await searchChatMessagesForHonoApi(
+	const messages = await searchChatMessagesForApi(
 		deps,
 		me.id,
 		params.query,
@@ -1676,7 +1661,7 @@ export async function handleHonoApiChatMessagesSearch(
 		omitUndefined({ userId: params.userId, roomId: params.roomId }),
 	);
 
-	return await packChatMessagesDetailedForHonoApi(deps, messages, me);
+	return await packChatMessagesDetailedForApi(deps, messages, me);
 }
 
 export const chatMessagesShowParamDef = z.object({
@@ -1685,21 +1670,21 @@ export const chatMessagesShowParamDef = z.object({
 
 type ChatMessagesShowParams = { messageId: string };
 
-export async function handleHonoApiChatMessagesShow(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatMessagesShow(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessage'>> {
-	const params = parseHonoApiParams(chatMessagesShowParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	const params = parseApiParams(chatMessagesShowParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
 	const message = await fetchChatMessageByIdFromDatabase(deps.db, params.messageId);
 	if (message == null) throw noSuchMessageError('3710865b-1848-4da9-8d61-cfed15510b93');
-	if (message.fromUserId !== me.id && message.toUserId !== me.id && !(await isHonoApiModerator(deps, me))) {
+	if (message.fromUserId !== me.id && message.toUserId !== me.id && !(await isApiModerator(deps, me))) {
 		throw noSuchMessageError('3710865b-1848-4da9-8d61-cfed15510b93');
 	}
 
-	return await packChatMessageDetailedForHonoApi(deps, message, me);
+	return await packChatMessageDetailedForApi(deps, message, me);
 }
 
 export const chatMessagesUserTimelineParamDef = z.object({
@@ -1720,24 +1705,24 @@ type ChatMessagesUserTimelineParams = {
 	userId: string;
 };
 
-export async function handleHonoApiChatMessagesUserTimeline(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatMessagesUserTimeline(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatMessageLiteFor1on1'>[]> {
-	const params = parseHonoApiParams(chatMessagesUserTimelineParamDef, body);
+	const params = parseApiParams(chatMessagesUserTimelineParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
-	const other = await getUserForHonoApiChat(deps, params.userId);
+	const other = await getUserForApiChat(deps, params.userId);
 
-	const messages = await chatUserTimelineForHonoApi(deps, me.id, other.id, params.limit, sinceId, untilId);
+	const messages = await chatUserTimelineForApi(deps, me.id, other.id, params.limit, sinceId, untilId);
 
-	void readUserChatMessageForHonoApi(deps, me.id, other.id);
+	void readUserChatMessageForApi(deps, me.id, other.id);
 
-	return await packChatMessagesLiteFor1on1ForHonoApi(deps, messages);
+	return await packChatMessagesLiteFor1on1ForApi(deps, messages);
 }
 
 export const chatRoomsCreateParamDef = z.object({
@@ -1747,16 +1732,16 @@ export const chatRoomsCreateParamDef = z.object({
 
 type ChatRoomsCreateParams = { name: string; description?: string };
 
-export async function handleHonoApiChatRoomsCreate(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsCreate(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoom'>> {
-	const params = parseHonoApiParams(chatRoomsCreateParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
+	const params = parseApiParams(chatRoomsCreateParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
-	const room = await createChatRoomForHonoApi(deps, me, { name: params.name, description: params.description ?? '' });
-	return await packChatRoomForHonoApi(deps, room);
+	const room = await createChatRoomForApi(deps, me, { name: params.name, description: params.description ?? '' });
+	return await packChatRoomForApi(deps, room);
 }
 
 export const chatRoomsDeleteParamDef = z.object({
@@ -1765,21 +1750,21 @@ export const chatRoomsDeleteParamDef = z.object({
 
 type ChatRoomsDeleteParams = { roomId: string };
 
-export async function handleHonoApiChatRoomsDelete(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsDelete(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(chatRoomsDeleteParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
+	const params = parseApiParams(chatRoomsDeleteParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
-	const room = await findChatRoomByIdForHonoApi(deps, params.roomId);
+	const room = await findChatRoomByIdForApi(deps, params.roomId);
 	if (room == null) throw noSuchRoomError('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
 
-	if (!(await hasPermissionToDeleteRoomForHonoApi(deps, me.id, room)))
+	if (!(await hasPermissionToDeleteRoomForApi(deps, me.id, room)))
 		throw noSuchRoomError('d4e3753d-97bf-4a19-ab8e-21080fbc0f4b');
 
-	await deleteChatRoomForHonoApi(deps, room, me);
+	await deleteChatRoomForApi(deps, room, me);
 }
 
 export const chatRoomsUpdateParamDef = z.object({
@@ -1790,23 +1775,23 @@ export const chatRoomsUpdateParamDef = z.object({
 
 type ChatRoomsUpdateParams = { roomId: string; name?: string; description?: string };
 
-export async function handleHonoApiChatRoomsUpdate(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsUpdate(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoom'>> {
-	const params = parseHonoApiParams(chatRoomsUpdateParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
+	const params = parseApiParams(chatRoomsUpdateParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
-	const room = await findMyChatRoomByIdForHonoApi(deps, me.id, params.roomId);
+	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
 	if (room == null) throw noSuchRoomError('fcdb0f92-bda6-47f9-bd05-343e0e020932');
 
-	const updated = await updateChatRoomForHonoApi(
+	const updated = await updateChatRoomForApi(
 		deps,
 		room,
 		omitUndefined({ name: params.name, description: params.description }),
 	);
-	return await packChatRoomForHonoApi(deps, updated, me);
+	return await packChatRoomForApi(deps, updated, me);
 }
 
 export const chatRoomsShowParamDef = z.object({
@@ -1815,21 +1800,21 @@ export const chatRoomsShowParamDef = z.object({
 
 type ChatRoomsShowParams = { roomId: string };
 
-export async function handleHonoApiChatRoomsShow(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsShow(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoom'>> {
-	const params = parseHonoApiParams(chatRoomsShowParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	const params = parseApiParams(chatRoomsShowParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
-	const room = await findChatRoomByIdForHonoApi(deps, params.roomId);
+	const room = await findChatRoomByIdForApi(deps, params.roomId);
 	if (room == null) throw noSuchRoomError('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
 
-	if (!(await hasPermissionToViewRoomInfoForHonoApi(deps, me.id, room)))
+	if (!(await hasPermissionToViewRoomInfoForApi(deps, me.id, room)))
 		throw noSuchRoomError('857ae02f-8759-4d20-9adb-6e95fffe4fd7');
 
-	return await packChatRoomForHonoApi(deps, room, me);
+	return await packChatRoomForApi(deps, room, me);
 }
 
 export const chatRoomsOwnedParamDef = z.object({
@@ -1848,19 +1833,19 @@ type ChatRoomsOwnedParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiChatRoomsOwned(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsOwned(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoom'>[]> {
-	const params = parseHonoApiParams(chatRoomsOwnedParamDef, body);
+	const params = parseApiParams(chatRoomsOwnedParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
-	const rooms = await getOwnedChatRoomsWithPaginationForHonoApi(deps, me.id, params.limit, sinceId, untilId);
-	return await packChatRoomsForHonoApi(deps, rooms, me);
+	const rooms = await getOwnedChatRoomsWithPaginationForApi(deps, me.id, params.limit, sinceId, untilId);
+	return await packChatRoomsForApi(deps, rooms, me);
 }
 
 export const chatRoomsJoinParamDef = z.object({
@@ -1869,14 +1854,14 @@ export const chatRoomsJoinParamDef = z.object({
 
 type ChatRoomsJoinParams = { roomId: string };
 
-export async function handleHonoApiChatRoomsJoin(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsJoin(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(chatRoomsJoinParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
-	await joinToChatRoomForHonoApi(deps, me.id, params.roomId);
+	const params = parseApiParams(chatRoomsJoinParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await joinToChatRoomForApi(deps, me.id, params.roomId);
 }
 
 export const chatRoomsJoiningParamDef = z.object({
@@ -1895,19 +1880,19 @@ type ChatRoomsJoiningParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiChatRoomsJoining(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsJoining(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoomMembership'>[]> {
-	const params = parseHonoApiParams(chatRoomsJoiningParamDef, body);
+	const params = parseApiParams(chatRoomsJoiningParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
-	const memberships = await getMyChatMembershipsForHonoApi(deps, me.id, params.limit, sinceId, untilId);
-	return await packChatRoomMembershipsForHonoApi(deps, memberships, me, { populateUser: false, populateRoom: true });
+	const memberships = await getMyChatMembershipsForApi(deps, me.id, params.limit, sinceId, untilId);
+	return await packChatRoomMembershipsForApi(deps, memberships, me, { populateUser: false, populateRoom: true });
 }
 
 export const chatRoomsLeaveParamDef = z.object({
@@ -1916,14 +1901,14 @@ export const chatRoomsLeaveParamDef = z.object({
 
 type ChatRoomsLeaveParams = { roomId: string };
 
-export async function handleHonoApiChatRoomsLeave(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsLeave(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(chatRoomsLeaveParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
-	await leaveChatRoomForHonoApi(deps, me.id, params.roomId);
+	const params = parseApiParams(chatRoomsLeaveParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await leaveChatRoomForApi(deps, me.id, params.roomId);
 }
 
 export const chatRoomsMembersParamDef = z.object({
@@ -1944,31 +1929,24 @@ type ChatRoomsMembersParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiChatRoomsMembers(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsMembers(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoomMembership'>[]> {
-	const params = parseHonoApiParams(chatRoomsMembersParamDef, body);
+	const params = parseApiParams(chatRoomsMembersParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
-	const room = await findChatRoomByIdForHonoApi(deps, params.roomId);
+	const room = await findChatRoomByIdForApi(deps, params.roomId);
 	if (room == null) throw noSuchRoomError('7b9fe84c-eafc-4d21-bf89-485458ed2c18');
 
-	if (!(await isChatRoomMemberForHonoApi(deps, room, me.id)))
-		throw noSuchRoomError('7b9fe84c-eafc-4d21-bf89-485458ed2c18');
+	if (!(await isChatRoomMemberForApi(deps, room, me.id))) throw noSuchRoomError('7b9fe84c-eafc-4d21-bf89-485458ed2c18');
 
-	const memberships = await getRoomChatMembershipsWithPaginationForHonoApi(
-		deps,
-		room.id,
-		params.limit,
-		sinceId,
-		untilId,
-	);
-	return await packChatRoomMembershipsForHonoApi(deps, memberships, me, { populateUser: true, populateRoom: false });
+	const memberships = await getRoomChatMembershipsWithPaginationForApi(deps, room.id, params.limit, sinceId, untilId);
+	return await packChatRoomMembershipsForApi(deps, memberships, me, { populateUser: true, populateRoom: false });
 }
 
 export const chatRoomsMuteParamDef = z.object({
@@ -1978,14 +1956,14 @@ export const chatRoomsMuteParamDef = z.object({
 
 type ChatRoomsMuteParams = { roomId: string; mute: boolean };
 
-export async function handleHonoApiChatRoomsMute(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsMute(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(chatRoomsMuteParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
-	await muteChatRoomForHonoApi(deps, me.id, params.roomId, params.mute);
+	const params = parseApiParams(chatRoomsMuteParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await muteChatRoomForApi(deps, me.id, params.roomId, params.mute);
 }
 
 export const chatRoomsInvitationsCreateParamDef = z.object({
@@ -1995,19 +1973,19 @@ export const chatRoomsInvitationsCreateParamDef = z.object({
 
 type ChatRoomsInvitationsCreateParams = { roomId: string; userId: string };
 
-export async function handleHonoApiChatRoomsInvitationsCreate(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsInvitationsCreate(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoomInvitation'>> {
-	const params = parseHonoApiParams(chatRoomsInvitationsCreateParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
+	const params = parseApiParams(chatRoomsInvitationsCreateParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
 
-	const room = await findMyChatRoomByIdForHonoApi(deps, me.id, params.roomId);
+	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
 	if (room == null) throw noSuchRoomError('916f9507-49ba-4e90-b57f-1fd4deaa47a5');
 
-	const invitation = await createChatRoomInvitationForHonoApi(deps, me.id, room.id, params.userId);
-	return await packChatRoomInvitationForHonoApi(deps, invitation, me);
+	const invitation = await createChatRoomInvitationForApi(deps, me.id, room.id, params.userId);
+	return await packChatRoomInvitationForApi(deps, invitation, me);
 }
 
 export const chatRoomsInvitationsIgnoreParamDef = z.object({
@@ -2016,14 +1994,14 @@ export const chatRoomsInvitationsIgnoreParamDef = z.object({
 
 type ChatRoomsInvitationsIgnoreParams = { roomId: string };
 
-export async function handleHonoApiChatRoomsInvitationsIgnore(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsInvitationsIgnore(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<void> {
-	const params = parseHonoApiParams(chatRoomsInvitationsIgnoreParamDef, body);
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'write');
-	await ignoreChatRoomInvitationForHonoApi(deps, me.id, params.roomId);
+	const params = parseApiParams(chatRoomsInvitationsIgnoreParamDef, body);
+	await checkChatAvailabilityForApi(deps, me.id, 'write');
+	await ignoreChatRoomInvitationForApi(deps, me.id, params.roomId);
 }
 
 export const chatRoomsInvitationsInboxParamDef = z.object({
@@ -2042,25 +2020,25 @@ type ChatRoomsInvitationsInboxParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiChatRoomsInvitationsInbox(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsInvitationsInbox(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
-	const params = parseHonoApiParams(chatRoomsInvitationsInboxParamDef, body);
+	const params = parseApiParams(chatRoomsInvitationsInboxParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
-	const invitations = await getReceivedChatRoomInvitationsWithPaginationForHonoApi(
+	const invitations = await getReceivedChatRoomInvitationsWithPaginationForApi(
 		deps,
 		me.id,
 		params.limit,
 		sinceId,
 		untilId,
 	);
-	return await packChatRoomInvitationsForHonoApi(deps, invitations, me);
+	return await packChatRoomInvitationsForApi(deps, invitations, me);
 }
 
 export const chatRoomsInvitationsOutboxParamDef = z.object({
@@ -2081,26 +2059,26 @@ type ChatRoomsInvitationsOutboxParams = {
 	untilDate?: number;
 };
 
-export async function handleHonoApiChatRoomsInvitationsOutbox(
-	deps: HonoApiChatDependencies,
+export async function handleApiChatRoomsInvitationsOutbox(
+	deps: ApiChatDependencies,
 	me: MiLocalUser,
 	body: Record<string, unknown>,
 ): Promise<Packed<'ChatRoomInvitation'>[]> {
-	const params = parseHonoApiParams(chatRoomsInvitationsOutboxParamDef, body);
+	const params = parseApiParams(chatRoomsInvitationsOutboxParamDef, body);
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
-	await checkChatAvailabilityForHonoApi(deps, me.id, 'read');
+	await checkChatAvailabilityForApi(deps, me.id, 'read');
 
-	const room = await findMyChatRoomByIdForHonoApi(deps, me.id, params.roomId);
+	const room = await findMyChatRoomByIdForApi(deps, me.id, params.roomId);
 	if (room == null) throw noSuchRoomError('a3c6b309-9717-4316-ae94-a69b53437237');
 
-	const invitations = await getSentChatRoomInvitationsWithPaginationForHonoApi(
+	const invitations = await getSentChatRoomInvitationsWithPaginationForApi(
 		deps,
 		room.id,
 		params.limit,
 		sinceId,
 		untilId,
 	);
-	return await packChatRoomInvitationsForHonoApi(deps, invitations, me);
+	return await packChatRoomInvitationsForApi(deps, invitations, me);
 }

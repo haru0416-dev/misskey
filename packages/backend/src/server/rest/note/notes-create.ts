@@ -89,74 +89,67 @@ import type * as Bull from 'bullmq';
 import { fetchPollByNoteIdFromDatabase } from '@/core/note/PollStore.js';
 import { listWebhooksFromDatabase } from '@/core/webhook/WebhookStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
-import { addNoteToAntennasForHonoApi } from '../antenna/antennas.js';
-import { HonoApiError } from '../error.js';
+import { addNoteToAntennasForApi } from '../antenna/antennas.js';
+import { ApiError } from '../error.js';
 import { formatHashtagUsersWindow, getCurrentFeaturedWindow, HASHTAG_RANKING_WINDOW } from '../hashtag/hashtags.js';
 import {
-	deliverNoteActivityForHonoApi,
-	deliverToRelaysForHonoApi,
-	renderNoteOrRenoteActivityForHonoApi,
-	resolveRemoteRecipientForHonoApi,
-	type HonoApiNoteApDependencies,
-	type HonoApiRelayDeliverDependencies,
+	deliverNoteActivityForApi,
+	deliverToRelaysForApi,
+	renderNoteOrRenoteActivityForApi,
+	resolveRemoteRecipientForApi,
+	type ApiNoteApDependencies,
+	type ApiRelayDeliverDependencies,
 } from '../activitypub/notes-ap.js';
 import {
-	createPackNoteHintsForUsersForHonoApi,
-	createPackNoteStaticHintForHonoApi,
-	packNoteForHonoApi,
-	isVisibleForMeForHonoApi,
-	type HonoApiNoteDependencies,
+	createPackNoteHintsForUsersForApi,
+	createPackNoteStaticHintForApi,
+	packNoteForApi,
+	isVisibleForMeForApi,
+	type ApiNoteDependencies,
 } from './note.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { MiNotification } from '@/models/Notification.js';
-import {
-	getHonoApiRolePolicies,
-	getHonoApiUserRoles,
-	type HonoApiRolePolicyDependencies,
-} from '../role/role-policy.js';
-import { pushSwNotificationForHonoApi } from '../notification/push-notification.js';
-import {
-	packNotificationForHonoApi,
-	type HonoApiNotificationsListDependencies,
-} from '../notification/notifications-list.js';
-import { xaddHonoApiNotifications, type HonoApiNotificationDependencies } from '../notification/notification.js';
-import { packUserLiteForHonoApi } from '../user/user.js';
+import { getApiRolePolicies, getApiUserRoles, type ApiRolePolicyDependencies } from '../role/role-policy.js';
+import { pushSwNotificationForApi } from '../notification/push-notification.js';
+import { packNotificationForApi, type ApiNotificationsListDependencies } from '../notification/notifications-list.js';
+import { xaddApiNotifications, type ApiNotificationDependencies } from '../notification/notification.js';
+import { packUserLiteForApi } from '../user/user.js';
 import type {
-	HonoApiAntennaStreamPublisher,
-	HonoApiMainStreamPublisher,
-	HonoApiNotesStreamPublisher,
-	HonoApiRoleTimelineStreamPublisher,
+	ApiAntennaStreamPublisher,
+	ApiMainStreamPublisher,
+	ApiNotesStreamPublisher,
+	ApiRoleTimelineStreamPublisher,
 } from '../events.js';
-import type { HonoChartWriters } from '@/server/chart-runtime.js';
-import { parseHonoApiParams } from '../validation.js';
+import type { ChartWriters } from '@/server/chart-runtime.js';
+import { parseApiParams } from '../validation.js';
 
-export type HonoApiNotesCreateDependencies = HonoApiNoteDependencies &
-	HonoApiNoteApDependencies &
-	HonoApiRelayDeliverDependencies &
-	HonoApiRolePolicyDependencies &
-	HonoApiNotificationDependencies & {
+export type ApiNotesCreateDependencies = ApiNoteDependencies &
+	ApiNoteApDependencies &
+	ApiRelayDeliverDependencies &
+	ApiRolePolicyDependencies &
+	ApiNotificationDependencies & {
 		config: Config;
 		meta: MiMeta;
 		db: MiDrizzleDatabase;
 		redis: Redis.Redis;
 		redisForTimelines: Redis.Redis;
-		chartWriters: HonoChartWriters;
+		chartWriters: ChartWriters;
 		userWebhookDeliverQueue: UserWebhookDeliverQueue;
 		endedPollNotificationQueue: EndedPollNotificationQueue;
 		dbQueue: DbQueue;
-		publishNotesStream?: HonoApiNotesStreamPublisher;
-		publishMainStream?: HonoApiMainStreamPublisher;
-		publishAntennaStream?: HonoApiAntennaStreamPublisher;
-		publishRoleTimelineStream?: HonoApiRoleTimelineStreamPublisher;
+		publishNotesStream?: ApiNotesStreamPublisher;
+		publishMainStream?: ApiMainStreamPublisher;
+		publishAntennaStream?: ApiAntennaStreamPublisher;
+		publishRoleTimelineStream?: ApiRoleTimelineStreamPublisher;
 	};
 
-function isSilencedHostForHonoApi(silencedHosts: string[] | undefined, host: string | null): boolean {
+function isSilencedHostForApi(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) return false;
 	const lowerHost = host.toLowerCase();
 	return silencedHosts.some((target) => `.${lowerHost}`.endsWith(`.${target}`));
 }
 
-function isMediaSilencedHostForHonoApi(silencedHosts: string[] | undefined, host: string | null): boolean {
+function isMediaSilencedHostForApi(silencedHosts: string[] | undefined, host: string | null): boolean {
 	if (!silencedHosts || host == null) return false;
 	return silencedHosts.includes(host.toLowerCase());
 }
@@ -170,7 +163,7 @@ function concatNoteContentsForKeyWordCheck(content: {
 	return `${content.cw ?? ''}${content.text ?? ''}\n${(content.pollChoices ?? []).join('\n')}\n${(content.others ?? []).join('\n')}`;
 }
 
-export function isKeyWordIncludedForHonoApi(text: string, keyWords: string[]): boolean {
+export function isKeyWordIncludedForApi(text: string, keyWords: string[]): boolean {
 	if (keyWords.length === 0) return false;
 	if (text === '') return false;
 
@@ -193,14 +186,14 @@ export function isKeyWordIncludedForHonoApi(text: string, keyWords: string[]): b
 }
 
 /** hashtags は normalizeForSearch 済みで渡すこと。 */
-export async function updateHashtagsRankingsForHonoApi(
+export async function updateHashtagsRankingsForApi(
 	deps: { meta: Pick<MiMeta, 'hiddenTags' | 'sensitiveWords'>; redis: Redis.Redis },
 	hashtags: string[],
 	userId: MiUser['id'],
 ): Promise<void> {
 	const hiddenTags = new Set(deps.meta.hiddenTags.map((tag) => normalizeForSearch(tag)));
 	const candidates = [...new Set(hashtags)].filter(
-		(hashtag) => !hiddenTags.has(hashtag) && !isKeyWordIncludedForHonoApi(hashtag, deps.meta.sensitiveWords),
+		(hashtag) => !hiddenTags.has(hashtag) && !isKeyWordIncludedForApi(hashtag, deps.meta.sensitiveWords),
 	);
 	if (candidates.length === 0) return;
 
@@ -235,120 +228,120 @@ export async function updateHashtagsRankingsForHonoApi(
 	await redisPipeline.exec();
 }
 
-export async function updateHashtagsRankingForHonoApi(
+export async function updateHashtagsRankingForApi(
 	deps: { meta: Pick<MiMeta, 'hiddenTags' | 'sensitiveWords'>; redis: Redis.Redis },
 	hashtag: string,
 	userId: MiUser['id'],
 ): Promise<void> {
-	await updateHashtagsRankingsForHonoApi(deps, [hashtag], userId);
+	await updateHashtagsRankingsForApi(deps, [hashtag], userId);
 }
 
-function noSuchRenoteTargetError(): HonoApiError {
-	return new HonoApiError({
+function noSuchRenoteTargetError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such renote target.',
 		code: 'NO_SUCH_RENOTE_TARGET',
 		id: 'b5c90186-4ab0-49c8-9bba-a1f76c282ba4',
 	});
 }
-function cannotReRenoteError(): HonoApiError {
-	return new HonoApiError({
+function cannotReRenoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You can not Renote a pure Renote.',
 		code: 'CANNOT_RENOTE_TO_A_PURE_RENOTE',
 		id: 'fd4cc33e-2a37-48dd-99cc-9b806eb2031a',
 	});
 }
-function cannotRenoteDueToVisibilityError(): HonoApiError {
-	return new HonoApiError({
+function cannotRenoteDueToVisibilityError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You can not Renote due to target visibility.',
 		code: 'CANNOT_RENOTE_DUE_TO_VISIBILITY',
 		id: 'be9529e9-fe72-4de0-ae43-0b363c4938af',
 	});
 }
-function noSuchReplyTargetError(): HonoApiError {
-	return new HonoApiError({
+function noSuchReplyTargetError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such reply target.',
 		code: 'NO_SUCH_REPLY_TARGET',
 		id: '749ee0f6-d3da-459a-bf02-282e2da4292c',
 	});
 }
-function cannotReplyToInvisibleNoteError(): HonoApiError {
-	return new HonoApiError({
+function cannotReplyToInvisibleNoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You cannot reply to an invisible Note.',
 		code: 'CANNOT_REPLY_TO_AN_INVISIBLE_NOTE',
 		id: 'b98980fa-3780-406c-a935-b6d0eeee10d1',
 	});
 }
-function cannotReplyToPureRenoteError(): HonoApiError {
-	return new HonoApiError({
+function cannotReplyToPureRenoteError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You can not reply to a pure Renote.',
 		code: 'CANNOT_REPLY_TO_A_PURE_RENOTE',
 		id: '3ac74a84-8fd5-4bb0-870f-01804f82ce15',
 	});
 }
-function cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibilityError(): HonoApiError {
-	return new HonoApiError({
+function cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibilityError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You cannot reply to a specified visibility note with extended visibility.',
 		code: 'CANNOT_REPLY_TO_SPECIFIED_VISIBILITY_NOTE_WITH_EXTENDED_VISIBILITY',
 		id: 'ed940410-535c-4d5e-bfa3-af798671e93c',
 	});
 }
-function cannotCreateAlreadyExpiredPollError(): HonoApiError {
-	return new HonoApiError({
+function cannotCreateAlreadyExpiredPollError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Poll is already expired.',
 		code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL',
 		id: '04da457d-b083-4055-9082-955525eda5a5',
 	});
 }
-function noSuchChannelError(): HonoApiError {
-	return new HonoApiError({
+function noSuchChannelError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'No such channel.',
 		code: 'NO_SUCH_CHANNEL',
 		id: 'b1653923-5453-4edc-b786-7c4f39bb0bbb',
 	});
 }
-function youHaveBeenBlockedError(): HonoApiError {
-	return new HonoApiError({
+function youHaveBeenBlockedError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'You have been blocked by this user.',
 		code: 'YOU_HAVE_BEEN_BLOCKED',
 		id: 'b390d7e1-8a5e-46ed-b625-06271cafd3d3',
 	});
 }
-function noSuchFileError(): HonoApiError {
-	return new HonoApiError({
+function noSuchFileError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Some files are not found.',
 		code: 'NO_SUCH_FILE',
 		id: 'b6992544-63e7-67f0-fa7f-32444b1b5306',
 	});
 }
-function cannotRenoteOutsideOfChannelError(): HonoApiError {
-	return new HonoApiError({
+function cannotRenoteOutsideOfChannelError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Cannot renote outside of channel.',
 		code: 'CANNOT_RENOTE_OUTSIDE_OF_CHANNEL',
 		id: '33510210-8452-094c-6227-4a6c05d99f00',
 	});
 }
-function containsProhibitedWordsError(): HonoApiError {
-	return new HonoApiError({
+function containsProhibitedWordsError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Cannot post because it contains prohibited words.',
 		code: 'CONTAINS_PROHIBITED_WORDS',
 		id: 'aa6e01d3-a85c-669d-758a-76aab43af334',
 	});
 }
-function containsTooManyMentionsError(): HonoApiError {
-	return new HonoApiError({
+function containsTooManyMentionsError(): ApiError {
+	return new ApiError({
 		status: 400,
 		message: 'Cannot post because it exceeds the allowed number of mentions.',
 		code: 'CONTAINS_TOO_MANY_MENTIONS',
@@ -356,8 +349,8 @@ function containsTooManyMentionsError(): HonoApiError {
 	});
 }
 
-async function extractMentionedUsersForHonoApi(
-	deps: HonoApiNotesCreateDependencies,
+async function extractMentionedUsersForApi(
+	deps: ApiNotesCreateDependencies,
 	user: { host: MiUser['host'] },
 	tokens: mfm.MfmNode[],
 ): Promise<MiUser[]> {
@@ -385,8 +378,8 @@ async function extractMentionedUsersForHonoApi(
 	return resolvedUsers;
 }
 
-async function pushFanoutTimelineForHonoApi(
-	deps: HonoApiNotesCreateDependencies,
+async function pushFanoutTimelineForApi(
+	deps: ApiNotesCreateDependencies,
 	tl: string,
 	id: string,
 	maxlen: number,
@@ -427,8 +420,8 @@ function deterministicUuidv7(sourceId: string, key: string): string {
 	return `${sourceId.slice(0, 12)}7${hash.slice(0, 3)}${variant}${hash.slice(4, 19)}`;
 }
 
-async function hydrateNotificationNoteRelationsForHonoApi(
-	deps: HonoApiNotificationDependencies & HonoApiNotificationsListDependencies,
+async function hydrateNotificationNoteRelationsForApi(
+	deps: ApiNotificationDependencies & ApiNotificationsListDependencies,
 	notes: MiNote[],
 ): Promise<MiNote[]> {
 	const roots = notes.map((note) => ({ ...note }) as MiNote);
@@ -476,8 +469,8 @@ async function hydrateNotificationNoteRelationsForHonoApi(
 	return roots;
 }
 
-async function createNoteNotificationsForHonoApi(
-	deps: HonoApiNotificationDependencies & HonoApiNotificationsListDependencies,
+async function createNoteNotificationsForApi(
+	deps: ApiNotificationDependencies & ApiNotificationsListDependencies,
 	notifierId: MiUser['id'],
 	requests: readonly NoteNotificationRequest[],
 ): Promise<void> {
@@ -575,7 +568,7 @@ async function createNoteNotificationsForHonoApi(
 			},
 		};
 	});
-	await xaddHonoApiNotifications(
+	await xaddApiNotifications(
 		deps,
 		stored.map((item) => ({
 			userId: item.request.notifieeId,
@@ -599,10 +592,10 @@ async function createNoteNotificationsForHonoApi(
 	];
 	const fetchedNotes = await listNotesByIdsFromDatabase(deps.db, noteIds);
 	if (fetchedNotes.length === 0) return;
-	const notes = await hydrateNotificationNoteRelationsForHonoApi(deps, fetchedNotes);
-	const notePackHint = await createPackNoteStaticHintForHonoApi(deps, notes);
+	const notes = await hydrateNotificationNoteRelationsForApi(deps, fetchedNotes);
+	const notePackHint = await createPackNoteStaticHintForApi(deps, notes);
 	const packedNotifier =
-		notePackHint.packedUsers.get(notifier.id) ?? (await packUserLiteForHonoApi(deps, notifier).catch(() => null));
+		notePackHint.packedUsers.get(notifier.id) ?? (await packUserLiteForApi(deps, notifier).catch(() => null));
 	if (packedNotifier == null) return;
 	const packedUsers = new Map([[notifier.id, packedNotifier]]);
 	const noteSources = new Map(notes.map((note) => [note.id, note]));
@@ -610,7 +603,7 @@ async function createNoteNotificationsForHonoApi(
 	const batchSize = 1000;
 	for (let offset = 0; offset < publishable.length; offset += batchSize) {
 		const batch = publishable.slice(offset, offset + batchSize);
-		const notePackHintsByUserId = await createPackNoteHintsForUsersForHonoApi(
+		const notePackHintsByUserId = await createPackNoteHintsForUsersForApi(
 			deps,
 			notes,
 			batch.map((item) => item.request.notifieeId),
@@ -618,7 +611,7 @@ async function createNoteNotificationsForHonoApi(
 		);
 		await Promise.all(
 			batch.map(async (item) => {
-				const packed = await packNotificationForHonoApi(
+				const packed = await packNotificationForApi(
 					deps,
 					item.notification as unknown as MiNotification,
 					item.request.notifieeId,
@@ -631,26 +624,26 @@ async function createNoteNotificationsForHonoApi(
 				);
 				if (packed != null) {
 					deps.publishMainStream?.(item.request.notifieeId, 'notification', packed);
-					void pushSwNotificationForHonoApi(deps, item.request.notifieeId, 'notification', packed);
+					void pushSwNotificationForApi(deps, item.request.notifieeId, 'notification', packed);
 				}
 			}),
 		);
 	}
 }
 
-export async function createNoteNotificationForHonoApi(
-	deps: HonoApiNotificationDependencies & HonoApiNotificationsListDependencies,
+export async function createNoteNotificationForApi(
+	deps: ApiNotificationDependencies & ApiNotificationsListDependencies,
 	notifieeId: MiUser['id'],
 	notifierId: MiUser['id'],
 	type: NoteNotificationType,
 	extra: Record<string, unknown>,
 ): Promise<void> {
-	await createNoteNotificationsForHonoApi(deps, notifierId, [{ notifieeId, type, extra }]);
+	await createNoteNotificationsForApi(deps, notifierId, [{ notifieeId, type, extra }]);
 }
 
 type NotificationType = 'reply' | 'renote' | 'quote' | 'mention';
 
-class HonoNotificationManager {
+class NotificationManager {
 	private queue = new Map<MiUser['id'], { target: MiUser['id']; reason: NotificationType }>();
 
 	constructor(
@@ -668,7 +661,7 @@ class HonoNotificationManager {
 		}
 	}
 
-	async notify(deps: HonoApiNotesCreateDependencies): Promise<void> {
+	async notify(deps: ApiNotesCreateDependencies): Promise<void> {
 		if (this.queue.size === 0) return;
 
 		let visibleUserIds: Set<MiUser['id']> | null;
@@ -707,11 +700,11 @@ class HonoNotificationManager {
 				});
 			}
 		}
-		await createNoteNotificationsForHonoApi(deps, this.notifier.id, requests);
+		await createNoteNotificationsForApi(deps, this.notifier.id, requests);
 	}
 }
 
-export async function fetchOrRegisterInstanceForHonoApi(
+export async function fetchOrRegisterInstanceForApi(
 	deps: { db: MiDrizzleDatabase },
 	host: string,
 ): Promise<{ id: string; host: string }> {
@@ -726,8 +719,8 @@ export async function fetchOrRegisterInstanceForHonoApi(
 	});
 }
 
-async function enqueueUserWebhookForHonoApi(
-	deps: HonoApiNotesCreateDependencies,
+async function enqueueUserWebhookForApi(
+	deps: ApiNotesCreateDependencies,
 	userId: MiUser['id'],
 	type: 'note' | 'reply' | 'renote' | 'mention',
 	note: unknown,
@@ -798,7 +791,7 @@ const notePostCreateStages = [
 ] as const satisfies readonly DbNotePostCreateStage[];
 
 /**
- * enqueue 時点で no-op と確定するステージ。条件は postNoteCreatedForHonoApi の
+ * enqueue 時点で no-op と確定するステージ。条件は postNoteCreatedForApi の
  * 各ステージ冒頭ガードの鏡像に保つこと。DB 参照が要る判定はここに置かない。
  */
 function isNoopPostCreateStage(
@@ -867,8 +860,8 @@ function isQuoteData(data: {
 	);
 }
 
-async function insertNoteForHonoApi(
-	deps: HonoApiNotesCreateDependencies,
+async function insertNoteForApi(
+	deps: ApiNotesCreateDependencies,
 	user: { id: MiUser['id']; host: MiUser['host']; isBot: boolean },
 	data: CreateNoteData,
 	tags: string[],
@@ -973,7 +966,7 @@ async function insertNoteForHonoApi(
 				});
 			}
 			if (deps.meta.enableStatsForFederatedInstances && user.host != null) {
-				const instance = await fetchOrRegisterInstanceForHonoApi({ db: tx }, user.host);
+				const instance = await fetchOrRegisterInstanceForApi({ db: tx }, user.host);
 				await adjustInstanceNotesCountFromDatabase(tx, instance.id, 1);
 			}
 			if (data.channel) {
@@ -1031,8 +1024,8 @@ async function insertNoteForHonoApi(
 	}
 }
 
-async function postNoteCreatedForHonoApi(
-	deps: HonoApiNotesCreateDependencies,
+async function postNoteCreatedForApi(
+	deps: ApiNotesCreateDependencies,
 	note: MiNote,
 	user: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
 	data: PostCreateNoteData,
@@ -1047,7 +1040,7 @@ async function postNoteCreatedForHonoApi(
 			deps.chartWriters.perUserNotesChart.update(user, note, true);
 		}
 		if (user.host != null) {
-			fetchOrRegisterInstanceForHonoApi(deps, user.host)
+			fetchOrRegisterInstanceForApi(deps, user.host)
 				.then(async (i) => {
 					if (deps.meta.enableChartsForFederatedInstances) {
 						void deps.chartWriters.instanceChart.updateNote(i.host, note, true);
@@ -1057,7 +1050,7 @@ async function postNoteCreatedForHonoApi(
 		}
 		if (data.visibility === 'public' || data.visibility === 'home') {
 			const names = [...new Set(tags.map((tag) => normalizeForSearch(tag)))];
-			void updateHashtagsRankingsForHonoApi(deps, names, user.id).catch(() => {});
+			void updateHashtagsRankingsForApi(deps, names, user.id).catch(() => {});
 		}
 		if (!silent && user.host == null) {
 			void deps.chartWriters.activeUsersChart.write(user as { id: string; host: null });
@@ -1065,11 +1058,11 @@ async function postNoteCreatedForHonoApi(
 	}
 
 	if (stage === 'fanout' && deps.meta.enableFanoutTimeline) {
-		await pushNoteToFanoutTimelinesForHonoApi(deps, note, user);
+		await pushNoteToFanoutTimelinesForApi(deps, note, user);
 	}
 
 	if (stage === 'antennas') {
-		await addNoteToAntennasForHonoApi(deps, { ...note, channel: data.channel ?? null }, user);
+		await addNoteToAntennasForApi(deps, { ...note, channel: data.channel ?? null }, user);
 	}
 
 	if (stage === 'followerNotifications' && data.reply == null) {
@@ -1087,7 +1080,7 @@ async function postNoteCreatedForHonoApi(
 					extra: { noteId: note.id },
 					idempotencyKey: `${note.id}:${followerId}:note`,
 				}));
-			await createNoteNotificationsForHonoApi(deps, user.id, requests);
+			await createNoteNotificationsForApi(deps, user.id, requests);
 		}
 	}
 
@@ -1105,14 +1098,14 @@ async function postNoteCreatedForHonoApi(
 	}
 
 	if (!silent && stage === 'streamsAndRole') {
-		const noteObj = await packNoteForHonoApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
-		await addNoteToRoleTimelinesForHonoApi(deps, noteObj);
+		const noteObj = await packNoteForApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
+		await addNoteToRoleTimelinesForApi(deps, noteObj);
 		deps.publishNotesStream?.(noteObj);
 	}
 
 	if (!silent && stage === 'notifications') {
-		const noteObj = await packNoteForHonoApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
-		const nm = new HonoNotificationManager(user, note);
+		const noteObj = await packNoteForApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
+		const nm = new NotificationManager(user, note);
 		const publishMainStreamEvents: (() => void)[] = [];
 		const localMentionedUsers = mentionedUsers.filter((u) => u.host == null);
 		const threadMutedUserIds = new Set(
@@ -1126,7 +1119,7 @@ async function postNoteCreatedForHonoApi(
 			localMentionedUsers
 				.filter((u) => !threadMutedUserIds.has(u.id))
 				.map(async (u) => {
-					const detailPackedNote = await packNoteForHonoApi(deps, note, u, { detail: true });
+					const detailPackedNote = await packNoteForApi(deps, note, u, { detail: true });
 					publishMainStreamEvents.push(() => deps.publishMainStream?.(u.id, 'mention', detailPackedNote));
 					nm.push(u.id, 'mention');
 				}),
@@ -1161,8 +1154,8 @@ async function postNoteCreatedForHonoApi(
 	}
 
 	if (!silent && stage === 'webhooks') {
-		const noteObj = await packNoteForHonoApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
-		await enqueueUserWebhookForHonoApi(deps, user.id, 'note', noteObj, note.id);
+		const noteObj = await packNoteForApi(deps, note, null, { skipHide: true, withReactionAndUserPairCache: true });
+		await enqueueUserWebhookForApi(deps, user.id, 'note', noteObj, note.id);
 		const localMentionedUsers = mentionedUsers.filter((mentioned) => mentioned.host == null);
 		const threadMutedUserIds = new Set(
 			await listNoteThreadMutedUserIdsFromDatabase(
@@ -1175,8 +1168,8 @@ async function postNoteCreatedForHonoApi(
 			localMentionedUsers
 				.filter((mentioned) => !threadMutedUserIds.has(mentioned.id))
 				.map(async (mentioned) => {
-					const detailPackedNote = await packNoteForHonoApi(deps, note, mentioned, { detail: true });
-					await enqueueUserWebhookForHonoApi(deps, mentioned.id, 'mention', detailPackedNote, note.id);
+					const detailPackedNote = await packNoteForApi(deps, note, mentioned, { detail: true });
+					await enqueueUserWebhookForApi(deps, mentioned.id, 'mention', detailPackedNote, note.id);
 				}),
 		);
 		if (data.reply?.userHost === null) {
@@ -1186,16 +1179,16 @@ async function postNoteCreatedForHonoApi(
 				data.reply.threadId ?? data.reply.id,
 			);
 			if (!isThreadMuted) {
-				await enqueueUserWebhookForHonoApi(deps, data.reply.userId, 'reply', noteObj, note.id);
+				await enqueueUserWebhookForApi(deps, data.reply.userId, 'reply', noteObj, note.id);
 			}
 		}
 		if (data.renote?.userHost === null && user.id !== data.renote.userId) {
-			await enqueueUserWebhookForHonoApi(deps, data.renote.userId, 'renote', noteObj, note.id);
+			await enqueueUserWebhookForApi(deps, data.renote.userId, 'renote', noteObj, note.id);
 		}
 	}
 
 	if (!silent && stage === 'federation' && !data.localOnly && user.host == null) {
-		const activity = await renderNoteOrRenoteActivityForHonoApi(
+		const activity = await renderNoteOrRenoteActivityForApi(
 			deps,
 			{
 				localOnly: data.localOnly,
@@ -1208,33 +1201,33 @@ async function postNoteCreatedForHonoApi(
 		const recipientUsers = note.visibility === 'specified' ? (data.visibleUsers ?? []) : mentionedUsers;
 		const directRecipients = (
 			await Promise.all(
-				recipientUsers.filter((u) => u.host != null).map((u) => resolveRemoteRecipientForHonoApi(deps, u.id)),
+				recipientUsers.filter((u) => u.host != null).map((u) => resolveRemoteRecipientForApi(deps, u.id)),
 			)
 		).filter((u): u is NonNullable<typeof u> => u != null);
 
 		if (data.reply && data.reply.userHost !== null) {
-			const u = await resolveRemoteRecipientForHonoApi(deps, data.reply.userId);
+			const u = await resolveRemoteRecipientForApi(deps, data.reply.userId);
 			if (u) directRecipients.push(u);
 		}
 		if (data.renote && data.renote.userHost !== null) {
-			const u = await resolveRemoteRecipientForHonoApi(deps, data.renote.userId);
+			const u = await resolveRemoteRecipientForApi(deps, data.renote.userId);
 			if (u) directRecipients.push(u);
 		}
 
-		await deliverNoteActivityForHonoApi(deps, user, activity, {
+		await deliverNoteActivityForApi(deps, user, activity, {
 			directRecipients,
 			deliverToFollowers: ['public', 'home', 'followers'].includes(note.visibility),
 			jobIdPrefix: `note-create-${note.id}`,
 		});
 
 		if (note.visibility === 'public') {
-			await deliverToRelaysForHonoApi(deps, { id: user.id, host: null }, activity, `note-relay-${note.id}`);
+			await deliverToRelaysForApi(deps, { id: user.id, host: null }, activity, `note-relay-${note.id}`);
 		}
 	}
 }
 
-export async function handleHonoQueueNotePostCreate(
-	deps: HonoApiNotesCreateDependencies,
+export async function handleQueueNotePostCreate(
+	deps: ApiNotesCreateDependencies,
 	job: Bull.Job<DbNotePostCreateJobData>,
 ): Promise<void> {
 	const note = await fetchNoteByIdFromDatabase(deps.db, job.data.noteId);
@@ -1258,7 +1251,7 @@ export async function handleHonoQueueNotePostCreate(
 					threadId: job.data.reply.threadId ?? job.data.reply.id,
 				});
 	const effectiveRenote: DbNotePostCreateJobData['renote'] = renote ?? job.data.renote;
-	await postNoteCreatedForHonoApi(
+	await postNoteCreatedForApi(
 		deps,
 		{ ...note, reply, renote },
 		user,
@@ -1283,18 +1276,15 @@ export async function handleHonoQueueNotePostCreate(
 	);
 }
 
-async function addNoteToRoleTimelinesForHonoApi(
-	deps: HonoApiNotesCreateDependencies,
-	noteObj: Packed<'Note'>,
-): Promise<void> {
+async function addNoteToRoleTimelinesForApi(deps: ApiNotesCreateDependencies, noteObj: Packed<'Note'>): Promise<void> {
 	// コンディショナルロール評価には full MiUser が必要 (呼び出し元は部分型しか持たない) のためここでフェッチする。
 	const user = await fetchUserByIdOrFailFromDatabase(deps.db, noteObj.userId);
-	const roles = await getHonoApiUserRoles(deps, user);
+	const roles = await getApiUserRoles(deps, user);
 	if (roles.length === 0) return;
 
 	const r = deps.redisForTimelines.pipeline();
 	for (const role of roles) {
-		await pushFanoutTimelineForHonoApi(deps, `roleTimeline:${role.id}`, noteObj.id, 1000, r);
+		await pushFanoutTimelineForApi(deps, `roleTimeline:${role.id}`, noteObj.id, 1000, r);
 	}
 	await r.exec();
 	for (const role of roles) {
@@ -1302,22 +1292,22 @@ async function addNoteToRoleTimelinesForHonoApi(
 	}
 }
 
-async function pushNoteToFanoutTimelinesForHonoApi(
-	deps: HonoApiNotesCreateDependencies,
+async function pushNoteToFanoutTimelinesForApi(
+	deps: ApiNotesCreateDependencies,
 	note: MiNote,
 	user: { id: MiUser['id']; host: MiUser['host'] },
 ): Promise<void> {
 	const r = deps.redisForTimelines.pipeline();
 
 	if (note.channelId) {
-		await pushFanoutTimelineForHonoApi(
+		await pushFanoutTimelineForApi(
 			deps,
 			`channelTimeline:${note.channelId}`,
 			note.id,
 			deps.config.limits.channelTimelineNotes,
 			r,
 		);
-		await pushFanoutTimelineForHonoApi(
+		await pushFanoutTimelineForApi(
 			deps,
 			`userTimelineWithChannel:${user.id}`,
 			note.id,
@@ -1327,7 +1317,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 
 		const channelFollowerIds = await listFollowerUserIdsByChannelIdFromDatabase(deps.db, note.channelId);
 		for (const followerId of channelFollowerIds) {
-			await pushFanoutTimelineForHonoApi(
+			await pushFanoutTimelineForApi(
 				deps,
 				`homeTimeline:${followerId}`,
 				note.id,
@@ -1335,7 +1325,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 				r,
 			);
 			if (note.fileIds.length > 0) {
-				await pushFanoutTimelineForHonoApi(
+				await pushFanoutTimelineForApi(
 					deps,
 					`homeTimelineWithFiles:${followerId}`,
 					note.id,
@@ -1362,7 +1352,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 			if (note.visibility === 'specified' && !visibleUserIdSet.has(following.followerId)) continue;
 			if (isReply(note, following.followerId) && !following.withReplies) continue;
 
-			await pushFanoutTimelineForHonoApi(
+			await pushFanoutTimelineForApi(
 				deps,
 				`homeTimeline:${following.followerId}`,
 				note.id,
@@ -1370,7 +1360,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 				r,
 			);
 			if (note.fileIds.length > 0) {
-				await pushFanoutTimelineForHonoApi(
+				await pushFanoutTimelineForApi(
 					deps,
 					`homeTimelineWithFiles:${following.followerId}`,
 					note.id,
@@ -1389,7 +1379,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 				continue;
 			if (isReply(note, membership.userListUserId) && !membership.withReplies) continue;
 
-			await pushFanoutTimelineForHonoApi(
+			await pushFanoutTimelineForApi(
 				deps,
 				`userListTimeline:${membership.userListId}`,
 				note.id,
@@ -1397,7 +1387,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 				r,
 			);
 			if (note.fileIds.length > 0) {
-				await pushFanoutTimelineForHonoApi(
+				await pushFanoutTimelineForApi(
 					deps,
 					`userListTimelineWithFiles:${membership.userListId}`,
 					note.id,
@@ -1409,7 +1399,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 
 		if (note.userHost == null) {
 			if (note.visibility !== 'specified' || !visibleUserIdSet.has(user.id)) {
-				await pushFanoutTimelineForHonoApi(
+				await pushFanoutTimelineForApi(
 					deps,
 					`homeTimeline:${user.id}`,
 					note.id,
@@ -1417,7 +1407,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 					r,
 				);
 				if (note.fileIds.length > 0) {
-					await pushFanoutTimelineForHonoApi(
+					await pushFanoutTimelineForApi(
 						deps,
 						`homeTimelineWithFiles:${user.id}`,
 						note.id,
@@ -1429,7 +1419,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 		}
 
 		if (isReply(note)) {
-			await pushFanoutTimelineForHonoApi(
+			await pushFanoutTimelineForApi(
 				deps,
 				`userTimelineWithReplies:${user.id}`,
 				note.id,
@@ -1439,19 +1429,13 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 				r,
 			);
 			if (note.visibility === 'public' && note.userHost == null) {
-				await pushFanoutTimelineForHonoApi(deps, 'localTimelineWithReplies', note.id, 300, r);
+				await pushFanoutTimelineForApi(deps, 'localTimelineWithReplies', note.id, 300, r);
 				if (note.replyUserHost == null) {
-					await pushFanoutTimelineForHonoApi(
-						deps,
-						`localTimelineWithReplyTo:${note.replyUserId}`,
-						note.id,
-						300 / 10,
-						r,
-					);
+					await pushFanoutTimelineForApi(deps, `localTimelineWithReplyTo:${note.replyUserId}`, note.id, 300 / 10, r);
 				}
 			}
 		} else {
-			await pushFanoutTimelineForHonoApi(
+			await pushFanoutTimelineForApi(
 				deps,
 				`userTimeline:${user.id}`,
 				note.id,
@@ -1461,7 +1445,7 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 				r,
 			);
 			if (note.fileIds.length > 0) {
-				await pushFanoutTimelineForHonoApi(
+				await pushFanoutTimelineForApi(
 					deps,
 					`userTimelineWithFiles:${user.id}`,
 					note.id,
@@ -1472,9 +1456,9 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 				);
 			}
 			if (note.visibility === 'public' && note.userHost == null) {
-				await pushFanoutTimelineForHonoApi(deps, 'localTimeline', note.id, 1000, r);
+				await pushFanoutTimelineForApi(deps, 'localTimeline', note.id, 1000, r);
 				if (note.fileIds.length > 0) {
-					await pushFanoutTimelineForHonoApi(deps, 'localTimelineWithFiles', note.id, 500, r);
+					await pushFanoutTimelineForApi(deps, 'localTimelineWithFiles', note.id, 500, r);
 				}
 			}
 		}
@@ -1483,8 +1467,8 @@ async function pushNoteToFanoutTimelinesForHonoApi(
 	await r.exec();
 }
 
-export async function createNoteForHonoApi(
-	deps: HonoApiNotesCreateDependencies,
+export async function createNoteForApi(
+	deps: ApiNotesCreateDependencies,
 	user: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
 	data: CreateNoteData,
 	silent = false,
@@ -1506,11 +1490,11 @@ export async function createNoteForHonoApi(
 	}
 
 	// ロールポリシーはこの関数内で2箇所 (canPublicNote / mentionLimit) から参照するため1回だけ解決する。
-	const policies = await getHonoApiRolePolicies(deps, user as MiUser);
+	const policies = await getApiRolePolicies(deps, user as MiUser);
 
 	if (data.visibility === 'public' && data.channel == null) {
 		if (
-			isKeyWordIncludedForHonoApi(data.cw ?? data.text ?? '', deps.meta.sensitiveWords) ||
+			isKeyWordIncludedForApi(data.cw ?? data.text ?? '', deps.meta.sensitiveWords) ||
 			policies.canPublicNote === false
 		) {
 			data.visibility = 'home';
@@ -1518,7 +1502,7 @@ export async function createNoteForHonoApi(
 	}
 
 	if (
-		isKeyWordIncludedForHonoApi(
+		isKeyWordIncludedForApi(
 			concatNoteContentsForKeyWordCheck(
 				omitUndefined({ cw: data.cw, text: data.text, pollChoices: data.poll?.choices }),
 			),
@@ -1528,7 +1512,7 @@ export async function createNoteForHonoApi(
 		throw new IdentifiableError('689ee33f-f97c-479a-ac49-1b9f8140af99', 'Note contains prohibited words');
 	}
 
-	const inSilencedInstance = isSilencedHostForHonoApi(deps.meta.silencedHosts, user.host);
+	const inSilencedInstance = isSilencedHostForApi(deps.meta.silencedHosts, user.host);
 	if (data.visibility === 'public' && inSilencedInstance && user.host !== null) {
 		data.visibility = 'home';
 	}
@@ -1598,10 +1582,10 @@ export async function createNoteForHonoApi(
 
 		tags = data.apHashtags ?? extractHashtags(combined);
 		emojis = data.apEmojis ?? extractCustomEmojisFromMfm(combined);
-		mentionedUsers = data.apMentions ?? (await extractMentionedUsersForHonoApi(deps, user, combined));
+		mentionedUsers = data.apMentions ?? (await extractMentionedUsersForApi(deps, user, combined));
 	}
 
-	if (isMediaSilencedHostForHonoApi(deps.meta.mediaSilencedHosts, user.host)) emojis = [];
+	if (isMediaSilencedHostForApi(deps.meta.mediaSilencedHosts, user.host)) emojis = [];
 
 	tags = tags.filter((tag) => Array.from(tag).length <= 128).splice(0, 32);
 
@@ -1642,7 +1626,7 @@ export async function createNoteForHonoApi(
 	}
 
 	const persisted = await persist((db) =>
-		insertNoteForHonoApi(deps, user, data, tags, emojis, finalMentionedUsers, silent, db),
+		insertNoteForApi(deps, user, data, tags, emojis, finalMentionedUsers, silent, db),
 	);
 	// 行はステージ毎に独立しているが、成功経路では claim もステージ毎のトランザクションも
 	// 張らず、完了した行をまとめて1本の DELETE で消す。落ちた場合は未完了の行が残り、
@@ -1651,7 +1635,7 @@ export async function createNoteForHonoApi(
 		const done: PersistedNote['outboxJobs'] = [];
 		for (const job of jobs) {
 			try {
-				await postNoteCreatedForHonoApi(
+				await postNoteCreatedForApi(
 					deps,
 					persisted.note,
 					user,
@@ -1681,7 +1665,7 @@ export async function createNoteForHonoApi(
 	// 投げっぱなしにすると裏の書き込みが応答後も無制限に並行し、DB プールを奪う。
 	const runAnalytics = async (): Promise<void> => {
 		try {
-			await postNoteCreatedForHonoApi(deps, persisted.note, user, data, tags, finalMentionedUsers, silent, 'analytics');
+			await postNoteCreatedForApi(deps, persisted.note, user, data, tags, finalMentionedUsers, silent, 'analytics');
 		} catch (error) {
 			console.error(`Failed to run analytics stage for note ${persisted.note.id}`, error);
 		}
@@ -1713,8 +1697,8 @@ export async function createNoteForHonoApi(
 	return persisted.note;
 }
 
-export async function fetchAndCreateNoteForHonoApi(
-	deps: HonoApiNotesCreateDependencies,
+export async function fetchAndCreateNoteForApi(
+	deps: ApiNotesCreateDependencies,
 	user: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
 	data: {
 		createdAt: Date;
@@ -1733,8 +1717,8 @@ export async function fetchAndCreateNoteForHonoApi(
 		apHashtags?: string[] | null;
 		apEmojis?: string[] | null;
 	},
-	persist?: Parameters<typeof createNoteForHonoApi>[4],
-	options: Parameters<typeof createNoteForHonoApi>[5] = {},
+	persist?: Parameters<typeof createNoteForApi>[4],
+	options: Parameters<typeof createNoteForApi>[5] = {},
 ): Promise<MiNote> {
 	const visibleUsers =
 		data.visibleUserIds.length > 0
@@ -1776,7 +1760,7 @@ export async function fetchAndCreateNoteForHonoApi(
 		reply = await fetchNoteByIdFromDatabase(deps.db, data.replyId);
 		if (reply == null) throw noSuchReplyTargetError();
 		if (isRenote(reply) && !isQuote(reply)) throw cannotReplyToPureRenoteError();
-		if (!(await isVisibleForMeForHonoApi(deps, reply, user.id))) throw cannotReplyToInvisibleNoteError();
+		if (!(await isVisibleForMeForApi(deps, reply, user.id))) throw cannotReplyToInvisibleNoteError();
 		if (reply.visibility === 'specified' && data.visibility !== 'specified')
 			throw cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibilityError();
 
@@ -1796,7 +1780,7 @@ export async function fetchAndCreateNoteForHonoApi(
 		if (channel == null || channel.isArchived) throw noSuchChannelError();
 	}
 
-	return await createNoteForHonoApi(
+	return await createNoteForApi(
 		deps,
 		user,
 		omitUndefined({
@@ -1864,15 +1848,15 @@ export const notesCreateParamDef = z
 		}
 	});
 
-export async function handleHonoApiNotesCreate(
-	deps: HonoApiNotesCreateDependencies,
+export async function handleApiNotesCreate(
+	deps: ApiNotesCreateDependencies,
 	me: { id: MiUser['id']; username: string; host: MiUser['host']; isBot: boolean },
 	body: Record<string, unknown>,
 ): Promise<{ createdNote: unknown }> {
-	const ps = parseHonoApiParams(notesCreateParamDef, body);
+	const ps = parseApiParams(notesCreateParamDef, body);
 
 	try {
-		const note = await fetchAndCreateNoteForHonoApi(
+		const note = await fetchAndCreateNoteForApi(
 			deps,
 			me,
 			omitUndefined({
@@ -1906,9 +1890,9 @@ export async function handleHonoApiNotesCreate(
 			{ deferPostPersistStages: true },
 		);
 
-		return { createdNote: await packNoteForHonoApi(deps, note, me) };
+		return { createdNote: await packNoteForApi(deps, note, me) };
 	} catch (err) {
-		if (err instanceof HonoApiError) throw err;
+		if (err instanceof ApiError) throw err;
 		if (err instanceof IdentifiableError) {
 			if (err.id === '689ee33f-f97c-479a-ac49-1b9f8140af99') throw containsProhibitedWordsError();
 			if (err.id === '9f466dab-c856-48cd-9e65-ff90ff750580') throw containsTooManyMentionsError();

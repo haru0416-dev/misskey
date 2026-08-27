@@ -8,21 +8,18 @@ import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import type { Packed } from '@/misc/json-schema.js';
 import {
-	filterNoteForStreamingHidingForHonoApi,
-	populateMyReactionForHonoApi,
-	type HonoApiNoteDependencies,
+	filterNoteForStreamingHidingForApi,
+	populateMyReactionForApi,
+	type ApiNoteDependencies,
 } from '@/server/rest/note/note.js';
-import { isNoteMutedOrBlockedForHonoStream, type HonoStreamChannelDefinition } from '../channel.js';
+import { isNoteMutedOrBlockedForStream, type StreamChannelDefinition } from '../channel.js';
 
-async function isRoleExplorableForHonoStream(
-	deps: { db: HonoApiNoteDependencies['db'] },
-	roleId: string,
-): Promise<boolean> {
+async function isRoleExplorableForStream(deps: { db: ApiNoteDependencies['db'] }, roleId: string): Promise<boolean> {
 	const role = await fetchRoleByIdFromDatabase(deps.db, roleId);
 	return role?.isExplorable ?? false;
 }
 
-export const honoStreamChannelRoleTimeline: HonoStreamChannelDefinition<HonoApiNoteDependencies> = {
+export const honoStreamChannelRoleTimeline: StreamChannelDefinition<ApiNoteDependencies> = {
 	shouldShare: false,
 	requireCredential: false,
 	kind: null,
@@ -34,7 +31,7 @@ export const honoStreamChannelRoleTimeline: HonoStreamChannelDefinition<HonoApiN
 			if (data.type === 'note') {
 				const note = data.body as unknown as Packed<'Note'>;
 
-				if (!(await isRoleExplorableForHonoStream(deps, roleId))) return;
+				if (!(await isRoleExplorableForStream(deps, roleId))) return;
 				if (note.visibility !== 'public') return;
 				if ((note.user as { requireSigninToViewContents?: boolean }).requireSigninToViewContents && ctx.user == null)
 					return;
@@ -51,15 +48,15 @@ export const honoStreamChannelRoleTimeline: HonoStreamChannelDefinition<HonoApiN
 				)
 					return;
 
-				if (isNoteMutedOrBlockedForHonoStream(ctx, note)) return;
+				if (isNoteMutedOrBlockedForStream(ctx, note)) return;
 
-				const filtered = await filterNoteForStreamingHidingForHonoApi(deps, note, ctx.user?.id ?? null);
+				const filtered = await filterNoteForStreamingHidingForApi(deps, note, ctx.user?.id ?? null);
 				if (!filtered) return;
 
 				if (ctx.user) {
 					if (isRenotePacked(filtered) && !isQuotePacked(filtered)) {
 						if (filtered.renote && Object.keys(filtered.renote.reactions).length > 0) {
-							filtered.renote.myReaction = await populateMyReactionForHonoApi(
+							filtered.renote.myReaction = await populateMyReactionForApi(
 								deps,
 								{
 									id: filtered.renote.id,
