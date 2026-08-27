@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { toPuny } from '@/misc/to-puny.js';
 import * as Bull from 'bullmq';
 import { fetchInstanceMetadataWithSideEffects } from '@/core/instance/FetchInstanceMetadataLogic.js';
 import { listSuspendedInstancesFromDatabase } from '@/core/instance/InstanceStore.js';
@@ -20,7 +21,6 @@ import {
 	fetchFederatedInstance,
 	fetchOrRegisterFederatedInstance,
 	isDeliverSuspendedSoftware,
-	toPuny,
 	tryLockFetchInstanceMetadata,
 	unlockFetchInstanceMetadata,
 	updateFederatedInstance,

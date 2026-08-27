@@ -4,7 +4,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import * as mfm from 'mfm-js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
@@ -360,7 +360,7 @@ async function extractMentionedUsersForApi(
 		const host = mention.host ?? user.host;
 		return {
 			username: mention.username.toLowerCase(),
-			host: host == null ? null : domainToASCII(host.toLowerCase()),
+			host: host == null ? null : toPuny(host),
 		};
 	});
 	const users = await listUsersByUsernamesAndHostsFromDatabase(deps.db, accounts).catch(() => []);
@@ -708,7 +708,7 @@ export async function fetchOrRegisterInstanceForApi(
 	deps: { db: MiDrizzleDatabase },
 	host: string,
 ): Promise<{ id: string; host: string }> {
-	const puny = domainToASCII(host.toLowerCase());
+	const puny = toPuny(host);
 	const existing = await fetchInstanceByHostFromDatabase(deps.db, puny);
 	if (existing != null) return existing;
 

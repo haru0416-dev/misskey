@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import { SECOND, HOUR } from '@/const.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
@@ -190,7 +190,7 @@ export async function createNoteReactionForApi(
 	} else if (requestedReaction != null) {
 		const custom = reaction.match(isCustomEmojiRegexp);
 		if (custom) {
-			const reacterHost = user.host != null ? domainToASCII(user.host.toLowerCase()) : null;
+			const reacterHost = user.host != null ? toPuny(user.host) : null;
 			const name = custom[1]!;
 			const emoji = await fetchEmojiByNameAndHostFromDatabaseCached(deps.db, name, reacterHost);
 

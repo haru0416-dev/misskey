@@ -4,7 +4,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { domainToASCII } from 'node:url';
+import { toPunyNullable } from '@/misc/to-puny.js';
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
@@ -1145,10 +1145,6 @@ async function packFollowersForApi(
 	});
 }
 
-function toPunyNullableForApi(host: string | null | undefined): string | null {
-	return host == null ? null : domainToASCII(host.toLowerCase());
-}
-
 // 元 ajv 版は `usersFollowersOrFollowingParamDef.allOf[0]` (userId か username+host のどちらか必須の anyOf 部分) を
 // `usersFollowingParamDef` からも参照・spread していた。Zod では anyOf を union で表現するため union 自体は
 // spread できない。代わりに union の各枝 (userId 版 / username+host 版) を再利用可能な base object として定義し、
@@ -1231,7 +1227,7 @@ export async function handleApiUsersFollowers(
 	const user =
 		params.userId != null
 			? await fetchUserByIdFromDatabase(deps.db, params.userId)
-			: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullableForApi(params.host));
+			: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullable(params.host));
 	if (user == null) throw usersFollowersNoSuchUserError();
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);
@@ -1268,7 +1264,7 @@ export async function handleApiUsersFollowing(
 	const user =
 		params.userId != null
 			? await fetchUserByIdFromDatabase(deps.db, params.userId)
-			: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullableForApi(params.host));
+			: await fetchUserByUsernameAndHostFromDatabase(deps.db, params.username!, toPunyNullable(params.host));
 	if (user == null) throw usersFollowingNoSuchUserError();
 
 	const profile = await fetchUserProfileByUserIdOrFailFromDatabase(deps.db, user.id);

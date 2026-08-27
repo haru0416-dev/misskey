@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import { sql, type SQL } from 'drizzle-orm';
 import type * as Redis from 'ioredis';
 import Chart, { type KVs } from '@/core/chart/core.js';
@@ -140,7 +140,7 @@ class InstanceChartWriter extends Chart<typeof instanceChartSchema> {
 			{
 				'requests.received': 1,
 			},
-			domainToASCII(host.toLowerCase()),
+			toPuny(host),
 		);
 	}
 
@@ -150,7 +150,7 @@ class InstanceChartWriter extends Chart<typeof instanceChartSchema> {
 				'requests.succeeded': isSucceeded ? 1 : 0,
 				'requests.failed': isSucceeded ? 0 : 1,
 			},
-			domainToASCII(host.toLowerCase()),
+			toPuny(host),
 		);
 	}
 
@@ -160,7 +160,7 @@ class InstanceChartWriter extends Chart<typeof instanceChartSchema> {
 				'users.total': 1,
 				'users.inc': 1,
 			},
-			domainToASCII(host.toLowerCase()),
+			toPuny(host),
 		);
 	}
 
@@ -171,7 +171,7 @@ class InstanceChartWriter extends Chart<typeof instanceChartSchema> {
 				'following.inc': isAdditional ? 1 : 0,
 				'following.dec': isAdditional ? 0 : 1,
 			},
-			domainToASCII(host.toLowerCase()),
+			toPuny(host),
 		);
 	}
 
@@ -182,7 +182,7 @@ class InstanceChartWriter extends Chart<typeof instanceChartSchema> {
 				'followers.inc': isAdditional ? 1 : 0,
 				'followers.dec': isAdditional ? 0 : 1,
 			},
-			domainToASCII(host.toLowerCase()),
+			toPuny(host),
 		);
 	}
 
@@ -201,7 +201,7 @@ class InstanceChartWriter extends Chart<typeof instanceChartSchema> {
 				'notes.diffs.reply': note.replyId != null ? (isAdditional ? 1 : -1) : 0,
 				'notes.diffs.withFile': note.fileIds.length > 0 ? (isAdditional ? 1 : -1) : 0,
 			},
-			domainToASCII(host.toLowerCase()),
+			toPuny(host),
 		);
 	}
 }

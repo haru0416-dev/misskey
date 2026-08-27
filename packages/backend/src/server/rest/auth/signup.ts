@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import { hashPassword } from '@/misc/password.js';
 import type { Config } from '@/config.js';
 import { isKeywordIncluded } from '@/misc/is-keyword-included.js';
@@ -82,7 +82,7 @@ function normalizeHost(host: unknown): string | null {
 	if (host == null) return null;
 	if (typeof host !== 'string') throw signupValidationError('INVALID_HOST');
 
-	const normalized = domainToASCII(host.toLowerCase());
+	const normalized = toPuny(host);
 	if (normalized === '') throw signupValidationError('INVALID_HOST');
 
 	return normalized;

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { FILE_TYPE_IMAGE } from '@/const.js';
@@ -268,10 +268,6 @@ function parseRemoteAdminEmojiPagination(
 	}
 
 	return { sinceId, untilId };
-}
-
-function toPuny(host: string): string {
-	return domainToASCII(host.toLowerCase());
 }
 
 function noSuchEmojiError(): ApiError {
