@@ -29,13 +29,13 @@ import {
 	handleApiNotesThreadMutingDelete,
 	handleApiNotesTimeline,
 	handleApiNotesUserListTimeline,
-	normalizeApiNotesFeaturedQuery,
+	notesFeaturedParamDef,
 } from '../note/notes.js';
 import {
 	handleApiNotesTranslate,
 	handleApiUsersFeaturedNotes,
 	handleApiUsersNotes,
-	normalizeApiUsersFeaturedNotesQuery,
+	usersFeaturedNotesParamDef,
 } from '../note/note.js';
 import { handleApiNotesCreate } from '../note/notes-create.js';
 import {
@@ -48,7 +48,7 @@ import {
 	handleApiNotesReactions,
 	handleApiNotesReactionsCreate,
 	handleApiNotesReactionsDelete,
-	normalizeApiNotesReactionsQuery,
+	notesReactionsParamDef,
 	reactionsDeleteRateLimit,
 } from '../note/notes-reactions.js';
 import { handleApiNotesPollsVote } from '../note/notes-polls-vote.js';
@@ -63,6 +63,7 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
+import { queryToApiBody } from '../query-params.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void {
@@ -113,7 +114,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 
 	app.get('/notes/reactions', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeApiNotesReactionsQuery(c.req.query());
+			const query = queryToApiBody(notesReactionsParamDef, c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
@@ -268,7 +269,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 
 	app.get('/notes/featured', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeApiNotesFeaturedQuery(c.req.query());
+			const query = queryToApiBody(notesFeaturedParamDef, c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(
@@ -309,7 +310,7 @@ export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void
 
 	app.get('/users/featured-notes', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const query = normalizeApiUsersFeaturedNotesQuery(c.req.query());
+			const query = queryToApiBody(usersFeaturedNotesParamDef, c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, query);
 
 			return jsonResponse(

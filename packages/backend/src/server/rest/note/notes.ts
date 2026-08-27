@@ -905,21 +905,6 @@ type NotesFeaturedParams = {
 	channelId?: string | null;
 };
 
-export function normalizeApiNotesFeaturedQuery(query: Record<string, string>): Record<string, unknown> {
-	const body: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(query)) {
-		if (key === 'limit') {
-			const numeric = Number(value);
-			body[key] = Number.isInteger(numeric) ? numeric : value;
-		} else if (key === 'channelId' && value === 'null') {
-			body[key] = null;
-		} else {
-			body[key] = value;
-		}
-	}
-	return body;
-}
-
 export async function handleApiNotesFeatured(
 	deps: ApiNotesDependencies,
 	me: { id: MiUser['id'] } | null | undefined,

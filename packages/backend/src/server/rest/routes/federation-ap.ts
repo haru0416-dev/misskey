@@ -8,13 +8,14 @@ import { assertCredential, assertSecureCredential, assertTokenPermission, authen
 import { rolePermissionDeniedError } from '../error.js';
 import { handleApiEndpoint, handleApiEndpoints } from '../endpoint-info.js';
 import {
+	federationInstancesParamDef,
+	federationStatsParamDef,
 	handleApiFederationFollowers,
 	handleApiFederationFollowing,
 	handleApiFederationInstances,
 	handleApiFederationShowInstance,
 	handleApiFederationStats,
 	handleApiFederationUsers,
-	normalizeApiFederationQuery,
 } from '../activitypub/federation.js';
 import { handleApiFetchExternalResources } from '../activitypub/fetch-external-resources.js';
 import { handleApiApGet, handleApiApShow } from '../activitypub/ap.js';
@@ -32,6 +33,7 @@ import {
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
+import { queryToApiBody } from '../query-params.js';
 
 export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies): void {
 	app.post(
@@ -50,7 +52,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 
 	app.get('/federation/instances', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const body = normalizeApiFederationQuery(c.req.query());
+			const body = queryToApiBody(federationInstancesParamDef, c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
 			return jsonResponse(
@@ -86,7 +88,7 @@ export function registerFederationApRoutes(app: Hono, deps: ApiShellDependencies
 
 	app.get('/federation/stats', async (c) => {
 		return await runApiEndpoint(c, async () => {
-			const body = normalizeApiFederationQuery(c.req.query());
+			const body = queryToApiBody(federationStatsParamDef, c.req.query());
 			const auth = await authenticateOptionalRequest(deps, c, body);
 
 			return jsonResponse(
