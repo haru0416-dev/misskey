@@ -4,25 +4,20 @@
  */
 
 import { describe, expect, test } from 'vitest';
-import httpSignature from '@peertube/http-signature';
+import { verifyRequestSignature, type ParsedSignature } from '@/core/activitypub/http-signature.js';
 
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { ApRequestCreator } from '@/core/activitypub/ap-request.js';
 import { assertActivityMatchesUrl, FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
 import { IObject } from '@/core/activitypub/type.js';
 
-export const buildParsedSignature = (signingString: string, signature: string, algorithm: string) => {
+export const buildParsedSignature = (signingString: string, signature: string, algorithm: string): ParsedSignature => {
 	return {
-		scheme: 'Signature',
-		params: {
-			keyId: 'KeyID', // 署名検証では使わないダミー値
-			algorithm: algorithm,
-			headers: ['(request-target)', 'date', 'host', 'digest'], // 署名検証では使わないダミー値
-			signature: signature,
-		},
-		signingString: signingString,
-		algorithm: algorithm.toUpperCase(),
 		keyId: 'KeyID', // 署名検証では使わないダミー値
+		algorithm,
+		headers: ['(request-target)', 'date', 'host', 'digest'], // 署名検証では使わないダミー値
+		signature,
+		signingString,
 	};
 };
 
@@ -45,7 +40,7 @@ describe('ap-request', () => {
 
 		const parsed = buildParsedSignature(req.signingString, req.signature, 'rsa-sha256');
 
-		const result = httpSignature.verifySignature(parsed, keypair.publicKey);
+		const result = await verifyRequestSignature(parsed, keypair.publicKey);
 		expect(result).toStrictEqual(true);
 		expect(req.signingString).toMatch(/^\(request-target\): post \/inbox\?sharedInbox=true$/m);
 	});
@@ -62,7 +57,7 @@ describe('ap-request', () => {
 
 		const parsed = buildParsedSignature(req.signingString, req.signature, 'rsa-sha256');
 
-		const result = httpSignature.verifySignature(parsed, keypair.publicKey);
+		const result = await verifyRequestSignature(parsed, keypair.publicKey);
 		expect(result).toStrictEqual(true);
 		expect(req.signingString).toMatch(/^\(request-target\): get \/outbox\?page=true$/m);
 	});

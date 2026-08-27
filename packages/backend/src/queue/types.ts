@@ -4,6 +4,7 @@
  */
 
 import type { MiDriveFile } from '@/models/DriveFile.js';
+import type { ParsedSignature } from '@/core/activitypub/http-signature.js';
 import type { MiNote } from '@/models/Note.js';
 import type { SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import type { MiUser } from '@/models/User.js';
@@ -11,7 +12,6 @@ import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
 import type { IActivity } from '@/core/activitypub/type.js';
 import type { SystemWebhookPayload } from '@/core/webhook/system-webhook-types.js';
 import type { UserWebhookPayload } from '@/core/webhook/user-webhook-types.js';
-import type httpSignature from '@peertube/http-signature';
 
 export type DeliverJobData = {
 	user: ThinUser;
@@ -24,7 +24,7 @@ export type DeliverJobData = {
 
 export type InboxJobData = {
 	activity: IActivity;
-	signature: httpSignature.IParsedSignature;
+	signature: ParsedSignature;
 };
 
 export type RelationshipJobData = {
