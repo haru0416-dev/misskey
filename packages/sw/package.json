@@ -11,13 +11,13 @@
 	"dependencies": {
 		"frontend-shared": "workspace:*",
 		"i18n": "workspace:*",
-		"idb-keyval": "6.2.5",
+		"idb-keyval": "6.3.0",
 		"misskey-js": "workspace:*"
 	},
 	"devDependencies": {
 		"@typescript/lib-webworker": "npm:@types/serviceworker@0.0.74",
 		"@types/node": "26.2.0",
-		"esbuild": "0.28.1",
+		"esbuild": "0.28.2",
 		"vitest": "4.1.11"
 	},
 	"type": "module"
