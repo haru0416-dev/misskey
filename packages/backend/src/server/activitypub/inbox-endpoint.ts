@@ -4,9 +4,9 @@
  */
 
 import * as crypto from 'node:crypto';
+import { parseRequestSignature, type ParsedSignature } from '@/core/activitypub/http-signature.js';
 import type { IncomingMessage } from 'node:http';
 import { Hono } from 'hono';
-import httpSignature from '@peertube/http-signature';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
 import type { InboxQueue } from '@/core/queue/queues.js';
@@ -30,11 +30,7 @@ const INBOX_BODY_LIMIT_BYTES = 1024 * 64;
 class InboxBodyLimitExceeded extends Error {}
 
 /** ジョブ名はアクティビティIDから生成する。 */
-function enqueueInboxJob(
-	deps: InboxEndpointDependencies,
-	activity: IActivity,
-	signature: httpSignature.IParsedSignature,
-) {
+function enqueueInboxJob(deps: InboxEndpointDependencies, activity: IActivity, signature: ParsedSignature) {
 	const data: InboxJobData = { activity, signature };
 	const label = (activity.id ?? '').replace('https://', '').replace('/activity', '');
 	return deps.inboxQueue.add(label, data, {
@@ -67,29 +63,27 @@ export async function handleInboxRequest(deps: InboxEndpointDependencies, reques
 	const headers = Object.fromEntries(request.headers.entries());
 	const url = new URL(request.url);
 
-	let signature: httpSignature.IParsedSignature;
+	let signature: ParsedSignature;
 	try {
-		// httpSignature.parseRequest の型定義はNode標準の IncomingMessage を要求するが、
-		// 実装が実際に参照するのは method/url/headers のみ (Fetch API の Request からの最小限のシム)。
-		const requestShim = {
+		signature = parseRequestSignature({
 			method: request.method,
 			url: url.pathname + url.search,
 			headers,
-		} as unknown as IncomingMessage;
-		signature = httpSignature.parseRequest(requestShim, {
-			headers: ['(request-target)', 'host', 'date'],
-			authorizationHeaderName: 'signature',
 		});
+		// 署名対象に (request-target) / host / date が含まれることを要求する。
+		for (const required of ['(request-target)', 'host', 'date']) {
+			if (!signature.headers.includes(required)) return rawStatus(401);
+		}
 	} catch {
 		return rawStatus(401);
 	}
 
-	if (!signature.params.headers.includes('host') || headers['host'] !== deps.config.runtime.host) {
+	if (headers['host'] !== deps.config.runtime.host) {
 		// Host が署名対象に含まれない、または設定値と一致しない。
 		return rawStatus(401);
 	}
 
-	if (!signature.params.headers.includes('digest')) {
+	if (!signature.headers.includes('digest')) {
 		// Digest が署名対象に含まれない。
 		return rawStatus(401);
 	}
