@@ -105,7 +105,7 @@ function noSuchAnnouncementError(id: string): HonoApiError {
 
 export function packAnnouncementForHonoApi(
 	config: Config,
-	announcement: MiAnnouncement & { isRead?: boolean | null },
+	announcement: MiAnnouncement & { isRead?: boolean | null; reactions?: Record<string, number> },
 	me?: { id: MiUser['id'] } | null,
 ): Packed<'Announcement'> {
 	return {
@@ -121,6 +121,8 @@ export function packAnnouncementForHonoApi(
 		needConfirmationToRead: announcement.needConfirmationToRead,
 		silence: announcement.silence,
 		isRead: announcement.isRead !== null ? announcement.isRead : undefined,
+		// SSR とお知らせ作成直後の配信はリアクションを読まないので、渡されなければ空。
+		reactions: announcement.reactions ?? {},
 	};
 }
 

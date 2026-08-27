@@ -387,6 +387,12 @@ export type AnnouncementsShowRequest = NonNullable<
 >['content']['application/json'];
 export type AnnouncementsShowResponse =
     operations['announcements___show']['responses']['200']['content']['application/json'];
+export type AnnouncementsReactRequest = NonNullable<
+    operations['announcements___react']['requestBody']
+>['content']['application/json'];
+export type AnnouncementsUnreactRequest = NonNullable<
+    operations['announcements___unreact']['requestBody']
+>['content']['application/json'];
 export type AntennasCreateRequest = NonNullable<
     operations['antennas___create']['requestBody']
 >['content']['application/json'];

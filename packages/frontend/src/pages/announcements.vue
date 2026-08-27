@@ -35,6 +35,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</div>
 						</MkA>
 					</div>
+					<div :class="$style.reactions">
+						<MkAnnouncementReactions :announcement="announcement" @updated="(updated) => paginator.updateItem(updated.id, () => updated)"/>
+					</div>
 					<div v-if="tab !== 'past' && $i != null && !announcement.silence && !announcement.isRead" :class="$style.footer">
 						<MkButton primary @click="read(announcement)"><i class="ti ti-check" aria-hidden="true"></i> {{ i18n.ts.gotIt }}</MkButton>
 					</div>
@@ -51,6 +54,7 @@ import * as Misskey from 'misskey-js';
 import MkPagination from '@/components/layout/MkPagination.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInfo from '@/components/display/MkInfo.vue';
+import MkAnnouncementReactions from '@/features/announcements/components/MkAnnouncementReactions.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
@@ -161,6 +165,10 @@ definePage(() => ({
 	margin-top: var(--MI-space-sm);
 	opacity: 0.7;
 	font-size: 85%;
+}
+
+.reactions {
+	margin-top: var(--MI-space-lg);
 }
 
 .footer {
