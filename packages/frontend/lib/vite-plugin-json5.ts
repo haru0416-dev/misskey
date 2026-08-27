@@ -4,9 +4,8 @@
  */
 
 import JSON5 from 'json5';
-import { createFilter, dataToEsm } from '@rollup/pluginutils';
-import type { Plugin } from 'vite';
-import type { RollupJsonOptions } from '@rollup/plugin-json';
+import { createFilter } from 'vite';
+import type { FilterPattern, Plugin } from 'vite';
 
 // json5 は SyntaxError を継承せず、追加プロパティを持つエラーを返す。
 // https://github.com/json5/json5/blob/de344f0619bda1465a6e25c76f1c0c3dda8108d9/lib/parse.js#L1111-L1112
@@ -15,9 +14,13 @@ interface Json5SyntaxError extends SyntaxError {
 	columnNumber: number;
 }
 
-export default function json5(options: RollupJsonOptions = {}): Plugin {
+export interface Json5PluginOptions {
+	include?: FilterPattern;
+	exclude?: FilterPattern;
+}
+
+export default function json5(options: Json5PluginOptions = {}): Plugin {
 	const filter = createFilter(options.include, options.exclude);
-	const indent = 'indent' in options ? options.indent : '\t';
 
 	return {
 		name: 'json5',
@@ -27,13 +30,10 @@ export default function json5(options: RollupJsonOptions = {}): Plugin {
 
 			try {
 				const parsed = JSON5.parse(json);
+				// オブジェクトリテラルではなく JSON.parse で復元する。読み込み側は default しか
+				// 使っておらず、大きなリテラルより構文解析が軽い。
 				return {
-					code: dataToEsm(parsed, {
-						preferConst: options.preferConst,
-						compact: options.compact,
-						namedExports: options.namedExports,
-						indent,
-					}),
+					code: `export default /* @__PURE__ */ JSON.parse(${JSON.stringify(JSON.stringify(parsed))});\n`,
 					map: { mappings: '' },
 				};
 			} catch (err) {
