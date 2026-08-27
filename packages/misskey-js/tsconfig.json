@@ -39,7 +39,7 @@
 		"test/**/*",
 		// エンドポイント毎の request() オーバーロードを declaration merging で生やすだけの生成物。
 		// プログラムに含めると (a) 全 .request 呼び出しが約1,100個のオーバーロード解決を払い、
-		// (b) tsgo の d.ts emit が augmentation と衝突して APIClient#request 本体を落とす。
+		// (b) ネイティブ tsc の d.ts emit が augmentation と衝突して APIClient#request 本体を落とす。
 		// ファイル自体は update-autogen-code の再生成互換のため残している (どこからも import されない)。
 		"src/autogen/apiClientJSDoc.ts"
 	]

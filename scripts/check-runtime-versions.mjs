@@ -60,6 +60,18 @@ const checks = [
 	['native re2 must not be trusted for lifecycle builds', !packageJson.trustedDependencies?.includes('re2')],
 	['bunfig.toml must use isolated installs', versions.linker === 'isolated'],
 	[
+		'the native TypeScript compiler must come from the released typescript package',
+		(packageJson.devDependencies?.['typescript-native'] ?? '').startsWith('npm:typescript@7.'),
+	],
+	[
+		'@typescript/native-preview must not come back (its channel stopped publishing at 7.0.0-dev.20260707.2)',
+		!packageJson.devDependencies?.['@typescript/native-preview'],
+	],
+	[
+		'the classic TypeScript API must stay on 6.x (vue-tsc / api-extractor / i18n codegen need it)',
+		(packageJson.devDependencies?.typescript ?? '').startsWith('6.'),
+	],
+	[
 		'frontend typecheck must use Bun-compatible vue-tsc runner',
 		(frontendPackageJson.scripts?.typecheck ?? '').startsWith('bun ../../scripts/vue-tsc-bun.cjs --noEmit'),
 	],

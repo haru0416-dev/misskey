@@ -12,9 +12,9 @@ upstream path: commands/quality-gate.md
 upstream license: MIT — https://github.com/affaan-m/everything-claude-code/blob/main/LICENSE
 project-level notice: see .claude/THIRD_PARTY_LICENSES.md (Misskey 内サードパーティ一覧 + MIT 全文)
 
-Imported into Misskey .claude/ on 2026-05-10. Pipeline 概念 (lint → typecheck → test) は upstream ECC 版から借用 (MIT)。実コマンド層はこの fork の Bun + oxlint + tsgo + Vitest に固定し、formatter フェーズは削除した。
+Imported into Misskey .claude/ on 2026-05-10. Pipeline 概念 (lint → typecheck → test) は upstream ECC 版から借用 (MIT)。実コマンド層はこの fork の Bun + oxlint + ネイティブ tsc + Vitest に固定し、formatter フェーズは削除した。
 
-note: 元 ECC 版は言語自動判定 + format/lint/type のジェネリック版だったが、この fork 専用に Bun + oxlint + tsgo + Vitest の組み合わせに固定。重い test:e2e / test:fed / Playwright は必要時のみ個別に実行する。
+note: 元 ECC 版は言語自動判定 + format/lint/type のジェネリック版だったが、この fork 専用に Bun + oxlint + ネイティブ tsc + Vitest の組み合わせに固定。重い test:e2e / test:fed / Playwright は必要時のみ個別に実行する。
 -->
 
 # /quality-gate — Misskey 軽量品質ゲート
@@ -50,7 +50,7 @@ bun run --bun --filter frontend test
 lint がまとめて失敗していて typecheck の結果だけ単独で見たい場合は、以下を個別に回す。**通常は不要** (lint の出力を読めば足りる):
 
 ```bash
-bun run --bun --filter backend typecheck    # tsgo 単体
+bun run --bun --filter backend typecheck    # 型検査単体
 bun run --bun --filter frontend typecheck   # vue-tsc-bun 単体 (Vue SFC の型を見るため)
 ```
 
@@ -63,7 +63,7 @@ bun run --bun --filter backend lint
 bun run --bun --filter backend test
 ```
 
-`tsgo` の出力を単独で見たい時のみ optional で `bun run --bun --filter backend typecheck` を別途回す。
+型検査の出力を単独で見たい時のみ optional で `bun run --bun --filter backend typecheck` を別途回す。
 
 ### Frontend scope
 
