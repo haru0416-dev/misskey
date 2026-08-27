@@ -153,5 +153,10 @@ export const nameSchema = z.string().min(1).max(50);
 export const descriptionSchema = z.string().min(1).max(1500);
 export const followedMessageSchema = z.string().min(1).max(256);
 export const locationSchema = z.string().min(1).max(50);
+
+// 追加情報 (fields) は 16 個まで持てるので、1 個あたりを絞らないとプロフィール全体が
+// 無制限に膨らむ。名前は見出し相当なので name と同じ 50、値は URL や短文が入るので 512。
+export const profileFieldNameSchema = z.string().max(50);
+export const profileFieldValueSchema = z.string().max(512);
 // 実在する日付だけを通す (旧実装の正規表現は 9999-99-99 のような値も通していた)。
 export const birthdaySchema = z.iso.date();

@@ -1850,6 +1850,9 @@ export async function listFrequentlyRepliedUsersFromDatabase(
 		SELECT "target"."userId" AS "userId", COUNT(*) AS "count"
 		FROM "note" AS "target"
 		INNER JOIN "recent_replies" ON "recent_replies"."replyId" = "target"."id"
+		-- 他の一覧系 (users / users/recommendation) と同じくサスペンド中のユーザーは出さない。
+		-- LIMIT の前に除かないと、除外した分だけ件数が減る。
+		INNER JOIN "user" ON "user"."id" = "target"."userId" AND "user"."isSuspended" = FALSE
 		GROUP BY "target"."userId"
 		ORDER BY "count" DESC
 		LIMIT ${limit}

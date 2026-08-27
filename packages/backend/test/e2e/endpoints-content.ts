@@ -685,6 +685,36 @@ describe('Endpoints', () => {
 			expect(castAsError(unreactAgain.body as any).error.code).toBe('NOT_REACTED');
 		});
 
+		test('announcements/react は終了したお知らせを受け付けない', async () => {
+			const announcement = await createAnnouncementInDatabase(db, {
+				id: genId(Date.now() + 200),
+				updatedAt: null,
+				title: 'Archived announcement',
+				text: 'Already over',
+				imageUrl: null,
+				icon: 'info',
+				display: 'normal',
+				isActive: false,
+				needConfirmationToRead: false,
+				forExistingUsers: false,
+				silence: false,
+				userId: null,
+			});
+
+			// 終了したお知らせも「過去」タブから読めるが、付け外しはできない。
+			const shown = await api('announcements/show', { announcementId: announcement.id }, alice);
+			expect(shown.status).toBe(200);
+			expect(shown.body.isActive).toBe(false);
+
+			const reacted = await api('announcements/react', { announcementId: announcement.id, reaction: '👍' }, alice);
+			expect(reacted.status).toBe(400);
+			expect(castAsError(reacted.body as any).error.code).toBe('ANNOUNCEMENT_NOT_ACTIVE');
+
+			const unreacted = await api('announcements/unreact', { announcementId: announcement.id }, alice);
+			expect(unreacted.status).toBe(400);
+			expect(castAsError(unreacted.body as any).error.code).toBe('ANNOUNCEMENT_NOT_ACTIVE');
+		});
+
 		test('announcements/react は使えない絵文字をフォールバックへ寄せ、他人宛のお知らせを隠す', async () => {
 			const now = Date.now();
 			const announcement = await createAnnouncementInDatabase(db, {

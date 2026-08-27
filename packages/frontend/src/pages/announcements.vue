@@ -36,7 +36,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						</MkA>
 					</div>
 					<div :class="$style.reactions">
-						<MkAnnouncementReactions :announcement="announcement" @updated="(updated) => paginator.updateItem(updated.id, () => updated)"/>
+						<MkAnnouncementReactions :announcement="announcement" :readonly="tab === 'past'" @updated="(updated) => paginator.updateItem(updated.id, () => updated)"/>
 					</div>
 					<div v-if="tab !== 'past' && $i != null && !announcement.silence && !announcement.isRead" :class="$style.footer">
 						<MkButton primary @click="read(announcement)"><i class="ti ti-check" aria-hidden="true"></i> {{ i18n.ts.gotIt }}</MkButton>

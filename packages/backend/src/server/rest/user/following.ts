@@ -1314,10 +1314,18 @@ export async function handleApiUsersFollowing(
 	return await packFollowingsForApi(deps, followings);
 }
 
-const birthdayMonthDaySchema = z.object({
-	month: z.int().min(1).max(12),
-	day: z.int().min(1).max(31),
-});
+// 月ごとの最大日数。2 月は 29 まで許す (閏日生まれの誕生日は実在するため)。
+const MAX_DAY_OF_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+const birthdayMonthDaySchema = z
+	.object({
+		month: z.int().min(1).max(12),
+		day: z.int().min(1).max(31),
+	})
+	// 月と日の組み合わせは JSON Schema で表現できないので、生成されるドキュメントには出ない。
+	.refine(({ month, day }) => day <= MAX_DAY_OF_MONTH[month - 1]!, {
+		message: 'must be an existing month and day',
+	});
 
 const birthdayRangeSchema = z.object({
 	begin: birthdayMonthDaySchema,

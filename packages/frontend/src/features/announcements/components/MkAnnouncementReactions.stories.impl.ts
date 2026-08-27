@@ -24,6 +24,7 @@ const announcement: Misskey.entities.Announcement = {
 	forYou: false,
 	reactions: { '👍': 2, '🎉': 1 },
 	myReaction: '👍',
+	isActive: true,
 };
 
 const calls: { endpoint: string; body: Record<string, unknown> }[] = [];

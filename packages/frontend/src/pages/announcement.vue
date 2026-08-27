@@ -36,7 +36,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					</div>
 				</div>
 				<div :class="$style.reactions">
-					<MkAnnouncementReactions :announcement="announcement" @updated="(updated) => { announcement = updated; }"/>
+					<MkAnnouncementReactions :announcement="announcement" :readonly="!announcement.isActive" @updated="(updated) => { announcement = updated; }"/>
 				</div>
 				<div v-if="$i && !announcement.silence && !announcement.isRead" :class="$style.footer">
 					<MkButton primary @click="read(announcement)"><i class="ti ti-check"></i> {{ i18n.ts.gotIt }}</MkButton>

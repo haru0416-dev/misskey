@@ -49,6 +49,7 @@ export const Default = {
 			silence: false,
 			forYou: true,
 			reactions: {},
+			isActive: true,
 		},
 	},
 	parameters: {
