@@ -206,6 +206,7 @@
 - Fix: `misskey-js` のモデレーションログ型に `pauseQueue` / `resumeQueue` が含まれておらず、キューの一時停止・再開のログを型付きで扱えなかった問題を修正
 
 ### Server
+- Enhance: HTTP 署名の検証で Ed25519 の鍵を受け付けるように (これまでは RSA のみで、Ed25519 を使うサーバーからの配送を弾いていた)
 - Fix: `users/following` の `birthday` に平年の年で `02-29` を渡すと 400 になっていたのを修正 (この絞り込みは年を見ないため)
 - Fix: `announcements/react` / `announcements/unreact` が移行済みアカウントからの操作を拒否していなかったのを修正
 - Fix: `MeDetailed` の `mutedWords` / `hardMutedWords` の型が `string[][]` になっていたのを修正 (正規表現の行は素の文字列で入る)

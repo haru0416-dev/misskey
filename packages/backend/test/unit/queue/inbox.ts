@@ -10,7 +10,7 @@
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import httpSignature from '@peertube/http-signature';
+import { parseRequestSignature } from '@/core/activitypub/http-signature.js';
 import * as Bull from 'bullmq';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { loadConfig } from '@/config.js';
@@ -90,7 +90,7 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 	/**
 	 * 実際に RSA 鍵ペアを生成し、user_publickey に登録した「リモートユーザー」として
 	 * ApRequestCreator.createSignedPost で本物の HTTP-Signature 付きリクエストを組み立て、
-	 * ローカルHTTPフィクスチャへ実際に送信して捕捉することで、httpSignature.verifySignature
+	 * ローカルHTTPフィクスチャへ実際に送信して捕捉することで、verifyRequestSignature
 	 * が本物のバイト列に対して動作する状態を再現する (established local HTTP fixture pattern)。
 	 */
 	async function createSignedInboxJob(
@@ -140,14 +140,10 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 		});
 
 		const captured = await capture();
-		const requestShim = {
+		const signature = parseRequestSignature({
 			method: captured.method,
 			url: new URL(url).pathname,
 			headers: captured.headers,
-		} as unknown as IncomingMessage;
-		const signature = httpSignature.parseRequest(requestShim, {
-			headers: ['(request-target)', 'host', 'date', 'digest'],
-			authorizationHeaderName: 'signature',
 		});
 
 		const job = { data: { activity, signature } } as unknown as Bull.Job<InboxJobData>;
@@ -190,7 +186,7 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 		const followee = await createTestLocalUser('honoqueueinboxtamperee');
 		const { job } = await createSignedInboxJob(host, { object: `${deps.config.instance.url}/users/${followee.id}` });
 
-		job.data.signature.params.signature = tamperBase64Signature(job.data.signature.params.signature);
+		job.data.signature.signature = tamperBase64Signature(job.data.signature.signature);
 
 		await expect(handleQueueInbox(deps, job)).rejects.toThrow(Bull.UnrecoverableError);
 	});

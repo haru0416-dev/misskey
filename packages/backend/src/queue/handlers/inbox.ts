@@ -4,7 +4,7 @@
  */
 
 import { toPuny } from '@/misc/to-puny.js';
-import httpSignature from '@peertube/http-signature';
+import { verifyRequestSignature } from '@/core/activitypub/http-signature.js';
 import * as Bull from 'bullmq';
 import { JsonLd, JsonLdError } from '@/core/activitypub/json-ld.js';
 import { getApId, isActor, isDelete } from '@/core/activitypub/type.js';
@@ -148,7 +148,7 @@ async function verifyAndResolveAuthUser(
 	}
 
 	// HTTP-Signatureの検証
-	const httpSignatureValidated = httpSignature.verifySignature(signature, authUser.key.keyPem);
+	const httpSignatureValidated = await verifyRequestSignature(signature, authUser.key.keyPem);
 
 	// また、signatureのsignerは、activity.actorと一致する必要がある
 	if (!httpSignatureValidated || authUser.user.uri !== getApId(activity.actor)) {
