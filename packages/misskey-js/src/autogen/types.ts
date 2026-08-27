@@ -6170,11 +6170,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default null */
                     state?: string | null;
@@ -6612,11 +6620,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default null */
                     publishing?: boolean | null;
@@ -6920,11 +6936,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     userId?: string | null;
                     /**
@@ -7239,11 +7263,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     userId?: string | null;
                 };
@@ -7776,11 +7808,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     userId?: string | null;
                     type?: string | null;
@@ -8380,11 +8420,19 @@ export interface operations {
                     query?: string | null;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -8456,11 +8504,19 @@ export interface operations {
                     host?: string | null;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -11964,11 +12020,19 @@ export interface operations {
                 'application/json': {
                     /** Format: misskey:id */
                     roleId: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -12194,11 +12258,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     type?: string | null;
                     userId?: string | null;
@@ -13929,11 +14001,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default true */
                     isActive?: boolean;
@@ -14423,11 +14503,19 @@ export interface operations {
                     antennaId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -15417,11 +15505,19 @@ export interface operations {
                 'application/json': {
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -15750,11 +15846,19 @@ export interface operations {
         requestBody?: {
             content: {
                 'application/json': {
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 5 */
                     limit?: number;
@@ -16065,11 +16169,19 @@ export interface operations {
         requestBody?: {
             content: {
                 'application/json': {
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 5 */
                     limit?: number;
@@ -16143,11 +16255,19 @@ export interface operations {
                      * @enum {string}
                      */
                     type?: 'nameAndDescription' | 'nameOnly';
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 5 */
                     limit?: number;
@@ -17926,11 +18046,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** Format: misskey:id */
                     roomId: string;
@@ -18199,11 +18327,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** Format: misskey:id */
                     userId: string;
@@ -18606,11 +18742,19 @@ export interface operations {
                 'application/json': {
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -18680,11 +18824,19 @@ export interface operations {
                     roomId: string;
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -18815,11 +18967,19 @@ export interface operations {
                 'application/json': {
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -18952,11 +19112,19 @@ export interface operations {
                     roomId: string;
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -19088,11 +19256,19 @@ export interface operations {
                 'application/json': {
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -19562,11 +19738,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -19694,11 +19878,19 @@ export interface operations {
                     clipId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     search?: string | null;
                 };
@@ -20091,11 +20283,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default null */
                     folderId?: string | null;
@@ -20165,11 +20365,19 @@ export interface operations {
         requestBody: {
             content: {
                 'application/json': {
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -20239,11 +20447,19 @@ export interface operations {
         requestBody: {
             content: {
                 'application/json': {
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -20947,11 +21163,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default null */
                     folderId?: string | null;
@@ -21361,11 +21585,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     type?: string;
                 };
@@ -21719,11 +21951,19 @@ export interface operations {
             content: {
                 'application/json': {
                     host: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -21774,11 +22014,19 @@ export interface operations {
             content: {
                 'application/json': {
                     host: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -22104,11 +22352,19 @@ export interface operations {
             content: {
                 'application/json': {
                     host: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -22654,11 +22910,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -22726,11 +22990,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     search?: string | null;
                 };
@@ -22802,11 +23074,19 @@ export interface operations {
             content: {
                 'application/json': {
                     query: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 5 */
                     limit?: number;
@@ -23309,11 +23589,19 @@ export interface operations {
                 'application/json': {
                     /** @default false */
                     notification?: boolean;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -23510,11 +23798,19 @@ export interface operations {
         requestBody?: {
             content: {
                 'application/json': {
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -23650,11 +23946,19 @@ export interface operations {
         requestBody?: {
             content: {
                 'application/json': {
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -24006,11 +24310,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -26413,11 +26725,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -26485,11 +26805,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -26561,11 +26889,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -27068,11 +27404,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default true */
                     markAsRead?: boolean;
@@ -27199,11 +27543,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default true */
                     markAsRead?: boolean;
@@ -27330,11 +27682,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -27406,11 +27766,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -28270,11 +28638,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -29735,11 +30111,19 @@ export interface operations {
                 'application/json': {
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -30062,11 +30446,19 @@ export interface operations {
                 'application/json': {
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -30208,11 +30600,19 @@ export interface operations {
                     poll?: boolean;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -30282,11 +30682,19 @@ export interface operations {
                     noteId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -30902,11 +31310,19 @@ export interface operations {
                 'application/json': {
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     scheduled?: boolean | null;
                 };
@@ -31287,11 +31703,19 @@ export interface operations {
                     withRenotes?: boolean;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -31359,11 +31783,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default false */
                     allowPartial?: boolean;
@@ -31527,11 +31959,19 @@ export interface operations {
                     following?: boolean;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     visibility?: string;
                 };
@@ -31737,11 +32177,19 @@ export interface operations {
                     type?: string | null;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -31947,11 +32395,19 @@ export interface operations {
                     noteId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -32021,11 +32477,19 @@ export interface operations {
                     noteId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -32094,11 +32558,19 @@ export interface operations {
                     query: string;
                     rangeStartAt?: number | null;
                     rangeEndAt?: number | null;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -32200,11 +32672,19 @@ export interface operations {
                     withFiles?: boolean;
                     /** @default null */
                     poll?: boolean | null;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -32617,11 +33097,19 @@ export interface operations {
                 'application/json': {
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default false */
                     allowPartial?: boolean;
@@ -32851,11 +33339,19 @@ export interface operations {
                     listId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default false */
                     allowPartial?: boolean;
@@ -34108,11 +34604,19 @@ export interface operations {
                 'application/json': {
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -34423,11 +34927,19 @@ export interface operations {
                     roleId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -34543,11 +35055,19 @@ export interface operations {
                 'application/json': {
                     /** Format: misskey:id */
                     roleId: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default 10 */
                     limit?: number;
@@ -35261,11 +35781,19 @@ export interface operations {
                     userId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -35405,11 +35933,19 @@ export interface operations {
                     userId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -35460,11 +35996,19 @@ export interface operations {
                     | ({
                           /** Format: misskey:id */
                           userId: string;
-                          /** Format: misskey:id */
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                           */
                           sinceId?: string;
-                          /** Format: misskey:id */
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より古いものを返す。
+                           */
                           untilId?: string;
+                          /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                           sinceDate?: number;
+                          /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                           untilDate?: number;
                           /** @default 10 */
                           limit?: number;
@@ -35474,11 +36018,19 @@ export interface operations {
                     | ({
                           username: string;
                           host: string | null;
-                          /** Format: misskey:id */
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                           */
                           sinceId?: string;
-                          /** Format: misskey:id */
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より古いものを返す。
+                           */
                           untilId?: string;
+                          /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                           sinceDate?: number;
+                          /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                           untilDate?: number;
                           /** @default 10 */
                           limit?: number;
@@ -35551,11 +36103,19 @@ export interface operations {
                     | ({
                           /** Format: misskey:id */
                           userId: string;
-                          /** Format: misskey:id */
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                           */
                           sinceId?: string;
-                          /** Format: misskey:id */
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より古いものを返す。
+                           */
                           untilId?: string;
+                          /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                           sinceDate?: number;
+                          /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                           untilDate?: number;
                           /** @default 10 */
                           limit?: number;
@@ -35566,11 +36126,19 @@ export interface operations {
                     | ({
                           username: string;
                           host: string | null;
-                          /** Format: misskey:id */
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                           */
                           sinceId?: string;
-                          /** Format: misskey:id */
+                          /**
+                           * Format: misskey:id
+                           * @description この ID より古いものを返す。
+                           */
                           untilId?: string;
+                          /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                           sinceDate?: number;
+                          /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                           untilDate?: number;
                           /** @default 10 */
                           limit?: number;
@@ -35645,11 +36213,19 @@ export interface operations {
                     userId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -36138,11 +36714,19 @@ export interface operations {
                     forPublic?: boolean;
                     /** @default 30 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -36700,11 +37284,19 @@ export interface operations {
                     withChannelNotes?: boolean;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                     /** @default false */
                     allowPartial?: boolean;
@@ -36778,11 +37370,19 @@ export interface operations {
                     userId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
@@ -36834,11 +37434,19 @@ export interface operations {
                     userId: string;
                     /** @default 10 */
                     limit?: number;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より新しいものを返す (指定すると古い順に並ぶ)。
+                     */
                     sinceId?: string;
-                    /** Format: misskey:id */
+                    /**
+                     * Format: misskey:id
+                     * @description この ID より古いものを返す。
+                     */
                     untilId?: string;
+                    /** @description この時刻 (UNIX ミリ秒) より新しいものを返す。 */
                     sinceDate?: number;
+                    /** @description この時刻 (UNIX ミリ秒) より古いものを返す。 */
                     untilDate?: number;
                 };
             };
