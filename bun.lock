@@ -72,7 +72,6 @@
         "otpauth": "9.5.1",
         "pg": "8.22.0",
         "qrcode": "1.5.4",
-        "re2js": "2.8.5",
         "rss-parser": "3.13.0",
         "sanitize-html": "2.17.7",
         "semver": "7.8.5",
@@ -2722,8 +2721,6 @@
     "quick-lru": ["quick-lru@5.1.1", "", {}, "sha512-WuyALRjWPDGtt/wzJiadO5AXY+8hZ80hVpe6MyivgraREW751X3SbhRvG3eLKOYN+8VEvqLcf3wdnt44Z4S4SA=="],
 
     "rdf-canonize": ["rdf-canonize@5.0.0", "", { "dependencies": { "setimmediate": "1.0.5" } }, "sha512-g8OUrgMXAR9ys/ZuJVfBr05sPPoMA7nHIVs8VEvg9QwM5W4GR2qSFEEHjsyHF1eWlBaf8Ev40WNjQFQ+nJTO3w=="],
-
-    "re2js": ["re2js@2.8.5", "", {}, "sha512-L13fl3sRU6GgC/3fGrZ3DBZt2knDy/MVTw90oVBKhdlLr9uKwrxlxJUD+zkEMm8X/nq1XMi5GS4jq8O4FjmHoA=="],
 
     "react-is": ["react-is@17.0.2", "", {}, "sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w=="],
 
