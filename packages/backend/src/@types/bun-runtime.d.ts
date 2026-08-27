@@ -78,6 +78,33 @@ declare module 'bun' {
 		ssl?: boolean | Record<string, unknown>;
 	}
 
+	interface BunFile extends Blob {
+		readonly name?: string;
+	}
+
+	interface S3ClientOptions {
+		bucket: string;
+		endpoint?: string;
+		region?: string;
+		accessKeyId?: string;
+		secretAccessKey?: string;
+		virtualHostedStyle?: boolean;
+	}
+
+	interface S3WriteOptions {
+		type?: string;
+		contentDisposition?: string;
+		acl?: 'public-read' | 'private';
+		partSize?: number;
+	}
+
+	class S3Client {
+		constructor(options: S3ClientOptions);
+		write(key: string, data: BunFile | Uint8Array | string | Blob, options?: S3WriteOptions): Promise<number>;
+		delete(key: string): Promise<void>;
+		exists(key: string): Promise<boolean>;
+	}
+
 	class SQL {
 		constructor(url: string, options?: SQLOptions);
 		unsafe(query: string, params?: unknown[]): SQLQuery;
@@ -91,10 +118,12 @@ declare const Bun:
 	| {
 			serve<T = undefined>(options: Bun.ServeOptions<T>): Bun.Server;
 			spawn(command: string[], options?: Bun.SpawnOptions): Bun.Subprocess;
+			file(path: string): Bun.BunFile;
 			JSON5: {
 				parse(text: string): unknown;
 				stringify(value: unknown, replacer?: null, space?: string | number): string;
 			};
+			S3Client: typeof Bun.S3Client;
 			password: {
 				hash(password: string, options: { algorithm: 'bcrypt'; cost: number }): Promise<string>;
 				hashSync(password: string, options: { algorithm: 'bcrypt'; cost: number }): string;

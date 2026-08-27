@@ -4,7 +4,6 @@
  */
 
 import type * as Bull from 'bullmq';
-import type { DeleteObjectCommandInput } from '@aws-sdk/client-s3';
 import { finishDriveFileDeletionSync } from '@/core/drive/DriveFileDeletionLogic.js';
 import {
 	countRemoteCachedDriveFilesFromDatabase,
@@ -42,12 +41,7 @@ export type QueueObjectStorageDependencies = {
 
 export async function deleteObjectStorageFileForApi(deps: QueueObjectStorageDependencies, key: string): Promise<void> {
 	try {
-		const param = {
-			Bucket: deps.meta.objectStorageBucket,
-			Key: key,
-		} as DeleteObjectCommandInput;
-
-		await deps.s3Service.delete(deps.meta as MiMeta, param);
+		await deps.s3Service.delete(deps.meta as MiMeta, { key });
 	} catch (err) {
 		if ((err as { name?: string }).name === 'NoSuchKey') {
 			return;

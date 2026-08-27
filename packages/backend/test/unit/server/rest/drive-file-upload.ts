@@ -74,18 +74,13 @@ describe('addDriveFileForApi quota serialization', () => {
 		const storedKeys = new Set<string>();
 		const deletedKeys: string[] = [];
 		const upload = vi.fn(async (_meta, input) => {
-			storedKeys.add(input.Key as string);
+			storedKeys.add(input.key as string);
 			uploadedCount++;
 			if (uploadedCount === paths.length) releaseUploads?.();
 			await uploadsReady;
-			return {
-				Bucket: input.Bucket as string,
-				Key: input.Key as string,
-				Location: `https://storage.example.test/${input.Key as string}`,
-			};
 		});
 		const deleteObject = vi.fn(async (_meta, input) => {
-			const key = input.Key as string;
+			const key = input.key as string;
 			storedKeys.delete(key);
 			deletedKeys.push(key);
 			return {};
@@ -166,12 +161,7 @@ describe('addDriveFileForApi quota serialization', () => {
 		const storedKeys = new Set<string>();
 		const deletedKeys: string[] = [];
 		const upload = vi.fn(async (_meta, input) => {
-			storedKeys.add(input.Key as string);
-			return {
-				Bucket: input.Bucket as string,
-				Key: input.Key as string,
-				Location: `https://storage.example.test/${input.Key as string}`,
-			};
+			storedKeys.add(input.key as string);
 		});
 		const deps = {
 			config,
@@ -199,7 +189,7 @@ describe('addDriveFileForApi quota serialization', () => {
 			s3Service: {
 				upload,
 				delete: vi.fn(async (_meta, input) => {
-					const key = input.Key as string;
+					const key = input.key as string;
 					storedKeys.delete(key);
 					deletedKeys.push(key);
 					return {};
@@ -280,14 +270,9 @@ describe('addDriveFileForApi quota serialization', () => {
 				imageProcessingService: {},
 				videoProcessingService: {},
 				internalStorageService: { del: vi.fn(), saveFromBuffer: vi.fn(), saveFromPath: vi.fn() },
-				// upload の戻り値に Bucket が無いと呼び出し元が中断する。
 				s3Service: {
-					upload: vi.fn(async (_meta: unknown, input: { Key: string }) => ({
-						Bucket: 'test',
-						Key: input.Key,
-						Location: `https://example.test/${input.Key}`,
-					})),
-					delete: vi.fn(async () => ({})),
+					upload: vi.fn(async () => undefined),
+					delete: vi.fn(async () => undefined),
 				},
 				chartWriters: {
 					driveChart: { update },
@@ -334,11 +319,11 @@ describe('addDriveFileForApi quota serialization', () => {
 		const uploadedKeys: string[] = [];
 		const deletedKeys: string[] = [];
 		const upload = vi.fn(async (_meta, input) => {
-			uploadedKeys.push(input.Key as string);
+			uploadedKeys.push(input.key as string);
 			throw new Error('object storage is down');
 		});
 		const deleteObject = vi.fn(async (_meta, input) => {
-			deletedKeys.push(input.Key as string);
+			deletedKeys.push(input.key as string);
 			return {};
 		});
 		const update = vi.fn();
@@ -407,8 +392,13 @@ describe('addDriveFileForApi quota serialization', () => {
 			imageProcessingService: {},
 			videoProcessingService: {},
 			internalStorageService: { del: vi.fn(), saveFromBuffer: vi.fn(), saveFromPath: vi.fn() },
-			// マルチパートアップロードの中断結果には Bucket が含まれない
-			s3Service: { upload: vi.fn(async () => ({ Key: 'aborted' })), delete: vi.fn(async () => ({})) },
+			// アップロードが失敗したら DriveFile を作らずに中断する。
+			s3Service: {
+				upload: vi.fn(async () => {
+					throw new Error('Upload aborted');
+				}),
+				delete: vi.fn(async () => undefined),
+			},
 			chartWriters: {
 				driveChart: { update },
 				perUserDriveChart: { update },

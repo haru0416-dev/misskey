@@ -32,8 +32,6 @@
 		"generate-api-json": "bun run compile-config && bun ./scripts/generate_api_json.js"
 	},
 	"dependencies": {
-		"@aws-sdk/client-s3": "3.1076.0",
-		"@aws-sdk/lib-storage": "3.1076.0",
 		"@kitajs/html": "4.2.13",
 		"@misskey-dev/emoji-assets": "17.0.6",
 		"@misskey-dev/emoji-data": "17.0.6",
@@ -49,7 +47,6 @@
 		"@opentelemetry/semantic-conventions": "1.38.0",
 		"@peertube/http-signature": "1.7.0",
 		"@simplewebauthn/server": "13.3.2",
-		"@smithy/node-http-handler": "4.9.1",
 		"archiver": "8.0.0",
 		"blurhash": "2.0.5",
 		"bullmq": "6.2.0",
@@ -105,7 +102,6 @@
 		"@types/web-push": "3.6.4",
 		"@types/ws": "8.18.1",
 		"@vitest/coverage-v8": "4.1.9",
-		"aws-sdk-client-mock": "4.1.0",
 		"cbor2": "2.3.0",
 		"drizzle-kit": "0.31.10",
 		"fast-check": "4.9.0",

@@ -246,36 +246,6 @@ export function createHttpRequestService(config: Config) {
 			})
 		: httpsNonProxyAgent;
 
-	function getAgentByUrl(url: URL, bypassProxy = false, isLocalAddressAllowed = false): http.Agent | https.Agent {
-		if (bypassProxy || (config.outboundNetwork.proxy.bypassHosts ?? []).includes(url.hostname)) {
-			if (isLocalAddressAllowed) {
-				return url.protocol === 'http:' ? httpNative : httpsNative;
-			}
-			return url.protocol === 'http:' ? httpNonProxyAgent : httpsNonProxyAgent;
-		} else {
-			if (isLocalAddressAllowed && !config.outboundNetwork.proxy.url) {
-				return url.protocol === 'http:' ? httpNative : httpsNative;
-			}
-			return url.protocol === 'http:' ? httpAgent : httpsAgent;
-		}
-	}
-
-	function getAgentForHttp(url: URL, isLocalAddressAllowed = false): http.Agent {
-		if ((config.outboundNetwork.proxy.bypassHosts ?? []).includes(url.hostname)) {
-			return isLocalAddressAllowed ? httpNative : httpNonProxyAgent;
-		} else {
-			return httpAgent;
-		}
-	}
-
-	function getAgentForHttps(url: URL, isLocalAddressAllowed = false): https.Agent {
-		if ((config.outboundNetwork.proxy.bypassHosts ?? []).includes(url.hostname)) {
-			return isLocalAddressAllowed ? httpsNative : httpsNonProxyAgent;
-		} else {
-			return httpsAgent;
-		}
-	}
-
 	/**
 	 * fetch() 経路の SSRF 防御。宛先ホスト名を事前に DNS 解決し、解決先が private / non-unicast なら例外を投げる。
 	 *
@@ -283,7 +253,7 @@ export function createHttpRequestService(config: Config) {
 	 * private-IP ブロックは Bun ランタイムでは機能しない。そこで fetch を投げる前にこの事前チェックで防ぐ。
 	 * 解決とその後の fetch は別々に名前解決するため DNS rebinding の TOCTOU 窓は残るが (dnsCache により
 	 * 実質縮小される)、宛先への直接的な private-IP アクセスは確実に遮断できる。
-	 * `getAgentByUrl` 等の got/S3 経路は Node 実行時には socket レベルで遮断される。
+	 * agent 経路 (URL プレビュー) は Node 実行時には socket レベルで遮断される。
 	 */
 	async function assertUrlAllowed(url: URL, isLocalAddressAllowed = false): Promise<void> {
 		if (isLocalAddressAllowed) return;
@@ -515,9 +485,6 @@ export function createHttpRequestService(config: Config) {
 	return {
 		httpAgent,
 		httpsAgent,
-		getAgentByUrl,
-		getAgentForHttp,
-		getAgentForHttps,
 		assertUrlAllowed,
 		fetchFollowingRedirects,
 		getActivityJson,
