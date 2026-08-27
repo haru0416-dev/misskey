@@ -6,6 +6,7 @@
 import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
 import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
+import { birthdaySchema } from '@/models/User.js';
 
 describe('misc:zod-params', () => {
 	describe('uniqueItems', () => {
@@ -71,6 +72,24 @@ describe('misc:zod-params', () => {
 
 		test('ID は misskey:id 形式を強制する', () => {
 			expect(z.object({ ...paginationParams }).safeParse({ sinceId: 'ab-cd' }).success).toBe(false);
+		});
+	});
+
+	describe('birthdaySchema', () => {
+		test('実在する日付を通す', () => {
+			expect(birthdaySchema.safeParse('2000-06-15').success).toBe(true);
+			expect(birthdaySchema.safeParse('2000-02-29').success).toBe(true);
+		});
+
+		test('存在しない日付を弾く', () => {
+			expect(birthdaySchema.safeParse('2000-02-30').success).toBe(false);
+			expect(birthdaySchema.safeParse('2001-02-29').success).toBe(false);
+			expect(birthdaySchema.safeParse('9999-99-99').success).toBe(false);
+		});
+
+		test('YYYY-MM-DD 以外の形を弾く', () => {
+			expect(birthdaySchema.safeParse('2000-6-15').success).toBe(false);
+			expect(birthdaySchema.safeParse('2000-06-15T00:00:00Z').success).toBe(false);
 		});
 	});
 });

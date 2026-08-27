@@ -182,10 +182,6 @@ export const createParamDef = z.object({
 	name: z.string().min(1).max(100),
 });
 
-type CreateParams = {
-	name: string;
-};
-
 export async function handleApiUsersListsCreate(
 	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
@@ -218,11 +214,6 @@ export const createFromPublicParamDef = z.object({
 	name: z.string().min(1).max(100),
 	listId: misskeyId(),
 });
-
-type CreateFromPublicParams = {
-	name: string;
-	listId: string;
-};
 
 export async function handleApiUsersListsCreateFromPublic(
 	deps: ApiUsersListsDependencies,
@@ -352,11 +343,6 @@ export const pullParamDef = z.object({
 	userId: misskeyId(),
 });
 
-type PullParams = {
-	listId: string;
-	userId: string;
-};
-
 export async function handleApiUsersListsPull(
 	deps: ApiUsersListsDependencies,
 	me: MiLocalUser,
@@ -376,11 +362,6 @@ export const pushParamDef = z.object({
 	listId: misskeyId(),
 	userId: misskeyId(),
 });
-
-type PushParams = {
-	listId: string;
-	userId: string;
-};
 
 export async function handleApiUsersListsPush(
 	deps: ApiUsersListsDependencies,
@@ -438,16 +419,6 @@ export const getMembershipsParamDef = z.object({
 	...paginationParams,
 });
 
-type GetMembershipsParams = {
-	listId: string;
-	forPublic: boolean;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
-
 export async function handleApiUsersListsGetMemberships(
 	deps: ApiUsersListsDependencies,
 	me: MiLocalUser | null,
@@ -478,12 +449,6 @@ export const updateMembershipParamDef = z.object({
 	userId: misskeyId(),
 	withReplies: z.boolean().optional(),
 });
-
-type UpdateMembershipParams = {
-	listId: string;
-	userId: string;
-	withReplies?: boolean;
-};
 
 export async function handleApiUsersListsUpdateMembership(
 	deps: ApiUsersListsDependencies,

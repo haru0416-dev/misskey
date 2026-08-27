@@ -51,19 +51,6 @@ export const authSessionUserkeyParamDef = z.object({
 	token: z.string(),
 });
 
-type AuthSessionGenerateParams = {
-	appSecret: string;
-};
-
-type AuthSessionShowParams = {
-	token: string;
-};
-
-type AuthSessionUserkeyParams = {
-	appSecret: string;
-	token: string;
-};
-
 function noSuchGenerateAppError(): ApiError {
 	return new ApiError({
 		status: 400,

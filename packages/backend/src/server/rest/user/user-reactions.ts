@@ -51,15 +51,6 @@ export const usersReactionsParamDef = z.object({
 	...paginationParams,
 });
 
-type UsersReactionsParams = {
-	userId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
-
 async function packNoteReactionWithNoteForApi(
 	deps: ApiUserReactionsDependencies,
 	reaction: NoteReactionRow & { note: MiNote },

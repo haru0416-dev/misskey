@@ -378,21 +378,6 @@ export const antennasCreateParamDef = z
 		}
 	});
 
-type AntennasCreateParams = {
-	name: string;
-	src: (typeof antennaSrcEnum)[number];
-	userListId?: string | null;
-	keywords: string[][];
-	excludeKeywords: string[][];
-	users: string[];
-	caseSensitive: boolean;
-	localOnly?: boolean;
-	excludeBots?: boolean;
-	withReplies: boolean;
-	withFile: boolean;
-	excludeNotesInSensitiveChannel?: boolean;
-};
-
 export async function handleApiAntennasCreate(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
@@ -484,22 +469,6 @@ export const antennasUpdateParamDef = z
 		}
 	});
 
-type AntennasUpdateParams = {
-	antennaId: string;
-	name?: string;
-	src?: (typeof antennaSrcEnum)[number];
-	userListId?: string | null;
-	keywords?: string[][];
-	excludeKeywords?: string[][];
-	users?: string[];
-	caseSensitive?: boolean;
-	localOnly?: boolean;
-	excludeBots?: boolean;
-	withReplies?: boolean;
-	withFile?: boolean;
-	excludeNotesInSensitiveChannel?: boolean;
-};
-
 export async function handleApiAntennasUpdate(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
@@ -566,10 +535,6 @@ export const antennasDeleteParamDef = z.object({
 	antennaId: misskeyId(),
 });
 
-type AntennasDeleteParams = {
-	antennaId: string;
-};
-
 export async function handleApiAntennasDelete(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
@@ -603,10 +568,6 @@ export const antennasShowParamDef = z.object({
 	antennaId: misskeyId(),
 });
 
-type AntennasShowParams = {
-	antennaId: string;
-};
-
 export async function handleApiAntennasShow(
 	deps: ApiAntennaDependencies,
 	me: MiLocalUser,
@@ -624,11 +585,6 @@ export const antennasRemoveNoteParamDef = z.object({
 	antennaId: misskeyId(),
 	noteId: misskeyId(),
 });
-
-type AntennasRemoveNoteParams = {
-	antennaId: string;
-	noteId: string;
-};
 
 export async function handleApiAntennasRemoveNote(
 	deps: ApiAntennaDependencies,
@@ -648,15 +604,6 @@ export const antennasNotesParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
-
-type AntennasNotesParams = {
-	antennaId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiAntennasNotes(
 	deps: ApiAntennaDependencies,

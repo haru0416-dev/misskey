@@ -78,19 +78,6 @@ export const adminSystemWebhookUpdateParamDef = z.object({
 	secret: z.string().max(1024).default(''),
 });
 
-type AdminSystemWebhookCreateParams = Omit<z.infer<typeof adminSystemWebhookCreateParamDef>, 'on'> & {
-	on: SystemWebhookEventType[];
-};
-type AdminSystemWebhookListParams = Omit<z.infer<typeof adminSystemWebhookListParamDef>, 'on'> & {
-	on?: SystemWebhookEventType[];
-};
-type AdminSystemWebhookTestParams = Omit<z.infer<typeof adminSystemWebhookTestParamDef>, 'type'> & {
-	type: SystemWebhookEventType;
-};
-type AdminSystemWebhookUpdateParams = Omit<z.infer<typeof adminSystemWebhookUpdateParamDef>, 'on'> & {
-	on: SystemWebhookEventType[];
-};
-
 export function packApiSystemWebhook(webhook: MiSystemWebhook): Packed<'SystemWebhook'> {
 	return {
 		id: webhook.id,

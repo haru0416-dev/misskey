@@ -58,10 +58,6 @@ export const notesDeleteParamDef = z.object({
 	noteId: misskeyId(),
 });
 
-type NotesDeleteParams = {
-	noteId: string;
-};
-
 export async function deleteNoteForApi(
 	deps: ApiNotesDeleteDependencies,
 	user: { id: MiUser['id']; uri: MiUser['uri']; host: MiUser['host']; isBot: MiUser['isBot'] },
@@ -153,10 +149,6 @@ function notesUnrenoteNoSuchNoteError(): ApiError {
 export const notesUnrenoteParamDef = z.object({
 	noteId: misskeyId(),
 });
-
-type NotesUnrenoteParams = {
-	noteId: string;
-};
 
 export async function handleApiNotesUnrenote(
 	deps: ApiNotesDeleteDependencies,

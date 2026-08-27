@@ -112,10 +112,6 @@ export const iMoveParamDef = z.object({
 	moveToAccount: z.string(),
 });
 
-type IMoveParams = {
-	moveToAccount: string;
-};
-
 function getUserUriForApi(config: Pick<Config, 'instance'>, user: MiUser): string | null {
 	return user.host != null ? user.uri : genLocalUserUri(config, user.id);
 }

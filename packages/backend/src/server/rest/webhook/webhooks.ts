@@ -62,13 +62,6 @@ export const webhooksCreateParamDef = z.object({
 	on: z.array(z.enum(webhookEventTypes)),
 });
 
-type WebhooksCreateParams = {
-	name: string;
-	url: string;
-	secret: string;
-	on: WebhookEventTypes[];
-};
-
 export const webhooksShowParamDef = z.object({
 	webhookId: misskeyId(),
 });
@@ -85,23 +78,6 @@ export const webhooksUpdateParamDef = z.object({
 	on: z.array(z.enum(webhookEventTypes)).optional(),
 	active: z.boolean().optional(),
 });
-
-type WebhooksShowParams = {
-	webhookId: string;
-};
-
-type WebhooksDeleteParams = {
-	webhookId: string;
-};
-
-type WebhooksUpdateParams = {
-	webhookId: string;
-	name?: string;
-	url?: string;
-	secret?: string | null;
-	on?: WebhookEventTypes[];
-	active?: boolean;
-};
 
 function packUserWebhook(webhook: MiWebhook): ApiUserWebhook {
 	return {
@@ -248,12 +224,6 @@ export const webhooksTestParamDef = z.object({
 		})
 		.optional(),
 });
-
-type WebhooksTestParams = {
-	webhookId: string;
-	type: WebhookEventTypes;
-	override?: { url?: string; secret?: string };
-};
 
 const oneDayMillis = 24 * 60 * 60 * 1000;
 

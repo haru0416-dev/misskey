@@ -74,29 +74,6 @@ export const usersListsUpdateParamDef = z.object({
 	isPublic: z.boolean().optional(),
 });
 
-type UsersAchievementsParams = {
-	userId: string;
-};
-
-type UsersListsDeleteParams = {
-	listId: string;
-};
-
-type UsersListsListParams = {
-	userId?: string;
-};
-
-type UsersListsShowParams = {
-	listId: string;
-	forPublic: boolean;
-};
-
-type UsersListsUpdateParams = {
-	listId: string;
-	name?: string;
-	isPublic?: boolean;
-};
-
 async function packUserListForApi(
 	deps: ApiUsersDependencies,
 	src: MiUserList['id'] | MiUserList,

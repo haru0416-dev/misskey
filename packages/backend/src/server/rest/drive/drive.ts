@@ -48,19 +48,10 @@ export const driveFilesCheckExistenceParamDef = z.object({
 	md5: z.string(),
 });
 
-type DriveFilesCheckExistenceParams = {
-	md5: string;
-};
-
 export const driveFoldersCreateParamDef = z.object({
 	name: z.string().max(200).default('Untitled'),
 	parentId: misskeyId().nullable().optional(),
 });
-
-type DriveFoldersCreateParams = {
-	name: string;
-	parentId?: string | null;
-};
 
 export const driveFoldersParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
@@ -68,32 +59,14 @@ export const driveFoldersParamDef = z.object({
 	folderId: misskeyId().nullable().default(null),
 });
 
-type DriveFoldersParams = {
-	limit: number;
-	sinceId?: string | null;
-	untilId?: string | null;
-	sinceDate?: number | null;
-	untilDate?: number | null;
-	folderId: string | null;
-};
-
 export const driveFoldersFindParamDef = z.object({
 	name: z.string(),
 	parentId: misskeyId().nullable().default(null),
 });
 
-type DriveFoldersFindParams = {
-	name: string;
-	parentId: string | null;
-};
-
 export const driveFoldersShowParamDef = z.object({
 	folderId: misskeyId(),
 });
-
-type DriveFoldersShowParams = {
-	folderId: string;
-};
 
 export const driveFoldersUpdateParamDef = z.object({
 	folderId: misskeyId(),
@@ -101,19 +74,9 @@ export const driveFoldersUpdateParamDef = z.object({
 	parentId: misskeyId().nullable().optional(),
 });
 
-type DriveFoldersUpdateParams = {
-	folderId: string;
-	name?: string;
-	parentId?: string | null;
-};
-
 export const driveFoldersDeleteParamDef = z.object({
 	folderId: misskeyId(),
 });
-
-type DriveFoldersDeleteParams = {
-	folderId: string;
-};
 
 function driveFoldersCreateNoSuchFolderError(): ApiError {
 	return new ApiError({

@@ -86,11 +86,6 @@ export const adminAbuseUserReportsParamDef = z.object({
 	targetUserOrigin: z.enum(['combined', 'local', 'remote']).optional().default('combined'),
 });
 
-type AdminAbuseUserReportsParams = z.infer<typeof adminAbuseUserReportsParamDef> & {
-	state: string | null;
-	reporterOrigin: 'combined' | 'local' | 'remote';
-	targetUserOrigin: 'combined' | 'local' | 'remote';
-};
 type ApiAbuseUserReport = {
 	id: string;
 	createdAt: string;
@@ -506,11 +501,6 @@ export const usersReportAbuseParamDef = z.object({
 	userId: misskeyId(),
 	comment: z.string().min(1).max(2048),
 });
-
-type UsersReportAbuseParams = {
-	userId: string;
-	comment: string;
-};
 
 export async function handleApiUsersReportAbuse(
 	deps: ApiUsersReportAbuseDependencies,

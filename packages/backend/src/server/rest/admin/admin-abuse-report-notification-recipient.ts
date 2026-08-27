@@ -61,20 +61,8 @@ export const adminAbuseReportNotificationRecipientDeleteParamDef = z.object({
 	id: misskeyId(),
 });
 
-type AdminAbuseReportNotificationRecipientListParams = Omit<
-	z.infer<typeof adminAbuseReportNotificationRecipientListParamDef>,
-	'method'
-> & {
-	method?: RecipientMethod[];
-};
 type AdminAbuseReportNotificationRecipientCreateParams = Omit<
 	z.infer<typeof adminAbuseReportNotificationRecipientCreateParamDef>,
-	'method'
-> & {
-	method: RecipientMethod;
-};
-type AdminAbuseReportNotificationRecipientUpdateParams = Omit<
-	z.infer<typeof adminAbuseReportNotificationRecipientUpdateParamDef>,
 	'method'
 > & {
 	method: RecipientMethod;

@@ -49,13 +49,6 @@ export const registrySetParamDef = z.object({
 
 export const registryScopesWithDomainParamDef = z.object({});
 
-type RegistrySetParams = {
-	key: string;
-	value: unknown;
-	scope: string[];
-	domain?: string | null;
-};
-
 function noSuchGetKeyError(): ApiError {
 	return new ApiError({
 		status: 400,

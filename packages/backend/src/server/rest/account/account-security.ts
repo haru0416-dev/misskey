@@ -80,12 +80,6 @@ export const changePasswordParamDef = z.object({
 	token: z.string().nullable().optional(),
 });
 
-type ChangePasswordParams = {
-	currentPassword: string;
-	newPassword: string;
-	token?: string | null;
-};
-
 export async function handleApiIChangePassword(
 	deps: ApiAccountSecurityDependencies,
 	me: MiLocalUser,
@@ -111,10 +105,6 @@ export async function handleApiIChangePassword(
 export const regenerateTokenParamDef = z.object({
 	password: z.string(),
 });
-
-type RegenerateTokenParams = {
-	password: string;
-};
 
 export async function handleApiIRegenerateToken(
 	deps: ApiAccountSecurityDependencies,
@@ -146,11 +136,6 @@ export const deleteAccountParamDef = z.object({
 	password: z.string(),
 	token: z.string().nullable().optional(),
 });
-
-type DeleteAccountParams = {
-	password: string;
-	token?: string | null;
-};
 
 export async function handleApiIDeleteAccount(
 	deps: ApiAccountSecurityDependencies,
@@ -203,12 +188,6 @@ export const updateEmailParamDef = z.object({
 	email: z.string().nullable().optional(),
 	token: z.string().nullable().optional(),
 });
-
-type UpdateEmailParams = {
-	password: string;
-	email?: string | null;
-	token?: string | null;
-};
 
 export async function handleApiIUpdateEmail(
 	deps: ApiAccountSecurityDependencies,

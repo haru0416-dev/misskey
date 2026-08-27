@@ -29,15 +29,6 @@ export const adminPromoCreateParamDef = z.object({
 	expiresAt: z.int(),
 });
 
-type PromoReadParams = {
-	noteId: string;
-};
-
-type AdminPromoCreateParams = {
-	noteId: string;
-	expiresAt: number;
-};
-
 function noSuchNoteError(): ApiError {
 	return new ApiError({
 		status: 400,

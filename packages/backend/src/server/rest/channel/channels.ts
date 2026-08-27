@@ -85,11 +85,6 @@ export const channelsSearchParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(5),
 });
 
-type ChannelsSearchParams = ChannelsListParams & {
-	query: string;
-	type: 'nameAndDescription' | 'nameOnly';
-};
-
 export const emptyParamDef = z.object({});
 
 export const channelCreateParamDef = z.object({
@@ -100,15 +95,6 @@ export const channelCreateParamDef = z.object({
 	isSensitive: z.boolean().nullable().optional(),
 	allowRenoteToExternal: z.boolean().nullable().optional(),
 });
-
-type ChannelCreateParams = {
-	name: string;
-	description?: string | null;
-	bannerId?: string | null;
-	color?: string;
-	isSensitive?: boolean | null;
-	allowRenoteToExternal?: boolean | null;
-};
 
 export const channelUpdateParamDef = z.object({
 	channelId: misskeyId(),
@@ -122,66 +108,28 @@ export const channelUpdateParamDef = z.object({
 	allowRenoteToExternal: z.boolean().nullable().optional(),
 });
 
-type ChannelUpdateParams = {
-	channelId: string;
-	name?: string;
-	description?: string | null;
-	bannerId?: string | null;
-	isArchived?: boolean | null;
-	pinnedNoteIds?: string[];
-	color?: string;
-	isSensitive?: boolean | null;
-	allowRenoteToExternal?: boolean | null;
-};
-
 export const channelFollowParamDef = z.object({
 	channelId: misskeyId(),
 });
-
-type ChannelFollowParams = {
-	channelId: string;
-};
 
 export const channelMuteCreateParamDef = z.object({
 	channelId: misskeyId(),
 	expiresAt: z.int().nullable().optional(),
 });
 
-type ChannelMuteCreateParams = {
-	channelId: string;
-	expiresAt?: number | null;
-};
-
 export const channelMuteDeleteParamDef = z.object({
 	channelId: misskeyId(),
 });
 
-type ChannelMuteDeleteParams = {
-	channelId: string;
-};
-
 export const channelShowParamDef = z.object({
 	channelId: misskeyId(),
 });
-
-type ChannelShowParams = {
-	channelId: string;
-};
 
 const channelTimelineParamDef = z.object({
 	channelId: misskeyId(),
 	limit: z.int().min(1).max(100).optional().default(10),
 	...paginationParams,
 });
-
-type ChannelTimelineParams = {
-	channelId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 function channelsShowNoSuchChannelError(): ApiError {
 	return new ApiError({

@@ -73,24 +73,6 @@ export const adminQueueOutboxJobParamDef = z.object({
 	revision: z.int().min(0),
 });
 
-type AdminQueueSelectParams = z.infer<typeof adminQueueSelectParamDef> & {
-	queue: QueueType;
-};
-
-type AdminQueueClearParams = z.infer<typeof adminQueueClearParamDef> & {
-	queue: QueueType;
-	state: QueueClearState;
-};
-
-type AdminQueueJobsParams = z.infer<typeof adminQueueJobsParamDef> & {
-	queue: QueueType;
-	state: JobType[];
-};
-
-type AdminQueueJobParams = z.infer<typeof adminQueueJobParamDef> & {
-	queue: QueueType;
-};
-
 export async function handleApiAdminQueueQueues(deps: ApiAdminQueueDependencies, body: Record<string, unknown>) {
 	parseApiParams(adminQueueNoParamsDef, body);
 

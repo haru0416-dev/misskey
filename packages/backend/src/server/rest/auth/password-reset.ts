@@ -38,11 +38,6 @@ export const requestResetPasswordParamDef = z.object({
 	email: z.string(),
 });
 
-type RequestResetPasswordParams = {
-	username: string;
-	email: string;
-};
-
 function invalidPasswordResetTokenError(): ApiError {
 	return new ApiError({
 		status: 400,
@@ -56,11 +51,6 @@ export const resetPasswordParamDef = z.object({
 	token: z.string(),
 	password: passwordSchema,
 });
-
-type ResetPasswordParams = {
-	token: string;
-	password: string;
-};
 
 export async function handleApiRequestResetPassword(
 	deps: ApiPasswordResetDependencies,

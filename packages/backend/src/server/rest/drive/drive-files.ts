@@ -69,17 +69,6 @@ export const driveFilesParamDef = z.object({
 	sort: z.union([z.enum(['+createdAt', '-createdAt', '+name', '-name', '+size', '-size']), z.null()]).optional(),
 });
 
-type DriveFilesParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	folderId?: string | null;
-	type?: string | null;
-	sort?: '+createdAt' | '-createdAt' | '+name' | '-name' | '+size' | '-size' | null;
-};
-
 export async function handleApiDriveFilesList(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
@@ -120,15 +109,6 @@ export const driveStreamParamDef = z.object({
 		.optional(),
 });
 
-type DriveStreamParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	type?: string;
-};
-
 export async function handleApiDriveStream(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
@@ -160,8 +140,6 @@ export async function handleApiDriveStream(
 
 export const driveFilesShowParamDef = z.union([z.object({ fileId: misskeyId() }), z.object({ url: z.string() })]);
 
-type DriveFilesShowParams = { fileId: string } | { url: string };
-
 export async function handleApiDriveFilesShow(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
@@ -188,11 +166,6 @@ export const driveFilesFindParamDef = z.object({
 	folderId: misskeyId().nullable().default(null),
 });
 
-type DriveFilesFindParams = {
-	name: string;
-	folderId?: string | null;
-};
-
 export async function handleApiDriveFilesFind(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
@@ -213,10 +186,6 @@ export const driveFilesFindByHashParamDef = z.object({
 	md5: z.string(),
 });
 
-type DriveFilesFindByHashParams = {
-	md5: string;
-};
-
 export async function handleApiDriveFilesFindByHash(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
@@ -234,15 +203,6 @@ export const driveFilesAttachedNotesParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
 	fileId: misskeyId(),
 });
-
-type DriveFilesAttachedNotesParams = {
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	limit: number;
-	fileId: string;
-};
 
 export async function handleApiDriveFilesAttachedNotes(
 	deps: ApiDriveFilesDependencies,
@@ -307,10 +267,6 @@ export const driveFilesDeleteParamDef = z.object({
 	fileId: misskeyId(),
 });
 
-type DriveFilesDeleteParams = {
-	fileId: string;
-};
-
 export async function handleApiDriveFilesDelete(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
@@ -335,14 +291,6 @@ export const driveFilesUpdateParamDef = z.object({
 	isSensitive: z.boolean().optional(),
 	comment: z.string().max(512).nullable().optional(),
 });
-
-type DriveFilesUpdateParams = {
-	fileId: string;
-	folderId?: string | null;
-	name?: string;
-	isSensitive?: boolean;
-	comment?: string | null;
-};
 
 export function validateApiDriveFileName(name: string): boolean {
 	return (
@@ -440,11 +388,6 @@ export const driveFilesMoveBulkParamDef = z.object({
 	folderId: misskeyId().nullable().optional(),
 });
 
-type DriveFilesMoveBulkParams = {
-	fileIds: string[];
-	folderId?: string | null;
-};
-
 export async function handleApiDriveFilesMoveBulk(
 	deps: ApiDriveFilesDependencies,
 	me: MiLocalUser,
@@ -472,15 +415,6 @@ export const driveFilesAttachedChatMessagesParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
 	fileId: misskeyId(),
 });
-
-type DriveFilesAttachedChatMessagesParams = {
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	limit: number;
-	fileId: string;
-};
 
 export async function handleApiDriveFilesAttachedChatMessages(
 	deps: ApiDriveFilesDependencies,

@@ -148,19 +148,9 @@ export const notificationsDeleteParamDef = z.object({
 	grouped: z.boolean().optional().default(false),
 });
 
-type NotificationsCreateParams = {
-	body: string;
-	header?: string | null;
-	icon?: string | null;
-};
-
 export const claimAchievementParamDef = z.object({
 	name: z.enum(ACHIEVEMENT_TYPES),
 });
-
-type ClaimAchievementParams = {
-	name: (typeof ACHIEVEMENT_TYPES)[number];
-};
 
 export function toXListId(id: string): string {
 	const { date, additional } = parseUuidv7Full(id);
