@@ -2759,6 +2759,7 @@ _postForm:
   quotePlaceholder: "このノートを引用..."
   channelPlaceholder: "チャンネルに投稿..."
   showHowToUse: "フォームの説明を表示"
+  pleaseCheckServerRules: "投稿の前にサーバールールを確認してください"
   _howToUse:
     content_title: "本文"
     content_description: "投稿する内容を入力します。"
