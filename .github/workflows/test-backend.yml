@@ -74,6 +74,9 @@ jobs:
         run: |
           sudo apt install -y ffmpeg
       - run: bun install --frozen-lockfile
+      - name: Build slacc
+        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
+        run: bun run --filter slacc build
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
       - name: Copy Configure
@@ -119,6 +122,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
+      - name: Build slacc
+        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
+        run: bun run --filter slacc build
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
       - name: Copy Configure
@@ -162,6 +168,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
+      - name: Build slacc
+        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
+        run: bun run --filter slacc build
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
       - name: Copy Configure
@@ -206,6 +215,9 @@ jobs:
         id: current-date
         run: echo "today=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
       - run: bun install --frozen-lockfile
+      - name: Build slacc
+        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
+        run: bun run --filter slacc build
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
       - name: Copy Configure

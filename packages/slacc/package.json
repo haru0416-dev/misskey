@@ -1,0 +1,30 @@
+{
+	"name": "slacc",
+	"version": "0.2.0",
+	"private": true,
+	"description": "misskey-dev/slacc を取り込んだもの。署名 (RSA / Ed25519 / ML-DSA) と zip 展開をネイティブで行う",
+	"license": "MIT",
+	"main": "index.cjs",
+	"types": "index.d.ts",
+	"files": [
+		"index.cjs",
+		"index.mjs",
+		"index.d.ts",
+		"*.node"
+	],
+	"scripts": {
+		"build": "napi build --platform --release",
+		"build:debug": "napi build --platform"
+	},
+	"devDependencies": {
+		"@napi-rs/cli": "3.8.6"
+	},
+	"module": "index.mjs",
+	"exports": {
+		".": {
+			"types": "./index.d.ts",
+			"import": "./index.mjs",
+			"require": "./index.cjs"
+		}
+	}
+}

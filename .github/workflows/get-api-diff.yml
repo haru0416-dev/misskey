@@ -45,6 +45,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
+      - name: Build slacc
+        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
+        run: bun run --filter slacc build
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
       - name: Copy Configure

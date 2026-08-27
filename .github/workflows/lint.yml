@@ -83,6 +83,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
+      - name: Build slacc
+        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
+        run: bun run --filter slacc build
       - run: bun run lint:ox
 
   oxfmt:
@@ -103,6 +106,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
+      - name: Build slacc
+        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
+        run: bun run --filter slacc build
       - run: bun run format:ox:check
 
   vue-templates:
@@ -123,6 +129,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
+      - name: Build slacc
+        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
+        run: bun run --filter slacc build
       - run: bun run lint:vue-templates
 
   typecheck:
@@ -155,6 +164,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
+      - name: Build slacc
+        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
+        run: bun run --filter slacc build
       - run: bun run build:frontend-deps
       - run: bun run --bun --filter ${{ matrix.workspace }} typecheck
       - if: matrix.workspace == 'frontend'
