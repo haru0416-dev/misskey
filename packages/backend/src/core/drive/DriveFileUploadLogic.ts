@@ -6,7 +6,6 @@
 import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import sharp from 'sharp';
-import type { PutObjectCommandInput } from '@aws-sdk/client-s3';
 import type { Sharp } from 'sharp';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import { FILE_TYPE_BROWSERSAFE } from '@/const.js';
@@ -16,7 +15,7 @@ import type { DownloadService } from '@/core/net/DownloadService.js';
 import type { FileInfoService } from '@/core/drive/FileInfoService.js';
 import type { IImage, ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
 import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
-import type { S3Service } from '@/core/drive/S3Service.js';
+import type { S3PutObject, S3Service } from '@/core/drive/S3Service.js';
 import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { contentDisposition } from '@/misc/content-disposition.js';
@@ -158,7 +157,7 @@ async function generateDriveFileAlts(
 async function uploadObjectStorageFile(
 	deps: DriveFileUploadDependencies,
 	key: string,
-	stream: fs.ReadStream | Buffer,
+	stream: Blob | Uint8Array,
 	type: string,
 	ext?: string | null,
 	filename?: string,
@@ -167,31 +166,22 @@ async function uploadObjectStorageFile(
 	if (uploadType === 'image/apng') uploadType = 'image/png';
 	if (!FILE_TYPE_BROWSERSAFE.includes(uploadType)) uploadType = 'application/octet-stream';
 
-	const params = {
-		Bucket: deps.meta.objectStorageBucket,
-		Key: key,
-		Body: stream,
-		ContentType: uploadType,
-		CacheControl: 'max-age=31536000, immutable',
-	} as PutObjectCommandInput;
+	const object: S3PutObject = {
+		key,
+		body: stream,
+		contentType: uploadType,
+		...(filename == null
+			? {}
+			: { contentDisposition: contentDisposition('inline', ext ? correctFilename(filename, ext) : filename) }),
+		publicRead: deps.meta.objectStorageSetPublicRead,
+	};
 
-	if (filename) {
-		params.ContentDisposition = contentDisposition('inline', ext ? correctFilename(filename, ext) : filename);
+	try {
+		await deps.s3Service.upload(deps.meta, object);
+		deps.logger?.debug(`Uploaded: ${deps.meta.objectStorageBucket}/${key}`);
+	} catch (err) {
+		deps.logger?.error(`Upload Failed: key = ${key}, filename = ${filename}`, { e: err as Error });
 	}
-	if (deps.meta.objectStorageSetPublicRead) params.ACL = 'public-read';
-
-	await deps.s3Service
-		.upload(deps.meta, params)
-		.then((result) => {
-			if ('Bucket' in result) {
-				deps.logger?.debug(`Uploaded: ${result.Bucket}/${result.Key} => ${result.Location}`);
-			} else {
-				deps.logger?.error(`Upload Result Aborted: key = ${key}, filename = ${filename}`);
-			}
-		})
-		.catch((err) => {
-			deps.logger?.error(`Upload Failed: key = ${key}, filename = ${filename}`, { e: err });
-		});
 }
 
 async function saveSystemDriveFile(
@@ -234,7 +224,7 @@ async function saveSystemDriveFile(
 		let thumbnailUrl: string | null = null;
 
 		deps.logger?.info(`uploading original: ${key}`);
-		const uploads = [uploadObjectStorageFile(deps, key, fs.createReadStream(path), type, null, name)];
+		const uploads = [uploadObjectStorageFile(deps, key, Bun!.file(path), type, null, name)];
 
 		if (alts.webpublic) {
 			webpublicKey = `${prefix}webpublic-${randomUUID()}.${alts.webpublic.ext}`;

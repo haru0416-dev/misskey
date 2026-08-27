@@ -12,7 +12,6 @@ import sharp from 'sharp';
 import { sql } from 'drizzle-orm';
 import type { Sharp } from 'sharp';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
-import type { PutObjectCommandInput } from '@aws-sdk/client-s3';
 import type { Context } from 'hono';
 import { DB_MAX_IMAGE_COMMENT_LENGTH, FILE_TYPE_BROWSERSAFE } from '@/const.js';
 import type { Config } from '@/config.js';
@@ -36,7 +35,7 @@ import type { FileInfoService } from '@/core/drive/FileInfoService.js';
 import type { IImage } from '@/core/drive/ImageProcessingService.js';
 import type { ImageProcessingService } from '@/core/drive/ImageProcessingService.js';
 import type { InternalStorageService } from '@/core/drive/InternalStorageService.js';
-import type { S3Service } from '@/core/drive/S3Service.js';
+import type { S3PutObject, S3Service } from '@/core/drive/S3Service.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { fetchUserProfileByUserIdFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { VideoProcessingService } from '@/core/drive/VideoProcessingService.js';
@@ -243,7 +242,7 @@ async function generateDriveFileAltsForApi(
 async function uploadDriveFileToObjectStorageForApi(
 	deps: ApiDriveFileUploadDependencies,
 	key: string,
-	body: fs.ReadStream | Buffer,
+	body: Blob | Uint8Array,
 	type: string,
 	ext: string | null | undefined,
 	filename: string | undefined,
@@ -252,36 +251,27 @@ async function uploadDriveFileToObjectStorageForApi(
 	if (contentType === 'image/apng') contentType = 'image/png';
 	if (!FILE_TYPE_BROWSERSAFE.includes(contentType)) contentType = 'application/octet-stream';
 
-	const params = {
-		Bucket: deps.meta.objectStorageBucket,
-		Key: key,
-		Body: body,
-		ContentType: contentType,
-		CacheControl: 'max-age=31536000, immutable',
-	} as PutObjectCommandInput;
-
-	if (filename) {
-		params.ContentDisposition = contentDisposition('inline', ext ? correctFilename(filename, ext) : filename);
-	}
-	if (deps.meta.objectStorageSetPublicRead) params.ACL = 'public-read';
+	const object: S3PutObject = {
+		key,
+		body,
+		contentType,
+		...(filename == null
+			? {}
+			: { contentDisposition: contentDisposition('inline', ext ? correctFilename(filename, ext) : filename) }),
+		publicRead: deps.meta.objectStorageSetPublicRead,
+	};
 
 	// 失敗をここで握り潰すと、実体の無いオブジェクトを指す DriveFile が DB に入り、
 	// APIは成功を返すのにファイルURLだけ404になる。呼び出し元へ伝播させて中断させる
-	const result = await deps.s3Service.upload(deps.meta, params);
-	if (!('Bucket' in result)) {
-		throw new Error(`Upload aborted: key = ${key}, filename = ${filename}`);
-	}
-	deps.logger.debug(`Uploaded: ${result.Bucket}/${result.Key} => ${result.Location}`);
+	await deps.s3Service.upload(deps.meta, object);
+	deps.logger.debug(`Uploaded: ${deps.meta.objectStorageBucket}/${key}`);
 }
 
 async function deleteDriveFileObjectsForApi(deps: ApiDriveFileUploadDependencies, keys: string[]): Promise<void> {
 	await Promise.all(
 		keys.map(async (accessKey) => {
 			try {
-				await deps.s3Service.delete(deps.meta, {
-					Bucket: deps.meta.objectStorageBucket ?? undefined,
-					Key: accessKey,
-				});
+				await deps.s3Service.delete(deps.meta, { key: accessKey });
 			} catch (err) {
 				deps.logger.error(`Failed to clean up uploaded object: key = ${accessKey}`, err as Error);
 			}
@@ -335,7 +325,7 @@ async function saveDriveFileForApi(
 		let thumbnailKey: string | null = null;
 		let thumbnailUrl: string | null = null;
 
-		const uploads = [uploadDriveFileToObjectStorageForApi(deps, key, fs.createReadStream(path), type, null, name)];
+		const uploads = [uploadDriveFileToObjectStorageForApi(deps, key, Bun!.file(path), type, null, name)];
 
 		if (alts.webpublic) {
 			webpublicKey = `${prefix}webpublic-${randomUUID()}.${alts.webpublic.ext}`;

@@ -3,64 +3,72 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { URL } from 'node:url';
-import * as http from 'node:http';
-import * as https from 'node:https';
-import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { Upload } from '@aws-sdk/lib-storage';
-import { NodeHttpHandler, NodeHttpHandlerOptions } from '@smithy/node-http-handler';
 import type { MiMeta } from '@/models/Meta.js';
-import { HttpRequestService } from '@/core/net/HttpRequestService.js';
-import type { DeleteObjectCommandInput, PutObjectCommandInput } from '@aws-sdk/client-s3';
 
-export function createS3Service(httpRequestService: HttpRequestService) {
-	function getS3Client(meta: MiMeta): S3Client {
-		const u = meta.objectStorageEndpoint
-			? `${meta.objectStorageUseSSL ? 'https' : 'http'}://${meta.objectStorageEndpoint}`
-			: `${meta.objectStorageUseSSL ? 'https' : 'http'}://example.net`; // HTTP(S) エージェント選択用のダミー URL
+/**
+ * オブジェクトストレージへ書き込む 1 オブジェクト。
+ * AWS SDK の PutObjectCommandInput の代わりに、実際に使う分だけを持つ。
+ */
+export type S3PutObject = {
+	key: string;
+	body: Blob | Uint8Array;
+	contentType: string;
+	contentDisposition?: string;
+	publicRead: boolean;
+};
 
-		const agent = httpRequestService.getAgentByUrl(new URL(u), !meta.objectStorageUseProxy, true);
-		const handlerOption: NodeHttpHandlerOptions = {};
-		if (meta.objectStorageUseSSL) {
-			handlerOption.httpsAgent = agent as https.Agent;
-		} else {
-			handlerOption.httpAgent = agent as http.Agent;
-		}
+export type S3DeleteObject = {
+	key: string;
+};
 
-		return new S3Client({
-			...(meta.objectStorageEndpoint ? { endpoint: u } : {}),
-			...(meta.objectStorageAccessKey !== null && meta.objectStorageSecretKey !== null
-				? {
-						credentials: {
-							accessKeyId: meta.objectStorageAccessKey,
-							secretAccessKey: meta.objectStorageSecretKey,
-						},
-					}
+/** Google Cloud Storage は大きめのパートを推奨しているので、そこだけ分ける。 */
+const GCS_PART_SIZE = 500 * 1024 * 1024;
+const DEFAULT_PART_SIZE = 8 * 1024 * 1024;
+
+function bucketOf(meta: MiMeta): string {
+	const bucket = meta.objectStorageBucket;
+	if (bucket == null || bucket === '') throw new Error('Object storage bucket is not configured');
+	return bucket;
+}
+
+export function createS3Service() {
+	function getS3Client(meta: MiMeta) {
+		if (typeof Bun === 'undefined') throw new Error('Object storage requires the bun runtime');
+
+		const bucket = bucketOf(meta);
+		const scheme = meta.objectStorageUseSSL ? 'https' : 'http';
+		// endpoint を指定したうえで仮想ホスト形式にする場合、バケットはホスト名側に付く。
+		// Bun は endpoint を指定すると virtualHostedStyle でもホスト名を組み立て直さず、
+		// バケットが URL から消えてしまうので、ここでホスト名に載せる。
+		const virtualHostedStyle = meta.objectStorageEndpoint ? !meta.objectStorageS3ForcePathStyle : true;
+		const endpoint = meta.objectStorageEndpoint
+			? `${scheme}://${virtualHostedStyle ? `${bucket}.` : ''}${meta.objectStorageEndpoint}`
+			: undefined;
+
+		return new Bun.S3Client({
+			bucket,
+			...(endpoint == null ? {} : { endpoint }),
+			...(meta.objectStorageAccessKey != null && meta.objectStorageSecretKey != null
+				? { accessKeyId: meta.objectStorageAccessKey, secretAccessKey: meta.objectStorageSecretKey }
 				: {}),
-			...(meta.objectStorageRegion ? { region: meta.objectStorageRegion } : {}), // 空文字列も省略するため ?? は使わない
-			tls: meta.objectStorageUseSSL,
-			forcePathStyle: meta.objectStorageEndpoint ? meta.objectStorageS3ForcePathStyle : false, // endpoint 未指定の AWS S3 では仮想ホスト形式を使う
-			requestHandler: new NodeHttpHandler(handlerOption),
-			requestChecksumCalculation: 'WHEN_REQUIRED',
-			responseChecksumValidation: 'WHEN_REQUIRED',
+			// 空文字列も省略したいので ?? は使わない
+			...(meta.objectStorageRegion ? { region: meta.objectStorageRegion } : {}),
+			virtualHostedStyle,
 		});
 	}
 
-	async function upload(meta: MiMeta, input: PutObjectCommandInput) {
+	async function upload(meta: MiMeta, object: S3PutObject): Promise<void> {
 		const client = getS3Client(meta);
-		return new Upload({
-			client,
-			params: input,
-			partSize:
-				client.config.endpoint && (await client.config.endpoint()).hostname === 'storage.googleapis.com'
-					? 500 * 1024 * 1024
-					: 8 * 1024 * 1024,
-		}).done();
+		await client.write(object.key, object.body, {
+			type: object.contentType,
+			...(object.contentDisposition == null ? {} : { contentDisposition: object.contentDisposition }),
+			...(object.publicRead ? { acl: 'public-read' as const } : {}),
+			partSize: meta.objectStorageEndpoint === 'storage.googleapis.com' ? GCS_PART_SIZE : DEFAULT_PART_SIZE,
+		});
 	}
 
-	function del(meta: MiMeta, input: DeleteObjectCommandInput) {
-		const client = getS3Client(meta);
-		return client.send(new DeleteObjectCommand(input));
+	async function del(meta: MiMeta, object: S3DeleteObject): Promise<void> {
+		await getS3Client(meta).delete(object.key);
 	}
 
 	return { getS3Client, upload, delete: del };

@@ -283,7 +283,7 @@ export async function createRuntimeDependencies(config: Config): Promise<Runtime
 		const imageProcessingService = createImageProcessingService();
 		const videoProcessingService = createVideoProcessingService(config, imageProcessingService);
 		const internalStorageService = createInternalStorageService(config);
-		const s3Service = createS3Service(httpRequestService);
+		const s3Service = createS3Service();
 		const utilityService = createUtilityService(config, meta);
 		const emailService = createEmailService(config, meta, db, loggerService, utilityService, httpRequestService);
 		const userAuthService = createUserAuthService(redis, db);
