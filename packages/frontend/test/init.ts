@@ -51,6 +51,12 @@ const localStorageMock = (() => {
 })();
 vi.stubGlobal('localStorage', localStorageMock);
 
+// instance は localStorage のキャッシュから作られる。空だと meta の全項目が undefined になり、
+// 実運用では起きない参照でコンポーネントが落ちる。
+const { meta } = await import('@/stories/fakes.js');
+localStorage.setItem('instance', JSON.stringify(meta()));
+localStorage.setItem('instanceCachedAt', '1');
+
 // i18n の読み込み時に localStorage を参照するため、localStorage のモック設定後に実行する。
 const { default: locales } = await import('i18n');
 

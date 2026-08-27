@@ -10460,6 +10460,10 @@ export interface Locale extends ILocale {
          * フォームの説明を表示
          */
         "showHowToUse": string;
+        /**
+         * 投稿の前にサーバールールを確認してください
+         */
+        "pleaseCheckServerRules": string;
         "_howToUse": {
             /**
              * 本文
