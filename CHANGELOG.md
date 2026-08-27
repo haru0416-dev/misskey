@@ -16,6 +16,7 @@
 	- 2025.4.0 以前から直接アップデートする場合、クライアント設定は移行されません。移行したい場合は一度 Misskey 2026.5.1 を経由してください。
 
 ### General
+- Change: 依存パッケージを更新 (`vite` 8.2.2 / `shiki` 4.4.3 / `pg` 8.23.0 / `nodemailer` 9.0.5 / OpenTelemetry 一式ほか計35件。`feed` 6 / `chalk` 6 / `content-disposition` 3 / `node-html-parser` 9 のメジャー更新を含む)
 
 - Change: バージョン番号を upstream の日付形式 (2026.6.x) から切り離し、`0.1.0` から振り直し (nodeinfo の `software.version` と「サーバー情報」の表示が変わる)
 - Enhance: YAML処理の直接依存を整理

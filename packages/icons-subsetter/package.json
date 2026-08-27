@@ -16,8 +16,8 @@
 		"vitest": "4.1.11"
 	},
 	"dependencies": {
-		"@tabler/icons-webfont": "3.44.0",
-		"harfbuzzjs": "1.4.0",
+		"@tabler/icons-webfont": "3.46.0",
+		"harfbuzzjs": "1.6.0",
 		"wawoff2": "2.0.1"
 	},
 	"files": [
