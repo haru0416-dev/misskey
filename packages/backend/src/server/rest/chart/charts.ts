@@ -83,25 +83,6 @@ function createApiChart<S extends ChartSchema>(
 	);
 }
 
-const chartIntegerQueryParams = new Set(['limit', 'offset']);
-
-export function normalizeApiChartQuery(query: Record<string, string>): Record<string, unknown> {
-	const body: Record<string, unknown> = {};
-
-	for (const [key, value] of Object.entries(query)) {
-		if (chartIntegerQueryParams.has(key) && value === 'null') {
-			body[key] = null;
-		} else if (chartIntegerQueryParams.has(key)) {
-			const numeric = Number(value);
-			body[key] = Number.isInteger(numeric) ? numeric : value;
-		} else {
-			body[key] = value;
-		}
-	}
-
-	return body;
-}
-
 export const chartParamDef = z.object({
 	span: z.enum(['day', 'hour']),
 	limit: z.int().min(1).max(500).default(30),

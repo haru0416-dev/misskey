@@ -1077,19 +1077,6 @@ async function getFeaturedRankingOfForApi(
 	return Array.from(ranking.keys());
 }
 
-export function normalizeApiUsersFeaturedNotesQuery(query: Record<string, string>): Record<string, unknown> {
-	const body: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(query)) {
-		if (key === 'limit') {
-			const numeric = Number(value);
-			body[key] = Number.isInteger(numeric) ? numeric : value;
-		} else {
-			body[key] = value;
-		}
-	}
-	return body;
-}
-
 export const usersFeaturedNotesParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
 	untilId: misskeyId().optional(),
