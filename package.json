@@ -54,7 +54,7 @@
 		"lint:knip": "knip",
 		"lint:jscpd": "jscpd packages/backend/src packages/frontend/src packages/frontend-embed/src packages/frontend-shared packages/sw/src packages/misskey-js/src",
 		"deps:inventory": "bun scripts/dependency-inventory.mjs",
-		"typecheck:playwright": "tsgo -p tests/e2e/tsconfig.json --noEmit",
+		"typecheck:playwright": "bun ./scripts/tsc-native.mjs -p tests/e2e/tsconfig.json --noEmit",
 		"format:ox": "oxfmt --config .oxfmtrc.json --no-error-on-unmatched-pattern --write '*.{cjs,js,json,json5,jsonc,mjs,mts,toml,ts,yaml,yml}' '.devcontainer/**/*.{json,yaml,yml}' '.github/scripts/**/*.{cjs,js,mjs,mts,ts}' '.github/workflows/**/*.yml' 'tests/e2e/**/*.{json,ts}' 'scripts/**/*.{cjs,js,mjs,mts,ts}' 'packages/frontend/src/**/*.{cjs,js,mjs,mts,ts,tsx}' 'packages/frontend/lib/**/*.{cjs,js,mjs,mts,ts,tsx}' 'packages/frontend-shared/**/*.ts' 'packages/frontend/builder/**/*.ts' 'packages/backend/src/**/*.{ts,tsx}' 'packages/backend/test/**/*.ts' 'packages/backend/scripts/**/*.{js,mjs,ts}'",
 		"format:ox:check": "oxfmt --config .oxfmtrc.json --no-error-on-unmatched-pattern --check '*.{cjs,js,json,json5,jsonc,mjs,mts,toml,ts,yaml,yml}' '.devcontainer/**/*.{json,yaml,yml}' '.github/scripts/**/*.{cjs,js,mjs,mts,ts}' '.github/workflows/**/*.yml' 'tests/e2e/**/*.{json,ts}' 'scripts/**/*.{cjs,js,mjs,mts,ts}' 'packages/frontend/src/**/*.{cjs,js,mjs,mts,ts,tsx}' 'packages/frontend/lib/**/*.{cjs,js,mjs,mts,ts,tsx}' 'packages/frontend-shared/**/*.ts' 'packages/frontend/builder/**/*.ts' 'packages/backend/src/**/*.{ts,tsx}' 'packages/backend/test/**/*.ts' 'packages/backend/scripts/**/*.{js,mjs,ts}'",
 		"pw:open": "playwright test --config tests/e2e/playwright.config.ts --ui",
@@ -75,14 +75,14 @@
 	"devDependencies": {
 		"@playwright/test": "1.61.1",
 		"@types/node": "26.2.0",
-		"@typescript/native-preview": "7.0.0-dev.20260629.1",
 		"@vue/compiler-sfc": "3.5.38",
 		"jscpd": "5.0.12",
 		"knip": "6.27.0",
 		"oxfmt": "0.64.0",
 		"oxlint": "1.71.0",
 		"tar": "7.5.21",
-		"typescript": "6.0.3"
+		"typescript": "6.0.3",
+		"typescript-native": "npm:typescript@7.0.2"
 	},
 	"trustedDependencies": [
 		"@parcel/watcher",
