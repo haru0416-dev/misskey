@@ -120,7 +120,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { watch, nextTick, onMounted, defineAsyncComponent, provide, shallowRef, ref, computed, toRef, useTemplateRef, onUnmounted, onBeforeUnmount } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
-import { toASCII } from 'punycode.js';
 import { host, url } from '@shared/utility/config.js';
 import type { ShallowRef } from 'vue';
 import type { PostFormProps } from '@/types/post-form.js';
@@ -366,12 +365,12 @@ watch(visibleUsers, () => {
 });
 
 if (props.mention) {
-	text.value = props.mention.host ? `@${props.mention.username}@${toASCII(props.mention.host)}` : `@${props.mention.username}`;
+	text.value = props.mention.host ? `@${props.mention.username}@${props.mention.host}` : `@${props.mention.username}`;
 	text.value += ' ';
 }
 
 if (replyTargetNote.value && (replyTargetNote.value.user.username !== $i.username || (replyTargetNote.value.user.host != null && replyTargetNote.value.user.host !== host))) {
-	text.value = `@${replyTargetNote.value.user.username}${replyTargetNote.value.user.host != null ? '@' + toASCII(replyTargetNote.value.user.host) : ''} `;
+	text.value = `@${replyTargetNote.value.user.username}${replyTargetNote.value.user.host != null ? '@' + replyTargetNote.value.user.host : ''} `;
 }
 
 if (replyTargetNote.value && replyTargetNote.value.text != null) {
@@ -380,10 +379,10 @@ if (replyTargetNote.value && replyTargetNote.value.text != null) {
 
 	for (const x of mfm.extractMentions(ast)) {
 		const mention = x.host ?
-			`@${x.username}@${toASCII(x.host)}` :
+			`@${x.username}@${x.host}` :
 			(otherHost == null || otherHost === host) ?
 				`@${x.username}` :
-				`@${x.username}@${toASCII(otherHost)}`;
+				`@${x.username}@${otherHost}`;
 
 		// 自分は除外
 		if ($i.username === x.username && (x.host == null || x.host === host)) continue;

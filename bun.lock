@@ -153,7 +153,6 @@
         "mfm-js": "workspace:*",
         "misskey-js": "workspace:*",
         "pinia": "4.0.3",
-        "punycode.js": "2.3.1",
         "qr-code-styling": "1.9.2",
         "qr-scanner": "1.4.2",
         "shiki": "4.2.0",
@@ -177,7 +176,6 @@
         "@types/estree": "1.0.9",
         "@types/matter-js": "0.20.2",
         "@types/node": "26.2.0",
-        "@types/punycode.js": "npm:@types/punycode@2.1.4",
         "@types/seedrandom": "3.0.8",
         "@types/throttle-debounce": "5.0.2",
         "@types/tinycolor2": "1.4.6",
@@ -186,6 +184,7 @@
         "@vitest/browser-playwright": "4.1.9",
         "@vitest/coverage-v8": "4.1.9",
         "@vue/compiler-core": "3.5.38",
+        "fast-check": "4.9.0",
         "happy-dom": "20.10.6",
         "lightningcss": "1.32.0",
         "magic-string": "1.2.1",
@@ -213,7 +212,6 @@
         "icons-subsetter": "workspace:*",
         "mfm-js": "workspace:*",
         "misskey-js": "workspace:*",
-        "punycode.js": "2.3.1",
         "shiki": "4.2.0",
         "tinycolor2": "1.6.0",
         "vue": "3.5.38",
@@ -222,7 +220,6 @@
         "@misskey-dev/emoji-assets": "17.0.6",
         "@tabler/icons-webfont": "3.44.0",
         "@types/node": "26.2.0",
-        "@types/punycode.js": "npm:@types/punycode@2.1.4",
         "@types/tinycolor2": "1.4.6",
         "@vitejs/plugin-vue": "6.0.7",
         "frontend": "workspace:*",
@@ -1450,8 +1447,6 @@
 
     "@types/pg-pool": ["@types/pg-pool@2.0.7", "", { "dependencies": { "@types/pg": "*" } }, "sha512-U4CwmGVQcbEuqpyju8/ptOKg6gEC+Tqsvj2xS9o1g71bUh8twxnC6ZL5rZKCsGN0iyH0CwgUyc9VR5owNQF9Ng=="],
 
-    "@types/punycode.js": ["@types/punycode@2.1.4", "", {}, "sha512-trzh6NzBnq8yw5e35f8xe8VTYjqM3NE7bohBtvDVf/dtUer3zYTLK1Ka3DG3p7bdtoaOHZucma6FfVKlQ134pQ=="],
-
     "@types/qrcode": ["@types/qrcode@1.5.6", "", { "dependencies": { "@types/node": "26.0.0" } }, "sha512-te7NQcV2BOvdj2b1hCAHzAoMNuj65kNBMz0KBaxM6c3VGBOhU0dURQKOtH8CFNI/dsKkwlv32p26qYQTWoB5bw=="],
 
     "@types/readdir-glob": ["@types/readdir-glob@1.1.5", "", { "dependencies": { "@types/node": "26.0.0" } }, "sha512-raiuEPUYqXu+nvtY2Pe8s8FEmZ3x5yAH4VkLdihcPdalvsHltomrRC9BzuStrJ9yk06470hS0Crw0f1pXqD+Hg=="],
@@ -2663,8 +2658,6 @@
     "proto-list": ["proto-list@1.2.4", "", {}, "sha512-vtK/94akxsTMhe0/cbfpR+syPuszcuwhqVjJq26CuNDgFGj682oRBXOP5MJpv2r7JtE8MsiepGIqvvOTBwn2vA=="],
 
     "protobufjs": ["protobufjs@7.6.5", "", { "dependencies": { "@protobufjs/aspromise": "^1.1.2", "@protobufjs/base64": "^1.1.2", "@protobufjs/codegen": "^2.0.5", "@protobufjs/eventemitter": "^1.1.1", "@protobufjs/fetch": "^1.1.1", "@protobufjs/float": "^1.0.2", "@protobufjs/path": "^1.1.2", "@protobufjs/pool": "^1.1.0", "@protobufjs/utf8": "^1.1.1", "@types/node": ">=13.7.0", "long": "^5.3.2" } }, "sha512-/FPD0nUc9jH6rfFjji9IBqOz4pcSE3CsT1m7Ep6Mdb0LxSUMj8hgl6GomOvZzpNpAqqGaXA0P3VSrZLFzIhQrw=="],
-
-    "punycode.js": ["punycode.js@2.3.1", "", {}, "sha512-uxFIHU0YlHYhDQtV4R9J6a52SLx28BCjT+4ieh7IGbgwVJWO+km431c4yRlREUAsAmt/uMjQUyQHNEPf0M39CA=="],
 
     "pure-rand": ["pure-rand@8.4.2", "", {}, "sha512-vvuOGgcuPJAirlHvuQw1TrOiw7ptaIXXmIbNuiNOY6lNGJJH49PQ1Kj4nd783nPdQhQdicgOjVI2yI/9BD6/Ng=="],
 
