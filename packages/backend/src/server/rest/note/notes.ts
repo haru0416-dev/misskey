@@ -161,7 +161,7 @@ function notesConversationNoSuchNoteError(): ApiError {
 export const notesConversationParamDef = z.object({
 	noteId: misskeyId(),
 	limit: z.int().min(1).max(100).optional().default(10),
-	offset: z.int().optional().default(0),
+	offset: z.int().nonnegative().optional().default(0),
 });
 
 export async function handleApiNotesConversation(
@@ -908,7 +908,7 @@ export const notesSearchParamDef = z.object({
 	rangeEndAt: z.int().nullable().optional(),
 	...paginationParams,
 	limit: z.int().min(1).max(100).optional().default(10),
-	offset: z.int().optional().default(0),
+	offset: z.int().nonnegative().optional().default(0),
 	host: z.string().optional(),
 	userId: misskeyId().nullable().optional().default(null),
 	channelId: misskeyId().nullable().optional().default(null),
@@ -1237,7 +1237,7 @@ export async function handleApiNotesUserListTimeline(
 
 export const notesPollsRecommendationParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),
-	offset: z.int().optional().default(0),
+	offset: z.int().nonnegative().optional().default(0),
 	excludeChannels: z.boolean().optional().default(false),
 });
 

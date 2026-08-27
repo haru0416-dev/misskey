@@ -1123,7 +1123,7 @@ async function searchUsersForApi(
 
 export const usersSearchParamDef = z.object({
 	query: z.string(),
-	offset: z.int().default(0),
+	offset: z.int().nonnegative().default(0),
 	limit: z.int().min(1).max(100).default(10),
 	origin: z.enum(['local', 'remote', 'combined']).default('combined'),
 	detail: z.boolean().default(true),
@@ -1267,7 +1267,7 @@ export async function handleApiUsersSearchByUsernameAndHost(
 
 export const usersRecommendationParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
-	offset: z.int().default(0),
+	offset: z.int().nonnegative().default(0),
 });
 
 export async function handleApiUsersRecommendation(
@@ -1332,7 +1332,7 @@ export async function handleApiUsersGetFrequentlyRepliedUsers(
 
 export const usersParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
-	offset: z.int().default(0),
+	offset: z.int().nonnegative().default(0),
 	sort: z.enum(['+follower', '-follower', '+createdAt', '-createdAt', '+updatedAt', '-updatedAt']).optional(),
 	state: z.enum(['all', 'alive']).default('all'),
 	origin: z.enum(['combined', 'local', 'remote']).default('local'),

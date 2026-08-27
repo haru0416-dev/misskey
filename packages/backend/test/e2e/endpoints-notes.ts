@@ -890,6 +890,15 @@ describe('Endpoints', () => {
 			});
 			expect(notFound.status).toBe(200);
 			expect((notFound.body as any[]).length).toBe(0);
+
+			// 負の offset は SQL の OFFSET へ渡ると Postgres がエラーにするので、その前に弾く。
+			const negativeOffset = await api('hashtags/users', {
+				tag,
+				sort: '+follower',
+				offset: -1,
+			});
+			expect(negativeOffset.status).toBe(400);
+			expect(castAsError(negativeOffset.body as any).error.code).toBe('INVALID_PARAM');
 		});
 
 		test('trend returns Redis-backed hashtag ranking charts', async () => {
