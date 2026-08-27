@@ -31,7 +31,11 @@ export function resetLocalStorage(): void {
 	localStorage.clear();
 	// token が無いと isAccountWithToken を通らず $i が null になり、ログイン前提の
 	// コンポーネントが "signin required" で落ちる。
-	localStorage.setItem('account', JSON.stringify({ ...userDetailed(), token: 'story-token', policies: {} }));
+	// userDetailed() は他人のユーザーなので、`MeDetailed` にしかない項目はここで補う。
+	localStorage.setItem(
+		'account',
+		JSON.stringify({ ...userDetailed(), token: 'story-token', policies: {}, mutedWords: [], hardMutedWords: [] }),
+	);
 	// instance は localStorage のキャッシュから作られる。空だと meta の全項目が undefined になり、
 	// 実運用では起きない参照で story が落ちる。
 	localStorage.setItem('instance', JSON.stringify(meta()));

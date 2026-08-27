@@ -243,7 +243,7 @@ const sortModeSelect = ref<NonNullable<Misskey.entities.DriveFilesRequest['sort'
  */
 const typeFilter = ref<'all' | 'image' | 'video' | 'audio'>('all');
 const typeFilterPrefix: Record<Exclude<typeof typeFilter.value, 'all'>, string> = {
-	image: 'video/*',
+	image: 'image/*',
 	video: 'video/*',
 	audio: 'audio/*',
 };

@@ -91,10 +91,14 @@ export const TypeFilter = {
 	async play({ canvasElement }) {
 		const canvas = within(canvasElement);
 
+		// filesRequests は story 間で共有されるので「最後の1件」では判定できない。
+		// 絞り込み後に type 付きの要求が現れることだけを見る。
 		await waitFor(() => expect(filesRequests.length).toBeGreaterThan(0));
-		expect(filesRequests.at(-1), '既定では type を送らない').not.toHaveProperty('type');
+		expect(
+			filesRequests.some((r) => r['type'] === 'image/*'),
+			'絞り込み前に type は無い',
+		).toBe(false);
 
-		const before = filesRequests.length;
 		await userEvent.click(canvas.getByRole('button', { name: i18n.ts.menu }));
 
 		// メニューは transition 中の祖先が pointer-events: none を持ち、userEvent の
@@ -109,7 +113,6 @@ export const TypeFilter = {
 		const image = await canvas.findByText(i18n.ts.image);
 		image.closest('[role="menuitem"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-		await waitFor(() => expect(filesRequests.length).toBeGreaterThan(before));
-		expect(filesRequests.at(-1)).toMatchObject({ type: 'image/*' });
+		await waitFor(() => expect(filesRequests.some((r) => r['type'] === 'image/*')).toBe(true));
 	},
 } satisfies StoryObj<typeof MkDrive>;
