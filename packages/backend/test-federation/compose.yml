@@ -222,7 +222,7 @@ services:
     command: >
       bash -c "
         bun install --frozen-lockfile
-        bun run --bun tsgo -p ./packages/backend/test-federation
+        bun ./scripts/tsc-native.mjs -p ./packages/backend/test-federation
         bun ./packages/backend/test-federation/built/daemon.js
       "
 

@@ -111,7 +111,7 @@ function buildDts(): Promise<void> {
 		const child = spawn('bun', [
 			'run',
 			'--bun',
-			'tsgo',
+			fileURLToPath(new URL('../../scripts/tsc-native.mjs', import.meta.url)),
 			'--project',
 			'tsconfig.json',
 			'--rootDir',
@@ -126,7 +126,7 @@ function buildDts(): Promise<void> {
 		child.once('error', reject);
 		child.once('exit', (code, signal) => {
 			if (code === 0) resolve();
-			else reject(new Error(`tsgo exited with ${signal ? `signal ${signal}` : `code ${code}`}`));
+			else reject(new Error(`型定義の生成が失敗しました: ${signal ? `signal ${signal}` : `code ${code}`}`));
 		});
 	});
 }

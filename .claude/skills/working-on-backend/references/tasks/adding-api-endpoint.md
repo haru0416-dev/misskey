@@ -205,7 +205,7 @@ bun run --bun --filter backend test:e2e
 
 ```bash
 # backend の型チェック
-bun run --bun --filter backend typecheck      # tsgo --noEmit (backend のみ)
+bun run --bun --filter backend typecheck      # ネイティブ tsc --noEmit (backend のみ)
 
 # 一括 (PR 提出前)
 bun run lint
