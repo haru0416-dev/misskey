@@ -117,6 +117,7 @@ export function packAnnouncementForApi(
 		forYou: announcement.userId === me?.id,
 		needConfirmationToRead: announcement.needConfirmationToRead,
 		silence: announcement.silence,
+		isActive: announcement.isActive,
 		isRead: announcement.isRead !== null ? announcement.isRead : undefined,
 		// SSR とお知らせ作成直後の配信はリアクションを読まないので、渡されなければ空。
 		reactions: announcement.reactions ?? {},

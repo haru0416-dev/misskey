@@ -42,7 +42,15 @@ import { safeForSql } from '@/misc/safe-for-sql.js';
 import { z } from 'zod';
 import { omitUndefined } from '@/misc/clone.js';
 import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
-import { birthdaySchema, descriptionSchema, followedMessageSchema, locationSchema, nameSchema } from '@/models/User.js';
+import {
+	birthdaySchema,
+	descriptionSchema,
+	followedMessageSchema,
+	locationSchema,
+	nameSchema,
+	profileFieldNameSchema,
+	profileFieldValueSchema,
+} from '@/models/User.js';
 import { notificationRecieveConfigZodSchema } from '@/models/json-schema/user.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
@@ -214,8 +222,8 @@ export const iUpdateParamDef = z.object({
 	fields: z
 		.array(
 			z.object({
-				name: z.string(),
-				value: z.string(),
+				name: profileFieldNameSchema,
+				value: profileFieldValueSchema,
 			}),
 		)
 		.min(0)

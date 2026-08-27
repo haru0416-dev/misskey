@@ -116,6 +116,12 @@ export const endpointMetas = {
 					httpStatusCode: 404,
 				},
 
+				announcementNotActive: {
+					message: 'That announcement is no longer active.',
+					code: 'ANNOUNCEMENT_NOT_ACTIVE',
+					id: 'aa4dbb14-7a3c-4a4c-9a44-a1f5f1e0dd39',
+				},
+
 				alreadyReacted: {
 					message: 'You are already reacting to that announcement.',
 					code: 'ALREADY_REACTED',
@@ -139,6 +145,12 @@ export const endpointMetas = {
 					code: 'NO_SUCH_ANNOUNCEMENT',
 					id: 'b1e8f640-5acc-4a77-8337-928a5362f57e',
 					httpStatusCode: 404,
+				},
+
+				announcementNotActive: {
+					message: 'That announcement is no longer active.',
+					code: 'ANNOUNCEMENT_NOT_ACTIVE',
+					id: 'aa4dbb14-7a3c-4a4c-9a44-a1f5f1e0dd39',
 				},
 
 				notReacted: {

@@ -11,14 +11,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 		class="_button"
 		:class="[$style.reaction, { [$style.reacted]: reaction === announcement.myReaction }]"
 		:aria-pressed="reaction === announcement.myReaction"
-		:disabled="busy"
+		:disabled="busy || readonly"
 		@click="toggle(reaction)"
 	>
 		<MkReactionIcon :class="$style.icon" :reaction="reaction"/>
 		<span :class="$style.count">{{ count }}</span>
 	</button>
 	<button
-		v-if="$i != null"
+		v-if="$i != null && !readonly"
 		ref="pickerAnchor"
 		class="_button"
 		:class="[$style.reaction, $style.add]"
@@ -50,6 +50,8 @@ import { toStoredAnnouncementReaction } from '@/features/announcements/reaction-
 
 const props = defineProps<{
 	announcement: Misskey.entities.Announcement;
+	/** 終了したお知らせでは件数だけ見せる (サーバー側も付け外しを受け付けない)。 */
+	readonly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -88,7 +90,7 @@ async function react(reaction: string): Promise<void> {
 }
 
 async function toggle(reaction: string): Promise<void> {
-	if ($i == null || busy.value) return;
+	if ($i == null || busy.value || props.readonly) return;
 	busy.value = true;
 	try {
 		if (props.announcement.myReaction === reaction) {

@@ -62,6 +62,11 @@ export const packedAnnouncementSchema = {
 			optional: false,
 			nullable: false,
 		},
+		isActive: {
+			type: 'boolean',
+			optional: false,
+			nullable: false,
+		},
 		forYou: {
 			type: 'boolean',
 			optional: false,

@@ -4523,6 +4523,7 @@ export type components = {
             display: 'dialog' | 'normal' | 'banner';
             needConfirmationToRead: boolean;
             silence: boolean;
+            isActive: boolean;
             forYou: boolean;
             isRead?: boolean;
             reactions: {
