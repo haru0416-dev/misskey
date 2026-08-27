@@ -54,7 +54,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { toUnicode } from 'punycode.js';
+import { toUnicode } from '@/utility/punycode.js';
 
 import { query, extractDomain } from '@shared/utility/url.js';
 import { host as configHost } from '@shared/utility/config.js';

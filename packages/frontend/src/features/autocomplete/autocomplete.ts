@@ -4,7 +4,6 @@
  */
 
 import { nextTick, ref, defineAsyncComponent } from 'vue';
-import { toASCII } from 'punycode.js';
 import type { Ref } from 'vue';
 import type { CompleteInfo } from '@/features/autocomplete/components/MkAutocomplete.vue';
 import { popup } from '@/os.js';
@@ -282,8 +281,7 @@ export class Autocomplete {
 			const trimmedBefore = before.substring(0, before.lastIndexOf('@'));
 			const after = source.substring(caret);
 
-			const acct =
-				props.value.host === null ? props.value.username : `${props.value.username}@${toASCII(props.value.host)}`;
+			const acct = props.value.host === null ? props.value.username : `${props.value.username}@${props.value.host}`;
 
 			// 挿入
 			this.text = `${trimmedBefore}@${acct} ${after}`;

@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { toUnicode } from 'punycode.js';
+import { toUnicode } from '@/utility/punycode.js';
 import { computed } from 'vue';
 import { host as localHost } from '@shared/utility/config.js';
 import type { MkABehavior } from '@/components/global/MkA.vue';
