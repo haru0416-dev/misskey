@@ -35,7 +35,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { paginationParams } from '@/misc/zod-params.js';
 import type { MiInstance, MiMeta } from '@/models/_.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { RelationshipJobData } from '@/queue/types.js';
@@ -495,10 +495,7 @@ export async function handleApiFederationStats(
 
 export const federationUsersParamDef = z.object({
 	host: z.string(),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).default(10),
 });
 
@@ -528,10 +525,7 @@ export async function handleApiFederationUsers(
 
 export const federationHostFollowingParamDef = z.object({
 	host: z.string(),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).default(10),
 });
 

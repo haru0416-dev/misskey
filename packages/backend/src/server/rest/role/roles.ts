@@ -23,7 +23,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiRole } from '@/models/Role.js';
 import type { MiUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
@@ -51,10 +51,7 @@ export const rolesShowParamDef = z.object({
 
 export const rolesUsersParamDef = z.object({
 	roleId: misskeyId(),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).default(10),
 });
 
@@ -88,10 +85,7 @@ function rolesNotesNoSuchRoleError(): ApiError {
 export const rolesNotesParamDef = z.object({
 	roleId: misskeyId(),
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 export async function packApiRole(

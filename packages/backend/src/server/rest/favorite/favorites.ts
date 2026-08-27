@@ -53,7 +53,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from '../error.js';
 import { packNoteForApi, packNoteManyForApi, type ApiNoteDependencies } from '../note/note.js';
@@ -419,10 +419,7 @@ export async function handleApiFlashUnlike(
 
 export const iFavoritesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type IFavoritesParams = {

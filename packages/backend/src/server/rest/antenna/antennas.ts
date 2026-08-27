@@ -35,7 +35,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiAntenna } from '@/models/Antenna.js';
@@ -646,10 +646,7 @@ export async function handleApiAntennasRemoveNote(
 export const antennasNotesParamDef = z.object({
 	antennaId: misskeyId(),
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type AntennasNotesParams = {

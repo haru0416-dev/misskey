@@ -29,7 +29,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import type { ApiDriveStreamPublisher } from '../events.js';
 import { ApiError } from '../error.js';
@@ -64,10 +64,7 @@ type DriveFoldersCreateParams = {
 
 export const driveFoldersParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	folderId: misskeyId().nullable().default(null),
 });
 

@@ -35,7 +35,7 @@ import { fetchLocalUserByUsernameFromDatabase, fetchUserByIdOrFailFromDatabase }
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import { MiPage, pageNameSchema, type MiPageContentBlock } from '@/models/Page.js';
 import type { PageLikeRow } from '@/db/schema/page-like.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -549,10 +549,7 @@ export async function handleApiPagesFeatured(
 
 export const iPagesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type IPagesParams = {
@@ -583,10 +580,7 @@ export async function handleApiIPages(
 
 export const iPageLikesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type IPageLikesParams = {
@@ -657,10 +651,7 @@ export async function handleApiIPageLikes(
 export const usersPagesParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type UsersPagesParams = {

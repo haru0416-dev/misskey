@@ -68,7 +68,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import { promiseLimit } from '@/misc/promise-limit.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import type { MiFollowing } from '@/models/Following.js';
@@ -127,19 +127,13 @@ export const followingUpdateAllParamDef = z.object({
 });
 
 export const followingRequestsListParamDef = z.object({
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).default(10),
 });
 
 export const followingListParamDef = z.object({
 	notification: z.boolean().default(false),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).default(10),
 });
 
@@ -1160,10 +1154,7 @@ function toPunyNullableForApi(host: string | null | undefined): string | null {
 // spread できない。代わりに union の各枝 (userId 版 / username+host 版) を再利用可能な base object として定義し、
 // `usersFollowingParamDef` はその base に `.extend({ birthday })` して組み立てる。
 const usersPaginationShape = {
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).default(10),
 };
 

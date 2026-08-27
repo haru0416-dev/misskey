@@ -10,7 +10,7 @@ import { listSigninHistoryFromDatabase, type SigninHistoryOrder } from '@/core/a
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { paginationParams } from '@/misc/zod-params.js';
 import type { MiAccessToken } from '@/models/AccessToken.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -24,10 +24,7 @@ export type ApiIDependencies = UserPackingDependencies & {
 
 export const iSigninHistoryParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 export function packApiSignin(

@@ -29,7 +29,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
 import { MAX_NOTE_TEXT_LENGTH } from '@/const.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiNoteDraft } from '@/models/NoteDraft.js';
@@ -166,10 +166,7 @@ type NotesDraftsDeleteParams = {
 
 export const notesDraftsListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(30),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	scheduled: z.boolean().nullable().optional(),
 });
 

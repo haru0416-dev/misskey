@@ -53,7 +53,7 @@ import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
 import { safeForSql } from '@/misc/safe-for-sql.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
@@ -117,10 +117,7 @@ function notesShowContentRestrictedByServerError(): ApiError {
 export const noteIdPaginationParamDef = z.object({
 	noteId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type NoteIdPaginationParams = {
@@ -230,10 +227,7 @@ export async function handleApiNotesConversation(
 export const notesMentionsParamDef = z.object({
 	following: z.boolean().optional().default(false),
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	visibility: z.string().optional(),
 });
 
@@ -533,10 +527,7 @@ export const notesGlobalTimelineParamDef = z.object({
 	withFiles: z.boolean().optional().default(false),
 	withRenotes: z.boolean().optional().default(true),
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type NotesGlobalTimelineParams = {
@@ -581,10 +572,7 @@ export const notesParamDef = z.object({
 	withFiles: z.boolean().optional(),
 	poll: z.boolean().optional(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type NotesParams = {
@@ -750,10 +738,7 @@ function notesHybridTimelineBothWithRepliesAndWithFilesError(): ApiError {
 
 export const notesHybridTimelineParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	allowPartial: z.boolean().optional().default(false),
 	includeMyRenotes: z.boolean().optional().default(true),
 	includeRenotedMyNotes: z.boolean().optional().default(true),
@@ -1025,10 +1010,7 @@ export const notesSearchParamDef = z.object({
 	query: z.string(),
 	rangeStartAt: z.number().int().nullable().optional(),
 	rangeEndAt: z.number().int().nullable().optional(),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).optional().default(10),
 	offset: z.number().int().optional().default(0),
 	host: z.string().optional(),
@@ -1136,10 +1118,7 @@ const notesSearchByTagParamDef = z
 		renote: z.boolean().nullable().optional().default(null),
 		withFiles: z.boolean().optional().default(false),
 		poll: z.boolean().nullable().optional().default(null),
-		sinceId: misskeyId().optional(),
-		untilId: misskeyId().optional(),
-		sinceDate: z.number().int().optional(),
-		untilDate: z.number().int().optional(),
+		...paginationParams,
 		limit: z.number().int().min(1).max(100).optional().default(10),
 	})
 	.superRefine((data, ctx) => {
@@ -1159,10 +1138,7 @@ const notesSearchByTagCommonFieldsDocsSchema = z.object({
 	renote: z.boolean().nullable().optional().default(null),
 	withFiles: z.boolean().optional().default(false),
 	poll: z.boolean().nullable().optional().default(null),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).optional().default(10),
 });
 export const notesSearchByTagDocsParamDef = z.intersection(
@@ -1256,10 +1232,7 @@ export async function handleApiNotesShowPartialBulk(
 
 export const notesTimelineParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	allowPartial: z.boolean().optional().default(false),
 	includeMyRenotes: z.boolean().optional().default(true),
 	includeRenotedMyNotes: z.boolean().optional().default(true),
@@ -1365,10 +1338,7 @@ function notesUserListTimelineNoSuchListError(): ApiError {
 export const notesUserListTimelineParamDef = z.object({
 	listId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	allowPartial: z.boolean().optional().default(false),
 	includeMyRenotes: z.boolean().optional().default(true),
 	includeRenotedMyNotes: z.boolean().optional().default(true),

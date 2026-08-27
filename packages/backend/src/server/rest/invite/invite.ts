@@ -24,7 +24,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { generateInviteCode } from '@/misc/generate-invite-code.js';
 import { genId } from '@/misc/id/gen-id.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { MiLocalUser } from '@/models/User.js';
@@ -47,10 +47,7 @@ export const inviteDeleteParamDef = z.object({
 
 export const inviteListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(30),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 export const adminInviteCreateParamDef = z.object({

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { listModerationLogsFromDatabase } from '@/core/moderation/ModerationLogStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { parseId } from '@/misc/id/parse-id.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { Config } from '@/config.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
@@ -36,10 +36,7 @@ type ApiModerationLogResponse = {
 
 export const adminShowModerationLogsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	type: z.string().nullable().optional(),
 	userId: misskeyId().nullable().optional(),
 	search: z.string().nullable().optional(),

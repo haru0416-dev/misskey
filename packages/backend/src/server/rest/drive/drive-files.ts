@@ -29,7 +29,7 @@ import { queueRetentionOptions } from '@/queue/const.js';
 import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { ApiError } from '../error.js';
 import { checkChatAvailabilityForApi, packChatMessagesDetailedForApi, type ApiChatDependencies } from '../chat/chat.js';
@@ -59,10 +59,7 @@ function accessDeniedError(id: string): ApiError {
 
 export const driveFilesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	folderId: misskeyId().nullable().default(null),
 	type: z
 		.string()
@@ -116,10 +113,7 @@ export async function handleApiDriveFilesList(
 
 export const driveStreamParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	type: z
 		.string()
 		.regex(/^[a-zA-Z/\-*]+$/)
@@ -236,10 +230,7 @@ export async function handleApiDriveFilesFindByHash(
 }
 
 export const driveFilesAttachedNotesParamDef = z.object({
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).default(10),
 	fileId: misskeyId(),
 });
@@ -477,10 +468,7 @@ export async function handleApiDriveFilesMoveBulk(
 }
 
 export const driveFilesAttachedChatMessagesParamDef = z.object({
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).default(10),
 	fileId: misskeyId(),
 });

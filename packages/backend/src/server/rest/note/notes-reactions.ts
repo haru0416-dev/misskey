@@ -13,7 +13,7 @@ import { parseId } from '@/misc/id/parse-id.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { isDuplicateKeyValueDatabaseError } from '@/misc/is-duplicate-key-value-database-error.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import { blockingExistsInDatabase } from '@/core/user/BlockingStore.js';
 import { fetchEmojiByNameAndHostFromDatabaseCached } from '@/core/emoji/EmojiStore.js';
 import {
@@ -436,10 +436,7 @@ export const notesReactionsParamDef = z.object({
 	noteId: misskeyId(),
 	type: z.string().nullable().optional(),
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type NotesReactionsParams = {
