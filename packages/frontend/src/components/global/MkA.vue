@@ -17,6 +17,7 @@ export type MkABehavior = 'window' | 'browser' | null;
 import { computed, inject, useTemplateRef } from 'vue';
 import { url } from '@shared/utility/config.js';
 import * as os from '@/os.js';
+import type { MenuItem } from '@/types/menu.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import { i18n } from '@/i18n.js';
 import { useRouter } from '@/router.js';
@@ -25,9 +26,16 @@ const props = withDefaults(defineProps<{
 	to: string;
 	activeClass?: null | string;
 	behavior?: MkABehavior;
+	/**
+	 * 右クリックのメニューを差し替える。リンク以外の意味を持つ場合に使う (ハッシュタグ等)。
+	 * 遅延評価なのは、開かない限りメニューを組む必要が無いため。`os.contextMenu` は
+	 * イベントを同期で使うので、解決を待ってから渡すことはできない。
+	 */
+	contextMenu?: (() => MenuItem[]) | null;
 }>(), {
 	activeClass: null,
 	behavior: null,
+	contextMenu: null,
 });
 
 const behavior = props.behavior ?? inject<MkABehavior>('linkNavigationBehavior', null);
@@ -52,6 +60,12 @@ const active = computed(() => {
 function onContextmenu(ev: PointerEvent) {
 	const selection = window.getSelection();
 	if (selection && selection.toString() !== '') return;
+
+	if (props.contextMenu != null) {
+		void os.contextMenu(props.contextMenu(), ev);
+		return;
+	}
+
 	os.contextMenu([{
 		type: 'label',
 		text: props.to,
