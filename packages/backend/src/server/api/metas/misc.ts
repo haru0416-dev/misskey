@@ -108,6 +108,8 @@ export const endpointMetas = {
 
 			kind: 'write:account',
 
+			prohibitMoved: true,
+
 			errors: {
 				noSuchAnnouncement: {
 					message: 'No such announcement.',
@@ -138,6 +140,8 @@ export const endpointMetas = {
 			requireCredential: true,
 
 			kind: 'write:account',
+
+			prohibitMoved: true,
 
 			errors: {
 				noSuchAnnouncement: {

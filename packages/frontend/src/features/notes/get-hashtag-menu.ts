@@ -8,11 +8,26 @@ import { $i } from '@/i.js';
 import type { MenuItem } from '@/types/menu.js';
 
 /**
- * ミュートワードの 1 行は、正規表現なら文字列、通常の語なら空白で分割した配列 (AND 条件)。
- * ハッシュタグは 1 語なので、要素 1 つの配列として持つ。
+ * ハッシュタグのミュートを表すミュートワードの 1 行を組み立てる。
+ *
+ * 語の配列 (AND 条件) にすると `String#includes` の素朴な部分一致になり、
+ * `#cat` のミュートが `#cats` まで巻き込むうえ、大小の違い (`#Misskey` と `#misskey`)
+ * も別物になる。サーバーはタグを NFKC + 小文字で同一視するので、それに寄せるため
+ * 正規表現の行として持つ。
  */
-export function isSameMute(entry: string | string[], word: string): boolean {
-	return Array.isArray(entry) && entry.length === 1 && entry[0] === word;
+export function toHashtagMute(hashtag: string): string {
+	// タグに使える文字だけが後ろに続く場合を除いて一致させる (`#cat` が `#cats` を拾わないように)。
+	return `/#${escapeForRegExp(hashtag.normalize('NFKC'))}(?![\\p{L}\\p{N}_])/iu`;
+}
+
+function escapeForRegExp(value: string): string {
+	return value.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** 同じハッシュタグのミュート行かどうか。旧形式 (語の配列) も外せるように見る。 */
+export function isSameMute(entry: string | string[], hashtag: string): boolean {
+	if (Array.isArray(entry)) return entry.length === 1 && entry[0] === `#${hashtag}`;
+	return entry === toHashtagMute(hashtag);
 }
 
 export function getHashtagMenu(hashtag: string): MenuItem[] {
@@ -36,13 +51,15 @@ export function getHashtagMenu(hashtag: string): MenuItem[] {
 	const me = $i;
 	if (me == null) return menu;
 
-	const muted = me.mutedWords.some((entry) => isSameMute(entry, word));
+	const muted = me.mutedWords.some((entry) => isSameMute(entry, hashtag));
 
 	menu.push({
 		icon: muted ? 'ti ti-eye' : 'ti ti-eye-off',
 		text: muted ? i18n.ts.unmute : i18n.ts.mute,
 		action: async () => {
-			const mutedWords = muted ? me.mutedWords.filter((entry) => !isSameMute(entry, word)) : [...me.mutedWords, [word]];
+			const mutedWords = muted
+				? me.mutedWords.filter((entry) => !isSameMute(entry, hashtag))
+				: [...me.mutedWords, toHashtagMute(hashtag)];
 
 			// `@/os.js` を module scope で読むと MkMfm 経由で循環 import になり、
 			// MFM が何も描画されなくなる。操作時に読む。

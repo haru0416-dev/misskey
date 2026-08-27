@@ -299,9 +299,17 @@ async function initialize() {
 }
 
 function onStreamDriveFileCreated(file: Misskey.entities.DriveFile) {
-	if (file.folderId === (folder.value?.id ?? null)) {
-		filesPaginator.prepend(file);
-	}
+	if (file.folderId !== (folder.value?.id ?? null)) return;
+	// 一覧は種類で絞り込めるので、絞り込みと合わない新着を差し込まない。
+	// 差し込むと「画像だけ」の表示に動画が混ざる。
+	if (effectiveType.value != null && !matchesTypeFilter(file.type, effectiveType.value)) return;
+	filesPaginator.prepend(file);
+}
+
+/** `image/*` のようなワイルドカードを含む drive/files の type 指定に合うか。 */
+function matchesTypeFilter(fileType: string, filter: string): boolean {
+	if (filter.endsWith('/*')) return fileType.startsWith(filter.slice(0, -1));
+	return fileType === filter;
 }
 
 function onFileDragstart(file: Misskey.entities.DriveFile, ev: DragEvent) {

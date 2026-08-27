@@ -93,7 +93,9 @@ async function toggle(reaction: string): Promise<void> {
 	if ($i == null || busy.value || props.readonly) return;
 	busy.value = true;
 	try {
-		if (props.announcement.myReaction === reaction) {
+		// ピッカーの戻り値は保存形と表記が違うことがあるので、揃えてから今の状態と比べる。
+		// 揃えないと ❤️ を選んだときに ❤ の付け外しにならず、付け替えになる。
+		if (props.announcement.myReaction === toStoredAnnouncementReaction(reaction)) {
 			await unreact();
 		} else {
 			await unreact();
