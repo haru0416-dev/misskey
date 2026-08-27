@@ -73,7 +73,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { watch, ref, computed } from 'vue';
-import { toUnicode } from 'punycode.js';
+import { toUnicode } from '@/utility/punycode.js';
 import tinycolor from 'tinycolor2';
 import JSON5 from 'json5';
 import lightTheme from '@shared/themes/_light.json5';

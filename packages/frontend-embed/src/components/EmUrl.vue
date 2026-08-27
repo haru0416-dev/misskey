@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { toUnicode as decodePunycode } from 'punycode.js';
+import { toUnicodeHost as decodePunycode } from '@shared/utility/punycode.js';
 import EmA from './EmA.vue';
 import { url as local } from '@shared/utility/config.js';
 import { isSameOrigin } from '@shared/utility/url.js';

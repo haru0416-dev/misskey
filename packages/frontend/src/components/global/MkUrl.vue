@@ -26,7 +26,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { defineAsyncComponent, ref } from 'vue';
-import { toUnicode as decodePunycode } from 'punycode.js';
+import { toUnicode as decodePunycode } from '@/utility/punycode.js';
 import { url as local } from '@shared/utility/config.js';
 import { maybeMakeRelative } from '@shared/utility/url.js';
 import type { MkABehavior } from '@/components/global/MkA.vue';

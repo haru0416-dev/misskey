@@ -9,6 +9,7 @@ import type { StoryObj } from '@/stories/types.js';
 import { HttpResponse, http } from 'msw';
 import { commonHandlers } from '@/stories/mocks.js';
 import MkUrl from './MkUrl.vue';
+import { miLocalStorage } from '@/local-storage.js';
 export const Default = {
 	render(args) {
 		return {
@@ -70,9 +71,18 @@ export const Default = {
 		},
 	},
 } satisfies StoryObj<typeof MkUrl>;
-// punycode の復元は ASCII ドメインでは何も起きないので、IDN を通す story を別に置く。
+// Punycode の復元は ASCII ドメインでは何も起きないので、IDN を通す story を別に置く。
+// 復元してよいかは閲覧者の表示言語で決まるため、環境の言語設定に左右されないよう story 側で固定する。
+function renderWithLang(lang: string): (typeof Default)['render'] {
+	return (args) => {
+		miLocalStorage.setItem('lang', lang);
+		return Default.render(args);
+	};
+}
+
 export const Idn = {
 	...Default,
+	render: renderWithLang('ja-JP'),
 	async play({ canvasElement }) {
 		const canvas = within(canvasElement);
 		const a = canvas.getByRole<HTMLAnchorElement>('link');
@@ -81,5 +91,21 @@ export const Idn = {
 	args: {
 		...Default.args,
 		url: 'https://xn--wgv71a119e.jp/',
+	},
+} satisfies StoryObj<typeof MkUrl>;
+
+// 復元すると全てキリル文字の `аррӏе.com` になり apple.com と見分けが付かない。
+// ブラウザのアドレスバーが xn-- のまま出すのと同じ理由で、日本語表示の閲覧者には復元しない。
+export const IdnConfusable = {
+	...Default,
+	render: renderWithLang('ja-JP'),
+	async play({ canvasElement }) {
+		const canvas = within(canvasElement);
+		const a = canvas.getByRole<HTMLAnchorElement>('link');
+		await expect(a).toHaveTextContent('xn--80ak6aa92e.com');
+	},
+	args: {
+		...Default.args,
+		url: 'https://xn--80ak6aa92e.com/',
 	},
 } satisfies StoryObj<typeof MkUrl>;

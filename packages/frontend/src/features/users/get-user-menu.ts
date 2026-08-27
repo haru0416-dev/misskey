@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { toUnicode } from 'punycode.js';
+import { toUnicode } from '@/utility/punycode.js';
 import { ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { host, url } from '@shared/utility/config.js';

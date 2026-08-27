@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import * as Misskey from 'misskey-js';
-import { toUnicode } from 'punycode.js';
+import { toUnicodeHost as toUnicode } from '@shared/utility/punycode.js';
 import { host as hostRaw } from '@shared/utility/config.js';
 
 defineProps<{
