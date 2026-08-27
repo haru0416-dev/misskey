@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { URL, domainToASCII } from 'node:url';
+import { URL } from 'node:url';
+import { toPuny, toPunyNullable } from '@/misc/to-puny.js';
 import semver from 'semver';
 import type { Config } from '@/config.js';
 import { MiMeta, SoftwareSuspension } from '@/models/Meta.js';
@@ -112,15 +113,6 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 	function extractDbHost(uri: string): string {
 		const url = new URL(uri);
 		return toPuny(url.host);
-	}
-
-	function toPuny(host: string): string {
-		return domainToASCII(host.toLowerCase());
-	}
-
-	function toPunyNullable(host: string | null | undefined): string | null {
-		if (host == null) return null;
-		return domainToASCII(host.toLowerCase());
 	}
 
 	function punyHost(url: string): string {

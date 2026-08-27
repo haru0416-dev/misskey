@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import httpSignature from '@peertube/http-signature';
 import * as Bull from 'bullmq';
 import { JsonLd, JsonLdError } from '@/core/activitypub/json-ld.js';
@@ -32,10 +32,6 @@ import {
 import { performActivityForApi, type ApiInboxDependencies } from '../../server/activitypub/inbox-dispatch.js';
 
 export type QueueInboxDependencies = ApiInboxDependencies;
-
-function toPuny(host: string): string {
-	return domainToASCII(host.toLowerCase());
-}
 
 type UpdateInstanceJob = {
 	latestRequestReceivedAt: Date;

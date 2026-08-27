@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII, URLSearchParams } from 'node:url';
+import { URLSearchParams } from 'node:url';
+import { toPuny, toPunyNullable } from '@/misc/to-puny.js';
 import type * as Redis from 'ioredis';
 import { z } from 'zod';
 import { fetchChannelByIdFromDatabase, listChannelsByIdsFromDatabase } from '@/core/channel/ChannelStore.js';
@@ -177,15 +178,6 @@ async function getBufferedReactionsMany(
 	}
 
 	return result;
-}
-
-function toPuny(host: string): string {
-	return domainToASCII(host.toLowerCase());
-}
-
-function toPunyNullable(host: string | null | undefined): string | null {
-	if (host == null) return null;
-	return domainToASCII(host.toLowerCase());
 }
 
 function isSelfHost(config: Config, host: string | null): boolean {

@@ -4,7 +4,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import type { Config } from '@/config.js';
 import { CONTEXT } from '@/core/activitypub/misc/contexts.js';
 import type { IActivity, IFollow, IObject, IUndo } from '@/core/activitypub/type.js';
@@ -38,7 +38,7 @@ function genLocalUserUri(config: Pick<Config, 'instance'>, userId: MiUser['id'])
 
 function isUriLocal(config: Pick<Config, 'runtime'>, uri: string): boolean {
 	try {
-		return domainToASCII(new URL(uri).host) === domainToASCII(config.runtime.host);
+		return toPuny(new URL(uri).host) === toPuny(config.runtime.host);
 	} catch {
 		return false;
 	}

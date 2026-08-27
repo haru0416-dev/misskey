@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { domainToASCII } from 'node:url';
+import { toPuny } from '@/misc/to-puny.js';
 import { z } from 'zod';
 import { toArray, toSingle } from '@/misc/prelude/array.js';
 import { truncate } from '@/misc/truncate.js';
@@ -180,13 +180,9 @@ function validateActorForApi(config: Pick<Config, 'instance'>, x: IObject, uri: 
 	return x;
 }
 
-export function toPunyForApi(host: string): string {
-	return domainToASCII(host.toLowerCase());
-}
-
 function punyHostForApi(url: string): string {
 	const urlObj = new URL(url);
-	return `${toPunyForApi(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
+	return `${toPuny(urlObj.hostname)}${urlObj.port.length > 0 ? ':' + urlObj.port : ''}`;
 }
 
 function analyzeAttachmentsForApi(
@@ -212,7 +208,7 @@ export async function extractEmojisForApi(
 	tags: IObject | IObject[],
 	host: string,
 ): Promise<MiEmoji[]> {
-	const punyHost = toPunyForApi(host);
+	const punyHost = toPuny(host);
 	const emojiTags = toArray(tags).filter(isEmoji);
 
 	const existingEmojis = await listEmojisByHostAndNamesFromDatabase(
@@ -587,7 +583,7 @@ export async function createPersonForApi(
 	history: Set<string> = new Set(),
 ): Promise<MiRemoteUser> {
 	const host = punyHostForApi(uri);
-	if (host === toPunyForApi(deps.config.runtime.host)) {
+	if (host === toPuny(deps.config.runtime.host)) {
 		throw new StatusError('cannot resolve local user', 400, 'cannot resolve local user');
 	}
 
@@ -910,7 +906,7 @@ export async function resolveUserForApi(
 ): Promise<MiLocalUser | MiRemoteUser> {
 	const usernameLower = username.toLowerCase();
 
-	if (host == null || toPunyForApi(host) === toPunyForApi(deps.config.runtime.host)) {
+	if (host == null || toPuny(host) === toPuny(deps.config.runtime.host)) {
 		const localUser = await fetchLocalUserByUsernameFromDatabase(deps.db, usernameLower);
 		if (localUser == null) {
 			throw new Error('user not found');
@@ -918,7 +914,7 @@ export async function resolveUserForApi(
 		return localUser;
 	}
 
-	const punyHost = toPunyForApi(host);
+	const punyHost = toPuny(host);
 	const user = (await fetchUserByUsernameAndHostFromDatabase(deps.db, usernameLower, punyHost)) as MiRemoteUser | null;
 
 	const acctLower = `${usernameLower}@${punyHost}`;
@@ -926,7 +922,7 @@ export async function resolveUserForApi(
 	if (user == null) {
 		const self = await resolveSelfForApi(deps, acctLower);
 
-		if (punyHostForApi(self.href) === toPunyForApi(deps.config.runtime.host)) {
+		if (punyHostForApi(self.href) === toPuny(deps.config.runtime.host)) {
 			const local = parseLocalApUri(deps.config, self.href);
 			if (local.local && local.type === 'users') {
 				const u = await getUserFromApIdForApi(deps, self.href);
