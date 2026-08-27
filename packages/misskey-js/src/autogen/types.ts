@@ -4138,8 +4138,8 @@ export type components = {
             hasUnreadNotification: boolean;
             hasPendingReceivedFollowRequest: boolean;
             unreadNotificationsCount: number;
-            mutedWords: string[][];
-            hardMutedWords: string[][];
+            mutedWords: (string[] | string)[];
+            hardMutedWords: (string[] | string)[];
             mutedInstances: string[];
             notificationRecieveConfig: {
                 note?:

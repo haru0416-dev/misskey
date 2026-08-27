@@ -9,6 +9,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:width="500"
 	:height="500"
 	@close="dialogEl?.close()"
+	@esc="dialogEl?.close()"
+	@click="dialogEl?.close()"
 	@closed="emit('closed')"
 >
 	<template #header>{{ i18n.ts.serverRules }}</template>

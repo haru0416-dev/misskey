@@ -3049,6 +3049,28 @@ describe('Endpoints', () => {
 			expect(getAt(res.body, 0).followeeId).toBe(followee.id);
 		});
 
+		test('birthday は年を見ないので、平年の年で 02-29 を渡しても通る', async () => {
+			// ハンドラは年を捨てて月日しか使わない。年込みのうるう年判定で弾くと、
+			// 閏日生まれを絞り込むクライアントが年の選び方で 400 になる。
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hnbd${suffix}` });
+
+			for (const birthday of ['2001-02-29', '2000-02-29']) {
+				const res = await api('users/following', { userId: follower.id, birthday }, follower);
+				expect(res.status, birthday).toBe(200);
+			}
+		});
+
+		test('birthday に実在しない月日は渡せない', async () => {
+			const suffix = Date.now().toString(36).slice(-8);
+			const follower = await signup({ username: `hnbdx${suffix}` });
+
+			for (const birthday of ['2000-02-30', '2000-13-01', '2000-1-1']) {
+				const res = await api('users/following', { userId: follower.id, birthday }, follower);
+				expect(res.status, birthday).toBe(400);
+			}
+		});
+
 		test('不正なbirthday形式で怒られる', async () => {
 			const suffix = Date.now().toString(36).slice(-8);
 			const follower = await signup({ username: `hnflgb${suffix}` });
