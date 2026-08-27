@@ -7,7 +7,7 @@ import { promises as dns } from 'node:dns';
 import * as nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport/index.js';
 import juice from 'juice';
-import disposableEmailDomains from 'disposable-email-domains';
+import { isDisposableEmailDomain } from 'disposable-email-domains-js';
 import { UtilityService } from '@/core/net/UtilityService.js';
 import type { Config } from '@/config.js';
 import type { MiMeta } from '@/models/_.js';
@@ -16,9 +16,8 @@ import { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import { countVerifiedUserProfilesByEmailFromDatabase } from '@/core/user/UserProfileStore.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 
-const disposableEmailDomainsSet = new Set(disposableEmailDomains);
-
-async function validateEmailDeliverability(emailAddress: string): Promise<{
+/** 使い捨てドメインの一覧照合と MX の存在確認。一覧で弾ける宛先へは問い合わせを飛ばさない。 */
+export async function validateEmailDeliverability(emailAddress: string): Promise<{
 	valid: boolean;
 	reason: 'disposable' | 'mx' | null;
 }> {
@@ -27,7 +26,7 @@ async function validateEmailDeliverability(emailAddress: string): Promise<{
 		return { valid: false, reason: 'mx' };
 	}
 
-	if (disposableEmailDomainsSet.has(domain)) {
+	if (isDisposableEmailDomain(domain)) {
 		return { valid: false, reason: 'disposable' };
 	}
 
