@@ -46,7 +46,7 @@ import { shouldHideNoteByTime } from '@/misc/should-hide-note-by-time.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { isQuotePacked, isRenotePacked } from '@/misc/is-renote.js';
 import { deepClone, omitUndefined } from '@/misc/clone.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiPoll } from '@/models/Poll.js';
 import type { MiPollVote } from '@/models/PollVote.js';
@@ -1315,10 +1315,7 @@ export const usersNotesParamDef = z.object({
 	withRenotes: z.boolean().default(true),
 	withChannelNotes: z.boolean().default(false),
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	allowPartial: z.boolean().default(false),
 	withFiles: z.boolean().default(false),
 });

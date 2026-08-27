@@ -25,7 +25,7 @@ import { fetchUserByIdOrFailFromDatabase } from '@/core/user/UserStore.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiFlash } from '@/models/Flash.js';
 import type { MiUser, MiLocalUser } from '@/models/User.js';
 import { clientErrorWithStatus } from '../error.js';
@@ -241,10 +241,7 @@ export async function handleApiFlashFeatured(
 
 export const flashMyParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type FlashMyParams = {
@@ -275,10 +272,7 @@ export async function handleApiFlashMy(
 
 export const flashMyLikesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	search: z.string().min(1).max(100).nullable().optional(),
 });
 
@@ -349,10 +343,7 @@ export async function handleApiFlashMyLikes(
 
 export const flashSearchParamDef = z.object({
 	query: z.string().min(1).max(100),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).optional().default(5),
 });
 
@@ -409,10 +400,7 @@ export async function handleApiFlashShow(
 export const usersFlashsParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type UsersFlashsParams = {

@@ -28,7 +28,7 @@ import type { Redis } from 'ioredis';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiMeta } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { ApiInternalEventPublisher, ApiMainStreamPublisher } from '../events.js';
@@ -123,10 +123,7 @@ export const adminRolesUpdateDefaultPoliciesParamDef = z.object({
 
 export const adminRolesUsersParamDef = z.object({
 	roleId: misskeyId(),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	limit: z.number().int().min(1).max(100).optional().default(10),
 });
 

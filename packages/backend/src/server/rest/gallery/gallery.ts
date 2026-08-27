@@ -35,7 +35,7 @@ import { genId } from '@/misc/id/gen-id.js';
 import { resolveDateIdPagination } from '@/misc/id-pagination.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId, uniqueItems } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams, uniqueItems } from '@/misc/zod-params.js';
 import type { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { packDriveFileManyByIdsForApi, type ApiDriveFileDependencies } from '../drive/drive-file.js';
@@ -123,10 +123,7 @@ export const galleryPopularParamDef = z.object({});
 
 export const galleryPostsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type GalleryPostsParams = {
@@ -524,10 +521,7 @@ export async function handleApiGalleryPostsUnlike(
 
 export const iGalleryPostsParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type IGalleryPostsParams = {
@@ -558,10 +552,7 @@ export async function handleApiIGalleryPosts(
 
 export const iGalleryLikesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type IGalleryLikesParams = {
@@ -605,10 +596,7 @@ export async function handleApiIGalleryLikes(
 export const usersGalleryPostsParamDef = z.object({
 	userId: misskeyId(),
 	limit: z.number().int().min(1).max(100).optional().default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 });
 
 type UsersGalleryPostsParams = {

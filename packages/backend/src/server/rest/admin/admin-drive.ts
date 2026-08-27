@@ -23,7 +23,7 @@ import { omitUndefined } from '@/misc/clone.js';
 import { isMimeImage } from '@/misc/is-mime-image.js';
 import { appendQuery, query } from '@/misc/prelude/url.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiUser } from '@/models/User.js';
 import { packDriveFoldersManyForApi } from '../drive/drive.js';
@@ -68,10 +68,7 @@ export const adminDriveShowFileDocsParamDef = z.union([
 
 export const adminDriveFilesParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	userId: misskeyId().nullable().optional(),
 	type: z
 		.string()

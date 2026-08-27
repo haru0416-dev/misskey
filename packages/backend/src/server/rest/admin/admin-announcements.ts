@@ -24,7 +24,7 @@ import type { MiDrizzleDatabase } from '@/drizzle.js';
 import { genId } from '@/misc/id/gen-id.js';
 import { parseId } from '@/misc/id/parse-id.js';
 import type { Packed } from '@/misc/json-schema.js';
-import { misskeyId } from '@/misc/zod-params.js';
+import { misskeyId, paginationParams } from '@/misc/zod-params.js';
 import type { MiAnnouncement } from '@/models/Announcement.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import type { ApiBroadcastStreamPublisher, ApiMainStreamPublisher } from '../events.js';
@@ -73,10 +73,7 @@ export const adminAnnouncementsDeleteParamDef = z.object({
 
 export const adminAnnouncementsListParamDef = z.object({
 	limit: z.number().int().min(1).max(100).default(10),
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.number().int().optional(),
-	untilDate: z.number().int().optional(),
+	...paginationParams,
 	userId: misskeyId().nullable().optional(),
 	status: z.enum(['all', 'active', 'archived']).default('active'),
 });

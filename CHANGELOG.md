@@ -200,6 +200,7 @@
 - Fix: `misskey-js` のモデレーションログ型に `pauseQueue` / `resumeQueue` が含まれておらず、キューの一時停止・再開のログを型付きで扱えなかった問題を修正
 
 ### Server
+- Fix: 配列パラメータの重複禁止 (`uniqueItems`) が OpenAPI (`/api.json`) に出ていなかったのを修正 (ajv から zod へ移した際に落ちていた。`notes/create` の `fileIds` など 16 箇所)
 - Feat: `announcements/react` / `announcements/unreact` を追加し、お知らせの packed entity に `reactions` と `myReaction` を追加
 - Fix: ページングの `untilDate` / `sinceDate` に `0` (UNIXエポック) を渡すと境界が無視されていた問題を修正 (`untilDate: 0` はエポック以前を求める指定だが、全件が返っていた)
 - Feat: 読み取りAPI 183本を HTTP QUERY (RFC 10008) でも受け付けるように (POST も従来どおり受ける。QUERY は safe かつ idempotent なので Cache-Control が中間キャッシュに実際に効く)
