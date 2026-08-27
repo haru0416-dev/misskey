@@ -41,6 +41,10 @@ jobs:
         run: git diff --exit-code bun.lock
       - name: Check duplicate dependency versions
         run: bun dedupe --check
+      # overrides で塞いでいる勧告が、依存更新で外れていないことを見る。
+      # `bun dedupe --check` と違い audit は問題があれば非ゼロで終わる。
+      - name: Audit dependencies
+        run: bun audit
       - name: Test source tarball
         run: bun test ./scripts/tarball.test.mjs
       - name: Copy Configure

@@ -17,6 +17,7 @@
 
 ### General
 - Change: 依存パッケージを更新 (`vite` 8.2.2 / `shiki` 4.4.3 / `pg` 8.23.0 / `nodemailer` 9.0.5 / OpenTelemetry 一式ほか計35件。`feed` 6 / `chalk` 6 / `content-disposition` 3 / `node-html-parser` 9 のメジャー更新を含む)
+- Change: 依存の重複と既知勧告を解消 (不要になった overrides を整理し、drizzle-kit が引いていた古い esbuild を含め `bun audit` の指摘をゼロに。重複していた 8 パッケージも 1 版へ統合)
 - Change: ビルドツールの重複を解消 (使われていなかった Rollup 本体とそのネイティブバイナリを依存から除去し、rolldown / vite / vitest をそれぞれ 1 バージョンへ統一)
 
 - Change: バージョン番号を upstream の日付形式 (2026.6.x) から切り離し、`0.1.0` から振り直し (nodeinfo の `software.version` と「サーバー情報」の表示が変わる)
