@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<MkError v-if="error" @retry="fetchUser()"/>
 		<div v-else-if="user != null">
 			<div :class="$style.banner" :style="user.bannerUrl ? { backgroundImage: `url(${prefer.disableShowingAnimatedImages ? getStaticImageUrl(user.bannerUrl) : user.bannerUrl})` } : ''">
-				<span v-if="$i && $i.id != user.id && user.isFollowed" :class="$style.followed">{{ i18n.ts.followsYou }}</span>
+				<span v-if="followRelation != null" :class="$style.followed">{{ followRelation === 'mutual' ? i18n.ts.mutualFollow : i18n.ts.followsYou }}</span>
 			</div>
 			<svg viewBox="0 0 128 128" :class="$style.avatarBack">
 				<g transform="matrix(1.6,0,0,1.6,-38.4,-51.2)">
@@ -58,7 +58,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkFollowButton from '@/features/users/components/MkFollowButton.vue';
 import { userPage } from '@/filters/user.js';
@@ -70,6 +70,7 @@ import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
 import { $i } from '@/i.js';
 import { isFollowingVisibleForMe, isFollowersVisibleForMe } from '@/features/users/is-ff-visible-for-me.js';
+import { getFollowRelationBadge } from '@/features/users/follow-relation.js';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
 
 const props = defineProps<{
@@ -86,6 +87,7 @@ const emit = defineEmits<{
 
 const zIndex = os.claimZIndex('middle');
 const user = ref<Misskey.entities.UserDetailed | null>(null);
+const followRelation = computed(() => user.value == null ? null : getFollowRelationBadge($i, user.value));
 const top = ref(0);
 const left = ref(0);
 const error = ref(false);
