@@ -21,11 +21,6 @@ export const exportFollowingParamDef = z.object({
 	excludeInactive: z.boolean().optional().default(false),
 });
 
-type ExportFollowingParams = {
-	excludeMuting: boolean;
-	excludeInactive: boolean;
-};
-
 type SimpleExportJobName =
 	| 'exportCustomEmojis'
 	| 'exportNotes'

@@ -88,28 +88,6 @@ export const notesDraftsCreateParamDef = z.object({
 	isActuallyScheduled: z.boolean().default(false),
 });
 
-type NotesDraftsCreateParams = {
-	visibility: 'public' | 'home' | 'followers' | 'specified';
-	visibleUserIds?: string[];
-	cw?: string | null;
-	hashtag?: string | null;
-	localOnly: boolean;
-	reactionAcceptance?: string | null;
-	replyId?: string | null;
-	renoteId?: string | null;
-	channelId?: string | null;
-	text?: string | null;
-	fileIds?: string[];
-	poll?: {
-		choices: string[];
-		multiple?: boolean;
-		expiresAt?: number | null;
-		expiredAfter?: number | null;
-	} | null;
-	scheduledAt?: number | null;
-	isActuallyScheduled: boolean;
-};
-
 export const notesDraftsUpdateParamDef = z.object({
 	draftId: misskeyId(),
 	visibility: z.enum(['public', 'home', 'followers', 'specified']).optional(),
@@ -133,51 +111,15 @@ export const notesDraftsUpdateParamDef = z.object({
 	isActuallyScheduled: z.boolean().optional(),
 });
 
-type NotesDraftsUpdateParams = {
-	draftId: string;
-	visibility?: 'public' | 'home' | 'followers' | 'specified';
-	visibleUserIds?: string[];
-	cw?: string | null;
-	hashtag?: string | null;
-	localOnly?: boolean;
-	reactionAcceptance?: string | null;
-	replyId?: string | null;
-	renoteId?: string | null;
-	channelId?: string | null;
-	text?: string | null;
-	fileIds?: string[];
-	poll?: {
-		choices: string[];
-		multiple?: boolean;
-		expiresAt?: number | null;
-		expiredAfter?: number | null;
-	} | null;
-	scheduledAt?: number | null;
-	isActuallyScheduled?: boolean;
-};
-
 export const notesDraftsDeleteParamDef = z.object({
 	draftId: misskeyId(),
 });
-
-type NotesDraftsDeleteParams = {
-	draftId: string;
-};
 
 export const notesDraftsListParamDef = z.object({
 	limit: z.int().min(1).max(100).default(30),
 	...paginationParams,
 	scheduled: z.boolean().nullable().optional(),
 });
-
-type NotesDraftsListParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	scheduled?: boolean | null;
-};
 
 function draftNoSuchNoteDraftError(): ApiError {
 	return new ApiError({

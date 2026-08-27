@@ -338,17 +338,6 @@ export const notificationsParamDef = z.object({
 	excludeTypes: z.array(z.enum(notificationTypeEnumValues)).optional(),
 });
 
-type NotificationsParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	markAsRead: boolean;
-	includeTypes?: string[];
-	excludeTypes?: string[];
-};
-
 export async function handleApiINotifications(
 	deps: ApiNotificationsListDependencies,
 	me: MiUser,

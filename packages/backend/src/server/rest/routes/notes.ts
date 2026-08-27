@@ -63,7 +63,7 @@ import {
 	authenticateOptionalRequest,
 } from '../shell-helpers.js';
 import type { ApiShellDependencies } from '../shell.js';
-import { queryToApiBody } from '../query-params.js';
+import { queryToApiBody } from '../string-params.js';
 import { endpointHandler, endpointHandlerAnonymous } from '../endpoint-handlers.js';
 
 export function registerNotesRoutes(app: Hono, deps: ApiShellDependencies): void {

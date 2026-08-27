@@ -29,10 +29,6 @@ export const apGetParamDef = z.object({
 	uri: z.string(),
 });
 
-type ApGetParams = {
-	uri: string;
-};
-
 export async function handleApiApGet(deps: ApiApResolveDependencies, body: Record<string, unknown>): Promise<IObject> {
 	const params = parseApiParams(apGetParamDef, body);
 	return await resolveApObjectForApi(deps, params.uri);
@@ -46,10 +42,6 @@ export type ApiApShowDependencies = ApiApNoteDependencies &
 export const apShowParamDef = z.object({
 	uri: z.string(),
 });
-
-type ApShowParams = {
-	uri: string;
-};
 
 type ApShowResult =
 	| { type: 'User'; object: Awaited<ReturnType<typeof packUserDetailedNotMeForApi>> }

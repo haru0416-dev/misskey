@@ -1083,12 +1083,6 @@ export const usersFeaturedNotesParamDef = z.object({
 	userId: misskeyId(),
 });
 
-type UsersFeaturedNotesParams = {
-	limit: number;
-	untilId?: string;
-	userId: string;
-};
-
 export async function handleApiUsersFeaturedNotes(
 	deps: ApiNoteDependencies,
 	me: MiUser | null | undefined,
@@ -1166,11 +1160,6 @@ export const notesTranslateParamDef = z.object({
 	noteId: misskeyId(),
 	targetLang: z.string(),
 });
-
-type NotesTranslateParams = {
-	noteId: string;
-	targetLang: string;
-};
 
 export type ApiNotesTranslateDependencies = ApiNoteDependencies &
 	ApiRolePolicyDependencies & {
@@ -1306,20 +1295,6 @@ export const usersNotesParamDef = z.object({
 	allowPartial: z.boolean().default(false),
 	withFiles: z.boolean().default(false),
 });
-
-type UsersNotesParams = {
-	userId: string;
-	withReplies: boolean;
-	withRenotes: boolean;
-	withChannelNotes: boolean;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	allowPartial: boolean;
-	withFiles: boolean;
-};
 
 function usersNotesBothWithRepliesAndWithFilesError(): ApiError {
 	return new ApiError({

@@ -24,10 +24,6 @@ export const verifyEmailParamDef = z.object({
 	code: z.string(),
 });
 
-type VerifyEmailParams = {
-	code: string;
-};
-
 function noSuchCodeError(): ApiError {
 	return new ApiError({
 		status: 400,

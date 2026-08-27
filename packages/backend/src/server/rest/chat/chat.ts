@@ -1393,8 +1393,6 @@ export const chatHistoryParamDef = z.object({
 	room: z.boolean().optional().default(false),
 });
 
-type ChatHistoryParams = { limit: number; room: boolean };
-
 export async function handleApiChatHistory(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1443,8 +1441,6 @@ export const chatMessagesCreateToUserParamDef = z.object({
 	fileId: misskeyId().optional(),
 	toUserId: misskeyId(),
 });
-
-type ChatMessagesCreateToUserParams = { text?: string | null; fileId?: string; toUserId: string };
 
 export async function handleApiChatMessagesCreateToUser(
 	deps: ApiChatDependencies,
@@ -1495,8 +1491,6 @@ export const chatMessagesCreateToRoomParamDef = z.object({
 	toRoomId: misskeyId(),
 });
 
-type ChatMessagesCreateToRoomParams = { text?: string | null; fileId?: string; toRoomId: string };
-
 export async function handleApiChatMessagesCreateToRoom(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1536,8 +1530,6 @@ export const chatMessagesDeleteParamDef = z.object({
 	messageId: misskeyId(),
 });
 
-type ChatMessagesDeleteParams = { messageId: string };
-
 export async function handleApiChatMessagesDelete(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1557,8 +1549,6 @@ export const chatMessagesReactParamDef = z.object({
 	reaction: z.string(),
 });
 
-type ChatMessagesReactParams = { messageId: string; reaction: string };
-
 export async function handleApiChatMessagesReact(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1573,8 +1563,6 @@ export const chatMessagesUnreactParamDef = z.object({
 	messageId: misskeyId(),
 	reaction: z.string(),
 });
-
-type ChatMessagesUnreactParams = { messageId: string; reaction: string };
 
 export async function handleApiChatMessagesUnreact(
 	deps: ApiChatDependencies,
@@ -1591,15 +1579,6 @@ export const chatMessagesRoomTimelineParamDef = z.object({
 	...paginationParams,
 	roomId: misskeyId(),
 });
-
-type ChatMessagesRoomTimelineParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	roomId: string;
-};
 
 export async function handleApiChatMessagesRoomTimeline(
 	deps: ApiChatDependencies,
@@ -1633,8 +1612,6 @@ export const chatMessagesSearchParamDef = z.object({
 	roomId: misskeyId().nullable().optional(),
 });
 
-type ChatMessagesSearchParams = { query: string; limit: number; userId?: string | null; roomId?: string | null };
-
 export async function handleApiChatMessagesSearch(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1665,8 +1642,6 @@ export const chatMessagesShowParamDef = z.object({
 	messageId: misskeyId(),
 });
 
-type ChatMessagesShowParams = { messageId: string };
-
 export async function handleApiChatMessagesShow(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1689,15 +1664,6 @@ export const chatMessagesUserTimelineParamDef = z.object({
 	...paginationParams,
 	userId: misskeyId(),
 });
-
-type ChatMessagesUserTimelineParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	userId: string;
-};
 
 export async function handleApiChatMessagesUserTimeline(
 	deps: ApiChatDependencies,
@@ -1724,8 +1690,6 @@ export const chatRoomsCreateParamDef = z.object({
 	description: z.string().max(1024).optional(),
 });
 
-type ChatRoomsCreateParams = { name: string; description?: string };
-
 export async function handleApiChatRoomsCreate(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1741,8 +1705,6 @@ export async function handleApiChatRoomsCreate(
 export const chatRoomsDeleteParamDef = z.object({
 	roomId: misskeyId(),
 });
-
-type ChatRoomsDeleteParams = { roomId: string };
 
 export async function handleApiChatRoomsDelete(
 	deps: ApiChatDependencies,
@@ -1767,8 +1729,6 @@ export const chatRoomsUpdateParamDef = z.object({
 	description: z.string().max(1024).optional(),
 });
 
-type ChatRoomsUpdateParams = { roomId: string; name?: string; description?: string };
-
 export async function handleApiChatRoomsUpdate(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1792,8 +1752,6 @@ export const chatRoomsShowParamDef = z.object({
 	roomId: misskeyId(),
 });
 
-type ChatRoomsShowParams = { roomId: string };
-
 export async function handleApiChatRoomsShow(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1816,14 +1774,6 @@ export const chatRoomsOwnedParamDef = z.object({
 	...paginationParams,
 });
 
-type ChatRoomsOwnedParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
-
 export async function handleApiChatRoomsOwned(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1843,8 +1793,6 @@ export const chatRoomsJoinParamDef = z.object({
 	roomId: misskeyId(),
 });
 
-type ChatRoomsJoinParams = { roomId: string };
-
 export async function handleApiChatRoomsJoin(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1859,14 +1807,6 @@ export const chatRoomsJoiningParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
-
-type ChatRoomsJoiningParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiChatRoomsJoining(
 	deps: ApiChatDependencies,
@@ -1887,8 +1827,6 @@ export const chatRoomsLeaveParamDef = z.object({
 	roomId: misskeyId(),
 });
 
-type ChatRoomsLeaveParams = { roomId: string };
-
 export async function handleApiChatRoomsLeave(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1904,15 +1842,6 @@ export const chatRoomsMembersParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
-
-type ChatRoomsMembersParams = {
-	roomId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiChatRoomsMembers(
 	deps: ApiChatDependencies,
@@ -1939,8 +1868,6 @@ export const chatRoomsMuteParamDef = z.object({
 	mute: z.boolean(),
 });
 
-type ChatRoomsMuteParams = { roomId: string; mute: boolean };
-
 export async function handleApiChatRoomsMute(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1955,8 +1882,6 @@ export const chatRoomsInvitationsCreateParamDef = z.object({
 	roomId: misskeyId(),
 	userId: misskeyId(),
 });
-
-type ChatRoomsInvitationsCreateParams = { roomId: string; userId: string };
 
 export async function handleApiChatRoomsInvitationsCreate(
 	deps: ApiChatDependencies,
@@ -1977,8 +1902,6 @@ export const chatRoomsInvitationsIgnoreParamDef = z.object({
 	roomId: misskeyId(),
 });
 
-type ChatRoomsInvitationsIgnoreParams = { roomId: string };
-
 export async function handleApiChatRoomsInvitationsIgnore(
 	deps: ApiChatDependencies,
 	me: MiLocalUser,
@@ -1993,14 +1916,6 @@ export const chatRoomsInvitationsInboxParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
-
-type ChatRoomsInvitationsInboxParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiChatRoomsInvitationsInbox(
 	deps: ApiChatDependencies,
@@ -2028,15 +1943,6 @@ export const chatRoomsInvitationsOutboxParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(30),
 	...paginationParams,
 });
-
-type ChatRoomsInvitationsOutboxParams = {
-	roomId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiChatRoomsInvitationsOutbox(
 	deps: ApiChatDependencies,

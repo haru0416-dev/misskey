@@ -5,9 +5,10 @@
 
 import { describe, expect, test } from 'vitest';
 import { z } from 'zod';
-import { queryToApiBody } from '@/server/rest/query-params.js';
+import { castMultipartFields, queryToApiBody } from '@/server/rest/string-params.js';
+import type { ApiError } from '@/server/rest/error.js';
 
-describe('server:rest:query-params', () => {
+describe('server:rest:string-params', () => {
 	const schema = z.object({
 		limit: z.int().min(1).max(100).default(10),
 		offset: z.int().nullable().default(null),
@@ -51,5 +52,50 @@ describe('server:rest:query-params', () => {
 
 	test('null 可の string に "null" 以外を渡しても壊さない', () => {
 		expect(queryToApiBody(schema, { host: 'example.com' })).toStrictEqual({ host: 'example.com' });
+	});
+
+	describe('castMultipartFields', () => {
+		const schema = z.object({
+			folderId: z.string().nullable().optional(),
+			name: z.string().nullable().optional(),
+			isSensitive: z.boolean().default(false),
+			count: z.int().optional(),
+		});
+
+		test('真偽値と数値だけ型を戻す', () => {
+			const fields: Record<string, unknown> = { isSensitive: 'true', count: '3', name: 'a.png' };
+			castMultipartFields(schema, fields);
+			expect(fields).toStrictEqual({ isSensitive: true, count: 3, name: 'a.png' });
+		});
+
+		test('文字列パラメータは JSON として解釈しない', () => {
+			// "null" や "123" を値に持つファイル名を壊さないこと。
+			const fields: Record<string, unknown> = { folderId: 'null', name: '123' };
+			castMultipartFields(schema, fields);
+			expect(fields).toStrictEqual({ folderId: 'null', name: '123' });
+		});
+
+		test('宣言された型に解釈できない値は INVALID_PARAM にする', () => {
+			// 理由は message ではなく info に入る (クライアントには error.info として返る)。
+			const reasonOf = (fields: Record<string, unknown>): unknown => {
+				try {
+					castMultipartFields(schema, fields);
+				} catch (err) {
+					return (err as ApiError).info;
+				}
+				return undefined;
+			};
+			expect(reasonOf({ isSensitive: 'yes' })).toStrictEqual({
+				param: 'isSensitive',
+				reason: 'cannot cast to boolean',
+			});
+			expect(reasonOf({ count: 'abc' })).toStrictEqual({ param: 'count', reason: 'cannot cast to number' });
+		});
+
+		test('スキーマに無いキーは触らない', () => {
+			const fields: Record<string, unknown> = { unknown: 'true' };
+			castMultipartFields(schema, fields);
+			expect(fields).toStrictEqual({ unknown: 'true' });
+		});
 	});
 });

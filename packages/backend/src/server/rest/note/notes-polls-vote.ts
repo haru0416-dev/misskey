@@ -86,11 +86,6 @@ export const notesPollsVoteParamDef = z.object({
 	choice: z.int(),
 });
 
-type NotesPollsVoteParams = {
-	noteId: string;
-	choice: number;
-};
-
 export async function handleApiNotesPollsVote(
 	deps: ApiNotesPollsVoteDependencies,
 	me: MiLocalUser,

@@ -86,12 +86,6 @@ export const flashParamDef = z.object({
 	flashId: misskeyId(),
 });
 
-type UserListParams = { listId: string };
-type ClipParams = { clipId: string };
-type ChannelParams = { channelId: string };
-type PageParams = { pageId: string };
-type FlashParams = { flashId: string };
-
 export async function handleApiUsersListsFavorite(
 	deps: ApiFavoriteDependencies,
 	me: MiLocalUser,
@@ -421,14 +415,6 @@ export const iFavoritesParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
-
-type IFavoritesParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiIFavorites(
 	deps: ApiIFavoritesDependencies,

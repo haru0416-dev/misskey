@@ -153,4 +153,5 @@ export const nameSchema = z.string().min(1).max(50);
 export const descriptionSchema = z.string().min(1).max(1500);
 export const followedMessageSchema = z.string().min(1).max(256);
 export const locationSchema = z.string().min(1).max(50);
-export const birthdaySchema = z.string().regex(/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/);
+// 実在する日付だけを通す (旧実装の正規表現は 9999-99-99 のような値も通していた)。
+export const birthdaySchema = z.iso.date();

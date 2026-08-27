@@ -24,11 +24,6 @@ export const fetchExternalResourcesParamDef = z.object({
 	hash: z.string(),
 });
 
-type FetchExternalResourcesParams = {
-	url: string;
-	hash: string;
-};
-
 type ExternalResourceResponse = {
 	type: string;
 	data: string;

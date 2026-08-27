@@ -22,12 +22,6 @@ export const pagePushParamDef = z.object({
 	var: z.unknown().optional(),
 });
 
-type PagePushParams = {
-	pageId: string;
-	event: string;
-	var?: unknown;
-};
-
 function noSuchPageError(): ApiError {
 	return new ApiError({
 		status: 400,

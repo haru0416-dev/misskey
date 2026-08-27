@@ -66,10 +66,6 @@ export const iPinOrUnpinParamDef = z.object({
 	noteId: misskeyId(),
 });
 
-type IPinOrUnpinParams = {
-	noteId: string;
-};
-
 function renderAddForApi(
 	config: Pick<Config, 'instance'>,
 	user: { id: MiUser['id'] },

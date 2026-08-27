@@ -75,14 +75,6 @@ export const clipsListParamDef = z.object({
 	...paginationParams,
 });
 
-type ClipsListParams = {
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
-
 export const clipIdParamDef = z.object({
 	clipId: misskeyId(),
 });
@@ -94,31 +86,11 @@ export const clipNotesParamDef = z.object({
 	search: z.string().min(1).max(100).nullable().optional(),
 });
 
-type ClipNotesParams = {
-	clipId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-	search?: string | null;
-};
-
-type ClipIdParams = {
-	clipId: string;
-};
-
 export const clipsCreateParamDef = z.object({
 	name: z.string().min(1).max(100),
 	isPublic: z.boolean().default(false),
 	description: z.string().max(2048).nullable().optional(),
 });
-
-type ClipsCreateParams = {
-	name: string;
-	isPublic: boolean;
-	description?: string | null;
-};
 
 export const clipsUpdateParamDef = z.object({
 	clipId: misskeyId(),
@@ -127,22 +99,10 @@ export const clipsUpdateParamDef = z.object({
 	description: z.string().max(2048).nullable().optional(),
 });
 
-type ClipsUpdateParams = {
-	clipId: string;
-	name?: string;
-	isPublic?: boolean;
-	description?: string | null;
-};
-
 export const clipsNoteParamDef = z.object({
 	clipId: misskeyId(),
 	noteId: misskeyId(),
 });
-
-type ClipsNoteParams = {
-	clipId: string;
-	noteId: string;
-};
 
 function clipsShowNoSuchClipError(): ApiError {
 	return new ApiError({
@@ -514,15 +474,6 @@ export const usersClipsParamDef = z.object({
 	limit: z.int().min(1).max(100).default(10),
 	...paginationParams,
 });
-
-type UsersClipsParams = {
-	userId: string;
-	limit: number;
-	sinceId?: string;
-	untilId?: string;
-	sinceDate?: number;
-	untilDate?: number;
-};
 
 export async function handleApiUsersClips(
 	deps: ApiClipDependencies,

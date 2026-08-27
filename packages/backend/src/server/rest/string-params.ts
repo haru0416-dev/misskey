@@ -4,6 +4,7 @@
  */
 
 import type { z } from 'zod';
+import { invalidParamError } from './error.js';
 
 type Accepts = { number: boolean; boolean: boolean; null: boolean };
 
@@ -82,4 +83,29 @@ export function queryToApiBody(schema: z.ZodObject, query: Record<string, string
 	}
 
 	return body;
+}
+
+/**
+ * multipart フォームの値を、paramDef が期待する型へ直す。
+ * クエリ文字列と違い、数値・真偽値として宣言されているのに解釈できない値は
+ * ここでエラーにする (元の実装の挙動を保つ)。
+ */
+export function castMultipartFields(schema: z.ZodObject, fields: Record<string, unknown>): void {
+	const shape = schema.shape as Record<string, z.ZodType | undefined>;
+
+	for (const [key, value] of Object.entries(fields)) {
+		if (typeof value !== 'string') continue;
+
+		const field = shape[key];
+		if (field === undefined) continue;
+
+		const accepts = acceptsOf(field);
+		if (!accepts.number && !accepts.boolean) continue;
+
+		try {
+			fields[key] = JSON.parse(value);
+		} catch {
+			throw invalidParamError({ param: key, reason: `cannot cast to ${accepts.number ? 'number' : 'boolean'}` });
+		}
+	}
 }

@@ -42,22 +42,6 @@ export const swUpdateRegistrationParamDef = z.object({
 	sendReadMessage: z.boolean().optional(),
 });
 
-type SwRegisterParams = {
-	endpoint: string;
-	auth: string;
-	publickey: string;
-	sendReadMessage: boolean;
-};
-
-type SwShowRegistrationParams = {
-	endpoint: string;
-};
-
-type SwUpdateRegistrationParams = {
-	endpoint: string;
-	sendReadMessage?: boolean;
-};
-
 type SwRegisterResponse = {
 	state: 'already-subscribed' | 'subscribed';
 	key: string | null;
