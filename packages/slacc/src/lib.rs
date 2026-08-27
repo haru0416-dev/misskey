@@ -7,7 +7,7 @@ use rayon::{ThreadPool, ThreadPoolBuilder};
 #[macro_use]
 extern crate napi_derive;
 
-pub mod aws_lc_rs;
+pub mod signing;
 pub mod zip;
 
 pub(crate) static THREAD_POOL: OnceLock<ThreadPool> = OnceLock::new();
@@ -17,7 +17,7 @@ pub fn init(num_threads: u32) -> napi::Result<()> {
   let pool = ThreadPoolBuilder::new()
     .num_threads(num_threads as usize)
     .build()
-    .map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))?;
+    .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err.to_string()))?;
   THREAD_POOL.set(pool).map_err(|_| {
     napi::Error::new(
       napi::Status::GenericFailure,

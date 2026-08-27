@@ -10,7 +10,7 @@ use crate::THREAD_POOL;
 
 #[napi(string_enum)]
 #[derive(Clone, Copy)]
-pub enum SignatureAlgorithmIdentifier {
+pub enum SignatureAlgorithm {
   Mldsa44,
   Eddsa,
   Rsa2048_8192,
@@ -28,15 +28,19 @@ enum PublicKey {
   Rsa(Vec<u8>),
 }
 
+/// 署名・検証の対象。JS 側から 1 本のバッファでも、分割された複数片でも渡せる。
 enum Payload {
   Parts(Vec<Buffer>),
   Raw(Buffer),
 }
 
-impl From<Payload> for Vec<u8> {
-  fn from(val: Payload) -> Self {
-    match val {
+impl Payload {
+  /// 署名対象のバイト列にする。
+  /// 分割で渡された場合は、各片の SHA-256 を連結したものを署名対象とする。
+  fn into_message(self) -> Vec<u8> {
+    match self {
       Payload::Parts(parts) => {
+        // 片ごとの digest を連結するので、最終長は片数 × SHA-256 の出力長。
         let mut combined = Vec::with_capacity(parts.len() * aws_lc_rs::digest::SHA256.output_len());
         for part in parts.iter() {
           combined.extend_from_slice(
@@ -51,41 +55,41 @@ impl From<Payload> for Vec<u8> {
 }
 
 #[napi(js_name = "Signer")]
-pub struct JsSigner {
+pub struct Signer {
   inner: Arc<KeyPair>,
 }
 
 #[napi]
-impl JsSigner {
+impl Signer {
   #[napi(factory)]
-  pub fn from_pkcs8_der(suite: SignatureAlgorithmIdentifier, der: Buffer) -> Result<Self> {
+  pub fn from_pkcs8_der(suite: SignatureAlgorithm, der: Buffer) -> Result<Self> {
     Self::from_pkcs8(suite, der.to_vec())
   }
 
   #[napi(factory)]
-  pub fn from_pkcs8_pem(suite: SignatureAlgorithmIdentifier, pem: String) -> Result<Self> {
+  pub fn from_pkcs8_pem(suite: SignatureAlgorithm, pem: String) -> Result<Self> {
     Self::from_pkcs8(
       suite,
       pkcs8::der::pem::decode_vec(pem.as_bytes())
-        .map_err(|e| Error::new(Status::InvalidArg, e.to_string()))?
+        .map_err(|err| Error::new(Status::InvalidArg, err.to_string()))?
         .1,
     )
   }
 
-  fn from_pkcs8(suite: SignatureAlgorithmIdentifier, pkcs8_der: Vec<u8>) -> Result<Self> {
+  fn from_pkcs8(suite: SignatureAlgorithm, pkcs8_der: Vec<u8>) -> Result<Self> {
     Ok(Self {
       inner: Arc::new(match suite {
-        SignatureAlgorithmIdentifier::Mldsa44 => KeyPair::Mldsa44(
+        SignatureAlgorithm::Mldsa44 => KeyPair::Mldsa44(
           PqdsaKeyPair::from_pkcs8(&ML_DSA_44_SIGNING, &pkcs8_der)
-            .map_err(|e| Error::new(Status::InvalidArg, e.to_string()))?,
+            .map_err(|err| Error::new(Status::InvalidArg, err.to_string()))?,
         ),
-        SignatureAlgorithmIdentifier::Eddsa => KeyPair::Ed25519(
+        SignatureAlgorithm::Eddsa => KeyPair::Ed25519(
           signature::Ed25519KeyPair::from_pkcs8(&pkcs8_der)
-            .map_err(|e| Error::new(Status::InvalidArg, e.to_string()))?,
+            .map_err(|err| Error::new(Status::InvalidArg, err.to_string()))?,
         ),
-        SignatureAlgorithmIdentifier::Rsa2048_8192 => KeyPair::Rsa(
+        SignatureAlgorithm::Rsa2048_8192 => KeyPair::Rsa(
           signature::RsaKeyPair::from_pkcs8(&pkcs8_der)
-            .map_err(|e| Error::new(Status::InvalidArg, e.to_string()))?,
+            .map_err(|err| Error::new(Status::InvalidArg, err.to_string()))?,
         ),
       }),
     })
@@ -101,14 +105,14 @@ impl JsSigner {
   }
 
   fn sign(&self, payload: Payload, callback: ThreadsafeFunction<Buffer>) -> Result<()> {
-    let kp = self.inner.clone();
+    let key_pair = self.inner.clone();
     THREAD_POOL
       .get()
       .ok_or_else(|| Error::new(Status::GenericFailure, "slacc is not initialized"))?
       .spawn(move || {
         let res = {
-          let message: Vec<u8> = payload.into();
-          match &*kp {
+          let message = payload.into_message();
+          match &*key_pair {
             KeyPair::Mldsa44(key) => {
               let mut sig = vec![0; key.algorithm().signature_len()];
               key.sign(&message, &mut sig).map(|_| Buffer::from(sig))
@@ -126,7 +130,7 @@ impl JsSigner {
                 .map(|_| Buffer::from(sig))
             }
           }
-          .map_err(|e| Error::new(Status::GenericFailure, e.to_string()))
+          .map_err(|err| Error::new(Status::GenericFailure, err.to_string()))
         };
         callback.call(res, ThreadsafeFunctionCallMode::Blocking);
       });
@@ -145,35 +149,35 @@ impl JsSigner {
 }
 
 #[napi(js_name = "Verifier")]
-pub struct JsVerifier {
+pub struct Verifier {
   inner: Arc<PublicKey>,
 }
 
 #[napi]
-impl JsVerifier {
+impl Verifier {
   #[napi(factory)]
-  pub fn from_spki_der(suite: SignatureAlgorithmIdentifier, der: Buffer) -> Result<Self> {
+  pub fn from_spki_der(suite: SignatureAlgorithm, der: Buffer) -> Result<Self> {
     Self::from_spki(suite, der.to_vec())
   }
 
   #[napi(factory)]
-  pub fn from_spki_pem(suite: SignatureAlgorithmIdentifier, pem: String) -> Result<Self> {
+  pub fn from_spki_pem(suite: SignatureAlgorithm, pem: String) -> Result<Self> {
     Self::from_spki(
       suite,
       pkcs8::der::pem::decode_vec(pem.as_bytes())
-        .map_err(|e| Error::new(Status::InvalidArg, e.to_string()))?
+        .map_err(|err| Error::new(Status::InvalidArg, err.to_string()))?
         .1,
     )
   }
 
-  fn from_spki(suite: SignatureAlgorithmIdentifier, spki_der: Vec<u8>) -> Result<Self> {
+  fn from_spki(suite: SignatureAlgorithm, spki_der: Vec<u8>) -> Result<Self> {
     let spki = spki::SubjectPublicKeyInfoRef::try_from(spki_der.as_slice())
-      .map_err(|e| Error::new(Status::InvalidArg, e.to_string()))?;
+      .map_err(|err| Error::new(Status::InvalidArg, err.to_string()))?;
     Ok(Self {
       inner: Arc::new(match (suite, spki.subject_public_key.as_bytes()) {
-        (SignatureAlgorithmIdentifier::Mldsa44, Some(raw)) => PublicKey::Mldsa44(raw.to_vec()),
-        (SignatureAlgorithmIdentifier::Eddsa, Some(raw)) => PublicKey::Ed25519(raw.to_vec()),
-        (SignatureAlgorithmIdentifier::Rsa2048_8192, _) => PublicKey::Rsa(spki_der),
+        (SignatureAlgorithm::Mldsa44, Some(raw)) => PublicKey::Mldsa44(raw.to_vec()),
+        (SignatureAlgorithm::Eddsa, Some(raw)) => PublicKey::Ed25519(raw.to_vec()),
+        (SignatureAlgorithm::Rsa2048_8192, _) => PublicKey::Rsa(spki_der),
         _ => {
           return Err(Error::new(
             Status::InvalidArg,
@@ -190,20 +194,20 @@ impl JsVerifier {
     payload: Payload,
     callback: ThreadsafeFunction<bool>,
   ) -> Result<()> {
-    let pk = self.inner.clone();
+    let public_key = self.inner.clone();
     THREAD_POOL
       .get()
       .ok_or_else(|| Error::new(Status::GenericFailure, "slacc is not initialized"))?
       .spawn(move || {
-        let message: Vec<u8> = payload.into();
+        let message = payload.into_message();
         callback.call(
           Ok(
-            match &*pk {
-              PublicKey::Mldsa44(pk) => signature::UnparsedPublicKey::new(&ML_DSA_44, pk),
-              PublicKey::Ed25519(pk) => signature::UnparsedPublicKey::new(&signature::ED25519, pk),
-              PublicKey::Rsa(pk) => signature::UnparsedPublicKey::new(
-                &aws_lc_rs::signature::RSA_PKCS1_2048_8192_SHA256,
-                pk,
+            match &*public_key {
+              PublicKey::Mldsa44(key) => signature::UnparsedPublicKey::new(&ML_DSA_44, key),
+              PublicKey::Ed25519(key) => signature::UnparsedPublicKey::new(&signature::ED25519, key),
+              PublicKey::Rsa(key) => signature::UnparsedPublicKey::new(
+                &signature::RSA_PKCS1_2048_8192_SHA256,
+                key,
               ),
             }
             .verify(&message, signature.as_ref())
