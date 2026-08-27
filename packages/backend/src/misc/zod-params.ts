@@ -33,8 +33,8 @@ export function uniqueItems<T extends z.ZodType>(schema: z.ZodArray<T>): z.ZodAr
  * スキーマは不変なので実体を共有してよい (`toJSONSchema` は使い回しを `$ref` にせず展開する)。
  */
 export const paginationParams = {
-	sinceId: misskeyId().optional(),
-	untilId: misskeyId().optional(),
-	sinceDate: z.int().optional(),
-	untilDate: z.int().optional(),
+	sinceId: misskeyId().optional().meta({ description: 'この ID より新しいものを返す (指定すると古い順に並ぶ)。' }),
+	untilId: misskeyId().optional().meta({ description: 'この ID より古いものを返す。' }),
+	sinceDate: z.int().optional().meta({ description: 'この時刻 (UNIX ミリ秒) より新しいものを返す。' }),
+	untilDate: z.int().optional().meta({ description: 'この時刻 (UNIX ミリ秒) より古いものを返す。' }),
 };
