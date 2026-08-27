@@ -3391,6 +3391,8 @@ _search:
   include: "含む"
   exclude: "含まない"
   cw: "内容を隠す（CW）"
+  hashtagPlaceholder: "例: 猫 写真"
+  hashtagAndNote: "空白で区切ると、全てのタグを含むノートを検索します"
 
 _serverSetupWizard:
   installCompleted: "Erebiaのインストールが完了しました！"
