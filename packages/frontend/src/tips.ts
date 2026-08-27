@@ -12,6 +12,7 @@ export const TIPS = [
 	'clips',
 	'userLists',
 	'postForm',
+	'postFormServerRules',
 	'deck',
 	'tl.home',
 	'tl.local',

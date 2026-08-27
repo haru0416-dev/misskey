@@ -63,6 +63,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkInfo v-if="!store.tips.postForm" :class="$style.showHowToUse" closable @close="closeTip('postForm')">
 		<button class="_textButton" @click="showTour">{{ i18n.ts._postForm.showHowToUse }}</button>
 	</MkInfo>
+	<MkInfo v-if="showServerRulesNotice" warn :class="$style.serverRulesNotice" closable @close="closeTip('postFormServerRules')">
+		{{ i18n.ts._postForm.pleaseCheckServerRules }} - <button class="_textButton" @click="showServerRules">{{ i18n.ts.serverRules }}</button>
+	</MkInfo>
 	<MkInfo v-if="scheduledAt != null" :class="$style.scheduledAt">
 		<I18n :src="i18n.ts.scheduleToPostOnX" tag="span">
 			<template #x>
@@ -152,6 +155,7 @@ import { checkDragDataType, getDragData } from '@/drag-and-drop.js';
 import { useUploader } from '@/features/drive/useUploader.js';
 import { startTour } from '@/features/onboarding/tour.js';
 import { closeTip } from '@/tips.js';
+import MkServerRulesDialog from '@/components/overlay/MkServerRulesDialog.vue';
 
 const MkUploaderItems = defineAsyncComponent(() => import('@/features/drive/components/MkUploaderItems.vue'));
 const MkNotePreview = defineAsyncComponent(() => import('@/features/post-composer/components/MkNotePreview.vue'));
@@ -213,6 +217,19 @@ const scheduledAt = ref<number | null>(null);
 const draghover = ref(false);
 const quoteId = ref<string | null>(null);
 const hasNotSpecifiedMentions = ref(false);
+
+/**
+ * ルールに触れやすいのは CW を付けるときとファイルを添付するときなので、その 2 つに限って出す。
+ * 常時出すと投稿のたびに読み飛ばされるだけになる。
+ */
+const showServerRulesNotice = computed(() =>
+	instance.serverRules.length > 0 &&
+	!store.tips.postFormServerRules &&
+	(useCw.value || files.value.length > 0));
+
+function showServerRules() {
+	const { dispose } = os.popup(MkServerRulesDialog, {}, { closed: () => dispose() });
+}
 const recentHashtags = ref(miLocalStorage.getItemAsJson('hashtags', isStringArray) ?? []);
 const imeText = ref('');
 const showingOptions = ref(false);
@@ -1737,6 +1754,10 @@ html[data-color-scheme=light] .preview {
 .hasNotSpecifiedMentions,
 .scheduledAt,
 .showHowToUse {
+	margin: 0 20px 16px 20px;
+}
+
+.serverRulesNotice {
 	margin: 0 20px 16px 20px;
 }
 
