@@ -29,7 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 									</button>
 								</div>
 							</div>
-							<span v-if="$i && $i.id != user.id && user.isFollowed" class="followed">{{ i18n.ts.followsYou }}</span>
+							<span v-if="followRelation != null" class="followed">{{ followRelation === 'mutual' ? i18n.ts.mutualFollow : i18n.ts.followsYou }}</span>
 							<div class="actions">
 								<button class="menu _button" @click="menu"><i class="ti ti-dots"></i></button>
 								<MkFollowButton v-if="$i?.id != user.id" v-model:user="user" :inline="true" :transparent="false" :full="true" class="koudoku"/>
@@ -179,6 +179,7 @@ import { dateString } from '@/filters/date.js';
 import { confetti } from '@/utility/confetti.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { isFollowingVisibleForMe, isFollowersVisibleForMe } from '@/features/users/is-ff-visible-for-me.js';
+import { getFollowRelationBadge } from '@/features/users/follow-relation.js';
 import { useRouter } from '@/router.js';
 import { getStaticImageUrl } from '@/utility/media-proxy.js';
 import MkSparkle from '@/components/effects/MkSparkle.vue';
@@ -220,6 +221,7 @@ const emit = defineEmits<{
 const router = useRouter();
 
 const user = ref(props.user);
+const followRelation = computed(() => getFollowRelationBadge($i, user.value));
 const narrow = ref<null | boolean>(null);
 const rootEl = useTemplateRef('rootEl');
 const bannerEl = useTemplateRef('bannerEl');
