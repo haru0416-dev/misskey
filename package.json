@@ -75,7 +75,7 @@
 	"devDependencies": {
 		"@playwright/test": "1.61.1",
 		"@types/node": "26.2.0",
-		"@vue/compiler-sfc": "3.5.38",
+		"@vue/compiler-sfc": "3.5.41",
 		"jscpd": "5.0.12",
 		"knip": "6.27.0",
 		"oxfmt": "0.64.0",
