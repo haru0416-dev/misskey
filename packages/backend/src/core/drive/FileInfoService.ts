@@ -11,7 +11,7 @@ import { FSWatcher } from 'chokidar';
 import * as fileType from 'file-type';
 import isSvg from 'is-svg';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
-import * as blurhash from 'blurhash';
+import { encodeBlurhash } from '@/core/drive/blurhash-encode.js';
 import { createTempDir } from '@/misc/create-temp.js';
 import { ffprobe, spawnFfmpeg } from '@/misc/ffmpeg.js';
 import { AiService } from '@/core/ai/AiService.js';
@@ -118,7 +118,7 @@ async function getBlurhash(path: string, type: string): Promise<string> {
 		.ensureAlpha()
 		.resize(64, 64, { fit: 'inside' })
 		.toBuffer({ resolveWithObject: true });
-	return blurhash.encode(new Uint8ClampedArray(buffer), info.width, info.height, 5, 5);
+	return encodeBlurhash(buffer, info.width, info.height, 5, 5);
 }
 
 async function checkSvg(path: string): Promise<boolean> {
