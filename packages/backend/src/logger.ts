@@ -142,7 +142,6 @@ export default class Logger {
 
 	@bindThis
 	public error(x: string | Error, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
-		// 実行を継続できない状況で使う
 		if (x instanceof Error) {
 			const record: Record<string, unknown> & { e?: Error } =
 				data instanceof Error || Array.isArray(data) ? { data } : (data ?? {});
@@ -155,19 +154,16 @@ export default class Logger {
 
 	@bindThis
 	public warn(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
-		// 実行を継続できるが改善すべき状況で使う
 		this.log('warning', message, data, important);
 	}
 
 	@bindThis
 	public succ(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
-		// 何かに成功した状況で使う
 		this.log('success', message, data, important);
 	}
 
 	@bindThis
 	public debug(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
-		// デバッグ用に使う(開発者に必要だが利用者に不要な情報)
 		if (isDebugLoggingEnabled()) {
 			this.log('debug', message, data, important);
 		}
@@ -175,7 +171,6 @@ export default class Logger {
 
 	@bindThis
 	public info(message: string, data?: Record<string, unknown> | Error | unknown[] | null, important = false): void {
-		// それ以外
 		this.log('info', message, data, important);
 	}
 }

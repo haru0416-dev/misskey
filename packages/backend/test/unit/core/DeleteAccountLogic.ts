@@ -164,7 +164,7 @@ describe('DeleteAccountLogic', () => {
 
 			expect((await fetchUserByIdOrFailFromDatabase(runtime.db, target.id)).isDeleted).toBe(true);
 
-			// 配送待ちが無い削除は即時発行されるので、行の内容ではなく発行内容を検証する
+			// 配送待ちの無い削除は即時発行されるため、outbox 行ではなく発行内容を検証する。
 			await vi.waitFor(() => expect(addBulk).toHaveBeenCalledTimes(1));
 			const publishedJobs = addBulk.mock.calls[0]?.[0] as { name: string; data: unknown; opts: { jobId: string } }[];
 			expect(publishedJobs).toHaveLength(1);

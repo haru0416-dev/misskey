@@ -483,7 +483,6 @@ export class StreamConnection {
 			return;
 		}
 
-		// 共有可能チャンネルに接続しようとしていて、かつそのチャンネル名に既に接続していたら無意味なので無視
 		if (definition.shouldShare) {
 			for (const existing of this.channels.values()) {
 				if (existing.channelName === channelName) {

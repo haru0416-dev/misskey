@@ -109,7 +109,7 @@ export class MiMeta {
 
 	public enableTestcaptcha: boolean;
 
-	// chaptcha系を追加した際にはnodeinfoのレスポンスに追加するのを忘れないようにすること
+	// CAPTCHA 設定は NodeInfo のレスポンスにも反映する。
 
 	public sensitiveMediaDetection: 'none' | 'all' | 'local' | 'remote';
 

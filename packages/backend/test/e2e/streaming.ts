@@ -282,22 +282,6 @@ describe('Streaming', () => {
 				expect(fired).toBe(false);
 			});
 
-			/**
-			 * TODO: 落ちる
-			 * @see https://github.com/misskey-dev/misskey/issues/13474
-			test('visibility: specified なノートで visibleUserIds に自分が含まれているときそのノートへのリプライが流れてくる', async () => {
-				const chitoseToKyokoAndAyano = await post(chitose, { text: 'direct note from chitose to kyoko and ayano', visibility: 'specified', visibleUserIds: [kyoko.id, ayano.id] });
-
-				const fired = await waitFire(
-					ayano, 'homeTimeline',
-					() => api('notes/create', { text: 'direct reply from kyoko to chitose and ayano', replyId: chitoseToKyokoAndAyano.id, visibility: 'specified', visibleUserIds: [chitose.id, ayano.id] }, kyoko),
-					msg => msg.type === 'note' && msg.body['userId'] === kyoko.id,
-				);
-
-				expect(fired).toBe(true);
-			});
-			 */
-
 			test('visibility: specified な投稿に対するリプライで visibleUserIds が拡張されたとき、その拡張されたユーザーの HTL にはそのリプライが流れない', async () => {
 				const chitoseToKyoko = await post(chitose, {
 					text: 'direct note from chitose to kyoko',
@@ -436,28 +420,6 @@ describe('Streaming', () => {
 				expect(fired).toBe(true);
 			});
 
-			/* TODO
-			test('リモートユーザーの投稿は流れない', async () => {
-				const fired = await waitFire(
-					ayano, 'localTimeline',
-					() => api('notes/create', { text: 'foo' }, chinatsu),
-					msg => msg.type === 'note' && msg.body.userId === chinatsu.id,
-				);
-
-				expect(fired).toBe(false);
-			});
-
-			test('フォローしてたとしてもリモートユーザーの投稿は流れない', async () => {
-				const fired = await waitFire(
-					ayano, 'localTimeline',
-					() => api('notes/create', { text: 'foo' }, akari),
-					msg => msg.type === 'note' && msg.body.userId === akari.id,
-				);
-
-				expect(fired).toBe(false);
-			});
-			*/
-
 			test('ホーム指定の投稿は流れない', async () => {
 				const fired = await waitFireWithoutEvent(
 					ayano,
@@ -525,28 +487,6 @@ describe('Streaming', () => {
 
 				expect(fired).toBe(true);
 			});
-
-			/* TODO
-			test('フォローしているリモートユーザーの投稿が流れる', async () => {
-				const fired = await waitFire(
-					ayano, 'hybridTimeline',
-					() => api('notes/create', { text: 'foo' }, akari),
-					msg => msg.type === 'note' && msg.body.userId === akari.id,
-				);
-
-				expect(fired).toBe(true);
-			});
-
-			test('フォローしていないリモートユーザーの投稿は流れない', async () => {
-				const fired = await waitFire(
-					ayano, 'hybridTimeline',
-					() => api('notes/create', { text: 'foo' }, chinatsu),
-					msg => msg.type === 'note' && msg.body.userId === chinatsu.id,
-				);
-
-				expect(fired).toBe(false);
-			});
-			*/
 
 			test('フォローしているユーザーのダイレクト投稿が流れる', async () => {
 				const fired = await waitFire(
@@ -654,18 +594,6 @@ describe('Streaming', () => {
 				expect(fired).toBe(true);
 			});
 
-			/* TODO
-			test('フォローしていないリモートユーザーの投稿が流れる', async () => {
-				const fired = await waitFire(
-					ayano, 'globalTimeline',
-					() => api('notes/create', { text: 'foo' }, chinatsu),
-					msg => msg.type === 'note' && msg.body.userId === chinatsu.id,
-				);
-
-				expect(fired).toBe(true);
-			});
-			*/
-
 			test('ホーム投稿は流れない', async () => {
 				const fired = await waitFireWithoutEvent(
 					ayano,
@@ -742,7 +670,6 @@ describe('Streaming', () => {
 
 			// #10443
 			test('チャンネル投稿は流れない', async () => {
-				// リスインしている kyoko が 任意のチャンネルに投降した時の動きを見たい
 				const fired = await waitFireWithoutEvent(
 					chitose,
 					'userList',
@@ -756,7 +683,6 @@ describe('Streaming', () => {
 
 			// #10443
 			test('ミュートしているユーザへのリプライがリストTLに流れない', async () => {
-				// chitose が kanako をミュートしている状態で、リスインしている kyoko が kanako にリプライした時の動きを見たい
 				const fired = await waitFireWithoutEvent(
 					chitose,
 					'userList',
@@ -770,7 +696,6 @@ describe('Streaming', () => {
 
 			// #10443
 			test('ミュートしているユーザの投稿をリノートしたときリストTLに流れない', async () => {
-				// chitose が kanako をミュートしている状態で、リスインしている kyoko が kanako のノートをリノートした時の動きを見たい
 				const fired = await waitFireWithoutEvent(
 					chitose,
 					'userList',
@@ -792,7 +717,6 @@ describe('Streaming', () => {
 					chitose,
 				);
 
-				// chitose が example.com をミュートしている状態で、リスインしている takumi が ノートした時の動きを見たい
 				const fired = await waitFireWithoutEvent(
 					chitose,
 					'userList',
@@ -814,7 +738,6 @@ describe('Streaming', () => {
 					chitose,
 				);
 
-				// chitose が example.com をミュートしている状態で、リスインしている kyoko が takumi のノートにリプライした時の動きを見たい
 				const fired = await waitFireWithoutEvent(
 					chitose,
 					'userList',
@@ -836,7 +759,6 @@ describe('Streaming', () => {
 					chitose,
 				);
 
-				// chitose が example.com をミュートしている状態で、リスインしている kyoko が takumi のノートをリノートした時の動きを見たい
 				const fired = await waitFireWithoutEvent(
 					chitose,
 					'userList',

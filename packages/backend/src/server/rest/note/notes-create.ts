@@ -1638,7 +1638,7 @@ export async function createNoteForApi(
 
 	// analytics は再実行で二重計上するため outbox に載せない (中身はチャートへの加算で、
 	// 行を持っても完了は保証されていない)。ただし実行はドレインチェーン内に留める。
-	// 投げっぱなしにすると裏の書き込みが応答後も無制限に並行し、DB プールを奪う。
+	// await せず実行すると応答後の書き込みが無制限に並行し、DB プールを奪う。
 	const runAnalytics = async (): Promise<void> => {
 		try {
 			await postNoteCreatedForApi(deps, persisted.note, user, data, tags, finalMentionedUsers, silent, 'analytics');
@@ -1783,8 +1783,7 @@ export async function fetchAndCreateNoteForApi(
 }
 
 /**
- * 旧 ajv の `if`/`then` (renoteId/fileIds/mediaIds/poll が全部 null-or-absent の場合のみ text 必須+非空白必須)
- * を superRefine で再現する。
+ * renoteId/fileIds/mediaIds/poll がすべて null または未指定の場合だけ、空白でない text を必須にする。
  */
 export const notesCreateParamDef = z
 	.object({

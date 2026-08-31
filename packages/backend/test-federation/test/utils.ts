@@ -97,7 +97,7 @@ async function createAdmin(host: Host): Promise<Misskey.entities.SignupResponse 
 				'admin/roles/update-default-policies',
 				{
 					policies: {
-						/** TODO: @see https://github.com/misskey-dev/misskey/issues/14169 */
+						// misskey-js の型に rateLimitFactor が反映されていない。
 						rateLimitFactor: 0 as never,
 					},
 				},
@@ -256,7 +256,7 @@ export async function isFired<C extends keyof Misskey.Channels, T extends keyof 
 	channel: C,
 	trigger: () => Promise<unknown>,
 	type: T,
-	// @ts-expect-error TODO: why getting error here?
+	// @ts-expect-error チャンネルイベントのジェネリックな引数型を TypeScript が解決できない。
 	cond: (msg: Parameters<Misskey.Channels[C]['events'][T]>[0]) => boolean,
 	params?: Misskey.Channels[C]['params'],
 	timeoutMs = 1500,

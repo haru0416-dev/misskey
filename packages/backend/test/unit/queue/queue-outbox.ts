@@ -336,7 +336,7 @@ describe('queue outbox', () => {
 	});
 
 	test('dispatches a DB backlog in bounded batches', async () => {
-		// READY_BATCH_SIZE (500) を超える件数を積み、1周あたりの発行件数が頭打ちになることを確認する
+		// 500 件を超える backlog でも、1 周の発行件数を上限内に保つ。
 		const outboxIds: string[] = [];
 		await runtime.db.transaction(async (transaction) => {
 			for (let i = 0; i < 600; i++) {

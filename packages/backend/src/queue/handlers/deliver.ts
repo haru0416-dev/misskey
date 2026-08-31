@@ -75,7 +75,6 @@ export async function handleQueueDeliver(
 		return 'skip (blocked)';
 	}
 
-	// isSuspendedなら中断
 	let suspendedHosts = suspendedHostsCache.get();
 	if (suspendedHosts == null) {
 		suspendedHosts = new Set((await listSuspendedInstancesFromDatabase(deps.db)).map((x) => x.host));
@@ -166,9 +165,8 @@ export async function handleQueueDeliver(
 			.catch(logBackgroundInstanceUpdateError);
 
 		if (res instanceof StatusError) {
-			// 4xx
 			if (!res.isRetryable) {
-				// 相手が閉鎖していることを明示しているため、配送停止する
+				// 410 は配送先の閉鎖を示すため、共有 inbox への配送を停止する。
 				if (job.data.isSharedInbox && res.statusCode === 410) {
 					fetchOrRegisterFederatedInstance(deps, host)
 						.then((i2) =>
@@ -182,7 +180,7 @@ export async function handleQueueDeliver(
 				throw new Bull.UnrecoverableError(`${res.statusCode} ${res.statusMessage}`);
 			}
 
-			// 5xx etc.
+			// 5xx などは再試行する。
 			throw new Error(`${res.statusCode} ${res.statusMessage}`, { cause: res });
 		} else {
 			// DNS エラー、ソケットエラー、タイムアウトなど。

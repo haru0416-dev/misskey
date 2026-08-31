@@ -1121,7 +1121,7 @@ describe('Note', () => {
 
 		/*
 		 * 禁止ユーザー名の判定は notes/create の禁止ワード判定と同じ関数を通る。
-		 * かつて両者は別実装で、正規表現の解釈が食い違っていた。
+		 * 両方で正規表現の解釈を一致させる。
 		 */
 		test('禁止ワードに該当するユーザー名ではサインアップできない (正規表現)', async () => {
 			const updated = await api('admin/update-meta', { prohibitedWordsForNameOfUser: ['/^Bad/i'] }, root);
@@ -1490,7 +1490,6 @@ describe('Note', () => {
 			const aliceNote = await post(alice, { text: 'Hello' });
 			const res = await api('notes/translate', { noteId: aliceNote.id, targetLang: 'ja' }, alice);
 
-			// NOTE: デフォルトでは登録されていないので落ちる
 			expect(res.status).toBe(400);
 			assert.ok(res.body);
 			expect(castAsError(res.body).error.code).toBe('UNAVAILABLE');

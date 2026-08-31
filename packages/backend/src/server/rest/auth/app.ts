@@ -67,9 +67,7 @@ export const iAuthorizedAppsParamDef = z.object({
 	sort: z.enum(['desc', 'asc']).default('desc'),
 });
 
-// 元は anyOf([{ required: ['tokenId'] }, { required: ['token'] }]) の2択。
-// tokenId/token は互いに素なプロパティなので、共通プロパティ optional + superRefine ではなく
-// z.union() で各枝をそのまま表現する (枝ごとの型チェックを他方に影響させないため。詳細は報告参照)。
+// tokenId と token は互いに素なため、各分岐の型検査が他方へ影響しない z.union() で表す。
 export const iRevokeTokenParamDef = z.union([
 	z.object({ tokenId: misskeyId() }),
 	z.object({ token: z.string().nullable() }),

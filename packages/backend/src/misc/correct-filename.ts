@@ -25,12 +25,12 @@ export function correctFilename(filename: string, ext: string | null) {
 	if (
 		ext === null ||
 		filenameExt === dotExt ||
-		// jpeg, tiffを同一視
+		// JPEG と TIFF の同義拡張子は同一視する。
 		(dotExt === '.jpg' && filenameExt === '.jpeg') ||
 		(dotExt === '.tif' && filenameExt === '.tiff') ||
-		// dllもexeもportable executableなので判定が正しく行われない
+		// DLL と EXE は同じ Portable Executable 形式なので、判定結果だけでは区別できない。
 		(dotExt === '.exe' && filenameExt === '.dll') ||
-		// 圧縮形式っぽければ下手に拡張子を変えない
+		// 圧縮形式と推定できる場合は拡張子を変更しない。
 		// https://github.com/misskey-dev/misskey/issues/11482
 		targetExtsToSkip.has(dotExt)
 	) {

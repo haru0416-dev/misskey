@@ -11,7 +11,7 @@ import { MiRole } from './Role.js';
 import { MiDriveFile } from './DriveFile.js';
 import { MiNoteDraft } from './NoteDraft.js';
 
-// misskey-js の notificationTypes と同期すべし
+// misskey-js の notificationTypes と同じ種別を維持する。
 export type MiNotification =
 	| {
 			type: 'note';

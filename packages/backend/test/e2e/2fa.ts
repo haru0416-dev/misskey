@@ -40,7 +40,7 @@ describe('2要素認証', () => {
 	const username = 'alice';
 
 	// https://datatracker.ietf.org/doc/html/rfc8152
-	// 各値の定義は上記規格に基づく。鍵ペアは適当に生成したやつ
+	// 各値は上記規格に基づく固定 fixture とする。
 	const coseKtyEc2 = 2;
 	const coseKid = 'meriadoc.brandybuck@buckland.example';
 	const coseAlgEs256 = -7;
@@ -255,7 +255,7 @@ describe('2要素認証', () => {
 			alice,
 		);
 		expect(registerResponse.status).toBe(200);
-		// QR はクライアントがこの url から描くので、url が otpauth 形式で secret を含むことを見る。
+		// クライアントが QR を生成できるよう、URL は secret を含む otpauth 形式にする。
 		expect(registerResponse.body.url).toMatch(/^otpauth:\/\/totp\//);
 		expect(registerResponse.body.secret).toEqual(expect.anything());
 		expect(registerResponse.body.url).toContain(registerResponse.body.secret);
@@ -288,7 +288,6 @@ describe('2要素認証', () => {
 		assert.strictEqual(signinResponse.body.finished, true);
 		expect(signinResponse.body.i).toEqual(expect.anything());
 
-		// 後片付け
 		await api(
 			'i/2fa/unregister',
 			{
@@ -370,7 +369,6 @@ describe('2要素認証', () => {
 		assert.strictEqual(signinResponse2.body.finished, true);
 		expect(signinResponse2.body.i).toEqual(expect.anything());
 
-		// 後片付け
 		await api(
 			'i/2fa/unregister',
 			{
@@ -459,7 +457,6 @@ describe('2要素認証', () => {
 		assert.strictEqual(signinResponse2.body.finished, true);
 		expect(signinResponse2.body.i).toEqual(expect.anything());
 
-		// 後片付け
 		await api(
 			'i/2fa/unregister',
 			{
@@ -641,7 +638,6 @@ describe('2要素認証', () => {
 		expect(securityKey.name).toBe(renamedKey);
 		expect(securityKey.lastUsed).toEqual(expect.anything());
 
-		// 後片付け
 		await api(
 			'i/2fa/unregister',
 			{
@@ -695,7 +691,7 @@ describe('2要素認証', () => {
 		);
 		expect(keyDoneResponse.status).toBe(200);
 
-		// テストの実行順によっては複数残ってるので全部消す
+		// テスト順に依存しないよう、残存する登録をすべて削除する。
 		const beforeIResponse = await api('i', {}, alice);
 		expect(beforeIResponse.status).toBe(200);
 		assert.ok(beforeIResponse.body.securityKeysList);
@@ -724,7 +720,6 @@ describe('2要素認証', () => {
 		assert.strictEqual(signinResponse.body.finished, true);
 		expect(signinResponse.body.i).toEqual(expect.anything());
 
-		// 後片付け
 		await api(
 			'i/2fa/unregister',
 			{
@@ -775,7 +770,6 @@ describe('2要素認証', () => {
 		assert.strictEqual(signinResponse.body.finished, true);
 		expect(signinResponse.body.i).toEqual(expect.anything());
 
-		// 後片付け
 		await api(
 			'i/2fa/unregister',
 			{
@@ -816,7 +810,7 @@ describe('2要素認証', () => {
 				},
 				user,
 			);
-			// 2FA失敗は利用者の入力ミスなので、500 INTERNAL_ERROR ではなく明示的なAPIエラーであること
+			// 2FA 失敗は利用者の入力不備なので、明示的な API エラーを返す。
 			expect(missingTokenResponse.status, JSON.stringify(missingTokenResponse.body)).toBe(400);
 			expect(castAsError(missingTokenResponse.body as any).error.code).toBe('TWO_FACTOR_AUTHENTICATION_FAILED');
 			await assertPasswordUnchanged();

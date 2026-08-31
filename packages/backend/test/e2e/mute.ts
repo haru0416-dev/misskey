@@ -40,7 +40,6 @@ describe('Mute', () => {
 
 		expect(res.status).toBe(204);
 
-		// 単体でも走らせられるように副作用消す
 		await api(
 			'mute/delete',
 			{
@@ -63,7 +62,6 @@ describe('Mute', () => {
 	});
 
 	test('ミュートしているユーザーからメンションされても、ストリームに unreadNotification イベントが流れてこない', async () => {
-		// 状態リセット
 		await api('notifications/mark-all-as-read', {}, alice);
 
 		const fired = await waitFire(

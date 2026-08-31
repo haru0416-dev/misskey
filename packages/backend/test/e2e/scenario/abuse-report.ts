@@ -101,8 +101,6 @@ describe('[シナリオ] ユーザ通報', () => {
 		return res.body;
 	}
 
-	// -------------------------------------------------------------------------------------------
-
 	beforeAll(
 		async () => {
 			queue = await startJobQueue();
@@ -119,8 +117,6 @@ describe('[シナリオ] ユーザ通報', () => {
 		await queue.close();
 	});
 
-	// -------------------------------------------------------------------------------------------
-
 	describe('SystemWebhook', () => {
 		beforeEach(async () => {
 			const webhooks = await api('admin/system-webhook/list', {}, admin);
@@ -136,7 +132,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			});
 			await createAbuseReportNotificationRecipient({ systemWebhookId: webhook.id });
 
-			// 通報(bob -> alice)
 			const abuse = {
 				userId: alice.id,
 				comment: randomString(),
@@ -161,7 +156,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			});
 			await createAbuseReportNotificationRecipient({ systemWebhookId: webhook.id });
 
-			// 通報(bob -> alice)
 			const abuse = {
 				userId: alice.id,
 				comment: randomString(),
@@ -179,7 +173,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			expect(webhookBody1.body.resolved).toBe(false);
 			expect(webhookBody1.body.comment).toBe(abuse.comment);
 
-			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
 				await resolveAbuseReport(
 					{
@@ -206,7 +199,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			});
 			await createAbuseReportNotificationRecipient({ systemWebhookId: webhook.id });
 
-			// 通報(bob -> alice)
 			const abuse = {
 				userId: alice.id,
 				comment: randomString(),
@@ -225,7 +217,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			});
 			await createAbuseReportNotificationRecipient({ systemWebhookId: webhook.id });
 
-			// 通報(bob -> alice)
 			const abuse = {
 				userId: alice.id,
 				comment: randomString(),
@@ -238,7 +229,6 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			const abuseReportId = first((await api('admin/abuse-user-reports', {}, admin)).body).id;
 
-			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
 				await resolveAbuseReport(
 					{
@@ -265,7 +255,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			});
 			await createAbuseReportNotificationRecipient({ systemWebhookId: webhook.id });
 
-			// 通報(bob -> alice)
 			const abuse = {
 				userId: alice.id,
 				comment: randomString(),
@@ -283,7 +272,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			expect(webhookBody1.body.resolved).toBe(false);
 			expect(webhookBody1.body.comment).toBe(abuse.comment);
 
-			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
 				await resolveAbuseReport(
 					{
@@ -303,7 +291,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			});
 			await createAbuseReportNotificationRecipient({ systemWebhookId: webhook.id });
 
-			// 通報(bob -> alice)
 			const abuse = {
 				userId: alice.id,
 				comment: randomString(),
@@ -316,7 +303,6 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			const abuseReportId = first((await api('admin/abuse-user-reports', {}, admin)).body).id;
 
-			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
 				await resolveAbuseReport(
 					{
@@ -336,7 +322,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			});
 			await createAbuseReportNotificationRecipient({ systemWebhookId: webhook.id });
 
-			// 通報(bob -> alice)
 			const abuse = {
 				userId: alice.id,
 				comment: randomString(),
@@ -349,7 +334,6 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			const abuseReportId = first((await api('admin/abuse-user-reports', {}, admin)).body).id;
 
-			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
 				await resolveAbuseReport(
 					{
@@ -369,7 +353,6 @@ describe('[シナリオ] ユーザ通報', () => {
 			});
 			await createAbuseReportNotificationRecipient({ systemWebhookId: webhook.id, isActive: false });
 
-			// 通報(bob -> alice)
 			const abuse = {
 				userId: alice.id,
 				comment: randomString(),
@@ -382,7 +365,6 @@ describe('[シナリオ] ユーザ通報', () => {
 
 			const abuseReportId = first((await api('admin/abuse-user-reports', {}, admin)).body).id;
 
-			// 解決
 			const webhookBody2 = await captureWebhook(async () => {
 				await resolveAbuseReport(
 					{

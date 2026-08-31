@@ -5,7 +5,7 @@
 
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
-// 未定義になる。テスト用にダミー値を注入しておく。
+// 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
@@ -27,7 +27,7 @@ function fakeJob(data: DeliverJobData): Bull.Job<DeliverJobData> {
 describe('hono-queue-deliver', () => {
 	let runtime: RuntimeDependencies;
 	let actor: MiLocalUser;
-	// meta.federationはデフォルト'none'(連合オフ)なので、素通りさせたいテストは
+	// meta.federation の既定値は 'none' なので、配送経路を検証するテストは
 	// 'all'に上書きする。
 	let federatedDeps: QueueDeliverDependencies;
 

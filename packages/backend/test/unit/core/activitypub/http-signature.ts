@@ -168,7 +168,6 @@ describe('core:activitypub:http-signature', () => {
 		});
 
 		test('Ed25519 の署名も通す', async () => {
-			// 旧実装 (@peertube/http-signature) は ED25519 を弾いていた。
 			const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
 			const pem = publicKey.export({ type: 'spki', format: 'pem' }) as string;
 			const signingString = 'date: Wed, 27 Aug 2026 00:00:00 GMT';

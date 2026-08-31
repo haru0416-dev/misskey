@@ -5,7 +5,7 @@
 
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
-// 未定義になる。テスト用にダミー値を注入しておく。
+// 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
@@ -111,7 +111,6 @@ describe('hono-queue-relationship', () => {
 		const blocker = await createTestUser(deps);
 		const blockee = await createTestUser(deps);
 
-		// 双方向のフォロー関係と、blockee→blocker のフォローリクエストを用意しておく
 		await createFollowingInDatabase(deps.db, {
 			id: genId(),
 			followerId: blocker.id,
@@ -276,7 +275,6 @@ describe('hono-queue-relationship', () => {
 		await updateUserProfileInDatabase(deps.db, followee.id, { autoAcceptFollowed: true });
 		const follower = await createTestUser(deps);
 
-		// followee が既に follower をフォローしている状態にしておく
 		await createFollowingInDatabase(deps.db, {
 			id: genId(),
 			followerId: followee.id,

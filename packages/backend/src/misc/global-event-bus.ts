@@ -54,8 +54,7 @@ class GlobalEventBus extends EventEmitter {
 	}
 
 	/**
-	 * イベントを全プロセスへ発行する。EventEmitter.emit とはシグネチャが異なる
-	 * (可変長引数ではなく data 1つ) 点も旧 xev と同じ。
+	 * イベントを全プロセスへ発行する。EventEmitter.emit と異なり、data は 1 引数だけ受ける。
 	 */
 	override emit(type: string, data?: unknown): boolean {
 		const envelope: BusEnvelope = { [MARKER]: true, type, data };

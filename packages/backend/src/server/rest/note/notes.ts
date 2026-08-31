@@ -553,7 +553,7 @@ export async function handleApiNotes(
 		}),
 	);
 
-	// me を指定せず、常に匿名としてパックする。
+	// 公開 API のため、閲覧者固有情報を含めない。
 	return await packNoteManyForApi(deps, notes, null);
 }
 
@@ -934,7 +934,7 @@ export async function handleApiNotesSearch(
 
 	const provider = deps.config.search.provider ?? 'sqlLike';
 	if (provider !== 'sqlLike' && provider !== 'sqlPgroonga') {
-		// 全文検索は SQL ベースの provider しか実装が無い。
+		// 全文検索は SQL ベースの provider に限る。
 		throw notesSearchUnavailableError();
 	}
 
@@ -965,11 +965,8 @@ export async function handleApiNotesSearch(
 	return await packNoteManyForApi(deps, notes, me);
 }
 
-// 元の ajv スキーマは `allOf: [{ anyOf: [tag必須, query必須] }, { 共通プロパティ (additionalProperties 制限なし) }]`。
-// anyOf の各分岐は互いのプロパティを一切検証しない (例: query 分岐は tag の型を問わない) ため、
-// tag/query 自体には型制約を掛けず (z.unknown()) 、「anyOf のどちらかの分岐を素朴に満たすか」を
-// isValidTagBranch/isValidQueryBranch で ajv 同等に再現し、superRefine で判定する。
-// これにより「tag が不正でも query が有効なら許可」のような ajv 特有の緩さを完全一致させる。
+// anyOf の各分岐は互いのプロパティを検証しないため、tag/query 自体は z.unknown() とする。
+// 一方が有効なら他方が不正でも許可する互換性を superRefine で維持する。
 function isValidTagBranch(tag: unknown): tag is string {
 	return typeof tag === 'string' && tag.length >= 1;
 }
@@ -1007,7 +1004,7 @@ const notesSearchByTagParamDef = z
 	});
 
 // OpenAPI/misskey-js コード生成専用。上の superRefine (tag/query の anyOf 判定) は
-// JSON Schema 化できないため、docs 用には元 ajv 版と同じ allOf+anyOf 構造を union+intersection で表現する。
+// JSON Schema 化できないため、docs 用には allOf+anyOf 構造を union+intersection で表現する。
 const notesSearchByTagCommonFieldsDocsSchema = z.object({
 	reply: z.boolean().nullable().optional().default(null),
 	renote: z.boolean().nullable().optional().default(null),

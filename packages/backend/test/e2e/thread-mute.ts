@@ -58,7 +58,5 @@ describe('Note thread mute', () => {
 		expect(
 			res.body.some((notification) => 'note' in notification && notification.note.id === carolReplyWithoutMention.id),
 		).toBe(false);
-
-		// NOTE: bobの投稿はスレッドミュート前に行われたため通知に含まれていてもよい
 	});
 });

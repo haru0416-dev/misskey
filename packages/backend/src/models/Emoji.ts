@@ -20,7 +20,7 @@ export class MiEmoji {
 
 	public uri: string | null;
 
-	// publicUrlの方のtypeが入る
+	// type は originalUrl ではなく publicUrl の MIME type。
 	public type: string | null;
 
 	public aliases: string[];
@@ -31,6 +31,6 @@ export class MiEmoji {
 
 	public isSensitive: boolean;
 
-	// TODO: 定期ジョブで存在しなくなったロールIDを除去するようにする
+	// 削除済みロールの ID が残る場合がある。
 	public roleIdsThatCanBeUsedThisEmojiAsReaction: string[];
 }

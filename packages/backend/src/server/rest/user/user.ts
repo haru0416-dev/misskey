@@ -845,9 +845,8 @@ function usersShowNoSuchUserError(): ApiError {
 }
 
 /**
- * 旧 ajv の `allOf` (anyOf分岐セレクタ + host共通プロパティ) を、分岐ごとに独立した
- * z.object を z.union で束ねる形で再現する。各分岐は自分の識別子プロパティのみを検証し、
- * 他の分岐のプロパティは (元の ajv の anyOf+properties と同様) 検証対象外になる。
+ * 各分岐は自分の識別子プロパティだけを検証し、他の分岐のプロパティは検証しない。
+ * この分岐独立性を保つため、個別の z.object を z.union で束ねる。
  */
 const usersShowHostSchema = z.string().nullable().optional().describe('The local host is represented with `null`.');
 
@@ -1224,8 +1223,7 @@ async function selectSearchUserIdsForApi(
 }
 
 /**
- * 旧 ajv の `allOf` (username/host いずれかを要求する anyOf 分岐セレクタ + limit/detail 共通プロパティ) を、
- * usersShowParamDef と同様に分岐ごとの z.object を z.union で束ねる形で再現する。
+ * username と host の分岐を独立して検証するため、個別の z.object を z.union で束ねる。
  */
 const usersSearchByUsernameAndHostCommon = {
 	limit: z.int().min(1).max(100).default(10),

@@ -66,7 +66,6 @@ export function encodeBlurhash(
 	const cosX = cosineTable(width, componentX);
 	const cosY = cosineTable(height, componentY);
 
-	// 行ごとに x 方向の和を取る: rowSums[(y * componentX + cx) * 3 + ch]
 	const rowSums = new Float64Array(height * componentX * 3);
 	const linear = new Float64Array(width * 3);
 	for (let y = 0; y < height; y++) {
@@ -95,7 +94,6 @@ export function encodeBlurhash(
 		}
 	}
 
-	// y 方向の和を取って成分を確定する。上流と同じく DC 成分は係数 1、それ以外は 2 の正規化
 	const scale = 1 / (width * height);
 	const factors = new Float64Array(componentX * componentY * 3);
 	for (let cy = 0; cy < componentY; cy++) {
@@ -120,7 +118,6 @@ export function encodeBlurhash(
 		}
 	}
 
-	// 添字はすべて確保済みの範囲内なので non-null で読む (noUncheckedIndexedAccess)
 	const factor = (i: number): number => factors[i] ?? 0;
 	const acCount = componentX * componentY - 1;
 	let hash = encode83(componentX - 1 + (componentY - 1) * 9, 1);

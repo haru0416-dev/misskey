@@ -42,19 +42,15 @@ export const FILE_TYPE_IMAGE = [
 	'image/x-icon',
 ];
 
-// 外部へ送信する User-Agent の製品名。
 export const PRODUCT_NAME = 'Erebia';
 
 // メディアプロキシが自分自身や他のプロキシを経由し続けるのを防ぐため、
 // リクエスト元の User-Agent がこのトークンを含む場合は中継を拒否する。
-// `misskey/` は Misskey 系実装が共通で名乗るので、自分の製品名とは別に残す。
+// `misskey/` は Misskey 系実装が共通で名乗るため、製品名と別に検査する。
 export const PROXY_LOOP_USER_AGENT_TOKENS = [`${PRODUCT_NAME.toLowerCase()}/`, 'misskey/'];
 
-// ブラウザで直接表示することを許可するファイルの種類のリスト
-// ここに含まれないものは application/octet-stream としてレスポンスされる
-// SVGはXSSを生むので許可しない
+// 一覧外は application/octet-stream で返す。XSS を防ぐため SVG は許可しない。
 export const FILE_TYPE_BROWSERSAFE = [
-	// 画像
 	'image/png',
 	'image/gif',
 	'image/jpeg',
@@ -65,13 +61,13 @@ export const FILE_TYPE_BROWSERSAFE = [
 	'image/tiff',
 	'image/x-icon',
 
-	// OggS
+	// OggS コンテナ
 	'audio/opus',
 	'video/ogg',
 	'audio/ogg',
 	'application/ogg',
 
-	// ISO/IEC base media file format
+	// ISO ベースメディアファイル形式
 	'video/quicktime',
 	'video/mp4',
 	'audio/mp4',

@@ -43,16 +43,16 @@ export class MiUser {
 
 	public banner: MiDriveFile | null;
 
-	// avatarId が null になったとしてもこれが null でない可能性があるため、このフィールドを使うときは avatarId の non-null チェックをすること
+	// avatarId が null でも値が残るため、利用時は avatarId も確認する。
 	public avatarUrl: string | null;
 
-	// bannerId が null になったとしてもこれが null でない可能性があるため、このフィールドを使うときは bannerId の non-null チェックをすること
+	// bannerId が null でも値が残るため、利用時は bannerId も確認する。
 	public bannerUrl: string | null;
 
-	// avatarId が null になったとしてもこれが null でない可能性があるため、このフィールドを使うときは avatarId の non-null チェックをすること
+	// avatarId が null でも値が残るため、利用時は avatarId も確認する。
 	public avatarBlurhash: string | null;
 
-	// bannerId が null になったとしてもこれが null でない可能性があるため、このフィールドを使うときは bannerId の non-null チェックをすること
+	// bannerId が null でも値が残るため、利用時は bannerId も確認する。
 	public bannerBlurhash: string | null;
 
 	public avatarDecorations: {
@@ -83,23 +83,18 @@ export class MiUser {
 
 	public requireSigninToViewContents: boolean;
 
-	// in sec, マイナスで相対時間
+	// 秒単位。負値は相対時間を表す。
 	public makeNotesFollowersOnlyBefore: number | null;
 
-	// in sec, マイナスで相対時間
+	// 秒単位。負値は相対時間を表す。
 	public makeNotesHiddenBefore: number | null;
 
-	// アカウントが削除されたかどうかのフラグだが、完全に削除される際は物理削除なので実質削除されるまでの「削除が進行しているかどうか」のフラグ
+	// 物理削除までの進行中状態を表す。
 	public isDeleted: boolean;
 
 	public emojis: string[];
 
-	// チャットを許可する相手
-	// everyone: 誰からでも
-	// followers: フォロワーのみ
-	// following: フォローしているユーザーのみ
-	// mutual: 相互フォローのみ
-	// none: 誰からも受け付けない
+	// everyone=全員、followers=フォロワー、following=フォロー中、mutual=相互、none=拒否。
 	public chatScope: 'everyone' | 'followers' | 'following' | 'mutual' | 'none';
 
 	public host: string | null;
@@ -158,5 +153,5 @@ export const locationSchema = z.string().min(1).max(50);
 // 無制限に膨らむ。名前は見出し相当なので name と同じ 50、値は URL や短文が入るので 512。
 export const profileFieldNameSchema = z.string().max(50);
 export const profileFieldValueSchema = z.string().max(512);
-// 実在する日付だけを通す (旧実装の正規表現は 9999-99-99 のような値も通していた)。
+// 9999-99-99 のような実在しない日付を拒否する。
 export const birthdaySchema = z.iso.date();

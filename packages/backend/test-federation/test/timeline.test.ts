@@ -291,7 +291,7 @@ describe('Timeline', () => {
 				name: 'Remote Users',
 				description: 'Remote users are assigned to this role.',
 				condFormula: {
-					/** TODO: @see https://github.com/misskey-dev/misskey/issues/14169 */
+					// misskey-js の型に isRemote 条件が反映されていない。
 					type: 'isRemote' as never,
 				},
 			});

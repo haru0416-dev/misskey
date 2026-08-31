@@ -25,15 +25,14 @@ function escapeNQuadLiteral(value: string): string {
 }
 
 /*
- * 近道が jsonld.normalize と同じ出力になると確信できる入力だけを通す門。
+ * jsonld.normalize と同じ出力を保証できる入力だけを高速経路で処理する。
  *
  * jsonld は IRI 中の `<` `>` `"` `\` と制御文字を `\uXXXX` へ退避し、空白を含む IRI や
- * 相対 IRI は safe mode の検証で例外にする。近道はどちらも行わないので、これらを通すと出力が
- * 食い違う。creator は検証側ではリモートが送ってくる値で、`>` と改行を混ぜられると N-Quads の
+ * 相対 IRI は safe mode の検証で例外にする。高速経路はこの処理を行わないため、対象に含めると
+ * 出力が食い違う。creator はリモート入力であり、`>` と改行を混ぜられると N-Quads の
  * 行そのものを注入できる。
  *
- * 退避規則を写し取るのではなく、退避が要らないと分かる部分集合だけ受ける。外れた入力は null を
- * 返して jsonld.normalize に委ねるので、正しさは落ちず速度だけ諦める。
+ * 退避が不要な部分集合だけを受け付け、範囲外の入力は null を返して jsonld.normalize で処理する。
  */
 const SAFE_CREATOR_IRI = /^https?:\/\/[^\s<>"{}|^`\\\u0000-\u0020\u007F]+$/u;
 
@@ -53,8 +52,8 @@ function isSafeNQuadLiteral(value: string): boolean {
  * 固定費が主体で、実測ではこの極小オブジェクトの正規化が活動本体と同じだけかかっていた
  * (1回あたり options 0.318ms / data 0.333ms)。
  *
- * 想定と少しでも違う形が来たら null を返し、呼び出し側は jsonld.normalize に委ねる。
- * 署名が壊れると連合が黙って壊れるため、既知の形以外を自前で組み立てない。
+ * 想定外の形は null を返し、呼び出し側で jsonld.normalize を実行する。
+ * 署名不一致が例外なしの連合失敗になるため、既知の形以外は組み立てない。
  */
 export function canonicalizeSignatureOptions(options: Record<string, unknown>): string | null {
 	const { '@context': context, creator, nonce, created, domain, ...rest } = options;

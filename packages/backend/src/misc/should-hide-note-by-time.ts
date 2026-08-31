@@ -16,9 +16,7 @@ export function shouldHideNoteByTime(hiddenBefore: number | null | undefined, cr
 
 	const createdAtTime = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
 
-	// NOTE(rust): hiddenBefore===0 がこの <=0 分岐で「0秒以上経過=ほぼ全ノート非表示」になるのは upstream 由来の
-	// 意図的仕様(単体テスト test/unit/misc/should-hide-note-by-time.ts が 0→hide を明示アサート)。バグに見えるが
-	// 「直さない」こと(< 0 に変えるとそのテストの意図を壊す)
+	// 0 は「0 秒以上経過したノート」を表すため、ほぼ全ノートが非表示になる。
 	if (hiddenBefore <= 0) {
 		const elapsedSeconds = (Date.now() - createdAtTime) / 1000;
 		const hideAfterSeconds = Math.abs(hiddenBefore);

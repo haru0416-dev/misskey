@@ -6,8 +6,6 @@
 import type { MiNote } from '@/models/Note.js';
 import type { Packed } from '@/misc/json-schema.js';
 
-// NoteEntityService.isPureRenote とよしなにリンク
-
 type Renote = MiNote & {
 	renoteId: NonNullable<MiNote['renoteId']>;
 };
@@ -34,7 +32,7 @@ export function isRenote(note: MiNote): note is Renote {
 }
 
 export function isQuote(note: Renote): note is Quote {
-	// NoteCreateService.isQuote と判定条件を一致させる。
+	// 引用判定は NoteCreateService.isQuote と一致させる。
 	return note.text != null || note.cw != null || note.replyId != null || note.hasPoll || note.fileIds.length > 0;
 }
 

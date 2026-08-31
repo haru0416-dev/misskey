@@ -700,7 +700,7 @@ export const endpointMetas = {
 			requireCredential: true,
 			requireAdmin: true,
 
-			// 実態はmetaの取得であるため
+			// CAPTCHA 設定は meta の一部として扱う。
 			kind: 'read:admin:meta',
 
 			res: {
@@ -751,7 +751,7 @@ export const endpointMetas = {
 			requireCredential: true,
 			requireAdmin: true,
 
-			// 実態はmetaの更新であるため
+			// CAPTCHA 設定は meta の一部として扱う。
 			kind: 'write:admin:meta',
 
 			errors: {

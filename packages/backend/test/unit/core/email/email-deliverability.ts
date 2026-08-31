@@ -26,7 +26,7 @@ describe('core:email:validateEmailDeliverability', () => {
 	});
 
 	test('大文字混じりのドメインでも使い捨てとして弾く', async () => {
-		// 現状は照合先のライブラリが正規化するので通るが、正規化しない実装へ差し替えると素通りする。
+		// 照合先の正規化に依存せず、不正なサブドメインを拒否することを検証する。
 		spyMx(async () => [{ exchange: 'mx.example.com', priority: 10 }]);
 		for (const address of ['a@MAILINATOR.COM', 'a@MailInator.Com']) {
 			await expect(validateEmailDeliverability(address)).resolves.toStrictEqual({
