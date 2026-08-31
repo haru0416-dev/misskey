@@ -41,10 +41,8 @@ function anchorToMfm(
 	if (!href && !txt) return '';
 	if (!href) return txt;
 	if (!txt || txt === href) {
-		// #6383: Missing text node
 		return href.match(urlRegexFull) ? href : `<${href}>`;
 	}
-	// #6846
 	return href.match(urlRegex) && !href.match(urlRegexFull) ? `[${txt}](<${href}>)` : `[${txt}](${href})`;
 }
 
@@ -188,7 +186,6 @@ export function createMfmService(config: Config) {
 					break;
 				}
 
-				// ブロックコード (<pre><code>)
 				case 'PRE': {
 					if (
 						node.childNodes.length === 1 &&
@@ -213,7 +210,6 @@ export function createMfmService(config: Config) {
 					break;
 				}
 
-				// インラインコード (<code>)
 				case 'CODE': {
 					text += '`';
 					analyzeChildren(node.childNodes);
@@ -241,7 +237,6 @@ export function createMfmService(config: Config) {
 					break;
 				}
 
-				// その他のブロック要素
 				case 'DIV':
 				case 'HEADER':
 				case 'FOOTER':

@@ -12,8 +12,7 @@ import { MiPoll } from '@/models/Poll.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 
-// poll の noteId 以外 (note / user relation) を参照するダウンストリームは残っていないが、
-// MiPoll.note は必須プロパティなので他の移行済み Store と同様に as でキャストする。
+// MiPoll.note は必須だが、この Store の利用側は noteId 以外の relation を参照しない。
 function deserializePoll(row: PollRow): MiPoll {
 	return row as MiPoll;
 }

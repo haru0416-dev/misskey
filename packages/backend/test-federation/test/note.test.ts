@@ -115,7 +115,6 @@ describe('Note', () => {
 				'userId',
 				'user',
 				'uri',
-				// 並行して増加するため、後で個別に確認する。
 				'repliesCount',
 			]);
 			strictEqual(aliceInB.id, resolvedNote.userId);
@@ -306,7 +305,7 @@ describe('Note', () => {
 				});
 			});
 
-			// 現在の実装では配信されないため、テストを実行しない。
+			// 未配送の宛先を対象とするためスキップする。
 			describe('To only resolved and not followed user', () => {
 				test.skip('Check', async () => {
 					const note = (await bob.client.request('notes/create', { text: "I'm Bob." })).createdNote;
@@ -344,10 +343,8 @@ describe('Note', () => {
 				);
 			});
 
-			/**
-			 * FIXME: ユーザーと同様にソフト削除も実装する必要があるか？
-			 *        @see https://github.com/misskey-dev/misskey/issues/11437
-			 */
+			// リモートノートの削除記録を保持しないため、再解決のテストは無効にする。
+			// https://github.com/misskey-dev/misskey/issues/11437
 			test.skip('Not found even if resolve again', async () => {
 				const noteInB = await resolveRemoteNote('a.test', note.id, bob);
 				await rejects(
@@ -414,7 +411,6 @@ describe('Note', () => {
 				strictEqual(getAt(reactions, 0).type, '❤');
 			});
 
-			// nonSensitiveOnly の制約がリモート由来の絵文字リアクションには適用されない現在の挙動を検証する。
 			test('Even if nonSensitiveOnly, remote users can react with sensitive emoji, and it is not converted', async () => {
 				const note = (await alice.client.request('notes/create', { text: 'a', reactionAcceptance: 'nonSensitiveOnly' }))
 					.createdNote;

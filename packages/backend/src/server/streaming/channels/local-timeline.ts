@@ -47,10 +47,9 @@ export const honoStreamChannelLocalTimeline: StreamChannelDefinition<ApiNoteDepe
 				)
 					return;
 
-				// 関係ない返信は除外
 				if (note.reply && ctx.user && !ctx.following[note.userId]?.withReplies && !withReplies) {
 					const reply = note.reply;
-					// 「チャンネル接続主への返信」でもなければ、「チャンネル接続主が行った返信」でもなければ、「投稿者の投稿者自身への返信」でもない場合
+					// 返信を含めない場合も、自分宛て・自分の返信・投稿者の自己返信は含める。
 					if (reply.userId !== ctx.user.id && note.userId !== ctx.user.id && reply.userId !== note.userId) return;
 				}
 

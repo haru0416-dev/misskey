@@ -288,8 +288,7 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 				const videoFilters = [
 					'select=e=eq(pict_type\\,PICT_TYPE_I)', // I-Frame のみをフィルタする（VP9 とかはデコードしてみないとわからないっぽい）
 					'blackframe=amount=0', // 暗いフレームの検出（暗さに関わらず全てのフレームで測定値を取る）
-					// フレームにおける暗部の百分率（前のフィルタからのメタデータを参照し、
-					// 50% 未満のフレームを選択する。50% 以上暗部があるフレームだと誤検知を招くかもしれないので）
+					// 暗部が 50% 以上のフレームは誤検知リスクが高いため、50% 未満に限定する。
 					'metadata=mode=select:key=lavfi.blackframe.pblack:value=50:function=less',
 					'scale=w=299:h=299',
 				].join(',');
@@ -297,7 +296,7 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 					'-skip_frame',
 					'nokey', // 可能ならキーフレームのみを取得してほしいとする（そうなるとは限らない）
 					'-lowres',
-					'3', // 元の画質でデコードする必要はないので 1/8 画質でデコードしてもよいとする（そうなるとは限らない）
+					'3', // 判定用途では原寸不要なため、デコーダへ 1/8 縮小を許可する。
 					'-i',
 					source,
 					'-an',
@@ -340,8 +339,8 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 			}
 		} else if (isMimeImage(mime, 'sharp-convertible-image-with-bmp')) {
 			/*
-			 * 判定サービス側のデコーダは限られた画像形式しか受け付けないため、sharp で PNG に変換する
-			 * せっかくなので内部処理で使われる最大サイズの299x299に事前にリサイズする
+			 * 判定サービス側のデコーダが受け付ける PNG へ変換し、内部処理の最大サイズである
+			 * 299×299 に事前縮小する。
 			 */
 			const png = await (
 				await sharpBmp(source, mime)
@@ -395,13 +394,11 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 				await new Promise<void>((resolve, reject) => {
 					watcher.on('add', function onAdd(path) {
 						if (path === next) {
-							// 次フレームの書き出しが始まっているなら、現在フレームの書き出しは終わっている
 							watcher.unwatch(current);
 							watcher.off('add', onAdd);
 							resolve();
 						}
 					});
-					// 全てのフレームを処理し終わったなら、最終フレームである現在フレームの書き出しは終わっている
 					procDone.then(resolve, reject);
 				});
 				yield framePath;
@@ -430,7 +427,6 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 		mime: string;
 		ext: string | null;
 	}> {
-		// 0 バイトのファイルを確認する。
 		const fileSize = await getFileSize(path);
 		if (fileSize === 0) {
 			return TYPE_OCTET_STREAM;
@@ -439,7 +435,6 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 		const type = await fileType.fileTypeFromFile(path);
 
 		if (type) {
-			// XMLはSVGかもしれない
 			if (type.mime === 'application/xml' && (await checkSvg(path))) {
 				return TYPE_SVG;
 			}
@@ -467,12 +462,10 @@ export function createFileInfoService(aiService: AiService, loggerService: Logge
 			};
 		}
 
-		// 種類が不明でもSVGかもしれない
 		if (await checkSvg(path)) {
 			return TYPE_SVG;
 		}
 
-		// それでも種類が不明なら application/octet-stream にする
 		return TYPE_OCTET_STREAM;
 	}
 

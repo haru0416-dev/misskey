@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// misskey-js の rolePolicies と同期すべし
+// misskey-js の rolePolicies と同じプロパティを維持する。
 export type RolePolicies = {
 	gtlAvailable: boolean;
 	ltlAvailable: boolean;

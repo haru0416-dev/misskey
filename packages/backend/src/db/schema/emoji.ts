@@ -19,13 +19,13 @@ export const emoji = pgTable(
 		originalUrl: varchar({ length: 512 }).notNull(),
 		publicUrl: varchar({ length: 512 }).default('').notNull(),
 		uri: varchar({ length: 512 }),
-		// publicUrlの方のtypeが入る
+		// type は originalUrl ではなく publicUrl の MIME type。
 		type: varchar({ length: 64 }),
 		aliases: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
 		license: varchar({ length: 1024 }),
 		localOnly: boolean().default(false).notNull(),
 		isSensitive: boolean().default(false).notNull(),
-		// TODO: 定期ジョブで存在しなくなったロールIDを除去するようにする
+		// 削除済みロールの ID が残る場合がある。
 		roleIdsThatCanBeUsedThisEmojiAsReaction: varchar({ length: 128 }).array().default(emptyVarcharArray).notNull(),
 	},
 	(table) => [

@@ -26,23 +26,16 @@ async function runControllerOperation<T>(operation: () => Promise<T>): Promise<T
 	return result;
 }
 
-/**
- * テスト用のサーバインスタンスを起動する
- */
 export async function setup() {
 	await stopControllerEndpoints();
 
 	await startControllerEndpoints();
 
-	// ジョブキューは必要な時にテストコード側で起動する
-	// ジョブキューが動くとテスト結果の確認に支障が出ることがあるので意図的に動かさないでいる
+	// テスト結果への非決定的な副作用を避けるため、ジョブキューは必要なテストだけが起動する。
 
 	console.log('controller initialized.');
 }
 
-/**
- * テスト用のサーバインスタンスを停止する
- */
 export async function teardown() {
 	await stopApplication();
 	await stopControllerEndpoints();

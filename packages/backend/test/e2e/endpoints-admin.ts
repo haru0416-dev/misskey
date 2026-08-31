@@ -3042,7 +3042,7 @@ describe('Endpoints', () => {
 			const suffix = now.toString(36).slice(-8);
 			const target = await signup({ username: `hsus${suffix}` });
 			// 共有fixtureのbobをfolloweeにすると、suspend時のunfollowジョブがカウンタを負値に
-			// 汚染して後続のfollowing系テストを壊すため、使い捨てユーザーを用いる
+			// 共有 fixture のカウンタへ影響させないため、使い捨てユーザーを用いる。
 			const throwawayFollowee = await signup({ username: `hsusf${suffix}` });
 			const config = fixtureConfig;
 			const following = await createFollowingInDatabase(db, {

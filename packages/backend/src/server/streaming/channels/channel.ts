@@ -24,9 +24,7 @@ function isNoteMutedOrBlockedForChannelChannel(
 	if (isUserRelated(note, ctx.userIdsWhoBlockingMe)) return true;
 	if (isRenotePacked(note) && !isQuotePacked(note) && ctx.userIdsWhoMeMutingRenotes.has(note.user.id)) return true;
 
-	// このソケットで見ているチャンネルがミュートされていたとしても、チャンネルを直接見ている以上は流すようにしたい
-	// ただし、他のミュートしているチャンネルは流さないようにもしたい
-	// ノート自体のチャンネルIDは呼び出し側でチェックしているので、ここではリノートのチャンネルIDをチェックする
+	// 閲覧中のチャンネル自体はミュート対象外だが、別チャンネルのリノートは除外する。
 	if (
 		note.renote &&
 		note.renote.channelId !== channelId &&

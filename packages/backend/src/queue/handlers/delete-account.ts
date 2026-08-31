@@ -133,7 +133,6 @@ export async function handleQueueDeleteAccount(
 		}
 	}
 
-	// soft指定されている場合は物理削除しない
 	if (!job.data.soft) {
 		await deleteUserByIdFromDatabase(deps.db, job.data.user.id);
 	}

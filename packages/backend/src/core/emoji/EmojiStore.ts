@@ -485,7 +485,7 @@ export async function listRemoteEmojisPageFromDatabase(
 
 /**
  * CustomEmojiService.fetchEmojis 向け。admin向け絵文字検索。
- * 既存検索のセマンティクス(LIKE ANY, aliasesのunnest部分一致, roleIdsのoverlapなど)を完全に再現する。
+ * LIKE ANY、aliases の部分一致、roleIds の overlap を同時に扱う。
  */
 type EmojiSearchQuery = NonNullable<NonNullable<Parameters<typeof fetchEmojisFromDatabase>[1]>['query']>;
 

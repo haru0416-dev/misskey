@@ -1122,8 +1122,7 @@ export async function searchNotesByTextFromDatabase(
 
 	if (options.withFiles != null) {
 		conditions.push(
-			// fileIds != '{}' と結果は同じだが、こちらは並列 Seq Scan にならない計画が選ばれる。
-			// 見通しのために表現を揃えると計画が変わるので、この関数では cardinality のまま残す。
+			// fileIds != '{}' は並列 Seq Scan になるため、cardinality で判定する。
 			options.withFiles ? sql`cardinality("note"."fileIds") > 0` : sql`cardinality("note"."fileIds") = 0`,
 		);
 	}
@@ -1680,7 +1679,7 @@ export async function listHybridTimelineNotesFromDatabase(
 		blockedHosts: string[];
 	},
 ): Promise<MiNote[]> {
-	// followeeIds の渡し方は listHomeTimelineNotesFromDatabase と同じ理由で = ANY(配列1パラメータ)。
+	// ID ごとのプレースホルダー生成を避けるため、followeeIds は配列 1 パラメータで渡す。
 	const meOrFolloweeIds = [options.me.id, ...options.followeeIds];
 	const conditions: SQL[] = [
 		notePaginationCondition(options),

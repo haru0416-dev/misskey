@@ -388,7 +388,7 @@ export async function handleApiAntennasCreate(
 	}
 
 	// src が 'list' のアンテナは userListId を必ず持つ (持たないと checkHitAntenna が常に false になり、
-	// 何にもマッチしないアンテナが出来てしまう)。DB 側にも CHK_ANTENNA_LIST_SRC_REQUIRES_USER_LIST がある。
+	// いずれにもマッチしないアンテナになる)。DB 側にも CHK_ANTENNA_LIST_SRC_REQUIRES_USER_LIST がある。
 	let userListId: MiUserList['id'] | null = null;
 	if (params.src === 'list') {
 		if (params.userListId == null) throw noSuchUserListError('95063e93-a283-4b8b-9aa5-bcdb8df69a7f');
@@ -483,7 +483,7 @@ export async function handleApiAntennasUpdate(
 	const antenna = await fetchAntennaByIdAndUserIdFromDatabase(deps.db, params.antennaId, me.id);
 	if (antenna == null) throw noSuchAntennaError('10c673ac-8852-48eb-aa1f-f5b67f069290');
 
-	// undefined = 変更しない
+	// undefined は変更なしを表す。
 	let userListIdUpdate: MiUserList['id'] | null | undefined = undefined;
 	if (params.userListId != null) {
 		const userList = await fetchUserListByIdAndUserIdFromDatabase(deps.db, params.userListId, me.id);
@@ -495,11 +495,11 @@ export async function handleApiAntennasUpdate(
 
 	const nextSrc = params.src ?? antenna.src;
 	if (nextSrc === 'list') {
-		// list のアンテナを userListId 無しの状態にはできない (create と同じ不変条件)
+		// list アンテナは userListId を必須とする。
 		const nextUserListId = userListIdUpdate !== undefined ? userListIdUpdate : antenna.userListId;
 		if (nextUserListId == null) throw noSuchUserListError('1c6b35c9-943e-48c2-81e4-2844989407f7');
 	} else if (userListIdUpdate != null || antenna.userListId != null) {
-		// list 以外では userListId は評価に使われないので保持しない
+		// list 以外では userListId を保持しない。
 		userListIdUpdate = null;
 	}
 

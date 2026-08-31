@@ -8,7 +8,6 @@ import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
-//import * as http from 'node:http';
 import * as fs from 'node:fs/promises';
 import { heapSnapshotCategory, type HeapSnapshotData } from '../../../.github/scripts/heap-snapshot-util.mts';
 
@@ -516,26 +515,6 @@ async function measureMemory() {
 		await setTimeout(1000);
 	}
 
-	//function createRequest() {
-	//	return new Promise((resolve, reject) => {
-	//		const req = http.request({
-	//			host: 'localhost',
-	//			port: 61812,
-	//			path: '/api/meta',
-	//			method: 'POST',
-	//		}, (res) => {
-	//			res.on('data', () => { });
-	//			res.on('end', () => {
-	//				resolve();
-	//			});
-	//		});
-	//		req.on('error', (err) => {
-	//			reject(err);
-	//		});
-	//		req.end();
-	//	});
-	//}
-
 	const startupStartTime = Date.now();
 	// eslint-disable-next-line no-unmodified-loop-condition -- serverReady is set by the 'message' event handler registered above
 	while (!serverReady) {
@@ -551,20 +530,9 @@ async function measureMemory() {
 
 	await setTimeout(MEMORY_SETTLE_TIME);
 
-	//const beforeGc = await getAllMemoryUsage(serverProcess);
-
 	await triggerGc();
 
 	const memoryUsageAfterGC = await getAllMemoryUsage(serverProcess);
-
-	//// create some http requests to simulate load
-	//await Promise.all(
-	//	Array.from({ length: REQUEST_COUNT }).map(() => createRequest()),
-	//);
-
-	//await triggerGc();
-
-	//const afterRequest = await getAllMemoryUsage(serverProcess);
 
 	const heapSnapshotAfterGc = await getHeapSnapshotStatistics(serverProcess);
 
@@ -588,12 +556,10 @@ async function measureMemory() {
 	const result = {
 		timestamp: new Date().toISOString(),
 		phases: {
-			//beforeGc,
 			afterGc: {
 				memoryUsage: memoryUsageAfterGC,
 				heapSnapshot: heapSnapshotAfterGc,
 			},
-			//afterRequest,
 		},
 	};
 

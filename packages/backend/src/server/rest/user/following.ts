@@ -1145,18 +1145,13 @@ async function packFollowersForApi(
 	});
 }
 
-// 元 ajv 版は `usersFollowersOrFollowingParamDef.allOf[0]` (userId か username+host のどちらか必須の anyOf 部分) を
-// `usersFollowingParamDef` からも参照・spread していた。Zod では anyOf を union で表現するため union 自体は
-// spread できない。代わりに union の各枝 (userId 版 / username+host 版) を再利用可能な base object として定義し、
-// `usersFollowingParamDef` はその base に `.extend({ birthday })` して組み立てる。
+// userId と username+host の分岐は複数の paramDef で共有するため、再利用可能な base object として定義する。
 const usersPaginationShape = {
 	...paginationParams,
 	limit: z.int().min(1).max(100).default(10),
 };
 
-// `.passthrough()` は元 ajv 版が `additionalProperties: false` を指定しておらず、
-// anyOf のもう一方の枝にしか属さないプロパティ (例: userId 枝に対する username/host) も
-// 素通りさせていた挙動を再現するために必要 (等価性検証スクリプトで確認済み)。
+// 他方の分岐だけに属するプロパティも拒否しないため、passthrough() が必要になる。
 const usersByUserIdBaseParamDef = z
 	.object({
 		userId: misskeyId(),
@@ -1198,8 +1193,7 @@ export const usersFollowingParamDef = z.union([
 
 // z.union の各枝は互いに素なプロパティ集合を持つため、推論される型では userId 版に username/host が
 // (逆も同様) 存在しない扱いになり、分岐後アクセス (`params.username!` 等) が型エラーになる。
-// 元 ajv 版も (allOf/anyOf からの型推論が不正確なため) 同様に手動の flat 型へ `as` キャストしていたので、
-// 同じ手法を踏襲する。実行時の検証・値は z.union 側 (branch ごとの安全な検証) が担う。
+// 実行時検証は z.union に任せ、ハンドラ内部では両枝を表す flat 型を使う。
 type UsersFollowersOrFollowingParams = {
 	userId?: string;
 	username?: string;

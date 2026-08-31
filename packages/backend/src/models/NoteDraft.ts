@@ -63,10 +63,8 @@ export class MiNoteDraft {
 
 	public pollExpiredAfter: number | null;
 
-	// 予約日時
-	// これがあるだけでは実際に予約されているかどうかはわからない
 	public scheduledAt: Date | null;
 
-	// scheduledAtに基づいて実際にスケジュールされているか
+	// scheduledAt だけでは予約状態を判定できないため、実状態を別に保持する。
 	public isActuallyScheduled: boolean;
 }

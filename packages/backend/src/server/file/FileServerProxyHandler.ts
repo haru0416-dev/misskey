@@ -46,7 +46,7 @@ export class FileServerProxyHandler {
 			return;
 		}
 
-		// アバタークロップなど、どうしてもオリジンである必要がある場合
+		// クロップ処理などオリジン画像が必要な要求は外部プロキシへ転送しない。
 		const mustOrigin = 'origin' in request.query;
 
 		if (this.config.media.externalProxyEnabled && !mustOrigin) {

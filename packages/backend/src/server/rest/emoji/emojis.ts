@@ -81,12 +81,8 @@ export const adminEmojiAddParamDef = z.object({
 });
 
 /**
- * 旧 ajv 版は `allOf: [{ anyOf: [{required:['id']}, {required:['name']}] }, {...}]` という形で
- * 「id か name のどちらかが単独で妥当ならOK」という判定だった。
- * anyOf の各分岐は他方のプロパティを一切参照しないため、id/name の一方が有効な形式ならもう一方の
- * 値が不正な形式・型であっても全体としては valid になる(ajv で実測して確認済み)。
- * この挙動を再現するため、id/name はここでは型を固定せず (z.unknown())、superRefine内で
- * それぞれ個別に misskeyId/name パターンとして安全にパースできるかどうかだけを判定する。
+ * id と name の一方が有効なら、他方が不正でも許可する互換性を維持する。
+ * 各値を z.unknown() として受け、superRefine 内で個別に検証する。
  */
 const adminEmojiUpdateParamDef = z
 	.object({
@@ -116,7 +112,7 @@ const adminEmojiUpdateParamDef = z
 	});
 
 // OpenAPI/misskey-js コード生成専用。上の superRefine (id/name の anyOf 判定) は
-// JSON Schema 化できないため、docs 用には元 ajv 版と同じ allOf+anyOf 構造を union+intersection で表現する。
+// JSON Schema 化できないため、docs 用には allOf+anyOf 構造を union+intersection で表現する。
 const adminEmojiUpdateCommonFieldsDocsSchema = z.object({
 	fileId: misskeyId().optional(),
 	category: z.string().nullable().optional(),

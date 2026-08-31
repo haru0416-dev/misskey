@@ -5,7 +5,7 @@
 
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
-// 未定義になる。テスト用にダミー値を注入しておく。
+// 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
@@ -66,7 +66,7 @@ describe('hono-queue-check-moderators-activity', () => {
 	});
 
 	afterEach(async () => {
-		// disableRegistration をテスト間で汚染しないようリセットしておく
+		// disableRegistration をリセットし、テスト間の影響を防ぐ。
 		const { after } = await updateMetaInDatabase(runtime.db, { disableRegistration: false });
 		Object.assign(runtime.meta, after);
 	});

@@ -27,13 +27,8 @@ export type AuthedCredential = { user: MiLocalUser; token: MiAccessToken | null 
 /**
  * エンドポイント定義から認証・権限・モデレーター判定を組み立てて実行する。
  *
- * これらの条件は endpoint-metas 側に既に宣言されているのに、ルート登録では手書きで
- * 書き写していた。同じ情報が2箇所にあると、片方だけ変えても気付けない (実際 kind を
- * 宣言しながら assertSecureCredential でアプリトークンを全拒否している、宣言した権限が
- * 使えないエンドポイントが11本あった)。宣言を単一の出所にする。
- *
- * レートリミットは呼び出しごとに上限値が違い meta では表現しきれないため、
- * 従来どおり呼び出し側で指定する。
+ * 認証・権限条件は endpoint-metas を唯一の定義元とする。
+ * レートリミットは呼び出しごとに上限値が異なるため、呼び出し側で指定する。
  */
 export async function withEndpointGuards<T>(
 	c: Context,

@@ -133,7 +133,6 @@ async function postProcessDriveFileDeletion(
 
 	void deps.updateDriveChart?.(file, false);
 	if (file.userHost == null) {
-		// ローカルユーザーのみ
 		void deps.updatePerUserDriveChart?.(file, false);
 	} else if (deps.meta.enableChartsForFederatedInstances) {
 		void deps.updateInstanceDriveChart?.(file, false);

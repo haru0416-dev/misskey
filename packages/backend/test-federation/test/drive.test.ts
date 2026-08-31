@@ -37,9 +37,6 @@ describe('Drive', () => {
 			});
 
 			test('Check consistency of DriveFile', () => {
-				// console.log(`a.test: ${JSON.stringify(image, null, '\t')}`);
-				// console.log(`b.test: ${JSON.stringify(imageInB, null, '\t')}`);
-
 				deepStrictEqualWithExcludedFields(image, imageInB, [
 					'id',
 					'createdAt',
@@ -67,9 +64,6 @@ describe('Drive', () => {
 			});
 
 			test('Check consistency', () => {
-				// console.log(`a.test: ${JSON.stringify(updatedImage, null, '\t')}`);
-				// console.log(`b.test: ${JSON.stringify(updatedImageInB, null, '\t')}`);
-
 				// drive/files/update の変更は連合先に反映されない。
 				strictEqual(updatedImage.isSensitive, true);
 				strictEqual(updatedImage.name, 'updated_192.jpg');
@@ -93,8 +87,6 @@ describe('Drive', () => {
 			});
 
 			test('Check consistency', () => {
-				// console.log(`b.test: ${JSON.stringify(reupdatedImageInB, null, '\t')}`);
-
 				strictEqual(reupdatedImageInB.isSensitive, true);
 				strictEqual(reupdatedImageInB.name, '192.jpg');
 			});

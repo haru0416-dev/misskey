@@ -46,8 +46,6 @@ describe('[シナリオ] ユーザ作成', () => {
 		return res.body;
 	}
 
-	// -------------------------------------------------------------------------------------------
-
 	beforeAll(
 		async () => {
 			queue = await startJobQueue();
@@ -61,8 +59,6 @@ describe('[シナリオ] ユーザ作成', () => {
 	afterAll(async () => {
 		await queue.close();
 	});
-
-	// -------------------------------------------------------------------------------------------
 
 	describe('SystemWebhook', () => {
 		beforeEach(async () => {

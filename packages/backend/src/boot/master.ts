@@ -63,30 +63,20 @@ export async function masterMain(config: Config) {
 	const topology = resolveTopology(config);
 
 	if (!envOption.disableClustering) {
-		// clusterモジュール有効時
 		bootLogger.info(`topology: [http: ${topology.httpWorkers}, queue: ${topology.queueWorkers}]`);
 
 		if (topology.masterRole === 'server') {
-			// HTTPが1プロセスだけで済むならメインプロセス自身がlistenする (プロセスを1つ節約できる)。
 			const runtime = await server(config, undefined, { daemons: true });
 			disposers.push(() => runtime.dispose());
 		} else if (topology.masterRole === 'queue') {
 			const runtime = await jobQueue(config);
 			disposers.push(() => runtime.close());
 		}
-		// masterRole が null の場合、メインプロセスはforkのみに制限する(listenしない)。
-		// ワーカープロセス側でlistenすると、メインプロセスでポートへの着信を受け入れてワーカープロセスへの分配を行う動作をする。
-		// そのため、メインプロセスでも直接listenするとポートの競合が発生して起動に失敗してしまう。
-		// see: https://nodejs.org/api/cluster.html#cluster
-		//
-		// なお bun の node:cluster は上記のNodeの分配モデルではなく SO_REUSEPORT で実装されている
-		// (実測: httpWorkers=3 でワーカー3プロセスがそれぞれ :3000 をLISTENし、masterはLISTENしない)。
-		// つまり `Bun.serve({ reusePort: true })` へ自前で置き換えても得られるものは無い。
+		// Bun の node:cluster は SO_REUSEPORT を使うため、masterRole が null ならワーカーだけが listen する。
+		// 実測では httpWorkers=3 の各ワーカーが :3000 を LISTEN し、master は LISTEN しない。
 
 		await spawnWorkers(topology.workerAssignments);
 	} else {
-		// clusterモジュール無効時
-
 		if (topology.queueWorkers === 0) {
 			const runtime = await server(config, undefined, { daemons: true });
 			disposers.push(() => runtime.dispose());
@@ -186,7 +176,6 @@ type Topology = {
 function resolveTopology(config: Config): Topology {
 	const { http: httpWorkers, queue: queueWorkers } = resolveHostProcessCounts(config);
 
-	// メインプロセスが自分で捌けるのは1役だけ。HTTPを優先し、HTTPが無いならキューを担う。
 	const masterRole: WorkerRole | null = httpWorkers === 1 ? 'server' : httpWorkers === 0 ? 'queue' : null;
 	const forkedHttp = masterRole === 'server' ? httpWorkers - 1 : httpWorkers;
 	const forkedQueue = masterRole === 'queue' ? queueWorkers - 1 : queueWorkers;
@@ -196,8 +185,7 @@ function resolveTopology(config: Config): Topology {
 		...Array.from({ length: Math.max(forkedQueue, 0) }, () => ({ role: 'queue' as const, ownsDaemons: false })),
 	];
 
-	// デーモンはHTTPを捌くプロセスに持たせる (ストリーム配信先と同じプロセスに置くのが素直)。
-	// メインプロセスがHTTPを持つならそちら、持たないなら最初のHTTPワーカーへ。
+	// デーモンはストリーム配信先と同じ HTTP プロセスに割り当てる。
 	if (masterRole !== 'server') {
 		const owner = workerAssignments.find((assignment) => assignment.role === 'server') ?? workerAssignments[0];
 		if (owner != null) owner.ownsDaemons = true;

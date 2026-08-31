@@ -397,7 +397,6 @@ export async function filterNoteForStreamingHidingForApi(
 	}
 
 	if (renoteChain.some((n) => isRenotePacked(n) && !isQuotePacked(n))) {
-		// 純粋リノートの場合は配信をスキップする
 		return null;
 	}
 
@@ -535,7 +534,7 @@ export async function packNoteForApi(
 	const note = typeof src === 'object' ? src : await fetchNoteByIdOrFailFromDatabase(deps.db, src);
 	const host = note.userHost;
 
-	// hint は事前一括取得の対象だったノートに対してのみ信頼できる
+	// hint は事前一括取得の対象だったノートに限り信頼する。
 	const hint = opts.hint?.noteIds.has(note.id) ? opts.hint : undefined;
 
 	const bufferedReactions = hint?.bufferedReactions.get(note.id) ?? (await getBufferedReactions(deps, note.id));
@@ -694,8 +693,7 @@ type PackNoteTargets = {
 };
 
 function collectPackNoteTargets(notes: MiNote[], detail: boolean): PackNoteTargets {
-	// 本体 + relation ロード済みの reply/renote を事前一括取得の対象にする
-	// (relation 未ロードのノートは packNoteForApi 内の個別取得にフォールバックする)
+	// relation 未ロードの reply/renote は packNoteForApi 内で個別取得する。
 	const targetById = new Map<MiNote['id'], MiNote>();
 	const detailTargetIds = new Set<MiNote['id']>();
 	const addTarget = (note: MiNote, packDetail: boolean): void => {
@@ -947,8 +945,7 @@ export async function packNoteManyForApi(
 			: Promise.resolve([]),
 	]);
 
-	// myReaction: populateMyReactionForApi と同じ判定で pair cache から解決し、
-	// DB 参照が必要なノートだけ IN 句 1 クエリでまとめて引く
+	// pair cache で解決できない myReaction だけを 1 クエリでまとめて取得する。
 	const myReactions = new Map<MiNote['id'], string | undefined>();
 	if (meId != null && detail) {
 		const idsNeedingDbLookup: MiNote['id'][] = [];
@@ -1309,8 +1306,7 @@ export async function handleApiUsersNotes(
 	const untilId = params.untilId ?? (params.untilDate ? genId(params.untilDate) : null);
 	const sinceId = params.sinceId ?? (params.sinceDate ? genId(params.sinceDate) : null);
 
-	// ブロック判定・チャンネルミュート・fanoutのフィルタが同じ関係を見るので、まとめて1本で取る
-	// (フォロー関係はここでは要らない。相手をフォローしているかは followingExistsInDatabase で1件だけ見る)
+	// ブロック・チャンネルミュート・fanout が共有する関係を 1 クエリで取得する。
 	const viewerRelation =
 		me != null
 			? await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), fanoutViewerRelationKinds)
@@ -1360,11 +1356,10 @@ export async function handleApiUsersNotes(
 				excludeReplies: params.withChannelNotes && !params.withReplies,
 				excludeNoFiles: params.withChannelNotes && params.withFiles,
 				excludePureRenotes: !params.withRenotes,
-				// noteFilter が note.channel.isSensitive を読むため必須 (他の呼び出し元は読まないので付けない)。
-				// 自分自身の一覧ではセンシティブ判定自体が無効なので、その分のチャンネル取得も要らない
+				// 他ユーザーの一覧だけがセンシティブチャンネルを除外するため、チャンネル情報を取得する。
 				hydrateChannels: !isSelf,
 				noteFilter: (note) => {
-					// リノート経由でも本文が露出するので、リノート先のチャンネルも同じ基準で弾く
+					// リノート経由の本文にも同じセンシティブ判定を適用する。
 					if (!isSelf && (note.channel?.isSensitive || note.renote?.channel?.isSensitive)) return false;
 					if (
 						note.visibility === 'specified' &&

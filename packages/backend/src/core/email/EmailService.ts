@@ -163,7 +163,7 @@ export function createEmailService(
 		const inlinedHtml = juice(htmlContent);
 
 		try {
-			// TODO: htmlサニタイズ
+			// HTML はサニタイズされないため、呼び出し側は信頼済みの本文だけを渡す。
 			const info = await transporter.sendMail({
 				from: meta.name
 					? {
@@ -290,7 +290,7 @@ export function createEmailService(
 			related_domains: string[];
 		}>;
 
-		/* api error: when there is only one `message` attribute in the returned result */
+		// message だけの応答は API エラーを表す。
 		if (Object.keys(json).length === 1 && Reflect.has(json, 'message')) {
 			return {
 				valid: false,

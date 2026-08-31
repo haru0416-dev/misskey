@@ -428,7 +428,6 @@ describe('OAuth', () => {
 		test('Require PKCE', async () => {
 			const client = new AuthorizationCode(clientConfig);
 
-			// パターン 1: PKCE フィールドなし
 			let response = await fetch(
 				client.authorizeURL({
 					redirect_uri,
@@ -439,7 +438,6 @@ describe('OAuth', () => {
 			);
 			assertIndirectError(response, 'invalid_request');
 
-			// パターン 2: code_challenge のみ
 			response = await fetch(
 				client.authorizeURL({
 					redirect_uri,
@@ -451,7 +449,6 @@ describe('OAuth', () => {
 			);
 			assertIndirectError(response, 'invalid_request');
 
-			// パターン 3: code_challenge_method のみ
 			response = await fetch(
 				client.authorizeURL({
 					redirect_uri,
@@ -463,7 +460,6 @@ describe('OAuth', () => {
 			);
 			assertIndirectError(response, 'invalid_request');
 
-			// パターン 4: 未対応の code_challenge_method
 			response = await fetch(
 				client.authorizeURL({
 					redirect_uri,

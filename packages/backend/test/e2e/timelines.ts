@@ -94,14 +94,6 @@ describe('Timelines', () => {
 		1000 * 60 * 2,
 	);
 
-	// afterEach(async () => {
-	// 	// テスト中に作ったノートをきれいにする。
-	// 	// ユーザも作っているが、時間差で動く通知系処理などがあり、このタイミングで消すとエラー落ちするので消さない（ノートさえ消えていれば支障はない）
-	// 	const db = await initTestDb(true);
-	// 	await db.query('DELETE FROM "note"');
-	// 	await db.query('DELETE FROM "channel"');
-	// });
-
 	describe.each([{ enableFanoutTimeline: true }, { enableFanoutTimeline: false }])(
 		'Timelines (enableFanoutTimeline: $enableFanoutTimeline)',
 		({ enableFanoutTimeline }) => {
@@ -164,7 +156,7 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'withReplies: true でフォローしているユーザーの他人への返信が含まれる',
 					async () => {
@@ -216,7 +208,7 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === carolNote.id)).toBe(false);
 				});
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'withReplies: true でフォローしているユーザーの行った別のフォローしているユーザーの visibility: followers な投稿への返信が含まれる',
 					async () => {
@@ -237,7 +229,7 @@ describe('Timelines', () => {
 					},
 				);
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'withReplies: true でフォローしているユーザーの自分の visibility: followers な投稿への返信が含まれる',
 					async () => {
@@ -289,7 +281,7 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote2.id)).toBe(true);
 				});
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'withReplies: false でフォローしているユーザーからの自分への返信が含まれる',
 					async () => {
@@ -306,7 +298,7 @@ describe('Timelines', () => {
 					},
 				);
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)('自分の他人への返信が含まれる', async () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
@@ -587,7 +579,7 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'フォローしていないユーザーからの visibility: specified なノートに返信したときの自身のノートが含まれる',
 					async () => {
@@ -608,18 +600,6 @@ describe('Timelines', () => {
 					},
 				);
 
-				/* TODO
-			test('自身の visibility: specified なノートへのフォローしていないユーザーからの返信が含まれる', async () => {
-				const [alice, bob] = await Promise.all([signup(), signup()]);
-				const aliceNote = await post(alice, { text: 'hi', visibility: 'specified', visibleUserIds: [bob.id] });
-				const bobNote = await post(bob, { text: 'ok', visibility: 'specified', visibleUserIds: [alice.id], replyId: aliceNote.id });
-				const res = await api('notes/timeline', { limit: 100 }, alice);
-				expect(res.body.some(note => note.id === bobNote.id)).toBe(true);
-				expect(res.body.find(note => note.id === bobNote.id).text).toBe('ok');
-			});
-			*/
-
-				// ↑の挙動が理想だけど実装が面倒かも
 				test('自身の visibility: specified なノートへのフォローしていないユーザーからの返信が含まれない', async () => {
 					const [alice, bob] = await Promise.all([signup(), signup()]);
 
@@ -894,7 +874,7 @@ describe('Timelines', () => {
 					const carolNote = await post(carol, { text: "I'm Carol." });
 
 					if (enableFanoutTimeline) {
-						// NOTE: notes/timeline だと DB へのフォールバックが効くので Redis を直接見て確かめる
+						// notes/timeline は DB へフォールバックするため、Redis を直接検査する。
 						expect(await redisForTimelines.exists(`list:homeTimeline:${bob.id}`)).toBe(1);
 
 						const bobHTL = await redisForTimelines.lrange(`list:homeTimeline:${bob.id}`, 0, -1);
@@ -920,7 +900,7 @@ describe('Timelines', () => {
 					await post(alice, { text: "I'm Alice." });
 					await post(bob, { text: "I'm Bob." });
 
-					// NOTE: notes/timeline だと DB へのフォールバックが効くので Redis を直接見て確かめる
+					// notes/timeline は DB へフォールバックするため、Redis を直接検査する。
 					expect(await redisForTimelines.exists(`list:homeTimeline:${bob.id}`)).toBe(0);
 				});
 
@@ -1098,7 +1078,6 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
-				// 含まれても良いと思うけど実装が面倒なので含まれない
 				test('フォローしているユーザーの visibility: home なノートが含まれない', async () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
@@ -1184,7 +1163,7 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'withReplies: false でフォローしているユーザーからの自分への返信が含まれる',
 					async () => {
@@ -1201,7 +1180,7 @@ describe('Timelines', () => {
 					},
 				);
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'withReplies: false でフォローしていないユーザーからの自分への返信が含まれる',
 					async () => {
@@ -1520,7 +1499,7 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'withReplies: false でフォローしているユーザーからの自分への返信が含まれる',
 					async () => {
@@ -1552,7 +1531,7 @@ describe('Timelines', () => {
 					expect(res.body.some((note: any) => note.id === carolNote.id)).toBe(false);
 				});
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'withReplies: true でフォローしているユーザーの行った別のフォローしているユーザーの visibility: followers な投稿への返信が含まれる',
 					async () => {
@@ -1573,7 +1552,7 @@ describe('Timelines', () => {
 					},
 				);
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'withReplies: true でフォローしているユーザーの自分の visibility: followers な投稿への返信が含まれる',
 					async () => {
@@ -1640,7 +1619,7 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(true);
 				});
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)(
 					'withReplies: false でフォローしていないユーザーからの自分への返信が含まれる',
 					async () => {
@@ -2550,7 +2529,7 @@ describe('Timelines', () => {
 					expect(res.body.some((note) => note.id === bobNote.id)).toBe(false);
 				});
 
-				// FIXME: https://github.com/misskey-dev/misskey/issues/12065
+				// Fanout Timeline 無効時は既知の不整合があるためスキップする: https://github.com/misskey-dev/misskey/issues/12065
 				test.skipIf(!enableFanoutTimeline)('[withReplies: false] 他人への返信が含まれない', async () => {
 					const [alice, bob, carol] = await Promise.all([signup(), signup(), signup()]);
 
@@ -3031,8 +3010,6 @@ describe('Timelines', () => {
 					expect(res.body.some((note: any) => note.id === bobRenote.id)).toBe(false);
 				});
 			});
-			// TODO: リノートミュート済みユーザーのテスト
-			// TODO: ページネーションのテスト
 		},
 	);
 });

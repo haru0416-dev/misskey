@@ -5,7 +5,7 @@
 
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
-// 未定義になる。テスト用にダミー値を注入しておく。
+// 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
@@ -46,7 +46,7 @@ async function createTestUserWithKeypair(
 
 // 実際に自分自身へ signedPostForApi で配送させ、送信された生のHTTPリクエストを
 // ローカルHTTPフィクスチャで捕捉することで、本物のHTTP-Signature/Digestヘッダーを持つ
-// リクエストを再現する (established local HTTP fixture pattern)。
+// リクエストを作る。
 function captureRequestServer(): Promise<{ server: Server; url: string; capture: () => Promise<CapturedRequest> }> {
 	return new Promise((resolve, reject) => {
 		let resolveCapture: (req: CapturedRequest) => void;
@@ -221,7 +221,6 @@ describe('hono-inbox-endpoint', () => {
 		);
 		const captured = await capture();
 
-		// config.runtime.host をフィクスチャのホストと変えることで不一致を再現する
 		const depsWithMismatchedHost: InboxEndpointDependencies = {
 			...deps,
 			config: { ...runtime.config, runtime: { ...runtime.config.runtime, host: 'totally-different-host.example.com' } },
@@ -251,7 +250,6 @@ describe('hono-inbox-endpoint', () => {
 			{
 				id: `https://${host}/activities/${genId()}`,
 				type: 'Follow',
-				// actor を欠落させる
 				object: `https://${host}/users/somebody`,
 			},
 		);

@@ -64,7 +64,7 @@ process.on('uncaughtException', (err) => {
 		logger.error(err);
 		console.trace(err);
 	} catch {
-		// logger 自体が壊れていても最後の手段として素の stderr には必ず残す
+		// logger の障害時も stderr へ記録する。
 		console.error(err);
 	}
 	void shutdownTelemetry().finally(() => process.exit(1));
@@ -170,8 +170,7 @@ process.on('message', (msg) => {
 
 readyRef.value = true;
 
-// ユニットテスト時にMisskeyが子プロセスで起動された時のため
-// それ以外のときは process.send は使えないので弾く
+// ユニットテストの子プロセスだけが起動完了を親へ通知する。
 if (process.send) {
 	process.send('ok');
 }

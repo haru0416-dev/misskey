@@ -33,7 +33,7 @@ export const honoStreamChannelUserList: StreamChannelDefinition<ApiNoteDependenc
 		const withFiles = !!(params['withFiles'] ?? false);
 		const withRenotes = !!(params['withRenotes'] ?? true);
 
-		// requireCredential=false だが内部では ctx.user を前提とするため、未ログイン時は例外になる。
+		// ユーザーリストは所有者の資格情報を前提とする。
 		const user = ctx.user!;
 
 		const listExist = await userListExistsByIdAndUserIdFromDatabase(deps.db, listId, user.id);
@@ -57,7 +57,6 @@ export const honoStreamChannelUserList: StreamChannelDefinition<ApiNoteDependenc
 		const onNote = async (note: Packed<'Note'>) => {
 			const isMe = user.id === note.userId;
 
-			// チャンネル投稿は無視する
 			if (note.channelId) return;
 
 			if (withFiles && (note.fileIds == null || note.fileIds.length === 0)) return;
@@ -69,10 +68,10 @@ export const honoStreamChannelUserList: StreamChannelDefinition<ApiNoteDependenc
 			if (note.reply) {
 				const reply = note.reply;
 				if (membershipsMap[note.userId]?.withReplies) {
-					// 自分のフォローしていないユーザーの visibility: followers な投稿への返信は弾く
+					// withReplies で返信を含めても、返信先の followers 公開範囲は越えない。
 					if (reply.visibility === 'followers' && !Object.hasOwn(ctx.following, reply.userId)) return;
 				} else {
-					// 「チャンネル接続主への返信」でもなければ、「チャンネル接続主が行った返信」でもなければ、「投稿者の投稿者自身への返信」でもない場合
+					// withReplies 無効時も、自分宛て・自分の返信・投稿者の自己返信は含める。
 					if (reply.userId !== user.id && !isMe && reply.userId !== note.userId) return;
 				}
 			}

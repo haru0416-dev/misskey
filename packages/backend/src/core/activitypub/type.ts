@@ -27,12 +27,8 @@ export interface IObject {
 	content?: string | null;
 	startTime?: Date;
 	endTime?: Date;
-	// icon/image はAP仕様上、単一のImageオブジェクトか、その配列で表現され得る
-	// (https://www.w3.org/TR/activitystreams-vocabulary/#dfn-icon)。
-	// また `url` フィールド (ApObject | string) がAP仕様どおり動的なため、
-	// ApNoteService.ts 等の消費側コードは `.url` への緩いアクセスを前提にしている。
-	// このフィールドをより厳密な型に倒すと、それらの消費側 (本タスクの編集対象外) で
-	// 型エラーを誘発するため、意図的に any のまま残す。
+	// AP 仕様では単一 Image または配列を取り、url も動的なため厳密な型へ固定できない。
+	// https://www.w3.org/TR/activitystreams-vocabulary/#dfn-icon
 	icon?: any;
 	image?: any;
 	mediaType?: string;
@@ -176,7 +172,7 @@ export interface IActor extends IObject {
 	alsoKnownAs?: string[];
 	discoverable?: boolean;
 	inbox: string;
-	sharedInbox?: string; // 後方互換性のため
+	sharedInbox?: string; // 互換入力として actor 直下の sharedInbox も受ける。
 	publicKey?: {
 		id: string;
 		publicKeyPem: string;

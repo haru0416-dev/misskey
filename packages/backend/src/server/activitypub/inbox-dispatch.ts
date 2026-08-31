@@ -256,7 +256,7 @@ async function acceptFollowFromApForApi(
 	actor: MiRemoteUser,
 	activity: IFollow,
 ): Promise<string> {
-	// ※ activityはこっちから投げたフォローリクエストなので、activity.actorは存在するローカルユーザーである必要がある
+	// 送信済みフォロー要求への応答なので、actor はローカルユーザーに限る。
 	const follower = await getUserFromApIdForApi(deps, activity.actor);
 	if (follower == null) return 'skip: follower not found';
 	if (follower.host != null) return 'skip: follower is not a local user';
@@ -313,22 +313,18 @@ async function announceNoteFromApForApi(
 ): Promise<string | void> {
 	if (actor.isSuspended) return;
 
-	// リレーからのAnnounceかチェック
 	const fromRelay = await isRelayActorForApi(deps, actor);
 	const uri = getApId(fromRelay ? target : activity);
 
-	// アナウンス先が許可されているかチェック
 	if (!isFederationAllowedUri(deps.config, deps.meta, uri)) return;
 
 	const activityUri = getApId(activity);
 	const unlock = await acquireApObjectLock(deps.redis, activityUri);
 
 	try {
-		// 既に同じURIを持つものが登録されていないかチェック
 		const exist = await getNoteFromApIdForApi(deps, uri);
 		if (exist) return;
 
-		// Announce対象をresolve
 		let renote;
 		try {
 			renote = await resolveNoteForApi(deps, target, { resolver: history });
@@ -343,7 +339,7 @@ async function announceNoteFromApForApi(
 			throw err;
 		}
 
-		// リレーからのAnnounceはリノートを作成せず、ノートを直接公開する
+		// リレー由来の Announce はリノートを作成せず、対象ノートを直接公開する。
 		if (fromRelay) {
 			const noteObj = await packNoteForApi(deps, renote, null, {
 				skipHide: true,
@@ -392,7 +388,7 @@ async function announceNoteFromApForApi(
 }
 
 async function blockFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser, activity: IBlock): Promise<string> {
-	// ※ activity.objectにブロック対象があり、それは存在するローカルユーザーのはず
+	// Block の対象は既存のローカルユーザーに限る。
 	const blockee = await getUserFromApIdForApi(deps, activity.object);
 	if (blockee == null) return 'skip: blockee not found';
 	if (blockee.host != null) return 'skip: ブロックしようとしているユーザーはローカルユーザーではありません';
@@ -411,7 +407,6 @@ async function createFromApForApi(
 	const targetUri = getApId(activity.object);
 	if (targetUri.startsWith('bear:')) return 'skip: bearcaps url not supported.';
 
-	// Activity と object の audience を相互にコピーする。
 	if (typeof activity.object === 'object') {
 		const to = unique(concat([toArray(activity.to), toArray(activity.object.to)]));
 		const cc = unique(concat([toArray(activity.cc), toArray(activity.object.cc)]));
@@ -474,7 +469,6 @@ async function createNoteWithLockFromApForApi(
 async function deleteFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser, activity: IDelete): Promise<string> {
 	if (actor.uri !== getApId(activity.actor)) return 'invalid actor';
 
-	// 削除対象objectのtype
 	let formerType: string | undefined;
 
 	if (typeof activity.object === 'string') {
@@ -486,10 +480,10 @@ async function deleteFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUse
 
 	const uri = getApId(activity.object);
 
-	// type不明でもactorとobjectが同じならばそれはPersonに違いない
+	// type が無くても actor 自身の削除なら Person と判定する。
 	if (!formerType && actor.uri === uri) formerType = 'Person';
 
-	// それでもなかったらおそらくNote
+	// type 不明の他オブジェクトは Note として扱う。
 	if (!formerType) formerType = 'Note';
 
 	if (validPost.includes(formerType)) return await deleteNoteFromApForApi(deps, actor, uri);
@@ -543,8 +537,7 @@ async function deleteNoteFromApForApi(deps: ApiInboxDependencies, actor: MiRemot
 }
 
 async function flagFromApForApi(deps: ApiInboxDependencies, actor: MiRemoteUser, activity: IFlag): Promise<string> {
-	// objectは `(User|Note) | (User|Note)[]` だけど、全パターンDBスキーマと対応させられないので
-	// 対象ユーザーは一番最初のユーザー として あとはコメントとして格納する
+	// DB は単一対象のみ保持できるため、先頭のユーザーを対象とし、全 URI は通報文へ残す。
 	const uris = getApIds(activity.object);
 
 	const userIds = uris
@@ -599,7 +592,7 @@ async function rejectFollowFromApForApi(
 	actor: MiRemoteUser,
 	activity: IFollow,
 ): Promise<string> {
-	// ※ activityはこっちから投げたフォローリクエストなので、activity.actorは存在するローカルユーザーである必要がある
+	// 送信済みフォロー要求への応答なので、actor はローカルユーザーに限る。
 	const follower = await getUserFromApIdForApi(deps, activity.actor);
 	if (follower == null) return 'skip: follower not found';
 	if (follower.host != null) return 'skip: follower is not a local user';

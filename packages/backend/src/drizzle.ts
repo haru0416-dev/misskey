@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// 既存のクエリコードとの互換性のため、int8 を number として扱う。
+// クエリ層が int8 を number として扱うため、pg の既定文字列変換を上書きする。
 import pg, { type Pool, type PoolConfig } from 'pg';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Logger as DrizzleLogger } from 'drizzle-orm/logger';

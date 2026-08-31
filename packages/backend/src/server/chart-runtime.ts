@@ -430,8 +430,7 @@ class FederationChartWriter extends Chart<typeof federationChartSchema> {
 	/**
 	 * following テーブルの host カラムの distinct 値集合を recursive CTE の
 	 * loose index scan (インデックス端を1ホストずつ辿る) で列挙する。
-	 * 元の COUNT(DISTINCT ...) は following 全行のソートを毎 tick 走らせていたが、
-	 * この形は O(distinct host 数 × log(following 行数)) で済み、既存の
+	 * 全行をソートせず O(distinct host 数 × log(following 行数)) で済み、
 	 * followeeHost / followerHost 単列インデックスにそのまま乗る。
 	 * COUNT(DISTINCT) と同じく「instance 行が存在しない host」も数えるため意味は同一。
 	 */

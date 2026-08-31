@@ -62,7 +62,7 @@ function getUpdateInstanceQueue(deps: QueueInboxDependencies): CollapsedQueue<st
 				await updateFederatedInstance(deps, id, {
 					latestRequestReceivedAt: job.latestRequestReceivedAt,
 					isNotResponding: false,
-					// もしサーバーが死んでるために配信が止まっていた場合には自動的に復活させてあげる
+					// 応答不能による自動停止は、受信成功時に解除する。
 					...(job.shouldUnsuspend ? { suspensionState: 'none' as const } : {}),
 				});
 			},
@@ -88,9 +88,9 @@ async function verifyAndResolveAuthUser(
 	const signature = job.data.signature;
 	let activity = job.data.activity;
 
-	// actor はリモートが送ってくる値なので欠けていることがある。ここで弾かないと以降の
+	// actor はリモート入力なので欠ける場合がある。ここで拒否しないと以降の
 	// getApId() が「cannot determine id」を投げ、UnrecoverableError ではないため
-	// 壊れた activity がジョブとして再試行され続ける。
+	// 不正な activity が再試行され続ける。
 	if (activity.actor == null) {
 		throw new Bull.UnrecoverableError('skip: activity has no actor');
 	}
@@ -98,8 +98,7 @@ async function verifyAndResolveAuthUser(
 	{
 		let userExistenceCheckApId: string | null = null;
 
-		// 存在しないActorに対するActorのDeleteアクティビティは無視する。
-		// actorとobjectが同じならばそれはActorに違いない
+		// actor と object が同一の Delete は Actor の削除として存在確認する。
 		if (
 			isDelete(activity) &&
 			typeof activity.object === 'object' &&
@@ -116,15 +115,12 @@ async function verifyAndResolveAuthUser(
 		}
 	}
 
-	// HTTP-Signature keyIdを元にDBから取得
 	let authUser: ApiAuthUser | null = await getAuthUserFromKeyIdForApi(deps, signature.keyId);
 
-	// keyIdでわからなければ、activity.actorを元にDBから取得 || activity.actorを元にリモートから取得
 	if (authUser == null) {
 		try {
 			authUser = await getAuthUserFromApIdForApi(deps, getApId(activity.actor));
 		} catch (err) {
-			// 対象が4xxならスキップ
 			if (err instanceof StatusError) {
 				if (!err.isRetryable) {
 					throw new Bull.UnrecoverableError(
@@ -137,22 +133,19 @@ async function verifyAndResolveAuthUser(
 		}
 	}
 
-	// それでもわからなければ終了
 	if (authUser == null) {
 		throw new Bull.UnrecoverableError(`skip: failed to resolve user ${getApId(activity.actor)}`);
 	}
 
-	// publicKey がなくても終了
 	if (authUser.key == null) {
 		throw new Bull.UnrecoverableError(`skip: failed to resolve user publicKey ${getApId(activity.actor)}`);
 	}
 
-	// HTTP-Signatureの検証
 	const httpSignatureValidated = await verifyRequestSignature(signature, authUser.key.keyPem);
 
-	// また、signatureのsignerは、activity.actorと一致する必要がある
+	// HTTP Signature の署名者は activity.actor と一致しなければならない。
 	if (!httpSignatureValidated || authUser.user.uri !== getApId(activity.actor)) {
-		// 一致しなくても、でもLD-Signatureがありそうならそっちも見る
+		// HTTP Signature が不一致でも LD Signature があれば検証する。
 		const ldSignature = activity.signature;
 		if (!ldSignature) {
 			throw new Bull.UnrecoverableError(
@@ -164,14 +157,12 @@ async function verifyAndResolveAuthUser(
 			throw new Bull.UnrecoverableError(`skip: unsupported LD-signature type ${ldSignature.type}`);
 		}
 
-		// ldSignature.creator: https://example.oom/users/user#main-key
-		// みたいになっててUserを引っ張れば公開キーも入ることを期待する
+		// creator のフラグメントを除いた Person を解決し、公開鍵を取得する。
 		if (ldSignature.creator) {
 			const candicate = ldSignature.creator.replace(/#.*/, '');
 			await resolvePersonForApi(deps, candicate).catch(() => null);
 		}
 
-		// keyIdからLD-Signatureのユーザーを取得
 		authUser = await getAuthUserFromKeyIdForApi(deps, ldSignature.creator);
 		if (authUser == null) {
 			throw new Bull.UnrecoverableError('skip: LD-Signatureのユーザーが取得できませんでした');
@@ -199,7 +190,6 @@ async function verifyAndResolveAuthUser(
 
 		jsonLd.freeze();
 
-		// LD-Signature検証
 		try {
 			const verified = await jsonLd.verifyRsaSignature2017(activity, authUser.key.keyPem);
 			if (!verified) {
@@ -212,7 +202,7 @@ async function verifyAndResolveAuthUser(
 			throw error;
 		}
 
-		// もう一度actorチェック
+		// LD Signature の署名者も activity.actor と一致しなければならない。
 		if (authUser.user.uri !== getApId(activity.actor)) {
 			throw new Bull.UnrecoverableError(
 				`skip: LD-Signature user(${authUser.user.uri}) !== activity.actor(${getApId(activity.actor)})`,
@@ -225,7 +215,7 @@ async function verifyAndResolveAuthUser(
 		}
 	}
 
-	// activity.idがあればホストが署名者のホストであることを確認する
+	// activity.id のホストは署名者のホストと一致しなければならない。
 	if (typeof activity.id === 'string') {
 		const signerHost = extractDbHost(authUser.user.uri!);
 		const activityIdHost = extractDbHost(activity.id);
@@ -286,7 +276,6 @@ export async function handleQueueInbox(deps: QueueInboxDependencies, job: Bull.J
 		);
 	});
 
-	// アクティビティを処理
 	try {
 		const result = await performActivityForApi(deps, authUser.user, activity);
 		if (result && !result.startsWith('ok')) {
@@ -299,11 +288,11 @@ export async function handleQueueInbox(deps: QueueInboxDependencies, job: Bull.J
 					return 'blocked notes with prohibited words';
 				case '85ab9bd7-3a41-4530-959d-f07073900109':
 					return 'actor has been suspended';
-				case 'd450b8a9-48e4-4dab-ae36-f4db763fda7c': // invalid Note
+				case 'd450b8a9-48e4-4dab-ae36-f4db763fda7c':
 					return e.message;
 				case '9f466dab-c856-48cd-9e65-ff90ff750580':
 					return 'note contains too many mentions';
-				case '09d79f9e-64f1-4316-9cfa-e75c4d091574': // Instance is blocked
+				case '09d79f9e-64f1-4316-9cfa-e75c4d091574':
 					return 'skip: blocked instance';
 			}
 		}

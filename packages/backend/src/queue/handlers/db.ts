@@ -363,7 +363,7 @@ export async function handleQueueExportUserLists(
 
 			for (const u of users) {
 				const acct = getFullApAccountForApi(deps.config, u.username, u.host);
-				// 3rd column and later will be key=value pairs
+				// 3 列目以降は key=value 形式にする。
 				await writeLineToStream(stream, `${list.name},${acct},withReplies=${usersWithReplies.has(u.id)}`);
 			}
 		}

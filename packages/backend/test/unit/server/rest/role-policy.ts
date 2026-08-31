@@ -10,8 +10,7 @@ import type { Config } from '@/config.js';
 import type { MiDrizzleDatabase } from '@/drizzle.js';
 import type { MiMeta, MiRole } from '@/models/_.js';
 
-// policies は jsonb で、role.policies も meta.policies も管理APIから任意の JSON が書き込めてしまう。
-// 壊れた値がそのまま制限値として使われないことを確認する
+// policies は管理 API から任意の JSON を書き込めるため、不正な値を制限値として使わない。
 function deps(metaPolicies: Record<string, unknown> = {}) {
 	return {
 		config: { limits: { maximumFileSizeBytes: 1024 * 1024 * 1024 } } as unknown as Config,
@@ -78,7 +77,6 @@ describe('getApiRolePolicies', () => {
 		expect(withoutRoles.antennaLimit).toBe(DEFAULT_POLICIES.antennaLimit);
 		expect(withoutRoles.gtlAvailable).toBe(DEFAULT_POLICIES.gtlAvailable);
 
-		// ロールを持つユーザーでも、useDefault のフォールバック先が壊れた値にならない
 		const withRole = await getApiRolePolicies(brokenMeta, null, [
 			role({ antennaLimit: { useDefault: true, priority: 1 } }),
 		]);

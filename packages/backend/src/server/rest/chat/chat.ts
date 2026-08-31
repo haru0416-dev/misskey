@@ -105,18 +105,13 @@ const isCustomEmojiRegexp = /^:([\w+-]+)(?:@\.)?:$/;
 function normalizeEmojiStringForApi(x: string): string {
 	const match = emojiRegex.exec(x);
 	if (match) {
-		// 合字を含む1つの絵文字
 		const unicode = match[0];
 
-		// 異体字セレクタ除去
 		return unicode.match('\u200d') ? unicode : unicode.replaceAll(/\ufe0f/g, '');
 	} else {
 		throw invalidParamError({ param: 'reaction', reason: 'invalid emoji' });
 	}
 }
-
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
 
 type ChatRoomInvitationPackable = ChatRoomInvitationRow & {
 	user?: MiUser | null;
@@ -580,10 +575,6 @@ async function packChatRoomMembershipsForApi(
 		),
 	);
 }
-
-// ---------------------------------------------------------------------------
-// ChatService のサービスロジック。
-// ---------------------------------------------------------------------------
 
 async function getChatAvailabilityForApi(
 	deps: ApiChatDependencies,
@@ -1328,9 +1319,6 @@ async function getMyChatMembershipsForApi(
 	});
 }
 
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-
 function noSuchRoomError(id: string): ApiError {
 	return new ApiError({ status: 400, message: 'No such room.', code: 'NO_SUCH_ROOM', id });
 }
@@ -1384,9 +1372,6 @@ async function getUserForApiChat(deps: ApiChatDependencies, userId: string): Pro
 	if (user == null) throw noSuchUserError('11795c64-40ea-4198-b06e-3c873ed9039d');
 	return user;
 }
-
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
 
 export const chatHistoryParamDef = z.object({
 	limit: z.int().min(1).max(100).optional().default(10),

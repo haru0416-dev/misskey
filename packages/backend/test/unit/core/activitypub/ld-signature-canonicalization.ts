@@ -8,11 +8,11 @@ import { JsonLd, canonicalizeSignatureOptions } from '@/core/activitypub/json-ld
 import type { HttpRequestService } from '@/core/net/HttpRequestService.js';
 import fc from 'fast-check';
 
-// 署名オプションの正規化は jsonld.normalize を通さない近道を持つ。近道が本物と1バイトでも
+// 署名オプションの正規化には jsonld.normalize を通さない高速経路がある。参照実装と 1 バイトでも
 // 違えば署名が壊れ、リレー購読側で検証に失敗する。壊れても例外は出ず連合が黙って劣化するため、
 // 両者の一致をテストで固定する。
 describe('LD signature option canonicalization', () => {
-	// 近道は外部リクエストを行わないので、HttpRequestService は使われない。
+	// 高速経路は外部リクエストを行わないので、HttpRequestService は使われない。
 	const service = new JsonLd(null as unknown as HttpRequestService);
 
 	const creators = [
@@ -50,19 +50,18 @@ describe('LD signature option canonicalization', () => {
 });
 
 /*
- * 署名オプションの正規化は jsonld.normalize を通さない近道を持つ。createVerifyData は署名生成
+ * 署名オプションの正規化には jsonld.normalize を通さない高速経路がある。createVerifyData は署名生成
  * だけでなく検証にも使われ、検証側の options はリモートが送ってきた signature ブロックそのもの
- * なので、近道の入力は相手が自由に選べる。
+ * なので、高速経路の入力は相手が自由に選べる。
  *
- * 近道が本物と1バイトでも違えば署名検証が壊れる。手で選んだ入力では網羅できないため、生成した
- * 入力で両者を突き合わせる。近道が null を返す入力は呼び出し側が jsonld.normalize へ落とすので
- * 何も主張しないが、そればかりになると検査が空振りするので、近道を通った回数に下限を課す。
+ * 高速経路が参照実装と 1 バイトでも違えば署名検証が失敗する。生成した入力で両者を比較し、
+ * 高速経路が null を返さなかった回数にも下限を設ける。
  */
 describe('LD signature option canonicalization (property)', () => {
-	// 近道も normalize も外部リクエストを行わない入力しか与えない。
+	// 高速経路も normalize も外部リクエストを行わない入力だけを与える。
 	const service = new JsonLd(null as unknown as HttpRequestService);
 
-	// N-Quads の区切り文字・エスケープ対象・制御文字・非BMP。近道が素通しすると本物と食い違う。
+	// N-Quads の区切り文字・エスケープ対象・制御文字・非 BMP を検査する。
 	const hostileChar = fc.constantFrom(
 		'>',
 		'<',
@@ -86,7 +85,7 @@ describe('LD signature option canonicalization (property)', () => {
 		.array(fc.oneof(fc.string({ maxLength: 6 }), hostileChar), { minLength: 1, maxLength: 5 })
 		.map((parts) => parts.join(''));
 
-	// 実際に飛んでくる形。これらは近道を通り、本物と一致しなければならない。
+	// 通常の受信形式は高速経路で参照実装と一致しなければならない。
 	const realisticSegment = fc.stringMatching(/^[A-Za-z0-9._~-]{1,16}$/u);
 	const realisticCreator = fc.oneof(
 		realisticSegment.map((s) => `https://example.com/users/${s}#main-key`),
@@ -128,7 +127,7 @@ describe('LD signature option canonicalization (property)', () => {
 					if (shortcut === null) return;
 					fastPath++;
 
-					// 近道を通した入力で normalize が例外を投げるなら、それも食い違い (ここで落ちる)。
+					// 高速経路が受理した入力で normalize が例外になった場合も不一致とする。
 					const canonical = await service.normalize(options as never);
 					expect(shortcut).toBe(canonical.toString());
 				},
@@ -136,7 +135,7 @@ describe('LD signature option canonicalization (property)', () => {
 			{ numRuns: 1000 },
 		);
 
-		// 門を締めすぎて近道が死んでも、上の主張は真のまま通ってしまう。
+		// 受理対象が過度に狭くなっても一致検査だけでは検出できないため、通過率も検査する。
 		expect({ fastPathAtLeast: fastPath >= total * 0.2, total }).toStrictEqual({ fastPathAtLeast: true, total: 1000 });
 	});
 });

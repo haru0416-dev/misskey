@@ -39,10 +39,6 @@ export const honoStreamChannelHybridTimeline: StreamChannelDefinition<ApiNoteDep
 				if (withFiles && (note.fileIds == null || note.fileIds.length === 0)) return;
 
 				if (!note.channelId) {
-					// 以下の条件に該当するノートのみ後続処理に通す（ので、以下のif文は該当しないノートをすべて弾くようにする）
-					// - 自分自身の投稿
-					// - その投稿のユーザーをフォローしている
-					// - 全体公開のローカルの投稿
 					if (
 						!(
 							isMe ||
@@ -53,8 +49,6 @@ export const honoStreamChannelHybridTimeline: StreamChannelDefinition<ApiNoteDep
 						return;
 					}
 				} else {
-					// 以下の条件に該当するノートのみ後続処理に通す（ので、以下のif文は該当しないノートをすべて弾くようにする）
-					// - フォローしているチャンネルの投稿
 					if (!ctx.followingChannels.has(note.channelId)) {
 						return;
 					}
@@ -66,7 +60,7 @@ export const honoStreamChannelHybridTimeline: StreamChannelDefinition<ApiNoteDep
 				if (note.reply) {
 					const reply = note.reply;
 					if ((ctx.following[note.userId]?.withReplies ?? false) || withReplies) {
-						// 自分のフォローしていないユーザーの visibility: followers な投稿への返信は弾く
+						// 返信を含めても、返信先の followers 公開範囲は越えない。
 						if (
 							reply.visibility === 'followers' &&
 							!Object.hasOwn(ctx.following, reply.userId) &&
@@ -74,17 +68,16 @@ export const honoStreamChannelHybridTimeline: StreamChannelDefinition<ApiNoteDep
 						)
 							return;
 					} else {
-						// 「チャンネル接続主への返信」でもなければ、「チャンネル接続主が行った返信」でもなければ、「投稿者の投稿者自身への返信」でもない場合
+						// 返信を含めない場合も、自分宛て・自分の返信・投稿者の自己返信は含める。
 						if (reply.userId !== user.id && !isMe && reply.userId !== note.userId) return;
 					}
 				}
 
-				// 純粋なリノート（引用リノートでないリノート）の場合
 				if (isRenotePacked(note) && !isQuotePacked(note) && note.renote) {
 					if (!withRenotes) return;
 					if (note.renote.reply) {
 						const reply = note.renote.reply;
-						// 自分のフォローしていないユーザーの visibility: followers な投稿への返信のリノートは弾く
+						// リノート経由でも返信先の followers 公開範囲は越えない。
 						if (
 							reply.visibility === 'followers' &&
 							!Object.hasOwn(ctx.following, reply.userId) &&

@@ -8,8 +8,6 @@ import { MiUser } from './User.js';
 import { MiPage } from './Page.js';
 import { MiUserList } from './UserList.js';
 
-// TODO: このテーブルで管理している情報すべてレジストリで管理するようにしても良いかも
-//       ただ、「emailVerified が true なユーザーを find する」のようなクエリは書けなくなるからウーン
 export class MiUserProfile {
 	public userId: MiUser['id'];
 
@@ -17,15 +15,12 @@ export class MiUserProfile {
 
 	public location: string | null;
 
-	// birthday の月日検索では、IDX_USERPROFILE_BIRTHDAY_DATE（get_birthday_date("birthday")）を使用する。
+	// 月日検索には IDX_USERPROFILE_BIRTHDAY_DATE を使用する。
 	public birthday: string | null;
 
 	public description: string | null;
 
-	// フォローされた際のメッセージ
 	public followedMessage: string | null;
-
-	// TODO: 鍵アカウントの場合の、フォローリクエスト受信時のメッセージも設定できるようにする
 
 	public fields: {
 		name: string;

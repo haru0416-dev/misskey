@@ -24,7 +24,6 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 		return punyHost(uri) === toPuny(config.runtime.host);
 	}
 
-	// メールアドレスのバリデーションを行う
 	// https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address
 	function validateEmailFormat(email: string): boolean {
 		const regexp =
@@ -81,7 +80,7 @@ export function createUtilityService(config: Config, meta: MiMeta) {
 	): SoftwareSuspension | undefined {
 		if (software.softwareName == null) return undefined;
 		if (software.softwareVersion == null) {
-			// software version is null; suspend iff versionRange is *
+			// バージョン不明のソフトウェアは、versionRange が * の場合だけ停止対象にする。
 			return meta.deliverSuspendedSoftware.find(
 				(x) => x.software === software.softwareName && x.versionRange.trim() === '*',
 			);

@@ -5,7 +5,7 @@
 
 import { MiUser } from './User.js';
 
-// TODO: 同じdomain、同じscope、同じkeyのレコードは二つ以上存在しないように制約付けたい
+// (domain, scope, key) の一意性は DB 制約で保証されていない。
 export class MiRegistryItem {
 	public id: string;
 
@@ -21,6 +21,5 @@ export class MiRegistryItem {
 
 	public scope: string[];
 
-	// サードパーティアプリに開放するときのためのカラム
 	public domain: string | null;
 }

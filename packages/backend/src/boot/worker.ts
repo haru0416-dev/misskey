@@ -13,7 +13,6 @@ export async function workerMain(config: Config) {
 
 	initExtraThreadPool(config);
 
-	// 役割は master が fork 時に env で渡す (cluster-roles.ts)
 	const assignment = assignmentFromEnv();
 
 	if (assignment.role === 'server') {

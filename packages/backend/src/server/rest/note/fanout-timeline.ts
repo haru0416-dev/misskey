@@ -100,7 +100,7 @@ export type FanoutTimelineReadOptions = {
 	noteFilter?: NoteFilter;
 	/**
 	 * noteFilter が `note.channel` / `note.renote.channel` を読むなら必ず true にすること。
-	 * false のままだと両方 undefined のままなので、チャンネル起因の除外が黙って素通りする。
+	 * false のままだと両方 undefined となり、チャンネル起因の除外が欠落する。
 	 * 逆に読まない呼び出し元で true にすると、捨てるだけのチャンネル取得が1本増える
 	 * (`note.channelId` / `note.renoteChannelId` を見るだけの判定にはhydrate不要)。
 	 */
@@ -193,7 +193,7 @@ export async function getFanoutTimelineNotesForApi(
 		if (ps.me) {
 			const me = ps.me;
 			// 渡された snapshot がここで読む種別を全部含んでいるときだけ使う。足りないまま使うと、
-			// 引いていない項目が空配列と区別できず、ミュート・ブロックの除外が黙って素通りする
+			// 未取得の項目を空配列と区別できず、ミュート・ブロックの除外が欠落する。
 			const relation = viewerRelationSnapshotCovers(ps.viewerRelation, fanoutViewerRelationKinds)
 				? ps.viewerRelation
 				: await fetchViewerRelationSnapshotFromDatabase(deps.db, me.id, new Date(), fanoutViewerRelationKinds);

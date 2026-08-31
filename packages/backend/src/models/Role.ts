@@ -134,7 +134,7 @@ export class MiRole {
 
 	public isPublic: boolean;
 
-	// trueの場合ユーザー名の横にバッジとして表示
+	// true の場合はユーザー名の横にバッジ表示する。
 	public asBadge: boolean;
 
 	public isModerator: boolean;
@@ -147,7 +147,7 @@ export class MiRole {
 
 	public canEditMembersByModerator: boolean;
 
-	// UIに表示する際の並び順用(大きいほど先頭)
+	// UI は値の大きい順に表示する。
 	public displayOrder: number;
 
 	public policies: Record<
