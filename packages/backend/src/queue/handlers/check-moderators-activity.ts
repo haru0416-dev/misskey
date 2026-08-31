@@ -34,11 +34,8 @@ export type QueueCheckModeratorsActivityDependencies = {
 	publishMainStream?: ApiMainStreamPublisher;
 };
 
-// モデレーターが不在と判断する日付の閾値
 const MODERATOR_INACTIVITY_LIMIT_DAYS = 7;
-// 警告通知やログ出力を行う残日数の閾値
 const MODERATOR_INACTIVITY_WARNING_REMAINING_DAYS = 2;
-// 期限から6時間ごとに通知を行う
 const MODERATOR_INACTIVITY_WARNING_NOTIFY_INTERVAL_HOURS = 6;
 const ONE_HOUR_MILLI_SEC = 1000 * 60 * 60;
 const ONE_DAY_MILLI_SEC = ONE_HOUR_MILLI_SEC * 24;
@@ -94,7 +91,6 @@ function generateInvitationOnlyChangedMail() {
 }
 
 async function fetchModeratorsForCheck(deps: QueueCheckModeratorsActivityDependencies): Promise<MiUser[]> {
-	// TODO: モデレーター以外にも特別な権限を持つユーザーがいる場合は考慮する
 	return getModeratorsForApi(deps, { includeAdmins: true, includeRoot: true, excludeExpire: true });
 }
 
@@ -110,7 +106,7 @@ async function evaluateModeratorsInactiveDays(
 		(moderator) => moderator.lastActiveDate!.getTime() < inactivePeriod.getTime(),
 	);
 
-	// 残りの猶予を示したいので、最終アクティブ日時が一番若いモデレータの日数を基準に猶予を計算する
+	// 猶予期間は最も新しい最終活動日時を基準に算出する。
 	const newestLastActiveDate = new Date(
 		Math.max(...moderators.map((moderator) => moderator.lastActiveDate!.getTime())),
 	);
@@ -221,8 +217,7 @@ export async function handleQueueCheckModeratorsActivity(
 	const remainingTime = evaluateResult.remainingTime;
 	if (remainingTime.asDays <= MODERATOR_INACTIVITY_WARNING_REMAINING_DAYS) {
 		if (remainingTime.asHours % MODERATOR_INACTIVITY_WARNING_NOTIFY_INTERVAL_HOURS === 0) {
-			// ジョブの実行頻度と同等だと通知が多すぎるため期限から6時間ごとに通知する
-			// つまり、のこり2日を切ったら6時間ごとに通知が送られる
+			// 過剰送信を避けるため、警告通知は 6 時間間隔に制限する。
 			await notifyInactiveModeratorsWarning(deps, remainingTime);
 		}
 	}

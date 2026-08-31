@@ -26,14 +26,10 @@ const compareBy =
 	};
 
 describe('アンテナ', () => {
-	// エンティティとしてのアンテナを主眼においたテストを記述する
-	// (Antennaを返すエンドポイント、Antennaエンティティを書き換えるエンドポイント、Antennaからノートを取得するエンドポイントをテストする)
-
 	type Antenna = misskey.entities.Antenna;
 	type User = misskey.entities.SignupResponse;
 	type Note = misskey.entities.Note;
 
-	// アンテナを作成できる最小のパラメタ
 	const defaultParam = {
 		caseSensitive: false,
 		excludeKeywords: [['']],
@@ -227,7 +223,7 @@ describe('アンテナ', () => {
 	});
 
 	test('を作成するとき src=list でリストを指定しないとエラーになる', async () => {
-		// userListId の無い src='list' アンテナは checkHitAntenna が常に false を返すため何にもマッチしない
+		// userListId の無い src='list' アンテナはいずれにもマッチしない。
 		await failedApiCall(
 			{
 				endpoint: 'antennas/create',
@@ -457,20 +453,18 @@ describe('アンテナ', () => {
 				id: 'b34dcf9d-348f-44bb-99d0-6c9314cfe2df',
 			},
 		);
-		// 本人にはまだ見える
 		const list = await successfulApiCall({ endpoint: 'antennas/list', parameters: {}, user: alice });
 		expect(list.map((a) => a.id).includes(antenna.id)).toStrictEqual(true);
 	});
 
 	describe('のノート', () => {
-		// アンテナへの振り分けは note 作成時に await されない副作用のため、期待件数が揃うまで待つ
+		// アンテナへの振り分けは非同期のため、期待件数が揃うまで待つ。
 		// (期待0件の場合は「流れ込まないこと」を見るので、短い猶予を置いてから読む)。
 		const waitForAntennaNotes = async (user: typeof alice, antennaId: string, expectedCount: number) => {
 			if (expectedCount === 0) {
 				await new Promise((resolve) => setTimeout(resolve, 300));
 			} else {
-				// antennas/notes の既定 limit は 10。期待件数がそれを超えるときは数えるぶんだけ明示して取る
-				// (元の実装は件数に届かないまま打ち切って続行しており、待ちが空振りしていた)。
+				// 期待件数が既定 limit の 10 を超える場合も全件取得する。
 				await vi.waitFor(
 					async () => {
 						const counted = await successfulApiCall({
@@ -536,7 +530,7 @@ describe('アンテナ', () => {
 			const removedNote = await post(bob, { text: `test ${keyword} removed` });
 
 			// 振り分け完了前に remove-note すると lrem が空振りした後から追加され直すため、
-			// 両ノートがアンテナに到達してから削除する
+			// remove-note 後の遅延追加を防ぐため、両ノートの到達を待ってから削除する。
 			await waitForAntennaNotes(alice, antenna.id, 2);
 			await waitForAntennaNotes(bob, otherAntenna.id, 2);
 
@@ -616,7 +610,7 @@ describe('アンテナ', () => {
 				],
 			},
 			{
-				// ホーム指定は自分の投稿とフォロー中ユーザーの投稿だけにマッチする
+				// ホーム指定は自分とフォロー中ユーザーの投稿だけにマッチする。
 				label: 'ホーム指定で',
 				parameters: () => ({ src: 'home' }),
 				posts: [
@@ -881,7 +875,6 @@ describe('アンテナ', () => {
 
 			const notes = await posts.reduce(
 				async (prev, current) => {
-					// includedに関わらずnote()は評価して投稿する。
 					const p = await prev;
 					const n = await current.note();
 					if (current.included) return p.concat(n);
@@ -890,7 +883,6 @@ describe('アンテナ', () => {
 				Promise.resolve([] as Note[]),
 			);
 
-			// alice視点でNoteを取り直す
 			const expected = await Promise.all(
 				notes.reverse().map((s) =>
 					successfulApiCall({
@@ -931,7 +923,6 @@ describe('アンテナ', () => {
 			await post(bob, { text: `test ${keyword}`, channelId: sensitiveChannel.id });
 
 			const response = await waitForAntennaNotes(alice, antenna.id, 2);
-			// 最後に投稿したものが先頭に来る。
 			const expected = [noteInNonSensitiveChannel, noteInLocal];
 			expect(response).toStrictEqual(expected);
 		});
@@ -959,7 +950,6 @@ describe('アンテナ', () => {
 
 				await waitForAntennaNotes(alice, antenna.id, 30);
 
-				// antennas/notesは降順のみで、昇順をサポートしない。
 				await testPaginationConsistency(
 					notes,
 					async (paginationParam) => {
@@ -975,9 +965,8 @@ describe('アンテナ', () => {
 			},
 		);
 
-		// BUG 7日過ぎると作り直すしかない。 https://github.com/misskey-dev/misskey/issues/10476
-		// (7日未使用で isActive: false になったアンテナからはノートが取得できなくなるが、
-		//  notes を取得しに来た時点で isActive: true に戻る挙動自体はここで検証する)
+		// 7 日未使用で無効になったアンテナは過去ノートを取得できないが、取得時に再び有効になる。
+		// https://github.com/misskey-dev/misskey/issues/10476
 		test('を取得したときActiveに戻る', async () => {
 			const antenna = await successfulApiCall({
 				endpoint: 'antennas/create',
@@ -988,7 +977,7 @@ describe('アンテナ', () => {
 
 			await successfulApiCall({ endpoint: 'antennas/notes', parameters: { antennaId: antenna.id }, user: alice });
 
-			// isActive の書き戻しは await されないため、反映されるまで待つ
+			// isActive の書き戻しは非同期のため、反映されるまで待つ。
 			await vi.waitFor(
 				async () => {
 					const shown = await successfulApiCall({

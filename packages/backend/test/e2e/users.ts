@@ -28,14 +28,10 @@ import type * as misskey from 'misskey-js';
 import { omitUndefined as stripUndefined } from '@/misc/clone.js';
 
 describe('ユーザー', () => {
-	// エンティティとしてのユーザーを主眼においたテストを記述する
-	// (Userを返すエンドポイントとUserエンティティを書き換えるエンドポイントをテストする)
-
 	const show = async (id: string, me = root): Promise<misskey.entities.UserDetailed> => {
 		return successfulApiCall({ endpoint: 'users/show', parameters: { userId: id }, user: me });
 	};
 
-	// UserLiteのキーが過不足なく入っている？
 	const userLite = (user: misskey.entities.UserLite): Partial<misskey.entities.UserLite> => {
 		return stripUndefined({
 			id: user.id,
@@ -52,13 +48,12 @@ describe('ユーザー', () => {
 			onlineStatus: user.onlineStatus,
 			badgeRoles: user.badgeRoles,
 
-			// BUG isAdmin/isModeratorはUserLiteではなくMeDetailedOnlyに含まれる。
+			// isAdmin/isModerator は UserLite ではなく MeDetailedOnly に含まれる。
 			isAdmin: undefined,
 			isModerator: undefined,
 		});
 	};
 
-	// UserDetailedNotMeのキーが過不足なく入っている？
 	const userDetailedNotMe = (user: misskey.entities.SignupResponse): Partial<misskey.entities.UserDetailedNotMe> => {
 		return stripUndefined({
 			...userLite(user),
@@ -97,7 +92,6 @@ describe('ユーザー', () => {
 		});
 	};
 
-	// Relations関連のキーが過不足なく入っている？
 	const userDetailedNotMeWithRelations = (
 		user: misskey.entities.SignupResponse,
 	): Partial<misskey.entities.UserDetailedNotMe> => {
@@ -117,7 +111,6 @@ describe('ユーザー', () => {
 		});
 	};
 
-	// MeDetailedのキーが過不足なく入っている？
 	const meDetailed = (
 		user: misskey.entities.SignupResponse,
 		security = false,
@@ -154,7 +147,7 @@ describe('ユーザー', () => {
 			mutedWords: user.mutedWords,
 			hardMutedWords: user.hardMutedWords,
 			mutedInstances: user.mutedInstances,
-			// @ts-expect-error 後方互換性
+			// @ts-expect-error SignupResponse の型に互換フィールドが含まれていない。
 			mutingNotificationTypes: user.mutingNotificationTypes,
 			notificationRecieveConfig: user.notificationRecieveConfig,
 			emailNotificationTypes: user.emailNotificationTypes,
@@ -180,7 +173,6 @@ describe('ユーザー', () => {
 
 	let bob: misskey.entities.SignupResponse;
 
-	// NOTE: これがないと落ちる（bob の updatedAt が null になってしまうため？）
 	let bobNote: misskey.entities.Note;
 
 	let carol: misskey.entities.SignupResponse;
@@ -216,7 +208,7 @@ describe('ユーザー', () => {
 
 	let database: TestDatabase;
 
-	// 連合の実サーバーは立てず、リモートユーザーをDBに直接用意する。
+	// 連合先の可用性に依存しないよう、リモートユーザーは DB に直接用意する。
 	// isExplorable はデフォルト true だが、既存の一覧系テストは origin: 'local' (デフォルト) で
 	// 取得するため互いに干渉しない。
 	let remoteUserCounter = 0;
@@ -262,7 +254,7 @@ describe('ユーザー', () => {
 			bobNote = await post(bob, { text: 'test' });
 			carol = await signup({ username: 'carol' });
 
-			// @alice -> @replyingへのリプライ。Promise.allで一気に作るとtimeoutしてしまうのでreduceで一つ一つawaitする
+			// 並行作成ではタイムアウトするため、リプライを直列に作成する。
 			usersReplying = await [...Array(10)]
 				.map((_, i) => i)
 				.reduce(
@@ -356,17 +348,14 @@ describe('ユーザー', () => {
 	});
 
 	test('が作れる。（作りたての状態で自分のユーザー情報が取れる）', async () => {
-		// SignupApiService.ts
 		const response = (await successfulApiCall({
 			endpoint: 'signup',
 			parameters: { username: 'zoe', password: 'password' },
 			user: undefined,
-		})) as unknown as misskey.entities.SignupResponse; // BUG MeDetailedに足りないキーがある
+		})) as unknown as misskey.entities.SignupResponse; // SignupResponse と実際の MeDetailed レスポンスの型が一致しない。
 
-		// signupの時はtokenが含まれる特別なMeDetailedが返ってくる
 		expect(response.token).toMatch(/[a-zA-Z0-9]{16}/);
 
-		// UserLite
 		expect(response.id).toMatch(/[0-9a-z]{10}/);
 		expect(response.name).toBe(null);
 		expect(response.username).toBe('zoe');
@@ -380,7 +369,6 @@ describe('ユーザー', () => {
 		expect(response.emojis).toStrictEqual({});
 		expect(response.onlineStatus).toBe('unknown');
 		expect(response.badgeRoles).toStrictEqual([]);
-		// UserDetailedNotMeOnly
 		expect(response.url).toBe(null);
 		expect(response.uri).toBe(null);
 		expect(response.movedTo).toBe(null);
@@ -414,7 +402,6 @@ describe('ユーザー', () => {
 		expect(response.roles).toStrictEqual([]);
 		expect(response.memo).toBe(null);
 
-		// MeDetailedOnly
 		expect(response.avatarId).toBe(null);
 		expect(response.bannerId).toBe(null);
 		expect(response.followedMessage).toBe(null);
@@ -704,7 +691,7 @@ describe('ユーザー', () => {
 	] as const)('をリスト形式で取得することができる（$label）', async ({ parameters, selector }) => {
 		const response = await successfulApiCall({ endpoint: 'users', parameters, user: alice });
 
-		// 結果の並びを事前にアサートするのは困難なので返ってきたidに対応するユーザーが返っており、ソート順が正しいことだけを検証する
+		// 共有 DB の既存件数に依存するため、返却 ID とソート順だけを検証する。
 		const users = await Promise.all(response.map((u) => show(u.id, alice)));
 		const expected = users.sort((x, y) => {
 			const index = selector(x) < selector(y) ? -1 : selector(x) > selector(y) ? 1 : 0;
@@ -735,13 +722,11 @@ describe('ユーザー', () => {
 
 		const parameters = { origin: 'remote', hostname: remote1.host, limit: 100 } as const;
 		const response = await successfulApiCall({ endpoint: 'users', parameters, user: alice });
-		// デフォルトはID昇順
 		const expected = await Promise.all([remote1, remote2].map((u) => show(u.id, alice)));
 		expect(response).toStrictEqual(expected);
 	});
 	test('をリスト形式で取得することができる（pagenation）', async () => {
 		const expected = await successfulApiCall({ endpoint: 'users', parameters: { limit: 100 }, user: alice });
-		// usersはoffsetのみサポートする (sinceId/untilIdは無い)
 		await testPaginationConsistency(
 			expected,
 			async (paginationParam) => {
@@ -1048,7 +1033,7 @@ describe('ユーザー', () => {
 	});
 	test('を検索することができる(pagenation)', async () => {
 		// 検索結果は updatedAt DESC NULLS LAST で並ぶため、それぞれ投稿して
-		// updatedAt を相異なる値にしないとoffsetページングが非決定的になる
+		// updatedAt を相異なる値にしないと offset ページングが非決定的になる。
 		const searchPrefix = `pgsrch${Date.now().toString(36).slice(-6)}`;
 		const created: misskey.entities.SignupResponse[] = [];
 		for (let i = 0; i < 4; i++) {
@@ -1058,8 +1043,7 @@ describe('ユーザー', () => {
 		}
 
 		const parameters = { query: searchPrefix, limit: 100 } as const;
-		// notes/createによるuser.updatedAtの反映は非同期なので、全員分が反映されて
-		// 並び順 (updatedAt DESC = 作成の逆順) が安定するまで待ってから期待値を固定する
+		// user.updatedAt は非同期更新のため、全員分の反映後に期待順を確定する。
 		const orderStabilized = [...created]
 			.reverse()
 			.map((u) => u.id)
@@ -1072,7 +1056,6 @@ describe('ユーザー', () => {
 			},
 			{ ...POLL, timeout: 10_000 },
 		);
-		// users/searchはoffsetのみサポートする
 		await testPaginationConsistency(
 			expected,
 			async (paginationParam) => {
@@ -1239,7 +1222,6 @@ describe('ユーザー', () => {
 	] as const)('をハッシュタグ指定で取得することができ、結果に$label', async ({ user, excluded }) => {
 		const hashtag = `user_test${user().username}`;
 		if (user() !== userSuspended) {
-			// サスペンドユーザーはupdateできない。
 			await successfulApiCall({ endpoint: 'i/update', parameters: { description: `#${hashtag}` }, user: user() });
 		}
 		const parameters = { tag: hashtag, limit: 100, sort: '-follower' } as const;
@@ -1260,7 +1242,6 @@ describe('ユーザー', () => {
 		const parameters = {};
 		const response = await successfulApiCall({ endpoint: 'users/recommendation', parameters, user: alice });
 		expect(response.length).not.toBe(0);
-		// 呼び出し主体(alice)視点のUserDetailedとして返る
 		const expected = await Promise.all(response.map((u) => show(u.id, alice)));
 		expect(response).toStrictEqual(expected);
 	});
@@ -1309,7 +1290,6 @@ describe('ユーザー', () => {
 		const remote2 = await createRemoteUser({ host: remote1.host });
 		const parameters = { host: remote1.host, limit: 10 };
 		const response = await successfulApiCall({ endpoint: 'federation/users', parameters, user: alice });
-		// ID降順ページネーション
 		const expected = await Promise.all([remote2, remote1].map((u) => show(u.id, alice)));
 		expect(response).toStrictEqual(expected);
 	});

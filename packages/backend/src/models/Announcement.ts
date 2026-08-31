@@ -18,9 +18,7 @@ export class MiAnnouncement {
 
 	public icon: 'info' | 'warning' | 'error' | 'success';
 
-	// normal ... お知らせページ掲載
-	// banner ... お知らせページ掲載 + バナー表示
-	// dialog ... お知らせページ掲載 + ダイアログ表示
+	// normal=一覧のみ、banner=一覧とバナー、dialog=一覧とダイアログ。
 	public display: 'normal' | 'banner' | 'dialog';
 
 	public needConfirmationToRead: boolean;

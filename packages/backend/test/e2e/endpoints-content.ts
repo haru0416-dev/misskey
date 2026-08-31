@@ -1469,7 +1469,7 @@ describe('Endpoints', () => {
 		test('following/update-all updates only the caller followings', async () => {
 			const config = fixtureConfig;
 			// 共有fixture (alice/bob) に直接DBのfollowing行を残すと、後続のblocking系テストの
-			// unfollow副作用がカウンタを負値に汚染するため、使い捨てユーザーで完結させる
+			// unfollow の副作用で共有 fixture のカウンタを負値にしないため、使い捨てユーザーで完結させる。
 			const suffix = Date.now().toString(36).slice(-8);
 			const updater = await signup({ username: `hfua${suffix}` });
 			const targetA = await signup({ username: `hfub${suffix}` });

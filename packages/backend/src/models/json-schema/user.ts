@@ -6,9 +6,7 @@
 import { z } from 'zod';
 import { misskeyId } from '@/misc/zod-params.js';
 
-// TODO: server/api/metas/admin.ts (admin/show-user の res: 定義、OpenAPI/misskey-js生成専用) が
-// 下記 notificationRecieveConfig をまだ参照しているため残す。res側もZod由来の型で表現できるようになったら
-// notificationRecieveConfig は削除して notificationRecieveConfigZodSchema にリネームする。
+// admin/show-user の res が OpenAPI/misskey-js 生成時に JSON Schema 版を参照するため、Zod 版と併存させる。
 export const notificationRecieveConfigZodSchema = z.union([
 	z.object({
 		type: z.enum(['all', 'following', 'follower', 'mutualFollow', 'followingOrFollower', 'never']),

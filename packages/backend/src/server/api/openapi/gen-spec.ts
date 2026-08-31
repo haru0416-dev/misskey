@@ -228,9 +228,9 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		},
 	};
 
-	// 書き換えたりするのでディープコピーしておく。そのまま編集するとメモリ上の値が汚れて次回以降の出力に影響する。
+	// 生成処理の変更が次回出力へ影響しないよう、エンドポイント定義を複製する。
 	// ただし JSON.stringify は Zod スキーマインスタンスを保持できない (プレーンオブジェクトとして潰れる) ため、
-	// params が Zod スキーマのエンドポイントだけは元の (非コピー) 配列から都度参照する。
+	// params が Zod スキーマのエンドポイントだけは複製前の定義を参照する。
 	const copiedEndpoints = JSON.parse(JSON.stringify(endpoints)) as IEndpoint[];
 	for (const [i, endpoint] of copiedEndpoints.entries()) {
 		const originalEndpoint = endpoints[i];

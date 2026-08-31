@@ -25,7 +25,7 @@ export function convertSchemaToOpenApiSchema(
 	type: 'param' | 'res',
 	includeSelfRef: boolean,
 ): OpenApiSchemaObject {
-	// optional, nullable, refはスキーマ定義に含まれないので分離しておく
+	// optional・nullable・ref はスキーマ定義に含まれないため分離する。
 	const { optional, nullable, ref, selfRef, ...res1 } = schema as Schema & Record<string, unknown>;
 	const res = deepClone(res1 as unknown as Cloneable) as OpenApiSchemaObject;
 

@@ -532,7 +532,7 @@ async function verifyLinkForApi(deps: ApiAccountUpdateDependencies, url: string,
 			await appendVerifiedLinkToUserProfileInDatabase(deps.db, user.id, url);
 		}
 	} catch {
-		// なにもしない
+		// 検証失敗時はリンクを追加しない。
 	}
 }
 
@@ -764,7 +764,6 @@ export async function handleApiIUpdate(
 	updates.emojis = emojis;
 	updates.tags = tags;
 
-	// ハッシュタグ更新 (ランキング更新 (Redis) 込み)
 	void updateUsertagsForApi(deps, user, tags).catch(() => {});
 
 	if (Object.keys(updates).length > 0) {
@@ -785,12 +784,10 @@ export async function handleApiIUpdate(
 
 	deps.publishMainStream?.(user.id, 'meUpdated', iObj);
 
-	// 鍵垢を解除したとき、溜まっていたフォローリクエストがあるならすべて承認
 	if (user.isLocked && ps.isLocked === false) {
 		void acceptAllFollowRequestsForApi(deps, user).catch(() => {});
 	}
 
-	// フォロワーにUpdateを配信
 	void publishAccountUpdateToFollowersForApi(deps, user.id).catch(() => {});
 
 	const urls = updatedProfile.fields.filter((x) => x.value.startsWith('https://'));

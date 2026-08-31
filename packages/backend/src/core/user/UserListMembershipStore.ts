@@ -274,8 +274,8 @@ export async function deleteUserListMembershipsByUserIdAndListOwnerIdInDatabase(
 }
 
 /**
- * NOTE: `withReplies` が undefined の場合は更新対象カラムが存在しないため、
- * 既存の `UpdateValuesMissingError` 挙動に揃える。
+ * `withReplies` が undefined の場合は更新対象カラムが存在しないため、
+ * `UpdateValuesMissingError` を送出する。
  */
 export async function updateUserListMembershipWithRepliesInDatabase(
 	db: MiDrizzleDatabase,

@@ -5,7 +5,7 @@
 
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
-// 未定義になる。テスト用にダミー値を注入しておく。
+// 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
@@ -91,7 +91,7 @@ describe('hono-queue-inbox handleQueueInbox', () => {
 	 * 実際に RSA 鍵ペアを生成し、user_publickey に登録した「リモートユーザー」として
 	 * ApRequestCreator.createSignedPost で本物の HTTP-Signature 付きリクエストを組み立て、
 	 * ローカルHTTPフィクスチャへ実際に送信して捕捉することで、verifyRequestSignature
-	 * が本物のバイト列に対して動作する状態を再現する (established local HTTP fixture pattern)。
+	 * が実際のバイト列に対して動作する状態を作る。
 	 */
 	async function createSignedInboxJob(
 		host: string,

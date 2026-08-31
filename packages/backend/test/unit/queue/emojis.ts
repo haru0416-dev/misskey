@@ -5,7 +5,7 @@
 
 // createRuntimeDependencies() が構築する UrlPreviewService は rolldown の `define` で注入される
 // _SUMMALY_VERSION_ を参照するが、vitest はソースを直接importするだけでrolldownを経由しないため
-// 未定義になる。テスト用にダミー値を注入しておく。
+// 未定義を避けるため、テスト用の固定値を注入する。
 (globalThis as unknown as { _SUMMALY_VERSION_: string })._SUMMALY_VERSION_ = 'test';
 
 import { createServer, type Server } from 'node:http';
@@ -95,7 +95,7 @@ describe('hono-queue-emojis', () => {
 
 	afterAll(async () => {
 		// export/importテストで作成したhost: nullの絵文字を残すと、
-		// 後続で実行される他のテストファイル (CustomEmojiService等) の全件カウントを汚染する
+		// 後続テストの全件カウントへ影響させない。
 		await runtime.db.delete(emoji);
 		await runtime.dispose();
 	});

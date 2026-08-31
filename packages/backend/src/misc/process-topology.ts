@@ -27,17 +27,17 @@ export type HostProcessCounts = {
  */
 export function resolveHostProcessCounts(config: Config): HostProcessCounts {
 	if (envOption.disableClustering) {
-		// cluster無効時はこのプロセス1つが両方を担う
+		// cluster 無効時はこのプロセス 1 つが両方を担う。
 		return { http: envOption.onlyQueue ? 0 : 1, queue: envOption.onlyServer ? 0 : 1, total: 1 };
 	}
 
 	const limit = os.cpus().length;
 	const requestedHttp = envOption.onlyQueue ? 0 : Math.min(config.server.process.httpWorkers, limit);
 	const queue = envOption.onlyServer ? 0 : Math.min(config.server.process.queueWorkers, limit);
-	// 両方0だと何も捌かないプロセスになってしまうので、その場合はHTTPだけ立てる
+	// 両方 0 の場合も HTTP プロセスを 1 つ起動する。
 	const http = requestedHttp === 0 && queue === 0 ? 1 : requestedHttp;
 
-	// HTTPが2プロセス以上のときはメインプロセスがlistenせずforkに徹するため、その1つを足す
+	// HTTP が 2 プロセス以上なら、listen せず fork 専任となるメインプロセスを加える。
 	const forkOnlyMaster = http >= 2 ? 1 : 0;
 
 	return { http, queue, total: http + queue + forkOnlyMaster };

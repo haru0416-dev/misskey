@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// structredCloneが遅いため
+// structuredClone より軽量な JSON 互換値専用の複製処理を使う。
 // 参照: http://var.blog.jp/archives/86038606.html
 
 export type Cloneable = string | number | boolean | null | undefined | { [key: string]: Cloneable } | Cloneable[];

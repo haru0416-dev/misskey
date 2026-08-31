@@ -375,7 +375,7 @@ describe('Endpoints', () => {
 			const jobs = await postScheduledNoteQueue!.getJobs(['waiting', 'delayed'], 0, 100, false);
 			expect(jobs.some((job) => job.data.noteDraftId === createdDraft.id)).toBe(true);
 
-			// scheduledNoteLimit (デフォルト1) を後続テストで消費しないよう後片付け
+			// 後続テストの scheduledNoteLimit を消費しないよう、予約ノートを削除する。
 			const cleanup = await api('notes/drafts/delete', { draftId: createdDraft.id }, alice);
 			expect(cleanup.status).toBe(204);
 		});
@@ -3198,7 +3198,7 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hnnexe${suffix}` });
 			const follower = await signup({ username: `hnnexr${suffix}` });
 			await api('following/create', { userId: followee.id }, follower);
-			// 通知が作られる前に読むと、除外されたのか未作成なのか区別できず素通りする
+			// 通知作成前に読むと除外と未作成を区別できず、偽陽性になる。
 			await vi.waitFor(async () => {
 				const created = await api('i/notifications', { includeTypes: ['follow'] }, followee);
 				expect(created.body.length).toBe(1);
@@ -3215,7 +3215,7 @@ describe('Endpoints', () => {
 			const followee = await signup({ username: `hnniee${suffix}` });
 			const follower = await signup({ username: `hnnier${suffix}` });
 			await api('following/create', { userId: followee.id }, follower);
-			// 通知が作られる前に読むと、空配列指定が効いたのか未作成なのか区別できず素通りする
+			// 通知作成前に読むと空配列指定の反映と未作成を区別できず、偽陽性になる。
 			await vi.waitFor(async () => {
 				const created = await api('i/notifications', { includeTypes: ['follow'] }, followee);
 				expect(created.body.length).toBe(1);

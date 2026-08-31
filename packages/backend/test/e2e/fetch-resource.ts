@@ -38,7 +38,7 @@ describe('Webリソース', () => {
 	let bob: misskey.entities.SignupResponse;
 
 	let database: TestDatabase;
-	// DBに直接用意したリモートユーザー (連合の実サーバーは立てない)
+	// 連合先の可用性に依存しないよう、リモートユーザーは DB に直接用意する。
 	let remoteUserAcct: string;
 	let remoteUserUri: string;
 
@@ -208,7 +208,6 @@ describe('Webリソース', () => {
 			test('MFMを含まない。', async () => {
 				const content = await simpleGet(path(alice.username), '*/*', undefined, (res) => res.text());
 				const _body: unknown = content.body;
-				// JSONフィードのときは改めて文字列化する
 				const body: string = typeof _body === 'object' ? JSON.stringify(_body) : (_body as string);
 
 				if (body.includes('**a**')) {
@@ -247,11 +246,6 @@ describe('Webリソース', () => {
 				});
 				expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
 				expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
-
-				// TODO ogタグの検証
-				// TODO profile.noCrawleの検証
-				// TODO twitter:creatorの検証
-				// TODO <link rel="me" ...>の検証
 			});
 			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () =>
 				await ok({
@@ -292,7 +286,6 @@ describe('Webリソース', () => {
 	});
 
 	describe.each([
-		// 実際のハンドルはフロントエンド(index.vue)で行われる
 		{ sub: 'home' },
 		{ sub: 'notes' },
 		{ sub: 'activity' },
@@ -323,10 +316,6 @@ describe('Webリソース', () => {
 			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
 			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 			expect(metaTag(res, 'misskey:page-id')).toBe(alicePage.id);
-
-			// TODO ogタグの検証
-			// TODO profile.noCrawleの検証
-			// TODO twitter:creatorの検証
 		});
 
 		test('はGETできる。(存在しないIDでも。)', async () =>
@@ -375,8 +364,6 @@ describe('Webリソース', () => {
 			await ok({
 				path: '/inbox',
 			}));
-
-		// test.todo('POSTできる？');
 	});
 
 	describe('/users/:id/inbox', () => {
@@ -386,8 +373,6 @@ describe('Webリソース', () => {
 			await ok({
 				path: path(alice.id),
 			}));
-
-		// test.todo('POSTできる？');
 	});
 
 	describe('/users/:id/outbox', () => {
@@ -415,10 +400,6 @@ describe('Webリソース', () => {
 				expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
 				expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 				expect(metaTag(res, 'misskey:note-id')).toBe(alicesPost.id);
-
-				// TODO ogタグの検証
-				// TODO profile.noCrawleの検証
-				// TODO twitter:creatorの検証
 			});
 
 			test('はHTMLとしてGETできる。(存在しないIDでも。)', async () =>
@@ -455,10 +436,6 @@ describe('Webリソース', () => {
 			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
 			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 			expect(metaTag(res, 'misskey:flash-id')).toBe(alicePlay.id);
-
-			// TODO ogタグの検証
-			// TODO profile.noCrawleの検証
-			// TODO twitter:creatorの検証
 		});
 
 		test('がGETできる。(存在しないIDでも。)', async () =>
@@ -477,9 +454,6 @@ describe('Webリソース', () => {
 			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
 			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
 			expect(metaTag(res, 'misskey:clip-id')).toBe(aliceClip.id);
-
-			// TODO ogタグの検証
-			// TODO profile.noCrawleの検証
 		});
 
 		test('がGETできる。(存在しないIDでも。)', async () =>
@@ -497,10 +471,6 @@ describe('Webリソース', () => {
 			});
 			expect(metaTag(res, 'misskey:user-username')).toBe(alice.username);
 			expect(metaTag(res, 'misskey:user-id')).toBe(alice.id);
-
-			// FIXME: misskey:gallery-post-idみたいなmetaタグの設定がない
-			// TODO profile.noCrawleの検証
-			// TODO twitter:creatorの検証
 		});
 
 		test('がGETできる。(存在しないIDでも。)', async () =>
@@ -516,9 +486,6 @@ describe('Webリソース', () => {
 			const res = await ok({
 				path: path(aliceChannel.id),
 			});
-
-			// FIXME: misskey関連のmetaタグの設定がない
-			// TODO ogタグの検証
 		});
 
 		test('がGETできる。(存在しないIDでも。)', async () =>

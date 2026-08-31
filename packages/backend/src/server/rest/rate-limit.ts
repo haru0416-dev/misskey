@@ -35,8 +35,8 @@ function durationToMicroseconds(duration: number): number {
 }
 
 /**
- * `ratelimiter` パッケージと同じ sliding-window-log 方式・同じキー形式 (`limit:{id}` の zset)。
- * 窓内エントリ数を数えてから今回分を必ず追加する (= 制限超過中のリクエストも窓を延長する) 点も踏襲。
+ * sliding-window-log 方式と `limit:{id}` の zset キー形式を使う。
+ * 窓内エントリ数を数えてから今回分を必ず追加し、制限超過中のリクエストも窓を延長する。
  */
 async function checkLimiter(options: {
 	id: string;
@@ -149,7 +149,7 @@ export async function assertApiRateLimit(
 }
 
 /**
- * 元の ApiCallService と同じく、認証済みユーザーにはロールポリシーの rateLimitFactor を適用する。
+ * 認証済みユーザーにはロールポリシーの rateLimitFactor を適用する。
  * factor <= 0 はレート制限なし、1 未満は緩和、1 超は強化 (minInterval/max に反映される)。
  */
 export async function assertApiRateLimitForUser(

@@ -463,9 +463,6 @@ export default abstract class Chart<T extends Schema> {
 			.then((result) => (result.rows[0] as RawRecord<T> | undefined) ?? null);
 	}
 
-	/**
-	 * 現在(=今のHour or Day)のログをデータベースから探して、あればそれを返し、なければ作成して返します。
-	 */
 	@bindThis
 	private async claimCurrentLog(group: string | null, span: 'hour' | 'day'): Promise<RawRecord<T>> {
 		const [y, m, d, h] = Chart.getCurrentDate();
@@ -474,10 +471,8 @@ export default abstract class Chart<T extends Schema> {
 			span === 'hour' ? [y, m, d, h] : span === 'day' ? [y, m, d] : (new Error('not happen') as never),
 		);
 
-		// 現在(=今のHour or Day)のログ
 		const currentLog = await this.getLogByDate(group, span, Chart.dateToTimestamp(current));
 
-		// ログがあればそれを返して終了
 		if (currentLog != null) {
 			return currentLog;
 		}
@@ -485,22 +480,12 @@ export default abstract class Chart<T extends Schema> {
 		let log: RawRecord<T>;
 		let data: KVs<T>;
 
-		// 集計期間が変わってから、初めてのチャート更新なら
-		// 最も最近のログを持ってくる
-		// * 例えば集計期間が「日」である場合で考えると、
-		// * 昨日何もチャートを更新するような出来事がなかった場合は、
-		// * ログがそもそも作られずドキュメントが存在しないということがあり得るため、
-		// * 「昨日の」と決め打ちせずに「もっとも最近の」とします
+		// 更新の無い集計期間にはログが存在しないため、直前区間ではなく最新ログを引き継ぐ。
 		const latest = await this.getLatestLog(group, span);
 
 		if (latest != null) {
-			// 空ログデータを作成
 			data = this.getNewLog(this.convertRawRecord(latest));
 		} else {
-			// ログが存在しなかったら
-			// (Misskeyインスタンスを建てて初めてのチャート更新時など)
-
-			// 初期ログデータを作成
 			data = this.getNewLog(null);
 
 			this.logger.info(`${this.name + (group ? `:${group}` : '')}(${span}): Initial commit created`);
@@ -511,10 +496,9 @@ export default abstract class Chart<T extends Schema> {
 
 		const unlock = await this.lock(lockKey);
 		try {
-			// ロック内でもう1回チェックする
+			// 同じ区間を重複作成しないため、ロック取得後に再確認する。
 			const currentLog = await this.getLogByDate(group, span, date);
 
-			// ログがあればそれを返して終了
 			if (currentLog != null) return currentLog;
 
 			const columns = {} as Record<string, number | unknown[]>;
@@ -523,7 +507,6 @@ export default abstract class Chart<T extends Schema> {
 				columns[COLUMN_PREFIX + name] = v;
 			}
 
-			// 新規ログ挿入
 			log = await this.insertLog(span, {
 				date: date,
 				...(group ? { group: group } : {}),
@@ -561,11 +544,7 @@ export default abstract class Chart<T extends Schema> {
 			return;
 		}
 
-		// TODO: 前の時間のログがbufferにあった場合のハンドリング
-		// 例えば、save が20分ごとに行われるとして、前回行われたのは 01:50 だったとする。
-		// 次に save が行われるのは 02:10 ということになるが、もし 01:55 に新規ログが buffer に追加されたとすると、
-		// そのログは本来は 01:00~ のログとしてDBに保存されて欲しいのに、02:00~ のログ扱いになってしまう。
-		// これを回避するための実装は複雑になりそうなため、一旦保留。
+		// バッファは保存時刻の区間へ集約されるため、保存間隔をまたいだ差分を発生時刻の区間へ戻せない。
 		const buffer = this.buffer.slice();
 
 		const update = async (logHour: RawRecord<T>, logDay: RawRecord<T>): Promise<void> => {
@@ -596,7 +575,6 @@ export default abstract class Chart<T extends Schema> {
 					if (v > 0) queryForDay[name] = sql`${identifierSql(name)} + ${v}`;
 					if (v < 0) queryForDay[name] = sql`${identifierSql(name)} - ${Math.abs(v)}`;
 				} else if (Array.isArray(v) && v.length > 0) {
-					// ユニークインクリメント
 					const tempColumnName = (UNIQUE_TEMP_COLUMN_PREFIX + k.replaceAll('.', COLUMN_DELIMITER)) as string &
 						keyof TempColumnsForUnique<T>;
 					const itemsForHour = v.filter((item) => !(logHour[tempColumnName] as unknown as string[]).includes(item));
@@ -626,7 +604,7 @@ export default abstract class Chart<T extends Schema> {
 				}
 			}
 
-			// TODO: intersectionに指定されたカラムがintersectionだった場合の対応
+			// intersection が別の intersection を参照する構成には対応していない。
 			for (const [k, v] of Object.entries(this.schema)) {
 				const intersection = v.intersection;
 				if (intersection) {
@@ -668,9 +646,8 @@ export default abstract class Chart<T extends Schema> {
 				}
 			}
 
-			// ログ更新
 			// hour と day を別トランザクションで書くと、片方だけ成功したときも buffer が残り、
-			// 次回 save で成功済みの span へ同じ diff がもう一度加算されて値が二重になる
+			// 次回 save で成功済みの span へ同じ diff が再加算される。
 			await this.chartDb.transaction(async (transaction) => {
 				await this.updateLogById('hour', logHour.id, queryForHour, transaction);
 				await this.updateLogById('day', logDay.id, queryForDay, transaction);
@@ -708,7 +685,7 @@ export default abstract class Chart<T extends Schema> {
 		}
 
 		const update = async (logHour: RawRecord<T>, logDay: RawRecord<T>): Promise<void> => {
-			// save() 側と同じ理由で、hour と day は同一トランザクションで更新する
+			// hour と day の片方だけが更新された状態を残さない。
 			await this.chartDb.transaction(async (transaction) => {
 				await this.updateLogById('hour', logHour.id, columns, transaction);
 				await this.updateLogById('day', logDay.id, columns, transaction);
@@ -729,7 +706,6 @@ export default abstract class Chart<T extends Schema> {
 	public async clean(): Promise<void> {
 		const current = dateUTC(Chart.getCurrentDate());
 
-		// 一日以上前かつ三日以内
 		const gt = Chart.dateToTimestamp(current) - 60 * 60 * 24 * 3;
 		const lt = Chart.dateToTimestamp(current) - 60 * 60 * 24;
 
@@ -772,7 +748,6 @@ export default abstract class Chart<T extends Schema> {
 					? subtractTime(cursor ? dateUTC([y2, m2, d2, h2]) : dateUTC([y, m, d, h]), amount - 1, 'hour')
 					: (new Error('not happen') as never);
 
-		// ログ取得
 		let logs = (
 			await this.chartDb.execute(sql`
 			SELECT *
@@ -783,20 +758,15 @@ export default abstract class Chart<T extends Schema> {
 		`)
 		).rows as RawRecord<T>[];
 
-		// 要求された範囲にログがひとつもなかったら
 		if (logs.length === 0) {
-			// もっとも新しいログを持ってくる
-			// (すくなくともひとつログが無いと補間できないため)
+			// 補間の起点として最新ログを 1 件確保する。
 			const recentLog = await this.getLatestLog(group, span);
 
 			if (recentLog) {
 				logs = [recentLog];
 			}
-
-			// 要求された範囲の最も古い箇所に位置するログが存在しなかったら
 		} else if (!isTimeSame(new Date(logs.at(-1)!.date * 1000), gt)) {
-			// 要求された範囲の最も古い箇所時点での最も新しいログを持ってきて末尾に追加する
-			// (補間できないため)
+			// 範囲先頭を補間できるよう、範囲より前の最新ログを追加する。
 			const outdatedLog = (
 				await this.chartDb.execute(sql`
 				SELECT *
@@ -828,7 +798,6 @@ export default abstract class Chart<T extends Schema> {
 			if (log) {
 				chart.unshift(this.convertRawRecord(log));
 			} else {
-				// 補間
 				const latest = logs.find((l) => isTimeBefore(new Date(l.date * 1000), current));
 				const data = latest ? this.convertRawRecord(latest) : null;
 				chart.unshift(this.getNewLog(data));
@@ -837,12 +806,6 @@ export default abstract class Chart<T extends Schema> {
 
 		const res = {} as ChartResult<T>;
 
-		/**
-		 * [{ foo: 1, bar: 5 }, { foo: 2, bar: 6 }, { foo: 3, bar: 7 }]
-		 * を
-		 * { foo: [1, 2, 3], bar: [5, 6, 7] }
-		 * にする
-		 */
 		for (const record of chart) {
 			for (const [k, v] of Object.entries(record) as [keyof typeof record, number][]) {
 				if (res[k]) {

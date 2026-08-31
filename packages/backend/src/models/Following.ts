@@ -18,7 +18,6 @@ export class MiFollowing {
 
 	public isFollowerHibernated: boolean;
 
-	// タイムラインにその人のリプライまで含めるかどうか
 	public withReplies: boolean;
 
 	public notify: 'normal' | null;

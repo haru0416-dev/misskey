@@ -256,7 +256,7 @@ export async function extractEmojisForApi(
 				host: punyHost,
 				name,
 				uri: tag.id,
-				// isEmoji のtype guardによりこの時点で icon.url は存在が保証されている
+				// isEmoji の型ガードにより icon.url は存在する。
 				originalUrl: icon!.url!,
 				publicUrl: icon!.url!,
 				updatedAt: new Date(),
@@ -299,7 +299,6 @@ export async function resolveImageForApi(
 
 		if (!file.isLink || file.url === image.url) return file;
 
-		// リンクとして保持するファイルの URL が変わった場合は、現在の画像 URL に更新する。
 		await updateDriveFileInDatabase(deps.db, file.id, { url: image.url, uri: image.url });
 		return await fetchDriveFileByIdOrFailFromDatabase(deps.db, file.id);
 	} catch {
@@ -394,13 +393,13 @@ async function processRemoteMoveForApi(
 	let dst: MiLocalUser | MiRemoteUser | null = await fetchPersonForApi(deps, src.movedToUri);
 
 	if (dst && dst.host == null) {
-		// ローカルユーザーだった場合はDBから読み直す
+		// ローカル移行先は URI から DB の完全なレコードを取得する。
 		dst = (await fetchUserByUriFromDatabase(deps.db, src.movedToUri)) as MiLocalUser | null;
 		if (dst == null) throw new Error('user not found');
 	} else if (dst) {
 		if (movePreventUris.includes(src.movedToUri)) return 'skip: circular move';
 
-		// dst自体も移行済みの可能性があるので再取得しておく (連鎖的な引っ越しの追跡)
+		// 連鎖移行を最新状態まで追跡し、循環検出用の URI を引き継ぐ。
 		await updatePersonForApi(deps, src.movedToUri, dst as MiRemoteUser, [...movePreventUris, src.uri]);
 		dst = (await fetchPersonForApi(deps, src.movedToUri)) ?? dst;
 	} else {
@@ -434,8 +433,7 @@ export async function updatePersonForApi(
 	hint?: IObject,
 ): Promise<void> {
 	const history = new Set<string>();
-	// Update activity に埋め込まれたオブジェクトが渡されていれば再フェッチしない (中間キャッシュ (nginx 等) が
-	// 古い Person を返すと更新が反映されないため、hint の利用は正しさに直結する)
+	// Update に埋め込まれた Person を優先し、中間キャッシュから古い情報を再取得しない。
 	const object = hint ?? (await resolveApObjectForApi(deps, uri, FetchAllowSoftFailMask.Strict, history));
 
 	const person = validateActorForApi(deps.config, object, uri);
@@ -456,7 +454,7 @@ export async function updatePersonForApi(
 				.then((isPublic) => (isPublic ? 'public' : 'private') as 'public' | 'private')
 				.catch((err) => {
 					if (!(err instanceof StatusError) || err.isRetryable) {
-						// 一時的なエラーでは既存の公開設定を保持する (更新しない)
+						// 一時的なエラーでは既存の公開設定を保持する。
 						return undefined;
 					}
 					return 'private';
@@ -562,8 +560,7 @@ export async function updatePersonForApi(
 
 	const mergedUpdated = { ...exist, ...updatesWithMove } as MiRemoteUser;
 
-	// 移行処理を行う: 初めての移行 (exist.movedAt == null) か、前回の移行から14日以上経過した場合のみ許可
-	// (Mastodonのクールダウン期間は30日だが若干緩めに設定)
+	// 移行カスケードの再実行は 14 日間隔に制限する。
 	if (
 		mergedUpdated.movedAt &&
 		(exist.movedAt == null || exist.movedAt.getTime() + 1000 * 60 * 60 * 24 * 14 < mergedUpdated.movedAt.getTime())
@@ -691,7 +688,7 @@ export async function createPersonForApi(
 		})) as MiRemoteUser;
 	} catch (e) {
 		if (isDuplicateKeyValueError(e)) {
-			// /users/@a => /users/:id のように入力がaliasなときにエラーになることがあるのを対応
+			// alias URI が正規 URI と同じユーザーを指す場合は既存レコードを使う。
 			const u = await fetchUserByUriFromDatabase(deps.db, person.id);
 			if (u == null) throw new Error('already registered', { cause: e });
 			user = u as MiRemoteUser;
@@ -715,7 +712,7 @@ export async function createPersonForApi(
 		await updateUserInDatabase(deps.db, user.id, updates);
 		user = { ...user, ...updates };
 	} catch {
-		// アバター/バナー取得の失敗はユーザー作成自体を失敗させない
+		// アバター／バナー取得の失敗はユーザー作成自体を失敗させない。
 	}
 
 	return user;
@@ -826,8 +823,7 @@ export async function handleApiFederationUpdateRemoteUser(
 	const params = parseApiParams(federationUpdateRemoteUserParamDef, body);
 
 	const user = await fetchUserByIdFromDatabase(deps.db, params.userId);
-	// IdentifiableError も生の Error も runApiEndpoint では 500 INTERNAL_ERROR になってしまうため、
-	// 「そのIDのユーザーが居ない」「ローカルユーザーを指定した」は明示的なAPIエラーとして返す
+	// runApiEndpoint が 500 に変換しないよう、入力不備は明示的な API エラーにする。
 	if (user == null) {
 		throw new ApiError({
 			status: 400,
@@ -936,15 +932,14 @@ export async function resolveUserForApi(
 		return await createPersonForApi(deps, self.href);
 	}
 
-	// ユーザー情報が古い場合は、WebFingerからやりなおして返す
 	if (user.lastFetchedAt == null || Date.now() - user.lastFetchedAt.getTime() > 1000 * 60 * 60 * 24) {
-		// 繋がらないインスタンスに何回も試行するのを防ぐ, 後続の同様処理の連続試行を防ぐ ため 試行前にも更新する
+		// 到達不能なホストへの連続再試行を防ぐため、通信前に最終取得日時を更新する。
 		await updateUserLastFetchedAtInDatabase(deps.db, user.id, new Date());
 
 		const self = await resolveSelfForApi(deps, acctLower);
 
 		if (user.uri !== self.href) {
-			// URI が一致しない場合は user@host と AP の Person ID (RemoteUser.uri) の対応を修正する。
+			// WebFinger の応答が変わった場合は acct と Person ID の対応を更新する。
 			const uri = new URL(self.href);
 			if (uri.hostname !== punyHost) {
 				throw new Error('Invalid uri');

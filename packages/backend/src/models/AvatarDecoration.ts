@@ -14,7 +14,7 @@ export class MiAvatarDecoration {
 
 	public description: string;
 
-	// TODO: 定期ジョブで存在しなくなったロールIDを除去するようにする
+	// 削除済みロールの ID が残る場合がある。
 	public roleIdsThatCanBeUsedThisDecoration: string[];
 
 	public category: string | null;

@@ -14,7 +14,7 @@ import { loadConfig } from '@/config.js';
  * 実サーバーへ繋いで確かめる。
  *
  * 遮断は Agent.createConnection の override で行うため、ランタイムがカスタム Agent を
- * 尊重しない場合は素通りする。Bun でも呼ばれることをここで固定する。
+ * 尊重しない場合は遮断を回避できる。Bun でも呼ばれることをここで固定する。
  */
 describe('core:net:HttpRequestService の agent 経路', () => {
 	let server: Server;

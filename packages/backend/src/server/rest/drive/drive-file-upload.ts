@@ -131,7 +131,7 @@ export async function readApiMultipartRequest(c: Context, config: Pick<Config, '
 			fs.createWriteStream(path),
 		);
 	} catch (err) {
-		// 書き出しに失敗するとこの関数は cleanup を返せないまま throw するので、ここで始末する
+		// 書き出し失敗時は cleanup を返せないため、ここで一時ファイルを削除する。
 		fs.unlink(path, () => {});
 		throw err;
 	}
@@ -261,8 +261,8 @@ async function uploadDriveFileToObjectStorageForApi(
 		publicRead: deps.meta.objectStorageSetPublicRead,
 	};
 
-	// 失敗をここで握り潰すと、実体の無いオブジェクトを指す DriveFile が DB に入り、
-	// APIは成功を返すのにファイルURLだけ404になる。呼び出し元へ伝播させて中断させる
+	// 失敗を無視すると、実体の無いオブジェクトを指す DriveFile が DB に入り、
+	// API 成功後にファイル URL だけが 404 にならないよう、呼び出し元へ失敗を伝播する。
 	await deps.s3Service.upload(deps.meta, object);
 	deps.logger.debug(`Uploaded: ${deps.meta.objectStorageBucket}/${key}`);
 }
@@ -362,7 +362,7 @@ async function saveDriveFileForApi(
 		try {
 			await Promise.all(uploads);
 		} catch (err) {
-			// 一部だけ成功していることがあるため、DBに載らないオブジェクトを残さないよう掃除してから中断する
+			// 一部成功時も DB に紐付かないオブジェクトを残さないよう、削除してから中断する。
 			await deleteDriveFileObjectsForApi(deps, keys);
 			throw err;
 		}

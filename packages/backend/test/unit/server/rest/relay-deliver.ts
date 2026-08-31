@@ -124,15 +124,12 @@ describe('deliverToRelaysForApi / attachLdSignatureForApi (RelayService#deliverT
 		expect(data.user.id).toBe(user.id);
 		expect(data.isSharedInbox).toBe(false);
 		const content = JSON.parse(data.content) as Record<string, unknown>;
-		// LD署名が付与されている
 		expect((content['signature'] as Record<string, unknown>)['type']).toBe('RsaSignature2017');
-		// to が無い場合は Public が補われる
 		expect(content['to']).toEqual(['https://www.w3.org/ns/activitystreams#Public']);
-		// 元の activity オブジェクト自体は変異しない (deepClone してから加工する)
+		// 入力の activity オブジェクトは変異させない。
 		expect('to' in activity).toBe(false);
 		expect('signature' in activity).toBe(false);
 
-		// requesting のリレーには配送されない
 		expect(jobs.find((j) => (j.data as DeliverJobData).to === pendingInbox)).toBeUndefined();
 
 		await relayJob!.remove();

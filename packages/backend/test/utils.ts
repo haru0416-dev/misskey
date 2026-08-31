@@ -200,7 +200,6 @@ export const createAppToken = async (user: UserToken, permissions: (typeof missk
 	return (res.body as misskey.entities.MiauthGenTokenResponse).token;
 };
 
-// 非公開ノートをAPI越しに見たときのノート NoteEntityService.ts
 export const hiddenNote = (note: misskey.entities.Note): misskey.entities.Note => {
 	const temp: misskey.entities.Note = {
 		...note,
@@ -647,7 +646,6 @@ export const simpleGet = async (
 		(accept.startsWith('application/activity+json') ||
 			(accept.startsWith('application/ld+json') && accept.includes('https://www.w3.org/ns/activitystreams')))
 	) {
-		// validateContentTypeSetAsActivityPubのテストを兼ねる
 		validateContentTypeSetAsActivityPub(res);
 	}
 
@@ -697,34 +695,6 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 	};
 
 	for (const limit of [1, 5, 10, 100, undefined]) {
-		/*
-		// 1. sinceId/DateとuntilId/Dateで両端を指定して取得した結果が期待通りになっていること
-		if (ordering === 'desc') {
-			const end = expected.at(-1)!;
-			let last = await fetchEntities(rangeToParam({ limit, since: end }));
-			const actual: Entity[] = [];
-			while (last.length !== 0) {
-				actual.push(...last);
-				last = await fetchEntities(rangeToParam({ limit, until: last.at(-1), since: end }));
-			}
-			actual.push(end);
-			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(expected.map(({ id, createdAt }) => id + ':' + createdAt));
-		}
-
-		// 2. sinceId/Date指定+limitで取得してつなぎ合わせた結果が期待通りになっていること
-		if (ordering === 'asc') {
-			// 昇順にしたときの先頭(一番古いもの)をもってくる（expected[1]を基準に降順にして0番目）
-			let last = await fetchEntities({ limit: 1, untilId: expected[1].id });
-			const actual: Entity[] = [];
-			while (last.length !== 0) {
-				actual.push(...last);
-				last = await fetchEntities(rangeToParam({ limit, since: last.at(-1) }));
-			}
-			expect(actual.map(({ id, createdAt }) => id + ':' + createdAt)).toStrictEqual(expected.map(({ id, createdAt }) => id + ':' + createdAt));
-		}
-		*/
-
-		// 3. untilId指定+limitで取得してつなぎ合わせた結果が期待通りになっていること
 		if (ordering === 'desc') {
 			let last = await fetchEntities(omitUndefined({ limit }));
 			const actual: Entity[] = [];
@@ -737,7 +707,6 @@ export async function testPaginationConsistency<Entity extends { id: string; cre
 			);
 		}
 
-		// 4. offset指定+limitで取得してつなぎ合わせた結果が期待通りになっていること
 		if (offsetBy === 'offset') {
 			let last = await fetchEntities(omitUndefined({ limit, offset: 0 }));
 			let offset = limit ?? 10;
@@ -793,7 +762,7 @@ export async function sendEnvResetRequest() {
 }
 
 // 与えられた値を強制的にエラーとみなす。この関数は型安全性を破壊するため、異常系のアサーション以外で用いられるべきではない。
-// FIXME(misskey-js): misskey-jsがエラー情報を公開するようになったらこの関数を廃止する
+// misskey-js がエラー情報を公開していないため、このキャストが必要になる。
 export function castAsError(obj: unknown): ApiErrorBody {
 	return obj as ApiErrorBody;
 }

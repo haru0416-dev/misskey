@@ -203,7 +203,7 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 		return;
 	});
 
-	//#region 埋め込みページ (frontend-embed が描画する。X-Frame-Options を外す必要がある)
+	// 埋め込みページは X-Frame-Options を外すため、通常ページとは別のレスポンスを返す。
 	app.get('/embed/user-timeline/:user', async (c, next) => {
 		const user = await fetchUserByIdFromDatabase(deps.db, c.req.param('user'));
 
@@ -287,8 +287,6 @@ export function createClientPagesApp(deps: ClientPagesDependencies): Hono {
 			}),
 		);
 	});
-	//#endregion
-
 	app.get('/channels/:channel', async (c, next) => {
 		const channel = await fetchChannelByIdFromDatabase(deps.db, c.req.param('channel'));
 

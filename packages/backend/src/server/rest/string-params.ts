@@ -88,7 +88,7 @@ export function queryToApiBody(schema: z.ZodObject, query: Record<string, string
 /**
  * multipart フォームの値を、paramDef が期待する型へ直す。
  * クエリ文字列と違い、数値・真偽値として宣言されているのに解釈できない値は
- * ここでエラーにする (元の実装の挙動を保つ)。
+ * 文字列のまま渡さず、ここでエラーにする。
  */
 export function castMultipartFields(schema: z.ZodObject, fields: Record<string, unknown>): void {
 	const shape = schema.shape as Record<string, z.ZodType | undefined>;

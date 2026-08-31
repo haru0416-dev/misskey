@@ -79,7 +79,6 @@ export default defineConfig((args) => {
 	const isWatchMode = args['watch'] != null && args['watch'] !== 'false';
 	const isE2E = process.env['MISSKEY_BUILD_E2E'] === '1';
 
-	// 通常のビルド時にexternalとするモジュール
 	const externalModules: ExternalOption = [
 		// slacc 本体もバンドルしない。napi-rs のローダーは `slacc-linux-x64-gnu` 等を
 		// 自分の位置から require するため、バンドルへ取り込むと解決の起点が built/ になり、
@@ -99,7 +98,6 @@ export default defineConfig((args) => {
 	];
 
 	const define: Record<string, string> = {
-		// Summalyのバージョンを埋め込む
 		_SUMMALY_VERSION_: JSON.stringify(summalyVersion),
 	};
 
@@ -149,7 +147,7 @@ export default defineConfig((args) => {
 				include: ['src/**/*.{ts,js,mjs,cjs,tsx,json}'],
 				clearScreen: false,
 			},
-			// ビルドの高速化のために、watchモードのときは外部モジュールは全てバンドルしないようにする
+			// watch 時は依存を外部化して再ビルド時間を短縮する。
 			external: isWatchMode ? /^(?!@\/)[^.\/](?!:[\/\\])/ : externalModules,
 		};
 	}

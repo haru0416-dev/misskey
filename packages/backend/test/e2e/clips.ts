@@ -59,7 +59,6 @@ describe('クリップ', () => {
 			...request,
 		});
 
-		// 入力が結果として入っていること
 		expect(clip).toStrictEqual({
 			...clip,
 			...defaultCreate(),
@@ -100,7 +99,6 @@ describe('クリップ', () => {
 			...request,
 		});
 
-		// 入力が結果として入っていること。clipIdはidになるので消しておく
 		delete (parameters as { clipId?: string }).clipId;
 		expect(clip).toStrictEqual({
 			...clip,
@@ -195,7 +193,6 @@ describe('クリップ', () => {
 
 	test('の作成ができる', async () => {
 		const res = await create();
-		// ISO 8601で日付が返ってくること
 		expect(res.createdAt).toBe(new Date(res.createdAt).toISOString());
 		expect(res.lastClippedAt).toBe(null);
 		expect(res.name).toBe('test');
@@ -286,7 +283,6 @@ describe('クリップ', () => {
 			isPublic: true,
 		});
 
-		// ISO 8601で日付が返ってくること
 		expect(res.createdAt).toBe(new Date(res.createdAt).toISOString());
 		expect(res.lastClippedAt).toBe(null);
 		expect(res.name).toBe('updated');
@@ -469,7 +465,7 @@ describe('クリップ', () => {
 			parameters: { limit: clips.length },
 		});
 
-		// 作成responseの配列には順序保障がないのでidでソートして厳密比較
+		// API が順序を保証しないため、ID 順に揃えて比較する。
 		expect(res.toReversed()).toStrictEqual(clips.sort(compareBy((s) => s.id)));
 	});
 
@@ -486,10 +482,9 @@ describe('クリップ', () => {
 			userId: alice.id,
 		});
 
-		// 返ってくる配列には順序保障がないのでidでソートして厳密比較
+		// API が順序を保証しないため、ID 順に揃えて比較する。
 		expect(res.sort(compareBy<Misskey.entities.Clip>((s) => s.id))).toStrictEqual(clips.sort(compareBy((s) => s.id)));
 
-		// 認証状態で見たときだけisFavoritedが入っている
 		for (const clip of res) {
 			expect(clip.isFavorited).toBe(false);
 		}
@@ -511,7 +506,6 @@ describe('クリップ', () => {
 			},
 		);
 
-		// 未認証で見たときはisFavoritedは入らない
 		for (const clip of res) {
 			expect('isFavorited' in clip).toBe(false);
 		}
@@ -537,7 +531,7 @@ describe('クリップ', () => {
 			limit: 4,
 		});
 
-		// Promise.allで返ってくる配列には順序保障がないのでidでソートして厳密比較
+		// Promise.all の結果順に依存しないよう、ID 順に揃えて比較する。
 		expect(
 			res.sort(compareBy<Misskey.entities.Clip>((s) => s.id)), // sinceIdとuntilId自体は結果に含まれない
 			getAt(clips, 1).id +
@@ -666,7 +660,6 @@ describe('クリップ', () => {
 			expect(clip.favoritedCount).toBe(1);
 			expect(clip.isFavorited).toBe(true);
 
-			// isFavoritedは見る人によって切り替わる。
 			const clip2 = await show({ clipId: publicClip.id });
 			expect(clip2.favoritedCount).toBe(1);
 			expect(clip2.isFavorited).toBe(false);
@@ -686,7 +679,7 @@ describe('クリップ', () => {
 		});
 
 		test('は11を超えて設定できる。', async () => {
-			// 自分で持てるクリップ数はポリシー上限までなので、超過分は他人のPublicクリップで稼ぐ
+			// 所有数のポリシー上限を避け、超過分は他ユーザーの公開クリップで用意する。
 			const clips = [
 				aliceClip,
 				...(await createMany({}, DEFAULT_POLICIES.clipLimit - 1, alice)),
@@ -697,7 +690,6 @@ describe('クリップ', () => {
 				await favorite({ clipId: clip.id });
 			}
 
-			// pagenationはない。全部一気にとれる。
 			const favorited = await myFavorites();
 			expect(favorited.length).toBe(clips.length);
 			for (const clip of favorited) {
@@ -899,7 +891,6 @@ describe('クリップ', () => {
 			expect(res.lastClippedAt).toBe(res.lastClippedAt ? new Date(res.lastClippedAt).toISOString() : null);
 			expect((await notes({ clipId: aliceClip.id })).map((x) => x.id)).toStrictEqual([aliceNote.id]);
 
-			// 他人の非公開ノートも突っ込める
 			await addNote({ clipId: aliceClip.id, noteId: bobHomeNote.id });
 			await addNote({ clipId: aliceClip.id, noteId: bobFollowersNote.id });
 			await addNote({ clipId: aliceClip.id, noteId: bobSpecifiedNote.id });
@@ -924,7 +915,7 @@ describe('クリップ', () => {
 			);
 		});
 
-		// TODO: 17000msくらいかかる...
+		// 200 件のノート作成を伴うため約 17 秒かかる。
 		test('をポリシーで定められた上限いっぱい(200)を超えて追加はできない。', async () => {
 			const noteLimit = DEFAULT_POLICIES.noteEachClipsLimit;
 			const noteList = (await Promise.all(
@@ -1083,8 +1074,6 @@ describe('クリップ', () => {
 
 			const res = await notes({ clipId: aliceClip.id });
 
-			// 自分のノートは非公開でも入れられるし、見える
-			// 他人の非公開ノートは入れられるけど、除外される
 			const expects = [aliceNote, aliceHomeNote, aliceFollowersNote, aliceSpecifiedNote, bobNote, bobHomeNote];
 			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(
 				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
@@ -1104,7 +1093,7 @@ describe('クリップ', () => {
 				limit: 3,
 			});
 
-			// Promise.allで返ってくる配列はID順で並んでないのでソートして厳密比較
+			// Promise.all の結果順に依存しないよう、ID 順に揃えて比較する。
 			const expects = [getAt(noteList, 3), getAt(noteList, 4), getAt(noteList, 5)];
 			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(
 				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
@@ -1124,7 +1113,7 @@ describe('クリップ', () => {
 				untilId: getAt(noteList, 4).id,
 			});
 
-			// Promise.allで返ってくる配列はID順で並んでないのでソートして厳密比較
+			// Promise.all の結果順に依存しないよう、ID 順に揃えて比較する。
 			const expects = [getAt(noteList, 2), getAt(noteList, 3)];
 			expect(res.sort(compareBy((s) => s.id)).map((x) => x.id)).toStrictEqual(
 				expects.sort(compareBy((s) => s.id)).map((x) => x.id),
@@ -1132,7 +1121,7 @@ describe('クリップ', () => {
 		});
 
 		test('Remoteのノートもクリップできる。', async () => {
-			// 連合の実サーバーは立てず、リモートユーザーとそのノートをDBに直接用意してクリップできることを検証する
+			// 連合先の可用性に依存しないよう、リモートユーザーとノートは DB に直接用意する。
 			const suffix = Date.now().toString(36).slice(-8);
 			const host = `clip-remote-${suffix}.example`;
 			const remoteUserId = genId();
@@ -1192,7 +1181,6 @@ describe('クリップ', () => {
 			await addNote({ clipId: aliceClip.id, noteId: bobNote.id });
 			await api('clips/update', { clipId: aliceClip.id, isPublic: true }, alice);
 
-			// viewerがbobをミュートするとbobのノートだけ見えなくなる
 			await api('mute/create', { userId: bob.id }, viewer);
 			const res = await notes({ clipId: aliceClip.id }, { user: viewer });
 			expect(res.map((x) => x.id)).toStrictEqual([aliceNote.id]);
@@ -1204,7 +1192,6 @@ describe('クリップ', () => {
 			await addNote({ clipId: aliceClip.id, noteId: bobNote.id });
 			await api('clips/update', { clipId: aliceClip.id, isPublic: true }, alice);
 
-			// bobがviewerをブロックするとbobのノートだけ見えなくなる
 			await api('blocking/create', { userId: viewer.id }, bob);
 			const res = await notes({ clipId: aliceClip.id }, { user: viewer });
 			expect(res.map((x) => x.id)).toStrictEqual([aliceNote.id]);

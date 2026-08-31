@@ -5,35 +5,15 @@
 import type { IObject } from '../type.js';
 
 export enum FetchAllowSoftFailMask {
-	// softfail フラグを許可しない。
+	/** softfail を許可しない。 */
 	Strict = 0,
-	// requestUrl・finalUrl・objectId の値がすべて一致しない場合を許可する。
-	//
-	// ユーザー起点の検索では一般的だが、連合処理では許可しない。
-	//
-	// 許可される例:
-	//   正常: https://alice.example.com/@user -> https://alice.example.com/user/:userId
-	//   問題のある例: https://alice.example.com/redirect?url=https://bad.example.com/ -> https://bad.example.com/ -> https://alice.example.com/somethingElse
+	/** request URL・final URL・object ID の非正規一致を許可する。ユーザー起点検索専用。 */
 	NonCanonicalId = 1 << 0,
-	// 最終オブジェクトのサブドメイン階層を、リクエスト URL より1階層深い範囲まで許可する。
-	//
-	// このフラグを有効にする呼び出し元は存在しない。限定的な構成で必要になった場合に、事前確認済みの選択肢として使えるよう残す。
-	//
-	// 許可される例:
-	//   正常: https://example.com/@user -> https://activitypub.example.com/@user { id: 'https://activitypub.example.com/@user' }
-	//   問題のある例: https://example.com/@user -> https://untrusted.example.com/@user { id: 'https://untrusted.example.com/@user' }
+	/** 最終 object ID が request URL の直下サブドメインに移ることを許可する。 */
 	MisalignedOrigin = 1 << 1,
-	// リクエスト URL と返された object ID のホストが異なるが、最終 URL と object ID は一致する場合を許可する。
-	//
-	// 中間ホストを使うユーザー起点の検索では一般的だが、連合処理では許可しない。
-	//
-	// 許可される例:
-	//   正常: https://alice.example.com/@user@bob.example.com -> https://bob.example.com/@user { id: 'https://bob.example.com/@user' }
-	//   問題のある例: https://alice.example.com/definitelyAlice -> https://bob.example.com/@somebodyElse { id: 'https://bob.example.com/@somebodyElse' }
+	/** final URL と object ID が一致する場合に、request URL との cross-origin を許可する。ユーザー起点検索専用。 */
 	CrossOrigin = (1 << 2) | MisalignedOrigin,
-	// すべての softfail フラグを許可する。
-	//
-	// リリース用コードでは使用しない。
+	/** すべての softfail を許可する。テスト専用。 */
 	Any = ~0,
 }
 
@@ -52,7 +32,6 @@ function hostFuzzyMatch(requestHost: string, candidateHost: string): FetchAllowS
 		return FetchAllowSoftFailMask.Strict;
 	}
 
-	// candidateHost が requestHost の1階層下にある場合だけ許可する。
 	const requestDnsDepth = requestFqdn.split('.').length;
 	const candidateDnsDepth = candidateFqdn.split('.').length;
 
@@ -67,7 +46,6 @@ function hostFuzzyMatch(requestHost: string, candidateHost: string): FetchAllowS
 	return FetchAllowSoftFailMask.CrossOrigin;
 }
 
-// www. 接頭辞を除いて同一視できるホスト名へ正規化する。
 function normalizeSynonymousSubdomain(url: URL | string): URL {
 	const urlParsed = url instanceof URL ? url : new URL(url);
 	const host = urlParsed.host;
@@ -88,7 +66,6 @@ export function assertActivityMatchesUrl(
 
 	let softfail = 0;
 
-	// 許可されたフラグなら戻り値へ設定し、許可されていなければ例外にする。
 	const requireSoftfail = (needed: FetchAllowSoftFailMask, message: string) => {
 		if ((allowSoftfail & needed) !== needed) {
 			throw new Error(message);
@@ -112,7 +89,6 @@ export function assertActivityMatchesUrl(
 		throw new Error(`bad Activity: id(${activity.id}) is not allowed to have http:// in the url`);
 	}
 
-	// 最終 URL と ID を比較する。
 	if (finalUrlParsed.href !== idParsed.href) {
 		requireSoftfail(
 			FetchAllowSoftFailMask.NonCanonicalId,
@@ -125,14 +101,12 @@ export function assertActivityMatchesUrl(
 		}
 	}
 
-	// リクエスト URL と ID を比較する。
 	if (requestUrlParsed.href !== idParsed.href) {
 		requireSoftfail(
 			FetchAllowSoftFailMask.NonCanonicalId,
 			`bad Activity: id(${activity.id}) does not match request url(${requestUrlParsed.toString()})`,
 		);
 
-		// cross-origin 検索を許可した場合は、最終 URL と ID の一致を保ったまま、リクエスト URL と最終 object ID の差異を許可する。
 		const hostResult = hostFuzzyMatch(requestUrlParsed.host, idParsed.host);
 
 		requireSoftfail(

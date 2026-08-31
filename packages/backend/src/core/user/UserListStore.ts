@@ -181,7 +181,7 @@ export async function createUserListWithinLimitInDatabase(
 	});
 }
 
-/** Must be called inside a transaction so both owner locks are held until the caller finishes. */
+/** 両所有者のロックを呼び出し完了まで保持するため、トランザクション内で呼ぶ。 */
 export async function lockUserListOwnerForCreationInDatabase(
 	db: MiDrizzleDatabase,
 	userId: MiUser['id'],

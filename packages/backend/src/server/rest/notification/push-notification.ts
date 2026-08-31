@@ -44,7 +44,6 @@ function truncateNotificationBody<T extends keyof PushNotificationsTypes>(
 			? {
 					note: {
 						...(body.note as Packed<'Note'>),
-						// textをgetNoteSummaryしたものに置き換える
 						text: getNoteSummary(
 							'type' in body && body.type === 'renote'
 								? ((body.note as Packed<'Note'>).renote as Packed<'Note'>)

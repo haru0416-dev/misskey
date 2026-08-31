@@ -70,10 +70,6 @@ describe('Block', () => {
 		expect(castAsError(res.body).error.id).toBe('b390d7e1-8a5e-46ed-b625-06271cafd3d3');
 	});
 
-	// TODO: ユーザーリストに入れられないテスト
-
-	// TODO: ユーザーリストから除外されるテスト
-
 	test('タイムライン(LTL)にブロックされているユーザーの投稿が含まれない', async () => {
 		const aliceNote = await post(alice, { text: 'hi' });
 		const bobNote = await post(bob, { text: 'hi' });

@@ -39,9 +39,6 @@ describe('User', () => {
 				const resolved = await resolveRemoteUser('a.test', aliceInA.id, aliceWatcherInB);
 				const aliceInB = await aliceWatcherInB.client.request('users/show', { userId: resolved.id });
 
-				// console.log(`a.test: ${JSON.stringify(aliceInA, null, '\t')}`);
-				// console.log(`b.test: ${JSON.stringify(aliceInB, null, '\t')}`);
-
 				deepStrictEqualWithExcludedFields(aliceInA, aliceInB, [
 					'id',
 					'host',
